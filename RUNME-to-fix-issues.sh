@@ -8,7 +8,7 @@ git submodule init
 git submodule update
 
 git submodule init
-git submodule add $hs_git_host$hs_tpl_repo.git tpl
+git submodule add $hs_git_host$hs_tpl_repo.git ./tpl
 
 # To remove submodules
 if ["False" == "True"]

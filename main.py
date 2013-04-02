@@ -53,9 +53,8 @@ cview,         = [lambda          : fac.change_view('chip_view')]
 
 # Add developer namespace
 import dev 
-_ = dev.get_namespace(fac)
-print _
-exec(_)
+dnspc = dev.get_namespace(fac)
+exec(dnspc)
 
 # TODO Move to dev
 if experiment_bit:

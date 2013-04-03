@@ -8,7 +8,7 @@ from matplotlib.collections import PatchCollection
 from matplotlib.transforms import Affine2D
 from matplotlib.pyplot import \
   ginput, draw, figure, get_cmap, jet, gray
-from numpy import array, uint32, round, sqrt, ceil 
+from numpy import array, uint32, round, sqrt, ceil, float32
 from warnings import catch_warnings, simplefilter 
 
 class DrawManager(AbstractManager):

@@ -1,26 +1,3 @@
-from PyQt4.Qt import QMessageBox
-from PyQt4.QtCore import QObject, pyqtSlot
-from numpy import array, argsort, int32, float32, uint32, matrix, insert, empty, hstack, vstack, intersect1d,  maximum, log10
-from other.logger import *
-from pylab import find
-import code
-import collections
-import inspect
-import logging
-import numpy
-import os.path
-import sys
-import threading
-import time
-import types
-from other.logger           import *
-from other.AbstractPrintable import AbstractPrintable
-import re
-
-
-
-
-
 '''
 This is less of a helper function file and more of a pile of things 
 where I wasn't sure of where to put. 
@@ -28,7 +5,22 @@ A lot of things could probably be consolidated or removed. There are many
 non-independent functions which are part of HotSpotter. They should be removed
 and put into their own module. The standalone functions should be compiled 
 into a global set of helper functions.
+
+Wow, pylint is nice for cleaning.
 '''
+
+from numpy import empty, log10
+from other.logger import logmsg, logerr, logdbg
+import code
+import logging
+import numpy
+import os.path
+import sys
+import time
+import types
+from other.logger           import *
+from other.AbstractPrintable import AbstractPrintable
+import re
 
 #---------------
 # Constants !!!
@@ -93,8 +85,10 @@ class AbstractDataManager(AbstractManager):
 
         ret  = '# NumData %d\n' % valid_xs.size
         ret += '#'+header+'\n'
+        if not numpy.iterable(valid_xs):
+            valid_xs = [valid_xs]
 
-        for x in npIter(valid_xs):
+        for x in iter(valid_xs):
             tup = tuple()
             for lbl in lbls:
                 try:
@@ -107,7 +101,7 @@ class AbstractDataManager(AbstractManager):
                 except TypeError:
                     tup = tup+tuple([val])
             logdbg('dat_format: '+str(dat_format))
-            logdbg('tuple_types: '+str(map(type, tup)))
+            logdbg('tuple_types: '+str([type(t) for t in tup]))
             logdbg('format tuple: '+str(tup))
             ret += ' '+dat_format.format(*tup)+'\n'
         return ret
@@ -115,7 +109,7 @@ class AbstractDataManager(AbstractManager):
 def npArrInfo(arr):
     try:
         info = DynStruct()
-        info.shapestr  = '['+' x '.join(map(str, arr.shape))+']'
+        info.shapestr  = '['+' x '.join([str(x) for x in arr.shape])+']'
         info.dtypestr  = str(arr.dtype)
         if info.dtypestr == 'bool':
             info.bittotal = 'T=%d, F=%d' % (sum(arr), sum(1-arr))
@@ -123,25 +117,11 @@ def npArrInfo(arr):
             info.minmaxstr = 'NA'
         else:
             info.minmaxstr = '(%s,%s)' % ( str( arr.min() if len(arr) > 0 else None ), str( arr.max() if len(arr) > 0 else None ) )
-    except Exception as e: 
-        logmsg(str(e))
-        logerr(str(e))
+    except Exception as ex: 
+        logmsg(str(ex))
+        logerr(str(ex))
     return info
 
-#---------------
-#hsl.log(get_stackstr(4,True), noprint=True)
-#hsl.log(get_stackstr(), noprint=True, noformat=True)
-#def get_stackstr(num_disp=10,remove_crud=True,numup=1):
-    #stackstr = ''
-    #stack = traceback.extract_stack()
-    #stacklen = len(stack)-numup
-    #for i in xrange(max(0,stacklen-num_disp),stacklen):
-        #(module, line, called, caller) = stack[i] 
-        #if remove_crud:
-            #module = module[module.rfind('\\')+1:module.rfind('.py')]
-        #stackstr += str(i)+ ' %s, %d, %s, %s \n' % (module, line, called, caller)
-        ##stackstr += ' %s.%s -> ' % (module, called)
-    #return stackstr   
 #----------------
 def dircheck(dpath,makedir=True):
     if not os.path.exists(dpath):
@@ -156,6 +136,7 @@ def dircheck(dpath,makedir=True):
 #---------------
 def filecheck(fpath):
     return os.path.exists(fpath)
+
 #---------------
 def lbls2_headers(lbls):
     _lbl2_header = {
@@ -173,9 +154,9 @@ def lbls2_headers(lbls):
         'num_c': 'Num Chips',\
         'aif'  : 'AllIndexesFound',\
     }
-    return map(lambda l: _lbl2_header[l], lbls)
+    return [_lbl2_header[l] for l in lbls]
 
-def lbls2_maxvals(lbls,hs):
+def lbls2_maxvals(lbls, hs):
     '''
     Finds the maximum value seen so far in the managers
     Uses this to figure out how big to make column spacing
@@ -198,15 +179,15 @@ def lbls2_maxvals(lbls,hs):
         'gname': gm.max_gname,\
         'num_c': 10
     }
-    return map(lambda l: _lbl2_maxval[l], lbls)
+    return [_lbl2_maxval[l] for l in lbls]
 
 def lbls2_format(lbls, hs):
     headers = lbls2_headers(lbls)
     maxvals = lbls2_maxvals(lbls, hs)
     #A list of (space,format) tuples
-    _spcfmt = map(lambda (m,h): __table_fmt(m,h), zip(maxvals, headers))
-    header_space_list = map(lambda t: t[0], _spcfmt)
-    data_format_list  = map(lambda t: t[1], _spcfmt)
+    _spcfmt = [__table_fmt(m, h) for m, h in zip(maxvals, headers)]
+    header_space_list = [ t[0] for t in _spcfmt ]
+    data_format_list  = [ t[1] for t in _spcfmt ]
     head_format_list  = ', '.join(['{:>%d}']*len(lbls)) % tuple(header_space_list)
     header = head_format_list.format(*headers)
     data_format = ', '.join(data_format_list)
@@ -236,9 +217,9 @@ def __table_fmt(max_val, lbl=""):
         _rBrace = ' ]'
         _lBrace = '[ '
         # Recursively format elements in the list
-        _items  = map(lambda x: __table_fmt(x), max_val)
-        _spc    = map(lambda t: t[0], _items) # Space of each 
-        _fmt    = map(lambda t: t[1], _items)
+        _items  = [__table_fmt(x) for x in max_val]
+        _spc    = [ t[0] for t in _items]
+        _fmt    = [ t[1] for t in _items]
         spaces  = sum(_spc)+((len(_items)-1)*len(_SEP))+len(_rBrace)+len(_lBrace)
         if spaces < len(lbl):
             _lBrace = ' '*(len(lbl)-spaces) + _lBrace
@@ -250,10 +231,11 @@ def __table_fmt(max_val, lbl=""):
     else:
         logerr('Unknown Type for '+str(type(max_val))+'\n label:\"'+str(lbl)+'\" max_val:'+str(max_val) )
     return (spaces, fmtstr)
+
 #---------------
+
 def keyboard(banner=None):
     ''' Function that mimics the matlab keyboard command '''
-
     # use exception trick to pick up the current frame
     try:
         raise None
@@ -270,75 +252,24 @@ def keyboard(banner=None):
     except SystemExit:
         return
 
-def toMatlabString(arr, nm=None):
-    if type(arr) == types.FloatType:
-        ret = str(arr)
-    else:
-        rows_strs = []
-        for r in arr:
-            cols = ''
-            rows_strs.append(',  '.join(map(lambda _: str(_), r)))
-        ret = '['+';\n'.join(rows_strs)+']'
-    if nm != None:
-        ret = nm + ' = ' + ret
-    return ret
-
-def ml_str(arr, nm=None):
-    return '\n'+toMatlabString(arr, nm)+'\n'
-
-#def is_iterable(_):
-#    return numpy.lib.iterable(_)
-
-def alloc_lists(nAlloc):
-    alloc_data = empty(nAlloc,dtype=list)
-    for i in xrange(nAlloc): alloc_data[i] = [] 
+def alloc_lists(num_alloc):
+    'allocates space for a numpy array of lists'
+    alloc_data = empty(num_alloc, dtype=list)
+    for i in xrange(num_alloc): alloc_data[i] = [] 
     return alloc_data
 
-def npIter(arr):
-    if numpy.iterable(arr):
-        return iter(arr)
-    else:
-        return iter([arr])
-
-def is_in_ipython():
-    try:
-        __IPYTHON__
-        return True
-    except NameError:
-        return False
-
-
 class Timer(object):
+    ''' Used to time statments with a with statment
+    e.g with Timer() as t: some_function()'''
     def __init__(self, name=''):
         self.name = name
+        self.tstart = -1
 
     def __enter__(self):
         self.tstart = time.time()
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type, value, trace):
         tend = time.time()
         if self.name != '':
             print '[%s]' % self.name,
         print 'Elapsed: %s' % (tend - self.tstart)
-
-
-any_empty  = lambda   a: any([len(_) > 0 for _ in a])
-ensurelist = lambda   a: a if is_iterable(a) else O_([a])
-#F_         = lambda   a: array(ensurelist(a), dtype=float32)
-#X_         = lambda   a: array(ensurelist(a), dtype=uint32)
-#O_         = lambda   a: array(ensurelist(a), dtype=object)
-#B_         = lambda   a: array(ensurelist(a), dtype=bool)
-
-HCAT       = lambda   a: hstack(a) if any_empty(a) else empty(0)
-VCAT       = lambda   a: vstack(a) if any_empty(a) else empty(0)
-FIND       = lambda   a: find(a)
-ISECT      = lambda a,b: array( intersect1d(a, b) ,dtype=uint32)
-MAX        = lambda   a: a.max() if len(a) > 0 else 0
-MIN        = lambda   a: a.min() if len(a) > 0 else 0
-PMAX       = lambda a,b: maximum(a,b)
-
-
-# Recursive list dir
-'''[join(relpath(root, img_dpath), fname).replace('\\','/').replace('./','')\
-                      for (root,dlist,flist) in os.walk(img_dpath)\
-                      for fname in flist]'''

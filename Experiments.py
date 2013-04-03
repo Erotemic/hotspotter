@@ -2,7 +2,7 @@ from other.helpers import *
 from other.logger import *
 from core.QueryManager import QueryResult
 from pylab import find
-from numpy import setdiff1d, ones, zeros
+from numpy import setdiff1d, ones, zeros, array, int32
 import shelve
 
 class ExperimentManager(AbstractManager):
@@ -11,7 +11,7 @@ class ExperimentManager(AbstractManager):
         em.cx2_res = None
         em.recompute_bit = False
 
-    def run_quick_experiment(em):
+    def run_singleton_queries(em):
         '''Quick experiment:
            Query each chip with a duplicate against whole database
            Do not remove anyone from ANN matching'''
@@ -25,9 +25,45 @@ class ExperimentManager(AbstractManager):
         em.cx2_res = array([  [] if rr == [] else\
                            QueryResult(hs,rr) for rr in cx2_rr])
 
+    def run_nightly(em):
+        hs = iom.hs
+        iom = hs.iom
+        datasets = iom.get_dataset_fpath('Naut')
+        #vary params
+        hs.am.query.method = 'LNRAT'
+
     def show_query(em, cx):
         res = em.cx2_res[cx]
         hs.show_query(res)
+
+    def get_result_rank_histogram(em):
+        '''returns a histogram of the number of queries with 
+        correct matches with some rank. The rank is the index
+        into the histogram'''
+        if em.cx2_res is None: 
+            logerr('You cant get results on unrun experiments')
+
+        cm,nm,am = em.hs.get_managers('cm','nm','am')
+        # gt hist shows how often a chip is at rank X
+        # opt is the optimistic rank. Precision
+        # pas is the pesemistic rank. Recallish
+        rank_hist_opt = zeros(len(cm.get_valid_cxs())+2) # add 2 because we arent using 0
+        rank_hist_pes = zeros(len(cm.get_valid_cxs())+2) # add 2 because we arent using 0
+        for res in em.cx2_res:
+            if res == []: continue
+            cx = res.rr.qcx
+            qnid = res.rr.qnid
+            # Evaluate considering the top returned chips and names
+            top_cx      = res.cx_sort()
+            gt_pos_chip = (1+find(qnid == cm.cx2_nid(top_cx)))
+            #Overflow, the last position is past the num_top
+            if len(gt_pos_chip) == 0:
+                rank_hist_opt[-1] += 1 
+                rank_hist_pes[-1] += 1
+            else: 
+                rank_hist_opt[min(gt_pos_chip)] += 1
+                rank_hist_pes[max(gt_pos_chip)-len(gt_pos_chip)+1] += 1
+        return rank_hist_opt
 
     def show_problems(em):
         cm,nm,am = em.hs.get_managers('cm','nm','am')
@@ -44,8 +80,7 @@ class ExperimentManager(AbstractManager):
             qnid = res.rr.qnid
             # Evaluate considering the top returned chips and names
             top_cx      = res.cx_sort()
-            top_nids_chip = cm.cx2_nid(top_cx)
-            gt_pos_chip = (1+find(qnid == top_nids_chip))
+            gt_pos_chip = (1+find(qnid == cm.cx2_nid(top_cx)))
             #Overflow, the last position is past the num_top
             if len(gt_pos_chip) == 0: gt_hist_chip[-1] += 1 
             else: gt_hist_chip[min(gt_pos_chip)] += 1
@@ -54,8 +89,7 @@ class ExperimentManager(AbstractManager):
                 cx2_error_chip[cx] = float(sum(gt_pos_chip))/len(gt_pos_chip)
             
             (top_nx, _) = res.nxcx_sort()
-            top_nids_name = nm.nx2_nid[top_nx]
-            gt_pos_name = (1+find(qnid == top_nids_name))
+            gt_pos_name = (1+find(qnid == nm.nx2_nid[top_nx]))
             if len(gt_pos_name) == 0: gt_hist_name[-1] += 1 
             else: gt_hist_name[min(gt_pos_name)] += 1
             if len(gt_pos_name) > 0:

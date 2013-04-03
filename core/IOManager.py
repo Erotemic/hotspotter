@@ -17,6 +17,7 @@ import shutil
 import time
 import fnmatch
 import tpl
+from pylab import find
 from os.path import expanduser, join, normpath, relpath
 from other.helpers import *
 from other.logger           import *
@@ -154,6 +155,13 @@ class IOManager(AbstractManager):
         dircheck(iom.global_dir)
         pref_fname = 'prefs.txt'
         return safepath(join(iom.global_dir, pref_fname))
+
+    def get_dataset_fpath(db_name='Naut_Dan'):
+        if sys.platform == 'win32':
+            work_fpath = 'D:/data/work/'
+        else:
+            work_fpath = '/data/work/'
+        return work_fpath+db_name
 
     def  load_tables(iom):
         logmsg('Loading '+iom.hs.db_dpath)

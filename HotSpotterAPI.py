@@ -235,7 +235,7 @@ class HotSpotterAPI(AbstractPrintable):
         hs.prev_draw = lambda: hs.show_splash()
         splash_fname = os.path.join(hs.get_source_fpath(), 'gui', 'splash.tif')
         splash_img = asarray(Image.open(splash_fname))
-        hs.dm.add_images([splash_img],['Welcome to Hotspotter']);
+        hs.dm.add_images([splash_img],['Welcome to Hotspotter'])
         hs.dm.end_draw()
     # ---
     @func_log
@@ -264,7 +264,7 @@ class HotSpotterAPI(AbstractPrintable):
     # ---
     @func_log
     def show_query(hs, res):
-        cm, nm, dm, am = hs.get_managers('cm','nm','dm','am')
+        cm, dm = hs.get_managers('cm','dm')
         hs.prev_draw = lambda: hs.show_query(res)
         # Make sure draw is valid
         if res is None: hs.show_splash(); return
@@ -275,8 +275,7 @@ class HotSpotterAPI(AbstractPrintable):
         (tcx , tcid , tnid , tname , tscore ) = res.tcid2_(*dynargs+('score',))
         # Titles of the Plot
         qtitle = 'name: %s\nQuery cid=%d, nid=%d' % (qname, qcid, qnid)
-        ttitle_func = lambda (name_, score_): 'name: %s\nscore=%.2f' % (name_, score_)
-        ttile = map(ttitle_func, zip(tname, tscore))
+        ttile = ['name: %s\nscore=%.2f' % (name_, score_) for name_, score_ in zip(tname, tscore)]
         title_list = [qtitle] + ttile
 
         # Add the images to draw

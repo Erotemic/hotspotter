@@ -4,7 +4,7 @@ from algo.spatial_functions import ransac
 from numpy import \
         array, sort, argsort, logical_and, ones, float32, setdiff1d,\
         arange, minimum, sum, multiply, transpose, log2, zeros, tile,\
-        ndarray
+        ndarray, int32, uint32
 
 class RawResults(DynStruct):
     def __init__(rr, *args):

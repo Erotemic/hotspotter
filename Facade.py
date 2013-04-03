@@ -16,7 +16,7 @@ glbls = ['gid','gname','num_c','cids']
 nlbls = ['nid','name','cids']
 
 class Facade(QObject):
-
+    'A friendlier interface into HotSpotter.'
     # Initialization, Opening, and Saving 
     def __init__(fac, use_gui=True, autoload=True, init_prefs={}):
         super( Facade, fac ).__init__()

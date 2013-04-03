@@ -4,7 +4,7 @@ import sys
 import shelve
 from other.helpers import *
 from other.logger           import *
-from numpy import sqrt, zeros, uint8, array, log2, sin, cos, array, floor, asarray
+from numpy import sqrt, zeros, uint8, array, log2, sin, cos, array, floor, asarray, float32
 from PIL import Image, ImageOps
 from tpl.other.shiftableBF import shiftableBF
 from skimage.color import rgb2gray
@@ -102,8 +102,8 @@ class AlgorithmManager(AbstractManager):
         am.query.k                         =       1 
         am.query.num_rerank                =    1000
         am.query.spatial_thresh            =    0.05 
-        am.query.sigma_thresh              =    0.05  # Unimplemented
-        am.query.method                    =  'COUNT' #: DIFF, LNRAT, RAT, TFIDF, COUNT
+        am.query.sigma_thresh              =    0.05  #: Unimplemented
+        am.query.method                    =  'DIFF'  #: DIFF, LNRAT, RAT, TFIDF, COUNT
         am.query.score                     = 'cscore' #: nscore, cscore # move to results
         am.query.self_as_result_bit        =   False  #: Return self (in terms of name) in results
         #TODO: (theta, xy, sigma)_thresh 

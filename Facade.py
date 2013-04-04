@@ -242,6 +242,7 @@ class Facade(QObject):
             '''
 
     def print_selected(fac):
+        uim = fac.hs.uim
         print '''
         HotSpotter State: '''+uim.state+'''
         Selected CID: '''+str(uim.sel_cid)+'''
@@ -339,7 +340,7 @@ class Facade(QObject):
         crossplat.view_text_file(logfname)
 
     def print_help(fac):
-        print messages.command_line_help
+        print messages.cmd_help
 
     @func_log
     def profile(fac, cmd='fac.query(1)'):

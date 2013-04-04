@@ -56,15 +56,15 @@ class UIManager(QObject):
         cm, gm = uim.hs.get_managers('cm','gm')
         'Tells the HotSpotterAPI to draw the current selection in the current mode'
         if uim.state in ['splash_view']:
-            uim.hs.show_splash()
+            uim.hs.dm.show_splash()
         elif uim.state in ['chip_view']:
             if cm.is_valid(uim.sel_cid):
-                uim.hs.show_chip(cm.cx(uim.sel_cid))
+                uim.hs.dm.show_chip(cm.cx(uim.sel_cid))
         elif uim.state in ['image_view', 'select_roi']:
             if gm.is_valid(uim.sel_gid):
-                uim.hs.show_image(gm.gx(uim.sel_gid))
+                uim.hs.dm.show_image(gm.gx(uim.sel_gid))
         elif uim.state in ['result_view']:
-            uim.hs.show_query(uim.sel_res)
+            uim.hs.dm.show_query(uim.sel_res)
         else:
             logerr('I dont know how to draw in state: '+str(uim.state))
 

@@ -151,6 +151,7 @@ class HotspotterMainWindow(QMainWindow):
         main_skel.actionOpen_Database.triggered.connect(fac.open_db)
         main_skel.actionSave_Database.triggered.connect(fac.save_db)
         main_skel.actionImport_Images.triggered.connect(fac.import_images)
+        main_skel.actionQuit.triggered.connect(hsgui.close)
         # View
         main_skel.actionOpen_Source_Directory.triggered.connect(fac.vd)
         main_skel.actionOpen_Data_Directory.triggered.connect(fac.vdd)

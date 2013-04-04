@@ -69,12 +69,12 @@ Format: command [required_args] <optional_args> - description
     selg [gid] - selects and displays the image-id
 
     query  - query's the selected chip-id
-    rename [new_name] - changes the selected chip-id's name to [new_name]
+    rename_cid [new_name] <cid> - changes the selected chip-id's name to [new_name]
                         (YOU WILL NEED QUOTES AROUND THE NAME)
-    remove_chip  - deletes the selected chip-id
+    remove_cid  - deletes the selected chip-id
     reselect_roi - the user reselects the seelcted chip-id's roi
 
-    add_roi - the user adds a chip to the selected image-id
+    add_chip - the user adds a chip to the selected image-id
 
     ctbl - prints chip table
     gtbl - prints image table
@@ -85,6 +85,7 @@ Format: command [required_args] <optional_args> - description
     vd <path> - view current directory
     vdd - view data directory
 
+    select_next - picks one of the following:
     next_empty_image - selects an image without an ROI
     next_uniden_chip - selects a chip without a name
     '''

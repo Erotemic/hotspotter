@@ -17,23 +17,18 @@ Code Concepts:
     possible.
 
 '''
-from Experiments            import ExperimentManager
-from PIL import Image
-from PyQt4.Qt import QString
-from PyQt4.QtGui import QFileDialog
-from core.AlgorithmManager  import AlgorithmManager
-from core.ChipManager       import ChipManager
-from core.IOManager         import IOManager
-from core.ImageManager      import ImageManager
-from core.NameManager       import NameManager
-from core.QueryManager      import QueryManager, QueryResult
-from core.VisualModel       import VisualModel
-from gui.DrawManager       import DrawManager
-from gui.UIManager         import UIManager
-from matplotlib.transforms import Affine2D
-from numpy import asarray, append
-from other.helpers           import *
-from other.logger           import *
+from Experiments import ExperimentManager
+from core.AlgorithmManager import AlgorithmManager
+from core.ChipManager import ChipManager
+from core.IOManager import IOManager
+from core.ImageManager import ImageManager
+from core.NameManager import NameManager
+from core.QueryManager import QueryManager, QueryResult
+from core.VisualModel import VisualModel
+from gui.DrawManager import DrawManager
+from gui.UIManager import UIManager
+from other.helpers import *
+from other.logger import *
 import cPickle
 import os
 import sys
@@ -149,7 +144,6 @@ class HotSpotterAPI(AbstractPrintable):
         hs.cm = None # Instance Manager
         hs.nm = None # Name Manager
         #-
-        hs.prev_draw = lambda : None
         hs.uim = UIManager(hs)
         hs.iom = IOManager(hs)
         hs.dm  = DrawManager(hs)
@@ -185,7 +179,6 @@ class HotSpotterAPI(AbstractPrintable):
         else:
             hs.prefs[pref_name] = pref_val
         hs.write_prefs()
-        hs.prev_draw()
     # ---
     @func_log
     def load_tables(hs):
@@ -229,112 +222,6 @@ class HotSpotterAPI(AbstractPrintable):
         import __init__
         return os.path.dirname(__init__.__file__)
 
-    # ---
-    @func_log
-    def show_splash(hs): 
-        hs.prev_draw = lambda: hs.show_splash()
-        splash_fname = os.path.join(hs.get_source_fpath(), 'gui', 'splash.tif')
-        splash_img = asarray(Image.open(splash_fname))
-        hs.dm.add_images([splash_img],['Welcome to Hotspotter'])
-        hs.dm.end_draw()
-    # ---
-    @func_log
-    def show_image(hs, gx):
-        hs.prev_draw = lambda: hs.show_image(gx)
-        gm, cm, dm = hs.get_managers('gm','cm','dm')
-        gid        = gm.gx2_gid[gx]
-        img_list   = gm.gx2_img_list(gx)
-        title_list = ['gid='+str(gid)+'   gname='+gm.gx2_gname[gx]]
-        transData  = hs.dm.add_images(img_list, title_list)[0]
-        cx_list        = gm.gx2_cx_list[gx]
-        for cx in iter(cx_list):
-            transImg = Affine2D( cm.cx2_transImg(cx) ) 
-            trans    = transImg + transData
-            dm.draw_chiprep(cx, trans, 0)
-        dm.end_draw()
-    # ---
-    @func_log
-    def show_chip(hs, cx):
-        hs.prev_draw = lambda: hs.show_chip(cx)
-        cm, dm = hs.get_managers('cm','dm')
-        cid, name, chip = cm.cx2_(cx, 'cid', 'name', 'chip')
-        transData = dm.add_images([chip], [name])[0]
-        dm.draw_chiprep(cx, transData)
-        dm.end_draw()
-    # ---
-    @func_log
-    def show_query(hs, res):
-        cm, dm = hs.get_managers('cm','dm')
-        hs.prev_draw = lambda: hs.show_query(res)
-        # Make sure draw is valid
-        if res is None: hs.show_splash(); return
-        # Get Chip Properties
-        dynargs =\
-        ('cx', 'cid', 'nid', 'name')
-        (qcx , qcid , qnid , qname ) =  res.qcid2_(*dynargs)
-        (tcx , tcid , tnid , tname , tscore ) = res.tcid2_(*dynargs+('score',))
-        # Titles of the Plot
-        qtitle = 'name: %s\nQuery cid=%d, nid=%d' % (qname, qcid, qnid)
-        ttile = ['name: %s\nscore=%.2f' % (name_, score_) for name_, score_ in zip(tname, tscore)]
-        title_list = [qtitle] + ttile
-
-        # Add the images to draw
-        if hs.prefs['res_as_img']: # Show the results in their full image
-            qimg = cm.cx2_img(qcx)
-            timg = cm.cx2_img_list(tcx)
-            transData_list = dm.add_images([qimg] + timg, title_list)
-            for (ix, cx) in enumerate(append(qcx,tcx)):
-                transImg = Affine2D( cm.cx2_transImg(cx) )
-                transData_list[ix] = transImg + transData_list[ix]
-        else: # Show just the chips
-            qchip = cm.cx2_chip_list(qcx)
-            tchip = cm.cx2_chip_list(tcx)
-            transData_list = dm.add_images(qchip + tchip, title_list)
-
-        # Draw the Query Chiprep
-        qtransData = transData_list[0]
-        qaxi       = 0; qfsel      = []
-        dm.draw_chiprep(qcx, qtransData, qaxi, qfsel)
-        # Draw the Top Result Chipreps
-        for (tx, cx) in enumerate(tcx):
-            fm    = res.rr.cx2_fm[cx]
-            fs    = res.rr.cx2_fs[cx]
-            axi   = tx+1
-            qfsel = fm[fs > 0][:,0]
-            fsel  = fm[fs > 0][:,1]
-            transData = transData_list[tx+1]
-            dm.draw_chiprep(cx,   transData,  axi,  fsel,\
-                            qcx, qtransData, qaxi, qfsel)
-        dm.end_draw()
-    # --- 
-    @func_log
-    def show_matching_graph(hs, computed_cx2_rr=None):
-        hs.prev_draw = lambda: hs.show_matching_graph(computed_cx2_rr)
-        cm = hs.cm
-        dm = hs.dm
-        try: 
-            computed_cx2_rr
-        except NameError:
-            computed_cx2_rr = None
-        if computed_cx2_rr == None:
-            computed_cx2_rr = vm.batch_query()
-        import networkx
-        G = networkx.DiGraph()
-        for rr in computed_cx2_rr:
-            if rr == []: continue
-            res = QueryResult(hs,rr)
-            qcid  = res.qcid
-            qnid  = res.qnid
-            G.add_node(qcid,qcid=qcid,qnid=qnid)
-            rr = res.rr
-            for (tscore,tcx) in zip(rr.cx2_cscore, range(len(rr.cx2_cscore))):
-                tcid = cm.cx2_cid[tcx]
-                if tscore > 0:
-                    G.add_edge(qcid, tcid, weight=tscore**2-tscore)
-        dm.draw_graph(G)
-        #hs.dm.end_draw()
-        pass
-    # --- 
     def get_managers(hs, *manager_list):
         'quick access of managers eg: (am, cm, iom) = hs.managers("am","cm","iom")'
         return tuple([hs.__dict__[manager_name] for manager_name in manager_list])

@@ -1,3 +1,9 @@
+#!/bin/python
+#TODO Find what else is using matplotlib other than drawmanager and 
+# get rid of it
+import matplotlib
+matplotlib.use('Qt4Agg')
+
 from Facade import Facade
 from PyQt4.Qt import QApplication, QEventLoop
 from PyQt4.QtCore import QCoreApplication
@@ -23,12 +29,12 @@ def_on  = {'action':'store_false', 'default':True}
 def_off = {'action':'store_true', 'default':False}
 
 parser.add_argument('-l', '--log-all',         dest='logall_bit',   help='Writes all logs', **def_off)
+parser.add_argument('--cmd',                   dest='cmd_bit',   help='Forces command line mode', **def_off)
 parser.add_argument('-r', '--run-experiments', dest='runexpt_bit',  help='Runs the experiments', **def_off)
 parser.add_argument('-g', '--gui-off',         dest='gui_bit',      help='Runs HotSpotter in command line mode', **def_on)
 parser.add_argument('-a', '--autoload-off',    dest='autoload_bit', help='Starts HotSpotter without loading a database', **def_on)
 
 args = parser.parse_args()
-print args
 
 if args.logall_bit:
     hsl.enable_global_logs()
@@ -62,11 +68,27 @@ if args.runexpt_bit:
     em.run_quick_experiment()
     em.show_problems()
 
-# Execute the threads 
-if not in_qtc_bit:
-    print 'Running the app until Exit'
+
+# be careful to not block the command line interface thread. 
+run_new_exec_loop_bit = False
+if args.cmd_bit or not args.gui_bit:
+    try:
+        __IPYTHON__
+    except NameError:
+        try:
+            print "Starting IPython Command Line Interaction"
+            import IPython
+            IPython.embed()
+        except Exception as e:
+            run_new_exec_loop_bit = True
+            print e
+elif in_qtc_bit:    
+    print 'Starting QtConsole Command Line Interaction'
+else:
+    run_new_exec_loop_bit = True
+if run_new_exec_loop_bit:
+    print 'Running the application event loop'
     sys.stdout.flush()
     sys.exit(app.exec_())
-else: 
-    print 'Starting Command Line Interaction'
+
 sys.stdout.flush()

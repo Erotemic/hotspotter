@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\code\HotSpotter-python\widgets\MainSkel.ui'
+# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/gui/MainSkel.ui'
 #
-# Created: Mon Apr 01 13:50:19 2013
-#      by: PyQt4 UI code generator 4.9.5
+# Created: Thu Apr  4 14:15:36 2013
+#      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -100,7 +100,7 @@ class Ui_mainSkel(object):
         self.gridLayout_2.addLayout(self.status_HLayout, 2, 1, 1, 1)
         mainSkel.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(mainSkel)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 927, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 927, 24))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -157,9 +157,12 @@ class Ui_mainSkel(object):
         self.actionOpen_Internal_Directory.setObjectName(_fromUtf8("actionOpen_Internal_Directory"))
         self.actionPreferences = QtGui.QAction(mainSkel)
         self.actionPreferences.setObjectName(_fromUtf8("actionPreferences"))
+        self.actionQuit = QtGui.QAction(mainSkel)
+        self.actionQuit.setObjectName(_fromUtf8("actionQuit"))
         self.menuFile.addAction(self.actionOpen_Database)
         self.menuFile.addAction(self.actionSave_Database)
         self.menuFile.addAction(self.actionImport_Images)
+        self.menuFile.addAction(self.actionQuit)
         self.menuView.addAction(self.actionOpen_Data_Directory)
         self.menuView.addAction(self.actionOpen_Source_Directory)
         self.menuView.addAction(self.actionOpen_Internal_Directory)
@@ -242,6 +245,7 @@ class Ui_mainSkel(object):
         self.actionWriteLogs.setText(QtGui.QApplication.translate("mainSkel", "Write Logs", None, QtGui.QApplication.UnicodeUTF8))
         self.actionOpen_Internal_Directory.setText(QtGui.QApplication.translate("mainSkel", "View Internal Directory", None, QtGui.QApplication.UnicodeUTF8))
         self.actionPreferences.setText(QtGui.QApplication.translate("mainSkel", "Edit Preferences", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionQuit.setText(QtGui.QApplication.translate("mainSkel", "Quit", None, QtGui.QApplication.UnicodeUTF8))
 
 
 if __name__ == "__main__":

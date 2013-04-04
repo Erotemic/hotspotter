@@ -161,7 +161,7 @@
      <x>0</x>
      <y>0</y>
      <width>927</width>
-     <height>21</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -171,6 +171,7 @@
     <addaction name="actionOpen_Database"/>
     <addaction name="actionSave_Database"/>
     <addaction name="actionImport_Images"/>
+    <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -362,6 +363,11 @@
   <action name="actionPreferences">
    <property name="text">
     <string>Edit Preferences</string>
+   </property>
+  </action>
+  <action name="actionQuit">
+   <property name="text">
+    <string>Quit</string>
    </property>
   </action>
  </widget>

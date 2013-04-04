@@ -1,6 +1,7 @@
 import numpy as np
 import re
 import types
+from other.helpers import *
 class AbstractPrintable(object):
     'A base class that prints its attributes instead of the memory address'
     def __init__(self, child_print_exclude=[]):

@@ -35,7 +35,7 @@ class Facade(QObject):
         # Open previous database
         try:
             fac.open_db(None, autoload)
-        except Exception as e:
+        except Exception as ex:
             print "Error occurred in autoload"
             print str(e)
             print '<<<<<<   Traceback    >>>>>'
@@ -162,10 +162,9 @@ class Facade(QObject):
         print new_state
         # THIS LIST IS IN THE ORDER OF THE TABS. 
         # THIS SHOULD CHANGE TO BE INDEPENDENT OF THAT FIXME
-        valid_states = ['image_view','chip_view','result_view']
-        if not new_state in valid_states:
-            if new_state in range(len(valid_states)):
-                new_state = valid_states[new_state]
+        if not new_state in uim.tab_order:
+            if new_state in range(len(uim.tab_order)):
+                new_state = uim.tab_order[new_state]
             else:
                 logerr('State is: '+str(new_state)+', but it must be one of: '+str(valid_states))
         uim.update_state(new_state)
@@ -191,7 +190,7 @@ class Facade(QObject):
             uim.update_state('result_view')
             uim.populate_result_table()
             uim.draw()
-        except Exception as e: 
+        except Exception as ex: 
             uim.update_state('done_querying')
             uim.update_state('query_failed')
             raise
@@ -390,6 +389,6 @@ class Facade(QObject):
         pycallgraph.make_dot_graph(callgraph_fpath)
         Image.open(callgraph_fpath).show()
 
-    def get_namespace(fac):
-        ''' Alias facade functions so the command line can reference them by name
-        the namespace eg: fac.select_cid(3) gets an alias select_cid(4)'''
+    def convert_all_images_to_chips(fac):
+
+        pass

@@ -26,7 +26,7 @@
          </sizepolicy>
         </property>
         <property name="currentIndex">
-         <number>2</number>
+         <number>0</number>
         </property>
         <widget class="QWidget" name="image_view">
          <property name="minimumSize">
@@ -175,8 +175,10 @@
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
-     <string>External</string>
+     <string>Convinience</string>
     </property>
+    <addaction name="actionConvertImage2Chip"/>
+    <addaction name="separator"/>
     <addaction name="actionOpen_Data_Directory"/>
     <addaction name="actionOpen_Source_Directory"/>
     <addaction name="actionOpen_Internal_Directory"/>
@@ -368,6 +370,11 @@
   <action name="actionQuit">
    <property name="text">
     <string>Quit</string>
+   </property>
+  </action>
+  <action name="actionConvertImage2Chip">
+   <property name="text">
+    <string>Convert All Images to Chips</string>
    </property>
   </action>
  </widget>

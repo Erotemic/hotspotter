@@ -28,12 +28,9 @@ def gui_log(fn):
             ret = fn(hsgui, *args, **kwargs)
             hsgui.logdbgSignal.emit(outo_str)
             return ret
-        except FuncLogException:
-            raise
-        except Exception as e:
-            # Only do this if something really bad happened
-            tb = traceback.format_exc()
-            logerr('!!!GUI ERROR: \n'+tb+'\n'+str(e))
+        except Exception as ex:
+            logmsg('\n\n *!!* HotSpotter GUI Raised Exception: '+str(ex))
+            logmsg('\n\n *!!* HotSpotter GUI Exception Traceback: \n\n'+traceback.format_exc())
     return gui_log_wrapper
 
 
@@ -221,7 +218,7 @@ class HotspotterMainWindow(QMainWindow):
                 try:
                     int_data = int(data)
                     item.setData(Qt.DisplayRole, int_data)
-                except Exception as e:
+                except Exception as ex:
                     item.setText(str(data))
                 item.setTextAlignment(Qt.AlignHCenter)
                 if col_editable[col]: item.setFlags(item.flags() | Qt.ItemIsEditable)
@@ -231,9 +228,6 @@ class HotspotterMainWindow(QMainWindow):
         tbl.sortByColumn(sort_col,sort_ord) # Move back to old sorting
         tbl.show()
         tbl.blockSignals(prevBlockSignals)
-
-
-        
 
     def updateSelSpinsSlot(hsgui, cid, gid):
         hsgui.prev_cid = cid
@@ -247,6 +241,7 @@ class HotspotterMainWindow(QMainWindow):
            hsgui.plotWidget.isVisible(): 
             hsgui.plotWidget.show()
             hsgui.plotWidget.draw()
+
     def updateStateSlot(hsgui, state):
         hsgui.main_skel.state_LBL.setText(state)
 
@@ -268,36 +263,23 @@ class HotspotterMainWindow(QMainWindow):
         sel_cid = int(hsgui.main_skel.chip_TBL.item(sel_row,0).text())
         hsgui.selectCidSignal.emit(sel_cid)
 
+    @gui_log
     def chipTableChangedSlot(hsgui, item):
         hsgui.logdbgSignal.emit('chip table changed')
-        try:
-            sel_row = item.row()
-            sel_cid = int(hsgui.main_skel.chip_TBL.item(sel_row,0).text())
-            new_name = str(item.text())
-            print 'NewName=%s for CID=%s' % (str(new_name), str(sel_cid))
-            hsgui.selectCidSignal.emit(sel_cid)
-            hsgui.renameChipIdSignal.emit(new_name, -1)
-        except FuncLogException:
-            logdbg('GUI Reraises FuncLog-Exception: '+str(e))
-            raise
-        except LogErrorException:
-            logdbg('GUI Reraises LogError-Exception: '+str(e))
-            raise
-        except Exception as e:
-            logmsg('\n\n *!!* HotSpotter GUI Catches Exception: '+str(e))
-            logmsg('\n\n *!!* HotSpotter GUI Exception Traceback: \n\n'+traceback.format_exc())
-            sys.stdout.flush()
-            et, ei, tb = sys.exc_info()
-            raise FuncLogException, FuncLogException(e), tb
-        #hsgui.renameCidSignal(cid, newName)
+        sel_row = item.row()
+        sel_cid = int(hsgui.main_skel.chip_TBL.item(sel_row,0).text())
+        new_name = str(item.text())
+        hsgui.selectCidSignal.emit(sel_cid)
+        hsgui.renameChipIdSignal.emit(new_name, -1)
+        #hsgui.renameCidSignal(cid, new_name)
 
     @gui_log
     def resultTableChangedSlot(hsgui, item):
         hsgui.logdbgSignal.emit('result table changed')
         sel_row  = item.row()
-        sel_cid  = hsgui.main_skel.res_TBL.item(sel_row,1).text()
-        new_name = item.text()
-        hsgui.renameChipIdSignal.emit(str(newName), int(sel_cid))
+        sel_cid  = int(hsgui.main_skel.res_TBL.item(sel_row,1).text())
+        new_name = str(item.text())
+        hsgui.renameChipIdSignal.emit(new_name, int(sel_cid))
 
     @gui_log
     def imageTableClickedSlot(hsgui, item):
@@ -306,8 +288,3 @@ class HotspotterMainWindow(QMainWindow):
         sel_row = item.row()
         sel_gid = int(hsgui.main_skel.image_TBL.item(sel_row,0).text())
         hsgui.selectGidSignal.emit(sel_gid)
-
-    ''' dev_grab_item
-    chip_TBL = hsgui.main_skel.chip_TBL
-    item = chip_TBL.item(0,1)
-    '''

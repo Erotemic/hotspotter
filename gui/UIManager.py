@@ -28,6 +28,7 @@ class UIManager(QObject):
         uim.sel_gid = None
         uim.sel_res = None
         uim.state = 'splash_view'
+        uim.tab_order = ['image','chip','result']
 
     def start_gui(uim, fac): # Currently needs facade access
         logdbg('Creating the GUI')
@@ -91,6 +92,7 @@ class UIManager(QObject):
     def populate_tables(uim):
         uim.populate_chip_table()
         uim.populate_image_table()
+        uim.populate_result_table()
 
     @func_log
     def update_state(uim, new_state):

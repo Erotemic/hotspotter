@@ -236,60 +236,6 @@ class VisualModel(AbstractManager):
         logmsg('The model is built')
         return True
 
-    def batch_query(vm, force_recomp=False, test_cxs=None):
-        iom, am = vm.hs.get_managers('iom','am')
-        samp_suffix = vm.get_samp_suffix()
-        algo_suffix = am.get_algo_suffix(depends='all')
-        qres_shelf_fname = 'qres_shelf'+samp_suffix+algo_suffix+'.db'
-        shelf_fpath = iom.get_temp_fpath(qres_shelf_fname)
-        # Compute the matches
-        qm = vm.hs.qm
-        vm.build_model(force_recomp=force_recomp)
-        if test_cxs == None:
-            test_cxs = vm.get_train_cx()
-        cx2_rr = alloc_lists(vm.hs.cm.max_cx+1)
-        logmsg('Building matching graph. This may take awhile')
-        total = len(test_cxs)
-        count = 0
-        need_to_save = force_recomp
-        shelf = shelve.open(shelf_fpath)
-        for cx in test_cxs:   
-            count+=1
-            shelf_key = str(cx)
-            rr = None
-            if not force_recomp and shelf_key in shelf.keys():
-                logmsg('Reloading %d/%d' % (count, total)) 
-                try:
-                    rr = shelf[str(cx)]
-                except Exception: 
-                    logmsg('Error reading '+str(cx))
-            if rr == None:
-                logmsg('Query %d/%d' % (count, total))
-                rr = qm.cx2_res(cx).rr
-                need_to_save = True
-            cx2_rr[cx] = rr
-        shelf.close()
-        if need_to_save: # Save the matches
-            shelf = shelve.open(shelf_fpath)
-            try:
-                # try and save some memory
-                for i in range(len(cx2_rr)):
-                    logmsg('SavingRR: '+str(i))
-                    to_save = cx2_rr[i]
-                    if to_save == []:
-                        continue
-                    to_save.cx2_cscore_ = []
-                    to_save.cx2_fs_ = []
-                    to_save.qfdsc = []
-                    to_save.qfpts = []
-                    shelf[str(to_save.qcx)] = to_save
-                shelf.sync()
-            except Exception as e:
-                logerr('Error saving to the shelf: '+str(e))
-            finally:
-                shelf.close()
-        logmsg('Done building matching graph.')
-        return cx2_rr
 
     
     def sample_train_set(vm, samp_filter_arg=None):

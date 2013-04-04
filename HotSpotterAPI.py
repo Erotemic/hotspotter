@@ -27,6 +27,8 @@ from core.QueryManager import QueryManager, QueryResult
 from core.VisualModel import VisualModel
 from gui.DrawManager import DrawManager
 from gui.UIManager import UIManager
+from other.AbstractPrintable import AbstractPrintable
+from other.PrefStruct import PrefStruct
 from other.helpers import *
 from other.logger import *
 import cPickle
@@ -35,6 +37,22 @@ import sys
 import types
 
 class HotSpotterAPI(AbstractPrintable):
+
+    def default_preferences(hs):
+        default_prefs = PrefStruct(hs.iom.get_prefs_fpath())
+        display_prefs = PrefStruct(hs.iom.get_prefs_fpath())
+
+        core_prefs.database_dpath  = None
+        core_prefs.roi_quickselect = False
+
+        display_prefs.thumbnail_size = None
+        display_prefs.thumbnail_size = None
+        display_prefs.ellipse_bit    = False
+        display_prefs.points_bit     = False
+        display_prefs.ellipse_alpha  = .5
+        #TODO: Combo Pref
+        display_prefs.result_display_mode = (1, ['in_image', 'in_raw_chip', 'in_preprocessed_chip'])
+
     @func_log
     def read_prefs(hs, default_bit=False):
         'Loads preferences from the home directory'

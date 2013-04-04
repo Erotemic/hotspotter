@@ -192,19 +192,19 @@ def func_log(fn):
         ret = None
         try:
             ret = fn(*args, **kwargs)
-        except FuncLogException as e:
-            logdbg('Caught FuncLog-Exception: '+str(e))
-        except LogErrorException as e: 
-            logdbg('Caught LogError-Exception: '+str(e))
+        except FuncLogException as ex:
+            logdbg('Caught FuncLog-Exception: '+str(ex))
+        except LogErrorException as ex: 
+            logdbg('Caught LogError-Exception: '+str(ex))
             et, ei, tb = sys.exc_info()
             #et, ei, tb = sys.exc_info()
             #raise FuncLogException, FuncLogException(e), tb
-        except Exception as e: 
-            logmsg('\n\n *!!* HotSpotter Logger Raised Exception: '+str(e))
+        except Exception as ex: 
+            logmsg('\n\n *!!* HotSpotter Logger Raised Exception: '+str(ex))
             logmsg('\n\n *!!* HotSpotter Logger Exception Traceback: \n\n'+traceback.format_exc())
             sys.stdout.flush()
             et, ei, tb = sys.exc_info()
-            raise FuncLogException, FuncLogException(e), tb
+            #raise FuncLogException, FuncLogException(e), tb
         # --- Log Exit Function
         hsl.log(prefixOUT+outo_str, noprint=True, noformat=True)
         if info.indent < 1:
@@ -228,10 +228,18 @@ def logerr(msg=None):
     hsl.log('</ERROR Number '+str(error_num)+'>')
     hsl.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
     sys.stdout.flush(); sys.stderr.flush()
-    #try:
-    #    QMessageBox.critical(None, 'ERROR', to_log)
-    #except Exception as e:
-    #    print(str(e))
+    try:
+        # Make a non modal critical QMessageBox
+        msgBox = QMessageBox( None );
+        msgBox.setAttribute( Qt.WA_DeleteOnClose )
+        msgBox.setStandardButtons( QMessageBox.Ok )
+        msgBox.setWindowTitle( 'ERROR' )
+        msgBox.setText( to_log )
+        msgBox.setModal( False );
+        msgBox.open( msgBox.close )
+        # Old Modal Version: QMessageBox.critical(None, 'ERROR', to_log)
+    except Exception as ex:
+        print(str(ex))
     raise LogErrorException(error_num)
 def logmsg(msg):
     hsl.log(msg)

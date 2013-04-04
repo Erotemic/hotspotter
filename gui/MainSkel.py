@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/gui/MainSkel.ui'
 #
-# Created: Thu Apr  4 14:15:36 2013
+# Created: Thu Apr  4 15:02:57 2013
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -159,10 +159,14 @@ class Ui_mainSkel(object):
         self.actionPreferences.setObjectName(_fromUtf8("actionPreferences"))
         self.actionQuit = QtGui.QAction(mainSkel)
         self.actionQuit.setObjectName(_fromUtf8("actionQuit"))
+        self.actionConvertImage2Chip = QtGui.QAction(mainSkel)
+        self.actionConvertImage2Chip.setObjectName(_fromUtf8("actionConvertImage2Chip"))
         self.menuFile.addAction(self.actionOpen_Database)
         self.menuFile.addAction(self.actionSave_Database)
         self.menuFile.addAction(self.actionImport_Images)
         self.menuFile.addAction(self.actionQuit)
+        self.menuView.addAction(self.actionConvertImage2Chip)
+        self.menuView.addSeparator()
         self.menuView.addAction(self.actionOpen_Data_Directory)
         self.menuView.addAction(self.actionOpen_Source_Directory)
         self.menuView.addAction(self.actionOpen_Internal_Directory)
@@ -193,7 +197,7 @@ class Ui_mainSkel(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(mainSkel)
-        self.tablesTabWidget.setCurrentIndex(2)
+        self.tablesTabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(mainSkel)
 
     def retranslateUi(self, mainSkel):
@@ -208,7 +212,7 @@ class Ui_mainSkel(object):
         self.label_3.setText(QtGui.QApplication.translate("mainSkel", "Image-ID:", None, QtGui.QApplication.UnicodeUTF8))
         self.label.setText(QtGui.QApplication.translate("mainSkel", "Chip-ID:", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("mainSkel", "File", None, QtGui.QApplication.UnicodeUTF8))
-        self.menuView.setTitle(QtGui.QApplication.translate("mainSkel", "External", None, QtGui.QApplication.UnicodeUTF8))
+        self.menuView.setTitle(QtGui.QApplication.translate("mainSkel", "Convinience", None, QtGui.QApplication.UnicodeUTF8))
         self.menuOptions.setTitle(QtGui.QApplication.translate("mainSkel", "Options", None, QtGui.QApplication.UnicodeUTF8))
         self.menuHelp.setTitle(QtGui.QApplication.translate("mainSkel", "Help", None, QtGui.QApplication.UnicodeUTF8))
         self.menuActions.setTitle(QtGui.QApplication.translate("mainSkel", "Actions", None, QtGui.QApplication.UnicodeUTF8))
@@ -246,6 +250,7 @@ class Ui_mainSkel(object):
         self.actionOpen_Internal_Directory.setText(QtGui.QApplication.translate("mainSkel", "View Internal Directory", None, QtGui.QApplication.UnicodeUTF8))
         self.actionPreferences.setText(QtGui.QApplication.translate("mainSkel", "Edit Preferences", None, QtGui.QApplication.UnicodeUTF8))
         self.actionQuit.setText(QtGui.QApplication.translate("mainSkel", "Quit", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionConvertImage2Chip.setText(QtGui.QApplication.translate("mainSkel", "Convert All Images to Chips", None, QtGui.QApplication.UnicodeUTF8))
 
 
 if __name__ == "__main__":

@@ -362,14 +362,14 @@ class AlgorithmManager(AbstractManager):
             if not filecheck(outname):
                 logerr('The output file doesnt exist: '+outname)
             logmsg('External Output:\n'+out[:-1])
-        except Exception as e:
-            logwarn('An Exception occurred while calling the keypoint detector: '+str(e))
+        except Exception as ex:
+            logwarn('An Exception occurred while calling the keypoint detector: '+str(ex))
             try:
                 ret2 = os.system(cmd)
                 if ret2 != 0:
-                    logerr(str(e)+'\nThe backup hesaff command didnt work either!')
-            except Exception as e2:
-                logerr(str(e2))
+                    logerr(str(ex)+'\nThe backup hesaff command didnt work either!')
+            except Exception as ex2:
+                logerr(str(ex2))
         fid = file(outname,'r')
         ndims  = int(fid.readline())
         nkpts = int(fid.readline())

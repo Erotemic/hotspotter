@@ -19,7 +19,7 @@ class DrawManager(AbstractManager):
         dm.add_images([splash_img],['Welcome to Hotspotter'])
         dm.end_draw()
     # ---
-    def show_image(hs, gx):
+    def show_image(dm, gx):
         gm, cm = dm.hs.get_managers('gm','cm')
         gid        = gm.gx2_gid[gx]
         img_list   = gm.gx2_img_list(gx)
@@ -42,7 +42,7 @@ class DrawManager(AbstractManager):
     def show_query(dm, res):
         cm = dm.hs.cm
         # Make sure draw is valid
-        if res is None: hs.show_splash(); return
+        if res is None: dm.show_splash(); return
         # Get Chip Properties
         dynargs =\
         ('cx', 'cid', 'nid', 'name')

@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python
 #TODO Find what else is using matplotlib other than drawmanager and 
 # get rid of it
 import matplotlib
@@ -79,9 +79,9 @@ if args.cmd_bit or not args.gui_bit:
             print "Starting IPython Command Line Interaction"
             import IPython
             IPython.embed()
-        except Exception as e:
+        except Exception as ex:
             run_new_exec_loop_bit = True
-            print e
+            print ex
 elif in_qtc_bit:    
     print 'Starting QtConsole Command Line Interaction'
 else:

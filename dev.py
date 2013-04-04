@@ -14,7 +14,8 @@ import types
 hs = fac.hs
 uim = hs.uim
 hsgui = uim.hsgui
-epw = hsgui.epw
+if hsgui != None:
+    epw = hsgui.epw
 cm,  nm,  gm,  am,  dm,  vm,  qm,  iom,  em = hs.get_managers(
 'cm','nm','gm','am','dm','vm','qm','iom','em')
 

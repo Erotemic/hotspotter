@@ -156,11 +156,16 @@ class IOManager(AbstractManager):
         pref_fname = 'prefs.txt'
         return safepath(join(iom.global_dir, pref_fname))
 
-    def get_dataset_fpath(db_name='Naut_Dan'):
+    def get_dataset_fpath(iom, db_name=None):
         if sys.platform == 'win32':
             work_fpath = 'D:/data/work/'
         else:
             work_fpath = '/data/work/'
+        if db_name is None:
+            db_name = 'Naut_Dan'
+            print "Valid Work Directories Are: "
+            for dir in os.listdir(work_fpath):
+                print dir
         return work_fpath+db_name
 
     def  load_tables(iom):

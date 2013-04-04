@@ -1,10 +1,12 @@
-from PyQt4.QtCore import QCoreApplication
-from PyQt4.Qt import QApplication, QEventLoop
 from Facade import Facade
-import sys
-import inspect
+from PyQt4.Qt import QApplication, QEventLoop
+from PyQt4.QtCore import QCoreApplication
 from other.helpers import *
 from other.logger import *
+import argparse
+import inspect
+import sys
+
 try:
     import tpl
     sys.path.append(os.path.join(os.path.dirname(tpl.__file__),'tpl',sys.platform,'lib'))
@@ -12,34 +14,33 @@ except Exception:
     print '''You must download hotspotter\'s 3rd party libraries before you can run it. 
     git clone https://github.com/Erotemic:tpl-hotspotter.git tpl'''
 
-
-use_gui         = True
-autoload        = True
-experiment_bit  = False
 init_prefs = {}
 logmsg('Starting the program')
-for (argc, argv) in enumerate(sys.argv):
-    if argv == '--no-plotwidget':
-        init_prefs['plotwidget_bit'] = True
-    if argv == '--plotwidget':
-        init_prefs['plotwidget_bit'] = False
-    if argv == '--no-gui':
-        use_gui = False
-    if argv == '--global-logs':
-        hsl.enable_global_logs()
-    if argv == '--no-autoload':
-        autoload = False
-    if argv == '--run-experiments':
-        experiment_bit = True
+
+parser = argparse.ArgumentParser(description='HotSpotter - Instance Recognition', prefix_chars='+-')
+
+def_on  = {'action':'store_false', 'default':True}
+def_off = {'action':'store_true', 'default':False}
+
+parser.add_argument('-l', '--log-all',         dest='logall_bit',   help='Writes all logs', **def_off)
+parser.add_argument('-r', '--run-experiments', dest='runexpt_bit',  help='Runs the experiments', **def_off)
+parser.add_argument('-g', '--gui-off',         dest='gui_bit',      help='Runs HotSpotter in command line mode', **def_on)
+parser.add_argument('-a', '--autoload-off',    dest='autoload_bit', help='Starts HotSpotter without loading a database', **def_on)
+
+args = parser.parse_args()
+print args
+
+if args.logall_bit:
+    hsl.enable_global_logs()
 
 # Attach to QtConsole's QApplication if able
 app = QCoreApplication.instance() 
-in_qtconsole_bit = (not app is None)
-if not in_qtconsole_bit:
+in_qtc_bit = (not app is None)
+if not in_qtc_bit:
     app = QApplication(sys.argv)
 
 # Start HotSpotter via the Facade
-fac = Facade(use_gui=use_gui, autoload=autoload, init_prefs=init_prefs)
+fac = Facade(use_gui=args.gui_bit, autoload=args.autoload_bit, init_prefs=init_prefs)
 for (name, value) in inspect.getmembers(Facade, predicate=inspect.ismethod):
     if name.find('_') != 0:
         exec('def '+name+'(*args, **kdgs): fac.'+name+'(*args, **kdgs)')
@@ -57,12 +58,12 @@ dnspc = dev.get_namespace(fac)
 exec(dnspc)
 
 # TODO Move to dev
-if experiment_bit:
+if args.runexpt_bit:
     em.run_quick_experiment()
     em.show_problems()
 
 # Execute the threads 
-if not in_qtconsole_bit:
+if not in_qtc_bit:
     print 'Running the app until Exit'
     sys.stdout.flush()
     sys.exit(app.exec_())

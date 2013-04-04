@@ -1,12 +1,23 @@
 #!/usr/bin/env python
-#TODO Find what else is using matplotlib other than drawmanager and 
-# get rid of it
-import matplotlib
-matplotlib.use('Qt4Agg')
+#TODO: Find a way to make this ugly code nice
+
+#-------------------------------------------
+# Figure out which environment we are in
+# and set assocated preferences
+
+# Attach to QtConsole's QApplication if able
+from PyQt4.QtCore import QCoreApplication
+app = QCoreApplication.instance() 
+in_qtc_bit = (not app is None)
+
+if not in_qtc_bit:
+    'if not in qtconsole, then configure matplotlib'
+    import matplotlib
+    matplotlib.use('Qt4Agg')
+
 
 from Facade import Facade
 from PyQt4.Qt import QApplication, QEventLoop
-from PyQt4.QtCore import QCoreApplication
 from other.helpers import *
 from other.logger import *
 import argparse
@@ -39,9 +50,6 @@ args = parser.parse_args()
 if args.logall_bit:
     hsl.enable_global_logs()
 
-# Attach to QtConsole's QApplication if able
-app = QCoreApplication.instance() 
-in_qtc_bit = (not app is None)
 if not in_qtc_bit:
     app = QApplication(sys.argv)
 

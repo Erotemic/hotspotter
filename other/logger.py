@@ -6,6 +6,8 @@ import sys
 import types
 from other.AbstractPrintable import AbstractPrintable
 from PyQt4.Qt import QObject
+from PyQt4.QtGui import QMessageBox
+from PyQt4.QtCore import Qt
 import re
 
 #import os
@@ -90,7 +92,24 @@ class HotSpotterLogger(object):
          '<(\'-\'<)  %4d']
         hsl.delete_kirby = '\b'*13
         hsl.prev_time = time.time()
+        hsl.non_modal_qt_handles = []
     
+    def non_modal_critical_dialog(hsl, title, msg):
+        try:
+            # Make a non modal critical QMessageBox
+            msgBox = QMessageBox( None );
+            msgBox.setAttribute( Qt.WA_DeleteOnClose )
+            msgBox.setStandardButtons( QMessageBox.Ok )
+            msgBox.setWindowTitle( title )
+            msgBox.setText( msg )
+            msgBox.setModal( False )
+            msgBox.open( msgBox.close )
+            msgBox.show()
+            hsl.non_modal_qt_handles.append(msgBox)
+            # Old Modal Version: QMessageBox.critical(None, 'ERROR', msg)
+        except Exception as ex:
+            print(str(ex))
+
     def __str__(hsl):
         return hsl.hidden_logs()
 
@@ -222,24 +241,13 @@ def logerr(msg=None):
     error_num = hsl.error_num
     hsl.error_num += 1
     hsl.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-    hsl.log('<ERROR Number '+str(error_num)+'>')
-    hsl.log('\n\n *!* HotSpotter Raised Exception: \n'+str(msg))
+    hsl.log('<ERROR Number %d>' % error_num)
+    hsl.log('\n\n *!* HotSpotter Raised Exception: %s \n' % str(msg))
     #hsl.log('\n\n *!* HotSpotter Exception Traceback: \n'+traceback.format_exc())
-    hsl.log('</ERROR Number '+str(error_num)+'>')
+    hsl.log('<ERROR Number %d>' % error_num)
     hsl.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
     sys.stdout.flush(); sys.stderr.flush()
-    try:
-        # Make a non modal critical QMessageBox
-        msgBox = QMessageBox( None );
-        msgBox.setAttribute( Qt.WA_DeleteOnClose )
-        msgBox.setStandardButtons( QMessageBox.Ok )
-        msgBox.setWindowTitle( 'ERROR' )
-        msgBox.setText( to_log )
-        msgBox.setModal( False );
-        msgBox.open( msgBox.close )
-        # Old Modal Version: QMessageBox.critical(None, 'ERROR', to_log)
-    except Exception as ex:
-        print(str(ex))
+    hsl.non_modal_critical_dialog('ERROR #%d' % error_num, msg)
     raise LogErrorException(error_num)
 def logmsg(msg):
     hsl.log(msg)

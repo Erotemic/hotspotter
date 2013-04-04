@@ -3,11 +3,9 @@ import subprocess
 import sys
 import shelve
 from other.helpers import *
-from other.logger           import *
+from other.logger  import *
 from numpy import sqrt, zeros, uint8, array, log2, sin, cos, array, floor, asarray
 from PIL import Image, ImageOps
-from tpl.other.shiftableBF import shiftableBF
-from skimage.color import rgb2gray
 import numpy as np
 from scipy import stats
 import re
@@ -256,6 +254,7 @@ class AlgorithmManager(AbstractManager):
         if am.preproc.autocontrast_bit :
             pil_filt = ImageOps.autocontrast(pil_filt)
         if am.preproc.bilateral_filt_bit :
+            from tpl.other.shiftableBF import shiftableBF
             pil_filt = Image.fromarray(shiftableBF(asarray(pil_filt)))
 
         return pil_filt

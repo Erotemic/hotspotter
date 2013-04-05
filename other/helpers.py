@@ -18,8 +18,6 @@ import os.path
 import sys
 import time
 import types
-from other.logger           import *
-from other.AbstractPrintable import AbstractPrintable
 import re
 
 #---------------
@@ -33,94 +31,6 @@ def str2(obj):
         return str(obj).replace('<type \'','').replace('\'>','')
     else:
         return str(obj)
-
-class DynStruct(AbstractPrintable):
-    ' dynamical add and remove members '
-    def __init__(self, child_exclude_list=[]):
-        super(DynStruct, self).__init__(child_exclude_list)
-    def to_dict(self):
-        ret = {}
-        exclude_key_list = self._printable_exclude
-        for (key, val) in self.__dict__.iteritems():
-            if key in exclude_key_list: continue
-            ret[key] = val
-        return ret
-
-    def dynget(self, *prop_list):
-        return tuple([self.__dict__[prop_name] for prop_name in prop_list])
-    def dynset(self, *propval_list):
-        offset = len(propval_list)/2
-        for i in range(offset):
-            self.__dict__[propval_list[i]] = propval_list[i+offset]
-    def __setitem__(self, key, value):
-        if isinstance(key, tuple):
-            for k, v in zip(key, value):
-                setattr(self, k, v)
-        else:
-            setattr(self, key, value)
-    def __getitem__(self, key):
-        if isinstance(key, tuple):
-            ret = []
-            for k in key:
-                ret.append(getattr(self, k))
-        else:
-            ret = getattr(self, key)
-        return ret
-#---------------
-class AbstractManager(AbstractPrintable):
-    def __init__(self, hs, child_print_exclude=[]):
-        super(AbstractManager, self).__init__(['hs'] + child_print_exclude)
-        self.hs = hs # ref to core HotSpotter
-#---------------
-class AbstractDataManager(AbstractManager):
-    ' Superclass for chip/name/table managers '
-    def __init__(self, hs, child_print_exclude=[]):
-        super(AbstractDataManager, self).__init__(hs, child_print_exclude+['x2_lbl'])
-
-    def x2_info(self, valid_xs, lbls):
-        ''' Used to print out formated information'''
-        format_tup = lbls2_format(lbls, self.hs)
-        header     = format_tup[0]
-        dat_format = format_tup[1]
-
-        ret  = '# NumData %d\n' % valid_xs.size
-        ret += '#'+header+'\n'
-        if not numpy.iterable(valid_xs):
-            valid_xs = [valid_xs]
-
-        for x in iter(valid_xs):
-            tup = tuple()
-            for lbl in lbls:
-                try:
-                    val = self.x2_lbl[lbl](x)
-                    if type(val) in [numpy.uint32, numpy.bool_, numpy.bool]:
-                        val = int(val)
-                    if type(val) == types.StringType or val == []:
-                        raise TypeError
-                    tup = tup+tuple(val)
-                except TypeError:
-                    tup = tup+tuple([val])
-            logdbg('dat_format: '+str(dat_format))
-            logdbg('tuple_types: '+str([type(t) for t in tup]))
-            logdbg('format tuple: '+str(tup))
-            ret += ' '+dat_format.format(*tup)+'\n'
-        return ret
-#---------------
-def npArrInfo(arr):
-    try:
-        info = DynStruct()
-        info.shapestr  = '['+' x '.join([str(x) for x in arr.shape])+']'
-        info.dtypestr  = str(arr.dtype)
-        if info.dtypestr == 'bool':
-            info.bittotal = 'T=%d, F=%d' % (sum(arr), sum(1-arr))
-        if info.dtypestr == 'object':
-            info.minmaxstr = 'NA'
-        else:
-            info.minmaxstr = '(%s,%s)' % ( str( arr.min() if len(arr) > 0 else None ), str( arr.max() if len(arr) > 0 else None ) )
-    except Exception as ex: 
-        logmsg(str(ex))
-        logerr(str(ex))
-    return info
 
 #----------------
 def dircheck(dpath,makedir=True):
@@ -229,7 +139,7 @@ def __table_fmt(max_val, lbl=""):
         spaces = len(max_val)+1
         fmtstr = '{:>%d}' % (spaces) 
     else:
-        logerr('Unknown Type for '+str(type(max_val))+'\n label:\"'+str(lbl)+'\" max_val:'+str(max_val) )
+        raise Exception('Unknown Type for '+str(type(max_val))+'\n label:\"'+str(lbl)+'\" max_val:'+str(max_val) )
     return (spaces, fmtstr)
 
 #---------------

@@ -17,6 +17,8 @@ class UIManager(QObject):
     updateStateSignal       = pyqtSignal(str)
     selectionSignal         = pyqtSignal(int, int)
     redrawGuiSignal         = pyqtSignal()
+    changeTabSignal         = pyqtSignal(int)
+
 
     # --- UIManager talks to the main thread
     def __init__(uim, hs):
@@ -42,6 +44,7 @@ class UIManager(QObject):
         uim.selectionSignal.connect( uim.hsgui.updateSelSpinsSlot )
         uim.redrawGuiSignal.connect( uim.hsgui.redrawGuiSlot )
         uim.populatePrefTreeSignal.connect( uim.hsgui.epw.populatePrefTreeSlot )
+        uim.changeTabSignal.connect( uim.hsgui.main_skel.tablesTabWidget.setCurrentIndex )
         uim.populate_algo_settings()
 
     def get_gui_figure(uim):
@@ -54,18 +57,25 @@ class UIManager(QObject):
 
     @func_log
     def draw(uim):
-        cm, gm = uim.hs.get_managers('cm','gm')
         'Tells the HotSpotterAPI to draw the current selection in the current mode'
+        cm, gm = uim.hs.get_managers('cm','gm')
+        current_tab = uim.hsgui.main_skel.tablesTabWidget.currentIndex
         if uim.state in ['splash_view']:
             uim.hs.dm.show_splash()
+        elif uim.state in ['select_roi']:
+            if gm.is_valid(uim.sel_gid):
+                uim.hs.dm.show_image(gm.gx(uim.sel_gid))
         elif uim.state in ['chip_view']:
             if cm.is_valid(uim.sel_cid):
                 uim.hs.dm.show_chip(cm.cx(uim.sel_cid))
-        elif uim.state in ['image_view', 'select_roi']:
+                uim.changeTabSignal.emit(uim.tab_order.index('chip'))
+        elif uim.state in ['image_view']:
             if gm.is_valid(uim.sel_gid):
                 uim.hs.dm.show_image(gm.gx(uim.sel_gid))
+                uim.changeTabSignal.emit(uim.tab_order.index('image'))
         elif uim.state in ['result_view']:
             uim.hs.dm.show_query(uim.sel_res)
+            uim.changeTabSignal.emit(uim.tab_order.index('result'))
         else:
             logerr('I dont know how to draw in state: '+str(uim.state))
 
@@ -162,7 +172,7 @@ class UIManager(QObject):
     def populate_chip_table(uim):
         cm = uim.hs.cm
         col_headers  = ['Chip ID', 'Chip Name', 'Name ID', 'Image ID', 'Other CIDS']
-        col_editable = [ False  ,   True    ,  False  ,   False  ,   False     ]
+        col_editable = [ False  ,   True      ,  False   ,   False   ,   False     ]
         cx_list  = cm.get_valid_cxs()
         data_list = [None]*len(cx_list)
         row_list = range(len(cx_list))

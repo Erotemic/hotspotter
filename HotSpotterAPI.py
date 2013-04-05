@@ -28,9 +28,8 @@ from core.VisualModel import VisualModel
 from gui.DrawManager import DrawManager
 from gui.UIManager import UIManager
 from other.AbstractPrintable import AbstractPrintable
-from other.PrefStruct import PrefStruct
-from other.helpers import *
-from other.logger import *
+from other.ConcretePrintable import PrefStruct
+from other.logger import logwarn, logerr, logmsg
 import cPickle
 import os
 import sys
@@ -202,6 +201,23 @@ class HotSpotterAPI(AbstractPrintable):
     def load_tables(hs):
         hs.iom.load_tables()
         hs.data_loaded_bit = True
+    # --- 
+    @func_log
+    def add_all_images_recursively(hs, image_list):
+        import os
+        num_add = len(image_list)
+        logmsg('Selected '+str(num_add)+' images to import')
+        prev_g = hs.gm.num_g
+        logdbg('Prev #g=%d' % prev_g)
+        for src_img in image_list:
+            hs.gm.add_img(gid=None, gname=None, aif=False, src_img=src_img)
+        post_g = hs.gm.num_g
+        num_new = (post_g - prev_g)
+        num_old = num_add - num_new
+        logdbg('Post #g=%d' % post_g)
+        logmsg('Imported '+str(num_new)+' new images')
+        if num_old != 0:
+            logmsg('%d Images had already been copied into the image directory' % num_old)
     # ---
     @func_log
     def add_image_list(hs, image_list):
@@ -227,6 +243,14 @@ class HotSpotterAPI(AbstractPrintable):
         hs.cm.unload_features(all_cxs)
         hs.vm.reset()
         hs.iom.remove_computed_files_with_pattern('*')
+    # ---
+    def add_roi_to_all_images(hs):
+        cm, gm = hs.get_managers('cm','gm')
+        gx_list = gm.get_empty_gxs()
+        logmsg('Adding '+str(len(gx_list))+' rois to empty images')
+        for gx in gx_list:
+            (gw, gh) = gm.gx2_img_size(gx)
+            cm.add_chip(-1, -1, gx, [0, 0, gw, gh])
     # ---
     @func_log
     def precompute_chips(hs):

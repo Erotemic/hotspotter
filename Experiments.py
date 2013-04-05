@@ -1,5 +1,5 @@
-from other.helpers import *
-from other.logger import *
+from other.logger           import logmsg, logdbg, logerr
+from other.AbstractPrintable import AbstractManager
 from core.QueryManager import QueryResult
 from pylab import find
 from numpy import setdiff1d, ones, zeros, array, int32

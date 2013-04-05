@@ -2,6 +2,23 @@ import numpy as np
 import re
 import types
 from other.helpers import *
+#---------------
+def npArrInfo(arr):
+    try:
+        info = DynStruct()
+        info.shapestr  = '['+' x '.join([str(x) for x in arr.shape])+']'
+        info.dtypestr  = str(arr.dtype)
+        if info.dtypestr == 'bool':
+            info.bittotal = 'T=%d, F=%d' % (sum(arr), sum(1-arr))
+        if info.dtypestr == 'object':
+            info.minmaxstr = 'NA'
+        else:
+            info.minmaxstr = '(%s,%s)' % ( str( arr.min() if len(arr) > 0 else None ), str( arr.max() if len(arr) > 0 else None ) )
+    except Exception as ex: 
+        logmsg(str(ex))
+        logerr(str(ex))
+    return info
+#---------------
 class AbstractPrintable(object):
     'A base class that prints its attributes instead of the memory address'
     def __init__(self, child_print_exclude=[]):
@@ -80,3 +97,41 @@ def printableVal(val,type_bit=True):
     _valstr = re.sub('\n *$','', _valstr) # Replace empty lines 
     return _valstr
 #---------------
+class AbstractManager(AbstractPrintable):
+    def __init__(self, hs, child_print_exclude=[]):
+        super(AbstractManager, self).__init__(['hs'] + child_print_exclude)
+        self.hs = hs # ref to core HotSpotter
+#---------------
+class AbstractDataManager(AbstractManager):
+    ' Superclass for chip/name/table managers '
+    def __init__(self, hs, child_print_exclude=[]):
+        super(AbstractDataManager, self).__init__(hs, child_print_exclude+['x2_lbl'])
+
+    def x2_info(self, valid_xs, lbls):
+        ''' Used to print out formated information'''
+        format_tup = lbls2_format(lbls, self.hs)
+        header     = format_tup[0]
+        dat_format = format_tup[1]
+
+        ret  = '# NumData %d\n' % valid_xs.size
+        ret += '#'+header+'\n'
+        if not numpy.iterable(valid_xs):
+            valid_xs = [valid_xs]
+
+        for x in iter(valid_xs):
+            tup = tuple()
+            for lbl in lbls:
+                try:
+                    val = self.x2_lbl[lbl](x)
+                    if type(val) in [numpy.uint32, numpy.bool_, numpy.bool]:
+                        val = int(val)
+                    if type(val) == types.StringType or val == []:
+                        raise TypeError
+                    tup = tup+tuple(val)
+                except TypeError:
+                    tup = tup+tuple([val])
+            logdbg('dat_format: '+str(dat_format))
+            logdbg('tuple_types: '+str([type(t) for t in tup]))
+            logdbg('format tuple: '+str(tup))
+            ret += ' '+dat_format.format(*tup)+'\n'
+        return ret

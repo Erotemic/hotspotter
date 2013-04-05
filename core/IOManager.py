@@ -22,7 +22,17 @@ from os.path import expanduser, join, normpath, relpath
 from other.helpers import *
 from other.logger           import *
 from other.crossplat import safepath, platexec
-
+#----------------
+def dircheck(dpath,makedir=True):
+    if not os.path.exists(dpath):
+        if not makedir:
+            logdbg('Nonexistant directory: %r ' % dpath)
+            return False
+        logio('Making directory: %r' % dpath)
+        os.makedirs(dpath)
+    #logdbg('SUCCESS')
+    return True
+#----------------
 def checkdir_decorator(method_fn):
     def wrapper(iom, *args):
         ret = method_fn(iom, *args)
@@ -355,7 +365,7 @@ class IOManager(AbstractManager):
         for adir in iter(alt_dirs):
             for aname in iter(alt_names):
                 alt_fpath = safepath(join(adir,aname))
-                logmsg('Checking: '+alt_fpath)
+                logdbg('Checking: '+alt_fpath)
                 if filecheck(alt_fpath):
                     logwarn('Using Alternative Datatable '+alt_fpath)
                     timestamp = str(time.time())

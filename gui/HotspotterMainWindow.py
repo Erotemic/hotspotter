@@ -132,6 +132,7 @@ class HotspotterMainWindow(QMainWindow):
         hsgui.prev_tbl_item = None
         hsgui.prev_cid = None
         hsgui.prev_gid = None 
+        hsgui.non_modal_qt_handles = []
         hsgui.connectSignals(fac)
         hsgui.show()
 
@@ -170,6 +171,7 @@ class HotspotterMainWindow(QMainWindow):
         main_skel.actionHelpTroubles.triggered.connect(lambda:hsgui.msgbox('GUI Help', gui_help))
         main_skel.actionHelpWorkflow.triggered.connect(lambda:hsgui.msgbox('Troubleshooting Help', troubles_help))
         main_skel.actionWriteLogs.triggered.connect(fac.write_logs)
+        main_skel.actionConvertImage2Chip.triggered.connect(fac.convert_all_images_to_chips)
         # 
         # Gui Components
         # Tables Widgets
@@ -184,7 +186,17 @@ class HotspotterMainWindow(QMainWindow):
         main_skel.image_TBL.sortByColumn(0, Qt.AscendingOrder)
 
     def msgbox(hsgui, title, msg):
-        QMessageBox.information(hsgui, title, msg)
+        # Make a non modal critical QMessageBox
+        msgBox = QMessageBox( hsgui );
+        msgBox.setAttribute( Qt.WA_DeleteOnClose )
+        msgBox.setStandardButtons( QMessageBox.Ok )
+        msgBox.setWindowTitle( title )
+        msgBox.setText( msg )
+        msgBox.setModal( False )
+        msgBox.open( msgBox.close )
+        msgBox.show()
+        hsgui.non_modal_qt_handles.append(msgBox)
+        # Old Modal Version: QMessageBox.critical(None, 'ERROR', msg)
 
     @pyqtSlot(name='setPlotWidgetVisible')
     def setPlotWidgetVisibleSlot(hsgui, bit=None): #None = toggle
@@ -255,16 +267,9 @@ class HotspotterMainWindow(QMainWindow):
     def populateResultTblSlot(hsgui, col_headers, col_editable, row_list, row2_data_tup):
         hsgui.populate_tbl_helper(hsgui.main_skel.res_TBL, col_headers, col_editable, row_list, row2_data_tup)
 
-    def chipTableClickedSlot(hsgui, item):
-        hsgui.logdbgSignal.emit('chip table clicked')
-        if item == hsgui.prev_tbl_item: return
-        hsgui.prev_tbl_item = item
-        sel_row = item.row()
-        sel_cid = int(hsgui.main_skel.chip_TBL.item(sel_row,0).text())
-        hsgui.selectCidSignal.emit(sel_cid)
-
     @gui_log
     def chipTableChangedSlot(hsgui, item):
+        'A Chip was Renamed'
         hsgui.logdbgSignal.emit('chip table changed')
         sel_row = item.row()
         sel_cid = int(hsgui.main_skel.chip_TBL.item(sel_row,0).text())
@@ -275,16 +280,27 @@ class HotspotterMainWindow(QMainWindow):
 
     @gui_log
     def resultTableChangedSlot(hsgui, item):
+        'A Chip was Renamed in Result View'
         hsgui.logdbgSignal.emit('result table changed')
         sel_row  = item.row()
         sel_cid  = int(hsgui.main_skel.res_TBL.item(sel_row,1).text())
         new_name = str(item.text())
         hsgui.renameChipIdSignal.emit(new_name, int(sel_cid))
 
-    @gui_log
     def imageTableClickedSlot(hsgui, item):
+        'Select Image ID'
         if item == hsgui.prev_tbl_item: return
         hsgui.prev_tbl_item = item
         sel_row = item.row()
         sel_gid = int(hsgui.main_skel.image_TBL.item(sel_row,0).text())
         hsgui.selectGidSignal.emit(sel_gid)
+
+    def chipTableClickedSlot(hsgui, item):
+        'Select Chip ID'
+        hsgui.logdbgSignal.emit('chip table clicked')
+        if item == hsgui.prev_tbl_item: return
+        hsgui.prev_tbl_item = item
+        sel_row = item.row()
+        sel_cid = int(hsgui.main_skel.chip_TBL.item(sel_row,0).text())
+        hsgui.selectCidSignal.emit(sel_cid)
+

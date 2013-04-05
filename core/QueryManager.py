@@ -1,5 +1,6 @@
-from other.helpers import *
-from other.logger           import *
+from other.logger           import logmsg, logdbg, logerr
+from other.AbstractPrintable import AbstractManager
+from other.ConcretePrintable import DynStruct
 from algo.spatial_functions import ransac
 from numpy import \
         array, sort, argsort, logical_and, ones, float32, setdiff1d,\

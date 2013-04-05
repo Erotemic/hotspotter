@@ -68,6 +68,7 @@ class ImageManager(AbstractDataManager):
             'gname' : lambda x: gm.gx2_gname[x] ,\
             'num_c' : lambda x: gm.gx2_num_c(x),\
         }
+        gm.valid_img_extensions = ['.jpeg','.jpg','.png','.tiff','.tif','.ppm']
 
     def img_alloc(gm, nAlloc):
         logdbg('Allocating room for %d more images' % nAlloc)
@@ -131,6 +132,8 @@ class ImageManager(AbstractDataManager):
         if src_img != '': #This is an new image
             (dir_part, nameext_part)  = os.path.split(src_img)
             (name_part, ext_part) = os.path.splitext(nameext_part)
+            if not ext_part.lower() in gm.valid_img_extensions:
+                logerr('Invalid Image: %s' % src_img)
             if gname is None:
               gname   = name_part + ext_part
             db_img  = os.path.join(gm.hs.iom.get_img_dpath(), gname)

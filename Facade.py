@@ -2,13 +2,13 @@ from HotSpotterAPI  import HotSpotterAPI
 from PyQt4.QtCore import QObject, pyqtSlot
 from PyQt4.QtGui  import QTreeWidgetItem
 from numpy          import logical_and
-from other.helpers     import *
-from other.logger import *
+from other.logger import logwarn, logerr, logmsg
 import other.crossplat as crossplat
 import other.messages as messages
 import subprocess
 import sys
 import time
+
 
 # Globals
 clbls = ['cid','gid','nid','name','roi']
@@ -164,7 +164,7 @@ class Facade(QObject):
         # THIS SHOULD CHANGE TO BE INDEPENDENT OF THAT FIXME
         if not new_state in uim.tab_order:
             if new_state in range(len(uim.tab_order)):
-                new_state = uim.tab_order[new_state]
+                new_state = uim.tab_order[new_state]+'_view'
             else:
                 logerr('State is: '+str(new_state)+', but it must be one of: '+str(valid_states))
         uim.update_state(new_state)
@@ -389,6 +389,10 @@ class Facade(QObject):
         pycallgraph.make_dot_graph(callgraph_fpath)
         Image.open(callgraph_fpath).show()
 
+    @pyqtSlot(name='convert_all_images_to_chips')
     def convert_all_images_to_chips(fac):
-
-        pass
+        uim = fac.hs.uim
+        uim.update_state('working')
+        fac.hs.add_roi_to_all_images()
+        uim.update_state('chip_view')
+        uim.draw()

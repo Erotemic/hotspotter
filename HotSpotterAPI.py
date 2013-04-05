@@ -260,8 +260,8 @@ class HotSpotterAPI(AbstractPrintable):
     # ---
     @func_log
     def get_source_fpath(hs):
-        import __init__
-        return os.path.dirname(__init__.__file__)
+        import dev
+        return os.path.dirname(dev.__file__)
 
     def get_managers(hs, *manager_list):
         'quick access of managers eg: (am, cm, iom) = hs.managers("am","cm","iom")'

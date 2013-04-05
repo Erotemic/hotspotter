@@ -14,7 +14,7 @@ import os.path
 import sys
 
 class DrawManager(AbstractManager):
-        # ---
+    # ---
     def show_splash(dm):
         splash_fname = os.path.join(dm.hs.get_source_fpath(), 'gui', 'splash.tif')
         splash_img = asarray(Image.open(splash_fname))

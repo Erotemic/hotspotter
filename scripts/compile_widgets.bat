@@ -1,9 +1,9 @@
 
-set widget_dir=%HOTSPOTTER%\widgets
+set widget_dir=%HOTSPOTTER%\gui
 ::%~dp0
 
-rm %HOTSPOTTER%\EditPrefSkel.py
-rm %HOTSPOTTER%\MainSkel.py
+rm %widget_dir%\EditPrefSkel.py
+rm %widget_dir%\MainSkel.py
 call pyuic4 -x %widget_dir%\EditPrefSkel.ui -o %widget_dir%\EditPrefSkel.py
 call pyuic4 -x %widget_dir%\MainSkel.ui -o %widget_dir%\MainSkel.py
 

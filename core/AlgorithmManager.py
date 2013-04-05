@@ -7,6 +7,7 @@ from other.ConcretePrintable import DynStruct
 from other.AbstractPrintable import AbstractManager
 from numpy import sqrt, zeros, uint8, array, asarray, float32
 from PIL import Image, ImageOps
+from algo.imalgos import contrast_stretch, histeq, adapt_histeq
 import re
 
 class AlgorithmManager(AbstractManager): 
@@ -39,13 +40,15 @@ class AlgorithmManager(AbstractManager):
         am.preproc.sqrt_num_pxls           = 700
         am.preproc.autocontrast_bit        = False
         am.preproc.bilateral_filt_bit      = False
-        am.preproc.histeq_bit              = True
+        am.preproc.histeq_bit              = False
+        am.preproc.contrast_stretch_bit    = False
+        am.preproc.adapt_histeq_bit        = True
 
         # --- Chip Representation ---
         # Currently one feature detector and one feature descriptor is chosen
         # * = non-free
         #am.chiprep.gravity_vector_bit      = True
-        am.chiprep.kpts_detector           = 'heshesaff' #: heshesaff, hesaff, heslap, dense, MSER, FREAK*, SIFT*
+        am.chiprep.kpts_detector           = 'hesaff' #: heshesaff, hesaff, heslap, dense, MSER, FREAK*, SIFT*
         am.chiprep.kpts_extractor          = 'SIFT' #: SIFT*, SURF, BRISK, 
         '''
             Interest point detectors/descriptors implemented by K.Mikolajczyk@surrey.ac.uk
@@ -100,7 +103,7 @@ class AlgorithmManager(AbstractManager):
         am.query.num_rerank                =    1000
         am.query.spatial_thresh            =    0.05 
         am.query.sigma_thresh              =    0.05  #: Unimplemented
-        am.query.method                    =  'DIFF'  #: DIFF, LNRAT, RAT, TFIDF, COUNT
+        am.query.method                    =  'COUNT'  #: DIFF, LNRAT, RAT, TFIDF, COUNT
         am.query.score                     = 'cscore' #: nscore, cscore # move to results
         am.query.self_as_result_bit        =   False  #: Return self (in terms of name) in results
         #TODO: (theta, xy, sigma)_thresh 
@@ -234,7 +237,7 @@ class AlgorithmManager(AbstractManager):
         outImg = inImg.resize(new_size, Image.ANTIALIAS)
         # Get the actual new chip size and scale factor
         (cw, ch) = outImg.size
-        logmsg('Resized %dx%d to %dx%d' % (rw, rh, cw, ch))
+        logdbg('Resized %dx%d to %dx%d' % (rw, rh, cw, ch))
         return outImg
 
     def preprocess_chip(am, raw_chip):
@@ -246,10 +249,17 @@ class AlgorithmManager(AbstractManager):
         pil_filt = am.resize_chip(pil_raw, am.preproc.sqrt_num_pxls)
 
         # --- Filters ---
-        if am.preproc.histeq_bit : 
-            #pil_filt = ImageOps.equalize(pil_filt)
-            from tpl.other.imtools import histeq
-            pil_filt = Image.fromarray(histeq(asarray(pil_filt))).convert('L')
+        #if am.preproc.histeq_bit : 
+            ##pil_filt = ImageOps.equalize(pil_filt)
+            #from tpl.other.imtools import histeq
+            #img_rescale = exposure.equalize_hist(asarray(pil_filt))
+            #pil_filt = Image.fromarray(histeq(asarray(pil_filt))).convert('L')
+        if am.preproc.histeq_bit:
+            pil_filt = Image.fromarray(histeq(asarray(pil_filt)))
+        if am.preproc.contrast_stretch_bit:
+            pil_filt = Image.fromarray(contrast_stretch(asarray(pil_filt)))
+        if am.preproc.adapt_histeq_bit:
+            pil_filt = Image.fromarray(adapt_histeq(asarray(pil_filt)))
         if am.preproc.autocontrast_bit :
             pil_filt = ImageOps.autocontrast(pil_filt)
         if am.preproc.bilateral_filt_bit :
@@ -350,7 +360,7 @@ class AlgorithmManager(AbstractManager):
                    % (am.chiprep.kpts_detector, am.chiprep.kpts_extractor))
 
         cmd = exename+' '+args
-        logmsg('External Executing: %r ' % cmd)
+        logdbg('External Executing: %r ' % cmd)
         try:
             proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             logdbg('External Execution did not throw an error')
@@ -360,7 +370,7 @@ class AlgorithmManager(AbstractManager):
                 logerr('Failed to execute '+cmd+'\n OUTPUT: '+out)
             if not filecheck(outname):
                 logerr('The output file doesnt exist: '+outname)
-            logmsg('External Output:\n'+out[:-1])
+            logdbg('External Output:\n'+out[:-1])
         except Exception as ex:
             logwarn('An Exception occurred while calling the keypoint detector: '+str(ex))
             try:

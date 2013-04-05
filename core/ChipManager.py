@@ -235,7 +235,7 @@ class ChipManager(AbstractDataManager):
         nm.nx2_cx_list[nx].append(cx)
         gm.gx2_cx_list[gx].append(cx)
         # Increment
-        cm.next_cx  = cm.next_cx + 1
+        cm.next_cx  = max(cm.next_cx + 1, cx+1)
         cm.next_cid = max(cm.next_cid+1, cid+1)
         cm.max_cx   = max(cm.max_cx,     cx)
         cm.max_cid  = max(cm.max_cid,    cid)
@@ -404,7 +404,7 @@ class ChipManager(AbstractDataManager):
         cid = cm.cx2_cid[cx]
         chip_fpath  = iom.get_chip_fpath(cid, thumb_bit=False)
         thumb_fpath = iom.get_chip_fpath(cid, thumb_bit=True)
-        logmsg('Computing Chip: cid=%d fname=%s' % (cid, chip_fpath))
+        logmsg('Computing Chip: cid=%d fname=%s\nalgo:\n'+am.get_name(['preproc']) % (cid, chip_fpath))
         # --- Preprocess the Raw Chip
         raw_chip = cm.cx2_raw_chip(cx)
         chip = cm.hs.am.preprocess_chip(raw_chip)
@@ -413,7 +413,7 @@ class ChipManager(AbstractDataManager):
         (cw, ch) = chip.size
         thumb_size = cm.hs.prefs['thumbnail_size']
         thumb_scale = min(thumb_size/float(cw), thumb_size/float(ch))
-        (tw, th) = map(lambda _: int(round(_*thumb_scale)), (cw, ch))
+        (tw, th) = (int(round(cw)), int(round(ch)))
         chip_thumb = chip.resize((tw, th), Image.ANTIALIAS)
         chip_thumb.save(thumb_fpath, 'JPEG')
 

@@ -29,9 +29,11 @@ class ExperimentManager(AbstractManager):
     def run_nightly(em):
         hs = em.hs
         iom = hs.iom
-        datasets = iom.get_dataset_fpath('Naut')
+        #datasets = iom.get_dataset_fpath('Naut')
         #vary params
-        hs.am.query.method = 'LNRAT'
+        #hs.am.query.method = 'LNRAT'
+        em.run_singleton_queries()
+        em.show_problems()
 
     def batch_query(em, force_recomp=False, test_cxs=None):
         'TODO: Fix up the VM dependencies'
@@ -123,6 +125,12 @@ class ExperimentManager(AbstractManager):
         return rank_hist_opt
 
     def show_problems(em):
+        '''TODO: I want to see: number of matches, the score of each type of matcher
+           I want to see this in graph format, but first print format. I want to see 
+           the precision and recall. I want to see the rank of the best, I want to see
+           the rank of the worst minus the number of correct answers. Once we have the 
+           metrics, we can build the learners, visualizations, and beter algorithms. 
+        '''
         cm,nm,am = em.hs.get_managers('cm','nm','am')
         # Evaluate rank by chip and rank by name
         cx2_error_chip = -ones(len(em.cx2_res))

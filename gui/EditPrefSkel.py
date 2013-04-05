@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/gui/EditPrefSkel.ui'
+# Form implementation generated from reading ui file 'C:\Code\hotspotter\gui\EditPrefSkel.ui'
 #
-# Created: Thu Apr  4 15:02:57 2013
-#      by: PyQt4 UI code generator 4.9.1
+# Created: Fri Apr 05 09:54:57 2013
+#      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,7 +12,16 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_editPrefSkel(object):
     def setupUi(self, editPrefSkel):
@@ -28,7 +37,7 @@ class Ui_editPrefSkel(object):
         QtCore.QMetaObject.connectSlotsByName(editPrefSkel)
 
     def retranslateUi(self, editPrefSkel):
-        editPrefSkel.setWindowTitle(QtGui.QApplication.translate("editPrefSkel", "Edit Preferences", None, QtGui.QApplication.UnicodeUTF8))
+        editPrefSkel.setWindowTitle(_translate("editPrefSkel", "Edit Preferences", None))
 
 
 if __name__ == "__main__":

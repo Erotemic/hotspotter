@@ -1,4 +1,5 @@
-from other.logger           import logmsg, logdbg, logerr
+from other.logger  import logmsg, logerr
+from other.helpers import alloc_lists
 from other.AbstractPrintable import AbstractManager
 from core.QueryManager import QueryResult
 from pylab import find
@@ -26,7 +27,7 @@ class ExperimentManager(AbstractManager):
                            QueryResult(hs,rr) for rr in cx2_rr])
 
     def run_nightly(em):
-        hs = iom.hs
+        hs = em.hs
         iom = hs.iom
         datasets = iom.get_dataset_fpath('Naut')
         #vary params
@@ -90,7 +91,7 @@ class ExperimentManager(AbstractManager):
 
     def show_query(em, cx):
         res = em.cx2_res[cx]
-        hs.show_query(res)
+        em.hs.dm.show_query(res)
 
     def get_result_rank_histogram(em):
         '''returns a histogram of the number of queries with 

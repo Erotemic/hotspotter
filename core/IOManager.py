@@ -16,22 +16,17 @@ import os.path
 import shutil
 import time
 import fnmatch
+import sys
 import tpl
+import numpy as np
 from pylab import find
-from os.path import expanduser, join, normpath, relpath
-from other.helpers import *
-from other.logger           import *
+from os.path import expanduser, join, relpath
+from other.AbstractPrintable import AbstractManager
+from other.ConcretePrintable import DynStruct
+from other.helpers import filecheck, dircheck
+from other.logger import logmsg, logwarn, logdbg, logerr, logio
 from other.crossplat import safepath, platexec
-#----------------
-def dircheck(dpath,makedir=True):
-    if not os.path.exists(dpath):
-        if not makedir:
-            logdbg('Nonexistant directory: %r ' % dpath)
-            return False
-        logio('Making directory: %r' % dpath)
-        os.makedirs(dpath)
-    #logdbg('SUCCESS')
-    return True
+
 #----------------
 def checkdir_decorator(method_fn):
     def wrapper(iom, *args):
@@ -95,9 +90,9 @@ class IOManager(AbstractManager):
     def  get_img_dpath(iom, thumb_bit=None):
         img_dname = 'images'
         if (thumb_bit != None and thumb_bit) or iom.hs.prefs['thumbnail_bit']:
-            return join(iom.get_thumb_dpath(),'images')
+            return join(iom.get_thumb_dpath(),img_dname)
         else:
-            return join(iom.hs.db_dpath,'images')
+            return join(iom.hs.db_dpath,img_dname)
     @checkdir_decorator
     def  get_chip_dpath(iom, thumb_bit=None):
         chip_dname = 'chips'
@@ -483,7 +478,6 @@ class IOManager(AbstractManager):
                     cm.add_chip(-1, nx, gx, roi)
         # HACKISH Duplicate detection. Eventually this should actually be in the codebase
         logmsg('Detecting and Removing Duplicate Ground Truth')
-        import numpy as np
         dup_cx_list = []
         for nx in nm.get_valid_nxs():
             cx_list = array(nm.nx2_cx_list[nx])

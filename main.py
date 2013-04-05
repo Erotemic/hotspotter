@@ -6,7 +6,7 @@
 # and set assocated preferences
 
 # Attach to QtConsole's QApplication if able
-from PyQt4.QtCore import QCoreApplication
+from PyQt4.Qt import QCoreApplication
 app = QCoreApplication.instance() 
 in_qtc_bit = (not app is None)
 
@@ -18,15 +18,16 @@ if not in_qtc_bit:
 
 from Facade import Facade
 from PyQt4.Qt import QApplication, QEventLoop
-from other.helpers import *
-from other.logger import *
+from other.logger import logmsg, hsl
 import argparse
 import inspect
 import sys
+import os.path
 
 try:
+    # Append the tpl lib to your path
     import tpl
-    sys.path.append(os.path.join(os.path.dirname(tpl.__file__),'tpl',sys.platform,'lib'))
+    sys.path.append(os.path.join(os.path.dirname(tpl.__file__), 'tpl', sys.platform,'lib'))
 except Exception: 
     print '''You must download hotspotter\'s 3rd party libraries before you can run it. 
     git clone https://github.com/Erotemic:tpl-hotspotter.git tpl'''
@@ -67,9 +68,25 @@ rview,         = [lambda          : fac.change_view('result_view')]
 cview,         = [lambda          : fac.change_view('chip_view')]
 
 # Add developer namespace
-import dev 
-dnspc = dev.get_namespace(fac)
-exec(dnspc)
+from PyQt4.Qt   import \
+        QApplication, QMainWindow, QMessageBox, QAbstractItemView, QObject
+from core.QueryManager import RawResults, QueryResult
+#from PyQt4.QtCore import SIGNAL, Qt, pyqtSlot, pyqtSignal
+from PIL import Image
+import types
+# Get commonly used variables for command line usage
+hs = fac.hs
+uim = hs.uim
+hsgui = uim.hsgui
+if hsgui != None:
+    epw = hsgui.epw
+cm,  nm,  gm,  am,  dm,  vm,  qm,  iom,  em = hs.get_managers(
+'cm','nm','gm','am','dm','vm','qm','iom','em')
+
+qcx = 1
+#import dev 
+#dnspc = dev.get_namespace(fac)
+#exec(dnspc)
 
 # TODO Move to dev
 if args.runexpt_bit:

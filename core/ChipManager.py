@@ -1,11 +1,11 @@
 import types
-import os
-from other.helpers      import *
-from other.logger           import *
+from other.AbstractPrintable import AbstractDataManager
+from other.helpers import filecheck
+from other.logger    import logmsg, logdbg, logerr, logio, logwarn
 from pylab           import find
 from PIL             import Image 
 from numpy           import \
-        setdiff1d, uint32, array, load, savez, asarray,\
+        setdiff1d, array, load, savez, asarray,\
         append, zeros, ones, empty, uint32, bool, sum,\
         linalg, float32, bitwise_or, iterable
 
@@ -328,8 +328,6 @@ class ChipManager(AbstractDataManager):
         return linalg.inv(cm.cx2_transImg(cx))
 
     def cx2_transImg(cm, cx):
-        gm = cm.hs.gm
-        gx = cm.cx2_gx[cx]
         (cw, ch) = cm.cx2_chip_size(cx)
         (rx, ry, rw, rh) = cm.cx2_roi[cx]
         sx = float(rw) / float(cw)

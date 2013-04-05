@@ -1,5 +1,5 @@
 from pylab import find
-from numpy import linalg, zeros, array, vstack, ones, sum, power, uint32, transpose, insert, matrix
+from numpy import linalg, zeros, array, vstack, ones, sum, power, uint32, insert, matrix
 from warnings import catch_warnings, simplefilter 
 
 #skimage.transform
@@ -57,7 +57,7 @@ def homogo_normalize_pts(xy):
 def get_affine_inliers_RANSAC(num_m, xy1_m, xy2_m,\
                             acd1_m, acd2_m, xy_thresh_sqrd):
     aff_inliers = []
-    bst_xy_err = -1
+    #bst_xy_err = -1
     for mx in xrange(num_m): 
         # Enumerate All Hypothesis (Match transformations)
         xy1  = xy1_m[:,mx].reshape(2,1) #  XY Positions
@@ -76,7 +76,7 @@ def get_affine_inliers_RANSAC(num_m, xy1_m, xy2_m,\
         #previously seen then set it as the best
         if len(_inliers) > len(aff_inliers):
             aff_inliers = _inliers
-            bst_xy_err  = xy_err_sqrd 
+            #bst_xy_err  = xy_err_sqrd 
     return aff_inliers
 
 def homog_warp(H3x3, xy):

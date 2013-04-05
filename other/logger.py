@@ -8,7 +8,7 @@ from other.AbstractPrintable import AbstractPrintable
 from PyQt4.Qt import QObject
 from PyQt4.QtGui import QMessageBox
 from PyQt4.QtCore import Qt
-import re
+
 
 #import os
 #os.spawnl(os.P_DETACH, 'some_log_running_command')
@@ -43,9 +43,10 @@ IOManager.__
 _hsGlobals.x2_info
 '''
 
+#---------------
+
 def callinfo(num_up=2):
     'finds how much to indent'
-    stackstr = ''
     stack_list = traceback.extract_stack()
     indent = 0
     calltype = '???call'
@@ -170,6 +171,35 @@ class LogErrorException(Exception):
     def __str__(self):
         return str('<LogError Num '+str(self.error_num)+'>')
 
+
+def logwarn(msg):
+    hsl.log('<WARNING-TRACEBACK> '+traceback.format_exc())
+    hsl.log('<WARNING> '+msg)
+    sys.stdout.flush(); sys.stderr.flush()
+
+def logerr(msg=None):
+    error_num = hsl.error_num
+    hsl.error_num += 1
+    hsl.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+    hsl.log('<ERROR Number %d>' % error_num)
+    hsl.log('\n\n *!* HotSpotter Raised Exception: %s \n' % str(msg))
+    hsl.log('<ERROR Number %d>' % error_num)
+    hsl.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+    #hsl.log('\n\n *!* HotSpotter Exception Traceback: \n'+traceback.format_exc())
+    sys.stdout.flush(); sys.stderr.flush()
+    hsl.non_modal_critical_dialog('ERROR #%d' % error_num, msg)
+    raise LogErrorException(error_num)
+
+def logmsg(msg):
+    hsl.log(msg)
+
+def logdbg(msg):
+    hsl.log('DBG> '+msg, noprint=True)
+
+def logio(msg):    
+    hsl.log('IO> '+msg, noprint=True)
+
+
 def func_log(fn):
     def func_log_wraper(*args, **kwargs):
         # -- Format Logs
@@ -231,28 +261,4 @@ def func_log(fn):
         sys.stdout.flush(); sys.stderr.flush()
         return ret
     return func_log_wraper
-
-def logwarn(msg):
-    hsl.log('<WARNING-TRACEBACK> '+traceback.format_exc())
-    hsl.log('<WARNING> '+msg)
-    sys.stdout.flush(); sys.stderr.flush()
-
-def logerr(msg=None):
-    error_num = hsl.error_num
-    hsl.error_num += 1
-    hsl.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-    hsl.log('<ERROR Number %d>' % error_num)
-    hsl.log('\n\n *!* HotSpotter Raised Exception: %s \n' % str(msg))
-    #hsl.log('\n\n *!* HotSpotter Exception Traceback: \n'+traceback.format_exc())
-    hsl.log('<ERROR Number %d>' % error_num)
-    hsl.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-    sys.stdout.flush(); sys.stderr.flush()
-    hsl.non_modal_critical_dialog('ERROR #%d' % error_num, msg)
-    raise LogErrorException(error_num)
-def logmsg(msg):
-    hsl.log(msg)
-def logdbg(msg):
-    hsl.log('DBG> '+msg, noprint=True)
-def logio(msg):    
-    hsl.log('IO> '+msg, noprint=True)
 

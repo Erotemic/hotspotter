@@ -1,19 +1,18 @@
-from other.helpers import DynStruct
-from other.logger import *
-from gui.MainSkel import Ui_mainSkel
+from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
+        QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal, \
+        QStandardItem, QStandardItemModel, QString
 from gui.EditPrefSkel import Ui_editPrefSkel
+from gui.MainSkel import Ui_mainSkel
+from other.ConcretePrintable import DynStruct
+from other.logger import logmsg, logdbg
 from other.messages import workflow_help, cmd_help, gui_help, troubles_help
-from PyQt4.QtGui  import QFileDialog, QTableView, QTreeWidgetItem, QStandardItem, QStandardItemModel
-from PyQt4.Qt     import QString, QApplication, QMainWindow, QTableWidgetItem, QMessageBox, QAbstractItemView, QObject, QWidget
-from PyQt4.QtCore import Qt, pyqtSlot, pyqtSignal
-from PyQt4 import QtCore, QtGui
 import types
-from weakref import ref
+#from weakref import ref
 
 # --- QtMainWindow Thread --- # 
 # Talk to this only with signals and slots
 try:
-    _fromUtf8 = QtCore.QString.fromUtf8
+    _fromUtf8 = QString.fromUtf8
 except AttributeError:
     _fromUtf8 = lambda s: s
 
@@ -29,6 +28,7 @@ def gui_log(fn):
             hsgui.logdbgSignal.emit(outo_str)
             return ret
         except Exception as ex:
+            import traceback
             logmsg('\n\n *!!* HotSpotter GUI Raised Exception: '+str(ex))
             logmsg('\n\n *!!* HotSpotter GUI Exception Traceback: \n\n'+traceback.format_exc())
     return gui_log_wrapper
@@ -230,7 +230,9 @@ class HotspotterMainWindow(QMainWindow):
                 try:
                     int_data = int(data)
                     item.setData(Qt.DisplayRole, int_data)
-                except Exception as ex:
+                except ValueError: # for strings
+                    item.setText(str(data))
+                except TypeError: #for lists
                     item.setText(str(data))
                 item.setTextAlignment(Qt.AlignHCenter)
                 if col_editable[col]: item.setFlags(item.flags() | Qt.ItemIsEditable)

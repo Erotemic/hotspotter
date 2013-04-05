@@ -1,4 +1,4 @@
-from other.helpers import *
+from other.AbstractPrintable import AbstractPrintable
 import types
 
 class DynStruct(AbstractPrintable):
@@ -43,14 +43,14 @@ class PrefStruct(DynStruct):
         self.save_fpath = save_fpath
         self.add_dict(copy_dict)
 
-    def add_dict(some_dict):
+    def add_dict(self, some_dict):
         if type(some_dict) != types.DictType:
             raise Exception('PrefStruct.add_dict expects a dictionary.'+\
                             'Recieved: '+str(type(some_dict)))
-        for (key,val) in copy_dict.iter_items():
+        for (key,val) in some_dict.iter_items():
             self.key = val
 
-    def iter_items():
+    def iter_items(self):
         pass
 
     def write_to_disk():

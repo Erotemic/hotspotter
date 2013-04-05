@@ -1,13 +1,12 @@
 import os
 import subprocess
-import sys
 import shelve
-from other.helpers import *
-from other.logger  import *
-from numpy import sqrt, zeros, uint8, array, log2, sin, cos, array, floor, asarray, float32
+from other.logger  import logmsg, logdbg, logerr, logwarn
+from other.helpers  import filecheck
+from other.ConcretePrintable import DynStruct
+from other.AbstractPrintable import AbstractManager
+from numpy import sqrt, zeros, uint8, array, asarray, float32
 from PIL import Image, ImageOps
-import numpy as np
-from scipy import stats
 import re
 
 class AlgorithmManager(AbstractManager): 

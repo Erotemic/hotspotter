@@ -1,13 +1,13 @@
 from HotSpotterAPI  import HotSpotterAPI
-from PyQt4.QtCore import QObject, pyqtSlot
-from PyQt4.QtGui  import QTreeWidgetItem
+from PyQt4.Qt import QObject, pyqtSlot, QTreeWidgetItem
 from numpy          import logical_and
-from other.logger import logwarn, logerr, logmsg
+from pylab import find
+from other.logger import logdbg, logerr, logmsg, func_log, hsl
 import other.crossplat as crossplat
 import other.messages as messages
-import subprocess
 import sys
 import time
+import os.path
 
 
 # Globals
@@ -36,8 +36,9 @@ class Facade(QObject):
         try:
             fac.open_db(None, autoload)
         except Exception as ex:
+            import traceback
             print "Error occurred in autoload"
-            print str(e)
+            print str(ex)
             print '<<<<<<   Traceback    >>>>>'
             traceback.print_exc()
             print "Error occurred in autoload"
@@ -166,7 +167,7 @@ class Facade(QObject):
             if new_state in range(len(uim.tab_order)):
                 new_state = uim.tab_order[new_state]+'_view'
             else:
-                logerr('State is: '+str(new_state)+', but it must be one of: '+str(valid_states))
+                logerr('State is: '+str(new_state)+', but it must be one of: '+str(uim.tab_order))
         uim.update_state(new_state)
         uim.draw()
 
@@ -315,6 +316,7 @@ class Facade(QObject):
 
     @pyqtSlot(QTreeWidgetItem, int, name='change_pref')
     def change_pref(fac, item, col):
+        from PyQt4.QtCore import Qt
         print item.data(0,Qt.DisplayRole)
         print item.data(1,Qt.DisplayRole)
 
@@ -394,5 +396,6 @@ class Facade(QObject):
         uim = fac.hs.uim
         uim.update_state('working')
         fac.hs.add_roi_to_all_images()
+        uim.populate_tables()
         uim.update_state('chip_view')
         uim.draw()

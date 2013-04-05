@@ -1,6 +1,7 @@
-from other.helpers import *
-from other.logger           import *
-from numpy import array, asarray, append, zeros, empty, uint32, bool, hstack, zeros, uint32
+from other.AbstractPrintable import AbstractDataManager
+from other.logger import logdbg, logerr, logwarn
+from other.helpers import alloc_lists
+from numpy import array, append, zeros, empty, uint32
 from pylab import find
 
 #TODO: Name should eventually become category.

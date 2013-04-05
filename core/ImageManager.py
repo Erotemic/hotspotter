@@ -1,9 +1,10 @@
-from other.helpers      import *
-from other.logger           import *
+from other.logger import logmsg, logdbg, logerr, logwarn
+from other.helpers import filecheck, alloc_lists
+from other.AbstractPrintable import AbstractDataManager
 from pylab import find
 from PIL          import Image
 from shutil       import copyfile
-from numpy        import array, asarray, append, zeros, empty, uint32, bool, logical_and, iterable
+from numpy        import array, asarray, append, zeros, uint32, bool, logical_and, iterable
 import os.path
 
 '''

@@ -23,23 +23,23 @@ from core.ChipManager import ChipManager
 from core.IOManager import IOManager
 from core.ImageManager import ImageManager
 from core.NameManager import NameManager
-from core.QueryManager import QueryManager, QueryResult
+from core.QueryManager import QueryManager
 from core.VisualModel import VisualModel
 from gui.DrawManager import DrawManager
 from gui.UIManager import UIManager
 from other.AbstractPrintable import AbstractPrintable
 from other.ConcretePrintable import PrefStruct
-from other.logger import logwarn, logerr, logmsg
+from other.logger import logdbg, logerr, logmsg, logwarn, func_log
+from other.helpers import dircheck, filecheck
 import cPickle
-import os
-import sys
 import types
+import os.path
 
 class HotSpotterAPI(AbstractPrintable):
 
     def default_preferences(hs):
-        default_prefs = PrefStruct(hs.iom.get_prefs_fpath())
         display_prefs = PrefStruct(hs.iom.get_prefs_fpath())
+        core_prefs = PrefStruct(hs.iom.get_prefs_fpath())
 
         core_prefs.database_dpath  = None
         core_prefs.roi_quickselect = False
@@ -204,7 +204,6 @@ class HotSpotterAPI(AbstractPrintable):
     # --- 
     @func_log
     def add_all_images_recursively(hs, image_list):
-        import os
         num_add = len(image_list)
         logmsg('Selected '+str(num_add)+' images to import')
         prev_g = hs.gm.num_g
@@ -245,12 +244,12 @@ class HotSpotterAPI(AbstractPrintable):
         hs.iom.remove_computed_files_with_pattern('*')
     # ---
     def add_roi_to_all_images(hs):
-        cm, gm = hs.get_managers('cm','gm')
+        cm, gm, nm = hs.get_managers('cm','gm','nm')
         gx_list = gm.get_empty_gxs()
         logmsg('Adding '+str(len(gx_list))+' rois to empty images')
         for gx in gx_list:
             (gw, gh) = gm.gx2_img_size(gx)
-            cm.add_chip(-1, -1, gx, [0, 0, gw, gh])
+            cm.add_chip(-1, nm.UNIDEN_NX(), gx, [0, 0, gw, gh])
     # ---
     @func_log
     def precompute_chips(hs):

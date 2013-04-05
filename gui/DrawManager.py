@@ -1,14 +1,16 @@
+from PIL import Image
 from matplotlib import gridspec
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle, Circle
-from matplotlib.pyplot import ginput, draw, figure, get_cmap, jet, gray
+from matplotlib.pyplot import draw, figure, get_cmap, gray
 from matplotlib.transforms import Affine2D
-from numpy import array, uint32, round, sqrt, ceil, float32, asarray, append
-from other.helpers import *
-from other.logger import *
-from PIL import Image
+from numpy import array, uint32, round, sqrt, ceil, asarray, append
+from numpy import spacing as eps
+from other.AbstractPrintable import AbstractManager
+from other.logger import logmsg, logdbg
 from warnings import catch_warnings, simplefilter 
 import colorsys
+import os.path
 import sys
 
 class DrawManager(AbstractManager):
@@ -131,6 +133,7 @@ class DrawManager(AbstractManager):
     # ---
     def save_fig(dm, save_file):
         dm.end_draw()
+        fig = dm.get_figure()
         fig.savefig(save_file, format='png')
     # ---
     def add_images(dm, img_list, title_list=[]):
@@ -169,7 +172,7 @@ class DrawManager(AbstractManager):
             with catch_warnings():
                 simplefilter("ignore")
                 aIS = 1/sqrt(a)
-                cIS = (c/sqrt(a) - c/sqrt(d))/(a - d + eps)
+                cIS = (c/sqrt(a) - c/sqrt(d))/(a - d + eps(1))
                 dIS = 1/sqrt(d)
             transEll = Affine2D([\
                     ( aIS,   0,   x),\
@@ -208,21 +211,14 @@ class DrawManager(AbstractManager):
         ell_alpha    = _default(hs.prefs['ellipse_alpha'],   .2)
 
         colormap     = _default(hs.prefs['colormap'],   'hsv')
-        shift_color  = lambda color, shift:\
-                map(lambda (cc, shiftc): min(1,(cc+shiftc) % 1.001), zip(color, shift))
 
         map_color   = get_cmap(colormap)(float(axi)/len(dm.ax_list))
-        #if len(map_color_) == 3:
-        #    map_color_ = map_color_ + tuple(1)
-        #map_color    = shift_color( map_color_, [0, .5, 0, 0] )
+
         if axi == 0:
             map_color = [map_color[0], map_color[1]+.5, map_color[2], map_color[3]]
 
         textcolor  = _default(hs.prefs['text_color'], map_color)
 
-
-        mcolor_ell_bit = _default(hs.prefs['match_with_color_ell'],   False)
-        mcolor_xys_bit = _default(hs.prefs['match_with_color_xys'],   False)
         #mlines_bit     = _default(hs.prefs['match_with_lines'],   False)
 
         cm        = dm.hs.cm
@@ -266,7 +262,6 @@ class DrawManager(AbstractManager):
             ax.add_patch(bbox)
 
             cid   = cm.cx2_cid[cx]
-            nid   = cm.cx2_nid(cx)
             name  = cm.cx2_name(cx)
             # Use the complimentary color as the text background
             _hsv = colorsys.rgb_to_hsv(textcolor[0],textcolor[1],textcolor[2])
@@ -284,38 +279,4 @@ class DrawManager(AbstractManager):
                     transform=transData,
                     color=textcolor,
                     backgroundcolor=comp_rgb)
-    # ---
-    def draw_graph(dm, G):
-        import networkx
-        #fig = dm.get_current_figure()
-        fig = figure(9001)
-        fig.clf()
-        ax = fig.gca()
-        pos = networkx.spring_layout(G, dim=2, scale=1,iterations=100) 
-        #pos = networkx.spectral_layout(G)
-        #pos = networkx.circular_layout(G)
-        node_labels=dict([(id,d['qnid']) for id,d in G.nodes(data=True)])
-        #networkx.draw_networkx(G,pos,ax=ax)
-        colormap = dm.hs.prefs['colormap']
-        cmap = get_cmap(colormap)
-        tot_num = dm.hs.nm.num_n+2
-        for cid in pos.keys():
-            cx = dm.hs.cm.cid2_cx[cid]
-            nid = dm.hs.cm.cx2_nid(cx)
-            color = cmap(float(nid)/tot_num)
-            #print color
-            networkx.draw_networkx_nodes(G,pos, nodelist=[cid], node_color=color, node_size=1000)
-            pass
-        #networkx.draw_networkx_nodes(G,pos)
-        #networkx.draw_networkx_labels(pos,node_labels)
-        networkx.draw_networkx_edges(G,pos,alpha=.5)
-        networkx.draw_networkx_labels(G,pos)
-            
-        #labels=networkx.draw_networkx_labels(G,pos=pos)
-        #edge_labels=dict([((u,v,),'%.1f' % d['weight']) for u,v,d in G.edges(data=True)])
-        #edge_labels = {}
-        #networkx.draw_networkx_edge_labels(G,pos,edge_labels,alpha=0.5)
-        #trans = ax.transData.transform
-        #trans2 = fig.transFigure.inverted().transform
-        #for node in G.nodes():
-        #    x,y = pos[node]
+

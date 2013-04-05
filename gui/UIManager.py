@@ -1,9 +1,8 @@
-from PyQt4.QtCore import pyqtSignal
-from PyQt4.QtGui  import QFileDialog
+from PyQt4.Qt import QObject, pyqtSignal, QFileDialog
 from gui.HotspotterMainWindow import HotspotterMainWindow
 from numpy import setdiff1d
-from other.helpers   import *
-from other.logger import *
+from other.ConcretePrintable import DynStruct
+from other.logger import logdbg, logerr, logmsg, func_log
 # The UIManager should be running in the same thread as 
 # the Facade functions. It should talk to the hsgui with 
 # signals and slots
@@ -59,7 +58,7 @@ class UIManager(QObject):
     def draw(uim):
         'Tells the HotSpotterAPI to draw the current selection in the current mode'
         cm, gm = uim.hs.get_managers('cm','gm')
-        current_tab = uim.hsgui.main_skel.tablesTabWidget.currentIndex
+        #current_tab = uim.hsgui.main_skel.tablesTabWidget.currentIndex
         if uim.state in ['splash_view']:
             uim.hs.dm.show_splash()
         elif uim.state in ['select_roi']:
@@ -68,13 +67,14 @@ class UIManager(QObject):
         elif uim.state in ['chip_view']:
             if cm.is_valid(uim.sel_cid):
                 uim.hs.dm.show_chip(cm.cx(uim.sel_cid))
-                uim.changeTabSignal.emit(uim.tab_order.index('chip'))
+            uim.changeTabSignal.emit(uim.tab_order.index('chip'))
         elif uim.state in ['image_view']:
             if gm.is_valid(uim.sel_gid):
                 uim.hs.dm.show_image(gm.gx(uim.sel_gid))
-                uim.changeTabSignal.emit(uim.tab_order.index('image'))
+            uim.changeTabSignal.emit(uim.tab_order.index('image'))
         elif uim.state in ['result_view']:
-            uim.hs.dm.show_query(uim.sel_res)
+            if uim.sel_res != None:
+                uim.hs.dm.show_query(uim.sel_res)
             uim.changeTabSignal.emit(uim.tab_order.index('result'))
         else:
             logerr('I dont know how to draw in state: '+str(uim.state))
@@ -220,7 +220,6 @@ class UIManager(QObject):
         
         data_list = [None]*(num_top+1)
         row_list = range(num_top+1)
-        qcx = res.rr.qcx
         data_list[0] = [0,  qcid, qname, 'Queried Chip']
         for (ix, (cid, name, score)) in enumerate(zip(tcid, tname, tscore)):
             rank   = ix+1 

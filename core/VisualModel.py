@@ -1,12 +1,13 @@
 import shelve
-from other.helpers import filecheck, str2, alloc_lists, AbstractManager
-from other.logger import logmsg, logdbg, logio
+from other.helpers import filecheck, str2 
+from other.AbstractPrintable import AbstractManager
+from other.logger import logmsg, logdbg, logio, logerr, logwarn
 from pylab import unique
 from tpl.pyflann import FLANN
 from itertools import chain
 from numpy import\
         array, uint32, uint8, empty, ones, float32, log2, savez, load, setdiff1d, int32
-
+from numpy import spacing as eps
 # TODO TF-IDF still needs the h or a kmeans to work. 
 class VisualModel(AbstractManager):
     '''I know its not really a model, but indexable database 
@@ -107,7 +108,6 @@ class VisualModel(AbstractManager):
             logmsg('The model is clean and is not forced to recompute')
             return True
         logmsg('Building the model. If you have over 1000 chips, this will take awhile and there may be no indication of progress.')
-        iom = vm.hs.iom
         am = vm.hs.am
         cm = vm.hs.cm
         logdbg('Build Index was Requested')
@@ -169,7 +169,7 @@ class VisualModel(AbstractManager):
                 max( float32(bincount(ax2_tx[ax_of_wx], minlength=max_tx)) / tx2_wtf_denom ), vm.wx2_axs)
             vm.wx2_idf = log2(map(lambda ax_of_wx:\
                 vm.num_train()/len(unique(ax2_tx[ax_of_wx])),\
-                vm.wx2_axs)+eps)
+                vm.wx2_axs)+eps(1))
         logdbg('Built Model using %d feature vectors. Preparing to index.' % len(vm.ax2_cid))
 
         logdbg('Step 4: Building FLANN Index: over '+str(len(vm.wx2_fdsc))+' words')
@@ -235,8 +235,6 @@ class VisualModel(AbstractManager):
         vm.isDirty = True
         logmsg('The model is built')
         return True
-
-
     
     def sample_train_set(vm, samp_filter_arg=None):
         cm = vm.hs.cm; nm = vm.hs.nm
@@ -255,11 +253,11 @@ class VisualModel(AbstractManager):
             train_cx = list(chain.from_iterable(cxsPool))
         if filt['one_out_each_name'] is True:
             vnxs     = nm.get_valid_nxs()
-            offset   = sopts.offset
+            offset   = filt['offset']
             cxsPool  = [nm.nx2_cx_list[_cx] for _cx in vnxs]
-            pickFun  = lambda cxs: mod(offset, len(cxs))
+            pickFun  = lambda cxs: offset % len(cxs)
             _test_cx = array(map(lambda cxs: cxs[pickFun(cxs)], cxsPool))
-            if samp_filter['less_than_offset_ok'] is False:
+            if samp_filter_arg['less_than_offset_ok'] is False:
                 nOther   = cm.cx2_num_other_chips(_test_cx)
                 _okBit   = nOther > offset
                 _test_cx = _test_cx[_okBit]

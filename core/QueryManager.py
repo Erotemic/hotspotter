@@ -1,11 +1,13 @@
-from other.logger           import logmsg, logdbg, logerr
+from other.logger            import logdbg, logerr
+from other.helpers           import alloc_lists
 from other.AbstractPrintable import AbstractManager
 from other.ConcretePrintable import DynStruct
-from algo.spatial_functions import ransac
+from algo.spatial_functions  import ransac
 from numpy import \
-        array, sort, argsort, logical_and, ones, float32, setdiff1d,\
-        arange, minimum, sum, multiply, transpose, log2, zeros, tile,\
-        ndarray, int32, uint32
+        array, logical_and, ones, float32, arange, minimum,\
+        multiply, transpose, log2, tile, ndarray, int32, uint32
+import numpy as np
+from numpy import spacing as eps
 
 class RawResults(DynStruct):
     def __init__(rr, *args):
@@ -18,7 +20,7 @@ class QueryManager(AbstractManager):
         super( QueryManager, qm ).__init__( hs )
         qm.rr = None # Reference to the last RawResult for debugging
         qm.compute_cscore = lambda cx2_fs:\
-                array( [ sum(fs[fs > 0]) for fs in iter(cx2_fs) ] , dtype=float32)
+                array( [ np.sum(fs[fs > 0]) for fs in iter(cx2_fs) ] , dtype=float32)
 
     def  cx2_res(qm,qcx):
         'Driver function for the query pipeliene'
@@ -61,8 +63,8 @@ class QueryManager(AbstractManager):
         score_functions = \
         { # p - pth nearest ; o - k+1th nearest 
             'DIFF'  : lambda p,o: o - p, 
-            'RAT'   : lambda p,o: o / p+eps,
-            'LNRAT' : lambda p,o: log2(o / p+eps),
+            'RAT'   : lambda p,o: o / p+eps(1),
+            'LNRAT' : lambda p,o: log2(o / p+eps(1)),
             'COUNT' : lambda p,o: 1,
             'NDIST' : lambda p,o: 10**16 - p, 
             'TFIDF' : lambda wx2_tf, wx_idf, wx: wx2_tf[wx] * wx_idf[wx]
@@ -72,7 +74,7 @@ class QueryManager(AbstractManager):
         if isTFIDF: # TF-IDF voting is a little different
                 # The wx2_qtf could really be per k or as agged across all K
                 w_histo = bincount(qfx2_wxs, minlength=vm.numWords() )
-                wx2_qtf = F_( w_histo ) / num_qf
+                wx2_qtf = array( w_histo ,dtype=float32) / num_qf
                 qfx2_vweight = score_function(wx2_qtf, vm.wx2_idf, qfx2_wxs)
         else: 
             qfx2_kdists_vote = qfx2_Kdists[:,0:(K-1)]
@@ -193,7 +195,7 @@ class QueryManager(AbstractManager):
                 cx2_fs[tcx][outliers] = minimum(cx2_fs[tcx][outliers],-1) # -1 is the Spatially Inconsistent Code
                 # Get the new score of the database instance. 
                 # This is only used for a temp minimum calculation. 
-                tmp_rrscore = sum(cx2_fs[tcx],axis=0)
+                tmp_rrscore = np.sum(cx2_fs[tcx],axis=0)
                 if tmp_rrscore > 0:
                     #Keep track of our worst reranked score. 
                     min_reranked_score = min(min_reranked_score, tmp_rrscore)
@@ -247,7 +249,7 @@ class QueryManager(AbstractManager):
         for nx in nx2_fx2_scores.keys():
             fx2_scores = nx2_fx2_scores[nx]
             scores = array(fx2_scores.values())
-            nscore = sum(scores[scores > 0])
+            nscore = np.sum(scores[scores > 0])
             if nx < 0: # UNIDEN HACK. See -int(cx) above
                 cx2_nscore[-nx] = nscore
             else:
@@ -280,7 +282,7 @@ class QueryResult(AbstractManager):
         return array([cx for cx in cx_sort_ if cx not in invalids],dtype=uint32)
     def nxcx_sort(res): #Sorted Names and Chips #TODO Chance nxcx to something better
         'Returns the a tuple of sorted nxs, with the top corresponding cx'
-        rr = res.rr; cm, nm = res.hs.get_managers('cm','nm')
+        cm, nm = res.hs.get_managers('cm','nm')
         cx_sort = res.cx_sort()
         cx2_nx_sort = cm.cx2_nx[cx_sort]
         nx_sort = []; nx_sort2_cx = []; nx_unique = set()

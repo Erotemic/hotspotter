@@ -42,7 +42,7 @@ class AlgorithmManager(AbstractManager):
         am.preproc.bilateral_filt_bit      = False
         am.preproc.histeq_bit              = False
         am.preproc.contrast_stretch_bit    = False
-        am.preproc.adapt_histeq_bit        = True
+        am.preproc.adapt_histeq_bit        = False
 
         # --- Chip Representation ---
         # Currently one feature detector and one feature descriptor is chosen
@@ -152,7 +152,7 @@ class AlgorithmManager(AbstractManager):
             depends = am.default_depends
         if not abbrev_bit:
             # No abreviation = nice printable representation
-            exclude_list = ['indexers','quantizers','default_depends']
+            exclude_list = ['indexers','quantizers','default_depends', 'settings']
             for stage in am.default_depends:
                 if stage not in depends:
                     exclude_list.append(stage)
@@ -256,10 +256,10 @@ class AlgorithmManager(AbstractManager):
             #pil_filt = Image.fromarray(histeq(asarray(pil_filt))).convert('L')
         if am.preproc.histeq_bit:
             pil_filt = Image.fromarray(histeq(asarray(pil_filt)))
-        if am.preproc.contrast_stretch_bit:
-            pil_filt = Image.fromarray(contrast_stretch(asarray(pil_filt)))
         if am.preproc.adapt_histeq_bit:
             pil_filt = Image.fromarray(adapt_histeq(asarray(pil_filt)))
+        if am.preproc.contrast_stretch_bit:
+            pil_filt = Image.fromarray(contrast_stretch(asarray(pil_filt)))
         if am.preproc.autocontrast_bit :
             pil_filt = ImageOps.autocontrast(pil_filt)
         if am.preproc.bilateral_filt_bit :

@@ -1,4 +1,5 @@
 import types
+import os.path
 from other.AbstractPrintable import AbstractDataManager
 from other.helpers import filecheck
 from other.logger    import logmsg, logdbg, logerr, logio, logwarn
@@ -401,11 +402,13 @@ class ChipManager(AbstractDataManager):
 
     def  compute_chip(cm, cx):
         iom = cm.hs.iom
+        am  = cm.hs.am
         cid = cm.cx2_cid[cx]
         chip_fpath  = iom.get_chip_fpath(cid, thumb_bit=False)
         thumb_fpath = iom.get_chip_fpath(cid, thumb_bit=True)
-        logmsg('Computing Chip: cid=%d fname=%s\nalgo:\n'+am.get_name(['preproc']) % (cid, chip_fpath))
-        # --- Preprocess the Raw Chip
+        chip_fname = os.path.split(chip_fpath)[1]
+        logmsg(('\nComputing Chip: cid=%d fname=%s\n'+am.get_algo_name(['preproc'])) % (cid, chip_fname))
+        # --- Preprocess the Raw Chipa
         raw_chip = cm.cx2_raw_chip(cx)
         chip = cm.hs.am.preprocess_chip(raw_chip)
         chip.save(chip_fpath, 'PNG')

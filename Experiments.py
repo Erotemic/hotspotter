@@ -131,6 +131,8 @@ class ExperimentManager(AbstractManager):
            the rank of the worst minus the number of correct answers. Once we have the 
            metrics, we can build the learners, visualizations, and beter algorithms. 
         '''
+        problem_str = ''
+
         cm,nm,am = em.hs.get_managers('cm','nm','am')
         # Evaluate rank by chip and rank by name
         cx2_error_chip = -ones(len(em.cx2_res))
@@ -167,8 +169,8 @@ class ExperimentManager(AbstractManager):
 
         nid2_badness = -ones(len(nm.nid2_nx))
 
-        print 'WORST QUERY RESULTS:'
-        print 'GT C AVE-RANK  | QCID - GT_CIDS, GT_CIDS_RANK'
+        problem_str += 'WORST QUERY RESULTS:'+'\n'
+        problem_str +=  'GT C AVE-RANK  | QCID - GT_CIDS, GT_CIDS_RANK'+'\n'
         for score, cx in worst_cids:
             if score < 0: continue        
             cid = cm.cx2_cid[cx]
@@ -183,28 +185,28 @@ class ExperimentManager(AbstractManager):
                 to_append = find(top_cx == ocx)+1
                 other_rank.extend(to_append.tolist())
             other_cids = cm.cx2_cid[other_cxs]
-            #print '%14.3f | %4d - %s,%s %s' % (score, cid, str(other_cids), '\n'+' '*23, str(array(other_rank, dtype=int32)))
-            print '%14.3f | %4d - %s' % (score, cid, str(zip(other_cids, array(other_rank, dtype=int32))))
+            #problem_str +=  '%14.3f | %4d - %s,%s %s' % (score, cid, str(other_cids), '\n'+' '*23, str(array(other_rank, dtype=int32)))
+            problem_str +=  '%14.3f | %4d - %s' % (score, cid, str(zip(other_cids, array(other_rank, dtype=int32))))+'\n'
 
 
-        print '\nGT N RANK      | QNID | QCID - GT_CIDS'
+        problem_str +=  '\nGT N RANK      | QNID | QCID - GT_CIDS'+'\n'
         for score, cx in worst_nids:
             if score < 0: continue        
             cid = cm.cx2_cid[cx]
             nid = cm.cx2_nid(cx)
             other_cids = setdiff1d(cm.cx2_cid[cm.cx2_other_cxs([cx])[0]], cid)
-            print '%14.3f | %4d | %4d - %s' % (score, nid, cid, str(other_cids))
+            problem_str +=  '%14.3f | %4d | %4d - %s' % (score, nid, cid, str(other_cids))+'\n'
 
-        print '\n\nOVERALL WORST NAMES:'
+        problem_str +=  '\n\nOVERALL WORST NAMES:'+'\n'
         worst_names = zip(nid2_badness, range(len(nid2_badness)))
         worst_names.sort()
-        print 'SUM C AVE RANK | NID - CIDS'
+        problem_str +=  'SUM C AVE RANK | NID - CIDS'+'\n'
         for score, nid in worst_names:
             if score < 0: continue
             nx = nm.nid2_nx[nid]
             name = nm.nx2_name[nx]
             other_cids = cm.cx2_cid[nm.nx2_cx_list[nx]]
-            print ' %13.3f | %4d | %s' % (score, nid, str(other_cids))
+            problem_str +=  ' %13.3f | %4d | %s' % (score, nid, str(other_cids))+'\n'
 
         #num less than 5 (chips/names)
         num_tops = [1,5]
@@ -221,11 +223,12 @@ class ExperimentManager(AbstractManager):
             num_bad_name  = sum(gt_hist_name[top_name:])
             total_name    = sum(gt_hist_name)
 
-            print '\n--------\nQueries with chip-rank <= '+str(num_top)+':'
-            print '  #good = %d, #bad =%d, #total=%d' % (num_good_chip, num_bad_chip, total_chip)
+            problem_str +=  '\n--------\nQueries with chip-rank <= '+str(num_top)+':'+'\n'
+            problem_str +=  '  #good = %d, #bad =%d, #total=%d' % (num_good_chip, num_bad_chip, total_chip)+'\n'
 
-            print 'Queries with name-rank <= '+str(num_top)+':'
-            print '  #good = %d, #bad =%d, #total=%d' % (num_good_name, num_bad_name, total_name)
+            problem_str +=  'Queries with name-rank <= '+str(num_top)+':'+'\n'
+            problem_str +=  '  #good = %d, #bad =%d, #total=%d' % (num_good_name, num_bad_name, total_name)+'\n'
     
-        print '-----'
-        print am.get_algo_name('all')
+        problem_str +=  '-----'
+        problem_str +=  'Database: '+am.hs.db_dpath+'\n'
+        problem_str +=  am.get_algo_name('all')+'\n'

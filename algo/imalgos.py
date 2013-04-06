@@ -51,7 +51,7 @@ def adapt_histeq(img):
 
 def bilateral_filter(img):
     img_uint8 = img
-    img_float = float32(img_uint8) ./ 255
+    img_float = float32(img_uint8) / 255
     #mode = Points outside the boundaries of the input are filled according to the given mode (?constant?, ?nearest?, ?reflect? or ?wrap?). Default is ?constant?.
     img_bilat = skimage.filter.denoise_bilateral(img_float, win_size=20, sigma_range=1.6, sigma_spatial=1.6, bins=256, mode='reflect', cval='reflect')
     return img_bilat

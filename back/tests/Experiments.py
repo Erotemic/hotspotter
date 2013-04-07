@@ -1,7 +1,7 @@
 from other.logger  import logmsg, logerr
 from other.helpers import alloc_lists
 from other.AbstractPrintable import AbstractManager
-from core.QueryManager import QueryResult
+from back.QueryManager import QueryResult
 from pylab import find
 from numpy import setdiff1d, ones, zeros, array, int32
 import shelve
@@ -19,9 +19,9 @@ class ExperimentManager(AbstractManager):
         hs = em.hs
         cm, vm = hs.get_managers('cm','vm')
         valid_cx = cm.get_valid_cxs()
-        cx2_numother = cm.cx2_num_other_chips(valid_cx)
-        singleton_cx = valid_cx[cx2_numother == 1] # find singletons
-        duplicate_cx = valid_cx[cx2_numother  > 1] # find matchables
+        cx2_num_other = cm.cx2_num_other_chips(valid_cx)
+        singleton_cx = valid_cx[cx2_num_other == 1] # find singletons
+        duplicate_cx = valid_cx[cx2_num_other  > 1] # find matchables
         cx2_rr = em.batch_query(force_recomp=em.recompute_bit, test_cxs=duplicate_cx)
         em.cx2_res = array([  [] if rr == [] else\
                            QueryResult(hs,rr) for rr in cx2_rr])
@@ -178,15 +178,15 @@ class ExperimentManager(AbstractManager):
             if nid2_badness[nid] == -1:
                 nid2_badness[nid] = 0
             nid2_badness[nid] += score
-            other_cxs  = setdiff1d(cm.cx2_other_cxs([cx])[0], [cx])
+            other.xs  = setdiff1d(cm.cx2_other.xs([cx])[0], [cx])
             top_cx = em.cx2_res[cx].cx_sort()
-            other_rank = []
-            for ocx in other_cxs:
+            other.ank = []
+            for ocx in other.xs:
                 to_append = find(top_cx == ocx)+1
-                other_rank.extend(to_append.tolist())
-            other_cids = cm.cx2_cid[other_cxs]
-            #problem_str +=  '%14.3f | %4d - %s,%s %s' % (score, cid, str(other_cids), '\n'+' '*23, str(array(other_rank, dtype=int32)))
-            problem_str +=  '%14.3f | %4d - %s' % (score, cid, str(zip(other_cids, array(other_rank, dtype=int32))))+'\n'
+                other.ank.extend(to_append.tolist())
+            other.ids = cm.cx2_cid[other.xs]
+            #problem_str +=  '%14.3f | %4d - %s,%s %s' % (score, cid, str(other.ids), '\n'+' '*23, str(array(other.ank, dtype=int32)))
+            problem_str +=  '%14.3f | %4d - %s' % (score, cid, str(zip(other.ids, array(other.ank, dtype=int32))))+'\n'
 
 
         problem_str +=  '\nGT N RANK      | QNID | QCID - GT_CIDS'+'\n'
@@ -194,8 +194,8 @@ class ExperimentManager(AbstractManager):
             if score < 0: continue        
             cid = cm.cx2_cid[cx]
             nid = cm.cx2_nid(cx)
-            other_cids = setdiff1d(cm.cx2_cid[cm.cx2_other_cxs([cx])[0]], cid)
-            problem_str +=  '%14.3f | %4d | %4d - %s' % (score, nid, cid, str(other_cids))+'\n'
+            other.ids = setdiff1d(cm.cx2_cid[cm.cx2_other.xs([cx])[0]], cid)
+            problem_str +=  '%14.3f | %4d | %4d - %s' % (score, nid, cid, str(other.ids))+'\n'
 
         problem_str +=  '\n\nOVERALL WORST NAMES:'+'\n'
         worst_names = zip(nid2_badness, range(len(nid2_badness)))
@@ -205,8 +205,8 @@ class ExperimentManager(AbstractManager):
             if score < 0: continue
             nx = nm.nid2_nx[nid]
             name = nm.nx2_name[nx]
-            other_cids = cm.cx2_cid[nm.nx2_cx_list[nx]]
-            problem_str +=  ' %13.3f | %4d | %s' % (score, nid, str(other_cids))+'\n'
+            other.ids = cm.cx2_cid[nm.nx2_cx_list[nx]]
+            problem_str +=  ' %13.3f | %4d | %s' % (score, nid, str(other.ids))+'\n'
 
         #num less than 5 (chips/names)
         num_tops = [1,5]

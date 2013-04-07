@@ -7,12 +7,12 @@ from other.ConcretePrintable import DynStruct
 from other.AbstractPrintable import AbstractManager
 from numpy import sqrt, zeros, uint8, array, asarray, float32
 from PIL import Image, ImageOps
-from algo.imalgos import contrast_stretch, histeq, adapt_histeq
+from back.algo.imalgos import contrast_stretch, histeq, adapt_histeq
 import re
 
 class AlgorithmManager(AbstractManager): 
     '''Manager the settings for different algorithms
-    as well as the implementation of some and calling of others.
+    as well as the implementation of some and calling of other.
     spatial_functions (which contains ransac) should be consolidated
     here.'''
     def __init__(am, hs):
@@ -215,9 +215,9 @@ class AlgorithmManager(AbstractManager):
 
     def get_algo_suffix(am, depends, use_id_bit=True):
         if use_id_bit:
-            return '.algo.'+str(am.get_algo_id(depends))
+            return '.algo:'+str(am.get_algo_id(depends))
         else:
-            return '.algo.'+am.get_algo_name(depends,True)
+            return '.algo:'+am.get_algo_name(depends,True)
 
 
     # TODO: Move to tools library
@@ -251,7 +251,7 @@ class AlgorithmManager(AbstractManager):
         # --- Filters ---
         #if am.preproc.histeq_bit : 
             ##pil_filt = ImageOps.equalize(pil_filt)
-            #from tpl.other.imtools import histeq
+            #from tpl.other.mtools import histeq
             #img_rescale = exposure.equalize_hist(asarray(pil_filt))
             #pil_filt = Image.fromarray(histeq(asarray(pil_filt))).convert('L')
         if am.preproc.histeq_bit:
@@ -263,7 +263,7 @@ class AlgorithmManager(AbstractManager):
         if am.preproc.autocontrast_bit :
             pil_filt = ImageOps.autocontrast(pil_filt)
         if am.preproc.bilateral_filt_bit :
-            from tpl.other.shiftableBF import shiftableBF
+            from tpl.other.hiftableBF import shiftableBF
             pil_filt = Image.fromarray(shiftableBF(asarray(pil_filt)))
 
         return pil_filt

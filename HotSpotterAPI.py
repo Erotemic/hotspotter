@@ -17,16 +17,16 @@ Code Concepts:
     possible.
 
 '''
-from Experiments import ExperimentManager
-from core.AlgorithmManager import AlgorithmManager
-from core.ChipManager import ChipManager
-from core.IOManager import IOManager
-from core.ImageManager import ImageManager
-from core.NameManager import NameManager
-from core.QueryManager import QueryManager
-from core.VisualModel import VisualModel
-from gui.DrawManager import DrawManager
-from gui.UIManager import UIManager
+from back.tests.Experiments import ExperimentManager
+from back.AlgorithmManager import AlgorithmManager
+from back.ChipManager import ChipManager
+from back.IOManager import IOManager
+from back.ImageManager import ImageManager
+from back.NameManager import NameManager
+from back.QueryManager import QueryManager
+from back.VisualModel import VisualModel
+from front.DrawManager import DrawManager
+from front.UIManager import UIManager
 from other.AbstractPrintable import AbstractPrintable
 from other.ConcretePrintable import PrefStruct
 from other.logger import logdbg, logerr, logmsg, logwarn, func_log
@@ -260,8 +260,8 @@ class HotSpotterAPI(AbstractPrintable):
     # ---
     @func_log
     def get_source_fpath(hs):
-        import dev
-        return os.path.dirname(dev.__file__)
+        import __init__ as root_module
+        return os.path.dirname(root_module.__file__)
 
     def get_managers(hs, *manager_list):
         'quick access of managers eg: (am, cm, iom) = hs.managers("am","cm","iom")'

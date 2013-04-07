@@ -2,7 +2,7 @@ from other.logger            import logdbg, logerr
 from other.helpers           import alloc_lists
 from other.AbstractPrintable import AbstractManager
 from other.ConcretePrintable import DynStruct
-from algo.spatial_functions  import ransac
+from back.algo.spatial_functions  import ransac
 from numpy import \
         array, logical_and, ones, float32, arange, minimum,\
         multiply, transpose, log2, tile, ndarray, int32, uint32

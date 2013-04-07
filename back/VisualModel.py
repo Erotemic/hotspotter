@@ -66,7 +66,7 @@ class VisualModel(AbstractManager):
         vm.train_cid = vm.get_test_cid()
     def  get_samp_id(vm):
         ''''Returns an id unique to the sampled train_cid
-        Note: if a cid is assigned to another chip, this will break'''
+        Note: if a cid is assigned to another.hip, this will break'''
         iom = vm.hs.iom
         samp_shelf = shelve.open(iom.get_temp_fpath('sample_shelf.db'))
         samp_key = '%r' % vm.train_cid
@@ -258,7 +258,7 @@ class VisualModel(AbstractManager):
             pickFun  = lambda cxs: offset % len(cxs)
             _test_cx = array(map(lambda cxs: cxs[pickFun(cxs)], cxsPool))
             if samp_filter_arg['less_than_offset_ok'] is False:
-                nOther   = cm.cx2_num_other_chips(_test_cx)
+                nOther   = cm.cx2_num_other.hips(_test_cx)
                 _okBit   = nOther > offset
                 _test_cx = _test_cx[_okBit]
             train_cx = setdiff1d(vm.train_cx, _test_cx)

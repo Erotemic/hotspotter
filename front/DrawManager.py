@@ -16,7 +16,7 @@ import sys
 class DrawManager(AbstractManager):
     # ---
     def show_splash(dm):
-        splash_fname = os.path.join(dm.hs.get_source_fpath(), 'gui', 'splash.tif')
+        splash_fname = os.path.join(dm.hs.get_source_fpath(), 'front', 'splash.tif')
         splash_img = asarray(Image.open(splash_fname))
         dm.add_images([splash_img],['Welcome to Hotspotter'])
         dm.end_draw()
@@ -125,7 +125,7 @@ class DrawManager(AbstractManager):
         fig = dm.get_figure()
         fig.subplots_adjust(hspace=0.2, wspace=0.2)
         if dm.hs.prefs['draw_in_cmd_bit']:
-            from IPython.core.display import display
+            from IPython.back.display import display
             display(fig)
         fig.show()
         dm.hs.uim.redraw_gui()

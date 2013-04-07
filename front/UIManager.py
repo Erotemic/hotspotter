@@ -1,5 +1,5 @@
 from PyQt4.Qt import QObject, pyqtSignal, QFileDialog
-from gui.HotspotterMainWindow import HotspotterMainWindow
+from front.HotspotterMainWindow import HotspotterMainWindow
 from numpy import setdiff1d
 from other.ConcretePrintable import DynStruct
 from other.logger import logdbg, logerr, logmsg, func_log

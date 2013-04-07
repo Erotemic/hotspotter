@@ -148,7 +148,7 @@ class ChipManager(AbstractDataManager):
         'depricated'
         return cm.get_invalid_cxs() 
     def cx2_num_other_chips(cm, cxs):
-        'returns the number of other chips beloning to the same name'
+        'returns the number of other.hips beloning to the same name'
         return array(map(lambda x: len(x), cm.cx2_other_cxs(cxs)),dtype=uint32)
     def cx2_name(cm, cxs):
         nxs  = cm.cx2_nx[cxs]
@@ -260,7 +260,7 @@ class ChipManager(AbstractDataManager):
         for cx in cx_list:
             cid = cm.cx2_cid[cx]
             logmsg('Removing cid=%d' % cid)
-            #Remove cx from other data managers
+            #Remove cx from other.data managers
             gx = cm.cx2_gx[cx]
             nx = cm.cx2_nx[cx]
             cm.hs.gm.gx2_cx_list[gx].remove(cx)

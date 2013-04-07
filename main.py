@@ -16,13 +16,13 @@ if not in_qtc_bit:
     matplotlib.use('Qt4Agg')
 
 
-from Facade import Facade
 from PyQt4.Qt import QApplication, QEventLoop
+from front.Facade import Facade
 from other.logger import logmsg, hsl
 import argparse
 import inspect
-import sys
 import os.path
+import sys
 
 try:
     # Append the tpl lib to your path
@@ -70,7 +70,7 @@ cview,         = [lambda          : fac.change_view('chip_view')]
 # Add developer namespace
 from PyQt4.Qt   import \
         QApplication, QMainWindow, QMessageBox, QAbstractItemView, QObject
-from core.QueryManager import RawResults, QueryResult
+from back.QueryManager import RawResults, QueryResult
 #from PyQt4.QtCore import SIGNAL, Qt, pyqtSlot, pyqtSignal
 from PIL import Image
 import types

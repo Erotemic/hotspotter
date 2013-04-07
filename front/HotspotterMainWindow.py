@@ -1,8 +1,8 @@
 from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
         QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal, \
         QStandardItem, QStandardItemModel, QString
-from gui.EditPrefSkel import Ui_editPrefSkel
-from gui.MainSkel import Ui_mainSkel
+from front.EditPrefSkel import Ui_editPrefSkel
+from front.MainSkel import Ui_mainSkel
 from other.ConcretePrintable import DynStruct
 from other.logger import logmsg, logdbg
 from other.messages import workflow_help, cmd_help, gui_help, troubles_help
@@ -40,7 +40,7 @@ class EditPrefWidget(QWidget):
     changeSettingSignal = pyqtSignal(dict)
     def __init__(epw, fac):
         super( EditPrefWidget, epw ).__init__()
-        # Setup algo settings
+        # Setup algo.settings
         epw.pref_skel = Ui_editPrefSkel()
         epw.pref_skel.setupUi(epw)
         #epw.pref_skel.prefTreeWidget.itemActivated.connect(epw.onDoubleClick)

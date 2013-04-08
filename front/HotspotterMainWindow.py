@@ -3,7 +3,7 @@ from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
         QStandardItem, QStandardItemModel, QString
 from front.EditPrefSkel import Ui_editPrefSkel
 from front.MainSkel import Ui_mainSkel
-from other.ConcretePrintable import DynStruct
+from tpl.other.matplotlibwidget import MatplotlibWidget
 from other.logger import logmsg, logdbg
 from other.messages import workflow_help, cmd_help, gui_help, troubles_help
 import types
@@ -45,68 +45,16 @@ class EditPrefWidget(QWidget):
         epw.pref_skel.setupUi(epw)
         #epw.pref_skel.prefTreeWidget.itemActivated.connect(epw.onDoubleClick)
         #epw.pref_skel.prefTreeWidget.itemChanged.connect( fac.change_pref )
-        epw.pref_model = QStandardItemModel()
-        epw.pref_model.setHorizontalHeaderLabels(['Pref Name', 'Pref Vals'])
-        epw.pref_model.itemChanged.connect(epw.itemChangedSlot)
+        epw.pref_model = None
 
     @pyqtSlot(dict, name='populatePrefTreeSlot')
-    def populatePrefTreeSlot(epw, some_dict):
+    def populatePrefTreeSlot(epw, pref_struct):
         'Populates the Preference Tree Model'
         prev_block = epw.pref_model.blockSignals(True)
         parentItem = epw.pref_model.invisibleRootItem()
-        def recursive_populate_pref(parent_item, some_dict):
-            'populates the setting table based on the type of data in a dict or DynStruct'
-            parent_item.setColumnCount(2)
-            parent_item.setRowCount(len(some_dict))
-            row_index = 0
-            for (name, data) in some_dict.iteritems():
-                name_column = 0
-                data_column = 1
-                name_item = QStandardItem()
-                name_item.setData(name, Qt.DisplayRole)
-                name_item.setFlags(Qt.ItemIsEnabled);
-                parent_item.setChild(row_index, name_column, name_item)
-                if type(data) == DynStruct:
-                    data_item = QStandardItem()
-                    data_item.setFlags(Qt.ItemFlags(0)); 
-                    parent_item.setChild(row_index,data_column, data_item)
-                    recursive_populate_pref(name_item, data.to_dict())
-                elif type(data) == types.DictType:
-                    data_item = QStandardItem()
-                    data_item.setFlags(Qt.ItemFlags(0)); 
-                    parent_item.setChild(row_index,data_column, data_item)
-                    recursive_populate_pref(name_item, data)
-                else:
-                    # Not Recursive, this is a Column Item
-                    data_item = QStandardItem()
-                    if type(data) == types.IntType:
-                        data_item.setData(data, Qt.DisplayRole)
-                        data_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable );
-                    elif type(data) == types.BooleanType:
-                        data_item.setCheckState([Qt.Unchecked, Qt.Checked][data])
-                        data_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsUserCheckable );
-                    elif type(data) == types.StringType:
-                        data_item.setData( str(data) , Qt.DisplayRole)
-                        data_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable );
-                    else:
-                        data_item.setData( str(data) , Qt.DisplayRole)
-                        data_item.setFlags(Qt.ItemIsSelectable);
-
-                    data_item.setFlags(Qt.ItemFlags(0)); # HACK to remove ability to change things
-                    parent_item.setChild(row_index,data_column, data_item)
-                row_index += 1
-        recursive_populate_pref(parentItem, some_dict)
-        epw.pref_model.blockSignals(prev_block)
+        epw.pref_model = pref_struct.createQtItemModel()
         epw.pref_skel.prefTreeView.setModel(epw.pref_model)
         epw.pref_skel.prefTreeView.header().resizeSection(0,250)
-        #recursive_populate_pref(prefTreeWidget, some_dict)
-        #prefTreeWidget.blockSignals(prev_block)
-
-    def itemChangedSlot(epw, item):
-        new_data = item.data()
-        print new_data
-        print item
-
 
 class HotspotterMainWindow(QMainWindow):
     'The GUI guts of the skeletons in the hsgui directory'
@@ -123,12 +71,9 @@ class HotspotterMainWindow(QMainWindow):
         hsgui.main_skel = Ui_mainSkel()
         hsgui.main_skel.setupUi(hsgui)
         hsgui.epw = EditPrefWidget(fac)
-        # Add the MatplotLibWidget if possible hsgui.plotWidget = None
-        if not fac.hs.prefs['plotwidget_bit']:
-            from tpl.other.matplotlibwidget import MatplotlibWidget
-            hsgui.plotWidget = MatplotlibWidget(hsgui.main_skel.centralwidget)
-            hsgui.plotWidget.setObjectName(_fromUtf8('plotWidget'))
-            hsgui.main_skel.root_hlayout.addWidget(hsgui.plotWidget)
+        hsgui.plotWidget = MatplotlibWidget(hsgui.main_skel.centralwidget)
+        hsgui.plotWidget.setObjectName(_fromUtf8('plotWidget'))
+        hsgui.main_skel.root_hlayout.addWidget(hsgui.plotWidget)
         hsgui.prev_tbl_item = None
         hsgui.prev_cid = None
         hsgui.prev_gid = None 
@@ -161,8 +106,8 @@ class HotspotterMainWindow(QMainWindow):
         main_skel.actionRemove_Chip.triggered.connect(  fac.remove_cid)
         main_skel.actionNext.triggered.connect(         fac.select_next)
         # Options
-        main_skel.actionTogEll.triggered.connect(lambda: fac.toggle_pref('fpts_ell_bit'))
-        main_skel.actionTogPts.triggered.connect(lambda: fac.toggle_pref('fpts_xys_bit'))
+        main_skel.actionTogEll.triggered.connect(lambda: fac.toggle_pref('ellipse_bit'))
+        main_skel.actionTogPts.triggered.connect(lambda: fac.toggle_pref('points_bit'))
         main_skel.actionTogPlt.triggered.connect(hsgui.setPlotWidgetVisibleSlot)
         main_skel.actionPreferences.triggered.connect( hsgui.epw.show )
         # Help
@@ -305,4 +250,5 @@ class HotspotterMainWindow(QMainWindow):
         sel_row = item.row()
         sel_cid = int(hsgui.main_skel.chip_TBL.item(sel_row,0).text())
         hsgui.selectCidSignal.emit(sel_cid)
+
 

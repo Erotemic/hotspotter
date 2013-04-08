@@ -69,8 +69,8 @@ class QueryManager(AbstractManager):
             'NDIST' : lambda p,o: 10**16 - p, 
             'TFIDF' : lambda wx2_tf, wx_idf, wx: wx2_tf[wx] * wx_idf[wx]
         }
-        isTFIDF        = am.query.method == 'TFIDF'
-        score_function = score_functions[am.query.method]
+        isTFIDF        = am.query.method() == 'TFIDF'
+        score_function = score_functions[am.query.method()]
         if isTFIDF: # TF-IDF voting is a little different
                 # The wx2_qtf could really be per k or as agged across all K
                 w_histo = bincount(qfx2_wxs, minlength=vm.numWords() )
@@ -328,3 +328,4 @@ class QueryResult(AbstractManager):
         return result_str
     #--- end assign_feature_matches ---
     
+

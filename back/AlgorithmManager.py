@@ -3,7 +3,7 @@ import subprocess
 import shelve
 from other.logger  import logmsg, logdbg, logerr, logwarn
 from other.helpers  import filecheck
-from other.ConcretePrintable import DynStruct
+from other.ConcretePrintable import DynStruct, PrefStruct
 from other.AbstractPrintable import AbstractManager
 from numpy import sqrt, zeros, uint8, array, asarray, float32
 from PIL import Image, ImageOps
@@ -18,22 +18,21 @@ class AlgorithmManager(AbstractManager):
     def __init__(am, hs):
         super( AlgorithmManager, am ).__init__( hs)
         am.__define_algo_options()
-        am.default_algo_settings()
-
-    def default_algo_settings(am):
-        #Define the pipeline stages
-        am.preproc  = DynStruct()  # Low Level Chip Operations
-        am.chiprep  = DynStruct()  # Extracting Chip Features
-        am.model    = DynStruct()  # Building the model
-        am.query    = DynStruct()  # Searching the model
-
-        # Store it together
+        am.init_preferences()
         am.default_depends = ['preproc','chiprep','model','query']
-        am.settings = DynStruct()
-        am.settings.preproc = am.preproc
-        am.settings.chiprep = am.chiprep
-        am.settings.model = am.model
-        am.settings.query = am.query
+
+    def init_preferences(am):
+        iom = am.hs.iom
+        am.algo_prefs = PrefStruct(iom.get_prefs_fpath('algo_prefs'))
+        #Define the pipeline stages
+        am.preproc  = PrefStruct()  # Low Level Chip Operations
+        am.chiprep  = PrefStruct()  # Extracting Chip Features
+        am.model    = PrefStruct()  # Building the model
+        am.query    = PrefStruct()  # Searching the model
+        am.algo_prefs.preproc = am.preproc
+        am.algo_prefs.chiprep = am.chiprep
+        am.algo_prefs.model = am.model
+        am.algo_prefs.query = am.query
 
         # --- Chip Preprocessing ---
         # (selection, options, params? )
@@ -47,65 +46,23 @@ class AlgorithmManager(AbstractManager):
         # --- Chip Representation ---
         # Currently one feature detector and one feature descriptor is chosen
         # * = non-free
-        #am.chiprep.gravity_vector_bit      = True
-        am.chiprep.kpts_detector           = 'hesaff' #: heshesaff, hesaff, heslap, dense, MSER, FREAK*, SIFT*
-        am.chiprep.kpts_extractor          = 'SIFT' #: SIFT*, SURF, BRISK, 
-        '''
-            Interest point detectors/descriptors implemented by K.Mikolajczyk@surrey.ac.uk
-            at [ref. http://www.robots.ox.ac.uk/~vgg/research/affine]
-            Options:
-            Interest points:
-                -harris - harris detector
-                -hessian - hessian detector
-                -harmulti - multi-scale harris detector
-                -hesmulti - multi-scale hessian detector
-                -harhesmulti - multi-scale harris-hessian detector
-                -harlap - harris-laplace detector
-                -heslap - hessian-laplace detector
-                -dog    - DoG detector
-                -mser   - mser detector
-                -haraff - harris-affine detector
-                -hesaff - hessian-affine detector
-                -harhes - harris-hessian-laplace detector
-                -dense dx dy - dense sampling
-            Interest points parameters:
-                -density 100 - feature density per pixels (1 descriptor per 100pix)
-                -harThres - harris threshold [100]
-                -hesThres  - hessian threshold [200]
-                -edgeLThres  - lower canny threshold [5]
-                -edgeHThres  - higher canny threshold [10]
-            Descriptors:
-                -sift - sift [D. Lowe]
-                -gloh - gloh [KM]
-            Descriptor paramenters:
-                -color - color sift [KM]
-                -dradius - patch radius for computing descriptors at scale 1
-                -fface ..../facemodel.dat - frontal face detector
-            Input/Output:
-                -i image.png  - input image pgm, ppm, png, jpg, tif
-                -p1 image.pgm.points - input regions format 1
-                -p2 image.pgm.points - input regions format 2
-                -o1 out.desc - saves descriptors in out.desc output format 1
-                -o2 out.desc - saves descriptors in out.desc output format 2
-                -noangle - computes rotation variant descriptors (no rotation esimation)
-                -DP - draws features as points in out.desc.png
-                -DC - draws regions as circles in out.desc.png
-                -DE - draws regions as ellipses in out.desc.png
-                -c 255 - draws points in grayvalue [0,...,255]'''
+        #am.chiprep.gravity_vector_bit     = True
+        am.chiprep.kpts_detector           = PrefStruct.ComboPref(0, ('heshesaff', 'heslapaff', 'dense', '!MSER', '#FREAK', '#SIFT'))
+        am.chiprep.kpts_extractor          = PrefStruct.ComboPref(0, ('SIFT', '#SURF', '#BRISK'))
 
         # --- Vocabulary ---
-        am.model.quantizer                 = 'none' #: 'hkmeans'
+        am.model.quantizer                 = PrefStruct.ComboPref(0, ('none', '#hkmeans', '#akmeans'))
         am.model.indexer                   = 'flann_kdtree'
 
         # --- Query Params ---
-        am.query.num_top                   =       3 # move to results
-        am.query.k                         =       1 
-        am.query.num_rerank                =    1000
-        am.query.spatial_thresh            =    0.05 
-        am.query.sigma_thresh              =    0.05  #: Unimplemented
-        am.query.method                    =  'COUNT'  #: DIFF, LNRAT, RAT, TFIDF, COUNT
-        am.query.score                     = 'cscore' #: nscore, cscore # move to results
-        am.query.self_as_result_bit        =   False  #: Return self (in terms of name) in results
+        am.query.k                         =    1 
+        am.query.num_rerank                = 1000
+        am.query.spatial_thresh            = 0.05 
+        am.query.sigma_thresh              = 0.05 #: Unimplemented
+        am.query.method                    = PrefStruct.ComboPref(0, ('COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'))
+        am.query.score                     = PrefStruct.ComboPref(0,('cscore','nscore')) # move to results?
+        am.query.self_as_result_bit        = False  #: Return self (in terms of name) in results
+        am.query.num_top                   =    3 # move to results
         #TODO: (theta, xy, sigma)_thresh 
 
     def __define_algo_options(am):
@@ -274,9 +231,9 @@ class AlgorithmManager(AbstractManager):
         external_detectors = ['heshesaff','hesaff', 'heslap', 'harlap', 'dense']
         external_descriptors = ['SIFT']
 
-        if am.chiprep.kpts_detector in external_detectors or True:
+        if am.chiprep.kpts_detector() in external_detectors or True:
             (kpts, desc) = am.external_feature_computers(chip)
-            if am.chiprep.kpts_extractor in external_descriptors:
+            if am.chiprep.kpts_extractor() in external_descriptors:
                 return (kpts, desc)
 
         from tpl.pyopencv import cv2
@@ -289,16 +246,16 @@ class AlgorithmManager(AbstractManager):
             # Also: Grid, GridFAST, PyramidStar
             # see http://docs.opencv.org/modules/features2d/doc/common_interfaces_of_feature_detectors.html#Ptr<FeatureDetector> FeatureDetector::create(const string& detectorType)
         im  = cv2.cvtColor(chip, cv2.COLOR_BGR2GRAY)
-        logdbg('Making detector: %r' % am.chiprep.kpts_detector)
-        cvFeatDetector  = cv2.FeatureDetector_create(am.chiprep.kpts_extractor)
+        logdbg('Making detector: %r' % am.chiprep.kpts_detector())
+        cvFeatDetector  = cv2.FeatureDetector_create(am.chiprep.kpts_extractor())
         #cvFeatDetector   = cv2.PyramidAdaptedFeatureDetector(cvFeatDetector_,4)
-        logdbg('Made %r, Making extractor: %r' % (cvFeatDetector, am.chiprep.kpts_detector))
-        cvFeatExtractor  = cv2.DescriptorExtractor_create(am.chiprep.kpts_extractor)
+        logdbg('Made %r, Making extractor: %r' % (cvFeatDetector, am.chiprep.kpts_detector()))
+        cvFeatExtractor  = cv2.DescriptorExtractor_create(am.chiprep.kpts_extractor())
 
         logdbg('Made %r, Detecting keypoints on image' % cvFeatExtractor )
         cvKpts_= cvFeatDetector.detect(im)
         # Tinker with Keypoint
-        if am.chiprep.gravity_vector_bit: 
+        if am.chiprep['gravity_vector_bit']: 
             for cvKp in cvKpts_:
                 cvKp.angle = 0
                 r = cvKp.size #scale = (r**2)/27
@@ -344,20 +301,22 @@ class AlgorithmManager(AbstractManager):
         chip = Image.fromarray(chip)
         tmp_chip_fpath = iom.get_temp_fpath('tmp.ppm')
         chip.save(tmp_chip_fpath,'PPM')
-        if am.chiprep.kpts_detector == 'heshesaff':
+        if am.chiprep.kpts_detector() == 'heshesaff':
             exename = iom.get_hesaff_exec()
             outname = tmp_chip_fpath+'.hesaff.sift'
             args = '"'+tmp_chip_fpath+'"'
-        elif am.chiprep.kpts_detector in ['dense'] or True:
+        elif am.chiprep.kpts_detector() in ['heslapaff', 'dense']:
             exename = iom.get_inria_exec()
-            feature_name = am.chiprep.kpts_detector
+            feature_name = am.chiprep.kpts_detector()
+            if feature_name == 'heslapaff':
+                feature_name = 'hesaff'
             if feature_name == 'dense':
                 feature_name = feature_name+' 6 6'
-            outname = tmp_chip_fpath+'.'+am.chiprep.kpts_detector+'.sift'
+            outname = tmp_chip_fpath+'.'+am.chiprep.kpts_detector()+'.sift'
             args = '-'+feature_name+' -sift -i "'+tmp_chip_fpath+'"'
         else:
             logerr('Method %r + %r is invalid in extern_detect_kpts.m'\
-                   % (am.chiprep.kpts_detector, am.chiprep.kpts_extractor))
+                   % (am.chiprep.kpts_detector(), am.chiprep.kpts_extractor()))
 
         cmd = exename+' '+args
         logdbg('External Executing: %r ' % cmd)
@@ -398,3 +357,46 @@ class AlgorithmManager(AbstractManager):
         fid.close()
 
         return (kpts, desc)
+        '''
+            Interest point detectors/descriptors implemented by K.Mikolajczyk@surrey.ac.uk
+            at [ref. http://www.robots.ox.ac.uk/~vgg/research/affine]
+            Options:
+            Interest points:
+                -harris - harris detector
+                -hessian - hessian detector
+                -harmulti - multi-scale harris detector
+                -hesmulti - multi-scale hessian detector
+                -harhesmulti - multi-scale harris-hessian detector
+                -harlap - harris-laplace detector
+                -heslap - hessian-laplace detector
+                -dog    - DoG detector
+                -mser   - mser detector
+                -haraff - harris-affine detector
+                -hesaff - hessian-affine detector
+                -harhes - harris-hessian-laplace detector
+                -dense dx dy - dense sampling
+            Interest points parameters:
+                -density 100 - feature density per pixels (1 descriptor per 100pix)
+                -harThres - harris threshold [100]
+                -hesThres  - hessian threshold [200]
+                -edgeLThres  - lower canny threshold [5]
+                -edgeHThres  - higher canny threshold [10]
+            Descriptors:
+                -sift - sift [D. Lowe]
+                -gloh - gloh [KM]
+            Descriptor paramenters:
+                -color - color sift [KM]
+                -dradius - patch radius for computing descriptors at scale 1
+                -fface ..../facemodel.dat - frontal face detector
+            Input/Output:
+                -i image.png  - input image pgm, ppm, png, jpg, tif
+                -p1 image.pgm.points - input regions format 1
+                -p2 image.pgm.points - input regions format 2
+                -o1 out.desc - saves descriptors in out.desc output format 1
+                -o2 out.desc - saves descriptors in out.desc output format 2
+                -noangle - computes rotation variant descriptors (no rotation esimation)
+                -DP - draws features as points in out.desc.png
+                -DC - draws regions as circles in out.desc.png
+                -DE - draws regions as ellipses in out.desc.png
+                -c 255 - draws points in grayvalue [0,...,255]'''
+

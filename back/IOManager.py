@@ -64,7 +64,7 @@ class IOManager(AbstractManager):
         super( IOManager, iom ).__init__( hs )        
         logdbg('Creating IOManager')
         iom.hs = hs
-        iom.global_dir = safepath(join(expanduser('~'),'.hotspotter'))
+        iom.settings_dir = safepath(join(expanduser('~'),'.hotspotter'))
         iom.internal_dname = '.hs_internals';
         iom.dummy_delete = False #Dont actually delete things
 
@@ -87,27 +87,17 @@ class IOManager(AbstractManager):
         return join(iom.get_computed_dpath(), 'experiments')
     # --- Public Directories
     @checkdir_decorator
-    def  get_img_dpath(iom, thumb_bit=None):
-        img_dname = 'images'
-        if (thumb_bit != None and thumb_bit) or iom.hs.prefs['thumbnail_bit']:
-            return join(iom.get_thumb_dpath(),img_dname)
-        else:
-            return join(iom.hs.db_dpath,img_dname)
+    def  get_img_dpath(iom):
+        return join(iom.hs.db_dpath, 'images')
     @checkdir_decorator
-    def  get_chip_dpath(iom, thumb_bit=None):
-        chip_dname = 'chips'
-        if (thumb_bit != None and thumb_bit) or iom.hs.prefs['thumbnail_bit']:
-            ret = join(iom.get_thumb_dpath(),chip_dname)
-        else:
-            ret = join(iom.get_computed_dpath(),chip_dname)
-        dircheck(ret)
-        return ret
+    def  get_chip_dpath(iom):
+        return join(iom.get_computed_dpath(), 'chips')
     @checkdir_decorator
     def  get_chiprep_dpath(iom):
         return join(iom.get_computed_dpath(), 'features')
     @checkdir_decorator
     def  get_model_dpath(iom):
-        return join(iom.get_computed_dpath(),'models')
+        return join(iom.get_computed_dpath(), 'models')
     @checkdir_decorator
     def  get_temp_dpath(iom):
         return join(iom.get_computed_dpath(), 'temp')
@@ -128,21 +118,28 @@ class IOManager(AbstractManager):
     def  get_inria_exec(iom):
         return platexec(join(iom.get_tpl_lib_dir(), 'inria_features'))
     # --- Chip Representations
-    def get_chip_prefix(iom, cid):
-        return 'CID.'+str(cid)+'_'
+    def get_chip_prefix(iom, cid, depends):
+        'Naming convention for chips: cid, algo_depends, other' 
+        am = iom.hs.am
+        algo_suffix = am.get_algo_suffix(depends=depends)
+        return 'CID.'+str(cid)+'_'+algo_suffix
     def  get_chiprep_fpath(iom, cid):
-        am = iom.hs.am
-        algo_suffix = am.get_algo_suffix(depends=['preproc', 'chiprep'])
-        chiprep_fname = iom.get_chip_prefix(cid)+algo_suffix+'_feats.npz' 
+        chiprep_fname = iom.get_chip_prefix\
+                (cid, ['preproc', 'chiprep']) + '_feats.npz' 
         return safepath(join(iom.get_chiprep_dpath(), chiprep_fname))
-    def  get_img_fpath(iom, gname, thumb_bit=None):
-        return safepath(join(iom.get_img_dpath(thumb_bit), gname))
-    def  get_chip_fpath(iom, cid, thumb_bit=None):
-        am = iom.hs.am
-        imgext = ['png','jpg'][thumb_bit]
-        algo_suffix = am.get_algo_suffix(depends=['preproc'])
-        chip_fname = iom.get_chip_prefix(cid)+algo_suffix+'_chip.'+imgext 
-        return safepath(join(iom.get_chip_dpath(thumb_bit),chip_fname))
+    # Images thumb and full
+    def  get_img_thumb_fpath(iom, gname):
+        return safepath(join(iom.get_thumb_dpath(), 'images', gname))
+    def  get_img_fpath(iom, gname):
+        return safepath(join(iom.get_img_dpath(), gname))
+    # Chips thumb and full
+    def  get_chip_thumb_fpath(iom, cid):
+        chip_fname = iom.get_chip_prefix(cid, ['preproc'])+'_chip.jpg' 
+        return safepath(join(iom.get_thumb_dpath(), 'chip', chip_fname))
+    def  get_chip_fpath(iom, cid):
+        chip_fname = iom.get_chip_prefix(cid, ['preproc'])+'_chip.png' 
+        return safepath(join(iom.get_chip_dpath(),chip_fname))
+    # 
     def get_model_fpath(iom):
         am, vm = iom.hs.get_managers('am','vm')
         algo_suffix = am.get_algo_suffix(depends=['preproc','chiprep','model'])
@@ -156,10 +153,9 @@ class IOManager(AbstractManager):
         flann_index_fname = 'index.%s.%s.flann' % (algo_suffix, samp_suffix)
         return safepath(join(iom.get_model_dpath(), flann_index_fname))
     # --- Indexes 
-    def get_prefs_fpath(iom):
-        dircheck(iom.global_dir)
-        pref_fname = 'prefs.txt'
-        return safepath(join(iom.global_dir, pref_fname))
+    def get_prefs_fpath(iom, prefs_name):
+        dircheck(iom.settings_dir)
+        return safepath(join(iom.settings_dir,  prefs_name+'.txt'))
 
     def get_dataset_fpath(iom, db_name=None):
         if sys.platform == 'win32':
@@ -504,5 +500,6 @@ class IOManager(AbstractManager):
                     logmsg('-----------------')
         for cx in dup_cx_list:
             cm.remove_chip(cx)
+
 
 

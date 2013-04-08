@@ -126,7 +126,7 @@ class VisualModel(AbstractManager):
 
         logdbg('Step 2: Build the model Words')
         isTFIDF = False
-        if am.model.quantizer == 'none':
+        if am.model.quantizer() == 'none':
             logdbg('No Quantization. Aggregating all fdscriptors for nearest neighbor search.')
             vm.wx2_fdsc = empty((num_train_keypoints,128),dtype=uint8)
             _p = 0
@@ -136,11 +136,11 @@ class VisualModel(AbstractManager):
                 _p += nfdsc
             ax2_wx = array(range(0,num_train_keypoints),dtype=uint32)
             isTFIDF = (am.quantizers['none'].pseudo_num_w > 0)
-        if am.model.quantizer == 'hkmeans':
+        if am.model.quantizer() == 'hkmeans':
             hkm_cfg = am.quantizers['hkmeans']
             [vm.wx2_fdsc, ax2_wx] = hkmeans_hack([cm.cx2_fdsc[:,tx2_cx]],hkm_cfg)
-        if am.model.quantizer == 'akmeans':
-            NUM_WORDS = am.quantizers['akmeans'].k
+        if am.model.quantizer() == 'akmeans':
+            NUM_WORDS = am.quantizers.akmeans.k
         
         logdbg('Step 3: Point the parts of the model back to their source')
         vm.wx2_axs = empty((vm.numWords()),dtype=object) 
@@ -276,4 +276,3 @@ class VisualModel(AbstractManager):
             else:
                 logdbg('The sample has not changed.')
         logdbg('The index is '+['Clean','Dirty'][vm.isDirty])
-    

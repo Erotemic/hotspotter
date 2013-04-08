@@ -1,7 +1,7 @@
 from PyQt4.Qt import QObject, pyqtSignal, QFileDialog
 from front.HotspotterMainWindow import HotspotterMainWindow
 from numpy import setdiff1d
-from other.ConcretePrintable import DynStruct
+from other.ConcretePrintable import PrefStruct
 from other.logger import logdbg, logerr, logmsg, func_log
 # The UIManager should be running in the same thread as 
 # the Facade functions. It should talk to the hsgui with 
@@ -18,6 +18,11 @@ class UIManager(QObject):
     redrawGuiSignal         = pyqtSignal()
     changeTabSignal         = pyqtSignal(int)
 
+    def init_preferences(uim):
+        iom = uim.hs.iom
+        uim.ui_prefs = PrefStruct(iom.get_prefs_fpath('ui_prefs'))
+        uim.ui_prefs.roi_beast_mode = False
+        uim.ui_prefs.load()
 
     # --- UIManager talks to the main thread
     def __init__(uim, hs):
@@ -30,6 +35,7 @@ class UIManager(QObject):
         uim.sel_res = None
         uim.state = 'splash_view'
         uim.tab_order = ['image','chip','result']
+        uim.init_preferences()
 
     def start_gui(uim, fac): # Currently needs facade access
         logdbg('Creating the GUI')
@@ -228,9 +234,12 @@ class UIManager(QObject):
 
     def populate_algo_settings(uim):
         hs = uim.hs
-        am = hs.am
-        all_sett = DynStruct()
-        all_sett.algorithm_settings = am.settings
-        all_sett.core_settings = hs.prefs
-        uim.populatePrefTreeSignal.emit(all_sett.to_dict())
+        dm, am = hs.get_managers('dm','am')
+        all_sett = PrefStruct()
+        all_sett.algorithm_settings = am.algo_prefs
+        all_sett.core_settings = hs.core_prefs
+        all_sett.ui_settings = uim.ui_prefs
+        all_sett.draw_settings = dm.draw_prefs
+        #uim.populatePrefTreeSignal.emit(all_sett.to_dict())
+
 

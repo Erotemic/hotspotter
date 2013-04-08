@@ -49,3 +49,4 @@ if __name__ == "__main__":
     editPrefSkel.show()
     sys.exit(app.exec_())
 
+

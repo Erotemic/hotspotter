@@ -37,135 +37,78 @@ import os.path
 
 class HotSpotterAPI(AbstractPrintable):
 
-    def default_preferences(hs):
-        display_prefs = PrefStruct(hs.iom.get_prefs_fpath())
-        core_prefs = PrefStruct(hs.iom.get_prefs_fpath())
-
-        core_prefs.database_dpath  = None
-        core_prefs.roi_quickselect = False
-
-        display_prefs.thumbnail_size = None
-        display_prefs.thumbnail_size = None
-        display_prefs.ellipse_bit    = False
-        display_prefs.points_bit     = False
-        display_prefs.ellipse_alpha  = .5
-        #TODO: Combo Pref
-        display_prefs.result_display_mode = (1, ['in_image', 'in_raw_chip', 'in_preprocessed_chip'])
+    def init_preferences(hs):
+        iom = hs.iom
+        hs.core_prefs = PrefStruct(iom.get_prefs_fpath('core_prefs'))
+        hs.core_prefs.database_dpath  = None
+        hs.core_prefs.load()
 
     @func_log
-    def read_prefs(hs, default_bit=False):
-        'Loads preferences from the home directory'
-        logdbg('Reading Prefs: ')    
-        # None will usually map to a function default
-        # 'none' will get rid of the preference
-        #TODO: Alot of these should be drawmanager settings
-        # Thumbnailing should be taken care of the draw manager
-        # maybe
-        default_prefs = {
-            'database_dir'     :  None,
-            'thumbnail_size'   :   128,        
-            'thumbnail_bit'    : False,
-            'plotwidget_bit'   : False,
-
-            'fpts_ell_bit'     : False,
-            'fpts_xys_bit'     : False,
-            'bbox_bit'         :  True,
-            'res_as_img'       : False, 
-
-            'text_color'       :  None,
-            'colormap'         : 'hsv',
-            'ellipse_alpha'    :    .5,   
-
-            'draw_in_cmd_bit'  :  False,
-            'fignum'           :     0,
-
-            #'match_with_lines'     : False,
-            'match_with_color_ell' :  True,
-            'match_with_color_xys' : False,
-
-            'roi_beast_mode' : False
-        }
-        pref_fpath = hs.iom.get_prefs_fpath()
-        if default_bit or not filecheck(pref_fpath):
-            hs.prefs = default_prefs
-        else:
-            with open(pref_fpath, 'r') as f:
-                hs.prefs = cPickle.load(f)
-            if type(hs.prefs) != types.DictType:
-                logerr('Preference file is corrupted')
-            for key in default_prefs.keys(): # Add New Preferences Dynamically
-                if not key in hs.prefs.keys(): 
-                    hs.prefs[key] = default_prefs[key]
-        return True
-
-    def use_thumbnail(hs, thumb_bit=None):
-        return (thumb_bit is not None and thumb_bit) or\
-               (thumb_bit is None and hs.prefs['thumbnail_bit'])
-
-    @func_log
-    def write_prefs(hs):
-        if type(hs.prefs) != types.DictType:
-            logerr('API preference dictionary is corrupted!')
-        with open(hs.iom.get_prefs_fpath(), 'w') as f:
-            cPickle.dump(hs.prefs, f)
-
-    @func_log
-    def smartup_db_dpath(hs, db_dpath):
-        ' Performs a smart update of the db_dpath '
-        ' Trys a number of various  options to get it rightu'
-        if db_dpath is None: # None = Open the last opened database
-            db_dpath = str(hs.prefs['database_dir'])
-            if db_dpath in [None, 'None'] or not dircheck(db_dpath, False):
-                logwarn('Warning! Global preference database_dir is invalid')
-                db_dpath = '' 
-        if db_dpath == '': # Quotes = try user selection
-            db_dpath = hs.uim.select_database()
-        elif db_dpath == None:
-            logerr('db_dpath cannot be None')
-        if not os.path.exists(db_dpath):
-            logerr('ERROR: db_dpath \"'+str(db_dpath)+'\" doesnt exist')
-        # --
+    def is_valid_db_dpath(hs, db_dpath):
+        'Checks to see if database conforms to expected conventions'
+        if not os.path.exists(db_dpath): 
+            logwarn('db_dpath \"'+str(db_dpath)+'\" doesnt exist')
+            return False
         db_dpath_files = os.listdir(db_dpath)
         if hs.iom.internal_dname in db_dpath_files:
             logmsg('Loading a HotSpotter database')
-        elif 'images' in db_dpath_files or 'data' in db_dpath_files:
+        elif 'images' in db_dpath_files or\
+             'data'   in db_dpath_files:
             logmsg('Loading a StripSpotter database')
         elif len(db_dpath_files) == 0:
-            logmsg('Creating a new database')
+            logmsg('Loading a new database')
         else:
+            logwarn('Unknown database type')
             logdbg('Files in dir: '+str(db_dpath_files))
-            logerr('Unknown database type. Select a HotSpotter, StripeSpotter, or empty directory.')
+            return False
+        return True
+
+    @func_log
+    def smartset_db_dpath(hs, db_dpath):
+        ''' Performs a smart update of the db_dpath
+        Trys a number of various  options to get it right
+
+        None = Read from preferences
+        ''   = Prompt the User For database
+        '''
+        if db_dpath is None: # If requested to read prefs
+            db_dpath = str(hs.core_prefs.database_dpath)
+        if db_dpath in [None, 'None'] or\
+           not os.path.exists(db_dpath): # Check validity
+            db_dpath = '' 
+            logwarn('Saved database_dpath was invalid')
+        if db_dpath == '': # Prompt The User
+            db_dpath = hs.uim.select_database()
         # --
-        if hs.prefs['database_dir'] != db_dpath:
-            hs.prefs['database_dir'] = db_dpath
-            hs.write_prefs()
-        logdbg('setting db_dpath = '+str(db_dpath))
-        hs.db_dpath = db_dpath
+        if hs.is_valid_db_dpath(db_dpath):
+            logdbg('Setting db_dpath = '+str(db_dpath))
+            hs.db_dpath = db_dpath
+            hs.core_prefs.update('database_dpath',db_dpath)
+        else:
+            logerr('Invalid Database. '+\
+                   'Select an existing HotSpotter, StripeSpotter database. '+\
+                   'To create a new database, select and empty directory. ')
 
     def __init__(hs):
         super( HotSpotterAPI, hs ).__init__(['cm','gm','nm','em','qm','dm','am','vm','iom','uim'])
         #
         hs.db_dpath = None #Database directory.
         hs.data_loaded_bit = False
-        hs.prefs = None
+        hs.core_prefs = None
         # --- Managers ---
-        hs.iom = None # IO Manager.
-        #
-        hs.am = None # Algorithm Manager
+        hs.iom = IOManager(hs) # Maintains path structures
+        hs.uim = UIManager(hs) # Interface to the QtGui
+        hs.dm = DrawManager(hs) # Matplotlib interface. Draws on a GUI
+        hs.am = AlgorithmManager(hs) # Settings and Standalone algos
+        # Data Managers
         hs.vm = None # Vocab Manager
         hs.qm = None # Vocab Manager
         hs.em = None # Experiment Manager
-        hs.dm = None # Draw Manager
-        #-
         hs.gm = None # Image Manager
         hs.cm = None # Instance Manager
         hs.nm = None # Name Manager
         #-
-        hs.uim = UIManager(hs)
-        hs.iom = IOManager(hs)
-        hs.dm  = DrawManager(hs)
-        hs.am = AlgorithmManager(hs)
-        hs.read_prefs()
+        hs.init_preferences()
         # --- 
 
     @func_log
@@ -173,9 +116,7 @@ class HotSpotterAPI(AbstractPrintable):
         hs.data_loaded_bit = False
         if hs.db_dpath != None and db_dpath == None:
             db_dpath = hs.db_dpath
-        hs.read_prefs()
-        hs.smartup_db_dpath(db_dpath)
-        
+        hs.smartset_db_dpath(db_dpath)
         hs.gm  = ImageManager(hs)
         hs.nm  = NameManager(hs)
         hs.cm  = ChipManager(hs)
@@ -186,16 +127,6 @@ class HotSpotterAPI(AbstractPrintable):
             hs.load_tables()
         else: 
             logdbg('autoload is false.')
-    # ---
-    @func_log
-    def set_pref(hs, pref_name, pref_val):
-        if pref_val == 'toggle':
-            if not hs.prefs[pref_name] in [True, False]:
-                logerr('Cannot toggle a non-boolean pref: '+str(pref_name))
-            hs.prefs[pref_name] = not hs.prefs[pref_name]
-        else:
-            hs.prefs[pref_name] = pref_val
-        hs.write_prefs()
     # ---
     @func_log
     def load_tables(hs):
@@ -272,3 +203,4 @@ class HotSpotterAPI(AbstractPrintable):
 
     def __getitem__(hs, *dynargs):
         return tuple([hs.__dict__[arg] for arg in dynargs])
+

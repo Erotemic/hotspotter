@@ -310,19 +310,19 @@ class ChipManager(AbstractDataManager):
         cm.cx2_nx[cx] = new_nx
 
 # --- Raw Image Representation of Chip ---
-    def  cx2_chip_list(cm, cx_list, thumb_bit=None):
+    def  cx2_chip_list(cm, cx_list):
         if iterable(cx_list): 
-            chip_fpath_list = [cm.cx2_chip_fpath(cx, thumb_bit) for cx in iter(cx_list) ]
+            chip_fpath_list = [cm.cx2_chip_fpath(cx) for cx in iter(cx_list) ]
             return [asarray(Image.open(chip_fpath)) for chip_fpath in iter(chip_fpath_list)]
         else: 
-            return [cm.cx2_chip(cx_list, thumb_bit)]
+            return [cm.cx2_chip(cx_list)]
 
-    def  cx2_chip(cm, cx, thumb_bit=None):
-        chip_fpath = cm.cx2_chip_fpath(cx, thumb_bit)
+    def  cx2_chip(cm, cx):
+        chip_fpath = cm.cx2_chip_fpath(cx)
         return asarray(Image.open(chip_fpath))
     
-    def  cx2_chip_size(cm, cx, thumb_bit=None):
-        chip_fpath = cm.cx2_chip_fpath(cx, thumb_bit)
+    def  cx2_chip_size(cm, cx):
+        chip_fpath = cm.cx2_chip_fpath(cx)
         return Image.open(chip_fpath).size
 
     def cx2_transChip(cm, cx):
@@ -341,17 +341,13 @@ class ChipManager(AbstractDataManager):
                        [ 0,  0,  1]), dtype=float32)
         return trans
 
-    def cx2_chip_fpath(cm, cx, thumb_bit=None):
+    def cx2_chip_fpath(cm, cx):
         iom = cm.hs.iom
         cid = cm.cid(cx)
-        chip_fpath  = iom.get_chip_fpath(cid, thumb_bit=False)
-        thumb_fpath = iom.get_chip_fpath(cid, thumb_bit=True)
-        if not (filecheck(chip_fpath) and filecheck(thumb_fpath)): 
+        chip_fpath  = iom.get_chip_fpath(cid)
+        if not filecheck(chip_fpath): 
             cm.compute_chip(cx)
-        if cm.hs.use_thumbnail(thumb_bit):
-            return thumb_fpath 
         return chip_fpath
-
     
 # --- Feature Representation Methods ---
     def  get_feats(cm, cx, force_recomp=False):
@@ -401,20 +397,21 @@ class ChipManager(AbstractDataManager):
         return cm.cut_out_roi(img, roi)
 
     def  compute_chip(cm, cx):
+        #TODO Save a raw chip and thumb
         iom = cm.hs.iom
         am  = cm.hs.am
         cid = cm.cx2_cid[cx]
-        chip_fpath  = iom.get_chip_fpath(cid, thumb_bit=False)
-        thumb_fpath = iom.get_chip_fpath(cid, thumb_bit=True)
+        chip_fpath  = iom.get_chip_fpath(cid)
         chip_fname = os.path.split(chip_fpath)[1]
         logmsg(('\nComputing Chip: cid=%d fname=%s\n'+am.get_algo_name(['preproc'])) % (cid, chip_fname))
-        # --- Preprocess the Raw Chipa
+        # --- Preprocess the Raw Chip
         raw_chip = cm.cx2_raw_chip(cx)
         chip = cm.hs.am.preprocess_chip(raw_chip)
         chip.save(chip_fpath, 'PNG')
         # --- Write Chip and Thumbnail to disk
+        thumb_fpath  = iom.get_chip_thumb_fpath(cid)
         (cw, ch) = chip.size
-        thumb_size = cm.hs.prefs['thumbnail_size']
+        thumb_size = cm.hs.dm.draw_prefs.thumbnail_size
         thumb_scale = min(thumb_size/float(cw), thumb_size/float(ch))
         (tw, th) = (int(round(cw)), int(round(ch)))
         chip_thumb = chip.resize((tw, th), Image.ANTIALIAS)
@@ -476,3 +473,4 @@ class ChipManager(AbstractDataManager):
         cm.cx2_fpts[cxs] = empty(nUnload,dtype=object)
         cm.cx2_fdsc[cxs] = empty(nUnload,dtype=object)
         cm.cx2_dirty_bit[cxs] = True
+

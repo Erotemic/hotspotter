@@ -1,5 +1,5 @@
 from other.logger import logmsg, logdbg, logerr, logwarn
-from other.helpers import filecheck, alloc_lists
+from other.helpers import alloc_lists
 from other.AbstractPrintable import AbstractDataManager
 from pylab import find
 from PIL          import Image
@@ -91,36 +91,43 @@ class ImageManager(AbstractDataManager):
         data_table_str = gm.x2_info(gxs, lbls)
         return '# ImageManager\n'+data_table_str
 
-    def gx2_img_fpath(gm, gx, thumb_bit=None): # returns full path
-        #logdbg('Getting Image Path')
+    def gx2_img_fpath(gm, gx): # returns full path
+        'Gets the img fpath with checks'
         iom = gm.hs.iom
         gname = gm.gx2_gname[gx]
         if gname is None: logerr('There is no image for GX='+str(gx))
-        thumb_bit2 = gm.hs.use_thumbnail(thumb_bit)
-        img_fpath = iom.get_img_fpath(gname, thumb_bit2)
-        if thumb_bit and not filecheck(img_fpath):
-            gid = gm.gx2_gid[gx]
-            logdbg('Computing thumbnail of GID=' + str(gid))
-            raw_img = gm.gx2_img(gx, thumb_bit=False)
-            raw_img.thumbnail((128,128), Image.ANTIALIAS).save(img_fpath, 'JPEG')
-            logdbg('Wrote thumbnail.')
-        elif not filecheck(img_fpath):
+        img_fpath = iom.get_img_fpath(gname)
+        if not os.path.exists(img_fpath):
             logerr('The data is gone!\nGX=%d, img_fpath=%s' % (gx, img_fpath))
         return img_fpath
 
-    def gx2_img_list(gm, gx_list, thumb_bit=None): 
+    def gx2_img_list(gm, gx_list): 
         if not iterable(gx_list): return gm.gx2_img_list([gx_list])
-        img_fpath_list = [ gm.gx2_img_fpath(gx, thumb_bit) for gx in iter(gx_list)  ]
+        img_fpath_list = [ gm.gx2_img_fpath(gx) for gx in iter(gx_list)  ]
         return [ asarray(Image.open(img_fpath)) for img_fpath in iter(img_fpath_list) ]
 
-    def gx2_img(gm, gx, thumb_bit=None): # returns actual image
-        img_fpath = gm.gx2_img_fpath(gx, thumb_bit)
+    def gx2_img(gm, gx): # returns actual image
+        img_fpath = gm.gx2_img_fpath(gx)
         return asarray(Image.open(img_fpath)) 
 
-    def gx2_img_size(gm,gx, thumb_bit=False): # returns height / width
-        img_fpath = gm.gx2_img_fpath(gx, thumb_bit)
+    def gx2_img_size(gm,gx): # returns height / width
+        img_fpath = gm.gx2_img_fpath(gx)
         img = Image.open(img_fpath)
         return img.size
+
+    def gx2_img_thumb(gm, gx):
+        iom = gm.hs.iom
+        gname = gm.gx2_gname[gx]
+        gid   = gm.gx2_gid[gx]
+        img_thumb_fpath = iom.get_img_thumb_fpath(gname)
+        if not os.path.exists(img_thumb_fpath):
+            logdbg('Computing thumbnail of GID=' + str(gid))
+            raw_img = gm.gx2_img(gx)
+            thumb_size = cm.hs.dm.draw_prefs.thumbnail_size
+            raw_img.thumbnail((thumb_size,thumb_size), Image.ANTIALIAS).save\
+                    (img_thumb_fpath, 'JPEG')
+            logdbg('Wrote thumbnail.')
+        return asarray(Image.open(img_thumb_fpath))
 
     def gx2_cids(gm, gxs): # returns cids belonging to gx
         return  map(lambda cxs: gm.hs.cm.cx2_cid[cxs], gm.gx2_cx_list[gxs])
@@ -144,12 +151,12 @@ class ImageManager(AbstractDataManager):
                 logmsg('Copying '+src_img+' to '+db_img)
                 copyfile(src_img, db_img)
         db_img  = os.path.join(gm.hs.iom.get_img_dpath(), gname)
-        if not filecheck(db_img):
+        if not os.path.exists(db_img):
             # Try to add an extension if it wasn't given
             extensions_fallback = ['.jpg','.jpeg','.JPG','.JPEG','.png','.tif']
             ext_sucess_bit = False
             for ext in extensions_fallback:
-                if filecheck(db_img+ext):
+                if os.path.exists(db_img+ext):
                     db_img = db_img+ext
                     gname = gname+ext
                     ext_sucess_bit = True; break
@@ -197,3 +204,4 @@ class ImageManager(AbstractDataManager):
 
     def get_invalid_gxs(cm):
         return find(cm.gx2_cid == 0)
+

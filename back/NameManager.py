@@ -136,3 +136,4 @@ class NameManager(AbstractDataManager):
         nm.num_n    = nm.num_n + 1
         logdbg('Added nid='+str(nid)+' name='+name)
         return nid
+

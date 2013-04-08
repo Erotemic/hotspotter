@@ -32,7 +32,6 @@ except Exception:
     print '''You must download hotspotter\'s 3rd party libraries before you can run it. 
     git clone https://github.com/Erotemic:tpl-hotspotter.git tpl'''
 
-init_prefs = {}
 logmsg('Starting the program')
 
 parser = argparse.ArgumentParser(description='HotSpotter - Instance Recognition', prefix_chars='+-')
@@ -55,7 +54,7 @@ if not in_qtc_bit:
     app = QApplication(sys.argv)
 
 # Start HotSpotter via the Facade
-fac = Facade(use_gui=args.gui_bit, autoload=args.autoload_bit, init_prefs=init_prefs)
+fac = Facade(use_gui=args.gui_bit, autoload=args.autoload_bit)
 for (name, value) in inspect.getmembers(Facade, predicate=inspect.ismethod):
     if name.find('_') != 0:
         exec('def '+name+'(*args, **kdgs): fac.'+name+'(*args, **kdgs)')
@@ -74,6 +73,7 @@ from back.QueryManager import RawResults, QueryResult
 #from PyQt4.QtCore import SIGNAL, Qt, pyqtSlot, pyqtSignal
 from PIL import Image
 import types
+from other.ConcretePrintable import *
 # Get commonly used variables for command line usage
 hs = fac.hs
 uim = hs.uim
@@ -117,3 +117,4 @@ if run_new_exec_loop_bit:
     sys.exit(app.exec_())
 
 sys.stdout.flush()
+

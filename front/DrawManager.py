@@ -8,12 +8,27 @@ from numpy import array, uint32, round, sqrt, ceil, asarray, append
 from numpy import spacing as eps
 from other.AbstractPrintable import AbstractManager
 from other.logger import logmsg, logdbg
+from other.ConcretePrintable import PrefStruct
 from warnings import catch_warnings, simplefilter 
 import colorsys
 import os.path
 import sys
 
 class DrawManager(AbstractManager):
+    def init_preferences(dm):
+        iom = dm.hs.iom
+        dm.draw_prefs = PrefStruct(iom.get_prefs_fpath('draw_prefs'))
+        dm.draw_prefs.bbox_bit       = True
+        dm.draw_prefs.ellipse_bit    = False
+        dm.draw_prefs.ellipse_alpha  = .5
+        dm.draw_prefs.points_bit     = False
+        dm.draw_prefs.result_view  = PrefStruct.ComboPref(1, ['in_image', 'in_chip'])
+        dm.draw_prefs.fignum         = 0
+        dm.draw_prefs.colormap       = 'hsv'
+        dm.draw_prefs.in_qtc_bit     = False #Draw in the Qt Console
+        dm.draw_prefs.use_thumbnails = False
+        dm.draw_prefs.thumbnail_size = 128
+        dm.draw_prefs.load()
     # ---
     def show_splash(dm):
         splash_fname = os.path.join(dm.hs.get_source_fpath(), 'front', 'splash.tif')
@@ -28,6 +43,8 @@ class DrawManager(AbstractManager):
         title_list = ['gid='+str(gid)+'   gname='+gm.gx2_gname[gx]]
         transData  = dm.add_images(img_list, title_list)[0]
         cx_list    = gm.gx2_cx_list[gx]
+        if dm.draw_prefs.use_thumbnails is True:
+            pass
         for cx in iter(cx_list):
             transImg = Affine2D( cm.cx2_transImg(cx) ) 
             trans    = transImg + transData
@@ -37,6 +54,8 @@ class DrawManager(AbstractManager):
     def show_chip(dm, cx):
         cm = dm.hs.cm
         cid, name, chip = cm.cx2_(cx, 'cid', 'name', 'chip')
+        if dm.draw_prefs.use_thumbnails is True:
+            pass
         transData = dm.add_images([chip], [name])[0]
         dm.draw_chiprep(cx, transData)
         dm.end_draw()
@@ -54,16 +73,18 @@ class DrawManager(AbstractManager):
         qtitle = 'name: %s\nQuery cid=%d, nid=%d' % (qname, qcid, qnid)
         ttile = ['name: %s\nscore=%.2f' % (name_, score_) for name_, score_ in zip(tname, tscore)]
         title_list = [qtitle] + ttile
+        if dm.draw_prefs.use_thumbnails is True:
+            pass
 
         # Add the images to draw
-        if dm.hs.prefs['res_as_img']: # Show the results in their full image
+        if dm.draw_prefs.result_view() == 'in_image':
             qimg = cm.cx2_img(qcx)
             timg = cm.cx2_img_list(tcx)
             transData_list = dm.add_images([qimg] + timg, title_list)
             for (ix, cx) in enumerate(append(qcx,tcx)):
                 transImg = Affine2D( cm.cx2_transImg(cx) )
                 transData_list[ix] = transImg + transData_list[ix]
-        else: # Show just the chips
+        elif dm.draw_prefs.result_view() == 'in_chip':
             qchip = cm.cx2_chip_list(qcx)
             tchip = cm.cx2_chip_list(tcx)
             transData_list = dm.add_images(qchip + tchip, title_list)
@@ -91,6 +112,7 @@ class DrawManager(AbstractManager):
         dm.hs      =   hs
         dm.fignum =    0
         dm.ax_list =   []
+        dm.init_preferences()
     # ---
     def get_figure(dm):
         guifig = dm.hs.uim.get_gui_figure()
@@ -124,7 +146,7 @@ class DrawManager(AbstractManager):
         logdbg('Finalizing Draw with '+str(len(dm.ax_list))+' axes')
         fig = dm.get_figure()
         fig.subplots_adjust(hspace=0.2, wspace=0.2)
-        if dm.hs.prefs['draw_in_cmd_bit']:
+        if dm.draw_prefs.in_qtc_bit:
             from IPython.back.display import display
             display(fig)
         fig.show()
@@ -190,6 +212,7 @@ class DrawManager(AbstractManager):
     def draw_chiprep(dm, cx, transData, axi=0, fsel=None,\
                      qcx=None, qtransData=None, qaxi=None, qfsel=None):
         ''' draws the instance in chip coordinates'''
+        #TODO: This is pretty ugly. It should be fixed
         #logdbg('Drawing Chip Representation:')
         #dbgstr = 'cx=%s\ntransData=%s\naxi=%s\nfsel=%s\nqcx=%s\nqtransData=%s\nqaxi=%s\nqfsel=%s'\
         #        %(str(cx), str(transData), str(axi), printableVal(fsel),\
@@ -202,24 +225,18 @@ class DrawManager(AbstractManager):
         # q[things] - relate to the query
         logdbg('Drawing Chip CX='+str(cx))
 
-        _default = lambda pref_val, default_val:\
-                pref_val if pref_val != None else default_val
         hs = dm.hs
-        feat_xy_bit  = _default(hs.prefs['fpts_xys_bit'], False)
-        fpts_ell_bit = _default(hs.prefs['fpts_ell_bit'],  True)
-        bbox_bit     = _default(hs.prefs['bbox_bit'],      True)
-        ell_alpha    = _default(hs.prefs['ellipse_alpha'],   .2)
-
-        colormap     = _default(hs.prefs['colormap'],   'hsv')
+        feat_xy_bit  = dm.draw_prefs.points_bit 
+        fpts_ell_bit = dm.draw_prefs.ellipse_bit 
+        bbox_bit     = dm.draw_prefs.bbox_bit 
+        ell_alpha    = dm.draw_prefs.ellipse_alpha
+        colormap     = dm.draw_prefs.colormap
 
         map_color   = get_cmap(colormap)(float(axi)/len(dm.ax_list))
-
         if axi == 0:
             map_color = [map_color[0], map_color[1]+.5, map_color[2], map_color[3]]
 
-        textcolor  = _default(hs.prefs['text_color'], map_color)
-
-        #mlines_bit     = _default(hs.prefs['match_with_lines'],   False)
+        textcolor  = map_color
 
         cm        = dm.hs.cm
         ax        = dm.ax_list[axi]
@@ -279,4 +296,3 @@ class DrawManager(AbstractManager):
                     transform=transData,
                     color=textcolor,
                     backgroundcolor=comp_rgb)
-

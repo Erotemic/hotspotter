@@ -118,9 +118,6 @@ code to add features that you like or fix anoying bugs. The 'logs' command will
 print out a detailed debug report of the last few things the program has done.
 'write_logs' will output this to a file and display it in a text editor. 
 
-Some preferences aren't exposed to the user but still work. They are stored
-in a python dictionary. Type 'print hs.prefs' to see what exists. 
-
 If all else fails you can send an email to hotspotter.ir@gmail.com 
 Please include a detailed description of the error, what you were 
 doing when it happened, and the file dumped by the write_logs function if possible.

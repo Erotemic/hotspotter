@@ -9,7 +9,6 @@ import sys
 import time
 import os.path
 
-
 # Globals
 clbls = ['cid','gid','nid','name','roi']
 glbls = ['gid','gname','num_c','cids']
@@ -18,22 +17,14 @@ nlbls = ['nid','name','cids']
 class Facade(QObject):
     'A friendlier interface into HotSpotter.'
     # Initialization, Opening, and Saving 
-    def __init__(fac, use_gui=True, autoload=True, init_prefs={}):
+    def __init__(fac, use_gui=True, autoload=True):
         super( Facade, fac ).__init__()
         # Create API
         fac.hs = HotSpotterAPI()
-        # Specify Command Line Prefs
-        if len(init_prefs) > 0:
-            fac.hs.read_prefs()
-            for key in init_prefs.keys():
-                fac.hs.prefs[key] = init_prefs[key]
-            fac.hs.write_prefs()
         if use_gui: #Make GUI? 
             uim = fac.hs.uim
-
             uim.start_gui(fac)
-        # Open previous database
-        try:
+        try: # Open previous database
             fac.open_db(None, autoload)
         except Exception as ex:
             import traceback
@@ -100,7 +91,7 @@ class Facade(QObject):
         uim.select_cid(new_cid)
         print 'New Chip: '+fac.hs.cm.info(new_cid, clbls)
         #If in beast mode, then move to the next ROI without drawing
-        if fac.hs.prefs['roi_beast_mode'] and fac.next_empty_image():
+        if uim.ui_prefs['roi_beast_mode'] and fac.next_empty_image():
             num_empty = len(fac.hs.gm.get_empty_gxs())
             print 'Only %d left to go!' % num_empty
         else:
@@ -321,6 +312,11 @@ class Facade(QObject):
         print item.data(1,Qt.DisplayRole)
 
 
+    def toggle_ellipse(fac):
+        dm, uim = fac.hs.get_managers('dm','uim')
+        dm.draw_prefs.toggle('ellipse_bit')
+        uim.draw()
+
     @func_log
     def toggle_pref(fac,pref_name):
         uim = fac.hs.uim
@@ -399,3 +395,4 @@ class Facade(QObject):
         uim.populate_tables()
         uim.update_state('chip_view')
         uim.draw()
+

@@ -8,6 +8,10 @@ from pylab import find
 # Name Manager handle the names/labels/categories
 class NameManager(AbstractDataManager):
 
+    def name2_cx_list(nm, name):
+        nx = nm.name2_nx[name]
+        return nm.nx2_cx_list[nx]
+
     def __init__(nm,hs=None):
         super( NameManager, nm ).__init__( hs )
         # --- Flat Table ---
@@ -42,6 +46,8 @@ class NameManager(AbstractDataManager):
         return find(all_numc >= min_chips)
     def UNIDEN_NX(nm):
         return nm.nid2_nx[nm.UNIDEN_NID]
+    def UNIDEN_NAME(nm):
+        return nm.nx2_name[nm.UNIDEN_NX()]
     def iter_nx(nm):
         return xrange(0,nm.max_nx+1)
     def  nx2_cids(nm,nxs):
@@ -81,10 +87,13 @@ class NameManager(AbstractDataManager):
         data_table_str = nm.x2_info(nxs,lbls)
         return '# NameManager\n'+data_table_str
 
-    def  add_name(nm, nid_, name):
+    def  add_name(nm, nid_, name_):
         'Adds a name. If nid == -1 a new nid will be assigned. Returns nid'
-        logdbg('Adding nid='+str(nid_)+' name='+name)
+        logdbg('Adding nid='+str(nid_)+' name='+name_)
         nid = nid_
+        name = name_.strip()
+        if name == '':
+            logerr('Cannot add an empty name!')
         if nid < 0:
             # Generate new nid if not specified
             nid = nm.next_nid

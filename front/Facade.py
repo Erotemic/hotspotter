@@ -170,7 +170,7 @@ class Facade(QObject):
     @pyqtSlot(name='query')
     @func_log
     def query(fac, qcid=None):
-        uim, cm, qm, vm = fac.hs.get_managers('uim', 'cm','qm','vm')
+        uim, cm, qm, vm, nm = fac.hs.get_managers('uim', 'cm','qm','vm', 'nm')
         try:
             if qcid is None:
                 qcx = uim.sel_cx()
@@ -187,10 +187,104 @@ class Facade(QObject):
             uim.update_state('result_view')
             uim.populate_result_table()
             uim.draw()
+            try:
+                cx1 = uim.sel_res.rr.qcx
+                cx2 = uim.sel_res.top_cx()[0]
+            except Exception as ex:
+                logdbg('bad facade code: '+str(ex))
+                pass
+            if uim.ui_prefs.prompt_after_result and cm.cx2_nx[cx1] == nm.UNIDEN_NX() and cm.cx2_nx[cx2] != nm.UNIDEN_NX():
+                fac._quick_and_dirty_result_prompt(uim.sel_res.rr.qcx, uim.sel_res.top_cx()[0])
+                    
         except Exception as ex: 
             uim.update_state('done_querying')
             uim.update_state('query_failed')
             raise
+
+
+
+    def _quick_and_dirty_batch_rename(fac):
+        from PyQt4.Qt import QDialog
+        from front.ChangeNameDialog import Ui_changeNameDialog
+        cm, nm, uim = fac.hs.get_managers('cm','nm', 'uim')
+        try:
+            if uim.sel_cid != None:
+                name = cm.cx2_name(uim.sel_cx())
+            else:
+                name = ''
+        except Exception as ex:
+            print 'A quick and dirty exception was caught'
+            logdbg(str(ex))
+            name = ''
+        class ChangeNameDialog(QDialog):
+            def __init__(self, name, fac):
+                super( ChangeNameDialog, self ).__init__()
+                self.dlg_skel = Ui_changeNameDialog()
+                self.dlg_skel.setupUi(self)
+                self.dlg_skel.oldNameEdit.setText(name)
+                def qad_batch_rename():
+                    print 'qad batch renaming'
+                    try:
+                        name1 = str(self.dlg_skel.oldNameEdit.text())
+                        name2 = str(self.dlg_skel.newNameEdit.text())
+                        fac.hs.batch_rename(name1, name2)
+                    except Exception as ex:
+                        logerr(str(ex))
+                    fac.hs.uim.populate_tables()
+                    fac.hs.uim.draw()
+                    self.close()
+                self.dlg_skel.buttonBox.ApplyRole = self.dlg_skel.buttonBox.AcceptRole
+                self.dlg_skel.buttonBox.accepted.connect(qad_batch_rename)
+                self.show()
+        changeNameDlg = ChangeNameDialog(name, fac)
+        self = changeNameDlg
+
+    def _quick_and_dirty_result_prompt(fac, cx_query, cx_result):
+        from PyQt4.Qt import QDialog
+        from front.ResultDialog import Ui_ResultDialog
+        from tpl.other.matplotlibwidget import MatplotlibWidget
+        cm, nm = fac.hs.get_managers('cm','nm')
+        chip1 = cm.cx2_chip(cx_query)
+        chip2 = cm.cx2_chip(cx_result)
+        query_cid = cm.cid(cx_query)
+        top_name = cm.cx2_name(cx_result)
+        class ResultDialog(QDialog):
+            def __init__(self, chip1, chip2, title1, title2, change_func, fac):
+                super( ResultDialog, self ).__init__()
+                self.dlg_skel = Ui_ResultDialog()
+                self.dlg_skel.setupUi(self)
+                self.pltWidget1 = MatplotlibWidget(self)
+                self.pltWidget2 = MatplotlibWidget(self)
+                self.dlg_skel.horizontalLayout.addWidget(self.pltWidget1)
+                self.dlg_skel.horizontalLayout.addWidget(self.pltWidget2)
+                def acceptSlot():
+                    print 'Accepted QaD Match'
+                    print change_func
+                    change_func()
+                    self.close()
+                    fac.hs.uim.draw()
+                def rejectSlot():
+                    print 'Rejected QaD Match'
+                    self.close()
+                self.dlg_skel.buttonBox.accepted.connect(acceptSlot)
+                self.dlg_skel.buttonBox.rejected.connect(rejectSlot)
+                self.fig1 = self.pltWidget1.figure
+                self.fig1.show = lambda: self.pltWidget1.show() #HACKY HACK HACK
+                self.fig2 = self.pltWidget2.figure
+                self.fig2.show = lambda: self.pltWidget2.show() #HACKY HACK HACK
+                ax1 = self.fig1.add_subplot(111) 
+                ax1.imshow(chip1)
+                ax1.set_title(title1)
+                ax2 = self.fig2.add_subplot(111) 
+                ax2.imshow(chip2)
+                ax2.set_title(title2)
+                self.pltWidget1.show()
+                self.pltWidget1.draw()
+                self.pltWidget2.show()
+                self.pltWidget2.draw()
+                self.show()
+        resdlg = ResultDialog(chip1, chip2, 'Unknown Query', 'Accept Match to '+str(top_name)+'?', lambda: fac.rename_cid(top_name, query_cid), fac)
+
 
     @pyqtSlot(str, name='logdbg')
     def logdbg(fac, msg):

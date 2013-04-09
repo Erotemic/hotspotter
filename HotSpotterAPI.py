@@ -134,6 +134,24 @@ class HotSpotterAPI(AbstractPrintable):
         hs.data_loaded_bit = True
     # --- 
     @func_log
+    def batch_rename(hs, name1, name2):
+        logmsg('Batch Renaming %s to %s' % (name1, name2))
+        cm, nm = hs.get_managers('cm','nm')
+        if name1 == nm.UNIDEN_NAME():
+            logerr('Cannot batch rename '+str(name1)+'. It is UNIDENTIFIED and has special meaning')
+        if name1 not in nm.name2_nx.keys():
+            logerr('Cannot batch rename. '+str(name1)+' does not exist')
+        cx_list = nm.name2_cx_list(name1)[:] # COPY BEFORE YOU CHANGE. Man, sneaky errors
+        num_chips = len(cx_list)
+        if num_chips == 0:
+            logerr('Cannot batch rename. '+str(name1)+' has no chips')
+        logmsg('Renaming '+str(num_chips)+' chips: '+str(cx_list))
+        for cx in cx_list:
+            logdbg('Batch Rename '+str(cx))
+            cm.rename_chip(cx, name2)
+        return True
+    # --- 
+    @func_log
     def add_all_images_recursively(hs, image_list):
         num_add = len(image_list)
         logmsg('Selected '+str(num_add)+' images to import')

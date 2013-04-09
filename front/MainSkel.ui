@@ -201,6 +201,7 @@
      <string>Convinience</string>
     </property>
     <addaction name="actionConvertImage2Chip"/>
+    <addaction name="actionBatch_Change_Name"/>
     <addaction name="separator"/>
     <addaction name="actionOpen_Data_Directory"/>
     <addaction name="actionOpen_Source_Directory"/>
@@ -389,6 +390,9 @@
    <property name="text">
     <string>Edit Preferences</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
   </action>
   <action name="actionQuit">
    <property name="text">
@@ -398,6 +402,11 @@
   <action name="actionConvertImage2Chip">
    <property name="text">
     <string>Convert All Images to Chips</string>
+   </property>
+  </action>
+  <action name="actionBatch_Change_Name">
+   <property name="text">
+    <string>Batch Change Name</string>
    </property>
   </action>
  </widget>

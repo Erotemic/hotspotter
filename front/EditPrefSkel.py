@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Code\hotspotter\gui\EditPrefSkel.ui'
+# Form implementation generated from reading ui file 'C:\Code\hotspotter\front\EditPrefSkel.ui'
 #
-# Created: Fri Apr 05 09:54:57 2013
+# Created: Tue Apr 09 01:09:35 2013
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -48,5 +48,4 @@ if __name__ == "__main__":
     ui.setupUi(editPrefSkel)
     editPrefSkel.show()
     sys.exit(app.exec_())
-
 

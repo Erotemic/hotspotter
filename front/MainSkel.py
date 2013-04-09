@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Code\hotspotter\gui\MainSkel.ui'
+# Form implementation generated from reading ui file 'C:\Code\hotspotter\front\MainSkel.ui'
 #
-# Created: Fri Apr 05 09:54:57 2013
+# Created: Tue Apr 09 01:09:35 2013
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -178,11 +178,14 @@ class Ui_mainSkel(object):
         self.actionQuit.setObjectName(_fromUtf8("actionQuit"))
         self.actionConvertImage2Chip = QtGui.QAction(mainSkel)
         self.actionConvertImage2Chip.setObjectName(_fromUtf8("actionConvertImage2Chip"))
+        self.actionBatch_Change_Name = QtGui.QAction(mainSkel)
+        self.actionBatch_Change_Name.setObjectName(_fromUtf8("actionBatch_Change_Name"))
         self.menuFile.addAction(self.actionOpen_Database)
         self.menuFile.addAction(self.actionSave_Database)
         self.menuFile.addAction(self.actionImport_Images)
         self.menuFile.addAction(self.actionQuit)
         self.menuView.addAction(self.actionConvertImage2Chip)
+        self.menuView.addAction(self.actionBatch_Change_Name)
         self.menuView.addSeparator()
         self.menuView.addAction(self.actionOpen_Data_Directory)
         self.menuView.addAction(self.actionOpen_Source_Directory)
@@ -267,8 +270,10 @@ class Ui_mainSkel(object):
         self.actionWriteLogs.setText(_translate("mainSkel", "Write Logs", None))
         self.actionOpen_Internal_Directory.setText(_translate("mainSkel", "View Internal Directory", None))
         self.actionPreferences.setText(_translate("mainSkel", "Edit Preferences", None))
+        self.actionPreferences.setShortcut(_translate("mainSkel", "Ctrl+P", None))
         self.actionQuit.setText(_translate("mainSkel", "Quit", None))
         self.actionConvertImage2Chip.setText(_translate("mainSkel", "Convert All Images to Chips", None))
+        self.actionBatch_Change_Name.setText(_translate("mainSkel", "Batch Change Name", None))
 
 
 if __name__ == "__main__":

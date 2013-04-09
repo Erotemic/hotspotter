@@ -291,7 +291,7 @@ class ChipManager(AbstractDataManager):
     
     def rename_chip(cm, cx, new_name):
         nm = cm.hs.nm
-        cid     = cm.cx2_cid[cx]
+        cid     = cm.cid(cx)
         old_nx  = cm.cx2_nx[cx]
         old_name = nm.nx2_name[old_nx]
         logmsg('Renaming cid='+str(cid)+' from '+str(old_name)+' to '+new_name)

@@ -92,10 +92,6 @@ class HotspotterMainWindow(QMainWindow):
         main_skel.actionSave_Database.triggered.connect(fac.save_db)
         main_skel.actionImport_Images.triggered.connect(fac.import_images)
         main_skel.actionQuit.triggered.connect(hsgui.close)
-        # View
-        main_skel.actionOpen_Source_Directory.triggered.connect(fac.vd)
-        main_skel.actionOpen_Data_Directory.triggered.connect(fac.vdd)
-        main_skel.actionOpen_Internal_Directory.triggered.connect(fac.vdi)
         # Actions
         main_skel.actionQuery.triggered.connect(        fac.query)
         main_skel.actionAdd_ROI.triggered.connect(      fac.add_chip)
@@ -113,7 +109,12 @@ class HotspotterMainWindow(QMainWindow):
         main_skel.actionHelpTroubles.triggered.connect(lambda:hsgui.msgbox('GUI Help', gui_help))
         main_skel.actionHelpWorkflow.triggered.connect(lambda:hsgui.msgbox('Troubleshooting Help', troubles_help))
         main_skel.actionWriteLogs.triggered.connect(fac.write_logs)
+        # Convinience
+        main_skel.actionOpen_Source_Directory.triggered.connect(fac.vd)
+        main_skel.actionOpen_Data_Directory.triggered.connect(fac.vdd)
+        main_skel.actionOpen_Internal_Directory.triggered.connect(fac.vdi)
         main_skel.actionConvertImage2Chip.triggered.connect(fac.convert_all_images_to_chips)
+        main_skel.actionBatch_Change_Name.triggered.connect(fac._quick_and_dirty_batch_rename)
         # 
         # Gui Components
         # Tables Widgets

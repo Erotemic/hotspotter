@@ -22,6 +22,7 @@ class UIManager(QObject):
         iom = uim.hs.iom
         uim.ui_prefs = PrefStruct(iom.get_prefs_fpath('ui_prefs'))
         uim.ui_prefs.quick_roi_select = False #roi_beast_mode
+        uim.ui_prefs.prompt_after_result = True
         uim.ui_prefs.load()
 
     # --- UIManager talks to the main thread

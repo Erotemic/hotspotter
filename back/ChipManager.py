@@ -47,8 +47,8 @@ class ChipManager(AbstractDataManager):
 
     def cx2_(cm, cx_list, *dynargs):
         'request chip data'
-        logdbg('Requested Data: %s of CX= %s' % (str(dynargs), str(cx_list)))
         'conviencience function to get many properties'
+        #logdbg('Requested Data: %s of CX= %s' % (str(dynargs), str(cx_list)))
         to_return = []
         cid = cm.cx2_cid[cx_list]
         invalid_x = find(cid == 0)
@@ -248,7 +248,7 @@ class ChipManager(AbstractDataManager):
         iom = cm.hs.iom
         if iterable(cid): logerr('this function only works for a single cid')
         logmsg('Removing CID=%d\'s computed files' % cid)
-        cid_fname_pattern = iom.get_chip_prefix(cid)+'*'
+        cid_fname_pattern = iom.get_chip_prefix(cid, [])+'*'
         iom.remove_computed_files_with_pattern(cid_fname_pattern)
             
     def  remove_chip(cm, cx):
@@ -342,6 +342,7 @@ class ChipManager(AbstractDataManager):
         return trans
 
     def cx2_chip_fpath(cm, cx):
+        'Gets chip fpath with checks'
         iom = cm.hs.iom
         cid = cm.cid(cx)
         chip_fpath  = iom.get_chip_fpath(cid)
@@ -351,6 +352,7 @@ class ChipManager(AbstractDataManager):
     
 # --- Feature Representation Methods ---
     def  get_feats(cm, cx, force_recomp=False):
+        # FIXME: If the algorithm changes, the dirty bit is not flipped
         if force_recomp or\
            cm.cx2_fpts[cx] is None or\
            cm.cx2_fdsc[cx] is None or\
@@ -407,15 +409,17 @@ class ChipManager(AbstractDataManager):
         # --- Preprocess the Raw Chip
         raw_chip = cm.cx2_raw_chip(cx)
         chip = cm.hs.am.preprocess_chip(raw_chip)
+        logdbg('Saving Computed Chip to :'+chip_fpath)
         chip.save(chip_fpath, 'PNG')
         # --- Write Chip and Thumbnail to disk
-        thumb_fpath  = iom.get_chip_thumb_fpath(cid)
+        chip_thumb_fpath  = iom.get_chip_thumb_fpath(cid)
         (cw, ch) = chip.size
         thumb_size = cm.hs.dm.draw_prefs.thumbnail_size
         thumb_scale = min(thumb_size/float(cw), thumb_size/float(ch))
         (tw, th) = (int(round(cw)), int(round(ch)))
         chip_thumb = chip.resize((tw, th), Image.ANTIALIAS)
-        chip_thumb.save(thumb_fpath, 'JPEG')
+        logdbg('Saving Computed Chip Thumb to :'+chip_thumb_fpath)
+        chip_thumb.save(chip_thumb_fpath, 'JPEG')
 
     def load_features(cm, _cxs=None, force_recomp=False):
         if _cxs is None:

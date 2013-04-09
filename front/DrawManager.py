@@ -8,7 +8,7 @@ from numpy import array, uint32, round, sqrt, ceil, asarray, append
 from numpy import spacing as eps
 from other.AbstractPrintable import AbstractManager
 from other.logger import logmsg, logdbg
-from other.ConcretePrintable import PrefStruct
+from other.ConcretePrintable import PrefStruct, ComboPref
 from warnings import catch_warnings, simplefilter 
 import colorsys
 import os.path
@@ -22,7 +22,7 @@ class DrawManager(AbstractManager):
         dm.draw_prefs.ellipse_bit    = False
         dm.draw_prefs.ellipse_alpha  = .5
         dm.draw_prefs.points_bit     = False
-        dm.draw_prefs.result_view  = PrefStruct.ComboPref(1, ['in_image', 'in_chip'])
+        dm.draw_prefs.result_view  = ComboPref(1, ['in_image', 'in_chip'])
         dm.draw_prefs.fignum         = 0
         dm.draw_prefs.colormap       = 'hsv'
         dm.draw_prefs.in_qtc_bit     = False #Draw in the Qt Console

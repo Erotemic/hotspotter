@@ -88,7 +88,6 @@ class VisualModel(AbstractManager):
             except WindowsError: 
                 logwarn('WARNING: FLANN is not deleting correctly')
         vm.reset()
-    
 
     def nearest_neighbors(vm, qfdsc, K): 
         ''' qfx2_wxs - (num_feats x K) Query Descriptor Index to the K Nearest Word Indexes 
@@ -100,7 +99,6 @@ class VisualModel(AbstractManager):
         qfx2_Kwxs.shape   =  (qfdsc.shape[0], K)
         qfx2_Kdists.shape =  (qfdsc.shape[0], K)
         return (qfx2_Kwxs, qfx2_Kdists)
-
 
     #Probably will have to make this over cids eventually\ Maybe
     def build_model(vm, force_recomp=False):
@@ -126,7 +124,7 @@ class VisualModel(AbstractManager):
 
         logdbg('Step 2: Build the model Words')
         isTFIDF = False
-        if am.model.quantizer() == 'none':
+        if am.algo_prefs.model.quantizer() == 'none':
             logdbg('No Quantization. Aggregating all fdscriptors for nearest neighbor search.')
             vm.wx2_fdsc = empty((num_train_keypoints,128),dtype=uint8)
             _p = 0
@@ -136,10 +134,10 @@ class VisualModel(AbstractManager):
                 _p += nfdsc
             ax2_wx = array(range(0,num_train_keypoints),dtype=uint32)
             isTFIDF = (am.quantizers['none'].pseudo_num_w > 0)
-        if am.model.quantizer() == 'hkmeans':
+        if am.algo_prefs.model.quantizer() == 'hkmeans':
             hkm_cfg = am.quantizers['hkmeans']
             [vm.wx2_fdsc, ax2_wx] = hkmeans_hack([cm.cx2_fdsc[:,tx2_cx]],hkm_cfg)
-        if am.model.quantizer() == 'akmeans':
+        if am.algo_prefs.model.quantizer() == 'akmeans':
             NUM_WORDS = am.quantizers.akmeans.k
         
         logdbg('Step 3: Point the parts of the model back to their source')

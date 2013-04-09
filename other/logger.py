@@ -109,7 +109,7 @@ class HotSpotterLogger(object):
             hsl.non_modal_qt_handles.append(msgBox)
             # Old Modal Version: QMessageBox.critical(None, 'ERROR', msg)
         except Exception as ex:
-            print(str(ex))
+            print('non_modal_critical_dialog: '+str(ex))
 
     def __str__(hsl):
         return hsl.hidden_logs()
@@ -199,6 +199,15 @@ def logdbg(msg):
 def logio(msg):    
     hsl.log('IO> '+msg, noprint=True)
 
+def func_debug(fn):
+    import traceback
+    def func_debug_wraper(*args, **kwargs):
+        print('\n\n *!!* Func Debug Traceback: \n\n\n'+str(traceback.format_stack()))
+        logdbg('\n\n *!!* Func Debug Traceback: \n\n'+str(traceback.format_stack()))
+        return fn(*args, **kwargs)
+    return func_debug_wraper
+
+    
 
 def func_log(fn):
     def func_log_wraper(*args, **kwargs):
@@ -206,15 +215,16 @@ def func_log(fn):
         # -- Arg Info
         argnames = fn.func_code.co_varnames[:fn.func_code.co_argcount]
         argprint = ''
+        arg_length_cutoff = 100
         if len(args) > 0 and\
            isinstance(args[0], AbstractPrintable) or\
            isinstance(args[0], QObject):
             #argprint = ', '.join( '%s=%r' % entry for entry in zip(argnames[1:],args[1:]) + kwargs.items())
-            arg_rep  = lambda argstr: argstr if len(argstr) < 20 else '...'
+            arg_rep  = lambda argstr: argstr if len(argstr) < arg_length_cutoff else '...'
             arg_iter = iter(zip(argnames[1:],args[1:]) + kwargs.items())
             argprint = ', '.join( var+'='+arg_rep(repr(val)) for (var,val) in arg_iter)
         else:
-            arg_rep  = lambda argstr: argstr if len(argstr) < 20 else '...'
+            arg_rep  = lambda argstr: argstr if len(argstr) < arg_length_cutoff else '...'
             arg_iter = iter(zip(argnames,args) + kwargs.items())
             argprint = ', '.join( var+'='+arg_rep(repr(val)) for (var,val) in arg_iter)
         # -- Module / Line Info
@@ -255,6 +265,7 @@ def func_log(fn):
             et, ei, tb = sys.exc_info()
             #raise FuncLogException, FuncLogException(e), tb
         # --- Log Exit Function
+        hsl.log(info.calltype+indent1OUT+prefix_sep+' returned '+str(ret), noprint=True, noformat=True)
         hsl.log(prefixOUT+outo_str, noprint=True, noformat=True)
         if info.indent < 1:
             hsl.log('\n\n', noprint=True, noformat=True)

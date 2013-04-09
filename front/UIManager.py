@@ -2,7 +2,7 @@ from PyQt4.Qt import QObject, pyqtSignal, QFileDialog
 from front.HotspotterMainWindow import HotspotterMainWindow
 from numpy import setdiff1d
 from other.ConcretePrintable import PrefStruct
-from other.logger import logdbg, logerr, logmsg, func_log
+from other.logger import logdbg, logerr, logmsg, func_log, func_debug
 # The UIManager should be running in the same thread as 
 # the Facade functions. It should talk to the hsgui with 
 # signals and slots
@@ -12,7 +12,7 @@ class UIManager(QObject):
     populateChipTblSignal   = pyqtSignal(list, list, list, list)
     populateImageTblSignal  = pyqtSignal(list, list, list, list)
     populateResultTblSignal = pyqtSignal(list, list, list, list)
-    populatePrefTreeSignal  = pyqtSignal(dict)
+    populatePrefTreeSignal  = pyqtSignal(PrefStruct)
     updateStateSignal       = pyqtSignal(str)
     selectionSignal         = pyqtSignal(int, int)
     redrawGuiSignal         = pyqtSignal()
@@ -21,20 +21,22 @@ class UIManager(QObject):
     def init_preferences(uim):
         iom = uim.hs.iom
         uim.ui_prefs = PrefStruct(iom.get_prefs_fpath('ui_prefs'))
-        uim.ui_prefs.roi_beast_mode = False
+        uim.ui_prefs.quick_roi_select = False #roi_beast_mode
         uim.ui_prefs.load()
 
     # --- UIManager talks to the main thread
     def __init__(uim, hs):
         super( UIManager, uim ).__init__()
         uim.hs = hs
+        uim.ui_prefs = None
+        uim.all_pref = None
         uim.hsgui = None
         # User Interface State
         uim.sel_cid = None
         uim.sel_gid = None
         uim.sel_res = None
         uim.state = 'splash_view'
-        uim.tab_order = ['image','chip','result']
+        uim.tab_order = ['image', 'chip', 'result']
         uim.init_preferences()
 
     def start_gui(uim, fac): # Currently needs facade access
@@ -137,7 +139,8 @@ class UIManager(QObject):
 
     @func_log
     def redraw_gui(uim):
-        uim.redrawGuiSignal.emit()
+        if uim.hsgui.isVisible():
+            uim.redrawGuiSignal.emit()
 
     @func_log
     def unselect_all(uim):
@@ -235,11 +238,12 @@ class UIManager(QObject):
     def populate_algo_settings(uim):
         hs = uim.hs
         dm, am = hs.get_managers('dm','am')
-        all_sett = PrefStruct()
-        all_sett.algorithm_settings = am.algo_prefs
-        all_sett.core_settings = hs.core_prefs
-        all_sett.ui_settings = uim.ui_prefs
-        all_sett.draw_settings = dm.draw_prefs
-        #uim.populatePrefTreeSignal.emit(all_sett.to_dict())
-
-
+        if uim.all_pref != None: 
+            raise Exception('Youve already built the pref tree')
+        logdbg('Populating the Preference Tree Sending Signal')
+        uim.all_pref = PrefStruct()
+        uim.all_pref.algo_prefs = am.algo_prefs
+        uim.all_pref.core_prefs = hs.core_prefs
+        uim.all_pref.ui_prefs   = uim.ui_prefs
+        uim.all_pref.draw_prefs = dm.draw_prefs
+        uim.populatePrefTreeSignal.emit(uim.all_pref)

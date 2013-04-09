@@ -117,4 +117,3 @@ if run_new_exec_loop_bit:
     sys.exit(app.exec_())
 
 sys.stdout.flush()
-

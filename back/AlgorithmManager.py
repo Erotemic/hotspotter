@@ -3,7 +3,7 @@ import subprocess
 import shelve
 from other.logger  import logmsg, logdbg, logerr, logwarn
 from other.helpers  import filecheck
-from other.ConcretePrintable import DynStruct, PrefStruct
+from other.ConcretePrintable import DynStruct, PrefStruct, ComboPref
 from other.AbstractPrintable import AbstractManager
 from numpy import sqrt, zeros, uint8, array, asarray, float32
 from PIL import Image, ImageOps
@@ -25,44 +25,41 @@ class AlgorithmManager(AbstractManager):
         iom = am.hs.iom
         am.algo_prefs = PrefStruct(iom.get_prefs_fpath('algo_prefs'))
         #Define the pipeline stages
-        am.preproc  = PrefStruct()  # Low Level Chip Operations
-        am.chiprep  = PrefStruct()  # Extracting Chip Features
-        am.model    = PrefStruct()  # Building the model
-        am.query    = PrefStruct()  # Searching the model
-        am.algo_prefs.preproc = am.preproc
-        am.algo_prefs.chiprep = am.chiprep
-        am.algo_prefs.model = am.model
-        am.algo_prefs.query = am.query
+        am.algo_prefs.preproc  = PrefStruct()  # Low Level Chip Operations
+        am.algo_prefs.chiprep  = PrefStruct()  # Extracting Chip Features
+        am.algo_prefs.model    = PrefStruct()  # Building the model
+        am.algo_prefs.query    = PrefStruct()  # Searching the model
 
         # --- Chip Preprocessing ---
         # (selection, options, params? )
-        am.preproc.sqrt_num_pxls           = 700
-        am.preproc.autocontrast_bit        = False
-        am.preproc.bilateral_filt_bit      = False
-        am.preproc.histeq_bit              = False
-        am.preproc.contrast_stretch_bit    = False
-        am.preproc.adapt_histeq_bit        = False
+        am.algo_prefs.preproc.sqrt_num_pxls           = 700
+        am.algo_prefs.preproc.autocontrast_bit        = False
+        am.algo_prefs.preproc.bilateral_filt_bit      = False
+        am.algo_prefs.preproc.histeq_bit              = False
+        am.algo_prefs.preproc.contrast_stretch_bit    = False
+        am.algo_prefs.preproc.adapt_histeq_bit        = False
 
         # --- Chip Representation ---
         # Currently one feature detector and one feature descriptor is chosen
         # * = non-free
-        #am.chiprep.gravity_vector_bit     = True
-        am.chiprep.kpts_detector           = PrefStruct.ComboPref(0, ('heshesaff', 'heslapaff', 'dense', '!MSER', '#FREAK', '#SIFT'))
-        am.chiprep.kpts_extractor          = PrefStruct.ComboPref(0, ('SIFT', '#SURF', '#BRISK'))
+        #am.algo_prefs.chiprep.gravity_vector_bit     = True
+        am.algo_prefs.chiprep.kpts_detector           = ComboPref(0, ('heshesaff', 'heslapaff', 'dense', '!MSER', '#FREAK', '#SIFT'))
+        am.algo_prefs.chiprep.kpts_extractor          = ComboPref(0, ('SIFT', '#SURF', '#BRISK'))
 
         # --- Vocabulary ---
-        am.model.quantizer                 = PrefStruct.ComboPref(0, ('none', '#hkmeans', '#akmeans'))
-        am.model.indexer                   = 'flann_kdtree'
+        am.algo_prefs.model.quantizer                 = ComboPref(0, ('none', '#hkmeans', '#akmeans'))
+        am.algo_prefs.model.indexer                   = 'flann_kdtree'
 
         # --- Query Params ---
-        am.query.k                         =    1 
-        am.query.num_rerank                = 1000
-        am.query.spatial_thresh            = 0.05 
-        am.query.sigma_thresh              = 0.05 #: Unimplemented
-        am.query.method                    = PrefStruct.ComboPref(0, ('COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'))
-        am.query.score                     = PrefStruct.ComboPref(0,('cscore','nscore')) # move to results?
-        am.query.self_as_result_bit        = False  #: Return self (in terms of name) in results
-        am.query.num_top                   =    3 # move to results
+        am.algo_prefs.query.k                         =    1 
+        am.algo_prefs.query.num_rerank                = 1000
+        am.algo_prefs.query.spatial_thresh            = 0.05 
+        am.algo_prefs.query.sigma_thresh              = 0.05 #: Unimplemented
+        am.algo_prefs.query.method                    = ComboPref(0, ('COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'))
+        am.algo_prefs.query.score                     = ComboPref(0,('cscore','nscore')) # move to results?
+        am.algo_prefs.query.self_as_result_bit        = False  #: Return self (in terms of name) in results
+        am.algo_prefs.query.num_top                   =    3 # move to results
+        am.algo_prefs.load()
         #TODO: (theta, xy, sigma)_thresh 
 
     def __define_algo_options(am):
@@ -109,11 +106,11 @@ class AlgorithmManager(AbstractManager):
             depends = am.default_depends
         if not abbrev_bit:
             # No abreviation = nice printable representation
-            exclude_list = ['indexers','quantizers','default_depends', 'settings']
+            exclude_list = []
             for stage in am.default_depends:
                 if stage not in depends:
                     exclude_list.append(stage)
-            print_attri = am.get_printable(type_bit=False,print_exclude_aug=exclude_list)
+            print_attri = am.algo_prefs.get_printable(type_bit=False,print_exclude_aug=exclude_list)
             return 'Algorithm Params'+('\n'+print_attri).replace('\n','\n    ')
 
         abbrev_list = [
@@ -131,7 +128,7 @@ class AlgorithmManager(AbstractManager):
         ]
         stage_list = []
         for stage_name in depends:
-            stage_struct = eval('am.'+stage_name) # Get the dependent stage
+            stage_struct = eval('am.algo_prefs.'+stage_name) # Get the dependent stage
             stage_par = stage_name+' {'+stage_struct.get_printable(type_bit=False)
             stage_par = stage_par.replace('\n',',') #remove newlines
             stage_par = re.sub('[\' \"]','',stage_par) #remove extra characters
@@ -172,9 +169,9 @@ class AlgorithmManager(AbstractManager):
 
     def get_algo_suffix(am, depends, use_id_bit=True):
         if use_id_bit:
-            return '.algo:'+str(am.get_algo_id(depends))
+            return '.algo.'+str(am.get_algo_id(depends))
         else:
-            return '.algo:'+am.get_algo_name(depends,True)
+            return '.algo.'+am.get_algo_name(depends,True)
 
 
     # TODO: Move to tools library
@@ -203,23 +200,23 @@ class AlgorithmManager(AbstractManager):
         # raw_chip = cm.cx2_raw_chip(6)
         # --- Resize ---
         pil_raw = Image.fromarray( raw_chip ).convert('L')
-        pil_filt = am.resize_chip(pil_raw, am.preproc.sqrt_num_pxls)
+        pil_filt = am.resize_chip(pil_raw, am.algo_prefs.preproc.sqrt_num_pxls)
 
         # --- Filters ---
-        #if am.preproc.histeq_bit : 
+        #if am.algo_prefs.preproc.histeq_bit : 
             ##pil_filt = ImageOps.equalize(pil_filt)
             #from tpl.other.mtools import histeq
             #img_rescale = exposure.equalize_hist(asarray(pil_filt))
             #pil_filt = Image.fromarray(histeq(asarray(pil_filt))).convert('L')
-        if am.preproc.histeq_bit:
+        if am.algo_prefs.preproc.histeq_bit:
             pil_filt = Image.fromarray(histeq(asarray(pil_filt)))
-        if am.preproc.adapt_histeq_bit:
+        if am.algo_prefs.preproc.adapt_histeq_bit:
             pil_filt = Image.fromarray(adapt_histeq(asarray(pil_filt)))
-        if am.preproc.contrast_stretch_bit:
+        if am.algo_prefs.preproc.contrast_stretch_bit:
             pil_filt = Image.fromarray(contrast_stretch(asarray(pil_filt)))
-        if am.preproc.autocontrast_bit :
+        if am.algo_prefs.preproc.autocontrast_bit :
             pil_filt = ImageOps.autocontrast(pil_filt)
-        if am.preproc.bilateral_filt_bit :
+        if am.algo_prefs.preproc.bilateral_filt_bit :
             from tpl.other.hiftableBF import shiftableBF
             pil_filt = Image.fromarray(shiftableBF(asarray(pil_filt)))
 
@@ -228,13 +225,16 @@ class AlgorithmManager(AbstractManager):
     def compute_features(am, chip):
         'Computes features of a chip. Uses settings in AlgorithmManager'
         logdbg('Calling feature detector')
-        external_detectors = ['heshesaff','hesaff', 'heslap', 'harlap', 'dense']
+        external_detectors = ['heshesaff', 'heslapaff', 'heslap', 'harlap', 'dense']
         external_descriptors = ['SIFT']
 
-        if am.chiprep.kpts_detector() in external_detectors or True:
+        if am.algo_prefs.chiprep.kpts_detector() in external_detectors:
             (kpts, desc) = am.external_feature_computers(chip)
-            if am.chiprep.kpts_extractor() in external_descriptors:
+            if am.algo_prefs.chiprep.kpts_extractor() in external_descriptors:
                 return (kpts, desc)
+        else:
+            logerr('Only External Keypoint Detectors are implemented: '+str(external_detectors))
+        logerr('Only External Keypoint Descriptors are implemented: '+str(external_descriptors))
 
         from tpl.pyopencv import cv2
         #  http://stackoverflow.com/questions/12491022/opencv-freak-fast-retina-keypoint-descriptor
@@ -246,16 +246,16 @@ class AlgorithmManager(AbstractManager):
             # Also: Grid, GridFAST, PyramidStar
             # see http://docs.opencv.org/modules/features2d/doc/common_interfaces_of_feature_detectors.html#Ptr<FeatureDetector> FeatureDetector::create(const string& detectorType)
         im  = cv2.cvtColor(chip, cv2.COLOR_BGR2GRAY)
-        logdbg('Making detector: %r' % am.chiprep.kpts_detector())
-        cvFeatDetector  = cv2.FeatureDetector_create(am.chiprep.kpts_extractor())
+        logdbg('Making detector: %r' % am.algo_prefs.chiprep.kpts_detector())
+        cvFeatDetector  = cv2.FeatureDetector_create(am.algo_prefs.chiprep.kpts_extractor())
         #cvFeatDetector   = cv2.PyramidAdaptedFeatureDetector(cvFeatDetector_,4)
-        logdbg('Made %r, Making extractor: %r' % (cvFeatDetector, am.chiprep.kpts_detector()))
-        cvFeatExtractor  = cv2.DescriptorExtractor_create(am.chiprep.kpts_extractor())
+        logdbg('Made %r, Making extractor: %r' % (cvFeatDetector, am.algo_prefs.chiprep.kpts_detector()))
+        cvFeatExtractor  = cv2.DescriptorExtractor_create(am.algo_prefs.chiprep.kpts_extractor())
 
         logdbg('Made %r, Detecting keypoints on image' % cvFeatExtractor )
         cvKpts_= cvFeatDetector.detect(im)
         # Tinker with Keypoint
-        if am.chiprep['gravity_vector_bit']: 
+        if am.algo_prefs.chiprep['gravity_vector_bit']: 
             for cvKp in cvKpts_:
                 cvKp.angle = 0
                 r = cvKp.size #scale = (r**2)/27
@@ -301,22 +301,26 @@ class AlgorithmManager(AbstractManager):
         chip = Image.fromarray(chip)
         tmp_chip_fpath = iom.get_temp_fpath('tmp.ppm')
         chip.save(tmp_chip_fpath,'PPM')
-        if am.chiprep.kpts_detector() == 'heshesaff':
+        perdoch_external = ['heshesaff']
+        mikolajczyk_external = ['heslapaff','dense']
+        if am.algo_prefs.chiprep.kpts_detector() in perdoch_external:
             exename = iom.get_hesaff_exec()
             outname = tmp_chip_fpath+'.hesaff.sift'
             args = '"'+tmp_chip_fpath+'"'
-        elif am.chiprep.kpts_detector() in ['heslapaff', 'dense']:
+        elif am.algo_prefs.chiprep.kpts_detector() in mikolajczyk_external:
             exename = iom.get_inria_exec()
-            feature_name = am.chiprep.kpts_detector()
+            feature_name = am.algo_prefs.chiprep.kpts_detector()
             if feature_name == 'heslapaff':
                 feature_name = 'hesaff'
+                suffix = 'hesaff'
             if feature_name == 'dense':
                 feature_name = feature_name+' 6 6'
-            outname = tmp_chip_fpath+'.'+am.chiprep.kpts_detector()+'.sift'
+                suffix = 'dense'
+            outname = tmp_chip_fpath+'.'+suffix+'.sift'
             args = '-'+feature_name+' -sift -i "'+tmp_chip_fpath+'"'
         else:
             logerr('Method %r + %r is invalid in extern_detect_kpts.m'\
-                   % (am.chiprep.kpts_detector(), am.chiprep.kpts_extractor()))
+                   % (am.algo_prefs.chiprep.kpts_detector(), am.algo_prefs.chiprep.kpts_extractor()))
 
         cmd = exename+' '+args
         logdbg('External Executing: %r ' % cmd)

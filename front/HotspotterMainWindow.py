@@ -1,3 +1,4 @@
+from other.ConcretePrintable import PrefStruct
 from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
         QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal, \
         QStandardItem, QStandardItemModel, QString
@@ -34,27 +35,24 @@ def gui_log(fn):
     return gui_log_wrapper
 
 
-#class PreferenceModel(QAbstractItemModel):
 class EditPrefWidget(QWidget):
     'The Settings Pane; Subclass of Main Windows.'
-    changeSettingSignal = pyqtSignal(dict)
     def __init__(epw, fac):
         super( EditPrefWidget, epw ).__init__()
-        # Setup algo.settings
         epw.pref_skel = Ui_editPrefSkel()
         epw.pref_skel.setupUi(epw)
-        #epw.pref_skel.prefTreeWidget.itemActivated.connect(epw.onDoubleClick)
-        #epw.pref_skel.prefTreeWidget.itemChanged.connect( fac.change_pref )
         epw.pref_model = None
 
-    @pyqtSlot(dict, name='populatePrefTreeSlot')
+    @pyqtSlot(PrefStruct, name='populatePrefTreeSlot')
     def populatePrefTreeSlot(epw, pref_struct):
         'Populates the Preference Tree Model'
-        prev_block = epw.pref_model.blockSignals(True)
-        parentItem = epw.pref_model.invisibleRootItem()
-        epw.pref_model = pref_struct.createQtItemModel()
+        logdbg('Bulding Preference Model of: '+repr(pref_struct))
+        logdbg('\n\n\n\n\n CREATE PREF MODEL \n\n\n')
+        epw.pref_model = pref_struct.createQPreferenceModel()
+        logdbg('Built: '+repr(epw.pref_model))
         epw.pref_skel.prefTreeView.setModel(epw.pref_model)
         epw.pref_skel.prefTreeView.header().resizeSection(0,250)
+        logdbg('\n\n\n\n\n CREATE PREF MODEL \n\n\n')
 
 class HotspotterMainWindow(QMainWindow):
     'The GUI guts of the skeletons in the hsgui directory'
@@ -79,7 +77,6 @@ class HotspotterMainWindow(QMainWindow):
         hsgui.prev_gid = None 
         hsgui.non_modal_qt_handles = []
         hsgui.connectSignals(fac)
-        hsgui.show()
 
     def connectSignals(hsgui, fac):
         logdbg('Connecting GUI >> to >> Facade')
@@ -106,8 +103,8 @@ class HotspotterMainWindow(QMainWindow):
         main_skel.actionRemove_Chip.triggered.connect(  fac.remove_cid)
         main_skel.actionNext.triggered.connect(         fac.select_next)
         # Options
-        main_skel.actionTogEll.triggered.connect(lambda: fac.toggle_pref('ellipse_bit'))
-        main_skel.actionTogPts.triggered.connect(lambda: fac.toggle_pref('points_bit'))
+        main_skel.actionTogEll.triggered.connect(fac.toggle_ellipse)
+        main_skel.actionTogPts.triggered.connect(fac.toggle_points)
         main_skel.actionTogPlt.triggered.connect(hsgui.setPlotWidgetVisibleSlot)
         main_skel.actionPreferences.triggered.connect( hsgui.epw.show )
         # Help

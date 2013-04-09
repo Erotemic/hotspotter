@@ -81,8 +81,8 @@ class IOManager(AbstractManager):
     def  get_computed_dpath(iom):
         return join(iom.get_internal_dpath(),'computed')
     @checkdir_decorator
-    def  get_thumb_dpath(iom):
-        return join(iom.get_computed_dpath(), 'thumbs')
+    def  get_thumb_dpath(iom, thumb_type):
+        return join(iom.get_computed_dpath(), 'thumbs', thumb_type)
     def  get_experiment_dpath(iom):
         return join(iom.get_computed_dpath(), 'experiments')
     # --- Public Directories
@@ -129,13 +129,13 @@ class IOManager(AbstractManager):
         return safepath(join(iom.get_chiprep_dpath(), chiprep_fname))
     # Images thumb and full
     def  get_img_thumb_fpath(iom, gname):
-        return safepath(join(iom.get_thumb_dpath(), 'images', gname))
+        return safepath(join(iom.get_thumb_dpath('images'), gname))
     def  get_img_fpath(iom, gname):
         return safepath(join(iom.get_img_dpath(), gname))
     # Chips thumb and full
     def  get_chip_thumb_fpath(iom, cid):
         chip_fname = iom.get_chip_prefix(cid, ['preproc'])+'_chip.jpg' 
-        return safepath(join(iom.get_thumb_dpath(), 'chip', chip_fname))
+        return safepath(join(iom.get_thumb_dpath('chip'), chip_fname))
     def  get_chip_fpath(iom, cid):
         chip_fname = iom.get_chip_prefix(cid, ['preproc'])+'_chip.png' 
         return safepath(join(iom.get_chip_dpath(),chip_fname))

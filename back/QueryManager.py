@@ -50,7 +50,7 @@ class QueryManager(AbstractManager):
 
         qindexed_bit = qcx in vm.get_train_cx()
         num_qf         = qfpts.shape[0]
-        K              = am.query.k + 1 
+        K              = am.algo_prefs.query.k + 1 
         if qindexed_bit: 
             K += 1
             logdbg('Query qcx=%d is in database ' % qcx)
@@ -69,8 +69,8 @@ class QueryManager(AbstractManager):
             'NDIST' : lambda p,o: 10**16 - p, 
             'TFIDF' : lambda wx2_tf, wx_idf, wx: wx2_tf[wx] * wx_idf[wx]
         }
-        isTFIDF        = am.query.method() == 'TFIDF'
-        score_function = score_functions[am.query.method()]
+        isTFIDF        = am.algo_prefs.query.method() == 'TFIDF'
+        score_function = score_functions[am.algo_prefs.query.method()]
         if isTFIDF: # TF-IDF voting is a little different
                 # The wx2_qtf could really be per k or as agged across all K
                 w_histo = bincount(qfx2_wxs, minlength=vm.numWords() )
@@ -154,13 +154,13 @@ class QueryManager(AbstractManager):
         top_cxs = array([cx for cx in top_cxs if cx not in invalids],dtype=uint32)
         
         num_c      = len(top_cxs)
-        xy_thresh  = am.query.spatial_thresh
-        sigma_thresh = am.query.sigma_thresh
-        num_rerank = min(num_c, am.query.num_rerank)
+        xy_thresh  = am.algo_prefs.query.spatial_thresh
+        sigma_thresh = am.algo_prefs.query.sigma_thresh
+        num_rerank = min(num_c, am.algo_prefs.query.num_rerank)
 
         cx2_fs = [arr.copy() for arr in cx2_fs_]
         if num_rerank == 0:
-            logdbg('Breaking rerank. num_rerank = 0;  min(num_c, am.query.num_rerank)')
+            logdbg('Breaking rerank. num_rerank = 0;  min(num_c, am.algo_prefs.query.num_rerank)')
         else: 
             min_reranked_score = 2^30
             #Initialize the reranked scores as the normal scores
@@ -264,12 +264,12 @@ class QueryResult(AbstractManager):
         super( QueryResult, res ).__init__( hs )
         logdbg('Constructing Query Result')
         res.rr = rr
-        res.num_top = hs.am.query.num_top
-        res.score_type = res.hs.am.query.score
+        res.num_top = hs.am.algo_prefs.query.num_top
+        res.score_type = hs.am.algo_prefs.query.score()
 
     def get_num_top(res):
         return min(len(res.score()), res.num_top)
-    def top_cx(res):   return res.cx_sort()[0:res.get_num_top()]   # Top chips
+    def top_cx(res): return res.cx_sort()[0:res.get_num_top()]   # Top chips
     def top_nxcx(res): return map(lambda a: a[0:res.num_top], res.nxcx_sort())    # Top names and chips
     def score(res):
         'returns the cx2_xscore array'
@@ -328,4 +328,3 @@ class QueryResult(AbstractManager):
         return result_str
     #--- end assign_feature_matches ---
     
-

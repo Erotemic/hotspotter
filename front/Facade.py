@@ -10,9 +10,9 @@ import time
 import os.path
 
 # Globals
-clbls = ['cid','gid','nid','name','roi']
-glbls = ['gid','gname','num_c','cids']
-nlbls = ['nid','name','cids']
+clbls = ['cid', 'gid', 'nid', 'name', 'roi']
+glbls = ['gid', 'gname', 'num_c', 'cids']
+nlbls = ['nid', 'name', 'cids']
 
 class Facade(QObject):
     'A friendlier interface into HotSpotter.'
@@ -22,8 +22,14 @@ class Facade(QObject):
         # Create API
         fac.hs = HotSpotterAPI()
         if use_gui: #Make GUI? 
+            logdbg('Starting with gui')
             uim = fac.hs.uim
             uim.start_gui(fac)
+            fac.show_main_window()
+        else: #HACKY HACKY HACK
+            logdbg('Starting without gui')
+            fac.hs.dm.fignum = 1
+            fac.hs.uim.start_gui(fac) #TODO: Remove
         try: # Open previous database
             fac.open_db(None, autoload)
         except Exception as ex:
@@ -91,7 +97,7 @@ class Facade(QObject):
         uim.select_cid(new_cid)
         print 'New Chip: '+fac.hs.cm.info(new_cid, clbls)
         #If in beast mode, then move to the next ROI without drawing
-        if uim.ui_prefs['roi_beast_mode'] and fac.next_empty_image():
+        if uim.ui_prefs.quick_roi_select and fac.next_empty_image():
             num_empty = len(fac.hs.gm.get_empty_gxs())
             print 'Only %d left to go!' % num_empty
         else:
@@ -151,7 +157,6 @@ class Facade(QObject):
     @func_log
     def change_view(fac, new_state):
         uim = fac.hs.uim
-        print new_state
         # THIS LIST IS IN THE ORDER OF THE TABS. 
         # THIS SHOULD CHANGE TO BE INDEPENDENT OF THAT FIXME
         if not new_state in uim.tab_order:
@@ -305,22 +310,16 @@ class Facade(QObject):
         fac.selc(cid)
         return True
 
-    @pyqtSlot(QTreeWidgetItem, int, name='change_pref')
-    def change_pref(fac, item, col):
-        from PyQt4.QtCore import Qt
-        print item.data(0,Qt.DisplayRole)
-        print item.data(1,Qt.DisplayRole)
-
-
+    @pyqtSlot(name='toggle_ellipse')
     def toggle_ellipse(fac):
         dm, uim = fac.hs.get_managers('dm','uim')
         dm.draw_prefs.toggle('ellipse_bit')
         uim.draw()
 
-    @func_log
-    def toggle_pref(fac,pref_name):
-        uim = fac.hs.uim
-        uim.hs.set_pref(pref_name, 'toggle')
+    @pyqtSlot(name='toggle_points')
+    def toggle_points(fac):
+        dm, uim = fac.hs.get_managers('dm','uim')
+        dm.draw_prefs.toggle('points_bit')
         uim.draw()
 
     def logs(fac, use_blacklist_bit=True):
@@ -396,3 +395,16 @@ class Facade(QObject):
         uim.update_state('chip_view')
         uim.draw()
 
+    def show_main_window(fac):
+        uim = fac.hs.uim
+        if uim.hsgui != None:
+            uim.hsgui.show()
+        else: 
+            logerr('GUI does not exist')
+
+    def show_edit_preference_widget(fac):
+        uim = fac.hs.uim
+        if uim.hsgui != None:
+            uim.hsgui.epw.show()
+        else: 
+            logerr('GUI does not exist')

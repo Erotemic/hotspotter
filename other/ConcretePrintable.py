@@ -73,13 +73,13 @@ class PrefStruct(DynStruct):
         super(PrefStruct, self).__init__(child_exclude_list=['pref_fpath'], copy_dict=copy_dict)
         self.pref_fpath = pref_fpath
 
-    def __getitem__(self, key):
-        val = super(PrefStruct, self).__getitem__(key)
-        if isinstance(val, list):
-            raise NotImplementedError
-        if isinstance(val, ComboPref):
-            return val()
-        return val
+    #def __getitem__(self, key):
+        #val = super(PrefStruct, self).__getitem__(key)
+        #if isinstance(val, list):
+            #raise NotImplementedError
+        #if isinstance(val, ComboPref):
+            #return val()
+        #return val
 
     def iteritems(self):
         for (key, val) in self.__dict__.iteritems():
@@ -154,193 +154,170 @@ class PrefStruct(DynStruct):
     def createQPreferenceModel(self):
         'Creates a QStandardItemModel that you can connect to a QTreeView'
         return QPreferenceModel(self)
-        #from PyQt4.Qt import QStandardItemModel, Qt, QStandardItem
-        #pref_model = QStandardItemModel()
-        #pref_model.setHorizontalHeaderLabels(['Pref Key', 'Pref Val'])
-        #prev_block = pref_model.blockSignals(True)
-        #parentItem = pref_model.invisibleRootItem()
-        ## Recursive Helper Function
-        #def populate_model_helper(parent_item, pref_struct):
-            #'populates the setting table based on the type of data in a dict or PrefStruct'
-            #parent_item.setColumnCount(2)
-            #parent_item.setRowCount(pref_struct.num_items())
-            ## Define QtItemFlags for various pref types
-            #disabledFlags = 0
-            #scalarFlags = Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
-            #booleanFlags = Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsUserCheckable
-            #unknownFlags = Qt.ItemIsSelectable
-            #for row_x, (name, data) in enumerate(pref_struct.iteritems()):
-                #name_column = 0
-                #data_column = 1
-                #name_item = QStandardItem()
-                #name_item.setData(name, Qt.DisplayRole)
-                #name_item.setFlags(Qt.ItemIsEnabled);
-                #parent_item.setChild(row_x, name_column, name_item)
-                #if type(data) == PrefStruct: # Recursive Case: PrefStruct
-                    #data_item = QStandardItem()
-                    #data_item.setFlags(Qt.ItemFlags(disabledFlags)); 
-                    #parent_item.setChild(row_x, data_column, data_item)
-                    #populate_model_helper(name_item, data)
-                    #continue
-                ## Base Case: Column Item
-                #data_item = QStandardItem()
-                #if type(data) == types.IntType:
-                    #data_item.setData(data, Qt.DisplayRole)
-                    #data_item.setFlags(scalarFlags);
-                #elif type(data) == types.StringType:
-                    #data_item.setData(str(data), Qt.DisplayRole)
-                    #data_item.setFlags(scalarFlags);
-                #elif type(data) == types.BooleanType:
-                    #data_item.setCheckState([Qt.Unchecked, Qt.Checked][data])
-                    #data_item.setFlags(booleanFlags);
-                #elif type(data) == ComboPref:
-                    #data_item.setData(repr(data), Qt.DisplayRole)
-                    #data_item.setFlags(unknownFlags);
-                #else:
-                    #data_item.setData(repr(data), Qt.DisplayRole)
-                    #data_item.setFlags(unknownFlags);
-                ## Add New Column Item to the tree
-                #parent_item.setChild(row_x, data_column, data_item)
-            ##end populate_helper
-        #populate_model_helper(parentItem, self)
-        #pref_model.blockSignals(prev_block)
-        #pref_model.itemChanged.connect(self.modelItemChangedSlot)
-        #return pref_model
-        ##epw.pref_skel.prefTreeView.setModel(epw.pref_model)
-        ##epw.pref_skel.prefTreeView.header().resizeSection(0,250)
 
-class StaticPrefStructWrapper(object):
-    '''Used as basis for the QPrefItemModel'''
-    def __init__(self, pref_struct, parent=None):
-        self.parent = parent
-        self.wrapped = pref_struct
-        self.pref_names = []
-        self.pref_vals  = []
-        self.struct_names = []
-        self.struct_vals  = [] 
-        self.nPrefs = 0
-        self.nStructs = 0
-        self.nChildren = 0
-        self.extract_static_prefs()
+from logger import logdbg, logmsg, func_log, logerr
+from PyQt4.Qt import QAbstractItemModel, QModelIndex, QVariant, Qt, QObject, QComboBox
 
-    def rc2_data(self, row, col):
-        if col == 0:
-            if row < self.nPrefs:
-                return self.pref_names[row]
-            elif row < self.nChildren:
-                return self.struct_names[row-self.nPrefs]
-        elif col == 1:
-            if row < self.nPrefs:
-                return self.pref_vals[row]
-            elif row < self.nChildren:
-                return None
-        return None
+class StaticPrefTreeItem(object):
+    '''This class represents one row in the Tree and builds itself from a PrefStruct'''
+    def __init__(self, pref_name, pref_value, parent=None):
+        self.parentItem = parent
+        self.pref_name  = pref_name
+        self.pref_value = pref_value #Changing this wont matter, it just cares about initial value
+        self.childItems = []
+        self.static_build_tree()
 
-    def rc2_child(self, row, col):
-        # Index into the static table
-        if col == 0:
-            if row < self.nChildren and row >=self.nPrefs:
-                return self.struct_vals[row-self.nPrefs]
-        return None
+    def static_build_tree(self):
+        'Add all children of any PrefStructs'
+        self.childItems = []
+        if type(self.pref_value) == PrefStruct:
+            for (key, val) in self.pref_value.iteritems():
+                self.childItems.append(StaticPrefTreeItem(key, val, self))
+
+    def data(self, column):
+        if column == 0:
+            return self.pref_name
+        assert(column == 1, 'Cant have more than 2 columns right now') 
+        if type(self.pref_value) == PrefStruct: # Recursive Case: PrefStruct
+            return ' ---- #children='+str(len(self.childItems))
+        data = self.getPrefStructValue()
+        ## Base Case: Column Item
+        #data_item = QStandardItem()
+        if type(data) in [types.IntType, types.StringType, types.FloatType]:
+            return data
+        elif type(data) == types.BooleanType:
+            return data
+            #data_item.setCheckState([Qt.Unchecked, Qt.Checked][data])
+            #data_item.setFlags(booleanFlags);
+        elif type(data) == ComboPref:
+            return data()
+            #data_item.setData(repr(data), Qt.DisplayRole)
+            #data_item.setFlags(unknownFlags);
+        #else:
+            #data_item.setData(repr(data), Qt.DisplayRole)
+            #data_item.setFlags(unknownFlags);
+        print data
 
     def childNumber(self):
-        if self.parent is None:
-            return 0
-        return self.parent.struct_vals.index(self)+self.parent.nPrefs
+        if self.parentItem != None:
+            return self.parentItem.childItems.index(self)
+        return 0
 
-    def extract_static_prefs(self):
-        'Extract a static representation.'
-        # Parse Children into nonrecursive and recurisve members
-        prefs, structs = self.wrapped.to_dict(split_structs_bit=True)
-        # Update static lists
-        self.pref_names = prefs.keys()
-        self.pref_vals  = prefs.values()
-        self.struct_names = structs.keys()
-        self.struct_vals  = [StaticPrefStructWrapper(struct, self) for struct in structs.itervalues()] 
-        # Update static bookeeping
-        self.nPrefs = len(self.pref_names)
-        self.nStructs = len(self.struct_names)
-        self.nChildren = self.nPrefs + self.nStructs
+    def isEditable(self):
+        if self.pref_name == 'database_dpath':
+            return False
+        return self.parentItem != None and type(self.pref_value) != PrefStruct
 
-from logger import logdbg, logmsg, func_log
-from PyQt4.Qt import QAbstractItemModel, QModelIndex, QVariant, Qt, QObject
+    def getPrefStructValue(self):
+        'access the actual backend data'
+        if self.parentItem != None:
+            return self.parentItem.pref_value[self.pref_name]
+
+    def setPrefStructValue(self, qvar):
+        'sets the actual backend data'
+        if self.isEditable():
+            old_data = self.getPrefStructValue()
+            new_data = 'UNHANDLED'
+            if type(old_data) == types.IntType:
+                new_data = int(qvar.toInt()[0])
+            elif type(old_data) == types.StringType:
+                new_data = str(qvar.toString())
+            elif type(old_data) == types.FloatType:
+                new_data = float(qvar.toFloat()[0])
+            elif type(old_data) == types.BooleanType:
+                new_data = bool(qvar.toBool())
+            elif type(old_data) == ComboPref:
+                new_value = str(qvar.toString())
+                try:
+                    new_index = self.parentItem.pref_value[self.pref_name].vals.index(new_value)
+                    self.parentItem.pref_value[self.pref_name].sel = new_index
+                except:
+                    logerr('Valid values for this pref: '+str(old_data.vals))
+                return
+            self.parentItem.pref_value[self.pref_name] = new_data
+
+    def setData(self, new_data):
+        print "I'd like to set data to : "+repr(new_data)
+        self.setPrefStructValue(new_data)
+        self.pref_value = new_data
+
+
 class QPreferenceModel(QAbstractItemModel):
     def __init__(self, pref_struct, parent=None):
         super(QPreferenceModel, self).__init__(parent)
-        self.staticRoot  = StaticPrefStructWrapper(pref_struct)
-
+        self.rootItem  = StaticPrefTreeItem('staticRoot', pref_struct)
     #-----------
-    # Non-Overloaded ItemModel Helper Functions
-    def getStaticWrapper(self, index=QModelIndex()):
-        #print DynStruct(copy_class=index)
+    def getItem(self, index=QModelIndex()):
         if index.isValid():
-            staticItem = index.internalPointer()
-            if staticItem:
-                return staticItem
-        return self.staticRoot
-    
+            item = index.internalPointer()
+            if item:
+                return item
+        return self.rootItem
     #-----------
     # Overloaded ItemModel Read Functions
     def rowCount(self, parent=QModelIndex()):
-        #logmsg(' IN ROW COUNT !!!! \n ******************')
-        #logmsg( DynStruct(copy_class=parent) )
-        staticParent = self.getStaticWrapper(parent)
-        #logmsg( str(DynStruct(copy_class=staticParent) ))
-        #logmsg(' RETURNING \n &&&&&&&&&&&&&&&&&&&&&&')
-        return staticParent.nChildren
+        parentItem = self.getItem(parent)
+        return len(parentItem.childItems)
 
     def columnCount(self, parent=QModelIndex()):
-        #logmsg( DynStruct(copy_class=parent) )
         return 2
 
     def data(self, index, role):
-        #logmsg( DynStruct(copy_class=parent) )
         if not index.isValid():
             return QVariant()
         if role != Qt.DisplayRole and role != Qt.EditRole:
             return QVariant()
-        staticItem = self.getStaticWrapper(index)
-        return QVariant(staticItem.rc2_data(index.row(), index.column()))
+        item = self.getItem(index)
+        return QVariant(item.data(index.column()))
 
     def index(self, row, col, parent=QModelIndex()):
-        #logmsg( 'row=%r col=%r ' % (row, col))
-        #logmsg( DynStruct(copy_class=parent) )
         if parent.isValid() and parent.column() != 0:
             return QModelIndex()
-        staticParent = self.getStaticWrapper(parent)
-        staticChild  = staticParent.rc2_child(row, col)
-        if staticChild:
-            return self.createIndex(row, col, staticChild)
+        parentItem = self.getItem(parent)
+        childItem = parentItem.childItems[row]
+        if childItem:
+            return self.createIndex(row, col, childItem)
         else:
             return QModelIndex()
 
     def parent(self, index=None):
-        #logmsg( DynStruct(copy_class=index) )
         if index is None: # Overload with QObject.parent()
             return QObject.parent(self)
         if not index.isValid():
             return QModelIndex()
-        staticChild = self.getStaticWrapper(index)
-        staticParent = staticChild.parent
-        if staticParent == self.staticRoot:
+        childItem = self.getItem(index)
+        parentItem = childItem.parentItem
+        if parentItem == self.rootItem:
             return QModelIndex()
-        return self.createIndex(staticParent.childNumber(), 0, staticParent)
+        return self.createIndex(parentItem.childNumber(), 0, parentItem)
     
     #-----------
     # Overloaded ItemModel Write Functions
-    #@func_log
-    #def flags(self, index):
-        #if not index.isValid():
-            #return 0
-        #return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+    def flags(self, index):
+        if index.column() == 0:
+            # The First Column is just a label and unchangable
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        if not index.isValid():
+            return 0
+        childItem = self.getItem(index)
+        if childItem:
+            if childItem.isEditable():
+                return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return 0
 
-    #@func_log
-    #def setData(self, index, value, role=Qt.EditRole):
-        #if role != Qt.EditRole:
-            #return False
-        #item = self.getItem(index)
-        #result = item.setData(index.column(), value)
-        #if result:
-            #self.dataChanged.emit(index, index)
-            ##self.emit(QtCore.SIGNAL('dataChanged(const QModelIndex&, const QModelIndex&)'), index, index)
-        #return result
+    def setData(self, index, value, role=Qt.EditRole):
+        if role != Qt.EditRole:
+            return False
+        item = self.getItem(index)
+        result = item.setData(value)
+        if result:
+            self.dataChanged.emit(index, index)
+        return result
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            if section == 0:
+                return QVariant("Pref Name")
+            if section == 1:
+                return QVariant("Pref Value")
+        return QVariant()

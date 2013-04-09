@@ -209,14 +209,19 @@ class AlgorithmManager(AbstractManager):
             #img_rescale = exposure.equalize_hist(asarray(pil_filt))
             #pil_filt = Image.fromarray(histeq(asarray(pil_filt))).convert('L')
         if am.algo_prefs.preproc.histeq_bit:
+            logdbg('Equalizing Histogram')
             pil_filt = Image.fromarray(histeq(asarray(pil_filt)))
         if am.algo_prefs.preproc.adapt_histeq_bit:
+            logdbg('Adaptive Equalizing Histogram')
             pil_filt = Image.fromarray(adapt_histeq(asarray(pil_filt)))
         if am.algo_prefs.preproc.contrast_stretch_bit:
+            logdbg('Stretching Histogram')
             pil_filt = Image.fromarray(contrast_stretch(asarray(pil_filt)))
         if am.algo_prefs.preproc.autocontrast_bit :
+            logdbg('PIL Autocontrast')
             pil_filt = ImageOps.autocontrast(pil_filt)
         if am.algo_prefs.preproc.bilateral_filt_bit :
+            logdbg('O(1) Bilateral Filter Approximation')
             from tpl.other.hiftableBF import shiftableBF
             pil_filt = Image.fromarray(shiftableBF(asarray(pil_filt)))
 

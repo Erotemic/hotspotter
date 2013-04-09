@@ -147,8 +147,11 @@ class DrawManager(AbstractManager):
         fig = dm.get_figure()
         fig.subplots_adjust(hspace=0.2, wspace=0.2)
         if dm.draw_prefs.in_qtc_bit:
-            from IPython.back.display import display
-            display(fig)
+            try:
+                from IPython.back.display import display
+                display(fig)
+            except:
+                logwarn('Cannot Draw in QTConsole')
         fig.show()
         dm.hs.uim.redraw_gui()
         draw() 
@@ -230,9 +233,15 @@ class DrawManager(AbstractManager):
         fpts_ell_bit = dm.draw_prefs.ellipse_bit 
         bbox_bit     = dm.draw_prefs.bbox_bit 
         ell_alpha    = dm.draw_prefs.ellipse_alpha
+        if ell_alpha > 1: 
+            ell_alpha = 1.0
+        if ell_alpha < 0:
+            ell_alpha = 0.0
         colormap     = dm.draw_prefs.colormap
-
-        map_color   = get_cmap(colormap)(float(axi)/len(dm.ax_list))
+        try: 
+            map_color   = get_cmap(colormap)(float(axi)/len(dm.ax_list))
+        except Exception:
+            map_color   = get_cmap('hsv')(float(axi)/len(dm.ax_list))
         if axi == 0:
             map_color = [map_color[0], map_color[1]+.5, map_color[2], map_color[3]]
 

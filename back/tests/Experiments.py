@@ -12,6 +12,15 @@ class ExperimentManager(AbstractManager):
         em.cx2_res = None
         em.recompute_bit = False
 
+    def run_experiment(em):
+        iom = em.hs.iom
+        em.run_singleton_queries()
+        report_str = em.get_report_str()
+        report_fpath = iom.get_temp_fpath('expt_report_'+em.get_expt_suffix()+'.txt')
+        with open(report_fpath,'w') as f:
+            f.write(report_str)
+        print report_str
+
     def run_singleton_queries(em):
         '''Quick experiment:
            Query each chip with a duplicate against whole database
@@ -26,22 +35,17 @@ class ExperimentManager(AbstractManager):
         em.cx2_res = array([  [] if rr == [] else\
                            QueryResult(hs,rr) for rr in cx2_rr])
 
-    def run_nightly(em):
-        hs = em.hs
-        iom = hs.iom
-        #datasets = iom.get_dataset_fpath('Naut')
-        #vary params
-        #hs.am.query.method = 'LNRAT'
-        em.run_singleton_queries()
-        em.show_problems()
+    def get_expt_suffix(em):
+        vm, am = em.hs.get_managers('vm','am')
+        samp_suffix = vm.get_samp_suffix()
+        algo_suffix = am.get_algo_suffix(depends='all')
+        return samp_suffix+algo_suffix
+
 
     def batch_query(em, force_recomp=False, test_cxs=None):
         'TODO: Fix up the VM dependencies'
         vm, iom, am = em.hs.get_managers('vm','iom','am')
-        samp_suffix = vm.get_samp_suffix()
-        algo_suffix = am.get_algo_suffix(depends='all')
-        qres_shelf_fname = 'qres_shelf'+samp_suffix+algo_suffix+'.db'
-        shelf_fpath = iom.get_temp_fpath(qres_shelf_fname)
+        shelf_fpath = iom.get_temp_fpath('qres_shelf'+em.get_expt_suffix()+'.db')
         # Compute the matches
         qm = vm.hs.qm
         vm.build_model(force_recomp=force_recomp)
@@ -124,14 +128,16 @@ class ExperimentManager(AbstractManager):
                 rank_hist_pes[max(gt_pos_chip)-len(gt_pos_chip)+1] += 1
         return rank_hist_opt
 
-    def show_problems(em):
+    def get_report_str(em):
         '''TODO: I want to see: number of matches, the score of each type of matcher
            I want to see this in graph format, but first print format. I want to see 
            the precision and recall. I want to see the rank of the best, I want to see
            the rank of the worst minus the number of correct answers. Once we have the 
            metrics, we can build the learners, visualizations, and beter algorithms. 
+
+           Average Num descriptors per image / StdDev / Min / and Max
         '''
-        problem_str = ''
+        report_str = ''
 
         cm,nm,am = em.hs.get_managers('cm','nm','am')
         # Evaluate rank by chip and rank by name
@@ -169,8 +175,8 @@ class ExperimentManager(AbstractManager):
 
         nid2_badness = -ones(len(nm.nid2_nx))
 
-        problem_str += 'WORST QUERY RESULTS:'+'\n'
-        problem_str +=  'GT C AVE-RANK  | QCID - GT_CIDS, GT_CIDS_RANK'+'\n'
+        report_str += 'WORST QUERY RESULTS:'+'\n'
+        report_str += 'GT C AVE-RANK  | QCID - GT_CIDS, GT_CIDS_RANK'+'\n'
         for score, cx in worst_cids:
             if score < 0: continue        
             cid = cm.cx2_cid[cx]
@@ -178,35 +184,34 @@ class ExperimentManager(AbstractManager):
             if nid2_badness[nid] == -1:
                 nid2_badness[nid] = 0
             nid2_badness[nid] += score
-            other.xs  = setdiff1d(cm.cx2_other.xs([cx])[0], [cx])
+            other_cxs  = setdiff1d(cm.cx2_other_cxs([cx])[0], [cx])
             top_cx = em.cx2_res[cx].cx_sort()
-            other.ank = []
-            for ocx in other.xs:
+            other_rank = []
+            for ocx in other_cxs:
                 to_append = find(top_cx == ocx)+1
-                other.ank.extend(to_append.tolist())
-            other.ids = cm.cx2_cid[other.xs]
-            #problem_str +=  '%14.3f | %4d - %s,%s %s' % (score, cid, str(other.ids), '\n'+' '*23, str(array(other.ank, dtype=int32)))
-            problem_str +=  '%14.3f | %4d - %s' % (score, cid, str(zip(other.ids, array(other.ank, dtype=int32))))+'\n'
+                other_rank.extend(to_append.tolist())
+            other_cids = cm.cx2_cid[other_cxs]
+            report_str += '%14.3f | %4d - %s' % (score, cid, str(zip(other_cids, array(other_rank, dtype=int32))))+'\n'
 
 
-        problem_str +=  '\nGT N RANK      | QNID | QCID - GT_CIDS'+'\n'
+        report_str += '\nGT N RANK      | QNID | QCID - GT_CIDS'+'\n'
         for score, cx in worst_nids:
             if score < 0: continue        
             cid = cm.cx2_cid[cx]
             nid = cm.cx2_nid(cx)
-            other.ids = setdiff1d(cm.cx2_cid[cm.cx2_other.xs([cx])[0]], cid)
-            problem_str +=  '%14.3f | %4d | %4d - %s' % (score, nid, cid, str(other.ids))+'\n'
+            other_cids = setdiff1d(cm.cx2_cid[cm.cx2_other_cxs([cx])[0]], cid)
+            report_str +=  '%14.3f | %4d | %4d - %s' % (score, nid, cid, str(other_cids))+'\n'
 
-        problem_str +=  '\n\nOVERALL WORST NAMES:'+'\n'
+        report_str += '\n\nOVERALL WORST NAMES:'+'\n'
         worst_names = zip(nid2_badness, range(len(nid2_badness)))
         worst_names.sort()
-        problem_str +=  'SUM C AVE RANK | NID - CIDS'+'\n'
+        report_str += 'SUM C AVE RANK | NID - CIDS'+'\n'
         for score, nid in worst_names:
             if score < 0: continue
             nx = nm.nid2_nx[nid]
             name = nm.nx2_name[nx]
-            other.ids = cm.cx2_cid[nm.nx2_cx_list[nx]]
-            problem_str +=  ' %13.3f | %4d | %s' % (score, nid, str(other.ids))+'\n'
+            other_cids = cm.cx2_cid[nm.nx2_cx_list[nx]]
+            report_str += ' %13.3f | %4d | %s' % (score, nid, str(other_cids))+'\n'
 
         #num less than 5 (chips/names)
         num_tops = [1,5]
@@ -223,12 +228,13 @@ class ExperimentManager(AbstractManager):
             num_bad_name  = sum(gt_hist_name[top_name:])
             total_name    = sum(gt_hist_name)
 
-            problem_str +=  '\n--------\nQueries with chip-rank <= '+str(num_top)+':'+'\n'
-            problem_str +=  '  #good = %d, #bad =%d, #total=%d' % (num_good_chip, num_bad_chip, total_chip)+'\n'
+            report_str +=  '\n--------\nQueries with chip-rank <= '+str(num_top)+':'+'\n'
+            report_str +=  '  #good = %d, #bad =%d, #total=%d' % (num_good_chip, num_bad_chip, total_chip)+'\n'
 
-            problem_str +=  'Queries with name-rank <= '+str(num_top)+':'+'\n'
-            problem_str +=  '  #good = %d, #bad =%d, #total=%d' % (num_good_name, num_bad_name, total_name)+'\n'
+            report_str +=  'Queries with name-rank <= '+str(num_top)+':'+'\n'
+            report_str +=  '  #good = %d, #bad =%d, #total=%d' % (num_good_name, num_bad_name, total_name)+'\n'
     
-        problem_str +=  '-----'
-        problem_str +=  'Database: '+am.hs.db_dpath+'\n'
-        problem_str +=  am.get_algo_name('all')+'\n'
+        report_str +=  '-----'
+        report_str +=  'Database: '+am.hs.db_dpath+'\n'
+        report_str +=  am.get_algo_name('all')+'\n'
+        return report_str

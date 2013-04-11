@@ -42,7 +42,7 @@ class Facade(QObject):
 
     @pyqtSlot(name='run_experiments')
     def run_experiments(fac):
-       fac.hs.em.run_nightly()
+       fac.hs.em.run_experiment()
 
     @pyqtSlot(name='open_db')
     @func_log
@@ -428,7 +428,7 @@ class Facade(QObject):
     def write_logs(fac):
         'Write current logs to a timestamped file and open in an editor'
         timestamp = str(time.time())
-        logfname  = 'hotspotter_logs_'+timestamp+'.txt'
+        logfname  = fac.hs.iom.get_temp_fpath('hotspotter_logs_'+timestamp+'.txt')
         with open(logfname,'w') as logfile:
             logfile.write(str(hsl))
         crossplat.view_text_file(logfname)

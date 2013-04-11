@@ -39,7 +39,8 @@ class HotSpotterAPI(AbstractPrintable):
 
     def init_preferences(hs, default_bit=False):
         iom = hs.iom
-        hs.core_prefs = PrefStruct(iom.get_prefs_fpath('core_prefs'))
+        if hs.core_prefs == None:
+            hs.core_prefs = PrefStruct(iom.get_prefs_fpath('core_prefs'))
         hs.core_prefs.database_dpath  = None
         if not default_bit:
             hs.core_prefs.load()
@@ -184,7 +185,7 @@ class HotSpotterAPI(AbstractPrintable):
             logmsg('%d Images had already been copied into the image directory' % num_old)
     # ---
     @func_log
-    def reload_preferences():
+    def reload_preferences(hs):
         hs.am.init_preferences(default_bit=True)
         hs.dm.init_preferences(default_bit=True)
         hs.uim.init_preferences(default_bit=True)

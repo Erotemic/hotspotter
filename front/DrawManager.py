@@ -7,7 +7,7 @@ from matplotlib.transforms import Affine2D
 from numpy import array, uint32, round, sqrt, ceil, asarray, append
 from numpy import spacing as eps
 from other.AbstractPrintable import AbstractManager
-from other.logger import logmsg, logdbg
+from other.logger import logmsg, logdbg, logwarn
 from other.ConcretePrintable import PrefStruct, ComboPref
 from warnings import catch_warnings, simplefilter 
 import colorsys
@@ -17,7 +17,8 @@ import sys
 class DrawManager(AbstractManager):
     def init_preferences(dm, default_bit=False):
         iom = dm.hs.iom
-        dm.draw_prefs = PrefStruct(iom.get_prefs_fpath('draw_prefs'))
+        if dm.draw_prefs == None:
+            dm.draw_prefs = PrefStruct(iom.get_prefs_fpath('draw_prefs'))
         dm.draw_prefs.bbox_bit       = True
         dm.draw_prefs.ellipse_bit    = False
         dm.draw_prefs.ellipse_alpha  = .5
@@ -116,6 +117,7 @@ class DrawManager(AbstractManager):
         super( DrawManager, dm ).__init__( hs )        
         dm.hs      =   hs
         dm.fignum =    0
+        dm.draw_prefs = None
         dm.ax_list =   []
         dm.init_preferences()
     # ---

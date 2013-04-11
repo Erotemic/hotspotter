@@ -68,6 +68,10 @@ class Facade(QObject):
         old_state = uim.update_state('save_database')
         'Saves the database chip, image, and name tables'
         fac.hs.iom.save_tables()
+        fac.hs.core_prefs.save()
+        fac.hs.dm.draw_prefs.save()
+        fac.hs.am.algo_prefs.save()
+        fac.hs.uim.ui_prefs.save()
         uim.update_state(old_state)
     # ---------------
     @pyqtSlot(name='import_images')
@@ -511,8 +515,13 @@ class Facade(QObject):
         uim = fac.hs.uim
         uim.draw()
 
+    @pyqtSlot(name='default_prefs')
     def default_prefs(fac):
+        uim = fac.hs.uim
         fac.hs.reload_preferences()
+        logmsg('The change to defaults will not become permanent until you save or change one')
+        if uim.hsgui != None:
+            uim.hsgui.epw.pref_model.dataChanged.emit()
 
     def unload_features_and_models(fac):
         fac.hs.unload_all_features()

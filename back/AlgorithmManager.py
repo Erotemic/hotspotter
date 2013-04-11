@@ -18,17 +18,19 @@ class AlgorithmManager(AbstractManager):
     def __init__(am, hs):
         super( AlgorithmManager, am ).__init__( hs)
         am.__define_algo_options()
-        am.init_preferences()
         am.default_depends = ['preproc','chiprep','model','query']
+        am.algo_prefs = None
+        am.init_preferences()
 
     def init_preferences(am, default_bit=False):
         iom = am.hs.iom
-        am.algo_prefs = PrefStruct(iom.get_prefs_fpath('algo_prefs'))
-        #Define the pipeline stages
-        am.algo_prefs.preproc  = PrefStruct(parent=am.algo_prefs)  # Low Level Chip Operations
-        am.algo_prefs.chiprep  = PrefStruct(parent=am.algo_prefs)  # Extracting Chip Features
-        am.algo_prefs.model    = PrefStruct(parent=am.algo_prefs)  # Building the model
-        am.algo_prefs.query    = PrefStruct(parent=am.algo_prefs)  # Searching the model
+        if am.algo_prefs == None:
+            am.algo_prefs = PrefStruct(iom.get_prefs_fpath('algo_prefs'))
+            #Define the pipeline stages
+            am.algo_prefs.preproc  = PrefStruct(parent=am.algo_prefs)  # Low Level Chip Operations
+            am.algo_prefs.chiprep  = PrefStruct(parent=am.algo_prefs)  # Extracting Chip Features
+            am.algo_prefs.model    = PrefStruct(parent=am.algo_prefs)  # Building the model
+            am.algo_prefs.query    = PrefStruct(parent=am.algo_prefs)  # Searching the model
 
         # --- Chip Preprocessing ---
         # (selection, options, params? )

@@ -193,20 +193,12 @@ class StaticPrefTreeItem(object):
             return ''
         data = self.getPrefStructValue()
         ## Base Case: Column Item
-        #data_item = QStandardItem()
         if type(data) in [types.IntType, types.StringType, types.FloatType]:
             return data
         elif type(data) == types.BooleanType:
             return data
-            #data_item.setCheckState([Qt.Unchecked, Qt.Checked][data])
-            #data_item.setFlags(booleanFlags);
         elif type(data) == ComboPref:
             return data() #Calling data gives you the string value of ComboPref
-            #data_item.setData(repr(data), Qt.DisplayRole)
-            #data_item.setFlags(unknownFlags);
-        #else:
-            #data_item.setData(repr(data), Qt.DisplayRole)
-            #data_item.setFlags(unknownFlags);
 
     def childNumber(self):
         if self.parentItem != None:
@@ -254,7 +246,7 @@ class StaticPrefTreeItem(object):
                     new_val.sel = new_index
                     logdbg('With new members: %r, %r' % (new_val.sel, new_val.vals))
                 except: # Tell the user if she is wrong
-                    logerr('Valid values for this pref: '+str(old_data.vals))
+                    logerr('Valid values for this pref: '+str(old_val.vals))
             logdbg('Changing to NewValue=%r' % new_val)
             return parent_prefs.update(self.pref_name, new_val) # Save to disk
         return 'PrefNotEditable'

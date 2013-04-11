@@ -21,7 +21,8 @@ class UIManager(QObject):
 
     def init_preferences(uim, default_bit=False):
         iom = uim.hs.iom
-        uim.ui_prefs = PrefStruct(iom.get_prefs_fpath('ui_prefs'))
+        if uim.ui_prefs == None:
+            uim.ui_prefs = PrefStruct(iom.get_prefs_fpath('ui_prefs'))
         uim.ui_prefs.quick_roi_select = False #roi_beast_mode
         uim.ui_prefs.prompt_after_result = True
         if not default_bit:

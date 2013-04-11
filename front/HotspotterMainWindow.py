@@ -62,7 +62,6 @@ class HotspotterMainWindow(QMainWindow):
     selectCidSignal    = pyqtSignal(int)
     selectGidSignal    = pyqtSignal(int)
     renameChipIdSignal = pyqtSignal(str, int)
-    setFignumSignal    = pyqtSignal(int)
     logdbgSignal       = pyqtSignal(str)
 
     def __init__(hsgui, fac):
@@ -86,7 +85,7 @@ class HotspotterMainWindow(QMainWindow):
         hsgui.selectGidSignal.connect(fac.selg)
         hsgui.renameChipIdSignal.connect(fac.rename_cid)
         hsgui.logdbgSignal.connect(fac.logdbg)
-        hsgui.setFignumSignal.connect(fac.set_fignum)
+        hsgui.main_skel.fignumSPIN.valueChanged.connect(fac.set_fignum)
         # SKEL SIGNALS
         main_skel = hsgui.main_skel
         # File
@@ -150,7 +149,11 @@ class HotspotterMainWindow(QMainWindow):
             if bit is None: bit = not hsgui.plotWidget.isVisible()
             was_visible = hsgui.plotWidget.setVisible(bit)
             if was_visible != bit: 
-                hsgui.setFignumSignal.emit(int(1 - bit)) # plotwidget fignum = 0
+                if bit:
+                    hsgui.main_skel.fignumSPIN.setValue(0)
+                else:
+                    hsgui.main_skel.fignumSPIN.setValue(1)
+                #hsgui.setFignumSignal.emit(int(1 - bit)) # plotwidget fignum = 0
 
     # Internal GUI Functions
     def populate_tbl_helper(hsgui, tbl, col_headers, col_editable, row_list, row2_data_tup ):

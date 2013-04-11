@@ -42,7 +42,7 @@ class Facade(QObject):
 
     @pyqtSlot(name='run_experiments')
     def run_experiments(fac):
-        print fac.hs.em
+       fac.hs.em.run_nightly()
 
     @pyqtSlot(name='open_db')
     @func_log
@@ -299,6 +299,7 @@ class Facade(QObject):
         # This should be a preference
         uim, dm = fac.hs.get_managers('uim','dm')
         dm.fignum = fignum
+        uim.set_fignum(fignum)
         uim.draw()
     # Printing Functions --------------------------------------------
     # - print image/chip/name table

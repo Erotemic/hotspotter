@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\front\MainSkel.ui'
 #
-# Created: Thu Apr 11 14:48:04 2013
+# Created: Thu Apr 11 15:16:27 2013
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -87,9 +87,9 @@ class Ui_mainSkel(object):
         self.label_2 = QtGui.QLabel(self.centralwidget)
         self.label_2.setObjectName(_fromUtf8("label_2"))
         self.status_HLayout.addWidget(self.label_2)
-        self.spinBox = QtGui.QSpinBox(self.centralwidget)
-        self.spinBox.setObjectName(_fromUtf8("spinBox"))
-        self.status_HLayout.addWidget(self.spinBox)
+        self.fignumSPIN = QtGui.QSpinBox(self.centralwidget)
+        self.fignumSPIN.setObjectName(_fromUtf8("fignumSPIN"))
+        self.status_HLayout.addWidget(self.fignumSPIN)
         self.state_LBL = QtGui.QLabel(self.centralwidget)
         self.state_LBL.setObjectName(_fromUtf8("state_LBL"))
         self.status_HLayout.addWidget(self.state_LBL)

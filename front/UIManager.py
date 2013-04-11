@@ -15,6 +15,7 @@ class UIManager(QObject):
     populatePrefTreeSignal  = pyqtSignal(PrefStruct)
     updateStateSignal       = pyqtSignal(str)
     selectionSignal         = pyqtSignal(int, int)
+    setfignumSignal         = pyqtSignal(int)
     redrawGuiSignal         = pyqtSignal()
     changeTabSignal         = pyqtSignal(int)
 
@@ -54,6 +55,7 @@ class UIManager(QObject):
         uim.redrawGuiSignal.connect( uim.hsgui.redrawGuiSlot )
         uim.populatePrefTreeSignal.connect( uim.hsgui.epw.populatePrefTreeSlot )
         uim.changeTabSignal.connect( uim.hsgui.main_skel.tablesTabWidget.setCurrentIndex )
+        uim.setfignumSignal.connect( uim.hsgui.main_skel.fignumSPIN.setValue )
         uim.populate_algo_settings()
 
     def get_gui_figure(uim):
@@ -249,3 +251,9 @@ class UIManager(QObject):
         uim.all_pref.ui_prefs   = uim.ui_prefs
         uim.all_pref.draw_prefs = dm.draw_prefs
         uim.populatePrefTreeSignal.emit(uim.all_pref)
+
+    def set_fignum(uim, fignum):
+        if uim.hsgui != None:
+            prevBlockSignals = uim.hsgui.main_skel.fignumSPIN.blockSignals(True)
+            uim.setfignumSignal.emit(fignum)
+            uim.hsgui.main_skel.fignumSPIN.blockSignals(prevBlockSignals)

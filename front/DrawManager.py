@@ -147,7 +147,7 @@ class DrawManager(AbstractManager):
             return None
     # ---
     def end_draw(dm):
-        gray()
+        #gray()
         logdbg('Finalizing Draw with '+str(len(dm.ax_list))+' axes')
         fig = dm.get_figure()
         fig.subplots_adjust(hspace=0.2, wspace=0.2)
@@ -159,7 +159,8 @@ class DrawManager(AbstractManager):
                 logwarn('Cannot Draw in QTConsole')
         fig.show()
         dm.hs.uim.redraw_gui()
-        draw() 
+        fig.canvas.draw()
+        #draw() 
     # ---
     def save_fig(dm, save_file):
         dm.end_draw()
@@ -184,7 +185,8 @@ class DrawManager(AbstractManager):
             #logdbg('   * type(img_list[i]): %s'+str(type(img_list[i])))
             #logdbg('   * img_list[i].shape: %s'+str(img_list[i].shape))
             dm.ax_list[i] = fig.add_subplot(gs[i])
-            dm.ax_list[i].imshow( img_list[i])
+            imgplot = dm.ax_list[i].imshow( img_list[i])
+            imgplot.set_cmap('gray')
             dm.ax_list[i].get_xaxis().set_ticks([])
             dm.ax_list[i].get_yaxis().set_ticks([])
             dm.ax_list[i].set_title(title_list[i])

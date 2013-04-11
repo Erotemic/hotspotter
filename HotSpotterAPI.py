@@ -184,12 +184,21 @@ class HotSpotterAPI(AbstractPrintable):
             logmsg('%d Images had already been copied into the image directory' % num_old)
     # ---
     @func_log
-    def delete_computed_directory(hs):
-        'Unloads all features and models and deletes the computed directory'
-        logmsg('Deleting the computed directory')
+    def delete_home_pref_directory(hs):
+        logmsg('Deleting the ~/.hotspotter preference directory')
+        hs.iom.remove_settings_files_with_pattern('*')
+    # ---
+    def unload_all_features(hs):
+        'Unloads all features and models'
         all_cxs = hs.cm.get_valid_cxs()
         hs.cm.unload_features(all_cxs)
         hs.vm.reset()
+    # ---
+    @func_log
+    def delete_computed_directory(hs):
+        'Unloads all features and models and deletes the computed directory'
+        logmsg('Deleting the computed directory')
+        hs.unload_all_features()
         hs.iom.remove_computed_files_with_pattern('*')
     # ---
     def add_roi_to_all_images(hs):

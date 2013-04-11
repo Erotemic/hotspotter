@@ -265,8 +265,8 @@ def func_log(fn):
             et, ei, tb = sys.exc_info()
             #raise FuncLogException, FuncLogException(e), tb
         # --- Log Exit Function
-        hsl.log(info.calltype+indent1OUT+prefix_sep+' returned '+str(ret), noprint=True, noformat=True)
-        hsl.log(prefixOUT+outo_str, noprint=True, noformat=True)
+        ret_str = ' returned '+str(ret)
+        hsl.log(prefixOUT+outo_str+ret_str, noprint=True, noformat=True)
         if info.indent < 1:
             hsl.log('\n\n', noprint=True, noformat=True)
         sys.stdout.flush(); sys.stderr.flush()

@@ -25,10 +25,10 @@ class AlgorithmManager(AbstractManager):
         iom = am.hs.iom
         am.algo_prefs = PrefStruct(iom.get_prefs_fpath('algo_prefs'))
         #Define the pipeline stages
-        am.algo_prefs.preproc  = PrefStruct()  # Low Level Chip Operations
-        am.algo_prefs.chiprep  = PrefStruct()  # Extracting Chip Features
-        am.algo_prefs.model    = PrefStruct()  # Building the model
-        am.algo_prefs.query    = PrefStruct()  # Searching the model
+        am.algo_prefs.preproc  = PrefStruct(parent=am.algo_prefs)  # Low Level Chip Operations
+        am.algo_prefs.chiprep  = PrefStruct(parent=am.algo_prefs)  # Extracting Chip Features
+        am.algo_prefs.model    = PrefStruct(parent=am.algo_prefs)  # Building the model
+        am.algo_prefs.query    = PrefStruct(parent=am.algo_prefs)  # Searching the model
 
         # --- Chip Preprocessing ---
         # (selection, options, params? )

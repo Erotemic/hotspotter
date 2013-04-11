@@ -49,22 +49,34 @@ class IOManager(AbstractManager):
             return False
         return True
 
-    def remove_computed_files_with_pattern(iom, fname_pattern):
-        'removes files in computed_dpath'
-        logdbg('Removing computed files with pattern: %r' % fname_pattern)
+    def remove_files_with_pattern(iom, dpath, fname_pattern, recursive_bit=True):
+        logdbg('Removing files in directory %r %s' % (dpath, ['', ', Recursively'][recursive_bit]))
+        logdbg('Removing files with pattern: %r' % fname_pattern)
         num_removed = 0
         num_matched = 0
-        for root, dname_list, fname_list in os.walk(iom.get_computed_dpath()):
+        for root, dname_list, fname_list in os.walk(dpath):
             for fname in fnmatch.filter(fname_list, fname_pattern):
                 num_matched += 1
                 num_removed += iom.remove_file(os.path.join(root, fname))
+            if not recursive_bit:
+                break
         logmsg('Removed %d/%d files' % (num_removed, num_matched))
+        return True
+
+
+    def remove_settings_files_with_pattern(iom, fname_pattern):
+        iom.remove_files_with_pattern(iom.settings_dpath, fname_pattern, recursive_bit=False)
+        'removes files in computed_dpath'
+
+    def remove_computed_files_with_pattern(iom, fname_pattern):
+        iom.remove_files_with_pattern(iom.get_computed_dpath(), fname_pattern, recursive_bit=True)
+        'removes files in computed_dpath'
     
     def __init__(iom, hs):
         super( IOManager, iom ).__init__( hs )        
         logdbg('Creating IOManager')
         iom.hs = hs
-        iom.settings_dir = safepath(join(expanduser('~'),'.hotspotter'))
+        iom.settings_dpath = safepath(join(expanduser('~'),'.hotspotter'))
         iom.internal_dname = '.hs_internals';
         iom.dummy_delete = False #Dont actually delete things
 
@@ -154,8 +166,8 @@ class IOManager(AbstractManager):
         return safepath(join(iom.get_model_dpath(), flann_index_fname))
     # --- Indexes 
     def get_prefs_fpath(iom, prefs_name):
-        dircheck(iom.settings_dir)
-        return safepath(join(iom.settings_dir,  prefs_name+'.txt'))
+        dircheck(iom.settings_dpath)
+        return safepath(join(iom.settings_dpath,  prefs_name+'.txt'))
 
     def get_dataset_fpath(iom, db_name=None):
         if sys.platform == 'win32':

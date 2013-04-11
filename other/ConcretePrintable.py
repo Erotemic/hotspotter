@@ -1,4 +1,6 @@
 from other.AbstractPrintable import AbstractPrintable
+from logger import logdbg, logerr, func_log
+from PyQt4.Qt import QAbstractItemModel, QModelIndex, QVariant, Qt, QObject, QComboBox
 import os.path
 import cPickle
 import types
@@ -67,11 +69,19 @@ class PrefStruct(DynStruct):
       * Can be nested 
       * Dynamically add/remove
     '''
-    def __init__(self, pref_fpath=None, copy_dict=None):
+    def __init__(self, pref_fpath=None, copy_dict=None, parent=None):
         '''Creates a pref struct that will save itself to pref_fpath if
         available and have initail members of some dictionary'''
-        super(PrefStruct, self).__init__(child_exclude_list=['pref_fpath'], copy_dict=copy_dict)
+        super(PrefStruct, self).__init__(child_exclude_list=['pref_fpath', 'parent'], copy_dict=copy_dict)
         self.pref_fpath = pref_fpath
+        self.parent = None
+        if parent != None:
+            self.setParent(parent)
+
+    def setParent(self, parent):
+        if type(parent) != PrefStruct:
+            raise Exception('The parent of a PrefStruct must be a PrefStruct')
+        self.parent = parent
 
     #def __getitem__(self, key):
         #val = super(PrefStruct, self).__getitem__(key)
@@ -107,16 +117,22 @@ class PrefStruct(DynStruct):
             return (pref_dict, struct_dict)
         return pref_dict
 
-
+    @func_log
     def save(self):
         'Saves preferences to disk in the form of a dict'
         if self.pref_fpath is None: 
+            if self.parent != None:
+                logdbg('Can my parent save me?')
+                return self.parent.save()
+            logdbg('I cannot be saved. I have no parents.')
             return False
         with open(self.pref_fpath, 'w') as f:
+            logdbg('Saving to '+self.pref_fpath)
             pref_dict = self.to_dict()
             cPickle.dump(pref_dict, f)
         return True
 
+    @func_log
     def load(self):
         'Read pref dict stored on disk. Overwriting current values.'
         if not os.path.exists(self.pref_fpath):
@@ -134,29 +150,23 @@ class PrefStruct(DynStruct):
         return True
 
     def toggle(self, key):
+        'Toggles a boolean key'
         if not self[key] in [True, False]:
             raise Exception('Cannot toggle the non-boolean type: '+str(key))
-        self[key] = not self[key]
-        self.save()
+        self.update(key, not self[key])
 
-    def update(self, key, val):
-        self[key] = val
-        self.save()
-
-    def modelItemChangedSlot(self, item):
-        from logger import logdbg, logmsg, logerr
-        new_data = item.data().toPyObject()
-        self.item = item
-        if not hasattr(self,'item_list'):
-            self.item_list = []
-        self.item_list.append(item)
+    @func_log
+    def update(self, key, new_val):
+        'Changes a preference value and saves it to disk'
+        logdbg('Updating Preference: %s to %r' % (key, str(new_val)))
+        self[key] = new_val
+        return self.save()
+       
 
     def createQPreferenceModel(self):
         'Creates a QStandardItemModel that you can connect to a QTreeView'
         return QPreferenceModel(self)
 
-from logger import logdbg, logmsg, func_log, logerr
-from PyQt4.Qt import QAbstractItemModel, QModelIndex, QVariant, Qt, QObject, QComboBox
 
 class StaticPrefTreeItem(object):
     '''This class represents one row in the Tree and builds itself from a PrefStruct'''
@@ -177,7 +187,7 @@ class StaticPrefTreeItem(object):
     def data(self, column):
         if column == 0:
             return self.pref_name
-        assert(column == 1, 'Cant have more than 2 columns right now') 
+        assert column == 1, 'Cant have more than 2 columns right now'
         if type(self.pref_value) == PrefStruct: # Recursive Case: PrefStruct
             return ' ---- #children='+str(len(self.childItems))
         data = self.getPrefStructValue()
@@ -190,13 +200,12 @@ class StaticPrefTreeItem(object):
             #data_item.setCheckState([Qt.Unchecked, Qt.Checked][data])
             #data_item.setFlags(booleanFlags);
         elif type(data) == ComboPref:
-            return data()
+            return data() #Calling data gives you the string value of ComboPref
             #data_item.setData(repr(data), Qt.DisplayRole)
             #data_item.setFlags(unknownFlags);
         #else:
             #data_item.setData(repr(data), Qt.DisplayRole)
             #data_item.setFlags(unknownFlags);
-        print data
 
     def childNumber(self):
         if self.parentItem != None:
@@ -211,33 +220,44 @@ class StaticPrefTreeItem(object):
     def getPrefStructValue(self):
         'access the actual backend data'
         if self.parentItem != None:
-            return self.parentItem.pref_value[self.pref_name]
+            # Your parent better be a PrefStruct
+            parent_prefs = self.parentItem.pref_value
+            return parent_prefs[self.pref_name]
 
+    @func_log
     def setPrefStructValue(self, qvar):
         'sets the actual backend data'
+        if self.parentItem == None: 
+            raise Exception('Cannot set root preference')
+        parent_prefs = self.parentItem.pref_value
         if self.isEditable():
-            old_data = self.getPrefStructValue()
-            new_data = 'UNHANDLED'
-            if type(old_data) == types.IntType:
-                new_data = int(qvar.toInt()[0])
-            elif type(old_data) == types.StringType:
-                new_data = str(qvar.toString())
-            elif type(old_data) == types.FloatType:
-                new_data = float(qvar.toFloat()[0])
-            elif type(old_data) == types.BooleanType:
-                new_data = bool(qvar.toBool())
-            elif type(old_data) == ComboPref:
-                new_value = str(qvar.toString())
-                try:
-                    new_index = self.parentItem.pref_value[self.pref_name].vals.index(new_value)
-                    self.parentItem.pref_value[self.pref_name].sel = new_index
-                except:
+            old_val = parent_prefs[self.pref_name]
+            new_val = 'BadThingsHappenedInPrefStructValue'
+            logdbg('Editing PrefName=%r with OldValue=%r' % (self.pref_name, old_val))
+            if type(old_val) == types.IntType:
+                new_val = int(qvar.toInt()[0])
+            elif type(old_val) == types.StringType:
+                new_val = str(qvar.toString())
+            elif type(old_val) == types.FloatType:
+                new_val = float(qvar.toFloat()[0])
+            elif type(old_val) == types.BooleanType:
+                new_val = bool(qvar.toBool())
+            elif type(old_val) == ComboPref:
+                # Only allow the new string to be one of the combopref options
+                logdbg('And it is a Combo Pref %r, %r' % (old_val.sel, old_val.vals))
+                try: 
+                    combo_sel = str(qvar.toString())
+                    new_val     = old_val
+                    new_index   = new_val.vals.index(combo_sel)
+                    new_val.sel = new_index
+                    logdbg('With new members: %r, %r' % (new_val.sel, new_val.vals))
+                except: # Tell the user if she is wrong
                     logerr('Valid values for this pref: '+str(old_data.vals))
-                return
-            self.parentItem.pref_value[self.pref_name] = new_data
+            logdbg('Changing to NewValue=%r' % new_val)
+            return parent_prefs.update(self.pref_name, new_val) # Save to disk
+        return 'PrefNotEditable'
 
     def setData(self, new_data):
-        print "I'd like to set data to : "+repr(new_data)
         self.setPrefStructValue(new_data)
         self.pref_value = new_data
 

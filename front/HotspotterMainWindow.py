@@ -47,12 +47,10 @@ class EditPrefWidget(QWidget):
     def populatePrefTreeSlot(epw, pref_struct):
         'Populates the Preference Tree Model'
         logdbg('Bulding Preference Model of: '+repr(pref_struct))
-        logdbg('\n\n\n\n\n CREATE PREF MODEL \n\n\n')
         epw.pref_model = pref_struct.createQPreferenceModel()
         logdbg('Built: '+repr(epw.pref_model))
         epw.pref_skel.prefTreeView.setModel(epw.pref_model)
         epw.pref_skel.prefTreeView.header().resizeSection(0,250)
-        logdbg('\n\n\n\n\n CREATE PREF MODEL \n\n\n')
 
 class HotspotterMainWindow(QMainWindow):
     'The GUI guts of the skeletons in the hsgui directory'

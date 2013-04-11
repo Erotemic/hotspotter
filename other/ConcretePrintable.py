@@ -189,7 +189,8 @@ class StaticPrefTreeItem(object):
             return self.pref_name
         assert column == 1, 'Cant have more than 2 columns right now'
         if type(self.pref_value) == PrefStruct: # Recursive Case: PrefStruct
-            return ' ---- #children='+str(len(self.childItems))
+            #return ' ---- #children='+str(len(self.childItems))
+            return ''
         data = self.getPrefStructValue()
         ## Base Case: Column Item
         #data_item = QStandardItem()
@@ -213,7 +214,8 @@ class StaticPrefTreeItem(object):
         return 0
 
     def isEditable(self):
-        if self.pref_name == 'database_dpath':
+        uneditable_hack = ['database_dpath', 'use_thumbnails', 'thumbnail_size', 'kpts_extractor', 'quantizer', 'indexer']
+        if self.pref_name in uneditable_hack:
             return False
         return self.parentItem != None and type(self.pref_value) != PrefStruct
 

@@ -15,7 +15,7 @@ import os.path
 import sys
 
 class DrawManager(AbstractManager):
-    def init_preferences(dm):
+    def init_preferences(dm, default_bit=False):
         iom = dm.hs.iom
         dm.draw_prefs = PrefStruct(iom.get_prefs_fpath('draw_prefs'))
         dm.draw_prefs.bbox_bit       = True
@@ -28,7 +28,8 @@ class DrawManager(AbstractManager):
         dm.draw_prefs.in_qtc_bit     = False #Draw in the Qt Console
         dm.draw_prefs.use_thumbnails = False
         dm.draw_prefs.thumbnail_size = 128
-        dm.draw_prefs.load()
+        if not default_bit:
+            dm.draw_prefs.load()
     # ---
     def show_splash(dm):
         splash_fname = os.path.join(dm.hs.get_source_fpath(), 'front', 'splash.tif')
@@ -98,8 +99,12 @@ class DrawManager(AbstractManager):
             fm    = res.rr.cx2_fm[cx]
             fs    = res.rr.cx2_fs[cx]
             axi   = tx+1
-            qfsel = fm[fs > 0][:,0]
-            fsel  = fm[fs > 0][:,1]
+            if len(fs) == 0:
+                qfsel = array([], uint32)
+                fsel = array([], uint32)
+            else:
+                qfsel = fm[fs > 0][:,0]
+                fsel  = fm[fs > 0][:,1]
             transData = transData_list[tx+1]
             dm.draw_chiprep(cx,   transData,  axi,  fsel,\
                             qcx, qtransData, qaxi, qfsel)

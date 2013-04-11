@@ -17,6 +17,31 @@
    <item>
     <widget class="QTreeView" name="prefTreeView"/>
    </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="redrawBUT">
+       <property name="text">
+        <string>Redraw</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="unloadFeaturesAndModelsBUT">
+       <property name="text">
+        <string>Unload Features and Models</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="defaultPrefsBUT">
+       <property name="text">
+        <string>Defaults</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
   </layout>
  </widget>
  <resources/>

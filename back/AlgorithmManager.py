@@ -21,7 +21,7 @@ class AlgorithmManager(AbstractManager):
         am.init_preferences()
         am.default_depends = ['preproc','chiprep','model','query']
 
-    def init_preferences(am):
+    def init_preferences(am, default_bit=False):
         iom = am.hs.iom
         am.algo_prefs = PrefStruct(iom.get_prefs_fpath('algo_prefs'))
         #Define the pipeline stages
@@ -59,7 +59,8 @@ class AlgorithmManager(AbstractManager):
         am.algo_prefs.query.score                     = ComboPref(0,('cscore','nscore')) # move to results?
         am.algo_prefs.query.self_as_result_bit        = False  #: Return self (in terms of name) in results
         am.algo_prefs.query.num_top                   =    3 # move to results
-        am.algo_prefs.load()
+        if not default_bit:
+            am.algo_prefs.load()
         #TODO: (theta, xy, sigma)_thresh 
 
     def __define_algo_options(am):

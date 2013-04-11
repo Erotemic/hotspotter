@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Code\hotspotter\front\EditPrefSkel.ui'
+# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\front\EditPrefSkel.ui'
 #
-# Created: Tue Apr 09 01:09:35 2013
+# Created: Thu Apr 11 14:48:04 2013
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -32,12 +32,27 @@ class Ui_editPrefSkel(object):
         self.prefTreeView = QtGui.QTreeView(editPrefSkel)
         self.prefTreeView.setObjectName(_fromUtf8("prefTreeView"))
         self.verticalLayout.addWidget(self.prefTreeView)
+        self.horizontalLayout = QtGui.QHBoxLayout()
+        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
+        self.redrawBUT = QtGui.QPushButton(editPrefSkel)
+        self.redrawBUT.setObjectName(_fromUtf8("redrawBUT"))
+        self.horizontalLayout.addWidget(self.redrawBUT)
+        self.unloadFeaturesAndModelsBUT = QtGui.QPushButton(editPrefSkel)
+        self.unloadFeaturesAndModelsBUT.setObjectName(_fromUtf8("unloadFeaturesAndModelsBUT"))
+        self.horizontalLayout.addWidget(self.unloadFeaturesAndModelsBUT)
+        self.defaultPrefsBUT = QtGui.QPushButton(editPrefSkel)
+        self.defaultPrefsBUT.setObjectName(_fromUtf8("defaultPrefsBUT"))
+        self.horizontalLayout.addWidget(self.defaultPrefsBUT)
+        self.verticalLayout.addLayout(self.horizontalLayout)
 
         self.retranslateUi(editPrefSkel)
         QtCore.QMetaObject.connectSlotsByName(editPrefSkel)
 
     def retranslateUi(self, editPrefSkel):
         editPrefSkel.setWindowTitle(_translate("editPrefSkel", "Edit Preferences", None))
+        self.redrawBUT.setText(_translate("editPrefSkel", "Redraw", None))
+        self.unloadFeaturesAndModelsBUT.setText(_translate("editPrefSkel", "Unload Features and Models", None))
+        self.defaultPrefsBUT.setText(_translate("editPrefSkel", "Defaults", None))
 
 
 if __name__ == "__main__":

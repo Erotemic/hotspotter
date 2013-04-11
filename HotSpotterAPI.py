@@ -37,11 +37,12 @@ import os.path
 
 class HotSpotterAPI(AbstractPrintable):
 
-    def init_preferences(hs):
+    def init_preferences(hs, default_bit=False):
         iom = hs.iom
         hs.core_prefs = PrefStruct(iom.get_prefs_fpath('core_prefs'))
         hs.core_prefs.database_dpath  = None
-        hs.core_prefs.load()
+        if not default_bit:
+            hs.core_prefs.load()
 
     @func_log
     def is_valid_db_dpath(hs, db_dpath):
@@ -110,7 +111,6 @@ class HotSpotterAPI(AbstractPrintable):
         #-
         hs.init_preferences()
         # --- 
-
     @func_log
     def restart(hs, db_dpath=None, autoload=True):
         hs.data_loaded_bit = False
@@ -184,10 +184,18 @@ class HotSpotterAPI(AbstractPrintable):
             logmsg('%d Images had already been copied into the image directory' % num_old)
     # ---
     @func_log
+    def reload_preferences():
+        hs.am.init_preferences(default_bit=True)
+        hs.dm.init_preferences(default_bit=True)
+        hs.uim.init_preferences(default_bit=True)
+        #hs.init_preferences(default_bit=True)
+
+    @func_log
     def delete_home_pref_directory(hs):
         logmsg('Deleting the ~/.hotspotter preference directory')
         hs.iom.remove_settings_files_with_pattern('*')
     # ---
+    @func_log
     def unload_all_features(hs):
         'Unloads all features and models'
         all_cxs = hs.cm.get_valid_cxs()

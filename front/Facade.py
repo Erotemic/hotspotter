@@ -194,10 +194,10 @@ class Facade(QObject):
                 logdbg('bad quick and dirty facade code: '+str(ex))
                 pass
             if uim.ui_prefs.prompt_after_result and cm.cx2_nx[cx1] == nm.UNIDEN_NX() and cm.cx2_nx[cx2] != nm.UNIDEN_NX():
-                logmsg('Quick and dirty prompting')
+                logdbg('Quick and dirty prompting')
                 fac._quick_and_dirty_result_prompt(uim.sel_res.rr.qcx, uim.sel_res.top_cx()[0])
             else:
-                logmsg('No Quick and dirty prompting')
+                logdbg('No Quick and dirty prompting')
                     
         except Exception as ex: 
             uim.update_state('done_querying')
@@ -505,3 +505,14 @@ class Facade(QObject):
             uim.hsgui.epw.show()
         else: 
             logerr('GUI does not exist')
+
+    def redraw(fac):
+        uim = fac.hs.uim
+        uim.draw()
+
+    def default_prefs(fac):
+        fac.hs.reload_preferences()
+
+    def unload_features_and_models(fac):
+        fac.hs.unload_all_features()
+

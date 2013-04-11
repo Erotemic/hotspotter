@@ -18,12 +18,13 @@ class UIManager(QObject):
     redrawGuiSignal         = pyqtSignal()
     changeTabSignal         = pyqtSignal(int)
 
-    def init_preferences(uim):
+    def init_preferences(uim, default_bit=False):
         iom = uim.hs.iom
         uim.ui_prefs = PrefStruct(iom.get_prefs_fpath('ui_prefs'))
         uim.ui_prefs.quick_roi_select = False #roi_beast_mode
         uim.ui_prefs.prompt_after_result = True
-        uim.ui_prefs.load()
+        if not default_bit:
+            uim.ui_prefs.load()
 
     # --- UIManager talks to the main thread
     def __init__(uim, hs):

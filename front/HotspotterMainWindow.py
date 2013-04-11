@@ -42,6 +42,10 @@ class EditPrefWidget(QWidget):
         epw.pref_skel = Ui_editPrefSkel()
         epw.pref_skel.setupUi(epw)
         epw.pref_model = None
+        epw.pref_skel.redrawBUT.clicked.connect(fac.redraw)
+        epw.pref_skel.defaultPrefsBUT.clicked.connect(fac.default_prefs)
+        epw.pref_skel.unloadFeaturesAndModelsBUT.clicked.connect(fac.unload_features_and_models)
+
 
     @pyqtSlot(PrefStruct, name='populatePrefTreeSlot')
     def populatePrefTreeSlot(epw, pref_struct):

@@ -265,11 +265,13 @@ class StaticPrefTreeItem(object):
 
 
 class QPreferenceModel(QAbstractItemModel):
+    'Convention states only items with column index 0 can have children'
     def __init__(self, pref_struct, parent=None):
         super(QPreferenceModel, self).__init__(parent)
         self.rootItem  = StaticPrefTreeItem('staticRoot', pref_struct)
     #-----------
     def getItem(self, index=QModelIndex()):
+        '''Internal helper method'''
         if index.isValid():
             item = index.internalPointer()
             if item:
@@ -284,7 +286,9 @@ class QPreferenceModel(QAbstractItemModel):
     def columnCount(self, parent=QModelIndex()):
         return 2
 
-    def data(self, index, role):
+    def data(self, index, role=Qt.DisplayRole):
+        '''Returns the data stored under the given role 
+        for the item referred to by the index.'''
         if not index.isValid():
             return QVariant()
         if role != Qt.DisplayRole and role != Qt.EditRole:
@@ -293,16 +297,20 @@ class QPreferenceModel(QAbstractItemModel):
         return QVariant(item.data(index.column()))
 
     def index(self, row, col, parent=QModelIndex()):
+        '''Returns the index of the item in the model specified
+        by the given row, column and parent index.'''
         if parent.isValid() and parent.column() != 0:
             return QModelIndex()
         parentItem = self.getItem(parent)
-        childItem = parentItem.childItems[row]
+        childItem  = parentItem.childItems[row]
         if childItem:
             return self.createIndex(row, col, childItem)
         else:
             return QModelIndex()
 
     def parent(self, index=None):
+        '''Returns the parent of the model item with the given index.
+        If the item has no parent, an invalid QModelIndex is returned.'''
         if index is None: # Overload with QObject.parent()
             return QObject.parent(self)
         if not index.isValid():
@@ -316,18 +324,20 @@ class QPreferenceModel(QAbstractItemModel):
     #-----------
     # Overloaded ItemModel Write Functions
     def flags(self, index):
+        'Returns the item flags for the given index.'
         if index.column() == 0:
             # The First Column is just a label and unchangable
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         if not index.isValid():
-            return 0
+            return Qt.ItemFlag(0)
         childItem = self.getItem(index)
         if childItem:
             if childItem.isEditable():
                 return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        return 0
+        return Qt.ItemFlag(0)
 
     def setData(self, index, value, role=Qt.EditRole):
+        'Sets the role data for the item at index to value.'
         if role != Qt.EditRole:
             return False
         item = self.getItem(index)

@@ -98,19 +98,22 @@ if args.runexpt_bit:
 run_new_exec_loop_bit = False
 if args.cmd_bit or not args.gui_bit:
     try:
+        print "Checking __IPYTHON__"
         __IPYTHON__
-    except NameError:
+    except NameError as nex:
         try:
             print "Starting IPython Command Line Interaction"
             import IPython
             IPython.embed()
         except Exception as ex:
+            print "IPython is not installed"
             run_new_exec_loop_bit = True
             print ex
 elif in_qtc_bit:    
     print 'Starting QtConsole Command Line Interaction'
 else:
     run_new_exec_loop_bit = True
+
 if run_new_exec_loop_bit:
     print 'Running the application event loop'
     sys.stdout.flush()

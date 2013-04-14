@@ -31,6 +31,8 @@ class AlgorithmManager(AbstractManager):
             am.algo_prefs.chiprep  = PrefStruct(parent=am.algo_prefs)  # Extracting Chip Features
             am.algo_prefs.model    = PrefStruct(parent=am.algo_prefs)  # Building the model
             am.algo_prefs.query    = PrefStruct(parent=am.algo_prefs)  # Searching the model
+            am.algo_prefs.results  = PrefStruct(parent=am.algo_prefs)  # Searching the model
+
 
         # --- Chip Preprocessing ---
         # (selection, options, params? )
@@ -58,9 +60,10 @@ class AlgorithmManager(AbstractManager):
         am.algo_prefs.query.spatial_thresh            = 0.05 
         am.algo_prefs.query.sigma_thresh              = 0.05 #: Unimplemented
         am.algo_prefs.query.method                    = ComboPref(0, ('COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'))
-        am.algo_prefs.query.score                     = ComboPref(0,('cscore','nscore')) # move to results?
-        am.algo_prefs.query.self_as_result_bit        = False  #: Return self (in terms of name) in results
-        am.algo_prefs.query.num_top                   =    3 # move to results
+        # --- Result Params --- 
+        am.algo_prefs.results.score                   = ComboPref(0,('cscore','nscore')) # move to results?
+        am.algo_prefs.results.self_as_result_bit      = False  #: Return self (in terms of name)
+        am.algo_prefs.results.num_top                 =     3 
         if not default_bit:
             am.algo_prefs.load()
         #TODO: (theta, xy, sigma)_thresh 

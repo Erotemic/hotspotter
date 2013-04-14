@@ -264,8 +264,9 @@ class QueryResult(AbstractManager):
         super( QueryResult, res ).__init__( hs )
         logdbg('Constructing Query Result')
         res.rr = rr
-        res.num_top = hs.am.algo_prefs.query.num_top
-        res.score_type = hs.am.algo_prefs.query.score()
+        res.num_top = res.hs.am.algo_prefs.results.num_top
+        res.score_type = res.hs.am.algo_prefs.results.score()
+        res.self_as_result_bit = res.hs.am.algo_prefs.results.self_as_result_bit
 
     def get_num_top(res):
         return min(len(res.score()), res.num_top)
@@ -302,13 +303,24 @@ class QueryResult(AbstractManager):
 
     def tcid2_(res, *dynargs): #change to top2_? 
         'returns the specified results in args: '
-        _, top_cx = res.top_nxcx() 
+        if res.self_as_result_bit: # Top scoring chips, regardless of name. 
+            top_cx = res.top_cx()
+        else: # Top scoring chips of each name
+            _, top_cx = res.top_nxcx() 
         cm = res.hs.cm
         dyngot = cm.cx2_(top_cx, *dynargs)
         for ix in xrange(len(dyngot)):
             if type(dyngot[ix]) != ndarray and dyngot[ix] == '__UNFILLED__':
                 dyngot[ix] = res.score()[top_cx]
         return dyngot
+
+    def get_precision(res):
+        raise NotImplementedError('implement ground truth scoring metrics here')
+        pass
+
+    def get_recall(res):
+        raise NotImplementedError('implement ground truth scoring metrics here')
+        pass
 
     def result_str(res):#, score=None):
         dynargs =\

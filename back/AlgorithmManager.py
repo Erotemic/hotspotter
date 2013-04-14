@@ -50,17 +50,44 @@ class AlgorithmManager(AbstractManager):
 
         # --- Vocabulary ---
         am.algo_prefs.model.quantizer                 = ComboPref(0, ('none', '#hkmeans', '#akmeans'))
-        am.algo_prefs.model.indexer                   = 'flann_kdtree'
+        
+        flann_kdtree = PrefStruct(parent=AlgoPrefs)
+        flann_kdtree.algorithm  = pref(default=1, choices=['linear',
+                                                           'kdtree',
+                                                           'kmeans',
+                                                           'composite',
+                                                           'autotuned']) # Build Params
+        flann_kdtree.trees      = pref(8, min=0, max=30)
+        flann_kdtree.checks     = pref(1024, min=0, max=4096) # Search Params
+        #Autotuned Specific Parameters
+        autotune_spef = (flann_kdtree.algorithm, 'autotuned') 
+        flann_kdtree.target_precision = pref(0.95, depeq=autotune_spef) 
+        flann_kdtree.build_weight     = pref(0.01, depeq=autotune_spef) 
+        flann_kdtree.memory_weight    = pref(0.86, depeq=autotune_spef, doc='the time-search tradeoff') 
+        flann_kdtree.sample_fraction  = pref(0.86, depeq=autotune_spef, doc='the train_fraction')
+        # HKMeans Specific Parameters
+        hkmeans_spef = (flann_kdtree.algorithm, 'kmeans') #Autotuned Specific Parameters
+        flann_kdtree.branching    = pref(10, depeq=hkmeans_spef) 
+        flann_kdtree.iterations   = pref( 6, depeq=hkmeans_spef, doc='num levels') 
+        flann_kdtree.centers_init = pref(choices=['random', 'gonzales', 'kmeansapp'], depeq=hkmeans_spef) 
+        flann_kdtree.cb_index = pref(0, min=0, max=5 depeq=hkmeans_spef, doc='''
+            this parameter (cluster boundary index) influences the way exploration
+            is performed in the hierarchical kmeans tree. When cb index is
+            zero the next kmeans domain to be explored is choosen to be the one with
+            the closest center. A value greater then zero also takes into account the
+            size of the domain.''' ) 
+        am.algo_prefs.model.indexer = ComboPref(0, [flann_kdtree])
 
         # --- Query Params ---
-        am.algo_prefs.query.k                         =    1 
-        am.algo_prefs.query.num_rerank                = 1000
-        am.algo_prefs.query.spatial_thresh            = 0.05 
-        am.algo_prefs.query.sigma_thresh              = 0.05 #: Unimplemented
-        am.algo_prefs.query.method                    = ComboPref(0, ('COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'))
-        am.algo_prefs.query.score                     = ComboPref(0,('cscore','nscore')) # move to results?
-        am.algo_prefs.query.self_as_result_bit        = False  #: Return self (in terms of name) in results
-        am.algo_prefs.query.num_top                   =    3 # move to results
+        am.algo_prefs.query.k                         = pref(1,    min=1, max=50)
+        am.algo_prefs.query.num_rerank                = pref(1000, min=0)
+        am.algo_prefs.query.spatial_thresh            = pref(0.05, min=0, max=1) 
+        am.algo_prefs.query.sigma_thresh              = pref(0.05, min=0, max=1) #: Unimplemented
+        am.algo_prefs.query.method                    = ComboPref(0, ['COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'])
+        am.algo_prefs.query.score                     = ComboPref(0,['cscore','nscore']) # move to results?
+        am.algo_prefs.query.self_as_result_bit        = pref(False)  #: Return self (in terms of name) in results
+        am.algo_prefs.query.num_top                   = pref(3) # move to results
+
         if not default_bit:
             am.algo_prefs.load()
         #TODO: (theta, xy, sigma)_thresh 
@@ -93,7 +120,7 @@ class AlgorithmManager(AbstractManager):
         # Autotuned specific: build weight = .01
         # Autotuned specific: memory weight = [0-1] the time-search tradeoff
         # Autotuned specific: sample fraction = [0-1]  the train_fraction
-        flann_kdtree_indexer = DynStruct()
+        flann_kdtree_indexer = PrefStruct()
         flann_kdtree_indexer.algorithm  = 'kdtree' # Build Params
         flann_kdtree_indexer.trees      = 8
         flann_kdtree_indexer.checks     = 1024 # Search Params

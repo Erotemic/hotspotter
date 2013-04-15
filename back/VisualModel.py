@@ -24,56 +24,22 @@ class VisualModel(AbstractManager):
         assert len(vm.train_cx) > 0, 'Training set cannot be  empty'
 
         logdbg('Build Index was Requested')
+        vm.sample_train_set()
+        vm.delete_model()
+        train_cx = vm.get_train_cx()
 
-        logdbg('Step 1: Aggregate the model support (Load feature vectors) ---')
-        (ax2_fdsc, ax2_cid, ax2_fx) = vm.aggregate_features()
-
-        logdbg('Step 2: Build the Vocabulary')
+        logdbg('Step 1: Aggregate the model support')
+        (ax2_fdsc, ax2_cx, ax2_fx) = vm.aggregate_features(train_cx)
+        logdbg('Step 2: Build Whole Chip Representation')
         if am.algo_prefs.model.quantizer == 'naive_bayes':
             vm.compute_naive_bayes(ax2_fdsc)
         elif am.algo_prefs.model.quantizer == 'bag_of_words':
-            vm.compute_bag_of_words(ax2_fdsc)
+            vm.compute_bag_of_words(ax2_fdsc, ax2_cid, train_cx)
         
         logdbg('Step 3: Build the Inverted Index')
 
         logdbg('Step 4: Building FLANN Index: over '+str(len(vm.wx2_fdsc))+' words')
         # Save Model
-
-    def aggregate_features(vm, channel=None):
-        # Aggregate Features. Not Saved
-        logdbg('Aggregating features')
-        vm.sample_train_set()
-        cm = vm.hs.cm
-        vm.delete_model()
-        train_cx = vm.get_train_cx()
-        logdbg('Aggregating %d training chips' % len(train_cx))
-        cm.load_features(train_cx)
-        tx2_num_fpts = cm.cx2_nfpts(train_cx)
-        num_agg = np.sum(tx2_num_fpts)
-        ax2_fdsc = empty((num_agg,128), dtype=uint8)
-        _p = 0
-        for tx, cx in enumerate(train_cx):
-            num_fpts = tx2_num_fpts[tx]
-            ax2_fdsc[_p:_p+num_fpts,:] = cm.cx2_fdsc[cx]
-            _p += num_fpts
-        # Inverted Aggregate Information. (Saved)
-        ax2_cid = np.empty((num_agg,), dtype=np.int32) 
-        ax2_fx  = np.empty((num_agg,), dtype=np.int32)
-        train_cid = vm.get_train_cid()
-        ax2_tx     = empty((num_agg,), dtype=int32)
-        _L = 0; _R = 0
-        for tx in xrange(vm.num_train()):
-            num_fpts    = tx2_num_fpts[tx]
-            _R  = _R + num_fpts
-            ax_of_tx = range(_L, _R)
-            _L = _L + num_fpts
-            ax2_tx[ax_of_tx]     = tx
-            ax2_cid[ax_of_tx] = train_cid[tx]   # to ChipID
-            ax2_fx[ax_of_tx]  = range(num_fpts) # to FeatID
-        return (ax2_fdsc, ax2_cid, ax2_fx)
-        #return ax2_fdsc
-        #vm.ax2_cid = ax2_cid
-        #vm.ax2_fx  = ax2_cid
 
     def compute_naive_bayes(vm, data):
         num_data = len(data)
@@ -84,58 +50,94 @@ class VisualModel(AbstractManager):
         # Save Words 
         # Save FLANN
 
-    def approximate_kmeans(vm, data, K=1e6, max_iters=1000):
-        N = data.shape[0]
-        centx = np.random.choice(N,size=K,replace=False)
-        cent = np.copy(array(data[centx], dtype=float)) # Random Centers
-        float_data = array(data, dtype=float)
-        assign = alloc_lists(K)
-        for _ in xrange(0,max_iters):
-            # Step 1: Find Nearest Neighbors
-            datax2_centx, dists = vm.flann_one_time(cent, float_data, 1)
-            datax2_centx = datax2_centx.flatten()
-            dists = dists.flatten()
-            # Step 2: Assign data to cluster centers
-            datax_sort = datax2_centx.argsort()
-            centx_sort = datax2_centx[datax_sort]
-            _L = 0 
-            converged = True
-            for _R in xrange(N):
-                if centx_sort[_L] != centx_sort[_R]:
-                    num_members = float(_R - _L)
-                    centx = centx_sort[_L]
-                    centx_membx = datax_sort[_L:_R]
-                    if all(assign[centx] != centx_membx):
-                        converged = False
-                    assign[centx] = centx_membx
-                    cent[centx] = float_data[centx_membx,:].sum(axis=0) / num_members
-                    _L = _R
-            if converged: # Assignments have not changed
-                print 'akmeans converged in '+str(_)+' iterations'
-                break
-        return cent, assign
+    def aggregate_features(vm, train_cx, channel=None):
+        # Aggregate Features. Not Saved
+        logdbg('Aggregating %d training chips' % len(train_cx))
+        cm = vm.hs.cm
+        cm.load_features(train_cx)
+        # Get how many descriptors each chips has
+        tx2_num_fpts = cm.cx2_nfpts(train_cx)
+        num_agg = np.sum(tx2_num_fpts)
+        ax2_fdsc = empty((num_agg,128), dtype=uint8)
+        # Aggregate database descriptors together
+        _p = 0
+        for tx, cx in enumerate(train_cx):
+            num_fpts = tx2_num_fpts[tx]
+            ax2_fdsc[_p:_p+num_fpts,:] = cm.cx2_fdsc[cx]
+            _p += num_fpts
+        # Build Inverted Aggregate Information. (Saved)
+        # This needs to be saved as cid
+        ax2_cx = np.empty((num_agg,), dtype=np.int32) 
+        ax2_fx = np.empty((num_agg,), dtype=np.int32)
+        ax2_tx = np.empty((num_agg,), dtype=np.int32)
+        _L = 0; _R = 0
+        for tx in xrange(len(train_cx)):
+            num_fpts    = tx2_num_fpts[tx]
+            _R  = _R + num_fpts
+            ax_of_tx = range(_L, _R)
+            _L = _L + num_fpts
+            ax2_tx[ax_of_tx] = tx
+            ax2_cx[ax_of_tx] = train_cx[tx]    # to ChipID
+            ax2_fx[ax_of_tx] = range(num_fpts) # to FeatID
+        return (ax2_fdsc, ax2_cx, ax2_fx)
+        #return ax2_fdsc
+        #vm.ax2_cx = ax2_cx 
+        #vm.ax2_fx = ax2_cx
 
-    def compute_bag_of_words(vm, ax2_fdsc):
+    def compute_bag_of_words(vm, ax2_fdsc, ax2_cid, train_cx):
+        '''Input: 
+            ax2_fdsc - aggregate index to raw descriptor
+            ax2_cid  - corresponding raw fdsc's chip id
+        '''
         # import sklearn.cluster.KMeans
+        from back.algo.clustering import approximate_kmeans
         import scipy.sparse
+        import collections
         am = vm.hs.am
-        num_words = min(ax2_fdsc.shape[0], am.algo_prefs.model.akmeans.num_words)
-        max_iters = min(ax2_fdsc.shape[0], am.algo_prefs.model.akmeans.max_iters)
-
-        wx2_fdesc, wx2_axs = vm.approximate_kmeans(ax2_fdsc, num_words)
-        # Create Visual Histograms
-        num_train = len( vm.get_train_cxs() )
-        cx2_chiprep_vector = scipy.sparse.coo_matrix((num_train, num_words), dtype=uint32)
-        cx2_tfidf          = scipy.sparse.coo_matrix((num_train, num_words), dtype=uint32)
+        num_raw_feats = ax2_fdsc.shape[0]
+        num_train = len(train_cx)
+        max_iters = am.algo_prefs.model.akmeans.max_iters
+        num_words = min(num_raw_feats,\
+                        am.algo_prefs.model.akmeans.num_words)
+        # compute visual_vocab with num_words using akmeans
+        # cluster the raw descriptors into visual words
+        # NumWords x 128
+        akmeans_flann = None
+        wx2_fdesc, wx2_axs = approximate_kmeans(ax2_fdsc, num_words, max_iters, akmeans_flann)
+        #naxs_in_vocab = array([len(x) for x in wx2_axs]).sum()
+        #print "Number of axs in the word inverted index should be the num axfeats)"
+        #print '%d == %d ? %s ' % (naxs_in_vocab, num_raw_feats, str(naxs_in_vocab == num_raw_feats))
+        cx2_tx = {}
+        for tx, cx in enumerate(train_cx):
+            cx2_tx[cx] = tx
+        # Create Visual Histograms. 
+        # NumTrain x NumWords
+        # Use Coordinate Sparse matrixes for efficiency
+        sparse_rows = np.empty((num_raw_feats,), dtype=np.uint32)
+        sparse_cols = np.empty((num_raw_feats,), dtype=np.uint32)
+        rcx = 0 # Counter Variable. Should be raw_num_feats at the end
+        # Loop over Columns; wx = col
         for wx in xrange(num_words):
-            axs = wx2_axs[wx] # vm.wx2_cxs
-            cids = [ax2_cid[ax] for ax in axs]
-            from collections import Counter
-            
-            term_freq_pairs = Counter(cids).items()
-            unique_cx, ucx2_term_frequency = apply(zip, term_freq_pairs)
-            wx2_termfreq = sum(ucx2_term_frequency)
-            cx2_tfidf[unique_cx, wx] = ucx2_term_frequency
+            axs = wx2_axs[wx]
+            cxs = [ax2_cx[ax] for ax in axs] # txs of cxs = rows
+            for cx in cxs:
+                tx = cx2_tx[cx]
+                sparse_rows[rcx] = tx
+                sparse_cols[rcx] = wx
+                rcx += 1
+            #from collections import Counter
+            #term_freq_pairs = Counter(cxs).items()
+            #unique_cx, ucx2_term_frequency = apply(zip, term_freq_pairs)
+            #wx2_termfreq = sum(ucx2_term_frequency)
+            #cx2_tfidf[unique_cx, wx] = ucx2_term_frequency
+        data = np.ones(num_raw_feats, dtype=uint8)
+        cx2_bowvec = scipy.sparse.coo_matrix\
+                ((data, (sparse_rows, sparse_cols)), dtype=uint32)
+
+        # GOOD UP UNTIL HERE
+        cx2_tfidf  = scipy.sparse.coo_matrix\
+                ((num_train, num_words), dtype=uint32)
+
         logdbg('Computing TF-IDF metadata')
         bcarg = {'max_tx':len(tx2_cx), 'dtype':np.float32}
         tx2_termfq_denom = float32(cm.cx2_nfpts(tx2_cx))
@@ -150,8 +152,7 @@ class VisualModel(AbstractManager):
         vm.wx2_idf = log2([ num_train/len(unique(ax2_tx[ax_of_wx])) for ax_of_wx in vm.wx2_axs ] )+eps(1)
         #vm.wx2_fdesc = sklearn.cluster.KMeans(
         # Non-quantized vocabulary
-        pass
-    return wx2_fdesc, wx2_axs
+        return wx2_fdesc, wx2_axs
 
     def compute_inverted_file(vm):
         vm.wx2_axs = empty((vm.wx2_fdsc.shape[0]),dtype=object) 
@@ -213,18 +214,6 @@ class VisualModel(AbstractManager):
         dist_list.shape = (N, K)
         return (index_list, dist_list)
 
-    def flann_one_time(vm, data_vecs, query_vecs, K):
-        N = query_vecs.shape[0]
-        flann       = FLANN()
-        flann_prefs = vm.hs.am.algo_prefs.model.indexer
-        flann_args  = flann_prefs.to_dict()
-        flann_args_ = flann.build_index(data_vecs, **flann_args)
-        (index_list, dist_list) = flann.nn_index(query_vecs, K, checks=flann_prefs.checks)
-        index_list.shape = (N, K)
-        dist_list.shape = (N, K)
-        return (index_list, dist_list)
-
-        
     def __init__(vm, hs=None):
         super( VisualModel, vm ).__init__( hs )        
         vm.train_cid    = array([],dtype=uint32) 

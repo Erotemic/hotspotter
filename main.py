@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 #TODO: Find a way to make this ugly code nice
-print 'omg'
 #-------------------------------------------
 # Figure out which environment we are in
 # and set assocated preferences

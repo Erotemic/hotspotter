@@ -26,7 +26,7 @@ class VisualModel(AbstractManager):
         logdbg('Build Index was Requested')
 
         logdbg('Step 1: Aggregate the model support (Load feature vectors) ---')
-        (ax2_fdsc, ax2_cid, ax2_fx) = am.aggregate_features()
+        (ax2_fdsc, ax2_cid, ax2_fx) = vm.aggregate_features()
 
         logdbg('Step 2: Build the Vocabulary')
         if am.algo_prefs.model.quantizer == 'naive_bayes':
@@ -84,45 +84,56 @@ class VisualModel(AbstractManager):
         # Save Words 
         # Save FLANN
 
-    def approximate_kmeans(vm, data, K):
-        max_iters = 1000
-        cent = data[randi(num=K, min=0, max=num_words-1),::] # Random Centers
+    def approximate_kmeans(vm, data, K=1e6, max_iters=1000):
+        N = data.shape[0]
+        centx = np.random.choice(N,size=K,replace=False)
+        cent = np.copy(array(data[centx], dtype=float)) # Random Centers
+        float_data = array(data, dtype=float)
+        assign = alloc_lists(K)
         for _ in xrange(0,max_iters):
             # Step 1: Find Nearest Neighbors
-            datax2_centx, dists = vm.flann_one_time(cent, data, 1)
+            datax2_centx, dists = vm.flann_one_time(cent, float_data, 1)
+            datax2_centx = datax2_centx.flatten()
+            dists = dists.flatten()
             # Step 2: Assign data to cluster centers
             datax_sort = datax2_centx.argsort()
             centx_sort = datax2_centx[datax_sort]
             _L = 0 
-            for _R in xrange(K):
-                if ax_sort[_L] != ax_sort[_R]:
+            converged = True
+            for _R in xrange(N):
+                if centx_sort[_L] != centx_sort[_R]:
                     num_members = float(_R - _L)
                     centx = centx_sort[_L]
                     centx_membx = datax_sort[_L:_R]
-                    cent[centx] = np.sum(data[centx_membx,:]) / num_members
+                    if all(assign[centx] != centx_membx):
+                        converged = False
+                    assign[centx] = centx_membx
+                    cent[centx] = float_data[centx_membx,:].sum(axis=0) / num_members
                     _L = _R
-        # End Step: Compute Final Assignments
-        _L = 0 
-        assign = alloc_lists(K)
-        for _R in xrange(num_words):
-            if centx_sort[_L] != centx_sort[_R]:
-                assign[ax] = centx_sort[_L:_R][:]
-                _L = _R
+            if converged: # Assignments have not changed
+                print 'akmeans converged in '+str(_)+' iterations'
+                break
         return cent, assign
 
     def compute_bag_of_words(vm, ax2_fdsc):
         # import sklearn.cluster.KMeans
         import scipy.sparse
-        num_words = params(1e6)
-        vm.wx2_fdesc, vm.wx2_axs = approximate_kmeans(ax2_fdsc, num_words)
+        am = vm.hs.am
+        num_words = min(ax2_fdsc.shape[0], am.algo_prefs.model.akmeans.num_words)
+        max_iters = min(ax2_fdsc.shape[0], am.algo_prefs.model.akmeans.max_iters)
+
+        wx2_fdesc, wx2_axs = vm.approximate_kmeans(ax2_fdsc, num_words)
         # Create Visual Histograms
         num_train = len( vm.get_train_cxs() )
-        cx2_chiprep_vector = scipy.sparse.coo_matrix((num_train, num_words, 1), dtype=uint32)
-        cx2_tfidf          = scipy.sparse.coo_matrix((num_train, num_words, 1), dtype=uint32)
+        cx2_chiprep_vector = scipy.sparse.coo_matrix((num_train, num_words), dtype=uint32)
+        cx2_tfidf          = scipy.sparse.coo_matrix((num_train, num_words), dtype=uint32)
         for wx in xrange(num_words):
-            axs = vm.wx2_axs[wx] # vm.wx2_cxs
-            cxs = [vm.ax2_cx[ax] for ax in axs]
-            unique_cx, ucx2_term_frequency = np.some_unique(cxs)
+            axs = wx2_axs[wx] # vm.wx2_cxs
+            cids = [ax2_cid[ax] for ax in axs]
+            from collections import Counter
+            
+            term_freq_pairs = Counter(cids).items()
+            unique_cx, ucx2_term_frequency = apply(zip, term_freq_pairs)
             wx2_termfreq = sum(ucx2_term_frequency)
             cx2_tfidf[unique_cx, wx] = ucx2_term_frequency
         logdbg('Computing TF-IDF metadata')
@@ -140,6 +151,7 @@ class VisualModel(AbstractManager):
         #vm.wx2_fdesc = sklearn.cluster.KMeans(
         # Non-quantized vocabulary
         pass
+    return wx2_fdesc, wx2_axs
 
     def compute_inverted_file(vm):
         vm.wx2_axs = empty((vm.wx2_fdsc.shape[0]),dtype=object) 
@@ -193,23 +205,24 @@ class VisualModel(AbstractManager):
         ''' Let N = len(query_vecs) 
             Returns: 
                 index_list - (N x K) Index of the Nth query_vec's Kth nearest neighbor
-                dist_lista - (N x K) Coresponding Distance'''
+                dist_list - (N x K) Coresponding Distance'''
         N = query_vecs.shape[0]
         flann_index = vm.flann_index(data_vecs)
         (index_list, dist_list) = flann_index.nn_index(query_vecs, K, checks=128)
         index_list.shape = (N, K)
-        dist_lista.shape = (N, K)
-        return (index_list, dist_lista)
+        dist_list.shape = (N, K)
+        return (index_list, dist_list)
 
     def flann_one_time(vm, data_vecs, query_vecs, K):
         N = query_vecs.shape[0]
         flann       = FLANN()
-        flann_args  = vm.hs.am.indexers['flann_args'].to_dict()
+        flann_prefs = vm.hs.am.algo_prefs.model.indexer
+        flann_args  = flann_prefs.to_dict()
         flann_args_ = flann.build_index(data_vecs, **flann_args)
-        (index_list, dist_list) = flann_index.nn_index(query_vecs, K, checks=128)
+        (index_list, dist_list) = flann.nn_index(query_vecs, K, checks=flann_prefs.checks)
         index_list.shape = (N, K)
-        dist_lista.shape = (N, K)
-        return (index_list, dist_lista)
+        dist_list.shape = (N, K)
+        return (index_list, dist_list)
 
         
     def __init__(vm, hs=None):

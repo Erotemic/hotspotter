@@ -1,7 +1,7 @@
 from PyQt4.Qt import QObject, pyqtSignal, QFileDialog
 from front.HotspotterMainWindow import HotspotterMainWindow
 from numpy import setdiff1d
-from other.ConcretePrintable import PrefStruct
+from other.ConcretePrintable import Pref
 from other.logger import logdbg, logerr, logmsg, func_log, func_debug
 # The UIManager should be running in the same thread as 
 # the Facade functions. It should talk to the hsgui with 
@@ -12,7 +12,7 @@ class UIManager(QObject):
     populateChipTblSignal   = pyqtSignal(list, list, list, list)
     populateImageTblSignal  = pyqtSignal(list, list, list, list)
     populateResultTblSignal = pyqtSignal(list, list, list, list)
-    populatePrefTreeSignal  = pyqtSignal(PrefStruct)
+    populatePrefTreeSignal  = pyqtSignal(Pref)
     updateStateSignal       = pyqtSignal(str)
     selectionSignal         = pyqtSignal(int, int)
     setfignumSignal         = pyqtSignal(int)
@@ -22,7 +22,7 @@ class UIManager(QObject):
     def init_preferences(uim, default_bit=False):
         iom = uim.hs.iom
         if uim.ui_prefs == None:
-            uim.ui_prefs = PrefStruct(iom.get_prefs_fpath('ui_prefs'))
+            uim.ui_prefs = Pref(fpath=iom.get_prefs_fpath('ui_prefs'))
         uim.ui_prefs.quick_roi_select = False #roi_beast_mode
         uim.ui_prefs.prompt_after_result = True
         if not default_bit:
@@ -246,7 +246,7 @@ class UIManager(QObject):
         if uim.all_pref != None: 
             raise Exception('Youve already built the pref tree')
         logdbg('Populating the Preference Tree Sending Signal')
-        uim.all_pref = PrefStruct()
+        uim.all_pref = Pref()
         uim.all_pref.algo_prefs = am.algo_prefs
         uim.all_pref.core_prefs = hs.core_prefs
         uim.all_pref.ui_prefs   = uim.ui_prefs

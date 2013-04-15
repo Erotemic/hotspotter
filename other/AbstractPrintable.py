@@ -132,7 +132,7 @@ class AbstractPrintable(object):
             if key in exclude_key_list: continue
             namestr = str(key)
             valstr  = printableVal(val,type_bit=type_bit)
-            typestr = printableType(val)
+            typestr = printableType(val, name=key, parent=self)
             max_valstr = 10000
             if len(valstr) > max_valstr:
                 valstr = valstr[0:max_valstr/2]+valstr[-max_valstr/2:-1]
@@ -145,7 +145,12 @@ class AbstractPrintable(object):
             body += typestr2 + namestr + ' = ' + valstr + entrytail
         return body
 #---------------
-def printableType(val):
+def printableType(val, name=None, parent=None):
+    if hasattr(parent, 'customPrintableType'):
+        # Hack for non-trivial preference types
+        _typestr = parent.customPrintableType(name)
+        if _typestr != None:
+            return _typestr
     if type(val) == np.ndarray:
         info = npArrInfo(val)
         _typestr = info.dtypestr
@@ -173,7 +178,7 @@ def printableVal(val,type_bit=True):
     elif type(val) is types.ListType:
         lenstr = str(len(val))
         _valstr = 'Length:'+lenstr
-    elif hasattr(val, 'get_printable'): #WTF? isinstance(val, AbstractPrintable):
+    elif hasattr(val, 'get_printable') and type(val) != type: #WTF? isinstance(val, AbstractPrintable):
         _valstr = val.get_printable(type_bit=type_bit)
     elif type(val) is types.DictType:
         _valstr = '{\n'

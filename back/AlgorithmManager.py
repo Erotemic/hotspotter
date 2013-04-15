@@ -3,12 +3,13 @@ import subprocess
 import shelve
 from other.logger  import logmsg, logdbg, logerr, logwarn
 from other.helpers  import filecheck
-from other.ConcretePrintable import DynStruct, PrefStruct, ComboPref
+from other.ConcretePrintable import DynStruct, Pref 
 from other.AbstractPrintable import AbstractManager
 from numpy import sqrt, zeros, uint8, array, asarray, float32
 from PIL import Image, ImageOps
 from back.algo.imalgos import contrast_stretch, histeq, adapt_histeq
 import re
+
 
 class AlgorithmManager(AbstractManager): 
     '''Manager the settings for different algorithms
@@ -25,17 +26,17 @@ class AlgorithmManager(AbstractManager):
     def init_preferences(am, default_bit=False):
         iom = am.hs.iom
         if am.algo_prefs == None:
-            am.algo_prefs = PrefStruct(iom.get_prefs_fpath('algo_prefs'))
+            am.algo_prefs = Pref(fpath=iom.get_prefs_fpath('algo_prefs'))
             #Define the pipeline stages
-            am.algo_prefs.preproc  = PrefStruct(parent=am.algo_prefs)  # Low Level Chip Operations
-            am.algo_prefs.chiprep  = PrefStruct(parent=am.algo_prefs)  # Extracting Chip Features
-            am.algo_prefs.model    = PrefStruct(parent=am.algo_prefs)  # Building the model
-            am.algo_prefs.query    = PrefStruct(parent=am.algo_prefs)  # Searching the model
-            am.algo_prefs.results  = PrefStruct(parent=am.algo_prefs)  # Searching the model
+            am.algo_prefs.preproc  = Pref(parent=am.algo_prefs)  # Low Level Chip Operations
+            am.algo_prefs.chiprep  = Pref(parent=am.algo_prefs)  # Extracting Chip Features
+            am.algo_prefs.model    = Pref(parent=am.algo_prefs)  # Building the model
+            am.algo_prefs.query    = Pref(parent=am.algo_prefs)  # Searching the model
+            am.algo_prefs.results  = Pref(parent=am.algo_prefs)  # Searching the model
 
 
         # --- Chip Preprocessing ---
-        # (selection, options, params? )
+        # (selection, options, prefs? )
         am.algo_prefs.preproc.sqrt_num_pxls           = 700
         am.algo_prefs.preproc.autocontrast_bit        = False
         am.algo_prefs.preproc.bilateral_filt_bit      = False
@@ -47,23 +48,55 @@ class AlgorithmManager(AbstractManager):
         # Currently one feature detector and one feature descriptor is chosen
         # * = non-free
         #am.algo_prefs.chiprep.gravity_vector_bit     = True
-        am.algo_prefs.chiprep.kpts_detector           = ComboPref(0, ('heshesaff', 'heslapaff', 'dense', '!MSER', '#FREAK', '#SIFT'))
-        am.algo_prefs.chiprep.kpts_extractor          = ComboPref(0, ('SIFT', '#SURF', '#BRISK'))
+        am.algo_prefs.chiprep.kpts_detector           = Pref(0, choices=('heshesaff', 'heslapaff', 'dense', '!MSER', '#FREAK', '#SIFT'))
+        am.algo_prefs.chiprep.kpts_extractor          = Pref(0, choices=('SIFT', '#SURF', '#BRISK'))
 
         # --- Vocabulary ---
-        am.algo_prefs.model.quantizer                 = ComboPref(0, ('none', '#hkmeans', '#akmeans'))
-        am.algo_prefs.model.indexer                   = 'flann_kdtree'
+        am.algo_prefs.model.quantizer                 = Pref(0, choices=('none', '#hkmeans', '#akmeans'))
+        
+        flann_kdtree = Pref()
+        flann_kdtree.algorithm  = Pref(default=1, choices=['linear',
+                                                           'kdtree',
+                                                           'kmeans',
+                                                           'composite',
+                                                           'autotuned']) # Build Prefs
+        flann_kdtree.trees      = Pref(8, min=0, max=30)
+        flann_kdtree.checks     = Pref(1024, min=0, max=4096) # Search Prefs
+        #Autotuned Specific Prefeters
+        autotune_spef = (flann_kdtree.algorithm, 'autotuned') 
+        flann_kdtree.target_precision = Pref(0.95, depeq=autotune_spef)  
+        flann_kdtree.build_weight     = Pref(0.01, depeq=autotune_spef) 
+        flann_kdtree.memory_weight    = Pref(0.86, depeq=autotune_spef,\
+                                             doc='the time-search tradeoff') 
+        flann_kdtree.sample_fraction  = Pref(0.86, depeq=autotune_spef,\
+                                             doc='the train_fraction')
+        # HKMeans Specific Prefeters
+        hkmeans_spef = (flann_kdtree.algorithm, 'kmeans') #Autotuned Specific Prefeters
+        flann_kdtree.branching    = Pref(10, depeq=hkmeans_spef) 
+        flann_kdtree.iterations   = Pref( 6, depeq=hkmeans_spef, doc='num levels') 
+        flann_kdtree.centers_init = Pref(choices=['random', 'gonzales', 'kmeansapp'],\
+                                         depeq=hkmeans_spef) 
+        flann_kdtree.cb_index = Pref(0, min=0, max=5, depeq=hkmeans_spef, doc='''
+            this parameter (cluster boundary index) influences the way exploration
+            is performed in the hierarchical kmeans tree. When cb index is
+            zero the next kmeans domain to be explored is choosen to be the one with
+            the closest center. A value greater then zero also takes into account the
+            size of the domain.''' ) 
+        am.algo_prefs.model.indexer = Pref(0, choices=[flann_kdtree])
 
-        # --- Query Params ---
-        am.algo_prefs.query.k                         =    1 
-        am.algo_prefs.query.num_rerank                = 1000
-        am.algo_prefs.query.spatial_thresh            = 0.05 
-        am.algo_prefs.query.sigma_thresh              = 0.05 #: Unimplemented
-        am.algo_prefs.query.method                    = ComboPref(0, ('COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'))
-        # --- Result Params --- 
-        am.algo_prefs.results.score                   = ComboPref(0,('cscore','nscore')) # move to results?
-        am.algo_prefs.results.self_as_result_bit      = False  #: Return self (in terms of name)
-        am.algo_prefs.results.num_top                 =     3 
+        # --- Query Prefs ---
+        am.algo_prefs.query.k                         = Pref(1,    min=1, max=50)
+        am.algo_prefs.query.num_rerank                = Pref(1000, min=0)
+        am.algo_prefs.query.spatial_thresh            = Pref(0.05, min=0, max=1) 
+        am.algo_prefs.query.sigma_thresh              = Pref(0.05, min=0, max=1) #: Unimplemented
+        am.algo_prefs.query.method                    = Pref(0, choices=['COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'])
+        am.algo_prefs.query.score                     = Pref(0, choices=['cscore','nscore']) # move to results?
+        am.algo_prefs.query.self_as_result_bit        = Pref(False)  #: Return self (in terms of name) in results
+        am.algo_prefs.query.num_top                   = Pref(3) # move to results
+        # --- Result Prefs --- 
+        am.algo_prefs.results.score                   = Pref(0, choices=('cscore','nscore')) # move to results?
+        am.algo_prefs.results.self_as_result_bit      = Pref(False)  #: Return self (in terms of name) in results
+        am.algo_prefs.results.num_top                 = Pref(3) # move to results
         if not default_bit:
             am.algo_prefs.load()
         #TODO: (theta, xy, sigma)_thresh 
@@ -96,10 +129,10 @@ class AlgorithmManager(AbstractManager):
         # Autotuned specific: build weight = .01
         # Autotuned specific: memory weight = [0-1] the time-search tradeoff
         # Autotuned specific: sample fraction = [0-1]  the train_fraction
-        flann_kdtree_indexer = DynStruct()
-        flann_kdtree_indexer.algorithm  = 'kdtree' # Build Params
+        flann_kdtree_indexer = Pref()
+        flann_kdtree_indexer.algorithm  = 'kdtree' # Build Prefs
         flann_kdtree_indexer.trees      = 8
-        flann_kdtree_indexer.checks     = 1024 # Search Params
+        flann_kdtree_indexer.checks     = 1024 # Search Prefs
         am.indexers['flann_kdtree'] = flann_kdtree_indexer    
         # HKMeans: 
         # branching
@@ -117,7 +150,7 @@ class AlgorithmManager(AbstractManager):
                 if stage not in depends:
                     exclude_list.append(stage)
             print_attri = am.algo_prefs.get_printable(type_bit=False,print_exclude_aug=exclude_list)
-            return 'Algorithm Params'+('\n'+print_attri).replace('\n','\n    ')
+            return 'Algorithm Prefs'+('\n'+print_attri).replace('\n','\n    ')
 
         abbrev_list = [
             ('gravity_vector_bit','gv'),
@@ -390,7 +423,7 @@ class AlgorithmManager(AbstractManager):
                 -hesaff - hessian-affine detector
                 -harhes - harris-hessian-laplace detector
                 -dense dx dy - dense sampling
-            Interest points parameters:
+            Interest points prefeters:
                 -density 100 - feature density per pixels (1 descriptor per 100pix)
                 -harThres - harris threshold [100]
                 -hesThres  - hessian threshold [200]
@@ -399,7 +432,7 @@ class AlgorithmManager(AbstractManager):
             Descriptors:
                 -sift - sift [D. Lowe]
                 -gloh - gloh [KM]
-            Descriptor paramenters:
+            Descriptor prefenters:
                 -color - color sift [KM]
                 -dradius - patch radius for computing descriptors at scale 1
                 -fface ..../facemodel.dat - frontal face detector

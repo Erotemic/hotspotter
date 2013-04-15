@@ -28,20 +28,19 @@ from back.VisualModel import VisualModel
 from front.DrawManager import DrawManager
 from front.UIManager import UIManager
 from other.AbstractPrintable import AbstractPrintable
-from other.ConcretePrintable import PrefStruct
+from other.ConcretePrintable import Pref
 from other.logger import logdbg, logerr, logmsg, logwarn, func_log
 from other.helpers import dircheck, filecheck
 import cPickle
 import types
 import os.path
-
 class HotSpotterAPI(AbstractPrintable):
 
     def init_preferences(hs, default_bit=False):
         iom = hs.iom
         if hs.core_prefs == None:
-            hs.core_prefs = PrefStruct(iom.get_prefs_fpath('core_prefs'))
-        hs.core_prefs.database_dpath  = None
+            hs.core_prefs = Pref(fpath=iom.get_prefs_fpath('core_prefs'))
+        hs.core_prefs.database_dpath = None
         if not default_bit:
             hs.core_prefs.load()
 

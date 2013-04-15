@@ -1,4 +1,4 @@
-from other.ConcretePrintable import PrefStruct
+from other.ConcretePrintable import Pref
 from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
         QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal, \
         QStandardItem, QStandardItemModel, QString
@@ -47,7 +47,7 @@ class EditPrefWidget(QWidget):
         epw.pref_skel.unloadFeaturesAndModelsBUT.clicked.connect(fac.unload_features_and_models)
 
 
-    @pyqtSlot(PrefStruct, name='populatePrefTreeSlot')
+    @pyqtSlot(Pref, name='populatePrefTreeSlot')
     def populatePrefTreeSlot(epw, pref_struct):
         'Populates the Preference Tree Model'
         logdbg('Bulding Preference Model of: '+repr(pref_struct))

@@ -11,9 +11,7 @@ import numpy as np
 from numpy import spacing as eps
 # TODO TF-IDF still needs the h or a kmeans to work. 
 class VisualModel(AbstractManager):
-
-
-    def cx2_visual_word_histogram(cx):
+    def cx2_visual_word_histogram(vm, cx):
         fdesc = cm.cx2_fdesc(cx)
         [fx2_word, dist] = vm.flann_wx2_fdesc.nearest(fdesc)
         return scipy.sparse_histogram(fx2_word)
@@ -22,18 +20,18 @@ class VisualModel(AbstractManager):
         The number of clusters to form as well as the number of centroids to generate.
         '''
 
-    def build_model2():
+    def build_model2(vm):
         assert len(vm.train_cx) > 0, 'Training set cannot be  empty'
 
         logdbg('Build Index was Requested')
 
         logdbg('Step 1: Aggregate the model support (Load feature vectors) ---')
-        ax2_fdsc = am.aggregate_features()
+        (ax2_fdsc, ax2_cid, ax2_fx) = am.aggregate_features()
 
         logdbg('Step 2: Build the Vocabulary')
-        if am.algo_prefs.model.quantizer() == 'naive_bayes':
+        if am.algo_prefs.model.quantizer == 'naive_bayes':
             vm.compute_naive_bayes(ax2_fdsc)
-        elif am.algo_prefs.model.quantizer() == 'bag_of_words':
+        elif am.algo_prefs.model.quantizer == 'bag_of_words':
             vm.compute_bag_of_words(ax2_fdsc)
         
         logdbg('Step 3: Build the Inverted Index')
@@ -41,7 +39,7 @@ class VisualModel(AbstractManager):
         logdbg('Step 4: Building FLANN Index: over '+str(len(vm.wx2_fdsc))+' words')
         # Save Model
 
-    def aggregate_features(channel=None):
+    def aggregate_features(vm, channel=None):
         # Aggregate Features. Not Saved
         logdbg('Aggregating features')
         vm.sample_train_set()
@@ -52,17 +50,17 @@ class VisualModel(AbstractManager):
         cm.load_features(train_cx)
         tx2_num_fpts = cm.cx2_nfpts(train_cx)
         num_agg = np.sum(tx2_num_fpts)
-        ax2_fdsc = empty((num_agg, 128), dtype=uint8)
+        ax2_fdsc = empty((num_agg,128), dtype=uint8)
         _p = 0
-        for tx, cx in enumerate(tx2_cx):
+        for tx, cx in enumerate(train_cx):
             num_fpts = tx2_num_fpts[tx]
-            ax2_fdsc[_p:_p+nfdsc,:] = cm.cx2_fdsc[cx]
-            _p += nfdsc
+            ax2_fdsc[_p:_p+num_fpts,:] = cm.cx2_fdsc[cx]
+            _p += num_fpts
         # Inverted Aggregate Information. (Saved)
-        vm.ax2_cid = empty(num_agg, shape=(1,), dtype=int32) 
-        vm.ax2_fx  = empty(num_agg, shape=(1,), dtype=int32)
+        ax2_cid = np.empty((num_agg,), dtype=np.int32) 
+        ax2_fx  = np.empty((num_agg,), dtype=np.int32)
         train_cid = vm.get_train_cid()
-        ax2_tx     = empty(num_agg, shape=(1,), dtype=int32)
+        ax2_tx     = empty((num_agg,), dtype=int32)
         _L = 0; _R = 0
         for tx in xrange(vm.num_train()):
             num_fpts    = tx2_num_fpts[tx]
@@ -70,11 +68,14 @@ class VisualModel(AbstractManager):
             ax_of_tx = range(_L, _R)
             _L = _L + num_fpts
             ax2_tx[ax_of_tx]     = tx
-            vm.ax2_cid[ax_of_tx] = tx2_cid[tx]     # to ChipID
-            vm.ax2_fx[ax_of_tx]  = range(num_fpts) # to FeatID
-        return ax2_fdsc
+            ax2_cid[ax_of_tx] = train_cid[tx]   # to ChipID
+            ax2_fx[ax_of_tx]  = range(num_fpts) # to FeatID
+        return (ax2_fdsc, ax2_cid, ax2_fx)
+        #return ax2_fdsc
+        #vm.ax2_cid = ax2_cid
+        #vm.ax2_fx  = ax2_cid
 
-    def compute_naive_bayes(data):
+    def compute_naive_bayes(vm, data):
         num_data = len(data)
         cent = data
         num_cent = len(num_data)
@@ -83,7 +84,7 @@ class VisualModel(AbstractManager):
         # Save Words 
         # Save FLANN
 
-    def approximate_kmeans(data, K):
+    def approximate_kmeans(vm, data, K):
         max_iters = 1000
         cent = data[randi(num=K, min=0, max=num_words-1),::] # Random Centers
         for _ in xrange(0,max_iters):
@@ -109,22 +110,21 @@ class VisualModel(AbstractManager):
                 _L = _R
         return cent, assign
 
-    def compute_bag_of_words(ax2_fdsc):
-        import sklearn.cluster.KMeans
+    def compute_bag_of_words(vm, ax2_fdsc):
+        # import sklearn.cluster.KMeans
         import scipy.sparse
         num_words = params(1e6)
         vm.wx2_fdesc, vm.wx2_axs = approximate_kmeans(ax2_fdsc, num_words)
         # Create Visual Histograms
-        num_train = len(vm.get_train_cxs())
+        num_train = len( vm.get_train_cxs() )
         cx2_chiprep_vector = scipy.sparse.coo_matrix((num_train, num_words, 1), dtype=uint32)
-        cx2_tfidf = scipy.sparse.coo_matrix((num_train, num_words, 1), dtype=uint32)
+        cx2_tfidf          = scipy.sparse.coo_matrix((num_train, num_words, 1), dtype=uint32)
         for wx in xrange(num_words):
             axs = vm.wx2_axs[wx] # vm.wx2_cxs
             cxs = [vm.ax2_cx[ax] for ax in axs]
             unique_cx, ucx2_term_frequency = np.some_unique(cxs)
             wx2_termfreq = sum(ucx2_term_frequency)
             cx2_tfidf[unique_cx, wx] = ucx2_term_frequency
-
         logdbg('Computing TF-IDF metadata')
         bcarg = {'max_tx':len(tx2_cx), 'dtype':np.float32}
         tx2_termfq_denom = float32(cm.cx2_nfpts(tx2_cx))
@@ -141,7 +141,7 @@ class VisualModel(AbstractManager):
         # Non-quantized vocabulary
         pass
 
-    def compute_inverted_file():
+    def compute_inverted_file(vm):
         vm.wx2_axs = empty((vm.wx2_fdsc.shape[0]),dtype=object) 
         for ax in xrange(0,num_train_keypoints):
             if vm.wx2_axs[ax] is None:
@@ -284,7 +284,6 @@ class VisualModel(AbstractManager):
                 logwarn('WARNING: FLANN is not deleting correctly')
         vm.reset()
 
-
 # OLD OLD OLD
     def nearest_neighbors(vm, qfdsc, K): 
         ''' qfx2_wxs - (num_feats x K) Query Descriptor Index to the K Nearest Word Indexes 
@@ -320,7 +319,7 @@ class VisualModel(AbstractManager):
 
         logdbg('Step 2: Build the model Words')
         isTFIDF = False
-        if am.algo_prefs.model.quantizer() == 'none':
+        if am.algo_prefs.model.quantizer == 'naive_bayes':
             logdbg('No Quantization. Aggregating all fdscriptors for nearest neighbor search.')
             vm.wx2_fdsc = empty((num_train_keypoints,128),dtype=uint8)
             _p = 0
@@ -329,11 +328,8 @@ class VisualModel(AbstractManager):
                 vm.wx2_fdsc[_p:_p+nfdsc,:] = cm.cx2_fdsc[cx]
                 _p += nfdsc
             ax2_wx = array(range(0,num_train_keypoints),dtype=uint32)
-        if am.algo_prefs.model.quantizer() == 'hkmeans':
-            hkm_cfg = am.quantizers['hkmeans']
-            [vm.wx2_fdsc, ax2_wx] = hkmeans_hack([cm.cx2_fdsc[:,tx2_cx]],hkm_cfg)
-        if am.algo_prefs.model.quantizer() == 'akmeans':
-            NUM_WORDS = am.quantizers.akmeans.k
+        if am.algo_prefs.model.quantizer == 'akmeans':
+            raise NotImplementedError(':)')
         
         logdbg('Step 3: Point the parts of the model back to their source')
         vm.wx2_axs = empty(vm.wx2_fdsc.shape[0], dtype=object) 
@@ -368,8 +364,8 @@ class VisualModel(AbstractManager):
         logdbg('Step 4: Building FLANN Index: over '+str(len(vm.wx2_fdsc))+' words')
         assert vm.flann is None, 'Flann already exists'
         vm.flann = FLANN()
-        flann_param_dict = am.indexers['flann_kdtree'].__dict__
-        flann_params = vm.flann.build_index(vm.wx2_fdsc, **flann_paaam_dict)
+        flann_param_dict = am.indexers['flann_kdtree'].to_dict()
+        flann_params = vm.flann.build_index(vm.wx2_fdsc, **flann_param_dict)
         vm.isDirty  = False
         if not vm.save_model():
             logerr('Error Saving Model')

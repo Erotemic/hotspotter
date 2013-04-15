@@ -18,7 +18,6 @@ class AlgorithmManager(AbstractManager):
     here.'''
     def __init__(am, hs):
         super( AlgorithmManager, am ).__init__( hs)
-        am.__define_algo_options()
         am.default_depends = ['preproc','chiprep','model','query']
         am.algo_prefs = None
         am.init_preferences()
@@ -33,8 +32,6 @@ class AlgorithmManager(AbstractManager):
             am.algo_prefs.model    = Pref(parent=am.algo_prefs)  # Building the model
             am.algo_prefs.query    = Pref(parent=am.algo_prefs)  # Searching the model
             am.algo_prefs.results  = Pref(parent=am.algo_prefs)  # Searching the model
-
-
         # --- Chip Preprocessing ---
         # (selection, options, prefs? )
         am.algo_prefs.preproc.sqrt_num_pxls           = 700
@@ -43,27 +40,39 @@ class AlgorithmManager(AbstractManager):
         am.algo_prefs.preproc.histeq_bit              = False
         am.algo_prefs.preproc.contrast_stretch_bit    = False
         am.algo_prefs.preproc.adapt_histeq_bit        = False
-
         # --- Chip Representation ---
         # Currently one feature detector and one feature descriptor is chosen
         # * = non-free
         #am.algo_prefs.chiprep.gravity_vector_bit     = True
         am.algo_prefs.chiprep.kpts_detector           = Pref(0, choices=('heshesaff', 'heslapaff', 'dense', '!MSER', '#FREAK', '#SIFT'))
         am.algo_prefs.chiprep.kpts_extractor          = Pref(0, choices=('SIFT', '#SURF', '#BRISK'))
-
         # --- Vocabulary ---
-        am.algo_prefs.model.quantizer                 = Pref(0, choices=('none', '#hkmeans', '#akmeans'))
+        am.algo_prefs.model.quantizer                 = Pref(0, choices=('naive_bayes', 'akmeans'))
+
+        #nbnn_dep = (am.algo_prefs.model.quantizer_internal, 'naive_bayes')
+        #am.algo_prefs.model.naive_bayes                    = Pref(depeq=nbnn_dep)
+        #am.algo_prefs.model.naive_bayes.num_nearest        = Pref('wip')
+        #am.algo_prefs.model.naive_bayes.pseudo_num_words   = Pref('wip')
+
+        akm_dep = (am.algo_prefs.model.quantizer_internal, 'akmeans')
+        am.algo_prefs.model.akmeans             = Pref(depeq=akm_dep)
+        am.algo_prefs.model.akmeans.num_words   = Pref(1000)
+
+        hkm_dep = (am.algo_prefs.model.quantizer_internal, 'hkmeans')
+        am.algo_prefs.model.hkmeans             = Pref(depeq=hkm_dep)
+        am.algo_prefs.model.hkmeans.branching   = Pref(10)
+        am.algo_prefs.model.hkmeans.depth       = Pref(6)
         
         flann_kdtree = Pref()
         flann_kdtree.algorithm  = Pref(default=1, choices=['linear',
-                                                           'kdtree',
-                                                           'kmeans',
-                                                           'composite',
-                                                           'autotuned']) # Build Prefs
+                                                 'kdtree',
+                                                 'kmeans',
+                                                 'composite',
+                                                 'autotuned']) # Build Prefs
         flann_kdtree.trees      = Pref(8, min=0, max=30)
         flann_kdtree.checks     = Pref(1024, min=0, max=4096) # Search Prefs
         #Autotuned Specific Prefeters
-        autotune_spef = (flann_kdtree.algorithm, 'autotuned') 
+        autotune_spef = (flann_kdtree.algorithm_internal, 'autotuned') 
         flann_kdtree.target_precision = Pref(0.95, depeq=autotune_spef)  
         flann_kdtree.build_weight     = Pref(0.01, depeq=autotune_spef) 
         flann_kdtree.memory_weight    = Pref(0.86, depeq=autotune_spef,\
@@ -71,7 +80,7 @@ class AlgorithmManager(AbstractManager):
         flann_kdtree.sample_fraction  = Pref(0.86, depeq=autotune_spef,\
                                              doc='the train_fraction')
         # HKMeans Specific Prefeters
-        hkmeans_spef = (flann_kdtree.algorithm, 'kmeans') #Autotuned Specific Prefeters
+        hkmeans_spef = (flann_kdtree.algorithm_internal, 'kmeans') #Autotuned Specific Prefeters
         flann_kdtree.branching    = Pref(10, depeq=hkmeans_spef) 
         flann_kdtree.iterations   = Pref( 6, depeq=hkmeans_spef, doc='num levels') 
         flann_kdtree.centers_init = Pref(choices=['random', 'gonzales', 'kmeansapp'],\
@@ -82,7 +91,7 @@ class AlgorithmManager(AbstractManager):
             zero the next kmeans domain to be explored is choosen to be the one with
             the closest center. A value greater then zero also takes into account the
             size of the domain.''' ) 
-        am.algo_prefs.model.indexer = Pref(0, choices=[flann_kdtree])
+        am.algo_prefs.model.indexer = flann_kdtree #Pref(0, choices=[flann_kdtree])
 
         # --- Query Prefs ---
         am.algo_prefs.query.k                         = Pref(1,    min=1, max=50)
@@ -99,46 +108,6 @@ class AlgorithmManager(AbstractManager):
         am.algo_prefs.results.num_top                 = Pref(3) # move to results
         if not default_bit:
             am.algo_prefs.load()
-        #TODO: (theta, xy, sigma)_thresh 
-
-    def __define_algo_options(am):
-        'List of options for Algo Manager to use'
-        # Quantizers
-        am.quantizers = {}
-        # --- No Quantization ---
-        none_quantizer = DynStruct()
-        none_quantizer.pseudo_num_w     = -1
-        am.quantizers['none'] = none_quantizer
-        # --- HeirKmeans Quant ---
-        hkmeans_quantizer = DynStruct()
-        hkmeans_quantizer.depth         =  5
-        hkmeans_quantizer.branching     = 10
-        am.quantizers['hkmeans'] = hkmeans_quantizer
-        # TODO Fix this in python version
-        # --- AproxKmeans Quant ---
-        akmeans_quantizer = DynStruct()
-        akmeans_quantizer.k = 1000000
-        am.quantizers['akmeans'] = akmeans_quantizer
-        #TODO implement akmeans
-
-        # Indexers
-        am.indexers = {}
-        # --- FLANN KD-Tree ---
-        # Options: 'linear', 'kdtree', 'kmeans', 'composite' or 'autotuned'.
-        # Autotuned specific: target_precision = betwen 0 and 1
-        # Autotuned specific: build weight = .01
-        # Autotuned specific: memory weight = [0-1] the time-search tradeoff
-        # Autotuned specific: sample fraction = [0-1]  the train_fraction
-        flann_kdtree_indexer = Pref()
-        flann_kdtree_indexer.algorithm  = 'kdtree' # Build Prefs
-        flann_kdtree_indexer.trees      = 8
-        flann_kdtree_indexer.checks     = 1024 # Search Prefs
-        am.indexers['flann_kdtree'] = flann_kdtree_indexer    
-        # HKMeans: 
-        # branching
-        # iterations
-        # centers_init
-        # cb_index
 
     def get_algo_name(am, depends, abbrev_bit=False):
         if depends == 'all':
@@ -272,9 +241,9 @@ class AlgorithmManager(AbstractManager):
         external_detectors = ['heshesaff', 'heslapaff', 'heslap', 'harlap', 'dense']
         external_descriptors = ['SIFT']
 
-        if am.algo_prefs.chiprep.kpts_detector() in external_detectors:
+        if am.algo_prefs.chiprep.kpts_detector in external_detectors:
             (kpts, desc) = am.external_feature_computers(chip)
-            if am.algo_prefs.chiprep.kpts_extractor() in external_descriptors:
+            if am.algo_prefs.chiprep.kpts_extractor in external_descriptors:
                 return (kpts, desc)
         else:
             logerr('Only External Keypoint Detectors are implemented: '+str(external_detectors))
@@ -290,11 +259,11 @@ class AlgorithmManager(AbstractManager):
             # Also: Grid, GridFAST, PyramidStar
             # see http://docs.opencv.org/modules/features2d/doc/common_interfaces_of_feature_detectors.html#Ptr<FeatureDetector> FeatureDetector::create(const string& detectorType)
         im  = cv2.cvtColor(chip, cv2.COLOR_BGR2GRAY)
-        logdbg('Making detector: %r' % am.algo_prefs.chiprep.kpts_detector())
-        cvFeatDetector  = cv2.FeatureDetector_create(am.algo_prefs.chiprep.kpts_extractor())
+        logdbg('Making detector: %r' % am.algo_prefs.chiprep.kpts_detector)
+        cvFeatDetector  = cv2.FeatureDetector_create(am.algo_prefs.chiprep.kpts_extractor)
         #cvFeatDetector   = cv2.PyramidAdaptedFeatureDetector(cvFeatDetector_,4)
-        logdbg('Made %r, Making extractor: %r' % (cvFeatDetector, am.algo_prefs.chiprep.kpts_detector()))
-        cvFeatExtractor  = cv2.DescriptorExtractor_create(am.algo_prefs.chiprep.kpts_extractor())
+        logdbg('Made %r, Making extractor: %r' % (cvFeatDetector, am.algo_prefs.chiprep.kpts_detector))
+        cvFeatExtractor  = cv2.DescriptorExtractor_create(am.algo_prefs.chiprep.kpts_extractor)
 
         logdbg('Made %r, Detecting keypoints on image' % cvFeatExtractor )
         cvKpts_= cvFeatDetector.detect(im)
@@ -347,13 +316,13 @@ class AlgorithmManager(AbstractManager):
         chip.save(tmp_chip_fpath,'PPM')
         perdoch_external = ['heshesaff']
         mikolajczyk_external = ['heslapaff','dense']
-        if am.algo_prefs.chiprep.kpts_detector() in perdoch_external:
+        if am.algo_prefs.chiprep.kpts_detector in perdoch_external:
             exename = iom.get_hesaff_exec()
             outname = tmp_chip_fpath+'.hesaff.sift'
             args = '"'+tmp_chip_fpath+'"'
-        elif am.algo_prefs.chiprep.kpts_detector() in mikolajczyk_external:
+        elif am.algo_prefs.chiprep.kpts_detector in mikolajczyk_external:
             exename = iom.get_inria_exec()
-            feature_name = am.algo_prefs.chiprep.kpts_detector()
+            feature_name = am.algo_prefs.chiprep.kpts_detector
             if feature_name == 'heslapaff':
                 feature_name = 'hesaff'
                 suffix = 'hesaff'
@@ -364,7 +333,7 @@ class AlgorithmManager(AbstractManager):
             args = '-'+feature_name+' -sift -i "'+tmp_chip_fpath+'"'
         else:
             logerr('Method %r + %r is invalid in extern_detect_kpts.m'\
-                   % (am.algo_prefs.chiprep.kpts_detector(), am.algo_prefs.chiprep.kpts_extractor()))
+                   % (am.algo_prefs.chiprep.kpts_detector, am.algo_prefs.chiprep.kpts_extractor))
 
         cmd = exename+' '+args
         logdbg('External Executing: %r ' % cmd)

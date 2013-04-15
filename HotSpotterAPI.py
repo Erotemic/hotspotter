@@ -90,7 +90,7 @@ class HotSpotterAPI(AbstractPrintable):
                    'Select an existing HotSpotter, StripeSpotter database. '+\
                    'To create a new database, select and empty directory. ')
 
-    def __init__(hs):
+    def __init__(hs, delete_home_dir_bit=False):
         super( HotSpotterAPI, hs ).__init__(['cm','gm','nm','em','qm','dm','am','vm','iom','uim'])
         #
         hs.db_dpath = None #Database directory.
@@ -98,6 +98,9 @@ class HotSpotterAPI(AbstractPrintable):
         hs.core_prefs = None
         # --- Managers ---
         hs.iom = IOManager(hs) # Maintains path structures
+        if delete_home_dir_bit:
+            # Developer hack to delete the home dir when big things change
+            hs.delete_home_pref_directory()
         hs.uim = UIManager(hs) # Interface to the QtGui
         hs.dm = DrawManager(hs) # Matplotlib interface. Draws on a GUI
         hs.am = AlgorithmManager(hs) # Settings and Standalone algos

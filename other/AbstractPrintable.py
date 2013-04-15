@@ -171,13 +171,13 @@ def printableVal(val,type_bit=True):
             _valstr = '{ shape:'+info.shapestr+' bittotal: '+info.bittotal+'}'# + '\n  |_____'
         else: 
             _valstr = '{ shape:'+info.shapestr+' mM:'+info.minmaxstr+' }'# + '\n  |_____'
-
-
     elif type(val) is types.StringType:
         _valstr = '\'%s\'' % val
     elif type(val) is types.ListType:
-        lenstr = str(len(val))
-        _valstr = 'Length:'+lenstr
+        if len(val) > 30:
+            _valstr = 'Length:'+str(len(val))
+        else:
+            _valstr = '[\n'+('\n'.join([str(v) for v in val]))+'\n]'
     elif hasattr(val, 'get_printable') and type(val) != type: #WTF? isinstance(val, AbstractPrintable):
         _valstr = val.get_printable(type_bit=type_bit)
     elif type(val) is types.DictType:

@@ -9,6 +9,7 @@ from numpy import spacing as eps
 from other.AbstractPrintable import AbstractManager
 from other.ConcretePrintable import Pref
 from other.logger import logmsg, logdbg, logwarn
+from warnings import catch_warnings, simplefilter
 import colorsys
 import os.path
 import sys
@@ -78,14 +79,14 @@ class DrawManager(AbstractManager):
             pass
 
         # Add the images to draw
-        if dm.draw_prefs.result_view() == 'in_image':
+        if dm.draw_prefs.result_view == 'in_image':
             qimg = cm.cx2_img(qcx)
             timg = cm.cx2_img_list(tcx)
             transData_list = dm.add_images([qimg] + timg, title_list)
             for (ix, cx) in enumerate(append(qcx,tcx)):
                 transImg = Affine2D( cm.cx2_transImg(cx) )
                 transData_list[ix] = transImg + transData_list[ix]
-        elif dm.draw_prefs.result_view() == 'in_chip':
+        elif dm.draw_prefs.result_view == 'in_chip':
             qchip = cm.cx2_chip_list(qcx)
             tchip = cm.cx2_chip_list(tcx)
             transData_list = dm.add_images(qchip + tchip, title_list)

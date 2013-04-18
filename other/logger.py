@@ -174,8 +174,10 @@ class LogErrorException(Exception):
 
 
 def logwarn(msg):
+    hsl.log('<WARN START **************************')
     hsl.log('<WARNING-TRACEBACK> '+traceback.format_exc())
     hsl.log('<WARNING> '+msg)
+    hsl.log('WARN END **************************>')
     sys.stdout.flush(); sys.stderr.flush()
 
 def logerr(msg=None):

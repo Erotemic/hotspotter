@@ -67,7 +67,7 @@ def approximate_kmeans(data, K=1e6, max_iters=1000, flann_pref=None):
                 #for x in centx_membx:
                     #dbg_assigned_list.append(x)
                 #/DBGCODE
-                if all(assign[centx] != centx_membx):
+                if np.all(assign[centx] != centx_membx):
                     converged = False
                 assign[centx] = centx_membx
                 # Recompute Centers

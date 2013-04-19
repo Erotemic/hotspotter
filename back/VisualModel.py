@@ -11,42 +11,52 @@ import numpy as np
 from numpy import spacing as eps
 # TODO TF-IDF still needs the h or a kmeans to work. 
 class VisualModel(AbstractManager):
-    def cx2_visual_word_histogram(vm, cx):
-        fdesc = cm.cx2_fdesc(cx)
-        [fx2_word, dist] = vm.flann_wx2_fdesc.nearest(fdesc)
-        return scipy.sparse_histogram(fx2_word)
-        '''
-        n_clusters : int, optional, default: 8
-        The number of clusters to form as well as the number of centroids to generate.
-        '''
+    #def cx2_visual_word_histogram(vm, cx):
+        #fdsc = cm.cx2_fdsc(cx) [fx2_word, dist] = vm.flann_wx2_fdsc.nearest(fdsc) return scipy.sparse_histogram(fx2_word)
+        #'''
+        #n_clusters : int, optional, default: 8
+        #The number of clusters to form as well as the number of centroids to generate.
+        #'''
 
     def build_model2(vm):
-        assert len(vm.train_cx) > 0, 'Training set cannot be  empty'
-
+        am = vm.hs.am
         logdbg('Build Index was Requested')
         vm.sample_train_set()
+        assert len(vm.train_cid) > 0, 'Training set cannot be  empty'
         vm.delete_model()
         train_cx = vm.get_train_cx()
-
         logdbg('Step 1: Aggregate the model support')
         (ax2_fdsc, ax2_cx, ax2_fx) = vm.aggregate_features(train_cx)
         logdbg('Step 2: Build Whole Chip Representation')
         if am.algo_prefs.model.quantizer == 'naive_bayes':
-            vm.compute_naive_bayes(ax2_fdsc)
+            wx2_fdsc, wx2_axs = vm.compute_naive_bayes\
+                    (ax2_fdsc, ax2_cx, train_cx)
         elif am.algo_prefs.model.quantizer == 'bag_of_words':
-            vm.compute_bag_of_words(ax2_fdsc, ax2_cid, train_cx)
-        
-        logdbg('Step 3: Build the Inverted Index')
+            # Get each chip's bag of words,  
+            # The words they index into, and the inverse
+            wx2_fdsc, wx2_axs, cx2_bow = vm.compute_bag_of_words\
+                    (ax2_fdsc, ax2_cx, train_cx)
 
-        logdbg('Step 4: Building FLANN Index: over '+str(len(vm.wx2_fdsc))+' words')
-        # Save Model
+        logdbg('Step 4: Build Database Representation')
+        # Set the model_data = DynStruct
+        vm.wx2_fdsc = wx2_fdsc
+        vm.wx2_axs  = wx2_axs
+        vm.ax2_fx   = ax2_fx
+        #vm.ax2_cx    = wx2_axs
+        vm.ax2_cid  = vm.hs.cm.cx2_cid[ax2_cx]
 
-    def compute_naive_bayes(vm, data):
-        num_data = len(data)
-        cent = data
-        num_cent = len(num_data)
-        assign = [[x] for x in xrange(num_cent)]
-        return cent, assign
+        logdbg('Step 5: Building FLANN Index: over '+str(len(vm.wx2_fdsc))+' words')
+        assert vm.flann is None, 'Flann already exists'
+        vm.flann = FLANN()
+        flann_param_dict = am.algo_prefs.model.indexer.to_dict()
+        flann_params = vm.flann.build_index(vm.wx2_fdsc, **flann_param_dict)
+        vm.isDirty  = False
+        if not vm.save_model():
+            logerr('Error Saving Model')
+
+    def compute_naive_bayes(vm, ax2_fdsc, ax2_cx, train_cx):
+        #wx2_fdsc = ax2_fdsc
+        return ax2_fdsc, array([array([ax],dtype=np.uint32) for ax in xrange(len(ax2_fdsc))], dtype=object)
         # Save Words 
         # Save FLANN
 
@@ -57,8 +67,8 @@ class VisualModel(AbstractManager):
         cm.load_features(train_cx)
         # Get how many descriptors each chips has
         tx2_num_fpts = cm.cx2_nfpts(train_cx)
-        num_agg = np.sum(tx2_num_fpts)
-        ax2_fdsc = empty((num_agg,128), dtype=uint8)
+        total_feats = np.sum(tx2_num_fpts)
+        ax2_fdsc = empty((total_feats,128), dtype=uint8)
         # Aggregate database descriptors together
         _p = 0
         for tx, cx in enumerate(train_cx):
@@ -67,94 +77,124 @@ class VisualModel(AbstractManager):
             _p += num_fpts
         # Build Inverted Aggregate Information. (Saved)
         # This needs to be saved as cid
-        ax2_cx = np.empty((num_agg,), dtype=np.int32) 
-        ax2_fx = np.empty((num_agg,), dtype=np.int32)
-        ax2_tx = np.empty((num_agg,), dtype=np.int32)
+        ax2_cx = np.empty((total_feats,), dtype=np.uint32) 
+        ax2_fx = np.empty((total_feats,), dtype=np.uint32)
+        ax2_tx = np.empty((total_feats,), dtype=np.uint32)
         _L = 0; _R = 0
         for tx in xrange(len(train_cx)):
             num_fpts    = tx2_num_fpts[tx]
             _R  = _R + num_fpts
-            ax_of_tx = range(_L, _R)
+            ax_of_tx = np.arange(_L, _R, dtype=np.uint32)
             _L = _L + num_fpts
             ax2_tx[ax_of_tx] = tx
             ax2_cx[ax_of_tx] = train_cx[tx]    # to ChipID
-            ax2_fx[ax_of_tx] = range(num_fpts) # to FeatID
+            ax2_fx[ax_of_tx] = np.arange(num_fpts, dtype=np.uint32) # to FeatID
         return (ax2_fdsc, ax2_cx, ax2_fx)
         #return ax2_fdsc
-        #vm.ax2_cx = ax2_cx 
+        #vm.ax2_cx = ax2_cx
         #vm.ax2_fx = ax2_cx
 
-    def compute_bag_of_words(vm, ax2_fdsc, ax2_cid, train_cx):
+    def compute_bag_of_words(vm, ax2_fdsc, ax2_cx, train_cx):
         '''Input: 
             ax2_fdsc - aggregate index to raw descriptor
             ax2_cid  - corresponding raw fdsc's chip id
         '''
-        # import sklearn.cluster.KMeans
+        # Parameters
         from back.algo.clustering import approximate_kmeans
         import scipy.sparse
         import collections
         am = vm.hs.am
-        num_raw_feats = ax2_fdsc.shape[0]
+        total_feats = ax2_fdsc.shape[0]
         num_train = len(train_cx)
         max_iters = am.algo_prefs.model.akmeans.max_iters
-        num_words = min(num_raw_feats,\
-                        am.algo_prefs.model.akmeans.num_words)
+        num_words = am.algo_prefs.model.akmeans.num_words
+        num_words = min(total_feats,num_words)
         # compute visual_vocab with num_words using akmeans
         # cluster the raw descriptors into visual words
         # NumWords x 128
         akmeans_flann = None
-        wx2_fdesc, wx2_axs = approximate_kmeans(ax2_fdsc, num_words, max_iters, akmeans_flann)
-        #naxs_in_vocab = array([len(x) for x in wx2_axs]).sum()
-        #print "Number of axs in the word inverted index should be the num axfeats)"
-        #print '%d == %d ? %s ' % (naxs_in_vocab, num_raw_feats, str(naxs_in_vocab == num_raw_feats))
-        cx2_tx = {}
+        # Compute Visual Words, and Database Asignments
+        wx2_fdsc, wx2_axs = approximate_kmeans\
+                (ax2_fdsc, num_words,\
+                 max_iters, akmeans_flann)
+        # Create Visual Histograms. 
+        cx2_tx = {} # For Inverted File
         for tx, cx in enumerate(train_cx):
             cx2_tx[cx] = tx
-        # Create Visual Histograms. 
-        # NumTrain x NumWords
-        # Use Coordinate Sparse matrixes for efficiency
-        sparse_rows = np.empty((num_raw_feats,), dtype=np.uint32)
-        sparse_cols = np.empty((num_raw_feats,), dtype=np.uint32)
-        rcx = 0 # Counter Variable. Should be raw_num_feats at the end
-        # Loop over Columns; wx = col
-        for wx in xrange(num_words):
-            axs = wx2_axs[wx]
-            cxs = [ax2_cx[ax] for ax in axs] # txs of cxs = rows
+        sparse_rows = np.empty((total_feats,), dtype=np.uint32)
+        sparse_cols = np.empty((total_feats,), dtype=np.uint32)
+        rcx = 0
+        # Assemble Non-Sparse Histogram Data
+        for wx in xrange(num_words):#wx = col
+            cxs = [ax2_cx[ax] for ax in wx2_axs[wx]] # txs of cxs = rows
             for cx in cxs:
                 tx = cx2_tx[cx]
                 sparse_rows[rcx] = tx
                 sparse_cols[rcx] = wx
                 rcx += 1
-            #from collections import Counter
-            #term_freq_pairs = Counter(cxs).items()
-            #unique_cx, ucx2_term_frequency = apply(zip, term_freq_pairs)
-            #wx2_termfreq = sum(ucx2_term_frequency)
-            #cx2_tfidf[unique_cx, wx] = ucx2_term_frequency
-        data = np.ones(num_raw_feats, dtype=uint8)
-        cx2_bowvec = scipy.sparse.coo_matrix\
-                ((data, (sparse_rows, sparse_cols)), dtype=uint32)
+        # Build Sparse Vector
+        sparse_data = np.ones(total_feats, dtype=uint8)
+        cx2_bow = scipy.sparse.coo_matrix\
+                ((sparse_data, (sparse_rows, sparse_cols)), dtype=uint32)
+        return wx2_fdsc, wx2_axs, cx2_bow
 
-        # GOOD UP UNTIL HERE
-        cx2_tfidf  = scipy.sparse.coo_matrix\
-                ((num_train, num_words), dtype=uint32)
+    def compute_tfidf():
+        pass
+        #from collections import Counter
+        #term_freq_pairs = Counter(cxs).items()
+        #unique_cx, ucx2_term_frequency = apply(zip, term_freq_pairs)
+        #wx2_termfreq = sum(ucx2_term_frequency)
+        #cx2_tfidf[unique_cx, wx] = ucx2_term_frequency
+        #cx2_tfidf  = scipy.sparse.coo_matrix\
+                #((num_train, num_words), dtype=uint32)
 
-        logdbg('Computing TF-IDF metadata')
-        bcarg = {'max_tx':len(tx2_cx), 'dtype':np.float32}
-        tx2_termfq_denom = float32(cm.cx2_nfpts(tx2_cx))
-        vm.wx2_maxtf = \
-                [ max( bincount(ax2_tx[axs], **bcarg)/termfq_denom ) for axs in vm.wx2_axs]
+        #logdbg('Computing TF-IDF metadata')
+        #bcarg = {'max_tx':len(tx2_cx), 'dtype':np.float32}
+        #tx2_termfq_denom = float32(cm.cx2_nfpts(tx2_cx))
+        #vm.wx2_maxtf = \
+                #[ max( bincount(ax2_tx[axs], **bcarg)/termfq_denom ) for axs in vm.wx2_axs]
         #TODO: 
         # timeit [ np.max( bincount(ax2_tx[axs], **bcarg)/termfq_denom ) for axs in vm.wx2_axs]
         # timeit x = [ bincount(ax2_tx[axs], **bcarg)/termfq_denom for axs in vm.wx2_axs]
         #        [ np.max(y) for y in x ]
         # timeit max
-        num_train = vm.num_train()
-        vm.wx2_idf = log2([ num_train/len(unique(ax2_tx[ax_of_wx])) for ax_of_wx in vm.wx2_axs ] )+eps(1)
-        #vm.wx2_fdesc = sklearn.cluster.KMeans(
+        #num_train = vm.num_train()
+        #vm.wx2_idf = log2([ num_train/len(unique(ax2_tx[ax_of_wx])) for ax_of_wx in vm.wx2_axs ] )+eps(1)
+        #vm.wx2_fdsc = sklearn.cluster.KMeans(
         # Non-quantized vocabulary
-        return wx2_fdesc, wx2_axs
 
-    def compute_inverted_file(vm):
+    def compute_inverted_file(vm, wx2_fdsc, train_cx):
+        cm = vm.hs.cm
+        wx2_axs = alloc_list(wx2_fdsc.shape[0])
+        for ax in xrange(0, len(ax2_fx)):
+            if vm.wx2_axs[ax] is None:
+                vm.wx2_axs[ax] = []
+            wx = ax2_wx[ax]
+            vm.wx2_axs[wx].append(ax)
+        ax2_cid = -ones(len(train_cx),dtype=int32) 
+        ax2_fx  = -ones(len(train_cx),dtype=int32)
+        ax2_tx  = -ones(len(train_cx),dtype=int32)
+        _Lfx = 0; _Rfx = 0
+        tx2_nfpts = cm.cx2_nfpts(train_cx)
+        for tx in xrange(train_cx):
+            nfpts    = tx2_nfpts[tx]
+            next_fx  = _Rfx + nfpts
+            ax_range = range(_Lfx,_Rfx)
+            ax2_tx[ax_range] = tx
+            ax2_cid[ax_range] = cm.cx2_cid[train_cx]  # Point to Inst
+            _Lfx = _Rfx + nfpts
+        if isTFIDF: # Compute info for TF-IDF
+            logdbg('Computing TF-IDF metadata')
+            max_tx = len(tx2_cx)
+            tx2_wtf_denom = float32(cm.cx2_nfpts(tx2_cx))
+            vm.wx2_maxtf = map(lambda ax_of_wx:\
+                max( float32(bincount(ax2_tx[ax_of_wx], minlength=max_tx)) / tx2_wtf_denom ), vm.wx2_axs)
+            vm.wx2_idf = log2(map(lambda ax_of_wx:\
+                vm.num_train()/len(unique(ax2_tx[ax_of_wx])),\
+                vm.wx2_axs)+eps(1))
+        logdbg('Built Model using %d feature vectors. Preparing to index.' % len(vm.ax2_cid))
+
+
         vm.wx2_axs = empty((vm.wx2_fdsc.shape[0]),dtype=object) 
         for ax in xrange(0,num_train_keypoints):
             if vm.wx2_axs[ax] is None:
@@ -197,7 +237,7 @@ class VisualModel(AbstractManager):
     @lazyprop
     def flann_index(data_vecs):
         flann       = FLANN()
-        flann_args  = vm.hs.am.indexers['flann_args'].to_dict()
+        flann_args  = vm.hs.am.indexer.to_dict()
         flann_args_ = flann.build_index(data_vecs, **flann_args)
         return flann
 
@@ -340,9 +380,9 @@ class VisualModel(AbstractManager):
                 vm.wx2_axs[ax] = []
             wx = ax2_wx[ax]
             vm.wx2_axs[wx].append(ax)
-        vm.ax2_cid = -ones(num_train_keypoints,dtype=int32) 
-        vm.ax2_fx  = -ones(num_train_keypoints,dtype=int32)
-        ax2_tx     = -ones(num_train_keypoints,dtype=int32)
+        vm.ax2_cid = -ones(num_train_keypoints,dtype=np.int32) 
+        vm.ax2_fx  = -ones(num_train_keypoints,dtype=np.int32)
+        ax2_tx     = -ones(num_train_keypoints,dtype=np.int32)
         curr_fx = 0; next_fx = 0
         for tx in xrange(vm.num_train()):
             nfpts    = tx2_nfpts[tx]
@@ -366,7 +406,7 @@ class VisualModel(AbstractManager):
         logdbg('Step 4: Building FLANN Index: over '+str(len(vm.wx2_fdsc))+' words')
         assert vm.flann is None, 'Flann already exists'
         vm.flann = FLANN()
-        flann_param_dict = am.indexers['flann_kdtree'].to_dict()
+        flann_param_dict = am.algo_prefs.model.indexer.to_dict()
         flann_params = vm.flann.build_index(vm.wx2_fdsc, **flann_param_dict)
         vm.isDirty  = False
         if not vm.save_model():

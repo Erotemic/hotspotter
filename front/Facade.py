@@ -526,3 +526,5 @@ class Facade(QObject):
     def unload_features_and_models(fac):
         fac.hs.unload_all_features()
 
+    def write_database_stats(fac):
+        pass

@@ -250,7 +250,7 @@ class Pref(DynStruct):
 
     def toggle(self, key):
         'Toggles a boolean key'
-        if not self._intern.type in [True, False]:
+        if not self._intern.type != types.BooleanType:
             raise Exception('Cannot toggle the non-boolean type: '+str(key))
         self.update(key, not self[key])
 

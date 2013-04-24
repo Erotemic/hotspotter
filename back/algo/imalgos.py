@@ -79,7 +79,6 @@ def bilateral_filter(img):
         logwarn('Scikits not found: %s' % str(ex))
         return img
 
-
 def segment(img):
     raise NotImplementedError
     import scimage.segmentation.felzenswalb

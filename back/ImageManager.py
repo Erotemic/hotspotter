@@ -153,14 +153,17 @@ class ImageManager(AbstractDataManager):
         db_img  = os.path.join(gm.hs.iom.get_img_dpath(), gname)
         if not os.path.exists(db_img):
             # Try to add an extension if it wasn't given
-            extensions_fallback = ['.jpg','.jpeg','.JPG','.JPEG','.png','.tif']
-            ext_sucess_bit = False
-            for ext in extensions_fallback:
-                if os.path.exists(db_img+ext):
-                    db_img = db_img+ext
-                    gname = gname+ext
-                    ext_sucess_bit = True; break
-            if not ext_sucess_bit:
+            ext_fallback_list = ['.jpg','.jpeg','.JPG','.JPEG','.png','.tif']
+            fb_sucess_bit = False
+            (db_img_noext, old_ext)  = os.path.splitext(db_img)
+            (gname_noext, old_ext2) = os.path.splitext(gname)
+            for ext_fb in ext_fallback_list:
+                db_img_fb = db_img_noext + ext_fb
+                if os.path.exists(db_img_fb):
+                    db_img = db_img_fb
+                    gname = gname_noext+ext_fb
+                    fb_sucess_bit = True; break
+            if not fb_sucess_bit:
                 logwarn('Trying to add a nonexistant image: '+db_img)
                 return
         if gname in gm.gname2_gid.keys():

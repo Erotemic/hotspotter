@@ -14,8 +14,13 @@ class DynStruct(AbstractPrintable):
         if copy_class != None and isinstance(copy_class, object):
             import inspect
             self.copied_class_str = repr(copy_class)
-            self.add_dict({name:attribute for (name, attribute) in inspect.getmembers(copy_class) if name.find('__') != 0 and str(type(attribute)) != "<type 'builtin_function_or_method'>" and str(type(attribute)) != "<type 'instancemethod'>"})
-
+            self.add_dict\
+                    ({name:attribute \
+                      for (name, attribute) in inspect.getmembers(copy_class)\
+                      if name.find('__') != 0 and\
+                      str(type(attribute)) != "<type 'builtin_function_or_method'>"\
+                      and str(type(attribute)) != "<type 'instancemethod'>"}\
+                    )
     def dynget(self, *prop_list):
         return tuple([self.__dict__[prop_name] for prop_name in prop_list])
     def dynset(self, *propval_list):
@@ -140,9 +145,13 @@ class PrefStruct(DynStruct):
         with open(self.pref_fpath, 'r') as f:
             try:
                 pref_dict = cPickle.load(f)
-            except EOFError:
+            except EOFError as ex:
                 import warnings
-                warnings.warn('Preference file did not load correctly')
+                warnings.warn('Preference file did not load correctly EOFError: '+str(ex))
+                return False
+            except AttributeError as ex:
+                import warnings
+                warnings.warn('Preference file did not load correctly. AttributeError: '+str(ex))
                 return False
         if type(pref_dict) != types.DictType:
             raise Exception('Preference file is corrupted')

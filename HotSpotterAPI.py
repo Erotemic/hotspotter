@@ -90,7 +90,7 @@ class HotSpotterAPI(AbstractPrintable):
                    'Select an existing HotSpotter, StripeSpotter database. '+\
                    'To create a new database, select and empty directory. ')
 
-    def __init__(hs, delete_home_dir_bit=False):
+    def __init__(hs, db_path=None, autoload=False, delete_home_dir_bit=False):
         super( HotSpotterAPI, hs ).__init__(['cm','gm','nm','em','qm','dm','am','vm','iom','uim'])
         #
         hs.db_dpath = None #Database directory.
@@ -113,7 +113,38 @@ class HotSpotterAPI(AbstractPrintable):
         hs.nm = None # Name Manager
         #-
         hs.init_preferences()
+        if db_path != None:
+            hs.restart(hs, db_dpath, autoload)
         # --- 
+
+    def enumerate_gx(hs):
+        for gx in enumerate(hs.gm.get_valid_gxs()):
+            yield gx
+
+    def merge_database(hs, db_path):
+        hs_other = HotSpotterAPI(db_path)
+        gid_offset = hs.cm.next_gid
+        cid_offset = hs.cm.next_cid
+        for gx in hs_other.enumerate_gx():
+            gid = hs_other.gm.gx2_gid[gx] + gid_offset
+            relpath = os.path.relpath(hs.iom.image_dir, hs_other.iom.hs.image_dir) 
+            aif = hs_other.gm.gx2_aif[gx]
+            gname = os.path.normpath(relpath+'/'+hs_other.gm.gx2_gname[gx])
+            hs.gm.add_img(gid=gid, gname=gname, aif=aif, src_img=None)
+        for cx in hs_other.enumerate_cx():
+            cid = hs_other.cm.cx2_cid[cx] + cid_offset
+            gid = hs_other.cm.cx2_cid[cx] + gid_offset
+            roi = hs_other.cm.cx2_roi[cx]
+            name = hs_other.cm.cx2_name(cx)
+            nx = hs.nm.add_name(name)
+            gx = hs.gm.gid2_gx[gid]
+            cm.add_chip(cid, nx, gx, roi)
+
+    @func_log
+    def merge_databases(hs, database_list):
+        'database_pathlist - a list of paths to the databases you want to combine'
+        [hs.merge_database(HotSpotterAPI(db_path)) for db_path in database_pathlist]
+
     @func_log
     def restart(hs, db_dpath=None, autoload=True):
         hs.data_loaded_bit = False

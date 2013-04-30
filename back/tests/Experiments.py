@@ -12,6 +12,16 @@ class ExperimentManager(AbstractManager):
         em.cx2_res = None
         em.recompute_bit = False
 
+
+    def print_matching_results(em): 
+        iom = em.hs.iom
+        em.run_singleton_queries()
+        matching_image_list = []
+        for res in enumerate(em.cx2_res):
+            pass
+
+
+
     def run_experiment(em):
         iom = em.hs.iom
         em.run_singleton_queries()

@@ -115,6 +115,21 @@ class IOManager(AbstractManager):
         return join(iom.get_computed_dpath(), 'temp')
     def  get_temp_fpath(iom, tmp_fname):
         return safepath(join(iom.get_temp_dpath(), tmp_fname))
+    def  get_user_fpath(iom, fname):
+        return safepath(join(iom.hs.db_dpath, fname))
+    def  write_to_user_fpath(iom, fname, to_write):
+        user_fpath = iom.get_user_fpath(fname)
+        iom.logwrite(user_fpath, to_write)
+    def logwrite(iom, fpath, to_write):
+        logmsg('Writing to: %s' % fpath)
+        print 'Writing String:\n%s' % to_write
+        try:
+            with open(fpath, 'w') as f:
+                    f.write(to_write)
+            print 'Wrote to %s' % fpath
+        except Exception as ex: 
+            print 'Error: '+str(ex)
+            print 'Failed to write to %s ' % fpath
     # --- Main Saved Files
     def  get_image_table_fpath(iom):
         return safepath(join(iom.get_internal_dpath(),'image_table.csv'))

@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 #TODO: Find a way to make this ugly code nice
+<<<<<<< HEAD
 from hotspotter.HotSpotterAPI import HotSpotterAPI
+=======
+>>>>>>> bagoffeatures
 #-------------------------------------------
 # Figure out which environment we are in
 # and set assocated preferences

@@ -80,7 +80,7 @@ class QueryManager(AbstractManager):
             qfx2_kdists_vote = qfx2_Kdists[:,0:(K-1)]
             qfx2_kdists_norm = tile(qfx2_Kdists[:,-1].reshape(num_qf, 1), (1, K-1) )
             qfx2_kweight = array([score_function(vd,nd) \
-                                for (vd, nd) in zip(qfx2_kdists_vote.flat, qfx2_kdists_norm.flat)])
+                                for (vd, nd) in zip(qfx2_kdists_vote.flat, qfx2_kdists_norm.flat)], dtype=np.float32)
             qfx2_kweight.shape = (num_qf, K-1)
 
         # We have the scores, now who do we vote for? 
@@ -89,7 +89,8 @@ class QueryManager(AbstractManager):
         qfx2_Kaxs_   = vm.wx2_axs[qfx2_Kwxs]
         qfx2_Kcids_  = [ vm.ax2_cid[axs] for axs  in qfx2_Kaxs_.flat ]
         qfx2_Kvbit_  = [ qcid != cids    for cids in qfx2_Kcids_ ]
-        qfx2_Kaxs    = [ array(axs,dtype=int32)[vbit] for (axs, vbit) in zip( qfx2_Kaxs_.flat, qfx2_Kvbit_) ]
+        qfx2_Kaxs    = [ axs[vbit] \
+                        for (axs, vbit) in zip( qfx2_Kaxs_.flat, qfx2_Kvbit_) ]
         # Clean Vote for Info
         qfx2_Kcxs    = array([ vm.ax2_cx(axs)  for axs  in qfx2_Kaxs ])
         qfx2_Kfxs    = array([ vm.ax2_fx[axs]  for axs  in qfx2_Kaxs ])

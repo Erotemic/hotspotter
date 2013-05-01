@@ -56,6 +56,7 @@ class AlgorithmManager(AbstractManager):
         akm_dep = (am.algo_prefs.model.quantizer_internal, 'akmeans')
         am.algo_prefs.model.akmeans             = Pref(depeq=akm_dep, hidden=True)
         am.algo_prefs.model.akmeans.num_words   = Pref(1000)
+        am.algo_prefs.model.akmeans.max_iters   = Pref(1000)
 
         hkm_dep = (am.algo_prefs.model.quantizer_internal, 'hkmeans')
         am.algo_prefs.model.hkmeans             = Pref(depeq=hkm_dep, hidden=True)
@@ -65,11 +66,11 @@ class AlgorithmManager(AbstractManager):
         flann_kdtree = Pref(hidden=True)
         flann_kdtree.algorithm  = Pref(default=1, choices=['linear',
                                                  'kdtree',
-                                                 'kmeans',
+                                                 'kmeanes',
                                                  'composite',
                                                  'autotuned']) # Build Prefs
         flann_kdtree.trees      = Pref(8, min=0, max=30)
-        flann_kdtree.checks     = Pref(1024, min=0, max=4096) # Search Prefs
+        flann_kdtree.checks     = Pref(128, min=0, max=4096) # Search Prefs
         #Autotuned Specific Prefeters
         autotune_spef = (flann_kdtree.algorithm_internal, 'autotuned') 
         flann_kdtree.target_precision = Pref(0.95, depeq=autotune_spef)  

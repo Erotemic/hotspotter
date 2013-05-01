@@ -535,3 +535,35 @@ class Facade(QObject):
     def unload_features_and_models(fac):
         fac.hs.unload_all_features()
 
+    def write_database_stats(fac):
+        'Writes some statistics to disk and returns them'
+        import numpy as np
+        cm, nm, gm, iom = fac.hs.get_managers('cm','nm','gm','iom')
+        num_images = gm.num_g
+        num_chips  = cm.num_c
+        num_names  = nm.num_n
+
+        vgx2_nChips = [] # Num Chips Per Image
+        for gx in iter(gm.get_valid_gxs()):
+            vgx2_nChips += [len(gm.gx2_cx_list[gx])]
+        vgx2_nChips = np.array(vgx2_nChips)
+
+        chips_per_image_mean = np.mean(vgx2_nChips)
+        chips_per_image_std  = np.std(vgx2_nChips)
+
+        chips_per_image_mean_gt0 = np.mean(vgx2_nChips[vgx2_nChips > 0])
+        chips_per_image_std_gt0  = np.std(vgx2_nChips[vgx2_nChips > 0])
+
+        db_stats = \
+        [
+            'Num Images:           %d' % num_images ,
+            'Num Chips:            %d' % num_chips,
+            'Num Names:            %d' % num_names,
+            'Num Tagged Images:    %d' % (vgx2_nChips >= 1).sum(),
+            'Num Untagged Images:  %d' % (vgx2_nChips == 0).sum(),
+            'Num Chips/TaggedImage:  %.2f += %.2f ' % ( chips_per_image_mean_gt0, chips_per_image_std_gt0 ),
+            'Num Chips/Image:        %.2f += %.2f ' % ( chips_per_image_mean, chips_per_image_std ),
+        ]
+        db_stats_str = '\n'.join(db_stats)
+        iom.write_to_user_fpath('database_stats.txt', db_stats_str)
+        return db_stats_str

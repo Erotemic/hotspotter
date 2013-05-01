@@ -8,7 +8,7 @@ def matchgraph(hs):
     num_cx = len(cx_list) # number of chips (> 10,000)
 
     # Train Default Bag-of-Words Model
-    V = vm.train_model(cx_list) # The Set of Visual Vectors (normalized, tf-idf preweighted)
+    V = vm.train_model(cx_list) # The Set of Bag-of-Words Vectors (normalized, tf-idf preweighted)
     if len(V) < 2:
         raise Exception('Cannot build matchgraph')
 
@@ -24,7 +24,6 @@ def matchgraph(hs):
             Sim[x_a, x_b] = np.transpose(qvec).dot(W).dot(dvec)
         tops_x = Sim[x_a, :].argsort()[::,-1] # sorted indexes
         spatial_rerank(Sim, tops_x)
-        
 
     # Train SVM 
     wT = np.transpose(w)
@@ -79,7 +78,6 @@ def matchgraph(hs):
         max_iter = param('''Hard limit on iterations within solver, or -1 for
                          no limit.''', -1)
 
-
         import numpy as np
         X = np.array([[-1, -1], [-2, -1], [1, 1], [2, 1]])
         y = np.array([1, 1, 2, 2])
@@ -121,7 +119,7 @@ def matchgraph(hs):
 
 
     w = minimize(  )
-a
+
     # Get Pairwise Matches
     qres_list = vm.batch_query(cx_list, method="TFIDF")
     qres_list.matching

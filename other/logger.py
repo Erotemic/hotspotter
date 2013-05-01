@@ -49,7 +49,7 @@ def callinfo(num_up=2):
     'finds how much to indent'
     stack_list = traceback.extract_stack()
     indent = 0
-    calltype = '???call'
+    calltype = '   '
     for stack_tup in reversed(stack_list): 
         if stack_tup[2] == 'start_event_loop_qt4':
             calltype = 'gui'

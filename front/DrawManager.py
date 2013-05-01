@@ -25,10 +25,10 @@ class DrawManager(AbstractManager):
         dm.draw_prefs.points_bit     = False
         dm.draw_prefs.result_view  = Pref(1, choices=['in_image', 'in_chip'])
         dm.draw_prefs.fignum         = 0
-        dm.draw_prefs.colormap       = 'hsv'
-        dm.draw_prefs.in_qtc_bit     = False #Draw in the Qt Console
-        dm.draw_prefs.use_thumbnails = False
-        dm.draw_prefs.thumbnail_size = 128
+        dm.draw_prefs.colormap       = Pref('hsv', hidden=True)
+        dm.draw_prefs.in_qtc_bit     = Pref(False, hidden=True) #Draw in the Qt Console
+        dm.draw_prefs.use_thumbnails = Pref(False, hidden=True)
+        dm.draw_prefs.thumbnail_size = Pref(128, hidden=True)
         if not default_bit:
             dm.draw_prefs.load()
     # ---

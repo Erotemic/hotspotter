@@ -69,8 +69,8 @@ class QueryManager(AbstractManager):
             'NDIST' : lambda p,o: 10**16 - p, 
             'TFIDF' : lambda wx2_tf, wx_idf, wx: wx2_tf[wx] * wx_idf[wx]
         }
-        isTFIDF        = am.algo_prefs.query.method() == 'TFIDF'
-        score_function = score_functions[am.algo_prefs.query.method()]
+        isTFIDF        = am.algo_prefs.query.method == 'TFIDF'
+        score_function = score_functions[am.algo_prefs.query.method]
         if isTFIDF: # TF-IDF voting is a little different
                 # The wx2_qtf could really be per k or as agged across all K
                 w_histo = bincount(qfx2_wxs, minlength=vm.numWords() )
@@ -265,7 +265,7 @@ class QueryResult(AbstractManager):
         logdbg('Constructing Query Result')
         res.rr = rr
         res.num_top = res.hs.am.algo_prefs.results.num_top
-        res.score_type = res.hs.am.algo_prefs.results.score()
+        res.score_type = res.hs.am.algo_prefs.results.score
         res.self_as_result_bit = res.hs.am.algo_prefs.results.self_as_result_bit
 
     def get_num_top(res):

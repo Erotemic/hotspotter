@@ -198,7 +198,7 @@
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
-     <string>Convinience</string>
+     <string>Convenience</string>
     </property>
     <addaction name="actionConvertImage2Chip"/>
     <addaction name="actionBatch_Change_Name"/>

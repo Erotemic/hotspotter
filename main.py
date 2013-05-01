@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #TODO: Find a way to make this ugly code nice
-print 'omg'
+from HotSpotterAPI import HotSpotterAPI
 #-------------------------------------------
 # Figure out which environment we are in
 # and set assocated preferences
@@ -27,7 +27,10 @@ import sys
 try:
     # Append the tpl lib to your path
     import tpl
-    sys.path.append(os.path.join(os.path.dirname(tpl.__file__), 'tpl', sys.platform,'lib'))
+    TPL_LIB_DIR = os.path.join(os.path.dirname(tpl.__file__), 'tpl', sys.platform,'lib')
+    BOOST_LIB_DIR = r'C:\boost_1_53_0\stage\lib'
+    sys.path.append(TPL_LIB_DIR)
+    sys.path.append(BOOST_LIB_DIR)
 except Exception: 
     print '''You must download hotspotter\'s 3rd party libraries before you can run it. 
     git clone https://github.com/Erotemic:tpl-hotspotter.git tpl'''
@@ -44,6 +47,8 @@ parser.add_argument('--cmd',                   dest='cmd_bit',   help='Forces co
 parser.add_argument('-r', '--run-experiments', dest='runexpt_bit',  help='Runs the experiments', **def_off)
 parser.add_argument('-g', '--gui-off',         dest='gui_bit',      help='Runs HotSpotter in command line mode', **def_on)
 parser.add_argument('-a', '--autoload-off',    dest='autoload_bit', help='Starts HotSpotter without loading a database', **def_on)
+parser.add_argument('-dp', '--delete-preferences', dest='delpref_bit', help='Deletes the HotSpotter preferences in ~/.hotspotter', **def_off)
+
 
 args = parser.parse_args()
 
@@ -55,9 +60,13 @@ if not in_qtc_bit:
 
 # Start HotSpotter via the Facade
 fac = Facade(use_gui=args.gui_bit, autoload=args.autoload_bit)
+
+if args.delpref_bit:
+    fac.hs.delete_preferences()
+
 for (name, value) in inspect.getmembers(Facade, predicate=inspect.ismethod):
     if name.find('_') != 0:
-        exec('def '+name+'(*args, **kdgs): fac.'+name+'(*args, **kdgs)')
+        exec('def '+name+'(*args, **kwargs): fac.'+name+'(*args, **kwargs)')
 # Defined Aliases
 stat, status   = [lambda          : fac.print_status()]*2
 removec,       = [lambda          : fac.remove_cid()]

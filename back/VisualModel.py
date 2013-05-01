@@ -184,7 +184,7 @@ class VisualModel(AbstractManager):
     @lazyprop
     def flann_index(data_vecs):
         flann       = FLANN()
-        flann_args  = vm.hs.am.indexers['flann_args'].to_dict()
+        flann_args  = vm.hs.am.algo_prefs.model.indexer.to_dict()
         flann_args_ = flann.build_index(data_vecs, **flann_args)
         return flann
 
@@ -204,7 +204,7 @@ class VisualModel(AbstractManager):
     def flann_one_time(vm, data_vecs, query_vecs, K):
         N = query_vecs.shape[0]
         flann       = FLANN()
-        flann_args  = vm.hs.am.indexers['flann_args'].to_dict()
+        flann_args  = vm.hs.am.algo_prefs.model.indexer.to_dict()
         flann_args_ = flann.build_index(data_vecs, **flann_args)
         (index_list, dist_list) = flann_index.nn_index(query_vecs, K, checks=128)
         index_list.shape = (N, K)
@@ -364,13 +364,14 @@ class VisualModel(AbstractManager):
         logdbg('Step 4: Building FLANN Index: over '+str(len(vm.wx2_fdsc))+' words')
         assert vm.flann is None, 'Flann already exists'
         vm.flann = FLANN()
-        flann_param_dict = am.indexers['flann_kdtree'].to_dict()
+        flann_param_dict = vm.hs.am.algo_prefs.model.indexer.to_dict()
         flann_params = vm.flann.build_index(vm.wx2_fdsc, **flann_param_dict)
         vm.isDirty  = False
-        if not vm.save_model():
-            logerr('Error Saving Model')
+        #if not vm.save_model():
+            #logerr('Error Saving Model')
 
     def save_model(vm): 
+        raise NotImplementedError()
         iom = vm.hs.iom
         model_fpath = iom.get_model_fpath()
         flann_index_fpath  = iom.get_flann_index_fpath()
@@ -397,6 +398,7 @@ class VisualModel(AbstractManager):
         pass
 
     def load_model(vm):
+        raise NotImplementedError()
         vm.delete_model()
         logio('Checking for previous model computations')
         iom = vm.hs.iom

@@ -6,9 +6,11 @@ git submodule update --init
 git submodule init 
 git submodule update
 
-chmod +x tpl/lib/darwin/*.mac
-chmod +x tpl/lib/linux2/*.ln
-chmod +x run-*
+chmod +x ../tpl/lib/darwin/*.mac
+chmod +x ../tpl/lib/linux2/*.ln
+chmod +x ../scripts/run-*
+
+python main.py --delete-preferences
 
 #git submodule init
 #git submodule add $hs_git_host$hs_tpl_repo.git ./tpl

@@ -28,25 +28,25 @@ class AlgorithmManager(AbstractManager):
             #Define the pipeline stages
             am.algo_prefs.preproc  = Pref(parent=am.algo_prefs)  # Low Level Chip Operations
             am.algo_prefs.chiprep  = Pref(parent=am.algo_prefs)  # Extracting Chip Features
-            am.algo_prefs.model    = Pref(parent=am.algo_prefs)  # Building the model
+            am.algo_prefs.model    = Pref(parent=am.algo_prefs, hidden=True)  # Building the model
             am.algo_prefs.query    = Pref(parent=am.algo_prefs)  # Searching the model
             am.algo_prefs.results  = Pref(parent=am.algo_prefs)  # Searching the model
         # --- Chip Preprocessing ---
         # (selection, options, prefs? )
-        am.algo_prefs.preproc.sqrt_num_pxls           = 700
-        am.algo_prefs.preproc.autocontrast_bit        = False
-        am.algo_prefs.preproc.bilateral_filt_bit      = False
-        am.algo_prefs.preproc.histeq_bit              = False
-        am.algo_prefs.preproc.contrast_stretch_bit    = False
-        am.algo_prefs.preproc.adapt_histeq_bit        = False
+        am.algo_prefs.preproc.sqrt_num_pxls           = Pref(700)
+        am.algo_prefs.preproc.autocontrast_bit        = Pref(False,hidden=True)
+        am.algo_prefs.preproc.bilateral_filt_bit      = Pref(False)
+        am.algo_prefs.preproc.histeq_bit              = Pref(False)
+        am.algo_prefs.preproc.contrast_stretch_bit    = Pref(False)
+        am.algo_prefs.preproc.adapt_histeq_bit        = Pref(False)
         # --- Chip Representation ---
         # Currently one feature detector and one feature descriptor is chosen
         # * = non-free
         #am.algo_prefs.chiprep.gravity_vector_bit     = True
-        am.algo_prefs.chiprep.kpts_detector           = Pref(0, choices=('heshesaff', 'heslapaff', 'dense', '!MSER', '#FREAK', '#SIFT'))
-        am.algo_prefs.chiprep.kpts_extractor          = Pref(0, choices=('SIFT', '#SURF', '#BRISK'))
+        am.algo_prefs.chiprep.kpts_detector           = Pref(0, choices=('heshesaff', 'heslapaff', 'dense')) #, '!MSER', '#FREAK', '#SIFT'))
+        am.algo_prefs.chiprep.kpts_extractor          = Pref(0, choices=('SIFT',), hidden=True) #, '#SURF', '#BRISK'))
         # --- Vocabulary ---
-        am.algo_prefs.model.quantizer                 = Pref(0, choices=('naive_bayes', 'akmeans'))
+        am.algo_prefs.model.quantizer                 = Pref(0, choices=('naive_bayes', 'akmeans'), hidden=True)
 
         #nbnn_dep = (am.algo_prefs.model.quantizer_internal, 'naive_bayes')
         #am.algo_prefs.model.naive_bayes                    = Pref(depeq=nbnn_dep)
@@ -54,15 +54,15 @@ class AlgorithmManager(AbstractManager):
         #am.algo_prefs.model.naive_bayes.pseudo_num_words   = Pref('wip')
 
         akm_dep = (am.algo_prefs.model.quantizer_internal, 'akmeans')
-        am.algo_prefs.model.akmeans             = Pref(depeq=akm_dep)
+        am.algo_prefs.model.akmeans             = Pref(depeq=akm_dep, hidden=True)
         am.algo_prefs.model.akmeans.num_words   = Pref(1000)
 
         hkm_dep = (am.algo_prefs.model.quantizer_internal, 'hkmeans')
-        am.algo_prefs.model.hkmeans             = Pref(depeq=hkm_dep)
+        am.algo_prefs.model.hkmeans             = Pref(depeq=hkm_dep, hidden=True)
         am.algo_prefs.model.hkmeans.branching   = Pref(10)
         am.algo_prefs.model.hkmeans.depth       = Pref(6)
         
-        flann_kdtree = Pref()
+        flann_kdtree = Pref(hidden=True)
         flann_kdtree.algorithm  = Pref(default=1, choices=['linear',
                                                  'kdtree',
                                                  'kmeans',
@@ -96,7 +96,7 @@ class AlgorithmManager(AbstractManager):
         am.algo_prefs.query.k                         = Pref(1,    min=1, max=50)
         am.algo_prefs.query.num_rerank                = Pref(1000, min=0)
         am.algo_prefs.query.spatial_thresh            = Pref(0.05, min=0, max=1) 
-        am.algo_prefs.query.sigma_thresh              = Pref(0.05, min=0, max=1) #: Unimplemented
+        am.algo_prefs.query.sigma_thresh              = Pref(0.05, min=0, max=1, hidden=True) #: Unimplemented
         am.algo_prefs.query.method                    = Pref(0, choices=['COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'])
         am.algo_prefs.query.score                     = Pref(0, choices=['cscore','nscore']) # move to results?
         am.algo_prefs.query.self_as_result_bit        = Pref(False)  #: Return self (in terms of name) in results

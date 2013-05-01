@@ -1,19 +1,19 @@
 Quick Instructions: 
+    You can run the appropriate quickstart file from the scripts directory:
+    If you are a windows run scripts/run-hotspotter-windows.bat
+    If you are on a mac run scripts/run-hotspotter-mac.sh
 
-    Run the appropriate run-*-hotspotter-*.* command for your operating system. 
-
-    If things don't work try running RUNME-to-fix-issues
-
+    If you encounter errors on a Linux or Mac System try running 
+    scripts/RUNME-to-fix-issues.sh 
+    before doing anything else
 
 Command Line Instructions: 
-    To run hotspotter from the command line try: 
+    To Run Hotspotter from the command line:
     python main.py
 
-    I'd recommend using the QtConsole 
-    ipython qtconsole --colors=Linux --autocall 2 --pylab=qt 
+    To Run HotSpotter from the command line with a command line interface 
+    python main.py --cmd
 
-    in the console run 
-
-    %run main.py 
-
-    you will have a functional terminal as well as a gui
+QtConsole Instructions
+    1) ipython qtconsole --colors=Linux --autocall 2 --pylab=qt 
+    2) in the console run %run main.py 

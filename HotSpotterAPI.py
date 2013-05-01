@@ -17,7 +17,7 @@ Code Concepts:
     possible.
 
 '''
-from back.tests.Experiments import ExperimentManager
+from back.Experiments import ExperimentManager
 from back.AlgorithmManager import AlgorithmManager
 from back.ChipManager import ChipManager
 from back.IOManager import IOManager
@@ -39,7 +39,7 @@ class HotSpotterAPI(AbstractPrintable):
     def init_preferences(hs, default_bit=False):
         iom = hs.iom
         if hs.core_prefs == None:
-            hs.core_prefs = Pref(fpath=iom.get_prefs_fpath('core_prefs'))
+            hs.core_prefs = Pref(fpath=iom.get_prefs_fpath('core_prefs'), hidden=True)
         hs.core_prefs.database_dpath = None
         if not default_bit:
             hs.core_prefs.load()
@@ -78,19 +78,12 @@ class HotSpotterAPI(AbstractPrintable):
            not os.path.exists(db_dpath): # Check validity
             db_dpath = '' 
             logwarn('Saved database_dpath was invalid')
-        if db_dpath == '': # Prompt The User
+        if db_dpath == '': # Prompt The User. TODO Move this to Facade/UIManager
             db_dpath = hs.uim.select_database()
-        # --
-        if hs.is_valid_db_dpath(db_dpath):
-            logdbg('Setting db_dpath = '+str(db_dpath))
-            hs.db_dpath = db_dpath
-            hs.core_prefs.update('database_dpath',db_dpath)
-        else:
-            logerr('Invalid Database. '+\
-                   'Select an existing HotSpotter, StripeSpotter database. '+\
-                   'To create a new database, select and empty directory. ')
+        return db_dpath
 
-    def __init__(hs, db_path=None, autoload=False, delete_home_dir_bit=False):
+
+    def __init__(hs, db_dpath=None, autoload=False, delete_home_dir_bit=False):
         super( HotSpotterAPI, hs ).__init__(['cm','gm','nm','em','qm','dm','am','vm','iom','uim'])
         #
         hs.db_dpath = None #Database directory.
@@ -113,25 +106,22 @@ class HotSpotterAPI(AbstractPrintable):
         hs.nm = None # Name Manager
         #-
         hs.init_preferences()
-        if db_path != None:
-            hs.restart(hs, db_dpath, autoload)
+        if db_dpath != None:
+            hs.restart(db_dpath, autoload, save_pref_bit=False)
         # --- 
 
-    def enumerate_gx(hs):
-        for gx in enumerate(hs.gm.get_valid_gxs()):
-            yield gx
-
-    def merge_database(hs, db_path):
-        hs_other = HotSpotterAPI(db_path)
-        gid_offset = hs.cm.next_gid
-        cid_offset = hs.cm.next_cid
-        for gx in hs_other.enumerate_gx():
+    def merge_database(hs, db_dpath):
+        #db_dpath = r'D:\data\work\LF_all\LF_OPTIMIZADAS_NI_V_E'
+        hs_other = HotSpotterAPI(db_dpath)
+        gid_offset = hs.gm.max_gid
+        cid_offset = hs.cm.max_cid
+        for gx in enumerate(hs_other.gm.get_valid_gxs()):
             gid = hs_other.gm.gx2_gid[gx] + gid_offset
             relpath = os.path.relpath(hs.iom.image_dir, hs_other.iom.hs.image_dir) 
             aif = hs_other.gm.gx2_aif[gx]
             gname = os.path.normpath(relpath+'/'+hs_other.gm.gx2_gname[gx])
             hs.gm.add_img(gid=gid, gname=gname, aif=aif, src_img=None)
-        for cx in hs_other.enumerate_cx():
+        for cx in  enumerate(hs_other.cm.get_valid_cxs()):
             cid = hs_other.cm.cx2_cid[cx] + cid_offset
             gid = hs_other.cm.cx2_cid[cx] + gid_offset
             roi = hs_other.cm.cx2_roi[cx]
@@ -141,16 +131,21 @@ class HotSpotterAPI(AbstractPrintable):
             cm.add_chip(cid, nx, gx, roi)
 
     @func_log
-    def merge_databases(hs, database_list):
-        'database_pathlist - a list of paths to the databases you want to combine'
-        [hs.merge_database(HotSpotterAPI(db_path)) for db_path in database_pathlist]
-
-    @func_log
-    def restart(hs, db_dpath=None, autoload=True):
+    def restart(hs, db_dpath=None, autoload=True, save_pref_bit=True):
         hs.data_loaded_bit = False
         if hs.db_dpath != None and db_dpath == None:
             db_dpath = hs.db_dpath
-        hs.smartset_db_dpath(db_dpath)
+        db_dpath = hs.smartset_db_dpath(db_dpath)
+        # --
+        if hs.is_valid_db_dpath(db_dpath) and save_pref_bit:
+            logdbg('Setting db_dpath = '+str(db_dpath))
+            hs.db_dpath = db_dpath
+            hs.core_prefs.update('database_dpath',db_dpath)
+        else:
+            logerr('Invalid Database. '+\
+                   'Select an existing HotSpotter, StripeSpotter database. '+\
+                   'To create a new database, select and empty directory. ')
+
         hs.gm  = ImageManager(hs)
         hs.nm  = NameManager(hs)
         hs.cm  = ChipManager(hs)
@@ -224,8 +219,12 @@ class HotSpotterAPI(AbstractPrintable):
         hs.uim.init_preferences(default_bit=True)
         #hs.init_preferences(default_bit=True)
 
-    @func_log
     def delete_home_pref_directory(hs):
+        'depricated for a bad name. Use delete_preferences() instead'
+        hs.delete_preferences()
+    @func_log
+    def delete_preferences(hs):
+        'Deletes the preference files in the ~/.hotspotter directory'
         logmsg('Deleting the ~/.hotspotter preference directory')
         hs.iom.remove_settings_files_with_pattern('*')
     # ---

@@ -1,4 +1,5 @@
 from other.AbstractPrintable import AbstractPrintable
+import numpy as np
 from logger import logdbg, logerr, func_log, logmsg
 from PyQt4.Qt import QAbstractItemModel, QModelIndex, QVariant, Qt, QObject, QComboBox
 import traceback
@@ -64,6 +65,7 @@ class Pref(DynStruct):
                  doc='',\
                  min=None,\
                  max=None,\
+                 hidden=False,\
                  choices=None,\
                  depeq=None,\
                  fpath='',\
@@ -79,12 +81,15 @@ class Pref(DynStruct):
         self._intern.name    = 'root'
         self._intern.value   = None
         self._intern.type    = Pref
+        self._intern.hidden  = hidden
         self._intern.fpath   = fpath
         self._intern.depeq   = depeq
 
         self._tree.parent    = parent
+        self._tree.hidden_children = []
         self._tree.child_list  = []
         self._tree.child_names = []
+        self._tree.num_visible_children = 0
         self._tree.aschildx    = 0 
         # Check if this is a leaf node and if so the type
         if choices != None:
@@ -162,12 +167,15 @@ class Pref(DynStruct):
         if type(attr) == Pref:
             logdbg( "New Attribute: %r %r" % (name, attr.value()) )
             # If The New Attribute already has a PrefWrapper
-            aschildx = len(self._tree.child_names)+1
+            new_childx = len(self._tree.child_names)
             attr._tree.parent = self     # Give Child Parent
             attr._intern.name = name     # Give Child Name
             if attr._intern.depeq == None:
                 attr._intern.depeq = self._intern.depeq # Give Child Parent Dependencies
-            attr._intern.aschildx = aschildx # Used for QTIndexing
+            if attr._intern.hidden:
+                self._tree.hidden_children.append(new_childx)
+                self._tree.hidden_children.sort()
+            attr._intern.aschildx = new_childx # Used for QTIndexing
             # Add To Internal Tree Structure
             self._tree.child_names.append(name)
             self._tree.child_list.append(attr)
@@ -250,7 +258,7 @@ class Pref(DynStruct):
 
     def toggle(self, key):
         'Toggles a boolean key'
-        if not self._intern.type in [True, False]:
+        if type(self[key]) != types.BooleanType:
             raise Exception('Cannot toggle the non-boolean type: '+str(key))
         self.update(key, not self[key])
 
@@ -274,7 +282,23 @@ class Pref(DynStruct):
         'Creates a QStandardItemModel that you can connect to a QTreeView'
         return QPreferenceModel(self)
 
-    def qt_getData(self, column):
+    def qt_get_parent(self):
+        return self._tree.parent
+
+    def qt_parents_index_of_me(self):
+        return self._tree.aschildx
+
+    def qt_get_child(self, row):
+        row_offset = (np.array(self._tree.hidden_children) <= row).sum()
+        return self._tree.child_list[row + row_offset]
+
+    def qt_row_count(self):
+        return len(self._tree.child_list) - len(self._tree.hidden_children)
+
+    def qt_col_count(self):
+        return 2
+
+    def qt_get_data(self, column):
         if column == 0:
             return self._intern.name
         data = self.value()
@@ -282,7 +306,7 @@ class Pref(DynStruct):
             data = ''
         return data
 
-    def qt_isEditable(self):
+    def qt_is_editable(self):
         uneditable_hack = ['database_dpath', 'use_thumbnails', 'thumbnail_size', 'kpts_extractor']
         self._intern.depeq
         if self._intern.name in uneditable_hack:
@@ -292,11 +316,11 @@ class Pref(DynStruct):
         return self._intern.value != None
 
     @func_log
-    def qt_setLeafData(self, qvar):
+    def qt_set_leaf_data(self, qvar):
         'Sets backend data using QVariants'
         if self._tree.parent == None: 
             raise Exception('Cannot set root preference')
-        if self.qt_isEditable():
+        if self.qt_is_editable():
             new_val = 'BadThingsHappenedInPref'
             if self._intern.type == Pref:
                 raise Exception('Qt can only change leafs')
@@ -348,11 +372,12 @@ class QPreferenceModel(QAbstractItemModel):
     @report_thread_error
     def rowCount(self, parent=QModelIndex()):
         parentPref = self.index2Pref(parent)
-        return len(parentPref._tree.child_list)
+        return parentPref.qt_row_count()
 
     @report_thread_error
     def columnCount(self, parent=QModelIndex()):
-        return 2
+        parentPref = self.index2Pref(parent)
+        return parentPref.qt_col_count()
 
     @report_thread_error
     def data(self, index, role=Qt.DisplayRole):
@@ -363,7 +388,7 @@ class QPreferenceModel(QAbstractItemModel):
         if role != Qt.DisplayRole and role != Qt.EditRole:
             return QVariant()
         nodePref = self.index2Pref(index)
-        return QVariant(nodePref.qt_getData(index.column()))
+        return QVariant(nodePref.qt_get_data(index.column()))
 
     @report_thread_error
     def index(self, row, col, parent=QModelIndex()):
@@ -372,7 +397,7 @@ class QPreferenceModel(QAbstractItemModel):
         if parent.isValid() and parent.column() != 0:
             return QModelIndex()
         parentPref = self.index2Pref(parent)
-        childPref  = parentPref._tree.child_list[row]
+        childPref  = parentPref.qt_get_child(row)
         if childPref:
             return self.createIndex(row, col, childPref)
         else:
@@ -387,10 +412,10 @@ class QPreferenceModel(QAbstractItemModel):
         if not index.isValid():
             return QModelIndex()
         nodePref = self.index2Pref(index)
-        parentPref = nodePref._tree.parent
+        parentPref = nodePref.qt_get_parent()
         if parentPref == self.rootPref:
             return QModelIndex()
-        return self.createIndex(parentPref._tree.aschildx, 0, parentPref)
+        return self.createIndex(parentPref.qt_parents_index_of_me(), 0, parentPref)
     
     #-----------
     # Overloaded ItemModel Write Functions
@@ -404,7 +429,7 @@ class QPreferenceModel(QAbstractItemModel):
             return Qt.ItemFlag(0)
         childPref = self.index2Pref(index)
         if childPref:
-            if childPref.qt_isEditable():
+            if childPref.qt_is_editable():
                 return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemFlag(0)
 
@@ -414,7 +439,7 @@ class QPreferenceModel(QAbstractItemModel):
         if role != Qt.EditRole:
             return False
         leafPref = self.index2Pref(index)
-        result = leafPref.qt_setLeafData(data)
+        result = leafPref.qt_set_leaf_data(data)
         if result == True:
             self.dataChanged.emit(index, index)
         return result

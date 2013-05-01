@@ -31,6 +31,26 @@ class ExperimentManager(AbstractManager):
             f.write(report_str)
         print report_str
 
+    def list_matches(em):
+        '''Quick experiment:
+           Query each chip with a duplicate against whole database
+           Do not remove anyone from ANN matching'''
+        hs = em.hs
+        cm, vm, qm = hs.get_managers('cm','vm', 'qm')
+        vm.build_model()
+        cx2_rr = alloc_lists(vm.hs.cm.max_cx+1)
+        logmsg('Building matching graph. This may take awhile')
+        total = len(test_cxs)
+        count = 0
+        for cx in enumerate(cm.get_valid_cxs()):
+            count+=1
+            rr = qm.cx2_res(cx).rr
+            need_to_save = True
+            cx2_rr[cx] = rr
+
+        em.cx2_res = array([  [] if rr == [] else\
+                           QueryResult(hs,rr) for rr in cx2_rr])
+
     def run_singleton_queries(em):
         '''Quick experiment:
            Query each chip with a duplicate against whole database

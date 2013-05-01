@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #TODO: Find a way to make this ugly code nice
-from HotSpotterAPI import HotSpotterAPI
+from hotspotter.HotSpotterAPI import HotSpotterAPI
 #-------------------------------------------
 # Figure out which environment we are in
 # and set assocated preferences
@@ -17,8 +17,8 @@ if not in_qtc_bit:
 
 
 from PyQt4.Qt import QApplication, QEventLoop
-from front.Facade import Facade
-from other.logger import logmsg, hsl
+from hotspotter.Facade import Facade
+from hotspotter.other.logger import logmsg, hsl
 import argparse
 import inspect
 import os.path
@@ -27,7 +27,7 @@ import sys
 try:
     # Append the tpl lib to your path
     import tpl
-    TPL_LIB_DIR = os.path.join(os.path.dirname(tpl.__file__), 'tpl', sys.platform,'lib')
+    TPL_LIB_DIR = os.path.join(os.path.dirname(hotspotter.tpl.__file__), 'tpl', sys.platform,'lib')
     BOOST_LIB_DIR = r'C:\boost_1_53_0\stage\lib'
     sys.path.append(TPL_LIB_DIR)
     sys.path.append(BOOST_LIB_DIR)
@@ -78,11 +78,11 @@ cview,         = [lambda          : fac.change_view('chip_view')]
 # Add developer namespace
 from PyQt4.Qt   import \
         QApplication, QMainWindow, QMessageBox, QAbstractItemView, QObject
-from back.QueryManager import RawResults, QueryResult
+from hotspotter.QueryManager import RawResults, QueryResult
 #from PyQt4.QtCore import SIGNAL, Qt, pyqtSlot, pyqtSignal
 from PIL import Image
 import types
-from other.ConcretePrintable import *
+from hotspotter.other.ConcretePrintable import *
 # Get commonly used variables for command line usage
 hs = fac.hs
 uim = hs.uim

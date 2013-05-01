@@ -1,8 +1,8 @@
 from PyQt4.Qt import QObject, pyqtSignal, QFileDialog
-from front.HotspotterMainWindow import HotspotterMainWindow
 from numpy import setdiff1d
-from other.ConcretePrintable import Pref
-from other.logger import logdbg, logerr, logmsg, func_log, func_debug
+from hotspotter.front.HotspotterMainWindow import HotspotterMainWindow
+from hotspotter.other.ConcretePrintable import Pref
+from hotspotter.other.logger import logdbg, logerr, logmsg, func_log, func_debug
 # The UIManager should be running in the same thread as 
 # the Facade functions. It should talk to the hsgui with 
 # signals and slots

@@ -17,14 +17,14 @@ Code Concepts:
     possible.
 
 '''
-from back.Experiments import ExperimentManager
-from back.AlgorithmManager import AlgorithmManager
-from back.ChipManager import ChipManager
-from back.IOManager import IOManager
-from back.ImageManager import ImageManager
-from back.NameManager import NameManager
-from back.QueryManager import QueryManager
-from back.VisualModel import VisualModel
+from Experiments import ExperimentManager
+from AlgorithmManager import AlgorithmManager
+from ChipManager import ChipManager
+from IOManager import IOManager
+from ImageManager import ImageManager
+from NameManager import NameManager
+from QueryManager import QueryManager
+from VisualModel import VisualModel
 from front.DrawManager import DrawManager
 from front.UIManager import UIManager
 from other.AbstractPrintable import AbstractPrintable

@@ -1,4 +1,4 @@
-from other.AbstractPrintable import AbstractPrintable
+from hotspotter.other.AbstractPrintable import AbstractPrintable
 import numpy as np
 from logger import logdbg, logerr, func_log, logmsg
 from PyQt4.Qt import QAbstractItemModel, QModelIndex, QVariant, Qt, QObject, QComboBox

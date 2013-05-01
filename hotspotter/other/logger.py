@@ -4,7 +4,7 @@ import traceback
 import os
 import sys
 import types
-from other.AbstractPrintable import AbstractPrintable
+from hotspotter.other.AbstractPrintable import AbstractPrintable
 from PyQt4.Qt import QObject
 from PyQt4.QtGui import QMessageBox
 from PyQt4.QtCore import Qt

@@ -1,12 +1,12 @@
-from other.ConcretePrintable import Pref
+from hotspotter.other.ConcretePrintable import Pref
 from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
         QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal, \
         QStandardItem, QStandardItemModel, QString
-from front.EditPrefSkel import Ui_editPrefSkel
-from front.MainSkel import Ui_mainSkel
-from tpl.other.matplotlibwidget import MatplotlibWidget
-from other.logger import logmsg, logdbg
-from other.messages import workflow_help, cmd_help, gui_help, troubles_help
+from hotspotter.front.EditPrefSkel import Ui_editPrefSkel
+from hotspotter.front.MainSkel import Ui_mainSkel
+from hotspotter.tpl.other.matplotlibwidget import MatplotlibWidget
+from hotspotter.other.logger import logmsg, logdbg
+from hotspotter.other.messages import workflow_help, cmd_help, gui_help, troubles_help
 import types
 #from weakref import ref
 

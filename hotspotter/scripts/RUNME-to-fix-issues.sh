@@ -2,6 +2,8 @@
 #export hs_git_host=https://github.com/Erotemic/
 #export hs_tpl_repo=tpl-hotspotter
 
+#TODO: Incorporate into setup.py
+git submodule add https://github.com/Erotemic/tpl-hotspotter.git hotspotter/tpl
 git submodule update --init
 git submodule init 
 git submodule update

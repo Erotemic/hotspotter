@@ -6,9 +6,9 @@ from matplotlib.pyplot import draw, figure, get_cmap, gray
 from matplotlib.transforms import Affine2D
 from numpy import array, uint32, round, sqrt, ceil, asarray, append
 from numpy import spacing as eps
-from other.AbstractPrintable import AbstractManager
-from other.ConcretePrintable import Pref
-from other.logger import logmsg, logdbg, logwarn
+from hotspotter.other.AbstractPrintable import AbstractManager
+from hotspotter.other.ConcretePrintable import Pref
+from hotspotter.other.logger import logmsg, logdbg, logwarn
 from warnings import catch_warnings, simplefilter
 import colorsys
 import os.path

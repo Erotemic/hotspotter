@@ -1,7 +1,7 @@
-from other.logger  import logmsg, logerr
-from other.helpers import alloc_lists
-from other.AbstractPrintable import AbstractManager
-from back.QueryManager import QueryResult
+from hotspotter.other.logger  import logmsg, logerr
+from hotspotter.other.helpers import alloc_lists
+from hotspotter.other.AbstractPrintable import AbstractManager
+from hotspotter.QueryManager import QueryResult
 from pylab import find
 from numpy import setdiff1d, ones, zeros, array, int32
 import shelve

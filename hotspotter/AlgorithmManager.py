@@ -215,15 +215,15 @@ class AlgorithmManager(AbstractManager):
             #img_rescale = exposure.equalize_hist(asarray(pil_filt))
             #pil_filt = Image.fromarray(histeq(asarray(pil_filt))).convert('L')
         if am.algo_prefs.preproc.histeq_bit:
-            from back.algo.imalgos import histeq
+            from hotspotter.algo.imalgos import histeq
             logdbg('Equalizing Histogram')
             pil_filt = histeq(pil_filt)
         if am.algo_prefs.preproc.adapt_histeq_bit:
-            from back.algo.imalgos import adapt_histeq
+            from hotspotter.algo.imalgos import adapt_histeq
             logdbg('Adaptive Equalizing Histogram')
             pil_filt = Image.fromarray(adapt_histeq(asarray(pil_filt)))
         if am.algo_prefs.preproc.contrast_stretch_bit:
-            from back.algo.imalgos import contrast_stretch
+            from hotspotter.algo.imalgos import contrast_stretch
             logdbg('Stretching Histogram')
             pil_filt = Image.fromarray(contrast_stretch(asarray(pil_filt)))
         if am.algo_prefs.preproc.autocontrast_bit :
@@ -231,7 +231,7 @@ class AlgorithmManager(AbstractManager):
             pil_filt = ImageOps.autocontrast(pil_filt)
         if am.algo_prefs.preproc.bilateral_filt_bit :
             logdbg('O(1) Bilateral Filter Approximation')
-            from tpl.other.shiftableBF import shiftableBF
+            from hotspotter.tpl.other.shiftableBF import shiftableBF
             pil_filt = Image.fromarray(shiftableBF(asarray(pil_filt)))
 
         return pil_filt
@@ -353,7 +353,7 @@ class AlgorithmManager(AbstractManager):
             try:
                 ret2 = os.system(cmd)
                 if ret2 != 0:
-                    logerr(str(ex)+'\nThe backup hesaff command didnt work either!')
+                    logerr(str(ex)+'\nThe backup keypoint detector didnt work either!')
             except Exception as ex2:
                 logerr(str(ex2))
         fid = file(outname,'r')

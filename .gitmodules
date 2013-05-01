@@ -1,6 +1,3 @@
-[submodule "tpl"]
-	path = hotspotter/tpl
-	url = https://github.com/Erotemic/tpl-hotspotter.git
 [submodule "hotspotter/tpl"]
 	path = hotspotter/tpl
 	url = https://github.com/Erotemic/tpl-hotspotter.git

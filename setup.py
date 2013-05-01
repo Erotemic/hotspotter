@@ -8,22 +8,131 @@ import sys
 import subprocess
 from fnmatch import fnmatchcase
 from distutils.util import convert_path
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+#try:
+from setuptools import setup
+#except ImportError:
+    #from distutils.core import setup
 try:
     from distutils.command.build_py import build_py_2to3 as build_py
 except ImportError:
     from distutils.command.build_py import build_py
     from distutils.command.build_scripts import build_scripts
-else:
-    exclude_fixers = ['fix_next', 'fix_filter']
-    from distutils.util import Mixin2to3
-    from lib2to3.refactor import get_fixers_from_package
-    Mixin2to3.fixer_names = [f for f in get_fixers_from_package('lib2to3.fixes')
-                             if f.rsplit('.', 1)[-1] not in exclude_fixers]
-    from distutils.command.build_scripts import build_scripts_2to3 as build_scripts
+#else:
+    #exclude_fixers = ['fix_next', 'fix_filter']
+    #from distutils.util import Mixin2to3
+    #from lib2to3.refactor import get_fixers_from_package
+    #Mixin2to3.fixer_names = [f for f in get_fixers_from_package('lib2to3.fixes')
+                             #if f.rsplit('.', 1)[-1] not in exclude_fixers]
+    #from distutils.command.build_scripts import build_scripts_2to3 as build_scripts
+
+INSTALL_REQUIRES = \
+[
+    'numpy>=1.5.0',
+    'scipy>=0.7.2',
+    'PIL>=1.1.7'
+]
+
+INSTALL_OPTIONAL = \
+[
+    'python-qt>=.50',
+    'matplotlib>=1.2.1rc1',
+    'pyvlfeat>=0.1.1a3'
+]
+
+INSTALL_OTHER = \
+[
+    'boost-python>=1.52',
+    'Cython>=.18',
+    'ipython>=.13.1'
+]
+
+INSTALL_BUILD = \
+[
+    'Cython'
+]
+
+INSTALL_DEV = \
+[
+    'py2exe>=0.6.10dev',
+    'pyflakes>=0.6.1',
+    'pylint>=0.27.0',
+    'RunSnakeRun>=2.0.2b1',
+    'maliae>=0.4.0.final.0',
+    'pycallgraph>=0.5.1'
+    'coverage>=3.6'
+]
+
+CLASSIFIERS = """\
+Development Status :: 1 - Alpha
+Intended Audience :: Education
+Intended Audience :: Science/Research
+Intended Audience :: Developers
+License :: OSI Approved :: BSD License
+Programming Language :: Python
+Operating System :: Microsoft :: Windows
+Operating System :: Unix
+Operating System :: MacOS
+"""
+NAME                = 'HotSpotter'
+AUTHOR              = "Jonathan Crall, RPI"
+AUTHOR_EMAIL        = "crallj@rpi.edu"
+MAINTAINER          = AUTHOR
+MAINTAINER_EMAIL    = AUTHOR_EMAIL
+DESCRIPTION         = 'Image Search for Large Animal Databases.'
+LONG_DESCRIPTION    = open("DESCRIPTION.txt").read()
+URL                 = "http://www.cs.rpi.edu/~cralljp"
+DOWNLOAD_URL        = "https://github.com/Erotemic/hotspotter/archive/release.zip"
+LICENSE             = 'BSD'
+PLATFORMS           = ["Windows", "Linux", "Mac OS-X"]
+MAJOR               = 0
+MINOR               = 0
+MICRO               = 0
+SUFFIX              = "rc3"  # Should be blank except for rc's, betas, etc.
+ISRELEASED          = False
+VERSION             = '%d.%d.%d%s' % (MAJOR, MINOR, MICRO, SUFFIX)
+
+def setup_windows():
+    setup_submodules()
+
+def setup_submodules():
+    private = 'git@hyrule.cs.rpi.edu:'
+    public = 'https://github.com/Erotemic/'
+    if not os.path.exists('hotspotter/tpl'):
+        os.system('git submodule add '+private+'tpl-hotspotter.git hotspotter/tpl')
+
+    os.system('git submodule update --init')
+
+
+# Copy boostpython dll to site-packages
+def setup_boost():
+    print('Setting up Boost')
+    boost_root = 'C:/boost_1_53_0'
+    boost_lib = boost_root + '/stage/lib'
+    python_root = 'C:/Python27'
+    site_packages = python_root +'/Lib/site-packages'
+    #copy(boost_lib+'/libboost_python-mgw46-mt-1_53.dll', site_packages+'/libboost_python-mgw46-mt-1_53.dll')
+    INCLUDE_DIRS = [
+        site_packages+'/numpy/core/include',
+        boost_root
+    ]
+    INCLUDE_LIBS = [
+        boost_lib
+    ]
+    INCLUDE_DIRS_STR = ','.join(map(os.path.normpath, INCLUDE_DIRS))
+    INCLUDE_LIBS_STR = ','.join(map(os.path.normpath, INCLUDE_LIBS))
+
+    # Goes in C:\Python27\Lib\distutils\distutils.cfg
+    windows_distutils_cfg = '''
+    [build]
+    compiler=mingw32
+    [build_ext]
+    include_dirs=%(include_dirs)s
+    library_dirs=%(library_dirs)s
+    ''' % {
+        'include_dirs':INCLUDE_DIRS_STR,
+        'library_dirs':INCLUDE_LIBS_STR
+    }
+    write_text(python_root+'\Lib\distutils\distutils.cfg', windows_distutils_cfg)
 
 # Installation Steps that I took: 
 #http://ctrl-dev.com/2012/02/compiling-boost-python-with-mingw/
@@ -69,107 +178,12 @@ using python : 2.7 : "C:/Python27" : "C:/Python27/include" : "C:/Python27/libs" 
     #except Exception as ex:
         #print 'Make Link Failed: Error:\n'+str(ex)
         #raise ex
-
-# Copy boostpython dll to site-packages
-os.system(r'copy C:\boost_1_53_0\stage\lib\libboost_python-mgw46-mt-1_53.dll C:\Python27\Lib\site-packages\libboost_python-mgw46-mt-1_53.dll')
-#make_link(\
-    #target=r'C:\boost_1_53_0\stage\lib\libboost_python-mgw46-mt-1_53.dll', 
-    #dest=r'C:\boost_1_53_0\stage\lib\boost_python-mt-py26.dll')
-#make_link(\
-    #target=r'C:\boost_1_53_0\stage\lib\libboost_python-mgw46-mt-1_53.dll.a', 
-    #dest=r'C:\boost_1_53_0\stage\lib\boost_python-mt-py26.dll.a')
-
-path_sep = ';' if sys.platform == 'win32' else ':'
-
-INCLUDE_DIRS = [
-    'C:/Python27/Lib/site-packages/numpy/core/include',
-    'C:/boost_1_53_0'
-]
-
-INCLUDE_LIBS = [
-    'C:/boost_1_53_0/stage/lib'
-]
-
-INCLUDE_DIRS_STR = path_sep.join(map(os.path.normpath, INCLUDE_DIRS))
-INCLUDE_LIBS_STR = path_sep.join(map(os.path.normpath, INCLUDE_LIBS))
-
-
-compiler_map = {'win32':'mingw32', 'other':'gcc'}
-
-# Goes in C:\Python27\Lib\distutils\distutils.cfg
-windows_distutils_cfg = '''
-[build]
-compiler=mingw32
-[build_ext]
-include_dirs=%(include_dirs)s
-library_dirs=%(library_dirs)s
-''' % {
-    'include_dirs':INCLUDE_DIRS_STR,
-    'library_dirs':INCLUDE_LIBS_STR
-}
-print windows_distutils_cfg
-
-INSTALL_REQUIRES = 
-[
-    'numpy>=1.5.0',
-    'scipy>=0.7.2'
-    'PIL>=1.1.7'
-]
-
-INSTALL_OPTIONAL = 
-[
-    'python-qt>=.50'
-    'matplotlib>=1.2.1rc1'
-    'pyvlfeat>=0.1.1a3'
-]
-
-INSTALL_OTHER = 
-[
-    'boost-python>=1.52'
-    'Cython>=.18'
-    'ipython>=.13.1'
-]
-
-INSTALL_DEV =
-[
-    'py2exe>=0.6.10dev',
-    'pyflakes>=0.6.1',
-    'pylint>=0.27.0',
-    'RunSnakeRun>=2.0.2b1',
-    'maliae>=0.4.0.final.0',
-    'pycallgraph>=0.5.1'
-    'coverage>=3.6'
-]
-
-CLASSIFIERS = """\
-Development Status :: 1 - Alpha
-Intended Audience :: Education
-Intended Audience :: Science/Research
-Intended Audience :: Developers
-License :: OSI Approved :: BSD License
-Programming Language :: Python
-Operating System :: Microsoft :: Windows
-Operating System :: Unix
-Operating System :: MacOS
-"""
-NAME                = 'HotSpotter'
-AUTHOR              = "Jonathan Crall, RPI"
-AUTHOR_EMAIL        = "crallj@rpi.edu"
-MAINTAINER          = AUTHOR
-MAINTAINER_EMAIL    = AUTHOR_EMAIL
-DESCRIPTION         = 'Image Search for Large Animal Databases.'
-LONG_DESCRIPTION    = open("DESCRIPTION.txt").read()
-URL                 = "http://www.cs.rpi.edu/~cralljp"
-DOWNLOAD_URL        = "https://github.com/Erotemic/hotspotter/archive/release.zip"
-LICENSE             = 'BSD'
-PLATFORMS           = ["Windows", "Linux", "Mac OS-X"]
-MAJOR               = 0
-MINOR               = 0
-MICRO               = 0
-SUFFIX              = "rc3"  # Should be blank except for rc's, betas, etc.
-ISRELEASED          = False
-VERSION             = '%d.%d.%d%s' % (MAJOR, MINOR, MICRO, SUFFIX)
-
+    #make_link(\
+        #target=r'C:\boost_1_53_0\stage\lib\libboost_python-mgw46-mt-1_53.dll', 
+        #dest=r'C:\boost_1_53_0\stage\lib\boost_python-mt-py26.dll')
+    #make_link(\
+        #target=r'C:\boost_1_53_0\stage\lib\libboost_python-mgw46-mt-1_53.dll.a', 
+        #dest=r'C:\boost_1_53_0\stage\lib\boost_python-mt-py26.dll.a')
 
 def find_packages(where='.', exclude=()):
     out = []
@@ -219,29 +233,12 @@ def git_version():
         git_revision = "unknown-git"
     return git_revision
 
-# Python 2.4 compatibility: Python versions 2.6 and later support new
-# exception syntax, but for now we have to resort to exec. 
-if sys.hexversion >= 0x2070000:
-    exec('''\
-def write_text(filename, text):
-    with open(filename, 'w') as a:
+def write_text(filename, text, mode='w'):
+    with open(filename, mode='w') as a:
         try:
             a.write(text)
         except Exception as e:
             print(e)
-    ''')
-else:
-    exec('''\
-def write_text(filename, text):
-    a = open(filename, 'w')
-    try:
-        try:
-            a.write(text)
-        except Exception, e:
-            print e
-    finally:
-        a.close()
-    ''')
 
 def write_version_py(filename=os.path.join('hotspotter', 'generated_version.py')):
     cnt = """ # THIS FILE IS GENERATED FROM HOTSPOTTER SETUP.PY
@@ -284,15 +281,22 @@ def do_setup():
           platforms=PLATFORMS,
           packages=find_packages(),
           install_requires=INSTALL_REQUIRES,
-          install_optional=INSTALL_OPTIONAL
-
-          scripts=['bin/hotspotter-cache', 'bin/theano-nose', 'bin/theano-test'],
+          install_optional=INSTALL_OPTIONAL,
+          build_scripts = ['hotspotter/scripts/compile_widgets.bat'],
           keywords=' '.join([
             'hotsoptter', 'vision', 'animals', 'object recognition',
             'instance recognition', 'naive bayes' ]),
           cmdclass = {'build_py': build_py,
                       'build_scripts': build_scripts}
     )
+
 if __name__ == "__main__":
-    do_setup()
+    import sys
+    print 'Entering HotSpotter setup'
+    if len(sys.argv) <= 1:
+        print 'what should I do? setup_windows? do_setup? install?'
+    for cmd in iter(sys.argv[1:]):
+        if cmd == 'setup_boost':
+            setup_boost()
+    #do_setup()
 

@@ -86,11 +86,12 @@ class QueryManager(AbstractManager):
         # We have the scores, now who do we vote for? 
         
         # Remove yourself from the query
+        #query feature index 2 agg descriptor indexes -> cids -> self_query_bit -> clean_axs
         qfx2_Kaxs_   = vm.wx2_axs[qfx2_Kwxs]
         qfx2_Kcids_  = [ vm.ax2_cid[axs] for axs  in qfx2_Kaxs_.flat ]
-        qfx2_Kvbit_  = [ qcid != cids    for cids in qfx2_Kcids_ ]
-        qfx2_Kaxs    = [ axs[vbit] \
-                        for (axs, vbit) in zip( qfx2_Kaxs_.flat, qfx2_Kvbit_) ]
+        qfx2_Ksqbit_ = [ qcid != cids    for cids in qfx2_Kcids_ ]
+        qfx2_Kaxs    = [ np.array(axs)[sqbit].tolist() \
+                        for (axs, sqbit) in zip( qfx2_Kaxs_.flat, qfx2_Ksqbit_) ]
         # Clean Vote for Info
         qfx2_Kcxs    = array([ vm.ax2_cx(axs)  for axs  in qfx2_Kaxs ])
         qfx2_Kfxs    = array([ vm.ax2_fx[axs]  for axs  in qfx2_Kaxs ])

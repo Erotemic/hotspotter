@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 #TODO: Find a way to make this ugly code nice
-<<<<<<< HEAD
 from hotspotter.HotSpotterAPI import HotSpotterAPI
-=======
->>>>>>> bagoffeatures
 #-------------------------------------------
 # Figure out which environment we are in
 # and set assocated preferences
@@ -29,8 +26,8 @@ import sys
 
 try:
     # Append the tpl lib to your path
-    import tpl
-    TPL_LIB_DIR = os.path.join(os.path.dirname(hotspotter.tpl.__file__), 'tpl', sys.platform,'lib')
+    import hotspotter
+    TPL_LIB_DIR = os.path.join(os.path.dirname(hotspotter.__file__), 'tpl', sys.platform,'lib')
     BOOST_LIB_DIR = r'C:\boost_1_53_0\stage\lib'
     sys.path.append(TPL_LIB_DIR)
     sys.path.append(BOOST_LIB_DIR)
@@ -61,6 +58,7 @@ if args.logall_bit:
 if not in_qtc_bit:
     app = QApplication(sys.argv)
 
+# TODO: Remove the Facade, Have only the HotSpotterAPI
 # Start HotSpotter via the Facade
 fac = Facade(use_gui=args.gui_bit, autoload=args.autoload_bit)
 

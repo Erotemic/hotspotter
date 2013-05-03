@@ -44,14 +44,12 @@ class DrawManager(AbstractManager):
         gid        = gm.gx2_gid[gx]
         img_list   = gm.gx2_img_list(gx)
         title_list = ['gid='+str(gid)+'   gname='+gm.gx2_gname[gx]]
-        transData  = dm.add_images(img_list, title_list)[0]
+        dm.add_images(img_list, title_list)
         cx_list    = gm.gx2_cx_list[gx]
         if dm.draw_prefs.use_thumbnails is True:
             pass
         for cx in iter(cx_list):
-            transImg = Affine2D( cm.cx2_transImg(cx) ) 
-            trans    = transImg + transData
-            dm.draw_chiprep(cx, trans, 0)
+            dm.draw_chiprep2(cx, axi=0, in_image_bit=True)
         dm.end_draw()
     # ---
     def show_chip(dm, cx):
@@ -59,8 +57,8 @@ class DrawManager(AbstractManager):
         cid, name, chip = cm.cx2_(cx, 'cid', 'name', 'chip')
         if dm.draw_prefs.use_thumbnails is True:
             pass
-        transData = dm.add_images([chip], [name])[0]
-        dm.draw_chiprep(cx, transData)
+        dm.add_images([chip], [name])
+        dm.draw_chiprep2(cx, axi=0)
         dm.end_draw()
     # ---
     def show_query(dm, res):
@@ -83,19 +81,14 @@ class DrawManager(AbstractManager):
         if dm.draw_prefs.result_view == 'in_image':
             qimg = cm.cx2_img(qcx)
             timg = cm.cx2_img_list(tcx)
-            transData_list = dm.add_images([qimg] + timg, title_list)
-            for (ix, cx) in enumerate(append(qcx,tcx)):
-                transImg = Affine2D( cm.cx2_transImg(cx) )
-                transData_list[ix] = transImg + transData_list[ix]
+            dm.add_images([qimg] + timg, title_list)
         elif dm.draw_prefs.result_view == 'in_chip':
             qchip = cm.cx2_chip_list(qcx)
             tchip = cm.cx2_chip_list(tcx)
-            transData_list = dm.add_images(qchip + tchip, title_list)
 
         # Draw the Query Chiprep
-        qtransData = transData_list[0]
         qaxi       = 0; qfsel      = []
-        dm.draw_chiprep(qcx, qtransData, qaxi, qfsel)
+        dm.draw_chiprep2(qcx, axi=qaxi, fsel=qfsel)
         # Draw the Top Result Chipreps
         for (tx, cx) in enumerate(tcx):
             fm    = res.rr.cx2_fm[cx]
@@ -107,9 +100,8 @@ class DrawManager(AbstractManager):
             else:
                 qfsel = fm[fs > 0][:,0]
                 fsel  = fm[fs > 0][:,1]
-            transData = transData_list[tx+1]
-            dm.draw_chiprep(cx,   transData,  axi,  fsel,\
-                            qcx, qtransData, qaxi, qfsel)
+            dm.draw_chiprep2(cx,  axi=axi,  fsel=fsel)
+            dm.draw_chiprep2(qcx, axi=qaxi, axi_color=axi, fsel=qfsel, bbox_bit = False)
         dm.end_draw()
 
     # ---
@@ -188,19 +180,17 @@ class DrawManager(AbstractManager):
         fig.savefig(save_file, format='png')
     # ---
     def add_images(dm, img_list, title_list=[]):
-        fig = dm.get_figure()
-        fig.clf()
+        fig = dm.get_figure(); fig.clf()
         num_images = len(img_list)
         #
         dm.ax_list     = [None]*num_images
-        transData_list = [None]*num_images
         title_list     = title_list + ['NoTitle']*(num_images-len(title_list))
-        #
+        # Fit Images into a grid
         nr = int( ceil( float(num_images)/2 ) )
         nc = 2 if num_images >= 2 else 1
         #
         gs = gridspec.GridSpec( nr, nc )
-        for i in range(num_images):
+        for i in xrange(num_images):
             #logdbg(' Adding the '+str(i)+'th Image')
             #logdbg('   * type(img_list[i]): %s'+str(type(img_list[i])))
             #logdbg('   * img_list[i].shape: %s'+str(img_list[i].shape))
@@ -210,13 +200,11 @@ class DrawManager(AbstractManager):
             dm.ax_list[i].get_xaxis().set_ticks([])
             dm.ax_list[i].get_yaxis().set_ticks([])
             dm.ax_list[i].set_title(title_list[i])
-            transData_list[i] = dm.ax_list[i].transData
             # transData: data coordinates -> display coordinates
             # transAxes: axes coordinates -> display coordinates
             # transLimits: data - > axes
         #
         logdbg('Added '+str(num_images)+' images/axes')
-        return transData_list
     # ---
     def _get_fpt_ell_collection(dm, fpts, transData, alpha, edgecolor):
         ell_patches = []
@@ -255,6 +243,14 @@ class DrawManager(AbstractManager):
         # q[things] - relate to the query
         logdbg('Drawing Chip CX='+str(cx))
 
+        transImg = Affine2D( cm.cx2_transImg(cx) ) 
+        theta = cm.cx2_theta[cx]
+        rot = Affine2D(np.array(([np.cos(theta), -np.sin(theta), 0],
+                        [np.sin(theta),  np.cos(theta), 0],
+                        [            0,              0, 1]), dtype=np.float32))
+        trans_kpts = transImg + rot + transData
+        trans_bbox = transImg + transData
+
         hs = dm.hs
         feat_xy_bit  = dm.draw_prefs.points_bit 
         fpts_ell_bit = dm.draw_prefs.ellipse_bit 
@@ -280,6 +276,7 @@ class DrawManager(AbstractManager):
         force_recomp=False
         if feat_xy_bit or fpts_ell_bit or qfsel != None:
             fpts = cm.get_fpts(cx, force_recomp=force_recomp)
+
             if fsel is None:
                 fsel = range(len(fpts))
             if fpts_ell_bit and len(fpts) > 0:
@@ -336,4 +333,74 @@ class DrawManager(AbstractManager):
                     rotation=degrees,
                     backgroundcolor=comp_rgb)
 
+    def draw_chiprep2(dm, cx, axi=0, fsel=None, in_image_bit=False, axi_color=0, bbox_bit=None):
+        cm = dm.hs.cm
+        # Grab Preferences
+        feat_xy_bit  = dm.draw_prefs.points_bit 
+        fpts_ell_bit = dm.draw_prefs.ellipse_bit 
+        bbox_bit     = dm.draw_prefs.bbox_bit if bbox_bit is None else bbox_bit
+        ell_alpha    = dm.draw_prefs.ellipse_alpha
+        if ell_alpha > 1: ell_alpha = 1.0
+        if ell_alpha < 0: ell_alpha = 0.0
+        map_color   = get_cmap('hsv')(float(axi_color)/len(dm.ax_list))
+        if axi_color == 0: map_color = [map_color[0], map_color[1]+.5, map_color[2], map_color[3]]
+        
+        # Axis We are drawing to.
+        ax        = dm.ax_list[axi]
+        transData = ax.transData # data coordinates -> display coordinates
+        # Data coordinates are chip coords
+        if in_image_bit: 
+            # data coords = chip coords -> image coords -> display coords
+            transImg = Affine2D( cm.cx2_transImg(cx) ) 
+        else: 
+            # data coords = chip coords -> display coords
+            transImg = Affine2D()
 
+        (cw,ch) = cm.cx2_chip_size(cx) # This is not ok, because the size disagrees with roi after rotation
+        if feat_xy_bit or fpts_ell_bit or qfsel != None:
+            fpts = cm.get_fpts(cx)
+            if in_image_bit:
+                theta = cm.cx2_theta[cx]
+                transRot = Affine2D().rotate_around(cw/2,ch/2,theta)
+            else:
+                transRot = Affine2D()
+            trans_kpts = transRot + transImg + transData
+            if fsel is None: fsel = range(len(fpts))
+            if fpts_ell_bit and len(fpts) > 0: # Plot ellipses
+                ells = dm._get_fpt_ell_collection(fpts[fsel,:], trans_kpts, ell_alpha, map_color)
+                ax.add_collection(ells)
+            if feat_xy_bit and len(fpts) > 0: # Plot xy points
+                ax.plot(fpts[fsel,0], fpts[fsel,1], 'o',\
+                        markeredgecolor=map_color,\
+                        markerfacecolor=map_color,\
+                        transform=trans_kpts,\
+                        markersize=2)
+        # === 
+        if bbox_bit:
+            trans_bbox = transImg + transData
+            # Draw Bounding Rectangle
+            cxy = (0,0)
+            #(_,_,cw,ch) = cm.cx2_roi[cx]
+            bbox = Rectangle(cxy,cw,ch,transform=trans_bbox) 
+            bbox.set_fill(False)
+            bbox.set_edgecolor(map_color)
+            ax.add_patch(bbox)
+
+            # Draw Text Annotation
+            cid   = cm.cx2_cid[cx]
+            name  = cm.cx2_name(cx)
+            # Use the complimentary color as the text background
+            _hsv = colorsys.rgb_to_hsv(map_color[0],map_color[1],map_color[2])
+            comp_hsv = [_hsv[0], _hsv[1], .2]
+            comp_rgb = list(colorsys.hsv_to_rgb(comp_hsv[0], comp_hsv[1], comp_hsv[2]))
+            comp_rgb.append(.7)
+            # Draw Orientation Backwards 
+            degrees = -cm.cx2_theta[cx]*180/np.pi
+            chip_text =  'name='+name+'\n'+'cid='+str(cid)
+            ax.text(1, 1, chip_text,
+                    horizontalalignment='left',
+                    verticalalignment='top',
+                    transform=trans_bbox,
+                    color=[1,1,1],
+                    rotation=degrees,
+                    backgroundcolor=comp_rgb)

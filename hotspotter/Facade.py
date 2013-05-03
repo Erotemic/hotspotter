@@ -10,7 +10,7 @@ import time
 import os.path
 
 # Globals
-clbls = ['cid', 'gid', 'nid', 'name', 'roi']
+clbls = ['cid', 'gid', 'nid', 'name', 'roi', 'theta']
 glbls = ['gid', 'gname', 'num_c', 'cids']
 nlbls = ['nid', 'name', 'cids']
 
@@ -20,7 +20,7 @@ class Facade(QObject):
     def __init__(fac, use_gui=True, autoload=True):
         super( Facade, fac ).__init__()
         # Create API
-        fac.hs = HotSpotterAPI()
+        fac.hs = HotSpotterAPI(autoload=False)
         if use_gui: #Make GUI? 
             logdbg('Starting with gui')
             uim = fac.hs.uim

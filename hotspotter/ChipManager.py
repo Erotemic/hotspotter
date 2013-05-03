@@ -1,4 +1,5 @@
 import types
+import re
 import numpy as np
 import os.path
 from other.AbstractPrintable import AbstractDataManager
@@ -116,6 +117,59 @@ class ChipManager(AbstractDataManager):
             'nx'   : lambda _: cm.cx2_nx[_] ,\
             'gx'   : lambda _: cm.cx2_gx[_] ,\
         }
+        cm.default_fields = ['cid','gid','nid','roi','theta']
+
+    def load_csv_line(cm, field_values, headers):
+        field_values = map(lambda k: k.strip(' '), field_values)
+        if headers is None: headers = cm.default_fields
+        if len(headers) != len(field_values):
+            logwarn('In chip_file. len(headers) != len(field_values) length mismatch\n'+\
+                    str(headers)+'\n'+str(field_values))
+        # Build field name -> field value map
+        dmap = {k:v for (k,v) in zip(headers,field_values)}
+        if cm.hs.core_prefs.legacy_bit:
+            # Legacy: Be Backwards Compatible
+            if 'imgindex' in dmap.keys():
+                logwarn('Found imgindex')
+                imgindex = int(dmap['imgindex'])
+                gname = 'img-%07d.jpg' % imgindex
+                cm.hs.gm.add_img(int(imgindex), gname, False)
+                dmap['gid'] = imgindex
+                dmap['cid'] = imgindex
+                del dmap['imgindex']
+            if 'animal_name' in dmap.keys():
+                logwarn('Found animal_name')
+                dmap['nid'] = cm.hs.nm.add_name(-1, dmap['animal_name'])
+                del dmap['animal_name']
+            if 'instance_id' in dmap.keys():
+                dmap['cid'] = dmap['instance_id']
+                del dmap['instance_id']
+            if 'image_id' in dmap.keys():
+                dmap['gid'] = dmap['image_id']
+                del dmap['image_id']
+            if 'name_id' in dmap.keys():
+                dmap['nid'] = dmap['name_id']
+                del dmap['name_id']
+
+        cid = int(dmap['cid'])
+        gid = int(dmap['gid'])
+        nid = int(dmap['nid'])
+        try:
+            theta = np.float32(dmap['theta'])
+        except KeyError as ex:
+            theta = 0
+        roi_str = re.sub('  *',' ', dmap['roi'].replace(']','').replace('[','')).strip(' ').rstrip()
+        roi = map(lambda x: int(round(float(x))),roi_str.split(' '))
+        nx  = cm.hs.nm.nid2_nx[nid]
+        gx  = cm.hs.gm.gid2_gx[gid]
+        if gx == 0 or nx == 0 or gid == 0 or nid == 0:
+            logmsg('Adding Chip: (cid=%d),(nid=%d,nx=%d),(gid=%d,gx=%d)' % (cid, nid, nx, gid, gx))
+            logerr('Chip has invalid indexes')
+        cm.add_chip(cid, nx, gx, roi, theta, delete_prev=False)
+
+    def get_csv_line(headers):
+        cm.cx2_info(lbls=['cid','gid','nid','roi','theta'])
+        pass
 
     def  chip_alloc(cm, nAlloc):
         logdbg('Allocating room for %d more chips' % nAlloc)
@@ -139,7 +193,7 @@ class ChipManager(AbstractDataManager):
     def cx2_info(cm, cxs=None, lbls=None):
         #returns info in formatted table
         if cxs is None: cxs = cm.get_valid_cxs()
-        if lbls is None: lbls = ['cid','gid','nid','roi']
+        if lbls is None: lbls = cm.default_fields
         data_table_str = cm.x2_info(cxs, lbls)
         return '# ChipManager\n'+data_table_str
 
@@ -349,15 +403,26 @@ class ChipManager(AbstractDataManager):
     def cx2_transImg(cm, cx):
         (cw, ch) = cm.cx2_chip_size(cx)
         (rx, ry, rw, rh) = cm.cx2_roi[cx]
+        theta = cm.cx2_theta[cx]
         sx = float(rw) / float(cw)
         sy = float(rh) / float(ch)
         tx = float(rx) # Translation happens after scaling
         ty = float(ry)
+        #rot = np.array(([np.cos(theta), -np.sin(theta), 0],
+                        #[np.sin(theta),  np.cos(theta), 0],
+                        #[            0,              0, 1]), dtype=np.float32)
+        rot = np.array(([1, 0, 0],
+                        [0, 1, 0],
+                        [0, 0, 1]), dtype=np.float32)
         # Return Affine Transformation 
-        trans = array(([sx,  0, tx],
-                       [ 0, sy, ty],
-                       [ 0,  0,  1]), dtype=float32)
-        return trans
+        scale = np.array(([sx,  0,  0],
+                          [ 0, sy,  0],
+                          [ 0,  0,  1]), dtype=np.float32)
+
+        trans = np.array(([ 1,  0, tx],
+                          [ 0,  1, ty],
+                          [ 0,  0,  1]), dtype=np.float32)
+        return trans.dot(scale.dot(rot))
 
     def cx2_chip_fpath(cm, cx):
         'Gets chip fpath with checks'

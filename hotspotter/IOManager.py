@@ -288,60 +288,62 @@ class IOManager(AbstractManager):
             logdbg('Adding Image (old way)')
         iom.hs.gm.add_img(gid, gname, aif)
 
-    def __chip_csv_func(iom, csv_fields, data_headers=None):
-        csv_fields = map(lambda k: k.strip(' '), csv_fields)
-        #gid   = None
-        #gname = None
-        #aif   = None
-        if data_headers is None:
-            data_headers = ['cid','gid','nid','roi','theta']
-        if data_headers != None:
-            if len(data_headers) != len(csv_fields):
-                logwarn('Error reading chip_file. len(data_headers) != len(csv_fields) length mismatch\n'+\
-                      str(data_headers)+'\n'+str(data_headers))
-            dmap = {}
-            for (a,b) in zip(data_headers,csv_fields):
-                dmap[a] = b
-            if 'imgindex' in dmap.keys():
-                logwarn('Found imgindex')
-                imgindex = int(dmap['imgindex'])
-                gname = 'img-%07d.jpg' % imgindex
-                iom.hs.gm.add_img(int(imgindex), gname, False)
-                dmap['gid'] = imgindex
-                dmap['cid'] = imgindex
-                del dmap['imgindex']
-            if 'animal_name' in dmap.keys():
-                logwarn('Found animal_name')
-                dmap['nid'] = iom.hs.nm.add_name(-1, dmap['animal_name'])
-                del dmap['animal_name']
-            if 'instance_id' in dmap.keys():
-                dmap['cid'] = dmap['instance_id']
-                del dmap['instance_id']
-            if 'image_id' in dmap.keys():
-                dmap['gid'] = dmap['image_id']
-                del dmap['image_id']
-            if 'name_id' in dmap.keys():
-                dmap['nid'] = dmap['name_id']
-                del dmap['name_id']
+    # MOVED INTO CHIP MANAGER READ_CSV_LINE
+    #def __chip_csv_func(iom, csv_fields, data_headers=None):
+        #csv_fields = map(lambda k: k.strip(' '), csv_fields)
+        ##gid   = None
+        ##gname = None
+        ##aif   = None
+        #if data_headers is None:
+            #data_headers = ['cid','gid','nid','roi','theta']
+        #if data_headers != None:
+            #if len(data_headers) != len(csv_fields):
+                #logwarn('In chip_file. len(data_headers) != len(csv_fields) length mismatch\n'+\
+                      #str(data_headers)+'\n'+str(data_headers))
+            #dmap = {}
+            #for (a,b) in zip(data_headers,csv_fields):
+                #dmap[a] = b
+            ## Legacy backwards compatibility code
+            #if 'imgindex' in dmap.keys():
+                #logwarn('Found imgindex')
+                #imgindex = int(dmap['imgindex'])
+                #gname = 'img-%07d.jpg' % imgindex
+                #iom.hs.gm.add_img(int(imgindex), gname, False)
+                #dmap['gid'] = imgindex
+                #dmap['cid'] = imgindex
+                #del dmap['imgindex']
+            #if 'animal_name' in dmap.keys():
+                #logwarn('Found animal_name')
+                #dmap['nid'] = iom.hs.nm.add_name(-1, dmap['animal_name'])
+                #del dmap['animal_name']
+            #if 'instance_id' in dmap.keys():
+                #dmap['cid'] = dmap['instance_id']
+                #del dmap['instance_id']
+            #if 'image_id' in dmap.keys():
+                #dmap['gid'] = dmap['image_id']
+                #del dmap['image_id']
+            #if 'name_id' in dmap.keys():
+                #dmap['nid'] = dmap['name_id']
+                #del dmap['name_id']
+            ## End Legacy backwards compatibility code
 
+        #cid = int(dmap['cid'])
+        #gid = int(dmap['gid'])
+        #nid = int(dmap['nid'])
+        #try:
+            #theta = np.float32(dmap['theta'])
+        #except KeyError as ex:
+            #theta = 0
+        #roi_field = re.sub('  *',' ', dmap['roi'].replace(']','').replace('[','')).strip(' ').rstrip()
 
-        cid = int(dmap['cid'])
-        gid = int(dmap['gid'])
-        nid = int(dmap['nid'])
-        try:
-            theta = np.float32(dmap['theta'])
-        except KeyError as ex:
-            theta = 0
-        roi_field = re.sub('  *',' ', dmap['roi'].replace(']','').replace('[','')).strip(' ').rstrip()
-
-        roi = map(lambda x: int(round(float(x))),roi_field.split(' '))
-        nx  = iom.hs.nm.nid2_nx[nid]
-        gx  = iom.hs.gm.gid2_gx[gid]
-        logdbg('Adding Chip: (cid=%d),(nid=%d,nx=%d),(gid=%d,gx=%d)' % (cid, nid, nx, gid, gx))
-        if gx == 0 or nx == 0 or gid == 0 or nid == 0:
-            logmsg('Adding Chip: (cid=%d),(nid=%d,nx=%d),(gid=%d,gx=%d)' % (cid, nid, nx, gid, gx))
-            logerr('Chip has invalid indexes')
-        iom.hs.cm.add_chip(cid, nx, gx, roi, theta, delete_prev=False)
+        #roi = map(lambda x: int(round(float(x))),roi_field.split(' '))
+        #nx  = iom.hs.nm.nid2_nx[nid]
+        #gx  = iom.hs.gm.gid2_gx[gid]
+        #logdbg('Adding Chip: (cid=%d),(nid=%d,nx=%d),(gid=%d,gx=%d)' % (cid, nid, nx, gid, gx))
+        #if gx == 0 or nx == 0 or gid == 0 or nid == 0:
+            #logmsg('Adding Chip: (cid=%d),(nid=%d,nx=%d),(gid=%d,gx=%d)' % (cid, nid, nx, gid, gx))
+            #logerr('Chip has invalid indexes')
+        #iom.hs.cm.add_chip(cid, nx, gx, roi, theta, delete_prev=False)
 
     def __name_csv_func(iom, csv_fields, data_headers=None):
         csv_fields = map(lambda k: k.strip(' '), csv_fields)
@@ -374,9 +376,7 @@ class IOManager(AbstractManager):
         if not filecheck(chip_table_fpath): 
             alt_names=['chip_table.csv','instance_table.csv','animal_info_table.csv','SightingData.csv']
             chip_table_fpath = iom._check_altfname(alt_names=alt_names)
-        chip_csv_func   = lambda f,d: iom.__chip_csv_func(f,d)
-        chip_alloc_func = lambda num: iom.cm.chip_alloc(num)
-        return iom.__load_table(chip_table_fpath, 'Chip', chip_alloc_func, chip_csv_func)
+        return iom.__load_table(chip_table_fpath, 'Chip', iom.hs.cm.chip_alloc, iom.hs.cm.load_csv_line)
 
     def _check_altfname(iom, alt_names=None):
         'Checks for a legacy data table'

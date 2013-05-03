@@ -41,6 +41,7 @@ class HotSpotterAPI(AbstractPrintable):
         if hs.core_prefs == None:
             hs.core_prefs = Pref(fpath=iom.get_prefs_fpath('core_prefs'), hidden=True)
         hs.core_prefs.database_dpath = None
+        hs.core_prefs.legacy_bit = Pref(True)
         if not default_bit:
             hs.core_prefs.load()
 
@@ -65,7 +66,7 @@ class HotSpotterAPI(AbstractPrintable):
         return True
 
     @func_log
-    def smartset_db_dpath(hs, db_dpath):
+    def smartget_db_dpath(hs, db_dpath):
         ''' Performs a smart update of the db_dpath
         Trys a number of various  options to get it right
 
@@ -82,8 +83,36 @@ class HotSpotterAPI(AbstractPrintable):
             db_dpath = hs.uim.select_database()
         return db_dpath
 
+    @func_log
+    def restart(hs, db_dpath=None, autoload=True, save_pref_bit=True):
+        hs.data_loaded_bit = False
+        if hs.db_dpath != None and db_dpath == None:
+            db_dpath = hs.db_dpath
+        db_dpath = hs.smartget_db_dpath(db_dpath)
+        # --
+        hs.db_dpath = None
+        if hs.is_valid_db_dpath(db_dpath):
+            hs.db_dpath = db_dpath
+            if save_pref_bit:
+                logdbg('Setting db_dpath = '+str(db_dpath))
+                hs.core_prefs.update('database_dpath',db_dpath)
+        if hs.db_dpath is None:
+            logerr('Invalid Database. '+\
+                   'Select an existing HotSpotter, StripeSpotter database. '+\
+                   'To create a new database, select and empty directory. ')
 
-    def __init__(hs, db_dpath=None, autoload=False, delete_home_dir_bit=False):
+        hs.gm  = ImageManager(hs)
+        hs.nm  = NameManager(hs)
+        hs.cm  = ChipManager(hs)
+        hs.vm  = VisualModel(hs)
+        hs.qm  = QueryManager(hs)
+        hs.em  = ExperimentManager(hs)
+        if autoload == True:
+            hs.load_tables()
+        else: 
+            logdbg('autoload is false.')
+
+    def __init__(hs, db_dpath=None, autoload=True, delete_home_dir_bit=False):
         super( HotSpotterAPI, hs ).__init__(['cm','gm','nm','em','qm','dm','am','vm','iom','uim'])
         #
         hs.db_dpath = None #Database directory.
@@ -104,58 +133,33 @@ class HotSpotterAPI(AbstractPrintable):
         hs.gm = None # Image Manager
         hs.cm = None # Instance Manager
         hs.nm = None # Name Manager
-        #-
+        #m
         hs.init_preferences()
         if db_dpath != None:
             hs.restart(db_dpath, autoload, save_pref_bit=False)
         # --- 
 
     def merge_database(hs, db_dpath):
-        #db_dpath = r'D:\data\work\LF_all\LF_OPTIMIZADAS_NI_V_E'
+        #db_dpath = r'D:\data\work\Lionfish\LF_OPTIMIZADAS_NI_V_E'
         hs_other = HotSpotterAPI(db_dpath)
         gid_offset = hs.gm.max_gid
         cid_offset = hs.cm.max_cid
-        for gx in enumerate(hs_other.gm.get_valid_gxs()):
+        for gx in iter(hs_other.gm.get_valid_gxs()):
             gid = hs_other.gm.gx2_gid[gx] + gid_offset
-            relpath = os.path.relpath(hs.iom.image_dir, hs_other.iom.hs.image_dir) 
-            aif = hs_other.gm.gx2_aif[gx]
-            gname = os.path.normpath(relpath+'/'+hs_other.gm.gx2_gname[gx])
-            hs.gm.add_img(gid=gid, gname=gname, aif=aif, src_img=None)
-        for cx in  enumerate(hs_other.cm.get_valid_cxs()):
-            cid = hs_other.cm.cx2_cid[cx] + cid_offset
-            gid = hs_other.cm.cx2_cid[cx] + gid_offset
+            aif = hs_other.gm.gx2_aif_bit[gx]
+            gname = hs_other.gm.gx2_gname[gx]
+            src_img = hs_other.gm.gx2_img_fpath(gx)
+            # TODO: Have databases be able to handle adding images and not copy them
+            #relpath = os.path.relpath(hs_other.iom.get_img_dpath(), hs.iom.get_img_dpath()) 
+            #gname = os.path.normpath(relpath+'/'+hs_other.gm.gx2_gname[gx])
+            hs.gm.add_img(gid=gid, gname=gname, aif=aif, src_img=src_img)
+        for cx in  iter(hs_other.cm.get_valid_cxs()):
+            cid, gid, name = hs_other.cm.cx2_(cx, 'cid', 'gid', 'name')
             roi = hs_other.cm.cx2_roi[cx]
-            name = hs_other.cm.cx2_name(cx)
-            nx = hs.nm.add_name(name)
-            gx = hs.gm.gid2_gx[gid]
-            cm.add_chip(cid, nx, gx, roi)
-
-    @func_log
-    def restart(hs, db_dpath=None, autoload=True, save_pref_bit=True):
-        hs.data_loaded_bit = False
-        if hs.db_dpath != None and db_dpath == None:
-            db_dpath = hs.db_dpath
-        db_dpath = hs.smartset_db_dpath(db_dpath)
-        # --
-        if hs.is_valid_db_dpath(db_dpath) and save_pref_bit:
-            logdbg('Setting db_dpath = '+str(db_dpath))
-            hs.db_dpath = db_dpath
-            hs.core_prefs.update('database_dpath',db_dpath)
-        else:
-            logerr('Invalid Database. '+\
-                   'Select an existing HotSpotter, StripeSpotter database. '+\
-                   'To create a new database, select and empty directory. ')
-
-        hs.gm  = ImageManager(hs)
-        hs.nm  = NameManager(hs)
-        hs.cm  = ChipManager(hs)
-        hs.vm  = VisualModel(hs)
-        hs.qm  = QueryManager(hs)
-        hs.em  = ExperimentManager(hs)
-        if autoload == True:
-            hs.load_tables()
-        else: 
-            logdbg('autoload is false.')
+            theta = hs_other.cm.cx2_theta[cx]
+            nx = hs.nm.add_name(-1, name)
+            gx = hs.gm.gid2_gx[gid + gid_offset]
+            hs.cm.add_chip(cid + cid_offset, nx, gx, roi, theta)
     # ---
     @func_log
     def load_tables(hs):

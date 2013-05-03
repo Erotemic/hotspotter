@@ -20,7 +20,7 @@ class VisualModel(AbstractManager):
 
     def build_model2(vm):
         am = vm.hs.am
-        logdbg('Build Index was Requested')
+        logmsg('Build Model was Requested')
         vm.sample_train_set()
         assert len(vm.train_cid) > 0, 'Training set cannot be  empty'
         vm.delete_model()

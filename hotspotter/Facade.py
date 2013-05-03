@@ -406,7 +406,9 @@ class Facade(QObject):
             fac.next_unident_chip()
         elif uim.state == 'image_view':
             if not fac.next_empty_image():
-                fac.next_equal_size_chip()
+                if not fac.next_equal_size_chip():
+                    fac.next_0_theta_chip()
+
         else:
             logerr('Cannot goto next in state: '+uim.state)
 
@@ -447,6 +449,24 @@ class Facade(QObject):
                 break
         if gid == -1: 
             print 'There are no more unrefined rois'
+            return False
+        fac.selg(gid)
+
+    @func_log
+    def next_0_theta_chip(fac):
+        cm = fac.hs.cm
+        gm = fac.hs.gm
+        valid_cxs = cm.get_valid_cxs()
+        fac.hs.cm.cx2_nx
+        gid = -1
+        for cx in iter(valid_cxs):
+            (gw,gh) = gm.gx2_img_size(cm.cx2_gx[cx])
+            (_,_,cw,ch) = cm.cx2_roi[cx]
+            if cm.cx2_theta[cx] == 0:
+                gid = fac.hs.cm.cx2_gid(cx)
+                break
+        if gid == -1: 
+            print 'There are no more 0 theta rois'
             return False
         fac.selg(gid)
 

@@ -1,7 +1,7 @@
 import numpy as np
-from other.helpers import alloc_lists
-from other.ConcretePrintable import Pref
-from tpl.pyflann import FLANN
+from hotspotter.other.helpers import alloc_lists
+from hotspotter.other.ConcretePrintable import Pref
+from hotspotter.tpl.pyflann import FLANN
 #from __future__ import print_function
 
 def flann_one_time(data_vecs, query_vecs, K, flann_args):

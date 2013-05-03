@@ -101,7 +101,7 @@ class DrawManager(AbstractManager):
             else:
                 qfsel = fm[fs > 0][:,0]
                 fsel  = fm[fs > 0][:,1]
-            dm.draw_chiprep2(cx,  axi=axi,  fsel=fsel)
+            dm.draw_chiprep2(cx,  axi=axi,  axi_color=axi, fsel=fsel)
             dm.draw_chiprep2(qcx, axi=qaxi, axi_color=axi, fsel=qfsel, bbox_bit = False)
         dm.end_draw()
 
@@ -228,6 +228,7 @@ class DrawManager(AbstractManager):
         ellipse_collection.set_edgecolor(edgecolor)
         return ellipse_collection
     # ---
+    # DEPRICATED to draw_chiprep2, which is still ugly
     def draw_chiprep(dm, cx, transData, axi=0, fsel=None,\
                      qcx=None, qtransData=None, qaxi=None, qfsel=None):
         ''' draws the instance in chip coordinates'''

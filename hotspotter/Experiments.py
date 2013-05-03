@@ -37,19 +37,24 @@ class ExperimentManager(AbstractManager):
            Do not remove anyone from ANN matching'''
         hs = em.hs
         cm, vm, qm = hs.get_managers('cm','vm', 'qm')
+        logmsg('Running List Matches Experiment')
         vm.build_model()
-        cx2_rr = alloc_lists(vm.hs.cm.max_cx+1)
-        logmsg('Building matching graph. This may take awhile')
-        total = len(test_cxs)
-        count = 0
-        for cx in enumerate(cm.get_valid_cxs()):
-            count+=1
-            rr = qm.cx2_res(cx).rr
-            need_to_save = True
-            cx2_rr[cx] = rr
-
-        em.cx2_res = array([  [] if rr == [] else\
-                           QueryResult(hs,rr) for rr in cx2_rr])
+        list_matches_file = iom.get_temp_fpath('expt_match_list'+em.get_expt_suffix()+'.txt')
+        with open(list_matches_file, 'a') as file:
+            for cx in iter(cm.get_valid_cxs()):
+                res = qm.cx2_res(cx)
+                cid, gname = cm.cx2_(res.rr.qcx, 'cid', 'gname')
+                (tcid , tgname  , tscore ) = res.tcid2_('cid','gname','score')
+                logmsg('---QUERY---')
+                outstr = 'QUERY:    gname=%s, cid=%4d' % (gname, cid)
+                print outstr 
+                file.write(outstr+'\n')
+                for (rank, tup) in enumerate(zip(*[x.tolist() for x in (tgname, tcid, tscore )])):
+                    outstr = '  rank=%d, gname=%s, cid=%4d, score=%7.2f' % tuple([rank+1]+list(tup))
+                    print outstr 
+                    file.write(outstr+'\n')
+                print ''
+                file.write('\n\n')
 
     def run_singleton_queries(em):
         '''Quick experiment:

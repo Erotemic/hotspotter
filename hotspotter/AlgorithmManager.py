@@ -44,7 +44,7 @@ class AlgorithmManager(AbstractManager):
         # Currently one feature detector and one feature descriptor is chosen
         # * = non-free
         #am.algo_prefs.chiprep.gravity_vector_bit     = True
-        am.algo_prefs.chiprep.kpts_detector           = Pref(0, choices=('heshesaff', 'heslapaff', 'dense')) #, '!MSER', '#FREAK', '#SIFT'))
+        am.algo_prefs.chiprep.kpts_detector           = Pref(0, choices=('heshesaff', 'heslapaff', 'dense'), hidden=True) #, '!MSER', '#FREAK', '#SIFT'))
         am.algo_prefs.chiprep.kpts_extractor          = Pref(0, choices=('SIFT',), hidden=True) #, '#SURF', '#BRISK'))
         # --- Vocabulary ---
         am.algo_prefs.model.quantizer                 = Pref(0, choices=('naive_bayes', 'akmeans'), hidden=True)

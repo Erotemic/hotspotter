@@ -1,0 +1,3 @@
+Use the frobius norm to find the distance between matrixes and dont count very different matrixes as inliers
+
+Or just use weak geometric constraints on scale and ?orientation?. 

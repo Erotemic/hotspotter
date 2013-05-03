@@ -84,6 +84,8 @@ from hotspotter.QueryManager import RawResults, QueryResult
 from PIL import Image
 import types
 from hotspotter.other.ConcretePrintable import *
+from hotspotter.other.helpers import *
+
 # Get commonly used variables for command line usage
 hs = fac.hs
 uim = hs.uim

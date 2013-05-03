@@ -1,6 +1,6 @@
 from numpy import asarray, percentile, uint8, uint16
 import numpy as np
-from other.logger import logdbg, logwarn
+from hotspotter.other.logger import logdbg, logwarn
 from PIL import Image, ImageOps
 
 '''
@@ -42,7 +42,7 @@ def histeq(pil_img):
         img_eq_float64 = exposure.equalize_hist(img)
         return Image.fromarray(uint8(np.round(img_eq_float64*255)))
     except Exception as ex:
-        from tpl.other import imtools
+        from hotspotter.tpl.other import imtools
         logdbg('Scikits not found: %s' % str(ex))
         logdbg('Using fallback histeq')
         return Image.fromarray(imtools.histeq(img)).convert('L')

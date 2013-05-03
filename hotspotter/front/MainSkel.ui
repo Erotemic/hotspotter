@@ -238,6 +238,7 @@
     <addaction name="separator"/>
     <addaction name="actionAdd_ROI"/>
     <addaction name="actionReselect_ROI"/>
+    <addaction name="actionReselect_Orientation"/>
     <addaction name="actionRemove_Chip"/>
     <addaction name="separator"/>
     <addaction name="actionNext"/>
@@ -407,6 +408,14 @@
   <action name="actionBatch_Change_Name">
    <property name="text">
     <string>Batch Change Name</string>
+   </property>
+  </action>
+  <action name="actionReselect_Orientation">
+   <property name="text">
+    <string>Reselect Orientation</string>
+   </property>
+   <property name="shortcut">
+    <string>O</string>
    </property>
   </action>
  </widget>

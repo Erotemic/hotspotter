@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\front\MainSkel.ui'
+# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\hotspotter\front\MainSkel.ui'
 #
-# Created: Tue Apr 30 17:11:14 2013
-#      by: PyQt4 UI code generator 4.9.6
+# Created: Fri May 03 00:18:11 2013
+#      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -180,6 +180,8 @@ class Ui_mainSkel(object):
         self.actionConvertImage2Chip.setObjectName(_fromUtf8("actionConvertImage2Chip"))
         self.actionBatch_Change_Name = QtGui.QAction(mainSkel)
         self.actionBatch_Change_Name.setObjectName(_fromUtf8("actionBatch_Change_Name"))
+        self.actionReselect_Orientation = QtGui.QAction(mainSkel)
+        self.actionReselect_Orientation.setObjectName(_fromUtf8("actionReselect_Orientation"))
         self.menuFile.addAction(self.actionOpen_Database)
         self.menuFile.addAction(self.actionSave_Database)
         self.menuFile.addAction(self.actionImport_Images)
@@ -207,6 +209,7 @@ class Ui_mainSkel(object):
         self.menuActions.addSeparator()
         self.menuActions.addAction(self.actionAdd_ROI)
         self.menuActions.addAction(self.actionReselect_ROI)
+        self.menuActions.addAction(self.actionReselect_Orientation)
         self.menuActions.addAction(self.actionRemove_Chip)
         self.menuActions.addSeparator()
         self.menuActions.addAction(self.actionNext)
@@ -274,6 +277,8 @@ class Ui_mainSkel(object):
         self.actionQuit.setText(_translate("mainSkel", "Quit", None))
         self.actionConvertImage2Chip.setText(_translate("mainSkel", "Convert All Images to Chips", None))
         self.actionBatch_Change_Name.setText(_translate("mainSkel", "Batch Change Name", None))
+        self.actionReselect_Orientation.setText(_translate("mainSkel", "Reselect Orientation", None))
+        self.actionReselect_Orientation.setShortcut(_translate("mainSkel", "O", None))
 
 
 if __name__ == "__main__":

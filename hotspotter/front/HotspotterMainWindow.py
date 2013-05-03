@@ -96,6 +96,7 @@ class HotspotterMainWindow(QMainWindow):
         # Actions
         main_skel.actionQuery.triggered.connect(        fac.query)
         main_skel.actionAdd_ROI.triggered.connect(      fac.add_chip)
+        main_skel.actionReselect_Orientation.triggered.connect(      fac.reselect_orientation)
         main_skel.actionReselect_ROI.triggered.connect( fac.reselect_roi)
         main_skel.actionRemove_Chip.triggered.connect(  fac.remove_cid)
         main_skel.actionNext.triggered.connect(         fac.select_next)

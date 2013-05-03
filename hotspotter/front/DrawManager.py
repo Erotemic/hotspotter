@@ -1,3 +1,4 @@
+import numpy as np
 from PIL import Image
 from matplotlib import gridspec
 from matplotlib.collections import PatchCollection
@@ -128,7 +129,24 @@ class DrawManager(AbstractManager):
         fig = figure(num=dm.fignum, figsize=(5,5), dpi=72, facecolor='w', edgecolor='k')
         return fig
     # ---
-    def select_roi(dm):
+    def annotate_orientation(dm):
+        logmsg('Please select an orientation of the torso (Click Two Points on the Image)')
+        try:
+            # Compute an angle from user interaction
+            sys.stdout.flush()
+            fig = dm.get_figure()
+            pts = np.array(fig.ginput(2))
+            logdbg('GInput Points are: '+str(pts))
+            # Get reference point to origin 
+            refpt = pts[0] - pts[1] 
+            #theta = np.math.atan2(refpt[1], refpt[0])
+            theta = np.math.atan(refpt[1]/refpt[0])
+            logmsg('The angle in radians is: '+str(theta))
+            return theta
+        except Exception as ex: 
+            logmsg('Annotate Orientation Failed'+str(ex))
+            return None
+    def annotate_roi(dm):
         logmsg('Please Select a Rectangular Region of Interest (Click Two Points on the Image)')
         try:
             sys.stdout.flush()
@@ -144,8 +162,8 @@ class DrawManager(AbstractManager):
             roi = array(round([x,y,w,h]),dtype=uint32)
             logmsg('The new ROI is: '+str(roi))
             return roi
-        except: 
-            logmsg('Select ROI Failed')
+        except Exception as ex:
+            logmsg('Annotate ROI Failed'+str(ex))
             return None
     # ---
     def end_draw(dm):
@@ -305,6 +323,8 @@ class DrawManager(AbstractManager):
             comp_rgb = list(colorsys.hsv_to_rgb(comp_hsv[0], comp_hsv[1], comp_hsv[2]))
             comp_rgb.append(.7)
 
+            # Draw Orientation Backwards 
+            degrees = -cm.cx2_theta[cx]*180/np.pi
             #chip_text =  'nid='+str(nid)+'\n'+'cid='+str(cid)
             chip_text =  'name='+name+'\n'+'cid='+str(cid)
             textcolor = [1,1,1]
@@ -313,4 +333,7 @@ class DrawManager(AbstractManager):
                     verticalalignment='top',
                     transform=transData,
                     color=textcolor,
+                    rotation=degrees,
                     backgroundcolor=comp_rgb)
+
+

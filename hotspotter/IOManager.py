@@ -294,10 +294,10 @@ class IOManager(AbstractManager):
         #gname = None
         #aif   = None
         if data_headers is None:
-            data_headers = ['cid','gid','nid','roi']
+            data_headers = ['cid','gid','nid','roi','theta']
         if data_headers != None:
             if len(data_headers) != len(csv_fields):
-                logerr('Error reading chip_file. len(data_headers) != len(csv_fields) length mismatch\n'+\
+                logwarn('Error reading chip_file. len(data_headers) != len(csv_fields) length mismatch\n'+\
                       str(data_headers)+'\n'+str(data_headers))
             dmap = {}
             for (a,b) in zip(data_headers,csv_fields):
@@ -328,6 +328,10 @@ class IOManager(AbstractManager):
         cid = int(dmap['cid'])
         gid = int(dmap['gid'])
         nid = int(dmap['nid'])
+        try:
+            theta = np.float32(dmap['theta'])
+        except KeyError as ex:
+            theta = 0
         roi_field = re.sub('  *',' ', dmap['roi'].replace(']','').replace('[','')).strip(' ').rstrip()
 
         roi = map(lambda x: int(round(float(x))),roi_field.split(' '))
@@ -337,7 +341,7 @@ class IOManager(AbstractManager):
         if gx == 0 or nx == 0 or gid == 0 or nid == 0:
             logmsg('Adding Chip: (cid=%d),(nid=%d,nx=%d),(gid=%d,gx=%d)' % (cid, nid, nx, gid, gx))
             logerr('Chip has invalid indexes')
-        iom.hs.cm.add_chip(cid, nx, gx, roi, delete_prev=False)
+        iom.hs.cm.add_chip(cid, nx, gx, roi, theta, delete_prev=False)
 
     def __name_csv_func(iom, csv_fields, data_headers=None):
         csv_fields = map(lambda k: k.strip(' '), csv_fields)
@@ -423,12 +427,12 @@ class IOManager(AbstractManager):
 
         logmsg('Saving Chip Table')
         chip_file = open(chip_table_fpath, 'w')
-        chip_file.write(cm.cx2_info(lbls=['cid','gid','nid','roi']))
+        chip_file.write(cm.cx2_info(lbls=['cid','gid','nid','roi','theta']))
         chip_file.close()
 
         logmsg('Saving Flat Table')
         flat_file = open(flat_table_fpath, 'w')
-        flat_file.write(cm.cx2_info(lbls=['cid','gname','name', 'roi']))
+        flat_file.write(cm.cx2_info(lbls=['cid','gname','name', 'roi', 'theta']))
         flat_file.close()
         logmsg('The Database was Saved')
 

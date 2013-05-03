@@ -74,7 +74,7 @@ class UIManager(QObject):
         #current_tab = uim.hsgui.main_skel.tablesTabWidget.currentIndex
         if uim.state in ['splash_view']:
             uim.hs.dm.show_splash()
-        elif uim.state in ['select_roi']:
+        elif uim.state in ['annotate']:
             if gm.is_valid(uim.sel_gid):
                 uim.hs.dm.show_image(gm.gx(uim.sel_gid))
         elif uim.state in ['chip_view']:
@@ -121,8 +121,8 @@ class UIManager(QObject):
     def update_state(uim, new_state):
         old_state   = uim.state
         logdbg('Updating to State: '+str(new_state)+', from: '+str(old_state))
-        if old_state == 'select_roi':
-            if new_state != 'select_roi_done':
+        if old_state == 'annotate':
+            if new_state != 'annotate_done':
                 logerr('Cannot enter new state while selecting an ROI.')
         elif old_state == 'querying':
             if new_state != 'done_querying':
@@ -171,15 +171,23 @@ class UIManager(QObject):
         uim.update_selection()
 
     @func_log
-    def select_roi(uim):
+    def _annotate(uim, annotate_fn):
         if not uim.hs.gm.is_valid(uim.sel_gid):
             logerr('Select an Image before you draw an ROI')
-        prev_state = uim.update_state('select_roi')
+        prev_state = uim.update_state('annotate')
         uim.draw()
-        new_roi = uim.hs.dm.select_roi()
-        uim.update_state('select_roi_done')
+        to_return = annotate_fn()
+        uim.update_state('annotate_done')
         uim.update_state(prev_state)
-        return new_roi
+        return to_return
+
+    @func_log
+    def annotate_roi(uim):
+        return uim._annotate(uim.hs.dm.annotate_roi)
+
+    @func_log 
+    def annotate_orientation(uim):
+        return uim._annotate(uim.hs.dm.annotate_orientation)
 
     # --- UIManager things that deal with the GUI Through Signals
     @func_log

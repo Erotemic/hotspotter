@@ -29,6 +29,7 @@ def lbls2_headers(lbls):
         'cids' : 'ChipIDs',\
         'name' : 'Name',\
         'gname': 'ImageName',\
+        'theta': 'theta',\
         'num_c': 'Num Chips',\
         'aif'  : 'AllIndexesFound',\
     }
@@ -55,7 +56,8 @@ def lbls2_maxvals(lbls, hs):
         'cids' :         '',\
         'name' : nm.max_name,\
         'gname': gm.max_gname,\
-        'num_c': 10
+        'num_c': 10,\
+        'theta': 10.0
     }
     return [_lbl2_maxval[l] for l in lbls]
 

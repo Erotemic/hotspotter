@@ -1,5 +1,5 @@
 
-set widget_dir=%HOTSPOTTER%\front
+set widget_dir=%HOTSPOTTER%\hotspotter\front
 ::%~dp0
 
 set pyuic4=C:\Python27\Lib\site-packages\PyQt4\pyuic4

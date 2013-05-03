@@ -104,9 +104,10 @@ class Facade(QObject):
             gx = gm.gx(gid)
             uim.select_gid(gid)
         uim.update_state('add_chip')
-        new_roi = uim.select_roi()
+        new_roi = uim.annotate_roi()
+        theta = 0
         uim.update_state('image_view')
-        new_cid = cm.add_chip(-1, nm.UNIDEN_NX(), gx, new_roi, delete_prev=True)
+        new_cid = cm.add_chip(-1, nm.UNIDEN_NX(), gx, new_roi, theta, delete_prev=True)
         uim.select_cid(new_cid)
         print 'New Chip: '+fac.hs.cm.info(new_cid, clbls)
         #If in beast mode, then move to the next ROI without drawing
@@ -121,9 +122,18 @@ class Facade(QObject):
     @func_log
     def reselect_roi(fac):
         uim = fac.hs.uim
-        new_roi = uim.select_roi()
+        new_roi = uim.annotate_roi()
         sel_cx = uim.sel_cx()
         fac.hs.cm.change_roi(sel_cx, new_roi)
+        uim.draw()
+
+    @pyqtSlot(name='reselect_orientation')
+    @func_log
+    def reselect_orientation(fac):
+        uim = fac.hs.uim
+        new_theta = uim.annotate_orientation()
+        sel_cx = uim.sel_cx()
+        fac.hs.cm.change_orientation(sel_cx, new_theta)
         uim.draw()
 
     @pyqtSlot(str, int, name='rename_cid')

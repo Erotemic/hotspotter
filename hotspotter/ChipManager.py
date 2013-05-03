@@ -1,4 +1,5 @@
 import types
+import numpy as np
 import os.path
 from other.AbstractPrintable import AbstractDataManager
 from other.helpers import filecheck
@@ -85,6 +86,7 @@ class ChipManager(AbstractDataManager):
         cm.cx2_nx        = empty(0, dtype=uint32) # index to Name id
         cm.cx2_gx        = empty(0, dtype=uint32) # index to imaGe id
         cm.cx2_roi       = empty((0,4), dtype=object) #  (x,y,w,h)
+        cm.cx2_theta     = empty(0, dtype=float32) # roi orientation
         # --- Feature Representation of Chip ---
         cm.cx2_fpts      = empty(0, dtype=object) # heshes keypoints
         cm.cx2_fdsc      = empty(0, dtype=object) # Root SIFT fdscriptors
@@ -109,6 +111,7 @@ class ChipManager(AbstractDataManager):
             'name' : lambda _: cm.cx2_name(_),\
 
             'roi'  : lambda _: cm.cx2_roi[_],\
+            'theta'  : lambda _: cm.cx2_theta[_],\
             'cx'   : lambda _: _ ,\
             'nx'   : lambda _: cm.cx2_nx[_] ,\
             'gx'   : lambda _: cm.cx2_gx[_] ,\
@@ -122,6 +125,7 @@ class ChipManager(AbstractDataManager):
         cm.cx2_gx        = append(cm.cx2_gx,  zeros(nAlloc,dtype=uint32)) 
         # Explicit Data
         cm.cx2_roi       = append(cm.cx2_roi,  zeros((nAlloc,4),dtype=uint32), axis=0)
+        cm.cx2_theta     = append(cm.cx2_theta, zeros(nAlloc,dtype=np.float32), axis=0)
         cm.cx2_fpts      = append(cm.cx2_fpts, empty(nAlloc,dtype=object))
         cm.cx2_fdsc      = append(cm.cx2_fdsc, empty(nAlloc,dtype=object))
         # Feature Representation
@@ -190,7 +194,7 @@ class ChipManager(AbstractDataManager):
             valid_bit = cm.max_cid > cids and cm.cid2_cx[cids] > 0
         return valid_bit
     # --- ACTUAL WORK FUNCTIONS
-    def  add_chip(cm, cid, nx, gx, roi, delete_prev=False):
+    def  add_chip(cm, cid, nx, gx, roi, theta, delete_prev=False):
         nm = cm.hs.nm
         gm = cm.hs.gm
         # Fails if cid is not available; cid = -1 means pick for you
@@ -226,6 +230,7 @@ class ChipManager(AbstractDataManager):
         cm.cx2_nx [cx]  = nx
         cm.cx2_gx [cx]  = gx
         cm.cx2_roi[cx]  = roi
+        cm.cx2_theta[cx]  = theta
         cm.max_roi      = map(lambda (a,b): max(a,b), zip(cm.max_roi, roi))
         # Add This Chip To Reverse Indexing
         if cid >= len(cm.cid2_cx):
@@ -276,11 +281,24 @@ class ChipManager(AbstractDataManager):
             cm.cx2_nx[cx]    = 0
             cm.cx2_gx[cx]    = 0
             cm.cx2_roi[cx]   = array([0,0,0,0],dtype=uint32)
+            cm.cx2_theta[cx] = 0
             cm.cid2_cx[cid]  = 0
     
+    def  change_orientation(cm, cx, new_theta):
+        cid = cm.cx2_cid[cx]
+        logmsg('Giving cid=%d new theta: %r' % (cid, new_theta))
+        assert not new_theta is None
+        cm.cx2_dirty_bit[cx] = True
+        cm.unload_features(cx)
+        cm.delete_computed_cid(cid)
+        cm.cx2_theta[cx] = new_theta
+        cm.hs.vm.isDirty = True # Mark vocab as dirty
+
+
     def  change_roi(cm, cx, new_roi):
         cid = cm.cx2_cid[cx]
         logmsg('Giving cid=%d new roi: %r' % (cid, new_roi))
+        assert not new_roi is None
         if new_roi is None:
             logerr('The ROI is empty')
         cm.cx2_dirty_bit[cx] = True
@@ -398,6 +416,11 @@ class ChipManager(AbstractDataManager):
         img = gm.gx2_img(gx)
         return cm.cut_out_roi(img, roi)
 
+    def cx2_pil_raw(cm, cx):
+        pil_raw = Image.fromarray( cm.cx2_raw_chip(cx) ).convert('L')
+        return pil_raw
+        
+
     def  compute_chip(cm, cx):
         #TODO Save a raw chip and thumb
         iom = cm.hs.iom
@@ -407,8 +430,8 @@ class ChipManager(AbstractDataManager):
         chip_fname = os.path.split(chip_fpath)[1]
         logmsg(('\nComputing Chip: cid=%d fname=%s\n'+am.get_algo_name(['preproc'])) % (cid, chip_fname))
         # --- Preprocess the Raw Chip
-        raw_chip = cm.cx2_raw_chip(cx)
-        chip = cm.hs.am.preprocess_chip(raw_chip)
+        pil_raw = cm.cx2_pil_raw(cx).rotate(cm.cx2_theta[cx]*180/np.pi, resample=Image.BICUBIC, expand=1) # Rotate Chip
+        chip = cm.hs.am.preprocess_chip(pil_raw)
         logdbg('Saving Computed Chip to :'+chip_fpath)
         chip.save(chip_fpath, 'PNG')
         # --- Write Chip and Thumbnail to disk

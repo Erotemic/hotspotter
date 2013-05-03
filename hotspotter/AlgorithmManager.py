@@ -1,4 +1,5 @@
 import os
+import types
 import subprocess
 import shelve
 from other.logger  import logmsg, logdbg, logerr, logwarn
@@ -176,6 +177,9 @@ class AlgorithmManager(AbstractManager):
 
 
     def get_algo_suffix(am, depends, use_id_bit=True):
+        if type(depends) == types.ListType and len(depends) == 0:
+            return ''
+
         if use_id_bit:
             return '.algo.'+str(am.get_algo_id(depends))
         else:
@@ -202,12 +206,11 @@ class AlgorithmManager(AbstractManager):
         logdbg('Resized %dx%d to %dx%d' % (rw, rh, cw, ch))
         return outImg
 
-    def preprocess_chip(am, raw_chip):
+    def preprocess_chip(am, pil_raw):
         logdbg('prepocessing')
         # Convert to grayscale
         # raw_chip = cm.cx2_raw_chip(6)
         # --- Resize ---
-        pil_raw = Image.fromarray( raw_chip ).convert('L')
         pil_filt = am.resize_chip(pil_raw, am.algo_prefs.preproc.sqrt_num_pxls)
 
         # --- Filters ---

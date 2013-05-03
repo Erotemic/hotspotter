@@ -357,7 +357,7 @@ class DrawManager(AbstractManager):
             transImg = Affine2D()
 
         (cw,ch) = cm.cx2_chip_size(cx) # This is not ok, because the size disagrees with roi after rotation
-        if feat_xy_bit or fpts_ell_bit or qfsel != None:
+        if feat_xy_bit or fpts_ell_bit or fsel != None:
             fpts = cm.get_fpts(cx)
             if in_image_bit:
                 theta = cm.cx2_theta[cx]

@@ -237,6 +237,9 @@ class AlgorithmManager(AbstractManager):
 
         return pil_filt
 
+    def compute_vlfeatures(am, chip):
+        import vlfeat
+
     def compute_features(am, chip):
         'Computes features of a chip. Uses settings in AlgorithmManager'
         logdbg('Calling feature detector')

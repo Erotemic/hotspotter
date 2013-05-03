@@ -1,0 +1,3 @@
+Merge other/and all of those into a hotspotter.helpers module
+
+

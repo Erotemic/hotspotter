@@ -91,6 +91,16 @@ SUFFIX              = "rc3"  # Should be blank except for rc's, betas, etc.
 ISRELEASED          = False
 VERSION             = '%d.%d.%d%s' % (MAJOR, MINOR, MICRO, SUFFIX)
 
+def setup_mingw_ext():
+
+    envvar_append('CMAKE_INCLUDE_PATH', 'C:/boost_1_53_0:$CMAKE_INCLUDE_PATH')
+    envvar_append('CMAKE_LIBRARY_PATH', 'C:/boost_1_53_0/stage/lib:$CMAKE_INCLUDE_PATH')
+
+    add_to_path(r'C:\MinGW\libexec\gcc\mingw32\4.6.2')
+    add_to_path(r'C:\MinGW\bin')
+    add_to_path(r'C:\MinGW\msys\1.0\bin')
+    sed(search='-mno-cygwin', replace='', fpath='C:\Python27\Lib\distutils\cygwinccompiler.py')
+
 def setup_windows():
     setup_submodules()
 

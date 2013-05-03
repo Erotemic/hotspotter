@@ -85,6 +85,7 @@ class DrawManager(AbstractManager):
         elif dm.draw_prefs.result_view == 'in_chip':
             qchip = cm.cx2_chip_list(qcx)
             tchip = cm.cx2_chip_list(tcx)
+            dm.add_images(qchip + tchip, title_list)
 
         # Draw the Query Chiprep
         qaxi       = 0; qfsel      = []
@@ -95,8 +96,8 @@ class DrawManager(AbstractManager):
             fs    = res.rr.cx2_fs[cx]
             axi   = tx+1
             if len(fs) == 0:
-                qfsel = array([], uint32)
-                fsel = array([], uint32)
+                qfsel = np.array([], np.uint32)
+                fsel  = np.array([], np.uint32)
             else:
                 qfsel = fm[fs > 0][:,0]
                 fsel  = fm[fs > 0][:,1]
@@ -349,15 +350,14 @@ class DrawManager(AbstractManager):
         ax        = dm.ax_list[axi]
         transData = ax.transData # data coordinates -> display coordinates
         # Data coordinates are chip coords
-        if in_image_bit: 
-            # data coords = chip coords -> image coords -> display coords
-            transImg = Affine2D( cm.cx2_transImg(cx) ) 
-        else: 
-            # data coords = chip coords -> display coords
-            transImg = Affine2D()
 
-        (cw,ch) = cm.cx2_chip_size(cx) # This is not ok, because the size disagrees with roi after rotation
+        # data coords = chip coords -> display coords
+        transImg = Affine2D()
         if feat_xy_bit or fpts_ell_bit or fsel != None:
+            if in_image_bit: 
+                # data coords = chip coords -> image coords -> display coords
+                transImg = Affine2D( cm.cx2_transImg(cx) ) 
+            (cw,ch) = cm.cx2_chip_size(cx) # This is not ok, because the size disagrees with roi after rotation
             fpts = cm.get_fpts(cx)
             if in_image_bit:
                 theta = cm.cx2_theta[cx]
@@ -377,11 +377,16 @@ class DrawManager(AbstractManager):
                         markersize=2)
         # === 
         if bbox_bit:
-            trans_bbox = transImg + transData
             # Draw Bounding Rectangle
-            cxy = (0,0)
-            #(_,_,cw,ch) = cm.cx2_roi[cx]
-            bbox = Rectangle(cxy,cw,ch,transform=trans_bbox) 
+            if in_image_bit:
+                [cx_pt,cy_pt,cw,ch] = cm.cx2_roi[cx]
+                cxy = (cx_pt,cy_pt)
+                bbox = Rectangle(cxy,cw,ch,transform=transData) 
+            else:
+                cxy = (0,0)
+                trans_bbox = transImg + transData
+                (cw,ch) = cm.cx2_chip_size(cx) # This is not ok, because the size disagrees with roi after rotation
+                bbox = Rectangle(cxy,cw,ch,transform=trans_bbox) 
             bbox.set_fill(False)
             bbox.set_edgecolor(map_color)
             ax.add_patch(bbox)
@@ -397,10 +402,10 @@ class DrawManager(AbstractManager):
             # Draw Orientation Backwards 
             degrees = -cm.cx2_theta[cx]*180/np.pi
             chip_text =  'name='+name+'\n'+'cid='+str(cid)
-            ax.text(1, 1, chip_text,
+            ax.text(cxy[0]+1, cxy[1]+1, chip_text,
                     horizontalalignment='left',
                     verticalalignment='top',
-                    transform=trans_bbox,
+                    transform=transData,
                     color=[1,1,1],
                     rotation=degrees,
                     backgroundcolor=comp_rgb)

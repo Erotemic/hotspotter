@@ -31,6 +31,46 @@ class ExperimentManager(AbstractManager):
             f.write(report_str)
         print report_str
 
+    def display_results(em, fpath=None):
+        cm, iom = em.hs.get_managers('cm','iom')
+        fpath = r'D:\data\work\Lionfish\LF_Bajo bonito\.hs_internals\computed\temp\expt_match_list.samp1.algo.5.txt'
+        if fpath is None: fpath = iom.get_temp_fpath('expt_match_list'+em.get_expt_suffix()+'.txt')
+        list_matches_file = iom.get_temp_fpath(fpath)
+        num_show = 4
+        cid_list = [0]*num_show
+        titles = [None]*num_show
+        import os
+        try:
+            os.makedirs(iom.get_temp_fpath('imgres'))
+        except Exception:
+            pass
+        with open(list_matches_file, 'r') as file:
+            file = open(list_matches_file, 'r')
+            file.seek(0)
+            for line in file:
+                if line.strip(' ') == '\n':
+                    save_fname = 'imgres/sim=%07.2f-qcid=%d.png' % (maxsim, cid_list[0])
+                    kwargs = {
+                        'titles' : titles,\
+                        'save_fpath' : iom.get_temp_fpath(save_fname),\
+                        'fignum' : 100
+                    }
+                    em.hs.show_chips(cid_list, **kwargs)
+                    continue
+                fields = line.replace('\n','').split(',')
+                if fields[0] == 'QUERY':
+                    rank = 0
+                    scorestr = 'QUERY'
+                else:
+                    rank = int(fields[0].replace('rank=',''))
+                    score = fields[3].replace('score=','').strip(' ')
+                    if rank == 1:
+                        maxsim = float(score)
+                    scorestr = 'SCORE = '+score
+                cid_list[rank] = int(fields[2].replace('cid=',''))
+                titles[rank] = scorestr
+
+
     def list_matches(em):
         '''Quick experiment:
            Query each chip with a duplicate against whole database
@@ -46,7 +86,7 @@ class ExperimentManager(AbstractManager):
                 cid, gname = cm.cx2_(res.rr.qcx, 'cid', 'gname')
                 (tcid , tgname  , tscore ) = res.tcid2_('cid','gname','score')
                 logmsg('---QUERY---')
-                outstr = 'QUERY:    gname=%s, cid=%4d' % (gname, cid)
+                outstr = 'QUERY,    gname=%s, cid=%4d' % (gname, cid)
                 print outstr 
                 file.write(outstr+'\n')
                 for (rank, tup) in enumerate(zip(*[x.tolist() for x in (tgname, tcid, tscore )])):

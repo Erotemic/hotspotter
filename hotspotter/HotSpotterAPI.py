@@ -45,6 +45,18 @@ class HotSpotterAPI(AbstractPrintable):
         if not default_bit:
             hs.core_prefs.load()
 
+    def show_chips(hs, cid_list, titles=[], save_fpath=None, fignum=1):
+        cm = hs.cm
+        hs.dm.fignum = fignum #TODO Set Fignum safer
+        cx_list   = cm.cid2_cx[cid_list]
+        chip_list = cm.cx2_chip_list(cx_list)
+        if len(titles) == 0:
+            titles = cm.cx2_name(cx_list)
+        hs.dm.add_images(chip_list, titles)
+        hs.dm.end_draw()
+        if not save_fpath is None:
+            hs.dm.save_fig(save_fpath)
+
     @func_log
     def is_valid_db_dpath(hs, db_dpath):
         'Checks to see if database conforms to expected conventions'

@@ -31,10 +31,11 @@ class ExperimentManager(AbstractManager):
             f.write(report_str)
         print report_str
 
-    def display_results(em, fpath=None):
+    def display_results(em, fname=None):
         cm, iom = em.hs.get_managers('cm','iom')
-        fpath = r'D:\data\work\Lionfish\LF_Bajo bonito\.hs_internals\computed\temp\expt_match_list.samp1.algo.5.txt'
-        if fpath is None: fpath = iom.get_temp_fpath('expt_match_list'+em.get_expt_suffix()+'.txt')
+        fname= r'expt_match_list.samp1.algo.5.txt'
+        if fname is None: fname = 'expt_match_list'+em.get_expt_suffix()+'.txt'
+        fpath = iom.get_temp_fpath(fname)
         txt_match_fpath = iom.get_temp_fpath(fpath)
         num_show = 4
         cid_list = [0]*num_show
@@ -48,12 +49,15 @@ class ExperimentManager(AbstractManager):
             file = open(txt_match_fpath, 'r')
             file.seek(0)
             for line in file:
+                line = line.replace('\n\n','\nSLASHN')
+                line = line.replace('\r','\n').replace('\n\n','\n')
+                line = line.replace('\nSLASHN','\n\n')
                 if line.strip(' ') == '\n':
                     save_fname = 'imgres/sim=%07.2f-qcid=%d.png' % (maxsim, cid_list[0])
                     kwargs = {
                         'titles' : titles,\
                         'save_fpath' : iom.get_temp_fpath(save_fname),\
-                        'fignum' : 100
+                        'fignum' : 1
                     }
                     em.hs.show_chips(cid_list, **kwargs)
                     continue

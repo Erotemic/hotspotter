@@ -91,6 +91,104 @@ SUFFIX              = "rc3"  # Should be blank except for rc's, betas, etc.
 ISRELEASED          = False
 VERSION             = '%d.%d.%d%s' % (MAJOR, MINOR, MICRO, SUFFIX)
 
+def create_sandbox():
+    #mkdir $hs/sandbox 
+    #export sandbox=$hs/sandbox
+    #ln -t $sandbox *.py
+    #ln -t $sandbox front/*.py
+    #ln -t $sandbox back/*.py
+    #ln -t $sandbox other/*.py
+    #ln -t $sandbox back/algo/*.py
+    #ln -t $sandbox back/tests/*.py
+    #set sandbox=%hotspotter%\sandbox
+    #call rob flat_dlink "%sandbox%" "%hotspotter%/other/*.py" True 
+    #call rob flat_dlink "%sandbox%" "%hotspotter%/back/*.py" True 
+    #call rob flat_dlink "%sandbox%" "%hotspotter%/front/*.py" True 
+    #call rob flat_dlink "%sandbox%" "%hotspotter%/*.py"
+    pass
+
+
+
+def get_rootdir():
+    import os.path
+    return os.path.dirname(os.path.realpath(__file__))
+
+def normalize_str(instr):
+    outstr = instr
+    outstr = outstr.replace('\r\n','\n')
+    outstr = outstr.replace('\r','\n')
+    outstr = outstr.replace('\t','    ')
+    return outstr
+
+def clean_git_config():
+    import re
+    print "Cleaning Git Config"
+    config_fpath = '.git/config'
+    gitconfig = open(config_fpath,'r').read()
+    gitconfig = normalize_str(gitconfig)
+    gitconfig = re.sub(
+        ' *\[submodule "tpl"\] *\n[^\n]*tpl-hotspotter.git *\n',
+        '', gitconfig, re.MULTILINE)
+    open(config_fpath,'w').write(gitconfig)
+
+def execute_syscalls(syscalls):
+    print "Executing Commands: "
+    for _cmd in syscalls.split('\n'):
+        cmd = _cmd.strip(' ')
+        if cmd == '': continue
+        print "  "+cmd
+        os.system(cmd)
+
+def initialize_submodules():
+    execute_syscalls('''
+    git submodule add https://github.com/Erotemic/tpl-hotspotter.git hotspotter/tpl
+    git submodule update --init
+    git submodule init 
+    git submodule update''')
+
+def fix_tpl_permissions():
+    execute_syscalls('''
+    chmod +x hotspotter/tpl/lib/darwin/*.mac
+    chmod +x hotspotter/tpl/lib/linux2/*.ln
+    chmod +x hotspotter/scripts/run-*''')
+
+def compile_widgets():
+    import os
+    if sys.platform == 'win32':
+        pyuic4_cmd = r'C:\Python27\Lib\site-packages\PyQt4\pyuic4'
+    else:
+        pyuic4_cmd = 'pyuic4'
+    widget_dir = os.path.join(get_rootdir(), 'hotspotter/front')
+    widget_list = ['MainSkel', 'ChangeNameDialog', 'EditPrefSkel', 'ResultDialog']
+    for widget in widget_list:
+        widget_ui = os.path.join(widget_dir, widget+'.ui')
+        widget_py = os.path.join(widget_dir, widget+'.py')
+        execute_syscalls(pyuic4_cmd+' -x '+widget_ui+' -o '+widget_py)
+
+def clean_hotspotter():
+    #rm *.pyc
+    #rm hotspotter_logs_*.txt
+    pass
+
+def fix_issues():
+    os.chdir(get_rootdir())
+    #python main.py --delete-preferences
+    clean_git_config()
+    initialize_submodules()
+    fix_tpl_permissions()
+    #export hs_git_host=git@hyrule.cs.rpi.edu:
+    #export hs_git_host=https://github.com/Erotemic/
+    #export hs_tpl_repo=tpl-hotspotter
+    #git submodule init
+    #git submodule add $hs_git_host$hs_tpl_repo.git ./tpl
+    # To remove submodules
+    #    export submodulepath=tpl
+    #    git config -f .git/config --remove-section submodule.$submodulepath
+    #    git config -f .gitmodules --remove-section submodule.$submodulepath
+    #    git rm --cached $submodulepath
+    #    rm -rf $submodulepath
+    #    rm -rf .git/modules/$submodulepath
+
 def setup_mingw_ext():
 
     envvar_append('CMAKE_INCLUDE_PATH', 'C:/boost_1_53_0:$CMAKE_INCLUDE_PATH')
@@ -308,5 +406,9 @@ if __name__ == "__main__":
     for cmd in iter(sys.argv[1:]):
         if cmd == 'setup_boost':
             setup_boost()
+        if cmd == 'fix_issues':
+            fix_issues()
+        if cmd == 'compile_widgets':
+                compile_widgets()
     #do_setup()
 

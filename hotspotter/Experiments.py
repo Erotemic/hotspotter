@@ -35,7 +35,7 @@ class ExperimentManager(AbstractManager):
         cm, iom = em.hs.get_managers('cm','iom')
         fpath = r'D:\data\work\Lionfish\LF_Bajo bonito\.hs_internals\computed\temp\expt_match_list.samp1.algo.5.txt'
         if fpath is None: fpath = iom.get_temp_fpath('expt_match_list'+em.get_expt_suffix()+'.txt')
-        list_matches_file = iom.get_temp_fpath(fpath)
+        txt_match_fpath = iom.get_temp_fpath(fpath)
         num_show = 4
         cid_list = [0]*num_show
         titles = [None]*num_show
@@ -44,8 +44,8 @@ class ExperimentManager(AbstractManager):
             os.makedirs(iom.get_temp_fpath('imgres'))
         except Exception:
             pass
-        with open(list_matches_file, 'r') as file:
-            file = open(list_matches_file, 'r')
+        with open(txt_match_fpath, 'r') as file:
+            file = open(txt_match_fpath, 'r')
             file.seek(0)
             for line in file:
                 if line.strip(' ') == '\n':
@@ -75,26 +75,38 @@ class ExperimentManager(AbstractManager):
         '''Quick experiment:
            Query each chip with a duplicate against whole database
            Do not remove anyone from ANN matching'''
+        import os
+        output_img_bit = True
         hs = em.hs
-        cm, vm, qm = hs.get_managers('cm','vm', 'qm')
+        cm, vm, qm, iom = hs.get_managers('cm','vm', 'qm', 'iom')
         logmsg('Running List Matches Experiment')
         vm.build_model()
-        list_matches_file = iom.get_temp_fpath('expt_match_list'+em.get_expt_suffix()+'.txt')
-        with open(list_matches_file, 'a') as file:
+        expt_dpath = iom.get_temp_fpath('expt.'+em.get_expt_suffix())
+        txt_match_fpath = os.path.join(expt_dpath,'/match_list.txt')
+        try:
+            os.makedirs(expt_dpath)
+        except Exception:
+            pass
+        with open(txt_match_fpath, 'a') as file:
             for cx in iter(cm.get_valid_cxs()):
                 res = qm.cx2_res(cx)
-                cid, gname = cm.cx2_(res.rr.qcx, 'cid', 'gname')
+                qcid, gname = cm.cx2_(res.rr.qcx, 'cid', 'gname')
                 (tcid , tgname  , tscore ) = res.tcid2_('cid','gname','score')
                 logmsg('---QUERY---')
-                outstr = 'QUERY,    gname=%s, cid=%4d' % (gname, cid)
+                outstr = 'QUERY,    gname=%s, cid=%4d' % (gname, qcid)
                 print outstr 
                 file.write(outstr+'\n')
+                maxsim = tscore[0]
                 for (rank, tup) in enumerate(zip(*[x.tolist() for x in (tgname, tcid, tscore )])):
                     outstr = '  rank=%d, gname=%s, cid=%4d, score=%7.2f' % tuple([rank+1]+list(tup))
                     print outstr 
                     file.write(outstr+'\n')
                 print ''
                 file.write('\n\n')
+                if output_img_bit:
+                    save_fname = os.path.join(expt_dpath, 'sim=%07.2f-qcid=%d.png' % (maxsim, qcid))
+                    em.hs.dm.show_query(res)
+                    em.hs.dm.save_fig(save_fname)
 
     def run_singleton_queries(em):
         '''Quick experiment:

@@ -37,7 +37,7 @@ class AlgorithmManager(AbstractManager):
         am.algo_prefs.preproc.sqrt_num_pxls           = Pref(700)
         am.algo_prefs.preproc.autocontrast_bit        = Pref(False,hidden=True)
         am.algo_prefs.preproc.bilateral_filt_bit      = Pref(False)
-        am.algo_prefs.preproc.histeq_bit              = Pref(False)
+        am.algo_prefs.preproc.histeq_bit              = Pref(True)
         am.algo_prefs.preproc.contrast_stretch_bit    = Pref(False)
         am.algo_prefs.preproc.adapt_histeq_bit        = Pref(False)
         # --- Chip Representation ---

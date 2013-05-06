@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 #TODO: Find a way to make this ugly code nice
-from hotspotter.HotSpotterAPI import HotSpotterAPI
 #-------------------------------------------
 # Figure out which environment we are in
 # and set assocated preferences
@@ -16,6 +15,7 @@ if not in_qtc_bit:
     matplotlib.use('Qt4Agg')
 
 
+from hotspotter.HotSpotterAPI import HotSpotterAPI
 from PyQt4.Qt import QApplication, QEventLoop
 from hotspotter.Facade import Facade
 from hotspotter.other.logger import logmsg, hsl

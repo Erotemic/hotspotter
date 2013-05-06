@@ -187,7 +187,7 @@ class QueryManager(AbstractManager):
                 #* xy_thresh2   = %r * (chip diagonal length) 
                 #* theta_thresh = %r (orientation)
                 #* sigma_thresh = %r (scale)''' % (num_m, xy_thresh2, theta_thresh, sigma_thresh))
-                inliers = ransac(fpts1_match, fpts2_match, xy_thresh2)
+                inliers = ransac(fpts1_match, fpts2_match, xy_thresh2, None) #sigma_thresh
                 # Remove the scores of chip pairs which generate RANSAC errors
                 if inliers is None:
                     cx2_fs[tcx][:] = -2 # -2 is the Degenerate Homography Code

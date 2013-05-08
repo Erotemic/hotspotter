@@ -1,0 +1,27 @@
+# List of tasks which need completion
+# Comma separated values: 
+# Priority 0 is the highest, Priority 5 is the lowest.
+#__________________________________________________
+# Priority|     Date|        Assigned |        Task
+#--------------------------------------------------
+#   (0-5) | yy/mm/dd|  developer_name |         ...
+#--------------------------------------------------
+        0 | 13/05/08|            ____ |  Weak Geometric Constraints
+        0 | 13/05/08|            ____ |  LO-RANSAC
+        0 | 13/05/08|            ____ |  FREAK
+        0 | 13/05/08|            ____ |  Detector
+        0 | 13/05/08|            ____ |  Segmentation
+
+        5 | 13/05/08|            ____ |  GPU? 
+        5 | 13/05/08|            ____ |  Feature Reduction 
+        5 | 13/05/08|            ____ |  SIFT Zebraness Measure NNet / SVM
+        5 | 13/05/08|            ____ |  Perdoch Quantized Keypoints / Precomputed transformations
+
+ * Hamming 
+ * Soft Assignment 
+ * Quantization / Bag-of-Words (Half In Already)
+ * TFIDF
+ * Learned TFIDF 
+
+# List of tasks which have been accomplished
+

@@ -337,26 +337,7 @@ class Facade(QObject):
         print nm.nx2_info(lbls=nlbls)
 
     def print_database_stats(fac):
-        if fac.hs.data_loaded_bit:
-            print( '''
-        Database Directory = %s
-        #Chips = %d
-        #Images = %d
-        #Names = %d
-            ''' % (fac.hs.db_dpath, fac.hs.cm.num_c, fac.hs.gm.num_g, fac.hs.nm.num_n))
-        else: 
-            print '''
-        No database has been selected.
-
-        * Use the open_database in the IPython window
-        OR 
-        * In the GUI select File->Open Database
-
-        Valid databases are: 
-            a HotSpotter Database Folder
-            a StripeSpotter Database Folder
-            or an empty folder for a new database
-            '''
+        print( fac.hs.get_database_stat_str() )
 
     def print_selected(fac):
         uim = fac.hs.uim

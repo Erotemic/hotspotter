@@ -249,17 +249,8 @@ class UIManager(QObject):
         uim.populateResultTblSignal.emit(col_headers, col_editable, row_list, data_list)
 
     def populate_algo_settings(uim):
-        hs = uim.hs
-        dm, am = hs.get_managers('dm','am')
-        if uim.all_pref != None: 
-            raise Exception('Youve already built the pref tree')
-        logdbg('Populating the Preference Tree Sending Signal')
-        uim.all_pref = Pref()
-        uim.all_pref.algo_prefs = am.algo_prefs
-        uim.all_pref.core_prefs = hs.core_prefs
-        uim.all_pref.ui_prefs   = uim.ui_prefs
-        uim.all_pref.draw_prefs = dm.draw_prefs
-        uim.populatePrefTreeSignal.emit(uim.all_pref)
+        logdbg('Populating the Preference Tree... Sending Signal')
+        uim.populatePrefTreeSignal.emit(uim.hs.all_pref)
 
     def set_fignum(uim, fignum):
         if uim.hsgui != None:

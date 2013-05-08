@@ -20,8 +20,6 @@ class ExperimentManager(AbstractManager):
         for res in enumerate(em.cx2_res):
             pass
 
-
-
     def run_experiment(em):
         iom = em.hs.iom
         em.run_singleton_queries()
@@ -76,41 +74,100 @@ class ExperimentManager(AbstractManager):
 
 
     def list_matches(em):
+        em.quick_experiment(em.get_expt_suffix())
+
+    def quick_experiment(em, expt_name=''):
         '''Quick experiment:
            Query each chip with a duplicate against whole database
            Do not remove anyone from ANN matching'''
         import os
-        output_img_bit = True
+        logmsg('Running Quick Experiment: '+expt_name)
         hs = em.hs
-        cm, vm, qm, iom = hs.get_managers('cm','vm', 'qm', 'iom')
-        logmsg('Running List Matches Experiment')
-        vm.build_model()
-        expt_dpath = iom.get_temp_fpath('expt.'+em.get_expt_suffix())
-        txt_match_fpath = os.path.join(expt_dpath,'/match_list.txt')
-        try:
-            os.makedirs(expt_dpath)
-        except Exception:
-            pass
-        with open(txt_match_fpath, 'a') as file:
+        am, cm, vm, qm, iom, dm = hs.get_managers('am', 'cm','vm', 'qm', 'iom', 'dm')
+        with_images   = True
+        with_ellipses = True
+        with_points   = True
+        with_full_results = False
+        with_ellipse_and_points  = False
+        # Create an Experiment Directory in .hs_internals/computed
+        timestamp  = iom.get_timestamp()
+        expt_dpath = iom.ensure_computed_directory('_'.join(['expt',expt_name,timestamp]))
+        expt_img_dpath = iom.ensure_directory(os.path.join(expt_dpath, 'result_images'))
+        expt_rr_dpath = iom.ensure_directory(os.path.join(expt_dpath, 'raw_results'))
+
+
+        # Write Algorithm Settings to the file
+        algo_prefs_text = am.get_algo_name('all')
+        algo_prefs_fpath = os.path.join(expt_dpath, 'algo_prefs.txt')
+        iom.write(algo_prefs_fpath, algo_prefs_text)
+        
+        vm.build_model() # Defaults to building model of all
+
+        prev_ell = dm.draw_prefs.ellipse_bit
+        prev_pts = dm.draw_prefs.points_bit
+
+        dm.fignum = 1
+
+        # Create Matches File To Append to
+        with open(os.path.join(expt_dpath,'matches.txt'), 'a') as file:
             for cx in iter(cm.get_valid_cxs()):
+                # Preform Query
                 res = qm.cx2_res(cx)
+                # Get Query Info
                 qcid, gname = cm.cx2_(res.rr.qcx, 'cid', 'gname')
+                # Get Result Info
                 (tcid , tgname  , tscore ) = res.tcid2_('cid','gname','score')
+                # Print Query Info
                 logmsg('---QUERY---')
                 outstr = 'QUERY,    gname=%s, cid=%4d' % (gname, qcid)
                 print outstr 
                 file.write(outstr+'\n')
-                maxsim = tscore[0]
+                # Print Result Info
+                maxsim = tscore[0] # Best Score
                 for (rank, tup) in enumerate(zip(*[x.tolist() for x in (tgname, tcid, tscore )])):
                     outstr = '  rank=%d, gname=%s, cid=%4d, score=%7.2f' % tuple([rank+1]+list(tup))
                     print outstr 
                     file.write(outstr+'\n')
                 print ''
                 file.write('\n\n')
-                if output_img_bit:
-                    save_fname = os.path.join(expt_dpath, 'sim=%07.2f-qcid=%d.png' % (maxsim, qcid))
-                    em.hs.dm.show_query(res)
-                    em.hs.dm.save_fig(save_fname)
+                # Output Images
+                query_name = 'sim=%07.2f-qcid=%d.png' % (maxsim, qcid)
+                if with_full_results:
+                    #import shelve
+                    #shelve.open(os.path.join(expt_rr_dpath, 'rr_'+query_name+'.shelf')
+                    #import cPickle
+                    #rr = res.rr
+                    #cPickle.dump(, rr)
+                    pass
+                if with_images:
+                    dm.draw_prefs.ellipse_bit = False
+                    dm.draw_prefs.points_bit  = False
+                    dm.draw_prefs.bbox_bit = False
+                    dm.show_query(res)
+                    dm.save_fig(os.path.join(expt_img_dpath, 'img_'+query_name))
+                    if with_ellipses:
+                        dm.draw_prefs.ellipse_bit = True
+                        dm.draw_prefs.points_bit  = False
+                        dm.show_query(res)
+                        dm.save_fig(os.path.join(expt_img_dpath, 'ellipse_'+query_name))
+                        
+                    if with_points:
+                        dm.draw_prefs.ellipse_bit = False
+                        dm.draw_prefs.points_bit  = True
+                        dm.show_query(res)
+                        dm.save_fig(os.path.join(expt_img_dpath, 'point_'+query_name))
+
+                    if with_ellipse_and_points:
+                        dm.draw_prefs.ellipse_bit = True
+                        dm.draw_prefs.points_bit  = True
+                        dm.show_query(res)
+                        dm.save_fig(os.path.join(expt_img_dpath, 'both_'+query_name))
+                        
+        logmsg('Finished Quick Experiment: '+expt_name)
+        timestamp  = iom.get_timestamp()
+        iom.write(os.path.join(expt_dpath, 'Finished_'+str(timestamp)), timestamp+'\n'+em.hs.get_database_stat_str())
+        prev_ell = dm.draw_prefs.ellipse_bit
+        prev_pts = dm.draw_prefs.points_bit
 
     def run_singleton_queries(em):
         '''Quick experiment:

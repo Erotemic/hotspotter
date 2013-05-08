@@ -28,8 +28,6 @@ def platexec(exe_fpath):
     if sys.platform == 'darwin':
         return '"'+safepath(exe_fpath)+'.mac"'
 
-def safepath(xpath):
-    return os.path.normpath(xpath)
     #toreturn = os.path.normpath(path).replace("'","").replace('"','')
     #if quotes_bit:
     #   toreturn = '"'+toreturn+'"'

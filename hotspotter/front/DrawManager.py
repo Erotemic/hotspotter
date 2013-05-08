@@ -72,7 +72,7 @@ class DrawManager(AbstractManager):
         (tcx , tcid , tnid , tname , tscore ) = res.tcid2_(*dynargs+('score',))
         # Titles of the Plot
         qtitle = 'name: %s\nQuery cid=%d, nid=%d' % (qname, qcid, qnid)
-        ttile = ['name: %s\nscore=%.2f' % (name_, score_) for name_, score_ in zip(tname, tscore)]
+        ttile = ['cid=%d, name: %s\nscore=%.2f' % (cid_, name_, score_) for cid_, name_, score_ in zip(tcid, tname, tscore)]
         title_list = [qtitle] + ttile
         if dm.draw_prefs.use_thumbnails is True:
             pass

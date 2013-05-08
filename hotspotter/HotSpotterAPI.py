@@ -37,7 +37,11 @@ import os.path
 class HotSpotterAPI(AbstractPrintable):
 
     def init_preferences(hs, default_bit=False):
+        'All classe with preferences have an init_preference function'
+        'TODO: Make a general way to automatically have this function in ConcretePrintable.Pref'
         iom = hs.iom
+        # Create a Preference Object With a Save Path
+        # Pref is a special class. __setattrib__ is overridden
         if hs.core_prefs == None:
             hs.core_prefs = Pref(fpath=iom.get_prefs_fpath('core_prefs'), hidden=True)
         hs.core_prefs.database_dpath = None
@@ -46,6 +50,7 @@ class HotSpotterAPI(AbstractPrintable):
             hs.core_prefs.load()
 
     def show_chips(hs, cid_list, titles=[], save_fpath=None, fignum=1):
+        'Displays a chip or list of chips'
         cm = hs.cm
         hs.dm.fignum = fignum #TODO Set Fignum safer
         cx_list   = cm.cid2_cx[cid_list]
@@ -124,6 +129,27 @@ class HotSpotterAPI(AbstractPrintable):
         else: 
             logdbg('autoload is false.')
 
+    def get_database_stat_str(hs):
+        if hs.data_loaded_bit:
+            return ( '''
+        Database Directory = %s
+        #Chips = %d
+        #Images = %d
+        #Names = %d
+            ''' % (hs.db_dpath, hs.cm.num_c, hs.gm.num_g, hs.nm.num_n))
+        else: 
+            return '''
+        No database has been selected.
+
+        * Use the open_database in the IPython window
+        OR 
+        * In the GUI select File->Open Database
+
+        Valid databases are: 
+            a HotSpotter Database Folder
+            a StripeSpotter Database Folder
+            or an empty folder for a new database
+            '''
     def __init__(hs, db_dpath=None, autoload=True, delete_home_dir_bit=False):
         super( HotSpotterAPI, hs ).__init__(['cm','gm','nm','em','qm','dm','am','vm','iom','uim'])
         #
@@ -135,9 +161,17 @@ class HotSpotterAPI(AbstractPrintable):
         if delete_home_dir_bit:
             # Developer hack to delete the home dir when big things change
             hs.delete_home_pref_directory()
+        # CLASSES WITH PREFERENCES
         hs.uim = UIManager(hs) # Interface to the QtGui
         hs.dm = DrawManager(hs) # Matplotlib interface. Draws on a GUI
         hs.am = AlgorithmManager(hs) # Settings and Standalone algos
+        hs.init_preferences()
+        hs.all_pref = Pref()
+        hs.all_pref.algo_prefs = hs.am.algo_prefs
+        hs.all_pref.core_prefs = hs.core_prefs
+        hs.all_pref.ui_prefs   = hs.uim.ui_prefs
+        hs.all_pref.draw_prefs = hs.dm.draw_prefs
+
         # Data Managers
         hs.vm = None # Vocab Manager
         hs.qm = None # Vocab Manager
@@ -146,7 +180,6 @@ class HotSpotterAPI(AbstractPrintable):
         hs.cm = None # Instance Manager
         hs.nm = None # Name Manager
         #m
-        hs.init_preferences()
         if db_dpath != None:
             hs.restart(db_dpath, autoload, save_pref_bit=False)
         # --- 

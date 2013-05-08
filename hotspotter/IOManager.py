@@ -20,12 +20,12 @@ import sys
 import tpl
 import numpy as np
 from pylab import find
-from os.path import expanduser, join, relpath
+from os.path import expanduser, join, relpath, normpath
 from other.AbstractPrintable import AbstractManager
 from other.ConcretePrintable import DynStruct
 from other.helpers import filecheck, dircheck
 from other.logger import logmsg, logwarn, logdbg, logerr, logio
-from other.crossplat import safepath, platexec
+from other.crossplat import platexec
 
 #----------------
 def checkdir_decorator(method_fn):
@@ -76,7 +76,7 @@ class IOManager(AbstractManager):
         super( IOManager, iom ).__init__( hs )        
         logdbg('Creating IOManager')
         iom.hs = hs
-        iom.settings_dpath = safepath(join(expanduser('~'),'.hotspotter'))
+        iom.settings_dpath = normpath(join(expanduser('~'),'.hotspotter'))
         iom.internal_dname = '.hs_internals';
         iom.dummy_delete = False #Dont actually delete things
 
@@ -114,13 +114,35 @@ class IOManager(AbstractManager):
     def  get_temp_dpath(iom):
         return join(iom.get_computed_dpath(), 'temp')
     def  get_temp_fpath(iom, tmp_fname):
-        return safepath(join(iom.get_temp_dpath(), tmp_fname))
+        return normpath(join(iom.get_temp_dpath(), tmp_fname))
     def  get_user_fpath(iom, fname):
-        return safepath(join(iom.hs.db_dpath, fname))
+        return normpath(join(iom.hs.db_dpath, fname))
     def  write_to_user_fpath(iom, fname, to_write):
         user_fpath = iom.get_user_fpath(fname)
         iom.logwrite(user_fpath, to_write)
+
+    # DEPRICATED: TODO: REMOVE
     def logwrite(iom, fpath, to_write):
+        iom.write(fpath, to_write) 
+
+    def get_timestamp(iom):
+        'Year-Month-Day_Hour-Minute'
+        import datetime
+        return datetime.datetime.now().strftime('%Y-%m-%d_%H:%M')
+
+    @checkdir_decorator
+    def ensure_directory(iom, dpath):
+        'Makes directory if it does not exist. Returns path to directory'
+        return dpath
+
+    @checkdir_decorator
+    def ensure_computed_directory(iom, dname):
+        'Input: Path relative to the computed directory'
+        'Ensures directory exists in the database\'s computed directory.'
+        'Output: Returns absolute path'
+        return os.path.join(iom.get_computed_dpath(), dname)
+
+    def write(iom, fpath, to_write):
         logmsg('Writing to: %s' % fpath)
         print 'Writing String:\n%s' % to_write
         try:
@@ -132,13 +154,13 @@ class IOManager(AbstractManager):
             print 'Failed to write to %s ' % fpath
     # --- Main Saved Files
     def  get_image_table_fpath(iom):
-        return safepath(join(iom.get_internal_dpath(),'image_table.csv'))
+        return normpath(join(iom.get_internal_dpath(),'image_table.csv'))
     def  get_chip_table_fpath(iom):
-        return safepath(join(iom.get_internal_dpath(),'chip_table.csv'))
+        return normpath(join(iom.get_internal_dpath(),'chip_table.csv'))
     def  get_name_table_fpath(iom):
-        return safepath(join(iom.get_internal_dpath(),'name_table.csv'))
+        return normpath(join(iom.get_internal_dpath(),'name_table.csv'))
     def  get_flat_table_fpath(iom):
-        return safepath(join(iom.hs.db_dpath,'flat_table.csv'))
+        return normpath(join(iom.hs.db_dpath,'flat_table.csv'))
     # --- Executable Filenames
     def  get_hesaff_exec(iom):
         return platexec(join(iom.get_tpl_lib_dir(), 'hesaff'))
@@ -153,36 +175,36 @@ class IOManager(AbstractManager):
     def  get_chiprep_fpath(iom, cid):
         chiprep_fname = iom.get_chip_prefix\
                 (cid, ['preproc', 'chiprep']) + '_feats.npz' 
-        return safepath(join(iom.get_chiprep_dpath(), chiprep_fname))
+        return normpath(join(iom.get_chiprep_dpath(), chiprep_fname))
     # Images thumb and full
     def  get_img_thumb_fpath(iom, gname):
-        return safepath(join(iom.get_thumb_dpath('images'), gname))
+        return normpath(join(iom.get_thumb_dpath('images'), gname))
     def  get_img_fpath(iom, gname):
-        return safepath(join(iom.get_img_dpath(), gname))
+        return normpath(join(iom.get_img_dpath(), gname))
     # Chips thumb and full
     def  get_chip_thumb_fpath(iom, cid):
         chip_fname = iom.get_chip_prefix(cid, ['preproc'])+'_chip.jpg' 
-        return safepath(join(iom.get_thumb_dpath('chip'), chip_fname))
+        return normpath(join(iom.get_thumb_dpath('chip'), chip_fname))
     def  get_chip_fpath(iom, cid):
         chip_fname = iom.get_chip_prefix(cid, ['preproc'])+'_chip.png' 
-        return safepath(join(iom.get_chip_dpath(),chip_fname))
+        return normpath(join(iom.get_chip_dpath(),chip_fname))
     # 
     def get_model_fpath(iom):
         am, vm = iom.hs.get_managers('am','vm')
         algo_suffix = am.get_algo_suffix(depends=['preproc','chiprep','model'])
         samp_suffix = vm.get_samp_suffix()
         model_fname = 'model'+samp_suffix+algo_suffix+'.npz'
-        return safepath(join(iom.get_model_dpath(),model_fname))
+        return normpath(join(iom.get_model_dpath(),model_fname))
     def get_flann_index_fpath(iom):
         am, vm = iom.hs.get_managers('am','vm')
         algo_suffix = am.get_algo_suffix(['preproc','chiprep','model'])
         samp_suffix = vm.get_samp_suffix()
         flann_index_fname = 'index.%s.%s.flann' % (algo_suffix, samp_suffix)
-        return safepath(join(iom.get_model_dpath(), flann_index_fname))
+        return normpath(join(iom.get_model_dpath(), flann_index_fname))
     # --- Indexes 
     def get_prefs_fpath(iom, prefs_name):
         dircheck(iom.settings_dpath)
-        return safepath(join(iom.settings_dpath,  prefs_name+'.txt'))
+        return normpath(join(iom.settings_dpath,  prefs_name+'.txt'))
 
     def get_dataset_fpath(iom, db_name=None):
         if sys.platform == 'win32':
@@ -386,12 +408,12 @@ class IOManager(AbstractManager):
                     join(iom.hs.db_dpath,'data','..','data','..')]
         for adir in iter(alt_dirs):
             for aname in iter(alt_names):
-                alt_fpath = safepath(join(adir,aname))
+                alt_fpath = normpath(join(adir,aname))
                 logdbg('Checking: '+alt_fpath)
                 if filecheck(alt_fpath):
                     logwarn('Using Alternative Datatable '+alt_fpath)
                     timestamp = str(time.time())
-                    backup_fpath = safepath(alt_fpath+'.'+timestamp+'.bak')
+                    backup_fpath = normpath(alt_fpath+'.'+timestamp+'.bak')
                     logwarn('Creating Backup: '+backup_fpath)
                     shutil.copyfile(alt_fpath, backup_fpath)
                     return alt_fpath

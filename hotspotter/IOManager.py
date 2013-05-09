@@ -128,7 +128,7 @@ class IOManager(AbstractManager):
     def get_timestamp(iom):
         'Year-Month-Day_Hour-Minute'
         import datetime
-        return datetime.datetime.now().strftime('%Y-%m-%d_%H:%M')
+        return datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
 
     @checkdir_decorator
     def ensure_directory(iom, dpath):

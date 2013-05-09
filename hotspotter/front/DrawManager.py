@@ -61,18 +61,22 @@ class DrawManager(AbstractManager):
         dm.draw_chiprep2(cx, axi=0)
         dm.end_draw()
     # ---
-    def show_query(dm, res):
+    def show_query(dm, res, titleargs=None):
         cm = dm.hs.cm
         # Make sure draw is valid
         if res is None: dm.show_splash(); return
         # Get Chip Properties
-        dynargs =\
-        ('cx', 'cid', 'nid', 'name')
-        (qcx , qcid , qnid , qname ) =  res.qcid2_(*dynargs)
-        (tcx , tcid , tnid , tname , tscore ) = res.tcid2_(*dynargs+('score',))
+
+        titleargs =\
+        ('cx', 'cid', 'nid', 'name', 'gname')
+        ( qcx, qcid , qnid , qname , qgname ) = res.qcid2_(*titleargs)
+        ( tcx, tcid , tnid , tname , tgname ) = res.tcid2_(*titleargs)
+
+        (tcx, tscore, ) = res.tcid2_('cx','score')
         # Titles of the Plot
-        qtitle = 'name: %s\nQuery cid=%d, nid=%d' % (qname, qcid, qnid)
-        ttile = ['cid=%d, name: %s\nscore=%.2f' % (cid_, name_, score_) for cid_, name_, score_ in zip(tcid, tname, tscore)]
+
+        qtitle = 'gname: %s\nQuery cid=%d, nid=%d' % (qgname, qcid, qnid)
+        ttile = ['cid=%d, gname: %s\nscore=%.2f' % tup for tup in zip(tcid, tgname, tscore)]
         title_list = [qtitle] + ttile
         if dm.draw_prefs.use_thumbnails is True:
             pass

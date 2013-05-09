@@ -8,6 +8,7 @@ from numpy import \
         multiply, transpose, log2, tile, ndarray, int32, uint32
 import numpy as np
 from numpy import spacing as eps
+import pylab as pl
 
 class RawResults(DynStruct):
     def __init__(rr, *args):
@@ -266,14 +267,47 @@ class QueryResult(AbstractManager):
         super( QueryResult, res ).__init__( hs )
         logdbg('Constructing Query Result')
         res.rr = rr
-        res.num_top = res.hs.am.algo_prefs.results.num_top
+        #res.num_top = res.hs.am.algo_prefs.results.num_top
+        # Return all matches higher than this threshold
+        res.top_thresh = 15
+        # And return at least this many 
+        res.num_top_min = 0
+        # And add extra runners up for context
+        res.num_extra_return = 2
         res.score_type = res.hs.am.algo_prefs.results.score
         res.self_as_result_bit = res.hs.am.algo_prefs.results.self_as_result_bit
 
-    def get_num_top(res):
-        return min(len(res.score()), res.num_top)
-    def top_cx(res): return res.cx_sort()[0:res.get_num_top()]   # Top chips
-    def top_nxcx(res): return map(lambda a: a[0:res.num_top], res.nxcx_sort())    # Top names and chips
+    #def get_num_top(res):
+        #return min(len(res.score()), res.num_top)
+
+    def _get_num_top(res, xsort, score):
+        'Helper function - Finds the number of results above a threshhold plus context'
+        # Find the first top position in reverse order
+        rev_top = (score[xsort]>res.top_thresh)[::-1].argmax()
+        # Flip it to the front of the list if something was found
+        num_top = len(xsort) - rev_top if rev_top > 0 else 0
+        num_top = max(num_top, min(len(score), res.num_top_min))
+        num_top = max(num_top, min(len(score), num_top+res.num_extra_return))
+        return num_top
+
+    # Top chips
+    def top_cx(res): 
+        'Returns a list of the top chip indexes'
+        cx_sort = res.cx_sort()
+        num_top = res._get_num_top(cx_sort, res.score())
+        return cx_sort[0:num_top]
+
+    # Top names and chips
+    def top_nxcx(res): 
+        '''Returns of a tuple containing two lists: 
+            1: List of top name indexes, 2: the chip indexes corresponding to the name'''
+        nx_sort, nx_sort2_cx = res.nxcx_sort()
+        nx_bestcx = np.empty(len(nx_sort2_cx),dtype=np.uint32)
+        for nx, cxs in enumerate(nx_sort2_cx):
+            nx_bestcx[nx] = cxs[0] if np.iterable(cxs) else cxs
+        num_top = res._get_num_top(nx_bestcx, res.score())
+        return (nx_sort[0:num_top], nx_sort2_cx[0:num_top])    
+
     def score(res):
         'returns the cx2_xscore array'
         if    res.score_type == 'cscore': return res.rr.cx2_cscore
@@ -325,6 +359,7 @@ class QueryResult(AbstractManager):
         pass
 
     def result_str(res):#, score=None):
+        # TODO: Move this to experiment output format. and use this instead
         dynargs =\
         ('cid', 'nid', 'name')
         (qcid , qnid , qname ) =  res.qcid2_(*dynargs)

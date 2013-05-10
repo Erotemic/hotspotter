@@ -22,11 +22,11 @@ def view_directory(dname):
 
 def platexec(exe_fpath):
     if sys.platform == 'win32':
-        return '"'+safepath(exe_fpath)+'.exe"'
+        return '"'+os.path.normpath(exe_fpath)+'.exe"'
     if sys.platform == 'linux2':
-        return '"'+safepath(exe_fpath)+'.ln"'
+        return '"'+os.path.normpath(exe_fpath)+'.ln"'
     if sys.platform == 'darwin':
-        return '"'+safepath(exe_fpath)+'.mac"'
+        return '"'+os.path.normpath(exe_fpath)+'.mac"'
 
     #toreturn = os.path.normpath(path).replace("'","").replace('"','')
     #if quotes_bit:

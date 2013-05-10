@@ -1,17 +1,9 @@
 *~
-OpenGLContext.profile
 hotspotter_global_logs.log
 hotspotter_logs*.txt
 '
-HotSpotterIdeas.txt
 *.un
 *.swp
 *.swo
 *.npz
-tmp.py
 *.pyc
-graveyard.py
-*.ppm
-*.sift
-Clutter
-sandbox

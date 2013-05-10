@@ -140,6 +140,7 @@ def execute_syscalls(syscalls):
         os.system(cmd)
 
 def initialize_submodules():
+    # git submodule add git@hyrule.cs.rpi.edu:tpl-hotspotter.git hotspotter/tpl
     execute_syscalls('''
     git submodule add https://github.com/Erotemic/tpl-hotspotter.git hotspotter/tpl
     git submodule update --init

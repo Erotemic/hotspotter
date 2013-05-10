@@ -7,6 +7,11 @@
 #   (0-5) | yy/mm/dd|  developer_name |         ...
 #--------------------------------------------------
         0 | 13/05/08|            ____ |  Save Model to Disk
+        0 | 13/05/08|            ____ |  Autosave to Database Structure
+                                Create a RawVisualModel who's object can be pickled. Same with RawResult, thats broken.
+                                names and CIDs should be saved in filenames. Name manager can probably go away. 
+                                Chips with names, but also names with chips.
+                                Should be able to merge effortlessly into a more industrial quick readable/writable/parallizable databases. 
         0 | 13/05/08|            ____ |  Rework Facade, UIManager, and HotspotterAPI into two classes: an API and a frontend.   
 
         1 | 13/05/08|            ____ |  Create Unit Tests for algorithm parts 

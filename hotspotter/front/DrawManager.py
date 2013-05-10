@@ -75,8 +75,8 @@ class DrawManager(AbstractManager):
         (tcx, tscore, ) = res.tcid2_('cx','score')
         # Titles of the Plot
 
-        qtitle = 'gname: %s\nQuery cid=%d, nid=%d' % (qgname, qcid, qnid)
-        ttile = ['cid=%d, gname: %s\nscore=%.2f' % tup for tup in zip(tcid, tgname, tscore)]
+        qtitle = 'gname: %s\nQUERY cid=%d, nid=%d' % (qgname, qcid, qnid)
+        ttile = ['cid=%d, gname: %s\nrank=%d, score=%.2f' % tup for tup in zip(tcid, tgname, range(1,len(tscore)+1), tscore)]
         title_list = [qtitle] + ttile
         if dm.draw_prefs.use_thumbnails is True:
             pass
@@ -114,7 +114,8 @@ class DrawManager(AbstractManager):
     def __init__(dm, hs):
         super( DrawManager, dm ).__init__( hs )        
         dm.hs      =   hs
-        dm.fignum =    0
+        dm.fignum  =    0
+        dm.dpi     = 100 #72
         dm.draw_prefs = None
         dm.ax_list =   []
         dm.init_preferences()
@@ -123,7 +124,7 @@ class DrawManager(AbstractManager):
         guifig = dm.hs.uim.get_gui_figure()
         if guifig != None and dm.fignum == 0: # Check to see if we have access to the gui
             return guifig
-        fig = figure(num=dm.fignum, figsize=(5,5), dpi=72, facecolor='w', edgecolor='k')
+        fig = figure(num=dm.fignum, figsize=(5,5), dpi=dm.dpi, facecolor='w', edgecolor='k')
         return fig
     # ---
     def annotate_orientation(dm):
@@ -191,8 +192,9 @@ class DrawManager(AbstractManager):
         dm.ax_list     = [None]*num_images
         title_list     = title_list + ['NoTitle']*(num_images-len(title_list))
         # Fit Images into a grid
-        nr = int( ceil( float(num_images)/2 ) )
-        nc = 2 if num_images >= 2 else 1
+        max_columns = 3
+        nr = int( ceil( float(num_images)/max_columns) )
+        nc = max_columns if num_images >= max_columns else 1
         #
         gs = gridspec.GridSpec( nr, nc )
         for i in xrange(num_images):
@@ -406,6 +408,7 @@ class DrawManager(AbstractManager):
             comp_rgb.append(.7)
             # Draw Orientation Backwards 
             degrees = -cm.cx2_theta[cx]*180/np.pi
+            if not in_image_bit: degrees = 0
             chip_text =  'name='+name+'\n'+'cid='+str(cid)
             ax.text(cxy[0]+1, cxy[1]+1, chip_text,
                     horizontalalignment='left',

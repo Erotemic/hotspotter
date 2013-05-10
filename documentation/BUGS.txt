@@ -1,0 +1,1 @@
+Preferences does not close when HotSpotterMainWindow Closes

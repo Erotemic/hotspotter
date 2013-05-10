@@ -1,0 +1,66 @@
+# List of tasks which need completion
+# Comma separated values: 
+# Priority 0 is the highest, Priority 5 is the lowest.
+#__________________________________________________
+# Priority|     Date|        Assigned |        Task
+#--------------------------------------------------
+#   (0-5) | yy/mm/dd|  developer_name |         ...
+#--------------------------------------------------
+        0 | 13/05/08|            ____ |  Save Model to Disk
+        0 | 13/05/08|            ____ |  Autosave to Database Structure
+                                Create a RawVisualModel who's object can be pickled. Same with RawResult, thats broken.
+                                names and CIDs should be saved in filenames. Name manager can probably go away. 
+                                Chips with names, but also names with chips.
+                                Should be able to merge effortlessly into a more industrial quick readable/writable/parallizable databases. 
+        0 | 13/05/08|            ____ |  Rework Facade, UIManager, and HotspotterAPI into two classes: an API and a frontend.   
+
+        1 | 13/05/08|            ____ |  Create Unit Tests for algorithm parts 
+        1 | 13/05/08|            ____ |  Create Unit Tests for interface parts 
+        1 | 13/05/08|            ____ |  Finish the creation of the distutils setup.py file, such that it installs on any system without a hitch.
+
+        2 | 13/05/08|            ____ |  Move ConcretePrintable.Pref and helpers to its own File
+        2 | 13/05/08|            ____ |  Have ConcretePrintable.Pref's Qt Model Display ComboBoxes for choices / Other Widgets
+
+        3 | 13/05/08|            ____ |  Move Chip and Image and Name Manager's loading mechanism into their own files. 
+        3 | 13/05/08|            ____ |  Rework DataManager and its children Chip and Image and Name Manager to reduce code redudency. (x2_info, all the [cng]x2_ functions)
+
+        4 | 13/05/08|            ____ |  Nightly Profiling and (Algorithm/System/Install) Testing. Multiple Platforms. 
+
+        4 | 13/05/08|            ____ |  Extend DataManager so it has an interface to a QtModel for data display. Right now data is displayed with an ItemBased Model in UIManager. This should change so the model is independent of the display choice. Allow for display in Tree or Table view. 
+
+        4 | 13/05/08|            ____ |  Extend DataManager for arbitrary metadata storage.
+
+        4 | 13/05/08|            ____ |  Finish implementation of thumbnails.
+
+        4 | 13/05/08|            ____ |  Have an option to not copy image when adding managed images. (Specifically for merging databases)
+
+        4 | 13/05/08|            ____ |  Develop easy way to select a specific chip in images with multiple chips
+
+        4 | 13/05/08|            ____ |  Right click context menus
+
+        5 | 13/05/08|            ____ |  Switch to Pure Python Qt Guis. Lose the ui files.
+
+        5 | 13/05/08|            ____ |  Have option to draw in not matplotlib for speed.
+
+        5 | 13/05/08|            ____ |  Easy docking / undocking of widgets.
+
+        5 | 13/05/08|            ____ |  Better Layout / Remember Layout on reload.
+
+        5 | 13/05/08|            ____ |  More Robust Loading.
+
+        5 | 13/05/08|            ____ |  Add a drag and drop for a new image to identify. 
+
+        5 | 13/05/08|            ____ |  Add a batch query user mode.
+
+        5 | 13/05/08|            ____ |  Add a batch ROI user mode. (sort of already there)
+
+        5 | 13/05/08|            ____ |  Add an ROI detection input
+
+        5 | 13/05/08|            ____ |  Sample Sets are handled by Visual Model. There is a better way to do these. 
+        5 | 13/05/08|            ____ |  Finish VisualModel.train_model2
+
+
+
+
+# List of tasks which have been accomplished
+

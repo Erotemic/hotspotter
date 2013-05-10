@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 #TODO: Find a way to make this ugly code nice
-
 #-------------------------------------------
 # Figure out which environment we are in
 # and set assocated preferences
@@ -16,9 +15,10 @@ if not in_qtc_bit:
     matplotlib.use('Qt4Agg')
 
 
+from hotspotter.HotSpotterAPI import HotSpotterAPI
 from PyQt4.Qt import QApplication, QEventLoop
-from front.Facade import Facade
-from other.logger import logmsg, hsl
+from hotspotter.Facade import Facade
+from hotspotter.other.logger import logmsg, hsl
 import argparse
 import inspect
 import os.path
@@ -26,8 +26,11 @@ import sys
 
 try:
     # Append the tpl lib to your path
-    import tpl
-    sys.path.append(os.path.join(os.path.dirname(tpl.__file__), 'tpl', sys.platform,'lib'))
+    import hotspotter
+    TPL_LIB_DIR = os.path.join(os.path.dirname(hotspotter.__file__), 'tpl', sys.platform,'lib')
+    BOOST_LIB_DIR = r'C:\boost_1_53_0\stage\lib'
+    sys.path.append(TPL_LIB_DIR)
+    sys.path.append(BOOST_LIB_DIR)
 except Exception: 
     print '''You must download hotspotter\'s 3rd party libraries before you can run it. 
     git clone https://github.com/Erotemic:tpl-hotspotter.git tpl'''
@@ -44,6 +47,8 @@ parser.add_argument('--cmd',                   dest='cmd_bit',   help='Forces co
 parser.add_argument('-r', '--run-experiments', dest='runexpt_bit',  help='Runs the experiments', **def_off)
 parser.add_argument('-g', '--gui-off',         dest='gui_bit',      help='Runs HotSpotter in command line mode', **def_on)
 parser.add_argument('-a', '--autoload-off',    dest='autoload_bit', help='Starts HotSpotter without loading a database', **def_on)
+parser.add_argument('-dp', '--delete-preferences', dest='delpref_bit', help='Deletes the HotSpotter preferences in ~/.hotspotter', **def_off)
+
 
 args = parser.parse_args()
 
@@ -53,11 +58,16 @@ if args.logall_bit:
 if not in_qtc_bit:
     app = QApplication(sys.argv)
 
+# TODO: Remove the Facade, Have only the HotSpotterAPI
 # Start HotSpotter via the Facade
 fac = Facade(use_gui=args.gui_bit, autoload=args.autoload_bit)
+
+if args.delpref_bit:
+    fac.hs.delete_preferences()
+
 for (name, value) in inspect.getmembers(Facade, predicate=inspect.ismethod):
     if name.find('_') != 0:
-        exec('def '+name+'(*args, **kdgs): fac.'+name+'(*args, **kdgs)')
+        exec('def '+name+'(*args, **kwargs): fac.'+name+'(*args, **kwargs)')
 # Defined Aliases
 stat, status   = [lambda          : fac.print_status()]*2
 removec,       = [lambda          : fac.remove_cid()]
@@ -69,11 +79,13 @@ cview,         = [lambda          : fac.change_view('chip_view')]
 # Add developer namespace
 from PyQt4.Qt   import \
         QApplication, QMainWindow, QMessageBox, QAbstractItemView, QObject
-from back.QueryManager import RawResults, QueryResult
+from hotspotter.QueryManager import RawResults, QueryResult
 #from PyQt4.QtCore import SIGNAL, Qt, pyqtSlot, pyqtSignal
 from PIL import Image
 import types
-from other.ConcretePrintable import *
+from hotspotter.other.ConcretePrintable import *
+from hotspotter.other.helpers import *
+
 # Get commonly used variables for command line usage
 hs = fac.hs
 uim = hs.uim

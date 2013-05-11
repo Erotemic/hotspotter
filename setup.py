@@ -121,6 +121,7 @@ def normalize_str(instr):
     return outstr
 
 def clean_git_config():
+    'Code for removing old submodules from your config'
     import re
     print "Cleaning Git Config"
     config_fpath = '.git/config'
@@ -153,8 +154,7 @@ def setup_submodules():
 def fix_tpl_permissions():
     execute_syscalls('''
     chmod +x hotspotter/tpl/lib/darwin/*.mac
-    chmod +x hotspotter/tpl/lib/linux2/*.ln
-    chmod +x hotspotter/scripts/run-*''')
+    chmod +x hotspotter/tpl/lib/linux2/*.ln''')
 
 def compile_widgets():
     import os

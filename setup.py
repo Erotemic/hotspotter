@@ -139,10 +139,13 @@ def execute_syscalls(syscalls):
         print "  "+cmd
         os.system(cmd)
 
-def initialize_submodules():
-    # git submodule add git@hyrule.cs.rpi.edu:tpl-hotspotter.git hotspotter/tpl
+def setup_submodules():
+    server  = 'https://github.com/Erotemic/'
+    # User Private Server if available
+    if git_fetch_url() == 'git@hyrule.cs.rpi.edu:hotspotter.git':
+        server = 'git@hyrule.cs.rpi.edu:'
     execute_syscalls('''
-    git submodule add https://github.com/Erotemic/tpl-hotspotter.git hotspotter/tpl
+    git submodule add '''+server+'''tpl-hotspotter.git hotspotter/tpl
     git submodule update --init
     git submodule init 
     git submodule update''')
@@ -175,41 +178,31 @@ def fix_issues():
     os.chdir(get_rootdir())
     #python main.py --delete-preferences
     clean_git_config()
-    initialize_submodules()
-    fix_tpl_permissions()
-    #export hs_git_host=git@hyrule.cs.rpi.edu:
-    #export hs_git_host=https://github.com/Erotemic/
-    #export hs_tpl_repo=tpl-hotspotter
-    #git submodule init
-    #git submodule add $hs_git_host$hs_tpl_repo.git ./tpl
-    # To remove submodules
-    #    export submodulepath=tpl
-    #    git config -f .git/config --remove-section submodule.$submodulepath
-    #    git config -f .gitmodules --remove-section submodule.$submodulepath
-    #    git rm --cached $submodulepath
-    #    rm -rf $submodulepath
-    #    rm -rf .git/modules/$submodulepath
-
-def setup_mingw_ext():
-
-    envvar_append('CMAKE_INCLUDE_PATH', 'C:/boost_1_53_0:$CMAKE_INCLUDE_PATH')
-    envvar_append('CMAKE_LIBRARY_PATH', 'C:/boost_1_53_0/stage/lib:$CMAKE_INCLUDE_PATH')
-
-    add_to_path(r'C:\MinGW\libexec\gcc\mingw32\4.6.2')
-    add_to_path(r'C:\MinGW\bin')
-    add_to_path(r'C:\MinGW\msys\1.0\bin')
-    sed(search='-mno-cygwin', replace='', fpath='C:\Python27\Lib\distutils\cygwinccompiler.py')
-
-def setup_windows():
     setup_submodules()
+    fix_tpl_permissions()
 
-def setup_submodules():
-    private = 'git@hyrule.cs.rpi.edu:'
-    public = 'https://github.com/Erotemic/'
-    if not os.path.exists('hotspotter/tpl'):
-        os.system('git submodule add '+private+'tpl-hotspotter.git hotspotter/tpl')
+#export hs_git_host=git@hyrule.cs.rpi.edu:
+#export hs_git_host=https://github.com/Erotemic/
+#export hs_tpl_repo=tpl-hotspotter
+#git submodule init
+#git submodule add $hs_git_host$hs_tpl_repo.git ./tpl
+# To remove submodules
+#    export submodulepath=tpl
+#    git config -f .git/config --remove-section submodule.$submodulepath
+#    git config -f .gitmodules --remove-section submodule.$submodulepath
+#    git rm --cached $submodulepath
+#    rm -rf $submodulepath
+#    rm -rf .git/modules/$submodulepath
+#def setup_mingw_ext():
 
-    os.system('git submodule update --init')
+    #envvar_append('CMAKE_INCLUDE_PATH', 'C:/boost_1_53_0:$CMAKE_INCLUDE_PATH')
+    #envvar_append('CMAKE_LIBRARY_PATH', 'C:/boost_1_53_0/stage/lib:$CMAKE_INCLUDE_PATH')
+
+    #add_to_path(r'C:\MinGW\libexec\gcc\mingw32\4.6.2')
+    #add_to_path(r'C:\MinGW\bin')
+    #add_to_path(r'C:\MinGW\msys\1.0\bin')
+    #sed(search='-mno-cygwin', replace='', fpath='C:\Python27\Lib\distutils\cygwinccompiler.py')
+
 
 
 # Copy boostpython dll to site-packages
@@ -311,30 +304,57 @@ def find_packages(where='.', exclude=()):
     return out
 
 
+# josharian: I doubt that the minimal environment stuff here is
+# still needed; it is inherited. This was originally
+# an hg_version function borrowed from NumPy's setup.py.
+# I'm leaving it in for now because I don't have enough other
+# environments to test in to be confident that it is safe to remove.
+def _minimal_ext_cmd(cmd):
+    import subprocess
+    # construct minimal environment
+    env = {}
+    for k in ['SYSTEMROOT', 'PATH', 'PYTHONPATH']:
+        v = os.environ.get(k)
+        if v is not None:
+            env[k] = v
+    # LANGUAGE is used on win32
+    env['LANGUAGE'] = 'C'
+    env['LANG'] = 'C'
+    env['LC_ALL'] = 'C'
+    out = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        env=env
+    ).communicate()[0]
+    return out
+
+def git_fetch_url():
+    ''' Return the git fetch url.'''
+    fetch_url = 'unknown'
+    try:
+        out = _minimal_ext_cmd(['git', 'remote', '-v']).strip().decode('ascii')
+        for item in out.split('\n'):
+            fetch_pos = item.find(' (fetch)')
+            origin_pos = item.find('origin\t')
+            if fetch_pos > -1 and origin_pos > -1:
+               fetch_url  = item[origin_pos+7:fetch_pos]
+    except Exception:
+        fetch_url = "unknown-exception"
+    return fetch_url
+
+def git_branch():
+    ''' Return the current git branch. '''
+    try:
+        out = _minimal_ext_cmd(['git', 'branch'])
+        _branch1 = out.strip().decode('ascii')+'\n'
+        _branch2 = _branch1[_branch1.find('*')+1:]
+        branch   = _branch2[:_branch2.find('\n')].strip()
+    except OSError:
+        branch = "release"
+    return branch
+
 def git_version():
     ''' Return the sha1 of local git HEAD as a string. '''
-    # josharian: I doubt that the minimal environment stuff here is
-    # still needed; it is inherited. This was originally
-    # an hg_version function borrowed from NumPy's setup.py.
-    # I'm leaving it in for now because I don't have enough other
-    # environments to test in to be confident that it is safe to remove.
-    def _minimal_ext_cmd(cmd):
-        # construct minimal environment
-        env = {}
-        for k in ['SYSTEMROOT', 'PATH', 'PYTHONPATH']:
-            v = os.environ.get(k)
-            if v is not None:
-                env[k] = v
-        # LANGUAGE is used on win32
-        env['LANGUAGE'] = 'C'
-        env['LANG'] = 'C'
-        env['LC_ALL'] = 'C'
-        out = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            env=env
-        ).communicate()[0]
-        return out
     try:
         out = _minimal_ext_cmd(['git', 'rev-parse', 'HEAD'])
         git_revision = out.strip().decode('ascii')

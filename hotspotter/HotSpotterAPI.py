@@ -150,7 +150,7 @@ class HotSpotterAPI(AbstractPrintable):
             a StripeSpotter Database Folder
             or an empty folder for a new database
             '''
-    def __init__(hs, db_dpath=None, autoload=True, delete_home_dir_bit=False):
+    def __init__(hs, db_dpath=None, autoload=True, delete_home_dir_bit=False, save_pref_bit=False):
         super( HotSpotterAPI, hs ).__init__(['cm','gm','nm','em','qm','dm','am','vm','iom','uim'])
         #
         hs.db_dpath = None #Database directory.
@@ -181,8 +181,15 @@ class HotSpotterAPI(AbstractPrintable):
         hs.nm = None # Name Manager
         #m
         if db_dpath != None:
-            hs.restart(db_dpath, autoload, save_pref_bit=False)
+            hs.restart(db_dpath, autoload, save_pref_bit=save_pref_bit)
         # --- 
+
+    def save_database(hs):
+        hs.iom.save_tables()
+        hs.core_prefs.save()
+        hs.dm.draw_prefs.save()
+        hs.am.algo_prefs.save()
+        hs.uim.ui_prefs.save()
 
     def merge_database(hs, db_dpath):
         #db_dpath = r'D:\data\work\Lionfish\LF_OPTIMIZADAS_NI_V_E'
@@ -231,6 +238,7 @@ class HotSpotterAPI(AbstractPrintable):
     # --- 
     @func_log
     def add_all_images_recursively(hs, image_list):
+        #TODO: This function was never implemented
         num_add = len(image_list)
         logmsg('Selected '+str(num_add)+' images to import')
         prev_g = hs.gm.num_g
@@ -297,7 +305,7 @@ class HotSpotterAPI(AbstractPrintable):
         logmsg('Adding '+str(len(gx_list))+' rois to empty images')
         for gx in gx_list:
             (gw, gh) = gm.gx2_img_size(gx)
-            cm.add_chip(-1, nm.UNIDEN_NX(), gx, [0, 0, gw, gh])
+            cm.add_chip(-1, nm.UNIDEN_NX(), gx, [0, 0, gw, gh], 0)
     # ---
     @func_log
     def precompute_chips(hs):

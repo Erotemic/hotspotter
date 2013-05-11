@@ -73,14 +73,10 @@ class Facade(QObject):
     @pyqtSlot(name='save_database')
     @func_log
     def save_db(fac):
+        'Saves the database chip, image, and name tables'
         iom, uim = fac.hs.get_managers('iom','uim')
         old_state = uim.update_state('save_database')
-        'Saves the database chip, image, and name tables'
-        fac.hs.iom.save_tables()
-        fac.hs.core_prefs.save()
-        fac.hs.dm.draw_prefs.save()
-        fac.hs.am.algo_prefs.save()
-        fac.hs.uim.ui_prefs.save()
+        fac.hs.save_database()
         uim.update_state(old_state)
     # ---------------
     @pyqtSlot(name='import_images')

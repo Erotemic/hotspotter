@@ -206,12 +206,11 @@ class AlgorithmManager(AbstractManager):
         logdbg('Resized %dx%d to %dx%d' % (rw, rh, cw, ch))
         return outImg
 
-    def preprocess_chip(am, pil_raw):
+    def preprocess_chip(am, pil_filt):
         logdbg('prepocessing')
         # Convert to grayscale
         # raw_chip = cm.cx2_raw_chip(6)
         # --- Resize ---
-        pil_filt = am.resize_chip(pil_raw, am.algo_prefs.preproc.sqrt_num_pxls)
 
         # --- Filters ---
         #if am.algo_prefs.preproc.histeq_bit : 

@@ -123,10 +123,12 @@ class UIManager(QObject):
         logdbg('Updating to State: '+str(new_state)+', from: '+str(old_state))
         if old_state == 'annotate':
             if new_state != 'annotate_done':
-                logerr('Cannot enter new state while selecting an ROI.')
+                uim.state = 'annotate_done'
+                logerr('Cannot enter new state while selecting an ROI. Attempting to recover')
         elif old_state == 'querying':
             if new_state != 'done_querying':
-                logerr('Cannot enter new state while querying')
+                uim.state = 'done_querying'
+                logerr('Cannot enter new state while querying. Attempting to recover')
         uim.state = new_state
         uim.updateStateSignal.emit(new_state)
         return old_state

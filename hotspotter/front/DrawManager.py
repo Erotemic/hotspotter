@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from PIL import Image
 from matplotlib import gridspec
 from matplotlib.collections import PatchCollection
@@ -52,13 +53,15 @@ class DrawManager(AbstractManager):
             dm.draw_chiprep2(cx, axi=0, in_image_bit=True)
         dm.end_draw()
     # ---
-    def show_chip(dm, cx):
+    def show_chip(dm, cx, in_raw_chip=False, **kwargs):
         cm = dm.hs.cm
         cid, name, chip = cm.cx2_(cx, 'cid', 'name', 'chip')
+        if in_raw_chip:
+            chip = np.asarray(cm.cx2_pil_scaled_rotated_color(cx))
         if dm.draw_prefs.use_thumbnails is True:
             pass
         dm.add_images([chip], [name])
-        dm.draw_chiprep2(cx, axi=0)
+        dm.draw_chiprep2(cx, axi=0, **kwargs)
         dm.end_draw()
     # ---
     def show_query(dm, res, titleargs=None):
@@ -233,121 +236,14 @@ class DrawManager(AbstractManager):
         ellipse_collection.set_alpha(alpha)
         ellipse_collection.set_edgecolor(edgecolor)
         return ellipse_collection
-    # ---
-    # DEPRICATED to draw_chiprep2, which is still ugly
-    def draw_chiprep(dm, cx, transData, axi=0, fsel=None,\
-                     qcx=None, qtransData=None, qaxi=None, qfsel=None):
-        ''' draws the instance in chip coordinates'''
-        #TODO: This is pretty ugly. It should be fixed
-        #logdbg('Drawing Chip Representation:')
-        #dbgstr = 'cx=%s\ntransData=%s\naxi=%s\nfsel=%s\nqcx=%s\nqtransData=%s\nqaxi=%s\nqfsel=%s'\
-        #        %(str(cx), str(transData), str(axi), printableVal(fsel),\
-        #          str(qcx), str(qtransData), str(qaxi), printableVal(qfsel))
-        #logdbg(dbgstr)
 
-        # transData - affine transformation to the data you are drawing
-        # axi - the index of the image you are drawing to. (see: add_images)
-        # fsel - select the feature indexes to show
-        # q[things] - relate to the query
-        logdbg('Drawing Chip CX='+str(cx))
-
-        transImg = Affine2D( cm.cx2_transImg(cx) ) 
-        theta = cm.cx2_theta[cx]
-        rot = Affine2D(np.array(([np.cos(theta), -np.sin(theta), 0],
-                        [np.sin(theta),  np.cos(theta), 0],
-                        [            0,              0, 1]), dtype=np.float32))
-        trans_kpts = transImg + rot + transData
-        trans_bbox = transImg + transData
-
-        hs = dm.hs
-        feat_xy_bit  = dm.draw_prefs.points_bit 
-        fpts_ell_bit = dm.draw_prefs.ellipse_bit 
-        bbox_bit     = dm.draw_prefs.bbox_bit 
-        ell_alpha    = dm.draw_prefs.ellipse_alpha
-        if ell_alpha > 1: 
-            ell_alpha = 1.0
-        if ell_alpha < 0:
-            ell_alpha = 0.0
-        colormap     = dm.draw_prefs.colormap
-        try: 
-            map_color   = get_cmap(colormap)(float(axi)/len(dm.ax_list))
-        except Exception:
-            map_color   = get_cmap('hsv')(float(axi)/len(dm.ax_list))
-        if axi == 0:
-            map_color = [map_color[0], map_color[1]+.5, map_color[2], map_color[3]]
-
-        textcolor  = map_color
-
-        cm        = dm.hs.cm
-        ax        = dm.ax_list[axi]
-        # ===
-        force_recomp=False
-        if feat_xy_bit or fpts_ell_bit or qfsel != None:
-            fpts = cm.get_fpts(cx, force_recomp=force_recomp)
-
-            if fsel is None:
-                fsel = range(len(fpts))
-            if fpts_ell_bit and len(fpts) > 0:
-                ells = dm._get_fpt_ell_collection(fpts[fsel,:], transData, ell_alpha, map_color)
-                ax.add_collection(ells)
-            if feat_xy_bit and len(fpts) > 0: 
-                ax.plot(fpts[fsel,0], fpts[fsel,1], 'o',\
-                        markeredgecolor=map_color,\
-                        markerfacecolor=map_color,\
-                        transform=transData,\
-                        markersize=2)
-            if qfsel != None and len(fpts) > 0:
-                # Draw Feature Matches
-                qcolor = get_cmap(colormap)(float(qaxi)/len(dm.ax_list))
-                if qaxi == 0:
-                    qcolor = [qcolor[0], qcolor[1]+.5, qcolor[2], qcolor[3]]
-                qax    = dm.ax_list[qaxi]
-                qfpts  = cm.get_fpts(qcx, force_recomp=force_recomp)
-                if feat_xy_bit:
-                    qxys = qfpts[qfsel,0:2]
-                    qax.plot(qxys[:,0],qxys[:,1],'o', markeredgecolor=map_color, transform=qtransData, markersize=2)
-                if fpts_ell_bit:
-                    qells = dm._get_fpt_ell_collection\
-                            (qfpts[qfsel,:], qtransData, ell_alpha, map_color)
-                    qax.add_collection(qells)
-        # === 
-        if bbox_bit:
-            cxy = (0,0)
-            (cw,ch) = cm.cx2_chip_size(cx)
-            bbox = Rectangle(cxy,cw,ch,transform=transData) 
-            bbox.set_fill(False)
-            bbox.set_edgecolor(map_color)
-            ax.add_patch(bbox)
-
-            cid   = cm.cx2_cid[cx]
-            name  = cm.cx2_name(cx)
-            # Use the complimentary color as the text background
-            _hsv = colorsys.rgb_to_hsv(textcolor[0],textcolor[1],textcolor[2])
-            comp_hsv = [_hsv[0], _hsv[1], .2]
-            #shift_color(_hsv, [0, 0,-.5])
-            comp_rgb = list(colorsys.hsv_to_rgb(comp_hsv[0], comp_hsv[1], comp_hsv[2]))
-            comp_rgb.append(.7)
-
-            # Draw Orientation Backwards 
-            degrees = -cm.cx2_theta[cx]*180/np.pi
-            #chip_text =  'nid='+str(nid)+'\n'+'cid='+str(cid)
-            chip_text =  'name='+name+'\n'+'cid='+str(cid)
-            textcolor = [1,1,1]
-            ax.text(1, 1, chip_text,
-                    horizontalalignment='left',
-                    verticalalignment='top',
-                    transform=transData,
-                    color=textcolor,
-                    rotation=degrees,
-                    backgroundcolor=comp_rgb)
-
-    def draw_chiprep2(dm, cx, axi=0, fsel=None, in_image_bit=False, axi_color=0, bbox_bit=None):
+    def draw_chiprep2(dm, cx, axi=0, fsel=None, in_image_bit=False, axi_color=0, bbox_bit=None, ell_alpha=None, **kwargs):
         cm = dm.hs.cm
         # Grab Preferences
         feat_xy_bit  = dm.draw_prefs.points_bit 
         fpts_ell_bit = dm.draw_prefs.ellipse_bit 
         bbox_bit     = dm.draw_prefs.bbox_bit if bbox_bit is None else bbox_bit
-        ell_alpha    = dm.draw_prefs.ellipse_alpha
+        ell_alpha    = dm.draw_prefs.ellipse_alpha if ell_alpha is None else ell_alpha 
         if ell_alpha > 1: ell_alpha = 1.0
         if ell_alpha < 0: ell_alpha = 0.0
         map_color   = get_cmap('hsv')(float(axi_color)/len(dm.ax_list))
@@ -366,13 +262,15 @@ class DrawManager(AbstractManager):
                 transImg = Affine2D( cm.cx2_transImg(cx) ) 
             (cw,ch) = cm.cx2_chip_size(cx) # This is not ok, because the size disagrees with roi after rotation
             fpts = cm.get_fpts(cx)
-            if in_image_bit:
-                theta = cm.cx2_theta[cx]
-                transRot = Affine2D().rotate_around(cw/2,ch/2,theta)
-            else:
-                transRot = Affine2D()
-            trans_kpts = transRot + transImg + transData
+            #if in_image_bit:
+                #theta = cm.cx2_theta[cx]
+                #transRot = Affine2D().rotate_around(cw/2,ch/2,theta)
+            #else:
+                #transRot = Affine2D()
+            #trans_kpts = transRot + transImg + transData
+            trans_kpts = transImg + transData
             if fsel is None: fsel = range(len(fpts))
+            elif fsel == 'rand': fsel = random.sample(xrange(len(fpts)), 50)
             if fpts_ell_bit and len(fpts) > 0: # Plot ellipses
                 ells = dm._get_fpt_ell_collection(fpts[fsel,:], trans_kpts, ell_alpha, map_color)
                 ax.add_collection(ells)
@@ -391,8 +289,10 @@ class DrawManager(AbstractManager):
                 bbox = Rectangle(cxy,cw,ch,transform=transData) 
             else:
                 cxy = (0,0)
-                trans_bbox = transImg + transData
+                theta = -cm.cx2_theta[cx]
                 (cw,ch) = cm.cx2_chip_size(cx) # This is not ok, because the size disagrees with roi after rotation
+                transRot = Affine2D().rotate_around(cw/2,ch/2,theta)
+                trans_bbox = transRot + transImg + transData
                 bbox = Rectangle(cxy,cw,ch,transform=trans_bbox) 
             bbox.set_fill(False)
             bbox.set_edgecolor(map_color)

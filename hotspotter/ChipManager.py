@@ -390,8 +390,11 @@ class ChipManager(AbstractDataManager):
             return [cm.cx2_chip(cx_list)]
 
     def  cx2_chip(cm, cx):
+        return cm.load_chip_from_disk(cx)
+
+    def load_chip_from_disk(cm, cx):
         chip_fpath = cm.cx2_chip_fpath(cx)
-        return asarray(Image.open(chip_fpath))
+        return asarray(Image.open(chip_fpath).rotate(cm.cx2_theta[cx]*180/np.pi, resample=Image.BICUBIC, expand=1))
     
     def  cx2_chip_size(cm, cx):
         chip_fpath = cm.cx2_chip_fpath(cx)
@@ -408,21 +411,31 @@ class ChipManager(AbstractDataManager):
         sy = float(rh) / float(ch)
         tx = float(rx) # Translation happens after scaling
         ty = float(ry)
-        #rot = np.array(([np.cos(theta), -np.sin(theta), 0],
-                        #[np.sin(theta),  np.cos(theta), 0],
-                        #[            0,              0, 1]), dtype=np.float32)
-        rot = np.array(([1, 0, 0],
-                        [0, 1, 0],
-                        [0, 0, 1]), dtype=np.float32)
+        #rot = np.array(([1, 0, 0],
+                        #[0, 1, 0],
+                        #[0, 0, 1]), dtype=np.float32)
         # Return Affine Transformation 
         scale = np.array(([sx,  0,  0],
                           [ 0, sy,  0],
                           [ 0,  0,  1]), dtype=np.float32)
 
+        rot_trans_pre = np.array(([ 1,  0, cw/2],
+                                  [ 0,  1, ch/2],
+                                  [ 0,  0,    1]), dtype=np.float32)
+
+        rot = np.array(([np.cos(theta), -np.sin(theta), 0],
+                        [np.sin(theta),  np.cos(theta), 0],
+                        [             0,             0, 1]), dtype=np.float32)
+
+        rot_trans_post = np.array(([ 1,  0, -cw/2],
+                                   [ 0,  1, -ch/2],
+                                   [ 0,  0,     1]), dtype=np.float32)
+
         trans = np.array(([ 1,  0, tx],
                           [ 0,  1, ty],
                           [ 0,  0,  1]), dtype=np.float32)
-        return trans.dot(scale.dot(rot))
+
+        return trans.dot(rot_trans_pre.dot(rot.dot(rot_trans_post.dot(scale))))
 
     def cx2_chip_fpath(cm, cx):
         'Gets chip fpath with checks'
@@ -475,16 +488,30 @@ class ChipManager(AbstractDataManager):
 
     def cx2_raw_chip(cm, cx):
         # --- Cut out the Raw Chip from Img
+        # TODO: Save raw chips to disk
         gm = cm.hs.gm
         gx = cm.cx2_gx[cx]
         roi = cm.cx2_roi[cx]
-        img = gm.gx2_img(gx)
+        # Read Image
+        img = gm.gx2_img(gx) 
         return cm.cut_out_roi(img, roi)
 
     def cx2_pil_raw(cm, cx):
         pil_raw = Image.fromarray( cm.cx2_raw_chip(cx) ).convert('L')
         return pil_raw
-        
+
+    def cx2_pil_scaled(cm, cx):
+        am = cm.hs.am
+        pil_raw = Image.fromarray( cm.cx2_raw_chip(cx) ).convert('L')
+        pil_scaled = am.resize_chip(pil_raw, am.algo_prefs.preproc.sqrt_num_pxls)
+        return pil_scaled
+
+    def cx2_pil_scaled_rotated_color(cm, cx):
+        am = cm.hs.am
+        pil_raw = Image.fromarray( cm.cx2_raw_chip(cx) )
+        pil_scaled = am.resize_chip(pil_raw, am.algo_prefs.preproc.sqrt_num_pxls)
+        pil_scaled_rotated = pil_scaled.rotate(cm.cx2_theta[cx]*180/np.pi, resample=Image.BICUBIC, expand=1)
+        return pil_scaled_rotated
 
     def  compute_chip(cm, cx):
         #TODO Save a raw chip and thumb
@@ -495,8 +522,9 @@ class ChipManager(AbstractDataManager):
         chip_fname = os.path.split(chip_fpath)[1]
         logmsg(('\nComputing Chip: cid=%d fname=%s\n'+am.get_algo_name(['preproc'])) % (cid, chip_fname))
         # --- Preprocess the Raw Chip
-        pil_raw = cm.cx2_pil_raw(cx).rotate(cm.cx2_theta[cx]*180/np.pi, resample=Image.BICUBIC, expand=1) # Rotate Chip
-        chip = cm.hs.am.preprocess_chip(pil_raw)
+        # Chip will be roated on disk load. Just scale for now
+        pil_scaled = cm.cx2_pil_scaled(cx)
+        chip = cm.hs.am.preprocess_chip(pil_scaled)
         logdbg('Saving Computed Chip to :'+chip_fpath)
         chip.save(chip_fpath, 'PNG')
         # --- Write Chip and Thumbnail to disk

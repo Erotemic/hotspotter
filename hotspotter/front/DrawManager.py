@@ -270,7 +270,7 @@ class DrawManager(AbstractManager):
             #trans_kpts = transRot + transImg + transData
             trans_kpts = transImg + transData
             if fsel is None: fsel = range(len(fpts))
-            elif fsel == 'rand': fsel = random.sample(xrange(len(fpts)), 50)
+            elif fsel == 'rand': fsel = random.sample(xrange(len(fpts)), 88)
             if fpts_ell_bit and len(fpts) > 0: # Plot ellipses
                 ells = dm._get_fpt_ell_collection(fpts[fsel,:], trans_kpts, ell_alpha, map_color)
                 ax.add_collection(ells)

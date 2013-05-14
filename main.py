@@ -28,9 +28,9 @@ try:
     # Append the tpl lib to your path
     import hotspotter
     TPL_LIB_DIR = os.path.join(os.path.dirname(hotspotter.__file__), 'tpl', sys.platform,'lib')
-    BOOST_LIB_DIR = r'C:\boost_1_53_0\stage\lib'
+    #BOOST_LIB_DIR = r'C:\boost_1_53_0\stage\lib'
     sys.path.append(TPL_LIB_DIR)
-    sys.path.append(BOOST_LIB_DIR)
+    #sys.path.append(BOOST_LIB_DIR)
 except Exception: 
     print '''You must download hotspotter\'s 3rd party libraries before you can run it. 
     git clone https://github.com/Erotemic:tpl-hotspotter.git tpl'''

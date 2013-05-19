@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import random
 from PIL import Image
 from matplotlib import gridspec
@@ -27,6 +28,7 @@ class DrawManager(AbstractManager):
         dm.draw_prefs.points_bit     = False
         dm.draw_prefs.result_view  = Pref(1, choices=['in_image', 'in_chip'])
         dm.draw_prefs.fignum         = 0
+        dm.draw_prefs.figsize        = (5,5)
         dm.draw_prefs.colormap       = Pref('hsv', hidden=True)
         dm.draw_prefs.in_qtc_bit     = Pref(False, hidden=True) #Draw in the Qt Console
         dm.draw_prefs.use_thumbnails = Pref(False, hidden=True)
@@ -61,8 +63,10 @@ class DrawManager(AbstractManager):
         if dm.draw_prefs.use_thumbnails is True:
             pass
         dm.add_images([chip], [name])
-        dm.draw_chiprep2(cx, axi=0, **kwargs)
+        # Draw chiprep and return fsel incase rand is good
+        fsel_ret = dm.draw_chiprep2(cx, axi=0, **kwargs)
         dm.end_draw()
+        return fsel_ret
     # ---
     def show_query(dm, res, titleargs=None):
         cm = dm.hs.cm
@@ -123,11 +127,15 @@ class DrawManager(AbstractManager):
         dm.ax_list =   []
         dm.init_preferences()
     # ---
+    def update_figsize(dm):
+        fig = dm.get_figure()
+        dm.draw_prefs.figsize = (fig.get_figheight(), fig.get_figwidth())
+    # ---
     def get_figure(dm):
         guifig = dm.hs.uim.get_gui_figure()
         if guifig != None and dm.fignum == 0: # Check to see if we have access to the gui
             return guifig
-        fig = figure(num=dm.fignum, figsize=(5,5), dpi=dm.dpi, facecolor='w', edgecolor='k')
+        fig = figure(num=dm.fignum, figsize=dm.draw_prefs.figsize, dpi=dm.dpi, facecolor='w', edgecolor='k')
         return fig
     # ---
     def annotate_orientation(dm):
@@ -237,17 +245,48 @@ class DrawManager(AbstractManager):
         ellipse_collection.set_edgecolor(edgecolor)
         return ellipse_collection
 
-    def draw_chiprep2(dm, cx, axi=0, fsel=None, in_image_bit=False, axi_color=0, bbox_bit=None, ell_alpha=None, **kwargs):
+    
+    def draw_chiprep2(dm, cx, axi=0, fsel=None, in_image_bit=False, axi_color=0,
+                      bbox_bit=None, 
+                      ell_alpha=None,
+                      ell_bit=None,
+                      xy_bit=None,
+                      color=None,
+                      **kwargs):
+        '''
+        Draws a chip representation over an already drawn chip
+        cx           - the chiprep to draw. Managed by the chip manager
+        axi          - the axis index to draw it in
+        in_image_bit - draw the chip by itself or in its original image
+        axi_color    - use the color associated with axis index 
+                       (used for ploting queries)
+        ---
+        Others are preference overloads
+        bbox_bit - 
+        ell_alpha
+        ell_bit 
+        xy_bit
+        ell_color
+        '''
+
+        print ell_bit 
+
         cm = dm.hs.cm
         # Grab Preferences
-        feat_xy_bit  = dm.draw_prefs.points_bit 
-        fpts_ell_bit = dm.draw_prefs.ellipse_bit 
-        bbox_bit     = dm.draw_prefs.bbox_bit if bbox_bit is None else bbox_bit
+        xy_bit  = dm.draw_prefs.points_bit    if xy_bit    is None else xy_bit
+        ell_bit = dm.draw_prefs.ellipse_bit   if ell_bit   is None else ell_bit
+        bbox_bit     = dm.draw_prefs.bbox_bit      if bbox_bit  is None else bbox_bit
         ell_alpha    = dm.draw_prefs.ellipse_alpha if ell_alpha is None else ell_alpha 
+
+        # Make sure alpha in range [0,1]
         if ell_alpha > 1: ell_alpha = 1.0
         if ell_alpha < 0: ell_alpha = 0.0
-        map_color   = get_cmap('hsv')(float(axi_color)/len(dm.ax_list))
-        if axi_color == 0: map_color = [map_color[0], map_color[1]+.5, map_color[2], map_color[3]]
+
+        # Get color from colormap or overloaded parameter
+        if color is None:
+            color   = plt.get_cmap('hsv')(float(axi_color)/len(dm.ax_list))[0:3]
+            if axi_color == 0: 
+                color = [color[0], color[1]+.5, color[2]]
         
         # Axis We are drawing to.
         ax        = dm.ax_list[axi]
@@ -255,8 +294,8 @@ class DrawManager(AbstractManager):
         # Data coordinates are chip coords
 
         # data coords = chip coords -> display coords
-        transImg = Affine2D()
-        if feat_xy_bit or fpts_ell_bit or fsel != None:
+        transImg = Affine2D() 
+        if xy_bit or ell_bit or fsel != None:
             if in_image_bit: 
                 # data coords = chip coords -> image coords -> display coords
                 transImg = Affine2D( cm.cx2_transImg(cx) ) 
@@ -270,14 +309,28 @@ class DrawManager(AbstractManager):
             #trans_kpts = transRot + transImg + transData
             trans_kpts = transImg + transData
             if fsel is None: fsel = range(len(fpts))
-            elif fsel == 'rand': fsel = random.sample(xrange(len(fpts)), 88)
-            if fpts_ell_bit and len(fpts) > 0: # Plot ellipses
-                ells = dm._get_fpt_ell_collection(fpts[fsel,:], trans_kpts, ell_alpha, map_color)
+            # Randomly sample the keypoints. (Except be sneaky)
+            elif fsel == 'rand': 
+                # Get Relative Position
+                minxy = fpts.min(0)[0:2]
+                maxxy = fpts.max(0)[0:2] 
+                rel_pos = (fpts[:,0]-minxy[0])/(maxxy[0]-minxy[0])
+                to_zero = 1 - np.abs(rel_pos - .5)/.5
+                pdf = (to_zero / to_zero.sum())
+                # Transform Relative Position to Probabilities
+                # making it more likely to pick a centerpoint
+                fsel = np.random.choice(xrange(len(fpts)), size=88, replace=False, p=pdf)
+
+            if ell_bit and len(fpts) > 0: # Plot ellipses
+                ells = dm._get_fpt_ell_collection(fpts[fsel,:],
+                                                  trans_kpts,
+                                                  ell_alpha,
+                                                  color)
                 ax.add_collection(ells)
-            if feat_xy_bit and len(fpts) > 0: # Plot xy points
+            if xy_bit and len(fpts) > 0: # Plot xy points
                 ax.plot(fpts[fsel,0], fpts[fsel,1], 'o',\
-                        markeredgecolor=map_color,\
-                        markerfacecolor=map_color,\
+                        markeredgecolor=color,\
+                        markerfacecolor=color,\
                         transform=trans_kpts,\
                         markersize=2)
         # === 
@@ -295,25 +348,25 @@ class DrawManager(AbstractManager):
                 trans_bbox = transRot + transImg + transData
                 bbox = Rectangle(cxy,cw,ch,transform=trans_bbox) 
             bbox.set_fill(False)
-            bbox.set_edgecolor(map_color)
+            bbox.set_edgecolor(color)
             ax.add_patch(bbox)
 
             # Draw Text Annotation
             cid   = cm.cx2_cid[cx]
             name  = cm.cx2_name(cx)
-            # Use the complimentary color as the text background
-            _hsv = colorsys.rgb_to_hsv(map_color[0],map_color[1],map_color[2])
-            comp_hsv = [_hsv[0], _hsv[1], .2]
-            comp_rgb = list(colorsys.hsv_to_rgb(comp_hsv[0], comp_hsv[1], comp_hsv[2]))
-            comp_rgb.append(.7)
-            # Draw Orientation Backwards 
+            # Lower the value to .2 for the background color and set alpha=.7 
+            rgb_textFG = [1,1,1]
+            hsv_textBG = colorsys.rgb_to_hsv(*color)[0:2]+(.2,)
+            rgb_textBG = colorsys.hsv_to_rgb(*hsv_textBG)+(.7,)
+            # Draw Orientation Backwards
             degrees = -cm.cx2_theta[cx]*180/np.pi
             if not in_image_bit: degrees = 0
             chip_text =  'name='+name+'\n'+'cid='+str(cid)
             ax.text(cxy[0]+1, cxy[1]+1, chip_text,
-                    horizontalalignment='left',
-                    verticalalignment='top',
-                    transform=transData,
-                    color=[1,1,1],
-                    rotation=degrees,
-                    backgroundcolor=comp_rgb)
+                    horizontalalignment ='left',
+                    verticalalignment   ='top',
+                    transform           =transData,
+                    rotation            =degrees,
+                    color               =rgb_textFG,
+                    backgroundcolor     =rgb_textBG)
+        return fsel

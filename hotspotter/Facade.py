@@ -561,6 +561,21 @@ class Facade(QObject):
     def unload_features_and_models(fac):
         fac.hs.unload_all_features()
 
+
+    def figure_for_paper(fac):
+        fac.set_fignum(1)
+        fac.hs.dm.draw_prefs.ellipse_bit = True
+        fac.hs.dm.draw_prefs.points_bit = False
+        #fac.selg(7)
+        import random
+        random.seed(0)
+        fsel_ret = fac.hs.dm.show_chip(1, in_raw_chip=True, fsel='rand', ell_alpha=1, bbox_bit=False, color=[0,0,1], ell_bit=True, xy_bit=False)
+        #fsel_ret = fac.hs.dm.show_chip(1, in_raw_chip=True, fsel=fsel_ret, ell_alpha=1, bbox_bit=False)
+        return fsel_ret
+
+
+
+
     def write_database_stats(fac):
         'Writes some statistics to disk and returns them'
         import numpy as np

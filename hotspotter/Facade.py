@@ -55,12 +55,15 @@ class Facade(QObject):
         uim.populate_tables()
 
     def merge_db(fac, db_dpath):
-        db_dpath1 = r'D:\data\work\LF_all\LF_OPTIMIZADAS_NI_V_E'
-        db_dpath2 = r'D:\data\work\LF_all\LF_WEST_POINT_OPTIMIZADAS'
-        db_dpath3 = r'D:\data\work\LF_all\LF_Bajo bonito'
-        db_dpath4 = r'D:\data\work\LF_all\LF_Juan'
-        db_dpath = db_dpath1
         fac.hs.merge_database(db_dpath)
+        fac.hs.merge_database(r'D:\data\work\Lionfish\LF_OPTIMIZADAS_NI_V_E')
+        fac.hs.merge_database(r'D:\data\work\Lionfish\LF_WEST_POINT_OPTIMIZADAS')
+        fac.hs.merge_database(r'D:\data\work\Lionfish\LF_Bajo_bonito')
+        fac.hs.merge_database(r'D:\data\work\Lionfish\LF_Juan')
+        uim.populate_tables()
+        
+
+
         
 
     @func_log

@@ -13,7 +13,7 @@ def compute_homog(xyz_norm1, xyz_norm2):
     num_pts = xyz_norm1.shape[1]
     assert xyz_norm1.shape == xyz_norm2.shape, ''
     assert xyz_norm1.shape[0] == 3, ''
-    Mbynine = zeros((2*num_pts,9))
+    Mbynine = zeros((2*num_pts,9), dtype=np.float32)
     for ilx in xrange(num_pts): # Loop over inliers
         # Concatinate all 2x9 matrices into an Mx9 matrcx
         u2      =     xyz_norm2[0,ilx]
@@ -26,7 +26,17 @@ def compute_homog(xyz_norm1, xyz_norm2):
             [(0, 0, 0, d, e, f, g, h, i),
             (j, k, l, 0, 0, 0, p, q, r) ] )
     # Solve for the nullspace of the Mbynine
-    (_U, _s, V) = linalg.svd(Mbynine)
+    try:
+        (_U, _s, V) = linalg.svd(Mbynine)
+    except MemoryError:
+        import gc
+        gc.collect()
+        logwarn('Singular Value Decomposition Ran Out of Memory. Trying to free some memory')
+        (_U, _s, V) = linalg.svd(Mbynine)
+        logerr('Singular Value Decomposition Ran Out of Memory')
+        import pdb
+        pdb.set_trace()
+
     # Rearange the nullspace into a homography
     h = V[-1,:] # (transposed in matlab)
     H = vstack( ( h[0:3],  h[3:6],  h[6:9]  ) )

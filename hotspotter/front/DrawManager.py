@@ -269,8 +269,6 @@ class DrawManager(AbstractManager):
         ell_color
         '''
 
-        print ell_bit 
-
         cm = dm.hs.cm
         # Grab Preferences
         xy_bit  = dm.draw_prefs.points_bit    if xy_bit    is None else xy_bit

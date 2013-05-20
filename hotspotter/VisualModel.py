@@ -1,13 +1,11 @@
 import shelve
-from other.helpers import filecheck, str2 
-from other.AbstractPrintable import AbstractManager
-from other.logger import logmsg, logdbg, logio, logerr, logwarn
-from pylab import unique
-from tpl.pyflann import FLANN
+from hotspotter.other.helpers import filecheck, str2 
+from hotspotter.other.AbstractPrintable import AbstractManager
+from hotspotter.other.logger import logmsg, logdbg, logio, logerr, logwarn
+from hotspotter.tpl.pyflann import FLANN
 from itertools import chain
-from numpy import\
-        array, uint32, uint8, empty, ones, float32, log2, savez, load, setdiff1d, int32
 import numpy as np
+import pylab
 from numpy import spacing as eps
 # TODO TF-IDF still needs the h or a kmeans to work. 
 class VisualModel(AbstractManager):
@@ -18,11 +16,45 @@ class VisualModel(AbstractManager):
         #The number of clusters to form as well as the number of centroids to generate.
         #'''
 
+    def __init__(vm, hs=None):
+        super( VisualModel, vm ).__init__( hs )        
+        vm.train_cid    = np.array([],dtype=np.uint32) 
+        vm.flann    = None # This should delete itself
+        vm.isDirty  = True 
+        # --- The Sample Data ---
+        vm.sample_filter = {'exclude_cids'         : [],
+                            'one_out_each_name'    : False,
+                            'less_than_offset_ok'  : False,
+                            'offset'               : 1,
+                            'randomize'            : 0,
+                            'max_numc_per_name'    :-1,
+                            'min_numc_per_name'    :-1,
+                            }
+        # --- Bookkeeping --
+        vm.exclude_load_mems = ['hs', 'flann', 'isDirty', 'exclude_load_mems', 'sample_filter']
+        
+    def reset(vm):
+        logmsg('Reseting the Visual Model')
+        # ---
+        vm.isDirty  = True 
+        # --- Inverted Index ---
+        # The support for the model (aka visual word custer centers)
+        # In the case of Naive Bayes, this is the raw features
+        # In the case of Quantization, these are the cluster centers
+        vm.wx2_fdsc   = np.array([], dtype=np.uint8) 
+        vm.wx2_axs    = []  # List of axs belonging to this word 
+        # --- TFIDF-Model ---
+        vm.wx2_idf    = np.array([]) # Word -> Inverse Document Frequency
+        vm.wx2_maxtf  = np.array([]) # Word -> Maximum Database Term Frequency
+        # --- Model Source Metadata --
+        vm.ax2_cid    = np.array([], dtype=np.uint32) # indexed chips
+        vm.ax2_fx     = np.array([], dtype=np.uint32) # indexed features
+
     def build_model2(vm):
         am = vm.hs.am
         logmsg('Build Model was Requested')
         vm.sample_train_set()
-        assert len(vm.train_cid) > 0, 'Training set cannot be  empty'
+        assert len(vm.train_cid) > 0, 'Training set cannot be  np.empty'
         vm.delete_model()
         train_cx = vm.get_train_cx()
         logdbg('Step 1: Aggregate the model support')
@@ -56,7 +88,7 @@ class VisualModel(AbstractManager):
 
     def compute_naive_bayes(vm, ax2_fdsc, ax2_cx, train_cx):
         #wx2_fdsc = ax2_fdsc
-        return ax2_fdsc, array([array([ax],dtype=np.uint32) for ax in xrange(len(ax2_fdsc))], dtype=object)
+        return ax2_fdsc, np.array([np.array([ax],dtype=np.uint32) for ax in xrange(len(ax2_fdsc))], dtype=object)
         # Save Words 
         # Save FLANN
 
@@ -68,7 +100,7 @@ class VisualModel(AbstractManager):
         # Get how many descriptors each chips has
         tx2_num_fpts = cm.cx2_nfpts(train_cx)
         total_feats = np.sum(tx2_num_fpts)
-        ax2_fdsc = empty((total_feats,128), dtype=uint8)
+        ax2_fdsc = np.empty((total_feats,128), dtype=np.uint8)
         # Aggregate database descriptors together
         _p = 0
         for tx, cx in enumerate(train_cx):
@@ -133,9 +165,9 @@ class VisualModel(AbstractManager):
                 sparse_cols[rcx] = wx
                 rcx += 1
         # Build Sparse Vector
-        sparse_data = np.ones(total_feats, dtype=uint8)
+        sparse_data = np.ones(total_feats, dtype=np.uint8)
         cx2_bow = scipy.sparse.coo_matrix\
-                ((sparse_data, (sparse_rows, sparse_cols)), dtype=uint32)
+                ((sparse_data, (sparse_rows, sparse_cols)), dtype=np.uint32)
         return wx2_fdsc, wx2_axs, cx2_bow
 
     def compute_tfidf():
@@ -146,11 +178,11 @@ class VisualModel(AbstractManager):
         #wx2_termfreq = sum(ucx2_term_frequency)
         #cx2_tfidf[unique_cx, wx] = ucx2_term_frequency
         #cx2_tfidf  = scipy.sparse.coo_matrix\
-                #((num_train, num_words), dtype=uint32)
+                #((num_train, num_words), dtype=np.uint32)
 
         #logdbg('Computing TF-IDF metadata')
         #bcarg = {'max_tx':len(tx2_cx), 'dtype':np.float32}
-        #tx2_termfq_denom = float32(cm.cx2_nfpts(tx2_cx))
+        #tx2_termfq_denom = np.float32(cm.cx2_nfpts(tx2_cx))
         #vm.wx2_maxtf = \
                 #[ max( bincount(ax2_tx[axs], **bcarg)/termfq_denom ) for axs in vm.wx2_axs]
         #TODO: 
@@ -159,7 +191,7 @@ class VisualModel(AbstractManager):
         #        [ np.max(y) for y in x ]
         # timeit max
         #num_train = vm.num_train()
-        #vm.wx2_idf = log2([ num_train/len(unique(ax2_tx[ax_of_wx])) for ax_of_wx in vm.wx2_axs ] )+eps(1)
+        #vm.wx2_idf = np.log2([ num_train/len(pylab.unique(ax2_tx[ax_of_wx])) for ax_of_wx in vm.wx2_axs ] )+eps(1)
         #vm.wx2_fdsc = sklearn.cluster.KMeans(
         # Non-quantized vocabulary
 
@@ -171,9 +203,9 @@ class VisualModel(AbstractManager):
                 vm.wx2_axs[ax] = []
             wx = ax2_wx[ax]
             vm.wx2_axs[wx].append(ax)
-        ax2_cid = -ones(len(train_cx),dtype=int32) 
-        ax2_fx  = -ones(len(train_cx),dtype=int32)
-        ax2_tx  = -ones(len(train_cx),dtype=int32)
+        ax2_cid = -np.ones(len(train_cx),dtype=int32) 
+        ax2_fx  = -np.ones(len(train_cx),dtype=int32)
+        ax2_tx  = -np.ones(len(train_cx),dtype=int32)
         _Lfx = 0; _Rfx = 0
         tx2_nfpts = cm.cx2_nfpts(train_cx)
         for tx in xrange(train_cx):
@@ -186,24 +218,24 @@ class VisualModel(AbstractManager):
         if isTFIDF: # Compute info for TF-IDF
             logdbg('Computing TF-IDF metadata')
             max_tx = len(tx2_cx)
-            tx2_wtf_denom = float32(cm.cx2_nfpts(tx2_cx))
+            tx2_wtf_denom = np.float32(cm.cx2_nfpts(tx2_cx))
             vm.wx2_maxtf = map(lambda ax_of_wx:\
-                max( float32(bincount(ax2_tx[ax_of_wx], minlength=max_tx)) / tx2_wtf_denom ), vm.wx2_axs)
-            vm.wx2_idf = log2(map(lambda ax_of_wx:\
-                vm.num_train()/len(unique(ax2_tx[ax_of_wx])),\
+                max( np.float32(bincount(ax2_tx[ax_of_wx], minlength=max_tx)) / tx2_wtf_denom ), vm.wx2_axs)
+            vm.wx2_idf = np.log2(map(lambda ax_of_wx:\
+                vm.num_train()/len(pylab.unique(ax2_tx[ax_of_wx])),\
                 vm.wx2_axs)+eps(1))
         logdbg('Built Model using %d feature vectors. Preparing to index.' % len(vm.ax2_cid))
 
 
-        vm.wx2_axs = empty((vm.wx2_fdsc.shape[0]),dtype=object) 
+        vm.wx2_axs = np.empty((vm.wx2_fdsc.shape[0]),dtype=object) 
         for ax in xrange(0,num_train_keypoints):
             if vm.wx2_axs[ax] is None:
                 vm.wx2_axs[ax] = []
             wx = ax2_wx[ax]
             vm.wx2_axs[wx].append(ax)
-        vm.ax2_cid = -ones(num_train_keypoints,dtype=int32) 
-        vm.ax2_fx  = -ones(num_train_keypoints,dtype=int32)
-        ax2_tx     = -ones(num_train_keypoints,dtype=int32)
+        vm.ax2_cid = -np.ones(num_train_keypoints,dtype=int32) 
+        vm.ax2_fx  = -np.ones(num_train_keypoints,dtype=int32)
+        ax2_tx     = -np.ones(num_train_keypoints,dtype=int32)
         curr_fx = 0; next_fx = 0
         for tx in xrange(vm.num_train()):
             nfpts    = tx2_nfpts[tx]
@@ -216,11 +248,11 @@ class VisualModel(AbstractManager):
         if isTFIDF: # Compute info for TF-IDF
             logdbg('Computing TF-IDF metadata')
             max_tx = len(tx2_cx)
-            tx2_wtf_denom = float32(cm.cx2_nfpts(tx2_cx))
+            tx2_wtf_denom = np.float32(cm.cx2_nfpts(tx2_cx))
             vm.wx2_maxtf = map(lambda ax_of_wx:\
-                max( float32(bincount(ax2_tx[ax_of_wx], minlength=max_tx)) / tx2_wtf_denom ), vm.wx2_axs)
-            vm.wx2_idf = log2(map(lambda ax_of_wx:\
-                vm.num_train()/len(unique(ax2_tx[ax_of_wx])),\
+                max( np.float32(bincount(ax2_tx[ax_of_wx], minlength=max_tx)) / tx2_wtf_denom ), vm.wx2_axs)
+            vm.wx2_idf = np.log2(map(lambda ax_of_wx:\
+                vm.num_train()/len(pylab.unique(ax2_tx[ax_of_wx])),\
                 vm.wx2_axs)+eps(1))
 
 
@@ -254,46 +286,14 @@ class VisualModel(AbstractManager):
         dist_list.shape = (N, K)
         return (index_list, dist_list)
 
-    def __init__(vm, hs=None):
-        super( VisualModel, vm ).__init__( hs )        
-        vm.train_cid    = array([],dtype=uint32) 
-        vm.flann    = None # This should delete itself
-        vm.isDirty  = True 
-        # --- The Sample Data ---
-        vm.sample_filter = {'exclude_cids'         : [],
-                            'one_out_each_name'    : False,
-                            'less_than_offset_ok'  : False,
-                            'offset'               : 1,
-                            'randomize'            : 0,
-                            'max_numc_per_name'    :-1,
-                            'min_numc_per_name'    :-1,
-                            }
-        # --- Bookkeeping --
-        vm.exclude_load_mems = ['hs', 'flann', 'isDirty', 'exclude_load_mems', 'sample_filter']
-        
-    def reset(vm):
-        logmsg('Reseting the Visual Model')
-        # ---
-        vm.isDirty  = True 
-        # --- Inverted Index ---
-        # The support for the model (aka visual word custer centers)
-        # In the case of Naive Bayes, this is the raw features
-        # In the case of Quantization, these are the cluster centers
-        vm.wx2_fdsc   = array([], dtype=uint8) 
-        vm.wx2_axs    = []  # List of axs belonging to this word 
-        # --- TFIDF-Model ---
-        vm.wx2_idf    = array([]) # Word -> Inverse Document Frequency
-        vm.wx2_maxtf  = array([]) # Word -> Maximum Database Term Frequency
-        # --- Model Source Metadata --
-        vm.ax2_cid    = array([], dtype=uint32) # indexed chips
-        vm.ax2_fx     = array([], dtype=uint32) # indexed features
+
 
     def num_train(vm):
         return len(vm.train_cid)
     def  get_train_cx(vm):
         return vm.hs.cm.cid2_cx[vm.get_train_cid()]
     def  get_test_cx(vm):
-        return setdiff1d(vm.hs.cm.all_cxs(), vm.get_train_cx())
+        return np.setdiff1d(vm.hs.cm.all_cxs(), vm.get_train_cx())
     def  get_test_cid(vm):
         return vm.hs.cm.cx2_cid[vm.get_test_cx()]
     def  get_train_cid(vm):
@@ -330,8 +330,8 @@ class VisualModel(AbstractManager):
     def nearest_neighbors(vm, qfdsc, K): 
         ''' qfx2_wxs - (num_feats x K) Query Descriptor Index to the K Nearest Word Indexes 
             qfx2_dists - (num_feats x K) Query Descriptor Index to the Distance to the  K Nearest Word Vectors '''
-        assert vm.flann is not None  , 'Cant query empty index'
-        assert len(qfdsc) != 0       , 'Cant have empty query'
+        assert vm.flann is not None  , 'Cant query np.empty index'
+        assert len(qfdsc) != 0       , 'Cant have np.empty query'
         logdbg('Searching for Nearest Neighbors: #vectors=%d, K=%d' % (len(qfdsc), K))
         (qfx2_Kwxs, qfx2_Kdists) = vm.flann.nn_index(qfdsc, K, checks=128)
         qfx2_Kwxs.shape   =  (qfdsc.shape[0], K)
@@ -348,12 +348,18 @@ class VisualModel(AbstractManager):
         am = vm.hs.am
         cm = vm.hs.cm
         logdbg('Build Index was Requested')
+        # Delete old index and resample chips to index
         vm.delete_model()
         vm.sample_train_set()
+        # Try to load the correct model
+        if not force_recomp and vm.load_model():
+            logdbg('The model was sucessfully loaded')
+            return
+        # Could not load old model. Do full rebuild
         logdbg('Step 1: Aggregate the model support (Load feature vectors) ---')
         tx2_cx   = vm.get_train_cx()
         tx2_cid  = vm.get_train_cid()
-        assert len(tx2_cx) > 0, 'Training set cannot be  empty'
+        assert len(tx2_cx) > 0, 'Training set cannot be  np.empty'
         logdbg('Building model with %d sample chips' % (vm.num_train()))
         cm.load_features(tx2_cx)
         tx2_nfpts = cm.cx2_nfpts(tx2_cx)
@@ -363,26 +369,26 @@ class VisualModel(AbstractManager):
         isTFIDF = False
         if am.algo_prefs.model.quantizer == 'naive_bayes':
             logdbg('No Quantization. Aggregating all fdscriptors for nearest neighbor search.')
-            vm.wx2_fdsc = empty((num_train_keypoints,128),dtype=uint8)
+            vm.wx2_fdsc = np.empty((num_train_keypoints,128),dtype=np.uint8)
             _p = 0
             for cx in tx2_cx:
                 nfdsc = cm.cx2_nfpts(cx)
                 vm.wx2_fdsc[_p:_p+nfdsc,:] = cm.cx2_fdsc[cx]
                 _p += nfdsc
-            ax2_wx = array(range(0,num_train_keypoints),dtype=uint32)
+            ax2_wx = np.array(range(0,num_train_keypoints),dtype=np.uint32)
         if am.algo_prefs.model.quantizer == 'akmeans':
             raise NotImplementedError(':)')
         
         logdbg('Step 3: Point the parts of the model back to their source')
-        vm.wx2_axs = empty(vm.wx2_fdsc.shape[0], dtype=object) 
+        vm.wx2_axs = np.empty(vm.wx2_fdsc.shape[0], dtype=object) 
         for ax in xrange(0,num_train_keypoints):
             if vm.wx2_axs[ax] is None:
                 vm.wx2_axs[ax] = []
             wx = ax2_wx[ax]
             vm.wx2_axs[wx].append(ax)
-        vm.ax2_cid = -ones(num_train_keypoints,dtype=np.int32) 
-        vm.ax2_fx  = -ones(num_train_keypoints,dtype=np.int32)
-        ax2_tx     = -ones(num_train_keypoints,dtype=np.int32)
+        vm.ax2_cid = -np.ones(num_train_keypoints,dtype=np.int32) 
+        vm.ax2_fx  = -np.ones(num_train_keypoints,dtype=np.int32)
+        ax2_tx     = -np.ones(num_train_keypoints,dtype=np.int32)
         curr_fx = 0; next_fx = 0
         for tx in xrange(vm.num_train()):
             nfpts    = tx2_nfpts[tx]
@@ -395,11 +401,11 @@ class VisualModel(AbstractManager):
         if isTFIDF: # Compute info for TF-IDF
             logdbg('Computing TF-IDF metadata')
             max_tx = len(tx2_cx)
-            tx2_wtf_denom = float32(cm.cx2_nfpts(tx2_cx))
+            tx2_wtf_denom = np.float32(cm.cx2_nfpts(tx2_cx))
             vm.wx2_maxtf = map(lambda ax_of_wx:\
-                max( float32(bincount(ax2_tx[ax_of_wx], minlength=max_tx)) / tx2_wtf_denom ), vm.wx2_axs)
-            vm.wx2_idf = log2(map(lambda ax_of_wx:\
-                vm.num_train()/len(unique(ax2_tx[ax_of_wx])),\
+                max( np.float32(bincount(ax2_tx[ax_of_wx], minlength=max_tx)) / tx2_wtf_denom ), vm.wx2_axs)
+            vm.wx2_idf = np.log2(map(lambda ax_of_wx:\
+                vm.num_train()/len(pylab.unique(ax2_tx[ax_of_wx])),\
                 vm.wx2_axs)+eps(1))
         logdbg('Built Model using %d feature vectors. Preparing to index.' % len(vm.ax2_cid))
 
@@ -409,11 +415,10 @@ class VisualModel(AbstractManager):
         flann_param_dict = am.algo_prefs.model.indexer.to_dict()
         flann_params = vm.flann.build_index(vm.wx2_fdsc, **flann_param_dict)
         vm.isDirty  = False
-        #if not vm.save_model():
-            #logerr('Error Saving Model')
+        if not vm.save_model():
+            logwarn('Could not save the model')
 
     def save_model(vm): 
-        raise NotImplementedError()
         iom = vm.hs.iom
         model_fpath = iom.get_model_fpath()
         flann_index_fpath  = iom.get_flann_index_fpath()
@@ -425,7 +430,7 @@ class VisualModel(AbstractManager):
                              for key in vm.__dict__.keys() \
                              if key.find('__') == -1 and key not in vm.exclude_load_mems }
         logio('Saving Model')
-        savez(model_fpath, **to_save_dict)
+        np.savez(model_fpath, **to_save_dict)
         logio('Saved Model to '+model_fpath)
         assert not vm.flann is None, 'Trying to save null flann index'
         vm.flann.save_index(flann_index_fpath)
@@ -440,31 +445,35 @@ class VisualModel(AbstractManager):
         pass
 
     def load_model(vm):
-        raise NotImplementedError()
-        vm.delete_model()
-        logio('Checking for previous model computations')
         iom = vm.hs.iom
+        # Delete old model
+        vm.delete_model()
+        vm.sample_train_set()
+        logio('Trying to load the visual model')
+        # Check to see if new model on disk
         model_fpath = iom.get_model_fpath()
         flann_index_fpath = iom.get_flann_index_fpath()
-
         if not (filecheck(model_fpath) and filecheck(flann_index_fpath)):
+            logdbg('A saved model file was missing. Looking for: '+flann_index_fpath+' and '+model_fpath)
             return False
-        logio('Reading Precomputed Model: %s\nKey/Vals Are:' % model_fpath)
-        npz = load(model_fpath)
+        # Read model into dictionary
+        logio('Reading Visual Model: %s\nKey/Vals Are:' % model_fpath)
+        npz = np.load(model_fpath)
         tmpdict = {}
         for _key in npz.files:
             _val = npz[_key]
             tmpdict[_key] = _val
             logdbg('  * <'+str2(type(_val))+'> '+str(_key)+' = '+str2(_val))
         npz.close()
-
+        # Move dictionary into class 
         for _key in tmpdict.keys():
             vm.__dict__[_key] = tmpdict[_key]
+        # Read FLANN index
         logio('Reading Precomputed FLANN Index: %s' % flann_index_fpath)
         assert vm.flann is None, '! Flann already exists'
         vm.flann = FLANN()
         vm.flann.load_index(flann_index_fpath, vm.wx2_fdsc)
-        vm.isDirty = True
+        vm.isDirty = False
         logmsg('The model is built')
         return True
     
@@ -488,15 +497,15 @@ class VisualModel(AbstractManager):
             offset   = filt['offset']
             cxsPool  = [nm.nx2_cx_list[_cx] for _cx in vnxs]
             pickFun  = lambda cxs: offset % len(cxs)
-            _test_cx = array(map(lambda cxs: cxs[pickFun(cxs)], cxsPool))
+            _test_cx = np.array(map(lambda cxs: cxs[pickFun(cxs)], cxsPool))
             if samp_filter_arg['less_than_offset_ok'] is False:
                 nOther   = cm.cx2_num_other.hips(_test_cx)
                 _okBit   = nOther > offset
                 _test_cx = _test_cx[_okBit]
-            train_cx = setdiff1d(vm.train_cx, _test_cx)
+            train_cx = np.setdiff1d(vm.train_cx, _test_cx)
         if len(filt['exclude_cids']) > 0:
             exclu_cx = cm.cx2_cid[filt['exclude_cids']]
-            train_cx = setdiff1d(train_cx, exclu_cx)
+            train_cx = np.setdiff1d(train_cx, exclu_cx)
         vm.train_cid = cm.cx2_cid[train_cx]
         logdbg('Train: '+str(vm.get_train_cid()))
         logdbg('Test: '+str(vm.get_test_cid()))
@@ -516,7 +525,7 @@ class VisualModel(AbstractManager):
             if fpath in lazy.loaded.keys():
                 lazyvar = lazy.loaded[fpath]
             elif fpath in lazy.canload(fpath):
-                lazyvar = lazy.load(fpath)
+                lazyvar = lazy.np.load(fpath)
             else:
                 lazyvar = fn(*args, **kwargs)
                 lazy.loaded[fpath] = lazyvar

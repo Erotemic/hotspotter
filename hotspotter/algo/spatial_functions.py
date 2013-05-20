@@ -24,18 +24,24 @@ def compute_homog(xyz_norm1, xyz_norm2):
         (p,q,r) = -u2*xyz_norm1[:,ilx]
         Mbynine[ilx*2:(ilx+1)*2,:]  = array(\
             [(0, 0, 0, d, e, f, g, h, i),
-            (j, k, l, 0, 0, 0, p, q, r) ] )
+             (j, k, l, 0, 0, 0, p, q, r) ] )
     # Solve for the nullspace of the Mbynine
     try:
         (_U, _s, V) = linalg.svd(Mbynine)
     except MemoryError:
-        import gc
-        gc.collect()
-        logwarn('Singular Value Decomposition Ran Out of Memory. Trying to free some memory')
-        (_U, _s, V) = linalg.svd(Mbynine)
-        logerr('Singular Value Decomposition Ran Out of Memory')
-        import pdb
-        pdb.set_trace()
+        # TODO: is sparse calculation faster than not?
+        print('Singular Value Decomposition Ran Out of Memory. Trying with a sparse matrix')
+        import scipy.sparse
+        import scipy.sparse.linalg
+        MbynineSparse = scipy.sparse.lil_matrix(Mbynine)
+        (_U, _s, V) = scipy.sparse.linalg.svds(MbynineSparse)
+        #import gc
+        #gc.collect()
+        #print('Singular Value Decomposition Ran Out of Memory.'+\
+              #'Trying to free some memory with garbage collection')
+        #(_U, _s, V) = linalg.svd(Mbynine)
+        #import pdb
+        #pdb.set_trace()
 
     # Rearange the nullspace into a homography
     h = V[-1,:] # (transposed in matlab)
@@ -69,7 +75,7 @@ def homogo_normalize_pts(xy):
     return (xyz_norm, T)
 #
 def get_affine_inliers_RANSAC(num_m, xy1_m, xy2_m,\
-                              acd1_m, acd2_m, xy_thresh_sqrd, sigma_thresh_sqrd):
+                              acd1_m, acd2_m, xy_thresh_sqrd, sigma_thresh_sqrd=None):
     '''Computes initial inliers by iteratively computing affine transformations
     between matched keypoints'''
     aff_inliers = []
@@ -171,7 +177,7 @@ def ransac(fpts1_match, fpts2_match,\
 
     # Compute affine inliers using exhaustive ransac
     aff_inliers = get_affine_inliers_RANSAC(num_m, xy1_m, xy2_m,\
-                                            acd1_m, acd2_m, xy_thresh_sqrd, sigma_thresh)
+                                            acd1_m, acd2_m, xy_thresh_sqrd, sigma_thresh_sqrd=None)
     if len(aff_inliers) < nInlier_thresh:
         # Cannot establish a better correspondence
         return aff_inliers

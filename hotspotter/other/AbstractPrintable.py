@@ -1,7 +1,6 @@
 import numpy as np
 import re
 import types
-from numpy import log10, uint32
 #---------------
 def npArrInfo(arr):
     from ConcretePrintable import DynStruct
@@ -81,16 +80,16 @@ def __table_fmt(max_val, lbl=""):
     '''
     if max_val == 0:
         max_val = 1
-    if type(max_val) is types.IntType or type(max_val) == uint32:
-        spaces = max(int(log10(max_val)), len(lbl))+1
+    if type(max_val) is types.IntType or type(max_val) == np.uint32:
+        spaces = max(int(np.log10(max_val)), len(lbl))+1
         fmtstr = '{:>%dd}' % spaces
     elif type(max_val) is types.FloatType:
         _nDEC = 3
         if _nDEC == 0:
-            spaces = max(int(log10(max_val)), len(lbl))+1
+            spaces = max(int(np.log10(max_val)), len(lbl))+1
             fmtstr = '{:>%d.0f}' % (spaces)
         else:
-            spaces = max(int(log10(max_val))+1+_nDEC, len(lbl))+1
+            spaces = max(int(np.log10(max_val))+1+_nDEC, len(lbl))+1
             fmtstr = '{:>%d.%df}' % (spaces, _nDEC)
     elif type(max_val) is types.ListType:
         _SEP    = '  '
@@ -129,7 +128,7 @@ class AbstractPrintable(object):
     def get_printable(self, type_bit=True, print_exclude_aug = []):
         body = ''
         attri_list = []
-        exclude_key_list = self._printable_exclude+print_exclude_aug
+        exclude_key_list = list(self._printable_exclude)+list(print_exclude_aug)
         for (key, val) in self.__dict__.iteritems():
             if key in exclude_key_list: continue
             namestr = str(key)

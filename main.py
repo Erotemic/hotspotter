@@ -27,7 +27,7 @@ import sys
 try:
     # Append the tpl lib to your path
     import hotspotter
-    TPL_LIB_DIR = os.path.join(os.path.dirname(hotspotter.__file__), 'tpl', sys.platform,'lib')
+    TPL_LIB_DIR = os.path.join(os.path.dirname(hotspotter.__file__), 'tpl/lib', sys.platform)
     #BOOST_LIB_DIR = r'C:\boost_1_53_0\stage\lib'
     sys.path.append(TPL_LIB_DIR)
     #sys.path.append(BOOST_LIB_DIR)

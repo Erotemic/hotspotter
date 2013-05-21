@@ -611,3 +611,23 @@ class Facade(QObject):
         db_stats_str = '\n'.join(db_stats)
         iom.write_to_user_fpath('database_stats.txt', db_stats_str)
         return db_stats_str
+
+    def SetNamesFromLionfishGroundTruth(hs):
+        import os.path
+        import re
+        cm = fac.hs.cm
+        nm = fac.hs.nm
+        gm = fac.hs.gm
+        name_fn = lambda path: os.path.splitext(os.path.split(path)[1])[0]
+        re_lfname = re.compile(r'(?P<DATASET>.*)-(?P<NAMEID>\d\d)-(?P<SIGHTINGID>[a-z])')
+        for cx in iter(cm.get_valid_cxs()):
+            gx = cm.cx2_gx[cx]
+            name = name_fn(gm.gx2_gname[gx])
+            match_obj = re_lfname.match(name)
+            if match_obj != None:
+                match_dict = match_obj.groupdict()
+                name_id = match_dict['NAMEID']
+                dataset = match_dict['DATASET']
+                dataset = match_dict['SIGHTINGID']
+                new_name = 'Lionfish_n'+str(name_id)
+                cm.rename_chip(cx, new_name)

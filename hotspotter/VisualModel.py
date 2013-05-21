@@ -1,26 +1,43 @@
 import shelve
 from hotspotter.other.helpers import filecheck, str2 
 from hotspotter.other.AbstractPrintable import AbstractManager
+from hotspotter.other.ConcretePrintable import DynStruct, Pref 
 from hotspotter.other.logger import logmsg, logdbg, logio, logerr, logwarn
 from hotspotter.tpl.pyflann import FLANN
 from itertools import chain
 import numpy as np
 import pylab
+import os
 from numpy import spacing as eps
 # TODO TF-IDF still needs the h or a kmeans to work. 
 class VisualModel(AbstractManager):
-    #def cx2_visual_word_histogram(vm, cx):
-        #fdsc = cm.cx2_fdsc(cx) [fx2_word, dist] = vm.flann_wx2_fdsc.nearest(fdsc) return scipy.sparse_histogram(fx2_word)
-        #'''
-        #n_clusters : int, optional, default: 8
-        #The number of clusters to form as well as the number of centroids to generate.
-        #'''
+
+    def init_preferences(vm, default_bit=False):
+        if vm.model_prefs == None:
+            pref_fpath = vm.hs.iom.get_prefs_fpath('visual_model_prefs')
+            vm.model_prefs = Pref(fpath=pref_fpath)
+            vm.model_prefs.save_load_model = Pref(True)
+
 
     def __init__(vm, hs=None):
         super( VisualModel, vm ).__init__( hs )        
-        vm.train_cid    = np.array([],dtype=np.uint32) 
-        vm.flann    = None # This should delete itself
+        vm.model_prefs = None
+        # ---
+        vm.train_cid = np.array([],dtype=np.uint32) 
+        vm.flann = None # This should delete itself
         vm.isDirty  = True 
+        # --- Inverted Index ---
+        # The support for the model (aka visual word custer centers)
+        # In the case of Naive Bayes, this is the raw features
+        # In the case of Quantization, these are the cluster centers
+        vm.wx2_fdsc   = np.array([], dtype=np.uint8) 
+        vm.wx2_axs    = []  # List of axs belonging to this word 
+        # --- TFIDF-Model ---
+        vm.wx2_idf    = np.array([], dtype=np.float32) # Word -> Inverse Document Frequency
+        vm.wx2_maxtf  = np.array([], dtype=np.float32) # Word -> Maximum Database Term Frequency
+        # --- Model Source Metadata --
+        vm.ax2_cid    = np.array([], dtype=np.uint32) # indexed chips
+        vm.ax2_fx     = np.array([], dtype=np.uint32) # indexed features
         # --- The Sample Data ---
         vm.sample_filter = {'exclude_cids'         : [],
                             'one_out_each_name'    : False,
@@ -31,291 +48,25 @@ class VisualModel(AbstractManager):
                             'min_numc_per_name'    :-1,
                             }
         # --- Bookkeeping --
-        vm.exclude_load_mems = ['hs', 'flann', 'isDirty', 'exclude_load_mems', 'sample_filter']
-        
+        vm.savable_model_fields = [ 'wx2_fdsc', 'wx2_axs', 'wx2_idf',
+                                    'wx2_maxtf', 'ax2_cid', 'ax2_fx',
+                                    'train_cid']
+        vm.init_preferences()
+
     def reset(vm):
         logmsg('Reseting the Visual Model')
-        # ---
         vm.isDirty  = True 
-        # --- Inverted Index ---
-        # The support for the model (aka visual word custer centers)
-        # In the case of Naive Bayes, this is the raw features
-        # In the case of Quantization, these are the cluster centers
         vm.wx2_fdsc   = np.array([], dtype=np.uint8) 
-        vm.wx2_axs    = []  # List of axs belonging to this word 
-        # --- TFIDF-Model ---
-        vm.wx2_idf    = np.array([]) # Word -> Inverse Document Frequency
-        vm.wx2_maxtf  = np.array([]) # Word -> Maximum Database Term Frequency
-        # --- Model Source Metadata --
-        vm.ax2_cid    = np.array([], dtype=np.uint32) # indexed chips
-        vm.ax2_fx     = np.array([], dtype=np.uint32) # indexed features
+        vm.wx2_axs    = []
+        vm.wx2_idf    = np.array([], dtype=np.float32)
+        vm.wx2_maxtf  = np.array([], dtype=np.float32)
+        vm.ax2_cid    = np.array([], dtype=np.uint32)
+        vm.ax2_fx     = np.array([], dtype=np.uint32)
 
-    def build_model2(vm):
-        am = vm.hs.am
-        logmsg('Build Model was Requested')
-        vm.sample_train_set()
-        assert len(vm.train_cid) > 0, 'Training set cannot be  np.empty'
-        vm.delete_model()
-        train_cx = vm.get_train_cx()
-        logdbg('Step 1: Aggregate the model support')
-        (ax2_fdsc, ax2_cx, ax2_fx) = vm.aggregate_features(train_cx)
-        logdbg('Step 2: Build Whole Chip Representation')
-        if am.algo_prefs.model.quantizer == 'naive_bayes':
-            wx2_fdsc, wx2_axs = vm.compute_naive_bayes\
-                    (ax2_fdsc, ax2_cx, train_cx)
-        elif am.algo_prefs.model.quantizer == 'bag_of_words':
-            # Get each chip's bag of words,  
-            # The words they index into, and the inverse
-            wx2_fdsc, wx2_axs, cx2_bow = vm.compute_bag_of_words\
-                    (ax2_fdsc, ax2_cx, train_cx)
-
-        logdbg('Step 4: Build Database Representation')
-        # Set the model_data = DynStruct
-        vm.wx2_fdsc = wx2_fdsc
-        vm.wx2_axs  = wx2_axs
-        vm.ax2_fx   = ax2_fx
-        #vm.ax2_cx    = wx2_axs
-        vm.ax2_cid  = vm.hs.cm.cx2_cid[ax2_cx]
-
-        logdbg('Step 5: Building FLANN Index: over '+str(len(vm.wx2_fdsc))+' words')
-        assert vm.flann is None, 'Flann already exists'
-        vm.flann = FLANN()
-        flann_param_dict = am.algo_prefs.model.indexer.to_dict()
-        flann_params = vm.flann.build_index(vm.wx2_fdsc, **flann_param_dict)
-        vm.isDirty  = False
-        if not vm.save_model():
-            logerr('Error Saving Model')
-
-    def compute_naive_bayes(vm, ax2_fdsc, ax2_cx, train_cx):
-        #wx2_fdsc = ax2_fdsc
-        return ax2_fdsc, np.array([np.array([ax],dtype=np.uint32) for ax in xrange(len(ax2_fdsc))], dtype=object)
-        # Save Words 
-        # Save FLANN
-
-    def aggregate_features(vm, train_cx, channel=None):
-        # Aggregate Features. Not Saved
-        logdbg('Aggregating %d training chips' % len(train_cx))
-        cm = vm.hs.cm
-        cm.load_features(train_cx)
-        # Get how many descriptors each chips has
-        tx2_num_fpts = cm.cx2_nfpts(train_cx)
-        total_feats = np.sum(tx2_num_fpts)
-        ax2_fdsc = np.empty((total_feats,128), dtype=np.uint8)
-        # Aggregate database descriptors together
-        _p = 0
-        for tx, cx in enumerate(train_cx):
-            num_fpts = tx2_num_fpts[tx]
-            ax2_fdsc[_p:_p+num_fpts,:] = cm.cx2_fdsc[cx]
-            _p += num_fpts
-        # Build Inverted Aggregate Information. (Saved)
-        # This needs to be saved as cid
-        ax2_cx = np.empty((total_feats,), dtype=np.uint32) 
-        ax2_fx = np.empty((total_feats,), dtype=np.uint32)
-        ax2_tx = np.empty((total_feats,), dtype=np.uint32)
-        _L = 0; _R = 0
-        for tx in xrange(len(train_cx)):
-            num_fpts    = tx2_num_fpts[tx]
-            _R  = _R + num_fpts
-            ax_of_tx = np.arange(_L, _R, dtype=np.uint32)
-            _L = _L + num_fpts
-            ax2_tx[ax_of_tx] = tx
-            ax2_cx[ax_of_tx] = train_cx[tx]    # to ChipID
-            ax2_fx[ax_of_tx] = np.arange(num_fpts, dtype=np.uint32) # to FeatID
-        return (ax2_fdsc, ax2_cx, ax2_fx)
-        #return ax2_fdsc
-        #vm.ax2_cx = ax2_cx
-        #vm.ax2_fx = ax2_cx
-
-    def compute_bag_of_words(vm, ax2_fdsc, ax2_cx, train_cx):
-        '''Input: 
-            ax2_fdsc - aggregate index to raw descriptor
-            ax2_cid  - corresponding raw fdsc's chip id
-        '''
-        # Parameters
-        from back.algo.clustering import approximate_kmeans
-        import scipy.sparse
-        import collections
-        am = vm.hs.am
-        total_feats = ax2_fdsc.shape[0]
-        num_train = len(train_cx)
-        max_iters = am.algo_prefs.model.akmeans.max_iters
-        num_words = am.algo_prefs.model.akmeans.num_words
-        num_words = min(total_feats,num_words)
-        # compute visual_vocab with num_words using akmeans
-        # cluster the raw descriptors into visual words
-        # NumWords x 128
-        akmeans_flann = None
-        # Compute Visual Words, and Database Asignments
-        wx2_fdsc, wx2_axs = approximate_kmeans\
-                (ax2_fdsc, num_words,\
-                 max_iters, akmeans_flann)
-        # Create Visual Histograms. 
-        cx2_tx = {} # For Inverted File
-        for tx, cx in enumerate(train_cx):
-            cx2_tx[cx] = tx
-        sparse_rows = np.empty((total_feats,), dtype=np.uint32)
-        sparse_cols = np.empty((total_feats,), dtype=np.uint32)
-        rcx = 0
-        # Assemble Non-Sparse Histogram Data
-        for wx in xrange(num_words):#wx = col
-            cxs = [ax2_cx[ax] for ax in wx2_axs[wx]] # txs of cxs = rows
-            for cx in cxs:
-                tx = cx2_tx[cx]
-                sparse_rows[rcx] = tx
-                sparse_cols[rcx] = wx
-                rcx += 1
-        # Build Sparse Vector
-        sparse_data = np.ones(total_feats, dtype=np.uint8)
-        cx2_bow = scipy.sparse.coo_matrix\
-                ((sparse_data, (sparse_rows, sparse_cols)), dtype=np.uint32)
-        return wx2_fdsc, wx2_axs, cx2_bow
-
-    def compute_tfidf():
-        pass
-        #from collections import Counter
-        #term_freq_pairs = Counter(cxs).items()
-        #unique_cx, ucx2_term_frequency = apply(zip, term_freq_pairs)
-        #wx2_termfreq = sum(ucx2_term_frequency)
-        #cx2_tfidf[unique_cx, wx] = ucx2_term_frequency
-        #cx2_tfidf  = scipy.sparse.coo_matrix\
-                #((num_train, num_words), dtype=np.uint32)
-
-        #logdbg('Computing TF-IDF metadata')
-        #bcarg = {'max_tx':len(tx2_cx), 'dtype':np.float32}
-        #tx2_termfq_denom = np.float32(cm.cx2_nfpts(tx2_cx))
-        #vm.wx2_maxtf = \
-                #[ max( bincount(ax2_tx[axs], **bcarg)/termfq_denom ) for axs in vm.wx2_axs]
-        #TODO: 
-        # timeit [ np.max( bincount(ax2_tx[axs], **bcarg)/termfq_denom ) for axs in vm.wx2_axs]
-        # timeit x = [ bincount(ax2_tx[axs], **bcarg)/termfq_denom for axs in vm.wx2_axs]
-        #        [ np.max(y) for y in x ]
-        # timeit max
-        #num_train = vm.num_train()
-        #vm.wx2_idf = np.log2([ num_train/len(pylab.unique(ax2_tx[ax_of_wx])) for ax_of_wx in vm.wx2_axs ] )+eps(1)
-        #vm.wx2_fdsc = sklearn.cluster.KMeans(
-        # Non-quantized vocabulary
-
-    def compute_inverted_file(vm, wx2_fdsc, train_cx):
-        cm = vm.hs.cm
-        wx2_axs = alloc_list(wx2_fdsc.shape[0])
-        for ax in xrange(0, len(ax2_fx)):
-            if vm.wx2_axs[ax] is None:
-                vm.wx2_axs[ax] = []
-            wx = ax2_wx[ax]
-            vm.wx2_axs[wx].append(ax)
-        ax2_cid = -np.ones(len(train_cx),dtype=int32) 
-        ax2_fx  = -np.ones(len(train_cx),dtype=int32)
-        ax2_tx  = -np.ones(len(train_cx),dtype=int32)
-        _Lfx = 0; _Rfx = 0
-        tx2_nfpts = cm.cx2_nfpts(train_cx)
-        for tx in xrange(train_cx):
-            nfpts    = tx2_nfpts[tx]
-            next_fx  = _Rfx + nfpts
-            ax_range = range(_Lfx,_Rfx)
-            ax2_tx[ax_range] = tx
-            ax2_cid[ax_range] = cm.cx2_cid[train_cx]  # Point to Inst
-            _Lfx = _Rfx + nfpts
-        if isTFIDF: # Compute info for TF-IDF
-            logdbg('Computing TF-IDF metadata')
-            max_tx = len(tx2_cx)
-            tx2_wtf_denom = np.float32(cm.cx2_nfpts(tx2_cx))
-            vm.wx2_maxtf = map(lambda ax_of_wx:\
-                max( np.float32(bincount(ax2_tx[ax_of_wx], minlength=max_tx)) / tx2_wtf_denom ), vm.wx2_axs)
-            vm.wx2_idf = np.log2(map(lambda ax_of_wx:\
-                vm.num_train()/len(pylab.unique(ax2_tx[ax_of_wx])),\
-                vm.wx2_axs)+eps(1))
-        logdbg('Built Model using %d feature vectors. Preparing to index.' % len(vm.ax2_cid))
-
-
-        vm.wx2_axs = np.empty((vm.wx2_fdsc.shape[0]),dtype=object) 
-        for ax in xrange(0,num_train_keypoints):
-            if vm.wx2_axs[ax] is None:
-                vm.wx2_axs[ax] = []
-            wx = ax2_wx[ax]
-            vm.wx2_axs[wx].append(ax)
-        vm.ax2_cid = -np.ones(num_train_keypoints,dtype=int32) 
-        vm.ax2_fx  = -np.ones(num_train_keypoints,dtype=int32)
-        ax2_tx     = -np.ones(num_train_keypoints,dtype=int32)
-        curr_fx = 0; next_fx = 0
-        for tx in xrange(vm.num_train()):
-            nfpts    = tx2_nfpts[tx]
-            next_fx  = next_fx + nfpts
-            ax_range = range(curr_fx,next_fx)
-            ax2_tx[ax_range] = tx
-            vm.ax2_cid[ax_range] = tx2_cid[tx]    # Point to Inst
-            vm.ax2_fx[ax_range]  = range(nfpts)   # Point to Kpts
-            curr_fx = curr_fx + nfpts
-        if isTFIDF: # Compute info for TF-IDF
-            logdbg('Computing TF-IDF metadata')
-            max_tx = len(tx2_cx)
-            tx2_wtf_denom = np.float32(cm.cx2_nfpts(tx2_cx))
-            vm.wx2_maxtf = map(lambda ax_of_wx:\
-                max( np.float32(bincount(ax2_tx[ax_of_wx], minlength=max_tx)) / tx2_wtf_denom ), vm.wx2_axs)
-            vm.wx2_idf = np.log2(map(lambda ax_of_wx:\
-                vm.num_train()/len(pylab.unique(ax2_tx[ax_of_wx])),\
-                vm.wx2_axs)+eps(1))
-
-
-    def lazyprop(fn):
-        # From http://stackoverflow.com/questions/3012421/python-lazy-property-decorator
-        attr_name = '_lazy_' + fn.__name__
-        @property
-        def _lazyprop(self, *args, **kwargs):
-            if not hasattr(self, attr_name):
-                setattr(self, attr_name, self.fn(*args, **kwargs))
-            return getattr(self, attr_name)
-        return _lazyprop
-
-    @lazyprop
-    def flann_index(data_vecs):
-        flann       = FLANN()
-        flann_args  = vm.hs.am.algo_prefs.model.indexer.to_dict()
-        flann_args_ = flann.build_index(data_vecs, **flann_args)
-        return flann
-
-    #, filename=None, cache=False
-    def flann_nearest(vm, data_vecs, query_vecs, K): 
-        ''' Let N = len(query_vecs) 
-            Returns: 
-                index_list - (N x K) Index of the Nth query_vec's Kth nearest neighbor
-                dist_list - (N x K) Coresponding Distance'''
-        N = query_vecs.shape[0]
-        flann_index = vm.flann_index(data_vecs)
-        (index_list, dist_list) = flann_index.nn_index(query_vecs, K, checks=128)
-        index_list.shape = (N, K)
-        dist_list.shape = (N, K)
-        return (index_list, dist_list)
-
-
-
-    def num_train(vm):
-        return len(vm.train_cid)
-    def  get_train_cx(vm):
-        return vm.hs.cm.cid2_cx[vm.get_train_cid()]
-    def  get_test_cx(vm):
-        return np.setdiff1d(vm.hs.cm.all_cxs(), vm.get_train_cx())
-    def  get_test_cid(vm):
-        return vm.hs.cm.cx2_cid[vm.get_test_cx()]
-    def  get_train_cid(vm):
-        return vm.train_cid
-    def  flip_sample(vm):
-        vm.train_cid = vm.get_test_cid()
-
-    def  get_samp_id(vm):
-        ''''Returns an id unique to the sampled train_cid
-        Note: if a cid is assigned to another.hip, this will break'''
-        iom = vm.hs.iom
-        samp_shelf = shelve.open(iom.get_temp_fpath('sample_shelf.db'))
-        samp_key = '%r' % vm.train_cid
-        if not samp_key in samp_shelf.keys():
-            samp_shelf[samp_key] = len(samp_shelf.keys())+1
-        samp_id = samp_shelf[samp_key]
-        samp_shelf.close()
-        return samp_id
-    def  get_samp_suffix(vm):
-        return '.samp'+str(vm.get_samp_id())
     def ax2_cx(vm, axs):
+        'aggregate index to chip index'
         return vm.hs.cm.cid2_cx[vm.ax2_cid[axs]]
+
     def delete_model(vm):
         logdbg('Deleting Sample Index')
         if vm.flann != None:
@@ -326,7 +77,7 @@ class VisualModel(AbstractManager):
                 logwarn('WARNING: FLANN is not deleting correctly')
         vm.reset()
 
-# OLD OLD OLD
+    # SHOULD BECOME DEPREICATED
     def nearest_neighbors(vm, qfdsc, K): 
         ''' qfx2_wxs - (num_feats x K) Query Descriptor Index to the K Nearest Word Indexes 
             qfx2_dists - (num_feats x K) Query Descriptor Index to the Distance to the  K Nearest Word Vectors '''
@@ -341,21 +92,23 @@ class VisualModel(AbstractManager):
 
     #Probably will have to make this over cids eventually\ Maybe
     def build_model(vm, force_recomp=False):
+        ''' Builds the model, if needed. Tries to reload if it can '''
+        logmsg('\n\nRequested: Build Model')
         if not force_recomp and not vm.isDirty:
             logmsg('The model is clean and is not forced to recompute')
             return True
-        logmsg('Building the model. If you have over 1000 chips, this will take awhile and there may be no indication of progress.')
-        am = vm.hs.am
         cm = vm.hs.cm
-        logdbg('Build Index was Requested')
         # Delete old index and resample chips to index
         vm.delete_model()
         vm.sample_train_set()
         # Try to load the correct model
         if not force_recomp and vm.load_model():
-            logdbg('The model was sucessfully loaded')
+            logmsg('Loaded saved model from disk')
             return
+        logmsg('Building the model. This may take some time.')
         # Could not load old model. Do full rebuild
+        # -----
+        # STEP 1 - Loading
         logdbg('Step 1: Aggregate the model support (Load feature vectors) ---')
         tx2_cx   = vm.get_train_cx()
         tx2_cid  = vm.get_train_cid()
@@ -364,10 +117,11 @@ class VisualModel(AbstractManager):
         cm.load_features(tx2_cx)
         tx2_nfpts = cm.cx2_nfpts(tx2_cx)
         num_train_keypoints = sum(tx2_nfpts)
-
+        # -----
+        # STEP 2 - Aggregating 
         logdbg('Step 2: Build the model Words')
         isTFIDF = False
-        if am.algo_prefs.model.quantizer == 'naive_bayes':
+        if vm.hs.am.algo_prefs.model.quantizer == 'naive_bayes':
             logdbg('No Quantization. Aggregating all fdscriptors for nearest neighbor search.')
             vm.wx2_fdsc = np.empty((num_train_keypoints,128),dtype=np.uint8)
             _p = 0
@@ -376,9 +130,10 @@ class VisualModel(AbstractManager):
                 vm.wx2_fdsc[_p:_p+nfdsc,:] = cm.cx2_fdsc[cx]
                 _p += nfdsc
             ax2_wx = np.array(range(0,num_train_keypoints),dtype=np.uint32)
-        if am.algo_prefs.model.quantizer == 'akmeans':
+        if vm.hs.am.algo_prefs.model.quantizer == 'akmeans':
             raise NotImplementedError(':)')
-        
+        # -----
+        # STEP 3 - Inverted Indexing
         logdbg('Step 3: Point the parts of the model back to their source')
         vm.wx2_axs = np.empty(vm.wx2_fdsc.shape[0], dtype=object) 
         for ax in xrange(0,num_train_keypoints):
@@ -408,76 +163,82 @@ class VisualModel(AbstractManager):
                 vm.num_train()/len(pylab.unique(ax2_tx[ax_of_wx])),\
                 vm.wx2_axs)+eps(1))
         logdbg('Built Model using %d feature vectors. Preparing to index.' % len(vm.ax2_cid))
-
+        # -----
+        # STEP 4 - Indexing
         logdbg('Step 4: Building FLANN Index: over '+str(len(vm.wx2_fdsc))+' words')
         assert vm.flann is None, 'Flann already exists'
         vm.flann = FLANN()
-        flann_param_dict = am.algo_prefs.model.indexer.to_dict()
+        flann_param_dict = vm.hs.am.algo_prefs.model.indexer.to_dict()
         flann_params = vm.flann.build_index(vm.wx2_fdsc, **flann_param_dict)
         vm.isDirty  = False
-        if not vm.save_model():
-            logwarn('Could not save the model')
+        vm.save_model()
+        logmsg('The model was built.')
+        
 
-    def save_model(vm): 
-        iom = vm.hs.iom
-        model_fpath = iom.get_model_fpath()
-        flann_index_fpath  = iom.get_flann_index_fpath()
-        #Crazy list compreshension. 
-        #Returns (key,val) tuples for saveable vars
+    def save_model(vm):
+        # See if the model is savable
+        if not vm.model_prefs.save_load_model:
+            logdbg('Can NOT save the visual model due to preferences')
+            return False
         if vm.isDirty:
-            raise Exception('Cannot Save a Dirty Index')
+            raise Exception('Can NOT save the visual model due to dirty index')
+        if vm.flann is None:
+            raise Exception('Can NOT save the visual model without a flann index')
+        logdbg('Building dictionary to save')
+        # TODO: This dictionary should just exist and not be 
+        # directly tied to this class.
+        # Build a dictionary of savable model terms
         to_save_dict = {key : vm.__dict__[key] \
-                             for key in vm.__dict__.keys() \
-                             if key.find('__') == -1 and key not in vm.exclude_load_mems }
-        logio('Saving Model')
+                        for key in vm.savable_model_fields }
+        # Get the save paths
+        model_fpath = vm.hs.iom.get_model_fpath()
+        flann_index_fpath = vm.hs.iom.get_flann_index_fpath()
+        # Save the Model
+        logio('Saving model to: '+model_fpath)
         np.savez(model_fpath, **to_save_dict)
-        logio('Saved Model to '+model_fpath)
-        assert not vm.flann is None, 'Trying to save null flann index'
+        # Save the Index
+        logio('Saving index to: '+flann_index_fpath)
         vm.flann.save_index(flann_index_fpath)
-        logio('Saved model index to '+flann_index_fpath)
+        logio('Model save was sucessfull')
         return True
 
-    def _save_class(vm, cls):
-        to_save_dict = {key : vm.__dict__[key] \
-                             for key in vm.__dict__.keys() \
-                             if key.find('__') == -1 and key not in vm.exclude_load_mems }
-    def _load_class(vm):
-        pass
-
     def load_model(vm):
-        iom = vm.hs.iom
-        # Delete old model
-        vm.delete_model()
-        vm.sample_train_set()
-        logio('Trying to load the visual model')
-        # Check to see if new model on disk
-        model_fpath = iom.get_model_fpath()
-        flann_index_fpath = iom.get_flann_index_fpath()
-        if not (filecheck(model_fpath) and filecheck(flann_index_fpath)):
-            logdbg('A saved model file was missing. Looking for: '+flann_index_fpath+' and '+model_fpath)
+        # See if the model is loadable
+        if not vm.model_prefs.save_load_model:
+            logdbg('Can NOT load the visual model')
             return False
+        if not vm.flann is None: 
+            raise Exception('Cannot load a model when FLANN already exists')
+        logdbg('Trying to load visual model')
+        # Check to see if new model on disk
+        model_fpath = vm.hs.iom.get_model_fpath()
+        if not os.path.exists(model_fpath):
+            logdbg(' * A saved model data file was missing: '+
+                   model_fpath); return False
+        flann_index_fpath = vm.hs.iom.get_flann_index_fpath()
+        if not os.path.exists(flann_index_fpath):
+            logdbg(' * A saved flann index file was missing: '+
+                   flann_index_fpath); return False
+        # Model and Flann Exist on disk
+        # Load the model data first
         # Read model into dictionary
-        logio('Reading Visual Model: %s\nKey/Vals Are:' % model_fpath)
+        logmsg('Loading visual model data: ' + model_fpath)
         npz = np.load(model_fpath)
-        tmpdict = {}
         for _key in npz.files:
-            _val = npz[_key]
-            tmpdict[_key] = _val
-            logdbg('  * <'+str2(type(_val))+'> '+str(_key)+' = '+str2(_val))
+            vm.__dict__[_key] = npz[_key]
         npz.close()
-        # Move dictionary into class 
-        for _key in tmpdict.keys():
-            vm.__dict__[_key] = tmpdict[_key]
         # Read FLANN index
-        logio('Reading Precomputed FLANN Index: %s' % flann_index_fpath)
-        assert vm.flann is None, '! Flann already exists'
+        logmsg('Loading FLANN index: '+ flann_index_fpath)
         vm.flann = FLANN()
         vm.flann.load_index(flann_index_fpath, vm.wx2_fdsc)
         vm.isDirty = False
-        logmsg('The model is built')
+        logmsg('The model was sucessfully loaded')
         return True
-    
+
+    # SHOULD BECOME DEPRICATED
     def sample_train_set(vm, samp_filter_arg=None):
+        ''' This is some pretty legacy matlab stuff. It builds a sample set for
+        the model based on some specifications'''
         cm = vm.hs.cm; nm = vm.hs.nm
         if samp_filter_arg is None: 
             filt = vm.sample_filter
@@ -518,31 +279,30 @@ class VisualModel(AbstractManager):
                 logdbg('The sample has not changed.')
         logdbg('The index is '+['Clean','Dirty'][vm.isDirty])
 
-        """
-    def lazy_computation(fn, fpath):
-        def lazy_wrapper(*args, **kwargs):
-            global lazy
-            if fpath in lazy.loaded.keys():
-                lazyvar = lazy.loaded[fpath]
-            elif fpath in lazy.canload(fpath):
-                lazyvar = lazy.np.load(fpath)
-            else:
-                lazyvar = fn(*args, **kwargs)
-                lazy.loaded[fpath] = lazyvar
-            return lazyvar
-        return lazy_wrapper
-    def lazy_savefunc(fn, fpath):
-        global lazy
-        lazy.savefuncs[fpath] = fn
-    def lazy_loadfunc(fn, fpath):
-        global lazy
-        lazy.loadfuncs[fpath] = fn
-    @lazy_savefunc('C:/tmp.flann'):
-    def _flann_save():
-        vm.flann.save_index(flann_index_fpath)
-    @lazy_loadfunc('C:/tmp.flann'):
-    def _flann_load(data_vecs):
-        vm.flann = FLANN()
-        vm.flann.load_index(flann_index_fpath, vm.wx2_fdsc)
-    @lazy_computation('C:/tmp.flann')
-    """
+    def num_train(vm):
+        return len(vm.train_cid)
+    def get_train_cx(vm):
+        return vm.hs.cm.cid2_cx[vm.get_train_cid()]
+    def get_test_cx(vm):
+        return np.setdiff1d(vm.hs.cm.all_cxs(), vm.get_train_cx())
+    def get_test_cid(vm):
+        return vm.hs.cm.cx2_cid[vm.get_test_cx()]
+    def get_train_cid(vm):
+        return vm.train_cid
+    def flip_sample(vm):
+        vm.train_cid = vm.get_test_cid()
+    def get_samp_id(vm):
+        '''
+        Returns an id unique to the sampled train_cid
+        Note: if a cid is assigned to another.hip, this will break
+        '''
+        iom = vm.hs.iom
+        samp_shelf = shelve.open(iom.get_temp_fpath('sample_shelf.db'))
+        samp_key = '%r' % vm.train_cid
+        if not samp_key in samp_shelf.keys():
+            samp_shelf[samp_key] = len(samp_shelf.keys())+1
+        samp_id = samp_shelf[samp_key]
+        samp_shelf.close()
+        return samp_id
+    def get_samp_suffix(vm):
+        return '.samp'+str(vm.get_samp_id())

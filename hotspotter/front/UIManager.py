@@ -212,9 +212,10 @@ class UIManager(QObject):
 
     @func_log
     def populate_image_table(uim):
-        cm, gm = uim.hs.get_managers('cm','gm')
         col_headers  = ['Image ID', 'Image Name', 'Chip IDs', 'Chip Names']
-        col_editable = [ False  ,   False      ,  False     ,    False]
+        col_editable = [ False    ,  False      ,  False    ,  False      ]
+        # Populate table with valid image indexes
+        cm, gm = uim.hs.get_managers('cm','gm')
         gx_list  = gm.get_valid_gxs()
         data_list = [None]*len(gx_list)
         row_list = range(len(gx_list))
@@ -228,14 +229,15 @@ class UIManager(QObject):
         
     @func_log
     def populate_result_table(uim):
+        col_headers  = ['Rank', 'Chip ID', 'Chip Name', 'score']
+        col_editable = [False ,   False  ,     True   ,  False ]
+        # Check to see if results exist
         res = uim.sel_res
         if res is None:
             logdbg('Requested populate_results, but there are no results to populate.')
             return None
         logmsg(res) 
         gm, cm, am = uim.hs.get_managers('gm','cm','am')
-        col_headers  = ['Rank', 'Chip ID', 'Chip Name', 'score']
-        col_editable = [False ,   False  ,     True   ,  False ]
         dynargs =\
         ('cid', 'name' )
         (qcid , qname  ) =  res.qcid2_(*dynargs)

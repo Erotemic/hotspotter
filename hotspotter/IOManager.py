@@ -199,7 +199,7 @@ class IOManager(AbstractManager):
         am, vm = iom.hs.get_managers('am','vm')
         algo_suffix = am.get_algo_suffix(['preproc','chiprep','model'])
         samp_suffix = vm.get_samp_suffix()
-        flann_index_fname = 'index.%s.%s.flann' % (algo_suffix, samp_suffix)
+        flann_index_fname = 'index%s%s.flann' % (algo_suffix, samp_suffix)
         return normpath(join(iom.get_model_dpath(), flann_index_fname))
     # --- Indexes 
     def get_prefs_fpath(iom, prefs_name):

@@ -1,8 +1,18 @@
 import subprocess
 import sys
 import os
+import struct
 
 #win32api.SetFileAttributes(path, win32con.FILE_ATTRIBUTE_NORMAL)
+
+def is_32_bit_python():
+    return struct.calcsize("P")*8 == 32
+def is_windows():
+    return sys.platform == 'win32'
+def is_linux():
+    return sys.platform == 'linux2'
+def is_mac():
+    return sys.platform == 'darwin'
 
 def view_text_file(txtfile):
     if sys.platform == 'win32':

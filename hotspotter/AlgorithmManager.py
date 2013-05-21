@@ -2,11 +2,10 @@ import os
 import types
 import subprocess
 import shelve
-from other.logger  import logmsg, logdbg, logerr, logwarn
-from other.helpers  import filecheck
-from other.ConcretePrintable import DynStruct, Pref 
-from other.AbstractPrintable import AbstractManager
-from numpy import sqrt, zeros, uint8, array, asarray, float32
+import numpy as np
+from hotspotter.other.logger  import logmsg, logdbg, logerr, logwarn
+from hotspotter.other.ConcretePrintable import DynStruct, Pref 
+from hotspotter.other.AbstractPrintable import AbstractManager
 from PIL import Image, ImageOps
 import re
 
@@ -185,27 +184,6 @@ class AlgorithmManager(AbstractManager):
         else:
             return '.algo.'+am.get_algo_name(depends,True)
 
-
-    # TODO: Move to tools library
-    def resize_chip(am, inImg, target_num_diag_pxls):
-        'Resizes a PIL chip to close to the target number of diagnal pixels'
-        (rw, rh) = inImg.size 
-        ar = float(rw)/float(rh) # Maintain Aspect Ratio
-        if ar > 4 or ar < .25:
-            logwarn('Aspect ratio %.2f may be too extreme' % (ar))
-        # Compute the scaled chip's tenative width and height
-        cd  = target_num_diag_pxls
-        _cw = sqrt(ar**2 * cd**2 / (ar**2 + 1))
-        _ch = _cw / ar
-        # Resize the chip as close to the target dimensions as possible
-        new_size = (int(round(_cw)),int(round(_ch)))
-        logdbg('Old size: %dx%d ; New size: %.2fx%.2f' % (rw, rh, _cw, _ch))
-        outImg = inImg.resize(new_size, Image.ANTIALIAS)
-        # Get the actual new chip size and scale factor
-        (cw, ch) = outImg.size
-        logdbg('Resized %dx%d to %dx%d' % (rw, rh, cw, ch))
-        return outImg
-
     def preprocess_chip(am, pil_filt):
         logdbg('prepocessing')
         # Convert to grayscale
@@ -215,8 +193,8 @@ class AlgorithmManager(AbstractManager):
         # --- Filters ---
         #if am.algo_prefs.preproc.histeq_bit : 
             ##pil_filt = ImageOps.equalize(pil_filt)
-            #img_rescale = exposure.equalize_hist(asarray(pil_filt))
-            #pil_filt = Image.fromarray(histeq(asarray(pil_filt))).convert('L')
+            #img_rescale = exposure.equalize_hist(np.asarray(pil_filt))
+            #pil_filt = Image.fromarray(histeq(np.asarray(pil_filt))).convert('L')
         if am.algo_prefs.preproc.histeq_bit:
             from hotspotter.algo.imalgos import histeq
             logdbg('Equalizing Histogram')
@@ -224,18 +202,18 @@ class AlgorithmManager(AbstractManager):
         if am.algo_prefs.preproc.adapt_histeq_bit:
             from hotspotter.algo.imalgos import adapt_histeq
             logdbg('Adaptive Equalizing Histogram')
-            pil_filt = Image.fromarray(adapt_histeq(asarray(pil_filt)))
+            pil_filt = Image.fromarray(adapt_histeq(np.asarray(pil_filt)))
         if am.algo_prefs.preproc.contrast_stretch_bit:
             from hotspotter.algo.imalgos import contrast_stretch
             logdbg('Stretching Histogram')
-            pil_filt = Image.fromarray(contrast_stretch(asarray(pil_filt)))
+            pil_filt = Image.fromarray(contrast_stretch(np.asarray(pil_filt)))
         if am.algo_prefs.preproc.autocontrast_bit :
             logdbg('PIL Autocontrast')
             pil_filt = ImageOps.autocontrast(pil_filt)
         if am.algo_prefs.preproc.bilateral_filt_bit :
             logdbg('O(1) Bilateral Filter Approximation')
             from hotspotter.tpl.other.shiftableBF import shiftableBF
-            pil_filt = Image.fromarray(shiftableBF(asarray(pil_filt)))
+            pil_filt = Image.fromarray(shiftableBF(np.asarray(pil_filt)))
 
         return pil_filt
 
@@ -257,6 +235,7 @@ class AlgorithmManager(AbstractManager):
         logerr('Only External Keypoint Descriptors are implemented: '+str(external_descriptors))
 
         from tpl.pyopencv import cv2
+        # http://stackoverflow.com/questions/10764895/opencv-python-sample-error
         #  http://stackoverflow.com/questions/12491022/opencv-freak-fast-retina-keypoint-descriptor
         from tpl.pyopencv.cv2 import cv
         # The following detector types are supported: 
@@ -282,8 +261,8 @@ class AlgorithmManager(AbstractManager):
         logdbg('Made %r, Keypoint description with %d kpts ' % (cvFeatExtractor, len(cvKpts_)) )
         (cvKpts, cvDesc) = cvFeatExtractor.compute(im,cvKpts_)
         logdbg('Detected %d features  ' % len(cvKpts) )
-        kpts = zeros((len(cvKpts), 5),dtype=float32)
-        desc = array(cvDesc,dtype=uint8)
+        kpts = np.zeros((len(cvKpts), 5),dtype=np.float32)
+        desc = np.array(cvDesc,dtype=np.uint8)
         fx = 0
         # * Convert to representation in: M. Perdoc, O. Chum, and J. Matas. CVPR 2009
         # * Efficient representation of local geometry for large scale object retrieval
@@ -297,12 +276,12 @@ class AlgorithmManager(AbstractManager):
             fx += 1
         return (kpts, desc)
          # Garbage
-         # SIFT descriptors are computed with a radius of r=3*sqrt(3*s)
+         # SIFT descriptors are computed with a radius of r=3*np.sqrt(3*s)
          # s = (det A_i) ^ (-1/2) OR
          # s = sqrtm(inv(det(A_i)))
-         #aIS = 1/sqrt(a)
-         #cIS = (c/sqrt(a) - c/sqrt(d))/(a - d + eps)
-         #dIS = 1/sqrt(d)
+         #aIS = 1/np.sqrt(a)
+         #cIS = (c/np.sqrt(a) - c/np.sqrt(d))/(a - d + eps)
+         #dIS = 1/np.sqrt(d)
          #print (aIS,cIS,dIS)
          #print (a,c,d)
          #print '_-----------'
@@ -351,7 +330,7 @@ class AlgorithmManager(AbstractManager):
             logdbg(str(out)+' '+str(err))
             if proc.returncode != 0:
                 logerr('Failed to execute '+cmd+'\n OUTPUT: '+out)
-            if not filecheck(outname):
+            if not os.path.exists(outname):
                 logerr('The output file doesnt exist: '+outname)
             logdbg('External Output:\n'+out[:-1])
         except Exception as ex:
@@ -367,17 +346,17 @@ class AlgorithmManager(AbstractManager):
         nkpts = int(fid.readline())
         if ndims != 128: 
             raise Exception(' These are not SIFT dexcriptors ')
-        kpts = zeros((nkpts,5),  dtype=float32)
-        desc = zeros((nkpts,ndims),dtype=uint8)
+        kpts = np.zeros((nkpts,5),  dtype=np.float32)
+        desc = np.zeros((nkpts,ndims),dtype=np.uint8)
         lines = fid.readlines()
-        # SIFT descriptors are computed with a radius of r=3*sqrt(3*s)
+        # SIFT descriptors are computed with a radius of r=3*np.sqrt(3*s)
         # s = (det A_i) ^ (-1/2) OR
         # s = sqrtm(inv(det(A_i)))
 
         for i in range(nkpts):
             nums = lines[i].split(' ')
-            kpts[i,:] = array(map(lambda _: float(_)   , nums[0:5]),dtype=float32)
-            desc[i,:] = array(map(lambda _: uint8(_), nums[5:]),dtype=uint8)
+            kpts[i,:] = np.array(map(lambda _: float(_)   , nums[0:5]),dtype=np.float32)
+            desc[i,:] = np.array(map(lambda _: np.uint8(_), nums[5:]),dtype=np.uint8)
         fid.close()
 
         return (kpts, desc)

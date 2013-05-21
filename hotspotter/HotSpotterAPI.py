@@ -62,6 +62,13 @@ class HotSpotterAPI(AbstractPrintable):
         if not save_fpath is None:
             hs.dm.save_fig(save_fpath)
 
+    def on_cx_modified(hs, cx):
+        # When a cx is modified mark dependents as dirty
+        # TODO: Add conditional dirtyness
+        hs.vm.isDirty = True
+        # Remove selection
+        hs.uim.sel_res = None
+
     @func_log
     def is_valid_db_dpath(hs, db_dpath):
         'Checks to see if database conforms to expected conventions'
@@ -328,4 +335,3 @@ class HotSpotterAPI(AbstractPrintable):
 
     def __getitem__(hs, *dynargs):
         return tuple([hs.__dict__[arg] for arg in dynargs])
-

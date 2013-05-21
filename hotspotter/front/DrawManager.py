@@ -24,7 +24,7 @@ class DrawManager(AbstractManager):
             dm.draw_prefs = Pref(fpath=iom.get_prefs_fpath('draw_prefs'))
         dm.draw_prefs.bbox_bit       = True
         dm.draw_prefs.ellipse_bit    = False
-        dm.draw_prefs.ellipse_alpha  = .5
+        dm.draw_prefs.ellipse_alpha  = .6
         dm.draw_prefs.points_bit     = False
         dm.draw_prefs.result_view  = Pref(1, choices=['in_image', 'in_chip'])
         dm.draw_prefs.fignum         = 0
@@ -59,12 +59,14 @@ class DrawManager(AbstractManager):
         cm = dm.hs.cm
         cid, name, chip = cm.cx2_(cx, 'cid', 'name', 'chip')
         if in_raw_chip:
-            chip = np.asarray(cm.cx2_pil_scaled_rotated_color(cx))
+            chip = np.asarray(cm.cx2_pil_chip(cx, scaled=True,
+                                              preprocessed=False, rotated=True,
+                                             colored=True))
         if dm.draw_prefs.use_thumbnails is True:
             pass
         dm.add_images([chip], [name])
         # Draw chiprep and return fsel incase rand is good
-        fsel_ret = dm.draw_chiprep2(cx, axi=0, **kwargs)
+        fsel_ret = dm.draw_chiprep2(cx, axi=0, bbox_bit=False, **kwargs)
         dm.end_draw()
         return fsel_ret
     # ---
@@ -113,7 +115,8 @@ class DrawManager(AbstractManager):
                 qfsel = fm[fs > 0][:,0]
                 fsel  = fm[fs > 0][:,1]
             dm.draw_chiprep2(cx,  axi=axi,  axi_color=axi, fsel=fsel)
-            dm.draw_chiprep2(qcx, axi=qaxi, axi_color=axi, fsel=qfsel, bbox_bit = False)
+            dm.draw_chiprep2(qcx, axi=qaxi, axi_color=axi, fsel=qfsel, bbox_bit
+                             = True)
         dm.end_draw()
 
     # ---
@@ -341,8 +344,9 @@ class DrawManager(AbstractManager):
             else:
                 cxy = (0,0)
                 theta = -cm.cx2_theta[cx]
-                (cw,ch) = cm.cx2_chip_size(cx) # This is not ok, because the size disagrees with roi after rotation
-                transRot = Affine2D().rotate_around(cw/2,ch/2,theta)
+                (r_cw, r_ch) = cm._rotated_scaled_size(cx) # Get Chip Space Extent
+                (u_cw, u_ch) = cm._scaled_size(cx) # Get Unrotated Chip Space Extent
+                transRot = Affine2D().rotate_around(r_cw/2,r_cw/2,theta)
                 trans_bbox = transRot + transImg + transData
                 bbox = Rectangle(cxy,cw,ch,transform=trans_bbox) 
             bbox.set_fill(False)

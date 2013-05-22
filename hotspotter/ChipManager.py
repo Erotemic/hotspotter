@@ -435,7 +435,7 @@ class ChipManager(AbstractDataManager):
                               [             0,             0, 1]), dtype=np.float32)
         # translate to uncentered unrotated
         trans_uncenter = np.array(([ 1,  0, uctx],
-                                   [ 0,  1, uctx],
+                                   [ 0,  1, ucty],
                                    [ 0,  0,    1]), dtype=np.float32)
         # Unscale to untranslated image space
         unscale = np.array(([ rw/ucw,    0,  0],

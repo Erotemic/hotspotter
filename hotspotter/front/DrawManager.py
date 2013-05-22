@@ -226,7 +226,7 @@ class DrawManager(AbstractManager):
         #
         logdbg('Added '+str(num_images)+' images/axes')
     # ---
-    def _get_fpt_ell_collection(dm, fpts, transData, alpha, edgecolor):
+    def _get_fpt_ell_collection(dm, fpts, T_data, alpha, edgecolor):
         ell_patches = []
         for (x,y,a,c,d) in fpts: # Manually Calculated sqrtm(inv(A))
             with catch_warnings():
@@ -242,7 +242,7 @@ class DrawManager(AbstractManager):
             ell_patches = [unitCirc1] + ell_patches
         ellipse_collection = PatchCollection(ell_patches)
         ellipse_collection.set_facecolor('none')
-        ellipse_collection.set_transform(transData)
+        ellipse_collection.set_transform(T_data)
         ellipse_collection.set_alpha(alpha)
         ellipse_collection.set_edgecolor(edgecolor)
         return ellipse_collection
@@ -291,13 +291,13 @@ class DrawManager(AbstractManager):
                 color = [color[0], color[1]+.5, color[2]]
         
         # Axis We are drawing to.
-        ax        = dm.ax_list[axi]
-        transData = ax.transData # data coordinates -> display coordinates
+        ax     = dm.ax_list[axi]
+        T_data = ax.transData # data coordinates -> display coordinates
         # Data coordinates are chip coords
 
         if xy_bit or ell_bit or fsel != None:
-            T_fpts = transData if not in_image_bit else\
-                    Affine2D(cm.cx2_T_chip2img(cx) ) + transData
+            T_fpts = T_data if not in_image_bit else\
+                    Affine2D(cm.cx2_T_chip2img(cx) ) + T_data
             fpts = cm.get_fpts(cx)
             if fsel is None: fsel = range(len(fpts))
             # ---DEVHACK---
@@ -313,14 +313,15 @@ class DrawManager(AbstractManager):
                 # making it more likely to pick a centerpoint
                 fsel = np.random.choice(xrange(len(fpts)), size=88, replace=False, p=pdf)
             # ---/DEVHACK---
-
-            if ell_bit and len(fpts) > 0: # Plot ellipses
+            # Plot ellipses
+            if ell_bit and len(fpts) > 0: 
                 ells = dm._get_fpt_ell_collection(fpts[fsel,:],
                                                   T_fpts,
                                                   ell_alpha,
                                                   color)
                 ax.add_collection(ells)
-            if xy_bit and len(fpts) > 0: # Plot xy points
+            # Plot xy points
+            if xy_bit and len(fpts) > 0: 
                 ax.plot(fpts[fsel,0], fpts[fsel,1], 'o',\
                         markeredgecolor=color,\
                         markerfacecolor=color,\
@@ -328,15 +329,14 @@ class DrawManager(AbstractManager):
                         markersize=2)
         # === 
         if bbox_bit:
-            # Draw Bounding Rectangle
-            [cx_pt,cy_pt,cw,ch] = cm.cx2_roi[cx]
-            cxy = (cx_pt,cy_pt)
-            
-            if in_image_bit:
-                bbox = Rectangle(cxy,cw,ch,transform=transData) 
-            else:
-                T_bbox = Affine2D( np.linalg.inv(cm.cx2_T_chip2img(cx)) ) 
-                bbox = Rectangle(cxy,cw,ch,transform=T_bbox) 
+            # Draw Bounding Rectangle in Image Coords
+            [rx,ry,rw,rh] = cm.cx2_roi[cx]
+            rxy = (rx,ry)
+            # Convert to Chip Coords if needbe
+            T_bbox = T_data if in_image_bit else\
+                Affine2D( np.linalg.inv(cm.cx2_T_chip2img(cx)) ) + T_data
+            bbox = Rectangle(rxy,rw,rh,transform=T_bbox) 
+            # Visual Properties
             bbox.set_fill(False)
             bbox.set_edgecolor(color)
             ax.add_patch(bbox)
@@ -349,13 +349,14 @@ class DrawManager(AbstractManager):
             hsv_textBG = colorsys.rgb_to_hsv(*color)[0:2]+(.2,)
             rgb_textBG = colorsys.hsv_to_rgb(*hsv_textBG)+(.7,)
             # Draw Orientation Backwards
-            degrees = -cm.cx2_theta[cx]*180/np.pi
-            if not in_image_bit: degrees = 0
+            degrees = 0 if not in_image_bit else -cm.cx2_theta[cx]*180/np.pi
+            txy = (0,0) if not in_image_bit else rxy
+
             chip_text =  'name='+name+'\n'+'cid='+str(cid)
-            ax.text(cxy[0]+1, cxy[1]+1, chip_text,
+            ax.text(txy[0]+1, txy[1]+1, chip_text,
                     horizontalalignment ='left',
                     verticalalignment   ='top',
-                    transform           =transData,
+                    transform           =T_data,
                     rotation            =degrees,
                     color               =rgb_textFG,
                     backgroundcolor     =rgb_textBG)

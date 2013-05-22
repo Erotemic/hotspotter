@@ -66,7 +66,7 @@ class DrawManager(AbstractManager):
             pass
         dm.add_images([chip], [name])
         # Draw chiprep and return fsel incase rand is good
-        fsel_ret = dm.draw_chiprep2(cx, axi=0, bbox_bit=False, **kwargs)
+        fsel_ret = dm.draw_chiprep2(cx, axi=0, **kwargs)
         dm.end_draw()
         return fsel_ret
     # ---
@@ -115,8 +115,7 @@ class DrawManager(AbstractManager):
                 qfsel = fm[fs > 0][:,0]
                 fsel  = fm[fs > 0][:,1]
             dm.draw_chiprep2(cx,  axi=axi,  axi_color=axi, fsel=fsel)
-            dm.draw_chiprep2(qcx, axi=qaxi, axi_color=axi, fsel=qfsel, bbox_bit
-                             = True)
+            dm.draw_chiprep2(qcx, axi=qaxi, axi_color=axi, fsel=qfsel, bbox_bit=True)
         dm.end_draw()
 
     # ---
@@ -260,7 +259,9 @@ class DrawManager(AbstractManager):
         Draws a chip representation over an already drawn chip
         cx           - the chiprep to draw. Managed by the chip manager
         axi          - the axis index to draw it in
-        in_image_bit - draw the chip by itself or in its original image
+        #TODO: in_image_bit becomes data_coordinates
+        in_image_bit - are the data coordinates image or rotated chip? 
+                       raw the chip by itself or in its original image
         axi_color    - use the color associated with axis index 
                        (used for ploting queries)
         ---
@@ -276,8 +277,8 @@ class DrawManager(AbstractManager):
         # Grab Preferences
         xy_bit  = dm.draw_prefs.points_bit    if xy_bit    is None else xy_bit
         ell_bit = dm.draw_prefs.ellipse_bit   if ell_bit   is None else ell_bit
-        bbox_bit     = dm.draw_prefs.bbox_bit      if bbox_bit  is None else bbox_bit
-        ell_alpha    = dm.draw_prefs.ellipse_alpha if ell_alpha is None else ell_alpha 
+        bbox_bit  = dm.draw_prefs.bbox_bit      if bbox_bit  is None else bbox_bit
+        ell_alpha = dm.draw_prefs.ellipse_alpha if ell_alpha is None else ell_alpha 
 
         # Make sure alpha in range [0,1]
         if ell_alpha > 1: ell_alpha = 1.0
@@ -294,22 +295,12 @@ class DrawManager(AbstractManager):
         transData = ax.transData # data coordinates -> display coordinates
         # Data coordinates are chip coords
 
-        # data coords = chip coords -> display coords
-        transImg = Affine2D() 
         if xy_bit or ell_bit or fsel != None:
-            if in_image_bit: 
-                # data coords = chip coords -> image coords -> display coords
-                transImg = Affine2D( cm.cx2_transImg(cx) ) 
-            (cw,ch) = cm.cx2_chip_size(cx) # This is not ok, because the size disagrees with roi after rotation
+            T_fpts = transData if not in_image_bit else\
+                    Affine2D(cm.cx2_T_chip2img(cx) ) + transData
             fpts = cm.get_fpts(cx)
-            #if in_image_bit:
-                #theta = cm.cx2_theta[cx]
-                #transRot = Affine2D().rotate_around(cw/2,ch/2,theta)
-            #else:
-                #transRot = Affine2D()
-            #trans_kpts = transRot + transImg + transData
-            trans_kpts = transImg + transData
             if fsel is None: fsel = range(len(fpts))
+            # ---DEVHACK---
             # Randomly sample the keypoints. (Except be sneaky)
             elif fsel == 'rand': 
                 # Get Relative Position
@@ -321,10 +312,11 @@ class DrawManager(AbstractManager):
                 # Transform Relative Position to Probabilities
                 # making it more likely to pick a centerpoint
                 fsel = np.random.choice(xrange(len(fpts)), size=88, replace=False, p=pdf)
+            # ---/DEVHACK---
 
             if ell_bit and len(fpts) > 0: # Plot ellipses
                 ells = dm._get_fpt_ell_collection(fpts[fsel,:],
-                                                  trans_kpts,
+                                                  T_fpts,
                                                   ell_alpha,
                                                   color)
                 ax.add_collection(ells)
@@ -332,23 +324,19 @@ class DrawManager(AbstractManager):
                 ax.plot(fpts[fsel,0], fpts[fsel,1], 'o',\
                         markeredgecolor=color,\
                         markerfacecolor=color,\
-                        transform=trans_kpts,\
+                        transform=T_fpts,\
                         markersize=2)
         # === 
         if bbox_bit:
             # Draw Bounding Rectangle
+            [cx_pt,cy_pt,cw,ch] = cm.cx2_roi[cx]
+            cxy = (cx_pt,cy_pt)
+            
             if in_image_bit:
-                [cx_pt,cy_pt,cw,ch] = cm.cx2_roi[cx]
-                cxy = (cx_pt,cy_pt)
                 bbox = Rectangle(cxy,cw,ch,transform=transData) 
             else:
-                cxy = (0,0)
-                theta = -cm.cx2_theta[cx]
-                (r_cw, r_ch) = cm._rotated_scaled_size(cx) # Get Chip Space Extent
-                (u_cw, u_ch) = cm._scaled_size(cx) # Get Unrotated Chip Space Extent
-                transRot = Affine2D().rotate_around(r_cw/2,r_cw/2,theta)
-                trans_bbox = transRot + transImg + transData
-                bbox = Rectangle(cxy,cw,ch,transform=trans_bbox) 
+                T_bbox = Affine2D( np.linalg.inv(cm.cx2_T_chip2img(cx)) ) 
+                bbox = Rectangle(cxy,cw,ch,transform=T_bbox) 
             bbox.set_fill(False)
             bbox.set_edgecolor(color)
             ax.add_patch(bbox)

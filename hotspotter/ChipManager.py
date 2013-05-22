@@ -392,9 +392,10 @@ class ChipManager(AbstractDataManager):
             Image.open(chip_fpath).rotate(
                 cm.cx2_theta[cx]*180/np.pi, resample=Image.BICUBIC, expand=1))
 
-    def cx2_chip_size(cm, cx):
-        chip_fpath = cm.cx2_chip_fpath(cx)
-        return Image.open(chip_fpath).size
+    def cx2_chip_size(cm, cx, rotated=False):
+        return cm._scaled_size(cx, rotated=rotated)
+        #chip_fpath = cm.cx2_chip_fpath(cx)
+        #return Image.open(chip_fpath).size
 
     def cx2_transChip(cm, cx):
         return np.linalg.inv(cm.cx2_transImg(cx))
@@ -411,39 +412,41 @@ class ChipManager(AbstractDataManager):
 #  (Image Space): roi=[rx,ry,rw,rh]
 #------------------------------
 
-    def cx2_transImg(cm, cx):
-        (cw, ch) = cm.cx2_chip_size(cx)
-        (rx, ry, rw, rh) = cm.cx2_roi[cx]
+    def cx2_T_chip2img(cm, cx):
+        'Return the transformation from Rotated Chip Space to Image Space'
+        # rotation radians
         theta = cm.cx2_theta[cx]
-        sx = float(rw) / float(cw)
-        sy = float(rh) / float(ch)
-        tx = float(rx) # Translation happens after scaling
-        ty = float(ry)
-        #rot = np.array(([1, 0, 0],
-                        #[0, 1, 0],
-                        #[0, 0, 1]), dtype=np.float32)
-        # Return Affine Transformation 
-        scale = np.array(([sx,  0,  0],
-                          [ 0, sy,  0],
-                          [ 0,  0,  1]), dtype=np.float32)
-
-        rot_trans_pre = np.array(([ 1,  0, cw/2],
-                                  [ 0,  1, ch/2],
-                                  [ 0,  0,    1]), dtype=np.float32)
-
-        rot = np.array(([np.cos(theta), -np.sin(theta), 0],
-                        [np.sin(theta),  np.cos(theta), 0],
-                        [             0,             0, 1]), dtype=np.float32)
-
-        rot_trans_post = np.array(([ 1,  0, -cw/2],
-                                   [ 0,  1, -ch/2],
-                                   [ 0,  0,     1]), dtype=np.float32)
-
-        trans = np.array(([ 1,  0, tx],
-                          [ 0,  1, ty],
-                          [ 0,  0,  1]), dtype=np.float32)
-
-        return trans.dot(rot_trans_pre.dot(rot.dot(rot_trans_post.dot(scale))))
+        # roi size and translation
+        (rx, ry, rw, rh) = np.array(cm.cx2_roi[cx],dtype=np.float)
+        # unrotated size
+        (ucw, uch) = cm._scaled_size(cx, rotated=False, dtype=np.float)
+        # rotated size
+        (cw, ch) = cm._scaled_size(cx, rotated=True, dtype=np.float)
+        # Translation Variables
+        ctx, cty   = ( cw/2,  ch/2)
+        uctx, ucty = (ucw/2, uch/2)
+        # Translate to centered rotated
+        trans_center = np.array(([ 1,  0, -ctx],
+                                 [ 0,  1, -cty],
+                                 [ 0,  0,    1]), dtype=np.float32)
+        # unrotate
+        unrotate = np.array(([np.cos(theta), -np.sin(theta), 0],
+                              [np.sin(theta),  np.cos(theta), 0],
+                              [             0,             0, 1]), dtype=np.float32)
+        # translate to uncentered unrotated
+        trans_uncenter = np.array(([ 1,  0, uctx],
+                                   [ 0,  1, uctx],
+                                   [ 0,  0,    1]), dtype=np.float32)
+        # Unscale to untranslated image space
+        unscale = np.array(([ rw/ucw,    0,  0],
+                            [ 0,    rh/uch,  0],
+                            [ 0,        0,  1]), dtype=np.float32) 
+        # Translate into image scale
+        trans_img = np.array(([ 1,  0, rx],
+                              [ 0,  1, ry],
+                              [ 0,  0,  1]), dtype=np.float32)
+        #return trans_center.dot(unrotate).dot(trans_uncenter).dot(unscale).dot(trans_img)
+        return trans_img.dot(unscale).dot(trans_uncenter).dot(unrotate).dot(trans_center)
 
     def cx2_chip_fpath(cm, cx):
         'Gets chip fpath with checks'
@@ -483,44 +486,45 @@ class ChipManager(AbstractDataManager):
     
     
     # --- Internals  ---
-    def _scaled_size(cm, cx, dtype=float):
-        '''Returns the scaled size of cx. Without considering rotation
+    def _scaled_size(cm, cx, dtype=float, rotated=False):
+        '''Returns the ChipSpace size of cx. Without considering rotation
            Depends on the current algorithm settings
            dtype specifies the percision of return type'''
+        # Compute Unrotated Chip Space
         # Get raw size and target sizze
-        (_, __, rw, rh)  = cm.cx2_roi[cx]
+        (_, _, rw, rh)  = cm.cx2_roi[cx]
         target_diag_pxls = cm.hs.am.algo_prefs.preproc.sqrt_num_pxls
-        if target_diag_pxls == -1: # Code for just doubleing the size
-            current_num_diag_pxls = np.sqrt(rw**2 + rh**2) * 2
-            target_diag_pxls = current_num_diag_pxls*2
-            #target_diag_pxls = max(current_num_diag_pxls * 2, 5000)
-        # Get raw aspect ratio
-        ar = np.float(rw)/np.float(rh) 
-        if ar > 4 or ar < .25: logwarn(
-            'Aspect ratio for cx=%d %.2f may be too extreme' % (cx, ar))
-        # Compute the scaled chip's tenative width and height
-        cw = np.sqrt(ar**2 * target_diag_pxls**2 / (ar**2 + 1))
-        ch = cw / ar
+        # HACK: Double the size like Lowe; instead of normalizing
+        if target_diag_pxls == -1:
+            current_num_diag_pxls = np.sqrt(rw**2 + rh**2)
+            target_diag_pxls = current_num_diag_pxls*2 # max(, 5000)
+        ar = np.float(rw)/np.float(rh) # aspect ratio
+        if ar > 4 or ar < .25: 
+            logwarn( 'Aspect ratio for cx=%d %.2f may be too extreme' % (cx, ar))
+        # Compute Unoriented scaled chip's width and height
+        ucw = np.sqrt(ar**2 * target_diag_pxls**2 / (ar**2 + 1))
+        uch = ucw / ar
+        # Rotate Unrotated Chip Space into Rotated Chip Space
+        if rotated: 
+            theta = cm.cx2_theta[cx]
+            rot = np.array(([np.cos(theta), -np.sin(theta)], [np.sin(theta),  np.cos(theta)]), dtype=np.float)
+            # Extend of Unrotated Chip Space. Center shifted to the origin 
+            pts_00 = np.array([(0,0), (ucw,0), (ucw,uch), (0, uch)]) - np.array((ucw, uch))/2
+            rot_pts = pts_00.dot(rot) 
+            xymin = rot_pts.min(0)
+            xymax = rot_pts.max(0)
+            # Floating point Rotated Chip w/h
+            cw, ch = xymax - xymin
+        else:
+            # Floating point Unrotated Chip w/h
+            cw, ch = ucw, uch
+        # Convert to the specified dtype at the end
         if dtype is np.float:
-            return (cw, ch)
+            return cw, ch
         elif np.dtype(dtype).kind == 'f':
             return dtype(cw), dtype(ch)
         else:
             return dtype(round(cw)), dtype(round(ch))
-
-    def _rotated_scaled_size(cm, cx):
-        '''Returns the scaled size of cx considering rotation'''
-        sz = np.array(cm._scaled_size(cx), dtype=np.float)
-        theta = -cm.cx2_theta[cx]
-        rot = np.array(([np.cos(theta), -np.sin(theta)],
-                        [np.sin(theta),  np.cos(theta)]), dtype=np.float)
-        # Get bbox points around the origin
-        pts_00 = np.array([(0,0), (sz[0],0), sz, (0, sz[1])]) - sz/2
-        rot_pts = pts_00.dot(rot) 
-        xymin = rot_pts.min(0)
-        xymax = rot_pts.max(0)
-        rot_scaled_sz = xymax - xymin
-        return rot_scaled_sz
 
     def _cut_out_roi(cm, img, roi):
         logdbg('Image shape is: '+str(img.shape))
@@ -553,7 +557,7 @@ class ChipManager(AbstractDataManager):
             pil_chip = Image.fromarray( cm.cx2_raw_chip(cx) )
         # Scale the image to its processed size
         if scaled:
-            new_size = cm._scaled_size(cx, dtype=int)
+            new_size = cm._scaled_size(cx, dtype=int, rotated=False)
             pil_chip = pil_chip.resize(new_size, Image.ANTIALIAS)
         if preprocessed:
             pil_chip = cm.hs.am.preprocess_chip(pil_chip)

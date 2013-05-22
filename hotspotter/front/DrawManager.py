@@ -91,7 +91,8 @@ class DrawManager(AbstractManager):
             pass
 
         # Add the images to draw
-        if dm.draw_prefs.result_view == 'in_image':
+        in_image_bit = dm.draw_prefs.result_view == 'in_image'
+        if in_image_bit:
             qimg = cm.cx2_img(qcx)
             timg = cm.cx2_img_list(tcx)
             dm.add_images([qimg] + timg, title_list)
@@ -114,8 +115,8 @@ class DrawManager(AbstractManager):
             else:
                 qfsel = fm[fs > 0][:,0]
                 fsel  = fm[fs > 0][:,1]
-            dm.draw_chiprep2(cx,  axi=axi,  axi_color=axi, fsel=fsel)
-            dm.draw_chiprep2(qcx, axi=qaxi, axi_color=axi, fsel=qfsel, bbox_bit=True)
+            dm.draw_chiprep2(cx,  axi=axi,  axi_color=axi, fsel=fsel,  in_image_bit=in_image_bit)
+            dm.draw_chiprep2(qcx, axi=qaxi, axi_color=axi, fsel=qfsel, in_image_bit=in_image_bit, bbox_bit=True)
         dm.end_draw()
 
     # ---

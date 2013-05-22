@@ -380,8 +380,7 @@ class ChipManager(AbstractDataManager):
 # --- Raw Image Representation of Chip ---
     def cx2_chip_list(cm, cx_list):
         if np.iterable(cx_list): 
-            chip_fpath_list = [cm.cx2_chip_fpath(cx) for cx in iter(cx_list) ]
-            return [np.asarray(Image.open(chip_fpath)) for chip_fpath in iter(chip_fpath_list)]
+            return [cm.cx2_chip(cx) for cx in iter(cx_list) ]
         else: 
             return [cm.cx2_chip(cx_list)]
 
@@ -412,7 +411,7 @@ class ChipManager(AbstractDataManager):
 #  (Image Space): roi=[rx,ry,rw,rh]
 #------------------------------
 
-    def cx2_T_chip2img(cm, cx):
+    def cx2_T_chip2img(cm, cx, rotated=True):
         'Return the transformation from Rotated Chip Space to Image Space'
         # rotation radians
         theta = cm.cx2_theta[cx]
@@ -447,6 +446,34 @@ class ChipManager(AbstractDataManager):
                               [ 0,  0,  1]), dtype=np.float32)
         #return trans_center.dot(unrotate).dot(trans_uncenter).dot(unscale).dot(trans_img)
         return trans_img.dot(unscale).dot(trans_uncenter).dot(unrotate).dot(trans_center)
+
+    def cx2_T_chip2unrotated(cm, cx, rotated=True):
+        'Return the transformation from Rotated Chip Space to Image Space'
+        # rotation radians
+        theta = cm.cx2_theta[cx]
+        # roi size and translation
+        (rx, ry, rw, rh) = np.array(cm.cx2_roi[cx],dtype=np.float)
+        # unrotated size
+        (ucw, uch) = cm._scaled_size(cx, rotated=False, dtype=np.float)
+        # rotated size
+        (cw, ch) = cm._scaled_size(cx, rotated=True, dtype=np.float)
+        # Translation Variables
+        ctx, cty   = ( cw/2,  ch/2)
+        uctx, ucty = (ucw/2, uch/2)
+        # Translate to centered rotated
+        trans_center = np.array(([ 1,  0, -ctx],
+                                 [ 0,  1, -cty],
+                                 [ 0,  0,    1]), dtype=np.float32)
+        # unrotate
+        unrotate = np.array(([np.cos(theta), -np.sin(theta), 0],
+                              [np.sin(theta),  np.cos(theta), 0],
+                              [             0,             0, 1]), dtype=np.float32)
+        # translate to uncentered unrotated
+        trans_uncenter = np.array(([ 1,  0, uctx],
+                                   [ 0,  1, ucty],
+                                   [ 0,  0,    1]), dtype=np.float32)
+        #return trans_center.dot(unrotate).dot(trans_uncenter).dot(unscale).dot(trans_img)
+        return trans_uncenter.dot(unrotate).dot(trans_center)
 
     def cx2_chip_fpath(cm, cx):
         'Gets chip fpath with checks'

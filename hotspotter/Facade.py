@@ -227,6 +227,21 @@ class Facade(QObject):
                 cm.rename_chip(cx, new_name)
         fac.hs.uim.populate_tables()
 
+    @pyqtSlot(name='run_matching_experiment')
+    @func_log
+    def run_matching_experiment(fac):
+        fac.hs.em.run_matching_experiment()
+
+    @pyqtSlot(name='run_name_consistency_experiment')
+    @func_log
+    def run_name_consistency_experiment(fac):
+        fac.hs.em.run_name_consistency_experiment()
+
+    @pyqtSlot(name='remove_cid')
+    @func_log
+    def run_matching_experiment(fac):
+        fac.hs.em.run_matching_experiment()
+
     @pyqtSlot(name='remove_cid')
     @func_log
     def remove_cid(fac, cid=None):

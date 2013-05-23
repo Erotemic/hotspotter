@@ -121,6 +121,9 @@ class HotspotterMainWindow(QMainWindow):
         main_skel.actionBatch_Change_Name.triggered.connect(fac._quick_and_dirty_batch_rename)
         main_skel.actionAdd_Metadata_Property.triggered.connect(fac.add_new_prop)
         main_skel.actionAssign_Matches_Above_Threshold.triggered.connect(fac.match_all_above_thresh)
+        # Experiments
+        main_skel.actionMatching_Experiment.triggered.connect(fac.run_matching_experiment)
+        main_skel.actionName_Consistency_Experiment.triggered.connect(fac.run_name_consistency_experiment)
         # 
         # Gui Components
         # Tables Widgets

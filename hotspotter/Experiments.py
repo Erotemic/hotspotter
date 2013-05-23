@@ -43,10 +43,9 @@ class ExperimentManager(AbstractManager):
         with_ellipse_and_points  = False
         # Create an Experiment Directory in .hs_internals/computed
         timestamp  = iom.get_timestamp()
-        expt_dpath = iom.ensure_computed_directory('_'.join(['expt',expt_name,timestamp]))
+        expt_dpath = iom.ensure_directory(iom.get_user_fpath('_'.join(['expt',expt_name,timestamp])))
         expt_img_dpath = iom.ensure_directory(os.path.join(expt_dpath, 'result_images'))
-        expt_rr_dpath = iom.ensure_directory(os.path.join(expt_dpath, 'raw_results'))
-
+        expt_rr_dpath  = iom.ensure_directory(os.path.join(expt_dpath, 'raw_results'))
 
         # Write Algorithm Settings to the file
         algo_prefs_text = am.get_algo_name('all')

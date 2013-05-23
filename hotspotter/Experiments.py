@@ -173,7 +173,7 @@ class ExperimentManager(AbstractManager):
             try:
                 # try and save some memory
                 for ix in xrange(len(cx2_rr)):
-                    logmsg('SavingRR: '+str(i))
+                    logmsg('SavingRR: '+str(ix))
                     to_save = cx2_rr[ix]
                     if to_save == []:
                         continue

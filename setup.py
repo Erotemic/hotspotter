@@ -7,6 +7,7 @@ from os.path import dirname, realpath, join, exists, normpath, isdir, isfile
 from setup_helpers.git_helpers import *
 from setup_helpers.fix_issues import *
 import os
+import shutil
 import subprocess
 import sys
 
@@ -180,9 +181,8 @@ def get_hotspotter_datafiles():
     data_files.append((splash_dest, splash_srcs))
     return data_files
 
-def package_windows_exe():
-    import shutil
-    import py2exe
+def package_application():
+    write_version_py()
     # ---------
     setup_kwargs = get_info_setup_kwarg()
     # ---------
@@ -204,35 +204,53 @@ def package_windows_exe():
     data_files = get_hotspotter_datafiles()
     setup_kwargs.update({'data_files' : data_files})
     # ---------
-    # Construct py2exe options
-    py2exe_options = {
-        'unbuffered'   : True,
-        'optimize'     : 0, # 0,1,2
-        'includes'     : includes_modules,
-        'skip_archive' : True, #do not place Python bytecode files in an
-                               #archive, put them directly in the file system
-        'compressed'   : False, #(boolean) create a compressed zipfile
-        'bundle_files' : 3 #1=all, 2=all-Interpret, 3=dont bundle
+    run_with_console = True
+    py2_appexe_universal = {
+            'optimize'     : 0, # 0,1,2
+            'includes'     : includes_modules
     }
-    setup_options={'py2exe' : py2exe_options}
+    # WINDOWS EXECUTABLE SETUP
+    if sys.platform == 'win32':
+        import py2exe
+        # Construct py2exe options
+        py2exe_options = py2_appexe_universal
+        py2exe_options.update({
+            'unbuffered'   : True,
+            'skip_archive' : True, #do not place Python bytecode files in an
+                                #archive, put them directly in the file system
+            'compressed'   : False, #(boolean) create a compressed zipfile
+            'bundle_files' : 3 #1=all, 2=all-Interpret, 3=dont bundle
+        })
+        setup_options={'py2exe' : py2exe_options}
+        run_cmd = [{'script': 'main.py',
+                    'icon_resources': [(0, 'hsicon.ico')]}]
+        run_type = 'console' if run_with_console else 'windows'
+    # 
+    # MAC APPLICATION SETUP
+    if sys.platform == 'darwin':
+        import py2app
+        # Construct py2app options
+        setup_kwargs.update({'setup_requires':['py2app']})
+        py2app_options = py2_appexe_universal
+        py2app_options.update({
+            'argv_emulation': False,
+            'iconfile':'hsicon.icns',
+            'plist': {'CFBundleShortVersionString':'1.0.0',}
+        })
+        py2app_options.update(py2_appexe_universal)
+        setup_options={'py2app' : py2app_options}
+        run_type = 'app'
+        run_cmd = ['main.py']
+    # add windows/mac stuff to setup keyword arguments
+    setup_kwargs.update({run_type : run_cmd})
     setup_kwargs.update({'options' : setup_options})
     # ---------
-    # Run the distutils or setuptools setup script
     # 
-    run_with_console = True
-    run_cmd = [{'script': 'main.py',
-                'icon_resources': [(0, 'hsicon.ico')]}]
-    run_type = 'console' if run_with_console else 'windows'
-    setup_kwargs.update({run_type : run_cmd})
     # Do actual setup
+    print 'Running package setup with args: '
+    for key, val in setup_kwargs.iteritems():
+        print(key+' : '+repr(val))
     setup(**setup_kwargs)
-
-def package_application():
-    write_version_py()
-    if sys.platform == 'win32':
-        package_windows_exe()
-    if sys.platform == 'darwin':
-        package_mac_app()
 
 def get_info_setup_kwarg():
     return dict(

@@ -4,6 +4,15 @@
 # Figure out which environment we are in
 # and set assocated preferences
 
+# For py2exe
+import PIL.TiffImagePlugin
+import PIL.Image
+import PIL.PngImagePlugin
+import PIL.JpegImagePlugin
+import PIL.GifImagePlugin
+import PIL.PpmImagePlugin
+
+
 # Attach to QtConsole's QApplication if able
 from PyQt4.Qt import QCoreApplication
 app = QCoreApplication.instance() 

@@ -14,6 +14,16 @@ class RawResults(DynStruct):
     def __init__(rr, *args):
         super(RawResults, rr).__init__()
         rr.dynset(*args)
+        rr.cx2_cscore_ = []
+        rr.cx2_nscore = []
+        rr.cx2_fs_ = []
+        rr.cx2_fs = []
+        rr.cx2_fm = []
+    def presave_clean(rr):
+        # Save some memory. We dont really need these.
+        rr.qfdsc = []
+        rr.qfpts = []
+
 
 class QueryManager(AbstractManager):
     ' Handles Searching the Vocab Manager'

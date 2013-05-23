@@ -62,6 +62,8 @@ if not in_qtc_bit:
 # Start HotSpotter via the Facade
 fac = Facade(use_gui=args.gui_bit, autoload=args.autoload_bit)
 
+#fac.profile('fac2 = Facade()')
+
 if args.delpref_bit:
     fac.hs.delete_preferences()
 

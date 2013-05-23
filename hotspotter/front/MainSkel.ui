@@ -246,10 +246,18 @@
     <addaction name="separator"/>
     <addaction name="actionNext"/>
    </widget>
+   <widget class="QMenu" name="menuExperiments">
+    <property name="title">
+     <string>Experiments</string>
+    </property>
+    <addaction name="actionMatching_Experiment"/>
+    <addaction name="actionName_Consistency_Experiment"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuActions"/>
    <addaction name="menuOptions"/>
    <addaction name="menuView"/>
+   <addaction name="menuExperiments"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionOpen_Database">
@@ -429,6 +437,16 @@
   <action name="actionAssign_Matches_Above_Threshold">
    <property name="text">
     <string>Assign Matches Above Threshold</string>
+   </property>
+  </action>
+  <action name="actionMatching_Experiment">
+   <property name="text">
+    <string>Matching Experiment</string>
+   </property>
+  </action>
+  <action name="actionName_Consistency_Experiment">
+   <property name="text">
+    <string>Run Name Consistency Experiment</string>
    </property>
   </action>
  </widget>

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\hotspotter/front\MainSkel.ui'
 #
-# Created: Wed May 22 17:04:34 2013
+# Created: Thu May 23 10:11:26 2013
 #      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -129,6 +129,8 @@ class Ui_mainSkel(object):
         self.menuHelp.setObjectName(_fromUtf8("menuHelp"))
         self.menuActions = QtGui.QMenu(self.menubar)
         self.menuActions.setObjectName(_fromUtf8("menuActions"))
+        self.menuExperiments = QtGui.QMenu(self.menubar)
+        self.menuExperiments.setObjectName(_fromUtf8("menuExperiments"))
         mainSkel.setMenuBar(self.menubar)
         self.actionOpen_Database = QtGui.QAction(mainSkel)
         self.actionOpen_Database.setObjectName(_fromUtf8("actionOpen_Database"))
@@ -186,6 +188,10 @@ class Ui_mainSkel(object):
         self.actionAdd_Metadata_Property.setObjectName(_fromUtf8("actionAdd_Metadata_Property"))
         self.actionAssign_Matches_Above_Threshold = QtGui.QAction(mainSkel)
         self.actionAssign_Matches_Above_Threshold.setObjectName(_fromUtf8("actionAssign_Matches_Above_Threshold"))
+        self.actionMatching_Experiment = QtGui.QAction(mainSkel)
+        self.actionMatching_Experiment.setObjectName(_fromUtf8("actionMatching_Experiment"))
+        self.actionName_Consistency_Experiment = QtGui.QAction(mainSkel)
+        self.actionName_Consistency_Experiment.setObjectName(_fromUtf8("actionName_Consistency_Experiment"))
         self.menuFile.addAction(self.actionOpen_Database)
         self.menuFile.addAction(self.actionSave_Database)
         self.menuFile.addAction(self.actionImport_Images)
@@ -220,10 +226,13 @@ class Ui_mainSkel(object):
         self.menuActions.addAction(self.actionRemove_Chip)
         self.menuActions.addSeparator()
         self.menuActions.addAction(self.actionNext)
+        self.menuExperiments.addAction(self.actionMatching_Experiment)
+        self.menuExperiments.addAction(self.actionName_Consistency_Experiment)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuActions.menuAction())
         self.menubar.addAction(self.menuOptions.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
+        self.menubar.addAction(self.menuExperiments.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(mainSkel)
@@ -247,6 +256,7 @@ class Ui_mainSkel(object):
         self.menuOptions.setTitle(_translate("mainSkel", "Options", None))
         self.menuHelp.setTitle(_translate("mainSkel", "Help", None))
         self.menuActions.setTitle(_translate("mainSkel", "Actions", None))
+        self.menuExperiments.setTitle(_translate("mainSkel", "Experiments", None))
         self.actionOpen_Database.setText(_translate("mainSkel", "Open Database", None))
         self.actionOpen_Database.setShortcut(_translate("mainSkel", "Ctrl+O", None))
         self.actionSave_Database.setText(_translate("mainSkel", "Save Database", None))
@@ -288,6 +298,8 @@ class Ui_mainSkel(object):
         self.actionReselect_Orientation.setShortcut(_translate("mainSkel", "O", None))
         self.actionAdd_Metadata_Property.setText(_translate("mainSkel", "Add Metadata Property", None))
         self.actionAssign_Matches_Above_Threshold.setText(_translate("mainSkel", "Assign Matches Above Threshold", None))
+        self.actionMatching_Experiment.setText(_translate("mainSkel", "Matching Experiment", None))
+        self.actionName_Consistency_Experiment.setText(_translate("mainSkel", "Run Name Consistency Experiment", None))
 
 
 if __name__ == "__main__":

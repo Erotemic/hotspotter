@@ -13,70 +13,23 @@ class ExperimentManager(AbstractManager):
         em.recompute_bit = False
 
 
-    def print_matching_results(em): 
+    def run_name_consistency_experiment(em):
         iom = em.hs.iom
+        # Run a batch query
         em.run_singleton_queries()
-        matching_image_list = []
-        for res in enumerate(em.cx2_res):
-            pass
-
-    def run_experiment(em):
-        iom = em.hs.iom
-        em.run_singleton_queries()
-        report_str = em.get_report_str()
-        report_fpath = iom.get_temp_fpath('expt_report_'+em.get_expt_suffix()+'.txt')
+        # Get name consistency report of the run query
+        report_str = em.get_name_consistency_report_str()
+        timestamp  = iom.get_timestamp()
+        report_fname = 'expt_name_consistency_report_'+\
+                em.get_expt_suffix()+'_'+timestamp+'.txt'
+        report_fpath = iom.get_user_fpath(report_fname)
         with open(report_fpath,'w') as f:
             f.write(report_str)
         print report_str
 
-    def display_results(em, fname=None):
-        cm, iom = em.hs.get_managers('cm','iom')
-        fname= r'expt_match_list.samp1.algo.5.txt'
-        if fname is None: fname = 'expt_match_list'+em.get_expt_suffix()+'.txt'
-        fpath = iom.get_temp_fpath(fname)
-        txt_match_fpath = iom.get_temp_fpath(fpath)
-        num_show = 4
-        cid_list = [0]*num_show
-        titles = [None]*num_show
-        import os
-        try:
-            os.makedirs(iom.get_temp_fpath('imgres'))
-        except Exception:
-            pass
-        with open(txt_match_fpath, 'r') as file:
-            file = open(txt_match_fpath, 'r')
-            file.seek(0)
-            for line in file:
-                line = line.replace('\n\n','\nSLASHN')
-                line = line.replace('\r','\n').replace('\n\n','\n')
-                line = line.replace('\nSLASHN','\n\n')
-                if line.strip(' ') == '\n':
-                    save_fname = 'imgres/sim=%07.2f-qcid=%d.png' % (maxsim, cid_list[0])
-                    kwargs = {
-                        'titles' : titles,\
-                        'save_fpath' : iom.get_temp_fpath(save_fname),\
-                        'fignum' : 1
-                    }
-                    em.hs.show_chips(cid_list, **kwargs)
-                    continue
-                fields = line.replace('\n','').split(',')
-                if fields[0] == 'QUERY':
-                    rank = 0
-                    scorestr = 'QUERY'
-                else:
-                    rank = int(fields[0].replace('rank=',''))
-                    score = fields[3].replace('score=','').strip(' ')
-                    if rank == 1:
-                        maxsim = float(score)
-                    scorestr = 'SCORE = '+score
-                cid_list[rank] = int(fields[2].replace('cid=',''))
-                titles[rank] = scorestr
 
-
-    def list_matches(em):
-        em.quick_experiment(em.get_expt_suffix())
-
-    def quick_experiment(em, expt_name=''):
+    def run_matching_experiment(em, expt_name='MatchingExperiment',
+                                with_images=True):
         '''Quick experiment:
            Query each chip with a duplicate against whole database
            Do not remove anyone from ANN matching'''
@@ -84,9 +37,8 @@ class ExperimentManager(AbstractManager):
         logmsg('Running Quick Experiment: '+expt_name)
         hs = em.hs
         am, cm, vm, qm, iom, dm = hs.get_managers('am', 'cm','vm', 'qm', 'iom', 'dm')
-        with_images   = True
         with_ellipses = True
-        with_points   = True
+        with_points   = False
         with_full_results = False
         with_ellipse_and_points  = False
         # Create an Experiment Directory in .hs_internals/computed
@@ -150,24 +102,22 @@ class ExperimentManager(AbstractManager):
                         dm.draw_prefs.points_bit  = False
                         dm.show_query(res)
                         dm.save_fig(os.path.join(expt_img_dpath, 'ellipse_'+query_name))
-                        
                     if with_points:
                         dm.draw_prefs.ellipse_bit = False
                         dm.draw_prefs.points_bit  = True
                         dm.show_query(res)
                         dm.save_fig(os.path.join(expt_img_dpath, 'point_'+query_name))
-
                     if with_ellipse_and_points:
                         dm.draw_prefs.ellipse_bit = True
                         dm.draw_prefs.points_bit  = True
                         dm.show_query(res)
                         dm.save_fig(os.path.join(expt_img_dpath, 'both_'+query_name))
-                        
-        logmsg('Finished Quick Experiment: '+expt_name)
+        logmsg('Finished Matching Experiment: '+expt_name)
         timestamp  = iom.get_timestamp()
         iom.write(os.path.join(expt_dpath, 'Finished_'+str(timestamp)), timestamp+'\n'+em.hs.get_database_stat_str())
         prev_ell = dm.draw_prefs.ellipse_bit
         prev_pts = dm.draw_prefs.points_bit
+
 
     def run_singleton_queries(em):
         '''Quick experiment:
@@ -183,19 +133,13 @@ class ExperimentManager(AbstractManager):
         em.cx2_res = array([  [] if rr == [] else\
                            QueryResult(hs,rr) for rr in cx2_rr])
 
-    def get_expt_suffix(em):
-        vm, am = em.hs.get_managers('vm','am')
-        samp_suffix = vm.get_samp_suffix()
-        algo_suffix = am.get_algo_suffix(depends='all')
-        return samp_suffix+algo_suffix
-
-
     def batch_query(em, force_recomp=False, test_cxs=None):
         'TODO: Fix up the VM dependencies'
         vm, iom, am = em.hs.get_managers('vm','iom','am')
         shelf_fpath = iom.get_temp_fpath('qres_shelf'+em.get_expt_suffix()+'.db')
         # Compute the matches
         qm = vm.hs.qm
+        vm.sample_train_set()
         vm.build_model(force_recomp=force_recomp)
         if test_cxs == None:
             test_cxs = vm.get_train_cx()
@@ -203,9 +147,11 @@ class ExperimentManager(AbstractManager):
         logmsg('Building matching graph. This may take awhile')
         total = len(test_cxs)
         count = 0
-        need_to_save = force_recomp
+        shelf_dirty_bit = force_recomp
         shelf = shelve.open(shelf_fpath)
+        # Run Each Query
         for cx in test_cxs:   
+            # Check to see if query has already been computed
             count+=1
             shelf_key = str(cx)
             rr = None
@@ -215,19 +161,21 @@ class ExperimentManager(AbstractManager):
                     rr = shelf[str(cx)]
                 except Exception: 
                     logmsg('Error reading '+str(cx))
+            # Query needst to be computed
             if rr == None:
                 logmsg('Query %d/%d' % (count, total))
                 rr = qm.cx2_res(cx).rr
-                need_to_save = True
+                shelf_dirty_bit = True
             cx2_rr[cx] = rr
         shelf.close()
-        if need_to_save: # Save the matches
+        # Something changed in batch compute, resave
+        if shelf_dirty_bit: 
             shelf = shelve.open(shelf_fpath)
             try:
                 # try and save some memory
-                for i in range(len(cx2_rr)):
+                for ix in xrange(len(cx2_rr)):
                     logmsg('SavingRR: '+str(i))
-                    to_save = cx2_rr[i]
+                    to_save = cx2_rr[ix]
                     if to_save == []:
                         continue
                     to_save.cx2_cscore_ = []
@@ -242,6 +190,13 @@ class ExperimentManager(AbstractManager):
                 shelf.close()
         logmsg('Done building matching graph.')
         return cx2_rr
+
+
+    def get_expt_suffix(em):
+        vm, am = em.hs.get_managers('vm','am')
+        samp_suffix = vm.get_samp_suffix()
+        algo_suffix = am.get_algo_suffix(depends='all')
+        return samp_suffix+algo_suffix
 
     def show_query(em, cx):
         res = em.cx2_res[cx]
@@ -276,7 +231,7 @@ class ExperimentManager(AbstractManager):
                 rank_hist_pes[max(gt_pos_chip)-len(gt_pos_chip)+1] += 1
         return rank_hist_opt
 
-    def get_report_str(em):
+    def get_name_consistency_report_str(em):
         '''TODO: I want to see: number of matches, the score of each type of matcher
            I want to see this in graph format, but first print format. I want to see 
            the precision and recall. I want to see the rank of the best, I want to see
@@ -386,3 +341,50 @@ class ExperimentManager(AbstractManager):
         report_str +=  'Database: '+am.hs.db_dpath+'\n'
         report_str +=  am.get_algo_name('all')+'\n'
         return report_str
+
+
+
+    # Old 
+    def display_matching_results(em, fname=None):
+        ''' displays results of a matching experiment'''
+        cm, iom = em.hs.get_managers('cm','iom')
+        fpath = iom.get_temp_fpath(fname)
+        txt_match_fpath = iom.get_temp_fpath(fpath)
+        num_show = 4
+        cid_list = [0]*num_show
+        titles = [None]*num_show
+        import os
+        try:
+            os.makedirs(iom.get_temp_fpath('imgres'))
+        except Exception:
+            pass
+        with open(txt_match_fpath, 'r') as file:
+            file = open(txt_match_fpath, 'r')
+            file.seek(0)
+            for line in file:
+                line = line.replace('\n\n','\nSLASHN')
+                line = line.replace('\r','\n').replace('\n\n','\n')
+                line = line.replace('\nSLASHN','\n\n')
+                if line.strip(' ') == '\n':
+                    save_fname = 'imgres/sim=%07.2f-qcid=%d.png' % (maxsim, cid_list[0])
+                    kwargs = {
+                        'titles' : titles,\
+                        'save_fpath' : iom.get_temp_fpath(save_fname),\
+                        'fignum' : 1
+                    }
+                    em.hs.show_chips(cid_list, **kwargs)
+                    continue
+                fields = line.replace('\n','').split(',')
+                if fields[0] == 'QUERY':
+                    rank = 0
+                    scorestr = 'QUERY'
+                else:
+                    rank = int(fields[0].replace('rank=',''))
+                    score = fields[3].replace('score=','').strip(' ')
+                    if rank == 1:
+                        maxsim = float(score)
+                    scorestr = 'SCORE = '+score
+                cid_list[rank] = int(fields[2].replace('cid=',''))
+                titles[rank] = scorestr
+
+

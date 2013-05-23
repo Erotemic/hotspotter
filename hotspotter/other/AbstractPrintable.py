@@ -15,8 +15,7 @@ def npArrInfo(arr):
         info.minmaxstr = '(%s,%s)' % ( str( arr.min() if len(arr) > 0 else None ), str( arr.max() if len(arr) > 0 else None ) )
     return info
 #---------------
-def lbls2_headers(lbls):
-    _lbl2_header = {
+_lbl2_header = {
         'cid'  : 'ChipID'      ,\
         'nid'  : 'NameID'      ,\
         'gid'  : 'ImgID'       ,\
@@ -32,12 +31,15 @@ def lbls2_headers(lbls):
         'num_c': 'Num Chips',\
         'aif'  : 'AllIndexesFound',\
     }
-    return [_lbl2_header[l] for l in lbls]
+def _lbls2_headers(lbls):
+    'Converts lookup keys to readable names if possible'
+    return [_lbl2_header[l] if l in _lbl2_header.keys() else l for l in lbls]
 
-def lbls2_maxvals(lbls, hs):
+def _lbls2_maxvals(lbls, hs):
     '''
     Finds the maximum value seen so far in the managers
     Uses this to figure out how big to make column spacing
+    If the info doesnt exist, then defaults to spacing of 10
     '''
     cm = hs.cm
     nm = hs.nm
@@ -58,13 +60,13 @@ def lbls2_maxvals(lbls, hs):
         'num_c': 10,\
         'theta': 10.0
     }
-    return [_lbl2_maxval[l] for l in lbls]
+    return [_lbl2_maxval[l] if l in _lbl2_header.keys() else l for l in lbls]
 
 def lbls2_format(lbls, hs):
-    headers = lbls2_headers(lbls)
-    maxvals = lbls2_maxvals(lbls, hs)
+    headers = _lbls2_headers(lbls)
+    maxvals = _lbls2_maxvals(lbls, hs)
     #A list of (space,format) tuples
-    _spcfmt = [__table_fmt(m, h) for m, h in zip(maxvals, headers)]
+    _spcfmt = [_table_fmt(m, h) for m, h in zip(maxvals, headers)]
     header_space_list = [ t[0] for t in _spcfmt ]
     data_format_list  = [ t[1] for t in _spcfmt ]
     head_format_list  = ', '.join(['{:>%d}']*len(lbls)) % tuple(header_space_list)
@@ -72,7 +74,7 @@ def lbls2_format(lbls, hs):
     data_format = ', '.join(data_format_list)
     return (header, data_format)
 
-def __table_fmt(max_val, lbl=""):
+def _table_fmt(max_val, lbl=""):
     '''
     Table Formater: gives you the python string to format your data
     Input:  longest value
@@ -96,7 +98,7 @@ def __table_fmt(max_val, lbl=""):
         _rBrace = ' ]'
         _lBrace = '[ '
         # Recursively format elements in the list
-        _items  = [__table_fmt(x) for x in max_val]
+        _items  = [_table_fmt(x) for x in max_val]
         _spc    = [ t[0] for t in _items]
         _fmt    = [ t[1] for t in _items]
         spaces  = sum(_spc)+((len(_items)-1)*len(_SEP))+len(_rBrace)+len(_lBrace)
@@ -207,19 +209,26 @@ class AbstractDataManager(AbstractManager):
 
     def x2_info(self, valid_xs, lbls):
         ''' Used to print out formated information'''
+        # Get the formating string, so the data looks nice
         format_tup = lbls2_format(lbls, self.hs)
+        # header formating string
         header     = format_tup[0]
+        # data formating string
         dat_format = format_tup[1]
-
+        # Write info on how many we are writing
         ret  = '# NumData %d\n' % valid_xs.size
         ret += '#'+header+'\n'
+        # Ensure iterability
         if not np.iterable(valid_xs):
             valid_xs = [valid_xs]
 
+        # Do work. Get the format data for each valid index and 
+        # format it into a nice printable string
         for x in iter(valid_xs):
             tup = tuple()
             for lbl in lbls:
                 try:
+                    # Use x2_lbl property to get what you need
                     val = self.x2_lbl[lbl](x)
                     if type(val) in [np.uint32, np.bool_, np.bool]:
                         val = int(val)

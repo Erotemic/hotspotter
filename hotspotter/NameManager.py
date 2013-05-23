@@ -60,10 +60,10 @@ class NameManager(AbstractDataManager):
         return array(map(lambda x: len(x), cxs),dtype=uint32)
     def  get_new_name(nm):
         name_num = nm.next_nx
-        novel_name = 'AutoLBL_'+str(name_num)
-        while nm.name2_nx.isKey(novel_name):
+        novel_name = 'AutoName_'+str(name_num)
+        while novel_name in nm.name2_nx.keys():
             name_num = name_num + 1
-            novel_name = 'AutoLBL_'+str(name_num)
+            novel_name = 'AutoName_'+str(name_num)
         return novel_name
     def  rename_all(nm, nx, new_name):
         nm.nx2_name[nx] = new_name

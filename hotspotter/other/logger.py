@@ -37,7 +37,6 @@ _hsPrefs
 ChipManager.add_chip
 ImageManager.add_img
 NameManager.add_name
-ChipManager.load_features
 alloc
 IOManager.__
 _hsGlobals.x2_info

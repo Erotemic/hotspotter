@@ -203,6 +203,9 @@
     <addaction name="actionConvertImage2Chip"/>
     <addaction name="actionBatch_Change_Name"/>
     <addaction name="separator"/>
+    <addaction name="actionAdd_Metadata_Property"/>
+    <addaction name="actionAssign_Matches_Above_Threshold"/>
+    <addaction name="separator"/>
     <addaction name="actionOpen_Data_Directory"/>
     <addaction name="actionOpen_Source_Directory"/>
     <addaction name="actionOpen_Internal_Directory"/>
@@ -416,6 +419,16 @@
    </property>
    <property name="shortcut">
     <string>O</string>
+   </property>
+  </action>
+  <action name="actionAdd_Metadata_Property">
+   <property name="text">
+    <string>Add Metadata Property</string>
+   </property>
+  </action>
+  <action name="actionAssign_Matches_Above_Threshold">
+   <property name="text">
+    <string>Assign Matches Above Threshold</string>
    </property>
   </action>
  </widget>

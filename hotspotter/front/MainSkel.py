@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hotspotter/front/MainSkel.ui'
+# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\hotspotter/front\MainSkel.ui'
 #
-# Created: Sun May  5 19:14:16 2013
-#      by: PyQt4 UI code generator 4.9.1
+# Created: Wed May 22 17:04:34 2013
+#      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,7 +12,16 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_mainSkel(object):
     def setupUi(self, mainSkel):
@@ -173,12 +182,19 @@ class Ui_mainSkel(object):
         self.actionBatch_Change_Name.setObjectName(_fromUtf8("actionBatch_Change_Name"))
         self.actionReselect_Orientation = QtGui.QAction(mainSkel)
         self.actionReselect_Orientation.setObjectName(_fromUtf8("actionReselect_Orientation"))
+        self.actionAdd_Metadata_Property = QtGui.QAction(mainSkel)
+        self.actionAdd_Metadata_Property.setObjectName(_fromUtf8("actionAdd_Metadata_Property"))
+        self.actionAssign_Matches_Above_Threshold = QtGui.QAction(mainSkel)
+        self.actionAssign_Matches_Above_Threshold.setObjectName(_fromUtf8("actionAssign_Matches_Above_Threshold"))
         self.menuFile.addAction(self.actionOpen_Database)
         self.menuFile.addAction(self.actionSave_Database)
         self.menuFile.addAction(self.actionImport_Images)
         self.menuFile.addAction(self.actionQuit)
         self.menuView.addAction(self.actionConvertImage2Chip)
         self.menuView.addAction(self.actionBatch_Change_Name)
+        self.menuView.addSeparator()
+        self.menuView.addAction(self.actionAdd_Metadata_Property)
+        self.menuView.addAction(self.actionAssign_Matches_Above_Threshold)
         self.menuView.addSeparator()
         self.menuView.addAction(self.actionOpen_Data_Directory)
         self.menuView.addAction(self.actionOpen_Source_Directory)
@@ -215,61 +231,63 @@ class Ui_mainSkel(object):
         QtCore.QMetaObject.connectSlotsByName(mainSkel)
 
     def retranslateUi(self, mainSkel):
-        mainSkel.setWindowTitle(QtGui.QApplication.translate("mainSkel", "HotSpotter", None, QtGui.QApplication.UnicodeUTF8))
+        mainSkel.setWindowTitle(_translate("mainSkel", "HotSpotter", None))
         self.image_TBL.setSortingEnabled(True)
-        self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.image_view), QtGui.QApplication.translate("mainSkel", "Image Table", None, QtGui.QApplication.UnicodeUTF8))
+        self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.image_view), _translate("mainSkel", "Image Table", None))
         self.chip_TBL.setSortingEnabled(True)
-        self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.chip_view), QtGui.QApplication.translate("mainSkel", "Chip Table", None, QtGui.QApplication.UnicodeUTF8))
+        self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.chip_view), _translate("mainSkel", "Chip Table", None))
         self.res_TBL.setSortingEnabled(True)
-        self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.result_view), QtGui.QApplication.translate("mainSkel", "Results Table", None, QtGui.QApplication.UnicodeUTF8))
-        self.label_2.setText(QtGui.QApplication.translate("mainSkel", "fignum: ", None, QtGui.QApplication.UnicodeUTF8))
-        self.state_LBL.setText(QtGui.QApplication.translate("mainSkel", "State: Unloaded Gui State", None, QtGui.QApplication.UnicodeUTF8))
-        self.label_3.setText(QtGui.QApplication.translate("mainSkel", "Image-ID:", None, QtGui.QApplication.UnicodeUTF8))
-        self.label.setText(QtGui.QApplication.translate("mainSkel", "Chip-ID:", None, QtGui.QApplication.UnicodeUTF8))
-        self.menuFile.setTitle(QtGui.QApplication.translate("mainSkel", "File", None, QtGui.QApplication.UnicodeUTF8))
-        self.menuView.setTitle(QtGui.QApplication.translate("mainSkel", "Convenience", None, QtGui.QApplication.UnicodeUTF8))
-        self.menuOptions.setTitle(QtGui.QApplication.translate("mainSkel", "Options", None, QtGui.QApplication.UnicodeUTF8))
-        self.menuHelp.setTitle(QtGui.QApplication.translate("mainSkel", "Help", None, QtGui.QApplication.UnicodeUTF8))
-        self.menuActions.setTitle(QtGui.QApplication.translate("mainSkel", "Actions", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionOpen_Database.setText(QtGui.QApplication.translate("mainSkel", "Open Database", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionOpen_Database.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+O", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionSave_Database.setText(QtGui.QApplication.translate("mainSkel", "Save Database", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionSave_Database.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+S", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionImport_Images.setText(QtGui.QApplication.translate("mainSkel", "Import Images", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionImport_Images.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+I", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionOpen_Data_Directory.setText(QtGui.QApplication.translate("mainSkel", "View Data Directory", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionOpen_Source_Directory.setText(QtGui.QApplication.translate("mainSkel", "View Source Directory", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionTogEll.setText(QtGui.QApplication.translate("mainSkel", "Toggle Ellipses", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionTogEll.setShortcut(QtGui.QApplication.translate("mainSkel", "E", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionUndockDisplay.setText(QtGui.QApplication.translate("mainSkel", "Undock Display", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionTogPlt.setText(QtGui.QApplication.translate("mainSkel", "Toggle PlotWidget", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionHelpCMD.setText(QtGui.QApplication.translate("mainSkel", "Command Line Help", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionHelpGUI.setText(QtGui.QApplication.translate("mainSkel", "GUI Help", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionHelpTroubles.setText(QtGui.QApplication.translate("mainSkel", "Troubleshooting", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionHelpWorkflow.setText(QtGui.QApplication.translate("mainSkel", "Workflow Help", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionTogPts.setText(QtGui.QApplication.translate("mainSkel", "Toggle Points", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionTogPts.setShortcut(QtGui.QApplication.translate("mainSkel", "P", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionAdd_ROI.setText(QtGui.QApplication.translate("mainSkel", "Add ROI", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionAdd_ROI.setShortcut(QtGui.QApplication.translate("mainSkel", "A", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionReselect_ROI.setText(QtGui.QApplication.translate("mainSkel", "Reselect ROI", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionReselect_ROI.setShortcut(QtGui.QApplication.translate("mainSkel", "R", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionNext.setText(QtGui.QApplication.translate("mainSkel", "Select Next", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionNext.setToolTip(QtGui.QApplication.translate("mainSkel", "Selects the next unidentified CID or Untagged GID", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionNext.setShortcut(QtGui.QApplication.translate("mainSkel", "N", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionRemove_Chip.setText(QtGui.QApplication.translate("mainSkel", "Remove Chip", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionRemove_Chip.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+Del", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionQuery.setText(QtGui.QApplication.translate("mainSkel", "Query", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionQuery.setShortcut(QtGui.QApplication.translate("mainSkel", "Q", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionPrev.setText(QtGui.QApplication.translate("mainSkel", "Prev", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionWriteLogs.setText(QtGui.QApplication.translate("mainSkel", "Write Logs", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionOpen_Internal_Directory.setText(QtGui.QApplication.translate("mainSkel", "View Internal Directory", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionPreferences.setText(QtGui.QApplication.translate("mainSkel", "Edit Preferences", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionPreferences.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+P", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionQuit.setText(QtGui.QApplication.translate("mainSkel", "Quit", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionConvertImage2Chip.setText(QtGui.QApplication.translate("mainSkel", "Convert All Images to Chips", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionBatch_Change_Name.setText(QtGui.QApplication.translate("mainSkel", "Batch Change Name", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionReselect_Orientation.setText(QtGui.QApplication.translate("mainSkel", "Reselect Orientation", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionReselect_Orientation.setShortcut(QtGui.QApplication.translate("mainSkel", "O", None, QtGui.QApplication.UnicodeUTF8))
+        self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.result_view), _translate("mainSkel", "Results Table", None))
+        self.label_2.setText(_translate("mainSkel", "fignum: ", None))
+        self.state_LBL.setText(_translate("mainSkel", "State: Unloaded Gui State", None))
+        self.label_3.setText(_translate("mainSkel", "Image-ID:", None))
+        self.label.setText(_translate("mainSkel", "Chip-ID:", None))
+        self.menuFile.setTitle(_translate("mainSkel", "File", None))
+        self.menuView.setTitle(_translate("mainSkel", "Convenience", None))
+        self.menuOptions.setTitle(_translate("mainSkel", "Options", None))
+        self.menuHelp.setTitle(_translate("mainSkel", "Help", None))
+        self.menuActions.setTitle(_translate("mainSkel", "Actions", None))
+        self.actionOpen_Database.setText(_translate("mainSkel", "Open Database", None))
+        self.actionOpen_Database.setShortcut(_translate("mainSkel", "Ctrl+O", None))
+        self.actionSave_Database.setText(_translate("mainSkel", "Save Database", None))
+        self.actionSave_Database.setShortcut(_translate("mainSkel", "Ctrl+S", None))
+        self.actionImport_Images.setText(_translate("mainSkel", "Import Images", None))
+        self.actionImport_Images.setShortcut(_translate("mainSkel", "Ctrl+I", None))
+        self.actionOpen_Data_Directory.setText(_translate("mainSkel", "View Data Directory", None))
+        self.actionOpen_Source_Directory.setText(_translate("mainSkel", "View Source Directory", None))
+        self.actionTogEll.setText(_translate("mainSkel", "Toggle Ellipses", None))
+        self.actionTogEll.setShortcut(_translate("mainSkel", "E", None))
+        self.actionUndockDisplay.setText(_translate("mainSkel", "Undock Display", None))
+        self.actionTogPlt.setText(_translate("mainSkel", "Toggle PlotWidget", None))
+        self.actionHelpCMD.setText(_translate("mainSkel", "Command Line Help", None))
+        self.actionHelpGUI.setText(_translate("mainSkel", "GUI Help", None))
+        self.actionHelpTroubles.setText(_translate("mainSkel", "Troubleshooting", None))
+        self.actionHelpWorkflow.setText(_translate("mainSkel", "Workflow Help", None))
+        self.actionTogPts.setText(_translate("mainSkel", "Toggle Points", None))
+        self.actionTogPts.setShortcut(_translate("mainSkel", "P", None))
+        self.actionAdd_ROI.setText(_translate("mainSkel", "Add ROI", None))
+        self.actionAdd_ROI.setShortcut(_translate("mainSkel", "A", None))
+        self.actionReselect_ROI.setText(_translate("mainSkel", "Reselect ROI", None))
+        self.actionReselect_ROI.setShortcut(_translate("mainSkel", "R", None))
+        self.actionNext.setText(_translate("mainSkel", "Select Next", None))
+        self.actionNext.setToolTip(_translate("mainSkel", "Selects the next unidentified CID or Untagged GID", None))
+        self.actionNext.setShortcut(_translate("mainSkel", "N", None))
+        self.actionRemove_Chip.setText(_translate("mainSkel", "Remove Chip", None))
+        self.actionRemove_Chip.setShortcut(_translate("mainSkel", "Ctrl+Del", None))
+        self.actionQuery.setText(_translate("mainSkel", "Query", None))
+        self.actionQuery.setShortcut(_translate("mainSkel", "Q", None))
+        self.actionPrev.setText(_translate("mainSkel", "Prev", None))
+        self.actionWriteLogs.setText(_translate("mainSkel", "Write Logs", None))
+        self.actionOpen_Internal_Directory.setText(_translate("mainSkel", "View Internal Directory", None))
+        self.actionPreferences.setText(_translate("mainSkel", "Edit Preferences", None))
+        self.actionPreferences.setShortcut(_translate("mainSkel", "Ctrl+P", None))
+        self.actionQuit.setText(_translate("mainSkel", "Quit", None))
+        self.actionConvertImage2Chip.setText(_translate("mainSkel", "Convert All Images to Chips", None))
+        self.actionBatch_Change_Name.setText(_translate("mainSkel", "Batch Change Name", None))
+        self.actionReselect_Orientation.setText(_translate("mainSkel", "Reselect Orientation", None))
+        self.actionReselect_Orientation.setShortcut(_translate("mainSkel", "O", None))
+        self.actionAdd_Metadata_Property.setText(_translate("mainSkel", "Add Metadata Property", None))
+        self.actionAssign_Matches_Above_Threshold.setText(_translate("mainSkel", "Assign Matches Above Threshold", None))
 
 
 if __name__ == "__main__":

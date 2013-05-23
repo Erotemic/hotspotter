@@ -77,14 +77,19 @@ rview,         = [lambda          : fac.change_view('result_view')]
 cview,         = [lambda          : fac.change_view('chip_view')]
 
 # Add developer namespace
-from PyQt4.Qt   import \
-        QApplication, QMainWindow, QMessageBox, QAbstractItemView, QObject
+from PyQt4.Qt import QApplication, QMainWindow,\
+        QMessageBox, QAbstractItemView, QObject, QInputDialog
 from hotspotter.QueryManager import RawResults, QueryResult
 #from PyQt4.QtCore import SIGNAL, Qt, pyqtSlot, pyqtSignal
 from PIL import Image
 import types
+import os
+import os.path
+from os.path import expanduser, join, relpath, normpath, exists, dirname
+from hotspotter.other.AbstractPrintable import *
 from hotspotter.other.ConcretePrintable import *
 from hotspotter.other.helpers import *
+from hotspotter.other.logger import *
 
 # Get commonly used variables for command line usage
 hs = fac.hs

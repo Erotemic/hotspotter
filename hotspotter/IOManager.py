@@ -12,20 +12,20 @@
 # dpath - full path to directory
 
 import re
-import os.path
 import shutil
 import time
 import fnmatch
 import sys
 import tpl
 import numpy as np
-from pylab import find
-from os.path import expanduser, join, relpath, normpath
-from other.AbstractPrintable import AbstractManager
-from other.ConcretePrintable import DynStruct
-from other.helpers import filecheck, dircheck
-from other.logger import logmsg, logwarn, logdbg, logerr, logio
-from other.crossplat import platexec
+import pylab
+import os
+from os.path import expanduser, join, relpath, normpath, exists, dirname
+from hotspotter.other.AbstractPrintable import AbstractManager
+from hotspotter.other.ConcretePrintable import DynStruct
+from hotspotter.other.helpers import dircheck
+from hotspotter.other.logger import logmsg, logwarn, logdbg, logerr, logio
+from hotspotter.other.crossplat import platexec
 
 #----------------
 def checkdir_decorator(method_fn):
@@ -57,7 +57,7 @@ class IOManager(AbstractManager):
         for root, dname_list, fname_list in os.walk(dpath):
             for fname in fnmatch.filter(fname_list, fname_pattern):
                 num_matched += 1
-                num_removed += iom.remove_file(os.path.join(root, fname))
+                num_removed += iom.remove_file(join(root, fname))
             if not recursive_bit:
                 break
         logmsg('Removed %d/%d files' % (num_removed, num_matched))
@@ -82,7 +82,7 @@ class IOManager(AbstractManager):
 
     # NEW AND UNTESTED
     def get_tpl_lib_dir(iom):
-        return os.path.join(os.path.dirname(tpl.__file__), 'lib', sys.platform)
+        return join(dirname(tpl.__file__), 'lib', sys.platform)
      #START: Directory and File Managment
     #==========
     # --- Private Directories'
@@ -140,7 +140,7 @@ class IOManager(AbstractManager):
         'Input: Path relative to the computed directory'
         'Ensures directory exists in the database\'s computed directory.'
         'Output: Returns absolute path'
-        return os.path.join(iom.get_computed_dpath(), dname)
+        return join(iom.get_computed_dpath(), dname)
 
     def write(iom, fpath, to_write):
         logmsg('Writing to: %s' % fpath)
@@ -220,10 +220,10 @@ class IOManager(AbstractManager):
 
     def  load_tables(iom):
         logmsg('Loading '+iom.hs.db_dpath)
-        if not (filecheck(iom.get_image_table_fpath()) and\
-                filecheck(iom.get_name_table_fpath()) and\
-                filecheck(iom.get_image_table_fpath())):
-            if os.path.exists(iom.get_oxford_gt_dpath()):
+        if not (exists(iom.get_image_table_fpath()) and\
+                exists(iom.get_name_table_fpath()) and\
+                exists(iom.get_image_table_fpath())):
+            if exists(iom.get_oxford_gt_dpath()):
                 logmsg('You have selected an Oxford style groundtruth')
                 iom.load_oxford_gt()
                 logmsg('Succesfully Loaded Oxford style groundtruth')
@@ -240,165 +240,126 @@ class IOManager(AbstractManager):
 
     #=======================================
     # IO Internals
-
-    # Reads HotSpotter specific csv headers.
-    # num) attribute - description
-    def  __load_table(iom, csv_fpath, table_name, alloc_func, csv_func):
+    def  _load_table(iom, csv_fpath, table_name, alloc_func, csv_func):
+        '''
+        Reads csv files. Must pass in a table name a memory allocation function 
+        and a csv_func: function which parses the fields read by _load_table
+        '''
         logio('Loading '+table_name+' Table: '+csv_fpath)
-        if not filecheck(csv_fpath):
+        if not exists(csv_fpath):
             logio('\"'+csv_fpath+'\" Does Not Exist')
             return False
         fid = file(csv_fpath, 'r')
-        in_header_bit = True
-        data_headers = None
+        csv_headers = None
         line = fid.readline()
+        num_line_prefix = '# NumData'
+        # Foreach line in the CSV file
         while line != '':
-            line = line[:-1]
-            if line == '\n':
-                continue
+            line = line.strip()
+            # NEW LINE: Skip
+            if line == '': continue
+            # COMMENT LINE: Check for metadata
             elif line[0] == '#':
-                if in_header_bit:
-                    num_line_prefix = '#NumLines'
-                    if line.find(num_line_prefix) > -1:
-                        num_line_str = line.replace(num_line_prefix,'').replace(' ','');
-                        num_lines = int(num_line_str[0:-1])
-                        alloc_func(num_lines)
-                    if line.find('#imgindex') > -1:
-                        logmsg('Loading a Legacy StripeSpotter File')
-                        csv_fields = line[1:].split(',')
-                        data_headers = csv_fields
-                    if line.find('#01)') > -1:
-                        logmsg('Loading a Legacy HotSpotter File')
-                        data_headers = []
-                        while line != '':
-                            line = line[:-1]
-                            if len(line) < 4 or line[3] != ')': break
-                            parnstr = '#\\d\\d\\) '
-                            data_field = re.sub(parnstr, '', line)
-                            data_field = re.sub(' - .*','', data_field)
-                            data_headers += [data_field]
-                            line = fid.readline()
+                # CHECK Preallocation
+                if line.find(num_line_prefix) > -1:
+                    # Parse out the number of lines to allocate
+                    # and use the given allocation function
+                    num_lines = int(line.replace(num_line_prefix,'').replace(' ',''))
+                    alloc_func(num_lines)
+                # CHECK Data Headers: StripeSpotter
+                elif line.find('#imgindex') > -1:
+                    logmsg('Loading a Legacy StripeSpotter File')
+                    csv_headers = line[1:].split(',')
+                # CHECK Data Headers: Legacy HotSpotter 
+                elif line.find('#01)') > -1:
+                    logmsg('Loading a Legacy HotSpotter File')
+                    csv_headers = []
+                    while line != '':
+                        line = line[:-1]
+                        if len(line) < 4 or line[3] != ')': break
+                        parnstr = '#\\d\\d\\) '
+                        head_field = re.sub(parnstr, '', line)
+                        head_field = re.sub(' - .*','', head_field)
+                        csv_headers += [head_field]
+                        line = fid.readline()
+                # CHECK Data Headers: Hotspotter
+                elif any([line.find(field) >=0 for field in ['ChipID', 'NameID', 'ImageID']]):
+                    csv_headers = [field.strip() for field in line[1:].split(',')]
+                    # HACK: Change the fields to the ones it actually expects
+                    import hotspotter.other.AbstractPrintable
+                    _lbl2_header = hotspotter.other.AbstractPrintable._lbl2_header
+                    _header2_lbl = {v:k for k,v in _lbl2_header.iteritems()}
+                    csv_headers = [_header2_lbl[field] if field in _header2_lbl.keys() else field for field in csv_headers]
+                    
+            # DATA LINE: Read it
             else:
-                csv_fields = line.split(',');
-                csv_func(csv_fields, data_headers)
+                csv_data = [data_field.strip() for data_field in line.split(',')]
+                csv_func(csv_data, csv_headers)
+            # Next Line
             line = fid.readline()
-
+        # Finsh reading table
         fid.close()
         logio('Loaded '+table_name+' Table')
         return True
 
-    def __image_csv_func(iom, csv_fields, data_headers=None):
-        csv_fields = map(lambda k: k.strip(' '), csv_fields)
+    def __image_csv_func(iom, csv_data, csv_headers=None):
         #gid   = None
         #gname = None
         #aif   = None
-        #if data_headers != None: pass
-        if len(csv_fields) == 3:
-            gid   = int(csv_fields[0])
-            gname = csv_fields[1]
-            aif   = csv_fields[2]
+        #if csv_headers != None: pass
+        if len(csv_data) == 3:
+            gid   = int(csv_data[0])
+            gname = csv_data[1]
+            aif   = csv_data[2]
             logdbg('Adding Image')
-        elif len(csv_fields) == 4:
-            gid   = int(csv_fields[0])
-            gnameext   = csv_fields[2]
-            gname_noext = csv_fields[1]
+        elif len(csv_data) == 4:
+            gid   = int(csv_data[0])
+            gnameext   = csv_data[2]
+            gname_noext = csv_data[1]
             if gname_noext.find('.') == -1 and gnameext.find('.') == -1:
                 gname = gname_noext + '.' + gnameext
             else: 
                 gname = gname_noext + gnameext
-            aif   = csv_fields[3]
+            aif   = csv_data[3]
             logdbg('Adding Image (old way)')
         iom.hs.gm.add_img(gid, gname, aif)
 
-    # MOVED INTO CHIP MANAGER READ_CSV_LINE
-    #def __chip_csv_func(iom, csv_fields, data_headers=None):
-        #csv_fields = map(lambda k: k.strip(' '), csv_fields)
-        ##gid   = None
-        ##gname = None
-        ##aif   = None
-        #if data_headers is None:
-            #data_headers = ['cid','gid','nid','roi','theta']
-        #if data_headers != None:
-            #if len(data_headers) != len(csv_fields):
-                #logwarn('In chip_file. len(data_headers) != len(csv_fields) length mismatch\n'+\
-                      #str(data_headers)+'\n'+str(data_headers))
-            #dmap = {}
-            #for (a,b) in zip(data_headers,csv_fields):
-                #dmap[a] = b
-            ## Legacy backwards compatibility code
-            #if 'imgindex' in dmap.keys():
-                #logwarn('Found imgindex')
-                #imgindex = int(dmap['imgindex'])
-                #gname = 'img-%07d.jpg' % imgindex
-                #iom.hs.gm.add_img(int(imgindex), gname, False)
-                #dmap['gid'] = imgindex
-                #dmap['cid'] = imgindex
-                #del dmap['imgindex']
-            #if 'animal_name' in dmap.keys():
-                #logwarn('Found animal_name')
-                #dmap['nid'] = iom.hs.nm.add_name(-1, dmap['animal_name'])
-                #del dmap['animal_name']
-            #if 'instance_id' in dmap.keys():
-                #dmap['cid'] = dmap['instance_id']
-                #del dmap['instance_id']
-            #if 'image_id' in dmap.keys():
-                #dmap['gid'] = dmap['image_id']
-                #del dmap['image_id']
-            #if 'name_id' in dmap.keys():
-                #dmap['nid'] = dmap['name_id']
-                #del dmap['name_id']
-            ## End Legacy backwards compatibility code
+    # MOVED INTO CHIP MANAGER READ_CSV_LINE. TODO: do with others
+    #def __chip_csv_func(iom, csv_data, csv_headers=None):
 
-        #cid = int(dmap['cid'])
-        #gid = int(dmap['gid'])
-        #nid = int(dmap['nid'])
-        #try:
-            #theta = np.float32(dmap['theta'])
-        #except KeyError as ex:
-            #theta = 0
-        #roi_field = re.sub('  *',' ', dmap['roi'].replace(']','').replace('[','')).strip(' ').rstrip()
-
-        #roi = map(lambda x: int(round(float(x))),roi_field.split(' '))
-        #nx  = iom.hs.nm.nid2_nx[nid]
-        #gx  = iom.hs.gm.gid2_gx[gid]
-        #logdbg('Adding Chip: (cid=%d),(nid=%d,nx=%d),(gid=%d,gx=%d)' % (cid, nid, nx, gid, gx))
-        #if gx == 0 or nx == 0 or gid == 0 or nid == 0:
-            #logmsg('Adding Chip: (cid=%d),(nid=%d,nx=%d),(gid=%d,gx=%d)' % (cid, nid, nx, gid, gx))
-            #logerr('Chip has invalid indexes')
-        #iom.hs.cm.add_chip(cid, nx, gx, roi, theta, delete_prev=False)
-
-    def __name_csv_func(iom, csv_fields, data_headers=None):
-        csv_fields = map(lambda k: k.strip(' '), csv_fields)
-        nid  = int(csv_fields[0])
-        name = (csv_fields[1])
+    def __name_csv_func(iom, csv_data, csv_headers=None):
+        nid  = int(csv_data[0])
+        name = (csv_data[1])
         logdbg('Adding Name: '+str(name))
         iom.hs.nm.add_name(nid, name)
 
     def  load_image_table(iom):
         logmsg('Loading Image Table')
         img_table_fpath = iom.get_image_table_fpath()
-        if not filecheck(img_table_fpath): 
+        if not exists(img_table_fpath): 
             img_table_fpath = iom._check_altfname(alt_names=['image_table.csv'])
         image_csv_func   = lambda f,d: iom.__image_csv_func(f,d)
-        image_alloc_func = lambda num: iom.gm.img_alloc(num)
-        return iom.__load_table(img_table_fpath, 'Image', image_alloc_func, image_csv_func)
+        return iom._load_table(img_table_fpath, 'Image', iom.hs.gm.img_alloc, image_csv_func)
 
     def  load_name_table(iom):
         logmsg('Loading Name Table')
         name_table_fpath = iom.get_name_table_fpath()
-        if not filecheck(name_table_fpath): 
+        if not exists(name_table_fpath): 
             name_table_fpath = iom._check_altfname(alt_names=['name_table.csv'])
         name_csv_func   = lambda f,d: iom.__name_csv_func(f,d)
-        name_alloc_func = lambda num: iom.gm.name_alloc(num)
-        return iom.__load_table(name_table_fpath, 'Name', name_alloc_func, name_csv_func)
+        return iom._load_table(name_table_fpath, 'Name', iom.hs.nm.name_alloc, name_csv_func)
     
     def  load_chip_table(iom):
         logmsg('Loading Chip Table')
         chip_table_fpath = iom.get_chip_table_fpath()
-        if not filecheck(chip_table_fpath): 
+        if not exists(chip_table_fpath): 
             alt_names=['chip_table.csv','instance_table.csv','animal_info_table.csv','SightingData.csv']
             chip_table_fpath = iom._check_altfname(alt_names=alt_names)
-        return iom.__load_table(chip_table_fpath, 'Chip', iom.hs.cm.chip_alloc, iom.hs.cm.load_csv_line)
+        return iom._load_table(chip_table_fpath, 'Chip', iom.hs.cm.chip_alloc, iom.hs.cm.load_csv_line)
+        #csv_fpath=chip_table_fpath
+        #table_name='Chip'
+        #alloc_func=iom.hs.cm.chip_alloc
+        #csv_func=iom.hs.cm.load_csv_line
 
     def _check_altfname(iom, alt_names=None):
         'Checks for a legacy data table'
@@ -410,7 +371,7 @@ class IOManager(AbstractManager):
             for aname in iter(alt_names):
                 alt_fpath = normpath(join(adir,aname))
                 logdbg('Checking: '+alt_fpath)
-                if filecheck(alt_fpath):
+                if exists(alt_fpath):
                     logwarn('Using Alternative Datatable '+alt_fpath)
                     timestamp = str(time.time())
                     backup_fpath = normpath(alt_fpath+'.'+timestamp+'.bak')
@@ -449,12 +410,12 @@ class IOManager(AbstractManager):
 
         logmsg('Saving Chip Table')
         chip_file = open(chip_table_fpath, 'w')
-        chip_file.write(cm.cx2_info(lbls=['cid','gid','nid','roi','theta']))
+        chip_file.write(cm.cx2_info(lbls='all'))
         chip_file.close()
 
         logmsg('Saving Flat Table')
         flat_file = open(flat_table_fpath, 'w')
-        flat_file.write(cm.cx2_info(lbls=['cid','gname','name', 'roi', 'theta']))
+        #flat_file.write(cm.cx2_info(lbls=['cid','gname','name', 'roi', 'theta']))
         flat_file.close()
         logmsg('The Database was Saved')
 
@@ -469,7 +430,7 @@ class IOManager(AbstractManager):
         corrupted_gname_list = []
         corrupted_file_fname = 'corrupted_files.txt'
         corrupted_file_fpath = join(oxford_gt_dpath,corrupted_file_fname)
-        if os.path.exists(corrupted_file_fpath):
+        if exists(corrupted_file_fpath):
             with open(corrupted_file_fpath) as f:
                 corrupted_gname_list = f.read().splitlines()
         logmsg('Loading Oxford Style Images')
@@ -536,7 +497,7 @@ class IOManager(AbstractManager):
             for gx in gx_list[unique_x]:
                 bit = False
                 gname = gm.gx2_gname[gx]
-                x_list = find(gx_list == gx)
+                x_list = pylab.find(gx_list == gx)
                 cx_list2  = cx_list[x_list]
                 roi_list2 = cm.cx2_roi[cx_list2]
                 roi_hash = lambda roi: roi[0]+roi[1]*10000+roi[2]*100000000+roi[3]*1000000000000

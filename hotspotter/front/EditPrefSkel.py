@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hotspotter/front/EditPrefSkel.ui'
+# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\hotspotter/front\EditPrefSkel.ui'
 #
-# Created: Sun May  5 19:14:16 2013
-#      by: PyQt4 UI code generator 4.9.1
+# Created: Wed May 22 17:04:35 2013
+#      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,7 +12,16 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_editPrefSkel(object):
     def setupUi(self, editPrefSkel):
@@ -40,10 +49,10 @@ class Ui_editPrefSkel(object):
         QtCore.QMetaObject.connectSlotsByName(editPrefSkel)
 
     def retranslateUi(self, editPrefSkel):
-        editPrefSkel.setWindowTitle(QtGui.QApplication.translate("editPrefSkel", "Edit Preferences", None, QtGui.QApplication.UnicodeUTF8))
-        self.redrawBUT.setText(QtGui.QApplication.translate("editPrefSkel", "Redraw", None, QtGui.QApplication.UnicodeUTF8))
-        self.unloadFeaturesAndModelsBUT.setText(QtGui.QApplication.translate("editPrefSkel", "Unload Features and Models", None, QtGui.QApplication.UnicodeUTF8))
-        self.defaultPrefsBUT.setText(QtGui.QApplication.translate("editPrefSkel", "Defaults", None, QtGui.QApplication.UnicodeUTF8))
+        editPrefSkel.setWindowTitle(_translate("editPrefSkel", "Edit Preferences", None))
+        self.redrawBUT.setText(_translate("editPrefSkel", "Redraw", None))
+        self.unloadFeaturesAndModelsBUT.setText(_translate("editPrefSkel", "Unload Features and Models", None))
+        self.defaultPrefsBUT.setText(_translate("editPrefSkel", "Defaults", None))
 
 
 if __name__ == "__main__":

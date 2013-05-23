@@ -62,12 +62,19 @@ class HotSpotterAPI(AbstractPrintable):
         if not save_fpath is None:
             hs.dm.save_fig(save_fpath)
 
+    @func_log
     def on_cx_modified(hs, cx):
         # When a cx is modified mark dependents as dirty
         # TODO: Add conditional dirtyness
+        cid = hs.cm.cx2_cid[cx]
         hs.vm.isDirty = True
         # Remove selection
         hs.uim.sel_res = None
+        hs.cm.unload_features(cx)
+        hs.cm.delete_computed_cid(cid)
+        hs.cm.cx2_dirty_bit[cx] = True
+        hs.iom.remove_computed_files_with_pattern('model*.npz')
+        hs.iom.remove_computed_files_with_pattern('index*.flann')
 
     @func_log
     def is_valid_db_dpath(hs, db_dpath):
@@ -304,7 +311,6 @@ class HotSpotterAPI(AbstractPrintable):
         'Unloads all features and models and deletes the computed directory'
         logmsg('Deleting the computed directory')
         hs.unload_all_features()
-        hs.iom.remove_computed_files_with_pattern('*')
     # ---
     def add_roi_to_all_images(hs):
         cm, gm, nm = hs.get_managers('cm','gm','nm')

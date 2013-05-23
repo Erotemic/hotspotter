@@ -194,20 +194,33 @@ class UIManager(QObject):
     # --- UIManager things that deal with the GUI Through Signals
     @func_log
     def populate_chip_table(uim):
+        #tbl = uim.hsgui.main_skel.chip_TBL
         cm = uim.hs.cm
         col_headers  = ['Chip ID', 'Chip Name', 'Name ID', 'Image ID', 'Other CIDS']
         col_editable = [ False  ,   True      ,  False   ,   False   ,   False     ]
+        # Add User Properties to headers
+        col_headers += cm.user_props.keys()
+        col_editable += [True for key in cm.user_props.keys()]
+        # Create Data List
         cx_list  = cm.get_valid_cxs()
         data_list = [None]*len(cx_list)
         row_list = range(len(cx_list))
         for (i,cx) in enumerate(cx_list):
+            # Get Indexing Data
             cid  =  cm.cx2_cid[cx]
             gid  =  cm.cx2_gid(cx)
             nid  =  cm.cx2_nid(cx)
+            # Get Useful Data
             name = cm.cx2_name(cx)
             other_cxs_ = setdiff1d(cm.cx2_other_cxs([cx])[0], cx)
             other_cids = cm.cx2_cid[other_cxs_]
-            data_list[i] = (cid, name, nid, gid, other_cids)
+            # Get User Data
+            cm.user_props.keys()
+            user_data = [cm.user_props[key][cx] for key in
+                         cm.user_props.iterkeys()]
+            # Pack data to sent to Qt
+            data_list[i] = (cid, name, nid, gid, other_cids)+tuple(user_data)
+            #(cid, name, nid, gid, other_cids, *user_data)
         uim.populateChipTblSignal.emit(col_headers, col_editable, row_list, data_list)
 
     @func_log
@@ -234,7 +247,7 @@ class UIManager(QObject):
         # Check to see if results exist
         res = uim.sel_res
         if res is None:
-            logdbg('Requested populate_results, but there are no results to populate.')
+            logdbg('Not populating. selected results are None.')
             return None
         logmsg(res) 
         gm, cm, am = uim.hs.get_managers('gm','cm','am')

@@ -59,10 +59,11 @@ class EditPrefWidget(QWidget):
 class HotspotterMainWindow(QMainWindow):
     'The GUI guts of the skeletons in the hsgui directory'
     # Signals that call Facade Slots
-    selectCidSignal    = pyqtSignal(int)
-    selectGidSignal    = pyqtSignal(int)
-    renameChipIdSignal = pyqtSignal(str, int)
-    logdbgSignal       = pyqtSignal(str)
+    selectCidSignal      = pyqtSignal(int)
+    selectGidSignal      = pyqtSignal(int)
+    renameChipIdSignal   = pyqtSignal(str, int)
+    changeChipPropSignal = pyqtSignal(str, str, int)
+    logdbgSignal         = pyqtSignal(str)
 
     def __init__(hsgui, fac):
         super( HotspotterMainWindow, hsgui ).__init__()
@@ -84,6 +85,7 @@ class HotspotterMainWindow(QMainWindow):
         hsgui.selectCidSignal.connect(fac.selc)
         hsgui.selectGidSignal.connect(fac.selg)
         hsgui.renameChipIdSignal.connect(fac.rename_cid)
+        hsgui.changeChipPropSignal.connect(fac.change_chip_prop)
         hsgui.logdbgSignal.connect(fac.logdbg)
         hsgui.main_skel.fignumSPIN.valueChanged.connect(fac.set_fignum)
         # SKEL SIGNALS
@@ -117,6 +119,8 @@ class HotspotterMainWindow(QMainWindow):
         main_skel.actionOpen_Internal_Directory.triggered.connect(fac.vdi)
         main_skel.actionConvertImage2Chip.triggered.connect(fac.convert_all_images_to_chips)
         main_skel.actionBatch_Change_Name.triggered.connect(fac._quick_and_dirty_batch_rename)
+        main_skel.actionAdd_Metadata_Property.triggered.connect(fac.add_new_prop)
+        main_skel.actionAssign_Matches_Above_Threshold.triggered.connect(fac.match_all_above_thresh)
         # 
         # Gui Components
         # Tables Widgets
@@ -220,14 +224,20 @@ class HotspotterMainWindow(QMainWindow):
 
     @gui_log
     def chipTableChangedSlot(hsgui, item):
-        'A Chip was Renamed'
+        'A Chip had a data member changed '
         hsgui.logdbgSignal.emit('chip table changed')
         sel_row = item.row()
+        sel_col = item.column()
         sel_cid = int(hsgui.main_skel.chip_TBL.item(sel_row,0).text())
-        new_name = str(item.text())
+        new_val = str(item.text()).replace(',',';;')
+        header_lbl = str(hsgui.main_skel.chip_TBL.horizontalHeaderItem(sel_col).text())
         hsgui.selectCidSignal.emit(sel_cid)
-        hsgui.renameChipIdSignal.emit(new_name, -1)
-        #hsgui.renameCidSignal(cid, new_name)
+        # Rename the chip!
+        if header_lbl == 'Chip Name':
+            hsgui.renameChipIdSignal.emit(new_val, sel_cid)
+        # Change the user property instead
+        else:
+            hsgui.changeChipPropSignal.emit(header_lbl, new_val, sel_cid)
 
     @gui_log
     def resultTableChangedSlot(hsgui, item):

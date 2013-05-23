@@ -4,7 +4,7 @@ import numpy as np
 import os.path
 from hotspotter.other.AbstractPrintable import AbstractDataManager
 from hotspotter.other.helpers   import filecheck
-from hotspotter.other.logger    import logmsg, logdbg, logerr, logio, logwarn
+from hotspotter.other.logger    import logmsg, logdbg, logerr, logio, logwarn 
 from pylab           import find
 from PIL             import Image 
 
@@ -87,7 +87,6 @@ class ChipManager(AbstractDataManager):
         # --- Feature Representation of Chip ---
         cm.cx2_fpts      = np.empty(0, dtype=object) # heshes keypoints
         cm.cx2_fdsc      = np.empty(0, dtype=object) # Root SIFT fdscriptors
-        cm.cx2_transChip = np.empty(0, dtype=object)
         cm.cx2_dirty_bit = np.empty(0, dtype=np.bool) # Dirty bit flag (need to recompute)
         # --- Reverse Index --
         cm.cid2_cx       = np.array([], dtype=np.uint32)
@@ -98,7 +97,6 @@ class ChipManager(AbstractDataManager):
         cm.max_cx    =  0 # the largest cx seen
         cm.max_cid   =  0 # the largest cid seen
         cm.max_roi   = [0,0,0,0]
-               
         cm.x2_lbl = \
         {
             'cid'  : lambda _: cm.cx2_cid[_],\
@@ -113,16 +111,36 @@ class ChipManager(AbstractDataManager):
             'nx'   : lambda _: cm.cx2_nx[_] ,\
             'gx'   : lambda _: cm.cx2_gx[_] ,\
         }
+        cm.user_props = {}
         cm.default_fields = ['cid','gid','nid','roi','theta']
 
-    def load_csv_line(cm, field_values, headers):
-        field_values = map(lambda k: k.strip(' '), field_values)
-        if headers is None: headers = cm.default_fields
-        if len(headers) != len(field_values):
-            logwarn('In chip_file. len(headers) != len(field_values) length mismatch\n'+\
-                    str(headers)+'\n'+str(field_values))
+    def add_user_prop(cm, new_prop):
+        if not new_prop in cm.user_props.keys():
+            if ',' in new_prop or '\n' in new_prop:
+                logerr('Properties cannot have commas or newlines')
+                return False
+            # Allocate data for property
+            # TODO: User prop must be a string
+            cm.user_props[new_prop] = np.empty(len(cm.cx2_cid),dtype=object)
+            # Add property to label map
+            cm.x2_lbl[new_prop] = lambda _: cm.user_props[new_prop][_]
+            for cx in iter(cm.get_valid_cxs()):
+                cm.user_props[new_prop][cx] = ''
+
+    def load_csv_line(cm, csv_data, csv_headers):
+        if csv_headers is None:
+            csv_headers = cm.default_fields
+        num_unspecified = len(csv_headers) - len(csv_data)
+        if num_unspecified != 0:
+            csv_data += ['' for _ in xrange(num_unspecified)]
+            unspecified_type = ['data','headers'][num_unspecified > 0]
+            logwarn(('\n\nIn chip_file: %d unspecified %s\n'+\
+                    'csv_headers=%r\n'+\
+                    'csv_data=%r\n\n')\
+                    % (abs(num_unspecified), unspecified_type, csv_headers, csv_data))
+
         # Build field name -> field value map
-        dmap = {k:v for (k,v) in zip(headers,field_values)}
+        dmap = {k:v for (k,v) in zip(csv_headers,csv_data)}
         if cm.hs.core_prefs.legacy_bit:
             # Legacy: Be Backwards Compatible
             if 'imgindex' in dmap.keys():
@@ -147,27 +165,35 @@ class ChipManager(AbstractDataManager):
                 dmap['nid'] = dmap['name_id']
                 del dmap['name_id']
 
-        cid = int(dmap['cid'])
-        gid = int(dmap['gid'])
-        nid = int(dmap['nid'])
+        # Read IDs
+        cid = int(dmap['cid']); del dmap['cid']
+        gid = int(dmap['gid']); del dmap['gid']
+        nid = int(dmap['nid']); del dmap['nid']
+        # Read Theta
         try:
             theta = np.float32(dmap['theta'])
+            del dmap['theta']
         except KeyError as ex:
             theta = 0
+        # Read ROI
         roi_str = re.sub('  *',' ', dmap['roi'].replace(']','').replace('[','')).strip(' ').rstrip()
         roi = map(lambda x: int(round(float(x))),roi_str.split(' '))
+        del dmap['roi']
+        # Read User Props, whatever is left in dmap
+        props = dmap 
         nx  = cm.hs.nm.nid2_nx[nid]
         gx  = cm.hs.gm.gid2_gx[gid]
         if gx == 0 or nx == 0 or gid == 0 or nid == 0:
             logmsg('Adding Chip: (cid=%d),(nid=%d,nx=%d),(gid=%d,gx=%d)' % (cid, nid, nx, gid, gx))
             logerr('Chip has invalid indexes')
-        cm.add_chip(cid, nx, gx, roi, theta, delete_prev=False)
+        cm.add_chip(cid, nx, gx, roi, theta, props=props, delete_prev=False)
 
     def get_csv_line(headers):
         cm.cx2_info(lbls=['cid','gid','nid','roi','theta'])
         pass
 
     def  chip_alloc(cm, nAlloc):
+        'Allocate room for nAlloc more chips'
         logdbg('Allocating room for %d more chips' % nAlloc)
         cm.cx2_cid       = np.append(cm.cx2_cid, np.zeros(nAlloc,dtype=np.uint32))
         # Implicit Data Local Identifiers
@@ -180,16 +206,20 @@ class ChipManager(AbstractDataManager):
         cm.cx2_fdsc      = np.append(cm.cx2_fdsc, np.empty(nAlloc,dtype=object))
         # Feature Representation
         cm.cx2_dirty_bit = np.append(cm.cx2_dirty_bit, np.ones(nAlloc,dtype=np.bool))
-        cm.cx2_transChip = np.append(cm.cx2_transChip, np.zeros(nAlloc,dtype=object))
         # Reverse Index
         idAlloc = len(cm.cid2_cx) - len(cm.cx2_cid)
         if idAlloc > 0:
             cm.cid2_cx = np.append(cm.cid2_cx, np.zeros(idAlloc,dtype=np.uint32))
+        # User Properties
+        for prop in cm.user_props.iterkeys():
+            cm.user_props[prop] = np.append(cm.user_props[prop], np.empty(nAlloc,dtype=object))
+
 
     def cx2_info(cm, cxs=None, lbls=None):
         #returns info in formatted table
         if cxs is None: cxs = cm.get_valid_cxs()
         if lbls is None: lbls = cm.default_fields
+        if lbls == 'all': lbls = cm.default_fields + cm.user_props.keys()
         data_table_str = cm.x2_info(cxs, lbls)
         return '# ChipManager\n'+data_table_str
 
@@ -244,7 +274,7 @@ class ChipManager(AbstractDataManager):
             valid_bit = cm.max_cid > cids and cm.cid2_cx[cids] > 0
         return valid_bit
     # --- ACTUAL WORK FUNCTIONS
-    def add_chip(cm, cid, nx, gx, roi, theta, delete_prev=False):
+    def add_chip(cm, cid, nx, gx, roi, theta, props={}, delete_prev=False):
         nm = cm.hs.nm
         gm = cm.hs.gm
         # Fails if cid is not available; cid = -1 means pick for you
@@ -290,7 +320,14 @@ class ChipManager(AbstractDataManager):
         cm.cid2_cx[cid] = cx
         nm.nx2_cx_list[nx].append(cx)
         gm.gx2_cx_list[gx].append(cx)
-        # Increment
+        # Add user props
+        for key in cm.user_props.keys():
+            if not key in props.keys():
+                cm.user_props[key][cx] = ''
+        for key,val in props.iteritems():
+            cm.add_user_prop(key)
+            cm.user_props[key][cx] = val
+        # Increment Data Counters
         cm.next_cx  = max(cm.next_cx + 1, cx+1)
         cm.next_cid = max(cm.next_cid+1, cid+1)
         cm.max_cx   = max(cm.max_cx,     cx)
@@ -311,22 +348,17 @@ class ChipManager(AbstractDataManager):
         if type(cx) == types.ListType:
             cx_list = cx
         logdbg('Removing CXs '+str(cx_list))
-        cm.hs.on_cx_modified(cx)
         for cx in cx_list:
+            # Remove data saved on disk and memory
+            cm.hs.on_cx_modified(cx)
             cid = cm.cx2_cid[cx]
             logmsg('Removing cid=%d' % cid)
-            #Remove cx from other.data managers
+            # Remove cx from other.data managers
             gx = cm.cx2_gx[cx]
             nx = cm.cx2_nx[cx]
             cm.hs.gm.gx2_cx_list[gx].remove(cx)
             cm.hs.nm.nx2_cx_list[nx].remove(cx)
-            #Remove from search manager
-            cm.hs.vm.index_dirty_bit = True
-            cm.hs.vm.train_cid = np.setdiff1d(cm.hs.vm.train_cid, cid)
-            #Remove data saved on disk and memory
-            cm.unload_features(cx)
-            cm.delete_computed_cid(cid)
-            #Remove data saved in memory            
+            # Remove data saved in memory            
             cm.cx2_cid[cx]   = 0
             cm.cx2_nx[cx]    = 0
             cm.cx2_gx[cx]    = 0
@@ -338,11 +370,8 @@ class ChipManager(AbstractDataManager):
         cid = cm.cx2_cid[cx]
         logmsg('Giving cid=%d new theta: %r' % (cid, new_theta))
         assert not new_theta is None
-        cm.cx2_dirty_bit[cx] = True
-        cm.unload_features(cx)
-        cm.delete_computed_cid(cid)
+        cm.hs.on_cx_modified(cx)
         cm.cx2_theta[cx] = new_theta
-        cm.hs.vm.isDirty = True # Mark vocab as dirty
 
 
     def change_roi(cm, cx, new_roi):
@@ -351,17 +380,18 @@ class ChipManager(AbstractDataManager):
         assert not new_roi is None
         if new_roi is None:
             logerr('The ROI is np.empty')
-        cm.cx2_dirty_bit[cx] = True
-        cm.unload_features(cx)
-        cm.delete_computed_cid(cid)
+        cm.hs.on_cx_modified(cx)
         cm.cx2_roi[cx] = new_roi
-        cm.hs.vm.isDirty = True # Mark vocab as dirty
+
     
     def rename_chip(cm, cx, new_name):
         nm = cm.hs.nm
         cid     = cm.cid(cx)
         old_nx  = cm.cx2_nx[cx]
         old_name = nm.nx2_name[old_nx]
+        if old_name == new_name:
+            logdbg('new_name == old_name')
+            return
         logmsg('Renaming cid='+str(cid)+' from '+str(old_name)+' to '+new_name)
         if not new_name in nm.name2_nx.keys():
             nm.add_name(-1,new_name)
@@ -396,27 +426,23 @@ class ChipManager(AbstractDataManager):
         #chip_fpath = cm.cx2_chip_fpath(cx)
         #return Image.open(chip_fpath).size
 
-    def cx2_transChip(cm, cx):
-        return np.linalg.inv(cm.cx2_transImg(cx))
-
-#------------------------------
-# Steps to transform a detection from Chip Space to Image Space
-#  (Chip Space): roi=[0, 0, cw, ch] 
-#  * translate: -[cw, ch]/2
-#  * rotate: -theta
-#  * translate: [ucw, uch]/2
-#  (Unoriented Chip Space) = roi=[0,0,ucw,ucw] 
-#  * scale: scale_factor
-#  * translate: rx, ry
-#  (Image Space): roi=[rx,ry,rw,rh]
-#------------------------------
-
     def cx2_T_chip2img(cm, cx, rotated=True):
         'Return the transformation from Rotated Chip Space to Image Space'
+        #------------------------------
+        # Steps to transform a detection from Chip Space to Image Space
+        #  (Chip Space): roi=[0, 0, cw, ch] 
+        #  * translate: -[cw, ch]/2
+        #  * rotate: -theta
+        #  * translate: [ucw, uch]/2
+        #  (Unoriented Chip Space) = roi=[0,0,ucw,ucw] 
+        #  * scale: scale_factor
+        #  * translate: rx, ry
+        #  (Image Space): roi=[rx,ry,rw,rh]
+        #------------------------------
         # rotation radians
         theta = cm.cx2_theta[cx]
         # roi size and translation
-        (rx, ry, rw, rh) = np.array(cm.cx2_roi[cx],dtype=np.float)
+        (rx, ry, rw, rh) = np.array(cm.cx2_roi[cx], dtype=np.float)
         # unrotated size
         (ucw, uch) = cm._scaled_size(cx, rotated=False, dtype=np.float)
         # rotated size
@@ -424,26 +450,34 @@ class ChipManager(AbstractDataManager):
         # Translation Variables
         ctx, cty   = ( cw/2,  ch/2)
         uctx, ucty = (ucw/2, uch/2)
+        sfx, sfy   = rw/ucw, rh/uch
+        sinth = np.sin(theta)
+        costh = np.cos(theta)
         # Translate to centered rotated
-        trans_center = np.array(([ 1,  0, -ctx],
-                                 [ 0,  1, -cty],
-                                 [ 0,  0,    1]), dtype=np.float32)
+        trans_center = np.array(
+            ([ 1,  0, -ctx],
+             [ 0,  1, -cty],
+             [ 0,  0,    1]), dtype=np.float)
         # unrotate
-        unrotate = np.array(([np.cos(theta), -np.sin(theta), 0],
-                              [np.sin(theta),  np.cos(theta), 0],
-                              [             0,             0, 1]), dtype=np.float32)
+        unrotate = np.array(
+            ([costh, -sinth, 0],
+             [sinth,  costh, 0],
+             [    0,      0, 1]), dtype=np.float)
         # translate to uncentered unrotated
-        trans_uncenter = np.array(([ 1,  0, uctx],
-                                   [ 0,  1, ucty],
-                                   [ 0,  0,    1]), dtype=np.float32)
+        trans_uncenter = np.array(
+            ([ 1,  0, uctx],
+             [ 0,  1, ucty],
+             [ 0,  0,    1]), dtype=np.float)
         # Unscale to untranslated image space
-        unscale = np.array(([ rw/ucw,    0,  0],
-                            [ 0,    rh/uch,  0],
-                            [ 0,        0,  1]), dtype=np.float32) 
+        unscale = np.array(
+            ([ sfx,   0,  0],
+             [   0, sfy,  0],
+             [   0,   0,  1]), dtype=np.float) 
         # Translate into image scale
-        trans_img = np.array(([ 1,  0, rx],
-                              [ 0,  1, ry],
-                              [ 0,  0,  1]), dtype=np.float32)
+        trans_img = np.array(
+            ([ 1,  0, rx],
+             [ 0,  1, ry],
+             [ 0,  0,  1]), dtype=np.float)
         #return trans_center.dot(unrotate).dot(trans_uncenter).dot(unscale).dot(trans_img)
         return trans_img.dot(unscale).dot(trans_uncenter).dot(unrotate).dot(trans_center)
 
@@ -620,7 +654,7 @@ class ChipManager(AbstractDataManager):
 
     def load_features(cm, _cxs=None, force_recomp=False):
         if _cxs is None:
-            _cxs = cm.get_valid_cxs()
+            cxs = cm.get_valid_cxs()
         elif type(_cxs) is types.ListType:
             cxs = np.array(_cxs)
         elif type(_cxs) in [types.IntType, np.uint32]:
@@ -631,14 +665,20 @@ class ChipManager(AbstractDataManager):
         is_dirty  = np.bitwise_or(cm.cx2_dirty_bit[cxs], force_recomp)
         num_samp  = cxs.size
         num_dirty = np.sum(is_dirty)
+        # HACKS
+        if not np.iterable(is_dirty):
+            is_dirty = np.array([is_dirty])
+        if not np.iterable(cxs):
+            cxs = np.array([cxs])
         load_cx   = cxs[is_dirty]
+        
         num_clean = num_samp - num_dirty
         #logdbg('Loading Features: Dirty=%d ; #Clean=%d' % (num_dirty, num_clean))
         if num_dirty == 0:
             return
         logio('Loading %d Feature Reps' % num_dirty)
         am = cm.hs.am
-        for cx in load_cx:
+        for cx in iter(load_cx):
             cid = cm.cx2_cid[cx]
             if cid <= 0:
                 logwarn('WARNING: IX='+str(cx)+' is invalid'); continue

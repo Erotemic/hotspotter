@@ -1,6 +1,5 @@
 from HotSpotterAPI  import HotSpotterAPI
-from PyQt4.Qt import QObject, pyqtSlot, QTreeWidgetItem
-from numpy          import logical_and
+from PyQt4.Qt import QObject, pyqtSlot, QTreeWidgetItem, QDialog, QInputDialog
 from pylab import find
 from other.logger import logdbg, logerr, logmsg, func_log, hsl
 import other.crossplat as crossplat
@@ -8,6 +7,7 @@ import other.messages as messages
 import sys
 import time
 import os.path
+import numpy as np
 
 # Globals
 clbls = ['cid', 'gid', 'nid', 'name', 'roi', 'theta']
@@ -56,14 +56,12 @@ class Facade(QObject):
 
     def merge_db(fac, db_dpath):
         fac.hs.merge_database(db_dpath)
-        fac.hs.merge_database(r'D:\data\work\Lionfish\LF_OPTIMIZADAS_NI_V_E')
-        fac.hs.merge_database(r'D:\data\work\Lionfish\LF_WEST_POINT_OPTIMIZADAS')
-        fac.hs.merge_database(r'D:\data\work\Lionfish\LF_Bajo_bonito')
-        fac.hs.merge_database(r'D:\data\work\Lionfish\LF_Juan')
+        #fac.hs.merge_database(r'D:\data\work\Lionfish\LF_OPTIMIZADAS_NI_V_E')
+        #fac.hs.merge_database(r'D:\data\work\Lionfish\LF_WEST_POINT_OPTIMIZADAS')
+        #fac.hs.merge_database(r'D:\data\work\Lionfish\LF_Bajo_bonito')
+        #fac.hs.merge_database(r'D:\data\work\Lionfish\LF_Juan')
         uim.populate_tables()
         
-
-
         
 
     @func_log
@@ -143,6 +141,91 @@ class Facade(QObject):
             cid = uim.sel_cid
         cm.rename_chip(cm.cx(cid), str(new_name))
         uim.populate_tables()
+
+    @pyqtSlot(str, int, name='change_chip_prop')
+    @func_log
+    def change_chip_prop(fac, propname, newval, cid=-1):
+        cm, uim = fac.hs.get_managers('cm','uim')
+        if cid == -1:
+            cid = uim.sel_cid
+        cx = cm.cx(cid)
+        cm.user_props[str(propname)][cx] = str(newval).replace('\n','\t').replace(',',';;')
+        uim.populate_tables()
+
+    @pyqtSlot(name='add_new_prop')
+    @func_log
+    def add_new_prop(fac, propname=None):
+        'add a new property to keep track of'
+        if propname is None:
+            # User ask
+            dlg = QInputDialog()
+            textres = dlg.getText(None, 'New Metadata Property','What is the new property name? ')
+            if not textres[1]:
+                logmsg('Cancelled new property')
+                return
+            propname = str(textres[0])
+
+        logmsg('Adding property '+propname)
+        fac.hs.cm.add_user_prop(propname)
+        fac.hs.uim.populate_tables()
+
+    @pyqtSlot(name='match_all_above_thresh')
+    def match_all_above_thresh(fac, threshold=None):
+        'do matching and assign all above thresh'
+        if threshold == None:
+            # User ask
+            dlg = QInputDialog()
+            threshres = dlg.getText(None, 'Threshold Selector', 
+                                    'Enter a matching threshold.\n'+
+             'The system will query each chip and assign all matches above this thresh')
+            if not threshres[1]:
+                logmsg('Cancelled all match')
+                return
+            try:
+                threshold = float(str(threshres[0]))
+            except ValueError: 
+                logerr('The threshold must be a number')
+        qm = fac.hs.qm
+        cm = fac.hs.cm
+        nm = fac.hs.nm
+        vm = fac.hs.vm
+        # Get model ready
+        vm.sample_train_set()
+        vm.build_model()
+        # Do all queries
+        for qcx in iter(cm.get_valid_cxs()):
+            qcid = cm.cx2_cid[qcx]
+            logmsg('Querying CID='+str(qcid))
+            query_name = cm.cx2_name(qcx)
+            logdbg(str(qcx))
+            logdbg(str(type(qcx)))
+            cm.load_features(qcx)
+            res = fac.hs.qm.cx2_res(qcx)
+            # Match only those above a thresh
+            res.num_top_min = 0
+            res.num_extra_return = 0
+            res.top_thresh = threshold
+            top_cx = res.top_cx()
+            if len(top_cx) == 0:
+                print('No matched for cid='+str(qcid))
+                continue
+            top_names = cm.cx2_name(top_cx)
+            all_names = np.append(top_names,[query_name])
+            if all([nm.UNIDEN_NAME() == name for name in all_names]):
+                # If all names haven't been identified, make a new one 
+                new_name = nm.get_new_name()
+            else:
+                # Rename to the most frequent non ____ name seen
+                from collections import Counter
+                name_freq = Counter(np.append(top_names,[query_name])).most_common()
+                new_name = name_freq[0][0] 
+                if new_name == nm.UNIDEN_NAME():
+                    new_name = name_freq[1][0]
+            # Do renaming
+            cm.rename_chip(qcx, new_name)
+            for cx in top_cx:
+                cm.rename_chip(cx, new_name)
+        fac.hs.uim.populate_tables()
 
     @pyqtSlot(name='remove_cid')
     @func_log
@@ -229,7 +312,6 @@ class Facade(QObject):
 
 
     def _quick_and_dirty_batch_rename(fac):
-        from PyQt4.Qt import QDialog
         from front.ChangeNameDialog import Ui_changeNameDialog
         cm, nm, uim = fac.hs.get_managers('cm','nm', 'uim')
         try:
@@ -354,10 +436,10 @@ class Facade(QObject):
             print 'Chip Info: \n'+fac.hs.cm.cx2_info(cx, lbls).replace('\n', '  \n')
 
     def print_status(fac):
-        print '\n\n  ___STATUS___'
+        print('\n\n  ___STATUS___')
         fac.print_database_stats()
         fac.print_selected()
-        print '\n Need Help? type print_help()'
+        print('\n Need Help? type print_help()')
         sys.stdout.flush()
 
     @pyqtSlot(name='vdd')
@@ -405,7 +487,7 @@ class Facade(QObject):
 
     @func_log
     def next_unident_chip(fac):
-        empty_cxs = find(logical_and(fac.hs.cm.cx2_nx == fac.hs.nm.UNIDEN_NX(), fac.hs.cm.cx2_cid > 0))
+        empty_cxs = find(np.logical_and(fac.hs.cm.cx2_nx == fac.hs.nm.UNIDEN_NX(), fac.hs.cm.cx2_cid > 0))
         if len(empty_cxs) == 0:
             print 'There are no more empty images'
             return False

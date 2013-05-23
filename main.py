@@ -50,7 +50,7 @@ parser.add_argument('-a', '--autoload-off',    dest='autoload_bit', help='Starts
 parser.add_argument('-dp', '--delete-preferences', dest='delpref_bit', help='Deletes the HotSpotter preferences in ~/.hotspotter', **def_off)
 
 
-args = parser.parse_args()
+args, unknown = parser.parse_known_args()
 
 if args.logall_bit:
     hsl.enable_global_logs()

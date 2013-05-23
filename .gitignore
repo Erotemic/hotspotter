@@ -1,6 +1,8 @@
 *~
+hotspotter/generated_version.py
 hotspotter_global_logs.log
 hotspotter_logs*.txt
+desktop.ini
 '
 *.un
 *.swp

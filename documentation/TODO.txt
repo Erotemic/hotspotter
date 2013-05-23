@@ -6,7 +6,6 @@
 #--------------------------------------------------
 #   (0-5) | yy/mm/dd|  developer_name |         ...
 #--------------------------------------------------
-        0 | 13/05/08|            ____ |  Save Model to Disk
         0 | 13/05/08|            ____ |  Autosave to Database Structure
                                 Create a RawVisualModel who's object can be pickled. Same with RawResult, thats broken.
                                 names and CIDs should be saved in filenames. Name manager can probably go away. 
@@ -50,8 +49,6 @@
 
         5 | 13/05/08|            ____ |  Add a drag and drop for a new image to identify. 
 
-        5 | 13/05/08|            ____ |  Add a batch query user mode.
-
         5 | 13/05/08|            ____ |  Add a batch ROI user mode. (sort of already there)
 
         5 | 13/05/08|            ____ |  Add an ROI detection input
@@ -63,4 +60,5 @@
 
 
 # List of tasks which have been accomplished
-
+        0 | 13/05/08|            ____ |  Save Model to Disk
+        5 | 13/05/08|            ____ |  Add a batch query user mode.

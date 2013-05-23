@@ -310,6 +310,7 @@ class HotSpotterAPI(AbstractPrintable):
     def delete_computed_directory(hs):
         'Unloads all features and models and deletes the computed directory'
         logmsg('Deleting the computed directory')
+        hs.iom.remove_computed_files_with_pattern('*')
         hs.unload_all_features()
     # ---
     def add_roi_to_all_images(hs):

@@ -239,11 +239,6 @@ class Facade(QObject):
 
     @pyqtSlot(name='remove_cid')
     @func_log
-    def run_matching_experiment(fac):
-        fac.hs.em.run_matching_experiment()
-
-    @pyqtSlot(name='remove_cid')
-    @func_log
     def remove_cid(fac, cid=None):
         uim = fac.hs.uim
         uim.update_state('image_view')

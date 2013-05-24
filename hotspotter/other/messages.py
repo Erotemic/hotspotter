@@ -120,6 +120,12 @@ Run (Convenience->View Internal Directory) and then delete the computed
 directory. This will simply cause the program to recompute its data. 
 You may have to restart HotSpotter. 
 
+HotSpotter keeps a small set of preference files in your home directory.
+These files remember the last database you had open as well as other
+preferences. When updating to new versions these can sometimes cause
+problems. Deleting the ~/.hotspotter folder may fix some issues. 
+
+
 If all else fails you can send an email to crallj at rpi D0T edu. Please include
 a detailed description of the error, what you were doing when it happened, and
 the output of the (Convenience->Write Logs) command if possible

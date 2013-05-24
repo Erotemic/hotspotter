@@ -263,6 +263,9 @@ def package_application():
         print(key+' : '+repr(val))
     setup(**setup_kwargs)
 
+    if sys.platform == 'darwin':
+        subprocess.call(["cp", "-r", "hotspotter/tpl/lib/darwin", "dist/HotSpotter.app/Contents/Resources/lib/"])
+
 def get_info_setup_kwarg():
     return dict(
         name=NAME,

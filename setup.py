@@ -196,8 +196,6 @@ def package_application():
     # ---------
     setup_kwargs = get_info_setup_kwarg()
     # ---------
-    ensure_findable_windows_dlls()
-    # ---------
     # Force inclusion the modules that may have not been explicitly included
     includes_modules = MODULES
     # Import whatever database module you can
@@ -222,6 +220,9 @@ def package_application():
     # WINDOWS EXECUTABLE SETUP
     if sys.platform == 'win32':
         import py2exe
+        ensure_findable_windows_dlls()
+        # ---------
+        
         # Construct py2exe options
         py2exe_options = py2_appexe_universal
         py2exe_options.update({

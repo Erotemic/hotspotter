@@ -171,13 +171,19 @@ def get_hotspotter_datafiles():
     data_files.extend(matplotlib.get_py2exe_datafiles())
     # Include TPL Libs
     plat_tpllibdir = join('hotspotter', 'tpl','lib', sys.platform)
-    for root,dlist,flist in os.walk(plat_tpllibdir):
-        tpl_dest = root
-        tpl_srcs = [realpath(join(root,fname)) for fname in flist]
-        data_files.append((tpl_dest, tpl_srcs))
+    if sys.platform == 'darwin':
+        raw_input(
+            'WARNING: Due to ridiculous path length restrictions the tpl '+\
+            'directory has to be added manually.\n You also have to manually'+\
+            ' press enter ;)')
+    else:
+        for root,dlist,flist in os.walk(plat_tpllibdir):
+            tpl_dest = root
+            tpl_srcs = [realpath(join(root,fname)) for fname in flist]
+            data_files.append((tpl_dest, tpl_srcs))
     # Include Splash Screen
     splash_dest = normpath('hotspotter/front')
-    splash_srcs = [realpath('hotspotter/front/splash.tif')]
+    splash_srcs = [realpath('hotspotter/front/splash.png')]
     data_files.append((splash_dest, splash_srcs))
     return data_files
 

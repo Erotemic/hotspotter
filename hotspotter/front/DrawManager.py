@@ -37,7 +37,7 @@ class DrawManager(AbstractManager):
             dm.draw_prefs.load()
     # ---
     def show_splash(dm):
-        splash_fname = os.path.join(os.path.realpath(os.path.dirname(__file__)), 'splash.tif')
+        splash_fname = os.path.join(os.path.realpath(os.path.dirname(__file__)), 'splash.png')
         logdbg('Splash Fname: %r '% splash_fname)
         splash_img = asarray(Image.open(splash_fname))
         dm.add_images([splash_img],['Welcome to Hotspotter'])

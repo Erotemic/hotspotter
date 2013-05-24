@@ -171,6 +171,10 @@ def get_hotspotter_datafiles():
     data_files.extend(matplotlib.get_py2exe_datafiles())
     # Include TPL Libs
     plat_tpllibdir = join('hotspotter', 'tpl','lib', sys.platform)
+    if sys.platform == 'win32':
+        # Hack to get MinGW dlls in for FLANN
+        data_files.append(('',[join(plat_tpllibdir, 'libgcc_s_dw2-1.dll'),
+                               join(plat_tpllibdir,'libstdc++-6.dll')]))
     if sys.platform == 'darwin':
         raw_input(
             'WARNING: Due to ridiculous path length restrictions the tpl '+\

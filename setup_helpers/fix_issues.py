@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+from setup_helpers.git_helpers import *
 
 def normalize_str(instr):
     outstr = instr
@@ -16,7 +17,7 @@ def clean_git_config():
     'Code for removing old submodules from your config'
     import re
     print 'Cleaning Git Config'
-    config_fpath = '.git/config'
+    config_fpath = '../.git/config'
     gitconfig = open(config_fpath,'r').read()
     gitconfig = normalize_str(gitconfig)
     gitconfig = re.sub(' *\[submodule \'tpl\'\] *\n[^\n]*tpl-hotspotter.git *\n',

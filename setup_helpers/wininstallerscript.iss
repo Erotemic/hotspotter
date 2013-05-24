@@ -5,13 +5,17 @@
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{5DF9FAF7-A258-4D84-8050-4AFB23E96BE4}
+AppId={{23340D3E-1854-4A0F-94A1-95D8D8DAFDA2}
 AppName=HotSpotter
 AppVersion=1
 ;AppVerName=HotSpotter 1
+AppPublisher=Rensselaer Polytechnic Institute
+AppPublisherURL=www.rpi.edu/~crallj/
+AppSupportURL=www.rpi.edu/~crallj/
+AppUpdatesURL=www.rpi.edu/~crallj/
 DefaultDirName={pf}\HotSpotter
 DefaultGroupName=HotSpotter
-OutputBaseFilename=hotspotter-setup
+OutputBaseFilename=hotspotter-win-setup
 SetupIconFile=C:\Users\jon.crall\code\hotspotter\hsicon.ico
 Compression=lzma
 SolidCompression=yes

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\hotspotter/front\MainSkel.ui'
+# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\setup_helpers\../hotspotter/front\MainSkel.ui'
 #
-# Created: Thu May 23 10:11:26 2013
+# Created: Thu May 23 20:34:41 2013
 #      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -212,10 +212,9 @@ class Ui_mainSkel(object):
         self.menuOptions.addSeparator()
         self.menuOptions.addAction(self.actionPreferences)
         self.menuHelp.addAction(self.actionHelpWorkflow)
+        self.menuHelp.addAction(self.actionHelpTroubles)
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionHelpCMD)
-        self.menuHelp.addAction(self.actionHelpGUI)
-        self.menuHelp.addAction(self.actionHelpTroubles)
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionWriteLogs)
         self.menuActions.addAction(self.actionQuery)

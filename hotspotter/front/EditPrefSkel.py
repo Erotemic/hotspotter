@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\hotspotter/front\EditPrefSkel.ui'
+# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\setup_helpers\../hotspotter/front\EditPrefSkel.ui'
 #
-# Created: Thu May 23 10:11:26 2013
+# Created: Thu May 23 20:34:42 2013
 #      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!

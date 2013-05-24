@@ -1,3 +1,9 @@
+from fnmatch import fnmatchcase
+from os.path import dirname, realpath, join, exists, normpath, isdir, isfile
+import os
+import shutil
+import subprocess
+import sys
 
 def normalize_str(instr):
     outstr = instr
@@ -42,12 +48,11 @@ def fix_tpl_permissions():
     chmod +x hotspotter/tpl/lib/linux2/*.ln''')
 
 def compile_widgets():
-    import os
     if sys.platform == 'win32':
         pyuic4_cmd = r'C:\Python27\Lib\site-packages\PyQt4\pyuic4'
     else:
         pyuic4_cmd = 'pyuic4'
-    widget_dir = join(dirname(realpath(__file__)), 'hotspotter/front')
+    widget_dir = join(dirname(realpath(__file__)), '../hotspotter/front')
     widget_list = ['MainSkel', 'ChangeNameDialog', 'EditPrefSkel', 'ResultDialog']
     for widget in widget_list:
         widget_ui = join(widget_dir, widget+'.ui')
@@ -55,6 +60,7 @@ def compile_widgets():
         execute_syscalls(pyuic4_cmd+' -x '+widget_ui+' -o '+widget_py)
 
 def fix_issues():
+    import os
     os.chdir(dirname(realpath(__file__)))
     #python main.py --delete-preferences
     clean_git_config()

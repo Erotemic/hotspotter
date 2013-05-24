@@ -226,10 +226,9 @@
      <string>Help</string>
     </property>
     <addaction name="actionHelpWorkflow"/>
+    <addaction name="actionHelpTroubles"/>
     <addaction name="separator"/>
     <addaction name="actionHelpCMD"/>
-    <addaction name="actionHelpGUI"/>
-    <addaction name="actionHelpTroubles"/>
     <addaction name="separator"/>
     <addaction name="actionWriteLogs"/>
    </widget>

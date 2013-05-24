@@ -6,7 +6,7 @@ from hotspotter.front.EditPrefSkel import Ui_editPrefSkel
 from hotspotter.front.MainSkel import Ui_mainSkel
 from hotspotter.tpl.other.matplotlibwidget import MatplotlibWidget
 from hotspotter.other.logger import logmsg, logdbg
-from hotspotter.other.messages import workflow_help, cmd_help, gui_help, troubles_help
+from hotspotter.other.messages import workflow_help, cmd_help, troubles_help
 import types
 #from weakref import ref
 
@@ -108,10 +108,9 @@ class HotspotterMainWindow(QMainWindow):
         main_skel.actionTogPlt.triggered.connect(hsgui.setPlotWidgetVisibleSlot)
         main_skel.actionPreferences.triggered.connect( hsgui.epw.show )
         # Help
-        main_skel.actionHelpCMD.triggered.connect(lambda:hsgui.msgbox('Workflow HOWTO', workflow_help))
-        main_skel.actionHelpGUI.triggered.connect(lambda:hsgui.msgbox('Command Line Help', cmd_help))
-        main_skel.actionHelpTroubles.triggered.connect(lambda:hsgui.msgbox('GUI Help', gui_help))
-        main_skel.actionHelpWorkflow.triggered.connect(lambda:hsgui.msgbox('Troubleshooting Help', troubles_help))
+        main_skel.actionHelpCMD.triggered.connect(lambda:hsgui.msgbox('Command Line Help', cmd_help))
+        main_skel.actionHelpWorkflow.triggered.connect(lambda:hsgui.msgbox('Workflow HOWTO', workflow_help))
+        main_skel.actionHelpTroubles.triggered.connect(lambda:hsgui.msgbox('Troubleshooting Help', troubles_help))
         main_skel.actionWriteLogs.triggered.connect(fac.write_logs)
         # Convinience
         main_skel.actionOpen_Source_Directory.triggered.connect(fac.vd)

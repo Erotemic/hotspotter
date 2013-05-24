@@ -1,62 +1,80 @@
-workflow_help = '''
-    + Open a database with 'File->Open Database'
-       A database is a folder.It can be:
-           a StripSpotter database (look for a folder with SightingData.csv)
-           a HotSpotter database, (look for a folder with an images directory)
-           an empty folder, (this will create a new HotSpotter database) 
+workflow_help = '''--- Open The Database ---
 
-    + 'File->import_images' will add one or more images to the database
-       (Remember to save after doing this, or you will have to do it again!)
+(File->Open Database)[(Ctrl+O)]
+Open a database or select an EMPTY folder as a new database 
 
-    + Select an image from the image table. 
+(File->Import Images)[Ctrl+I] 
+Import images into the database.
+  * You may select more than one image at a time.
 
-    + Click Add ROI, and click two points on the image 
-        (this will be the bounding box)
-        (make sure to get ALL of the animal in the bounding box.)
-        (This will add a new chip to the chip table)
+--- Select the Chips ---
 
-    + If you made a mistake use Reselect ROI to do just that. 
+(Actions->Add ROI)[A]
+Click two points to select a regions of interest (ROI) in an image.
+  * ROIs become Chips
+  * (Convenience->Convert All Image To Chips) Adds and ROI to each full image.
+  * (Actions->Reselect Orientation)[O] Rotates an image for better matching.
+  * (Actions->Reselect ROI)[R] Allows a missed selection to be fixed.
+  * (Actions->Remove Chip)[Ctrl+Delete] Deletes a chip
+  * (Actions->Next)[N] Moves to the next unidentified chip or unROIed image.
 
-    + Select a chip from the chip table by clicking it. 
+  
+--- Discover Matching Animals ---
 
-    + Click query to find probable identity matches in the database. 
+Select a chip (an ROIed animal) in the image or chip table
+(Actions->Query)[Q]
+  * You will be brought to the results table. 
+    You can edit the Chip Name to mark an animal as identified.
+  * When you get a feeling for what score is a sure match try
+    (Convenience->Assign Matches Above Threshold) will automatically query 
+    each animal in the database and assign matches to the queries which score
+    above the threshold. 
 
-    + Edit the chip's name in the table to rename it.
+--- Displaying Results ---
+
+The Ticker Box in the bottom left corner will change the figure drawn in. 
+0 is defaulted to be inside HotSpotter's internal PlotWidget, but any other
+will be drawn to a new window. You can resize, zoom in, and save the image. 
+
+(Options -> Toggle Ellipses)[E]
+Toggles drawing of the 'HotSpot' regions
+
+(Options -> Toggle Points)[P]
+Toggles drawing of the 'HotSpot' points
+
+(Options -> Toggle Plot Widget)
+Like the Ticker Box, but the Plot Widget is removed for extra space
+* NOTE: You can only select ROIs and Orientation in the PlotWidget *
+'''
+
+preference_help = '''
+--- Preferences ---
+Algorithm Prefs:
+    Query: 
+        k - The number of matches a hotspot can have
+        spatial_thresh - How geometrically consistent matches must be
+        method - If COUNT is too inaccurate consider switching to LNRAT
+        score - cscore is useful for unknown images nscore is useful otherwise.
+        num_top - Number of results per query 
+        
+    Chip Preprocessing:
+      sqrt_num_pxls - Changes chip size. Decrease if too slow, increase if too
+                        inaccurate.
+      bilateral_filt_bit   - If on, filters some noise out of chips
+      hist_eq_bit          - If on corrects for some global lighting issues
+      adapt_hist_eq_bit    - If on corrects for some local lighting issues
+      contrast_stretch_bit - If on tries stretches the contrast of the image
     
-    + File->Save Database saves any changes. REMEMBER TO SAVE!
-       (This also writes flat_table.csv to the data directory and can be freely used and edited)
-       (Use 'View->Open Data Directory' to qickly access it)
 '''
 
 cmd_help = '''
-HotSpotter - Python Version - PreAlpha
+For those brave enough to run HotSpotter with the --cmd option
 
-General Workflow: 
-    + Use open_db to open or create a new database 
-       (typically this is a directory with an images folder
-        HotSpotter should read older stripe-program formats
-        a HotSpotter-Python database will have a .hs_internals
-        folder next to the images folder)
-    + Use import_images to add images to the database
-    + Use selg to select an image
-    + Use add_roi to add a chip to the image
-        ( the figure you need to click on is in another window, 
-         dont click on the image that shows up in the console) 
-    + Use selc to select a chip
-    + Use query to perform a seach
-    + Use rename to manage the names of animals
-    + save_db saves your changes
-       (This will also save a flat_table.csv file to the database
-       folder. You can quickly access this using the command vdd)
-
-General Tips: 
-    * Pressing the up arrow on your keyboard reissues the last command
-    * Pressing tab on the keyboard will autocomplete a command
-    * HotSpotter runs in an IPython Environment, you have the power of 
-      the python scripting language at your fingertips.
-    * SAVE OFTEN! THIS IS A PRE-ALPHA!
+Look in hotspotter/Facade.py for all the functions
 
 Format: command [required_args] <optional_args> - description
+
+    logs - writes debugging logs
 
     print_help - shows this message
 
@@ -72,7 +90,7 @@ Format: command [required_args] <optional_args> - description
     rename_cid [new_name] <cid> - changes the selected chip-id's name to [new_name]
                         (YOU WILL NEED QUOTES AROUND THE NAME)
     remove_cid  - deletes the selected chip-id
-    reselect_roi - the user reselects the seelcted chip-id's roi
+    reselect_roi - the user reselects the selcted chip-id's roi
 
     add_chip - the user adds a chip to the selected image-id
 
@@ -91,52 +109,18 @@ Format: command [required_args] <optional_args> - description
     '''
 
 troubles_help = '''
-This is an Alpha Release of HotSpotter. You may encounter some errors. 
+When in doubt, restart. 
 
-I will refer to your current database directory as <db_dir>. Commands
-and directory-paths will be put in single quotes: ''
+If the images you've imported aren't showing up, you can always re-import the
+images in your '<db_dir>/images directory'. 
 
-If the program freezes, see if you can still enter the 'save_database()'
-command in the IPython command window. 
+If something looks corrupted or ROIs are being oddly drawn 
+consider deleting your computed directory. 
+Run (Convenience->View Internal Directory) and then delete the computed
+directory. This will simply cause the program to recompute its data. 
+You may have to restart HotSpotter. 
 
-The program execution can be restarted by pressing 'Ctrl .' in the 
-IPython command window and entering the command '%run main.py'
-
-If the images you've imported aren't showing up, you can always re-import
-the images in your '<db_dir>/images directory'. 
-
-If you think something was corrupted or ROIs are being drawn weird, 
-you may want to consider recomputing the information. This can be 
-done by deleting the files in the computed directory: 
-    <db_dir>/.hs_internals/computed 
-You may need to restart HotSpotter. You can recompute everything
-by running a query
-
-As an open source python project, you have the same potential to fix
-bugs as the developer does. If you are tech-savey you can edit the source
-code to add features that you like or fix anoying bugs. The 'logs' command will
-print out a detailed debug report of the last few things the program has done.
-'write_logs' will output this to a file and display it in a text editor. 
-
-If all else fails you can send an email to hotspotter.ir@gmail.com 
-Please include a detailed description of the error, what you were 
-doing when it happened, and the file dumped by the write_logs function if possible.
-'''
-
-
-gui_help = '''
-The HotSpotter GUI is not yet fully developed. 
-
-Currently the chip and image tabel will be displayed on the left. 
-Clicking on an item will select the chip or image. 
-
-The current chip and image selection are shown in the bottom of the gui. 
-
-Add ROI will add a new chip to the selected image
-
-Reselect ROI will let the user redraw an ROI for a query. (Make sure you save)
-
-Query will query the selected chip against the database. 
-
-All progress will be indicated in the IPython command window.
+If all else fails you can send an email to crallj at rpi D0T edu. Please include
+a detailed description of the error, what you were doing when it happened, and
+the output of the (Convenience->Write Logs) command if possible
 '''

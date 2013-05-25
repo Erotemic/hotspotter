@@ -163,7 +163,24 @@ class IOManager(AbstractManager):
         return normpath(join(iom.hs.db_dpath,'flat_table.csv'))
     # --- Executable Filenames
     def  get_hesaff_exec(iom):
-        return platexec(join(iom.get_tpl_lib_dir(), 'hesaff'))
+        root_dir = iom.get_tpl_lib_dir()
+
+        while root_dir!=None:
+            hesaff_fname = join(root_dir, "hotspotter", "tpl", "lib", "darwin", 'hesaff.mac')
+            print hesaff_fname
+            exists_test = os.path.exists(hesaff_fname)
+            print "Exists:", exists_test
+            if exists_test:
+                break
+
+            tmp = os.path.dirname(root_dir)
+            if tmp == root_dir:
+                root_dir = None
+            else:
+                root_dir = tmp
+
+        return "\"" + hesaff_fname + "\""
+
     def  get_inria_exec(iom):
         return platexec(join(iom.get_tpl_lib_dir(), 'inria_features'))
     # --- Chip Representations

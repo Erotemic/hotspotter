@@ -38,22 +38,21 @@ class DrawManager(AbstractManager):
             dm.draw_prefs.load()
     # ---
     def show_splash(dm):
-        root_dir = os.path.realpath(os.path.dirname(__file__))
-        
-        while root_dir!=None:
-            splash_fname = os.path.join(root_dir, "hotspotter", "front", 'splash.png')
-            print splash_fname
-            exists_test = os.path.exists(splash_fname)
-            print "Exists:", exists_test
-            if exists_test:
-                break
-
-            tmp = os.path.dirname(root_dir)
-            if tmp == root_dir:
-                root_dir = None
-            else:
-                root_dir = tmp
-
+        splash_fname = os.path.join(os.path.realpath(os.path.dirname(__file__)), 'splash.png')
+        if not os.path.exists(splash_fname):
+            root_dir = os.path.realpath(os.path.dirname(__file__))
+            while root_dir!=None:
+                splash_fname = os.path.join(root_dir, "hotspotter", "front", 'splash.png')
+                logdbg(splash_fname)
+                exists_test = os.path.exists(splash_fname)
+                logbdg('Exists:'+str(exists_test))
+                if exists_test:
+                    break
+                tmp = os.path.dirname(root_dir)
+                if tmp == root_dir:
+                    root_dir = None
+                else:
+                    root_dir = tmp
         logdbg('Splash Fname: %r '% splash_fname)
         splash_img = asarray(Image.open(splash_fname))
         dm.add_images([splash_img],['Welcome to Hotspotter'])

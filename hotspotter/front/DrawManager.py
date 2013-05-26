@@ -45,7 +45,7 @@ class DrawManager(AbstractManager):
                 splash_fname = os.path.join(root_dir, "hotspotter", "front", 'splash.png')
                 logdbg(splash_fname)
                 exists_test = os.path.exists(splash_fname)
-                logbdg('Exists:'+str(exists_test))
+                logdbg('Exists:'+str(exists_test))
                 if exists_test:
                     break
                 tmp = os.path.dirname(root_dir)

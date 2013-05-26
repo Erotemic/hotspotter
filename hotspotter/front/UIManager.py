@@ -1,6 +1,6 @@
 from PyQt4.Qt import QObject, pyqtSignal, QFileDialog
 from numpy import setdiff1d
-from hotspotter.front.HotspotterMainWindow import HotspotterMainWindow
+from hotspotter.front.HotspotterMainWindow import HotspotterMainWindow 
 from hotspotter.other.ConcretePrintable import Pref
 from hotspotter.other.logger import logdbg, logerr, logmsg, func_log, func_debug
 # The UIManager should be running in the same thread as 
@@ -13,12 +13,12 @@ class UIManager(QObject):
     populateImageTblSignal  = pyqtSignal(list, list, list, list)
     populateResultTblSignal = pyqtSignal(list, list, list, list)
     populatePrefTreeSignal  = pyqtSignal(Pref)
-    updateStateSignal       = pyqtSignal(str)
+    updateStateLabelSignal  = pyqtSignal(str)
     selectionSignal         = pyqtSignal(int, int)
     setfignumSignal         = pyqtSignal(int)
     redrawGuiSignal         = pyqtSignal()
-    changeTabSignal         = pyqtSignal(int)
-
+    selectTabSignal         = pyqtSignal(int)
+    
     def init_preferences(uim, default_bit=False):
         iom = uim.hs.iom
         if uim.ui_prefs == None:
@@ -39,25 +39,35 @@ class UIManager(QObject):
         uim.sel_cid = None
         uim.sel_gid = None
         uim.sel_res = None
-        uim.state = 'splash_view'
         uim.tab_order = ['image', 'chip', 'result']
+        uim.state = 'splash_view'
         uim.init_preferences()
 
     def start_gui(uim, fac): # Currently needs facade access
         logdbg('Creating the GUI')
         uim.hsgui = HotspotterMainWindow(fac)
+        uim.hsgui.connectSignals(fac)
 
         logdbg('Connecting Facade >> to >> GUI')
         uim.populateChipTblSignal.connect( uim.hsgui.populateChipTblSlot )
         uim.populateImageTblSignal.connect( uim.hsgui.populateImageTblSlot )
         uim.populateResultTblSignal.connect( uim.hsgui.populateResultTblSlot )
-        uim.updateStateSignal.connect( uim.hsgui.updateStateSlot ) 
+        uim.updateStateLabelSignal.connect( uim.hsgui.updateStateLabelSlot ) 
         uim.selectionSignal.connect( uim.hsgui.updateSelSpinsSlot )
         uim.redrawGuiSignal.connect( uim.hsgui.redrawGuiSlot )
         uim.populatePrefTreeSignal.connect( uim.hsgui.epw.populatePrefTreeSlot )
-        uim.changeTabSignal.connect( uim.hsgui.main_skel.tablesTabWidget.setCurrentIndex )
+        uim.selectTabSignal.connect( uim.hsgui.main_skel.tablesTabWidget.setCurrentIndex )
         uim.setfignumSignal.connect( uim.hsgui.main_skel.fignumSPIN.setValue )
         uim.populate_algo_settings()
+
+    def select_tab(uim, tabname, block_draw=False):
+        logdbg('Selecting the '+tabname+' Tab')
+        if block_draw:
+            prevBlock = uim.hsgui.main_skel.tablesTabWidget.blockSignals(True)
+        tab_index = uim.tab_order.index(tabname)
+        uim.selectTabSignal.emit(tab_index)
+        if block_draw:
+            uim.hsgui.main_skel.tablesTabWidget.blockSignals(prevBlock)
 
     def get_gui_figure(uim):
         'returns the matplotlib.pyplot.figure'
@@ -69,7 +79,8 @@ class UIManager(QObject):
 
     @func_log
     def draw(uim):
-        'Tells the HotSpotterAPI to draw the current selection in the current mode'
+        '''Tells the HotSpotterAPI to draw the current selection in the current
+        mode. It will automatically switch tabs to the current view.'''
         cm, gm = uim.hs.get_managers('cm','gm')
         #current_tab = uim.hsgui.main_skel.tablesTabWidget.currentIndex
         if uim.state in ['splash_view']:
@@ -80,15 +91,16 @@ class UIManager(QObject):
         elif uim.state in ['chip_view']:
             if cm.is_valid(uim.sel_cid):
                 uim.hs.dm.show_chip(cm.cx(uim.sel_cid))
-            uim.changeTabSignal.emit(uim.tab_order.index('chip'))
+            uim.select_tab('chip', block_draw=True)
         elif uim.state in ['image_view']:
             if gm.is_valid(uim.sel_gid):
                 uim.hs.dm.show_image(gm.gx(uim.sel_gid))
-            uim.changeTabSignal.emit(uim.tab_order.index('image'))
+            uim.select_tab('image', block_draw=True)
         elif uim.state in ['result_view']:
             if uim.sel_res != None:
+                logdbg('Drawing Query Results')
                 uim.hs.dm.show_query(uim.sel_res)
-            uim.changeTabSignal.emit(uim.tab_order.index('result'))
+            uim.select_tab('result', block_draw=True)
         else:
             logerr('I dont know how to draw in state: '+str(uim.state))
 
@@ -119,8 +131,9 @@ class UIManager(QObject):
 
     @func_log
     def update_state(uim, new_state):
+        'Updates the state of the UI'
         old_state   = uim.state
-        logdbg('Updating to State: '+str(new_state)+', from: '+str(old_state))
+        logdbg('State Change: from: '+str(old_state)+', to: '+str(new_state))
         if old_state == 'annotate':
             if new_state != 'annotate_done':
                 uim.state = 'annotate_done'
@@ -130,7 +143,7 @@ class UIManager(QObject):
                 uim.state = 'done_querying'
                 logerr('Cannot enter new state while querying. Attempting to recover')
         uim.state = new_state
-        uim.updateStateSignal.emit(new_state)
+        uim.updateStateLabelSignal.emit(new_state)
         return old_state
 
     @func_log
@@ -255,10 +268,10 @@ class UIManager(QObject):
         ('cid', 'name' )
         (qcid , qname  ) =  res.qcid2_(*dynargs)
         (tcid , tname , tscore ) = res.tcid2_(*dynargs+('score',))
-        num_top = len(tcid)
+        num_results = len(tcid)
         
-        data_list = [None]*(num_top+1)
-        row_list = range(num_top+1)
+        data_list = [None]*(num_results+1)
+        row_list = range(num_results+1)
         data_list[0] = [0,  qcid, qname, 'Queried Chip']
         for (ix, (cid, name, score)) in enumerate(zip(tcid, tname, tscore)):
             rank   = ix+1 

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\setup_helpers\../hotspotter/front\MainSkel.ui'
 #
-# Created: Thu May 23 20:34:41 2013
+# Created: Sat May 25 20:22:37 2013
 #      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -192,6 +192,8 @@ class Ui_mainSkel(object):
         self.actionMatching_Experiment.setObjectName(_fromUtf8("actionMatching_Experiment"))
         self.actionName_Consistency_Experiment = QtGui.QAction(mainSkel)
         self.actionName_Consistency_Experiment.setObjectName(_fromUtf8("actionName_Consistency_Experiment"))
+        self.actionIncrease_ROI_Size = QtGui.QAction(mainSkel)
+        self.actionIncrease_ROI_Size.setObjectName(_fromUtf8("actionIncrease_ROI_Size"))
         self.menuFile.addAction(self.actionOpen_Database)
         self.menuFile.addAction(self.actionSave_Database)
         self.menuFile.addAction(self.actionImport_Images)
@@ -201,6 +203,7 @@ class Ui_mainSkel(object):
         self.menuView.addSeparator()
         self.menuView.addAction(self.actionAdd_Metadata_Property)
         self.menuView.addAction(self.actionAssign_Matches_Above_Threshold)
+        self.menuView.addAction(self.actionIncrease_ROI_Size)
         self.menuView.addSeparator()
         self.menuView.addAction(self.actionOpen_Data_Directory)
         self.menuView.addAction(self.actionOpen_Source_Directory)
@@ -299,6 +302,7 @@ class Ui_mainSkel(object):
         self.actionAssign_Matches_Above_Threshold.setText(_translate("mainSkel", "Assign Matches Above Threshold", None))
         self.actionMatching_Experiment.setText(_translate("mainSkel", "Matching Experiment", None))
         self.actionName_Consistency_Experiment.setText(_translate("mainSkel", "Run Name Consistency Experiment", None))
+        self.actionIncrease_ROI_Size.setText(_translate("mainSkel", "Increase all ROI Sizes", None))
 
 
 if __name__ == "__main__":

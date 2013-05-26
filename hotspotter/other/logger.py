@@ -152,7 +152,8 @@ class HotSpotterLogger(object):
             if hsl.cursor_x > 0:
                 fmted_msg = '\n'+fmted_msg 
             hsl.cursor_x = -1
-            sys.stdout.write(fmted_msg+'\n')
+            #sys.stdout.write(fmted_msg+'\n')
+            print(msg)
             hsl.prev_time = time.time()
 
 hsl = HotSpotterLogger()
@@ -196,7 +197,7 @@ def logmsg(msg):
     hsl.log(msg)
 
 def logdbg(msg):
-    hsl.log('DBG> '+msg, noprint=True)
+    hsl.log('> '+msg, noprint=True)
 
 def logio(msg):    
     hsl.log('IO> '+msg, noprint=True)

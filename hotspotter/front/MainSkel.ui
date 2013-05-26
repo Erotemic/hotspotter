@@ -205,6 +205,7 @@
     <addaction name="separator"/>
     <addaction name="actionAdd_Metadata_Property"/>
     <addaction name="actionAssign_Matches_Above_Threshold"/>
+    <addaction name="actionIncrease_ROI_Size"/>
     <addaction name="separator"/>
     <addaction name="actionOpen_Data_Directory"/>
     <addaction name="actionOpen_Source_Directory"/>
@@ -446,6 +447,11 @@
   <action name="actionName_Consistency_Experiment">
    <property name="text">
     <string>Run Name Consistency Experiment</string>
+   </property>
+  </action>
+  <action name="actionIncrease_ROI_Size">
+   <property name="text">
+    <string>Increase all ROI Sizes</string>
    </property>
   </action>
  </widget>

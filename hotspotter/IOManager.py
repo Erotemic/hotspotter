@@ -432,7 +432,8 @@ class IOManager(AbstractManager):
 
         logmsg('Saving Flat Table')
         flat_file = open(flat_table_fpath, 'w')
-        #flat_file.write(cm.cx2_info(lbls=['cid','gname','name', 'roi', 'theta']))
+        flat_lbls = ['cid','gname','name', 'roi', 'theta'] + cm.user_props.keys()
+        flat_file.write(cm.cx2_info(lbls=flat_lbls))
         flat_file.close()
         logmsg('The Database was Saved')
 

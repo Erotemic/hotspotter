@@ -83,9 +83,6 @@ for (name, value) in inspect.getmembers(Facade, predicate=inspect.ismethod):
 stat, status   = [lambda          : fac.print_status()]*2
 removec,       = [lambda          : fac.remove_cid()]
 rename,        = [lambda new_name : fac.rename_cid(new_name)]
-gview,         = [lambda          : fac.change_view('image_view')]
-rview,         = [lambda          : fac.change_view('result_view')]
-cview,         = [lambda          : fac.change_view('chip_view')]
 
 # Add developer namespace
 from PyQt4.Qt import QApplication, QMainWindow,\

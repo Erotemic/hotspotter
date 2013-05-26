@@ -101,11 +101,13 @@ class AlgorithmManager(AbstractManager):
         am.algo_prefs.query.method                    = Pref(0, choices=['COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'])
         am.algo_prefs.query.score                     = Pref(0, choices=['cscore','nscore']) # move to results?
         am.algo_prefs.query.self_as_result_bit        = Pref(False)  #: Return self (in terms of name) in results
-        am.algo_prefs.query.num_top                   = Pref(3) # move to results
         # --- Result Prefs --- 
         am.algo_prefs.results.score                   = Pref(0, choices=('cscore','nscore')) # move to results?
-        am.algo_prefs.results.self_as_result_bit      = Pref(False)  #: Return self (in terms of name) in results
-        am.algo_prefs.results.num_top                 = Pref(3) # move to results
+        am.algo_prefs.results.one_result_per_name     = Pref(False)  #: Return self (in terms of name) in results
+        am.algo_prefs.results.match_threshold         = Pref(0) 
+        am.algo_prefs.results.min_num_results         = Pref(5)
+        am.algo_prefs.results.max_num_results         = Pref(5) 
+        am.algo_prefs.results.extra_num_results       = Pref(0)
         if not default_bit:
             am.algo_prefs.load()
 

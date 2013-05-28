@@ -1,9 +1,11 @@
-from hotspotter.other.logger  import logmsg, logerr
+from hotspotter.other.logger  import logmsg, logerr, logwarn
 from hotspotter.other.helpers import alloc_lists
 from hotspotter.other.AbstractPrintable import AbstractManager
 from hotspotter.QueryManager import QueryResult
-from pylab import find
-from numpy import setdiff1d, ones, zeros, array, int32
+import cPickle
+import os
+import numpy as np
+import pylab
 import shelve
 
 class ExperimentManager(AbstractManager):
@@ -122,72 +124,119 @@ class ExperimentManager(AbstractManager):
         '''Quick experiment:
            Query each chip with a duplicate against whole database
            Do not remove anyone from ANN matching'''
-        hs = em.hs
-        cm, vm = hs.get_managers('cm','vm')
+        cm, vm = em.hs.get_managers('cm','vm')
         valid_cx = cm.get_valid_cxs()
         cx2_num_other = cm.cx2_num_other_chips(valid_cx)
         singleton_cx = valid_cx[cx2_num_other == 1] # find singletons
         duplicate_cx = valid_cx[cx2_num_other  > 1] # find matchables
         cx2_rr = em.batch_query(force_recomp=em.recompute_bit, test_cxs=duplicate_cx)
-        em.cx2_res = array([  [] if rr == [] else\
-                           QueryResult(hs,rr) for rr in cx2_rr])
+        em.cx2_res = np.array([  [] if rr == [] else\
+                           QueryResult(em.hs,rr) for rr in cx2_rr])
+
+    def run_all_queries(em):
+        cm, vm = em.hs.get_managers('cm','vm')
+        all_cxs = cm.get_valid_cxs()
+        cx2_rr = em.batch_query(force_recomp=em.recompute_bit, test_cxs=all_cxs)
+        em.cx2_res = np.array([  [] if rr == [] else\
+                           QueryResult(em.hs,rr) for rr in cx2_rr])
+        pass
+
+
+
+
+    def threaded_run_and_save_queries(query_cxs, rr_fmtstr_cid):
+        # UNTESTED
+        import thread
+        from threading import Thread
+        class run_threaded_queries(Thread):
+            def __init__ (self, cx, rr_fmtstr_cid):
+                Thread.__init__(self)
+                self.cx = cx
+                self.rr_fmtstr_cid = rr_fmtstr_cid
+            def run(self):
+                mutex.acquire()
+                output.append(em.run_and_save_query(self.cx, self.rr_fmtstr_cid))
+                mutex.release()  
+        threads = []
+        output = []
+        mutex = thread.allocate_lock()
+        for cx in iter(query_cxs):
+            current = run_threaded_queries(cx, rr_fmtstr_cid)
+            threads.append(current)
+            current.start()
+        for t in threads:
+            t.join()
+        
+
+
+    def run_and_save_query(em, cx, rr_fmtstr_cid):
+        cid = em.hs.cm.cx2_cid[cx]
+        rr_fpath = rr_fmtstr_cid % cid
+        rr = em.hs.qm.cx2_res(cx).rr
+        rr_file = open(rr_fpath, 'wb')
+        cPickle.dump(rr, rr_file)
+        rr_file.close()
+        pass
+
+
 
     def batch_query(em, force_recomp=False, test_cxs=None):
+        '''Runs each test_cxs as a query. If test_cxs is None, then all queries
+        are run'''
         'TODO: Fix up the VM dependencies'
-        vm, iom, am = em.hs.get_managers('vm','iom','am')
-        shelf_fpath = iom.get_temp_fpath('qres_shelf'+em.get_expt_suffix()+'.db')
+        vm, iom, am, cm = em.hs.get_managers('vm','iom','am', 'cm')
         # Compute the matches
         qm = vm.hs.qm
         vm.sample_train_set()
         vm.build_model(force_recomp=force_recomp)
         if test_cxs == None:
             test_cxs = vm.get_train_cx()
-        cx2_rr = alloc_lists(vm.hs.cm.max_cx+1)
         logmsg('Building matching graph. This may take awhile')
+
+        depends = ['chiprep','preproc','model','query']
+        algo_suffix = am.get_algo_suffix(depends)
+        samp_suffix = vm.get_samp_suffix()
+        result_dpath = iom.ensure_directory(iom.get_temp_fpath('raw_results'))
+        rr_fmtstr_cid = os.path.join(result_dpath, 'rr_cid%07d'+samp_suffix+algo_suffix+'.pkl')
+
+        # Find the Queries which need to be run
+        unsaved_cxs = []
+        for cx in iter(test_cxs):   
+            cid = cm.cx2_cid[cx]
+            rr_fpath = rr_fmtstr_cid % cid
+            if not os.path.exists(rr_fpath):
+                unsaved_cxs.append(cx)
+        
+        # Run Unsaved Query
+        total = len(unsaved_cxs)
+        for count, cx in enumerate(unsaved_cxs):   
+            logmsg('Query %d/%d' % (count, total))
+            em.run_and_save_query(cx, rr_fmtstr_cid)
+
+        # Read Each Query 
+        cx2_rr = alloc_lists(test_cxs.max()+1)
         total = len(test_cxs)
-        count = 0
-        shelf_dirty_bit = force_recomp
-        shelf = shelve.open(shelf_fpath)
-        # Run Each Query
-        for cx in test_cxs:   
-            # Check to see if query has already been computed
-            count+=1
-            shelf_key = str(cx)
-            rr = None
-            if not force_recomp and shelf_key in shelf.keys():
-                logmsg('Reloading %d/%d' % (count, total)) 
-                try:
-                    rr = shelf[str(cx)]
-                except Exception: 
-                    logmsg('Error reading '+str(cx))
-            # Query needst to be computed
-            if rr == None:
-                logmsg('Query %d/%d' % (count, total))
-                rr = qm.cx2_res(cx).rr
-                shelf_dirty_bit = True
+        for count, cx in enumerate(test_cxs):
+            logmsg('Loading Result %d/%d' % (count, total))
+            cid = cm.cx2_cid[cx]
+            rr_fpath = rr_fmtstr_cid % cid
+            if not os.path.exists(rr_fpath):
+                logwarn('Result does not exist for CID=%d' % cid)
+            rr_file = open(rr_fpath,'rb')
+            try: 
+                rr = cPickle.load(rr_file)
+            except EOFError:
+                rr_file.close()
+                os.remove(rr_fpath)
+                logwarn('Result was corrupted for CID=%d' % cid)
+
+            rr_file.close()
+            rr.cx2_cscore_ = []
+            rr.cx2_fs_ = []
+            rr.qfdsc = []
+            rr.qfpts = []
             cx2_rr[cx] = rr
-        shelf.close()
-        # Something changed in batch compute, resave
-        if shelf_dirty_bit: 
-            shelf = shelve.open(shelf_fpath)
-            try:
-                # try and save some memory
-                for ix in xrange(len(cx2_rr)):
-                    logmsg('SavingRR: '+str(ix))
-                    to_save = cx2_rr[ix]
-                    if to_save == []:
-                        continue
-                    to_save.cx2_cscore_ = []
-                    to_save.cx2_fs_ = []
-                    to_save.qfdsc = []
-                    to_save.qfpts = []
-                    shelf[str(to_save.qcx)] = to_save
-                shelf.sync()
-            except Exception as ex:
-                logerr('Error saving to the shelf: '+str(ex))
-            finally:
-                shelf.close()
-        logmsg('Done building matching graph.')
+
         return cx2_rr
 
 
@@ -212,15 +261,15 @@ class ExperimentManager(AbstractManager):
         # gt hist shows how often a chip is at rank X
         # opt is the optimistic rank. Precision
         # pas is the pesemistic rank. Recallish
-        rank_hist_opt = zeros(len(cm.get_valid_cxs())+2) # add 2 because we arent using 0
-        rank_hist_pes = zeros(len(cm.get_valid_cxs())+2) # add 2 because we arent using 0
+        rank_hist_opt = np.zeros(len(cm.get_valid_cxs())+2) # add 2 because we arent using 0
+        rank_hist_pes = np.zeros(len(cm.get_valid_cxs())+2) # add 2 because we arent using 0
         for res in em.cx2_res:
             if res == []: continue
             cx = res.rr.qcx
             qnid = res.rr.qnid
             # Evaluate considering the top returned chips and names
             top_cx      = res.cx_sort()
-            gt_pos_chip = (1+find(qnid == cm.cx2_nid(top_cx)))
+            gt_pos_chip = (1+pylab.find(qnid == cm.cx2_nid(top_cx)))
             #Overflow, the last position is past the num_top
             if len(gt_pos_chip) == 0:
                 rank_hist_opt[-1] += 1 
@@ -229,6 +278,70 @@ class ExperimentManager(AbstractManager):
                 rank_hist_opt[min(gt_pos_chip)] += 1
                 rank_hist_pes[max(gt_pos_chip)-len(gt_pos_chip)+1] += 1
         return rank_hist_opt
+
+    # Score a single query for name consistency
+    # Written: 5-28-2013 
+    def res2_name_consistency(em, res):
+        '''Score a single query for name consistency
+        Input: 
+            res - query result
+        Returns: Dict
+            error_chip - degree of chip error
+            name_error - degree of name error
+            gt_pos_name - 
+            gt_pos_chip - 
+        '''
+        # Defaults to -1 if no ground truth is in the top results
+        cm, nm = em.hs.get_managers('cm','nm')
+        qcx  = res.rr.qcx
+        qnid = res.rr.qnid
+        qnx   = nm.nid2_nx[qnid]
+        ret = {'name_error':-1, 'chip_error':-1,
+               'gt_pos_chip':-1, 'gt_pos_name':-1, 
+               'chip_precision': -1, 'chip_recall':-1}
+        if qnid == nm.UNIDEN_NID: exec('return ret')
+        # ----
+        # Score Top Chips
+        top_cx = res.cx_sort()
+        gt_pos_chip_list = (1+pylab.find(qnid == cm.cx2_nid(top_cx)))
+        # If a correct chip was in the top results
+        # Reward more chips for being in the top X
+        if len(gt_pos_chip_list) > 0:
+            # Use summation formula sum_i^n i = n(n+1)/2
+            ret['gt_pos_chip'] = gt_pos_chip_list.min()
+            _N = len(gt_pos_chip_list)
+            _SUM_DENOM = float(_N * (_N + 1)) / 2.0
+            ret['chip_error'] = float(gt_pos_chip_list.sum())/_SUM_DENOM
+        # Calculate Precision / Recall (depends on the # threshold/max_results)
+        ground_truth_cxs = np.setdiff1d(np.array(nm.nx2_cx_list[qnx]), np.array([qcx]))
+        true_positives  = top_cx[gt_pos_chip_list-1]
+        false_positives = np.setdiff1d(top_cx, true_positives)
+        false_negatives = np.setdiff1d(ground_truth_cxs, top_cx)
+
+        nTP = float(len(true_positives)) # Correct result
+        nFP = float(len(false_positives)) # Unexpected result
+        nFN = float(len(false_negatives)) # Missing result
+        #nTN = float( # Correct absence of result
+
+        ret['chip_precision'] = nTP / (nTP + nFP)
+        ret['chip_recall']    = nTP / (nTP + nFN)
+        #ret['true_negative_rate'] = nTN / (nTN + nFP)
+        #ret['accuracy'] = (nTP + nFP) / (nTP + nTN + nFP + nFN)
+        # ----
+        # Score Top Names
+        (top_nx, _) = res.nxcx_sort()
+        gt_pos_name_list = (1+pylab.find(qnid == nm.nx2_nid[top_nx]))
+        # If a correct name was in the top results
+        if len(gt_pos_name_list) > 0: 
+            ret['gt_pos_name'] = gt_pos_name_list.min() 
+            # N should always be 1
+            _N = len(gt_pos_name_list)
+            _SUM_DENOM = float(_N * (_N + 1)) / 2.0
+            ret['name_error'] = float(gt_pos_name_list.sum())/_SUM_DENOM
+        # ---- 
+        # RETURN RESULTS
+        return ret
+
 
     def get_name_consistency_report_str(em):
         '''TODO: I want to see: number of matches, the score of each type of matcher
@@ -243,39 +356,28 @@ class ExperimentManager(AbstractManager):
 
         cm,nm,am = em.hs.get_managers('cm','nm','am')
         # Evaluate rank by chip and rank by name
-        cx2_error_chip = -ones(len(em.cx2_res))
-        cx2_error_name = -ones(len(em.cx2_res))
+        cx2_error_chip = -np.ones(len(em.cx2_res))
+        cx2_error_name = -np.ones(len(em.cx2_res))
         # gt hist shows how often a chip is at rank X
-        gt_hist_chip = zeros(len(cm.get_valid_cxs())+2) # add 2 because we arent using 0
-        # FIXME: what if a lot of names are UNIDEN?
-        gt_hist_name = zeros(len(nm.get_valid_nxs())+2) # and 1 at the end for overflow
+        gt_hist_chip = np.zeros(len(cm.get_valid_cxs())+2) # add 2 because we arent using 0
+        gt_hist_name = np.zeros(len(nm.get_valid_nxs())+2) # and 1 at the end for overflow
         for res in em.cx2_res:
             if res == []: continue
-            cx = res.rr.qcx
-            qnid = res.rr.qnid
-            # Evaluate considering the top returned chips and names
-            top_cx      = res.cx_sort()
-            gt_pos_chip = (1+find(qnid == cm.cx2_nid(top_cx)))
-            #Overflow, the last position is past the num_top
-            if len(gt_pos_chip) == 0: gt_hist_chip[-1] += 1 
-            else: gt_hist_chip[min(gt_pos_chip)] += 1
-            if len(gt_pos_chip) > 0:
-                # Reward more chips for being in the top X
-                cx2_error_chip[cx] = float(sum(gt_pos_chip))/len(gt_pos_chip)
-            
-            (top_nx, _) = res.nxcx_sort()
-            gt_pos_name = (1+find(qnid == nm.nx2_nid[top_nx]))
-            if len(gt_pos_name) == 0: gt_hist_name[-1] += 1 
-            else: gt_hist_name[min(gt_pos_name)] += 1
-            if len(gt_pos_name) > 0:
-                cx2_error_name[cx] = float(sum(gt_pos_name))/len(gt_pos_name) 
+            qcx = res.rr.qcx
+            nm_consist = em.res2_name_consistency(res)
+            # Get the qualitative 'badness' of the results
+            cx2_error_chip[qcx] = nm_consist['chip_error']
+            cx2_error_name[qcx] = nm_consist['name_error']
+            # Get the quantitative rankings of best results
+            gt_hist_chip[nm_consist['gt_pos_chip']] += 1
+            gt_hist_name[nm_consist['gt_pos_name']] += 1
 
         worst_cids = zip(cx2_error_name, range(len(cx2_error_name)))
         worst_nids = zip(cx2_error_chip, range(len(cx2_error_chip)))
         worst_cids.sort()
         worst_nids.sort()
 
-        nid2_badness = -ones(len(nm.nid2_nx))
+        nid2_badness = -np.ones(len(nm.nid2_nx))
 
         report_str += 'WORST QUERY RESULTS:'+'\n'
         report_str += 'GT C AVE-RANK  | QCID - GT_CIDS, GT_CIDS_RANK'+'\n'
@@ -286,14 +388,16 @@ class ExperimentManager(AbstractManager):
             if nid2_badness[nid] == -1:
                 nid2_badness[nid] = 0
             nid2_badness[nid] += score
-            other_cxs  = setdiff1d(cm.cx2_other_cxs([cx])[0], [cx])
+            other_cxs  = np.setdiff1d(cm.cx2_other_cxs([cx])[0], [cx])
             top_cx = em.cx2_res[cx].cx_sort()
             other_rank = []
             for ocx in other_cxs:
-                to_append = find(top_cx == ocx)+1
+                to_append = pylab.find(top_cx == ocx)+1
                 other_rank.extend(to_append.tolist())
             other_cids = cm.cx2_cid[other_cxs]
-            report_str += '%14.3f | %4d - %s' % (score, cid, str(zip(other_cids, array(other_rank, dtype=int32))))+'\n'
+            report_str += '%14.3f | %4d - %s' % (score, cid, str(zip(other_cids,
+                                                                     np.array(other_rank,
+                                                                              dtype=np.int32))))+'\n'
 
 
         report_str += '\nGT N RANK      | QNID | QCID - GT_CIDS'+'\n'
@@ -301,7 +405,7 @@ class ExperimentManager(AbstractManager):
             if score < 0: continue        
             cid = cm.cx2_cid[cx]
             nid = cm.cx2_nid(cx)
-            other_cids = setdiff1d(cm.cx2_cid[cm.cx2_other_cxs([cx])[0]], cid)
+            other_cids = np.setdiff1d(cm.cx2_cid[cm.cx2_other_cxs([cx])[0]], cid)
             report_str +=  '%14.3f | %4d | %4d - %s' % (score, nid, cid, str(other_cids))+'\n'
 
         report_str += '\n\nOVERALL WORST NAMES:'+'\n'
@@ -385,5 +489,3 @@ class ExperimentManager(AbstractManager):
                     scorestr = 'SCORE = '+score
                 cid_list[rank] = int(fields[2].replace('cid=',''))
                 titles[rank] = scorestr
-
-

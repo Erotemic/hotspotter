@@ -646,7 +646,7 @@ class Facade(QObject):
         iom.write_to_user_fpath('database_stats.txt', db_stats_str)
         return db_stats_str
 
-    def SetNamesFromLionfishGroundTruth(hs):
+    def SetNamesFromLionfishGroundTruth(fac):
         import os.path
         import re
         cm = fac.hs.cm

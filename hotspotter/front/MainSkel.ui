@@ -226,6 +226,7 @@
     <property name="title">
      <string>Help</string>
     </property>
+    <addaction name="actionView_Documentation"/>
     <addaction name="actionHelpWorkflow"/>
     <addaction name="actionHelpTroubles"/>
     <addaction name="separator"/>
@@ -452,6 +453,11 @@
   <action name="actionIncrease_ROI_Size">
    <property name="text">
     <string>Increase all ROI Sizes</string>
+   </property>
+  </action>
+  <action name="actionView_Documentation">
+   <property name="text">
+    <string>View Documentation</string>
    </property>
   </action>
  </widget>

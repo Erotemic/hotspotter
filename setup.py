@@ -69,7 +69,7 @@ Development Status :: 1 - Alpha
 Intended Audience :: Education
 Intended Audience :: Science/Research
 Intended Audience :: Developers
-License :: OSI Approved :: BSD License
+License :: GPL License
 Programming Language :: Python
 Operating System :: Microsoft :: Windows
 Operating System :: Unix
@@ -84,7 +84,7 @@ DESCRIPTION         = 'Image Search for Large Animal Databases.'
 LONG_DESCRIPTION    = open('DESCRIPTION.txt').read()
 URL                 = 'http://www.cs.rpi.edu/~cralljp'
 DOWNLOAD_URL        = 'https://github.com/Erotemic/hotspotter/archive/release.zip'
-LICENSE             = 'BSD'
+LICENSE             = 'GPL'
 PLATFORMS           = ['Windows', 'Linux', 'Mac OS-X']
 MAJOR               = 0
 MINOR               = 0

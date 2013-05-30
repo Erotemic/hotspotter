@@ -17,13 +17,12 @@ def clean_git_config():
     'Code for removing old submodules from your config'
     import re
     print 'Cleaning Git Config'
-    config_fpath = '../.git/config'
+    config_fpath = '.git/config'
     gitconfig = open(config_fpath,'r').read()
     gitconfig = normalize_str(gitconfig)
     gitconfig = re.sub(' *\[submodule \'tpl\'\] *\n[^\n]*tpl-hotspotter.git *\n',
         '', gitconfig, re.MULTILINE)
     open(config_fpath,'w').write(gitconfig)
-
 def execute_syscalls(syscalls):
     print 'Executing Commands: '
     for _cmd in syscalls.split('\n'):
@@ -62,7 +61,7 @@ def compile_widgets():
 
 def configure():
     import os
-    os.chdir(dirname(realpath(__file__)))
+    os.chdir(join(dirname(realpath(__file__)), '..'))
     #python main.py --delete-preferences
     clean_git_config()
     setup_submodules()

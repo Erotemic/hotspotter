@@ -43,10 +43,10 @@ for root, dirs, files in os.walk(walk_path):
         toc_src = join(hsroot, lib_rpath, lib_name)
         toc_dest = join(hsbuild, lib_rpath, lib_name)
         # MinGW libs should be put into root
-        if lib_name in ROOT_DLLS:
+        if lib_name in ROOT_DLLS: # or lib_name.find('libopencv') > -1:
             toc_dest = join(hsbuild, lib_name)
         print toc_dest, toc_src
-        a.datas += [(toc_dest, toc_src, 'BINARY')]
+        a.datas += [(toc_dest, toc_src, 'DATA')]
 
 # Get Correct Icon
 icon_cpmap = { 'darwin' : 'hsicon.icns',

@@ -4,8 +4,8 @@ from distutils.core import setup
 from distutils.util import convert_path
 from fnmatch import fnmatchcase
 from os.path import dirname, realpath, join, exists, normpath, isdir, isfile
-from setup_helpers.git_helpers import *
-from setup_helpers.configure import *
+from helpers_setup.git_helpers import *
+from helpers_setup.configure import *
 import os
 import shutil
 import subprocess
@@ -176,10 +176,7 @@ def get_hotspotter_datafiles():
         data_files.append(('',[join(plat_tpllibdir, 'libgcc_s_dw2-1.dll'),
                                join(plat_tpllibdir,'libstdc++-6.dll')]))
     if sys.platform == 'darwin':
-        raw_input(
-            'WARNING: Due to ridiculous path length restrictions the tpl '+\
-            'directory has to be added manually.\n You also have to manually'+\
-            ' press enter ;)')
+        pass
     else:
         for root,dlist,flist in os.walk(plat_tpllibdir):
             tpl_dest = root
@@ -289,6 +286,12 @@ def get_system_setup_kwargs():
         install_optional=INSTALL_OPTIONAL,
     )
 
+
+def build_pyinstaller():
+    import os
+    os.system('pyinstaller helpers_setup/pyinstaller-hotspotter.spec')
+    pass
+
 if __name__ == '__main__':
     import sys
     print 'Entering HotSpotter setup'
@@ -301,5 +304,8 @@ if __name__ == '__main__':
             sys.exit(0)
         if cmd == 'compile_widgets':
             compile_widgets()
+            sys.exit(0)
+        if cmd == 'build_pyinstaller':
+            build_pyinstaller()
             sys.exit(0)
     package_application()

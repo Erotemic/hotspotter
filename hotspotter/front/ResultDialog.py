@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\setup_helpers\../hotspotter/front\ResultDialog.ui'
+# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/helpers_setup/../hotspotter/front/ResultDialog.ui'
 #
-# Created: Sat May 25 20:22:37 2013
-#      by: PyQt4 UI code generator 4.10.1
+# Created: Thu May 30 12:16:55 2013
+#      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,16 +12,7 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+    _fromUtf8 = lambda s: s
 
 class Ui_ResultDialog(object):
     def setupUi(self, ResultDialog):
@@ -42,7 +33,7 @@ class Ui_ResultDialog(object):
         QtCore.QMetaObject.connectSlotsByName(ResultDialog)
 
     def retranslateUi(self, ResultDialog):
-        ResultDialog.setWindowTitle(_translate("ResultDialog", "ResultDialog", None))
+        ResultDialog.setWindowTitle(QtGui.QApplication.translate("ResultDialog", "ResultDialog", None, QtGui.QApplication.UnicodeUTF8))
 
 
 if __name__ == "__main__":

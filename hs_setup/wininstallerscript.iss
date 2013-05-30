@@ -16,7 +16,7 @@ AppUpdatesURL=www.rpi.edu/~crallj/
 DefaultDirName={pf}\HotSpotter
 DefaultGroupName=HotSpotter
 OutputBaseFilename=hotspotter-win32-setup
-SetupIconFile=C:\Users\jon.crall\code\hotspotter\helpers_setup\hsicon.ico
+SetupIconFile=C:\Users\jon.crall\code\hotspotter\hs_setup\hsicon.ico
 Compression=lzma
 SolidCompression=yes
 

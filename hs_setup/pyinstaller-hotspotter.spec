@@ -49,9 +49,9 @@ for root, dirs, files in os.walk(walk_path):
         a.datas += [(toc_dest, toc_src, 'DATA')]
 
 # Add documentation folder
-a.datas += [('documentation', join(hsroot, 'documentation','HotSpotterUserGuide.pdf'), 'DATA')]
+a.datas += [('documentation/HotSpotterUserGuide.pdf', join(hsroot, 'documentation','HotSpotterUserGuide.pdf'), 'DATA')]
 # Add Landmark
-a.datas += [('', join(hsroot, '__HOTSPOTTER_ROOT__','*'), 'DATA')]
+a.datas += [('__HOTSPOTTER_ROOT__', join(hsroot, '__HOTSPOTTER_ROOT__'), 'DATA')]
 
 # Get Correct Icon
 icon_cpmap = { 'darwin' : 'hsicon.icns',

@@ -298,7 +298,10 @@ def build_pyinstaller():
             print('Removing '+rmdir)
             os.system('rm -rf '+rmdir)
     os.system('pyinstaller hs_setup/pyinstaller-hotspotter.spec')
-    pass
+
+    if sys.platform == 'darwin':
+        shutil.copyfile("hs_setup/hsicon.icns", "dist/HotSpotter.app/Contents/Resources/icon-windowed.icns")
+        shutil.copyfile("hs_setup/Info.plist", "dist/HotSpotter.app/Contents/Info.plist")
 
 if __name__ == '__main__':
     import sys

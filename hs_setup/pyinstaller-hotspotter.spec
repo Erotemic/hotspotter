@@ -48,11 +48,16 @@ for root, dirs, files in os.walk(walk_path):
         print toc_dest, toc_src
         a.datas += [(toc_dest, toc_src, 'DATA')]
 
+# Add documentation folder
+a.datas += [('documentation', join(hsroot, 'documentation','HotSpotterUserGuide.pdf'), 'DATA')]
+# Add Landmark
+a.datas += [('', join(hsroot, '__HOTSPOTTER_ROOT__','*'), 'DATA')]
+
 # Get Correct Icon
 icon_cpmap = { 'darwin' : 'hsicon.icns',
                'win32'  : 'hsicon.ico' ,
                'linux2' : 'hsicon.ico' }
-iconfile = join(hsroot, 'helpers_setup', icon_cpmap[sys.platform])
+iconfile = join(hsroot, 'hs_setup', icon_cpmap[sys.platform])
 
 # Get Correct Extension
 ext_cpmap  = {'darwin':'', 'win32':'.exe', 'linux2':'.ln'}

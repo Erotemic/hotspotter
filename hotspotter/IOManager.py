@@ -45,6 +45,7 @@ class IOManager(AbstractManager):
         iom.settings_dpath = normpath(join(expanduser('~'),'.hotspotter'))
         iom.internal_dname = '.hs_internals';
         iom.dummy_delete = False #Dont actually delete things
+        iom.find_hotspotter_root_dir()
 
     def hsroot(iom):
         if iom._hsroot is None:

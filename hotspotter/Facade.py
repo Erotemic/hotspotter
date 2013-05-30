@@ -404,8 +404,7 @@ class Facade(QObject):
     def vd(fac, dname=None):
         'View a specific directory (defaults to source directory)'
         if dname == None:
-            hssourcedir = os.path.join(os.path.dirname(crossplat.__file__))
-            dname = hssourcedir
+            dname = fac.hs.iom.hsroot()
         crossplat.view_directory(dname)
 
     @pyqtSlot(name='select_next')

@@ -297,7 +297,7 @@ def build_pyinstaller():
         if exists(rmdir):
             print('Removing '+rmdir)
             os.system('rm -rf '+rmdir)
-    os.system('pyinstaller helpers_setup/pyinstaller-hotspotter.spec')
+    os.system('pyinstaller hs_setup/pyinstaller-hotspotter.spec')
     pass
 
 if __name__ == '__main__':

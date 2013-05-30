@@ -34,13 +34,17 @@ a.datas += [(splash_dest, splash_src, 'DATA')]
 ROOT_DLLS = ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']
 lib_rpath = normpath(join('hotspotter/tpl/lib/', sys.platform))
 # Walk the lib dir
-for root, dirs, files in os.walk(join(hsroot, lib_rpath)):
+walk_path = join(hsroot, lib_rpath)
+print "Adding lib files from directory:", walk_path
+for root, dirs, files in os.walk(walk_path):
     for lib_name in files:
+        print "Adding lib name:", lib_name
         toc_src = join(hsroot, lib_rpath, lib_name)
         toc_dest = join(hsbuild, lib_rpath, lib_name)
         # MinGW libs should be put into root
         if lib_name in ROOT_DLLS:
             toc_dest = join(hsbuild, lib_name)
+        print toc_dest, toc_src
         a.datas += [(toc_dest, toc_src, 'BINARY')]
 
 # Get Correct Icon
@@ -54,7 +58,6 @@ ext_cpmap  = {'darwin':'.app', 'win32':'.exe', 'linux2':'.ln'}
 appext   = ext_cpmap[sys.platform]
 
 pyz = PYZ(a.pure)
-#os.path.join('build/pyi.darwin/HotSpotterApp', 
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
@@ -62,7 +65,7 @@ exe = EXE(pyz,
           debug=False,
           strip=None,
           upx=True,
-          console=True,
+          console = sys.platform != "darwin",
           icon=iconfile)
 
 coll = COLLECT(exe,
@@ -73,4 +76,8 @@ coll = COLLECT(exe,
                upx=True,
                name=os.path.join('dist', 'HotSpotterApp'))
 
-app = BUNDLE(coll, name=os.path.join('dist', 'HotSpotterApp'))
+bundle_name = 'HotSpotterApp'
+if sys.platform == "darwin":
+  bundle_name += '.app'
+
+app = BUNDLE(coll, name=join('dist', bundle_name))

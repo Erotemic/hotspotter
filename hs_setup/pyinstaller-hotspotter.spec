@@ -52,17 +52,25 @@ for root, dirs, files in os.walk(walk_path):
 icon_cpmap = { 'darwin' : 'hsicon.icns',
                'win32'  : 'hsicon.ico' ,
                'linux2' : 'hsicon.ico' }
-iconfile = join(hsroot, 'helpers_setup', 'hsicon.ico')
+iconfile = join(hsroot, 'helpers_setup', icon_cpmap[sys.platform])
 
 # Get Correct Extension
 ext_cpmap  = {'darwin':'', 'win32':'.exe', 'linux2':'.ln'}
 appext   = ext_cpmap[sys.platform]
 
+if sys.platform == 'win32':
+  exe_name = 'build/HotSpotterApp.exe'
+elif sys.platform == 'linux2':
+  exe_name = 'build/HotSpotterApp.ln'
+elif sys.platform == 'darwin':
+  exe_name = 'build/pyi.darwin/HotSpotterApp/HotSpotterApp'
+
+
 pyz = PYZ(a.pure)
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
-          name='build/HotSpotterApp'+appext,
+          name=exe_name,
           debug=False,
           strip=None,
           upx=True,
@@ -75,7 +83,7 @@ coll = COLLECT(exe,
                a.datas,
                strip=None,
                upx=True,
-               name=os.path.join('dist', 'HotSpotterApp'))
+               name=join('dist', 'HotSpotter'))
 
 bundle_name = 'HotSpotter'
 if sys.platform == "darwin":

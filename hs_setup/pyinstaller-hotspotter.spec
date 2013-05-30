@@ -9,10 +9,9 @@ from os.path import join, dirname, exists, normpath
 hsroot = os.getcwd()
 if not exists(hsroot) or not exists(join(hsroot, 'setup.py')):
     raise Exception('You must run this script in the hotspotter root')
-#if not exists('dist'):
-    #os.mkdir('dist')
-#os.chdir('dist')
-hsbuild = '' #join(hsroot, 'dist')
+
+# This needs to be relative directory. Leave as is.
+hsbuild = ''
 
 # ------
 # Build Analysis

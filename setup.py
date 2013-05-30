@@ -4,8 +4,8 @@ from distutils.core import setup
 from distutils.util import convert_path
 from fnmatch import fnmatchcase
 from os.path import dirname, realpath, join, exists, normpath, isdir, isfile, normpath
-from helpers_setup.git_helpers import *
-from helpers_setup.configure import *
+from hs_setup.git_helpers import *
+from hs_setup.configure import *
 import os
 import shutil
 import subprocess
@@ -77,7 +77,7 @@ Operating System :: MacOS
 '''
 NAME                = 'HotSpotter'
 AUTHOR              = 'Jonathan Crall, RPI'
-AUTHOR_EMAIL        = 'crallj@rpi.edu'
+AUTHOR_EMAIL        = 'hotspotter.ir@gmail.com'
 MAINTAINER          = AUTHOR
 MAINTAINER_EMAIL    = AUTHOR_EMAIL
 DESCRIPTION         = 'Image Search for Large Animal Databases.'
@@ -313,7 +313,7 @@ if __name__ == '__main__':
         if cmd == 'compile_widgets':
             compile_widgets()
             sys.exit(0)
-        if cmd == 'build_pyinstaller':
+        if cmd in ['build_pyinstaller', 'build_installer']:
             build_pyinstaller()
             sys.exit(0)
     package_application()

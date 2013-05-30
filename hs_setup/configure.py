@@ -1,10 +1,10 @@
 from fnmatch import fnmatchcase
+from hs_setup.git_helpers import *
 from os.path import dirname, realpath, join, exists, normpath, isdir, isfile
 import os
 import shutil
 import subprocess
 import sys
-from helpers_setup.git_helpers import *
 
 def normalize_str(instr):
     outstr = instr

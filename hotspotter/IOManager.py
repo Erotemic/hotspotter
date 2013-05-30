@@ -163,7 +163,29 @@ class IOManager(AbstractManager):
         return normpath(join(iom.hs.db_dpath,'flat_table.csv'))
     # --- Executable Filenames
     def  get_hesaff_exec(iom):
-        return platexec(join(iom.get_tpl_lib_dir(), 'hesaff'))
+        hesaff_fname = platexec(join(iom.get_tpl_lib_dir(), 'hesaff'))
+        if os.path.exists(hesaff_fname):
+            return hesaff_fname
+        # Fix for weird mac packaging things
+        root_dir = iom.get_tpl_lib_dir()
+        crossplat_ext = {'win32':'.exe',
+                         'darwin':'.mac',
+                         'linux2':'.ln'}[sys.platform] 
+        while root_dir!=None:
+            hesaff_fname = join(root_dir, 'hotspotter', 'tpl', 'lib',
+                                sys.platform, 'hesaff'+crossplat_ext)
+            logdbg(hesaff_fname)
+            exists_test = os.path.exists(hesaff_fname)
+            logdbg('Exists:'+str(exists_test))
+            if exists_test:
+                break
+            tmp = os.path.dirname(root_dir)
+            if tmp == root_dir:
+                root_dir = None
+            else:
+                root_dir = tmp
+        return '"' + hesaff_fname + '"'
+
     def  get_inria_exec(iom):
         return platexec(join(iom.get_tpl_lib_dir(), 'inria_features'))
     # --- Chip Representations
@@ -415,7 +437,8 @@ class IOManager(AbstractManager):
 
         logmsg('Saving Flat Table')
         flat_file = open(flat_table_fpath, 'w')
-        #flat_file.write(cm.cx2_info(lbls=['cid','gname','name', 'roi', 'theta']))
+        flat_lbls = ['cid','gname','name', 'roi', 'theta'] + cm.user_props.keys()
+        flat_file.write(cm.cx2_info(lbls=flat_lbls))
         flat_file.close()
         logmsg('The Database was Saved')
 

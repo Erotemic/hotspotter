@@ -60,7 +60,7 @@ def compile_widgets():
         widget_py = join(widget_dir, widget+'.py')
         execute_syscalls(pyuic4_cmd+' -x '+widget_ui+' -o '+widget_py)
 
-def fix_issues():
+def configure():
     import os
     os.chdir(dirname(realpath(__file__)))
     #python main.py --delete-preferences

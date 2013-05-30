@@ -5,7 +5,7 @@ from distutils.util import convert_path
 from fnmatch import fnmatchcase
 from os.path import dirname, realpath, join, exists, normpath, isdir, isfile
 from setup_helpers.git_helpers import *
-from setup_helpers.fix_issues import *
+from setup_helpers.configure import *
 import os
 import shutil
 import subprocess
@@ -296,8 +296,8 @@ if __name__ == '__main__':
         if cmd == 'setup_boost':
             setup_boost()
             sys.exit(0)
-        if cmd == 'fix_issues':
-            fix_issues()
+        if cmd in ['fix_issues', 'configure']:
+            configure()
             sys.exit(0)
         if cmd == 'compile_widgets':
             compile_widgets()

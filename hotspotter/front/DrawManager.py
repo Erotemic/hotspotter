@@ -28,6 +28,7 @@ class DrawManager(AbstractManager):
         dm.draw_prefs.points_bit     = False
         dm.draw_prefs.result_view  = Pref(1, choices=['in_image', 'in_chip'])
         dm.draw_prefs.fignum         = 0
+        dm.draw_prefs.num_result_cols = 3
         dm.draw_prefs.figsize        = (5,5)
         dm.draw_prefs.colormap       = Pref('hsv', hidden=True)
         dm.draw_prefs.in_qtc_bit     = Pref(False, hidden=True) #Draw in the Qt Console
@@ -38,6 +39,20 @@ class DrawManager(AbstractManager):
     # ---
     def show_splash(dm):
         splash_fname = os.path.join(os.path.realpath(os.path.dirname(__file__)), 'splash.png')
+        if not os.path.exists(splash_fname):
+            root_dir = os.path.realpath(os.path.dirname(__file__))
+            while root_dir!=None:
+                splash_fname = os.path.join(root_dir, "hotspotter", "front", 'splash.png')
+                logdbg(splash_fname)
+                exists_test = os.path.exists(splash_fname)
+                logdbg('Exists:'+str(exists_test))
+                if exists_test:
+                    break
+                tmp = os.path.dirname(root_dir)
+                if tmp == root_dir:
+                    root_dir = None
+                else:
+                    root_dir = tmp
         logdbg('Splash Fname: %r '% splash_fname)
         splash_img = asarray(Image.open(splash_fname))
         dm.add_images([splash_img],['Welcome to Hotspotter'])
@@ -117,7 +132,7 @@ class DrawManager(AbstractManager):
                 qfsel = fm[fs > 0][:,0]
                 fsel  = fm[fs > 0][:,1]
             dm.draw_chiprep2(cx,  axi=axi,  axi_color=axi, fsel=fsel,  in_image_bit=in_image_bit)
-            dm.draw_chiprep2(qcx, axi=qaxi, axi_color=axi, fsel=qfsel, in_image_bit=in_image_bit, bbox_bit=True)
+            dm.draw_chiprep2(qcx, axi=qaxi, axi_color=axi, fsel=qfsel, in_image_bit=in_image_bit)
         dm.end_draw()
 
     # ---
@@ -183,14 +198,16 @@ class DrawManager(AbstractManager):
         #gray()
         logdbg('Finalizing Draw with '+str(len(dm.ax_list))+' axes')
         fig = dm.get_figure()
-        fig.subplots_adjust(hspace=0.2, wspace=0.2)
+        #fig.subplots_adjust(hspace=0.2, wspace=0.2)
+        #fig.tight_layout(pad=.3, h_pad=None, w_pad=None)
+        #fig.tight_layout()
         if dm.draw_prefs.in_qtc_bit:
             try:
                 from IPython.back.display import display
                 display(fig)
             except:
                 logwarn('Cannot Draw in QTConsole')
-        fig.show()
+        #fig.show()
         dm.hs.uim.redraw_gui()
         fig.canvas.draw()
         #draw() 
@@ -207,7 +224,7 @@ class DrawManager(AbstractManager):
         dm.ax_list     = [None]*num_images
         title_list     = title_list + ['NoTitle']*(num_images-len(title_list))
         # Fit Images into a grid
-        max_columns = 3
+        max_columns = max(1,dm.draw_prefs.num_result_cols)
         nr = int( ceil( float(num_images)/max_columns) )
         nc = max_columns if num_images >= max_columns else 1
         #
@@ -217,7 +234,7 @@ class DrawManager(AbstractManager):
             #logdbg('   * type(img_list[i]): %s'+str(type(img_list[i])))
             #logdbg('   * img_list[i].shape: %s'+str(img_list[i].shape))
             dm.ax_list[i] = fig.add_subplot(gs[i])
-            imgplot = dm.ax_list[i].imshow( img_list[i])
+            imgplot = dm.ax_list[i].imshow(img_list[i])
             imgplot.set_cmap('gray')
             dm.ax_list[i].get_xaxis().set_ticks([])
             dm.ax_list[i].get_yaxis().set_ticks([])
@@ -226,6 +243,7 @@ class DrawManager(AbstractManager):
             # transAxes: axes coordinates -> display coordinates
             # transLimits: data - > axes
         #
+        gs.tight_layout(fig)
         logdbg('Added '+str(num_images)+' images/axes')
     # ---
     def _get_fpt_ell_collection(dm, fpts, T_data, alpha, edgecolor):

@@ -62,8 +62,6 @@ class Facade(QObject):
         #fac.hs.merge_database(r'D:\data\work\Lionfish\LF_Juan')
         uim.populate_tables()
         
-        
-
     @func_log
     def unselect(fac):
         uim = fac.hs.uim
@@ -169,73 +167,6 @@ class Facade(QObject):
         fac.hs.cm.add_user_prop(propname)
         fac.hs.uim.populate_tables()
 
-    @pyqtSlot(name='match_all_above_thresh')
-    def match_all_above_thresh(fac, threshold=None):
-        'do matching and assign all above thresh'
-        if threshold == None:
-            # User ask
-            dlg = QInputDialog()
-            threshres = dlg.getText(None, 'Threshold Selector', 
-                                    'Enter a matching threshold.\n'+
-             'The system will query each chip and assign all matches above this thresh')
-            if not threshres[1]:
-                logmsg('Cancelled all match')
-                return
-            try:
-                threshold = float(str(threshres[0]))
-            except ValueError: 
-                logerr('The threshold must be a number')
-        qm = fac.hs.qm
-        cm = fac.hs.cm
-        nm = fac.hs.nm
-        vm = fac.hs.vm
-        # Get model ready
-        vm.sample_train_set()
-        vm.build_model()
-        # Do all queries
-        for qcx in iter(cm.get_valid_cxs()):
-            qcid = cm.cx2_cid[qcx]
-            logmsg('Querying CID='+str(qcid))
-            query_name = cm.cx2_name(qcx)
-            logdbg(str(qcx))
-            logdbg(str(type(qcx)))
-            cm.load_features(qcx)
-            res = fac.hs.qm.cx2_res(qcx)
-            # Match only those above a thresh
-            res.num_top_min = 0
-            res.num_extra_return = 0
-            res.top_thresh = threshold
-            top_cx = res.top_cx()
-            if len(top_cx) == 0:
-                print('No matched for cid='+str(qcid))
-                continue
-            top_names = cm.cx2_name(top_cx)
-            all_names = np.append(top_names,[query_name])
-            if all([nm.UNIDEN_NAME() == name for name in all_names]):
-                # If all names haven't been identified, make a new one 
-                new_name = nm.get_new_name()
-            else:
-                # Rename to the most frequent non ____ name seen
-                from collections import Counter
-                name_freq = Counter(np.append(top_names,[query_name])).most_common()
-                new_name = name_freq[0][0] 
-                if new_name == nm.UNIDEN_NAME():
-                    new_name = name_freq[1][0]
-            # Do renaming
-            cm.rename_chip(qcx, new_name)
-            for cx in top_cx:
-                cm.rename_chip(cx, new_name)
-        fac.hs.uim.populate_tables()
-
-    @pyqtSlot(name='run_matching_experiment')
-    @func_log
-    def run_matching_experiment(fac):
-        fac.hs.em.run_matching_experiment()
-
-    @pyqtSlot(name='run_name_consistency_experiment')
-    @func_log
-    def run_name_consistency_experiment(fac):
-        fac.hs.em.run_name_consistency_experiment()
 
     @pyqtSlot(name='remove_cid')
     @func_log
@@ -272,19 +203,23 @@ class Facade(QObject):
     @func_log
     def change_view(fac, new_state):
         uim = fac.hs.uim
+        prevBlock = uim.hsgui.main_skel.tablesTabWidget.blockSignals(True)
         # THIS LIST IS IN THE ORDER OF THE TABS. 
         # THIS SHOULD CHANGE TO BE INDEPENDENT OF THAT FIXME
         if not new_state in uim.tab_order:
-            if new_state in range(len(uim.tab_order)):
+            if new_state in xrange(len(uim.tab_order)):
                 new_state = uim.tab_order[new_state]+'_view'
             else:
                 logerr('State is: '+str(new_state)+', but it must be one of: '+str(uim.tab_order))
         uim.update_state(new_state)
         uim.draw()
+        uim.hsgui.main_skel.tablesTabWidget.blockSignals(prevBlock)
+        
 
     @pyqtSlot(name='query')
     @func_log
     def query(fac, qcid=None):
+        'Performs a query'
         uim, cm, qm, vm, nm = fac.hs.get_managers('uim', 'cm','qm','vm', 'nm')
         try:
             if qcid is None:
@@ -295,13 +230,20 @@ class Facade(QObject):
             uim.update_state('Querying')
             vm.sample_train_set()
             vm.build_model()
-            print 'Querying Chip: '+fac.hs.cm.cx2_info(qcx, clbls)
+            print('Querying Chip: '+fac.hs.cm.cx2_info(qcx, clbls))
+            logdbg('\n\nQuerying Chip: '+fac.hs.cm.cx2_info(qcx, clbls))
             uim.sel_res = fac.hs.qm.cx2_res(qcx)
+            logmsg('\n\nFinished Query')
             uim.update_state('done_querying')
-            logdbg(str(uim.sel_res))
-            uim.update_state('result_view')
+            logmsg(str(uim.sel_res))
+            logdbg('\n\n*** Populating Results Tables ***')
             uim.populate_result_table()
+            logdbg('\n\n*** Switching To Result Views ***')
+            uim.update_state('result_view')
+            logdbg('\n\n*** Redrawing UI ***')
             uim.draw()
+            logdbg('\n\n*** Done Redrawing UI ***')
+            # QUICK AND DIRTY CODE. PLEASE FIXME
             try:
                 cx1 = uim.sel_res.rr.qcx
                 cx2 = uim.sel_res.top_cx()[0]
@@ -313,6 +255,7 @@ class Facade(QObject):
                 fac._quick_and_dirty_result_prompt(uim.sel_res.rr.qcx, uim.sel_res.top_cx()[0])
             else:
                 logdbg('No Quick and dirty prompting')
+            logdbg('\n\n-----------Query OVER-------------\n\n')
                     
         except Exception as ex: 
             uim.update_state('done_querying')
@@ -402,11 +345,6 @@ class Facade(QObject):
                 self.show()
         resdlg = ResultDialog(chip1, chip2, 'Unknown Query', 'Accept Match to '+str(top_name)+'?', lambda: fac.rename_cid(top_name, query_cid), fac)
 
-
-    @pyqtSlot(str, name='logdbg')
-    def logdbg(fac, msg):
-        logdbg(msg)
-
     @pyqtSlot(int, name='set_fignum')
     @func_log
     def set_fignum(fac, fignum):
@@ -485,18 +423,8 @@ class Facade(QObject):
             logerr('Cannot goto next in state: '+uim.state)
 
     @func_log
-    def next_empty_image(fac):
-        empty_gxs = fac.hs.gm.get_empty_gxs()
-        if len(empty_gxs) == 0:
-            print 'There are no more empty images.'
-            return False
-        gx = empty_gxs[0]
-        gid = fac.hs.gm.gx2_gid[gx]
-        fac.selg(gid)
-        return True
-
-    @func_log
     def next_unident_chip(fac):
+        'Next call that finds a chip that is unidentified'
         empty_cxs = find(np.logical_and(fac.hs.cm.cx2_nx == fac.hs.nm.UNIDEN_NX(), fac.hs.cm.cx2_cid > 0))
         if len(empty_cxs) == 0:
             print 'There are no more empty images'
@@ -507,7 +435,20 @@ class Facade(QObject):
         return True
 
     @func_log
+    def next_empty_image(fac):
+        'Next call that finds an image without a chip'
+        empty_gxs = fac.hs.gm.get_empty_gxs()
+        if len(empty_gxs) == 0:
+            print 'There are no more empty images.'
+            return False
+        gx = empty_gxs[0]
+        gid = fac.hs.gm.gx2_gid[gx]
+        fac.selg(gid)
+        return True
+
+    @func_log
     def next_equal_size_chip(fac):
+        'Next call that finds a chip where the entire image is the roi'
         cm = fac.hs.cm
         gm = fac.hs.gm
         valid_cxs = cm.get_valid_cxs()
@@ -526,6 +467,7 @@ class Facade(QObject):
 
     @func_log
     def next_0_theta_chip(fac):
+        'Next call that finds a chip without an orientation'
         cm = fac.hs.cm
         gm = fac.hs.gm
         valid_cxs = cm.get_valid_cxs()
@@ -636,7 +578,7 @@ class Facade(QObject):
 
     def show_edit_preference_widget(fac):
         uim = fac.hs.uim
-        if uim.hsgui != None:
+        if not uim.hsgui is None:
             uim.hsgui.epw.show()
         else: 
             logerr('GUI does not exist')
@@ -704,7 +646,7 @@ class Facade(QObject):
         iom.write_to_user_fpath('database_stats.txt', db_stats_str)
         return db_stats_str
 
-    def SetNamesFromLionfishGroundTruth(hs):
+    def SetNamesFromLionfishGroundTruth(fac):
         import os.path
         import re
         cm = fac.hs.cm
@@ -723,3 +665,121 @@ class Facade(QObject):
                 dataset = match_dict['SIGHTINGID']
                 new_name = 'Lionfish_n'+str(name_id)
                 cm.rename_chip(cx, new_name)
+
+    @pyqtSlot(name='expand_rois')
+    @func_log
+    def expand_rois(fac, percent_increase=None):
+        'expand rois by a percentage of the diagonal'
+        if percent_increase == None:
+            # User ask
+            dlg = QInputDialog()
+            percentres = dlg.getText(None, 'ROI Expansion Factor', 
+                                    'Enter the percentage to expand the ROIs.\n'+
+                                'The percentage is in terms of diagonal length')
+            if not percentres[1]:
+                logmsg('Cancelled all match')
+                return
+            try:
+                percent_increase = float(str(percentres[0]))
+            except ValueError: 
+                logerr('The percentage must be a number')
+        cm = fac.hs.cm
+        gm = fac.hs.gm
+        logmsg('Resizing all chips')
+        for cx in iter(cm.get_valid_cxs()):
+            logmsg('Resizing cx='+str(cx))
+            # Get ROI size and Image size
+            [rx, ry, rw, rh] = cm.cx2_roi[cx]
+            [gw, gh] = gm.gx2_img_size(cm.cx2_gx[cx])
+            # Find Diagonal Increase 
+            diag = np.sqrt(rw**2 + rh**2)
+            scale_factor = percent_increase/100.0
+            diag_increase = scale_factor * diag
+            target_diag = diag + diag_increase
+            # Find Width/Height Increase 
+            ar = float(rw)/float(rh)
+            w_increase = np.sqrt(ar**2 * diag_increase**2 / (ar**2 + 1))
+            h_increase = w_increase / ar
+            # Find New xywh within image constriants 
+            new_x = int(max(0, round(rx - w_increase / 2.0)))
+            new_y = int(max(0, round(ry - h_increase / 2.0)))
+            new_w = int(min(gw - new_x, round(rw + w_increase)))
+            new_h = int(min(gh - new_y, round(rh + h_increase)))
+            new_roi = [new_x, new_y, new_w, new_h]
+            logmsg('Old Roi: '+repr([rx, ry, rw, rh]))
+            cm.change_roi(cx, new_roi)
+            logmsg('\n')
+        logmsg('Done resizing all chips')
+
+    @pyqtSlot(name='match_all_above_thresh')
+    def match_all_above_thresh(fac, threshold=None):
+        'do matching and assign all above thresh'
+        if threshold == None:
+            # User ask
+            dlg = QInputDialog()
+            threshres = dlg.getText(None, 'Threshold Selector', 
+                                    'Enter a matching threshold.\n'+
+             'The system will query each chip and assign all matches above this thresh')
+            if not threshres[1]:
+                logmsg('Cancelled all match')
+                return
+            try:
+                threshold = float(str(threshres[0]))
+            except ValueError: 
+                logerr('The threshold must be a number')
+        qm = fac.hs.qm
+        cm = fac.hs.cm
+        nm = fac.hs.nm
+        vm = fac.hs.vm
+        # Get model ready
+        vm.sample_train_set()
+        vm.build_model()
+        # Do all queries
+        for qcx in iter(cm.get_valid_cxs()):
+            qcid = cm.cx2_cid[qcx]
+            logmsg('Querying CID='+str(qcid))
+            query_name = cm.cx2_name(qcx)
+            logdbg(str(qcx))
+            logdbg(str(type(qcx)))
+            cm.load_features(qcx)
+            res = fac.hs.qm.cx2_res(qcx)
+            # Match only those above a thresh
+            res.num_top_min = 0
+            res.num_extra_return = 0
+            res.top_thresh = threshold
+            top_cx = res.top_cx()
+            if len(top_cx) == 0:
+                print('No matched for cid='+str(qcid))
+                continue
+            top_names = cm.cx2_name(top_cx)
+            all_names = np.append(top_names,[query_name])
+            if all([nm.UNIDEN_NAME() == name for name in all_names]):
+                # If all names haven't been identified, make a new one 
+                new_name = nm.get_new_name()
+            else:
+                # Rename to the most frequent non ____ name seen
+                from collections import Counter
+                name_freq = Counter(np.append(top_names,[query_name])).most_common()
+                new_name = name_freq[0][0] 
+                if new_name == nm.UNIDEN_NAME():
+                    new_name = name_freq[1][0]
+            # Do renaming
+            cm.rename_chip(qcx, new_name)
+            for cx in top_cx:
+                cm.rename_chip(cx, new_name)
+        fac.hs.uim.populate_tables()
+
+    @pyqtSlot(str, name='logdbgSlot')
+    def logdbgSlot(fac, msg):
+        # This function is a hack so MainWin can call logdbg
+        logdbg(msg)
+
+    @pyqtSlot(name='run_matching_experiment')
+    @func_log
+    def run_matching_experiment(fac):
+        fac.hs.em.run_matching_experiment()
+
+    @pyqtSlot(name='run_name_consistency_experiment')
+    @func_log
+    def run_name_consistency_experiment(fac):
+        fac.hs.em.run_name_consistency_experiment()

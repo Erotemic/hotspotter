@@ -55,7 +55,10 @@ Algorithm Prefs:
         spatial_thresh - How geometrically consistent matches must be
         method - If COUNT is too inaccurate consider switching to LNRAT
         score - cscore is useful for unknown images nscore is useful otherwise.
-        num_top - Number of results per query 
+        match_threshold - The minimum score to be counted as a match
+        min_num_results - Number of results per maximum result per query 
+        max_num_results - Number of results per minimum result per query 
+        extra_num_results - Extra results for context, not subject to min or max
         
     Chip Preprocessing:
       sqrt_num_pxls - Changes chip size. Decrease if too slow, increase if too

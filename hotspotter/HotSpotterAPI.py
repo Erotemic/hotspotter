@@ -327,7 +327,7 @@ class HotSpotterAPI(AbstractPrintable):
         all_cxs = hs.cm.get_valid_cxs()
         for cx in all_cxs:
             hs.cm.compute_chip(cx)
-    # ---
+
     @func_log
     def get_source_fpath(hs):
         import __init__ as root_module

@@ -128,6 +128,8 @@ class HotspotterMainWindow(QMainWindow):
         main_skel.actionPreferences.triggered.connect(
             hsgui.epw.show )
         # Help
+        main_skel.actionView_Documentation.triggered.connect(
+            fac.view_documentation)
         main_skel.actionHelpCMD.triggered.connect(
             lambda:hsgui.msgbox('Command Line Help', cmd_help))
         main_skel.actionHelpWorkflow.triggered.connect(

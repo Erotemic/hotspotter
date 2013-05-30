@@ -783,3 +783,15 @@ class Facade(QObject):
     @func_log
     def run_name_consistency_experiment(fac):
         fac.hs.em.run_name_consistency_experiment()
+
+    @pyqtSlot(name='view_documentation')
+    @func_log
+    def view_documentation(fac):
+        import os.path
+        pdf_name = 'HotSpotterUserGuide.pdf'
+        doc_path = os.path.join(fac.hs.iom.hsroot(), 'documentation')
+        pdf_fpath = os.path.join(doc_path, pdf_name)
+        # Tries to open pdf, if it fails it opens the documentation folder
+        if os.system('open '+pdf_fpath) == 1:
+            if os.system(pdf_fpath) == 1:
+                crossplat.view_directory(doc_path)

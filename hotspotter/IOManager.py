@@ -20,7 +20,7 @@ import tpl
 import numpy as np
 import pylab
 import os
-from os.path import expanduser, join, relpath, normpath, exists, dirname
+from os.path import expanduser, join, relpath, realpath, normpath, exists, dirname
 from hotspotter.other.AbstractPrintable import AbstractManager
 from hotspotter.other.ConcretePrintable import DynStruct
 from hotspotter.other.helpers import dircheck
@@ -36,6 +36,37 @@ def checkdir_decorator(method_fn):
     return wrapper
 
 class IOManager(AbstractManager):
+    
+    def __init__(iom, hs):
+        super( IOManager, iom ).__init__( hs )        
+        logdbg('Creating IOManager')
+        iom.hs = hs
+        iom._hsroot = None
+        iom.settings_dpath = normpath(join(expanduser('~'),'.hotspotter'))
+        iom.internal_dname = '.hs_internals';
+        iom.dummy_delete = False #Dont actually delete things
+
+    def hsroot(iom):
+        if iom._hsroot is None:
+            iom.find_hotspotter_root_dir()
+        return iom._hsroot
+
+    def find_hotspotter_root_dir(iom):
+        # Find the HotSpotter root dir even in installed packages
+        hsroot = realpath(dirname(__file__))
+        while True:
+            root_landmark = join(hsroot, '__HOTSPOTTER_ROOT__')
+            logdbg('Testing Existence:'+str(root_landmark))
+            if not os.path.exists(root_landmark):
+                logdbg('No landmark here')
+            else: 
+                logdbg('Found the landmark')
+                break
+            _newroot = dirname(hsroot)
+            if _newroot == hsroot:
+                logerr('Cannot Find HotSpotter Root')
+            hsroot = _newroot
+        iom._hsroot = hsroot
 
     def remove_file(iom, fpath):
         if iom.dummy_delete:
@@ -71,14 +102,6 @@ class IOManager(AbstractManager):
     def remove_computed_files_with_pattern(iom, fname_pattern):
         iom.remove_files_with_pattern(iom.get_computed_dpath(), fname_pattern, recursive_bit=True)
         'removes files in computed_dpath'
-    
-    def __init__(iom, hs):
-        super( IOManager, iom ).__init__( hs )        
-        logdbg('Creating IOManager')
-        iom.hs = hs
-        iom.settings_dpath = normpath(join(expanduser('~'),'.hotspotter'))
-        iom.internal_dname = '.hs_internals';
-        iom.dummy_delete = False #Dont actually delete things
 
     # NEW AND UNTESTED
     def get_tpl_lib_dir(iom):

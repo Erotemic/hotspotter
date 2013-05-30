@@ -3,7 +3,7 @@
 from distutils.core import setup
 from distutils.util import convert_path
 from fnmatch import fnmatchcase
-from os.path import dirname, realpath, join, exists, normpath, isdir, isfile
+from os.path import dirname, realpath, join, exists, normpath, isdir, isfile, normpath
 from helpers_setup.git_helpers import *
 from helpers_setup.configure import *
 import os
@@ -289,6 +289,14 @@ def get_system_setup_kwargs():
 
 def build_pyinstaller():
     import os
+    cwd = normpath(realpath(dirname(__file__)))
+    print cwd
+    build_dir = join(cwd, 'build')
+    dist_dir = join(cwd, 'dist')
+    for rmdir in [build_dir, dist_dir]:
+        if exists(rmdir):
+            print('Removing '+rmdir)
+            os.system('rm -rf '+rmdir)
     os.system('pyinstaller helpers_setup/pyinstaller-hotspotter.spec')
     pass
 

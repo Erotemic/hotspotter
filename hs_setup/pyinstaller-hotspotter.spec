@@ -32,10 +32,11 @@ a.datas += [(splash_dest, splash_src, 'DATA')]
 
 # Add TPL Libs for current platform
 ROOT_DLLS = ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']
+
 lib_rpath = normpath(join('hotspotter/tpl/lib/', sys.platform))
 # Walk the lib dir
 walk_path = join(hsroot, lib_rpath)
-print "Adding lib files from directory:", walk_path
+print "Adding lib files from directory:" , walk_path
 for root, dirs, files in os.walk(walk_path):
     for lib_name in files:
         print "Adding lib name:", lib_name
@@ -54,7 +55,7 @@ icon_cpmap = { 'darwin' : 'hsicon.icns',
 iconfile = join(hsroot, 'helpers_setup', 'hsicon.ico')
 
 # Get Correct Extension
-ext_cpmap  = {'darwin':'.app', 'win32':'.exe', 'linux2':'.ln'}
+ext_cpmap  = {'darwin':'', 'win32':'.exe', 'linux2':'.ln'}
 appext   = ext_cpmap[sys.platform]
 
 pyz = PYZ(a.pure)
@@ -76,7 +77,7 @@ coll = COLLECT(exe,
                upx=True,
                name=os.path.join('dist', 'HotSpotterApp'))
 
-bundle_name = 'HotSpotterApp'
+bundle_name = 'HotSpotter'
 if sys.platform == "darwin":
   bundle_name += '.app'
 

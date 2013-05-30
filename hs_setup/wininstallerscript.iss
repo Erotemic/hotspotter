@@ -27,14 +27,14 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\jon.crall\code\hotspotter\dist\HotSpotterApp\HotSpotterApp.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\jon.crall\code\hotspotter\dist\HotSpotterApp\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\jon.crall\code\hotspotter\dist\HotSpotter\HotSpotterApp.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\jon.crall\code\hotspotter\dist\HotSpotter\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
-Name: "{group}\HotSpotter"; Filename: "{app}\main.exe"
-Name: "{commondesktop}\HotSpotter"; Filename: "{app}\main.exe"; Tasks: desktopicon
+Name: "{group}\HotSpotter"; Filename: "{app}\HotSpotterApp.exe"
+Name: "{commondesktop}\HotSpotter"; Filename: "{app}\HotSpotterApp.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\main.exe"; Description: "{cm:LaunchProgram,HotSpotter}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\HotSpotterApp.exe"; Description: "{cm:LaunchProgram,HotSpotter}"; Flags: nowait postinstall skipifsilent
 

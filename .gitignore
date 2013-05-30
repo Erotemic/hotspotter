@@ -1,6 +1,6 @@
 *~
 build
-setup_helpers/Output
+hs_setup/Output
 dist
 hotspotter/generated_version.py
 hotspotter_global_logs.log

@@ -76,7 +76,10 @@ class ExperimentManager(AbstractManager):
                 print outstr 
                 file.write(outstr+'\n')
                 # Print Result Info
-                maxsim = tscore[0] # Best Score
+                if len(tscore) == 0:
+                    maxsim = 0 # Best Score
+                if len(tscore) > 0:
+                    maxsim = tscore[0] # Best Score
                 for (rank, tup) in enumerate(zip(*[x.tolist() for x in (tgname, tcid, tscore )])):
                     outstr = '  rank=%d, gname=%s, cid=%4d, score=%7.2f' % tuple([rank+1]+list(tup))
                     print outstr 

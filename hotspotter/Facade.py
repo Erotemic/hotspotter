@@ -662,7 +662,7 @@ class Facade(QObject):
                 name_id = match_dict['NAMEID']
                 dataset = match_dict['DATASET']
                 dataset = match_dict['SIGHTINGID']
-                new_name = 'Lionfish_n'+str(name_id)
+                new_name = 'Lionfish_'+str(dataset)+str(name_id)
                 cm.rename_chip(cx, new_name)
 
     @pyqtSlot(name='expand_rois')

@@ -73,14 +73,14 @@ class DrawManager(AbstractManager):
     # ---
     def show_chip(dm, cx, in_raw_chip=False, **kwargs):
         cm = dm.hs.cm
-        cid, name, chip = cm.cx2_(cx, 'cid', 'name', 'chip')
+        cid, gname, chip = cm.cx2_(cx, 'cid', 'gname', 'chip')
         if in_raw_chip:
             chip = np.asarray(cm.cx2_pil_chip(cx, scaled=True,
                                               preprocessed=False, rotated=True,
                                              colored=True))
         if dm.draw_prefs.use_thumbnails is True:
             pass
-        dm.add_images([chip], [name])
+        dm.add_images([chip], [gname])
         # Draw chiprep and return fsel incase rand is good
         fsel_ret = dm.draw_chiprep2(cx, axi=0, **kwargs)
         dm.end_draw()
@@ -100,8 +100,10 @@ class DrawManager(AbstractManager):
         (tcx, tscore, ) = res.tcid2_('cx','score')
         # Titles of the Plot
 
-        qtitle = 'gname: %s\nQUERY cid=%d, nid=%d' % (qgname, qcid, qnid)
-        ttile = ['cid=%d, gname: %s\nrank=%d, score=%.2f' % tup for tup in zip(tcid, tgname, range(1,len(tscore)+1), tscore)]
+        #qtitle = 'gname: %s\nQUERY cid=%d, nid=%d' % (qgname, qcid, qnid)
+        #ttile = ['cid=%d\n gname: %s\nrank/score=%d,%.2f' % tup for tup in zip(tcid, tgname, range(1,len(tscore)+1), tscore)]
+        qtitle = 'gname: %s\nQUERY nid=%d' % (qgname, qnid)
+        ttile = ['gname: %s\nrank/score=%d,%.2f' % tup for tup in zip(tgname, range(1,len(tscore)+1), tscore)]
         title_list = [qtitle] + ttile
         if dm.draw_prefs.use_thumbnails is True:
             pass
@@ -207,7 +209,7 @@ class DrawManager(AbstractManager):
                 display(fig)
             except:
                 logwarn('Cannot Draw in QTConsole')
-        #fig.show()
+        fig.show()
         dm.hs.uim.redraw_gui()
         fig.canvas.draw()
         #draw() 
@@ -243,7 +245,7 @@ class DrawManager(AbstractManager):
             # transAxes: axes coordinates -> display coordinates
             # transLimits: data - > axes
         #
-        gs.tight_layout(fig)
+        #gs.tight_layout(fig)
         logdbg('Added '+str(num_images)+' images/axes')
     # ---
     def _get_fpt_ell_collection(dm, fpts, T_data, alpha, edgecolor):

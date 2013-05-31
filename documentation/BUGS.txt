@@ -1,1 +1,16 @@
 Preferences does not close when HotSpotterMainWindow Closes
+
+
+TODO: Algorithm Configurations should be saved in separate files. 
+Algo Config 1: 
+BAM
+Sample Config 2: 
+BAM
+
+
+BUG: The Visual Model does not save when there are too many features. 
+Fix this. Fails on saving LF_all. Actaully this only fails in IPython.
+
+
+
+CRASH: Query a lionfish. Change to new figure. Program crashes or displays odd results. 

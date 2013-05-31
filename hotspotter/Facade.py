@@ -661,7 +661,13 @@ class Facade(QObject):
                 match_dict = match_obj.groupdict()
                 name_id = match_dict['NAMEID']
                 dataset = match_dict['DATASET']
-                dataset = match_dict['SIGHTINGID']
+                sightingid = match_dict['SIGHTINGID']
+                if dataset.find('BB') > -1:
+                    dataset = 'BB'
+                if dataset.find('SA-WP') > -1:
+                    dataset = 'WP'
+                if dataset.find('SA-VE') > -1:
+                    dataset = 'VE'
                 new_name = 'Lionfish_'+str(dataset)+str(name_id)
                 cm.rename_chip(cx, new_name)
 

@@ -103,7 +103,7 @@ class DrawManager(AbstractManager):
         #qtitle = 'gname: %s\nQUERY cid=%d, nid=%d' % (qgname, qcid, qnid)
         #ttile = ['cid=%d\n gname: %s\nrank/score=%d,%.2f' % tup for tup in zip(tcid, tgname, range(1,len(tscore)+1), tscore)]
         qtitle = 'gname: %s\nQUERY nid=%d' % (qgname, qnid)
-        ttile = ['gname: %s\nrank/score=%d,%.2f' % tup for tup in zip(tgname, range(1,len(tscore)+1), tscore)]
+        ttile = ['gname: %s\nrank/score=%d/%.2f' % tup for tup in zip(tgname, range(1,len(tscore)+1), tscore)]
         title_list = [qtitle] + ttile
         if dm.draw_prefs.use_thumbnails is True:
             pass
@@ -226,7 +226,8 @@ class DrawManager(AbstractManager):
         dm.ax_list     = [None]*num_images
         title_list     = title_list + ['NoTitle']*(num_images-len(title_list))
         # Fit Images into a grid
-        max_columns = max(1,dm.draw_prefs.num_result_cols)
+        max_columns = min(num_images, max(1,dm.draw_prefs.num_result_cols))
+        if max_columns == 0: max_columns = 1
         nr = int( ceil( float(num_images)/max_columns) )
         nc = max_columns if num_images >= max_columns else 1
         #

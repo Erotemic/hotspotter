@@ -81,9 +81,9 @@ class VisualModel(AbstractManager):
     def nearest_neighbors(vm, qfdsc, K): 
         ''' qfx2_wxs - (num_feats x K) Query Descriptor Index to the K Nearest Word Indexes 
             qfx2_dists - (num_feats x K) Query Descriptor Index to the Distance to the  K Nearest Word Vectors '''
-        assert vm.flann is not None  , 'Cant query np.empty index'
-        assert len(qfdsc) != 0       , 'Cant have np.empty query'
-        logdbg('Searching for Nearest Neighbors: #vectors=%d, K=%d' % (len(qfdsc), K))
+        #assert vm.flann is not None  , 'Cant query np.empty index'
+        #assert len(qfdsc) != 0       , 'Cant have np.empty query'
+        #logdbg('Searching for Nearest Neighbors: #vectors=%d, K=%d' % (len(qfdsc), K))
         (qfx2_Kwxs, qfx2_Kdists) = vm.flann.nn_index(qfdsc, K, checks=128)
         qfx2_Kwxs.shape   =  (qfdsc.shape[0], K)
         qfx2_Kdists.shape =  (qfdsc.shape[0], K)

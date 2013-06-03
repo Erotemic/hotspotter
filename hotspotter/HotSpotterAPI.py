@@ -164,6 +164,10 @@ class HotSpotterAPI(AbstractPrintable):
             a StripeSpotter Database Folder
             or an empty folder for a new database
             '''
+
+    def get_dbid(hs):
+        return os.path.split(hs.db_dpath)[1]
+
     def __init__(hs, db_dpath=None, autoload=True, delete_home_dir_bit=False, save_pref_bit=False):
         super( HotSpotterAPI, hs ).__init__(['cm','gm','nm','em','qm','dm','am','vm','iom','uim'])
         #

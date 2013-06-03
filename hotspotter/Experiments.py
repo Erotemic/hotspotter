@@ -204,7 +204,7 @@ class ExperimentManager(AbstractManager):
 
         # Find the Queries which need to be run
         unsaved_cxs = []
-        for cx in iter(test_cxs):   
+        for cx in iter(test_cxs):
             cid = cm.cx2_cid[cx]
             rr_fpath = rr_fmtstr_cid % cid
             if not os.path.exists(rr_fpath):

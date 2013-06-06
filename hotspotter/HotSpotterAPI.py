@@ -23,7 +23,7 @@ from ChipManager import ChipManager
 from IOManager import IOManager
 from ImageManager import ImageManager
 from NameManager import NameManager
-from QueryManager import QueryManager
+from QueryManager import QueryManager, QueryResult
 from VisualModel import VisualModel
 from front.DrawManager import DrawManager
 from front.UIManager import UIManager
@@ -84,14 +84,14 @@ class HotSpotterAPI(AbstractPrintable):
             return False
         db_dpath_files = os.listdir(db_dpath)
         if hs.iom.internal_dname in db_dpath_files:
-            logmsg('Loading a HotSpotter database')
+            logmsg('Opening a HotSpotter database: '+db_dpath)
         elif 'images' in db_dpath_files or\
              'data'   in db_dpath_files:
-            logmsg('Loading a StripSpotter database')
+            logmsg('Opening a StripSpotter database: '+db_dpath)
         elif len(db_dpath_files) == 0:
-            logmsg('Loading a new database')
+            logmsg('Creating a new database: '+db_dpath)
         else:
-            logwarn('Unknown database type')
+            logwarn('Unknown database type: '+db_dpath)
             logdbg('Files in dir: '+str(db_dpath_files))
             return False
         return True
@@ -143,6 +143,9 @@ class HotSpotterAPI(AbstractPrintable):
         else: 
             logdbg('autoload is false.')
 
+    def get_database_stats(hs):
+        return (hs.db_dpath, hs.cm.num_c, hs.gm.num_g, hs.nm.num_n)
+
     def get_database_stat_str(hs):
         if hs.data_loaded_bit:
             return ( '''
@@ -150,7 +153,7 @@ class HotSpotterAPI(AbstractPrintable):
         #Chips = %d
         #Images = %d
         #Names = %d
-            ''' % (hs.db_dpath, hs.cm.num_c, hs.gm.num_g, hs.nm.num_n))
+            ''' % hs.get_database_stats())
         else: 
             return '''
         No database has been selected.
@@ -328,9 +331,89 @@ class HotSpotterAPI(AbstractPrintable):
     @func_log
     def precompute_chips(hs):
         logmsg('Precomputing the chips')
-        all_cxs = hs.cm.get_valid_cxs()
-        for cx in all_cxs:
-            hs.cm.compute_chip(cx)
+        uncomputed_cx_list = []
+        valid_cxs = hs.cm.get_valid_cxs()
+        logmsg('  * There are %d valid chips' % len(valid_cxs))
+        for cx in iter(valid_cxs):
+            if not hs.cm.cx2_is_chip_computed(cx):
+                uncomputed_cx_list += [cx]
+        total = len(uncomputed_cx_list)
+        logmsg('  * There are %d uncomputed chips' % total)
+
+        __USE_MULTIPROCESSING__ = True
+
+        if not __USE_MULTIPROCESSING__:
+            for count, cx in enumerate(uncomputed_cx_list):
+                logmsg('  * computing %d / %d ' % (count, total))
+                hs.cm.compute_chip(cx)
+            eval('return')
+        else:
+            # http://docs.python.org/2/library/multiprocessing.html
+            import time, random
+            import multiprocessing as mp
+            from multiprocessing import Process, Queue, current_process, freeze_support
+            def calculate(func, args):
+                result = func(*args)
+                return '%s says that %s%s = %s' % \
+                    (mp.current_process().name, func.__name__, args, result)
+            def worker(input, output):
+                for func, args in iter(input.get, 'STOP'):
+                    result = calculate(func, args)
+                    output.put(result)
+
+            NUMBER_OF_PROCESSES = 4
+            TASKS = [(hs.cm.compute_chip, (cx, False)) for cx in uncomputed_cx_list]
+            task_queue = mp.Queue()
+            done_queue = mp.Queue()
+            print 'Submiting tasks:'
+            for task in TASKS:
+                task_queue.put(task)
+
+            print 'Starting '+str(NUMBER_OF_PROCESSES)+ ' processes'
+            for i in range(NUMBER_OF_PROCESSES):
+                Process(target=worker, args=(task_queue, done_queue)).start()
+
+            # Get and print results
+            print 'Unordered results:'
+            for i in range(len(TASKS)):
+                print '\t', done_queue.get()
+
+            # Tell child processes to stop
+            for i in range(NUMBER_OF_PROCESSES):
+                task_queue.put('STOP')
+
+            #import thread
+            #from threading import Thread
+            #class ComputeChipThread(Thread):
+                #def __init__ (self, cx, cm):
+                    #Thread.__init__(self)
+                    #self.cx = cx
+                    #self.cm = cm
+                #def run(self):
+                    #mutex.acquire()
+                    #output.append(cm.compute_chip(cx,showmsg=False))
+                    #mutex.release()
+            #threads = []
+            #output = []
+            #mutex = thread.allocate_lock()
+            #for count, cx in enumerate(uncomputed_cx_list):
+                #logmsg('  * threading %d / %d ' % (count, total))
+                #current = ComputeChipThread(cx, cm)
+                #threads.append(current)
+                #current.start()
+            #for t in threads:
+                #t.join()
+
+    @func_log
+    def query(hs, cid, hsother=None):
+        '''
+        Runs query against this database with cid. 
+        If hsother is specified uses the chip from that database
+        '''
+        hs.vm.ensure_model()
+        rawres = hs.qm.cid2_res(cid)
+        return QueryResult(hs, rawres, hsother)
+
 
     @func_log
     def get_source_fpath(hs):

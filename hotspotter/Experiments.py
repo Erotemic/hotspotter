@@ -54,7 +54,7 @@ class ExperimentManager(AbstractManager):
         algo_prefs_fpath = os.path.join(expt_dpath, 'algo_prefs.txt')
         iom.write(algo_prefs_fpath, algo_prefs_text)
         
-        vm.build_model() # Defaults to building model of all
+        vm.ensure_model() # Defaults to building model of all
 
         prev_ell = dm.draw_prefs.ellipse_bit
         prev_pts = dm.draw_prefs.points_bit

@@ -87,10 +87,12 @@ class DrawManager(AbstractManager):
         return fsel_ret
     # ---
     def show_query(dm, res, titleargs=None):
-        cm = dm.hs.cm
         # Make sure draw is valid
         if res is None: dm.show_splash(); return
         # Get Chip Properties
+
+        cm  = res.hs.cm
+        qcm = res.qhs.cm
 
         titleargs =\
         ('cx', 'cid', 'nid', 'name', 'gname')
@@ -111,17 +113,17 @@ class DrawManager(AbstractManager):
         # Add the images to draw
         in_image_bit = dm.draw_prefs.result_view == 'in_image'
         if in_image_bit:
-            qimg = cm.cx2_img(qcx)
+            qimg = qcm.cx2_img(qcx)
             timg = cm.cx2_img_list(tcx)
             dm.add_images([qimg] + timg, title_list)
         elif dm.draw_prefs.result_view == 'in_chip':
-            qchip = cm.cx2_chip_list(qcx)
+            qchip = qcm.cx2_chip_list(qcx)
             tchip = cm.cx2_chip_list(tcx)
             dm.add_images(qchip + tchip, title_list)
 
         # Draw the Query Chiprep
         qaxi       = 0; qfsel      = []
-        dm.draw_chiprep2(qcx, axi=qaxi, fsel=qfsel)
+        dm.draw_chiprep2(qcx, axi=qaxi, fsel=qfsel, qcm=qcm)
         # Draw the Top Result Chipreps
         for (tx, cx) in enumerate(tcx):
             fm    = res.rr.cx2_fm[cx]
@@ -133,8 +135,17 @@ class DrawManager(AbstractManager):
             else:
                 qfsel = fm[fs > 0][:,0]
                 fsel  = fm[fs > 0][:,1]
-            dm.draw_chiprep2(cx,  axi=axi,  axi_color=axi, fsel=fsel,  in_image_bit=in_image_bit)
-            dm.draw_chiprep2(qcx, axi=qaxi, axi_color=axi, fsel=qfsel, in_image_bit=in_image_bit)
+            dm.draw_chiprep2(cx,
+                             axi=axi,
+                             axi_color=axi,
+                             fsel=fsel,
+                             in_image_bit=in_image_bit)
+            dm.draw_chiprep2(qcx,
+                             axi=qaxi,
+                             axi_color=axi,
+                             fsel=qfsel,
+                             in_image_bit=in_image_bit,
+                             qcm=qcm)
         dm.end_draw()
 
     # ---
@@ -277,6 +288,7 @@ class DrawManager(AbstractManager):
                       ell_bit=None,
                       xy_bit=None,
                       color=None,
+                      qcm=None,
                       **kwargs):
         '''
         Draws a chip representation over an already drawn chip
@@ -295,8 +307,8 @@ class DrawManager(AbstractManager):
         xy_bit
         ell_color
         '''
-
-        cm = dm.hs.cm
+        # Allows display of cross database queries
+        cm = dm.hs.cm if qcm is None else qcm
         # Grab Preferences
         xy_bit  = dm.draw_prefs.points_bit    if xy_bit    is None else xy_bit
         ell_bit = dm.draw_prefs.ellipse_bit   if ell_bit   is None else ell_bit

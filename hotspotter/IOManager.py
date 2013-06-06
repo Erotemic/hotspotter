@@ -265,7 +265,7 @@ class IOManager(AbstractManager):
         return work_fpath+db_name
 
     def  load_tables(iom):
-        logmsg('Loading '+iom.hs.db_dpath)
+        logmsg('Loading data tables in '+iom.hs.db_dpath)
         if not (exists(iom.get_image_table_fpath()) and\
                 exists(iom.get_name_table_fpath()) and\
                 exists(iom.get_image_table_fpath())):
@@ -279,7 +279,7 @@ class IOManager(AbstractManager):
         iom.load_image_table()
         iom.load_name_table()
         iom.load_chip_table()
-        logmsg('Done Loading Tables')
+        logmsg('Done loading data tables')
         sys.stdout.flush()
 
     #START: CSV IO METHODS

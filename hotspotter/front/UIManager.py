@@ -18,6 +18,7 @@ class UIManager(QObject):
     setfignumSignal         = pyqtSignal(int)
     redrawGuiSignal         = pyqtSignal()
     selectTabSignal         = pyqtSignal(int)
+    updateDBStatsSignal     = pyqtSignal(dict)
     
     def init_preferences(uim, default_bit=False):
         iom = uim.hs.iom
@@ -49,6 +50,7 @@ class UIManager(QObject):
         uim.hsgui.connectSignals(fac)
 
         logdbg('Connecting Facade >> to >> GUI')
+        uim.updateDBStatsSignal.connect( uim.hsgui.updateDBStatsSlot )
         uim.populateChipTblSignal.connect( uim.hsgui.populateChipTblSlot )
         uim.populateImageTblSignal.connect( uim.hsgui.populateImageTblSlot )
         uim.populateResultTblSignal.connect( uim.hsgui.populateResultTblSlot )
@@ -128,6 +130,14 @@ class UIManager(QObject):
         uim.populate_chip_table()
         uim.populate_image_table()
         uim.populate_result_table()
+        uim.update_database_stats()
+
+    @func_log
+    def update_database_stats(uim):
+        hs = uim.hs
+        stats = {}
+        stats['title'] = 'HotSpotter ---  #Chips: %d, #Names: %d, #Images: %d --- %s' % ( hs.cm.num_c, hs.nm.num_n, hs.gm.num_g, hs.db_dpath)
+        uim.updateDBStatsSignal.emit(stats)
 
     @func_log
     def update_state(uim, new_state):
@@ -159,7 +169,7 @@ class UIManager(QObject):
 
     @func_log
     def redraw_gui(uim):
-        if uim.hsgui.isVisible():
+        if not uim.hsgui is None and uim.hsgui.isVisible():
             uim.redrawGuiSignal.emit()
 
     @func_log

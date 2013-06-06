@@ -233,7 +233,7 @@ def func_log(fn):
         # -- Module / Line Info
         info = callinfo(3) 
         module = str(fn.func_code)
-        module = module[module.rfind('\\')+1:module.rfind('.py')]
+        module = module[max(module.find('\\'), module.rfind('/'))+1:module.rfind('.py')]
         align_space = 80
         function_name = fn.func_name
         #if info.indent < 1: # Hack to make kirby not appear every time you do anything

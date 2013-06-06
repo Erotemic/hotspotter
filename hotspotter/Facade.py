@@ -229,7 +229,7 @@ class Facade(QObject):
                 qcx = cm.cx(qcid)
             uim.update_state('Querying')
             vm.sample_train_set()
-            vm.build_model()
+            vm.ensure_model()
             print('Querying Chip: '+fac.hs.cm.cx2_info(qcx, clbls))
             logdbg('\n\nQuerying Chip: '+fac.hs.cm.cx2_info(qcx, clbls))
             uim.sel_res = fac.hs.qm.cx2_res(qcx)
@@ -738,7 +738,7 @@ class Facade(QObject):
         vm = fac.hs.vm
         # Get model ready
         vm.sample_train_set()
-        vm.build_model()
+        vm.ensure_model()
         # Do all queries
         for qcx in iter(cm.get_valid_cxs()):
             qcid = cm.cx2_cid[qcx]

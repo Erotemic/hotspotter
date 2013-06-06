@@ -1,12 +1,11 @@
 from hotspotter.algo.spatial_functions import ransac
-from hotspotter.other.AbstractPrintable import AbstractManager
+from hotspotter.other.AbstractPrintable import AbstractManager, AbstractPrintable
 from hotspotter.other.ConcretePrintable import DynStruct
 from hotspotter.other.helpers import alloc_lists
 from hotspotter.other.logger import logdbg, logerr
 from numpy import spacing as eps
 from os.path import join
-import os
-import cPickle
+import os, cPickle
 import numpy as np
 
 # -----------------
@@ -25,11 +24,11 @@ class RawResults(DynStruct):
         rr.qfdsc = qfdsc
         rr.qchip_size = qchip_size
         # Result Information
-        rr.cx2_cscore_ = []
-        rr.cx2_nscore  = []
-        rr.cx2_fs_     = []
-        rr.cx2_fs      = []
-        rr.cx2_fm      = []
+        rr.cx2_cscore_ = None
+        rr.cx2_nscore  = None
+        rr.cx2_fs_     = None
+        rr.cx2_fs      = None
+        rr.cx2_fm      = None
 
     def presave_clean(rr):
         'Save some memory by not saving query descriptors.'
@@ -55,7 +54,8 @@ class RawResults(DynStruct):
             logwarn('Result was corrupted for CID=%d' % rr.qcid)
 # --- /RawResults ---
 
-
+def compute_cscore(cx2_fs):
+    return np.array([ np.sum(fs[fs > 0]) for fs in iter(cx2_fs) ], dtype=np.float32)
 # -----------------
 class QueryManager(AbstractManager):
     ' Handles Searching the Vocab Manager'
@@ -64,6 +64,32 @@ class QueryManager(AbstractManager):
         qm.rr = None # Reference to the last RawResult for debugging
         qm.rr_fnamefmt = None # Filename Format for saving RawResults
         qm.rr_dpath = None
+
+    def cid2_res(qm, qcid, hsother=None):
+        qhs  = qm.hs if hsother is None else hsother
+        dbid = qhs.get_dbid()
+        qcx            = qhs.cm.cid2_cx[qcid]
+        qnid           = qhs.cm.cx2_nid(qcx)
+        (qfpts, qfdsc) = qhs.cm.get_feats(qcx)
+        qchip_size     = qhs.cm.cx2_chip_size(qcx)
+        rr = RawResults(qcx, qcid, qnid, qfpts, qfdsc, qchip_size, dbid)
+        # Populate RawResults
+        qm.repopulate_raw_results(rr, qhs)
+        return rr
+
+    def cx2_res(qm, qcx):
+        'Driver function for the query pipeliene'
+        hs = qm.hs
+        cm = hs.cm
+        (qfpts, qfdsc) = cm.get_feats(qcx)
+        qcid           = cm.cx2_cid[qcx]
+        qnid           = cm.cx2_nid(qcx)
+        logdbg('Querying QCID=%d' % qcid)
+        rr = RawResults(qcx, qcid,  qnid,  qfpts, qfdsc)
+        qm.rr = rr
+        qm.repopulate_raw_results(rr, qhs)
+        res = QueryResult(hs, rr)
+        return res
 
     #@depends_algo
     #@depends_sample
@@ -74,69 +100,36 @@ class QueryManager(AbstractManager):
         qm.rr_dpath = em.hs.iom.ensure_computed_directory('query_results')
         qm.rr_fnamefmt = 'cid%07d'+samp_suffix+algo_suffix
 
-    def query_and_save(qm, qcid, qhs=None):
-        'Query this database using the cid of the database: query_hs'
-        if query_hs is None:
-            dbid = ''
-            qhs = qm.hs
-        else:
-            dbid = qm.hs.get_dbid()
-        # Create RawResults
-        qcx            = qhs.cm.cid2_cx[qcid]
-        qnid           = qhs.cm.cx2_nid(qcx)
-        (qfpts, qfdsc) = qhs.get_feats(qcx)
-        qchip_size     = qhs.cm.cx2_chip_size(qcx)
-        rr = RawResults(qcx, qcid, qnid, qfpts, qfdsc, qchip_size, dbid)
-        # Populate RawResults
-        qm.repopulate_raw_results(rr, qhs)
-
     def repopulate_raw_results(qm, rr, qhs):
-        # Get Query Parameters
+        # Get query parameters
         hs = qm.hs
-        query_pref = qhs.am.algo_prefs.query
-        qindexed_bit   = (qhs is hs) and (rr.qcx in hs.vm.get_train_cx())
-        K              = query_pref.k
-        method         = query_pref.method
-        # Add 1 to k and remove query from matches if query exists in results
-        if qindexed_bit:
-            K += 1
-            logdbg('Query qcx=%d is in database ' % qcx)
-
+        query_pref   = qhs.am.algo_prefs.query
+        K            = query_pref.k
+        method       = query_pref.method
+        cids_to_remove = []
+        if qhs is qm.hs and rr.qcid in hs.vm.get_train_cid():
+            # Remove query id if it could be matched
+            cids_to_remove = [rr.qcid]
+        num_rerank   = query_pref.num_rerank
         xy_thresh    = query_pref.spatial_thresh
         sigma_thresh = query_pref.sigma_thresh
-        num_rerank   = query_pref.num_rerank
-
-        qm.assign_feature_matches_1vM(rr, K, method)
-        qm.spatial_rerank(rr)
+        # Run the actual query
+        qm.assign_feature_matches_1vM(rr, K, method, cids_to_remove)
+        qm.spatial_rerank(rr, num_rerank, xy_thresh, sigma_thresh)
         qm.compute_scores(rr)
         return rr
 
-    def  cx2_res(qm, qcx):
-        'Driver function for the query pipeliene'
-        hs = qm.hs
-        cm = hs.cm
-        (qfpts, qfdsc) = cm.get_feats(qcx)
-        qcid           = cm.cx2_cid[qcx]
-        qnid           = cm.cx2_nid(qcx)
-        logdbg('Querying QCID=%d' % qcid)
-        rr = RawResults(qcx, qcid,  qnid,  qfpts, qfdsc)
-        qm.rr = rr
-        qm.repopulate_raw_results(rr)
-        res = QueryResult(hs, rr)
-        return res
-
-    def  assign_feature_matches_1vM(qm, rr, K, method):
+    def  assign_feature_matches_1vM(qm, rr, K, method, cids_to_remove):
         '''Assigns each query feature to its K nearest database features
         with a similarity-score. Each feature votes for its assigned
         chip with this weight.'''
         logdbg('Assigning feature matches and initial scores')
         # Get managers
-        hs = qm.hs
         cm = qm.hs.cm
         nm = qm.hs.nm
         vm = qm.hs.vm
         # Get intermediate results
-        qcx   = rr.cx
+        qcx   = rr.qcx
         qcid  = rr.qcid
         qfdsc = rr.qfdsc
         qfpts = rr.qfpts
@@ -144,18 +137,22 @@ class QueryManager(AbstractManager):
         num_qf         = qfpts.shape[0]
         # define: Prefix K = list of K+1 nearest; k = K nearest
         # Everything is done in a flat manner, and reshaped at the end.
+        if len(cids_to_remove) > 0: 
+            logdbg('K is being increased by %d to account for removing results'
+                   % len(cids_to_remove))
+            K += len(cids_to_remove)
+        # qfx = Query Feature Index
+        # Kwxs = the Kth result word index ;  Kdists = the Kth result distance
         (qfx2_Kwxs, qfx2_Kdists) = vm.nearest_neighbors(qfdsc, K+1)
-
         # ---
         # Candidate score the nearest neighbor matches
-        #
         # p - pth nearest ; o - k+1th nearest
         score_fn_dict = {
             'DIFF'  : lambda p, o: o - p,
-            'RAT'   : lambda p, o: o / p+eps(1),
-            'LNRAT' : lambda p, o: np.log2(o / p+eps(1)),
+            'RAT'   : lambda p, o: o / p,
+            'LNRAT' : lambda p, o: np.log2(o / p),
             'COUNT' : lambda p, o: 1,
-            'NDIST' : lambda p, o: 10**16 - p,
+            'NDIST' : lambda p, o: 10e16 - p,
             'TFIDF' : lambda wx2_tf, wx_idf, wx: wx2_tf[wx] * wx_idf[wx] }
         score_fn = score_fn_dict[method]
         if method == 'TFIDF':
@@ -165,32 +162,35 @@ class QueryManager(AbstractManager):
                 qfx2_vweight = score_fn(wx2_qtf, vm.wx2_idf, qfx2_wxs)
         else:
             # Distances to the 0-K results
-            p_vote = qfx2_Kdists[:, 0:K]
+            p_vote = qfx2_Kdists[:, 0:K] + 1
             # Distance to the K+1th result
-            o_norm = np.tile(qfx2_Kdists[:, -1].reshape(num_qf, 1), (1, K))
+            o_norm = np.tile(
+                qfx2_Kdists[:, -1].reshape(num_qf, 1) + 1, (1, K))
+            print o_norm
             # Use score method to get weight
-            qfx2_kweight = np.array([score_fn(p, o) for (p, o) in \
-                                     iter(zip(p_vote.flat, o_norm.flat))],
+            qfx2_kweight = np.array(
+                [score_fn(p, o) for (p, o) in 
+                 iter(zip(p_vote.flat, o_norm.flat))],
                                     dtype=np.float32)
             qfx2_kweight.shape = (num_qf, K)
-
-
         # ---
         # Use the scores to cast weighted votes for database chips
         #
-
-        # Remove the query from results
-        # query feature index 2 agg descriptor indexes -> cids -> self_query_bit -> clean_axs
-        #
-        # Feature Matches -> Chip Ids
-        qfx2_Kaxs_   = vm.wx2_axs[qfx2_Kwxs]
-        qfx2_Kcids_  = [vm.ax2_cid[axs] for axs in qfx2_Kaxs_.flat]
-        # Test if each FeatureMatch-ChipId is the Query-ChipId.
-        qfx2_Ksqbit_ = [qcid != cids for cids in qfx2_Kcids_]
-        # Remove FeatureMatches to the Query-ChipId
-        qfx2_Kaxs    = [np.array(axs)[sqbit].tolist() for (axs, sqbit) in\
-                        iter(zip(qfx2_Kaxs_.flat, qfx2_Ksqbit_))]
-
+        if len(cids_to_remove) > 0:
+            # Remove the query from results
+            # query feature index 2 agg descriptor indexes -> cids -> self_query_bit -> clean_axs
+            #
+            # Feature Matches -> Chip Ids
+            logdbg('Query qcid=%r are being removed from results ' % cids_to_remove)
+            qfx2_Kaxs_   = vm.wx2_axs[qfx2_Kwxs]
+            qfx2_Kcids_  = [vm.ax2_cid[axs] for axs in qfx2_Kaxs_.flat]
+            # Test if each FeatureMatch-ChipId is the Query-ChipId.
+            qfx2_Ksqbit_ = [qcid != cids for cids in qfx2_Kcids_]
+            # Remove FeatureMatches to the Query-ChipId
+            qfx2_Kaxs    = [np.array(axs)[sqbit].tolist() for (axs, sqbit) in\
+                            iter(zip(qfx2_Kaxs_.flat, qfx2_Ksqbit_))]
+        else:
+            qfx2_Kaxs = vm.wx2_axs[qfx2_Kwxs]
         # Clean Vote for Info
         qfx2_Kcxs = np.array([vm.ax2_cx(axs) for axs in qfx2_Kaxs])
         qfx2_Kfxs = np.array([vm.ax2_fx[axs] for axs in qfx2_Kaxs])
@@ -216,7 +216,6 @@ class QueryManager(AbstractManager):
         qfx2_normgood_bit = np.logical_and(qfx2_kcxs_vote != qfx2_kcxs_norm, \
                                         qfx2_knxs_vote == qfx2_knxs_norm)
         #qfx2_kweight[qfx2_normgood_bit] = 2
-
 
         # -----
         # Build FeatureMatches and FeaturesScores
@@ -245,10 +244,8 @@ class QueryManager(AbstractManager):
         rr.cx2_fs_ = cx2_fs_
         # --- end assign_feature_matches_1vM ---
 
-    def compute_cscore(cx2_fs):
-        return np.array([ np.sum(fs[fs > 0]) for fs in iter(cx2_fs) ], dtype=np.float32)
 
-    def spatial_rerank(qm, rr, xy_thresh, sigma_thresh, num_rerank):
+    def spatial_rerank(qm, rr, num_rerank, xy_thresh, sigma_thresh):
         '''Recalculates the votes for chips by setting the similarity-score of
          spatially invalid assignments to 0'''
 
@@ -263,7 +260,7 @@ class QueryManager(AbstractManager):
         (w, h)   = rr.qchip_size
 
         # Sort by orderless score
-        cx2_cscore_ = qm.compute_cscore(rr.cx2_fs_)
+        cx2_cscore_ = compute_cscore(rr.cx2_fs_)
         # Get shortlist of top results
         top_cxs = cx2_cscore_.argsort()[::-1] #set diff with order
         invalids = set(cm.invalid_cxs())
@@ -281,7 +278,6 @@ class QueryManager(AbstractManager):
         #Initialize the reranked scores as the normal scores
         cm.load_features(top_cxs) #[np.arange(num_rerank)])
         # For each tcx (top cx) in the shortlist
-        (w, h) = rr.chip_size
         for tcx in top_cxs[0:num_rerank]:
             logdbg('Reranking qcx=%d vs tcx=%d' % (qcx, tcx))
             cid   = cm.cx2_cid[tcx]
@@ -334,11 +330,16 @@ class QueryManager(AbstractManager):
     def compute_scores(qm, rr):
         ' Aggregates the votes for chips into votes for animal names'
         logdbg('Aggregating Feature Scores ')
-        nm, vm, cm = qm.hs.get_managers('nm', 'vm', 'cm')
-        cx2_fm, cx2_fs = rr.dynget('cx2_fm', 'cx2_fs')
+        # get managers
+        nm = qm.hs.nm
+        vm = qm.hs.vm
+        cm = qm.hs.cm
+        # get intermediate results
+        cx2_fm = rr.cx2_fm
+        cx2_fs = rr.cx2_fs
 
         cx2_nscore = -np.ones(cm.max_cx + 1, dtype=np.float32)
-        cx2_cscore = qm.compute_cscore(cx2_fs)
+        cx2_cscore = compute_cscore(cx2_fs)
 
         nx2_fx2_scores = {}
         # Analyze the freq of a keypoint matching a name later
@@ -377,23 +378,25 @@ class QueryManager(AbstractManager):
 
 
 # ----------------
-class QueryResult(AbstractManager):
+class QueryResult(AbstractPrintable):
     'Wrapper around raw results which computes the top results'
-    def __init__(res, hs, rr):
-        super(QueryResult, res).__init__(hs)
+    def __init__(res, hs, rr, qhs=None):
+        super(QueryResult, res).__init__(['hs','qhs'])
         logdbg('Constructing Query Result')
         res.rr = rr
+        res.hs  = hs
+        res.qhs = hs if qhs is None else qhs 
         # Set Result Settings based on preferences
         result_prefs = hs.am.algo_prefs.results
-        res.score_type         = result_prefs.score
+        res.score_type          = result_prefs.score
         res.one_result_per_name = result_prefs.one_result_per_name
         # Return all matches higher than this threshold. Subject to...
-        res.top_thresh         = result_prefs.match_threshold
+        res.top_thresh          = result_prefs.match_threshold
         # And return between this many results
-        res.num_top_min        = result_prefs.min_num_results
-        res.num_top_max        = result_prefs.max_num_results
+        res.num_top_min         = result_prefs.min_num_results
+        res.num_top_max         = result_prefs.max_num_results
         # And add extra runners up for context
-        res.num_extra_return   = result_prefs.extra_num_results
+        res.num_extra_return    = result_prefs.extra_num_results
 
     def _get_num_top(res, xsort, scores):
         '''Helper function -
@@ -438,7 +441,9 @@ class QueryResult(AbstractManager):
     def cx_sort(res): # Sorted Chips
         'returns the valid cxs, sorted by scores, '
         cx_sort_ = res.scores().argsort()[::-1]
-        invalids = set(res.hs.cm.invalid_cxs().tolist()+[res.rr.qcx])
+        invalids = set(res.hs.cm.invalid_cxs().tolist())
+        if res.hs is res.qhs:
+            invalids.add(res.rr.qcx)
         return np.array([cx for cx in cx_sort_ \
                          if cx not in invalids], dtype=np.uint32)
     def nxcx_sort(res): 
@@ -463,7 +468,7 @@ class QueryResult(AbstractManager):
         return res.result_str()
 
     def qcid2_(res, *dynargs): #change to query2_?
-        cm = res.hs.cm
+        cm = res.qhs.cm
         return cm.cx2_(res.rr.qcx, *dynargs)
 
     def tcid2_(res, *dynargs): #change to top2_?
@@ -489,6 +494,9 @@ class QueryResult(AbstractManager):
     def get_recall(res):
         raise NotImplementedError('implement ground truth scoring metrics here')
         pass
+
+    def visualize(res):
+        res.hs.dm.show_query(res)
 
     def result_str(res):#, scores=None):
         # TODO: Move this to experiment output format. and use this instead

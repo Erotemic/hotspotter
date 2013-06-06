@@ -1,12 +1,11 @@
-import types
-import re
+from PIL import Image 
+from hotspotter.other.AbstractPrintable import AbstractDataManager
+from hotspotter.other.logger import logmsg, logdbg, logerr, logio, logwarn 
 import numpy as np
 import os.path
-from hotspotter.other.AbstractPrintable import AbstractDataManager
-from hotspotter.other.helpers   import filecheck
-from hotspotter.other.logger    import logmsg, logdbg, logerr, logio, logwarn 
-from pylab           import find
-from PIL             import Image 
+import pylab
+import re
+import types
 
 # Chip Manager handle the chips
 # this entails managing:
@@ -49,7 +48,7 @@ class ChipManager(AbstractDataManager):
         #logdbg('Requested Data: %s of CX= %s' % (str(dynargs), str(cx_list)))
         to_return = []
         cid = cm.cx2_cid[cx_list]
-        invalid_x = find(cid == 0)
+        invalid_x = pylab.find(cid == 0)
         if len(invalid_x) > 0:
             logerr('Requested invalid cxs: '+str(cx_list[invalid_x]))
         for arg in dynargs: 
@@ -225,9 +224,9 @@ class ChipManager(AbstractDataManager):
 
     # More convinence functions
     def get_valid_cxs(cm): 
-        return find(cm.cx2_cid > 0)
+        return pylab.find(cm.cx2_cid > 0)
     def get_invalid_cxs(cm):
-        return find(cm.cx2_cid == 0)
+        return pylab.find(cm.cx2_cid == 0)
     def invalid_cxs(cm):
         'depricated'
         return cm.get_invalid_cxs() 
@@ -263,7 +262,7 @@ class ChipManager(AbstractDataManager):
         return [ocx if nx != UNIDEN_NX else [] for (nx,ocx) in zip(nx_list, other_cxs)]
         #return [nm.nx2_cx_list[nx] for nx in nx_list]
     def all_cxs(cm):
-        return np.array(find(cm.cx2_cid > 0), dtype=np.uint32)
+        return np.array(pylab.find(cm.cx2_cid > 0), dtype=np.uint32)
     def cid2_valid_bit(cm,cids): # Tests if CID is managed.
         if type(cids) is types.ListType:
             # Check InverseIndex Overflow
@@ -509,12 +508,15 @@ class ChipManager(AbstractDataManager):
         #return trans_center.dot(unrotate).dot(trans_uncenter).dot(unscale).dot(trans_img)
         return trans_uncenter.dot(unrotate).dot(trans_center)
 
+    def cx2_is_chip_computed(cm, cx):
+        return os.path.exists(cm.hs.iom.get_chip_fpath(cm.cid(cx)))
+
     def cx2_chip_fpath(cm, cx):
         'Gets chip fpath with checks'
         iom = cm.hs.iom
         cid = cm.cid(cx)
         chip_fpath  = iom.get_chip_fpath(cid)
-        if not filecheck(chip_fpath): 
+        if not os.path.exists(chip_fpath): 
             cm.compute_chip(cx)
         return chip_fpath
     
@@ -628,14 +630,15 @@ class ChipManager(AbstractDataManager):
             pil_chip = pil_chip.rotate(angle_degrees, resample=Image.BICUBIC, expand=1)
         return pil_chip
 
-    def  compute_chip(cm, cx):
+    def  compute_chip(cm, cx, showmsg=True):
         #TODO Save a raw chip and thumb
         iom = cm.hs.iom
         am  = cm.hs.am
         cid = cm.cx2_cid[cx]
         chip_fpath  = iom.get_chip_fpath(cid)
         chip_fname = os.path.split(chip_fpath)[1]
-        logmsg(('\nComputing Chip: cid=%d fname=%s\n'+am.get_algo_name(['preproc'])) % (cid, chip_fname))
+        if showmsg:
+            logmsg(('\nComputing Chip: cid=%d fname=%s\n'+am.get_algo_name(['preproc'])) % (cid, chip_fname))
         # --- Preprocess the Raw Chip
         # Chip will be roated on disk np.load. Just scale for now
         chip = cm.cx2_pil_chip(cx, scaled=True, preprocessed=True,
@@ -649,7 +652,8 @@ class ChipManager(AbstractDataManager):
         thumb_scale = min(thumb_size/float(cw), thumb_size/float(ch))
         (tw, th) = (int(round(cw)), int(round(ch)))
         chip_thumb = chip.resize((tw, th), Image.ANTIALIAS)
-        logdbg('Saving Computed Chip Thumb to :'+chip_thumb_fpath)
+        if showmsg:
+            logdbg('Saving Computed Chip Thumb to :'+chip_thumb_fpath)
         chip_thumb.save(chip_thumb_fpath, 'JPEG')
 
     def load_features(cm, _cxs=None, force_recomp=False):
@@ -683,7 +687,7 @@ class ChipManager(AbstractDataManager):
             if cid <= 0:
                 logwarn('WARNING: IX='+str(cx)+' is invalid'); continue
             chiprep_fpath = cm.hs.iom.get_chiprep_fpath(cid)
-            if not force_recomp and filecheck(chiprep_fpath):
+            if not force_recomp and os.path.exists(chiprep_fpath):
                 logdbg('Loading features in '+chiprep_fpath)
                 #Reload representation
                 npz  = np.load(chiprep_fpath)

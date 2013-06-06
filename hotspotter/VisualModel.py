@@ -90,6 +90,12 @@ class VisualModel(AbstractManager):
         return (qfx2_Kwxs, qfx2_Kdists)
 
 
+    def ensure_model(vm):
+        'Ensures that the model is built'
+        if vm.isDirty:
+            return vm.build_model()
+        return True
+
     #Probably will have to make this over cids eventually\ Maybe
     def build_model(vm, force_recomp=False):
         ''' Builds the model, if needed. Tries to reload if it can '''

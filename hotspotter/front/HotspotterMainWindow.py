@@ -241,6 +241,13 @@ class HotspotterMainWindow(QMainWindow):
         tbl.show()
         tbl.blockSignals(prevBlockSignals)
 
+
+    @pyqtSlot(dict, name='updateDBStatsSlot')
+    @gui_log
+    def updateDBStatsSlot(hsgui, stats):
+        hsgui.setWindowTitle(stats['title'])
+        
+
     def updateSelSpinsSlot(hsgui, cid, gid):
         hsgui.prev_cid = cid
         hsgui.prev_gid = gid

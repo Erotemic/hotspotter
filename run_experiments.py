@@ -9,12 +9,15 @@ from os.path import join
 import os, cPickle
 import numpy as np
 import pylab
+import sys
 
 print "RUNNING EXPERIMENTS"
 
 hsl.enable_global_logs()
 
 workdir = '/media/SSD_Extra/'
+if sys.platform == 'win32':
+    workdir = 'D:/data/work/LF_all/'
 bajo_bonito = workdir+'LF_Bajo_bonito'
 optimizas   = workdir+'LF_OPTIMIZADAS_NI_V_E'
 westpoint   = workdir+'LF_WEST_POINT_OPTIMIZADAS'

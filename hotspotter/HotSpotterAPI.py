@@ -324,6 +324,11 @@ class HotSpotterAPI(AbstractPrintable):
         hs.iom.remove_computed_files_with_pattern('*')
         hs.unload_all_features()
     # ---
+    @func_log
+    def delete_precomputed_results(hs):
+        logmsg('Deleting precomputed results')
+        hs.iom.remove_computed_files_with_pattern('rr_*')
+    # ---
     def add_roi_to_all_images(hs):
         cm, gm, nm = hs.get_managers('cm','gm','nm')
         gx_list = gm.get_empty_gxs()
@@ -387,7 +392,7 @@ class HotSpotterAPI(AbstractPrintable):
         qhs = hs if qhs is None else qhs
         qcx = qhs.cm.cx(qcid)
         hs.ensure_model()
-        rawres = hs.qm.cx2_rr(qcx)
+        rawres = hs.qm.cx2_rr(qcx, qhs)
         return QueryResult(hs, rawres, qhs)
 
 

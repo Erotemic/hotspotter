@@ -2,31 +2,32 @@ from hotspotter.algo.spatial_functions import ransac
 from hotspotter.other.AbstractPrintable import AbstractManager, AbstractPrintable
 from hotspotter.other.ConcretePrintable import DynStruct
 from hotspotter.other.helpers import alloc_lists
-from hotspotter.other.logger import logdbg, logerr
+from hotspotter.other.logger import logdbg, logerr, logmsg, logwarn
 from numpy import spacing as eps
 from os.path import join
-import os, cPickle
 import numpy as np
+import os
 
 # -----------------
 class RawResults(DynStruct):
     ' Intermediate class for result storage '
 
-    def __init__(rr, qcx, qcid,  qnid,  qfpts, qfdsc, qchip_size, dbid=''):
+    def __init__(rr, qcx, qcid, qnid, dbid=''):
         super(RawResults, rr).__init__()
-        # Database query information
-        rr.dbid  = dbid # dbid of the queried database. ''=current
-        # Chip query Information
+        # Idenfication information
         rr.qcx   = qcx
         rr.qcid  = qcid
         rr.qnid  = qnid
-        rr.qfpts = qfpts
-        rr.qfdsc = qfdsc
-        rr.qchip_size = qchip_size
-        # Result Information
+        rr.dbid  = dbid
+        # Query information
+        rr.qfpts = None
+        rr.qfdsc = None
+        rr.qchip_size = None
+        # Intermediate information
         rr.cx2_cscore_ = None
-        rr.cx2_nscore  = None
         rr.cx2_fs_     = None
+        # Result information
+        rr.cx2_nscore  = None
         rr.cx2_fs      = None
         rr.cx2_fm      = None
 
@@ -34,25 +35,37 @@ class RawResults(DynStruct):
         'Save some memory by not saving query descriptors.'
         rr.qfdsc = None
         rr.qfpts = None
+        rr.cx2_fs_ = None
 
     def rr_fpath(rr, qhs):
         return join(qhs.qm.rr_dpath, 'rr_' + rr.dbid + '_' + \
-                    (qhs.qm.rr_fnamefmt % rr.qcid) + '.pkl')
+                    (qhs.qm.rr_fnamefmt % rr.qcid) + '.npz')
+
+    def has_result(rr, qhs):
+        return os.path.exists(rr.rr_fpath(qhs))
 
     def save_result(rr, qhs):
         'Saves the result to the given database'
-        with open(qm.rr_fpath(rr, qhs), 'wb') as rr_file:
-            cPickle.dump(rr, rr_file.__dict__)
+        rr.presave_clean()
+        rr_fpath = rr.rr_fpath(qhs)
+        to_save = rr.__dict__
+        np.savez(rr_fpath, **to_save)
 
     def load_result(rr, qhs):
         'Loads the result from the given database'
+        rr_fpath = rr.rr_fpath(qhs)
         try:
-            with open(qm.rr_fpath(rr, qhs), 'rb') as rr_file:
-                rr.__dict__ = cPickle.load(rr_file)
-        except EOFError:
-            os.remove(qm.rr_fpath(rr, qhs))
-            logwarn('Result was corrupted for CID=%d' % rr.qcid)
-# --- /RawResults ---
+            npz = np.load(rr_fpath)
+            for _key in npz.files:
+                if _key in ['qcx','qcid','qnid','dbid']:
+                    rr.__dict__[_key] = npz[_key].tolist()
+                else: 
+                    rr.__dict__[_key] = npz[_key]
+            # Numpy saving is werid. gotta cast
+        except Exception as ex:
+            os.remove(rr.rr_fpath(qhs))
+            logwarn('Load Result Exception : '+str(ex)+'\nResult was corrupted for CID=%d' % rr.qcid)
+# --- /class RawResults
 
 def compute_cscore(cx2_fs):
     return np.array([ np.sum(fs[fs > 0]) for fs in iter(cx2_fs) ], dtype=np.float32)
@@ -61,19 +74,30 @@ class QueryManager(AbstractManager):
     ' Handles Searching the Vocab Manager'
     def __init__(qm, hs):
         super(QueryManager, qm).__init__(hs)
-        qm.rr_fnamefmt = None # Filename Format for saving RawResults
+        qm.rr_fnamefmt = None # Filename Format for saving raw results
         qm.rr_dpath = None
+        qm.rr = None
+        qm.update_rr_fnamefmt()
 
-    def cx2_rr(qm, qcx, hsother=None):
-        qhs  = qm.hs if hsother is None else hsother
+    def cx2_rr(qm, qcx, qhs=None):
+        qhs  = qm.hs if qhs is None else qhs
         dbid = qhs.get_dbid()
         qcid           = qhs.cm.cx2_cid[qcx]
         qnid           = qhs.cm.cx2_nid(qcx)
-        (qfpts, qfdsc) = qhs.cm.get_feats(qcx)
-        qchip_size     = qhs.cm.cx2_chip_size(qcx)
-        rr = RawResults(qcx, qcid, qnid, qfpts, qfdsc, qchip_size, dbid)
-        # Populate RawResults
-        qm.repopulate_raw_results(rr, qhs)
+        rr = RawResults(qcx, qcid, qnid, dbid)
+        qm.rr = rr
+        # Populate raw results
+        if rr.has_result(qhs):
+            logmsg('Loading query.')
+            rr.load_result(qhs)
+        else:
+            logmsg('Recomputing query.')
+            (qfpts, qfdsc) = qhs.cm.get_feats(qcx)
+            rr.qfpts = qfpts
+            rr.qfdsc = qfdsc
+            rr.qchip_size = qhs.cm.cx2_chip_size(qcx)
+            qm.repopulate_raw_results(rr, qhs)
+            rr.save_result(qhs)
         return rr
 
     #@depends_algo
@@ -82,7 +106,7 @@ class QueryManager(AbstractManager):
         depends = ['chiprep', 'preproc', 'model', 'query']
         algo_suffix = qm.hs.am.get_algo_suffix(depends)
         samp_suffix = qm.hs.vm.get_samp_suffix()
-        qm.rr_dpath = em.hs.iom.ensure_computed_directory('query_results')
+        qm.rr_dpath = qm.hs.iom.ensure_computed_directory('query_results')
         qm.rr_fnamefmt = 'cid%07d'+samp_suffix+algo_suffix
 
     def repopulate_raw_results(qm, rr, qhs):
@@ -115,7 +139,6 @@ class QueryManager(AbstractManager):
         vm = qm.hs.vm
         # Get intermediate results
         qcx   = rr.qcx
-        qcid  = rr.qcid
         qfdsc = rr.qfdsc
         qfpts = rr.qfpts
 
@@ -151,7 +174,6 @@ class QueryManager(AbstractManager):
             # Distance to the K+1th result
             o_norm = np.tile(
                 qfx2_Kdists[:, -1].reshape(num_qf, 1) + 1, (1, K))
-            print o_norm
             # Use score method to get weight
             qfx2_kweight = np.array(
                 [score_fn(p, o) for (p, o) in 
@@ -170,12 +192,13 @@ class QueryManager(AbstractManager):
             qfx2_Kaxs_   = vm.wx2_axs[qfx2_Kwxs]
             qfx2_Kcids_  = [vm.ax2_cid[axs] for axs in qfx2_Kaxs_.flat]
             # Test if each FeatureMatch-ChipId is the Query-ChipId.
-            qfx2_Ksqbit_ = [qcid != cids for cids in qfx2_Kcids_]
+            qfx2_Ksqbit_ = [True - np.in1d(qcid, cids_to_remove) for cids in qfx2_Kcids_]
             # Remove FeatureMatches to the Query-ChipId
             qfx2_Kaxs    = [np.array(axs)[sqbit].tolist() for (axs, sqbit) in\
                             iter(zip(qfx2_Kaxs_.flat, qfx2_Ksqbit_))]
         else:
-            qfx2_Kaxs = vm.wx2_axs[qfx2_Kwxs]
+            qfx2_Kaxs_ = vm.wx2_axs[qfx2_Kwxs]
+            qfx2_Kaxs  = [np.array(axs).tolist() for axs in qfx2_Kaxs_.flat]
         # Clean Vote for Info
         qfx2_Kcxs = np.array([vm.ax2_cx(axs) for axs in qfx2_Kaxs])
         qfx2_Kfxs = np.array([vm.ax2_fx[axs] for axs in qfx2_Kaxs])
@@ -215,7 +238,8 @@ class QueryManager(AbstractManager):
                             qfx2_kweight.flat, \
                             qfx2_kcxs_vote.flat, \
                             qfx2_kfxs_vote.flat)):
-            for (vote_cx, vote_fx) in iter(zip(cxs, fxs)):
+
+            for (vote_cx, vote_fx) in iter(zip(np.nditer(cxs), np.nditer(fxs))):
                 cx2_fm[vote_cx].append((qfx, vote_fx))
                 cx2_fs_[vote_cx].append(qfs)
 

@@ -61,14 +61,13 @@ class QueryManager(AbstractManager):
     ' Handles Searching the Vocab Manager'
     def __init__(qm, hs):
         super(QueryManager, qm).__init__(hs)
-        qm.rr = None # Reference to the last RawResult for debugging
         qm.rr_fnamefmt = None # Filename Format for saving RawResults
         qm.rr_dpath = None
 
-    def cid2_res(qm, qcid, hsother=None):
+    def cx2_rr(qm, qcx, hsother=None):
         qhs  = qm.hs if hsother is None else hsother
         dbid = qhs.get_dbid()
-        qcx            = qhs.cm.cid2_cx[qcid]
+        qcid           = qhs.cm.cx2_cid[qcx]
         qnid           = qhs.cm.cx2_nid(qcx)
         (qfpts, qfdsc) = qhs.cm.get_feats(qcx)
         qchip_size     = qhs.cm.cx2_chip_size(qcx)
@@ -76,20 +75,6 @@ class QueryManager(AbstractManager):
         # Populate RawResults
         qm.repopulate_raw_results(rr, qhs)
         return rr
-
-    def cx2_res(qm, qcx):
-        'Driver function for the query pipeliene'
-        hs = qm.hs
-        cm = hs.cm
-        (qfpts, qfdsc) = cm.get_feats(qcx)
-        qcid           = cm.cx2_cid[qcx]
-        qnid           = cm.cx2_nid(qcx)
-        logdbg('Querying QCID=%d' % qcid)
-        rr = RawResults(qcx, qcid,  qnid,  qfpts, qfdsc)
-        qm.rr = rr
-        qm.repopulate_raw_results(rr, qhs)
-        res = QueryResult(hs, rr)
-        return res
 
     #@depends_algo
     #@depends_sample

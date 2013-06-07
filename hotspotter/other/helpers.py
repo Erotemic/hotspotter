@@ -66,8 +66,9 @@ def alloc_lists(num_alloc):
 class Timer(object):
     ''' Used to time statments with a with statment
     e.g with Timer() as t: some_function()'''
-    def __init__(self, name=''):
-        self.name = name
+    def __init__(self, outlist=[]):
+        # outlist is a list to append output to
+        self.outlist   = outlist
         self.tstart = -1
 
     def __enter__(self):
@@ -75,6 +76,6 @@ class Timer(object):
 
     def __exit__(self, type, value, trace):
         tend = time.time()
-        if self.name != '':
-            print '[%s]' % self.name,
-        print 'Elapsed: %s' % (tend - self.tstart)
+        ellapsed = (tend - self.tstart)
+        self.outlist.append(ellapsed)
+        print 'Elapsed: %s seconds' % ellapsed

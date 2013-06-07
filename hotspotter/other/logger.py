@@ -75,10 +75,11 @@ def callinfo(num_up=2):
 #---------------
 class HotSpotterLogger(object):
     def enable_global_logs(hsl):
-        print "Enabling RealTime Logging"
+        logfile = os.path.realpath('hotspotter_global_logs.log')
+        print('Enableing active logging to file: ' +  logfile)
         hsl.global_logs_on = True
         if hsl.global_logs_on:
-            hsl.global_log_file = open('hotspotter_global_logs.log','a')
+            hsl.global_log_file = open(logfile,'a')
     def __init__(hsl):
         hsl.error_num = 0
         hsl.global_logs_on = False

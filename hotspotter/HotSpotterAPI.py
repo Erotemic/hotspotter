@@ -17,23 +17,24 @@ Code Concepts:
     possible.
 
 '''
-from Experiments import ExperimentManager
-from AlgorithmManager import AlgorithmManager
-from ChipManager import ChipManager
-from IOManager import IOManager
-from ImageManager import ImageManager
-from NameManager import NameManager
-from QueryManager import QueryManager, QueryResult
-from VisualModel import VisualModel
-from front.DrawManager import DrawManager
-from front.UIManager import UIManager
-from other.AbstractPrintable import AbstractPrintable
-from other.ConcretePrintable import Pref
-from other.logger import logdbg, logerr, logmsg, logwarn, func_log
-from other.helpers import dircheck, filecheck
+from hotspotter.AlgorithmManager import AlgorithmManager
+from hotspotter.ChipManager import ChipManager
+from hotspotter.Experiments import ExperimentManager
+from hotspotter.IOManager import IOManager
+from hotspotter.ImageManager import ImageManager
+from hotspotter.NameManager import NameManager
+from hotspotter.Parallelize import parallelize_tasks, cpu_count
+from hotspotter.QueryManager import QueryManager, QueryResult
+from hotspotter.VisualModel import VisualModel
+from hotspotter.front.DrawManager import DrawManager
+from hotspotter.front.UIManager import UIManager
+from hotspotter.other.AbstractPrintable import AbstractPrintable
+from hotspotter.other.ConcretePrintable import Pref
+from hotspotter.other.helpers import dircheck, filecheck
+from hotspotter.other.logger import logdbg, logerr, logmsg, logwarn, func_log
 import cPickle
-import types
 import os.path
+import types
 class HotSpotterAPI(AbstractPrintable):
 
     def init_preferences(hs, default_bit=False):
@@ -43,9 +44,11 @@ class HotSpotterAPI(AbstractPrintable):
         # Create a Preference Object With a Save Path
         # Pref is a special class. __setattrib__ is overridden
         if hs.core_prefs == None:
-            hs.core_prefs = Pref(fpath=iom.get_prefs_fpath('core_prefs'), hidden=True)
-        hs.core_prefs.database_dpath = None
+            hs.core_prefs = Pref(fpath=iom.get_prefs_fpath('core_prefs'), hidden=False)
+        hs.core_prefs.database_dpath = hs.db_dpath
         hs.core_prefs.legacy_bit = Pref(True)
+        hs.core_prefs.num_procs  = Pref(cpu_count() + 1)
+
         if not default_bit:
             hs.core_prefs.load()
 
@@ -108,10 +111,14 @@ class HotSpotterAPI(AbstractPrintable):
             db_dpath = str(hs.core_prefs.database_dpath)
         if db_dpath in [None, 'None'] or\
            not os.path.exists(db_dpath): # Check validity
+            logwarn('db_dpath='+repr(db_dpath)+' is invalid')
             db_dpath = '' 
-            logwarn('Saved database_dpath was invalid')
         if db_dpath == '': # Prompt The User. TODO Move this to Facade/UIManager
-            db_dpath = hs.uim.select_database()
+            logmsg('what database should I open?')
+            try: 
+                db_dpath = hs.uim.select_database()
+            except: 
+                logerr(' Was unable to prompt user with QT')
         return db_dpath
 
     @func_log
@@ -181,7 +188,7 @@ class HotSpotterAPI(AbstractPrintable):
         hs.iom = IOManager(hs) # Maintains path structures
         if delete_home_dir_bit:
             # Developer hack to delete the home dir when big things change
-            hs.delete_home_pref_directory()
+            hs.delete_preferences()
         # CLASSES WITH PREFERENCES
         hs.uim = UIManager(hs) # Interface to the QtGui
         hs.dm = DrawManager(hs) # Matplotlib interface. Draws on a GUI
@@ -295,11 +302,8 @@ class HotSpotterAPI(AbstractPrintable):
         hs.am.init_preferences(default_bit=True)
         hs.dm.init_preferences(default_bit=True)
         hs.uim.init_preferences(default_bit=True)
-        #hs.init_preferences(default_bit=True)
+        hs.init_preferences(default_bit=True)
 
-    def delete_home_pref_directory(hs):
-        'depricated for a bad name. Use delete_preferences() instead'
-        hs.delete_preferences()
     @func_log
     def delete_preferences(hs):
         'Deletes the preference files in the ~/.hotspotter directory'
@@ -329,90 +333,62 @@ class HotSpotterAPI(AbstractPrintable):
             cm.add_chip(-1, nm.UNIDEN_NX(), gx, [0, 0, gw, gh], 0)
     # ---
     @func_log
-    def precompute_chips(hs):
-        logmsg('Precomputing the chips')
-        uncomputed_cx_list = []
-        valid_cxs = hs.cm.get_valid_cxs()
-        logmsg('  * There are %d valid chips' % len(valid_cxs))
-        for cx in iter(valid_cxs):
-            if not hs.cm.cx2_is_chip_computed(cx):
-                uncomputed_cx_list += [cx]
-        total = len(uncomputed_cx_list)
-        logmsg('  * There are %d uncomputed chips' % total)
+    def precompute_chips(hs, num_procs=None):
+        from hotspotter.ChipFunctions import \
+                get_task_list, chip_fpath,\
+                compute_chip, compute_chip_args
+        logmsg('Ensuring all %d chips are computed' % hs.cm.num_c)
+        chip_task_list = get_task_list\
+                (hs, chip_fpath, compute_chip, compute_chip_args)
+        total = len(chip_task_list)
+        if total == 0:
+            logmsg('  * The chips are all clean')
+            return True
+        logmsg('  * There are %d chips to compute' % len(chip_task_list))
+        num_procs = hs.core_prefs.num_procs \
+                if num_procs is None else num_procs
+        parallelize_tasks(chip_task_list, num_procs)
+        return True
 
-        __USE_MULTIPROCESSING__ = True
-
-        if not __USE_MULTIPROCESSING__:
-            for count, cx in enumerate(uncomputed_cx_list):
-                logmsg('  * computing %d / %d ' % (count, total))
-                hs.cm.compute_chip(cx)
-            eval('return')
-        else:
-            # http://docs.python.org/2/library/multiprocessing.html
-            import time, random
-            import multiprocessing as mp
-            from multiprocessing import Process, Queue, current_process, freeze_support
-            def calculate(func, args):
-                result = func(*args)
-                return '%s says that %s%s = %s' % \
-                    (mp.current_process().name, func.__name__, args, result)
-            def worker(input, output):
-                for func, args in iter(input.get, 'STOP'):
-                    result = calculate(func, args)
-                    output.put(result)
-
-            NUMBER_OF_PROCESSES = 4
-            TASKS = [(hs.cm.compute_chip, (cx, False)) for cx in uncomputed_cx_list]
-            task_queue = mp.Queue()
-            done_queue = mp.Queue()
-            print 'Submiting tasks:'
-            for task in TASKS:
-                task_queue.put(task)
-
-            print 'Starting '+str(NUMBER_OF_PROCESSES)+ ' processes'
-            for i in range(NUMBER_OF_PROCESSES):
-                Process(target=worker, args=(task_queue, done_queue)).start()
-
-            # Get and print results
-            print 'Unordered results:'
-            for i in range(len(TASKS)):
-                print '\t', done_queue.get()
-
-            # Tell child processes to stop
-            for i in range(NUMBER_OF_PROCESSES):
-                task_queue.put('STOP')
-
-            #import thread
-            #from threading import Thread
-            #class ComputeChipThread(Thread):
-                #def __init__ (self, cx, cm):
-                    #Thread.__init__(self)
-                    #self.cx = cx
-                    #self.cm = cm
-                #def run(self):
-                    #mutex.acquire()
-                    #output.append(cm.compute_chip(cx,showmsg=False))
-                    #mutex.release()
-            #threads = []
-            #output = []
-            #mutex = thread.allocate_lock()
-            #for count, cx in enumerate(uncomputed_cx_list):
-                #logmsg('  * threading %d / %d ' % (count, total))
-                #current = ComputeChipThread(cx, cm)
-                #threads.append(current)
-                #current.start()
-            #for t in threads:
-                #t.join()
 
     @func_log
-    def query(hs, cid, hsother=None):
+    def precompute_chipreps(hs, num_procs=None):
+        from hotspotter.ChipFunctions import \
+                get_task_list, chiprep_fpath,\
+                compute_chiprep, compute_chiprep_args
+        logmsg('Ensuring all %d chip representations are computed' % hs.cm.num_c)
+        chiprep_task_list = get_task_list\
+                (hs, chiprep_fpath, compute_chiprep, compute_chiprep_args)
+        total = len(chiprep_task_list)
+        if total == 0: 
+            logmsg('  * The chipreps are all clean')
+            return True
+        logmsg('  * There are %d chipreps to compute' % len(chiprep_task_list))
+        num_procs = hs.core_prefs.num_procs \
+                if num_procs is None else num_procs
+        parallelize_tasks(chiprep_task_list, num_procs)
+        return True
+
+    @func_log
+    def ensure_model(hs):
+        logdbg('Ensuring Computed Chips')
+        hs.precompute_chips()
+        logdbg('Ensuring Computed ChipsReps')
+        hs.precompute_chipreps()
+        logdbg('Ensuring Visual Model')
+        hs.vm.build_model()
+
+    @func_log
+    def query(hs, qcid, qhs=None):
         '''
         Runs query against this database with cid. 
         If hsother is specified uses the chip from that database
         '''
-        hs.vm.ensure_model()
-        rawres = hs.qm.cid2_res(cid)
-        return QueryResult(hs, rawres, hsother)
+        qhs = hs if qhs is None else qhs
+        qcx = qhs.cm.cx(qcid)
+        hs.ensure_model()
+        rawres = hs.qm.cx2_rr(qcx)
+        return QueryResult(hs, rawres, qhs)
 
 
     @func_log

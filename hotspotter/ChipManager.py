@@ -6,6 +6,7 @@ import os.path
 import pylab
 import re
 import types
+from hotspotter.ChipFunctions import compute_chip_driver
 
 # Chip Manager handle the chips
 # this entails managing:
@@ -508,9 +509,6 @@ class ChipManager(AbstractDataManager):
         #return trans_center.dot(unrotate).dot(trans_uncenter).dot(unscale).dot(trans_img)
         return trans_uncenter.dot(unrotate).dot(trans_center)
 
-    def cx2_is_chip_computed(cm, cx):
-        return os.path.exists(cm.hs.iom.get_chip_fpath(cm.cid(cx)))
-
     def cx2_chip_fpath(cm, cx):
         'Gets chip fpath with checks'
         iom = cm.hs.iom
@@ -589,6 +587,7 @@ class ChipManager(AbstractDataManager):
         else:
             return dtype(round(cw)), dtype(round(ch))
 
+    # DEPRICATED
     def _cut_out_roi(cm, img, roi):
         logdbg('Image shape is: '+str(img.shape))
         [gh, gw]        = [ x-1 for x in img.shape[0:2] ]
@@ -599,6 +598,7 @@ class ChipManager(AbstractDataManager):
         raw_chip = img[ ry1:ry2, rx1:rx2, : ]
         return raw_chip
 
+    # DEPRICATED
     def cx2_raw_chip(cm, cx):
         # --- Cut out the Raw Chip from Img
         # TODO: Save raw chips to disk?
@@ -611,6 +611,7 @@ class ChipManager(AbstractDataManager):
 
     # TODO: Just have a flag for each preprocessing step. 
     # Move this over from AlgorithmManager
+    # DEPRICATEDISH
     def cx2_pil_chip(cm, cx, scaled=True, preprocessed=True, rotated=False, colored=False):
         am = cm.hs.am
         # Convert the raw image to PIL, and uncolor unless otherwise requested
@@ -630,31 +631,32 @@ class ChipManager(AbstractDataManager):
             pil_chip = pil_chip.rotate(angle_degrees, resample=Image.BICUBIC, expand=1)
         return pil_chip
 
-    def  compute_chip(cm, cx, showmsg=True):
+    def compute_chip(cm, cx, showmsg=True):
+        compute_chip_driver(cm.hs, cx, showmsg)
         #TODO Save a raw chip and thumb
-        iom = cm.hs.iom
-        am  = cm.hs.am
-        cid = cm.cx2_cid[cx]
-        chip_fpath  = iom.get_chip_fpath(cid)
-        chip_fname = os.path.split(chip_fpath)[1]
-        if showmsg:
-            logmsg(('\nComputing Chip: cid=%d fname=%s\n'+am.get_algo_name(['preproc'])) % (cid, chip_fname))
-        # --- Preprocess the Raw Chip
-        # Chip will be roated on disk np.load. Just scale for now
-        chip = cm.cx2_pil_chip(cx, scaled=True, preprocessed=True,
-                               rotated=False, colored=False)
-        logdbg('Saving Computed Chip to :'+chip_fpath)
-        chip.save(chip_fpath, 'PNG')
+        #iom = cm.hs.iom
+        #am  = cm.hs.am
+        #cid = cm.cx2_cid[cx]
+        #chip_fpath  = iom.get_chip_fpath(cid)
+        #chip_fname = os.path.split(chip_fpath)[1]
+        #if showmsg:
+            #logmsg(('\nComputing Chip: cid=%d fname=%s\n'+am.get_algo_name(['preproc'])) % (cid, chip_fname))
+        ## --- Preprocess the Raw Chip
+        ## Chip will be roated on disk np.load. Just scale for now
+        #chip = cm.cx2_pil_chip(cx, scaled=True, preprocessed=True,
+                               #rotated=False, colored=False)
+        #logdbg('Saving Computed Chip to :'+chip_fpath)
+        #chip.save(chip_fpath, 'PNG')
         # --- Write Chip and Thumbnail to disk
-        chip_thumb_fpath  = iom.get_chip_thumb_fpath(cid)
-        (cw, ch) = chip.size
-        thumb_size = cm.hs.dm.draw_prefs.thumbnail_size
-        thumb_scale = min(thumb_size/float(cw), thumb_size/float(ch))
-        (tw, th) = (int(round(cw)), int(round(ch)))
-        chip_thumb = chip.resize((tw, th), Image.ANTIALIAS)
-        if showmsg:
-            logdbg('Saving Computed Chip Thumb to :'+chip_thumb_fpath)
-        chip_thumb.save(chip_thumb_fpath, 'JPEG')
+        #chip_thumb_fpath  = iom.get_chip_thumb_fpath(cid)
+        #(cw, ch) = chip.size
+        #thumb_size = cm.hs.dm.draw_prefs.thumbnail_size
+        #thumb_scale = min(thumb_size/float(cw), thumb_size/float(ch))
+        #(tw, th) = (int(round(cw)), int(round(ch)))
+        #chip_thumb = chip.resize((tw, th), Image.ANTIALIAS)
+        #if showmsg:
+            #logdbg('Saving Computed Chip Thumb to :'+chip_thumb_fpath)
+        #chip_thumb.save(chip_thumb_fpath, 'JPEG')
 
     def load_features(cm, _cxs=None, force_recomp=False):
         if _cxs is None:

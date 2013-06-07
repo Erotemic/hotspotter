@@ -44,3 +44,18 @@ def preform_memory_dump(fpath):
     scanner.dump_all_objects( fpath ) 
 
 
+def parallel_speed_test(hs):
+    arg_list = [(x,) for x in xrange(1,20)]
+    #method_fn, remove_pat = hs.precompute_chips, '*.png'
+    method_fn, remove_pat = hs.precompute_chipreps, '*.npz'
+    outlist = []
+    for args in iter(arg_list):
+        hs.iom.remove_computed_files_with_pattern(remove_pat)
+        with Timer(outlist) as t:
+            method_fn(*args)
+        print('Times So Far: ', outlist)
+    print('Output Times:')
+    for outtup in zip(arg_list,outlist):
+        print outtup
+    
+        

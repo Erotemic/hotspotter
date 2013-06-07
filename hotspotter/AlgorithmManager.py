@@ -98,7 +98,7 @@ class AlgorithmManager(AbstractManager):
         am.algo_prefs.query.num_rerank                = Pref(1000, min=0)
         am.algo_prefs.query.spatial_thresh            = Pref(0.05, min=0, max=1) 
         am.algo_prefs.query.sigma_thresh              = Pref(0.05, min=0, max=1, hidden=True) #: Unimplemented
-        am.algo_prefs.query.method                    = Pref(0, choices=['COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'])
+        am.algo_prefs.query.method                    = Pref(2, choices=['COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'])
         am.algo_prefs.query.score                     = Pref(0, choices=['cscore','nscore']) # move to results?
         am.algo_prefs.query.self_as_result_bit        = Pref(False)  #: Return self (in terms of name) in results
         # --- Result Prefs --- 
@@ -186,6 +186,7 @@ class AlgorithmManager(AbstractManager):
         else:
             return '.algo.'+am.get_algo_name(depends,True)
 
+    # DEPRICATED
     def preprocess_chip(am, pil_filt):
         logdbg('prepocessing')
         # Convert to grayscale
@@ -219,9 +220,11 @@ class AlgorithmManager(AbstractManager):
 
         return pil_filt
 
+    # DEPRICATED   
     def compute_vlfeatures(am, chip):
         import vlfeat
 
+    # DEPRICATED
     def compute_features(am, chip):
         'Computes features of a chip. Uses settings in AlgorithmManager'
         logdbg('Calling feature detector')
@@ -294,7 +297,7 @@ class AlgorithmManager(AbstractManager):
          #        surfDetector    = cv2.PyramidAdaptedFeatureDetector(surfDetector_,50)
          #        freakExtractor  = cv2.DescriptorExtractor_create('FREAK')
 
-
+    # DEPRICATED
     def  external_feature_computers(am, chip):
         'Write chip ; call extern executable ; read output ; return (kpts,desc)'
         logdbg('Calling external kpt detector')

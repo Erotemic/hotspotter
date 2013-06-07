@@ -175,7 +175,7 @@ class ExperimentManager(AbstractManager):
     def run_and_save_query(em, cx, rr_fmtstr_cid):
         cid = em.hs.cm.cx2_cid[cx]
         rr_fpath = rr_fmtstr_cid % cid
-        rr = em.hs.qm.cx2_res(cx).rr
+        rr = em.hs.qm.cx2_rr(cx)
         rr_file = open(rr_fpath, 'wb')
         cPickle.dump(rr, rr_file)
         rr_file.close()

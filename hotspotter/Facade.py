@@ -223,16 +223,14 @@ class Facade(QObject):
         uim, cm, qm, vm, nm = fac.hs.get_managers('uim', 'cm','qm','vm', 'nm')
         try:
             if qcid is None:
-                qcx = uim.sel_cx()
+                qcid = uim.sel_cid
             else: 
                 uim.select_cid(qcid)
-                qcx = cm.cx(qcid)
+            qcx = cm.cx(qcid)
             uim.update_state('Querying')
-            vm.sample_train_set()
-            vm.ensure_model()
-            print('Querying Chip: '+fac.hs.cm.cx2_info(qcx, clbls))
-            logdbg('\n\nQuerying Chip: '+fac.hs.cm.cx2_info(qcx, clbls))
-            uim.sel_res = fac.hs.qm.cx2_res(qcx)
+            print('Querying Chip: '+cm.cx2_info(qcx, clbls))
+            logdbg('\n\nQuerying Chip: '+cm.cx2_info(qcx, clbls))
+            uim.sel_res = fac.hs.query(qcid)
             logmsg('\n\nFinished Query')
             uim.update_state('done_querying')
             logmsg(str(uim.sel_res))
@@ -592,7 +590,7 @@ class Facade(QObject):
         fac.hs.reload_preferences()
         logmsg('The change to defaults will not become permanent until you save or change one')
         if uim.hsgui != None:
-            uim.hsgui.epw.pref_model.dataChanged.emit()
+            uim.hsgui.epw.pref_model.layoutChanged.emit()
 
     def unload_features_and_models(fac):
         fac.hs.unload_all_features()
@@ -738,7 +736,7 @@ class Facade(QObject):
         vm = fac.hs.vm
         # Get model ready
         vm.sample_train_set()
-        vm.ensure_model()
+        fac.hs.ensure_model()
         # Do all queries
         for qcx in iter(cm.get_valid_cxs()):
             qcid = cm.cx2_cid[qcx]
@@ -747,7 +745,7 @@ class Facade(QObject):
             logdbg(str(qcx))
             logdbg(str(type(qcx)))
             cm.load_features(qcx)
-            res = fac.hs.qm.cx2_res(qcx)
+            res = fac.hs.query(qcid)
             # Match only those above a thresh
             res.num_top_min = 0
             res.num_extra_return = 0
@@ -800,3 +798,8 @@ class Facade(QObject):
         if os.system('open '+pdf_fpath) == 1:
             if os.system(pdf_fpath) == 1:
                 crossplat.view_directory(doc_path)
+
+    @pyqtSlot(name='precompute')
+    @func_log
+    def precompute(fac):
+        fac.hs.ensure_model()

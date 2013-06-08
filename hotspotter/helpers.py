@@ -14,7 +14,7 @@ import os.path
 import sys
 import time
 import types
-from numpy import empty
+import numpy as np
 
 def str2(obj):
     if type(obj) == types.DictType:
@@ -38,10 +38,12 @@ def sanatize_fname(fname):
         fname += ext
     return fname
 def save(obj, fname):
+    'A simple save function using cPickle'
     import cPickle
     with open(sanatize_fname(fname), 'wb') as file:
         cPickle.dump(obj, file)
 def load(fname):
+    'A simple load function using cPickle'
     import cPickle
     with open(sanatize_fname(fname), 'wb') as file:
         return cPickle.load(file)
@@ -79,9 +81,7 @@ def keyboard(banner=None):
 
 def alloc_lists(num_alloc):
     'allocates space for a numpy array of lists'
-    alloc_data = empty(num_alloc, dtype=list)
-    for i in xrange(num_alloc): alloc_data[i] = [] 
-    return alloc_data
+    return [[] for _ in xrange(num_alloc)]
 
 class Timer(object):
     ''' Used to time statments with a with statment

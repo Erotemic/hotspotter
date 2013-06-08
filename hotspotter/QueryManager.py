@@ -12,13 +12,13 @@ import os
 class RawResults(DynStruct):
     ' Intermediate class for result storage '
 
-    def __init__(rr, qcx, qcid, qnid, dbid=''):
+    def __init__(rr, qcx, qcid, qnid, dbid):
         super(RawResults, rr).__init__()
         # Idenfication information
         rr.qcx   = qcx
         rr.qcid  = qcid
         rr.qnid  = qnid
-        rr.dbid  = dbid
+        rr.dbid  = dbid 
         # Query information
         rr.qfpts = None
         rr.qfdsc = None
@@ -35,7 +35,7 @@ class RawResults(DynStruct):
         'Save some memory by not saving query descriptors.'
         rr.qfdsc = None
         rr.qfpts = None
-        rr.cx2_fs_ = None
+        #rr.cx2_fs_ = None
 
     def rr_fpath(rr, qhs):
         return join(qhs.qm.rr_dpath, 'rr_' + rr.dbid + '_' + \
@@ -81,7 +81,7 @@ class QueryManager(AbstractManager):
 
     def cx2_rr(qm, qcx, qhs=None):
         qhs  = qm.hs if qhs is None else qhs
-        dbid = qhs.get_dbid()
+        dbid = qm.hs.get_dbid()
         qcid           = qhs.cm.cx2_cid[qcx]
         qnid           = qhs.cm.cx2_nid(qcx)
         rr = RawResults(qcx, qcid, qnid, dbid)
@@ -128,7 +128,7 @@ class QueryManager(AbstractManager):
         qm.compute_scores(rr)
         return rr
 
-    def  assign_feature_matches_1vM(qm, rr, K, method, cids_to_remove):
+    def assign_feature_matches_1vM(qm, rr, K, method, cids_to_remove):
         '''Assigns each query feature to its K nearest database features
         with a similarity-score. Each feature votes for its assigned
         chip with this weight.'''
@@ -407,6 +407,13 @@ class QueryResult(AbstractPrintable):
         # And add extra runners up for context
         res.num_extra_return    = result_prefs.extra_num_results
 
+    def force_num_top(res, num_top):
+        'Forces the result to display a specific number of results'
+        res.top_thresh          = 0
+        res.num_top_min         = 0
+        res.num_top_max         = 0
+        res.num_extra_return    = num_top
+
     def _get_num_top(res, xsort, scores):
         '''Helper function -
         Takes the scores by whatever type of result is requested
@@ -477,12 +484,20 @@ class QueryResult(AbstractPrintable):
         return res.result_str()
 
     def qcid2_(res, *dynargs): #change to query2_?
-        cm = res.qhs.cm
-        return cm.cx2_(res.rr.qcx, *dynargs)
+        return res.qhs.cm.cx2_(res.rr.qcx, *dynargs)
 
+    # DEPRICATE? 
+    def top2_(res, *dynargs): 
+        return res.tcid2_(*dynargs)
+
+    def top_scores(res):
+        return res.scores()[res.top_cx()]
+        #return res.scores()[res.top_nxcx()[1]]
+
+    # DEPRICATED
     def tcid2_(res, *dynargs): #change to top2_?
         'returns the specified results in args: '
-        # Top scoring chips, regardless of name.
+        # Top scoring chips, regardless of name. idk if this works right
         if res.one_result_per_name:
             _, top_cx = res.top_nxcx()
         # Top scoring chips of each name

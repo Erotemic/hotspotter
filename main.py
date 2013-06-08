@@ -98,9 +98,9 @@ import types
 import os
 import os.path
 from os.path import expanduser, join, relpath, normpath, exists, dirname
+from hotspotter.helpers import *
 from hotspotter.other.AbstractPrintable import *
 from hotspotter.other.ConcretePrintable import *
-from hotspotter.other.helpers import *
 from hotspotter.other.logger import *
 
 # Get commonly used variables for command line usage

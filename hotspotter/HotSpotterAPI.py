@@ -30,7 +30,6 @@ from hotspotter.front.DrawManager import DrawManager
 from hotspotter.front.UIManager import UIManager
 from hotspotter.other.AbstractPrintable import AbstractPrintable
 from hotspotter.other.ConcretePrintable import Pref
-from hotspotter.other.helpers import dircheck, filecheck
 from hotspotter.other.logger import logdbg, logerr, logmsg, logwarn, func_log
 import cPickle
 import os.path

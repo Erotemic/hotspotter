@@ -12,3 +12,4 @@ desktop.ini
 *.swo
 *.npz
 *.pyc
+*.pkl

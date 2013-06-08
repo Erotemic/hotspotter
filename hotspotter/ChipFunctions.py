@@ -47,7 +47,7 @@ def compute_chip(img_fpath, chip_fpath, roi, new_size, preproc_prefs):
     if preproc_prefs.autocontrast_bit :
         pil_chip = ImageOps.autocontrast(pil_chip)
     if preproc_prefs.bilateral_filt_bit :
-        pil_chip = Image.fromarray(shiftableBF(np.asarray(pil_chip)))
+        pil_chip = shiftableBF(pil_chip)
     # Save chip to disk
     pil_chip.save(chip_fpath, 'PNG')
 

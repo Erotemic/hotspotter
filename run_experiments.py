@@ -11,13 +11,15 @@ import numpy as np
 import pylab
 import sys
 
+import multiprocessing as mp
+mp.freeze_support()
 print "RUNNING EXPERIMENTS"
 
-hsl.enable_global_logs()
+#hsl.enable_global_logs()
 
 workdir = '/media/SSD_Extra/'
 if sys.platform == 'win32':
-    workdir = 'D:/data/work/LF_all/'
+    workdir = 'D:/data/work/Lionfish/'
 bajo_bonito = workdir+'LF_Bajo_bonito'
 optimizas   = workdir+'LF_OPTIMIZADAS_NI_V_E'
 westpoint   = workdir+'LF_WEST_POINT_OPTIMIZADAS'
@@ -26,31 +28,33 @@ hsdb1 = HotSpotterAPI(bajo_bonito)
 hsdb2 = HotSpotterAPI(optimizas)
 hsdb3 = HotSpotterAPI(westpoint)
 
-with Timer() as t:
-    hsdb1.ensure_model()
-with Timer() as t:
-    hsdb2.ensure_model()
-with Timer() as t:
-    hsdb3.ensure_model()
+hsdb1.ensure_model()
+hsdb2.ensure_model()
+hsdb3.ensure_model()
 
 def query_db_vs_db(hsA, hsB):
     print 'Running '+hsA.get_dbid()+' vs '+hsB.get_dbid()
     query_cxs = hsA.cm.get_valid_cxs()
     total = len(query_cxs)
+    cx2_rr = alloc_lists(total)
     for count, qcx in enumerate(query_cxs):
         with Timer() as t:
             print 'Query %d / %d ' % (count, total)
             rr = hsB.qm.cx2_rr(qcx, hsA)
+            cx2_rr[count] = rr
+    return cx2_rr
 
 
 dbvslist =  [(hsdb1, hsdb2),
-           (hsdb2, hsdb1),
-           (hsdb1, hsdb3),
-           (hsdb3, hsdb1),
-           (hsdb2, hsdb3),
-           (hsdb2, hsdb3)]
-for hsA, hsB in dbvslist:
-    query_db_vs_db(hsA, hsB)
+             (hsdb2, hsdb1),
+             (hsdb1, hsdb3),
+             (hsdb3, hsdb1),
+             (hsdb2, hsdb3),
+             (hsdb2, hsdb3)]
+
+cx2rr_list = [query_db_vs_db(hsA, hsB) for hsA, hsB in dbvslist]
+
+def 
 
 #print hsdb1.query(1)
 #res = hsdb2.query(1, hsdb1)

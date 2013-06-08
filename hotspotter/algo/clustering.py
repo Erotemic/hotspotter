@@ -1,5 +1,5 @@
 import numpy as np
-from hotspotter.other.helpers import alloc_lists
+from hotspotter.helpers import alloc_lists
 from hotspotter.other.ConcretePrintable import Pref
 from hotspotter.tpl.pyflann import FLANN
 #from __future__ import print_function

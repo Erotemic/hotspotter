@@ -23,7 +23,7 @@ import os
 from os.path import expanduser, join, relpath, realpath, normpath, exists, dirname
 from hotspotter.other.AbstractPrintable import AbstractManager
 from hotspotter.other.ConcretePrintable import DynStruct
-from hotspotter.other.helpers import dircheck
+from hotspotter.helpers import dircheck
 from hotspotter.other.logger import logmsg, logwarn, logdbg, logerr, logio
 from hotspotter.other.crossplat import platexec
 

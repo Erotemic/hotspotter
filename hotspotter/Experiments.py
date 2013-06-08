@@ -1,5 +1,5 @@
+from hotspotter.helpers import alloc_lists
 from hotspotter.other.logger  import logmsg, logerr, logwarn
-from hotspotter.other.helpers import alloc_lists
 from hotspotter.other.AbstractPrintable import AbstractManager
 from hotspotter.QueryManager import QueryResult
 import cPickle

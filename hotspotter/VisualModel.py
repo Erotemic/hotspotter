@@ -1,5 +1,4 @@
 import shelve
-from hotspotter.other.helpers import filecheck, str2 
 from hotspotter.other.AbstractPrintable import AbstractManager
 from hotspotter.other.ConcretePrintable import DynStruct, Pref 
 from hotspotter.other.logger import logmsg, logdbg, logio, logerr, logwarn

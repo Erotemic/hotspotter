@@ -23,8 +23,28 @@ def str2(obj):
         return str(obj).replace('<type \'','').replace('\'>','')
     else:
         return str(obj)
-
-
+#---------------
+'''
+def __getstate__(self):
+    out_dict = self.__dict__.copy()
+    return odict
+def __setstate__(self, in_dict):
+    self.__dict__.update(in_dict)
+'''
+#---------------
+def sanatize_fname(fname):
+    ext = '.pkl'
+    if fname.rfind(ext) != max(len(fname) - len(ext), 0):
+        fname += ext
+    return fname
+def save(obj, fname):
+    import cPickle
+    with open(sanatize_fname(fname), 'wb') as file:
+        cPickle.dump(obj, file)
+def load(fname):
+    import cPickle
+    with open(sanatize_fname(fname), 'wb') as file:
+        return cPickle.load(file)
 #---------------
 def filecheck(fpath):
     return os.path.exists(fpath)

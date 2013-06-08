@@ -1,6 +1,6 @@
 # http://docs.python.org/2/library/multiprocessing.html
 import multiprocessing as mp
-from hotspotter.other.helpers import Timer
+from hotspotter.helpers import Timer
 
 def _calculate(func, args):
     result = func(*args)

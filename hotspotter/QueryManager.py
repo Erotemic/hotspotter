@@ -1,8 +1,8 @@
 from hotspotter.algo.spatial_functions import ransac
 from hotspotter.other.AbstractPrintable import AbstractManager, AbstractPrintable
 from hotspotter.other.ConcretePrintable import DynStruct
-from hotspotter.other.helpers import alloc_lists
 from hotspotter.other.logger import logdbg, logerr, logmsg, logwarn
+from hotspotter.helpers import alloc_lists
 from numpy import spacing as eps
 from os.path import join
 import numpy as np

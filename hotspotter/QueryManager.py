@@ -12,14 +12,15 @@ import os
 class RawResults(DynStruct):
     ' Intermediate class for result storage '
 
-    def __init__(rr, qcx, qcid, qnid, dbid):
+    def __init__(rr, qcx, hs, qhs):
         super(RawResults, rr).__init__()
         # Idenfication information
-        rr.qcx   = qcx
-        rr.qcid  = qcid
-        rr.qnid  = qnid
-        rr.dbid  = dbid # Result / Database dbid
+        rr.qcid  = qhs.cm.cx2_cid[qcx]
+        rr.qnid  = qhs.cm.cx2_nid(qcx)
+        rr.qdbid = qhs.get_dbid() # query database 
+        rr.dbid  =  hs.get_dbid() # result database 
         # Query information
+        rr.qcx   = qcx
         rr.qfpts = None
         rr.qfdsc = None
         rr.qchip_size = None
@@ -31,37 +32,27 @@ class RawResults(DynStruct):
         rr.cx2_fs      = None
         rr.cx2_fm      = None
 
-    def presave_clean(rr):
-        'Save some memory by not saving query descriptors.'
-        rr.qfdsc = None
-        rr.qfpts = None
-        #rr.cx2_fs_ = None
+    def rr_fpath(rr, rr_dpath, rr_suffix):
+        rr_fname = 'rr_' + rr.dbid + '_' + ('cid%07d' % rr.qcid) + rr_suffix + '.npz'
+        return join(rr_dpath, rr_fname)
 
-    def rr_fpath(rr, qhs):
-        # TODO: This is a hack right now. Name should depend on database
-        # Not becomputed every time you save, and what not. This file needs a
-        # fixin. 
-        #depends = ['chiprep', 'preproc', 'model', 'query']
-        #algo_suffix = qhs.hs.am.get_algo_suffix(depends)
-        #samp_suffix = qhs.hs.vm.get_samp_suffix()
-        rr_dpath = qhs.iom.ensure_computed_directory('query_results')
-        # Save in query database. point to result database
-        return join(rr_dpath, 'rr_' + rr.dbid + '_' + \
-                    ('cid%07d' % rr.qcid) + '.npz')
+    def has_result(rr, rr_dpath, rr_suffix):
+        return os.path.exists(rr.rr_fpath(rr_dpath, rr_suffix))
 
-    def has_result(rr, qhs):
-        return os.path.exists(rr.rr_fpath(qhs))
-
-    def save_result(rr, qhs):
+    def save_result(rr, rr_dpath, rr_suffix):
         'Saves the result to the given database'
-        rr.presave_clean()
-        rr_fpath = rr.rr_fpath(qhs)
-        to_save = rr.__dict__
+        # The database copies itself. Not a good thing. 
+        # Sanatize the class dict first
+        to_save  = rr.__dict__.copy()
+        rr_fpath = rr.rr_fpath(rr_dpath, rr_suffix)
+        # Don't save descriptors
+        del to_save['qfdsc']
+        del to_save['qfpts']
         np.savez(rr_fpath, **to_save)
 
-    def load_result(rr, qhs):
+    def load_result(rr, rr_dpath, rr_suffix):
         'Loads the result from the given database'
-        rr_fpath = rr.rr_fpath(qhs)
+        rr_fpath = rr.rr_fpath(rr_dpath, rr_suffix)
         try:
             npz = np.load(rr_fpath)
             for _key in npz.files:
@@ -71,7 +62,7 @@ class RawResults(DynStruct):
                     rr.__dict__[_key] = npz[_key]
             # Numpy saving is werid. gotta cast
         except Exception as ex:
-            os.remove(rr.rr_fpath(qhs))
+            os.remove(rr_fpath)
             logwarn('Load Result Exception : '+str(ex)+'\nResult was corrupted for CID=%d' % rr.qcid)
 # --- /class RawResults
 
@@ -85,300 +76,307 @@ class QueryManager(AbstractManager):
         qm.rr = None
 
     def cx2_rr(qm, qcx, qhs=None):
-        qhs  = qm.hs if qhs is None else qhs
-        dbid = qm.hs.get_dbid()
-        qcid           = qhs.cm.cx2_cid[qcx]
-        qnid           = qhs.cm.cx2_nid(qcx)
-        rr = RawResults(qcx, qcid, qnid, dbid)
+        hs   = qm.hs
+        qhs  = hs if qhs is None else qhs
+        rr = RawResults(qcx, hs, qhs)
         qm.rr = rr
+        # Save in query database. 
+        rr_dpath = qhs.iom.ensure_computed_directory('query_results')
+        # Filename points to result database
+        depends = ['chiprep', 'preproc', 'model', 'query']
+        algo_suffix = hs.am.get_algo_suffix(depends)
+        samp_suffix = hs.vm.get_samp_suffix()
+        rr_suffix = algo_suffix + samp_suffix
         # Populate raw results
-        if rr.has_result(qhs):
+        force_recompute = True
+        if rr.has_result(rr_dpath, rr_suffix) and not force_recompute:
             logmsg('Loading query.')
-            rr.load_result(qhs)
+            rr.load_result(hs, qhs, rr_dpath, rr_suffix)
         else:
             logmsg('Recomputing query.')
             (qfpts, qfdsc) = qhs.cm.get_feats(qcx)
             rr.qfpts = qfpts
             rr.qfdsc = qfdsc
             rr.qchip_size = qhs.cm.cx2_chip_size(qcx)
-            qm.repopulate_raw_results(rr, qhs)
-            rr.save_result(qhs)
+            qm.repopulate_raw_results(rr, hs, qhs)
+            rr.save_result(hs, qhs, rr_dpath, rr_suffix)
         return rr
 
-    def repopulate_raw_results(qm, rr, qhs):
+    def repopulate_raw_results(qm, rr, hs, qhs):
         # Get query parameters
-        hs = qm.hs
         query_pref   = qhs.am.algo_prefs.query
         K            = query_pref.k
         method       = query_pref.method
         cids_to_remove = []
-        if qhs is qm.hs and rr.qcid in hs.vm.get_train_cid():
+        if qhs is hs and rr.qcid in hs.vm.get_train_cid():
             # Remove query id if it could be matched
             cids_to_remove = [rr.qcid]
         num_rerank   = query_pref.num_rerank
         xy_thresh    = query_pref.spatial_thresh
         sigma_thresh = query_pref.sigma_thresh
         # Run the actual query
-        qm.assign_feature_matches_1vM(rr, K, method, cids_to_remove)
-        qm.spatial_rerank(rr, num_rerank, xy_thresh, sigma_thresh)
-        qm.compute_scores(rr)
+        assign_feature_matches_1vM(rr, hs, K, method, cids_to_remove)
+        spatial_rerank(rr, hs, num_rerank, xy_thresh, sigma_thresh)
+        compute_scores(rr, hs)
         return rr
 
-    def assign_feature_matches_1vM(qm, rr, K, method, cids_to_remove):
-        '''Assigns each query feature to its K nearest database features
-        with a similarity-score. Each feature votes for its assigned
-        chip with this weight.'''
-        logdbg('Assigning feature matches and initial scores')
-        # Get managers
-        cm = qm.hs.cm
-        nm = qm.hs.nm
-        vm = qm.hs.vm
-        # Get intermediate results
-        qcx   = rr.qcx
-        qfdsc = rr.qfdsc
-        qfpts = rr.qfpts
+def assign_feature_matches_1vM(rr, hs, K, method, cids_to_remove):
+    '''Assigns each query feature to its K nearest database features
+    with a similarity-score. Each feature votes for its assigned
+    chip with this weight.'''
+    logdbg('Assigning feature matches and initial scores')
+    # Get managers
+    cm = hs.cm
+    nm = hs.nm
+    vm = hs.vm
+    # Get intermediate results
+    qcx   = rr.qcx
+    qcid  = rr.qcid
+    qfdsc = rr.qfdsc
+    qfpts = rr.qfpts
 
-        num_qf         = qfpts.shape[0]
-        # define: Prefix K = list of K+1 nearest; k = K nearest
-        # Everything is done in a flat manner, and reshaped at the end.
-        if len(cids_to_remove) > 0: 
-            logdbg('K is being increased by %d to account for removing results'
-                   % len(cids_to_remove))
-            K += len(cids_to_remove)
-        # qfx = Query Feature Index
-        # Kwxs = the Kth result word index ;  Kdists = the Kth result distance
-        (qfx2_Kwxs, qfx2_Kdists) = vm.nearest_neighbors(qfdsc, K+1)
-        # ---
-        # Candidate score the nearest neighbor matches
-        # p - pth nearest ; o - k+1th nearest
-        score_fn_dict = {
-            'DIFF'  : lambda p, o: o - p,
-            'RAT'   : lambda p, o: o / p,
-            'LNRAT' : lambda p, o: np.log2(o / p),
-            'COUNT' : lambda p, o: 1,
-            'NDIST' : lambda p, o: 10e16 - p,
-            'TFIDF' : lambda wx2_tf, wx_idf, wx: wx2_tf[wx] * wx_idf[wx] }
-        score_fn = score_fn_dict[method]
-        if method == 'TFIDF':
-                # The wx2_qtf could really be per k or as agged across all K
-                w_histo = bincount(qfx2_wxs, minlength=vm.numWords())
-                wx2_qtf = np.array(w_histo, dtype=np.float32) / num_qf
-                qfx2_vweight = score_fn(wx2_qtf, vm.wx2_idf, qfx2_wxs)
-        else:
-            # Distances to the 0-K results
-            p_vote = qfx2_Kdists[:, 0:K] + 1
-            # Distance to the K+1th result
-            o_norm = np.tile(
-                qfx2_Kdists[:, -1].reshape(num_qf, 1) + 1, (1, K))
-            # Use score method to get weight
-            qfx2_kweight = np.array(
-                [score_fn(p, o) for (p, o) in 
-                 iter(zip(p_vote.flat, o_norm.flat))],
-                                    dtype=np.float32)
-            qfx2_kweight.shape = (num_qf, K)
-        # ---
-        # Use the scores to cast weighted votes for database chips
+    num_qf = qfpts.shape[0]
+    # define: Prefix K = list of K+1 nearest; k = K nearest
+    # Everything is done in a flat manner, and reshaped at the end.
+    if len(cids_to_remove) > 0: 
+        K += len(cids_to_remove)
+        logdbg('K = %d. Increased by %d to account for removing results'
+                % (K, len(cids_to_remove)))
+    # qfx = Query Feature Index
+    # Kwxs = the Kth result word index ;  Kdists = the Kth result distance
+    (qfx2_Kwxs, qfx2_Kdists) = vm.nearest_neighbors(qfdsc, K+1)
+    # ---
+    # Candidate score the nearest neighbor matches
+    # p - pth nearest ; o - k+1th nearest
+    score_fn_dict = {
+        'DIFF'  : lambda p, o: o - p,
+        'RAT'   : lambda p, o: o / p,
+        'LNRAT' : lambda p, o: np.log2(o / p),
+        'COUNT' : lambda p, o: 1,
+        'NDIST' : lambda p, o: 10e16 - p,
+        'TFIDF' : lambda wx2_tf, wx_idf, wx: wx2_tf[wx] * wx_idf[wx] }
+    score_fn = score_fn_dict[method]
+    if method == 'TFIDF':
+            # The wx2_qtf could really be per k or as agged across all K
+            w_histo = bincount(qfx2_wxs, minlength=vm.numWords())
+            wx2_qtf = np.array(w_histo, dtype=np.float32) / num_qf
+            qfx2_vweight = score_fn(wx2_qtf, vm.wx2_idf, qfx2_wxs)
+    else:
+        # Distances to the 0-K results
+        p_vote = qfx2_Kdists[:, 0:K] + 1
+        # Distance to the K+1th result
+        o_norm = np.tile(
+            qfx2_Kdists[:, -1].reshape(num_qf, 1) + 1, (1, K))
+        # Use score method to get weight
+        qfx2_kweight = np.array(
+            [score_fn(p, o) for (p, o) in 
+                iter(zip(p_vote.flat, o_norm.flat))],
+                                dtype=np.float32)
+        qfx2_kweight.shape = (num_qf, K)
+    # ---
+    # Use the scores to cast weighted votes for database chips
+    #
+    if len(cids_to_remove) > 0:
+        # Remove the query from results
+        # query feature index 2 agg descriptor indexes -> cids -> self_query_bit -> clean_axs
         #
-        if len(cids_to_remove) > 0:
-            # Remove the query from results
-            # query feature index 2 agg descriptor indexes -> cids -> self_query_bit -> clean_axs
-            #
-            # Feature Matches -> Chip Ids
-            logdbg('Query qcid=%r are being removed from results ' % cids_to_remove)
-            qfx2_Kaxs_   = vm.wx2_axs[qfx2_Kwxs]
-            qfx2_Kcids_  = [vm.ax2_cid[axs] for axs in qfx2_Kaxs_.flat]
-            # Test if each FeatureMatch-ChipId is the Query-ChipId.
-            qfx2_Ksqbit_ = [True - np.in1d(qcid, cids_to_remove) for cids in qfx2_Kcids_]
-            # Remove FeatureMatches to the Query-ChipId
-            qfx2_Kaxs    = [np.array(axs)[sqbit].tolist() for (axs, sqbit) in\
-                            iter(zip(qfx2_Kaxs_.flat, qfx2_Ksqbit_))]
-        else:
-            qfx2_Kaxs_ = vm.wx2_axs[qfx2_Kwxs]
-            qfx2_Kaxs  = [np.array(axs).tolist() for axs in qfx2_Kaxs_.flat]
-        # Clean Vote for Info
-        qfx2_Kcxs = np.array([vm.ax2_cx(axs) for axs in qfx2_Kaxs])
-        qfx2_Kfxs = np.array([vm.ax2_fx[axs] for axs in qfx2_Kaxs])
-        qfx2_Knxs = np.array([cm.cx2_nx[cxs] for cxs in qfx2_Kcxs])
-        if qfx2_Kfxs.size == 0:
-            logerr('Cannot query when there is one chip in database')
-        # Reshape Vote for Info
-        qfx2_Kcxs = np.array(qfx2_Kcxs).reshape(num_qf, K+1)
-        qfx2_Kfxs = np.array(qfx2_Kfxs).reshape(num_qf, K+1)
-        qfx2_Knxs = np.array(qfx2_Knxs).reshape(num_qf, K+1)
+        # Feature Matches -> Chip Ids
+        logdbg('Query qcid=%r are being removed from results ' % cids_to_remove)
+        qfx2_Kaxs_   = vm.wx2_axs[qfx2_Kwxs]
+        qfx2_Kcids_  = [vm.ax2_cid[axs] for axs in qfx2_Kaxs_.flat]
+        # Test if each FeatureMatch-ChipId is the Query-ChipId.
+        qfx2_Ksqbit_ = [True - np.in1d(cids, cids_to_remove) for cids in qfx2_Kcids_]
+        # Remove FeatureMatches to the Query-ChipId
+        qfx2_Kaxs    = [np.array(axs)[sqbit].tolist() for (axs, sqbit) in\
+                        iter(zip(qfx2_Kaxs_.flat, qfx2_Ksqbit_))]
+    else:
+        qfx2_Kaxs_ = vm.wx2_axs[qfx2_Kwxs]
+        qfx2_Kaxs  = [np.array(axs).tolist() for axs in qfx2_Kaxs_.flat]
+    # Clean Vote for Info
+    qfx2_Kcxs = np.array([vm.ax2_cx(axs) for axs in qfx2_Kaxs])
+    qfx2_Kfxs = np.array([vm.ax2_fx[axs] for axs in qfx2_Kaxs])
+    qfx2_Knxs = np.array([cm.cx2_nx[cxs] for cxs in qfx2_Kcxs])
+    if qfx2_Kfxs.size == 0:
+        logerr('Cannot query when there is one chip in database')
+    # Reshape Vote for Info
+    qfx2_Kcxs = np.array(qfx2_Kcxs).reshape(num_qf, K+1)
+    qfx2_Kfxs = np.array(qfx2_Kfxs).reshape(num_qf, K+1)
+    qfx2_Knxs = np.array(qfx2_Knxs).reshape(num_qf, K+1)
 
-        # Using the K=K+1 results, make k=K scores
-        qfx2_kcxs_vote = qfx2_Kcxs[:, 0:K] # vote for cx
-        qfx2_kfxs_vote = qfx2_Kfxs[:, 0:K] # vote for fx
-        qfx2_knxs_vote = qfx2_Knxs[:, 0:K] # check with nx
+    # Using the K=K+1 results, make k=K scores
+    qfx2_kcxs_vote = qfx2_Kcxs[:, 0:K] # vote for cx
+    qfx2_kfxs_vote = qfx2_Kfxs[:, 0:K] # vote for fx
+    qfx2_knxs_vote = qfx2_Knxs[:, 0:K] # check with nx
 
-        # Attempt to recover from problems where K is too small
-        qfx2_knxs_norm = np.tile(qfx2_Knxs[:, K].reshape(num_qf, 1), (1, K))
-        qfx2_knxs_norm[qfx2_knxs_norm == nm.UNIDEN_NX()] = 0 # Remove Unidentifieds from this test
-        qfx2_kcxs_norm = np.tile(qfx2_Kcxs[:, K].reshape(num_qf, 1), (1, K))
-        # If the normalizer has the same name, but is a different chip, there is a good chance
-        # it is a correct match and was peanalized by the scoring function
-        qfx2_normgood_bit = np.logical_and(qfx2_kcxs_vote != qfx2_kcxs_norm, \
-                                        qfx2_knxs_vote == qfx2_knxs_norm)
-        #qfx2_kweight[qfx2_normgood_bit] = 2
+    # Attempt to recover from problems where K is too small
+    qfx2_knxs_norm = np.tile(qfx2_Knxs[:, K].reshape(num_qf, 1), (1, K))
+    qfx2_knxs_norm[qfx2_knxs_norm == nm.UNIDEN_NX()] = 0 # Remove Unidentifieds from this test
+    qfx2_kcxs_norm = np.tile(qfx2_Kcxs[:, K].reshape(num_qf, 1), (1, K))
+    # If the normalizer has the same name, but is a different chip, there is a good chance
+    # it is a correct match and was peanalized by the scoring function
+    qfx2_normgood_bit = np.logical_and(qfx2_kcxs_vote != qfx2_kcxs_norm, \
+                                    qfx2_knxs_vote == qfx2_knxs_norm)
+    #qfx2_kweight[qfx2_normgood_bit] = 2
 
-        # -----
-        # Build FeatureMatches and FeaturesScores
-        #
-        cx2_fm  = alloc_lists(cm.max_cx + 1)
-        cx2_fs_ = alloc_lists(cm.max_cx + 1)
+    # -----
+    # Build FeatureMatches and FeaturesScores
+    #
+    cx2_fm  = alloc_lists(cm.max_cx + 1)
+    cx2_fs_ = alloc_lists(cm.max_cx + 1)
 
-        qfx2_qfx = np.tile(np.arange(0, num_qf).reshape(num_qf, 1), (1, K))
-        # Add matches and scores
-        for (qfx, qfs, cxs, fxs)\
-                in iter(zip(qfx2_qfx.flat, \
-                            qfx2_kweight.flat, \
-                            qfx2_kcxs_vote.flat, \
-                            qfx2_kfxs_vote.flat)):
+    qfx2_qfx = np.tile(np.arange(0, num_qf).reshape(num_qf, 1), (1, K))
+    # Add matches and scores
+    for (qfx, qfs, cxs, fxs)\
+            in iter(zip(qfx2_qfx.flat, \
+                        qfx2_kweight.flat, \
+                        qfx2_kcxs_vote.flat, \
+                        qfx2_kfxs_vote.flat)):
+        if len(cxs) == 0: 
+            continue
+        for (vote_cx, vote_fx) in iter(zip(np.nditer(cxs), np.nditer(fxs))):
+            cx2_fm[vote_cx].append((qfx, vote_fx))
+            cx2_fs_[vote_cx].append(qfs)
 
-            for (vote_cx, vote_fx) in iter(zip(np.nditer(cxs), np.nditer(fxs))):
-                cx2_fm[vote_cx].append((qfx, vote_fx))
-                cx2_fs_[vote_cx].append(qfs)
-
-        # Convert correspondences to to numpy
-        for cx in xrange(len(cx2_fs_)):
-            num_m = len(cx2_fm[cx])
-            cx2_fs_[cx] = np.array(cx2_fs_[cx], dtype=np.float32)
-            cx2_fm[cx]  = np.array(cx2_fm[cx], dtype=np.uint32).reshape(num_m, 2)
-        logdbg('Setting feature assignments')
-        rr.cx2_fm  = cx2_fm
-        rr.cx2_fs_ = cx2_fs_
-        # --- end assign_feature_matches_1vM ---
+    # Convert correspondences to to numpy
+    for cx in xrange(len(cx2_fs_)):
+        num_m = len(cx2_fm[cx])
+        cx2_fs_[cx] = np.array(cx2_fs_[cx], dtype=np.float32)
+        cx2_fm[cx]  = np.array(cx2_fm[cx], dtype=np.uint32).reshape(num_m, 2)
+    logdbg('Setting feature assignments')
+    rr.cx2_fm  = cx2_fm
+    rr.cx2_fs_ = cx2_fs_
+    # --- end assign_feature_matches_1vM ---
 
 
-    def spatial_rerank(qm, rr, num_rerank, xy_thresh, sigma_thresh):
-        '''Recalculates the votes for chips by setting the similarity-score of
-         spatially invalid assignments to 0'''
+def spatial_rerank(rr, hs, num_rerank, xy_thresh, sigma_thresh):
+    '''Recalculates the votes for chips by setting the similarity-score of
+        spatially invalid assignments to 0'''
 
-        logdbg('Spatially Reranking')
-        # hs managers
-        cm = qm.hs.cm
-        # intermediate results
-        qcx     = rr.qcx
-        qfpts   = rr.qfpts
-        cx2_fm  = rr.cx2_fm
-        cx2_fs_ = rr.cx2_fs_
-        (w, h)   = rr.qchip_size
+    logdbg('Spatially Reranking')
+    # hs managers
+    cm = hs.cm
+    # intermediate results
+    qcx     = rr.qcx
+    qfpts   = rr.qfpts
+    cx2_fm  = rr.cx2_fm
+    cx2_fs_ = rr.cx2_fs_
+    (w, h)  = rr.qchip_size
 
-        # Sort by orderless score
-        cx2_cscore_ = compute_cscore(rr.cx2_fs_)
-        # Get shortlist of top results
-        top_cxs = cx2_cscore_.argsort()[::-1] #set diff with order
-        invalids = set(cm.invalid_cxs())
-        top_cxs = np.array([cx for cx in top_cxs \
-                            if cx not in invalids], dtype=np.uint32)
-        num_c      = len(top_cxs)
-        num_rerank = min(num_c, num_rerank)
-        # Build new feature scores
-        cx2_fs = [arr.copy() for arr in cx2_fs_]
-        if num_rerank == 0:
-            logdbg('Breaking rerank. num_rerank = 0;  min(num_c, query_prefs.num_rerank)')
-            rr.cx2_fs     = cx2_fs
-            return False
-        min_reranked_score = 2^30
-        #Initialize the reranked scores as the normal scores
-        cm.load_features(top_cxs) #[np.arange(num_rerank)])
-        # For each tcx (top cx) in the shortlist
-        for tcx in top_cxs[0:num_rerank]:
-            logdbg('Reranking qcx=%d vs tcx=%d' % (qcx, tcx))
-            cid   = cm.cx2_cid[tcx]
-            if cid <= 0: continue
-            fx2_match  = cx2_fm[tcx]
-            if len(fx2_match) == 0:
-                logdbg('Breaking rerank. len(fx2_match) == 0')
-                break
-            tfpts      = cm.cx2_fpts[tcx]
-            xy_thresh2 = (w*w + h*h) * xy_thresh**2
-            # Find which matches are spatially constent
-            fpts1_match  = qfpts[fx2_match[:, 0], :].transpose()
-            fpts2_match  = tfpts[fx2_match[:, 1], :].transpose()
-            #logdbg('''
-            #RANSAC Resampling matches on %r chips
-            #* xy_thresh2   = %r * (chip diagonal length)
-            #* theta_thresh = %r (orientation)
-            #* sigma_thresh = %r (scale)''' % (num_m, xy_thresh2, theta_thresh, sigma_thresh))
-            inliers = ransac(fpts1_match, fpts2_match, xy_thresh2, None) #sigma_thresh
-            # Remove the scores of chip pairs which generate RANSAC errors
-            if inliers is None:
-                cx2_fs[tcx][:] = -2 # -2 is the Degenerate Homography Code
-                continue
-            outliers = True - inliers
-            # Set the score of previously valid outliers to 0
-            cx2_fs[tcx][outliers] = np.minimum(cx2_fs[tcx][outliers], -1) # -1 is the Spatially Inconsistent Code
-            # Get the new score of the database instance.
-            # This is only used for a temp np.minimum calculation.
-            tmp_rrscore = np.sum(cx2_fs[tcx], axis=0)
-            if tmp_rrscore > 0:
-                #Keep track of our worst reranked score.
-                min_reranked_score = min(min_reranked_score, tmp_rrscore)
-        # Non-Reranked scores should always be less than reranked np.ones.
-        if num_rerank < num_c:
-            logdbg('Rescaling '+str(num_c - num_rerank)+' non-reranked scores')
-            all_nonreranked_scores = [s for scores in cx2_fs_[num_rerank:] for s in scores]
-            if len(all_nonreranked_scores) == 0:
-                max_unreranked_score = 1.
-            else:
-                max_unreranked_score = max(all_nonreranked_scores)
-            unrr_scale_factor = .5 * min_reranked_score / max_unreranked_score
-            for tcx in top_cxs[num_rerank:]:
-                cx2_fs[tcx] = np.multiply(cx2_fs[tcx], unrr_scale_factor)
-        else:
-            logdbg('Entire training set was reranked')
-        logdbg('Reranking done.')
+    # Sort by orderless score
+    cx2_cscore_ = compute_cscore(rr.cx2_fs_)
+    # Get shortlist of top results
+    top_cxs = cx2_cscore_.argsort()[::-1] #set diff with order
+    invalids = set(cm.invalid_cxs())
+    top_cxs = np.array([cx for cx in top_cxs \
+                        if cx not in invalids], dtype=np.uint32)
+    num_c      = len(top_cxs)
+    num_rerank = min(num_c, num_rerank)
+    # Build new feature scores
+    cx2_fs = [arr.copy() for arr in cx2_fs_]
+    if num_rerank == 0:
+        logdbg('Breaking rerank. num_rerank = 0;  min(num_c, query_prefs.num_rerank)')
         rr.cx2_fs     = cx2_fs
-        return True
+        return False
+    min_reranked_score = 2^30
+    #Initialize the reranked scores as the normal scores
+    cm.load_features(top_cxs) #[np.arange(num_rerank)])
+    # For each tcx (top cx) in the shortlist
+    for tcx in top_cxs[0:num_rerank]:
+        logdbg('Reranking qcx=%d vs tcx=%d' % (qcx, tcx))
+        cid   = cm.cx2_cid[tcx]
+        if cid <= 0: continue
+        fx2_match  = cx2_fm[tcx]
+        if len(fx2_match) == 0:
+            logdbg('Breaking rerank. len(fx2_match) == 0')
+            break
+        tfpts      = cm.cx2_fpts[tcx]
+        xy_thresh2 = (w*w + h*h) * xy_thresh**2
+        # Find which matches are spatially constent
+        fpts1_match  = qfpts[fx2_match[:, 0], :].transpose()
+        fpts2_match  = tfpts[fx2_match[:, 1], :].transpose()
+        #logdbg('''
+        #RANSAC Resampling matches on %r chips
+        #* xy_thresh2   = %r * (chip diagonal length)
+        #* theta_thresh = %r (orientation)
+        #* sigma_thresh = %r (scale)''' % (num_m, xy_thresh2, theta_thresh, sigma_thresh))
+        inliers = ransac(fpts1_match, fpts2_match, xy_thresh2, None) #sigma_thresh
+        # Remove the scores of chip pairs which generate RANSAC errors
+        if inliers is None:
+            cx2_fs[tcx][:] = -2 # -2 is the Degenerate Homography Code
+            continue
+        outliers = True - inliers
+        # Set the score of previously valid outliers to 0
+        cx2_fs[tcx][outliers] = np.minimum(cx2_fs[tcx][outliers], -1) # -1 is the Spatially Inconsistent Code
+        # Get the new score of the database instance.
+        # This is only used for a temp np.minimum calculation.
+        tmp_rrscore = np.sum(cx2_fs[tcx], axis=0)
+        if tmp_rrscore > 0:
+            #Keep track of our worst reranked score.
+            min_reranked_score = min(min_reranked_score, tmp_rrscore)
+    # Non-Reranked scores should always be less than reranked np.ones.
+    if num_rerank < num_c:
+        logdbg('Rescaling '+str(num_c - num_rerank)+' non-reranked scores')
+        all_nonreranked_scores = [s for scores in cx2_fs_[num_rerank:] for s in scores]
+        if len(all_nonreranked_scores) == 0:
+            max_unreranked_score = 1.
+        else:
+            max_unreranked_score = max(all_nonreranked_scores)
+        unrr_scale_factor = .5 * min_reranked_score / max_unreranked_score
+        for tcx in top_cxs[num_rerank:]:
+            cx2_fs[tcx] = np.multiply(cx2_fs[tcx], unrr_scale_factor)
+    else:
+        logdbg('Entire training set was reranked')
+    logdbg('Reranking done.')
+    rr.cx2_fs     = cx2_fs
+    return True
 
-    def compute_scores(qm, rr):
-        ' Aggregates the votes for chips into votes for animal names'
-        logdbg('Aggregating Feature Scores ')
-        # get managers
-        nm = qm.hs.nm
-        vm = qm.hs.vm
-        cm = qm.hs.cm
-        # get intermediate results
-        cx2_fm = rr.cx2_fm
-        cx2_fs = rr.cx2_fs
+def compute_scores(rr, hs):
+    ' Aggregates the votes for chips into votes for animal names'
+    logdbg('Aggregating Feature Scores ')
+    # get managers
+    nm = hs.nm
+    vm = hs.vm
+    cm = hs.cm
+    # get intermediate results
+    cx2_fm = rr.cx2_fm
+    cx2_fs = rr.cx2_fs
 
-        cx2_nscore = -np.ones(cm.max_cx + 1, dtype=np.float32)
-        cx2_cscore = compute_cscore(cx2_fs)
+    cx2_nscore = -np.ones(cm.max_cx + 1, dtype=np.float32)
+    cx2_cscore = compute_cscore(cx2_fs)
 
-        nx2_fx2_scores = {}
-        # Analyze the freq of a keypoint matching a name later
-        nx2_fx2_freq = {}
-        for (cx, fm) in enumerate(cx2_fm):
-            # Each keypoint votes for the highest scoring match
-            # it had to a particular name. (it can vote for multiple names)
-            fs = cx2_fs[cx]
-            nx = cm.cx2_nx[cx]
-            if nx == nm.UNIDEN_NX(): # UNIDEN is a unique name
-                nx = -int(cx)
-            if not nx in nx2_fx2_scores.keys():
-                nx2_fx2_scores[nx] = {}
-                nx2_fx2_freq[nx] = {}
-            for qfs, (qfx, fx) in iter(zip(fs, fm)):
-                if qfx in nx2_fx2_scores[nx].keys():
-                    nx2_fx2_scores[nx][qfx] = max(nx2_fx2_scores[nx][qfx], qfs)
-                    nx2_fx2_freq[nx][qfx] += 1
-                else:
-                    nx2_fx2_scores[nx][qfx] = qfs
-                    nx2_fx2_freq[nx][qfx]   = 1
-
-        for nx in nx2_fx2_scores.keys():
-            fx2_scores = nx2_fx2_scores[nx]
-            scores = np.array(fx2_scores.values())
-            nscore = scores[scores > 0].sum()
-            if nx < 0: # UNIDEN HACK. See -int(cx) above
-                cx2_nscore[-nx] = nscore
+    nx2_fx2_scores = {}
+    # Analyze the freq of a keypoint matching a name later
+    nx2_fx2_freq = {}
+    for (cx, fm) in enumerate(cx2_fm):
+        # Each keypoint votes for the highest scoring match
+        # it had to a particular name. (it can vote for multiple names)
+        fs = cx2_fs[cx]
+        nx = cm.cx2_nx[cx]
+        if nx == nm.UNIDEN_NX(): # UNIDEN is a unique name
+            nx = -int(cx)
+        if not nx in nx2_fx2_scores.keys():
+            nx2_fx2_scores[nx] = {}
+            nx2_fx2_freq[nx] = {}
+        for qfs, (qfx, fx) in iter(zip(fs, fm)):
+            if qfx in nx2_fx2_scores[nx].keys():
+                nx2_fx2_scores[nx][qfx] = max(nx2_fx2_scores[nx][qfx], qfs)
+                nx2_fx2_freq[nx][qfx] += 1
             else:
-                for cx in nm.nx2_cx_list[nx]:
-                    cx2_nscore[cx] = nscore
+                nx2_fx2_scores[nx][qfx] = qfs
+                nx2_fx2_freq[nx][qfx]   = 1
 
-        rr.cx2_cscore = cx2_cscore
-        rr.cx2_nscore = cx2_nscore
+    for nx in nx2_fx2_scores.keys():
+        fx2_scores = nx2_fx2_scores[nx]
+        scores = np.array(fx2_scores.values())
+        nscore = scores[scores > 0].sum()
+        if nx < 0: # UNIDEN HACK. See -int(cx) above
+            cx2_nscore[-nx] = nscore
+        else:
+            for cx in nm.nx2_cx_list[nx]:
+                cx2_nscore[cx] = nscore
+
+    rr.cx2_cscore = cx2_cscore
+    rr.cx2_nscore = cx2_nscore
 # --- /QueryManager  ---
 
 

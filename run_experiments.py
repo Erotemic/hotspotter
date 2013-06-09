@@ -38,7 +38,10 @@ if len(sys.argv) > 1 and sys.argv[1] == '--delete':
 if len(sys.argv) > 1 and sys.argv[1] == '--list':
     for hsdb in hsdb_list:
         print hsdb.db_dpath
-        for fname in os.listdir(hsdb.db_dpath+'/.hs_internals/computed/query_results'):
+        result_dir  = hsdb.db_dpath+'/.hs_internals/computed/query_results'
+        result_list = os.listdir(result_dir)
+        result_list.sort()
+        for fname in result_list:
             print '  '+fname
     sys.exit(0)
 

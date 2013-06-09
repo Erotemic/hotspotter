@@ -24,13 +24,26 @@ bajo_bonito = workdir+'LF_Bajo_bonito'
 optimizas   = workdir+'LF_OPTIMIZADAS_NI_V_E'
 westpoint   = workdir+'LF_WEST_POINT_OPTIMIZADAS'
 
-hsdb1 = HotSpotterAPI(bajo_bonito)
-hsdb2 = HotSpotterAPI(optimizas)
-hsdb3 = HotSpotterAPI(westpoint)
+dbpath_list = [bajo_bonito, optimizas, westpoint]
+hsdb_list = []
+for dbpath in dbpath_list:
+    hsdb = HotSpotterAPI(dbpath)
+    hsdb_list.append(hsdb)
 
-hsdb1.ensure_model()
-hsdb2.ensure_model()
-hsdb3.ensure_model()
+if len(sys.argv) > 1 and sys.argv[1] == '--delete':
+    for hsdb in hsdb_list:
+        hsdb.delete_precomputed_results()
+    sys.exit(0)
+
+if len(sys.argv) > 1 and sys.argv[1] == '--list':
+    for hsdb in hsdb_list:
+        print hsdb.db_dpath
+        for fname in os.listdir(hsdb.db_dpath+'/.hs_internals/computed/query_results'):
+            print '  '+fname
+    sys.exit(0)
+
+for hsdb in hsdb_list:
+    hsdb.ensure_model()
 
 def query_db_vs_db(hsA, hsB):
     vs_str = hsA.get_dbid()+' vs '+hsB.get_dbid()
@@ -45,13 +58,16 @@ def query_db_vs_db(hsA, hsB):
             cx2_rr[count] = rr
     return cx2_rr
 
-
-dbvslist =  [(hsdb1, hsdb2),
-             (hsdb2, hsdb1),
-             (hsdb1, hsdb3),
-             (hsdb3, hsdb1),
-             (hsdb2, hsdb3),
-             (hsdb2, hsdb3)]
+dbvslist = []
+for hsdbA in hsdb_list:
+    for hsdbB in hsdb_list:
+        if not hsdbA is hsdbB:
+            dbtup1 = (hsdbA, hsdbB)
+            dbtup2 = (hsdbA, hsdbB)
+            if not dbtup1 in dbvslist:
+                assert not dbtup2 in dbvslist
+                dbvslist.append(dbtup1)
+                dbvslist.append(dbtup2)
 
 cx2rr_list = [query_db_vs_db(hsA, hsB) for hsA, hsB in dbvslist]
 

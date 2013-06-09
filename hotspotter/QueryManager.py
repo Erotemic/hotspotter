@@ -18,7 +18,7 @@ class RawResults(DynStruct):
         rr.qcx   = qcx
         rr.qcid  = qcid
         rr.qnid  = qnid
-        rr.dbid  = dbid 
+        rr.dbid  = dbid # Result / Database dbid
         # Query information
         rr.qfpts = None
         rr.qfdsc = None
@@ -38,8 +38,16 @@ class RawResults(DynStruct):
         #rr.cx2_fs_ = None
 
     def rr_fpath(rr, qhs):
-        return join(qhs.qm.rr_dpath, 'rr_' + rr.dbid + '_' + \
-                    (qhs.qm.rr_fnamefmt % rr.qcid) + '.npz')
+        # TODO: This is a hack right now. Name should depend on database
+        # Not becomputed every time you save, and what not. This file needs a
+        # fixin. 
+        #depends = ['chiprep', 'preproc', 'model', 'query']
+        #algo_suffix = qhs.hs.am.get_algo_suffix(depends)
+        #samp_suffix = qhs.hs.vm.get_samp_suffix()
+        rr_dpath = qhs.iom.ensure_computed_directory('query_results')
+        # Save in query database. point to result database
+        return join(rr_dpath, 'rr_' + rr.dbid + '_' + \
+                    ('cid%07d' % rr.qcid) + '.npz')
 
     def has_result(rr, qhs):
         return os.path.exists(rr.rr_fpath(qhs))
@@ -74,10 +82,7 @@ class QueryManager(AbstractManager):
     ' Handles Searching the Vocab Manager'
     def __init__(qm, hs):
         super(QueryManager, qm).__init__(hs)
-        qm.rr_fnamefmt = None # Filename Format for saving raw results
-        qm.rr_dpath = None
         qm.rr = None
-        qm.update_rr_fnamefmt()
 
     def cx2_rr(qm, qcx, qhs=None):
         qhs  = qm.hs if qhs is None else qhs
@@ -99,15 +104,6 @@ class QueryManager(AbstractManager):
             qm.repopulate_raw_results(rr, qhs)
             rr.save_result(qhs)
         return rr
-
-    #@depends_algo
-    #@depends_sample
-    def update_rr_fnamefmt(qm):
-        depends = ['chiprep', 'preproc', 'model', 'query']
-        algo_suffix = qm.hs.am.get_algo_suffix(depends)
-        samp_suffix = qm.hs.vm.get_samp_suffix()
-        qm.rr_dpath = qm.hs.iom.ensure_computed_directory('query_results')
-        qm.rr_fnamefmt = 'cid%07d'+samp_suffix+algo_suffix
 
     def repopulate_raw_results(qm, rr, qhs):
         # Get query parameters

@@ -10,7 +10,7 @@ import PIL.PpmImagePlugin
 
 import argparse
 import inspect
-import sys
+import os, sys
 from os.path import join, dirname
 
 def emergency_msgbox(title, msg):
@@ -31,6 +31,13 @@ def ensure_tpl_libs():
         import hotspotter
         TPL_LIB_DIR = join(dirname(hotspotter.__file__), 'tpl/lib', sys.platform)
         sys.path.append(TPL_LIB_DIR)
+            if py
+            ext = {'linux2':'.ln','darwin':'.mac','win32':'.exe'}[sys.platform]
+        # Ensure that hesaff is executable
+        hesaff_fname = TPL_LIB_DIR+'/hesaff'+ext
+        is_executable = lambda fname: bin(int(oct(os.stat(fname).st_mode)[4]))[4]
+        if not is_executable(hesaff_fname): 
+            os.system('chmod 775 '+hesaff_fname)
     except Exception: 
         print('''You must download hotspotter\'s 3rd party libraries before you can run it. 
         git clone https://github.com/Erotemic:tpl-hotspotter.git tpl''')

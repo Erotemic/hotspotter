@@ -34,11 +34,11 @@ class Facade(QObject):
             fac.open_db(None, autoload)
         except Exception as ex:
             import traceback
-            print "Error occurred in autoload"
-            print str(ex)
-            print '<<<<<<   Traceback    >>>>>'
+            print("Error occurred in autoload")
+            print(str(ex))
+            print('<<<<<<   Traceback    >>>>>')
             traceback.print_exc()
-            print "Error occurred in autoload"
+            print("Error occurred in autoload")
 
     @pyqtSlot(name='run_experiments')
     def run_experiments(fac):

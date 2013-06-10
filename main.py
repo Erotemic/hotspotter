@@ -1,12 +1,4 @@
 #!/usr/bin/env python
-#TODO: Find a way to make this ugly code nice
-#-------------------------------------------
-# Figure out which environment we are in
-# and set assocated preferences
-
-# Freeze support is needed for windows installers
-import multiprocessing as mp
-mp.freeze_support()
 
 # For py2exe
 import PIL.TiffImagePlugin
@@ -16,136 +8,119 @@ import PIL.JpegImagePlugin
 import PIL.GifImagePlugin
 import PIL.PpmImagePlugin
 
-
-# Attach to QtConsole's QApplication if able
-from PyQt4.Qt import QCoreApplication
-app = QCoreApplication.instance() 
-in_qtc_bit = (not app is None)
-
-if not in_qtc_bit:
-    'if not in qtconsole, then configure matplotlib'
-    import matplotlib
-    matplotlib.use('Qt4Agg')
-
-
-from hotspotter.HotSpotterAPI import HotSpotterAPI
-from PyQt4.Qt import QApplication, QEventLoop
-from hotspotter.Facade import Facade
-from hotspotter.other.logger import logmsg, hsl
 import argparse
 import inspect
-import os.path
 import sys
+from os.path import join, dirname
 
-try:
-    # Append the tpl lib to your path
-    import hotspotter
-    TPL_LIB_DIR = os.path.join(os.path.dirname(hotspotter.__file__), 'tpl/lib', sys.platform)
-    #BOOST_LIB_DIR = r'C:\boost_1_53_0\stage\lib'
-    sys.path.append(TPL_LIB_DIR)
-    #sys.path.append(BOOST_LIB_DIR)
-except Exception: 
-    print '''You must download hotspotter\'s 3rd party libraries before you can run it. 
-    git clone https://github.com/Erotemic:tpl-hotspotter.git tpl'''
+def emergency_msgbox(title, msg):
+    'Make a non modal critical QMessageBox.'
+    from PyQt4.Qt import QMessageBox
+    msgBox = QMessageBox(None);
+    msgBox.setAttribute(Qt.WA_DeleteOnClose)
+    msgBox.setStandardButtons(QMessageBox.Ok)
+    msgBox.setWindowTitle(title)
+    msgBox.setText(msg)
+    msgBox.setModal(False)
+    msgBox.open(msgBox.close)
+    msgBox.show()
+    return msgBox
 
-logmsg('Starting the program')
+def ensure_tpl_libs():
+    try: # Ensure that TPL's lib files are in PATH
+        import hotspotter
+        TPL_LIB_DIR = join(dirname(hotspotter.__file__), 'tpl/lib', sys.platform)
+        sys.path.append(TPL_LIB_DIR)
+    except Exception: 
+        print('''You must download hotspotter\'s 3rd party libraries before you can run it. 
+        git clone https://github.com/Erotemic:tpl-hotspotter.git tpl''')
 
-parser = argparse.ArgumentParser(description='HotSpotter - Instance Recognition', prefix_chars='+-')
-
-def_on  = {'action':'store_false', 'default':True}
-def_off = {'action':'store_true', 'default':False}
-
-parser.add_argument('-l', '--log-all',         dest='logall_bit',   help='Writes all logs', **def_off)
-parser.add_argument('--cmd',                   dest='cmd_bit',   help='Forces command line mode', **def_off)
-parser.add_argument('-r', '--run-experiments', dest='runexpt_bit',  help='Runs the experiments', **def_off)
-parser.add_argument('-g', '--gui-off',         dest='gui_bit',      help='Runs HotSpotter in command line mode', **def_on)
-parser.add_argument('-a', '--autoload-off',    dest='autoload_bit', help='Starts HotSpotter without loading a database', **def_on)
-parser.add_argument('-dp', '--delete-preferences', dest='delpref_bit', help='Deletes the HotSpotter preferences in ~/.hotspotter', **def_off)
-
-
-args, unknown = parser.parse_known_args()
-
-if args.logall_bit:
-    hsl.enable_global_logs()
-
-if not in_qtc_bit:
-    app = QApplication(sys.argv)
-
-# TODO: Remove the Facade, Have only the HotSpotterAPI
-# Start HotSpotter via the Facade
-fac = Facade(use_gui=args.gui_bit, autoload=args.autoload_bit)
-
-#fac.profile('fac2 = Facade()')
-
-if args.delpref_bit:
-    fac.hs.delete_preferences()
-
-for (name, value) in inspect.getmembers(Facade, predicate=inspect.ismethod):
-    if name.find('_') != 0:
-        exec('def '+name+'(*args, **kwargs): fac.'+name+'(*args, **kwargs)')
-# Defined Aliases
-stat, status   = [lambda          : fac.print_status()]*2
-removec,       = [lambda          : fac.remove_cid()]
-rename,        = [lambda new_name : fac.rename_cid(new_name)]
-
-# Add developer namespace
-from PyQt4.Qt import QApplication, QMainWindow,\
-        QMessageBox, QAbstractItemView, QObject, QInputDialog
-from hotspotter.QueryManager import RawResults, QueryResult
-#from PyQt4.QtCore import SIGNAL, Qt, pyqtSlot, pyqtSignal
-from PIL import Image
-import types
-import os
-import os.path
-from os.path import expanduser, join, relpath, normpath, exists, dirname
-from hotspotter.helpers import *
-from hotspotter.other.AbstractPrintable import *
-from hotspotter.other.ConcretePrintable import *
-from hotspotter.other.logger import *
-
-# Get commonly used variables for command line usage
-hs = fac.hs
-uim = hs.uim
-hsgui = uim.hsgui
-if hsgui != None:
-    epw = hsgui.epw
-cm,  nm,  gm,  am,  dm,  vm,  qm,  iom,  em = hs.get_managers(
-'cm','nm','gm','am','dm','vm','qm','iom','em')
-
-qcx = 1
-#import dev 
-#dnspc = dev.get_namespace(fac)
-#exec(dnspc)
-
-# TODO Move to dev
-if args.runexpt_bit:
-    em.run_quick_experiment()
-    em.show_problems()
+def parse_arguments():
+    print('Parsing arguments')
+    parser = argparse.ArgumentParser(description='HotSpotter - Instance Recognition', prefix_chars='+-')
+    def_on  = {'action':'store_false', 'default':True}
+    def_off = {'action':'store_true', 'default':False}
+    parser.add_argument('-l', '--log-all', 
+                        dest='logall_bit', help='Writes all logs', **def_off)
+    parser.add_argument('--cmd', dest='cmd_bit',
+                        help='Forces command line mode', **def_off)
+    parser.add_argument('-g', '--gui-off', dest='gui_bit',
+                        help='Runs HotSpotter in command line mode', **def_on)
+    parser.add_argument('-a', '--autoload-off', dest='autoload_bit',
+                        help='Starts HotSpotter without loading a database', **def_on)
+    parser.add_argument('-dp', '--delete-preferences', dest='delpref_bit',
+                        help='Deletes preferences in ~/.hotspotter', **def_off)
+    args, unknown = parser.parse_known_args()
+    return args
 
 
-# be careful to not block the command line interface thread. 
-run_new_exec_loop_bit = False
-if args.cmd_bit or not args.gui_bit:
-    try:
-        print "Checking __IPYTHON__"
-        __IPYTHON__
-    except NameError as nex:
-        try:
-            print "Starting IPython Command Line Interaction"
-            import IPython
-            IPython.embed()
-        except Exception as ex:
-            print "IPython is not installed"
-            run_new_exec_loop_bit = True
-            print ex
-elif in_qtc_bit:    
-    print 'Starting QtConsole Command Line Interaction'
-else:
-    run_new_exec_loop_bit = True
+def initQtApp():
+    # Attach to QtConsole's QApplication if able
+    from PyQt4.Qt import QCoreApplication, QApplication
+    app = QCoreApplication.instance() 
+    isRootApp = app is None
+    if isRootApp: # if not in qtconsole
+        # configure matplotlib 
+        import matplotlib
+        print('Configuring matplotlib for Qt4')
+        matplotlib.use('Qt4Agg')
+        # Run new root application
+        print('Starting new QApplication')
+        app = QApplication(sys.argv)
+    else: 
+        print('Running using parent QApplication')
+    return app, isRootApp 
 
-if run_new_exec_loop_bit:
-    print 'Running the application event loop'
+def executeEventLoop(app):
+    print('Running the application event loop')
     sys.stdout.flush()
     sys.exit(app.exec_())
 
-sys.stdout.flush()
+# MAIN ENTRY POINT
+if __name__ == '__main__':
+    # 1) Multiprocess Initialization 
+    from multiprocessing import freeze_support
+    freeze_support()
+    # 2) TPL Initialization
+    ensure_tpl_libs()
+    # 3) Qt Initialization
+    args = parse_arguments()
+    app, isRootApp = initQtApp()
+    # 4) HotSpotter Initialization
+    from hotspotter.other.logger import hsl
+
+    from hotspotter.standalone import delete_preference_dir
+    from hotspotter.Facade import Facade
+    if args.logall_bit:
+        hsl.enable_global_logs()
+    if args.delpref_bit:
+        delete_preference_dir()
+    # 5) HotSpotter Execution 
+    fac = Facade(use_gui=args.gui_bit, autoload=args.autoload_bit)
+
+    # Register Facade functions into current namespace
+    for (name, value) in inspect.getmembers(Facade, predicate=inspect.ismethod):
+        if name.find('_') != 0:
+            exec('def '+name+'(*args, **kwargs): fac.'+name+'(*args, **kwargs)')
+    # Defined Aliases
+    stat, status   = [lambda          : fac.print_status()]*2
+    removec,       = [lambda          : fac.remove_cid()]
+    rename,        = [lambda new_name : fac.rename_cid(new_name)]
+
+    # Get developer variables
+    with open('dev.py', 'r') as devfile:
+        devpy = devfile.read()
+        exec(devpy)
+
+    run_exec = isRootApp
+    if args.cmd_bit:
+        # Start IPython command line mode
+        from hotspotter.helpers import in_IPython, have_IPython
+        run_exec = False
+        if not in_IPython() and have_IPython():
+            import IPython
+            IPython.embed()
+
+    # Run Event Loop, but do not block QTConsole or IPython
+    if run_exec:
+        executeEventLoop(app)

@@ -53,6 +53,8 @@
 
         5 | 13/05/08|            ____ |  Add an ROI detection input
 
+        5 | 13/05/08|            ____ |  HotSpotterAPI should be given to a GUI. The GUI should then register itself into the draw manager
+
         5 | 13/05/08|            ____ |  Sample Sets are handled by Visual Model. There is a better way to do these. 
         5 | 13/05/08|            ____ |  Finish VisualModel.train_model2
 

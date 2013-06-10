@@ -91,7 +91,7 @@ class QueryManager(AbstractManager):
         force_recompute = True
         if rr.has_result(rr_dpath, rr_suffix) and not force_recompute:
             logmsg('Loading query.')
-            rr.load_result(hs, qhs, rr_dpath, rr_suffix)
+            rr.load_result(rr_dpath, rr_suffix)
         else:
             logmsg('Recomputing query.')
             (qfpts, qfdsc) = qhs.cm.get_feats(qcx)
@@ -99,7 +99,7 @@ class QueryManager(AbstractManager):
             rr.qfdsc = qfdsc
             rr.qchip_size = qhs.cm.cx2_chip_size(qcx)
             qm.repopulate_raw_results(rr, hs, qhs)
-            rr.save_result(hs, qhs, rr_dpath, rr_suffix)
+            rr.save_result(rr_dpath, rr_suffix)
         return rr
 
     def repopulate_raw_results(qm, rr, hs, qhs):
@@ -231,7 +231,7 @@ def assign_feature_matches_1vM(rr, hs, K, method, cids_to_remove):
                         qfx2_kweight.flat, \
                         qfx2_kcxs_vote.flat, \
                         qfx2_kfxs_vote.flat)):
-        if len(cxs) == 0: 
+        if cxs.size == 0: 
             continue
         for (vote_cx, vote_fx) in iter(zip(np.nditer(cxs), np.nditer(fxs))):
             cx2_fm[vote_cx].append((qfx, vote_fx))

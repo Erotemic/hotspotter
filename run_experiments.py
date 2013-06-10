@@ -3,6 +3,7 @@ from hotspotter.algo.spatial_functions import ransac
 from hotspotter.helpers import alloc_lists, Timer
 from hotspotter.other.AbstractPrintable import AbstractManager, AbstractPrintable
 from hotspotter.other.ConcretePrintable import DynStruct
+from hotspotter.QueryManager import QueryResult
 from hotspotter.other.logger import logdbg, logerr, hsl, logmsg, logwarn
 from numpy import spacing as eps
 from os.path import join
@@ -11,42 +12,59 @@ import os, sys
 import cPickle
 import pylab
 
-import multiprocessing as mp
-mp.freeze_support()
-print "RUNNING EXPERIMENTS"
+from scipy.stats.kde import gaussian_kde
+from numpy import linspace,hstack
+from pylab import *
 
-#hsl.enable_global_logs()
+def main():
 
-workdir = '/media/SSD_Extra/'
-if sys.platform == 'win32':
-    workdir = 'D:/data/work/Lionfish/'
-bajo_bonito = workdir+'LF_Bajo_bonito'
-optimizas   = workdir+'LF_OPTIMIZADAS_NI_V_E'
-westpoint   = workdir+'LF_WEST_POINT_OPTIMIZADAS'
+    workdir = '/media/SSD_Extra/'
+    if sys.platform == 'win32':
+        workdir = 'D:/data/work/Lionfish/'
+    bajo_bonito = workdir+'LF_Bajo_bonito'
+    optimizas   = workdir+'LF_OPTIMIZADAS_NI_V_E'
+    westpoint   = workdir+'LF_WEST_POINT_OPTIMIZADAS'
 
-dbpath_list = [bajo_bonito, optimizas, westpoint]
-hsdb_list = []
-for dbpath in dbpath_list:
-    hsdb = HotSpotterAPI(dbpath)
-    hsdb_list.append(hsdb)
+    dbpath_list = [bajo_bonito, optimizas, westpoint]
+    hsdb_list = []
+    for dbpath in dbpath_list:
+        hsdb = HotSpotterAPI(dbpath)
+        hsdb_list.append(hsdb)
 
-if len(sys.argv) > 1 and sys.argv[1] == '--delete':
+    if len(sys.argv) > 1 and sys.argv[1] == '--delete':
+        for hsdb in hsdb_list:
+            hsdb.delete_precomputed_results()
+        sys.exit(0)
+
+    if len(sys.argv) > 1 and sys.argv[1] == '--list':
+        for hsdb in hsdb_list:
+            print hsdb.db_dpath
+            result_dir  = hsdb.db_dpath+'/.hs_internals/computed/query_results'
+            result_list = os.listdir(result_dir)
+            result_list.sort()
+            for fname in result_list:
+                print '  '+fname
+        sys.exit(0)
+
     for hsdb in hsdb_list:
-        hsdb.delete_precomputed_results()
-    sys.exit(0)
+        hsdb.ensure_model()
 
-if len(sys.argv) > 1 and sys.argv[1] == '--list':
-    for hsdb in hsdb_list:
-        print hsdb.db_dpath
-        result_dir  = hsdb.db_dpath+'/.hs_internals/computed/query_results'
-        result_list = os.listdir(result_dir)
-        result_list.sort()
-        for fname in result_list:
-            print '  '+fname
-    sys.exit(0)
+    # Get all combinations of database pairs
+    dbvslist = []
+    for hsdbA in hsdb_list:
+        for hsdbB in hsdb_list:
+            if not hsdbA is hsdbB:
+                dbtup1 = (hsdbA, hsdbB)
+                dbtup2 = (hsdbB, hsdbA)
+                if not dbtup1 in dbvslist:
+                    assert not dbtup2 in dbvslist
+                    dbvslist.append(dbtup1)
+                    dbvslist.append(dbtup2)
 
-for hsdb in hsdb_list:
-    hsdb.ensure_model()
+    for tup in dbvslist:
+        print(tup[0].get_dbid()+' vs '+tup[1].get_dbid())
+
+    cx2rr_list = [query_db_vs_db(hsA, hsB) for hsA, hsB in dbvslist]
 
 def query_db_vs_db(hsA, hsB):
     vs_str = hsA.get_dbid()+' vs '+hsB.get_dbid()
@@ -61,19 +79,6 @@ def query_db_vs_db(hsA, hsB):
             cx2_rr[count] = rr
     return cx2_rr
 
-dbvslist = []
-for hsdbA in hsdb_list:
-    for hsdbB in hsdb_list:
-        if not hsdbA is hsdbB:
-            dbtup1 = (hsdbA, hsdbB)
-            dbtup2 = (hsdbA, hsdbB)
-            if not dbtup1 in dbvslist:
-                assert not dbtup2 in dbvslist
-                dbvslist.append(dbtup1)
-                dbvslist.append(dbtup2)
-
-cx2rr_list = [query_db_vs_db(hsA, hsB) for hsA, hsB in dbvslist]
-
 def dostuff():
     for i in range(len(dbvslist))[::2]:
         hsA, hsB = dbvslist[i]
@@ -81,7 +86,6 @@ def dostuff():
         cxB2rrA = cx2rr_list[i+1]
         symetric_matchings(hsA, hsB, rrlistA, rrlistB)
 
-from hotspotter.QueryManager import QueryResult
 def visualize_top_scores(hsA, hsB, cxA2rrB):
     ''' displays a pdf of how likely matching scores are '''
     cx = 1
@@ -94,9 +98,7 @@ def visualize_top_scores(hsA, hsB, cxA2rrB):
         res.force_num_top(num_top)
         top_scores = res.top_scores()
         ts_list[qx, 0:len(top_scores)] = top_scores
-    from scipy.stats.kde import gaussian_kde
-    from numpy import linspace,hstack
-    from pylab import *
+
     min_score = 0
     max_score = round(ts_list.max()+1)
     score_range = (min_score, max_score)
@@ -165,3 +167,11 @@ def spatial_consistent_match_comparisons():
 #res.visualize()
 
 #pylab.show() # keep things on screen
+
+if __name__ == '__main__':
+    import multiprocessing as mp
+    mp.freeze_support()
+    print "RUNNING EXPERIMENTS"
+    main()
+    #hsl.enable_global_logs()
+

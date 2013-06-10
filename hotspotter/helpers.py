@@ -60,6 +60,19 @@ def dircheck(dpath,makedir=True):
         os.makedirs(dpath)
     return True
 
+def in_IPython():
+    try:
+        __IPYTHON__
+        return True
+    except NameError as nex:
+        return False
+
+def have_IPython():
+    try:
+        import IPython
+        return True
+    except NameError as nex:
+        return False
 
 def keyboard(banner=None):
     ''' Function that mimics the matlab keyboard command '''

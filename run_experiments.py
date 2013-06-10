@@ -48,25 +48,30 @@ def visualize_all_results(dbvslist, cx2rr_list):
         hsA, hsB = dbvslist[i]
         results_name = (hsA.get_dbid()+' vs '+hsB.get_dbid())
         print('Visualizing: '+results_name)
-        hsA.dm.draw_prefs.figsize = (19.2,10.8)
         # Symetric results.
         cx2rr_dirAB = cx2rr_list[i]
         cx2rr_dirBA = cx2rr_list[i+1]
         # Visualize the probability of a chip score.
-        __CHIPSCORE_PROBAILITIES__ = True
+        __CHIPSCORE_PROBAILITIES__ = False
         if __CHIPSCORE_PROBAILITIES__:
-            if not exists('results/chipscore_probabilities'):
-                os.mkdir('results/chipscore_probabilities')
+            cpres_dir = 'results/chipscore_probabilities'
+            if not exists(cpres_dir):
+                os.mkdir(cpres_dir)
             fig1 = viz_chipscore_pdf(hsA, hsB, cx2rr_dirAB, i)
+            fig1.savefig(join(cpres_dir, results_name+'_chipscoreAB.png'), format='png')
             fig2 = viz_chipscore_pdf(hsB, hsA, cx2rr_dirBA, i+1)
-            fig1.savefig(results_name+'_chipscoreAB.png', format='png')
-            fig2.savefig(results_name+'_chipscoreBA.png', format='png')
+            fig2.savefig(join(cpres_dir, results_name+'_chipscoreBA.png'), format='png')
         # Visualize chips which symetrically match across databases.
-        __SYMETRIC_MATCHINGS__ = True
+        __SYMETRIC_MATCHINGS__ = False
         if __SYMETRIC_MATCHINGS__:
             matching_pairs = get_symetric_matchings(hsA, hsB, cx2rr_dirAB, cx2rr_dirBA)
             matching_pairs_list.append(matching_pairs)
             viz_symetric_matchings(matching_pairs, results_name)
+
+        # Visualize chips which have a results with a high score
+        __THRESHOLD_MATCHINGS__ = True
+        if __THRESHOLD_MATCHINGS__:
+            viz_threshold_matchings(hsA, hsB, cx2rr_dirAB, 15)
 
 # --- VISUALIZATIONS ---
 def viz_symetric_matchings(matching_pairs, results_name):
@@ -76,10 +81,8 @@ def viz_symetric_matchings(matching_pairs, results_name):
     print('  * Visualizing '+str(len(matching_pairs))+' matching pairs')
     for cx, cx2, match_pos, match_pos1, res1, res2 in matching_pairs:
         for res in (res1,res2):
-            res.hs.dm.draw_prefs.ellipse_bit = True 
-            res.hs.dm.draw_prefs.figsize=(19.2,10.8)
             res.visualize()
-            fignum = res.hs.dm.draw_prefs.fignum
+            fignum = 0
             fig = figure(num=fignum, figsize=(19.2,10.8))
             fig.show()
             fig.canvas.set_window_title('Symetric Matching: '+str(cx)+' '+str(cx2))
@@ -93,10 +96,42 @@ def viz_symetric_matchings(matching_pairs, results_name):
             fig.savefig(fig_fpath, format='png')
             fig.clf()
 
+def viz_threshold_matchings(hsA, hsB, cx2rr_dirAB, match_threshold = 20):
+    'returns database, cx, database cx'
+    import numpy as np
+    output_dir = 'results/threshold_matches'
+    if not exists(output_dir):
+        os.mkdir(output_dir)
+    valid_cxsB = hsB.cm.get_valid_cxs()
+    num_found = 0
+    
+    for count in xrange(len(cx2rr_dirAB)):
+        rr = cx2rr_dirAB[count]
+        cx = rr.qcx
+        res = QueryResult(hsB, rr, hsA)
+        # Set matching threshold
+        res.top_thresh = match_threshold
+        res.num_top_min = 0
+        res.num_top_max = 5
+        res.num_extra_return = 0
+        # See if there are matches
+        top_cxs = res.top_cx()
+        top_scores = res.scores()[top_cxs]
+        if len(top_cxs) > 0:
+            tsstr = str(top_scores[0])
+            res.visualize()
+            results_name = res.rr.dbid +'v'+ res.rr.qdbid
+            fig_fname = results_name+'score'+tsstr+'_cx'
+            print('  * Threshold Match: '+str(res))
+            fig = figure(0)
+            fig.savefig(realpath(join(output_dir, fig_fname)), format='png')
+            num_found += 1
+    print('  * Visualized '+str(num_found)+' above thresh: '+str(match_threshold))            
+
 def get_symetric_matchings(hsA, hsB, cx2rr_dirAB, cx2rr_dirBA):
     'returns database, cx, database cx'
     import numpy as np
-    sym_match_thresh = 10
+    sym_match_thresh = 5
 
     matching_pairs = []
     valid_cxsB = hsB.cm.get_valid_cxs()
@@ -217,6 +252,9 @@ if __name__ == '__main__':
     hsdb_list = []
     for dbpath in dbpath_list:
         hsdb = HotSpotterAPI(dbpath)
+        hsdb.dm.draw_prefs.ellipse_bit = True 
+        hsdb.dm.draw_prefs.figsize=(19.2,10.8)
+        hsdb.dm.draw_prefs.fignum = 0
         hsdb_list.append(hsdb)
 
     if len(sys.argv) > 1 and sys.argv[1] == '--delete':

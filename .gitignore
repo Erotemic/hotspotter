@@ -1,4 +1,5 @@
 *~
+results
 build
 hs_setup/Output
 dist
@@ -13,3 +14,4 @@ desktop.ini
 *.npz
 *.pyc
 *.pkl
+*.png

@@ -142,11 +142,15 @@ class HotSpotterLogger(object):
                 if hsl.cursor_x == -1:
                     pass
                 elif hsl.cursor_x ==  0:
-                    sys.stdout.write('Working: '+(hsl.kirby[hsl.cursor_x % 4] % hsl.cursor_x))
-                    sys.stdout.flush()
+                    # Write Kirby
+                    #sys.stdout.write('Working: '+(hsl.kirby[hsl.cursor_x % 4] % hsl.cursor_x))
+                    #sys.stdout.flush()
+                    pass
                 else:
-                    sys.stdout.write(hsl.delete_kirby+(hsl.kirby[hsl.cursor_x % 4] % hsl.cursor_x))
-                    sys.stdout.flush()
+                    # Write Kirby
+                    #sys.stdout.write(hsl.delete_kirby+(hsl.kirby[hsl.cursor_x % 4] % hsl.cursor_x))
+                    pass
+                    #sys.stdout.flush()
                 hsl.cursor_x += 1
                 hsl.prev_time = time.time()
         else:

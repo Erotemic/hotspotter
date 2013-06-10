@@ -56,7 +56,7 @@ class RawResults(DynStruct):
         try:
             npz = np.load(rr_fpath)
             for _key in npz.files:
-                if _key in ['qcx','qcid','qnid','dbid']:
+                if _key in ['qcx','qcid','qnid','dbid','qdbid']:
                     rr.__dict__[_key] = npz[_key].tolist()
                 else: 
                     rr.__dict__[_key] = npz[_key]
@@ -88,7 +88,7 @@ class QueryManager(AbstractManager):
         samp_suffix = hs.vm.get_samp_suffix()
         rr_suffix = algo_suffix + samp_suffix
         # Populate raw results
-        force_recompute = True
+        force_recompute = False #TODO PREFERENCE
         if rr.has_result(rr_dpath, rr_suffix) and not force_recompute:
             logmsg('Loading query.')
             rr.load_result(rr_dpath, rr_suffix)

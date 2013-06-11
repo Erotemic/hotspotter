@@ -101,6 +101,8 @@ class AlgorithmManager(AbstractManager):
         am.algo_prefs.query.method                    = Pref(2, choices=['COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'])
         am.algo_prefs.query.score                     = Pref(0, choices=['cscore','nscore']) # move to results?
         am.algo_prefs.query.self_as_result_bit        = Pref(False)  #: Return self (in terms of name) in results
+        am.algo_prefs.query.remove_other_names        = Pref(False)  #: Remove all results with the same identified name as the query
+
         # --- Result Prefs --- 
         am.algo_prefs.results.score                   = Pref(0, choices=('cscore','nscore')) # move to results?
         am.algo_prefs.results.one_result_per_name     = Pref(False)  #: Return self (in terms of name) in results

@@ -111,6 +111,12 @@ class QueryManager(AbstractManager):
         if qhs is hs and rr.qcid in hs.vm.get_train_cid():
             # Remove query id if it could be matched
             cids_to_remove = [rr.qcid]
+        if query_prefs.remove_other_names:
+            # Remove everything with the same name as query
+            qname = qhs.cm.cx2_name(rr.qcx)
+            if qhs.nm.UNIDEN_NAME() != qname:
+                cx_list = hs.nm.name2_cx_list(qname)
+                cids_to_remove = hs.cm.cx2_cid[cx_list]
         num_rerank   = query_pref.num_rerank
         xy_thresh    = query_pref.spatial_thresh
         sigma_thresh = query_pref.sigma_thresh
@@ -427,7 +433,7 @@ class QueryResult(AbstractPrintable):
     def top_cx(res):
         'Returns a list of the top chip indexes'
         cx_sort = res.cx_sort()
-        scores   = res.scores()
+        scores  = res.scores()
         num_top = res._get_num_top(cx_sort, scores)
         return cx_sort[0:num_top]
 
@@ -504,6 +510,16 @@ class QueryResult(AbstractPrintable):
             if type(dyngot[ix]) != np.ndarray and dyngot[ix] == '__UNFILLED__':
                 dyngot[ix] = res.scores()[top_cx]
         return dyngot
+
+    def get_groundtruth_ranks(res):
+        hs = res.hs
+        qname = res.qhs.cm.cx2_name(res.rr.qcx)
+        if qname == res.qhs.nm.UNIDEN_NAME():
+            return None
+        gtcx_list = res.hs.nm.name2_cx_list(qname)
+        for gtcx in gtcx_list:
+
+
 
     def get_precision(res):
         raise NotImplementedError('implement ground truth scoring metrics here')

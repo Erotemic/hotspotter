@@ -538,7 +538,7 @@ class QueryResult(AbstractPrintable):
         pass
 
     def visualize(res):
-        res.hs.dm.show_query(res)
+        res.hs.dm.show_query(res, enddraw=False)
 
     def result_str(res):#, scores=None):
         # TODO: Move this to experiment output format. and use this instead

@@ -9,14 +9,24 @@ into a global set of helper functions.
 Wow, pylint is nice for cleaning.
 '''
 
+import cPickle
 import code
-import os.path
+import numpy as np
+import os, os.path, sys
 import sys
 import time
 import types
-import numpy as np
+
+def join_mkdir(*args):
+    'os.path.join and creates if not exists'
+    output_dir = os.path.join(*args)
+    if not os.path.exists(output_dir):
+        print('Making dir: '+output_dir)
+        os.mkdir(output_dir)
+    return output_dir
 
 def vd(dname=None):
+    'View directory'
     if dname is None: 
         dname = os.getcwd()
     os_type       = sys.platform
@@ -47,12 +57,10 @@ def sanatize_fname(fname):
     return fname
 def save(obj, fname):
     'A simple save function using cPickle'
-    import cPickle
     with open(sanatize_fname(fname), 'wb') as file:
         cPickle.dump(obj, file)
 def load(fname):
     'A simple load function using cPickle'
-    import cPickle
     with open(sanatize_fname(fname), 'wb') as file:
         return cPickle.load(file)
 #---------------

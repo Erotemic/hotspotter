@@ -86,7 +86,7 @@ class DrawManager(AbstractManager):
         dm.end_draw()
         return fsel_ret
     # ---
-    def show_query(dm, res, titleargs=None):
+    def show_query(dm, res, titleargs=None, enddraw=True):
         # Make sure draw is valid
         if res is None: dm.show_splash(); return
         # Get Chip Properties
@@ -146,7 +146,8 @@ class DrawManager(AbstractManager):
                              fsel=qfsel,
                              in_image_bit=in_image_bit,
                              qcm=qcm)
-        dm.end_draw()
+        if enddraw:
+            dm.end_draw()
 
     # ---
 

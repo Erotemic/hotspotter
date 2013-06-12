@@ -31,8 +31,7 @@ def ensure_tpl_libs():
         import hotspotter
         TPL_LIB_DIR = join(dirname(hotspotter.__file__), 'tpl/lib', sys.platform)
         sys.path.append(TPL_LIB_DIR)
-            if py
-            ext = {'linux2':'.ln','darwin':'.mac','win32':'.exe'}[sys.platform]
+        ext = {'linux2':'.ln','darwin':'.mac','win32':'.exe'}[sys.platform]
         # Ensure that hesaff is executable
         hesaff_fname = TPL_LIB_DIR+'/hesaff'+ext
         is_executable = lambda fname: bin(int(oct(os.stat(fname).st_mode)[4]))[4]

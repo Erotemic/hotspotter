@@ -9,7 +9,10 @@ from pylab import find
 class NameManager(AbstractDataManager):
 
     def name2_cx_list(nm, name):
-        nx = nm.name2_nx[name]
+        try:
+            nx = nm.name2_nx[name]
+        except KeyError: 
+            return []
         return nm.nx2_cx_list[nx]
 
     def __init__(nm,hs=None):

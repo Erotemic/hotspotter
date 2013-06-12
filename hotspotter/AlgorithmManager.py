@@ -98,7 +98,7 @@ class AlgorithmManager(AbstractManager):
         am.algo_prefs.query.num_rerank                = Pref(1000, min=0)
         am.algo_prefs.query.spatial_thresh            = Pref(0.05, min=0, max=1) 
         am.algo_prefs.query.sigma_thresh              = Pref(0.05, min=0, max=1, hidden=True) #: Unimplemented
-        am.algo_prefs.query.method                    = Pref(2, choices=['COUNT', 'DIFF', 'LNRAT', 'RAT', '#TFIDF'])
+        am.algo_prefs.query.method                    = Pref(2, choices=['COUNT', 'DIFF', 'LNRAT', 'RAT']) #, '#TFIDF'
         am.algo_prefs.query.score                     = Pref(0, choices=['cscore','nscore']) # move to results?
         am.algo_prefs.query.self_as_result_bit        = Pref(False)  #: Return self (in terms of name) in results
         am.algo_prefs.query.remove_other_names        = Pref(False)  #: Remove all results with the same identified name as the query

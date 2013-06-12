@@ -111,7 +111,7 @@ class QueryManager(AbstractManager):
         if qhs is hs and rr.qcid in hs.vm.get_train_cid():
             # Remove query id if it could be matched
             cids_to_remove = [rr.qcid]
-        if query_prefs.remove_other_names:
+        if query_pref.remove_other_names:
             # Remove everything with the same name as query
             qname = qhs.cm.cx2_name(rr.qcx)
             if qhs.nm.UNIDEN_NAME() != qname:
@@ -511,14 +511,22 @@ class QueryResult(AbstractPrintable):
                 dyngot[ix] = res.scores()[top_cx]
         return dyngot
 
-    def get_groundtruth_ranks(res):
-        hs = res.hs
+    def get_groundtruth_cxs(res):
         qname = res.qhs.cm.cx2_name(res.rr.qcx)
         if qname == res.qhs.nm.UNIDEN_NAME():
             return None
         gtcx_list = res.hs.nm.name2_cx_list(qname)
-        for gtcx in gtcx_list:
+        return gtcx_list
 
+    def get_groundtruth_ranks(res):
+        ''' returns the rank (0 indexed) of ground truth in results '''
+        gtcx_list = res.get_groundtruth_cxs()
+        if gtcx_list is None:
+            return None
+        gt_pos = []
+        for gtcx in gtcx_list:
+            gt_pos += np.nonzero(res.cx_sort() == gtcx)[0].tolist()
+        return gt_pos
 
 
     def get_precision(res):

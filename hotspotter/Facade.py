@@ -664,6 +664,8 @@ class Facade(QObject):
                     dataset = 'BB'
                 if dataset.find('SA-WP') > -1:
                     dataset = 'WP'
+                if dataset.find('SA-NV') > -1:
+                    dataset = 'NV'
                 if dataset.find('SA-VE') > -1:
                     dataset = 'VE'
                 new_name = 'Lionfish_'+str(dataset)+str(name_id)

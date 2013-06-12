@@ -45,7 +45,7 @@ __K__                      = 1
 __NUM_RANKS_CSPDF__        = 1
 __METHOD__                 = 'LNRAT'
 
-__SANS_GT__                = False
+__SANS_GT__                = True
 __THRESHOLD_MATCHINGS__    = True
 
 __CHIPSCORE_PROBAILITIES__ = True
@@ -65,6 +65,21 @@ def get_results_name(hsA, hsB):
                         +__readable_dbmap__[hsB.get_dbid()]) 
     return results_name
 
+def safe_savefig(fig, fpath):
+    if fpath[-4:] == '.png':
+        format = 'png'
+    if fpath[-4:] == '.jpg':
+        format = 'jpg'
+    [full_path, sanatized_fname] = os.path.split(fpath)
+    sanatized_fname = sanatized_fname.replace(' vs ','-vs-')
+    sanatized_fname = sanatized_fname.replace('Bajo Bonito','BB')
+    sanatized_fname = sanatized_fname.replace('Optimizadas','OP')
+    sanatized_fname = sanatized_fname.replace('West Point','WP')
+    sanatized_fname = sanatized_fname.replace(' ','')
+    sanatized_fname = sanatized_fname.replace('_','-')
+    sanatized_fpath = join(full_path, sanatized_fname)
+    print('Saving Figure: '+str(sanatized_fpath))
+    fig.savefig(sanatized_fpath, format=format)
 
 def query_db_vs_db(hsA, hsB):
     'Runs cross database queries / reloads cross database queries'
@@ -96,6 +111,40 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
     withindb_chipscore_tup_list = []
     crossdb_chipscore_tup_list = []
 
+    # cross-database chipscores probabilities in one graph
+    if __CHIPSCORE_PROBAILITIES__:
+        output_dir = join_mkdir(result_dir, 'chipscore_probabilities')
+        combocrossdb_fname = join(output_dir, 'combocrossdb-chipscore')
+        fig = figure(0, figsize=__FIGSIZE__)
+        fig.clf()
+        title('Probability density of cross-database chipscore experiments')
+        tmp_count = 0.0
+        tmp_total = len(dbvs_list)+1
+        for i in range(len(dbvs_list)):
+            hsA, hsB = dbvs_list[i]
+            if hsA is hsB: continue
+            results_name = get_results_name(hsA, hsB) 
+            print(' combining: '+results_name)
+            # Symetric results.
+            count2rr_AB = count2rr_list[i]
+            chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
+            bigplot_chipscores(results_name,
+                               chipscore_data,
+                               ischipscore_TP,
+                               'NA-fname',
+                               labelaug=results_name+' ',
+                               releaseaxis=True, 
+                               releasetitle=False, 
+                               color=get_cmap('Set1')(tmp_count/tmp_total),
+                               plotTPFP=False,
+                               sameplot=True,
+                               holdon=True)
+            tmp_count += 1
+        legend(prop={'size':22})
+        #fig.show()
+        fig.tight_layout()
+        safe_savefig(fig, combocrossdb_fname+'.png')
+
     for i in range(len(dbvs_list)):
         # Database handles.
         hsA, hsB = dbvs_list[i]
@@ -107,7 +156,7 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
         if __CHIPSCORE_PROBAILITIES__:
             # Visualize the probability density of a chip score.
             output_dir = join_mkdir(result_dir, 'chipscore_probabilities')
-            chipscore_fname = join(output_dir, results_name+'_chipscore')
+            chipscore_fname = join(output_dir, results_name+'-chipscore')
 
             chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
             if hsA is hsB: 
@@ -117,9 +166,8 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
 
             if __INDIVIDUAL_CHIPSCORES__: 
                 print('  * Visualizing chipscore probabilities')
-                plot_TFPF = hsA is hsB
                 bigplot_chipscores(results_name, chipscore_data, ischipscore_TP,
-                                   chipscore_fname, plot_TFPF=True)
+                                   chipscore_fname, plotTPFP=True, sameplot=True)
 
         if __FEATSCORE_STATISTICS__:
             print('  * Visualizing feature score statistics')
@@ -134,8 +182,8 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
              FP_inlier_scale_pairs,
              FP_outlier_scale_pairs) = get_featmatch_stats(hsA, hsB, count2rr_AB, i)
             fig_sd1, fig_fs1 = viz_featmatch_stats(outlier_scale_pairs, inlier_scale_pairs)
-            fig_sd1.savefig(join(output_dir, results_name+'_scalediff.png'), format='png')
-            fig_fs1.savefig(join(output_dir, results_name+'_fmatchscore.png'), format='png')
+            fig_sd1.savefig(join(output_dir, results_name+'-scalediff.png'), format='png')
+            fig_fs1.savefig(join(output_dir, results_name+'-fmatchscore.png'), format='png')
 
         if __THRESHOLD_MATCHINGS__:
             # Visualize chips which have a results with a high score
@@ -171,7 +219,7 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
             within_lbl = ['within-db','within-db-sansgt'][__SANS_GT__]
             cross_lbl = 'cross-db'
             agg_chipscore_titlestr = \
-                    'Probability desnity of feature scores \n' + \
+                    'Probability desnity of chip-scores \n' + \
                     within_lbl+'-databases vs cross-databases\n' + \
                     'scored with: '+__METHOD__ + \
                     ' k='+str(__K__)
@@ -184,7 +232,7 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
                                                       crossdb_chipscore_tup_list)):
                 print ('  * Visualizing '+expt_type+' Aggregate Chipscores')
                 expt_type_full     = expt_type.replace('db', 'database')
-                aggchipscore_fname = join(output_dir, expt_type+'_aggchipscore')
+                aggchipscore_fname = join(output_dir, expt_type+'-aggchipscore')
                 chipscore_data_all, ischipscore_TP_all =  [list(t) for t in \
                                                             zip(*chipscore_tup_list)]
                 aggchipscore_data = np.vstack(chipscore_data_all)
@@ -204,15 +252,25 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
                 aggchipscore_fname = join(output_dir, within_lbl+'-'+cross_lbl+'aggchipscore')
                 legend()
                 fig.tight_layout()
-                fig.savefig(aggchipscore_fname+'.png', format='png')
+                safe_savefig(fig, aggchipscore_fname+'.png')
+    print("Vizualizations Complete")
             
 
 # --- Big Plots ---
 
-def bigplot_chipscores(results_name, chipscore_data, ischipscore_TP,\
-                       chipscore_fname, sameplot=False, holdon=False,
-                       plotTPFP=False, plotall=True, releasetitle=None,
-                       releaseaxis=None, color=None, **kwargs):
+def bigplot_chipscores(results_name,
+                       chipscore_data,
+                       ischipscore_TP,
+                       chipscore_fname,
+                       sameplot=False,
+                       holdon=False,
+                       plotTPFP=False,
+                       plotall=True,
+                       releasetitle=None,
+                       releaseaxis=None,
+                       color=None,
+                       **kwargs):
+
     if sameplot: 
         fignum = 0
         fig = figure(0, figsize=__FIGSIZE__)
@@ -235,11 +293,13 @@ def bigplot_chipscores(results_name, chipscore_data, ischipscore_TP,\
             kwargs['releasetitle'] = False
         else: 
             fignum = 1
+        print('plotting true positives')
         fig_chipscoreTP = viz_chipscores(results_name, chipscore_data,
                                          ischipscore_TP, restype='TP', fignum=fignum,
                                         **kwargs)
         if sameplot: kwargs['color'] = [1,0,0]  if color is None else color
         else: fignum = 2
+        print('plotting false positives')
         fig_chipscoreFP = viz_chipscores(results_name, chipscore_data,
                                          ischipscore_TP, restype='FP', fignum=fignum,
                                         **kwargs)
@@ -248,7 +308,7 @@ def bigplot_chipscores(results_name, chipscore_data, ischipscore_TP,\
             fig.tight_layout()
             #fig.show()
             legend()
-            fig.savefig(chipscore_fname+'.png', format='png')
+            safe_savefig(fig, chipscore_fname+'.png')
         return fig
     else:
         fig_chipscore.tight_layout()
@@ -258,7 +318,7 @@ def bigplot_chipscores(results_name, chipscore_data, ischipscore_TP,\
             fig_chipscoreTP.savefig(chipscore_fname+'TP.png', format='png')
             fig_chipscoreFP.tight_layout()
             fig_chipscoreFP.savefig(chipscore_fname+'FP.png', format='png')
-            return fig_chipscore, fig_chipscoreTP, figchipscoreFP
+            return fig_chipscore, fig_chipscoreTP, fig_chipscoreFP
         else:
             return fig_chipscore
 
@@ -285,7 +345,7 @@ def viz_symetric_matchings(hsA, hsB, matching_pairs, results_name, output_dir='s
             fig_fpath = realpath(join(output_dir, fig_fname))
             print('      * saving to '+fig_fpath)
             fig.tight_layout()
-            fig.savefig(fig_fpath, format='png')
+            safe_savefig(fig, fig_fpath)
             fig.clf()
 
 # Visualization of images which match above a threshold 
@@ -311,18 +371,18 @@ def viz_threshold_matchings(hsA, hsB, count2rr_AB, output_dir='threshold_matches
         top_names = res.hs.cm.cx2_name(top_cxs)
         top_scores = res.scores()[top_cxs]
         if len(top_cxs) > 0:
-            tsstr = str(top_scores[0])
+            tsstr = str(int(round(top_scores[0])))
             res.visualize()
             results_name = get_results_name(res.qhs, res.hs)
 
             matching_names_set = set([name.replace('Lionfish','') for name in\
                                   (top_names+[qname])])
             matching_names = '_'.join(list(matching_names_set))
-            fig_fname = results_name+'_score'+tsstr+'_cx'+str(qcx)+'_'+matching_names+'.jpg'
+            fig_fname = results_name+'-score'+tsstr+'-cx'+str(qcx)+'-'+matching_names+'.jpg'
             #print('  * Threshold Match: '+str(res))
             fig = figure(0)
             fig.tight_layout()
-            fig.savefig(realpath(join(output_dir, fig_fname)), format='jpg')
+            safe_savefig(fig, realpath(join(output_dir, fig_fname)))
             num_found += 1
     print('  * Visualized '+str(num_found)+' above thresh: '+str(match_threshold))            
 
@@ -605,7 +665,7 @@ def get_featmatch_stats(hsA, hsB, count2rr_AB):
 def get_chipscores(hsA, hsB, count2rr_AB):
     '''
     Input: Two database handles and queries from A to B
-    Output: Matrix of chip scores. As well as 
+    Output: Matrix of chip-scores. As well as 
     '''
     num_results = __NUM_RANKS_CSPDF__  # ensure there are N top results 
     num_queries = len(count2rr_AB)
@@ -762,6 +822,16 @@ if __name__ == '__main__':
             print('     ' + str(dbx) + ' --- sx' + str(symx) + ' - ' + dbtup[0].get_dbid()+' vs '+dbtup[1].get_dbid())
     print('---')
 
+    # Dependents of parameters 
+    results_configstr = 'results_' + __METHOD__ + '_k' + str(__K__) + ['','_sansgt'][__SANS_GT__]
+    results_root = join_mkdir('Results')
+    result_dir = join_mkdir(results_root, results_configstr)
+    print('\n\nOutputing results in: '+result_dir+'\n\n')
+    
+    if not __cmd_mode__:
+        # Compute / Load all query results. Then visualize
+        visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir)
+
     if __cmd_mode__ or __cmd_run_mode__:
         print('Entering interacitve mode. You\'ve got variables.')
         i = 0
@@ -774,13 +844,3 @@ if __name__ == '__main__':
         count = 0
         import IPython 
         IPython.embed()
-
-    # Dependents of parameters 
-    results_configstr = 'results_' + __METHOD__ + '_k' + str(__K__) + ['','_sansgt'][__SANS_GT__]
-    results_root = join_mkdir('Results')
-    result_dir = join_mkdir(results_root, results_configstr)
-    print('\n\nOutputing results in: '+result_dir+'\n\n')
-    
-    if not __cmd_mode__:
-        # Compute / Load all query results. Then visualize
-        visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir)

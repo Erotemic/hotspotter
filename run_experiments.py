@@ -1,6 +1,6 @@
 from hotspotter.HotSpotterAPI import HotSpotterAPI 
 from hotspotter.algo.spatial_functions import ransac
-from hotspotter.helpers import alloc_lists, Timer
+from hotspotter.helpers import alloc_lists, Timer, vd
 from hotspotter.other.AbstractPrintable import AbstractManager, AbstractPrintable
 from hotspotter.other.ConcretePrintable import DynStruct
 from hotspotter.QueryManager import QueryResult
@@ -18,9 +18,11 @@ from numpy import linspace,hstack
 from pylab import *
     
 # --- PARAMETERS ---
-dbid_list   = ['LF_Bajo_bonito',
-               'LF_OPTIMIZADAS_NI_V_E',
-               'LF_WEST_POINT_OPTIMIZADAS']
+dbid_list   = ['Lionfish/LF_Bajo_bonito',
+               'Lionfish/LF_OPTIMIZADAS_NI_V_E',
+               'Lionfish/LF_WEST_POINT_OPTIMIZADAS']
+
+#dbid_list = ['NAUT_Dan', 'WS_sharks']
 method2matchthresh = {'LNRAT':20, 'COUNT':20}
 k = 1
 method = 'LNRAT'
@@ -29,8 +31,11 @@ remove_other_names = False
 __ENSURE_MODEL__           = True
 __CHIPSCORE_PROBAILITIES__ = True
 __SYMETRIC_MATCHINGS__     = False
-__THRESHOLD_MATCHINGS__    = True
+__THRESHOLD_MATCHINGS__    = False
 __FEATSCORE_STATISTICS__   = False
+__INDIVIDUAL_CHIPSCORES__  = False
+__AGGREGATE_CHIPSCORES__   = True
+
 
 # --- DRIVERS ---
 def query_db_vs_db(hsA, hsB):
@@ -55,11 +60,64 @@ def join_mkdir(*args):
         os.mkdir(output_dir)
     return output_dir
 
+def bigplot_chipscores(results_name, chipscore_data, ischipscore_TP,\
+                       chipscore_fname, sameplot=False, holdon=False,
+                       plotTPFP=False, plotall=True, releasetitle=None,
+                       releaseaxis=None, color=None, **kwargs):
+    if sameplot: 
+        fignum = 0
+        fig = figure(0, figsize=(19.2,10.8))
+        if not holdon:
+            fig.clf()
+        kwargs['holdon'] = True
+        kwargs['color'] = [0,0,1] if color is None else color
+        
+        kwargs['releaseaxis'] = True if releaseaxis is None else releaseaxis
+        kwargs['releasetitle'] = True if releasetitle is None else releasetitle
+    else: 
+        fignum=1
+    if plotall:
+        fig_chipscore  = viz_chipscores(results_name, chipscore_data,
+                                    ischipscore_TP,restype='', fignum=fignum, **kwargs)
+    if plotTPFP: # DO TP / FP on self queries and not remove_other_names
+        if sameplot: 
+            kwargs['color'] = [0,1,0] if color is None else color
+            kwargs['releaseaxis'] = False
+            kwargs['releasetitle'] = False
+        else: 
+            fignum = 1
+        fig_chipscoreTP = viz_chipscores(results_name, chipscore_data,
+                                         ischipscore_TP, restype='TP', fignum=fignum,
+                                        **kwargs)
+        if sameplot: kwargs['color'] = [1,0,0]  if color is None else color
+        else: fignum = 2
+        fig_chipscoreFP = viz_chipscores(results_name, chipscore_data,
+                                         ischipscore_TP, restype='FP', fignum=fignum,
+                                        **kwargs)
+    if sameplot:
+        if not holdon:
+            fig.tight_layout()
+            fig.show()
+            legend()
+            fig.savefig(chipscore_fname+'.png', format='png')
+        return fig
+    else:
+        if not holdon:
+            fig_chipscoreTP.savefig(chipscore_fname+'TP.png', format='png')
+        if hsA is hsB:
+            fig_chipscoreFP.savefig(chipscore_fname+'FP.png', format='png')
+            fig_chipscore.savefig(chipscore_fname+'.png', format='png')
+        return fig_chipscore, fig_chipscoreTP, figchipscoreFP
+
 def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
     i = 0
     # Skip 2 places do do symetrical matching
     matching_pairs_list = []
     symdid_set = set([]) # keeps track of symetric matches already computed
+
+    interdb_chipscore_tup_list = []
+    intradb_chipscore_tup_list = []
+
     for i in range(len(dbvs_list)):
         # Database handles.
         hsA, hsB = dbvs_list[i]
@@ -67,25 +125,26 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
             results_name = (hsA.get_dbid()+' vs self')
         else:
             results_name = (hsA.get_dbid()+' vs '+hsB.get_dbid())
-        print('Visualizing: '+results_name)
+        print('Individual Visualizations: '+results_name)
         # Symetric results.
         count2rr_AB = count2rr_list[i]
 
         if __CHIPSCORE_PROBAILITIES__:
-            print('  * Visualizing chipscore probabilities')
             # Visualize the probability of a chip score.
             output_dir = join_mkdir(result_dir, 'chipscore_probabilities')
             chipscore_fname = join(output_dir, results_name+'_chipscore')
 
             chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
-            fig_chipscore  = viz_chipscores(hsA, hsB, chipscore_data, ischipscore_TP,restype='')
-            if hsA is hsB: # DO TP / FP on self queries and not remove_other_names
-                fig_chipscoreTP = viz_chipscores(hsA, hsB, chipscore_data, ischipscore_TP, restype='TP', fignum=1)
-                fig_chipscoreFP = viz_chipscores(hsA, hsB, chipscore_data, ischipscore_TP, restype='FP', fignum=2)
-                fig_chipscoreTP.savefig(chipscore_fname+'TP.png', format='png')
-                fig_chipscoreFP.savefig(chipscore_fname+'FP.png', format='png')
-            fig_chipscore.savefig(chipscore_fname+'.png', format='png')
+            if hsA is hsB: 
+                interdb_chipscore_tup_list.append((chipscore_data, ischipscore_TP))
+            else:
+                intradb_chipscore_tup_list.append((chipscore_data, ischipscore_TP))
 
+            if __INDIVIDUAL_CHIPSCORES__: 
+                print('  * Visualizing chipscore probabilities')
+                plot_TFPF = hsA is hsB
+                bigplot_chipscores(results_name, chipscore_data, ischipscore_TP,
+                                   chipscore_fname, plot_TFPF=True)
 
         if __FEATSCORE_STATISTICS__:
             print('  * Visualizing feature score statistics')
@@ -102,11 +161,13 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
             fig_sd1, fig_fs1 = viz_featmatch_stats(outlier_scale_pairs, inlier_scale_pairs)
             fig_sd1.savefig(join(output_dir, results_name+'_scalediff.png'), format='png')
             fig_fs1.savefig(join(output_dir, results_name+'_fmatchscore.png'), format='png')
+
         if __THRESHOLD_MATCHINGS__:
             print('  * Visualizing threshold matchings')
             # Visualize chips which have a results with a high score
             output_dir = join_mkdir(result_dir, 'threshold_matches')
             viz_threshold_matchings(hsA, hsB, count2rr_AB, output_dir)
+
         if __SYMETRIC_MATCHINGS__:
             print('  * Visualizing symetric matchings')
             # Do not symetric match twice 
@@ -122,8 +183,54 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
             output_dir = join_mkdir(result_dir, 'symetric_matches')
             matching_pairs = get_symetric_matchings(hsA, hsB, count2rr_AB, count2rr_BA)
             viz_symetric_matchings(matching_pairs, results_name, output_dir)
-
-
+        # endfor
+    print('Aggregate Visualizations: ')
+    if __AGGREGATE_CHIPSCORES__:
+        # inter - intra 
+        fig = figure(0, figsize=(19.2,10.8))
+        fig.clf()
+        title('inter-database vs intra-database')
+        title_str = 'Probability of feature scores \n' + \
+            'inter-databases vs intra-databases ' + \
+            'scored with: '+hsB.am.algo_prefs.query.method + \
+            ' k='+str(hsB.am.algo_prefs.query.k)
+        title(title_str)
+        fig.canvas.set_window_title(title_str)
+        
+        '''
+        intera = 'interdb'
+        chipscore_tup_list = interdb_chipscore_tup_list
+        intera = 'intradb'
+        chipscore_tup_list = intradb_chipscore_tup_list
+        '''
+        inertra_color = [1,0,0]
+        for inertra, chipscore_tup_list in zip(('interdb','intradb'),\
+                                                  (interdb_chipscore_tup_list,\
+                                                   intradb_chipscore_tup_list)):
+            print ('  * Visualizing '+inertra+' Aggregate Chipscores')
+            results_name = inertra.replace('db','-database experiments')
+            output_dir = join_mkdir(result_dir, 'chipscore_probabilities')
+            aggchipscore_fname = join(output_dir, inertra+'_aggchipscore')
+            chipscore_data_all, ischipscore_TP_all =  [list(t) for t in \
+                                                        zip(*chipscore_tup_list)]
+            aggchipscore_data = np.vstack(chipscore_data_all)
+            aggischipscore_TP = np.vstack(ischipscore_TP_all)
+            bigplot_chipscores(results_name,
+                            aggchipscore_data,
+                            aggischipscore_TP,
+                            aggchipscore_fname,
+                            releaseaxis=True,
+                            color=inertra_color,
+                            releasetitle=False,
+                            labelaug=inertra.replace('db', '-database '),
+                            sameplot=True, 
+                            holdon=True)
+            inertra_color = [0,0,1]
+        inertra_aggchipscore_fname = join(output_dir, inertra+'_inter-intra-aggchipscore')
+        legend()
+        fig.tight_layout()
+        fig.savefig(inertra_aggchipscore_fname+'.png', format='png')
+            
 # --- Visualizations ---
 
 # Visualization of chips which match symetrically (in top x results)
@@ -170,31 +277,30 @@ def viz_threshold_matchings(hsA, hsB, count2rr_AB, output_dir='threshold_matches
             tsstr = str(top_scores[0])
             res.visualize()
             results_name = res.rr.dbid +' vs '+ res.rr.qdbid
-            fig_fname = results_name+'_score'+tsstr+'_cx'+str(cx)+'.png'
+            fig_fname = results_name+'_score'+tsstr+'_cx'+str(cx)+'.jpg'
             print('  * Threshold Match: '+str(res))
             fig = figure(0)
-            fig.savefig(realpath(join(output_dir, fig_fname)), format='png')
+            fig.savefig(realpath(join(output_dir, fig_fname)), format='jpg')
             num_found += 1
     print('  * Visualized '+str(num_found)+' above thresh: '+str(match_threshold))            
 
 
 # Visualization of feature score probability
-def viz_fmatch_score(hsA, hsB, inlier_score_list, outlier_score_list, fignum=0):
+def viz_fmatch_score(results_name, inlier_score_list, outlier_score_list, fignum=0):
     inlier_scores  = np.array(inlier_score_list)
     outlier_scores = np.array(outlier_score_list)
     # Set up axes and labels: fscores
     fig_scorediff = figure(num=fignum, figsize=(19.2,10.8))
     fig_scorediff.clf()
     title_str = 'Probability of feature scores \n' + \
-        'queries from: '+hsA.get_dbid() + '\n' + \
-        'results from: '+hsB.get_dbid()  + '\n' + \
+        'datasets: '+results_name+'\n'+\
         'scored with: '+hsB.am.algo_prefs.query.method +\
         ' k='+str(hsB.am.algo_prefs.query.k)
     xlabel('feature score ('+hsB.am.algo_prefs.query.method+')')
     ylabel('probability')
     title(title_str)
-    inlier_args  = {'label':'P( fscore | inlier )',  'color':[0,0,1]}
-    outlier_args = {'label':'P( fscore | outlier )', 'color':[1,0,0]}
+    inlier_args  = {'label':'P(fscore | inlier)',  'color':[0,0,1]}
+    outlier_args = {'label':'P(fscore | outlier)', 'color':[1,0,0]}
     # histogram 
     hist(inlier_scores,  normed=1, alpha=.3, bins=100, **inlier_args)
     hist(outlier_scores, normed=1, alpha=.3, bins=100, **outlier_args)
@@ -252,7 +358,9 @@ def viz_fmatch_scalediff(hsA, hsB, outlier_scale_pairs, inlier_scale_pairs, fign
     return fig_scalediff
 
 
-def viz_chipscores(hsA, hsB, chipscore_data, ischipscore_TP, restype='', fignum=0):
+def viz_chipscores(results_name, chipscore_data, ischipscore_TP, restype='',
+                   fignum=0, holdon=False, releaseaxis=None, releasetitle=None,
+                   color=None, labelaug='', **kwargs):
     ''' Displays a pdf of how likely matching scores are.
     Input: chipscore_data - QxT np.array containing Q queries and T top scores
     Output: A matplotlib figure
@@ -278,16 +386,18 @@ def viz_chipscores(hsA, hsB, chipscore_data, ischipscore_TP, restype='', fignum=
         else: 
             max_score = round(chipscore_data.max()+1)
     title_str = 'Probability of '+typestr+'chip-scores \n' + \
-            'queries from: '+hsA.get_dbid() + '\n' + \
-            'results from: '+hsB.get_dbid()  + '\n' + \
-            'scored with: '+hsB.am.algo_prefs.query.method + \
-            ' k='+str(hsB.am.algo_prefs.query.k)
+            results_name + '\n' + \
+            'scored with: '+ method + \
+            ' k='+str(k)
     fig = figure(num=fignum, figsize=(19.2,10.8))
-    fig.clf()
-    xlabel('chip-score')
-    ylabel('probability')
-    title(title_str)
-    fig.canvas.set_window_title(title_str)
+    if not holdon:
+        fig.clf()
+    if not holdon or releaseaxis is None or releaseaxis:
+        xlabel('chip-score')
+        ylabel('probability')
+    if not holdon or releasetitle is None or releasetitle:
+        title(title_str)
+        fig.canvas.set_window_title(title_str)
     #
     num_queries, num_results = chipscore_data.shape
     do_true_pos  = restype == 'TP'
@@ -313,13 +423,17 @@ def viz_chipscores(hsA, hsB, chipscore_data, ischipscore_TP, restype='', fignum=
         chipscore_pdf = gaussian_kde(scores)
         chipscore_domain = linspace(0, max_score, 100)
         extra_given = '' if restype == '' else ', '+restype
-        rank_label = 'P(chip-score | chip-rank = #'+str(rank)+extra_given+') '+\
+        rank_label = labelaug+'P(chip-score | chip-rank = #'+str(rank)+extra_given+') '+\
                 '#examples='+str(scores.size)
-        line_color = get_cmap('gist_rainbow')(tx/float(num_results))
+        if color is None:
+            line_color = get_cmap('gist_rainbow')(tx/float(num_results))
+        else: 
+            line_color = color
         # --- plot agg
         #hist(scores, normed=1, range=(0,max_score), bins=max_score/2, alpha=.3, label=rank_label) 
-        plot(chipscore_domain, chipscore_pdf(chipscore_domain), color=line_color, label=rank_label) 
-    legend()
+        plot(chipscore_domain, chipscore_pdf(chipscore_domain), color=line_color, label=rank_label)
+    if not holdon:
+        legend()
     return fig
 
 # --- Visualization Data ---
@@ -495,7 +609,9 @@ if __name__ == '__main__':
     #hsl.enable_global_logs()
     workdir = '/media/SSD_Extra/'
     if sys.platform == 'win32':
-        workdir = 'D:/data/work/Lionfish/'
+        workdir = 'D:/data/work/'
+
+    global count2rr_list
 
     # dont need these. already in global scope
     #global method
@@ -512,6 +628,8 @@ if __name__ == '__main__':
         k = 1
     if '--k5' in sys.argv:
         k = 5
+    if '--threshold' in sys.argv:
+        __THRESHOLD_MATCHINGS__ = True
     if '--remove-other-names' in sys.argv:
         remove_other_names = True
     if '--num-results-cs1' in sys.argv:
@@ -521,62 +639,72 @@ if __name__ == '__main__':
         
 
     # Build list of all databases to run experiments on
-    hsdb_list = []
-    dbpath_list = [join(workdir, dbid) for dbid in dbid_list]
-    for dbpath in dbpath_list:
-        hsdb = HotSpotterAPI(dbpath)
-        hsdb.am.algo_prefs.query.remove_other_names = remove_other_names 
-        hsdb.am.algo_prefs.query.method = method
-        hsdb.am.algo_prefs.query.k = k
-        hsdb.dm.draw_prefs.ellipse_bit = True 
-        hsdb.dm.draw_prefs.figsize = (19.2,10.8)
-        hsdb.dm.draw_prefs.fignum = 0
-        hsdb_list.append(hsdb)
 
-    # Delete precomputed results
-    if len(sys.argv) > 1 and sys.argv[1] == '--delete':
-        for hsdb in hsdb_list:
-            hsdb.delete_precomputed_results()
-        sys.exit(0)
 
-    # Check what is in the query results directory
-    if len(sys.argv) > 1 and sys.argv[1] == '--list':
-        for hsdb in hsdb_list:
-            print hsdb.db_dpath
-            rawrr_dir  = hsdb.db_dpath+'/.hs_internals/computed/query_results'
-            result_list = os.listdir(rawrr_dir)
-            result_list.sort()
-            for fname in result_list:
-                print '  '+fname
-        sys.exit(0)
+    try:
+        print('I sure hope count2rr_list already exists')
+        count2rr_list
+    except NameError as ex:
+        print str(ex)
+        print('... dang you not in IPython? Hope you dont need to run again soon')
+        hsdb_list = []
+        dbpath_list = [join(workdir, dbid) for dbid in dbid_list]
+        for dbpath in dbpath_list:
+            hsdb = HotSpotterAPI(dbpath)
+            hsdb.am.algo_prefs.query.remove_other_names = remove_other_names 
+            hsdb.am.algo_prefs.query.method = method
+            hsdb.am.algo_prefs.query.k = k
+            hsdb.dm.draw_prefs.ellipse_bit = True 
+            hsdb.dm.draw_prefs.figsize = (19.2,10.8)
+            hsdb.dm.draw_prefs.fignum = 0
+            hsdb_list.append(hsdb)
 
-    if __ENSURE_MODEL__:
-        for hsdb in hsdb_list:
-            hsdb.ensure_model()
-    else: # The sample set things its 0 if you dont at least do this
-        for hsdb in hsdb_list:
-            hsdb.vm.sample_train_set()
+        # Delete precomputed results
+        if len(sys.argv) > 1 and sys.argv[1] == '--delete':
+            for hsdb in hsdb_list:
+                hsdb.delete_precomputed_results()
+            sys.exit(0)
 
-    # Get all combinations of database pairs
-    dbvs_list = []
-    symx_list = [] # list of symetric matches
-    for hsdbA in hsdb_list:
-        # Reflexive case
-        symx_list += [len(dbvs_list)]
-        dbvs_list.append((hsdbA, hsdbA))
-        for hsdbB in hsdb_list:
-            # Nonreflexive cases
-            if hsdbA is hsdbB: continue
-            dbtupAB = (hsdbA, hsdbB)
-            dbtupBA = (hsdbB, hsdbA)
-            if dbtupAB in dbvs_list: continue
-            assert not dbtupBA in dbvs_list
-            cur_pos = len(dbvs_list)
-            symx_list += [cur_pos+1, cur_pos]
-            dbvs_list.append(dbtupAB)
-            dbvs_list.append(dbtupBA)
+        # Check what is in the query results directory
+        if len(sys.argv) > 1 and sys.argv[1] == '--list':
+            for hsdb in hsdb_list:
+                print hsdb.db_dpath
+                rawrr_dir  = hsdb.db_dpath+'/.hs_internals/computed/query_results'
+                result_list = os.listdir(rawrr_dir)
+                result_list.sort()
+                for fname in result_list:
+                    print '  '+fname
+            sys.exit(0)
 
-    count2rr_list = [query_db_vs_db(hsA, hsB) for hsA, hsB in dbvs_list]
+        if __ENSURE_MODEL__:
+            for hsdb in hsdb_list:
+                hsdb.ensure_model()
+        else: # The sample set things its 0 if you dont at least do this
+            for hsdb in hsdb_list:
+                hsdb.vm.sample_train_set()
+
+        # Get all combinations of database pairs
+        dbvs_list = []
+        symx_list = [] # list of symetric matches
+        for hsdbA in hsdb_list:
+            # Reflexive case
+            symx_list += [len(dbvs_list)]
+            dbvs_list.append((hsdbA, hsdbA))
+            for hsdbB in hsdb_list:
+                # Nonreflexive cases
+                if hsdbA is hsdbB: continue
+                dbtupAB = (hsdbA, hsdbB)
+                dbtupBA = (hsdbB, hsdbA)
+                if dbtupAB in dbvs_list: continue
+                assert not dbtupBA in dbvs_list
+                cur_pos = len(dbvs_list)
+                symx_list += [cur_pos+1, cur_pos]
+                dbvs_list.append(dbtupAB)
+                dbvs_list.append(dbtupBA)
+
+        count2rr_list = [query_db_vs_db(hsA, hsB) for hsA, hsB in dbvs_list]
+    else:
+        print('... Excellent :)')
 
     # Dependents of parameters 
     result_dir = 'results_' + method + '_k' + str(k) + ['','_self_removed'][remove_other_names]
@@ -592,7 +720,7 @@ if __name__ == '__main__':
 
     print(' Outputing results in: '+result_dir)
 
-    if '--cmd' in sys.argv:
+    if '--cmd' in sys.argv or '--cmdrun' in sys.argv:
         print('Entering interacitve mode. Run the experiments at your leasure')
         i = 0
         # Skip 2 places do do symetrical matching
@@ -607,6 +735,7 @@ if __name__ == '__main__':
         count = 0
         import IPython 
         IPython.embed()
-    else:
+    
+    if not '--cmd' in sys.argv:
         # Compute / Load all query results. Then visualize
         visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir)

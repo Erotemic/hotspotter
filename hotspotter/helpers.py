@@ -16,6 +16,14 @@ import time
 import types
 import numpy as np
 
+def vd(dname=None):
+    if dname is None: 
+        dname = os.getcwd()
+    os_type       = sys.platform
+    open_prog_map = {'win32':'explorer.exe', 'linux2':'nautilus', 'darwin':'open'}
+    open_prog     = open_prog_map[os_type]
+    os.system(open_prog+' '+dname)
+        
 def str2(obj):
     if type(obj) == types.DictType:
         return str(obj).replace(', ','\n')[1:-1]

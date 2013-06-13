@@ -522,3 +522,7 @@ def bigplot_chipscores(results_name,
         else:
             return fig_chipscore
 
+
+__METHOD_AND_K_IN_TITLE__ = False
+if __METHOD_AND_K_IN_TITLE__:
+    title_str += '\nscored with: '+__METHOD__+' k='+str(__K__)

@@ -17,8 +17,7 @@ import matplotlib
 
 from scipy.stats.kde import gaussian_kde
 from numpy import linspace,hstack
-from pylab import *
-    
+from matplotlib import pyplot as plt    
         
 font = {'family' : 'Bitstream Vera Sans',
         'weight' : 'bold',
@@ -67,7 +66,6 @@ __ENSURE_MODEL__           = True
 __FEATSCORE_STATISTICS__   = False
 __SYMETRIC_MATCHINGS__     = False
 
-__METHOD_AND_K_IN_TITLE__ = False
 
 __all_exceptions__ = []
 # --- DRIVERS ---
@@ -114,7 +112,7 @@ def query_db_vs_db(hsA, hsB):
     return cx2_rr
 
 def myfigure(fignum, doclf=False):
-    fig = figure(fignum, figsize=__FIGSIZE__)
+    fig = plt.figure(fignum, figsize=__FIGSIZE__)
     if doclf:
         fig.clf()
     return fig
@@ -163,9 +161,9 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
 
             if __SANS_GT__ and not is_cross_database:
                 # First true negative - within db (sansgt)
-                fig = viz_chipscores(results_name, chipscore_data, ischipscore_TP,
-                                        restype='', fignum=within_ALL_TP_fignum,
-                                        holdon=True)
+    title_str = 'Frequency of '+typestr+'chip scores \n'+results_name
+                fig = viz_chipscores(results_name, chipscore_data,
+                                     fignum=within_ALL_TP_fignum, holdon=True)
             elif not is_cross_database:
                 # ALL TRUE POSITIVES - within a database
                 fig = viz_chipscores(results_name, chipscore_data, ischipscore_TP,
@@ -186,7 +184,7 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
 # --- Visualizations ---
 
 # Visualization of images which match above a threshold 
-def viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir='threshold_matches'):
+def viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir):
     'returns database, cx, database cx'
     import numpy as np
     valid_cxsB = hsB.cm.get_valid_cxs()
@@ -233,17 +231,15 @@ def viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir='threshold_mat
     print('  * Visualized %d above thresh: %f from expt: %s ' % (num_matching,
                                                                  match_threshold,
                                                                  results_name))
-
-def viz_chipscores(results_name,
-                   chipscore_data,
-                   ischipscore_TP,
-                   restype='',
-                   fignum=0,
-                   holdon=False,
-                   releaseaxis=None,
-                   releasetitle=None,
-                   color=None,
-                   labelaug='', 
+def viz_chipscores(chipscore_data,
+                   fignum         =0,
+                   fig            =None
+                   chipscore_mask =None,
+                   title          =None,
+                   holdon         =True,
+                   releaseaxis    =None,
+                   color          =None,
+                   labelaug       ='', 
                    **kwargs):
     ''' Displays a pdf of how likely matching scores are.
     Input: chipscore_data - QxT np.array containing Q queries and T top scores
@@ -251,39 +247,22 @@ def viz_chipscores(results_name,
     '''
     # Prepare Plot
     no_data = False
-    if restype == 'TP':
-        typestr = 'True Positive '
-        if len(chipscore_data[ischipscore_TP]) == 0:
+    if not chipscore_mask is None:
+        if len(chipscore_data[chipscore_mask]) == 0: 
             no_data = True
         else:
-            max_score = round(chipscore_data[ischipscore_TP].max()+1)
-    elif restype == 'FP':
-        typestr = 'False Positive '
-        if len(chipscore_data[True - ischipscore_TP]) == 0:
-            no_data = True
-        else:
-            max_score = round(chipscore_data[True - ischipscore_TP].max()+1)
-    else:
-        typestr = ''
-        if len(chipscore_data) == 0:
-            no_data = True
-        else: 
-            max_score = round(chipscore_data.max()+1)
-    title_str = 'Frequency of '+typestr+'chip scores \n'+results_name
-    #print('  !! Viz - '+title_str+' fignum='+str(fignum)+' holdon='+str(holdon))
-    if __METHOD_AND_K_IN_TITLE__:
-        title_str += '\nscored with: '+__METHOD__+' k='+str(__K__)
-    fig = myfigure(fignum, doclf=not holdon)
+            max_score = round(chipscore_data[ischipscore_TP].max()+1) 
+            
+    if fig is None:
+        fig = myfigure(fignum, doclf=not holdon)
     if not holdon or releaseaxis is None or releaseaxis:
-        xlabel('chip score')
-        ylabel('frequency')
-    if not holdon or releasetitle is None or releasetitle:
-        title(title_str)
+        plt.xlabel('chip score')
+        plt.ylabel('frequency')
+    if not title is None:
+        plt.title(title)
         fig.canvas.set_window_title(title_str)
     #
     num_queries, num_results = chipscore_data.shape
-    do_true_pos  = restype == 'TP'
-    do_false_pos = restype == 'FP'
 
     if no_data:
         return fig
@@ -293,21 +272,12 @@ def viz_chipscores(results_name,
         # --- plot info
         rank = tx + 1
 
-        if do_true_pos:
-            isTP   = ischipscore_TP[:,tx]
-            scores = chipscore_data[isTP,tx]
-        elif do_false_pos:
-            isFP   = True - ischipscore_TP[:,tx]
-            scores = chipscore_data[isFP,tx]
-        else:
+        if chipscore_mask is None:
             scores = chipscore_data[:,tx]
+        else:
+            mask   = chipscore_mask[:,tx]
+            scores = chipscore_data[mask,tx]
 
-        print results_name
-        
-        try:
-            print sort(scores)[0:5]
-        except:
-            pass
         chipscore_pdf = gaussian_kde(scores)
         #print chipscore_pdf.__dict__
         #print chipscore_pdf.covariance_factor

@@ -12,21 +12,32 @@ import numpy as np
 import os, sys
 import cPickle
 import pylab
+import scipy
 import matplotlib
 
 from scipy.stats.kde import gaussian_kde
 from numpy import linspace,hstack
 from pylab import *
     
+        
+font = {'family' : 'Bitstream Vera Sans',
+        'weight' : 'bold',
+        'size'   : 22}
+
+matplotlib.rc('font', **font)
+
 # --- PARAMETERS ---
 dbid_list   = ['Lionfish/LF_Bajo_bonito',
                'Lionfish/LF_OPTIMIZADAS_NI_V_E',
                'Lionfish/LF_WEST_POINT_OPTIMIZADAS']
 
-
 __readable_dbmap__ = {'LF_Bajo_bonito':'Bajo Bonito', 
                       'LF_OPTIMIZADAS_NI_V_E':'Optimizadas',
                       'LF_WEST_POINT_OPTIMIZADAS':'West Point'}
+
+__abbrev_dbmap__ = {'Bajo Bonito':'BB',
+                    'Optimizadas':'OP',
+                    'West Point':'WP'}
                     
 #dbid_list = ['NAUT_Dan', 'WS_sharks']
 
@@ -41,12 +52,12 @@ __cmd_run_mode__           = False
 __method_2_matchthresh__   = {'LNRAT':12, 'COUNT':20}
 
 __FIGSIZE__                = (19.2,10.8)
-__K__                      = 1
+__K__                      = 5
 __NUM_RANKS_CSPDF__        = 1
 __METHOD__                 = 'LNRAT'
 
-__SANS_GT__                = True
-__THRESHOLD_MATCHINGS__    = True
+__SANS_GT__                = False
+__THRESHOLD_MATCHINGS__    = False
 
 __CHIPSCORE_PROBAILITIES__ = True
 __INDIVIDUAL_CHIPSCORES__  = True
@@ -56,6 +67,9 @@ __ENSURE_MODEL__           = True
 __FEATSCORE_STATISTICS__   = False
 __SYMETRIC_MATCHINGS__     = False
 
+__METHOD_AND_K_IN_TITLE__ = False
+
+__all_exceptions__ = []
 # --- DRIVERS ---
 def get_results_name(hsA, hsB):
     if hsA is hsB:
@@ -72,14 +86,18 @@ def safe_savefig(fig, fpath):
         format = 'jpg'
     [full_path, sanatized_fname] = os.path.split(fpath)
     sanatized_fname = sanatized_fname.replace(' vs ','-vs-')
-    sanatized_fname = sanatized_fname.replace('Bajo Bonito','BB')
-    sanatized_fname = sanatized_fname.replace('Optimizadas','OP')
-    sanatized_fname = sanatized_fname.replace('West Point','WP')
+    for key, val in __abbrev_dbmap__.iteritems():
+        sanatized_fname = sanatized_fname.replace(key, val)
     sanatized_fname = sanatized_fname.replace(' ','')
     sanatized_fname = sanatized_fname.replace('_','-')
     sanatized_fpath = join(full_path, sanatized_fname)
-    print('Saving Figure: '+str(sanatized_fpath))
-    fig.savefig(sanatized_fpath, format=format)
+    fig.tight_layout()
+    #fig.show()
+    try: 
+        fig.savefig(sanatized_fpath, format=format)
+    except Exception as ex:
+        __all_exceptions__ += [ex]
+        print(str(ex))
 
 def query_db_vs_db(hsA, hsB):
     'Runs cross database queries / reloads cross database queries'
@@ -95,373 +113,138 @@ def query_db_vs_db(hsA, hsB):
             cx2_rr[count] = rr
     return cx2_rr
 
+def myfigure(fignum, doclf=False):
+    fig = figure(fignum, figsize=__FIGSIZE__)
+    if doclf:
+        fig.clf()
+    return fig
+# ----- 
+# DRIVERS
 def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
     global __SANS_GT__
+
+    within_lbl = ['within-db','within-db-sans-gt'][__SANS_GT__]
+    cross_lbl  = 'cross-db'
+    within_label = within_lbl.replace('db','database')
+    cross_label  = cross_lbl.replace('db','database')
+
+    _CHIPSCORE_DIR_ = join_mkdir(result_dir, 'chipscore_frequencies')
+    _COMBO_LEGEND_SIZE_ = 18
     
-    font = {'family' : 'normal',
-            'weight' : 'bold',
-            'size'   : 22}
-
-    matplotlib.rc('font', **font)
+    # ALL TRUE POSITIVES - within a database
+    # First true negative - within db (sansgt)
+    # Highest Interdatabase matches for each combination of db
+    # Smallest Gaussian window we can do
+    # Show top 5-10  scoring cross-database matches give them rest
     i = 0
-    # Skip 2 places do do symetrical matching
-    matching_pairs_list = []
-    symdid_set = set([]) # keeps track of symetric matches already computed
+    within_ALL_TP_fignum   = 100
+    within_FIRST_TN_fignum = 200
+    cross_fignum           = 300
 
-    withindb_chipscore_tup_list = []
-    crossdb_chipscore_tup_list = []
-
-    # cross-database chipscores probabilities in one graph
-    if __CHIPSCORE_PROBAILITIES__:
-        output_dir = join_mkdir(result_dir, 'chipscore_probabilities')
-        combocrossdb_fname = join(output_dir, 'combocrossdb-chipscore')
-        fig = figure(0, figsize=__FIGSIZE__)
-        fig.clf()
-        title('Probability density of cross-database chipscore experiments')
-        tmp_count = 0.0
-        tmp_total = len(dbvs_list)+1
-        for i in range(len(dbvs_list)):
-            hsA, hsB = dbvs_list[i]
-            if hsA is hsB: continue
-            results_name = get_results_name(hsA, hsB) 
-            print(' combining: '+results_name)
-            # Symetric results.
-            count2rr_AB = count2rr_list[i]
-            chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
-            bigplot_chipscores(results_name,
-                               chipscore_data,
-                               ischipscore_TP,
-                               'NA-fname',
-                               labelaug=results_name+' ',
-                               releaseaxis=True, 
-                               releasetitle=False, 
-                               color=get_cmap('Set1')(tmp_count/tmp_total),
-                               plotTPFP=False,
-                               sameplot=True,
-                               holdon=True)
-            tmp_count += 1
-        legend(prop={'size':22})
-        #fig.show()
-        fig.tight_layout()
-        safe_savefig(fig, combocrossdb_fname+'.png')
+    myfigure(within_ALL_TP_fignum, doclf=True)
+    myfigure(within_FIRST_TN_fignum, doclf=True)
+    myfigure(cross_fignum, doclf=True)
 
     for i in range(len(dbvs_list)):
         # Database handles.
         hsA, hsB = dbvs_list[i]
+        is_cross_database = not hsA is hsB
         results_name = get_results_name(hsA, hsB) 
-        print('Individual Visualizations: '+results_name)
-        # Symetric results.
+        if results_name != 'Optimizadas vs self': continue
+        print('--- DATABASE VIZUALIZATIONS: '+results_name+' ---')
         count2rr_AB = count2rr_list[i]
 
         if __CHIPSCORE_PROBAILITIES__:
-            # Visualize the probability density of a chip score.
-            output_dir = join_mkdir(result_dir, 'chipscore_probabilities')
-            chipscore_fname = join(output_dir, results_name+'-chipscore')
+            # Visualize the frequency of a chip score.
+            print('  * Visualizing chip score frequencies '+results_name)
+            chipscore_fname = join(_CHIPSCORE_DIR_, results_name+'-chipscore')
 
             chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
-            if hsA is hsB: 
-                withindb_chipscore_tup_list.append((chipscore_data, ischipscore_TP))
-            else:
-                crossdb_chipscore_tup_list.append((chipscore_data, ischipscore_TP))
 
-            if __INDIVIDUAL_CHIPSCORES__: 
-                print('  * Visualizing chipscore probabilities')
-                bigplot_chipscores(results_name, chipscore_data, ischipscore_TP,
-                                   chipscore_fname, plotTPFP=True, sameplot=True)
-
-        if __FEATSCORE_STATISTICS__:
-            print('  * Visualizing feature score statistics')
-            # Visualize the individual feature match statistics
-            output_dir = join_mkdir(result_dir, 'featmatch')
-            (TP_inlier_score_list,
-             TP_outlier_score_list,
-             TP_inlier_scale_pairs,
-             TP_outlier_scale_pairs,
-             FP_inlier_score_list,
-             FP_outlier_score_list,
-             FP_inlier_scale_pairs,
-             FP_outlier_scale_pairs) = get_featmatch_stats(hsA, hsB, count2rr_AB, i)
-            fig_sd1, fig_fs1 = viz_featmatch_stats(outlier_scale_pairs, inlier_scale_pairs)
-            fig_sd1.savefig(join(output_dir, results_name+'-scalediff.png'), format='png')
-            fig_fs1.savefig(join(output_dir, results_name+'-fmatchscore.png'), format='png')
-
+            if __SANS_GT__ and not is_cross_database:
+                # First true negative - within db (sansgt)
+                fig = viz_chipscores(results_name, chipscore_data, ischipscore_TP,
+                                        restype='', fignum=within_ALL_TP_fignum,
+                                        holdon=True)
+            elif not is_cross_database:
+                # ALL TRUE POSITIVES - within a database
+                fig = viz_chipscores(results_name, chipscore_data, ischipscore_TP,
+                                        restype='TP', fignum=within_FIRST_TN_fignum,
+                                        holdon=True)
+            elif is_cross_database:
+                # Highest Interdatabase matches for each combination of db
+                fig = viz_chipscores(results_name, chipscore_data, ischipscore_TP,
+                                        restype='', fignum=cross_fignum,
+                                        holdon=True)
         if __THRESHOLD_MATCHINGS__:
             # Visualize chips which have a results with a high score
-            output_dir = join_mkdir(result_dir, 'threshold_matches')
-            if hsA is hsB:
-                output_dir = join_mkdir(result_dir, 'threshold_matches', 'within_db')
-            print('  * Visualizing threshold matchings')
-            viz_threshold_matchings(hsA, hsB, count2rr_AB, output_dir)
-
-        if __SYMETRIC_MATCHINGS__:
-            # Visualize chips which symetrically.
-            # Do not symetric match twice 
-            if (hsA, hsB) in symdid_set: 
-                print('  * Already computed symetric matchings')
-                continue
-            else: 
-                symdid_set.add((hsA, hsB))
-                symdid_set.add((hsB, hsA))
-            output_dir = join_mkdir(result_dir, 'symetric_matches')
-            # Find the symetric index
-            symx = symx_list[count]
-            count2rr_BA = count2rr_list[symx]
-            print('  * Visualizing symetric matchings')
-            matching_pairs = get_symetric_matchings(hsA, hsB, count2rr_AB, count2rr_BA)
-            viz_symetric_matchings(matching_pairs, results_name, output_dir)
-        # endfor
-    print('Aggregate Visualizations: ')
-    if __AGGREGATE_CHIPSCORES__:
-        output_dir  = join_mkdir(result_dir, 'chipscore_probabilities')
-        for holdon in [False, True]:
-            fig = figure(0, figsize=__FIGSIZE__)
-            fig.clf()
-            within_lbl = ['within-db','within-db-sansgt'][__SANS_GT__]
-            cross_lbl = 'cross-db'
-            agg_chipscore_titlestr = \
-                    'Probability desnity of chip-scores \n' + \
-                    within_lbl+'-databases vs cross-databases\n' + \
-                    'scored with: '+__METHOD__ + \
-                    ' k='+str(__K__)
-
-            title(agg_chipscore_titlestr)
-            fig.canvas.set_window_title(agg_chipscore_titlestr)
-            aggchipscore_color = [1,0,0]
-            for expt_type, chipscore_tup_list in zip((within_lbl, cross_lbl),\
-                                                     (withindb_chipscore_tup_list,\
-                                                      crossdb_chipscore_tup_list)):
-                print ('  * Visualizing '+expt_type+' Aggregate Chipscores')
-                expt_type_full     = expt_type.replace('db', 'database')
-                aggchipscore_fname = join(output_dir, expt_type+'-aggchipscore')
-                chipscore_data_all, ischipscore_TP_all =  [list(t) for t in \
-                                                            zip(*chipscore_tup_list)]
-                aggchipscore_data = np.vstack(chipscore_data_all)
-                aggischipscore_TP = np.vstack(ischipscore_TP_all)
-                bigplot_chipscores(expt_type_full+' experiments',
-                                aggchipscore_data,
-                                aggischipscore_TP,
-                                aggchipscore_fname,
-                                releaseaxis=True,
-                                color=aggchipscore_color,
-                                releasetitle=(not holdon),
-                                labelaug=expt_type+' ',
-                                sameplot=True, 
-                                holdon=holdon)
-                aggchipscore_color = [0,0,1]
-            if holdon == True:
-                aggchipscore_fname = join(output_dir, within_lbl+'-'+cross_lbl+'aggchipscore')
-                legend()
-                fig.tight_layout()
-                safe_savefig(fig, aggchipscore_fname+'.png')
-    print("Vizualizations Complete")
-            
-
-# --- Big Plots ---
-
-def bigplot_chipscores(results_name,
-                       chipscore_data,
-                       ischipscore_TP,
-                       chipscore_fname,
-                       sameplot=False,
-                       holdon=False,
-                       plotTPFP=False,
-                       plotall=True,
-                       releasetitle=None,
-                       releaseaxis=None,
-                       color=None,
-                       **kwargs):
-
-    if sameplot: 
-        fignum = 0
-        fig = figure(0, figsize=__FIGSIZE__)
-        if not holdon:
-            fig.clf()
-        kwargs['holdon'] = True
-        kwargs['color'] = [0,0,1] if color is None else color
-        
-        kwargs['releaseaxis'] = True if releaseaxis is None else releaseaxis
-        kwargs['releasetitle'] = True if releasetitle is None else releasetitle
-    else: 
-        fignum=1
-    if plotall:
-        fig_chipscore  = viz_chipscores(results_name, chipscore_data,
-                                    ischipscore_TP,restype='', fignum=fignum, **kwargs)
-    if plotTPFP: # DO TP / FP on self queries and not __SANS_GT__
-        if sameplot: 
-            kwargs['color'] = [0,1,0] if color is None else color
-            kwargs['releaseaxis'] = False
-            kwargs['releasetitle'] = False
-        else: 
-            fignum = 1
-        print('plotting true positives')
-        fig_chipscoreTP = viz_chipscores(results_name, chipscore_data,
-                                         ischipscore_TP, restype='TP', fignum=fignum,
-                                        **kwargs)
-        if sameplot: kwargs['color'] = [1,0,0]  if color is None else color
-        else: fignum = 2
-        print('plotting false positives')
-        fig_chipscoreFP = viz_chipscores(results_name, chipscore_data,
-                                         ischipscore_TP, restype='FP', fignum=fignum,
-                                        **kwargs)
-    if sameplot:
-        if not holdon:
-            fig.tight_layout()
-            #fig.show()
-            legend()
-            safe_savefig(fig, chipscore_fname+'.png')
-        return fig
-    else:
-        fig_chipscore.tight_layout()
-        fig_chipscore.savefig(chipscore_fname+'.png', format='png')
-        if plotTPFP:
-            fig_chipscoreTP.tight_layout()
-            fig_chipscoreTP.savefig(chipscore_fname+'TP.png', format='png')
-            fig_chipscoreFP.tight_layout()
-            fig_chipscoreFP.savefig(chipscore_fname+'FP.png', format='png')
-            return fig_chipscore, fig_chipscoreTP, fig_chipscoreFP
-        else:
-            return fig_chipscore
-
-
+            thresh_dir     = join_mkdir(result_dir, 'threshold_matches')
+            expt_lbl       = [within_lbl, cross_lbl][hsA is hsB]
+            thresh_out_dir = join_mkdir(thresh_dir, expt_lbl)
+            viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir)
 
 # --- Visualizations ---
 
-# Visualization of chips which match symetrically (in top x results)
-def viz_symetric_matchings(hsA, hsB, matching_pairs, results_name, output_dir='symetric_matches'):
-    print('  * Visualizing '+str(len(matching_pairs))+' matching pairs')
-    for cx, cx2, match_pos, match_pos1, res1, res2 in matching_pairs:
-        for res, suffix in zip((res1,res2), ('AB','BA')):
-            fig.tight_layout()
-            res.visualize()
-            fignum = 0
-            fig = figure(num=fignum, figsize=__FIGSIZE__)
-            #fig.show()
-            fig.canvas.set_window_title('Symetric Matching: '+str(cx)+' '+str(cx2))
-            fig_fname = results_name+\
-                    '__symmpos_'+str(match_pos)+'_'+str(match_pos1)+\
-                    '__cx_'+str(cx)+'_'+str(cx2)+\
-                    suffix+\
-                    '.png'
-            fig_fpath = realpath(join(output_dir, fig_fname))
-            print('      * saving to '+fig_fpath)
-            fig.tight_layout()
-            safe_savefig(fig, fig_fpath)
-            fig.clf()
-
 # Visualization of images which match above a threshold 
-def viz_threshold_matchings(hsA, hsB, count2rr_AB, output_dir='threshold_matches'):
+def viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir='threshold_matches'):
     'returns database, cx, database cx'
     import numpy as np
     valid_cxsB = hsB.cm.get_valid_cxs()
-    num_found = 0
+    num_matching = 0
     
-    match_threshold = __method_2_matchthresh__.get(__METHOD__, 10)
+    MATCH_THRESHOLD = __method_2_matchthresh__.get(__METHOD__, 10)
+    results_name = get_results_name(hsA, hsB)
+    print('  * Visualizing threshold matchings '+results_name)
+    threshdb_out_dir = join_mkdir(thresh_out_dir, results_name)
+    # For each query run in hsA vs hsB
     for count in xrange(len(count2rr_AB)):
-        rr = count2rr_AB[count]
-        qcx = rr.qcx
-        res = QueryResult(hsB, rr, hsA)
+        rr    = count2rr_AB[count]
+        qcx   = rr.qcx
+        res   = QueryResult(hsB, rr, hsA)
         qname = res.qhs.cm.cx2_name(qcx)
         # Set matching threshold
-        res.top_thresh = match_threshold
-        res.num_top_min = 0
-        res.num_top_max = 5
+        res.top_thresh       = MATCH_THRESHOLD
+        res.num_top_min      = 0
+        res.num_top_max      = 5
         res.num_extra_return = 0
-        # See if there are matches
-        top_cxs = res.top_cx()
-        top_names = res.hs.cm.cx2_name(top_cxs)
+        # Check to see if any matched over the threshold
+        top_cxs    = res.top_cx()
+        top_names  = res.hs.cm.cx2_name(top_cxs)
         top_scores = res.scores()[top_cxs]
         if len(top_cxs) > 0:
-            tsstr = str(int(round(top_scores[0])))
+            # Visualize the result
+            # Stupid segfaults #if qcx == 113: #41: #import IPython #IPython.embed() # Get the scores
+            num_matching += 1
             res.visualize()
-            results_name = get_results_name(res.qhs, res.hs)
+            # Create a filename showing dataset, score, cx, match names
+            matchname_set = \
+                    set([name.replace('Lionfish','') for name in (top_names+[qname])])
+            matchnames = '-'.join(list(matchname_set))
+            scorestr = str(int(round(top_scores[0])))
 
-            matching_names_set = set([name.replace('Lionfish','') for name in\
-                                  (top_names+[qname])])
-            matching_names = '_'.join(list(matching_names_set))
-            fig_fname = results_name+'-score'+tsstr+'-cx'+str(qcx)+'-'+matching_names+'.jpg'
-            #print('  * Threshold Match: '+str(res))
-            fig = figure(0)
-            fig.tight_layout()
-            safe_savefig(fig, realpath(join(output_dir, fig_fname)))
-            num_found += 1
-    print('  * Visualized '+str(num_found)+' above thresh: '+str(match_threshold))            
+            fig_fname = '-'.join([results_name,
+                                 'score'+scorestr,
+                                 'cx'+str(qcx),
+                                 'MATCHES'+matchnames])+'.jpg'
 
+            fig = myfigure(0)
+            fig_fpath = join(threshdb_out_dir, fig_fname)
+            safe_savefig(fig, fig_fpath)
+    print('  * Visualized %d above thresh: %f from expt: %s ' % (num_matching,
+                                                                 match_threshold,
+                                                                 results_name))
 
-# Visualization of feature score probability
-def viz_fmatch_score(results_name, inlier_score_list, outlier_score_list, fignum=0):
-    inlier_scores  = np.array(inlier_score_list)
-    outlier_scores = np.array(outlier_score_list)
-    # Set up axes and labels: fscores
-    fig_scorediff = figure(num=fignum, figsize=__FIGSIZE__)
-    fig_scorediff.clf()
-    title_str = 'Probability density of feature scores \n' + \
-        'datasets: '+results_name+'\n'+\
-        'scored with: '+hsB.am.algo_prefs.query.method +\
-        ' k='+str(hsB.am.algo_prefs.query.k)
-    xlabel('feature score ('+hsB.am.algo_prefs.query.method+')')
-    ylabel('probability density')
-    title(title_str)
-    inlier_args  = {'label':'P(fscore | inlier)',  'color':[0,0,1]}
-    outlier_args = {'label':'P(fscore | outlier)', 'color':[1,0,0]}
-    # histogram 
-    hist(inlier_scores,  normed=1, alpha=.3, bins=100, **inlier_args)
-    hist(outlier_scores, normed=1, alpha=.3, bins=100, **outlier_args)
-    # pdf
-    fx_extent = (0, max(inlier_scores.max(), outlier_scores.max()))
-    fs_domain = np.linspace(fx_extent[0], fx_extent[1], 100)
-    inscore_pdf = gaussian_kde(inlier_scores)
-    outscore_pdf = gaussian_kde(outlier_scores)
-    plot(fs_domain, outscore_pdf(fs_domain), **outlier_args) 
-    plot(fs_domain, inscore_pdf(fs_domain),  **inlier_args) 
-
-    legend()
-    #fig_scorediff.show()
-    return fig_scorediff
-
-# Visualization of scale difference probability
-def viz_fmatch_scalediff(hsA, hsB, outlier_scale_pairs, inlier_scale_pairs, fignum=0):
-    out_scales = np.array(outlier_scale_pairs)
-    in_scales = np.array(inlier_scale_pairs)
-    out_scale_diff = np.abs(out_scales[:,0] - out_scales[:,1])
-    in_scale_diff = np.abs(in_scales[:,0] - in_scales[:,1])
-    # Remove some extreme data
-    in_scale_diff.sort() 
-    out_scale_diff.sort() 
-    subset_in  = in_scale_diff[0:int(len(in_scale_diff)*.88)]
-    subset_out = out_scale_diff[0:int(len(out_scale_diff)*.88)]
-    # Set up axes and labels: scalediff
-    fig_scalediff = figure(num=fignum, figsize=__FIGSIZE__)
-    fig_scalediff.clf()
-    title_str = 'Probability density of feature scale differences (omitted largest 12%) \n' + \
-        'queries from: '+hsA.get_dbid() + '\n' + \
-        'results from: '+hsB.get_dbid()  + '\n' + \
-        'scored with: '+hsB.am.algo_prefs.query.method + \
-        ' k='+str(hsB.am.algo_prefs.query.k)
-    xlabel('scale difference')
-    ylabel('probability density')
-    title(title_str)
-    fig_scalediff.canvas.set_window_title(title_str)
-    inlier_args  = {'label':'P( scale_diff | inlier )',  'color':[0,0,1]}
-    outlier_args = {'label':'P( scale_diff | outlier )', 'color':[1,0,0]}
-    # histogram 
-    hist(subset_in, normed=1, alpha=.3, bins=100,  **inlier_args)
-    hist(subset_out, normed=1, alpha=.3, bins=100, **outlier_args)
-    # pdf
-    sd_extent = (0, max(subset_in.max(), subset_out.max()))
-    sd_domain = np.linspace(sd_extent[0], sd_extent[1], 100)
-    subset_out_pdf = gaussian_kde(subset_out)
-    subset_in_pdf = gaussian_kde(subset_in)
-    plot(sd_domain, subset_in_pdf(sd_domain), **inlier_args) 
-    plot(sd_domain, subset_out_pdf(sd_domain), **outlier_args) 
-    
-    legend()
-    #fig_scalediff.show()
-    return fig_scalediff
-
-
-def viz_chipscores(results_name, chipscore_data, ischipscore_TP, restype='',
-                   fignum=0, holdon=False, releaseaxis=None, releasetitle=None,
-                   color=None, labelaug='', **kwargs):
+def viz_chipscores(results_name,
+                   chipscore_data,
+                   ischipscore_TP,
+                   restype='',
+                   fignum=0,
+                   holdon=False,
+                   releaseaxis=None,
+                   releasetitle=None,
+                   color=None,
+                   labelaug='', 
+                   **kwargs):
     ''' Displays a pdf of how likely matching scores are.
     Input: chipscore_data - QxT np.array containing Q queries and T top scores
     Output: A matplotlib figure
@@ -486,16 +269,14 @@ def viz_chipscores(results_name, chipscore_data, ischipscore_TP, restype='',
             no_data = True
         else: 
             max_score = round(chipscore_data.max()+1)
-    title_str = 'Probability density of '+typestr+'chip-scores \n' + \
-            results_name + '\n' + \
-            'scored with: '+ __METHOD__ + \
-            ' k='+str(__K__)
-    fig = figure(num=fignum, figsize=__FIGSIZE__)
-    if not holdon:
-        fig.clf()
+    title_str = 'Frequency of '+typestr+'chip scores \n'+results_name
+    #print('  !! Viz - '+title_str+' fignum='+str(fignum)+' holdon='+str(holdon))
+    if __METHOD_AND_K_IN_TITLE__:
+        title_str += '\nscored with: '+__METHOD__+' k='+str(__K__)
+    fig = myfigure(fignum, doclf=not holdon)
     if not holdon or releaseaxis is None or releaseaxis:
-        xlabel('chip-score')
-        ylabel('probability density')
+        xlabel('chip score')
+        ylabel('frequency')
     if not holdon or releasetitle is None or releasetitle:
         title(title_str)
         fig.canvas.set_window_title(title_str)
@@ -521,151 +302,54 @@ def viz_chipscores(results_name, chipscore_data, ischipscore_TP, restype='',
         else:
             scores = chipscore_data[:,tx]
 
+        print results_name
+        
+        try:
+            print sort(scores)[0:5]
+        except:
+            pass
         chipscore_pdf = gaussian_kde(scores)
-        chipscore_domain = linspace(0, max_score, 100)
+        #print chipscore_pdf.__dict__
+        #print chipscore_pdf.covariance_factor
+        #chipscore_pdf.covariance_factor = scipy.stats.kde.gaussian_kde.scotts_factor
+        chipscore_pdf.covariance_factor = scipy.stats.kde.gaussian_kde.silverman_factor
+        #chipscore_pdf.covariance_factor = lambda: .0001
+
+
+        chipscore_domain = linspace(0, max_score, 200)
         extra_given = '' if restype == '' else ', '+restype
-        rank_label = labelaug+'P(chip-score | chip-rank = #'+str(rank)+extra_given+') '+\
+        rank_label = labelaug+'P(chip score | chip-rank = #'+str(rank)+extra_given+') '+\
                 '#examples='+str(scores.size)
         if color is None:
             line_color = get_cmap('gist_rainbow')(tx/float(num_results))
         else: 
             line_color = color
         # --- plot agg
-        #hist(scores, normed=1, range=(0,max_score), bins=max_score/2, alpha=.3, label=rank_label) 
+        histscale = np.logspace(0,3,100)
+        histscale = histscale[histscale - 10 > 5] 
+        histscale = [10, 20, 40, 60, 80, 100, 120, 160,
+                     200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900,
+                     1000]
+        #print histscale
+        highpdf = chipscore_pdf(scores).max()
+        lowpdf = chipscore_pdf(scores).min()
+        #print highpdf
+        perb = (np.random.randn(len(scores))) * (highpdf - lowpdf)/40
+        y_data = chipscore_pdf(scores)+perb
+        y_data = [(highpdf - lowpdf)/2 for _ in scores]
+        plot(scores, y_data, 'o', color=line_color)
+        #hist(scores, normed=1, range=(0,max_score), alpha=.1, log=True,
+             #bins=np.logspace(0,3,100),  histtype='stepfilled') # , bins=max_score/2 
         plot(chipscore_domain, chipscore_pdf(chipscore_domain), color=line_color, label=rank_label)
     if not holdon:
         legend()
     return fig
 
 # --- Visualization Data ---
-
-def get_symetric_matchings(hsA, hsB, count2rr_AB, count2rr_BA):
-    'returns database, cx, database cx'
-    import numpy as np
-    sym_match_thresh = 5
-
-    matching_pairs = []
-    valid_cxsB = hsB.cm.get_valid_cxs()
-    lop_thresh = 10
-    for count in xrange(len(count2rr_AB)):
-        rr = count2rr_AB[count]
-        cx = rr.qcx
-        res = QueryResult(hsB, rr, hsA)
-        top_cxs = res.top_cx()
-        top_scores = res.scores()[top_cxs]
-        level_of_promise = len(top_scores) > 0 and top_scores[0]
-        if level_of_promise > lop_thresh:
-            lop_thresh = lop_thresh + (0.2 * lop_thresh)
-            print('    * Checking dbA cx='+str(cx)+' \n'+\
-                  '      top_cxs='+str(top_cxs)+'\n'+\
-                  '      top_scores='+str(top_scores))
-        match_pos1 = -1
-        for tcx, score in zip(top_cxs, top_scores):
-            match_pos1 += 1
-            count = (valid_cxsB == tcx).nonzero()[0]
-            rr2  = count2rr_BA[count]
-            res2 = QueryResult(hsA, rr2, hsB)
-            top_cxs2    = res2.top_cx()
-            top_scores2 = res2.scores()[top_cxs2]
-            if level_of_promise > lop_thresh:
-                print('      * topcxs2 = '+str(top_cxs2))
-                print('      * top_scores2 = '+str(top_scores2))
-            # Check if this pair has eachother in their top 5 results
-            match_pos_arr = (top_cxs2 == cx).nonzero()[0]
-            if len(match_pos_arr) == 0: continue
-            match_pos = match_pos_arr[0]
-            print('  * Symetric Match: '+str(cx)+' '+str(tcx)+'   match_pos='+str(match_pos)+', '+str(match_pos1))
-            
-            matching_pairs.append((cx, tcx, match_pos, match_pos1, res, res2))
-    return matching_pairs
-
-def get_featmatch_stats(hsA, hsB, count2rr_AB):
-    num_queries = len(count2rr_AB)
-    TP_inlier_score_list   = []
-    TP_outlier_score_list  = []
-    TP_inlier_scale_pairs  = []
-    TP_outlier_scale_pairs = []
-    # False positive in this case also encompases False Negative and unknown
-    FP_inlier_score_list   = []
-    FP_outlier_score_list  = []
-    FP_inlier_scale_pairs  = []
-    FP_outlier_scale_pairs = []
-    # Get Data
-    print('Aggregating featmatch info for  '+str(num_queries)+' queries')
-    for count in xrange(num_queries):
-        rr = count2rr_AB[count]
-        res = QueryResult(hsA, rr, hsB)
-        # Get the cxs which are ground truth
-        gtcx_list = res.get_groundtruth_cxs()
-        qcx = rr.qcx
-        qname = hsA.cm.cx2_name(qcx)
-        # Get query features
-        qfpts, _ = hsA.cm.get_feats(qcx)
-        for cx in xrange(len(rr.cx2_fm)):
-            # Switch to whatever the correct list to append to is
-            if not gtcx_list is None and cx in gtcx_list:
-                inlier_score_list   = TP_inlier_score_list   
-                outlier_score_list  = TP_outlier_score_list  
-                inlier_scale_pairs  = TP_inlier_scale_pairs  
-                outlier_scale_pairs = TP_outlier_scale_pairs 
-            else:
-                inlier_score_list   = FP_inlier_score_list   
-                outlier_score_list  = FP_outlier_score_list  
-                inlier_scale_pairs  = FP_inlier_scale_pairs  
-                outlier_scale_pairs = FP_outlier_scale_pairs 
-
-            # Get feature matching indexes and scores
-            feat_matches = rr.cx2_fm[cx]
-            feat_scores_SC  = rr.cx2_fs[cx]
-            feat_scores_all = rr.cx2_fs_[cx]
-            nx = []
-            name = hsB.cm.cx2_name(cx)
-            # continue if no feature matches
-            if len(feat_matches) == 0: continue
-            # Get database features
-            fpts, _ = hsB.cm.get_feats(cx)
-            # Separate into inliers / outliers
-            outliers = (feat_scores_SC == -1)
-            inliers = True - outliers
-            # Get info about matching scores
-            outlier_scores = feat_scores_all[outliers]
-            inlier_scores  = feat_scores_all[inliers]
-            # Append score info
-            inlier_score_list.extend(inlier_scores.tolist())
-            outlier_score_list.extend(outlier_scores.tolist())
-            # Get info about matching keypoint shape
-            inlier_matches  = feat_matches[inliers]
-            outlier_matches = feat_matches[outliers]
-            inlier_qfpts  = qfpts[inlier_matches[:,0]]
-            outlier_qfpts = qfpts[outlier_matches[:,0]]
-            inlier_fpts   =  fpts[inlier_matches[:,1]]
-            outlier_fpts  =  fpts[outlier_matches[:,1]]
-            # Get the scales of matching keypoints as their sqrt(1/determinant)
-            aQI,_,dQI = inlier_qfpts[:,2:5].transpose()
-            aDI,_,dDI = inlier_fpts[:,2:5].transpose()
-            aQO,_,dQO = outlier_qfpts[:,2:5].transpose()
-            aDO,_,dDO = outlier_fpts[:,2:5].transpose()
-            inlier_scalesA  = np.sqrt(1/np.multiply(aQI,dQI))
-            inlier_scalesB  = np.sqrt(1/np.multiply(aDI,dDI))
-            outlier_scalesA = np.sqrt(1/np.multiply(aQO,dQO))
-            outlier_scalesB = np.sqrt(1/np.multiply(aDO,dDO))
-            # Append to end of array
-            outlier_scale_pairs.extend(zip(outlier_scalesA, outlier_scalesB))
-            inlier_scale_pairs.extend(zip(inlier_scalesA, inlier_scalesB))
-    return (TP_inlier_score_list,
-            TP_outlier_score_list,
-            TP_inlier_scale_pairs,
-            TP_outlier_scale_pairs,
-            FP_inlier_score_list,
-            FP_outlier_score_list,
-            FP_inlier_scale_pairs,
-            FP_outlier_scale_pairs)
-
-
 def get_chipscores(hsA, hsB, count2rr_AB):
     '''
     Input: Two database handles and queries from A to B
-    Output: Matrix of chip-scores. As well as 
+    Output: Matrix of chip scores. As well as 
     '''
     num_results = __NUM_RANKS_CSPDF__  # ensure there are N top results 
     num_queries = len(count2rr_AB)
@@ -686,21 +370,6 @@ def get_chipscores(hsA, hsB, count2rr_AB):
         ischipscore_TP[count, gtpos_list] = 1
         chipscore_data[count, 0:len(top_scores)] = top_scores
     return chipscore_data, ischipscore_TP
-
-def high_score_matchings():
-    'Visualizes each query against its top matches'
-    pass
-
-
-def scoring_metric_comparisons():
-    'Plots a histogram of match scores of differnt types'
-    pass
-
-
-def spatial_consistent_match_comparisons():
-    'Plots a histogram of spatially consistent match scores vs inconsistent'
-    pass
-
 
 # MAIN ENTRY POINT
 if __name__ == '__main__':
@@ -726,8 +395,6 @@ if __name__ == '__main__':
     if '--cmdrun'          in sys.argv: __cmd_run_mode__ = True
     if '--delete'          in sys.argv: __cmd_run_mode__ = True
 
-
-        
     # IPython forced settings
     print("Checking forced configurations")
     HAS_FORCED_SETTINGS = '__forced_sans_gt__' in vars()
@@ -832,7 +499,12 @@ if __name__ == '__main__':
         # Compute / Load all query results. Then visualize
         visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir)
 
-    if __cmd_mode__ or __cmd_run_mode__:
+    try: 
+        __force_no_embed__
+    except: 
+        __force_no_embed__ = False
+  
+    if (__cmd_mode__ or __cmd_run_mode__) and not __force_no_embed__:
         print('Entering interacitve mode. You\'ve got variables.')
         i = 0
         # Skip 2 places do do symetrical matching
@@ -844,3 +516,28 @@ if __name__ == '__main__':
         count = 0
         import IPython 
         IPython.embed()
+        __cmd_run_mode__ == False
+        __force_no_embed__ = True
+        #sys.argv.remove('--runcmd')
+
+
+# NEED: 
+
+# ALL TRUE POSITIVES - within a database
+# First true negative - within db (sansgt)
+# Highest Interdatabase matches for each combination of db
+# Smallest Gaussian window we can do
+# Show top 5-10  scoring cross-database matches give them rest
+
+# ---
+# Handle a lot of images
+# Multiple views of every animals (they come in all views)
+# Handle partial views of an animal (know when there is not enough information)
+# Too much data to check every result
+# There are wide varieties and incomplete views of animals 
+
+# Matching vs ground
+# How to score (choice of k w/ dynamic database)
+# What do fins feature-matches score? 
+# 
+

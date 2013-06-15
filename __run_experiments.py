@@ -526,3 +526,15 @@ def bigplot_chipscores(results_name,
 __METHOD_AND_K_IN_TITLE__ = False
 if __METHOD_AND_K_IN_TITLE__:
     title_str += '\nscored with: '+__METHOD__+' k='+str(__K__)
+
+        #plt.hist(scores, normed=1, range=(0,max_score), alpha=.1, log=True,
+        #bins=np.logspace(0,3,100),  histtype='stepfilled', figure=fig)) # , bins=max_score/2 
+       
+               y_data = score_pdf(scores)+perb
+        y_data = [(highpdf - lowpdf)/2. for _ in scores]
+
+        histscale = np.logspace(0,3,100)
+        histscale = histscale[histscale - 10 > 5] 
+        histscale = [10, 20, 40, 60, 80, 100, 120, 160,
+                    200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900,
+                    1000]

@@ -427,6 +427,8 @@ class QueryResult(AbstractPrintable):
         num_top = min(num_top, min(len(scores), res.num_top_max))
         # With the extra added, without overflowing
         num_top = max(num_top, min(len(scores), num_top+res.num_extra_return))
+        if res.num_extra_return == -1:
+            num_top = len(scores)
         return num_top
 
     # Top chips

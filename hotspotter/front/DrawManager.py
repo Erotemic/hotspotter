@@ -350,14 +350,14 @@ class DrawManager(AbstractManager):
                 fsel = np.random.choice(xrange(len(fpts)), size=88, replace=False, p=pdf)
             # ---/DEVHACK---
             # Plot ellipses
-            if ell_bit and len(fpts) > 0: 
+            if ell_bit and len(fpts) > 0 and len(fsel) > 0: 
                 ells = dm._get_fpt_ell_collection(fpts[fsel,:],
                                                   T_fpts,
                                                   ell_alpha,
                                                   color)
                 ax.add_collection(ells)
             # Plot xy points
-            if xy_bit and len(fpts) > 0: 
+            if xy_bit and len(fpts) > 0 and len(fsel) > 0: 
                 ax.plot(fpts[fsel,0], fpts[fsel,1], 'o',\
                         markeredgecolor=color,\
                         markerfacecolor=color,\

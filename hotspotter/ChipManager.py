@@ -663,7 +663,7 @@ class ChipManager(AbstractDataManager):
             cxs = cm.get_valid_cxs()
         elif type(_cxs) is types.ListType:
             cxs = np.array(_cxs)
-        elif type(_cxs) in [types.IntType, np.uint32]:
+        elif type(_cxs) in [types.IntType, types.LongType, np.uint32]:
             cxs = np.array([_cxs])
         else: 
             cxs = _cxs

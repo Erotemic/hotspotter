@@ -1,3 +1,5 @@
+from __future__ import division
+from __future__ import print_function
 from hotspotter.HotSpotterAPI import HotSpotterAPI 
 from hotspotter.algo.spatial_functions import ransac
 from hotspotter.helpers import alloc_lists, Timer, vd, join_mkdir
@@ -25,6 +27,16 @@ font = {'family' : 'Bitstream Vera Sans',
 
 matplotlib.rc('font', **font)
 
+
+def print(*args): 
+    if len(args) == 0:
+        sys.stdout.write('\n')
+    elif len(args) == 1:
+        sys.stdout.write(str(args[0])+'\n')
+    else:
+        sys.stdout.write(' '.join(args)+'\n')
+    sys.stdout.flush()
+
 # --- PARAMETERS ---
 dbid_list   = ['Lionfish/LF_Bajo_bonito',
                'Lionfish/LF_OPTIMIZADAS_NI_V_E',
@@ -32,11 +44,15 @@ dbid_list   = ['Lionfish/LF_Bajo_bonito',
 
 __readable_dbmap__ = {'LF_Bajo_bonito':'Bajo Bonito', 
                       'LF_OPTIMIZADAS_NI_V_E':'Optimizadas',
-                      'LF_WEST_POINT_OPTIMIZADAS':'West Point'}
+                      'LF_WEST_POINT_OPTIMIZADAS':'West Point',
+                      'NAUT_Dan':'NAUT_Dan',
+                      'WS_sharks':'WS_sharks'}
 
 __abbrev_dbmap__ = {'Bajo Bonito':'BB',
                     'Optimizadas':'OP',
-                    'West Point':'WP'}
+                     'West Point':'WP',
+                       'NAUT_Dan':'ND',
+                      'WS_sharks':'WS'}
                     
 #dbid_list = ['NAUT_Dan', 'WS_sharks']
 
@@ -45,22 +61,20 @@ if sys.platform == 'win32':
     workdir = 'D:/data/work/'
 
 global __SANS_GT__
+__SANS_GT__                = False
 
 __cmd_mode__               = False
 __cmd_run_mode__           = False
-__method_2_matchthresh__   = {'LNRAT':12, 'COUNT':20}
+__method_2_matchthresh__   = {'LNRAT':5, 'COUNT':20}
 
 __FIGSIZE__                = (19.2,10.8)
 __K__                      = 5
-__NUM_RANKS_CSPDF__        = 1
+__RESTRICT_TP__            = 5
 __METHOD__                 = 'LNRAT'
 
-__SANS_GT__                = False
 __THRESHOLD_MATCHINGS__    = False
 
 __CHIPSCORE_PROBAILITIES__ = True
-__INDIVIDUAL_CHIPSCORES__  = True
-__AGGREGATE_CHIPSCORES__   = True
 __ENSURE_MODEL__           = True
 
 __FEATSCORE_STATISTICS__   = False
@@ -77,11 +91,44 @@ def get_results_name(hsA, hsB):
                         +__readable_dbmap__[hsB.get_dbid()]) 
     return results_name
 
-def safe_savefig(fig, fpath):
+def myfigure(fignum, doclf=False, title=None):
+    fig = plt.figure(fignum, figsize=__FIGSIZE__)
+    if not 'user_stat_list' in fig.__dict__.keys() or doclf:
+        fig.user_stat_list = []
+        fig.user_notes = []
+    if doclf:
+        fig.clf()
+        ax = plt.subplot(111)
+    ax  = fig.get_axes()[0]
+    if not title is None:
+        ax.set_title(title)
+        fig.canvas.set_window_title(title)
+    return fig
+
+def safe_savefig(fig, fpath, adjust_axes=False):
+    ax  = fig.get_axes()[0]
+    if adjust_axes and fig.user_stat_list != []:
+        fig_min  = np.array(fig.user_stat_list).max(0)[0]
+        fig_mean = np.array(fig.user_stat_list).max(0)[1]
+        fig_std  = np.array(fig.user_stat_list).max(0)[2]
+        fig_max  = np.array(fig.user_stat_list).max(0)[3]
+
+        trunc_max = fig_mean+fig_std*1.5
+        trunc_min = fig_min
+        trunc_xticks = np.linspace(trunc_min, trunc_max,10)
+        no_zero_yticks = ax.get_yticks()[ax.get_yticks() > 0]
+        ax.set_xlim(trunc_min,trunc_max)
+        ax.set_xticks(trunc_xticks)
+        ax.set_yticks(no_zero_yticks)
+    if len(fpath) < 4:
+        fpath += '.JPEG'
     if fpath[-4:] == '.png':
         format = 'png'
     if fpath[-4:] == '.jpg':
         format = 'jpg'
+    else: 
+        fpath  += '.JPEG'
+        format = 'JPEG'
     [full_path, sanatized_fname] = os.path.split(fpath)
     sanatized_fname = sanatized_fname.replace(' vs ','-vs-')
     for key, val in __abbrev_dbmap__.iteritems():
@@ -89,99 +136,302 @@ def safe_savefig(fig, fpath):
     sanatized_fname = sanatized_fname.replace(' ','')
     sanatized_fname = sanatized_fname.replace('_','-')
     sanatized_fpath = join(full_path, sanatized_fname)
-    fig.tight_layout()
     #fig.show()
-    try: 
-        fig.savefig(sanatized_fpath, format=format)
-    except Exception as ex:
-        __all_exceptions__ += [ex]
-        print(str(ex))
+    #try: 
+    if fig.user_stat_list != []:
+        print('\n\n---\nSaving '+ax.get_title())
+        print(' stats: ')
+        for stat in fig.user_stat_list:
+            print(str(stat))
+        print('---\n\n')
+    ax.legend(**{'fontsize':18})
+    fig.tight_layout()
+    fig.savefig(sanatized_fpath, format=format)
 
 def query_db_vs_db(hsA, hsB):
     'Runs cross database queries / reloads cross database queries'
     vs_str = get_results_name(hsA, hsB) 
-    print 'Running '+vs_str
+    print('Running '+vs_str)
     query_cxs = hsA.cm.get_valid_cxs()
     total = len(query_cxs)
     cx2_rr = alloc_lists(total)
     for count, qcx in enumerate(query_cxs):
         with Timer() as t:
-            print ('Query %d / %d   ' % (count, total)) + vs_str
+            print(('Query %d / %d   ' % (count, total)) + vs_str)
             rr = hsB.qm.cx2_rr(qcx, hsA)
             cx2_rr[count] = rr
     return cx2_rr
 
-def myfigure(fignum, doclf=False):
-    fig = plt.figure(fignum, figsize=__FIGSIZE__)
-    if doclf:
-        fig.clf()
-    return fig
 # ----- 
 # DRIVERS
-def visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir):
+
+def visualize_all_results(dbvs_list, count2rr_list, symx_list, results_root):
     global __SANS_GT__
+    print('\n\nOutputing results in: '+results_root+'\n\n')
+    print('--- Vizualizing All Results ---')
+    print('Ground Truth: '+str(not __SANS_GT__))
 
     within_lbl = ['within-db','within-db-sans-gt'][__SANS_GT__]
     cross_lbl  = 'cross-db'
     within_label = within_lbl.replace('db','database')
     cross_label  = cross_lbl.replace('db','database')
 
-    _CHIPSCORE_DIR_ = join_mkdir(result_dir, 'chipscore_frequencies')
-    _COMBO_LEGEND_SIZE_ = 18
+    results_configstr = 'results_%s_k%d%s' %\
+            (__METHOD__, __K__,  ['','_sansgt'][__SANS_GT__])
+    result_dir = join_mkdir(results_root, results_configstr)
+    print('\n\nAlso in: '+result_dir+'\n\n')
+
+    hs_configstr = '-%s_k%d' % (__METHOD__, __K__)
+
+    _CHIPSCORE_DIR_ = join_mkdir(results_root, 'chipscore_frequencies'+hs_configstr)
+    _THRESH_DIR_    = join_mkdir(results_root, 'threshold_matches'+hs_configstr)
+    
     
     # ALL TRUE POSITIVES - within a database
     # First true negative - within db (sansgt)
     # Highest Interdatabase matches for each combination of db
     # Smallest Gaussian window we can do
-    # Show top 5-10  scoring cross-database matches give them rest
-    i = 0
-    within_ALL_TP_fignum   = 100
-    within_FIRST_TN_fignum = 200
-    cross_fignum           = 300
+    # Show top 5-10 scoring cross-database matches give them rest
+    if __CHIPSCORE_PROBAILITIES__:
+        if __SANS_GT__:
+            Rank1TNFig = myfigure(200, doclf=True,
+                                title='Frequency of true negative chip scores')
+            CrossAndTNFig = myfigure(400, doclf=True,
+                                title='True negatives and cross database queries')
 
-    myfigure(within_ALL_TP_fignum, doclf=True)
-    myfigure(within_FIRST_TN_fignum, doclf=True)
-    myfigure(cross_fignum, doclf=True)
+        elif not __SANS_GT__:
+            AllTPFig   = myfigure(100, doclf=True,
+                                title='Frequency of true positive chip scores')
+            CrossFig   = myfigure(300, doclf=True,
+                                title='Frequency of all cross-database chip scores')
+    #AllTPFig   = myfigure(100)
+    #Rank1TNFig = myfigure(200)
+    #CrossFig   = myfigure(300)
 
-    for i in range(len(dbvs_list)):
+    exptx = 0
+    cmap = plt.get_cmap('Set1')
+    total_expts = len(dbvs_list)
+    cross_db_scores = []
+    true_pos_scores = []
+    for exptx in range(total_expts):
         # Database handles.
-        hsA, hsB = dbvs_list[i]
+        hsA, hsB = dbvs_list[exptx]
         is_cross_database = not hsA is hsB
+        expt_lbl   = [within_lbl, cross_lbl][is_cross_database]
+        expt_color = cmap(exptx/float(total_expts))
+        
         results_name = get_results_name(hsA, hsB) 
-        if results_name != 'Optimizadas vs self': continue
-        print('--- DATABASE VIZUALIZATIONS: '+results_name+' ---')
-        count2rr_AB = count2rr_list[i]
+        print('    --- ---')
+        print('      - database  ='+results_name+' ---')
+        print('      - expt_lbl  ='+expt_lbl+' ---')
 
+        count2rr_AB = count2rr_list[exptx]
+        # Visualize the frequency of a chip score.
+        print('    * Visualizing chip score frequencies '+results_name)
+        chipscore_fname = join(_CHIPSCORE_DIR_, results_name+'-chipscore')
+        chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
         if __CHIPSCORE_PROBAILITIES__:
-            # Visualize the frequency of a chip score.
-            print('  * Visualizing chip score frequencies '+results_name)
-            chipscore_fname = join(_CHIPSCORE_DIR_, results_name+'-chipscore')
-
-            chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
-
             if __SANS_GT__ and not is_cross_database:
                 # First true negative - within db (sansgt)
-    title_str = 'Frequency of '+typestr+'chip scores \n'+results_name
-                fig = viz_chipscores(results_name, chipscore_data,
-                                     fignum=within_ALL_TP_fignum, holdon=True)
-            elif not is_cross_database:
-                # ALL TRUE POSITIVES - within a database
-                fig = viz_chipscores(results_name, chipscore_data, ischipscore_TP,
-                                        restype='TP', fignum=within_FIRST_TN_fignum,
-                                        holdon=True)
-            elif is_cross_database:
-                # Highest Interdatabase matches for each combination of db
-                fig = viz_chipscores(results_name, chipscore_data, ischipscore_TP,
-                                        restype='', fignum=cross_fignum,
-                                        holdon=True)
-        if __THRESHOLD_MATCHINGS__:
-            # Visualize chips which have a results with a high score
-            thresh_dir     = join_mkdir(result_dir, 'threshold_matches')
-            expt_lbl       = [within_lbl, cross_lbl][hsA is hsB]
-            thresh_out_dir = join_mkdir(thresh_dir, expt_lbl)
-            viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir)
+                viz_chipscores(chipscore_data,
+                                chipscore_mask=True - ischipscore_TP,
+                                fig=Rank1TNFig,
+                                holdon=True,
+                                color=expt_color,
+                                labelaug=results_name,
+                                conditions='Rank=1, not TP')
 
+                viz_chipscores(chipscore_data,
+                                chipscore_mask=True - ischipscore_TP,
+                                fig=CrossAndTNFig,
+                                holdon=True,
+                                color=expt_color,
+                                labelaug=results_name,
+                                conditions='Rank=1, not TP')
+
+            elif __SANS_GT__ and is_cross_database:
+                top_scores = chipscore_data[:,0]
+                cross_db_scores.append(top_scores)
+                viz_chipscores(chipscore_data,
+                                fig=CrossAndTNFig,
+                                color=expt_color,
+                                holdon=True,
+                                labelaug=results_name,
+                                conditions='Rank<=%d' % __RESTRICT_TP__)
+
+            if not __SANS_GT__ and not is_cross_database:
+                # ALL TRUE POSITIVES - within a database
+                top_scores = chipscore_data[:,0:__RESTRICT_TP__]
+                top_mask   = ischipscore_TP[:,0:__RESTRICT_TP__]
+                true_pos_scores.append(top_scores[top_mask])
+                viz_chipscores(chipscore_data,
+                                chipscore_mask=ischipscore_TP,
+                                fig=AllTPFig,
+                                holdon=True,
+                                color=expt_color,
+                                labelaug=results_name,
+                                conditions='Rank<=%d, TP' % __RESTRICT_TP__)
+            if not __SANS_GT__ and is_cross_database:
+                # Highest Interdatabase matches for each combination of db
+                top_scores = chipscore_data[:,0]
+                cross_db_scores.append(top_scores)
+                viz_chipscores(chipscore_data,
+                                fig=CrossFig,
+                                color=expt_color,
+                                holdon=True,
+                                labelaug=results_name,
+                                conditions='Rank<=%d' % __RESTRICT_TP__)
+        if __THRESHOLD_MATCHINGS__:
+            if not is_cross_database or not __SANS_GT__:
+                # Visualize chips which have a results with a high score
+                thresh_out_dir = join_mkdir(_THRESH_DIR_, expt_lbl)
+                viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir)
+    
+
+    if __CHIPSCORE_PROBAILITIES__:
+        if __SANS_GT__:
+            safe_savefig(Rank1TNFig,
+                        join(_CHIPSCORE_DIR_, within_lbl+'-rank1-chipscore'),
+                        adjust_axes=True)
+
+            safe_savefig(CrossAndTNFig,
+                        join(_CHIPSCORE_DIR_, within_lbl+'-and-cross-chipscore'),
+                        adjust_axes=True)
+            
+        elif not __SANS_GT__:
+            highest_cdscores = sort(np.hstack(cross_db_scores))[::-1][0:20]
+            for c in highest_cdscores:
+                print('There are %d/%d TPs with scores less than %d' %
+                    (np.sum(np.hstack(true_pos_scores) < c ),
+                    np.hstack(true_pos_scores).size, c))
+
+            # Finalize Plots and save
+            safe_savefig(AllTPFig,
+                        join(_CHIPSCORE_DIR_, within_lbl+'-top%dtp-chipscore' % __RESTRICT_TP__),
+                        adjust_axes=True)
+            safe_savefig(CrossFig,
+                        join(_CHIPSCORE_DIR_, 'crossdb-all-chipscores'),
+                        adjust_axes=True)
 # --- Visualizations ---
+
+def viz_chipscores(chipscore_data,
+                   fignum         =None,
+                   fig            =None,
+                   chipscore_mask =None,
+                   title          =None,
+                   holdon         =True,
+                   releaseaxis    =None,
+                   color          =None,
+                   labelaug       ='', 
+                   conditions     ='',
+                   **kwargs):
+    ''' Displays a pdf of how likely matching scores are.
+    Input: chipscore_data - QxT np.array containing Q queries and T top scores
+    Output: A matplotlib figure
+    '''
+    #print('   !! Vizualizing Chip Scores ')
+    #print('   !! chipscore_data = %r '% chipscore_data)
+    #print('   !! fignum         = %r '% fignum)
+    #print('   !! fig            = %r' % fig)
+    #print('   !! chipscore_mask = %r' % chipscore_mask)
+    #print('   !! title          = %r' % title)
+    #print('   !! holdon         = %r' % holdon)
+    #print('   !! releaseaxis    = %r' % releaseaxis)
+    #print('   !! color          = %r' % repr(color))
+    #print('   !! labelaug       = %r' % labelaug)
+    #print('   !! conditions     = %r' % conditions)
+    #print('   !! kwargs         = %r' % kwargs)
+
+    # Check that there is data
+    no_data = False
+    if chipscore_mask is None:
+        max_score = round(chipscore_data.max()+1)
+    else:
+        if len(chipscore_data[chipscore_mask]) == 0: 
+            print('There is no data!')
+            no_data = True
+        else:
+            max_score = round(chipscore_data[chipscore_mask].max()+1) 
+    # Get Figure 
+    if fig is None:
+        fig = myfigure(fignum, doclf=not holdon)
+    else: 
+        fig
+    ax = fig.get_axes()[0]
+
+    if not holdon or releaseaxis is None or releaseaxis:
+        ax.set_xlabel('chip score')
+        ax.set_ylabel('frequency')
+    if not title is None:
+        ax.set_title(title, figure=fig)
+        fig.canvas.set_window_title(title_str)
+    #
+    num_queries, num_results = chipscore_data.shape
+
+    if no_data:
+        return fig
+
+    # Compute pdf of top scores
+    rankless_list = None
+    if conditions.find('Rank=1') > -1:
+        print(' Rank=1 condition')
+        num_results = 1
+        rankless_list = []
+    elif conditions.find('Rank<=%d' % __RESTRICT_TP__) > -1:
+        print(' Rank<=R condition')
+        num_results = __RESTRICT_TP__
+        rankless_list = []
+    elif conditions.find('All Ranks') > -1:
+        rankless_list = []
+        num_results = chipscore_data.shape[1]
+        
+    def __plot_scores(scores, fig):
+        # Set up plot info (labels and colors)
+        _condstr = '' if len(conditions) == 0 else ' | '+conditions
+        scores_lbl = labelaug+' P(chip score%s) #examples=%d' % (_condstr, scores.size)
+        if color is None:
+            line_color = plt.get_cmap('gist_rainbow')(tx/float(num_results))
+        else: line_color = color
+        # Estimate pdf
+        bw_factor = .1
+        score_pdf = gaussian_kde(scores, bw_factor)
+        # Plot the actual scores on near the bottom perterbed in Y
+        pdfrange = score_pdf(scores).max() - score_pdf(scores).min() 
+        perb   = (np.random.randn(len(scores))) * pdfrange/30.
+        y_data = np.abs([pdfrange/50. for _ in scores]+perb)
+        ax.plot(scores, y_data, 'o', color=line_color, figure=fig, alpha=.1)
+        # Plot the estimated PDF of the scores
+        x_data = linspace(-max_score, max_score, 500)
+        ax.plot(x_data, score_pdf(x_data),
+                color=line_color,
+                label=scores_lbl)
+
+    # --- plot info
+    print('Plotting info from the top %d results' % num_results)
+    for tx in xrange(num_results):
+        rank = tx + 1
+        if chipscore_mask is None:
+            scores = chipscore_data[:,tx]
+        else:
+            mask   = chipscore_mask[:,tx]
+            scores = chipscore_data[mask,tx]
+        if not rankless_list is None:
+            rankless_list.append(scores)
+        #else: 
+            #__plot_scores(scores, fig)
+
+    if not rankless_list is None:
+        #import pdb
+        #pdb.set_trace()
+        scores = np.hstack(rankless_list)
+        score_stats =( scores.min(), scores.std(), scores.mean(), scores.max())
+        print('    !! Conditions: '+conditions)
+        print('    !! Scores (min=%.1f, mean=%.1f, std=%.1f, max=%.1f)' % score_stats)
+        __plot_scores(scores, fig)
+        fig.user_stat_list.append(score_stats)
+    return fig
+
+
 
 # Visualization of images which match above a threshold 
 def viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir):
@@ -192,7 +442,7 @@ def viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir):
     
     MATCH_THRESHOLD = __method_2_matchthresh__.get(__METHOD__, 10)
     results_name = get_results_name(hsA, hsB)
-    print('  * Visualizing threshold matchings '+results_name)
+    print('  * Visualizing threshold matchings '+results_name+' give it some time to plot...')
     threshdb_out_dir = join_mkdir(thresh_out_dir, results_name)
     # For each query run in hsA vs hsB
     for count in xrange(len(count2rr_AB)):
@@ -227,93 +477,12 @@ def viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir):
 
             fig = myfigure(0)
             fig_fpath = join(threshdb_out_dir, fig_fname)
+            sys.stdout.write('.')
             safe_savefig(fig, fig_fpath)
     print('  * Visualized %d above thresh: %f from expt: %s ' % (num_matching,
-                                                                 match_threshold,
+                                                                 MATCH_THRESHOLD,
                                                                  results_name))
-def viz_chipscores(chipscore_data,
-                   fignum         =0,
-                   fig            =None
-                   chipscore_mask =None,
-                   title          =None,
-                   holdon         =True,
-                   releaseaxis    =None,
-                   color          =None,
-                   labelaug       ='', 
-                   **kwargs):
-    ''' Displays a pdf of how likely matching scores are.
-    Input: chipscore_data - QxT np.array containing Q queries and T top scores
-    Output: A matplotlib figure
-    '''
-    # Prepare Plot
-    no_data = False
-    if not chipscore_mask is None:
-        if len(chipscore_data[chipscore_mask]) == 0: 
-            no_data = True
-        else:
-            max_score = round(chipscore_data[ischipscore_TP].max()+1) 
-            
-    if fig is None:
-        fig = myfigure(fignum, doclf=not holdon)
-    if not holdon or releaseaxis is None or releaseaxis:
-        plt.xlabel('chip score')
-        plt.ylabel('frequency')
-    if not title is None:
-        plt.title(title)
-        fig.canvas.set_window_title(title_str)
-    #
-    num_queries, num_results = chipscore_data.shape
 
-    if no_data:
-        return fig
-
-    # Compute pdf of top scores
-    for tx in xrange(num_results):
-        # --- plot info
-        rank = tx + 1
-
-        if chipscore_mask is None:
-            scores = chipscore_data[:,tx]
-        else:
-            mask   = chipscore_mask[:,tx]
-            scores = chipscore_data[mask,tx]
-
-        chipscore_pdf = gaussian_kde(scores)
-        #print chipscore_pdf.__dict__
-        #print chipscore_pdf.covariance_factor
-        #chipscore_pdf.covariance_factor = scipy.stats.kde.gaussian_kde.scotts_factor
-        chipscore_pdf.covariance_factor = scipy.stats.kde.gaussian_kde.silverman_factor
-        #chipscore_pdf.covariance_factor = lambda: .0001
-
-
-        chipscore_domain = linspace(0, max_score, 200)
-        extra_given = '' if restype == '' else ', '+restype
-        rank_label = labelaug+'P(chip score | chip-rank = #'+str(rank)+extra_given+') '+\
-                '#examples='+str(scores.size)
-        if color is None:
-            line_color = get_cmap('gist_rainbow')(tx/float(num_results))
-        else: 
-            line_color = color
-        # --- plot agg
-        histscale = np.logspace(0,3,100)
-        histscale = histscale[histscale - 10 > 5] 
-        histscale = [10, 20, 40, 60, 80, 100, 120, 160,
-                     200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900,
-                     1000]
-        #print histscale
-        highpdf = chipscore_pdf(scores).max()
-        lowpdf = chipscore_pdf(scores).min()
-        #print highpdf
-        perb = (np.random.randn(len(scores))) * (highpdf - lowpdf)/40
-        y_data = chipscore_pdf(scores)+perb
-        y_data = [(highpdf - lowpdf)/2 for _ in scores]
-        plot(scores, y_data, 'o', color=line_color)
-        #hist(scores, normed=1, range=(0,max_score), alpha=.1, log=True,
-             #bins=np.logspace(0,3,100),  histtype='stepfilled') # , bins=max_score/2 
-        plot(chipscore_domain, chipscore_pdf(chipscore_domain), color=line_color, label=rank_label)
-    if not holdon:
-        legend()
-    return fig
 
 # --- Visualization Data ---
 def get_chipscores(hsA, hsB, count2rr_AB):
@@ -321,33 +490,42 @@ def get_chipscores(hsA, hsB, count2rr_AB):
     Input: Two database handles and queries from A to B
     Output: Matrix of chip scores. As well as 
     '''
-    num_results = __NUM_RANKS_CSPDF__  # ensure there are N top results 
+    num_results = -1  # ensure there are N top results 
     num_queries = len(count2rr_AB)
     # Get top scores of result
-    chipscore_data = -np.ones((num_queries, num_results))
+    chipscore_list = [[] for _ in xrange(num_queries)]
     # Indicator as to if chipscore was a true positive
-    ischipscore_TP = np.zeros((num_queries, num_results), dtype=np.bool)
+    isscoreTP_list = [[] for _ in xrange(num_queries)]
     for count in xrange(num_queries):
         rr = count2rr_AB[count]
         res = QueryResult(hsB, rr, hsA)
-        res.force_num_top(num_results) 
+        res.force_num_top(-1) 
         top_scores = res.top_scores()
         gtpos_full = res.get_groundtruth_ranks()
         gtpos_full = [] if gtpos_full is None else gtpos_full
         gtpos_list = []
         for gt_pos in gtpos_full:
-            if gt_pos < num_results: gtpos_list.append(gt_pos)
-        ischipscore_TP[count, gtpos_list] = 1
-        chipscore_data[count, 0:len(top_scores)] = top_scores
+            if num_results == -1 or gt_pos < num_results:
+                gtpos_list.append(gt_pos)
+        isscoreTP_list[count] = gtpos_list
+        chipscore_list[count] = top_scores
+
+    num_results = len(chipscore_list[0])
+    assert np.all(num_results == np.array([len(_) for _ in chipscore_list])), \
+            'There must be the same number of results'
+    chipscore_data = np.array(chipscore_list)
+    ischipscore_TP = np.zeros((num_queries, num_results), dtype=np.bool)
+    for count in xrange(num_queries):
+        gtpos_list = [isscoreTP_list[count]]
+        ischipscore_TP[count][gtpos_list] = 1
     return chipscore_data, ischipscore_TP
 
 # MAIN ENTRY POINT
 if __name__ == '__main__':
     import multiprocessing as mp
     mp.freeze_support()
-    print "Running experiments"
+    print('Running experiments')
     #hsl.enable_global_logs()
-
 
     global count2rr_list
 
@@ -359,8 +537,6 @@ if __name__ == '__main__':
     if '--k5'              in sys.argv: __K__ = 5
     if '--threshold'       in sys.argv: __THRESHOLD_MATCHINGS__ = True
     if '--sans-gt'         in sys.argv: __SANS_GT__ = True
-    if '--num-results-cs1' in sys.argv: __NUM_RANKS_CSPDF__ = 1
-    if '--num-results-cs5' in sys.argv: __NUM_RANKS_CSPDF__ = 5
     if '--cmd'             in sys.argv: __cmd_mode__ = True
     if '--cmdrun'          in sys.argv: __cmd_run_mode__ = True
     if '--delete'          in sys.argv: __cmd_run_mode__ = True
@@ -412,7 +588,7 @@ if __name__ == '__main__':
     # Command Line Argument: List Results 
     if '--list' in sys.argv:
         for hsdb in hsdb_list:
-            print hsdb.db_dpath
+            print(hsdb.db_dpath)
             rawrr_dir  = hsdb.db_dpath+'/.hs_internals/computed/query_results'
             result_list = os.listdir(rawrr_dir)
             result_list.sort()
@@ -436,6 +612,7 @@ if __name__ == '__main__':
             symx_list += [len(dbvs_list)]
             dbvs_list.append((hsdbA, hsdbA))
             for hsdbB in hsdb_list:
+                #if __SANS_GT__: continue
                 # Nonreflexive cases
                 if hsdbA is hsdbB: continue
                 dbtupAB = (hsdbA, hsdbB)
@@ -460,20 +637,17 @@ if __name__ == '__main__':
     print('---')
 
     # Dependents of parameters 
-    results_configstr = 'results_' + __METHOD__ + '_k' + str(__K__) + ['','_sansgt'][__SANS_GT__]
     results_root = join_mkdir('Results')
-    result_dir = join_mkdir(results_root, results_configstr)
-    print('\n\nOutputing results in: '+result_dir+'\n\n')
     
     if not __cmd_mode__:
         # Compute / Load all query results. Then visualize
-        visualize_all_results(dbvs_list, count2rr_list, symx_list, result_dir)
+        visualize_all_results(dbvs_list, count2rr_list, symx_list, results_root)
 
     try: 
         __force_no_embed__
     except: 
         __force_no_embed__ = False
-  
+
     if (__cmd_mode__ or __cmd_run_mode__) and not __force_no_embed__:
         print('Entering interacitve mode. You\'ve got variables.')
         i = 0
@@ -510,4 +684,5 @@ if __name__ == '__main__':
 # How to score (choice of k w/ dynamic database)
 # What do fins feature-matches score? 
 # 
+# Do finns still match after you take top 1 out of the scores? 
 

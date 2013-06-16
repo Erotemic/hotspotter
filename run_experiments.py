@@ -73,8 +73,8 @@ __RESTRICT_TP__            = 5
 __METHOD__                 = 'LNRAT'
 
 __THRESHOLD_MATCHINGS__    = False
-
 __CHIPSCORE_PROBAILITIES__ = True
+
 __ENSURE_MODEL__           = True
 
 __FEATSCORE_STATISTICS__   = False
@@ -275,8 +275,10 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
                         join(chipscore_dir, 'crossdb-all-chipscores'),
                         adjust_axes=True)
     #------------
-    vizualize_all_threshold_experiments()
-    vizualize_all_chipscores()
+    if __THRESHOLD_MATCHINGS__:
+        vizualize_all_threshold_experiments()
+    if __CHIPSCORE_PROBAILITIES__:
+        vizualize_all_chipscores()
     
     # ALL TRUE POSITIVES - within a database
     # First true negative - within db (nogt)

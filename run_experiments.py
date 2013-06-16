@@ -116,9 +116,9 @@ def safe_savefig(fig, fpath, adjust_axes=False,trunc_max=None):
         trunc_max = fig_mean+fig_std*1.5 if trunc_max is None else trunc_max
 
         trunc_min = np.floor(fig_min)
-        trunc_xticks = np.linspace(int(trunc_min), int(trunc_max),10)
-        trunc_ticks = trunc_ticks[trunc_xticks < trunc_min]
-        trunc_ticks = np.append([int(trunc_min)], trunc_ticks)
+        trunc_xticks = np.linspace(0, int(trunc_max),11)
+        trunc_xticks = trunc_xticks[trunc_xticks >= trunc_min]
+        trunc_xticks = np.append([int(trunc_min)], trunc_xticks)
         no_zero_yticks = ax.get_yticks()[ax.get_yticks() > 0]
         ax.set_xlim(trunc_min,trunc_max)
         ax.set_xticks(trunc_xticks)
@@ -267,10 +267,11 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
         if nogt:
             print('  * Saving nogt')
             figfpath=join(chipscore_dir, within_lbl+'-rank1-chipscore')
-            safe_savefig(Rank1TNFig,figfpath, adjust_axes=True,trunc_max=600)
+            safe_savefig(Rank1TNFig,figfpath, adjust_axes=True,trunc_max=100)
 
             figfpath=join(chipscore_dir, within_lbl+'-and-cross-chipscore')
-            safe_savefig(CrossAndTNFig,figfpath, adjust_axes=True,trunc_max=60)
+            safe_savefig(CrossAndTNFig,figfpath,
+adjust_axes=True,trunc_max=100)
             
         elif not nogt:
             print('  * Saving gt')
@@ -283,10 +284,10 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
             # Finalize Plots and save
             safe_savefig(AllTPFig,
                         join(chipscore_dir, within_lbl+'-top%dtp-chipscore' % __RESTRICT_TP__),
-                        adjust_axes=True, trunc_max=60)
+                        adjust_axes=True, trunc_max=1000)
             safe_savefig(CrossFig,
                         join(chipscore_dir, 'crossdb-all-chipscores'),
-                        adjust_axes=True, trunc_max=60)
+                        adjust_axes=True, trunc_max=100)
     #------------
     if __THRESHOLD_MATCHINGS__:
         vizualize_all_threshold_experiments()
@@ -388,12 +389,13 @@ def viz_chipscores(chipscore_data,
             line_color = plt.get_cmap('gist_rainbow')(tx/float(num_results))
         else: line_color = color
         # Estimate pdf
-        bw_factor = .1
+        bw_factor = .01
         #print bw_factor
         #help(gaussian_kde)
         #score_pdf = gaussian_kde(scores, bw_factor)
         score_pdf = gaussian_kde(scores)
         score_pdf.factor = bw_factor
+        score_pdf.covariance_factor = bw_factor
         #Plot the actual scores on near the bottom perterbed in Y
         #pdfrange=1
         pdfrange = score_pdf(scores).max() - score_pdf(scores).min() 
@@ -401,7 +403,7 @@ def viz_chipscores(chipscore_data,
         y_data = np.abs([pdfrange/50. for _ in scores]+perb)
         ax.plot(scores, y_data, 'o', color=line_color, figure=fig, alpha=.1)
         # Plot the estimated PDF of the scores
-        x_data = linspace(-max_score, max_score, 500)
+        x_data = linspace(0, max_score, 500)
         ax.plot(x_data, score_pdf(x_data),
                 color=line_color,
                 label=scores_lbl)
@@ -579,7 +581,7 @@ if __name__ == '__main__':
             for hsA in _dblist:
                 _symlist.append(len(_symlist))
                 _vslist.append((hsA, hsA))
-                if nogt is False: # dont run cross-database without gt
+                if nogt is True: # dont run cross-database with gt
                     for hsB in _dblist:
                         # cross db matches
                         if not hsA is hsB and not (hsA, hsB) in _vslist:
@@ -657,12 +659,14 @@ if __name__ == '__main__':
     
     if not __cmd_mode__:
         # Compute / Load all query results. Then visualize
+        print('Viz GT')
         visualize_all_results(vsdb_list,
                               count2rr_list,
                               sym_list,
                               results_root,
                               nogt=False)
         if __NOGT__:
+            print('Viz No GT')
             visualize_all_results(vsdb_nogt_list,
                                 count2rr_list_nogt,
                                 sym_nogt_list, 

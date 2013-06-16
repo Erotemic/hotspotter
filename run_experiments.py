@@ -60,8 +60,8 @@ workdir = '/media/SSD_Extra/'
 if sys.platform == 'win32':
     workdir = 'D:/data/work/'
 
-global __SANS_GT__
-__SANS_GT__                = False
+global __NOGT__
+__NOGT__                = False
 
 __cmd_mode__               = False
 __cmd_run_mode__           = False
@@ -148,157 +148,119 @@ def safe_savefig(fig, fpath, adjust_axes=False):
     fig.tight_layout()
     fig.savefig(sanatized_fpath, format=format)
 
-def query_db_vs_db(hsA, hsB):
-    'Runs cross database queries / reloads cross database queries'
-    vs_str = get_results_name(hsA, hsB) 
-    print('Running '+vs_str)
-    query_cxs = hsA.cm.get_valid_cxs()
-    total = len(query_cxs)
-    cx2_rr = alloc_lists(total)
-    for count, qcx in enumerate(query_cxs):
-        with Timer() as t:
-            print(('Query %d / %d   ' % (count, total)) + vs_str)
-            rr = hsB.qm.cx2_rr(qcx, hsA)
-            cx2_rr[count] = rr
-    return cx2_rr
+
 
 # ----- 
 # DRIVERS
 
-def visualize_all_results(dbvs_list, count2rr_list, symx_list, results_root):
-    global __SANS_GT__
+
+def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nogt):
     print('\n\nOutputing results in: '+results_root+'\n\n')
     print('--- Vizualizing All Results ---')
-    print('Ground Truth: '+str(not __SANS_GT__))
+    print('Ground Truth: '+str(not nogt))
 
-    within_lbl = ['within-db','within-db-sans-gt'][__SANS_GT__]
+    within_lbl = ['within-db','within-db-nogt'][nogt]
     cross_lbl  = 'cross-db'
     within_label = within_lbl.replace('db','database')
     cross_label  = cross_lbl.replace('db','database')
 
     results_configstr = 'results_%s_k%d%s' %\
-            (__METHOD__, __K__,  ['','_sansgt'][__SANS_GT__])
+            (__METHOD__, __K__,  ['','_nogt'][nogt])
     result_dir = join_mkdir(results_root, results_configstr)
     print('\n\nAlso in: '+result_dir+'\n\n')
 
     hs_configstr = '-%s_k%d' % (__METHOD__, __K__)
 
-    _CHIPSCORE_DIR_ = join_mkdir(results_root, 'chipscore_frequencies'+hs_configstr)
-    _THRESH_DIR_    = join_mkdir(results_root, 'threshold_matches'+hs_configstr)
-    
-    
-    # ALL TRUE POSITIVES - within a database
-    # First true negative - within db (sansgt)
-    # Highest Interdatabase matches for each combination of db
-    # Smallest Gaussian window we can do
-    # Show top 5-10 scoring cross-database matches give them rest
-    if __CHIPSCORE_PROBAILITIES__:
-        if __SANS_GT__:
-            Rank1TNFig = myfigure(200, doclf=True,
-                                title='Frequency of true negative chip scores')
-            CrossAndTNFig = myfigure(400, doclf=True,
-                                title='True negatives and cross database queries')
+    def vizualize_all_threshold_experiments():
+        thresh_output_dir = join_mkdir(results_root, 'threshold_matches'+hs_configstr)
+        exptx = 0
+        cmap = plt.get_cmap('Set1')
+        for exptx in range(len(vsdb_list)):
+            # Database handles.
+            hsA, hsB = vsdb_list[exptx]
+            expt_lbl   = [within_lbl, cross_lbl][not hsA is hsB]
+            results_name = get_results_name(hsA, hsB) 
+            print('    --- ---')
+            print('      - database  ='+results_name+' ---')
+            print('      - expt_lbl  ='+expt_lbl+' ---')
+            count2rr_AB = count2rr_list[exptx]
+            if hsA is hsB or not nogt:
+                # Visualize chips which have a results with a high score
+                thresh_out_dir = join_mkdir(thresh_output_dir, expt_lbl)
+                viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir)
+    def vizualize_all_chipscores():
+        chipscore_dir = join_mkdir(results_root, 'chipscore_frequencies'+hs_configstr)
+        if nogt:
+                Rank1TNFig = myfigure(200, doclf=True,
+                                    title='Frequency of true negative chip scores')
+                CrossAndTNFig = myfigure(400, doclf=True,
+                                    title='True negatives and cross database queries')
 
-        elif not __SANS_GT__:
+        elif not nogt:
             AllTPFig   = myfigure(100, doclf=True,
                                 title='Frequency of true positive chip scores')
             CrossFig   = myfigure(300, doclf=True,
                                 title='Frequency of all cross-database chip scores')
-    #AllTPFig   = myfigure(100)
-    #Rank1TNFig = myfigure(200)
-    #CrossFig   = myfigure(300)
+        cross_db_scores = []
+        true_pos_scores = []
+        for exptx in range(total_expts):
+            # Database handles.
+            hsA, hsB = vsdb_list[exptx]
+            expt_lbl   = [within_lbl, cross_lbl][not hsA is hsB]
+            expt_color = cmap(exptx/float(total_expts))
+            
+            results_name = get_results_name(hsA, hsB) 
+            print('    --- ---')
+            print('      - database  ='+results_name+' ---')
+            print('      - expt_lbl  ='+expt_lbl+' ---')
 
-    exptx = 0
-    cmap = plt.get_cmap('Set1')
-    total_expts = len(dbvs_list)
-    cross_db_scores = []
-    true_pos_scores = []
-    for exptx in range(total_expts):
-        # Database handles.
-        hsA, hsB = dbvs_list[exptx]
-        is_cross_database = not hsA is hsB
-        expt_lbl   = [within_lbl, cross_lbl][is_cross_database]
-        expt_color = cmap(exptx/float(total_expts))
-        
-        results_name = get_results_name(hsA, hsB) 
-        print('    --- ---')
-        print('      - database  ='+results_name+' ---')
-        print('      - expt_lbl  ='+expt_lbl+' ---')
-
-        count2rr_AB = count2rr_list[exptx]
-        # Visualize the frequency of a chip score.
-        print('    * Visualizing chip score frequencies '+results_name)
-        chipscore_fname = join(_CHIPSCORE_DIR_, results_name+'-chipscore')
-        chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
-        if __CHIPSCORE_PROBAILITIES__:
-            if __SANS_GT__ and not is_cross_database:
-                # First true negative - within db (sansgt)
-                viz_chipscores(chipscore_data,
-                                chipscore_mask=True - ischipscore_TP,
-                                fig=Rank1TNFig,
-                                holdon=True,
-                                color=expt_color,
-                                labelaug=results_name,
+            count2rr_AB = count2rr_list[exptx]
+            print('    * Visualizing chip score frequencies '+results_name)
+            chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
+            if nogt and hsA is hsB:
+                # First true negative - within db (nogt)
+                viz_chipscores(chipscore_data, chipscore_mask=True - ischipscore_TP,
+                                fig=Rank1TNFig, holdon=True,
+                                color=expt_color, labelaug=results_name,
                                 conditions='Rank=1, not TP')
 
-                viz_chipscores(chipscore_data,
-                                chipscore_mask=True - ischipscore_TP,
-                                fig=CrossAndTNFig,
-                                holdon=True,
-                                color=expt_color,
-                                labelaug=results_name,
+                viz_chipscores(chipscore_data, chipscore_mask=True - ischipscore_TP,
+                                fig=CrossAndTNFig, holdon=True,
+                                color=expt_color, labelaug=results_name,
                                 conditions='Rank=1, not TP')
 
-            elif __SANS_GT__ and is_cross_database:
+            elif nogt and not hsA is hsB:
                 top_scores = chipscore_data[:,0]
                 cross_db_scores.append(top_scores)
-                viz_chipscores(chipscore_data,
-                                fig=CrossAndTNFig,
-                                color=expt_color,
-                                holdon=True,
-                                labelaug=results_name,
-                                conditions='Rank<=%d' % __RESTRICT_TP__)
+                viz_chipscores(chipscore_data, fig=CrossAndTNFig,
+                                color=expt_color, holdon=True,
+                                labelaug=results_name, conditions='Rank<=%d' % __RESTRICT_TP__)
 
-            if not __SANS_GT__ and not is_cross_database:
+            if not nogt and hsA is hsB:
                 # ALL TRUE POSITIVES - within a database
                 top_scores = chipscore_data[:,0:__RESTRICT_TP__]
                 top_mask   = ischipscore_TP[:,0:__RESTRICT_TP__]
                 true_pos_scores.append(top_scores[top_mask])
-                viz_chipscores(chipscore_data,
-                                chipscore_mask=ischipscore_TP,
-                                fig=AllTPFig,
-                                holdon=True,
-                                color=expt_color,
-                                labelaug=results_name,
+                viz_chipscores(chipscore_data, chipscore_mask=ischipscore_TP,
+                                fig=AllTPFig, holdon=True,
+                                color=expt_color, labelaug=results_name,
                                 conditions='Rank<=%d, TP' % __RESTRICT_TP__)
-            if not __SANS_GT__ and is_cross_database:
+            if not nogt and not hsA is hsB:
                 # Highest Interdatabase matches for each combination of db
                 top_scores = chipscore_data[:,0]
                 cross_db_scores.append(top_scores)
-                viz_chipscores(chipscore_data,
-                                fig=CrossFig,
-                                color=expt_color,
-                                holdon=True,
-                                labelaug=results_name,
-                                conditions='Rank<=%d' % __RESTRICT_TP__)
-        if __THRESHOLD_MATCHINGS__:
-            if not is_cross_database or not __SANS_GT__:
-                # Visualize chips which have a results with a high score
-                thresh_out_dir = join_mkdir(_THRESH_DIR_, expt_lbl)
-                viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir)
-    
+                viz_chipscores(chipscore_data, fig=CrossFig,
+                                color=expt_color, holdon=True,
+                                labelaug=results_name, conditions='Rank<=%d' % __RESTRICT_TP__)
 
-    if __CHIPSCORE_PROBAILITIES__:
-        if __SANS_GT__:
-            safe_savefig(Rank1TNFig,
-                        join(_CHIPSCORE_DIR_, within_lbl+'-rank1-chipscore'),
-                        adjust_axes=True)
+        if nogt:
+            figfpath=join(chipscore_dir, within_lbl+'-rank1-chipscore')
+            safe_savefig(Rank1TNFig,figfpath, adjust_axes=True)
 
-            safe_savefig(CrossAndTNFig,
-                        join(_CHIPSCORE_DIR_, within_lbl+'-and-cross-chipscore'),
-                        adjust_axes=True)
+            figfpath=join(chipscore_dir, within_lbl+'-and-cross-chipscore')
+            safe_savefig(CrossAndTNFig,figfpath, adjust_axes=True)
             
-        elif not __SANS_GT__:
+        elif not nogt:
             highest_cdscores = sort(np.hstack(cross_db_scores))[::-1][0:20]
             for c in highest_cdscores:
                 print('There are %d/%d TPs with scores less than %d' %
@@ -307,11 +269,25 @@ def visualize_all_results(dbvs_list, count2rr_list, symx_list, results_root):
 
             # Finalize Plots and save
             safe_savefig(AllTPFig,
-                        join(_CHIPSCORE_DIR_, within_lbl+'-top%dtp-chipscore' % __RESTRICT_TP__),
+                        join(chipscore_dir, within_lbl+'-top%dtp-chipscore' % __RESTRICT_TP__),
                         adjust_axes=True)
             safe_savefig(CrossFig,
-                        join(_CHIPSCORE_DIR_, 'crossdb-all-chipscores'),
+                        join(chipscore_dir, 'crossdb-all-chipscores'),
                         adjust_axes=True)
+    #------------
+    vizualize_all_threshold_experiments()
+    vizualize_all_chipscores()
+    
+    # ALL TRUE POSITIVES - within a database
+    # First true negative - within db (nogt)
+    # Highest Interdatabase matches for each combination of db
+    # Smallest Gaussian window we can do
+    # Show top 5-10 scoring cross-database matches give them rest
+
+    #AllTPFig   = myfigure(100)
+    #Rank1TNFig = myfigure(200)
+    #CrossFig   = myfigure(300)
+
 # --- Visualizations ---
 
 def viz_chipscores(chipscore_data,
@@ -536,50 +512,9 @@ if __name__ == '__main__':
     if '--k1'              in sys.argv: __K__ = 1
     if '--k5'              in sys.argv: __K__ = 5
     if '--threshold'       in sys.argv: __THRESHOLD_MATCHINGS__ = True
-    if '--sans-gt'         in sys.argv: __SANS_GT__ = True
     if '--cmd'             in sys.argv: __cmd_mode__ = True
     if '--cmdrun'          in sys.argv: __cmd_run_mode__ = True
-    if '--delete'          in sys.argv: __cmd_run_mode__ = True
-
-    # IPython forced settings
-    print("Checking forced configurations")
-    HAS_FORCED_SETTINGS = '__forced_sans_gt__' in vars()
-    if HAS_FORCED_SETTINGS:
-        print('...forcing __SANS_GT__='+str(__forced_sans_gt__))
-        __SANS_GT__ = __forced_sans_gt__
-        if '__prev_forced_sans_gt__' in vars():
-            print('...Checking if the value has changed')
-            if __prev_forced_sans_gt__ != __forced_sans_gt__:
-                print('...... It changed Whelp, we\'ve got to rerun')
-                del count2rr_list
-            else:
-                print('...... no change')
-        __prev_forced_sans_gt__ = __forced_sans_gt__
-
-
-    print("Checking if count2rr_list needs to reload")
-    NEED_TO_RELOAD = not 'count2rr_list' in vars()
-    # Build list of all databases to run experiments on
-    if NEED_TO_RELOAD:
-        print('... Dang no count2rr_list. Are you not in IPython?')
-        hsdb_list = []
-        dbpath_list = [join(workdir, dbid) for dbid in dbid_list]
-        __forced_sans_gt__ = __SANS_GT__
-        for dbpath in dbpath_list:
-            hsdb = HotSpotterAPI(dbpath)
-            hsdb_list.append(hsdb)
-    else:
-        print('... Great! count2rr_list is already loaded')
-
-    print("Setting database configurations")
-    for hsdb in hsdb_list:
-        hsdb.am.algo_prefs.query.remove_other_names = __SANS_GT__ 
-        hsdb.am.algo_prefs.query.method = __METHOD__
-        hsdb.am.algo_prefs.query.k = __K__
-        hsdb.dm.draw_prefs.ellipse_bit = True 
-        hsdb.dm.draw_prefs.figsize = (19.2,10.8)
-        hsdb.dm.draw_prefs.fignum = 0
-
+    if '--runcmd'          in sys.argv: __cmd_run_mode__ = True
     # Command Line Argument: Delete precomputed results
     if '--delete' in sys.argv:
         for hsdb in hsdb_list:
@@ -596,44 +531,95 @@ if __name__ == '__main__':
                 print('  '+fname)
         sys.exit(0)
 
-    if NEED_TO_RELOAD:
-        if __ENSURE_MODEL__:
-            for hsdb in hsdb_list:
-                hsdb.ensure_model()
-        else: # The sample set things its 0 if you dont at least do this
-            for hsdb in hsdb_list:
-                hsdb.vm.sample_train_set()
+    # does count2rr_list need to reload?
+    print("does count2rr_list need to reload?")
+    if not 'count2rr_list' in vars():
+        print('... yes')
+        hsdb_list   = []
+        if __NOGT__:
+            hsdb_nogt_list = []
+        dbpath_list = [join(workdir, dbid) for dbid in dbid_list]
+        def append_api_list(api_list):
+            hsdb = HotSpotterAPI(dbpath)
+            api_list.append(hsdb)
+        for dbpath in dbpath_list:
+            append_api_list(hsdb_list)
+            if __NOGT__:
+                append_api_list(hsdb_nogt_list)
+        def build_db_comparisons(_dblist, nogt):
+            # Assemble ALL hotspotter-database-api combinations
+            _vslist = []
+            _symlist = [] # list of symetric matches
+            for hsA in _dblist:
+                _symlist.append(len(_symlist))
+                _vslist.append((hsA, hsA))
+                if nogt is False: # dont run cross-database without gt
+                    for hsB in _dblist:
+                        # cross db matches
+                        if not hsA is hsB and not (hsA, hsB) in _vslist:
+                            _vslen = len(_vslist)
+                            _symlist.extend([_vslen+1, _vslen])
+                            _vslist.append((hsA, hsB))
+                            _vslist.append((hsB, hsA))
+            return _vslist, _symlist
+        vsdb_list, sym_list = build_db_comparisons(hsdb_list, nogt=False)
+        if __NOGT__:
+            vsdb_nogt_list, sym_nogt_list = build_db_comparisons(hsdb_nogt_list, nogt=True)
 
-        # Get all combinations of database pairs
-        dbvs_list = []
-        symx_list = [] # list of symetric matches
-        for hsdbA in hsdb_list:
-            # Reflexive case
-            symx_list += [len(dbvs_list)]
-            dbvs_list.append((hsdbA, hsdbA))
-            for hsdbB in hsdb_list:
-                #if __SANS_GT__: continue
-                # Nonreflexive cases
-                if hsdbA is hsdbB: continue
-                dbtupAB = (hsdbA, hsdbB)
-                dbtupBA = (hsdbB, hsdbA)
-                if dbtupAB in dbvs_list: continue
-                assert not dbtupBA in dbvs_list
-                cur_pos = len(dbvs_list)
-                symx_list += [cur_pos+1, cur_pos]
-                dbvs_list.append(dbtupAB)
-                dbvs_list.append(dbtupBA)
+        # Build list of all databases to run experiments on
+        def api_list_set_prefs(_dblist, nogt):
+            print("Setting database configurations")
+            for hsdb in _dblist:
+                hsdb.am.algo_prefs.query.remove_other_names = nogt 
+                hsdb.am.algo_prefs.query.method             = __METHOD__
+                hsdb.am.algo_prefs.query.k                  = __K__
+                hsdb.dm.draw_prefs.ellipse_bit              = True 
+                hsdb.dm.draw_prefs.figsize                  = (19.2,10.8)
+                hsdb.dm.draw_prefs.fignum                   = 0
+        api_list_set_prefs(hsdb_list, True)
+        if __NOGT__:
+            api_list_set_prefs(hsdb_nogt_list, False)
 
-        count2rr_list = [query_db_vs_db(hsA, hsB) for hsA, hsB in dbvs_list]
+        # Set the preferences of the experiments
+        def api_list_ensure_model(_dblist):
+                for hsdb in _dblist:
+                    hsdb.vm.sample_train_set()
+                    if __ENSURE_MODEL__:
+                        hsdb.ensure_model()
+        api_list_ensure_model(hsdb_list)
+        if __NOGT__:
+            api_list_ensure_model(hsdb_nogt_list)
+
+        # Run all combinations of queries
+        def query_db_vs_db(hsA, hsB):
+            'Runs cross database queries / reloads cross database queries'
+            vs_str = get_results_name(hsA, hsB) 
+            print('Running '+vs_str)
+            query_cxs = hsA.cm.get_valid_cxs()
+            total = len(query_cxs)
+            cx2_rr = alloc_lists(total)
+            for count, qcx in enumerate(query_cxs):
+                #with Timer() as t:
+                    #print(('Query %d / %d   ' % (count, total)) + vs_str)
+                    rr = hsB.qm.cx2_rr(qcx, hsA)
+                    cx2_rr[count] = rr
+            return cx2_rr 
+
+        count2rr_list      = [query_db_vs_db(hsA, hsB) for hsA, hsB in vsdb_list]
+        if __NOGT__:
+            count2rr_list_nogt = [query_db_vs_db(hsA, hsB) for hsA, hsB in vsdb_nogt_list]
+    else:
+        print('... Great! count2rr_list is already loaded')
+
 
     # List the database list we are running on
-    print('--- Database versus list ---')
-    print('   DBX --- SYMX - hsA vs hsB ')
-    for dbx, (dbtup, symx) in enumerate(zip(dbvs_list, symx_list)):
+    print('--- Database versus list ---\n   DBX --- SYMX - hsA vs hsB ')
+    for dbx, (dbtup, symx) in enumerate(zip(vsdb_list, sym_list)):
         if dbtup[0] is dbtup[1]: 
-            print('     ' + str(dbx) + ' --- sx' + str(symx) + ' - ' + dbtup[0].get_dbid()+' vs self')
+            print('     %d --- sx%d - %s vs self' %
+                  (dbx, symx, dbtup[0].get_dbid()) )
         else:
-            print('     ' + str(dbx) + ' --- sx' + str(symx) + ' - ' + dbtup[0].get_dbid()+' vs '+dbtup[1].get_dbid())
+            print('     %d --- sx%d - %s vs %s' % (dbx, symx, dbtup[0].get_dbid(), dbtup[1].get_dbid()) )
     print('---')
 
     # Dependents of parameters 
@@ -641,34 +627,32 @@ if __name__ == '__main__':
     
     if not __cmd_mode__:
         # Compute / Load all query results. Then visualize
-        visualize_all_results(dbvs_list, count2rr_list, symx_list, results_root)
-
+        visualize_all_results(vsdb_list,
+                              count2rr_list,
+                              sym_list,
+                              results_root,
+                              nogt=False)
+        visualize_all_results(vsdb_nogt_list,
+                              count2rr_list_nogt,
+                              sym_nogt_list, 
+                              results_root,
+                              nogt=True)
     try: 
         __force_no_embed__
     except: 
         __force_no_embed__ = False
 
     if (__cmd_mode__ or __cmd_run_mode__) and not __force_no_embed__:
-        print('Entering interacitve mode. You\'ve got variables.')
-        i = 0
-        # Skip 2 places do do symetrical matching
-        matching_pairs_list = []
-        symdid_set = set([])  
-        hsA, hsB = dbvs_list[i]
-        results_name = get_results_name(hsA, hsB)
-        count2rr_AB = count2rr_list[i]
-        count = 0
+        print('Entering interacitve mode.')
         import IPython 
         IPython.embed()
         __cmd_run_mode__ == False
         __force_no_embed__ = True
         #sys.argv.remove('--runcmd')
-
-
+    #count2rr_list_nogt = 
 # NEED: 
-
 # ALL TRUE POSITIVES - within a database
-# First true negative - within db (sansgt)
+# First true negative - within db (nogt)
 # Highest Interdatabase matches for each combination of db
 # Smallest Gaussian window we can do
 # Show top 5-10  scoring cross-database matches give them rest

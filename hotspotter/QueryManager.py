@@ -90,7 +90,7 @@ class QueryManager(AbstractManager):
         # Populate raw results
         force_recompute = False #TODO PREFERENCE
         if rr.has_result(rr_dpath, rr_suffix) and not force_recompute:
-            logmsg('Loading query.')
+            logdbg('Loading query.')
             rr.load_result(rr_dpath, rr_suffix)
         else:
             logmsg('Recomputing query.')

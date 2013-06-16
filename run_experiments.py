@@ -275,11 +275,12 @@ adjust_axes=True,trunc_max=100)
             
         elif not nogt:
             print('  * Saving gt')
-            highest_cdscores = np.sort(np.hstack(cross_db_scores))[::-1][0:20]
-            for c in highest_cdscores:
-                print('There are %d/%d TPs with scores less than %d' %
-                    (np.sum(np.hstack(true_pos_scores) < c ),
-                    np.hstack(true_pos_scores).size, c))
+            if len(cross_db_scores) > 0:
+                highest_cdscores = np.sort(np.hstack(cross_db_scores))[::-1][0:20]
+                for c in highest_cdscores:
+                    print('There are %d/%d TPs with scores less than %d' %
+                        (np.sum(np.hstack(true_pos_scores) < c ),
+                        np.hstack(true_pos_scores).size, c))
 
             # Finalize Plots and save
             safe_savefig(AllTPFig,

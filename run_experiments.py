@@ -1,5 +1,5 @@
 from __future__ import division
-from __future__ import print_function
+#from __future__ import print_function
 from hotspotter.HotSpotterAPI import HotSpotterAPI 
 from hotspotter.algo.spatial_functions import ransac
 from hotspotter.helpers import alloc_lists, Timer, vd, join_mkdir
@@ -28,14 +28,14 @@ font = {'family' : 'Bitstream Vera Sans',
 matplotlib.rc('font', **font)
 
 
-def print(*args): 
-    if len(args) == 0:
-        sys.stdout.write('\n')
-    elif len(args) == 1:
-        sys.stdout.write(str(args[0])+'\n')
-    else:
-        sys.stdout.write(' '.join(args)+'\n')
-    sys.stdout.flush()
+#def print(*args): 
+    #if len(args) == 0:
+        #sys.stdout.write('\n')
+    #elif len(args) == 1:
+        #sys.stdout.write(str(args[0])+'\n')
+    #else:
+        #sys.stdout.write(' '.join(args)+'\n')
+    #sys.stdout.flush()
 
 # --- PARAMETERS ---
 dbid_list   = ['Lionfish/LF_Bajo_bonito',
@@ -61,7 +61,7 @@ if sys.platform == 'win32':
     workdir = 'D:/data/work/'
 
 global __NOGT__
-__NOGT__                = False
+__NOGT__                   = True
 
 __cmd_mode__               = False
 __cmd_run_mode__           = False
@@ -105,7 +105,7 @@ def myfigure(fignum, doclf=False, title=None):
         fig.canvas.set_window_title(title)
     return fig
 
-def safe_savefig(fig, fpath, adjust_axes=False):
+def safe_savefig(fig, fpath, adjust_axes=False,trunc_max=None):
     ax  = fig.get_axes()[0]
     if adjust_axes and fig.user_stat_list != []:
         fig_min  = np.array(fig.user_stat_list).max(0)[0]
@@ -113,9 +113,12 @@ def safe_savefig(fig, fpath, adjust_axes=False):
         fig_std  = np.array(fig.user_stat_list).max(0)[2]
         fig_max  = np.array(fig.user_stat_list).max(0)[3]
 
-        trunc_max = fig_mean+fig_std*1.5
-        trunc_min = fig_min
-        trunc_xticks = np.linspace(trunc_min, trunc_max,10)
+        trunc_max = fig_mean+fig_std*1.5 if trunc_max is None else trunc_max
+
+        trunc_min = np.floor(fig_min)
+        trunc_xticks = np.linspace(int(trunc_min), int(trunc_max),10)
+        trunc_ticks = trunc_ticks[trunc_xticks < trunc_min]
+        trunc_ticks = np.append([int(trunc_min)], trunc_ticks)
         no_zero_yticks = ax.get_yticks()[ax.get_yticks() > 0]
         ax.set_xlim(trunc_min,trunc_max)
         ax.set_xticks(trunc_xticks)
@@ -171,10 +174,11 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
 
     hs_configstr = '-%s_k%d' % (__METHOD__, __K__)
 
+    total_expts = len(vsdb_list)
+
     def vizualize_all_threshold_experiments():
         thresh_output_dir = join_mkdir(results_root, 'threshold_matches'+hs_configstr)
         exptx = 0
-        cmap = plt.get_cmap('Set1')
         for exptx in range(len(vsdb_list)):
             # Database handles.
             hsA, hsB = vsdb_list[exptx]
@@ -203,6 +207,7 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
                                 title='Frequency of all cross-database chip scores')
         cross_db_scores = []
         true_pos_scores = []
+        cmap = plt.get_cmap('Set1')
         for exptx in range(total_expts):
             # Database handles.
             hsA, hsB = vsdb_list[exptx]
@@ -217,7 +222,10 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
             count2rr_AB = count2rr_list[exptx]
             print('    * Visualizing chip score frequencies '+results_name)
             chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
+            #print(chipscore_data)
+            #print(ischipscore_TP)
             if nogt and hsA is hsB:
+                print('      * rank1 not TP')
                 # First true negative - within db (nogt)
                 viz_chipscores(chipscore_data, chipscore_mask=True - ischipscore_TP,
                                 fig=Rank1TNFig, holdon=True,
@@ -230,6 +238,7 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
                                 conditions='Rank=1, not TP')
 
             elif nogt and not hsA is hsB:
+                print('      * Rank <=__RESTRICT_TP__')
                 top_scores = chipscore_data[:,0]
                 cross_db_scores.append(top_scores)
                 viz_chipscores(chipscore_data, fig=CrossAndTNFig,
@@ -238,6 +247,7 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
 
             if not nogt and hsA is hsB:
                 # ALL TRUE POSITIVES - within a database
+                print('      * Top __RESTRICT_TP__ true positive chipscores')
                 top_scores = chipscore_data[:,0:__RESTRICT_TP__]
                 top_mask   = ischipscore_TP[:,0:__RESTRICT_TP__]
                 true_pos_scores.append(top_scores[top_mask])
@@ -247,6 +257,7 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
                                 conditions='Rank<=%d, TP' % __RESTRICT_TP__)
             if not nogt and not hsA is hsB:
                 # Highest Interdatabase matches for each combination of db
+                print('      * Top __RESTRICT_TP__ cross database chipscores')
                 top_scores = chipscore_data[:,0]
                 cross_db_scores.append(top_scores)
                 viz_chipscores(chipscore_data, fig=CrossFig,
@@ -254,14 +265,16 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
                                 labelaug=results_name, conditions='Rank<=%d' % __RESTRICT_TP__)
 
         if nogt:
+            print('  * Saving nogt')
             figfpath=join(chipscore_dir, within_lbl+'-rank1-chipscore')
-            safe_savefig(Rank1TNFig,figfpath, adjust_axes=True)
+            safe_savefig(Rank1TNFig,figfpath, adjust_axes=True,trunc_max=600)
 
             figfpath=join(chipscore_dir, within_lbl+'-and-cross-chipscore')
-            safe_savefig(CrossAndTNFig,figfpath, adjust_axes=True)
+            safe_savefig(CrossAndTNFig,figfpath, adjust_axes=True,trunc_max=60)
             
         elif not nogt:
-            highest_cdscores = sort(np.hstack(cross_db_scores))[::-1][0:20]
+            print('  * Saving gt')
+            highest_cdscores = np.sort(np.hstack(cross_db_scores))[::-1][0:20]
             for c in highest_cdscores:
                 print('There are %d/%d TPs with scores less than %d' %
                     (np.sum(np.hstack(true_pos_scores) < c ),
@@ -270,10 +283,10 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
             # Finalize Plots and save
             safe_savefig(AllTPFig,
                         join(chipscore_dir, within_lbl+'-top%dtp-chipscore' % __RESTRICT_TP__),
-                        adjust_axes=True)
+                        adjust_axes=True, trunc_max=60)
             safe_savefig(CrossFig,
                         join(chipscore_dir, 'crossdb-all-chipscores'),
-                        adjust_axes=True)
+                        adjust_axes=True, trunc_max=60)
     #------------
     if __THRESHOLD_MATCHINGS__:
         vizualize_all_threshold_experiments()
@@ -352,18 +365,22 @@ def viz_chipscores(chipscore_data,
     # Compute pdf of top scores
     rankless_list = None
     if conditions.find('Rank=1') > -1:
-        print(' Rank=1 condition')
+        print('  ?? Rank=1 condition')
         num_results = 1
         rankless_list = []
     elif conditions.find('Rank<=%d' % __RESTRICT_TP__) > -1:
-        print(' Rank<=R condition')
+        print('  ?? Rank<=R condition')
         num_results = __RESTRICT_TP__
         rankless_list = []
     elif conditions.find('All Ranks') > -1:
+        print('  ?? All Ranks')
         rankless_list = []
         num_results = chipscore_data.shape[1]
         
     def __plot_scores(scores, fig):
+        if len(scores) == 0:
+            return
+
         # Set up plot info (labels and colors)
         _condstr = '' if len(conditions) == 0 else ' | '+conditions
         scores_lbl = labelaug+' P(chip score%s) #examples=%d' % (_condstr, scores.size)
@@ -372,8 +389,13 @@ def viz_chipscores(chipscore_data,
         else: line_color = color
         # Estimate pdf
         bw_factor = .1
-        score_pdf = gaussian_kde(scores, bw_factor)
-        # Plot the actual scores on near the bottom perterbed in Y
+        #print bw_factor
+        #help(gaussian_kde)
+        #score_pdf = gaussian_kde(scores, bw_factor)
+        score_pdf = gaussian_kde(scores)
+        score_pdf.factor = bw_factor
+        #Plot the actual scores on near the bottom perterbed in Y
+        #pdfrange=1
         pdfrange = score_pdf(scores).max() - score_pdf(scores).min() 
         perb   = (np.random.randn(len(scores))) * pdfrange/30.
         y_data = np.abs([pdfrange/50. for _ in scores]+perb)
@@ -402,11 +424,12 @@ def viz_chipscores(chipscore_data,
         #import pdb
         #pdb.set_trace()
         scores = np.hstack(rankless_list)
-        score_stats =( scores.min(), scores.std(), scores.mean(), scores.max())
+        score_stats = (scores.min(), scores.std(), scores.mean(), scores.max())
         print('    !! Conditions: '+conditions)
         print('    !! Scores (min=%.1f, mean=%.1f, std=%.1f, max=%.1f)' % score_stats)
         __plot_scores(scores, fig)
         fig.user_stat_list.append(score_stats)
+    else: raise Exception('rankless_list should not be None')
     return fig
 
 
@@ -528,13 +551,14 @@ if __name__ == '__main__':
             print(hsdb.db_dpath)
             rawrr_dir  = hsdb.db_dpath+'/.hs_internals/computed/query_results'
             result_list = os.listdir(rawrr_dir)
+            print(result_list)
             result_list.sort()
             for fname in result_list:
                 print('  '+fname)
         sys.exit(0)
 
     # does count2rr_list need to reload?
-    print("does count2rr_list need to reload?")
+    print('does count2rr_list need to reload?')
     if not 'count2rr_list' in vars():
         print('... yes')
         hsdb_list   = []
@@ -570,7 +594,7 @@ if __name__ == '__main__':
 
         # Build list of all databases to run experiments on
         def api_list_set_prefs(_dblist, nogt):
-            print("Setting database configurations")
+            print('Setting database configurations')
             for hsdb in _dblist:
                 hsdb.am.algo_prefs.query.remove_other_names = nogt 
                 hsdb.am.algo_prefs.query.method             = __METHOD__
@@ -578,9 +602,9 @@ if __name__ == '__main__':
                 hsdb.dm.draw_prefs.ellipse_bit              = True 
                 hsdb.dm.draw_prefs.figsize                  = (19.2,10.8)
                 hsdb.dm.draw_prefs.fignum                   = 0
-        api_list_set_prefs(hsdb_list, True)
+        api_list_set_prefs(hsdb_list, False)
         if __NOGT__:
-            api_list_set_prefs(hsdb_nogt_list, False)
+            api_list_set_prefs(hsdb_nogt_list, True)
 
         # Set the preferences of the experiments
         def api_list_ensure_model(_dblist):
@@ -596,7 +620,7 @@ if __name__ == '__main__':
         def query_db_vs_db(hsA, hsB):
             'Runs cross database queries / reloads cross database queries'
             vs_str = get_results_name(hsA, hsB) 
-            print('Running '+vs_str)
+            print('Running/Loading '+vs_str)
             query_cxs = hsA.cm.get_valid_cxs()
             total = len(query_cxs)
             cx2_rr = alloc_lists(total)
@@ -615,14 +639,18 @@ if __name__ == '__main__':
 
 
     # List the database list we are running on
-    print('--- Database versus list ---\n   DBX --- SYMX - hsA vs hsB ')
-    for dbx, (dbtup, symx) in enumerate(zip(vsdb_list, sym_list)):
-        if dbtup[0] is dbtup[1]: 
-            print('     %d --- sx%d - %s vs self' %
-                  (dbx, symx, dbtup[0].get_dbid()) )
-        else:
-            print('     %d --- sx%d - %s vs %s' % (dbx, symx, dbtup[0].get_dbid(), dbtup[1].get_dbid()) )
-    print('---')
+    def print_vsdb(vsdb_list, sym_list):
+        print('--- Database versus list GT ---\n   DBX --- SYMX - hsA vs hsB ')
+        for dbx, (dbtup, symx) in enumerate(zip(vsdb_list, sym_list)):
+            if dbtup[0] is dbtup[1]: 
+                print('     %d --- sx%d - %s vs self' %
+                    (dbx, symx, dbtup[0].get_dbid()) )
+            else:
+                print('     %d --- sx%d - %s vs %s' % (dbx, symx, dbtup[0].get_dbid(), dbtup[1].get_dbid()) )
+    print_vsdb(vsdb_list, sym_list)
+    if __NOGT__:
+        print('--- Database versus list __NOGT__ ---\n   DBX --- SYMX - hsA vs hsB ')
+        print_vsdb(vsdb_nogt_list, sym_nogt_list)
 
     # Dependents of parameters 
     results_root = join_mkdir('Results')
@@ -634,11 +662,12 @@ if __name__ == '__main__':
                               sym_list,
                               results_root,
                               nogt=False)
-        visualize_all_results(vsdb_nogt_list,
-                              count2rr_list_nogt,
-                              sym_nogt_list, 
-                              results_root,
-                              nogt=True)
+        if __NOGT__:
+            visualize_all_results(vsdb_nogt_list,
+                                count2rr_list_nogt,
+                                sym_nogt_list, 
+                                results_root,
+                                nogt=True)
     try: 
         __force_no_embed__
     except: 

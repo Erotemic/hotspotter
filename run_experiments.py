@@ -17,7 +17,7 @@ import pylab
 import scipy
 import matplotlib
 
-from scipy.stats.kde import gaussian_kde
+#from scipy.stats.kde import gaussian_kde
 from numpy import linspace,hstack
 from matplotlib import pyplot as plt    
         
@@ -42,11 +42,11 @@ dbid_list   = ['Lionfish/LF_Bajo_bonito',
                'Lionfish/LF_OPTIMIZADAS_NI_V_E',
                'Lionfish/LF_WEST_POINT_OPTIMIZADAS']
 
-__readable_dbmap__ = {'LF_Bajo_bonito':'Bajo Bonito', 
-                      'LF_OPTIMIZADAS_NI_V_E':'Optimizadas',
-                      'LF_WEST_POINT_OPTIMIZADAS':'West Point',
-                      'NAUT_Dan':'NAUT_Dan',
-                      'WS_sharks':'WS_sharks'}
+__readable_dbmap__ = {'LF_Bajo_bonito':('Bajo Bonito', 'BB'), 
+                      'LF_OPTIMIZADAS_NI_V_E':('Optimizadas', 'OP'),
+                      'LF_WEST_POINT_OPTIMIZADAS':('West Point', 'WP'),
+                      'NAUT_Dan':('NAUT_Dan', 'ND'),
+                      'WS_sharks':('WS_sharks', 'WS')}
 
 __abbrev_dbmap__ = {'Bajo Bonito':'BB',
                     'Optimizadas':'OP',
@@ -60,8 +60,15 @@ workdir = '/media/SSD_Extra/'
 if sys.platform == 'win32':
     workdir = 'D:/data/work/'
 
-global __NOGT__
-__NOGT__                   = True
+global __SANSGT__
+
+#__WITHIN_DB__ = True
+#__CROSS_DB__  = True
+#__WITHINDB_SANSGT__ = True
+
+__SANSGT__                   = True
+__SANSGTCROSSDB__            = True
+__CROSSDB__                = True
 
 __cmd_mode__               = False
 __cmd_run_mode__           = False
@@ -83,12 +90,12 @@ __SYMETRIC_MATCHINGS__     = False
 
 __all_exceptions__ = []
 # --- DRIVERS ---
-def get_results_name(hsA, hsB):
+def get_results_name(hsA, hsB, abrev=False):
     if hsA is hsB:
-        results_name = (__readable_dbmap__[hsA.get_dbid()]+' vs self')
+        results_name = (__readable_dbmap__[hsA.get_dbid()][abrev]+' vs self')
     else:
-        results_name = (__readable_dbmap__[hsA.get_dbid()]+' vs '\
-                        +__readable_dbmap__[hsB.get_dbid()]) 
+        results_name = (__readable_dbmap__[hsA.get_dbid()][abrev]+' vs '\
+                        +__readable_dbmap__[hsB.get_dbid()][abrev]) 
     return results_name
 
 def myfigure(fignum, doclf=False, title=None):
@@ -104,6 +111,16 @@ def myfigure(fignum, doclf=False, title=None):
         ax.set_title(title)
         fig.canvas.set_window_title(title)
     return fig
+
+def sanatize_fpath(fpath):
+    [full_path, sanatized_fname] = os.path.split(fpath)
+    sanatized_fname = sanatized_fname.replace(' vs ','-vs-')
+    for key, val in __abbrev_dbmap__.iteritems():
+        sanatized_fname = sanatized_fname.replace(key, val)
+    sanatized_fname = sanatized_fname.replace(' ','')
+    sanatized_fname = sanatized_fname.replace('_','-')
+    sanatized_fpath = join(full_path, sanatized_fname)
+    return sanatized_fpath
 
 def safe_savefig(fig, fpath, adjust_axes=False,trunc_max=None):
     ax  = fig.get_axes()[0]
@@ -132,15 +149,9 @@ def safe_savefig(fig, fpath, adjust_axes=False,trunc_max=None):
     else: 
         fpath  += '.JPEG'
         format = 'JPEG'
-    [full_path, sanatized_fname] = os.path.split(fpath)
-    sanatized_fname = sanatized_fname.replace(' vs ','-vs-')
-    for key, val in __abbrev_dbmap__.iteritems():
-        sanatized_fname = sanatized_fname.replace(key, val)
-    sanatized_fname = sanatized_fname.replace(' ','')
-    sanatized_fname = sanatized_fname.replace('_','-')
-    sanatized_fpath = join(full_path, sanatized_fname)
     #fig.show()
     #try: 
+    sanatized_fpath = sanatize_fpath(fpath)
     if fig.user_stat_list != []:
         print('\n\n---\nSaving '+ax.get_title())
         print(' stats: ')
@@ -152,25 +163,89 @@ def safe_savefig(fig, fpath, adjust_axes=False,trunc_max=None):
     fig.savefig(sanatized_fpath, format=format)
 
 
+def cross_database_experiment():
+    pass
+
+def within_database_experiment():
+    pass
+
+def within_database_sansgt_experiment(vsdb_list, count2rr_list):
+    for exptx in xrange(len(vsdb_list)):
+        hsA, hsB    = vsdb_list[exptx]
+        count2rr_AB = count2rr_list[exptx]
+        if not hsA is hsB: continue # Within DB only
+        # First true negative - within db (sansgt)
+        chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
+        viz_chipscores(chipscore_data, chipscore_mask=True - ischipscore_TP,
+                        fig=Rank1TNFig, holdon=True,
+                        color=expt_color, labelaug=results_name,
+                        conditions='Rank=1, No Groundtruth')
+
+
+        
+def write_all_chipscore_results(hsA, hsB, count2rr_AB, txt_output_fpath):
+    txt_header = '''#<COMMENTED_XML_HEADER>
+#  <filename>
+#    '''+txt_output_fpath+'''
+#  </filename>
+#  
+#  <description> 
+#    Sorted Query Results. The results are stored in the format:
+#    The first line gives the query image name, the next lines are 
+#    a sorted list of result image names and scores. Queries are 
+#    separated by two new lines. 
+#  </description>
+#  
+#  <data_format>
+#    queryA
+#    resultA1 scoreA1
+#    resultA2 scoreA2
+#    resultA3 scoreA3
+#    ...
+#    
+#    queryB-gname
+#    resultB1 scoreB1
+#    resultB2 scoreB2
+#    resultB3 scoreB3
+#    ...
+#     
+#    ...
+#  </data_format>
+#</COMMENTED_XML_HEADER>
+
+'''
+    txt_body = ''
+    for count in range(len(count2rr_AB)):
+        rr = count2rr_AB[count]
+        res = QueryResult(hsB, rr, hsA)
+        txt_body += hsA.cm.cx2_gname(rr.qcx)+'\n'
+        top_cxs = res.cx_sort()
+        scores = res.scores()
+        output_tup_list = []
+        for cx in top_cxs:
+            output_tup_list.append((hsB.cm.cx2_gname(cx), scores[cx]))
+        output_tup_list.sort(key=lambda tup: tup[1]) 
+        output_tup_list = output_tup_list[::-1]
+        for tup in output_tup_list:
+            txt_body += tup[0]+' '+str(tup[1])+'\n'
+        txt_body+='\n'
+    with open(txt_output_fpath,'w') as file:
+        file.write(txt_body)
 
 # ----- 
 # DRIVERS
-
-
-def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nogt):
+def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, sansgt):
     print('\n\nOutputing results in: '+results_root+'\n\n')
     print('--- Vizualizing All Results ---')
-    print('Ground Truth: '+str(not nogt))
+    print('Ground Truth: '+str(not sansgt))
 
-    within_lbl = ['within-db','within-db-nogt'][nogt]
-    cross_lbl  = 'cross-db'
+    within_lbl   = ['within-db','within-db-sansgt'][sansgt]
+    cross_lbl    = 'cross-db'
     within_label = within_lbl.replace('db','database')
     cross_label  = cross_lbl.replace('db','database')
 
     results_configstr = 'results_%s_k%d%s' %\
-            (__METHOD__, __K__,  ['','_nogt'][nogt])
-    result_dir = join_mkdir(results_root, results_configstr)
-    print('\n\nAlso in: '+result_dir+'\n\n')
+            (__METHOD__, __K__,  ['','_sansgt'][sansgt])
 
     hs_configstr = '-%s_k%d' % (__METHOD__, __K__)
 
@@ -188,23 +263,23 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
             print('      - database  ='+results_name+' ---')
             print('      - expt_lbl  ='+expt_lbl+' ---')
             count2rr_AB = count2rr_list[exptx]
-            if hsA is hsB or not nogt:
+            if hsA is hsB or not sansgt:
                 # Visualize chips which have a results with a high score
                 thresh_out_dir = join_mkdir(thresh_output_dir, expt_lbl)
                 viz_threshold_matchings(hsA, hsB, count2rr_AB, thresh_out_dir)
     def vizualize_all_chipscores():
         chipscore_dir = join_mkdir(results_root, 'chipscore_frequencies'+hs_configstr)
-        if nogt:
+        if sansgt:
                 Rank1TNFig = myfigure(200, doclf=True,
                                     title='Frequency of true negative chip scores')
                 CrossAndTNFig = myfigure(400, doclf=True,
                                     title='True negatives and cross database queries')
+                CrossFig   = myfigure(300, doclf=True,
+                                    title='Frequency of all cross-database chip scores')
 
-        elif not nogt:
+        elif not sansgt:
             AllTPFig   = myfigure(100, doclf=True,
                                 title='Frequency of true positive chip scores')
-            CrossFig   = myfigure(300, doclf=True,
-                                title='Frequency of all cross-database chip scores')
         cross_db_scores = []
         true_pos_scores = []
         cmap = plt.get_cmap('Set1')
@@ -215,18 +290,24 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
             expt_color = cmap(exptx/float(total_expts))
             
             results_name = get_results_name(hsA, hsB) 
+            results_name_abrev = get_results_name(hsA, hsB, abrev=True) 
             print('    --- ---')
             print('      - database  ='+results_name+' ---')
             print('      - expt_lbl  ='+expt_lbl+' ---')
-
+            
             count2rr_AB = count2rr_list[exptx]
             print('    * Visualizing chip score frequencies '+results_name)
             chipscore_data, ischipscore_TP = get_chipscores(hsA, hsB, count2rr_AB)
-            #print(chipscore_data)
-            #print(ischipscore_TP)
-            if nogt and hsA is hsB:
+
+            txt_output_fpath = sanatize_fpath(join(results_root,
+                                                   results_name_abrev+\
+                                                   '_allscores_'+\
+                                                   results_configstr+'.txt'))
+            write_all_chipscore_results(hsA, hsB, count2rr_AB, txt_output_fpath)
+
+            if sansgt and hsA is hsB:
                 print('      * rank1 not TP')
-                # First true negative - within db (nogt)
+                # First true negative - within db (sansgt)
                 viz_chipscores(chipscore_data, chipscore_mask=True - ischipscore_TP,
                                 fig=Rank1TNFig, holdon=True,
                                 color=expt_color, labelaug=results_name,
@@ -237,7 +318,7 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
                                 color=expt_color, labelaug=results_name,
                                 conditions='Rank=1, not TP')
 
-            elif nogt and not hsA is hsB:
+            elif sansgt and not hsA is hsB:
                 print('      * Rank <=__RESTRICT_TP__')
                 top_scores = chipscore_data[:,0]
                 cross_db_scores.append(top_scores)
@@ -245,7 +326,7 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
                                 color=expt_color, holdon=True,
                                 labelaug=results_name, conditions='Rank<=%d' % __RESTRICT_TP__)
 
-            if not nogt and hsA is hsB:
+            if not sansgt and hsA is hsB:
                 # ALL TRUE POSITIVES - within a database
                 print('      * Top __RESTRICT_TP__ true positive chipscores')
                 top_scores = chipscore_data[:,0:__RESTRICT_TP__]
@@ -255,7 +336,7 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
                                 fig=AllTPFig, holdon=True,
                                 color=expt_color, labelaug=results_name,
                                 conditions='Rank<=%d, TP' % __RESTRICT_TP__)
-            if not nogt and not hsA is hsB:
+            if sansgt and not hsA is hsB:
                 # Highest Interdatabase matches for each combination of db
                 print('      * Top __RESTRICT_TP__ cross database chipscores')
                 top_scores = chipscore_data[:,0]
@@ -264,16 +345,19 @@ def visualize_all_results(vsdb_list, count2rr_list, symx_list, results_root, nog
                                 color=expt_color, holdon=True,
                                 labelaug=results_name, conditions='Rank<=%d' % __RESTRICT_TP__)
 
-        if nogt:
-            print('  * Saving nogt')
+        if sansgt:
+            print('  * Saving sansgt')
             figfpath=join(chipscore_dir, within_lbl+'-rank1-chipscore')
             safe_savefig(Rank1TNFig,figfpath, adjust_axes=True,trunc_max=100)
 
             figfpath=join(chipscore_dir, within_lbl+'-and-cross-chipscore')
             safe_savefig(CrossAndTNFig,figfpath,
 adjust_axes=True,trunc_max=100)
+            safe_savefig(CrossFig,
+                        join(chipscore_dir, 'crossdb-all-chipscores'),
+                        adjust_axes=True, trunc_max=100)
             
-        elif not nogt:
+        elif not sansgt:
             print('  * Saving gt')
             if len(cross_db_scores) > 0:
                 highest_cdscores = np.sort(np.hstack(cross_db_scores))[::-1][0:20]
@@ -286,9 +370,6 @@ adjust_axes=True,trunc_max=100)
             safe_savefig(AllTPFig,
                         join(chipscore_dir, within_lbl+'-top%dtp-chipscore' % __RESTRICT_TP__),
                         adjust_axes=True, trunc_max=1000)
-            safe_savefig(CrossFig,
-                        join(chipscore_dir, 'crossdb-all-chipscores'),
-                        adjust_axes=True, trunc_max=100)
     #------------
     if __THRESHOLD_MATCHINGS__:
         vizualize_all_threshold_experiments()
@@ -296,7 +377,7 @@ adjust_axes=True,trunc_max=100)
         vizualize_all_chipscores()
     
     # ALL TRUE POSITIVES - within a database
-    # First true negative - within db (nogt)
+    # First true negative - within db (sansgt)
     # Highest Interdatabase matches for each combination of db
     # Smallest Gaussian window we can do
     # Show top 5-10 scoring cross-database matches give them rest
@@ -390,12 +471,17 @@ def viz_chipscores(chipscore_data,
             line_color = plt.get_cmap('gist_rainbow')(tx/float(num_results))
         else: line_color = color
         # Estimate pdf
-        bw_factor = .01
+        bw_factor = .05
         #print bw_factor
         #help(gaussian_kde)
         #score_pdf = gaussian_kde(scores, bw_factor)
-        score_pdf = gaussian_kde(scores)
-        score_pdf.factor = bw_factor
+        score_pdf = scipy.stats.gaussian_kde(scores, bw_factor)
+        #score_pdf.set_bandwidth(bw_factor)
+        #score_pdf.factor = .01
+        #score_pdf.covariance_factor = .01
+        #score_pdf.resample()
+        #score_pdf.factor = bw_factor
+
         score_pdf.covariance_factor = bw_factor
         #Plot the actual scores on near the bottom perterbed in Y
         #pdfrange=1
@@ -565,24 +651,24 @@ if __name__ == '__main__':
     if not 'count2rr_list' in vars():
         print('... yes')
         hsdb_list   = []
-        if __NOGT__:
-            hsdb_nogt_list = []
+        if __SANSGT__:
+            hsdb_sansgt_list = []
         dbpath_list = [join(workdir, dbid) for dbid in dbid_list]
         def append_api_list(api_list):
             hsdb = HotSpotterAPI(dbpath)
             api_list.append(hsdb)
         for dbpath in dbpath_list:
             append_api_list(hsdb_list)
-            if __NOGT__:
-                append_api_list(hsdb_nogt_list)
-        def build_db_comparisons(_dblist, nogt):
+            if __SANSGT__:
+                append_api_list(hsdb_sansgt_list)
+        def build_db_comparisons(_dblist, sansgt):
             # Assemble ALL hotspotter-database-api combinations
             _vslist = []
             _symlist = [] # list of symetric matches
             for hsA in _dblist:
                 _symlist.append(len(_symlist))
                 _vslist.append((hsA, hsA))
-                if nogt is True: # dont run cross-database with gt
+                if sansgt is True: # dont run cross-database with gt
                     for hsB in _dblist:
                         # cross db matches
                         if not hsA is hsB and not (hsA, hsB) in _vslist:
@@ -591,23 +677,23 @@ if __name__ == '__main__':
                             _vslist.append((hsA, hsB))
                             _vslist.append((hsB, hsA))
             return _vslist, _symlist
-        vsdb_list, sym_list = build_db_comparisons(hsdb_list, nogt=False)
-        if __NOGT__:
-            vsdb_nogt_list, sym_nogt_list = build_db_comparisons(hsdb_nogt_list, nogt=True)
+        vsdb_list, sym_list = build_db_comparisons(hsdb_list, sansgt=False)
+        if __SANSGT__:
+            vsdb_sansgt_list, sym_sansgt_list = build_db_comparisons(hsdb_sansgt_list, sansgt=True)
 
         # Build list of all databases to run experiments on
-        def api_list_set_prefs(_dblist, nogt):
+        def api_list_set_prefs(_dblist, sansgt):
             print('Setting database configurations')
             for hsdb in _dblist:
-                hsdb.am.algo_prefs.query.remove_other_names = nogt 
+                hsdb.am.algo_prefs.query.remove_other_names = sansgt 
                 hsdb.am.algo_prefs.query.method             = __METHOD__
                 hsdb.am.algo_prefs.query.k                  = __K__
                 hsdb.dm.draw_prefs.ellipse_bit              = True 
                 hsdb.dm.draw_prefs.figsize                  = (19.2,10.8)
                 hsdb.dm.draw_prefs.fignum                   = 0
         api_list_set_prefs(hsdb_list, False)
-        if __NOGT__:
-            api_list_set_prefs(hsdb_nogt_list, True)
+        if __SANSGT__:
+            api_list_set_prefs(hsdb_sansgt_list, True)
 
         # Set the preferences of the experiments
         def api_list_ensure_model(_dblist):
@@ -616,8 +702,8 @@ if __name__ == '__main__':
                     if __ENSURE_MODEL__:
                         hsdb.ensure_model()
         api_list_ensure_model(hsdb_list)
-        if __NOGT__:
-            api_list_ensure_model(hsdb_nogt_list)
+        if __SANSGT__:
+            api_list_ensure_model(hsdb_sansgt_list)
 
         # Run all combinations of queries
         def query_db_vs_db(hsA, hsB):
@@ -635,8 +721,8 @@ if __name__ == '__main__':
             return cx2_rr 
 
         count2rr_list      = [query_db_vs_db(hsA, hsB) for hsA, hsB in vsdb_list]
-        if __NOGT__:
-            count2rr_list_nogt = [query_db_vs_db(hsA, hsB) for hsA, hsB in vsdb_nogt_list]
+        if __SANSGT__:
+            count2rr_list_sansgt = [query_db_vs_db(hsA, hsB) for hsA, hsB in vsdb_sansgt_list]
     else:
         print('... Great! count2rr_list is already loaded')
 
@@ -651,9 +737,9 @@ if __name__ == '__main__':
             else:
                 print('     %d --- sx%d - %s vs %s' % (dbx, symx, dbtup[0].get_dbid(), dbtup[1].get_dbid()) )
     print_vsdb(vsdb_list, sym_list)
-    if __NOGT__:
-        print('--- Database versus list __NOGT__ ---\n   DBX --- SYMX - hsA vs hsB ')
-        print_vsdb(vsdb_nogt_list, sym_nogt_list)
+    if __SANSGT__:
+        print('--- Database versus list __SANSGT__ ---\n   DBX --- SYMX - hsA vs hsB ')
+        print_vsdb(vsdb_sansgt_list, sym_sansgt_list)
 
     # Dependents of parameters 
     results_root = join_mkdir('Results')
@@ -665,14 +751,14 @@ if __name__ == '__main__':
                               count2rr_list,
                               sym_list,
                               results_root,
-                              nogt=False)
-        if __NOGT__:
+                              sansgt=False)
+        if __SANSGT__:
             print('Viz No GT')
-            visualize_all_results(vsdb_nogt_list,
-                                count2rr_list_nogt,
-                                sym_nogt_list, 
+            visualize_all_results(vsdb_sansgt_list,
+                                count2rr_list_sansgt,
+                                sym_sansgt_list, 
                                 results_root,
-                                nogt=True)
+                                sansgt=True)
     try: 
         __force_no_embed__
     except: 
@@ -685,10 +771,10 @@ if __name__ == '__main__':
         __cmd_run_mode__ == False
         __force_no_embed__ = True
         #sys.argv.remove('--runcmd')
-    #count2rr_list_nogt = 
+    #count2rr_list_sansgt = 
 # NEED: 
 # ALL TRUE POSITIVES - within a database
-# First true negative - within db (nogt)
+# First true negative - within db (sansgt)
 # Highest Interdatabase matches for each combination of db
 # Smallest Gaussian window we can do
 # Show top 5-10  scoring cross-database matches give them rest

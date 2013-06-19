@@ -59,6 +59,17 @@
         5 | 13/05/08|            ____ |  Finish VisualModel.train_model2
 
 
+        5 | 13/06/17|            ____ |  Name ID value of 1 is just a place-holder for everyone who has not been named yet.  We should probably fix this in the next version.
+        5 | 13/06/17|            ____ |  Dont autoswitch views. Find a better way. A new dialog would probably be better. 
+        5 | 13/06/17|            ____ |  View of of a certain name
+        5 | 13/06/17|            ____ |  Enter two names to compare via text
+        5 | 13/06/17|            ____ |  Precompute matches - 
+        5 | 13/06/17|            ____ |  Result Table should show a list of recent results 
+
+
+
+
+
 
 
 # List of tasks which have been accomplished

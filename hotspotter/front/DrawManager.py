@@ -386,7 +386,7 @@ class DrawManager(AbstractManager):
             rgb_textBG = colorsys.hsv_to_rgb(*hsv_textBG)+(.7,)
             # Draw Orientation Backwards
             degrees = 0 if not in_image_bit else -cm.cx2_theta[cx]*180/np.pi
-            txy = (0,0) if not in_image_bit else rxy
+            txy = (0,rh) if not in_image_bit else (rx, ry+rh)
 
             chip_text =  'name='+name+'\n'+'cid='+str(cid)
             ax.text(txy[0]+1, txy[1]+1, chip_text,

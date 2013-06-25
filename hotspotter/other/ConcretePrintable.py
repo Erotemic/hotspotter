@@ -163,7 +163,7 @@ class Pref(DynStruct):
             self.__dict__[name] = child.value() 
 
     def __new_attr(self, name, attr):
-        # --- New Attribute Wrapper ---
+        ' --- New Attribute Wrapper ---'
         if type(attr) == Pref:
             logdbg( "New Attribute: %r %r" % (name, attr.value()) )
             # If The New Attribute already has a PrefWrapper

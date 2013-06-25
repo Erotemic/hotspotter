@@ -18,8 +18,9 @@ class AlgorithmManager(AbstractManager):
     here.'''
     def __init__(am, hs):
         super( AlgorithmManager, am ).__init__( hs)
-        am.default_depends = ['preproc','chiprep','model','query']
+        am.default_depends = ['preproc','chiprep','model','query', 'results']
         am.algo_prefs = None
+        am.last_algo_key = None
         am.init_preferences()
 
     def init_preferences(am, default_bit=False):
@@ -147,7 +148,6 @@ class AlgorithmManager(AbstractManager):
                     exclude_list.append(stage)
             print_attri = am.algo_prefs.get_printable(type_bit=False,print_exclude_aug=exclude_list)
             return 'Algorithm Prefs'+('\n'+print_attri).replace('\n','\n    ')
-
         abbrev_list = [
             ('use_gravity_vector','gv'),
             ('histeq_bit','hsteq'),
@@ -163,7 +163,7 @@ class AlgorithmManager(AbstractManager):
         ]
         stage_list = []
         for stage_name in depends:
-            stage_struct = eval('am.algo_prefs.'+stage_name) # Get the dependent stage
+            stage_struct = am.algo_prefs[stage_name] # Get the dependent stage
             stage_par = stage_name+' {'+stage_struct.get_printable(type_bit=False)
             stage_par = stage_par.replace('\n',',') #remove newlines
             stage_par = re.sub('[\' \"]','',stage_par) #remove extra characters
@@ -174,12 +174,10 @@ class AlgorithmManager(AbstractManager):
         return '_'.join(stage_list)
 
     def get_algo_id(am, depends):
-        return 1
         'Returns an id unique to the current algorithm'
         iom = am.hs.iom
         algo_shelf = shelve.open(iom.get_temp_fpath('algo_shelf.db'))
-        # TODO: This will cause errors. I do not check for hash collisions
-        algo_key = str(hash(am.get_algo_name(depends=depends,abbrev_bit=True)))
+        algo_key = am.get_algo_name(depends=depends,abbrev_bit=True)
         shelf_changed_bit = False
         if not algo_key in algo_shelf.keys():
             algo_shelf[algo_key] = len(algo_shelf.keys())+1

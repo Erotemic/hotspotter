@@ -99,6 +99,15 @@ class Pref(DynStruct):
         elif default != None:
             self._intern.type = type(default)
         self._intern.value = default
+    
+    def get_printable(self, type_bit=True, print_exclude_aug=[]):
+        # Remove unsatisfied dependencies from the printed structure
+        further_aug = print_exclude_aug[:]
+        for child_name in self._tree.child_names:
+            depeq = self[child_name+'_internal']._intern.depeq
+            if not depeq is None and depeq[0].value() != depeq[1]:
+                further_aug.append(child_name)
+        return super(Pref, self).get_printable(type_bit, print_exclude_aug=further_aug)
 
     def value(self):
         if self._intern.type == Pref:

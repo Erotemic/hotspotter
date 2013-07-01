@@ -105,18 +105,22 @@ if __name__ == '__main__':
     fac = Facade(use_gui=args.gui_bit, autoload=args.autoload_bit)
 
     # Register Facade functions into current namespace
+    # ### SNIPIT: Namespace Class Functions
     for (name, value) in inspect.getmembers(Facade, predicate=inspect.ismethod):
         if name.find('_') != 0:
             exec('def '+name+'(*args, **kwargs): fac.'+name+'(*args, **kwargs)')
+    # ### ---
     # Defined Aliases
     stat, status   = [lambda          : fac.print_status()]*2
     removec,       = [lambda          : fac.remove_cid()]
     rename,        = [lambda new_name : fac.rename_cid(new_name)]
 
     # Get developer variables
+    # ### SNIPIT: Execute File
     with open('dev.py', 'r') as devfile:
         devpy = devfile.read()
         exec(devpy)
+    # ### ----
 
     run_exec = isRootApp
     if args.cmd_bit:

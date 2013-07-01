@@ -16,23 +16,35 @@ import os, os.path, sys
 import sys
 import time
 import types
+from sys import stdout as sout
+
+def _print(msg):
+    sout.write(msg)
+def _println(msg):
+    sout.write(msg+'\n')
 
 def myprint(input=None, prefix='', indent=''):
-    print(indent+prefix+' '+str(type(input)))
+    if len(prefix) > 0:
+        prefix += ' '
+    _print(indent+prefix+str(type(input))+' ')
     if type(input) == types.ListType:
-        print(indent+'[')
+        _println(indent+'[')
         for item in iter(input):
-            myprint(item)
-        print(indent+']')
-        return
-    if True: #if type(input) == types.DICT_TYPE
-        print(indent+'{')
+            myprint(item, indent=indent+'  ')
+        _println(indent+']')
+    elif type(input) == types.StringType:
+        _println(input)
+    else: #if type(input) == types.DICT_TYPE
+        _println(indent+'{')
         attribute_list = dir(input)
         for attr in attribute_list:
             if attr.find('__') == 0: continue
-            print(indent+'  '+attr+':'+str(input.__getattribute__(attr)))
-        print(indent+'}')
-        return
+            val = str(input.__getattribute__(attr))
+            # Format methods nicer
+            if val.find('built-in method'):
+                val = '<built-in method>'
+            _println(indent+'  '+attr+' : '+val)
+        _println(indent+'}')
 
     
 
@@ -167,5 +179,5 @@ def figure(fignum, doclf=False, title=None, **kwargs):
         ax  = axes_list[0]
     if not title is None:
         ax.set_title(title)
-        fig.canvas.set_window_title(title)
+        fig.canvas.set_window_title('fig '+str(fignum)+' '+title)
     return fig

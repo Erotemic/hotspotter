@@ -93,7 +93,14 @@ class Pref(DynStruct):
         self._tree.aschildx    = 0 
         # Check if this is a leaf node and if so the type
         if choices != None:
-            sel = 0 if default is None else default
+            sel = 0
+            if type(default) == types.IntType:
+                sel = default
+            elif type(default) == types.StringType:
+                sel = choices.index(default)
+                if sel == -1:
+                    raise Exception('Default: %r is not in the chioces: %r '\
+                                    % (default, choices) )
             default = (sel, choices)
             self._intern.type = 'combo'
         elif default != None:

@@ -6,7 +6,7 @@ import os.path
 import pylab
 import re
 import types
-from hotspotter.ChipFunctions import compute_chip_driver
+import hotspotter.ChipFunctions
 
 # Chip Manager handle the chips
 # this entails managing:
@@ -515,7 +515,7 @@ class ChipManager(AbstractDataManager):
         cid = cm.cid(cx)
         chip_fpath  = iom.get_chip_fpath(cid)
         if not os.path.exists(chip_fpath): 
-            cm.compute_chip(cx)
+            hotspotter.ChipFunctions.precompute_chips(cm.hs, cx_list=[cx], num_procs=1, force_recompute=True)
         return chip_fpath
     
 # --- Feature Representation Methods ---
@@ -631,8 +631,9 @@ class ChipManager(AbstractDataManager):
             pil_chip = pil_chip.rotate(angle_degrees, resample=Image.BICUBIC, expand=1)
         return pil_chip
 
-    def compute_chip(cm, cx, showmsg=True):
-        compute_chip_driver(cm.hs, cx, showmsg)
+    #def compute_chip(cm, cx, showmsg=True):
+
+        #compute_chip_driver(cm.hs, cx, showmsg)
         #TODO Save a raw chip and thumb
         #iom = cm.hs.iom
         #am  = cm.hs.am
@@ -689,18 +690,17 @@ class ChipManager(AbstractDataManager):
             if cid <= 0:
                 logwarn('WARNING: IX='+str(cx)+' is invalid'); continue
             chiprep_fpath = cm.hs.iom.get_chiprep_fpath(cid)
-            if not force_recomp and os.path.exists(chiprep_fpath):
-                logdbg('Loading features in '+chiprep_fpath)
-                #Reload representation
-                npz  = np.load(chiprep_fpath)
-                fpts = npz['arr_0'] 
-                fdsc = npz['arr_1']
-                npz.close()
-            else:
-                #Extract and save representation
+            # Ensure that the features exists
+            if force_recomp or not os.path.exists(chiprep_fpath):
                 logio('Computing and saving features of cid='+str(cid))
-                [fpts, fdsc] = am.compute_features(cm.cx2_chip(cx))
-                np.savez(chiprep_fpath, fpts, fdsc)
+                hotspotter.ChipFunctions.precompute_chipreps(cm.hs, [cx], num_procs=1, force_recompute=force_recomp)
+            # Load the features
+            logdbg('Loading features in '+chiprep_fpath)
+            npz  = np.load(chiprep_fpath)
+            fpts = npz['arr_0'] 
+            fdsc = npz['arr_1']
+            npz.close()
+
             cm.cx2_fpts[cx]  = fpts
             cm.cx2_fdsc[cx]  = fdsc
             cm.cx2_dirty_bit[cx] = False

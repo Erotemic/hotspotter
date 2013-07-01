@@ -245,14 +245,14 @@ class Facade(QObject):
             try:
                 cx1 = uim.sel_res.rr.qcx
                 cx2 = uim.sel_res.top_cx()[0]
+                if uim.ui_prefs.prompt_after_result and cm.cx2_nx[cx1] == nm.UNIDEN_NX() and cm.cx2_nx[cx2] != nm.UNIDEN_NX():
+                    logdbg('Quick and dirty prompting')
+                    fac._quick_and_dirty_result_prompt(uim.sel_res.rr.qcx, uim.sel_res.top_cx()[0])
+                else:
+                    logdbg('No Quick and dirty prompting')
             except Exception as ex:
                 logdbg('bad quick and dirty facade code: '+str(ex))
                 pass
-            if uim.ui_prefs.prompt_after_result and cm.cx2_nx[cx1] == nm.UNIDEN_NX() and cm.cx2_nx[cx2] != nm.UNIDEN_NX():
-                logdbg('Quick and dirty prompting')
-                fac._quick_and_dirty_result_prompt(uim.sel_res.rr.qcx, uim.sel_res.top_cx()[0])
-            else:
-                logdbg('No Quick and dirty prompting')
             logdbg('\n\n-----------Query OVER-------------\n\n')
                     
         except Exception as ex: 

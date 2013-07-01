@@ -23,7 +23,6 @@ from hotspotter.Experiments import ExperimentManager
 from hotspotter.IOManager import IOManager
 from hotspotter.ImageManager import ImageManager
 from hotspotter.NameManager import NameManager
-from hotspotter.Parallelize import parallelize_tasks, cpu_count
 from hotspotter.QueryManager import QueryManager, QueryResult
 from hotspotter.VisualModel import VisualModel
 from hotspotter.front.DrawManager import DrawManager
@@ -31,6 +30,8 @@ from hotspotter.front.UIManager import UIManager
 from hotspotter.other.AbstractPrintable import AbstractPrintable
 from hotspotter.other.ConcretePrintable import Pref
 from hotspotter.other.logger import logdbg, logerr, logmsg, logwarn, func_log
+import hotspotter.Parallelize
+import hotspotter.ChipFunctions
 import cPickle
 import os.path
 import types
@@ -46,7 +47,7 @@ class HotSpotterAPI(AbstractPrintable):
             hs.core_prefs = Pref(fpath=iom.get_prefs_fpath('core_prefs'), hidden=False)
         hs.core_prefs.database_dpath = hs.db_dpath
         hs.core_prefs.legacy_bit = Pref(True)
-        hs.core_prefs.num_procs  = Pref(cpu_count() + 1)
+        hs.core_prefs.num_procs  = Pref(hotspotter.Parallelize.cpu_count() + 1)
 
         if not default_bit:
             hs.core_prefs.load()
@@ -338,40 +339,11 @@ class HotSpotterAPI(AbstractPrintable):
     # ---
     @func_log
     def precompute_chips(hs, num_procs=None):
-        from hotspotter.ChipFunctions import \
-                get_task_list, chip_fpath,\
-                compute_chip, compute_chip_args
-        logmsg('Ensuring all %d chips are computed' % hs.cm.num_c)
-        chip_task_list = get_task_list\
-                (hs, chip_fpath, compute_chip, compute_chip_args)
-        total = len(chip_task_list)
-        if total == 0:
-            logmsg('  * The chips are all clean')
-            return True
-        logmsg('  * There are %d chips to compute' % len(chip_task_list))
-        num_procs = hs.core_prefs.num_procs \
-                if num_procs is None else num_procs
-        parallelize_tasks(chip_task_list, num_procs)
-        return True
-
+        return hotspotter.ChipFunctions.precompute_chips(hs, num_procs)
 
     @func_log
     def precompute_chipreps(hs, num_procs=None):
-        from hotspotter.ChipFunctions import \
-                get_task_list, chiprep_fpath,\
-                compute_chiprep, compute_chiprep_args
-        logmsg('Ensuring all %d chip representations are computed' % hs.cm.num_c)
-        chiprep_task_list = get_task_list\
-                (hs, chiprep_fpath, compute_chiprep, compute_chiprep_args)
-        total = len(chiprep_task_list)
-        if total == 0: 
-            logmsg('  * The chipreps are all clean')
-            return True
-        logmsg('  * There are %d chipreps to compute' % len(chiprep_task_list))
-        num_procs = hs.core_prefs.num_procs \
-                if num_procs is None else num_procs
-        parallelize_tasks(chiprep_task_list, num_procs)
-        return True
+        return hotspotter.ChipFunctions.precompute_chipreps(hs, num_procs)
 
     @func_log
     def ensure_model(hs):

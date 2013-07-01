@@ -1,3 +1,4 @@
+import cv2
 import os
 import types
 import subprocess
@@ -17,8 +18,9 @@ class AlgorithmManager(AbstractManager):
     here.'''
     def __init__(am, hs):
         super( AlgorithmManager, am ).__init__( hs)
-        am.default_depends = ['preproc','chiprep','model','query']
+        am.default_depends = ['preproc','chiprep','model','query', 'results']
         am.algo_prefs = None
+        am.last_algo_key = None
         am.init_preferences()
 
     def init_preferences(am, default_bit=False):
@@ -41,9 +43,31 @@ class AlgorithmManager(AbstractManager):
         am.algo_prefs.preproc.adapt_histeq_bit        = Pref(False)
         # --- Chip Representation ---
         # Currently one feature detector and one feature descriptor is chosen
-        # * = non-free
-        #am.algo_prefs.chiprep.gravity_vector_bit     = True
-        am.algo_prefs.chiprep.kpts_detector           = Pref(0, choices=('heshesaff', 'heslapaff', 'dense'), hidden=True) #, '!MSER', '#FREAK', '#SIFT'))
+        am.algo_prefs.chiprep.use_gravity_vector     = True
+
+        opencv_detectors = ['FAST', 'STAR', 'SIFT', 'SURF', 'ORB', 'BRISK',
+                            'MSER', 'GFTT', 'HARRIS', 'Dense', 'SimpleBlob']
+        # Keypoint Detector: Add a list of opencv detectors
+        am.algo_prefs.chiprep.kpts_detector           = Pref(0, choices=['heshesaff']+opencv_detectors) 
+        # Keypoint Detector Parameters: Add a list of associated preferences
+        # types = { 0:'int', 1:'bool', 2:'double', 7:'float', 9:'int64', 11:'unsigned char'}
+        for detector_type in opencv_detectors:
+            det_dep = (am.algo_prefs.chiprep.kpts_detector_internal, detector_type)
+            det_pref = Pref(depeq=det_dep)
+            det = cv2.FeatureDetector_create(detector_type)
+            for param_name in det.getParams():
+                param_type = det.paramType(param_name)
+                if param_type in [0, 9, 11]:
+                    param_val = det.getInt(param_name)
+                elif param_type == 1:
+                    param_val = det.getBool(param_name)
+                elif param_type in [2,7]:
+                    param_val = det.getDouble(param_name)
+                else:
+                    raise Exception('name: '+str(param_name) + ' type: '+str(param_type))
+                det_pref[param_name] = param_val
+            am.algo_prefs.chiprep[detector_type+'_params'] = det_pref
+
         am.algo_prefs.chiprep.kpts_extractor          = Pref(0, choices=('SIFT',), hidden=True) #, '#SURF', '#BRISK'))
         # --- Vocabulary ---
         am.algo_prefs.model.quantizer                 = Pref(0, choices=('naive_bayes', 'akmeans'), hidden=True)
@@ -124,9 +148,8 @@ class AlgorithmManager(AbstractManager):
                     exclude_list.append(stage)
             print_attri = am.algo_prefs.get_printable(type_bit=False,print_exclude_aug=exclude_list)
             return 'Algorithm Prefs'+('\n'+print_attri).replace('\n','\n    ')
-
         abbrev_list = [
-            ('gravity_vector_bit','gv'),
+            ('use_gravity_vector','gv'),
             ('histeq_bit','hsteq'),
             ('num_top','nTop'),
             ('kpts_extractor','dsc'),
@@ -140,7 +163,7 @@ class AlgorithmManager(AbstractManager):
         ]
         stage_list = []
         for stage_name in depends:
-            stage_struct = eval('am.algo_prefs.'+stage_name) # Get the dependent stage
+            stage_struct = am.algo_prefs[stage_name] # Get the dependent stage
             stage_par = stage_name+' {'+stage_struct.get_printable(type_bit=False)
             stage_par = stage_par.replace('\n',',') #remove newlines
             stage_par = re.sub('[\' \"]','',stage_par) #remove extra characters
@@ -261,7 +284,7 @@ class AlgorithmManager(AbstractManager):
         logdbg('Made %r, Detecting keypoints on image' % cvFeatExtractor )
         cvKpts_= cvFeatDetector.detect(im)
         # Tinker with Keypoint
-        if am.algo_prefs.chiprep['gravity_vector_bit']: 
+        if am.algo_prefs.chiprep['use_gravity_vector']: 
             for cvKp in cvKpts_:
                 cvKp.angle = 0
                 r = cvKp.size #scale = (r**2)/27

@@ -11,10 +11,14 @@ chip_fpath = 'D:/data/work/PZ_flankhack/images/img-0000001.jpg'
 img3 = cv2.imread(chip_fpath)
 img2  = cv2.cvtColor(img3, cv2.COLOR_BGR2GRAY)
 img   = cv2.resize(img2,(100,100))
+# Add a black bar
+mid = img.shape[1]/2
+hw  = 2
+img[:, (mid-hw):(mid+hw)] = 0
 imshow(img)
 set_cmap('gray')
-params = { 'kpts_type' :'DoG'}
-xpmp = {'DoG':'SIFT', 'SIFT':'SIFT'}
+params = { 'kpts_type' :'MSER'}
+xpmp = {'DoG':'SIFT', 'SIFT':'SIFT', 'SURF':'SURF','MSER':'MSER'}
 # Detect  
 print('Detect and Extract')
 kpts_detector = cv2.FeatureDetector_create(xpmp[params['kpts_type']])
@@ -76,9 +80,7 @@ freak_desc = freak_cv_descs[sel]
 #mykpt = cv2.KeyPoint(50, 50, _size=20, _angle=0, _response=1, _octave=1)
 #myprint(sift_desc, prefix='Extracting one descriptor from: ')
 #(sift_kpt2,  sift_desc2) = map(lambda a: a[0], sift_extractor.compute(img, [sift_kpt]))
-
 #(freak_mykpts2, freak_mydesc2) = map(lambda a: a[0], freak_extractor.compute(img, [freak_kpt]))
-
 #with Timer(msg='Computing one SIFT descriptor'):
 #with Timer(msg='Computing one FREAK descriptor'):
 #freak_extractor2 = cv2.DescriptorExtractor_create('FREAK')
@@ -86,9 +88,6 @@ freak_desc = freak_cv_descs[sel]
 #(freak_kpt2, freak_desc2) = freak_extractor2.compute(img, [freak_kpt, sift_kpt])
     #(freak_kpt2, freak_desc2) = freak_extractor.compute(img, [freak_kpt])
     #(freak_kpt2, freak_desc2) = freak_extractor.compute(img, cv_dog_kpts)
-
-
 #myprint(sift_kpt2, prefix='sift_kpt2 ')
 #myprint(freak_kpt2, prefix='freak_kpt2 ')
-
-#show()
+show()

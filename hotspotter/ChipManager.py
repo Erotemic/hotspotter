@@ -700,7 +700,6 @@ class ChipManager(AbstractDataManager):
             fpts = npz['arr_0'] 
             fdsc = npz['arr_1']
             npz.close()
-
             cm.cx2_fpts[cx]  = fpts
             cm.cx2_fdsc[cx]  = fdsc
             cm.cx2_dirty_bit[cx] = False

@@ -17,6 +17,25 @@ import sys
 import time
 import types
 
+def myprint(input=None, prefix='', indent=''):
+    print(indent+prefix+' '+str(type(input)))
+    if type(input) == types.ListType:
+        print(indent+'[')
+        for item in iter(input):
+            myprint(item)
+        print(indent+']')
+        return
+    if True: #if type(input) == types.DICT_TYPE
+        print(indent+'{')
+        attribute_list = dir(input)
+        for attr in attribute_list:
+            if attr.find('__') == 0: continue
+            print(indent+'  '+attr+':'+str(input.__getattribute__(attr)))
+        print(indent+'}')
+        return
+
+    
+
 def join_mkdir(*args):
     'os.path.join and creates if not exists'
     output_dir = os.path.join(*args)
@@ -112,19 +131,41 @@ def alloc_lists(num_alloc):
     'allocates space for a numpy array of lists'
     return [[] for _ in xrange(num_alloc)]
 
+import sys
 class Timer(object):
     ''' Used to time statments with a with statment
     e.g with Timer() as t: some_function()'''
-    def __init__(self, outlist=[]):
+    def __init__(self, outlist=[], msg=''):
         # outlist is a list to append output to
         self.outlist   = outlist
+        self.msg   = msg
         self.tstart = -1
 
     def __enter__(self):
+        sys.stdout.write('Running: '+self.msg+'\n')
         self.tstart = time.time()
+        sys.stdout.flush()
 
     def __exit__(self, type, value, trace):
-        tend = time.time()
-        ellapsed = (tend - self.tstart)
-        self.outlist.append(ellapsed)
-        print 'Elapsed: %s seconds' % ellapsed
+        ellapsed = (time.time() - self.tstart)
+        if len(self.msg) <= 0:
+            self.outlist.append(ellapsed)
+        sys.stdout.write('  ...ellapsed: '+str(ellapsed)+' seconds\n')
+        sys.stdout.flush()
+
+import matplotlib.pyplot as plt
+def figure(fignum, doclf=False, title=None, **kwargs):
+    fig = plt.figure(fignum, **kwargs)
+    axes_list = fig.get_axes()
+    if not 'user_stat_list' in fig.__dict__.keys() or doclf:
+        fig.user_stat_list = []
+        fig.user_notes = []
+    if doclf or len(axes_list) == 0:
+        fig.clf()
+        ax = plt.subplot(111)
+    else: 
+        ax  = axes_list[0]
+    if not title is None:
+        ax.set_title(title)
+        fig.canvas.set_window_title(title)
+    return fig

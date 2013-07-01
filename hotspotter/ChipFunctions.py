@@ -237,7 +237,6 @@ def compute_chiprep(chip_fpath, chiprep_fpath, detector, extractor, orientation,
 
     '''
     toShow = cv2.drawKeypoints(img, cv_fpts1)
-
     flags = cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
     toShow = cv2.drawKeypoints(img, cv_fpts, flags=flags)
     fig = plt.figure(0)

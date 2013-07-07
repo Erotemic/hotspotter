@@ -2,6 +2,7 @@
 Result*
 results*
 build
+temp
 hs_setup/Output
 dist
 hotspotter/generated_version.py

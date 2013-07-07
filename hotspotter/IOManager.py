@@ -349,18 +349,22 @@ class IOManager(AbstractManager):
         return True
 
     def __image_csv_func(iom, csv_data, csv_headers=None):
-        #gid   = None
-        #gname = None
-        #aif   = None
-        #if csv_headers != None: pass
+        """ A function which reads a single line of csv image data """
+        '''
+        gid   = None
+        gname = None
+        aif   = None
+        if csv_headers != None: pass'''
         if len(csv_data) == 3:
+            # Format where extension is part of name
             gid   = int(csv_data[0])
             gname = csv_data[1]
             aif   = csv_data[2]
             logdbg('Adding Image')
         elif len(csv_data) == 4:
+            # Format where extension is its own field
             gid   = int(csv_data[0])
-            gnameext   = csv_data[2]
+            gnameext    = csv_data[2]
             gname_noext = csv_data[1]
             if gname_noext.find('.') == -1 and gnameext.find('.') == -1:
                 gname = gname_noext + '.' + gnameext

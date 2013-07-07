@@ -75,3 +75,9 @@
 # List of tasks which have been accomplished
         0 | 13/05/08|            ____ |  Save Model to Disk
         5 | 13/05/08|            ____ |  Add a batch query user mode.
+
+
+        When reading in data, allow there to be a check to make 
+        sure that all the images actually exist. 
+
+        Or remove the image table entirely and just use the image names in a folder as the indexes, that shouldn't be so bad. 

@@ -3,8 +3,8 @@ from hotspotter.algo.imalgos import adapt_histeq
 from hotspotter.algo.imalgos import contrast_stretch
 from hotspotter.algo.imalgos import histeq
 from hotspotter.other.logger import logmsg, logdbg, logerr, logio, logwarn, func_log
-from hotspotter.tpl.other.shiftableBF import shiftableBF
-import cv2
+#from hotspotter.tpl.other.shiftableBF import shiftableBF
+import hotspotter.tpl.cv2 as cv2
 import hotspotter.Parallelize
 import os.path
 import types
@@ -101,7 +101,8 @@ def compute_chip(img_fpath, chip_fpath, roi, new_size, preproc_prefs):
     if preproc_prefs.autocontrast_bit :
         pil_chip = ImageOps.autocontrast(pil_chip)
     if preproc_prefs.bilateral_filt_bit :
-        pil_chip = shiftableBF(pil_chip)
+        raise NotImplemented('Bilateral filter implementation removed.')
+        #pil_chip = shiftableBF(pil_chip)
     # Save chip to disk
     pil_chip.save(chip_fpath, 'PNG')
 

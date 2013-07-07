@@ -1,4 +1,4 @@
-import cv2
+import hotspotter.tpl.cv2 as cv2
 import os
 import types
 import subprocess
@@ -57,7 +57,7 @@ class AlgorithmManager(AbstractManager):
             det = cv2.FeatureDetector_create(detector_type)
             for param_name in det.getParams():
                 param_type = det.paramType(param_name)
-                if param_type in [0, 9, 11]:
+                if param_type in [0, 8, 9, 11]:
                     param_val = det.getInt(param_name)
                 elif param_type == 1:
                     param_val = det.getBool(param_name)
@@ -264,10 +264,8 @@ class AlgorithmManager(AbstractManager):
             logerr('Only External Keypoint Detectors are implemented: '+str(external_detectors))
         logerr('Only External Keypoint Descriptors are implemented: '+str(external_descriptors))
 
-        from tpl.pyopencv import cv2
         # http://stackoverflow.com/questions/10764895/opencv-python-sample-error
         #  http://stackoverflow.com/questions/12491022/opencv-freak-fast-retina-keypoint-descriptor
-        from tpl.pyopencv.cv2 import cv
         # The following detector types are supported: 
             # FAST, STAR, SIFT (nonfree), SURF (nonfree),
             # ORB, BRISK, MSER, GFTT (good features to track)

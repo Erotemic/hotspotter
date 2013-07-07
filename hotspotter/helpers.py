@@ -1,3 +1,4 @@
+from __future__ import print_function
 '''
 This is less of a helper function file and more of a pile of things 
 where I wasn't sure of where to put. 
@@ -46,7 +47,31 @@ def myprint(input=None, prefix='', indent=''):
             _println(indent+'  '+attr+' : '+val)
         _println(indent+'}')
 
-    
+import os
+def checkpath(_path):
+    '''Checks to see if the argument _path exists.'''
+    # Do the work
+    _path = os.path.normpath(_path)
+    print('Checking ' + _path + '...')
+    if os.path.exists(_path):
+        if os.path.isfile(_path):
+            path_type = 'FILE'
+        if os.path.isdir(_path): 
+            path_type = 'DIR'
+        print(path_type + '... Exists')
+    else:
+        print('!!! Does not exist')
+        while True: 
+            _path_new = os.path.dirname(_path)
+            if os.path.exists(_path_new):
+                print('... ' + _path_new + ' is the best you can do')
+                break
+            if _path_new == _path: 
+                print('!!! This is a very illformated path indeed.')
+                break
+            _path = _path_new
+        return False
+    return True
 
 def join_mkdir(*args):
     'os.path.join and creates if not exists'
@@ -128,7 +153,7 @@ def keyboard(banner=None):
         raise None
     except:
         frame = sys.exc_info()[2].tb_frame.f_back
-    print "# Ctrl-D  Use quit() to exit :) Happy debugging!"
+    print("# Ctrl-D  Use quit() to exit :) Happy debugging!")
     # evaluate commands in current namespace
     namespace = frame.f_globals.copy()
     namespace.update(frame.f_locals)

@@ -216,7 +216,6 @@ def package_application():
     }
     # WINDOWS EXECUTABLE SETUP
     if sys.platform == 'win32':
-        import py2exe
         ensure_findable_windows_dlls()
         # ---------
         
@@ -319,4 +318,6 @@ if __name__ == '__main__':
         if cmd in ['build_pyinstaller', 'build_installer']:
             build_pyinstaller()
             sys.exit(0)
+        if cmd in ['localize', 'setup_localize.py']:
+            from setup_localize import *
     package_application()

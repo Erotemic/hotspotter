@@ -54,7 +54,7 @@ class ExperimentManager(AbstractManager):
         algo_prefs_fpath = os.path.join(expt_dpath, 'algo_prefs.txt')
         iom.write(algo_prefs_fpath, algo_prefs_text)
         
-        vm.ensure_model() # Defaults to building model of all
+        vm.build_model() # Defaults to building model of all
 
         prev_ell = dm.draw_prefs.ellipse_bit
         prev_pts = dm.draw_prefs.points_bit
@@ -65,7 +65,7 @@ class ExperimentManager(AbstractManager):
         with open(os.path.join(expt_dpath,'matches.txt'), 'a') as file:
             for cx in iter(cm.get_valid_cxs()):
                 # Preform Query
-                res = qm.cx2_res(cx)
+                res = QueryResult(qm.hs, qm.cx2_rr(cx))
                 # Get Query Info
                 qcid, gname = cm.cx2_(res.rr.qcx, 'cid', 'gname')
                 # Get Result Info

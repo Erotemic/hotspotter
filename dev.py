@@ -11,7 +11,7 @@ from hotspotter.other.AbstractPrintable import *
 from hotspotter.other.ConcretePrintable import *
 from hotspotter.other.logger import *
 import hotspotter.ChipFunctions
-import cv2
+import hotspotter.tpl.cv2 as cv2
 import matplotlib.pyplot as plt
 from hotspotter.ChipFunctions import normalize, read_oriented_chip
 
@@ -71,3 +71,33 @@ for function_body in function_body_list:
 
 def MSER_PREFS():
     hs.am.algo_prefs.chiprep.kpts_detector = 'MSER'
+    import os, sys
+    PYTHONPATH = os.environ['PYTHONPATH'].split(os.pathsep)
+    PATH = os.environ['PATH'].split(os.pathsep)
+    PATH = sys.path
+
+'''
+    def vd_HOTSPOTTER():
+        vd(HOTSPOTTER_INSTALL_PATH)
+    def vd_SITEPACKAGES():
+        vd(SITEPACKAGES_PATH)
+    def vd_OPENCV():
+        vd(OPENCV_PATH)
+'''
+
+# TODO: Add to setup TPL
+'''
+OpenCV
+Numpy 
+Scipy
+Matplotlib
+Qt
+msvcp
+msvcr
+LibFLANN
+LibINRIA
+LIB_GCC
+LIB_SDC++
+'''
+
+

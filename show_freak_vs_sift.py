@@ -1,4 +1,4 @@
-import cv2
+import hotspotter.tpl.cv2 as cv2
 from pylab import *
 from hotspotter.helpers import Timer, figure
 import os

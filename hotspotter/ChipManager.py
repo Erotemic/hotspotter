@@ -184,8 +184,9 @@ class ChipManager(AbstractDataManager):
         nx  = cm.hs.nm.nid2_nx[nid]
         gx  = cm.hs.gm.gid2_gx[gid]
         if gx == 0 or nx == 0 or gid == 0 or nid == 0:
-            logmsg('Adding Chip: (cid=%d),(nid=%d,nx=%d),(gid=%d,gx=%d)' % (cid, nid, nx, gid, gx))
-            logerr('Chip has invalid indexes')
+            err_msg = 'Adding Chip: (cid=%d),(nid=%d,nx=%d),(gid=%d,gx=%d)' % (cid, nid, nx, gid, gx)
+            err_msg += '\nChip has invalid indexes. (Maybe you deleted an image from the images directory?) '
+            logwarn(err_msg)
         cm.add_chip(cid, nx, gx, roi, theta, props=props, delete_prev=False)
 
     def get_csv_line(headers):

@@ -2,11 +2,12 @@ import matplotlib
 print('Configuring matplotlib for Qt4')
 matplotlib.use('Qt4Agg')
 
-import cv2
+import hotspotter.tpl.cv2 as cv2
 from pylab import *
 from hotspotter.helpers import Timer, figure, myprint
 from hotspotter.other.ConcretePrintable import Pref
-import os, sys, types
+import os, sys, types, string
+
 
 # ___HELPER_FUNCTIONS___
 # --------

@@ -27,19 +27,37 @@ def emergency_msgbox(title, msg):
     return msgBox
 
 def ensure_tpl_libs():
+    print('Ensuring third party libraries')
     try: # Ensure that TPL's lib files are in PATH
+        #from hotspotter.standalone import find_hotspotter_root_dir
+        print('Can import hotspotter?')
         import hotspotter
+        print(' ... yes')
         TPL_LIB_DIR = join(dirname(hotspotter.__file__), 'tpl/lib', sys.platform)
-        sys.path.append(TPL_LIB_DIR)
+        sys.path.insert(0, TPL_LIB_DIR)
         ext = {'linux2':'.ln','darwin':'.mac','win32':'.exe'}[sys.platform]
         # Ensure that hesaff is executable
         hesaff_fname = TPL_LIB_DIR+'/hesaff'+ext
         is_executable = lambda fname: bin(int(oct(os.stat(fname).st_mode)[4]))[4]
         if not is_executable(hesaff_fname): 
             os.system('chmod 775 '+hesaff_fname)
-    except Exception: 
+        print('Can import hotspotter.tpl.cv2?')
+        import hotspotter.tpl.cv2
+        print(' ... yes')
+        print('Can import hotspotter.tpl.pyflann?')
+        import hotspotter.tpl.pyflann
+        print(' ... yes')
+    except Exception as ex: 
+        print('\n\n!!! TPL ERROR !!!')
+        PYTHONPATH = os.getenv('PYTHONPATH')
+        PATH = os.getenv('PATH')
+
+        print('PYTHONPATH = '+repr(PYTHONPATH))
+        print('PATH = '+repr(PATH))
+
         print('''You must download hotspotter\'s 3rd party libraries before you can run it. 
         git clone https://github.com/Erotemic:tpl-hotspotter.git tpl''')
+        raise
 
 def parse_arguments():
     print('Parsing arguments')

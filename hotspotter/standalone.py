@@ -1,12 +1,13 @@
 from __future__ import print_function 
 from os.path import expanduser, join, relpath, realpath, normpath, exists, dirname
-import os, fnmatch
+import os, fnmatch, sys
 
 def preferences_dir():
     return normpath(join(expanduser('~'), '.hotspotter'))
 
 def find_hotspotter_root_dir():
     'Find the HotSpotter root dir even in installed packages'
+    sys.stdout.write(' ... Finding hotspotter root')
     root_fpath = realpath(dirname(__file__))
     landmark_fname = '__HOTSPOTTER_ROOT__'
     while True:
@@ -15,8 +16,9 @@ def find_hotspotter_root_dir():
             break
         next_root = dirname(root_fpath)
         if next_root == root_fpath:
-            raise Exception('Cannot Find HotSpotter Root')
+            raise Exception(' !!! Cannot find hotspotter root')
         root_fpath = next_root
+    sys.stdout.write(' ... FOUND: '+str(root_fpath)+'\n')
     return root_fpath
 
 def delete_file(fpath):

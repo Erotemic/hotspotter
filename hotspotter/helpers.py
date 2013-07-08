@@ -64,13 +64,19 @@ def checkpath(_path):
         while True: 
             _path_new = os.path.dirname(_path)
             if os.path.exists(_path_new):
-                print('... ' + _path_new + ' is the best you can do')
+                print('... The longest existing path is: ' + _path_new)
                 break
             if _path_new == _path: 
                 print('!!! This is a very illformated path indeed.')
                 break
             _path = _path_new
         return False
+    return True
+
+def ensurepath(_path):
+    if not checkpath(_path):
+        print('... Making directory: ' + _path)
+        os.mkdir(_path)
     return True
 
 def join_mkdir(*args):

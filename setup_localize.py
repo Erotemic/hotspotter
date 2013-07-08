@@ -9,6 +9,29 @@ from os.path import join
 import types
 from fnmatch import fnmatch
 
+
+# A script for windows to install pkg config (needed for building with opencv I think)
+def fix_mingw_pkgconfig():
+    fix_mingw_pkgconfig_bat = r'''
+set pkgconfig_name=pkg-config-lite-0.28-1
+set pkgconfig_zip=%pkgconfig_name%-win32.zip
+set MINGW_BIN="C:\MinGW\bin"
+set MINGW_SHARE="C:\MinGW\bin"
+set pkg_config_dlsrc=http://downloads.sourceforge.net/project/pkgconfiglite/0.28-1/%pkgconfig_name%_bin-win32.zip
+
+:: Download pkg-config-lite
+wget %pkg_config_dlsrc%
+
+:: Unzip and remove zipfile
+unzip %pkgconfig_zip%
+rm %pkgconfig_zip%
+
+:: Install contents to MSYS
+cp %pkgconfig_name%/bin/pkg-config.exe %MINGW_BIN%
+cp -r %pkgconfig_name%/share/aclocal %MINGW_SHARE%
+'''
+    os.system(fix_mingw_pkgconfig_bat)
+
 def copy(src_path, dest_path):
     if os.path.exists(dest_path):
         sys.stdout.write('!!! Overwriting and ')
@@ -92,7 +115,7 @@ def cd(dir):
     print('Changing directory to '+dir)
     os.chdir(dir)
 
-def __build(pkg_name, branchname='hotspotter_branch', cmake_flags={}):
+def __build(pkg_name, branchname='hotspotter_branch', cmake_flags={}, noinstall=False):
     from hs_setup.git_helpers import git_branch, git_version, git_fetch_url
     ''' 
     Generic build function for hotspotter third party libraries: 
@@ -145,12 +168,20 @@ def __build(pkg_name, branchname='hotspotter_branch', cmake_flags={}):
     __cmd('make -j9', *cmd_args)
 
     # ____ INSTALL ____
-    print('\n --- Installing to: '+install_prefix+'\n')
-    __sudo_cmd('make install', *cmd_args)
+    if noinstall:
+        print('\n --- Not Installing\n')
+    else:
+        print('\n --- Installing to: '+install_prefix+'\n')
+        __sudo_cmd('make install', *cmd_args)
+
+    # ____ END ____
     cd(hotspotter_root)
     exit_msg =  ' --- Finished building: '+pkg_name
     print('\n'+exit_msg)
     print('='*len(exit_msg)+'\n')
+
+def build_hesaff():
+    __build('hesaff', branchname='hotspotter_branch', noinstall=True)
 
 def build_opencv():
     __build('opencv', branchname='freak_modifications')
@@ -164,8 +195,17 @@ def build_flann():
         cmake_flags['USE_OPENMP'] = False
     __build('flann', branchname='hotspotter_flann')
     
+def localize_hesaff():
+    print('____ Localizing hessaff ____')
+    hesaff_build = __CODE__+'/hesaff/build'
+    checkpath(hesaff_build)
+    tpl_hesaff = tpl_root + '/hesaff'
+    ensurepath(tpl_hesaff) 
+    copy_all_files(hesaff_build, tpl_hesaff, 'hesaff*')
+    pass
 
 def localize_opencv():
+    print('____ Localizing opencv ____')
     # Where to install
     tpl_cv2 = tpl_root + '/cv2'
     ensurepath(tpl_cv2) 
@@ -178,6 +218,8 @@ def localize_opencv():
         cv2_init.write('from cv2 import *')
 
 def localize_flann():
+    print('____ Localizing flann ____')
+    # Where to install
     # Where to install
     tpl_pyflann   = tpl_root+'/pyflann'
     ensurepath(tpl_pyflann) 
@@ -188,19 +230,29 @@ def localize_flann():
     pyflann_dir = install_prefix+'/share/flann/python/pyflann'
     copy_all_files(pyflann_dir,  tpl_pyflann, '*.py')
 
+
+exec_str_template = """
+if 'localize_%s' in sys.argv or localize_all:
+    localize_%s()
+if 'build_%s' in sys.argv or build_all:
+    build_%s()
+if '%s' in sys.argv:
+    localize_%s()
+    build_%s()
+"""
+num_subs = exec_str_template.count('%s')
+
 if __name__ == '__main__':
     localize_all = False
     build_all = False
 
-    if 'localize_flann' in sys.argv or localize_all:
-        localize_flann()
-    if 'localize_opencv' in sys.argv or localize_all:
-        localize_opencv()
-    if 'build_opencv' in sys.argv or build_all:
-        build_opencv()
-    if 'build_flann' in sys.argv or build_all:
-        build_flann()
+    tpl_list = ['flann', 'opencv', 'hesaff']
 
-    if 'flann' in sys.argv:
-        build_flann()
-        localize_flann()
+    if 'localize_all' in sys.argv: 
+        localize_all = True
+    if 'build_all' in sys.argv: 
+        build_all = True
+
+    for tpl_name in tpl_list:
+        exec_str = exec_str_template % tuple([tpl_name]*num_subs)
+        exec(exec_str)

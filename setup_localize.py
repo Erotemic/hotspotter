@@ -115,7 +115,8 @@ def cd(dir):
     print('Changing directory to '+dir)
     os.chdir(dir)
 
-def __build(pkg_name, branchname='hotspotter_branch', cmake_flags={}, noinstall=False):
+def __build(pkg_name, branchname='hotspotter_branch', cmake_flags={},
+            noinstall=False, rm_build=False):
     from hs_setup.git_helpers import git_branch, git_version, git_fetch_url
     ''' 
     Generic build function for hotspotter third party libraries: 
@@ -150,6 +151,10 @@ def __build(pkg_name, branchname='hotspotter_branch', cmake_flags={}, noinstall=
         __cmd('git checkout '+branchname, *cmd_args)
 
     # ____ CHECK BUILD ____
+    if rm_build:
+        print('\n --- Forcing rm build dir: ' + code_build + '\n')
+        if checkpath(code_build):
+            __cmd('rm -rf '+code_build)
     print('\n --- Creating build dir: ' + code_build + '\n')
     ensurepath(code_build)
     cd(code_build)
@@ -182,7 +187,11 @@ def __build(pkg_name, branchname='hotspotter_branch', cmake_flags={}, noinstall=
     print('='*len(exit_msg)+'\n')
 
 def build_hesaff():
-    __build('hesaff', branchname='hotspotter_branch', noinstall=True)
+    cmake_flags = {}
+    if sys.platform == 'win32':
+        cmake_flags['CMAKE_C_FLAGS'] = '-march=i486'
+        cmake_flags['CMAKE_CXX_FLAGS'] = '-march=i486'
+    __build('hesaff', branchname='hotspotter_branch', cmake_flags=cmake_flags, noinstall=True, rm_build=True)
 
 def build_opencv():
     __build('opencv', branchname='freak_modifications')

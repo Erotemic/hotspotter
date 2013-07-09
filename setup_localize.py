@@ -67,8 +67,8 @@ else:
 install_prefix = '/usr/local/'
 py_dist_packages = install_prefix+'/lib/python2.7/dist-packages'
 if sys.platform == 'win32':
-    install_prefix= r'C:\Program Files (x86)\OpenCV'
-    py_dist_packages = r'C:\Python27\Lib\site-packages'
+    install_prefix= r'C:/Program Files (x86)'
+    py_dist_packages = r'C:/Python27/Lib/site-packages'
 
 
 def __cmd(cmd, *args):
@@ -159,13 +159,14 @@ def __build(pkg_name, branchname='hotspotter_branch', cmake_flags={}, noinstall=
     if 'CMAKE_INSTALL_PREFIX' in cmake_flags: 
         raise Exception('Unexpected behavior may be occuring. Overwriting CMAKE_INSTALL_PREFIX')
     user_cmake_args = cmake_flags2str(cmake_flags)
-    _cmake_args = '-DCMAKE_INSTALL_PREFIX='+install_prefix+' '+user_cmake_args
+    _cmake_args = '-DCMAKE_INSTALL_PREFIX="'+install_prefix+'" '+user_cmake_args
     _cmake_args = _cmake_args.replace('\n',' ')
     __cmd(cmake_cmd + _cmake_args + ' ..', *cmd_args)
 
     # ____ MAKE ____
     print('\n --- Running make\n') 
-    __cmd('make -j9', *cmd_args)
+    __cmd('make ', *cmd_args)
+    #__cmd('make -j9', *cmd_args)
 
     # ____ INSTALL ____
     if noinstall:
@@ -193,7 +194,7 @@ def build_flann():
         cmake_flags['CMAKE_C_FLAGS']   = '-m32'
         cmake_flags['CMAKE_CXX_FLAGS'] = '-m32'
         cmake_flags['USE_OPENMP'] = False
-    __build('flann', branchname='hotspotter_flann')
+    __build('flann', cmake_flags=cmake_flags, branchname='hotspotter_flann')
     
 def localize_hesaff():
     print('____ Localizing hessaff ____')
@@ -237,8 +238,8 @@ if 'localize_%s' in sys.argv or localize_all:
 if 'build_%s' in sys.argv or build_all:
     build_%s()
 if '%s' in sys.argv:
-    localize_%s()
     build_%s()
+    localize_%s()
 """
 num_subs = exec_str_template.count('%s')
 

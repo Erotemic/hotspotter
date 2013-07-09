@@ -5,6 +5,7 @@ from pylab import find
 from PIL          import Image
 from shutil       import copyfile
 from numpy        import array, asarray, append, zeros, uint32, bool, logical_and, iterable
+from hotspotter.helpers import img_ext_set
 import os.path
 
 '''
@@ -69,7 +70,7 @@ class ImageManager(AbstractDataManager):
             'gname' : lambda x: gm.gx2_gname[x] ,\
             'num_c' : lambda x: gm.gx2_num_c(x),\
         }
-        gm.valid_img_extensions = ['.jpeg','.jpg','.png','.tiff','.tif','.ppm']
+        gm.valid_img_extensions = img_ext_set 
 
     def img_alloc(gm, nAlloc):
         logdbg('Allocating room for %d more images' % nAlloc)

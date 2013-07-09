@@ -2,12 +2,10 @@
 
 #os.chdir(hotspotter_root)
 #import hotspotter.tpl.cv2 as cv2 
-import shutil
 import os, sys
-from hotspotter.helpers import checkpath, vd, ensurepath
+from hotspotter.helpers import check_path, ensure_path, vd, copy_all, copy
 from os.path import join
 import types
-from fnmatch import fnmatch
 
 
 # A script for windows to install pkg config (needed for building with opencv I think)
@@ -31,24 +29,6 @@ cp %pkgconfig_name%/bin/pkg-config.exe %MINGW_BIN%
 cp -r %pkgconfig_name%/share/aclocal %MINGW_SHARE%
 '''
     os.system(fix_mingw_pkgconfig_bat)
-
-def copy(src_path, dest_path):
-    if os.path.exists(dest_path):
-        sys.stdout.write('!!! Overwriting and ')
-    sys.stdout.write('Copying: \n ...'+src_path+' \n ... -> '+dest_path+'\n')
-    shutil.copy(src_path, dest_path)
-
-def copy_all_files(src_dir, dest_dir, glob_str_list):
-    if type(glob_str_list) != types.ListType:
-        glob_str_list = [glob_str_list]
-    for _fname in os.listdir(src_dir):
-        for glob_str in glob_str_list:
-            if fnmatch(_fname, glob_str):
-                src_path = os.path.normpath(join(src_dir, _fname))
-                dest_path = os.path.normpath(join(dest_dir, _fname))
-                copy(src_path, dest_path)
-                break
-
 
 __HOME__ = os.path.expanduser("~")
 __CODE__ = os.path.expanduser("~")+'/code'
@@ -132,8 +112,8 @@ def __build(pkg_name, branchname='hotspotter_branch', cmake_flags={},
     code_build = code_src+'/build'
     # ____ CHECK SOURCE ____
     print('\n --- Checking code source dir: '+code_src+'\n')
-    if not checkpath(code_src): 
-        if not checkpath(__CODE__):
+    if not check_path(code_src): 
+        if not check_path(__CODE__):
             raise Exception('We have problems')
         cd(__CODE__)
         __cmd('git clone git@github.com:Erotemic/'+pkg_name+'.git', *cmd_args)
@@ -153,10 +133,10 @@ def __build(pkg_name, branchname='hotspotter_branch', cmake_flags={},
     # ____ CHECK BUILD ____
     if rm_build:
         print('\n --- Forcing rm build dir: ' + code_build + '\n')
-        if checkpath(code_build):
+        if check_path(code_build):
             __cmd('rm -rf '+code_build)
     print('\n --- Creating build dir: ' + code_build + '\n')
-    ensurepath(code_build)
+    ensure_path(code_build)
     cd(code_build)
 
     # ____ CMAKE ____
@@ -208,22 +188,23 @@ def build_flann():
 def localize_hesaff():
     print('____ Localizing hessaff ____')
     hesaff_build = __CODE__+'/hesaff/build'
-    checkpath(hesaff_build)
+    check_path(hesaff_build)
     tpl_hesaff = tpl_root + '/hesaff'
-    ensurepath(tpl_hesaff) 
-    copy_all_files(hesaff_build, tpl_hesaff, 'hesaff*')
+    ensure_path(tpl_hesaff) 
+    copy_all(hesaff_build, tpl_hesaff, 'hesaff*')
+    os.system('chmod +x '+tpl_hesaff)
     pass
 
 def localize_opencv():
     print('____ Localizing opencv ____')
     # Where to install
     tpl_cv2 = tpl_root + '/cv2'
-    ensurepath(tpl_cv2) 
+    ensure_path(tpl_cv2) 
     # Libraries
     opencv_lib = install_prefix+'/lib'
-    copy_all_files(opencv_lib, tpl_cv2, 'libopencv*')
+    copy_all(opencv_lib, tpl_cv2, 'libopencv*')
     # Python bindings
-    copy_all_files(py_dist_packages, tpl_cv2, 'cv2.so')
+    copy_all(py_dist_packages, tpl_cv2, 'cv2.so')
     with open(tpl_cv2+'/__init__.py', 'w') as cv2_init:
         cv2_init.write('from cv2 import *')
 
@@ -232,13 +213,13 @@ def localize_flann():
     # Where to install
     # Where to install
     tpl_pyflann   = tpl_root+'/pyflann'
-    ensurepath(tpl_pyflann) 
+    ensure_path(tpl_pyflann) 
     # Libraries
     flann_lib   = install_prefix+'/lib'
-    copy_all_files(flann_lib,  tpl_pyflann, 'libflann*')
+    copy_all(flann_lib,  tpl_pyflann, 'libflann*')
     # Python bindings
     pyflann_dir = install_prefix+'/share/flann/python/pyflann'
-    copy_all_files(pyflann_dir,  tpl_pyflann, '*.py')
+    copy_all(pyflann_dir,  tpl_pyflann, '*.py')
 
 
 exec_str_template = """

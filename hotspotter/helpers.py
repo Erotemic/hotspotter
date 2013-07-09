@@ -17,12 +17,16 @@ import os, os.path, sys
 import sys
 import time
 import types
+import shutil
+from fnmatch import fnmatch
 from sys import stdout as sout
 
 def _print(msg):
     sout.write(msg)
 def _println(msg):
     sout.write(msg+'\n')
+
+img_ext_set = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
 
 def myprint(input=None, prefix='', indent=''):
     if len(prefix) > 0:
@@ -73,11 +77,79 @@ def checkpath(_path):
         return False
     return True
 
+def copy_task(cp_list, test=False, nooverwrite=False, print_tasks=True):
+    '''
+    Input list of tuples: 
+        format = [(src_1, dst_1), ..., (src_N, dst_N)] 
+    Copies all files src_i to dst_i
+    '''
+    num_overwrite = 0
+    _cp_tasks = [] # Build this list with the actual tasks
+    if nooverwrite:
+        print('Removed: copy task ')
+    else:
+        print('Begining copy+overwrite task.')
+    for (src, dst) in iter(cp_list):
+        if os.path.exists(dst):
+            num_overwrite += 1
+            if print_tasks:
+                print('!!! Overwriting ')
+            if not nooverwrite:
+                _cp_tasks.append((src, dst))
+        else:
+            if print_tasks:
+                print('... Copying ')
+                _cp_tasks.append((src, dst))
+        if print_tasks:
+            print('    '+src+' -> \n    '+dst)
+    print('About to copy %d files' % len(cp_list))
+    if nooverwrite:
+        print('Skipping %d tasks which would have overwriten files' % num_overwrite)
+    else:
+        print('There will be %d overwrites' % num_overwrite)
+    if not test: 
+        print('... Copying')
+        for (src, dst) in iter(_cp_tasks):
+            shutil.copy(src, dst)
+        print('... Finished copying')
+    else:
+        print('... In test mode. Nothing was copied.')
+
+def copy(src, dst):
+    if os.path.exists(dst):
+        print('!!! Overwriting ')
+    else:
+        print('... Copying ')
+    print('    '+src+' -> \n    '+dst)
+    shutil.copy(src, dst)
+
+def copy_all(src_dir, dest_dir, glob_str_list):
+    if type(glob_str_list) != types.ListType:
+        glob_str_list = [glob_str_list]
+    for _fname in os.listdir(src_dir):
+        for glob_str in glob_str_list:
+            if fnmatch(_fname, glob_str):
+                src = os.path.normpath(join(src_dir, _fname))
+                dst = os.path.normpath(join(dest_dir, _fname))
+                copy(src, dst)
+                break
+
+def check_path(_path):
+    return checkpath(_path)
+
 def ensurepath(_path):
     if not checkpath(_path):
         print('... Making directory: ' + _path)
         os.mkdir(_path)
     return True
+def ensure_path(_path):
+    return ensurepath(_path)
+
+def assertpath(_path):
+    if not checkpath(_path):
+        raise AssertionError('Asserted path does not exist: '+_path)
+def assert_path(_path):
+    return assertpath(_path)
 
 def join_mkdir(*args):
     'os.path.join and creates if not exists'

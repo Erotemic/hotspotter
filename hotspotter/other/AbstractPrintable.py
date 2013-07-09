@@ -116,37 +116,64 @@ def _table_fmt(max_val, lbl=""):
 
 class AbstractPrintable(object):
     'A base class that prints its attributes instead of the memory address'
+
     def __init__(self, child_print_exclude=[]):
         self._printable_exclude = ['_printable_exclude'] + child_print_exclude
+
     def __str__(self):
         head = printableType(self)
         body = self.get_printable(type_bit=True)
         body = re.sub('\n *\n *\n','\n\n',body)
         return head+('\n'+body).replace('\n','\n    ')
+
     def printme(self):
         print(self)
-    def printme2(self, type_bit=True, print_exclude_aug = []):
-        print(self.get_printable(type_bit, print_exclude_aug))
-    def get_printable(self, type_bit=True, print_exclude_aug = []):
+
+    def printme2(self, 
+                 type_bit=True, 
+                 print_exclude_aug = [],
+                 val_bit=True, 
+                 max_valstr=1000,
+                 justlength=True):
+        to_print = self.get_printable(type_bit=type_bit,
+                                      print_exclude_aug=print_exclude_aug,
+                                      val_bit=val_bit,
+                                      max_valstr=max_valstr,
+                                      justlength=justlength)
+        print(to_print)
+
+    def get_printable(self,
+                      type_bit=True,
+                      print_exclude_aug = [], 
+                      val_bit=True,
+                      max_valstr=1000,
+                      justlength=False):
         body = ''
         attri_list = []
         exclude_key_list = list(self._printable_exclude)+list(print_exclude_aug)
         for (key, val) in self.__dict__.iteritems():
             if key in exclude_key_list: continue
             namestr = str(key)
-            valstr  = printableVal(val,type_bit=type_bit)
             typestr = printableType(val, name=key, parent=self)
-            max_valstr = 10000
+            if not val_bit:
+                attri_list.append( (typestr, namestr, '<ommited>') )
+                continue
+            valstr  = printableVal(val,type_bit=type_bit, justlength=justlength)
             if len(valstr) > max_valstr:
                 valstr = valstr[0:max_valstr/2]+valstr[-max_valstr/2:-1]
-            attri_list.append( (typestr, namestr, valstr) )
-        
+            attri_list.append( (typestr, namestr, valstr) )    
         attri_list.sort()
         for (typestr, namestr, valstr) in attri_list:
             entrytail = '\n' if valstr.count('\n') <= 1 else '\n\n'
             typestr2 = typestr+' ' if type_bit else ''
             body += typestr2 + namestr + ' = ' + valstr + entrytail
         return body
+
+    def format_printable(self, type_bit=False, indstr='  * '):
+        _printable_str = self.get_printable(type_bit=type_bit)
+        _printable_str = _printable_str.replace('\r','\n')
+        _printable_str = indstr+_printable_str.strip('\n').replace('\n','\n'+indstr)
+        return _printable_str
 #---------------
 def printableType(val, name=None, parent=None):
     if hasattr(parent, 'customPrintableType'):
@@ -167,20 +194,23 @@ def printableType(val, name=None, parent=None):
         _typestr = _typestr.strip()
     return _typestr
 #---------------
-def printableVal(val,type_bit=True):
+def printableVal(val,type_bit=True, justlength=False):
+    # NUMPY ARRAY
     if type(val) is np.ndarray:
         info = npArrInfo(val)
         if info.dtypestr == 'bool':
             _valstr = '{ shape:'+info.shapestr+' bittotal: '+info.bittotal+'}'# + '\n  |_____'
         else: 
             _valstr = '{ shape:'+info.shapestr+' mM:'+info.minmaxstr+' }'# + '\n  |_____'
+    # String
     elif type(val) is types.StringType:
         _valstr = '\'%s\'' % val
+    # List
     elif type(val) is types.ListType:
-        if len(val) > 30:
-            _valstr = 'Length:'+str(len(val))
+        if justlength or len(val) > 30:
+            _valstr = 'len='+str(len(val))
         else:
-            _valstr = '[\n'+('\n'.join([str(v) for v in val]))+'\n]'
+            _valstr = '[ '+(',\n  '.join([str(v) for v in val]))+' ]'
     elif hasattr(val, 'get_printable') and type(val) != type: #WTF? isinstance(val, AbstractPrintable):
         _valstr = val.get_printable(type_bit=type_bit)
     elif type(val) is types.DictType:

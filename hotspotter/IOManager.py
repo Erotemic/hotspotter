@@ -16,7 +16,7 @@ import shutil
 import time
 import fnmatch
 import sys
-import tpl
+import hotspotter.tpl
 import numpy as np
 import pylab
 import os
@@ -104,9 +104,9 @@ class IOManager(AbstractManager):
         iom.remove_files_with_pattern(iom.get_computed_dpath(), fname_pattern, recursive_bit=True)
         'removes files in computed_dpath'
 
-    # NEW AND UNTESTED
+    # DEPRICATED
     def get_tpl_lib_dir(iom):
-        return join(dirname(tpl.__file__), 'lib', sys.platform)
+        return join(dirname(hotspotter.tpl.__file__), 'lib', sys.platform)
      #START: Directory and File Managment
     #==========
     # --- Private Directories'
@@ -187,19 +187,19 @@ class IOManager(AbstractManager):
         return normpath(join(iom.hs.db_dpath,'flat_table.csv'))
     # --- Executable Filenames
     def  get_hesaff_exec(iom):
-        hesaff_fname = platexec(join(iom.get_tpl_lib_dir(), 'hesaff'))
-        if os.path.exists(hesaff_fname):
-            return hesaff_fname
+        ext = ''
+        if sys.platform == 'win32':
+            ext = '.exe'
+        tpl_dir = dirname(hotspotter.tpl.__file__)
+        tpl_hesaff = normpath(join(tpl_dir, 'hesaff', 'hesaff'+ext))
+        if os.path.exists(tpl_hesaff):
+            return tpl_hesaff
         # Fix for weird mac packaging things
-        root_dir = iom.get_tpl_lib_dir()
-        crossplat_ext = {'win32':'.exe',
-                         'darwin':'.mac',
-                         'linux2':'.ln'}[sys.platform] 
+        root_dir = tpl_dir
         while root_dir!=None:
-            hesaff_fname = join(root_dir, 'hotspotter', 'tpl', 'lib',
-                                sys.platform, 'hesaff'+crossplat_ext)
-            logdbg(hesaff_fname)
-            exists_test = os.path.exists(hesaff_fname)
+            tpl_hesaff = join(root_dir, 'hotspotter', 'tpl', 'hesaff', 'hesaff'+ext)
+            logdbg(tpl_hesaff)
+            exists_test = os.path.exists(tpl_hesaff)
             logdbg('Exists:'+str(exists_test))
             if exists_test:
                 break
@@ -208,7 +208,7 @@ class IOManager(AbstractManager):
                 root_dir = None
             else:
                 root_dir = tmp
-        return '"' + hesaff_fname + '"'
+        return '"' + tpl_hesaff + '"'
 
     def  get_inria_exec(iom):
         return platexec(join(iom.get_tpl_lib_dir(), 'inria_features'))

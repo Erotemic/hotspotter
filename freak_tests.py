@@ -3,6 +3,8 @@ print('Configuring matplotlib for Qt4')
 matplotlib.use('Qt4Agg')
 
 import hotspotter.tpl.cv2 as cv2
+
+
 from pylab import *
 from hotspotter.helpers import Timer, figure, myprint
 from hotspotter.other.ConcretePrintable import Pref
@@ -109,7 +111,6 @@ def get_all_figures():
     all_figures=[manager.canvas.figure for manager in
                  matplotlib._pylab_helpers.Gcf.get_all_fig_managers()]
     return all_figures
-
 def show_all_figures():
     for fig in iter(get_all_figures()):
         fig.show()
@@ -128,7 +129,6 @@ def move_all_figures():
         y = (i%num_rows)*w
         x = (int(i/num_rows))*h
         qtwin.setGeometry(x,y,w,h)
-
 def bring_to_front_all_figures():
     from PyQt4.QtCore import Qt
     all_figures = get_all_figures()
@@ -143,7 +143,6 @@ def bring_to_front_all_figures():
         qtwin.setWindowFlags(Qt.WindowFlags(0))
         qtwin.show()
         #what is difference between show and show normal?
-
 def close_all_figures():
     from PyQt4.QtCore import Qt
     all_figures = get_all_figures()
@@ -152,8 +151,8 @@ def close_all_figures():
         if not isinstance(qtwin, matplotlib.backends.backend_qt4.MainWindow):
             raise NotImplemented('need to add more window manager handlers')
         qtwin.close()
-
 # --------
+
 # ___DEFINE_PARAMETERS___
 
 # Define Image
@@ -168,6 +167,13 @@ else:
 
 # OpenCV Feature Detector Documentation
 # http://docs.opencv.org/modules/features2d/doc/feature_detection_and_description.html#freak-freak
+
+import load_data2
+db_dir = load_data2.NAUTS
+hs_tables = load_data2.load_csv_tables(db_dir)
+exec(hs_tables.execstr('hs_tables'))
+print(hs_tables)
+
 
 kpts_type_pref = Pref('SIFT', choices=['SIFT', 'SURF', 'ORB', 'BRISK', 'BRIEF'])
 kpts_type = kpts_type_pref.value()
@@ -283,4 +289,11 @@ except NameError as ex:
     if ex.message != '''name '__IPYTHON__' is not defined''':
         raise
     else:
-        show()
+        if '--cmd' in sys.argv:
+            from hotspotter.helpers import in_IPython, have_IPython
+            run_exec = False
+            if not in_IPython() and have_IPython():
+                import IPython
+                IPython.embed()
+        else:
+            show()

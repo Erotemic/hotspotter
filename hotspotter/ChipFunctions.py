@@ -261,7 +261,7 @@ def compute_chiprep_args(hs, cx):
     extractor     = chiprep_prefs.kpts_extractor
     gravity       = chiprep_prefs.use_gravity_vector
     if detector == 'heshesaff' and extractor == 'SIFT':
-        extractor       = hs.iom.get_hesaff_exec()
+        extractor   = hs.iom.get_hesaff_exec()
         params_dict = {}
     else:
         params_dict = chiprep_prefs[detector+'_params'].to_dict()

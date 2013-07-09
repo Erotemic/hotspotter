@@ -264,23 +264,32 @@ class HotSpotterAPI(AbstractPrintable):
             cm.rename_chip(cx, name2)
         return True
     # --- 
-    @func_log
-    def add_all_images_recursively(hs, image_list):
-        #TODO: This function was never implemented
-        num_add = len(image_list)
-        logmsg('Selected '+str(num_add)+' images to import')
-        prev_g = hs.gm.num_g
-        logdbg('Prev #g=%d' % prev_g)
-        for src_img in image_list:
-            hs.gm.add_img(gid=None, gname=None, aif=False, src_img=src_img)
-        post_g = hs.gm.num_g
-        num_new = (post_g - prev_g)
-        num_old = num_add - num_new
-        logdbg('Post #g=%d' % post_g)
-        logmsg('Imported '+str(num_new)+' new images')
-        if num_old != 0:
-            logmsg('%d Images had already been copied into the image directory' % num_old)
-    # ---
+  
+    # Will eventaully be cleaned into new more efficient functions
+    # Right now they just convert the new efficient format into the 
+    # old one
+    def add_name2(hs, name):
+        nid = hs.nm.add_name(-1, name)
+        nx  = hs.nm.nid2_nx[nid]
+        return nx
+    def add_img2(hs, src_img):
+        gid = hs.gm.add_img(src_img=src_img, aif=True)
+        gx  = hs.gm.gid2_gx[gid]
+        return gx
+    def add_chip2(hs, nx, gx, roi, theta):
+        cid = hs.cm.add_chip(-1, nx, gx, roi, theta)
+        cx  = hs.cm.cid2_cx[cid]
+        return cx
+    def add_img_list2(hs, img_list):
+        return [hs.add_img2(_img) 
+                for _img in iter(img_list)]
+    def add_name_list2(hs, name_list):
+        return [hs.add_name2(_name) 
+                for _name in iter(name_list)]
+    def add_chip_list2(hs, nx_list, gx_list, roi_list, theta_list):
+        return [hs.add_chip2(*carg)  
+                for carg in iter(zip(nx_list, gx_list, roi_list, theta_list))]
+        
     @func_log
     def add_image_list(hs, image_list):
         num_add = len(image_list)

@@ -18,6 +18,7 @@ import sys
 import time
 import types
 import shutil
+import warnings
 from fnmatch import fnmatch
 from sys import stdout as sout
 
@@ -28,7 +29,9 @@ def _println(msg):
 
 img_ext_set = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
 
-def myprint(input=None, prefix='', indent=''):
+def myprint(input=None, prefix='', indent='', lbl=''):
+    if len(lbl) > len(prefix): 
+        prefix = lbl
     if len(prefix) > 0:
         prefix += ' '
     _print(indent+prefix+str(type(input))+' ')
@@ -39,7 +42,10 @@ def myprint(input=None, prefix='', indent=''):
         _println(indent+']')
     elif type(input) == types.StringType:
         _println(input)
-    else: #if type(input) == types.DICT_TYPE
+    elif type(input) == types.DictType:
+        from hotspotter.other.AbstractPrintable import printableVal
+        _println(printableVal(input))
+    else: #
         _println(indent+'{')
         attribute_list = dir(input)
         for attr in attribute_list:
@@ -143,7 +149,6 @@ def copy_all(src_dir, dest_dir, glob_str_list):
                 copy(src, dst)
                 break
 
-
 def ensurepath(_path):
     if not checkpath(_path):
         print('... Making directory: ' + _path)
@@ -206,9 +211,23 @@ def load(fname):
     with open(sanatize_fname(fname), 'wb') as file:
         return cPickle.load(file)
 #---------------
+def __DEPRICATED__(func):
+    'deprication decorator'
+    warn_msg = 'Depricated call to: %s' % func.__name__
+    def __DEP_WRAPPER(*args, **kwargs):
+        print(warn_msg)
+        warnings.warn(warn_msg, category=DeprecationWarning)
+        return func(*args, **kwargs)
+    __DEP_WRAPPER.__name__ = func.__name__
+    __DEP_WRAPPER.__doc__ = func.__doc__
+    __DEP_WRAPPER.__dict__.update(func.__dict__)
+    return __DEP_WRAPPER
+#---------------
+@__DEPRICATED__
 def filecheck(fpath):
     return os.path.exists(fpath)
 #----------------
+@__DEPRICATED__
 def dircheck(dpath,makedir=True):
     if not os.path.exists(dpath):
         if not makedir:
@@ -254,6 +273,13 @@ def alloc_lists(num_alloc):
     'allocates space for a numpy array of lists'
     return [[] for _ in xrange(num_alloc)]
 
+def mystats(_list):
+    nparr = np.array(_list)
+    return {'min'   : nparr.min(),
+            'mean'  : nparr.mean(),
+            'stddev': np.sqrt(nparr.var()),
+            'max'   : nparr.max()}
+
 def unit_test(test_func):
     test_name = test_func.func_name
     def __unit_test_wraper():
@@ -278,7 +304,7 @@ class Timer(object):
         self.tstart = -1
 
     def __enter__(self):
-        sys.stdout.write('Running: '+self.msg+'\n')
+        sys.stdout.write('Timing: '+self.msg+'\n')
         self.tstart = time.time()
         sys.stdout.flush()
 

@@ -2,6 +2,7 @@
 from __future__ import print_function, division
 import multiprocessing as mp
 from hotspotter.helpers import Timer
+import sys
 
 def _calculate(func, args):
     result = func(*args)
@@ -22,39 +23,64 @@ def _worker(input, output):
 def cpu_count():
     return mp.cpu_count()
 
-def parallelize_tasks(task_list, num_procs):
+def parallelize_tasks(task_list, num_procs, verbose=False):
     '''
     Used for embarissingly parallel tasks, which write output to disk
     '''
-    with Timer() as t:
+    timer_msg = 'Distrubiting '+str(len(task_list))+' tasks to ' + str(num_procs) + ' parallel processes'
+    
+    with Timer(msg=timer_msg) as t:
         if num_procs > 1:
-            print('  * Computing in parallel process')
-            _parallelize_tasks(task_list, num_procs)
+            if verbose:
+                print('  * Computing in parallel process')
+            _parallelize_tasks(task_list, num_procs, verbose)
         else:
-            print('Computing in serial process')
+            if verbose: 
+                print('Computing in serial process')
             total = len(task_list)
+            sys.stdout.write('    ')
             for count, (fn, args) in enumerate(task_list):
-                print('  * computing %d / %d ' % (count, total))
+                if verbose:
+                    print('  * computing %d / %d ' % (count, total))
+                else: 
+                    sys.stdout.write('.')
+                    if (count+1) % 80 == 0:
+                        sys.stdout.write('\n    ')
+                    sys.stdout.flush()
                 fn(*args)
+            sys.stdout.write('\n')
 
-def _parallelize_tasks(task_list, num_procs):
+def _parallelize_tasks(task_list, num_procs, verbose):
     '''
     Input: task list: [ (fn, args), ... ] 
     '''
     task_queue = mp.Queue()
     done_queue = mp.Queue()
-    print('  * Submiting tasks:')
+    if verbose: 
+        print('  * Submiting '+str(len(task_list))+' tasks:')
     # queue tasks
-    for task in task_list:
+    for task in iter(task_list):
         task_queue.put(task)
     # start processes
-    print('  * Starting ' + str(num_procs) + ' processes')
     for i in xrange(num_procs):
         mp.Process(target=_worker, args=(task_queue, done_queue)).start()
     # Get and print results
-    print('  * Unordered results:')
-    for i in xrange(len(task_list)):
-        print(done_queue.get())
+    if verbose:
+        print('  * Unordered results:')
+        for i in xrange(len(task_list)):
+            print(done_queue.get())
+    else:
+        sys.stdout.write('    ')
+        newln_len = num_procs * int(80/num_procs)
+        for i in xrange(len(task_list)):
+            done_queue.get()
+            sys.stdout.write('.')
+            if (i+1) % num_procs == 0:
+                sys.stdout.write(' ')
+            if (i+1) % newln_len == 0:
+                sys.stdout.write('\n    ')
+            sys.stdout.flush()
+        print('\n  ... Finished')
     # Tell child processes to stop
     for i in xrange(num_procs):
         task_queue.put('STOP')

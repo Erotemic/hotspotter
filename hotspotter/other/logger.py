@@ -279,5 +279,8 @@ def func_log(fn):
             hsl.log('\n\n', noprint=True, noformat=True)
         sys.stdout.flush(); sys.stderr.flush()
         return ret
+    func_log_wraper.__name__ = fn.__name__
+    #func_log_wraper.__doc__ = fn.__doc__
+    #func_log_wraper.__dict__.update(fn.__dict__)
     return func_log_wraper
 

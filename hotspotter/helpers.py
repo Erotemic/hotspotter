@@ -52,6 +52,20 @@ def myprint(input=None, prefix='', indent=''):
         _println(indent+'}')
 
 import os
+
+def longest_existing_path(_path):
+    while True: 
+        _path_new = os.path.dirname(_path)
+        if os.path.exists(_path_new):
+            _path = _path_new
+            break
+        if _path_new == _path: 
+            print('!!! This is a very illformated path indeed.')
+            _path = ''
+            break
+        _path = _path_new
+    return _path
+
 def checkpath(_path):
     '''Checks to see if the argument _path exists.'''
     # Do the work
@@ -65,17 +79,12 @@ def checkpath(_path):
         print(path_type + '... Exists')
     else:
         print('!!! Does not exist')
-        while True: 
-            _path_new = os.path.dirname(_path)
-            if os.path.exists(_path_new):
-                print('... The longest existing path is: ' + _path_new)
-                break
-            if _path_new == _path: 
-                print('!!! This is a very illformated path indeed.')
-                break
-            _path = _path_new
+        _longest_path = longest_existing_path(_path)
+        print('... The longest existing path is: ' + _longest_path)
         return False
     return True
+def check_path(_path):
+    return checkpath(_path)
 
 def copy_task(cp_list, test=False, nooverwrite=False, print_tasks=True):
     '''
@@ -129,19 +138,18 @@ def copy_all(src_dir, dest_dir, glob_str_list):
     for _fname in os.listdir(src_dir):
         for glob_str in glob_str_list:
             if fnmatch(_fname, glob_str):
-                src = os.path.normpath(join(src_dir, _fname))
-                dst = os.path.normpath(join(dest_dir, _fname))
+                src = os.path.normpath(os.path.join(src_dir, _fname))
+                dst = os.path.normpath(os.path.join(dest_dir, _fname))
                 copy(src, dst)
                 break
 
-def check_path(_path):
-    return checkpath(_path)
 
 def ensurepath(_path):
     if not checkpath(_path):
         print('... Making directory: ' + _path)
-        os.mkdir(_path)
+        os.makedirs(_path)
     return True
+
 def ensure_path(_path):
     return ensurepath(_path)
 
@@ -245,6 +253,19 @@ def keyboard(banner=None):
 def alloc_lists(num_alloc):
     'allocates space for a numpy array of lists'
     return [[] for _ in xrange(num_alloc)]
+
+def unit_test(test_func):
+    test_name = test_func.func_name
+    def __unit_test_wraper():
+        print('Testing: '+test_name)
+        try:
+            ret = test_func()
+        except Exception as ex:
+            print('Tested'+test_name+' ...FAILURE')
+            return ex
+        print('Tested'+test_name+' ...SUCCESS')
+        return ret
+    return __unit_test_wraper
 
 import sys
 class Timer(object):

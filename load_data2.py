@@ -1,8 +1,6 @@
-import os
-import sys
-import string
+import os, sys, string
 import numpy as np
-from hotspotter.helpers import checkpath
+from hotspotter.helpers import checkpath, unit_test
 from hotspotter.other.ConcretePrintable import DynStruct
 
 def printDBG(msg, lbl=''):
@@ -44,142 +42,167 @@ def load_csv_tables(db_dir):
         raise Exception('Data tables are missing')
     print('-------------------------')
     print('Loading database tables: ')
-    # --- READ NAMES --- #
-    print('... Loading name table: '+name_table)
-    nx2_name = ['____', '____']
-    nid2_nx  = { 0:0, 1:1}
-    name_lines = open(name_table,'r')
-    for csv_line in iter(name_lines):
-        if csv_line.find('#') == 0:
-            continue
-        csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
-        nid = int(csv_fields[0])
-        name = csv_fields[1]
-        nid2_nx[nid] = len(nx2_name)
-        nx2_name.append(name)
-    print('      * Loaded '+str(len(nx2_name)-2)+' names (excluding unknown names)')
-    print('      * Done loading name table')
-    # --- READ IMAGES --- 
-    gx2_gname = []
-    print('... Loading images')
-    # Load Image Table 
-    # <LEGACY CODE>
-    print('    ... Loading image table: '+image_table)
-    gid2_gx = {}
-    gid_lines = open(image_table,'r').readlines()
-    for csv_line in iter(gid_lines):
-        if csv_line.find('#') == 0:
-            continue
-        csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
-        gid = int(csv_fields[0])
-        if len(csv_fields) == 3: 
-            gname = csv_fields[1]
-        if len(csv_fields) == 4: 
-            gname = csv_fields[1:3]
-        gid2_gx[gid] = len(gx2_gname)
-        gx2_gname.append(gname)
-    nTableImgs = len(gx2_gname)
-    fromTableNames = set(gx2_gname)
-    print('          * table specified '+str(nTableImgs)+' images')
-    # </LEGACY CODE>
-    # Load Image Directory
-    print('    ... Loading image directory: '+image_dir)
-    nDirImgs = 0
-    nDirImgsAlready = 0
-    for fname in os.listdir(image_dir):
-        if len(fname) > 4 and string.lower(fname[-4:]) in ['.jpg', '.png', '.tiff']:
-            if fname in fromTableNames: 
-                nDirImgsAlready += 1
+    cid_lines  = [] 
+    line_num   = 0
+    csv_line   = ''
+    csv_fields = []
+    try:
+        # ------------------
+        # --- READ NAMES --- 
+        # ------------------
+        print('... Loading name table: '+name_table)
+        nx2_name = ['____', '____']
+        nid2_nx  = { 0:0, 1:1}
+        name_lines = open(name_table,'r')
+        for line_num, csv_line in enumerate(name_lines):
+            csv_line = csv_line.strip('\n\r\t ')
+            if len(csv_line) == 0 or csv_line.find('#') == 0:
                 continue
-            gx2_gname.append(fname)
-            nDirImgs += 1
-    print('          * dir specified '+str(nDirImgs)+' images')
-    print('          * '+str(nDirImgsAlready)+' were already specified in the table')
-    print('  * Loaded '+str(len(gx2_gname))+' images')
-    print('  * Done loading images')
-    # --- READ CHIPS --- 
-    print('... Loading chip table: '+chip_table)
-    # Load Chip Table Header
-    cid_lines = open(chip_table,'r').readlines()
-    # Header Markers
-    header_numdata = '# NumData '
-    header_csvformat = '# ChipID,'
-    # Default Header Variables
-    chip_csv_format = ['ChipID', 'ImgID',  'NameID',   'roi[tl_x  tl_y  w  h]',  'theta']
-    num_data   = -1
-    # Parse Chip Table Header
-    for csv_line in iter(cid_lines):
-        csv_line = csv_line.strip('\n')
-        if csv_line.find('#') != 0:
-           break # Break after header
-        if csv_line.find(header_csvformat) == 0:
-            chip_csv_format = [_.strip() for _ in csv_line.strip('#').split(',')]
-        if csv_line.find(header_numdata) == 0:
-            num_data = int(csv_line.replace(header_numdata,''))
-    print('  * num_chips: '+str(num_data))
-    print('  * chip_csv_format: '+str(chip_csv_format))
-    def tryindex(list, val):
-        try: 
-            return list.index(val)
-        except ValueError as ex:
-            return -1
-    cid_x   = tryindex(chip_csv_format, 'ChipID')
-    gid_x   = tryindex(chip_csv_format, 'ImgID')
-    nid_x   = tryindex(chip_csv_format, 'NameID')
-    roi_x   = tryindex(chip_csv_format, 'roi[tl_x  tl_y  w  h]')
-    theta_x = tryindex(chip_csv_format, 'theta')
-    # new fields
-    gname_x = tryindex(chip_csv_format, 'Image')
-    name_x  = tryindex(chip_csv_format, 'Name')
-    required_x = [cid_x, gid_x, gname_x, nid_x, name_x, roi_x, theta_x]
-    prop_x_list = np.setdiff1d(range(len(chip_csv_format)), required_x).tolist()
-    # Hotspotter Chip Tables
-    cx2_cid   = []
-    cx2_nx    = []
-    cx2_gx    = []
-    cx2_roi   = []
-    cx2_theta = []
-    # x is a csv field index in this context
-    px2_propname = [chip_csv_format[x] for x in prop_x_list]
-    px2_cx2_prop = [[] for px in prop_x_list]
-    print('  * num_user_properties: '+str(len(prop_x_list)))
-    # Parse Chip Table
-    for csv_line in iter(cid_lines):
-        if csv_line.find('#') == 0:
-            continue
-        csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
-        # Load Chip ID
-        cid = int(csv_fields[cid_x])
-        # Load Chip Image Info
-        if gid_x != -1:
-            gid = int(csv_fields[gid_x])
-            gx = gid2_gx[gid]
-        elif gname_x != -1:
-            gname = csv_fields[gname_x]
-            gx = gx2_name.index(gname)
-        # Load Chip Name Info
-        if nid_x != -1:
-            nid = int(csv_fields[nid_x])
-            nx = nid2_nx[nid]
-        elif name_x != -1:
-            name = csv_fields[name_x]
-            nx = nx2_name.index(name)
-        # Load Chip ROI Info
-        roi_str = csv_fields[roi_x].strip('[').strip(']')
-        roi = [int(_) for _ in roi_str.split()]
-        # Load Chip theta Info
-        if theta_x != -1:
-            theta = float(csv_fields[theta_x])
-        else:
-            theta = 0
-        # Append info to cid lists
-        cx2_cid.append(cid)
-        cx2_gx.append(gx)
-        cx2_nx.append(nx)
-        cx2_roi.append(roi)
-        cx2_theta.append(theta)
-        for px, x in enumerate(prop_x_list): 
-            px2_cx2_prop[px].append(csv_fields[x])
+            csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
+            nid = int(csv_fields[0])
+            name = csv_fields[1]
+            nid2_nx[nid] = len(nx2_name)
+            nx2_name.append(name)
+        print('      * Loaded '+str(len(nx2_name)-2)+' names (excluding unknown names)')
+        print('      * Done loading name table')
+
+        # -------------------
+        # --- READ IMAGES --- 
+        # -------------------
+        gx2_gname = []
+        print('... Loading images')
+        # Load Image Table 
+        # <LEGACY CODE>
+        print('    ... Loading image table: '+image_table)
+        gid2_gx = {}
+        gid_lines = open(image_table,'r').readlines()
+        for line_num, csv_line in enumerate(gid_lines):
+            csv_line = csv_line.strip('\n\r\t ')
+            if len(csv_line) == 0 or csv_line.find('#') == 0:
+                continue
+            csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
+            gid = int(csv_fields[0])
+            if len(csv_fields) == 3: 
+                gname = csv_fields[1]
+            if len(csv_fields) == 4: 
+                gname = csv_fields[1:3]
+            gid2_gx[gid] = len(gx2_gname)
+            gx2_gname.append(gname)
+        nTableImgs = len(gx2_gname)
+        fromTableNames = set(gx2_gname)
+        print('          * table specified '+str(nTableImgs)+' images')
+        # </LEGACY CODE>
+        # Load Image Directory
+        print('    ... Loading image directory: '+image_dir)
+        nDirImgs = 0
+        nDirImgsAlready = 0
+        for fname in os.listdir(image_dir):
+            if len(fname) > 4 and string.lower(fname[-4:]) in ['.jpg', '.png', '.tiff']:
+                if fname in fromTableNames: 
+                    nDirImgsAlready += 1
+                    continue
+                gx2_gname.append(fname)
+                nDirImgs += 1
+        print('          * dir specified '+str(nDirImgs)+' images')
+        print('          * '+str(nDirImgsAlready)+' were already specified in the table')
+        print('  * Loaded '+str(len(gx2_gname))+' images')
+        print('  * Done loading images')
+
+        # ------------------
+        # --- READ CHIPS --- 
+        # ------------------
+        print('... Loading chip table: '+chip_table)
+        # Load Chip Table Header
+        cid_lines = open(chip_table,'r').readlines()
+        # Header Markers
+        header_numdata   = '# NumData '
+        header_csvformat = '# ChipID,'
+        # Default Header Variables
+        chip_csv_format = ['ChipID', 'ImgID',  'NameID',   'roi[tl_x  tl_y  w  h]',  'theta']
+        num_data   = -1
+        # Parse Chip Table Header
+        for line_num, csv_line in enumerate(cid_lines):
+            csv_line = csv_line.strip('\n\r\t ')
+            if len(csv_line) == 0:
+                continue
+            csv_line = csv_line.strip('\n')
+            if csv_line.find('#') != 0:
+                break # Break after header
+            if csv_line.find(header_csvformat) == 0:
+                chip_csv_format = [_.strip() for _ in csv_line.strip('#').split(',')]
+            if csv_line.find(header_numdata) == 0:
+                num_data = int(csv_line.replace(header_numdata,''))
+        print('  * num_chips: '+str(num_data))
+        print('  * chip_csv_format: '+str(chip_csv_format))
+        def tryindex(list, val):
+            try: 
+                return list.index(val)
+            except ValueError as ex:
+                return -1
+        cid_x   = tryindex(chip_csv_format, 'ChipID')
+        gid_x   = tryindex(chip_csv_format, 'ImgID')
+        nid_x   = tryindex(chip_csv_format, 'NameID')
+        roi_x   = tryindex(chip_csv_format, 'roi[tl_x  tl_y  w  h]')
+        theta_x = tryindex(chip_csv_format, 'theta')
+        # new fields
+        gname_x = tryindex(chip_csv_format, 'Image')
+        name_x  = tryindex(chip_csv_format, 'Name')
+        required_x = [cid_x, gid_x, gname_x, nid_x, name_x, roi_x, theta_x]
+        prop_x_list = np.setdiff1d(range(len(chip_csv_format)), required_x).tolist()
+        # Hotspotter Chip Tables
+        cx2_cid   = []
+        cx2_nx    = []
+        cx2_gx    = []
+        cx2_roi   = []
+        cx2_theta = []
+        # x is a csv field index in this context
+        px2_propname = [chip_csv_format[x] for x in prop_x_list]
+        px2_cx2_prop = [[] for px in prop_x_list]
+        print('  * num_user_properties: '+str(len(prop_x_list)))
+        # Parse Chip Table
+        for line_num, csv_line in enumerate(cid_lines):
+            csv_line = csv_line.strip('\n\r\t ')
+            if len(csv_line) == 0 or csv_line.find('#') == 0:
+                continue
+            csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
+            # Load Chip ID
+            cid = int(csv_fields[cid_x])
+            # Load Chip Image Info
+            if gid_x != -1:
+                gid = int(csv_fields[gid_x])
+                gx = gid2_gx[gid]
+            elif gname_x != -1:
+                gname = csv_fields[gname_x]
+                gx = gx2_name.index(gname)
+            # Load Chip Name Info
+            if nid_x != -1:
+                nid = int(csv_fields[nid_x])
+                nx = nid2_nx[nid]
+            elif name_x != -1:
+                name = csv_fields[name_x]
+                nx = nx2_name.index(name)
+            # Load Chip ROI Info
+            roi_str = csv_fields[roi_x].strip('[').strip(']')
+            roi = [int(_) for _ in roi_str.split()]
+            # Load Chip theta Info
+            if theta_x != -1:
+                theta = float(csv_fields[theta_x])
+            else:
+                theta = 0
+            # Append info to cid lists
+            cx2_cid.append(cid)
+            cx2_gx.append(gx)
+            cx2_nx.append(nx)
+            cx2_roi.append(roi)
+            cx2_theta.append(theta)
+            for px, x in enumerate(prop_x_list): 
+                px2_cx2_prop[px].append(csv_fields[x])
+    except Exception as ex:
+        print('Failed parsing: '+str(''.join(cid_lines)))
+        print('Failed on line number:  '+str(line_num))
+        print('Failed on line:         '+repr(csv_line))
+        print('Failed on fields:       '+repr(csv_fields))
+        raise
 
     print('  * Loaded: '+str(len(cx2_cid))+' chips')
     print('  * Finished loading chip table')
@@ -261,18 +284,6 @@ GZ_ALL  = WORK_DIR+'/GZ_ALL'
 WS_HARD = WORK_DIR+'/WS_hard'
 MOTHERS = WORK_DIR+'/HSDB_zebra_with_mothers'
 
-def unit_test(test_func):
-    test_name = test_func.func_name
-    def __unit_test_wraper():
-        print('Testing: '+test_name)
-        try:
-            ret = test_func()
-        except Exception as ex:
-            print('Tested'+test_name+' ...FAILURE')
-            return ex
-        print('Tested'+test_name+' ...SUCCESS')
-        return ret
-    return __unit_test_wraper
 
 @unit_test
 def test_load_csv():

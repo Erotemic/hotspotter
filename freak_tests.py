@@ -169,11 +169,13 @@ else:
 # http://docs.opencv.org/modules/features2d/doc/feature_detection_and_description.html#freak-freak
 
 import load_data2
-db_dir = load_data2.NAUTS
+db_dir = load_data2.MOTHERS
 hs_tables = load_data2.load_csv_tables(db_dir)
 exec(hs_tables.execstr('hs_tables'))
 print(hs_tables)
 
+chip_dir = db_dir + '.hs_internals/computed/chips/'
+feat_dir = db_dir + '.hs_internals/computed/feats/'
 
 kpts_type_pref = Pref('SIFT', choices=['SIFT', 'SURF', 'ORB', 'BRISK', 'BRIEF'])
 kpts_type = kpts_type_pref.value()

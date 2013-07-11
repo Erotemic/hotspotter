@@ -5,10 +5,13 @@ from hotspotter.helpers import Timer
 
 def _calculate(func, args):
     result = func(*args)
+    arg_names = func.func_code.co_varnames[:func.func_code.co_argcount]
+    arg_list  = [n+'='+str(v) for n,v in iter(zip(arg_names, args))]
+    arg_str = '\n    *** '+str('\n    *** '.join(arg_list))
     return '  * %s finished:\n    ** %s%s \n    ** %s' % \
             (mp.current_process().name,
              func.__name__,
-             str(args).replace(',', ',\n    *** '),
+             arg_str,
              result)
 
 def _worker(input, output):

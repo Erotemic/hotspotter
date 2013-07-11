@@ -54,5 +54,4 @@ hs.save_database()
 
 if convert_fmt == 'zebra_with_mothers':
     img_list = create_bare_db_zebra_mother()
-    i
 

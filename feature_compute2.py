@@ -1,8 +1,10 @@
 from __future__ import division
+from hotspotter.Parallelize import parallel_compute
+from hotspotter.helpers import normalize
+from hotspotter.other.ConcretePrintable import DynStruct
+from numpy import array, cos, float32, hstack, pi, round, sqrt, uint8, zeros
 import hotspotter.tpl.cv2 as cv2
 import hotspotter.tpl.hesaff
-from hotspotter.helpers import normalize
-from numpy import array, cos, float32, hstack, pi, round, sqrt, uint8, zeros
 import numpy as np
 
 #def old_cvkpts2_kpts(cvkpts)
@@ -91,9 +93,81 @@ def compute_freak(rchip_path, feats_path):
     return __comp_cv_feats(rchip_path, feats_path,
                            common_detector, freak_extractor)
 
-
 def load_features(feats_path):
     npz = np.load(feats_path)
     kpts = npz['arr_0']
     desc = npz['arr_1']
     return (kpts, desc)
+
+# =======================================
+# Main Script 
+# =======================================
+
+class HotspotterChipFeatures(DynStruct):
+    def __init__(self):
+        super(HotspotterChipFeatures, self).__init__()
+        self.cx2_hesaff_feats = []
+        self.cx2_sift_feats   = []
+        self.cx2_freak_feats  = []
+
+def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
+    print('\n=============================')
+    print('Computing and loading features')
+    print('=============================')
+
+    # --- BUILD TASK INFORMATION --- #
+    # Paths to features
+    feat_dir       = hs_dirs.feat_dir
+    cx2_rchip_path = hs_cpaths.cx2_rchip_path
+    cx2_cid        = hs_tables.cx2_cid
+    
+    cx2_hesaff_path = [ feat_dir+'/CID_%d_hesaff.npz' % cid for cid in cx2_cid]
+    cx2_sift_path   = [ feat_dir+'/CID_%d_sift.npz'   % cid for cid in cx2_cid]
+    cx2_freak_path  = [ feat_dir+'/CID_%d_freak.npz'  % cid for cid in cx2_cid]
+    
+    # --- COMPUTE FEATURES --- # 
+    print('Computing features')
+    parallel_compute(compute_hesaff, [cx2_rchip_path, cx2_hesaff_path])
+    parallel_compute(compute_sift,   [cx2_rchip_path, cx2_sift_path])
+    #parallel_compute(compute_freak,  [cx2_rchip_path, cx2_freak_path]) 
+    # --- LOAD FEATURES --- # 
+    print('Loading features')
+    cx2_hesaff_feats = parallel_compute(load_features, [cx2_hesaff_path], 1)
+    cx2_sift_feats   = parallel_compute(load_features, [cx2_sift_path], 1)
+    #cx2_freak_feats   = parallel_compute(load_features, [cx2_freak_path])
+
+    hs_feats = HotspotterChipFeatures()
+    hs_feats.cx2_hesaff_feats = cx2_hesaff_feats
+    hs_feats.cx2_sift_feats   = cx2_sift_feats
+    print('=============================')
+    print('Done computing and loading features')
+    print('=============================\n\n')
+    return hs_feats
+
+if __name__ == '__main__':
+    import load_data2
+    import chip_compute2
+    from multiprocessing import freeze_support
+    freeze_support()
+    # --- CHOOSE DATABASE --- #
+    db_dir = load_data2.MOTHERS
+    # --- LOAD DATA --- #
+    hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
+    # --- LOAD CHIPS --- #
+    hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
+    # --- LOAD FEATURES --- #
+    hs_feats  = load_chip_features(hs_dirs, hs_tables, hs_cpaths)
+
+# GRAVEYARD
+    #cx2_sift_kpts, cx2_sift_desc = \
+    #     ([ k for k,d in cx2_sift_feats ], [ d for k,d in cx2_sift_feats ])
+
+'''
+from feature_compute2 import *
+detector = common_detector
+extractor = sift_extractor
+
+rchip = cv2.imread(rchip_path)
+_cvkpts = detector.detect(rchip)  
+print_cvkpt(_cvkpts)
+'''    

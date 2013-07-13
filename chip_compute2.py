@@ -3,12 +3,11 @@ from PIL import Image
 from hotspotter.Parallelize import parallel_compute
 from hotspotter.algo.imalgos import histeq
 from hotspotter.helpers import ensure_path, mystats, myprint
+from hotspotter.other.ConcretePrintable import DynStruct
 import load_data2
 import numpy as np
 import os, sys
-import feature_compute2 as fc2
 
-__DBG_INFO__ = False
 
 # =======================================
 # Parallelizable Work Functions          
@@ -49,64 +48,72 @@ def rotate_chip(chip_path, rchip_path, theta):
 # Main Script 
 # =======================================
 
+class HotspotterChipPaths(DynStruct):
+    def __init__(self):
+        super(HotspotterChipPaths, self).__init__()
+        self.cx2_chip_path  = []
+        self.cx2_rchip_path = []
+
+def load_chip_paths(hs_dirs, hs_tables):
+    img_dir      = hs_dirs.img_dir
+    rchip_dir    = hs_dirs.rchip_dir
+    chip_dir     = hs_dirs.chip_dir
+
+    cx2_gx       = hs_tables.cx2_gx
+    cx2_cid      = hs_tables.cx2_cid
+    cx2_theta    = hs_tables.cx2_theta
+    cx2_roi      = hs_tables.cx2_roi
+    gx2_gname    = hs_tables.gx2_gname
+
+    print('\n=============================')
+    print('Precomputing chips and loading chip paths')
+    print('=============================')
+    
+    # --- BUILD TASK INFORMATION --- #
+    ''' TODO: These should be functions
+    Maybe you can change them to objects so they work like lists but dont 
+    use up so much memory. Make them more like indexable generators'''
+    # Full image path
+    cx2_img_path    = [ img_dir+'/'+gx2_gname[gx]   for gx  in cx2_gx ]
+    # Paths to chip, rotated chip
+    cx2_chip_path   = [ chip_dir+'/CID_%d.png'        % cid for cid in cx2_cid]
+    cx2_rchip_path  = [rchip_dir+'/CID_%d.rot.png'    % cid for cid in cx2_cid]
+    # Normalized chip size
+    __At__ = 500.0 ** 2 # target area
+    def _resz(w, h):
+        ht = np.sqrt(__At__ * h / w)
+        wt = w * ht / h
+        return (int(round(wt)), int(round(ht)))
+    cx2_chip_sz = [_resz(float(w), float(h)) for (x,y,w,h) in cx2_roi]
+    cx2_imgchip_sz = [(float(w), float(h)) for (x,y,w,h) in cx2_roi]
+    # --- COMPUTE CHIPS --- # 
+    parallel_compute(compute_chip, arg_list=[cx2_img_path, cx2_chip_path,
+                                             cx2_roi, cx2_chip_sz])
+    # --- ROTATE CHIPS --- # 
+    parallel_compute(rotate_chip, arg_list=[cx2_chip_path,
+                                            cx2_rchip_path, cx2_theta])
+    # --- RETURN CHIP PATHS --- #
+    hs_cpaths = HotspotterChipPaths()
+    hs_cpaths.cx2_chip_path  = cx2_chip_path
+    hs_cpaths.cx2_rchip_path = cx2_rchip_path
+    print('=============================')
+    print('Done Precomputing chips and loading chip paths')
+    print('=============================\n\n')
+
+    return hs_cpaths
+
 if __name__ == '__main__':
-    # <Support for windows>
     from multiprocessing import freeze_support
     freeze_support()
-    # </Support for windows>
-
     # --- LOAD DATA --- #
     db_dir = load_data2.MOTHERS
     hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
-    # These are bad, but convinient. 
-    #print(hs_tables.execstr('hs_tables'))
-    #exec(hs_tables.execstr('hs_tables'))
-    #print(hs_dirs.execstr('hs_dirs'))
-    #exec(hs_dirs.execstr('hs_dirs'))
-    #print(hs_tables)
-    #print(hs_dirs)
-    name_table   = hs_dirs.name_table
-    feat_dir     = hs_dirs.feat_dir
-    chip_table   = hs_dirs.chip_table
-    img_dir      = hs_dirs.img_dir
-    internal_sym = hs_dirs.internal_sym
-    rchip_dir    = hs_dirs.rchip_dir
-    chip_dir     = hs_dirs.chip_dir
-    image_table  = hs_dirs.image_table
-    internal_dir = hs_dirs.internal_dir
-    db_dir       = hs_dirs.db_dir
+    # --- LOAD CHIPS --- #
+    hs_cpaths = load_chip_paths(hs_dirs, hs_tables)
 
-    px2_propname = hs_tables.px2_propname
-    px2_cx2_prop = hs_tables.px2_cx2_prop
-    cx2_gx = hs_tables.cx2_gx
-    cx2_cid = hs_tables.cx2_cid
-    nx2_name = hs_tables.nx2_name
-    cx2_nx = hs_tables.cx2_nx
-    cx2_theta = hs_tables.cx2_theta
-    cx2_roi = hs_tables.cx2_roi
-    gx2_gname = hs_tables.gx2_gname
-    
-    # --- CREATE COMPUTED DIRS --- #
-
-    # --- BUILD TASK INFORMATION --- #
-    # Full image path
-    cx2_img_path  = [ img_dir+'/'+gx2_gname[gx]   for gx  in cx2_gx ]
-  
-    # Paths to chip, rotated chip, and chip features 
-    cx2_chip_path   = [ chip_dir+'/CID_%d.png'     % cid for cid in cx2_cid]
-    cx2_rchip_path  = [rchip_dir+'/CID_%d.rot.png' % cid for cid in cx2_cid]
-    cx2_hesaff_path = [ feat_dir+'/CID_%d_hesaff.npz' % cid for cid in cx2_cid]
-    cx2_sift_path   = [ feat_dir+'/CID_%d_sift.npz'   % cid for cid in cx2_cid]
-    cx2_freak_path  = [ feat_dir+'/CID_%d_freak.npz'  % cid for cid in cx2_cid]
-
-    # Normalized chip size
-    At = 500.0 ** 2 # target area
-    def _target_resize(w, h):
-        ht = np.sqrt(At * h / w)
-        wt = w * ht / h
-        return (int(round(wt)), int(round(ht)))
-    cx2_chip_sz = [_target_resize(float(w), float(h)) for (x,y,w,h) in cx2_roi]
-    cx2_imgchip_sz = [(float(w), float(h)) for (x,y,w,h) in cx2_roi]
+# GRAVEYARD
+'''
+    __DBG_INFO__ = False
 
     if __DBG_INFO__:
         cx2_chip_sf = [(w/wt, h/ht)
@@ -115,29 +122,4 @@ if __name__ == '__main__':
         cx2_sf_err = [np.abs(sf1 - sf2) for (sf1, sf2) in cx2_chip_sf]
         myprint(mystats(cx2_sf_ave),lbl='ave scale factor')
         myprint(mystats(cx2_sf_err),lbl='ave scale factor error')
-
-    # --- COMPUTE CHIPS --- # 
-    parallel_compute(compute_chip,
-                     arg_list=[cx2_img_path,
-                               cx2_chip_path,
-                               cx2_roi,
-                               cx2_chip_sz])
-    # --- ROTATE CHIPS --- # 
-    parallel_compute(rotate_chip,
-                     arg_list=[cx2_chip_path,
-                               cx2_rchip_path,
-                               cx2_theta])
-
-    # --- COMPUTE FEATURES --- # 
-    # Hessian Affine Features
-    print('Computing features')
-    #parallel_compute(fc2.compute_hesaff, [cx2_rchip_path, cx2_hesaff_path])
-    parallel_compute(fc2.compute_sift,   [cx2_rchip_path, cx2_sift_path])
-    #parallel_compute(fc2.compute_freak,  [cx2_rchip_path, cx2_freak_path]) 
-    # --- LOAD FEATURES --- # 
-    print('Loading features')
-    #cx2_hesaff_feats = parallel_compute(fc2.load_features, [cx2_hesaff_path])
-    cx2_sift_feats  = parallel_compute(fc2.load_features, [cx2_sift_path], 1)
-    #cx2_sift_kpts, cx2_sift_desc = \
-    #     ([ k for k,d in cx2_sift_feats ], [ d for k,d in cx2_sift_feats ])
-    #cx2_freak_feats   = parallel_compute(fc2.load_features, [cx2_freak_path])
+'''

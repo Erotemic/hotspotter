@@ -32,8 +32,12 @@ def parallel_compute(func, arg_list, num_procs=8, lazy=True):
     if len(task_list) == 0:
         print('... No '+func.func_name+' tasks left to compute!')
         return None
-    msg = 'Distributing %d %s tasks to %d parallel processes' % \
-            (len(task_list), func.func_name, num_procs)
+    if num_procs > 1:
+        msg = 'Distributing %d %s tasks to %d parallel processes' % \
+                (len(task_list), func.func_name, num_procs)
+    else: 
+        msg = 'Executing %d %s tasks in serial' % \
+                (len(task_list), func.func_name)
     return parallelize_tasks(task_list, num_procs, msg=msg)
 
 def make_task_list_lazy(func, *args):

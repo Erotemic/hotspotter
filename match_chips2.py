@@ -1,32 +1,32 @@
-''' BruteForce
-BruteForce-L1
-BruteForce-Hamming
-BruteForceHamming(2)
-FlannBased ''' 
-#raw_matches = matcher.match(descriptors2  descriptors4)
-#img_matches = cv2.DRAW_MATCHES_FLAGS_DEFAULT(im2  keypoints2  im4  keypoints4  raw_matches)
+from PCV.geometry import homography, warp
+from drawing_functions2 import draw_matches, draw_kpts
+from hotspotter.tpl.pyflann import FLANN
+import hotspotter.tpl.cv2  as cv2
+
+if __name__ == '__main__':
+    import chip_compute2
+    import feature_compute2
+    import load_data2
+    from multiprocessing import freeze_support
+    freeze_support()
+    # --- CHOOSE DATABASE --- #
+    db_dir = load_data2.MOTHERS
+    # --- LOAD DATA --- #
+    hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
+    # --- LOAD CHIPS --- #
+    hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
+    # --- LOAD FEATURES --- #
+    hs_feats  = feature_compute2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
 
 rchip_path = cx2_rchip_path[0]
 sift_path = cx2_sift_path[0]
 sift = fc2.load_features(sift_path)
 
 kpts, desc = sift
-from feature_compute2 import *
-detector = common_detector
-extractor = sift_extractor
-
-rchip = cv2.imread(rchip_path)
-_cvkpts = detector.detect(rchip)  
-print_cvkpt(_cvkpts)
 
 cx1 = 1
 cx2 = 2
 
-
-
-
-from hotspotter.tpl.pyflann import FLANN
-import hotspotter.tpl.cv2  as cv2
 def flann_nearest(desc1, desc2, K=1):
     flann = FLANN()
     flann_params = {'algorithm':'kdtree',
@@ -41,9 +41,6 @@ def flann_nearest(desc1, desc2, K=1):
     #flann.save_index(path)
     #flann.load_index(path, desc1)
     
-from PCV.geometry import homography, warp
-import pylab
-pylab.set_cmap('gray')
 #print('Baseline SIFT matching')
 #print('len(desc1) = %d' % len(desc1))
 #print('len(desc2) = %d' % len(desc2))
@@ -102,45 +99,9 @@ def PCV_ransac(kpts1, kpts2, matches12):
         inlier_matches12 = []
     return inlier_matches12
 
-
-# adapted from:
-# http://jayrambhia.com/blog/sift-keypoint-matching-using-python-opencv/
-def draw_matches(rchip1, rchip2, kpts1, kpts2, matches12, vert=False):
-    h1, w1 = rchip1.shape[0:2]
-    h2, w2 = rchip2.shape[0:2]
-    woff = 0; hoff = 0 # offsets 
-    if vert:
-        wB = max(w1, w2); hB = h1+h2; hoff = h1
-    else: 
-        hB = max(h1, h2); wB = w1+w2; woff = w1
-    # Concat images
-    match_img = np.zeros((hB, wB, 3), np.uint8)
-    match_img[0:h1, 0:w1, :] = rchip1
-    match_img[hoff:(hoff+h2), woff:(woff+w2), :] = rchip2
-    # Draw lines
-    for kx1, kx2 in iter(matches12):
-        pt1 = (int(kpts1[kx1,0]),      int(kpts1[kx1,1]))
-        pt2 = (int(kpts2[kx2,0])+woff, int(kpts2[kx2,1])+hoff)
-        match_img = cv2.line(match_img, pt1, pt2, (255, 0, 0))
-    return match_img
-    
-def draw_kpts(_rchip, _kpts):
-    kpts_img = np.copy(_rchip)
-    # Draw circles
-    for (x,y,a,d,c) in iter(_kpts):
-        center = (int(x), int(y))
-        radius = int(3*np.sqrt(1/a))
-        kpts_img = cv2.circle(kpts_img, center, radius, (255, 0, 0))
-    return kpts_img
-
-
 def desc_matcher(cx1, cx2):
+    ''' BruteForce, BruteForce-L1, BruteForce-Hamming,
+    BruteForceHamming(2), FlannBased '''
     matcher = cv2.DescriptorMatcher_create('BruteForce')
     matches = matcher.match(desc1, desc2)
     return matches
-
-    xy_thresh2 = np.sum(np.array(rchip2.shape[0:2])**2)
-
-    Haffine_from_points()
-    model = homography.RansacModel()
-    num_m = len(matches12)

@@ -32,9 +32,6 @@ class HotspotterDirs(DynStruct):
         self.chip_dir     = internal_dir + '/computed/chips'
         self.rchip_dir    = internal_dir + '/computed/temp'
         self.feat_dir     = internal_dir + '/computed/feats'
-        self.chip_table   = internal_dir + '/chip_table.csv'
-        self.name_table   = internal_dir + '/name_table.csv'
-        self.image_table  = internal_dir + '/image_table.csv' # TODO: Make optional
         # Make directories if needbe
         ensure_path(self.internal_dir)
         ensure_path(self.chip_dir)
@@ -55,21 +52,22 @@ def load_csv_tables(db_dir):
     Returns HotspotterDirs and HotspotterTables
     '''
     print('\n=============================')
-    print('Opening hotspotter database: '+str(db_dir))
+    print('Loading hotspotter csv tables: '+str(db_dir))
     print('=============================')
     hs_dirs = HotspotterDirs(db_dir)
     #exec(hs_dirs.execstr('hs_dirs'))
     #print(hs_dirs.execstr('hs_dirs'))
-    name_table   = hs_dirs.name_table
     feat_dir     = hs_dirs.feat_dir
-    chip_table   = hs_dirs.chip_table
     img_dir      = hs_dirs.img_dir
     internal_sym = hs_dirs.internal_sym
     rchip_dir    = hs_dirs.rchip_dir
     chip_dir     = hs_dirs.chip_dir
-    image_table  = hs_dirs.image_table
     internal_dir = hs_dirs.internal_dir
     db_dir       = hs_dirs.db_dir
+    # --- Table Names ---
+    chip_table   = internal_dir + '/chip_table.csv'
+    name_table   = internal_dir + '/name_table.csv'
+    image_table  = internal_dir + '/image_table.csv' # TODO: Make optional
     # --- CHECKS ---
     hasDbDir   = checkpath(db_dir)
     hasImgDir  = checkpath(img_dir)
@@ -238,8 +236,7 @@ def load_csv_tables(db_dir):
         raise
 
     print('  * Loaded: '+str(len(cx2_cid))+' chips')
-    print('  * Finished loading chip table')
-    print('===============================\n\n')
+    print('  * Done loading chip table')
     # Return all information from load_tables
     hs_tables = HotspotterTables()
     #hs_tables.gid2_gx = gid2_gx
@@ -253,6 +250,9 @@ def load_csv_tables(db_dir):
     hs_tables.cx2_theta    = cx2_theta
     hs_tables.px2_propname = px2_propname
     hs_tables.px2_cx2_prop = px2_cx2_prop
+    print('===============================')
+    print('Done Loading hotspotter csv tables: '+str(db_dir))
+    print('===============================\n\n')
     return hs_dirs, hs_tables
 
     

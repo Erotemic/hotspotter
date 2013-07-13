@@ -29,6 +29,14 @@ def _println(msg):
 
 img_ext_set = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
 
+def public_attributes(input):
+    public_attr_list = []
+    all_attr_list = dir(input)
+    for attr in all_attr_list:
+        if attr.find('__') == 0: continue
+        public_attr_list.append(attr)
+    return public_attr_list
+
 def myprint(input=None, prefix='', indent='', lbl=''):
     if len(lbl) > len(prefix): 
         prefix = lbl
@@ -51,9 +59,10 @@ def myprint(input=None, prefix='', indent='', lbl=''):
         for attr in attribute_list:
             if attr.find('__') == 0: continue
             val = str(input.__getattribute__(attr))
+            #val = input[attr]
             # Format methods nicer
-            if val.find('built-in method'):
-                val = '<built-in method>'
+            #if val.find('built-in method'):
+                #val = '<built-in method>'
             _println(indent+'  '+attr+' : '+val)
         _println(indent+'}')
 
@@ -71,6 +80,13 @@ def longest_existing_path(_path):
             break
         _path = _path_new
     return _path
+
+def normalize(array, dim=0):
+    'normalizes a numpy array from 0 to 1'
+    array_max  = array.max(dim)
+    array_min  = array.min(dim)
+    array_exnt = np.subtract(array_max, array_min)
+    return np.divide(np.subtract(array, array_min), array_exnt)
 
 def checkpath(_path):
     '''Checks to see if the argument _path exists.'''
@@ -331,3 +347,26 @@ def figure(fignum, doclf=False, title=None, **kwargs):
         ax.set_title(title)
         fig.canvas.set_window_title('fig '+str(fignum)+' '+title)
     return fig
+
+
+def symlink(source, link_name, noraise=False):
+    try: 
+        import os
+        os_symlink = getattr(os, "symlink", None)
+        if callable(os_symlink):
+            os_symlink(source, link_name)
+        else:
+            import ctypes
+            csl = ctypes.windll.kernel32.CreateSymbolicLinkW
+            csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
+            csl.restype = ctypes.c_ubyte
+            flags = 1 if os.path.isdir(source) else 0
+            if csl(link_name, source, flags) == 0:
+                warnings.warn(warn_msg, category=UserWarning)
+                print(' Unable to create symbolic liwk on windows.')
+                raise ctypes.WinError()
+    except Exception as ex:
+        if not noraise:
+            raise
+
+

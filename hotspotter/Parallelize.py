@@ -3,17 +3,18 @@ from __future__ import print_function, division
 import multiprocessing as mp
 from hotspotter.helpers import Timer
 import sys
+import os.path
 
 def _calculate(func, args):
     result = func(*args)
-    arg_names = func.func_code.co_varnames[:func.func_code.co_argcount]
-    arg_list  = [n+'='+str(v) for n,v in iter(zip(arg_names, args))]
-    arg_str = '\n    *** '+str('\n    *** '.join(arg_list))
-    return '  * %s finished:\n    ** %s%s \n    ** %s' % \
-            (mp.current_process().name,
-             func.__name__,
-             arg_str,
-             result)
+    #arg_names = func.func_code.co_varnames[:func.func_code.co_argcount]
+    #arg_list  = [n+'='+str(v) for n,v in iter(zip(arg_names, args))]
+    #arg_str = '\n    *** '+str('\n    *** '.join(arg_list))
+    #print('  * %s finished:\n    ** %s%s' % \
+            #(mp.current_process().name,
+             #func.__name__,
+             #arg_str))
+    return result
 
 def _worker(input, output):
     for func, args in iter(input.get, 'STOP'):
@@ -23,32 +24,63 @@ def _worker(input, output):
 def cpu_count():
     return mp.cpu_count()
 
-def parallelize_tasks(task_list, num_procs, verbose=False):
+def parallel_compute(func, arg_list, num_procs=8, lazy=True):
+    if lazy:
+        task_list = make_task_list_lazy(func, *arg_list)
+    else:
+        task_list = make_task_list(func, *arg_list)
+    if len(task_list) == 0:
+        print('... No '+func.func_name+' tasks left to compute!')
+        return None
+    msg = 'Distributing %d %s tasks to %d parallel processes' % \
+            (len(task_list), func.func_name, num_procs)
+    return parallelize_tasks(task_list, num_procs, msg=msg)
+
+def make_task_list_lazy(func, *args):
+    # The input should alawyas be argument 1
+    # The output should always be argument 2
+    task_list = []
+    lazy_skips = 0
+    has_output = len(args) >= 2
+    for _args in iter(zip(*args)):
+        if has_output and os.path.exists(_args[1]):
+            lazy_skips += 1
+        else:
+            task_list.append((func, _args))
+    print('Already computed '+str(lazy_skips)+' '+func.func_name+' tasks')
+    return task_list
+def make_task_list(func, *args):
+    arg_iterator = iter(zip(*args))
+    task_list    = [(func, _args) for _args in arg_iterator]
+    return task_list
+
+def parallelize_tasks(task_list, num_procs, msg=''):
     '''
     Used for embarissingly parallel tasks, which write output to disk
     '''
-    timer_msg = 'Distrubiting '+str(len(task_list))+' tasks to ' + str(num_procs) + ' parallel processes'
-    
-    with Timer(msg=timer_msg) as t:
+    with Timer(msg=msg) as t:
         if num_procs > 1:
-            if verbose:
+            if False:
                 print('  * Computing in parallel process')
-            _parallelize_tasks(task_list, num_procs, verbose)
+            return _parallelize_tasks(task_list, num_procs, False)
         else:
-            if verbose: 
+            result_list = []
+            if False: 
                 print('Computing in serial process')
             total = len(task_list)
             sys.stdout.write('    ')
             for count, (fn, args) in enumerate(task_list):
-                if verbose:
+                if False:
                     print('  * computing %d / %d ' % (count, total))
                 else: 
                     sys.stdout.write('.')
                     if (count+1) % 80 == 0:
                         sys.stdout.write('\n    ')
                     sys.stdout.flush()
-                fn(*args)
+                result = fn(*args)
+                result_list.append(result)
             sys.stdout.write('\n')
+            return result_list
 
 def _parallelize_tasks(task_list, num_procs, verbose):
     '''
@@ -75,12 +107,11 @@ def _parallelize_tasks(task_list, num_procs, verbose):
         for i in xrange(len(task_list)):
             done_queue.get()
             sys.stdout.write('.')
-            if (i+1) % num_procs == 0:
-                sys.stdout.write(' ')
-            if (i+1) % newln_len == 0:
-                sys.stdout.write('\n    ')
+            if (i+1) % num_procs == 0: sys.stdout.write(' ')
+            if (i+1) % newln_len == 0: sys.stdout.write('\n    ')
             sys.stdout.flush()
-        print('\n  ... Finished')
+        print('\n  ... done')
     # Tell child processes to stop
     for i in xrange(num_procs):
         task_queue.put('STOP')
+    return done_queue

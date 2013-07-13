@@ -303,9 +303,10 @@ def unit_test(test_func):
         try:
             ret = test_func()
         except Exception as ex:
-            print('Tested'+test_name+' ...FAILURE')
-            return ex
-        print('Tested'+test_name+' ...SUCCESS')
+            print(repr(ex))
+            print('Tested: '+test_name+' ...FAILURE')
+            raise
+        print('Tested: '+test_name+' ...SUCCESS')
         return ret
     return __unit_test_wraper
 

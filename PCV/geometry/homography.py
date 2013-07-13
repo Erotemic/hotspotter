@@ -54,10 +54,13 @@ def H_from_ransac(fp,tp,model,maxiter=1000,match_theshold=10):
     from PCV.tools import ransac
     
     # group corresponding points
-    data = vstack((fp,tp))
-    
+    data = vstack((fp,tp)).T
+    n = 4 # minimum number of data values required to fit the model
+    k = maxiter
+    t = match_theshold
+    d = 5 # the number of close data values required
     # compute H and return
-    H,ransac_data = ransac.ransac(data.T,model,4,maxiter,match_theshold,10,return_all=True)
+    H,ransac_data = ransac.ransac(data,model,n,k,t,d,return_all=True)
     return H,ransac_data['inliers']
 
 

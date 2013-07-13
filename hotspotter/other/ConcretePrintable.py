@@ -49,24 +49,30 @@ class DynStruct(AbstractPrintable):
         for (key,val) in dyn_dict.iteritems():
             self[key] = val
 
-    #def to_dict(self):
-        #'''Converts dynstruct to a dictionary. '''
-        #dyn_dict = {}
-        #for (key, val) in self.__dict__.iteritems():
-            #if not key in child_exclude_list:
-                #dyn_dict[key] = val
-        #return pref_dict
+    def to_dict(self):
+        '''Converts dynstruct to a dictionary.  '''
+        dyn_dict = {}
+        for (key, val) in self.__dict__.iteritems():
+            if not key in self._printable_exclude:
+                dyn_dict[key] = val
+        return dyn_dict
 
     def execstr(self, local_name):
         '''returns a string which when evaluated will
            add the stored variables to the current namespace
            
            localname is the name of the variable in the current scope
+           * use locals().update(dyn.to_dict()) instead
         '''
-        return '''
-for (key, val) in %s.__dict__.iteritems():
-    if not key in %s._printable_exclude:
-        exec(key+' = %s.'+key)''' % tuple([local_name]*3)
+        execstr = ''
+        for (key, val) in self.__dict__.iteritems():
+            if not key in self._printable_exclude:
+                execstr+=key+' = '+local_name+'.'+key+'\n'
+        return execstr
+        #return '''
+#for (key, val) in %s.__dict__.iteritems():
+    #if not key in %s._printable_exclude:
+        #exec(key+' = %s.'+key)''' % tuple([local_name]*3)
             
 #---------------
 

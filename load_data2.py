@@ -241,15 +241,15 @@ def load_csv_tables(db_dir):
     hs_tables = HotspotterTables()
     #hs_tables.gid2_gx = gid2_gx
     #hs_tables.nid2_nx  = nid2_nx
-    hs_tables.gx2_gname  = gx2_gname
-    hs_tables.nx2_name   = nx2_name
-    hs_tables.cx2_cid      = cx2_cid
-    hs_tables.cx2_nx       = cx2_nx
-    hs_tables.cx2_gx       = cx2_gx
-    hs_tables.cx2_roi      = cx2_roi
-    hs_tables.cx2_theta    = cx2_theta
-    hs_tables.px2_propname = px2_propname
-    hs_tables.px2_cx2_prop = px2_cx2_prop
+    hs_tables.gx2_gname  = np.array(gx2_gname)
+    hs_tables.nx2_name   = np.array(nx2_name)
+    hs_tables.cx2_cid      = np.array(cx2_cid)
+    hs_tables.cx2_nx       = np.array(cx2_nx)
+    hs_tables.cx2_gx       = np.array(cx2_gx)
+    hs_tables.cx2_roi      = np.array(cx2_roi)
+    hs_tables.cx2_theta    = np.array(cx2_theta)
+    hs_tables.px2_propname = np.array(px2_propname)
+    hs_tables.px2_cx2_prop = np.array(px2_cx2_prop)
     print('===============================')
     print('Done Loading hotspotter csv tables: '+str(db_dir))
     print('===============================\n\n')

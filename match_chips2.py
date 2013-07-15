@@ -1,18 +1,311 @@
-from PCV.geometry import homography, warp
+import matplotlib
+import sys
+print('Configuring matplotlib for Qt4')
+matplotlib.use('Qt4Agg')
+import matplotlib.pyplot as plt
+import numpy as np
 from hotspotter.Parallelize import parallel_compute
-from drawing_functions2 import draw_matches, draw_kpts
+from hotspotter.other.ConcretePrintable import DynStruct
+from hotspotter.helpers import Timer, get_exec_src, check_path
+from drawing_functions2 import draw_matches, draw_kpts, tile_all_figures
 from hotspotter.tpl.pyflann import FLANN
 import hotspotter.tpl.cv2  as cv2
 from itertools import chain
+from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC
 
-flann_params = {'algorithm' :'kdtree',
-                'trees'     :4,
-                'checks'    :128}
+__K__ = 2
+__NUM_RERANK__     = 50
+__1v1_RAT_THRESH__ = 1.5
+__FLANN_PARAMS__ = {'algorithm' :'kdtree',
+                    'trees'     :4,
+                    'checks'    :128}
+
+
+def EXPERIMENT(hs_tables, hs_feats):
+    cx2_feats_hesaff = hs_feats.cx2_feats_hesaff
+    cx2_feats_sift   = hs_feats.cx2_feats_sift
+    cx2_feats_freak  = hs_feats.cx2_feats_freak
+
+    runall_match(cx2_feats_sift,   hs_tables)
+    runall_match(cx2_feats_hesaff, hs_tables)
+    #runall_match(cx2_feats_freak,  hs_tables)
+
+
+def runall_match(cx2_feats, hs_tables):
+    cx2_cid    = hs_tables.cx2_cid
+
+    cx2_desc   = [d for (k,d) in cx2_feats]
+    cx2_kpts   = [k for (k,d) in cx2_feats]
+
+    funcs_1v1 = {'fn_precomp_args'        : precompute_args_1v1, 
+                 'fn_assign_feat_matches' : assign_feat_matches_1v1}
+    funcs_1vM = {'fn_precomp_args'        : precompute_args_1vM, 
+                 'fn_assign_feat_matches' : assign_feat_matches_1vM}
+
+    tmparg = DynStruct(copy_dict=funcs_1vM)
+    exec(tmparg.execstr('tmparg'))
+    
+    cx2_res_1vM = __runall(cx2_desc, cx2_kpts, **funcs_1vM)
+    #cx2_res_1v1 = __runall(cx2_desc, cx2_kpts, **funcs_1v1)
+
+
+class HotspotterQueryResult(DynStruct):
+    def __init__(self):
+        super(HotspotterQueryResult, self).__init__()
+        self.qcx    = -1
+        self.cx2_fm = []
+        self.cx2_fs = []
+
+def __runall(cx2_desc, cx2_kpts, fn_precomp_args=None, fn_assign_feat_matches=None):
+    with Timer(msg=None):
+        assign_args = fn_precomp_args(cx2_cid, cx2_desc)
+    cx2_res = [HotspotterQueryResult() for _ in xrange(len(cx2_cid))]
+    with Timer(msg=None):
+        for qcx, qcid in enumerate(cx2_cid):
+            res = cx2_res[qcx]
+            res.qcx = qcx
+            if qcid == 0: continue
+            with Timer(msg=None):
+                matches_scores = fn_assign_feat_matches(qcx, *assign_args)
+                res.cx2_fm = matches_scores[0]
+                res.cx2_fs = matches_scores[1]
+    return cx2_res
+
+def spatially_verify(qcx, cx, cx2_kpts, cx2_fm, cx2_fs):
+    qkpts = cx2_kpts[qcx]
+
+    cx2_cscore = np.array([np.sum(fs) for fs in cx2_fs])
+    top_cx = cx2_cscore.argsort()[::-1]
+
+    topx = 0 # for
+    cx = top_cx[topx]
+
+    kpts = cx2_kpts[cx]
+    fm12 = cx2_fm[cx]
+    mx1  = fm12[:,0]
+    mx2  = fm12[:,1]
+
+    # ugg transpose, put in an assert to keep things sane. I like row first, 
+    # but ransac seems not to
+    kpts1_m = qkpts[mx1,:].T
+    kpts2_m =  kpts[mx2,:].T
+    assert kpts1_m.shape[0] == 5 and kpts2_m.shape[0] == 5, 'needs ellipses'
+    # Get match threshold 10% of matching keypoint extent diagonal
+    img2_extent = (kpts2_m[0:2,:].min(1) - kpts2_m[0:2,:].max(1))[0:2]
+    xy_thresh_sqrd = np.sum(img2_extent**2)/100
+
+    #H, inliers = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
+    # Show what it did
+    #fm12_SV = fm12[inliers,:]
+
+def precompute_args_1vM(cx2_cid, cx2_desc, hs_dirs):
+    feat_dir = hs_dirs.feat_dir
+    print('Precomputing one vs many information')
+    cx2_nFeats = [len(k) for k in cx2_desc]
+    _ax2_cx = [[cx_]*nFeats for (cx_, nFeats) in iter(zip(range(len(cx2_cid)), cx2_nFeats))]
+    _ax2_fx = [range(nFeats) for nFeats in iter(cx2_nFeats)]
+    ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
+    ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
+    ax2_desc   = np.vstack(cx2_desc)
+
+    flann_1vM = FLANN()
+    flann_1vM_path = feat_dir + '/flann_1vM.index'
+    load_success = False
+    if check_path(flann_1vM_path):
+        try:
+            print('Attempting to load flann index')
+            flann_1vM.load_index(flann_path, ax2_desc)
+            load_success = True
+        except Exception as ex:
+            print('Cannot load FLANN index'+repr(ex))
+    if not load_success:
+        with Timer(msg='rebuilding FLANN index'):
+            flann_1vM.build_index(ax2_desc, **__FLANN_PARAMS__)
+    flann_1vM.ax2_desc = ax2_desc # dont let this loose scope
+    return cx2_cid, cx2_desc, ax2_cx, ax2_fx, flann_1vM
+
+# Feature scoring functions
+def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist+1, vdist+1)) 
+def RATIO_fn(vdist, ndist): return np.divide(ndist+1, vdist+1)
+def LNBNN_fn(vdist, ndist): return ndist - vdist 
+
+score_fn = LNRAT_fn
+def assign_feat_matches_1vM(qcx, cx2_cid, cx2_desc, ax2_cx, ax2_fx, flann_1vM):
+    print('Assigning 1vM feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
+    isQueryIndexed = True
+    qdesc = cx2_desc[qcx]
+    K = __K__+1 if isQueryIndexed else __K__
+    # Find each query descriptor's K+1 nearest neighbors
+    (qfx2_ax, qfx2_dists) = flann_1vM.nn_index(qdesc, K+1, **__FLANN_PARAMS__)
+    vote_dists = qfx2_dists[:, 0:K]
+    norm_dists = qfx2_dists[:, K] # K+1th descriptor for normalization
+    # Score the feature matches
+    qfx2_score = np.array([score_fn(_vdist.T, norm_dists) for _vdist in vote_dists.T]).T
+    # Vote using the inverted file 
+    qfx2_cx = ax2_cx[qfx2_ax[:,0:K]]
+    qfx2_fx = ax2_fx[qfx2_ax[:,0:K]]
+    # Build feature matches
+    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    num_qf = len(qdesc)
+    qfx2_qfx = np.tile(np.arange(num_qf).reshape(num_qf,1), (1,K)) 
+    iter_matches = iter(zip(qfx2_qfx.flat, qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat))
+    for qfx, cx,fx,score in iter_matches:
+        if qcx == cx: continue # dont vote for yourself
+        cx2_fm[cx].append((qfx,fx))
+        cx2_fs[cx].append(score)
+    # Convert to numpy
+    for cx in xrange(len(cx2_cid)): cx2_fm[cx] = np.array(cx2_fm[cx])
+    for cx in xrange(len(cx2_cid)): cx2_fs[cx] = np.array(cx2_fs[cx])
+    return cx2_fm, cx2_fs
+
+def precompute_args_1v1(cx2_cid, cx2_desc):
+    return cx2_cid, cx2_desc
+
+def assign_feat_matches_1v1(qcx, cx2_cid, cx2_desc):
+    print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
+    qdesc = cx2_desc[qcx]
+    flann_1v1 = FLANN()
+    flann_1v1.build_index(qdesc, **__FLANN_PARAMS__)
+    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    for cx, desc in enumerate(cx2_desc):
+        sys.stdout.write('.')
+        sys.stdout.flush()
+        if cx == qcx: continue
+        (fx2_qfx, fx2_dist) = flann_1v1.nn_index(desc, 2, **__FLANN_PARAMS__)
+        # Lowe's ratio test
+        fx2_ratio = np.divide(fx2_dist[:,1]+1, fx2_dist[:,0]+1)
+        fx, = np.where(fx2_ratio > 1.5)
+        qfx = fx2_qfx[fx,0]
+        cx2_fm[cx] = np.array(zip(qfx, fx))
+        cx2_fs[cx] = fx2_ratio[fx]
+    sys.stdout.write('DONE')
+    flann_1v1.delete_index()
+    return cx2_fm, cx2_fs
+
+def FREAK_assign_feat_matches_1v1(qcx, cx2_cid, cx2_freak):
+    print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
+    qfreak = cx2_freak[qcx]
+    matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
+    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    for cx, freak in enumerate(cx2_freak):
+        sys.stdout.write('.')
+        sys.stdout.flush()
+        m = matcher.match(freak, qfreak)
+        if cx == qcx: continue
+        (fx2_qfx, fx2_dist) = flann_1v1.nn_index(freak, 2, **__FLANN_PARAMS__)
+        # Lowe's ratio test
+        fx2_ratio = np.divide(fx2_dist[:,1]+1, fx2_dist[:,0]+1)
+        fx, = np.where(fx2_ratio > __1v1_RAT_THRESH__)
+        qfx = fx2_qfx[fx,0]
+        cx2_fm[cx] = np.array(zip(qfx, fx))
+        cx2_fs[cx] = fx2_ratio[fx]
+    sys.stdout.write('DONE')
+    flann_1v1.delete_index()
+    return cx2_fm, cx2_fs
+
+def report_results(cx2_res, hs_tables):
+    cx2_cid = hs_tables.cx2_cid
+    cx2_nx  = hs_tables.cx2_nx
+    cx2_top_truepos_rank  = np.zeros(len(cx2_cid)) - 100
+    cx2_top_truepos_score = np.zeros(len(cx2_cid)) - 100
+    cx2_top_trueneg_rank  = np.zeros(len(cx2_cid)) - 100
+    cx2_top_trueneg_score = np.zeros(len(cx2_cid)) - 100
+    cx2_top_score         = np.zeros(len(cx2_cid)) - 100
+    for qcx, qcid in enumerate(cx2_cid):
+        qnx = cx2_nx[qcx]
+        res = cx2_res[qcx]
+        # The score is the sum of the feature scores
+        cx2_score = np.array([np.sum(fs) for fs in res.cx2_fs])
+        top_cx = np.argsort(cx2_score)[::-1]
+        top_score = cx2_score[top_cx]
+        top_nx = cx2_nx[top_cx]
+        # Remove query from true positives ranks
+        _truepos_ranks, = np.where(top_nx == qnx)
+        # Get TRUE POSTIIVE ranks
+        truepos_ranks = _truepos_ranks[top_cx[_truepos_ranks] != qcx]
+        # Get BEST True Positive and BEST True Negative
+        if len(truepos_ranks) > 0:
+            top_truepos_rank = truepos_ranks.min()
+            bot_truepos_rank = truepos_ranks.max()
+            true_neg_range   = np.arange(0, bot_truepos_rank+2)
+            top_trueneg_rank = np.setdiff1d(true_neg_range, truepos_ranks).min()
+            top_trupos_score = top_score[top_truepos_rank]
+        else:
+            top_trueneg_rank = 0
+            top_truepos_rank = np.NAN
+            top_trupos_score = np.NAN
+        # Append stats to output
+        cx2_top_truepos_rank[qcx]  = top_truepos_rank
+        cx2_top_truepos_score[qcx] = top_trupos_score
+        cx2_top_trueneg_rank[qcx]  = top_trueneg_rank
+        cx2_top_trueneg_score[qcx] = top_score[top_trueneg_rank]
+        cx2_top_score[qcx]         = top_score[0]
+    # difference between the top score and the actual best score
+    cx2_score_disp = cx2_top_score - cx2_top_true_score
+    #
+    # Easy to digest results
+    num_chips = len(cx2_top_truepos_rank)
+    num_with_gtruth = (1 - np.isnan(cx2_top_truepos_rank)).sum()
+    num_rank_less5 = (cx2_top_truepos_rank < 5).sum()
+    num_rank_less1 = (cx2_top_truepos_rank < 1).sum()
+    
+    # Display ranking results
+    rankres_str = ('#TTP = top true positive #TTN = top true negative\n')
+    rankres_header = '#CID, TTP RANK, TTN RANK, TTP SCORE, TTN SCORE, SCORE DISP, NAME\n'
+    rankres_str += rankres_header
+    todisp = np.vstack([cx2_cid,
+                        cx2_top_truepos_rank,
+                        cx2_top_trueneg_rank,
+                        cx2_top_truepos_score,
+                        cx2_top_trueneg_score,
+                        cx2_score_disp, 
+                        cx2_nx]).T
+    for (cid, ttpr, ttnr, ttps, ttns, sdisp, nx) in todisp:
+        rankres_str+=('%4d, %8.0f, %8.0f, %9.2f, %9.2f, %10.2f, %s\n' %\
+              (cid, ttpr, ttnr, ttps, ttns, sdisp, nx2_name[nx]) )
+    rankres_str += rankres_header
+
+    rankres_str += '#Num Chips: %d \n' % num_chips
+    rankres_str += '#Num Chips with at least one match: %d \n' % num_with_gtruth
+    rankres_str += '#Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
+    rankres_str += '#Ranks <= 1: %d / %d\n' % (num_rank_less1, num_with_gtruth)
+    
+    print(rankres_str)
+    result_csv = 'results_ground_truth_rank.csv'
+    with open(result_csv, 'w') as file:
+        file.write(rankres_str)
+    os.system('gvim '+result_csv)
+
+def unpack_freak(cx2_desc):
+    cx2_unpacked_freak = []
+    for descs in cx2_desc:
+        unpacked_desc = []
+        for d in descs:
+            bitstr = ''.join([('{0:#010b}'.format(byte))[2:] for byte in d])
+            d_bool = np.array([int(bit) for bit in bitstr],dtype=bool)
+            unpacked_desc.append(d_bool)
+        cx2_unpacked_freak.append(unpacked_desc)
+
+def show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12, fignum=1):
+    cx2_rchip_path = hs_cpaths.cx2_rchip_path
+    rchip1 = cv2.imread(cx2_rchip_path[qcx])
+    rchip2 = cv2.imread(cx2_rchip_path[cx])
+    kpts1  = cx2_kpts[qcx]
+    kpts2  = cx2_kpts[cx]
+
+    rchip1_kpts = draw_kpts(rchip1, kpts1[fm12[:,0],:])
+    rchip2_kpts = draw_kpts(rchip2, kpts2[fm12[:,1],:])
+    img = draw_matches(rchip1_kpts, rchip2_kpts, qkpts, kpts, fm12, vert=True)
+    fig = plt.figure(fignum)
+    fig.clf()
+    plt.imshow(img)
+    fig.show()
 
 if __name__ == '__main__':
-    import chip_compute2
-    import feature_compute2
-    import load_data2
+    import chip_compute2, feature_compute2, load_data2
     from multiprocessing import freeze_support
     freeze_support()
     # --- CHOOSE DATABASE --- #
@@ -36,239 +329,68 @@ if __name__ == '__main__':
         exec(hs_feats.execstr('hs_feats'))
         exec(hs_tables.execstr('hs_tables'))
         exec(hs_dirs.execstr('hs_dirs'))
+        #cx2_feats = cx2_feats_hesaff
+        cx2_feats = cx2_feats_sift
+        cx2_desc   = [d for (k,d) in cx2_feats]
+        cx2_kpts   = [k for (k,d) in cx2_feats]
+        qcx = 0
+        cx  = 1
+        exec(get_exec_src(precompute_args_1vM))
+        exec(get_exec_src(assign_feat_matches_1vM))
+        exec(get_exec_src(spatially_verify))
 
-def unpack_freak(cx2_desc):
-    cx2_unpacked_freak = []
-    for descs in cx2_desc:
-        unpacked_desc = []
-        for d in descs:
-            bitstr = ''.join([('{0:#010b}'.format(byte))[2:] for byte in d])
-            d_bool = np.array([int(bit) for bit in bitstr],dtype=bool)
-            unpacked_desc.append(d_bool)
-        cx2_unpacked_freak.append(unpacked_desc)
+        #import imp
+        #import cvransac2
+        #imp.reload(cvransac2)
+        #from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC
 
+        #http://scikit-image.org/docs/dev/api/skimage.transform.html#estimate-transform
+        with Timer():
+            H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd) 
+        with Timer():
+            H2, inliers2 = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
+        with Timer():
+            H3, inliers3 = H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
+
+        H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd) 
+        H2, inliers2 = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
+        H3, inliers3 = H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
+
+        rchip1 = cv2.imread(cx2_rchip_path[qcx])
+        rchip2 = cv2.imread(cx2_rchip_path[cx])
+
+        #import skimage.transform
+        #rchip1_H1 = skimage.transform.fast_homography(rchip1, H1)
+        #rchip1_H2 = skimage.transform.fast_homography(rchip1, H2)
+        #rchip1_H3 = skimage.transform.fast_homography(rchip1, H3)
+        import hotspotter.tpl.cv2 as cv2
         
+        # http://stackoverflow.com/questions/8181872/finding-homography-and-warping-perspective
+        #H = findHomography( src2Dfeatures, dst2Dfeatures, outlierMask, RANSAC, 3);
+        rchip1_H1 = cv2.warpPerspective(rchip1, H1, rchip2.size())
+        
+        , cv2.INTER_LINEAR)
+        rchip1_H2 = cv2.warpPerspective(rchip1, H2, rchip2.size()), cv2.INTER_LINEAR)
+        rchip1_H3 = cv2.warpPerspective(rchip1, H3, rchip2.size()), cv2.INTER_LINEAR)
 
-def EXPERIMENT(hs_tables, hs_feats):
-    __K__ = 2
+        #cmd = 'H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)'
+        #from hotspotter.helpers import profile
+        #profile(cmd)
 
-    cx2_hesaff_feats = hs_feats.cx2_hesaff_feats
-    cx2_sift_feats   = hs_feats.cx2_sift_feats
-    cx2_freak_feats  = hs_feats.cx2_freak_feats
+        #H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd) 
+        # Show what it did
+        fm12_SV1 = fm12[inliers1, :]
+        fm12_SV2 = fm12[inliers2, :]
+        fm12_SV3 = fm12[inliers3, :]
 
-    cx2_freak  = [d for (k,d) in cx2_freak_feats]
-    cx2_freak_kpt  = [k for (k,d) in cx2_freak_feats]
+        show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12,     fignum=0)
+        show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV1, fignum=1)
+        show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV2, fignum=2)
+        show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV3, fignum=3)
 
-    #cx2_feats  = cx2_hesaff_feats
-    cx2_feats  = cx2_freak_feats
+        tile_all_figures()
 
-    cx2_cid    = hs_tables.cx2_cid
-
-    cx2_desc   = [d for (k,d) in cx2_feats]
-    cx2_kpts   = [k for (k,d) in cx2_feats]
-    cx2_nFeats = [len(k) for k in cx2_kpts]
-
-    ## <1vM Aggregate Info> ##
-    _ax2_cx = [[cx_]*nFeats for (cx_, nFeats) in iter(zip(range(len(cx2_cid)), cx2_nFeats))]
-    _ax2_fx = [range(nFeats) for nFeats in iter(cx2_nFeats)]
-    ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
-    ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
-    ax2_desc   = np.vstack(cx2_desc)
-    flann_1vM = FLANN()
-    flann_1vM.build_index(ax2_desc, **flann_params)
-    ## </1vM Aggregate Info> ##
-    # Query information
-    qcx = 1
-
-    with Timer(msg=None):
-        cx2_fm_1vM, cx2_fs_1vM = assign_feat_matches_1vM(qcx, cx2_cid, cx2_desc, ax2_cx, ax2_fx, flann_1vM)
-    with Timer(msg=None):
-        cx2_fm_1v1, cx2_fs_1v1 = assign_feat_matches_1v1(qcx, cx2_cid, cx2_desc)
-    with Timer(msg=None):
-        cx2_fm_1v1, cx2_fs_1v1 = FREAK_assign_feat_matches_1v1(qcx, cx2_cid, cx2_freak)
-
-
-    cmd = 'assign_feat_matches_1v1(qcx, cx2_cid, cx2_desc)'
-
-    cx2_score_1vM = [np.sum(fs) for fs in cx2_fs_1vM]
-    cx2_score_1v1 = [np.sum(fs) for fs in cx2_fs_1v1]
-    cx2_num_fm_1v1  = [len(_) for _ in cx2_fs_1vM]
-    cx2_num_fm_1vM  = [len(_) for _ in cx2_fs_1v1]
-
-
-def assign_feat_matches_1vM(qcx, cx2_cid, cx2_desc, ax2_cx, ax2_fx, flann_1vM):
-    print('Assigning 1vM feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
-    qdesc = cx2_desc[qcx]
-    # if query is indexed in FLANN
-    isQueryIndexed = True
-    K = __K__+1 if isQueryIndexed else __K__
-    (qfx2_ax, qfx2_dists) = flann_1vM.nn_index(qdesc, K+1, **flann_params)
-    vote_dists = qfx2_dists[:, 0:K]
-    norm_dists = qfx2_dists[:, K] # K+1th descriptor for normalization
-
-    # Feature scoring functions
-    def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist+1, vdist+1)) 
-    def RATIO_fn(vdist, ndist): return np.divide(ndist+1, vdist+1)
-    def LNBNN_fn(vdist, ndist): return ndist - vdist 
-    #LNBNN_score = np.array([norm_dists - _vdist.T for _vdist in vote_dists.T]).T
-    #LNRAT_score = np.array([np.log((norm_dists+1) / (_vdist.T+1)) for _vdist in vote_dists.T]).T
-    #RATIO_score = np.array([(norm_dists+1) / (_vdist.T+1) for _vdist in vote_dists.T]).T
-    score_fn = LNRAT_fn
-    qfx2_score = np.array([score_fn(_vdist.T, norm_dists) for _vdist in vote_dists.T]).T
-
-    # Vote for the appropriate indexes
-    qfx2_cx = ax2_cx[qfx2_ax[:,0:K]]
-    qfx2_fx = ax2_fx[qfx2_ax[:,0:K]]
-
-    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
-    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
-    iter_matches = iter(zip(qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat))
-    for qfx, (cx,fx,score) in enumerate(iter_matches):
-        if qcx == cx: continue # dont vote for yourself
-        cx2_fm[cx].append((qfx,fx))
-        cx2_fs[cx].append(score)
-    return cx2_fm, cx2_fs
-
-def assign_feat_matches_1v1(qcx, cx2_cid, cx2_desc):
-    print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
-    qdesc = cx2_desc[qcx]
-    flann_1v1 = FLANN()
-    flann_1v1.build_index(qdesc, **flann_params)
-    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
-    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
-    for cx, desc in enumerate(cx2_desc):
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        if cx == qcx: continue
-        (fx2_qfx, fx2_dist) = flann_1v1.nn_index(desc, 2, **flann_params)
-        # Lowe's ratio test
-        fx2_ratio = np.divide(fx2_dist[:,1]+1, fx2_dist[:,0]+1)
-        fx, = np.where(fx2_ratio > 1.5)
-        qfx = fx2_qfx[fx,0]
-        cx2_fm[cx] = np.array(zip(qfx, fx))
-        cx2_fs[cx] = fx2_ratio[fx]
-    sys.stdout.write('DONE')
-    flann_1v1.delete_index()
-    return cx2_fm, cx2_fs
-
-
-def FREAK_assign_feat_matches_1v1(qcx, cx2_cid, cx2_freak):
-    print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
-    qfreak = cx2_freak[qcx]
-    matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
-    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
-    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
-    for cx, freak in enumerate(cx2_freak):
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        m = matcher.match(freak, qfreak)
-        if cx == qcx: continue
-        (fx2_qfx, fx2_dist) = flann_1v1.nn_index(freak, 2, **flann_params)
-        # Lowe's ratio test
-        fx2_ratio = np.divide(fx2_dist[:,1]+1, fx2_dist[:,0]+1)
-        fx, = np.where(fx2_ratio > 1.5)
-        qfx = fx2_qfx[fx,0]
-        cx2_fm[cx] = np.array(zip(qfx, fx))
-        cx2_fs[cx] = fx2_ratio[fx]
-    sys.stdout.write('DONE')
-    flann_1v1.delete_index()
-    return cx2_fm, cx2_fs
-
-rchip_path = cx2_rchip_path[0]
-sift_path = cx2_sift_path[0]
-sift = fc2.load_features(sift_path)
-
-kpts, desc = sift
-
-qcx = 1
-
-
-def FLANN_Searcher(object): 
-    def __init__(self, qdesc):
-        self.flann = FLANN()
-
-        self.flann.build_index(qdesc, **flann_params)
-    def neareset(desc2, K=1):
-        (idx21, dists21) = flann.nn_index(desc2, K, **flann_params)
-        idx21.shape   =  (desc2.shape[0], K)
-        dists21.shape =  (desc2.shape[0], K)
-        flann.delete_index()
-        return idx21.T, dists21.T
-    #flann.save_index(path)
-    #flann.load_index(path, qdesc)
-    
-def one_vs_one(qcx, cx2):
-    kpts1, qdesc = cx2_sift_feats[qcx]
-    kpts2, desc2 = cx2_sift_feats[cx2]
-    idx21, dists = flann_nearest(qdesc, desc2, K=2)
-    ratio = dists[1,:] / dists[0,:]
-    mx2, = np.where(ratio > 1.5)
-    mx1 = idx21[0, mx2]
-    matches12 = np.array(zip(mx1, mx2))
-
-    rchip1 = cv2.imread(cx2_rchip_path[qcx])
-    rchip2 = cv2.imread(cx2_rchip_path[cx2])
-    # Homogonize and transpose for PCV
-
-    inlier_matches_12 = PCV_ransac(kpts1, kpts2, matches12)
-    kpts_img1 = draw_kpts(rchip1, kpts1_m)
-    figure(1)
-    imshow(kpts_img1)
-
-    kpts_img2 = draw_kpts(rchip1, kpts2_m)
-    figure(2)
-    imshow(kpts_img2)
-
-    figure(3)
-    match_img = draw_matches(rchip1, rchip2,
-                             kpts1,   kpts2, 
-                             inlier_matches12, vert=True)
-    imshow(match_img)
-
-def PCV_ransac(kpts1, kpts2, matches12):
-    # Get xy points
-    xy1_m = kpts1[matches12[:,0],0:2] 
-    xy2_m = kpts2[matches12[:,1],0:2] 
-    # Homogonize points
-    num_m = len(matches12)
-    fp = np.hstack([xy1_m, np.ones((num_m,1))]).T
-    tp = np.hstack([xy2_m, np.ones((num_m,1))]).T
-    # Get match threshold 10% of image diagonal
-    img2_extent = (kpts2.min(0) - kpts2.max(0))[0:2]
-    match_theshold = np.sqrt(np.sum(img2_extent**2))/10
-    # Get RANSAC inliers
-    maxiter = 1000
-    model = homography.RansacModel() 
-    try: 
-        H_12, inliers = homography.H_from_ransac(fp,tp,model, maxiter,match_theshold)
-        inlier_matches12 = matches12[inliers,:]
-    except ValueError as ex:
-        print(ex)
-        inlier_matches12 = []
-    return inlier_matches12
-
-def desc_matcher(qcx, cx2):
-    ''' BruteForce, BruteForce-L1, BruteForce-Hamming,
-    BruteForceHamming(2), FlannBased '''
-    matcher = cv2.DescriptorMatcher_create('BruteForce')
-    matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
-
-    matches = matcher.match(qdesc, desc2)
-    return matches
-
-    # 1vM Agg info graveyard
-    #cx2_max_ax = np.cumsum(cx2_nFeats)
-    #_ax2_cid   = [[cid_]*nFeats for (cid_, nFeats) in iter(zip(cx2_cid, cx2_nFeats))]
-    #ax2_cid    = np.array(list(chain.from_iterable(_ax2_cid)))
-    # dont need no cid stuff here
-    #qfx2_cx = np.array([cx2_cid.index(cid) for cid in qfx2_cid.flat])
-    #qfx2_cx.shape = qfx2_cid.shape
-
-#print('Baseline SIFT matching')
-#print('len(qdesc) = %d' % len(qdesc))
-#print('len(desc2) = %d' % len(desc2))
-#print('len(matches) = %d' % len(matches))
-
-    #delta = 2000
-    #im_12 = warp.panorama(H_12,rchip1,rchip2,delta,delta)
-    
+        try: 
+            __IPYTHON__
+        except: 
+            plt.show()

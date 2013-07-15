@@ -371,4 +371,46 @@ def symlink(source, link_name, noraise=False):
         if not noraise:
             raise
 
+def get_exec_src(func):
+    import inspect
+    import textwrap
+    _src = inspect.getsource(func)
+    src = textwrap.dedent(_src[_src.find(':')+1:])
+    # Remove return statments
+    while True:
+        ret_start = src.find('return')
+        if ret_start == -1:
+            break
+        middle   = src[ret_start:]
+        ret_end1 = middle.find(';')
+        ret_end2 = middle.find('\n')
+        if ret_end1 == -1:
+            ret_end1 = ret_end2
+        ret_end = min(ret_end1, ret_end2)
+        if ret_end == -1 or ret_end == len(src):
+            ret_end = len(src)-1
+        ret_end = ret_start + ret_end + 1
+        before = src[:ret_start]
+        after  = src[ret_end:]
+        src = before+after
+    return src
 
+def profile(cmd):
+    # Meliae # from meliae import loader # om = loader.load('filename.json') # s = om.summarize();
+    import cProfile, sys, os
+    print('Profiling Command: '+cmd)
+    cProfOut_fpath = 'OpenGLContext.profile'
+    cProfile.runctx( cmd, globals(), locals(), filename=cProfOut_fpath )
+    # RUN SNAKE
+    print('Profiled Output: '+cProfOut_fpath)
+    if sys.platform == 'win32':
+        rsr_fpath = 'C:/Python27/Scripts/runsnake.exe'
+    else:
+        rsr_fpath = 'runsnake'
+    view_cmd = rsr_fpath+' "'+cProfOut_fpath+'"'
+    os.system(view_cmd)
+    return True
+
+#http://www.huyng.com/posts/python-performance-analysis/
+#Once youve gotten your code setup with the @profile decorator, use kernprof.py to run your script.
+#kernprof.py -l -v fib.py

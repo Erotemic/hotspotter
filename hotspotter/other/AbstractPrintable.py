@@ -9,7 +9,9 @@ def npArrInfo(arr):
     info.dtypestr  = str(arr.dtype)
     if info.dtypestr == 'bool':
         info.bittotal = 'T=%d, F=%d' % (sum(arr), sum(1-arr))
-    if info.dtypestr == 'object':
+    elif info.dtypestr == 'object':
+        info.minmaxstr = 'NA'
+    elif info.dtypestr[0] == '|':
         info.minmaxstr = 'NA'
     else:
         info.minmaxstr = '(%s,%s)' % ( str( arr.min() if len(arr) > 0 else None ), str( arr.max() if len(arr) > 0 else None ) )
@@ -201,6 +203,7 @@ def printableVal(val,type_bit=True, justlength=False):
         if info.dtypestr == 'bool':
             _valstr = '{ shape:'+info.shapestr+' bittotal: '+info.bittotal+'}'# + '\n  |_____'
         else: 
+            print info.dtypestr
             _valstr = '{ shape:'+info.shapestr+' mM:'+info.minmaxstr+' }'# + '\n  |_____'
     # String
     elif type(val) is types.StringType:

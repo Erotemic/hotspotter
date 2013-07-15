@@ -70,8 +70,8 @@ def __comp_cv_feats(rchip_path, feats_path, detector, extractor):
 # Global opencv detectors and extractors      
 # =======================================
 ## Common keypoint detector
-#common_detector  = cv2.FeatureDetector_create('SURF')
-common_detector  = cv2.FeatureDetector_create('SIFT')
+common_detector  = cv2.FeatureDetector_create('SURF')
+#common_detector  = cv2.FeatureDetector_create('SIFT')
 ## SIFT extractor settings
 sift_extractor = cv2.DescriptorExtractor_create('SIFT')
 ## FREAK extractor settings
@@ -106,9 +106,9 @@ def load_features(feats_path):
 class HotspotterChipFeatures(DynStruct):
     def __init__(self):
         super(HotspotterChipFeatures, self).__init__()
-        self.cx2_hesaff_feats = []
-        self.cx2_sift_feats   = []
-        self.cx2_freak_feats  = []
+        self.cx2_feats_hesaff = []
+        self.cx2_feats_sift   = []
+        self.cx2_feats_freak  = []
 
 def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     print('\n=============================')
@@ -132,14 +132,14 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     parallel_compute(compute_freak,  [cx2_rchip_path, cx2_freak_path]) 
     # --- LOAD FEATURES --- # 
     print('Loading features')
-    cx2_hesaff_feats = parallel_compute(load_features, [cx2_hesaff_path], 1)
-    cx2_sift_feats   = parallel_compute(load_features, [cx2_sift_path], 1)
-    cx2_freak_feats  = parallel_compute(load_features, [cx2_freak_path], 1)
+    cx2_feats_hesaff = parallel_compute(load_features, [cx2_hesaff_path], 1)
+    cx2_feats_sift   = parallel_compute(load_features, [cx2_sift_path], 1)
+    cx2_feats_freak  = parallel_compute(load_features, [cx2_freak_path], 1)
 
     hs_feats = HotspotterChipFeatures()
-    hs_feats.cx2_hesaff_feats = cx2_hesaff_feats
-    hs_feats.cx2_sift_feats   = cx2_sift_feats
-    hs_feats.cx2_freak_feats = cx2_freak_feats
+    hs_feats.cx2_feats_hesaff = cx2_feats_hesaff
+    hs_feats.cx2_feats_sift   = cx2_feats_sift
+    hs_feats.cx2_feats_freak  = cx2_feats_freak
     print('=============================')
     print('Done computing and loading features')
     print('=============================\n\n')

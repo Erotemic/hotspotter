@@ -49,13 +49,12 @@ def unpack_freak(cx2_desc):
 
         
 
-def SIFT_EXPERIMENT(hs_tables, hs_feats):
+def EXPERIMENT(hs_tables, hs_feats):
     __K__ = 2
 
     cx2_hesaff_feats = hs_feats.cx2_hesaff_feats
     cx2_sift_feats   = hs_feats.cx2_sift_feats
     cx2_freak_feats  = hs_feats.cx2_freak_feats
-
 
     cx2_freak  = [d for (k,d) in cx2_freak_feats]
     cx2_freak_kpt  = [k for (k,d) in cx2_freak_feats]

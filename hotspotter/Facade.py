@@ -512,14 +512,16 @@ class Facade(QObject):
     @func_log
     def profile(fac, cmd='fac.query(1)'):
         # Meliae # from meliae import loader # om = loader.load('filename.json') # s = om.summarize();
-        import cProfile
         iom = fac.hs.iom
-        logmsg('Profiling Command: '+cmd)
-        cProfOut_fpath = iom.get_temp_fpath('OpenGLContext_'+cmd+'.profile')
+        import cProfile
+        print('Profiling Command: '+cmd)
+        #cProfOut_fpath = ('OpenGLContext_'+cmd+'.profile').replace(' ','')
+        cProfOut_fpath = 'OpenGLContext.profile'
+        #cProfOut_fpath = iom.get_temp_fpath('OpenGLContext_'+cmd+'.profile')
         cProfile.runctx( cmd, globals(), locals(), filename=cProfOut_fpath )
-        logdbg('Profiled Output: '+cProfOut_fpath)
-        rsr_fpath = 'C:\\Python27\\Scripts\\runsnake.exe'
-        view_cmd = rsr_fpath+' '+cProfOut_fpath
+        print('Profiled Output: '+cProfOut_fpath)
+        rsr_fpath = 'C:/Python27/Scripts/runsnake.exe'
+        view_cmd = rsr_fpath+' "'+cProfOut_fpath+'"'
         os.system(view_cmd)
 
     @func_log

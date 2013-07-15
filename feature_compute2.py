@@ -129,16 +129,17 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     print('Computing features')
     parallel_compute(compute_hesaff, [cx2_rchip_path, cx2_hesaff_path])
     parallel_compute(compute_sift,   [cx2_rchip_path, cx2_sift_path])
-    #parallel_compute(compute_freak,  [cx2_rchip_path, cx2_freak_path]) 
+    parallel_compute(compute_freak,  [cx2_rchip_path, cx2_freak_path]) 
     # --- LOAD FEATURES --- # 
     print('Loading features')
     cx2_hesaff_feats = parallel_compute(load_features, [cx2_hesaff_path], 1)
     cx2_sift_feats   = parallel_compute(load_features, [cx2_sift_path], 1)
-    #cx2_freak_feats   = parallel_compute(load_features, [cx2_freak_path])
+    cx2_freak_feats  = parallel_compute(load_features, [cx2_freak_path], 1)
 
     hs_feats = HotspotterChipFeatures()
     hs_feats.cx2_hesaff_feats = cx2_hesaff_feats
     hs_feats.cx2_sift_feats   = cx2_sift_feats
+    hs_feats.cx2_freak_feats = cx2_freak_feats
     print('=============================')
     print('Done computing and loading features')
     print('=============================\n\n')

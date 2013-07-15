@@ -316,20 +316,21 @@ class Timer(object):
     e.g with Timer() as t: some_function()'''
     def __init__(self, outlist=[], msg=''):
         # outlist is a list to append output to
-        self.outlist   = outlist
-        self.msg   = msg
+        self.outlist = outlist
+        self.msg = msg
         self.tstart = -1
 
     def __enter__(self):
-        sys.stdout.write('Timing: '+self.msg+'\n')
-        self.tstart = time.time()
+        if not self.msg is None:
+            sys.stdout.write('Timing: '+self.msg+'\n')
         sys.stdout.flush()
+        self.tstart = time.time()
 
     def __exit__(self, type, value, trace):
         ellapsed = (time.time() - self.tstart)
-        if len(self.msg) <= 0:
+        if not self.msg is None and len(self.msg) <= 0:
             self.outlist.append(ellapsed)
-        sys.stdout.write('  ...ellapsed: '+str(ellapsed)+' seconds\n')
+        sys.stdout.write('  ...took '+str(ellapsed)+' seconds\n')
         sys.stdout.flush()
 
 import matplotlib.pyplot as plt

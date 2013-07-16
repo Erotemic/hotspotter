@@ -367,9 +367,9 @@ if __name__ == '__main__':
         
         # http://stackoverflow.com/questions/8181872/finding-homography-and-warping-perspective
         #H = findHomography( src2Dfeatures, dst2Dfeatures, outlierMask, RANSAC, 3);
-        rchip2_H1 = cv2.warpPerspective(rchip2, H1.inv(), rchip1.size(), cv2.INTER_LANCZOS4)
-        rchip2_H2 = cv2.warpPerspective(rchip2, H2.inv(), rchip1.size(), cv2.INTER_LANCZOS4)
-        rchip2_H3 = cv2.warpPerspective(rchip2, H3.inv(), rchip1.size(), cv2.INTER_LANCZOS4)
+        rchip2_H1 = cv2.warpPerspective(rchip2, linalg.inv(H1), rchip1.size(), cv2.INTER_LANCZOS4)
+        rchip2_H2 = cv2.warpPerspective(rchip2, linalg.inv(H2), rchip1.size(), cv2.INTER_LANCZOS4)
+        rchip2_H3 = cv2.warpPerspective(rchip2, linalg.inv(H3), rchip1.size(), cv2.INTER_LANCZOS4)
 
 
         #cmd = 'H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)'

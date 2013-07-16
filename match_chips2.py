@@ -115,14 +115,14 @@ def precompute_args_1vM(cx2_cid, cx2_desc, hs_dirs):
     if check_path(flann_1vM_path):
         try:
             print('Attempting to load flann index')
-            flann_1vM.load_index(flann_path, ax2_desc)
+            flann_1vM.load_index(flann_1vM_path, ax2_desc)
             load_success = True
         except Exception as ex:
             print('Cannot load FLANN index'+repr(ex))
     if not load_success:
         with Timer(msg='rebuilding FLANN index'):
             flann_1vM.build_index(ax2_desc, **__FLANN_PARAMS__)
-            flann_1vM.save_index(flann_path)
+            flann_1vM.save_index(flann_1vM_path)
     flann_1vM.ax2_desc = ax2_desc # dont let this loose scope
     return cx2_cid, cx2_desc, ax2_cx, ax2_fx, flann_1vM
 

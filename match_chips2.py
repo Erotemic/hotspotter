@@ -393,7 +393,7 @@ if __name__ == '__main__':
         #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV1, fignum=1)
         #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV2, fignum=2)
         #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV3, fignum=3)
-        imshow(rchip1_H)
+        plt.imshow(rchip1_H)
 
         tile_all_figures()
 

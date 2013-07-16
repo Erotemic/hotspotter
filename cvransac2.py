@@ -197,6 +197,7 @@ def H_homog_from_CV2SAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     method = cv2.LMEDS # Least-Median robust method
 
     H, inliers = cv2.findHomography(xy1_m.T, xy2_m.T, cv2.RANSAC, np.sqrt(xy_thresh_sqrd))
+    H = H if not H is None else np.eye(3)
     return H, np.array(inliers, dtype=bool).flatten()
 
 def H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
@@ -214,9 +215,8 @@ def H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     try: 
         H, pcv_inliers = homography.H_from_ransac(fp, tp, model, 500, np.sqrt(xy_thresh_sqrd))
     except ValueError as ex:
-        print(ex)
-        H = np.eye(3)
-        inliers = []
+        print('!!! Error in H_homog_from_PCVSAC'+repr(ex))
+        return np.eye(3), []
     # Convert to the format I'm expecting
     inliers = np.zeros(kpts1_m.shape[1], dtype=bool)
     inliers[pcv_inliers] = True

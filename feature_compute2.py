@@ -104,11 +104,31 @@ def load_features(feats_path):
 # =======================================
 
 class HotspotterChipFeatures(DynStruct):
+    #
     def __init__(self):
         super(HotspotterChipFeatures, self).__init__()
         self.cx2_feats_hesaff = []
         self.cx2_feats_sift   = []
         self.cx2_feats_freak  = []
+        self.cx2_desc = None
+        self.cx2_kpts = None
+        self.feat_type = None
+    #
+    def set_feat_type(self, feat_type):
+        if feat_type == self.feat_type:
+            print('Feature type is already: '+feat_type)
+            return
+        print('Setting feature type to: '+feat_type)
+        self.feat_type = feat_type
+        if self.feat_type == 'HESAFF':
+            cx2_feats = self.cx2_feats_hesaff
+        elif self.feat_type == 'SIFT':
+            cx2_feats = self.cx2_feats_sift
+        elif self.feat_type == 'FREAK':
+            cx2_feats = self.cx2_feats_freak
+        self.cx2_desc  = [d for (k,d) in cx2_feats]
+        self.cx2_kpts  = [k for (k,d) in cx2_feats]
+
 
 def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     print('\n=============================')

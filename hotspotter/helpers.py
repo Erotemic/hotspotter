@@ -227,12 +227,15 @@ def load(fname):
     with open(sanatize_fname(fname), 'wb') as file:
         return cPickle.load(file)
 #---------------
+def printWARN(warn_msg, category=UserWarning):
+    print(warn_msg)
+    warnings.warn(warn_msg, category=category)
+#---------------
 def __DEPRICATED__(func):
     'deprication decorator'
     warn_msg = 'Depricated call to: %s' % func.__name__
     def __DEP_WRAPPER(*args, **kwargs):
-        print(warn_msg)
-        warnings.warn(warn_msg, category=DeprecationWarning)
+        printWARN(warn_msg, category=DeprecationWarning)
         return func(*args, **kwargs)
     __DEP_WRAPPER.__name__ = func.__name__
     __DEP_WRAPPER.__doc__ = func.__doc__
@@ -309,6 +312,16 @@ def unit_test(test_func):
         print('Tested: '+test_name+' ...SUCCESS')
         return ret
     return __unit_test_wraper
+
+
+def tic(msg=None):
+    return (msg, time.time())
+
+def toc(tt):
+    ellapsed = (time.time() - tt[1])
+    sys.stdout.write('...toc(%.4fs, ' % ellapsed + '"' + str(tt[0]) + '"' + ')\n')
+    return ellapsed
+
 
 import sys
 class Timer(object):
@@ -404,6 +417,33 @@ def get_exec_src(func):
         after  = src[ret_end:]
         src = before+after
     return src
+
+def remove_file(iom, fpath):
+    try:
+        os.remove(fpath)
+    except OSError as e:
+        printWARN('OSError: %s,\n Could not delete %s' % (str(e), fpath))
+        return False
+    return True
+
+import os
+import fnmatch
+def remove_files_in_dir(dpath, fname_pattern='*', recursive=False):
+    print('Removing files:')
+    print('  * in dpath = %r ' % dpath) 
+    print('  * matching pattern = %r' % fname_pattern) 
+    print('  * recursive = %r' % recursive) 
+    num_removed, num_matched = (0,0)
+    if not os.path.exists(dpath):
+        printWARN('!!! dir = %r does not exist!' % dpath)
+    for root, dname_list, fname_list in os.walk(dpath):
+        for fname in fnmatch.filter(fname_list, fname_pattern):
+            num_matched += 1
+            num_removed += remove_file(os.path.join(root, fname))
+        if not recursive:
+            break
+    print('... Removed %d/%d files' % (num_removed, num_matched))
+    return True
 
 def profile(cmd):
     # Meliae # from meliae import loader # om = loader.load('filename.json') # s = om.summarize();

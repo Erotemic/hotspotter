@@ -9,6 +9,8 @@ import numpy as np
 import os, sys
 
 
+__HISTEQ__ = False
+
 # =======================================
 # Parallelizable Work Functions          
 # =======================================
@@ -32,7 +34,8 @@ def compute_chip(img_path, chip_path, roi, new_size):
     # Scale chip, but do not rotate
     chip = raw_chip.convert('L').resize(new_size, Image.ANTIALIAS)
     # Preprocessing based on preferences
-    chip = histeq(chip)
+    if __HISTEQ__:
+        chip = histeq(chip)
     # Save chip to disk
     chip.save(chip_path, 'PNG')
     return True

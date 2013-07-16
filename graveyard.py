@@ -49,3 +49,49 @@ def desc_matcher(qcx, cx2):
 
     matches = matcher.match(qdesc, desc2)
     return matches
+#####
+# DIRECTION 2 of __test_homog():
+####
+    #with Timer(msg=testname+' SV21'):
+    #H21, inliers21 = func_homog(kpts2_m, kpts1_m, xy_thresh12_sqrd) 
+    #print(' * num inliers21 = %d' % inliers21.sum())
+    #fm1_SV2 = fm12[inliers21,:]
+    #df2.show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm1_SV2, fignum=fignum+1, title=testname+' SV2')
+    #df2.imshow(rchip1_H2, fignum=fignum+2, title=testname+' warped querychip1')
+    #df2.imshow(rchip2_H2, fignum=fignum+3, title=testname+' warped reschip2')
+    #print H2
+    #rchip1_H2 = cv2.warpPerspective(rchip1, inv(H2), rchip2.shape[0:2][::-1])
+    #rchip2_H2 = cv2.warpPerspective(rchip2,     H2, rchip1.shape[0:2][::-1])
+
+
+def FREAK_assign_feat_matches_1v1(qcx, cx2_cid, cx2_freak):
+    print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
+    qfreak = cx2_freak[qcx]
+    matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
+    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    for cx, freak in enumerate(cx2_freak):
+        sys.stdout.write('.')
+        sys.stdout.flush()
+        m = matcher.match(freak, qfreak)
+        if cx == qcx: continue
+        (fx2_qfx, fx2_dist) = flann_1v1.nn_index(freak, 2, **__FLANN_PARAMS__)
+        # Lowe's ratio test
+        fx2_ratio = np.divide(fx2_dist[:,1]+1, fx2_dist[:,0]+1)
+        fx, = np.where(fx2_ratio > __1v1_RAT_THRESH__)
+        qfx = fx2_qfx[fx,0]
+        cx2_fm[cx] = np.array(zip(qfx, fx))
+        cx2_fs[cx] = fx2_ratio[fx]
+    sys.stdout.write('DONE')
+    flann_1v1.delete_index()
+    return cx2_fm, cx2_fs
+
+def unpack_freak(cx2_desc):
+    cx2_unpacked_freak = []
+    for descs in cx2_desc:
+        unpacked_desc = []
+        for d in descs:
+            bitstr = ''.join([('{0:#010b}'.format(byte))[2:] for byte in d])
+            d_bool = np.array([int(bit) for bit in bitstr],dtype=bool)
+            unpacked_desc.append(d_bool)
+        cx2_unpacked_freak.append(unpacked_desc)

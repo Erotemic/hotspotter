@@ -15,13 +15,15 @@ imp.reload(hotspotter.helpers)
 from hotspotter.helpers import *
 from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC, H_homog_from_CV2SAC
 
+# TEST PARAMETERS
 __VIEW_TOP__ = 10
 
 __SHOW_PLAIN_CHIPS__ = True
-__SHOW_KPTS_CHIPS__ = False
+__SHOW_KPTS_CHIPS__ = True
 __SHOW_ASSIGNED_FEATURE_MATCHES__ = True
 __SHOW_INLIER_MATCHES__ = True
-__OTHER_X__ = 2
+__OTHER_X__ = 0
+__xy_thresh_percent__ = .10
 
 def cx2_other_cx(cx):
     nx = cx2_nx[cx]
@@ -29,23 +31,23 @@ def cx2_other_cx(cx):
     other_cx  = other_cx_[other_cx_ != cx]
     return other_cx
 
+# INITIALIZATION DEPENDS ON RUNNING MATCH_CHIPS2 FIRST
+df2.reset()
+
+# VIEW TOP SCORES AND GROUND TRUTH SCORES
 print('\n\n=============================')
 print(' INSPECTING QCX MATCHES      ')
 print('=============================')
-df2.reset()
-
 qnx = cx2_nx[qcx]
 other_cx = cx2_other_cx(qcx)
 print('Inspecting matches of qcx=%d name=%s' % (qcx, nx2_name[qnx]))
 print(' * Matched against %d other chips' % len(cx2_fm))
 print(' * Ground truth chip indexes:\n   other_cx=%r' % other_cx)
-
 cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
 top_cx = cx2_score.argsort()[::-1]
 top_scores = cx2_score[top_cx] 
 top_nx = cx2_nx[top_cx]
 view_top = min(len(top_scores), __VIEW_TOP__)
-
 print('---------------------------------------')
 print('The ground truth scores are: ')
 for cx in iter(other_cx):
@@ -62,10 +64,8 @@ for topx in xrange(view_top):
 print('---------------------------------------')
 print('---------------------------------------')
 
-cx = other_cx[__OTHER_X__]
-print(' * Inspecting: cx = %d' % cx)
-
 # INPUT CHIPS
+cx = other_cx[__OTHER_X__]
 kpts1  = cx2_kpts[qcx]
 kpts2  = cx2_kpts[cx]
 rchip1 = cv2.imread(cx2_rchip_path[qcx])
@@ -73,6 +73,7 @@ rchip2 = cv2.imread(cx2_rchip_path[cx])
 rchipkpts1 = draw_kpts(rchip1, kpts1)
 rchipkpts2 = draw_kpts(rchip2, kpts2)
 print('---------------------------------------')
+print(' * Inspecting match to: cx = %d' % cx)
 print('Drawing chips we are inspecting')
 print('  * rchip1.shape = %r ' % (rchip1.shape,)) 
 print('  * rchip2.shape = %r ' % (rchip2.shape,)) 
@@ -101,22 +102,23 @@ if __SHOW_ASSIGNED_FEATURE_MATCHES__:
                  title='Assigned feature matches qcx=%d cx=%d ' % (qcx, cx))
 
 # SPATIAL VERIFICATION PARAMS SETUP
-print('---------------------------------------')
-print('Begining spatial verification tests')
-__xy_thresh_percent__ = .10
 img1_extent = (kpts1_m[0:2,:].max(1) - kpts1_m[0:2,:].min(1))[0:2]
 img2_extent = (kpts2_m[0:2,:].max(1) - kpts2_m[0:2,:].min(1))[0:2]
 xy_thresh12_sqrd = np.sum(img1_extent**2) * (__xy_thresh_percent__**2)
 xy_thresh21_sqrd = np.sum(img2_extent**2) * (__xy_thresh_percent__**2)
-print('Computing the xy_threshold:')
-print(' * Threshold is %.1f%% of diagonal length' % (__xy_thresh_percent__*100))
-print(' * img1_extent = %r ' % img1_extent)
-print(' * img2_extent = %r ' % img2_extent)
-print(' * img1_diag_len = %.2f ' % np.sqrt(np.sum(img1_extent**2)))
-print(' * img2_diag_len = %.2f ' % np.sqrt(np.sum(img2_extent**2)))
-print(' * xy_thresh12_sqrd=%.2f' % np.sqrt(xy_thresh12_sqrd))
-print(' * xy_thresh21_sqrd=%.2f' % np.sqrt(xy_thresh21_sqrd))
-print('---------------------------------------')
+
+__PRINT_THRESH_INFO__ = False
+if __PRINT_THRESH_INFO__:
+    print('---------------------------------------')
+    print('Computing the xy_threshold:')
+    print(' * Threshold is %.1f%% of diagonal length' % (__xy_thresh_percent__*100))
+    print(' * img1_extent = %r ' % img1_extent)
+    print(' * img2_extent = %r ' % img2_extent)
+    print(' * img1_diag_len = %.2f ' % np.sqrt(np.sum(img1_extent**2)))
+    print(' * img2_diag_len = %.2f ' % np.sqrt(np.sum(img2_extent**2)))
+    print(' * xy_thresh12_sqrd=%.2f' % np.sqrt(xy_thresh12_sqrd))
+    print(' * xy_thresh21_sqrd=%.2f' % np.sqrt(xy_thresh21_sqrd))
+    print('---------------------------------------')
 
 
 # HOMOGRAPHY ESTIMATIONS
@@ -124,18 +126,13 @@ print('---------------------------------------')
 def __test_homog(func_homog, testname, fignum):
     print('--------------------------')
     print('Testing homog: '+testname)
-    with Timer(msg=testname+' SV1'):
+    with Timer(msg=testname+' SV12'):
         H12, inliers12 = func_homog(kpts1_m, kpts2_m, xy_thresh12_sqrd) 
-    with Timer(msg=testname+' SV2'):
-        H21, inliers21 = func_homog(kpts2_m, kpts1_m, xy_thresh12_sqrd) 
     print(' * num inliers12 = %d' % inliers12.sum())
-    print(' * num inliers21 = %d' % inliers21.sum())
     fm1_SV1 = fm12[inliers12,:]
-    fm1_SV2 = fm12[inliers21,:]
     if __SHOW_INLIER_MATCHES__:
         df2.show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm1_SV1, fignum=fignum, title=testname+' SV1')
-        df2.show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm1_SV2, fignum=fignum+1, title=testname+' SV2')
-    return ((H12, inliers12), (H21, inliers21))
+    return (H12, inliers12)
 print('Estimating homography')
 pcvsac_homog = __test_homog(H_homog_from_PCVSAC, 'pcv RanSaC',  5)
 ransac_homog = __test_homog(H_homog_from_RANSAC, ' my RanSaC',  7)
@@ -149,17 +146,12 @@ print('---------------------------------------')
 print('Warping Images')
 from numpy.linalg import inv
 def __test_warp(homog_tup, testname, fignum):
-    H1 = homog_tup[0][0]
-    H2 = homog_tup[1][0]
+    H1 = homog_tup[0]
     rchip1_H1 = cv2.warpPerspective(rchip1,      H1, rchip2.shape[0:2][::-1])
     rchip2_H1 = cv2.warpPerspective(rchip2, inv(H1), rchip1.shape[0:2][::-1])
 
-    rchip1_H2 = cv2.warpPerspective(rchip1, inv(H2), rchip2.shape[0:2][::-1])
-    rchip2_H2 = cv2.warpPerspective(rchip2,     H2, rchip1.shape[0:2][::-1])
-    df2.imshow(rchip1_H1, fignum=fignum+1, title=testname+' warped querychip1')
-    df2.imshow(rchip2_H1, fignum=fignum+0, title=testname+' warped reschip2')
-    df2.imshow(rchip1_H2, fignum=fignum+3, title=testname+' warped querychip1')
-    df2.imshow(rchip2_H2, fignum=fignum+2, title=testname+' warped reschip2')
+    df2.imshow(rchip1_H1, fignum=fignum+0, title=testname+' warped querychip1')
+    df2.imshow(rchip2_H1, fignum=fignum+1, title=testname+' warped reschip2')
 
 __test_warp(cv2sac_homog, 'cv2 RanSaC', fignum=12)
 __test_warp(delsac_homog, ' my DElSaC', fignum=16)

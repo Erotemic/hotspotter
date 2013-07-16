@@ -1,10 +1,11 @@
 import drawing_functions2 as df2
+import report_results2
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
 from hotspotter.Parallelize import parallel_compute
 from hotspotter.other.ConcretePrintable import DynStruct
-from hotspotter.helpers import Timer, get_exec_src, check_path
+from hotspotter.helpers import Timer, get_exec_src, check_path, tic, toc
 from drawing_functions2 import draw_matches, draw_kpts, tile_all_figures
 from hotspotter.tpl.pyflann import FLANN
 import hotspotter.tpl.cv2  as cv2
@@ -18,35 +19,16 @@ __1v1_RAT_THRESH__ = 1.5
 __FLANN_PARAMS__ = {'algorithm' :'kdtree',
                     'trees'     :4,
                     'checks'    :128}
+__FEAT_TYPE__ = 'HESAFF'
+__xy_thresh_percent__ = .10
 
 
-def EXPERIMENT(hs_tables, hs_feats):
-    cx2_feats_hesaff = hs_feats.cx2_feats_hesaff
-    cx2_feats_sift   = hs_feats.cx2_feats_sift
-    cx2_feats_freak  = hs_feats.cx2_feats_freak
-
-    runall_match(cx2_feats_sift,   hs_tables)
-    runall_match(cx2_feats_hesaff, hs_tables)
-    #runall_match(cx2_feats_freak,  hs_tables)
-
-
-def runall_match(cx2_feats, hs_tables):
-    cx2_cid    = hs_tables.cx2_cid
-
-    cx2_desc   = [d for (k,d) in cx2_feats]
-    cx2_kpts   = [k for (k,d) in cx2_feats]
-
-    funcs_1v1 = {'fn_precomp_args'        : precompute_args_1v1, 
-                 'fn_assign_feat_matches' : assign_feat_matches_1v1}
-    funcs_1vM = {'fn_precomp_args'        : precompute_args_1vM, 
-                 'fn_assign_feat_matches' : assign_feat_matches_1vM}
-
-    tmparg = DynStruct(copy_dict=funcs_1vM)
-    exec(tmparg.execstr('tmparg'))
-    
-    cx2_res_1vM = __runall(cx2_desc, cx2_kpts, **funcs_1vM)
-    #cx2_res_1v1 = __runall(cx2_desc, cx2_kpts, **funcs_1v1)
-
+def runall_match(hs):
+    with Timer(msg=None):
+        flann_1vM = precompute_index_1vM(hs)
+    #functools.partial
+    cx2_res_1vM = __run_matching(hs, assign_matches_1vM, flann_1vM)
+    cx2_res_1v1 = __run_matching(hs, assign_matches_1v1)
 
 class HotspotterQueryResult(DynStruct):
     def __init__(self):
@@ -54,50 +36,103 @@ class HotspotterQueryResult(DynStruct):
         self.qcx    = -1
         self.cx2_fm = []
         self.cx2_fs = []
+        self.cx2_fm_SV = []
+        self.cx2_fs_SV = []
 
-def __runall(cx2_desc, cx2_kpts, fn_precomp_args=None, fn_assign_feat_matches=None):
-    with Timer(msg=None):
-        assign_args = fn_precomp_args(cx2_cid, cx2_desc)
+# Work function that is the basic matching pipeline. 
+# specific functions need to be bound: 
+# 
+# fn_assign - assign feature matches
+def __run_matching(hs, fn_assign, *args):
+    cx2_cid    = hs.tables.cx2_cid
+    cx2_kpts, cx2_desc = hs.get_feats(__FEAT_TYPE__)
+    cx2_desc   = [d for (k,d) in cx2_feats]
+    cx2_kpts   = [k for (k,d) in cx2_feats]
     cx2_res = [HotspotterQueryResult() for _ in xrange(len(cx2_cid))]
-    with Timer(msg=None):
-        for qcx, qcid in enumerate(cx2_cid):
-            res = cx2_res[qcx]
-            res.qcx = qcx
-            if qcid == 0: continue
-            with Timer(msg=None):
-                matches_scores = fn_assign_feat_matches(qcx, *assign_args)
-                res.cx2_fm = matches_scores[0]
-                res.cx2_fs = matches_scores[1]
+    tt_ALL = tic('all queries')
+    assign_times = []
+    verify_times = []
+    skip_list = []
+    for qcx, qcid in enumerate(cx2_cid):
+        if qcid == 0: 
+            skip_list.append(qcx)
+            continue
+        tt_A = tic('query(qcx=%d)' % qcx)
+        # Assign matches with the chosen function (1v1) or (1vM)
+        (cx2_fm, cx2_fs) = fn_assign(qcx, cx2_cid, cx2_desc, *args)
+        assign_times.append(toc(tt_A))
+        # Spatially verify the assigned matches
+        tt_V = tic('verify(qcx=%d)' % qcx)
+        (cx2_fm_SV, cx2_fs_SV) = spatially_verify(qcx, cx2_kpts, cx2_fm, cx2_fs)
+        verify_times.append(toc(tt_V))
+        # Assign output to a query result
+        res = cx2_res[qcx]
+        res.qcx = qcx
+        res.cx2_fm    = cx2_fm
+        res.cx2_fs    = cx2_fs
+        res.cx2_fm_SV = cx2_fm_SV
+        res.cx2_fs_SV = cx2_fs_SV
+    if len(skip_list) > 0:
+        print('Skipped more queries than you should have: %r ' % skip_list)
+    total_time = toc(tt_ALL)
+    report_results2.report_results(cx2_res, hs.tables)
     return cx2_res
 
+#@profile
 def spatially_verify(qcx, cx2_kpts, cx2_fm, cx2_fs):
     qkpts = cx2_kpts[qcx]
     cx2_cscore = np.array([np.sum(fs) for fs in cx2_fs])
     top_cx = cx2_cscore.argsort()[::-1]
 
-    topx = 0 # for
-    cx = top_cx[topx]
+    num_rerank = min(len(top_cx), __NUM_RERANK__)
+    # -----------------------------------------------
+    # TODO: SHOULD THIS HAPPEN HERE? (ISSUE XY_THRESH)
+    #img1_extent = (qkpts[:,0:2].max(0) - qkpts[:,0:2].min(0))[0:2]
+    #xy_thresh1_sqrd = np.sum(img1_extent**2) * __xy_thresh_percent__
+    # -----------------------------------------------
 
-    kpts = cx2_kpts[cx]
-    fm12 = cx2_fm[cx]
-    mx1  = fm12[:,0]
-    mx2  = fm12[:,1]
+    # Precompute output container
+    cx2_fm_SV = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fs_SV = [[] for _ in xrange(len(cx2_cid))]
 
-    # ugg transpose, put in an assert to keep things sane. I like row first, 
-    # but ransac seems not to
-    kpts1_m = qkpts[mx1,:].T
-    kpts2_m =  kpts[mx2,:].T
-    assert kpts1_m.shape[0] == 5 and kpts2_m.shape[0] == 5, 'needs ellipses'
-    # Get match threshold 10% of matching keypoint extent diagonal
-    img2_extent = (kpts2_m[0:2,:].max(1) - kpts2_m[0:2,:].min(1))[0:2]
-    xy_thresh_sqrd = np.sum(img2_extent**2)/100
+    # for the top __NUM_RERANK__ results
+    # 1) compute a robust transform from img2 -> img1
+    # 2) keep feature matches which are inliers
+    for topx in xrange(num_rerank):
+        cx = top_cx[topx]
 
-    #H, inliers = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
-    # Show what it did
-    #fm12_SV = fm12[inliers,:]
+        kpts = cx2_kpts[cx]
+        fm = cx2_fm[cx]
+        fs = cx2_fs[cx]
+        mx1  = fm[:,0]
+        mx2  = fm[:,1]
 
-def precompute_args_1vM(cx2_cid, cx2_desc, hs_dirs):
-    feat_dir = hs_dirs.feat_dir
+        # ugg transpose, I like row first, but ransac seems not to
+        kpts1_m = qkpts[mx1,:].T
+        kpts2_m =  kpts[mx2,:].T
+
+        # -----------------------------------------------
+        # TODO: SHOULD THIS HAPPEN HERE? (ISSUE XY_THRESH)
+        # Get match threshold 10% of matching keypoint extent diagonal
+        img1_extent = (kpts1_m[0:2,:].max(1) - kpts1_m[0:2,:].min(1))[0:2]
+        xy_thresh1_sqrd = np.sum(img1_extent**2) * __xy_thresh_percent__
+        # -----------------------------------------------
+
+        H, inliers = H_homog_from_DELSAC(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
+        fm_SV = fm[inliers,:]
+        fs_SV = fs[inliers,:]
+
+        cx2_fm_SV[cx] = fm_SV
+        cx2_fm_SV[cx] = fs_SV
+    return cx2_fm_SV, cx2_fs_SV
+
+
+#@profile
+def precompute_index_1vM(hs):
+    cx2_cid   = hs.tables.cx2_cid
+    cx2_desc  = hs.feats.cx2_desc
+    feat_dir  = hs.dirs.feat_dir
+    feat_type = hs.feats.feat_type
     print('Precomputing one vs many information')
     cx2_nFeats = [len(k) for k in cx2_desc]
     _ax2_cx = [[cx_]*nFeats for (cx_, nFeats) in iter(zip(range(len(cx2_cid)), cx2_nFeats))]
@@ -105,9 +140,9 @@ def precompute_args_1vM(cx2_cid, cx2_desc, hs_dirs):
     ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
     ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
     ax2_desc   = np.vstack(cx2_desc)
-
+    # Build (or reload) one vs many flann index
     flann_1vM = FLANN()
-    flann_1vM_path = feat_dir + '/flann_1vM.index'
+    flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
     load_success = False
     if check_path(flann_1vM_path):
         try:
@@ -121,16 +156,21 @@ def precompute_args_1vM(cx2_cid, cx2_desc, hs_dirs):
         with Timer(msg='rebuilding FLANN index'):
             flann_1vM.build_index(ax2_desc, **__FLANN_PARAMS__)
             flann_1vM.save_index(flann_1vM_path)
-    flann_1vM.ax2_desc = ax2_desc # dont let this loose scope
-    return cx2_cid, cx2_desc, ax2_cx, ax2_fx, flann_1vM
+    # Keep relevant data in the flann object. 
+    # as to prevent them from loosing scope
+    flann_1vM.ax2_desc = ax2_desc 
+    flann_1vM.ax2_cx   = ax2_cx 
+    flann_1vM.ax2_fx   = ax2_fx 
+    return flann_1vM
 
 # Feature scoring functions
 def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist+1, vdist+1)) 
 def RATIO_fn(vdist, ndist): return np.divide(ndist+1, vdist+1)
 def LNBNN_fn(vdist, ndist): return ndist - vdist 
-
 score_fn = LNRAT_fn
-def assign_feat_matches_1vM(qcx, cx2_cid, cx2_desc, ax2_cx, ax2_fx, flann_1vM):
+
+#@profile
+def assign_matches_1vM(qcx, cx2_cid, cx2_desc, flann_1vM):
     print('Assigning 1vM feature matches from qcx=%d to %d chips' % (qcx, len(cx2_cid)))
     isQueryIndexed = True
     qdesc = cx2_desc[qcx]
@@ -142,8 +182,8 @@ def assign_feat_matches_1vM(qcx, cx2_cid, cx2_desc, ax2_cx, ax2_fx, flann_1vM):
     # Score the feature matches
     qfx2_score = np.array([score_fn(_vdist.T, norm_dists) for _vdist in vote_dists.T]).T
     # Vote using the inverted file 
-    qfx2_cx = ax2_cx[qfx2_ax[:,0:K]]
-    qfx2_fx = ax2_fx[qfx2_ax[:,0:K]]
+    qfx2_cx = flann_1vM.ax2_cx[qfx2_ax[:,0:K]]
+    qfx2_fx = flann_1vM.ax2_fx[qfx2_ax[:,0:K]]
     # Build feature matches
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
@@ -159,10 +199,7 @@ def assign_feat_matches_1vM(qcx, cx2_cid, cx2_desc, ax2_cx, ax2_fx, flann_1vM):
     for cx in xrange(len(cx2_cid)): cx2_fs[cx] = np.array(cx2_fs[cx])
     return cx2_fm, cx2_fs
 
-def precompute_args_1v1(cx2_cid, cx2_desc):
-    return cx2_cid, cx2_desc
-
-def assign_feat_matches_1v1(qcx, cx2_cid, cx2_desc):
+def assign_matches_1v1(qcx, cx2_cid, cx2_desc):
     print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
     qdesc = cx2_desc[qcx]
     flann_1v1 = FLANN()
@@ -184,125 +221,14 @@ def assign_feat_matches_1v1(qcx, cx2_cid, cx2_desc):
     flann_1v1.delete_index()
     return cx2_fm, cx2_fs
 
-def FREAK_assign_feat_matches_1v1(qcx, cx2_cid, cx2_freak):
-    print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
-    qfreak = cx2_freak[qcx]
-    matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
-    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
-    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
-    for cx, freak in enumerate(cx2_freak):
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        m = matcher.match(freak, qfreak)
-        if cx == qcx: continue
-        (fx2_qfx, fx2_dist) = flann_1v1.nn_index(freak, 2, **__FLANN_PARAMS__)
-        # Lowe's ratio test
-        fx2_ratio = np.divide(fx2_dist[:,1]+1, fx2_dist[:,0]+1)
-        fx, = np.where(fx2_ratio > __1v1_RAT_THRESH__)
-        qfx = fx2_qfx[fx,0]
-        cx2_fm[cx] = np.array(zip(qfx, fx))
-        cx2_fs[cx] = fx2_ratio[fx]
-    sys.stdout.write('DONE')
-    flann_1v1.delete_index()
-    return cx2_fm, cx2_fs
 
-def report_results(cx2_res, hs_tables):
-    cx2_cid = hs_tables.cx2_cid
-    cx2_nx  = hs_tables.cx2_nx
-    cx2_top_truepos_rank  = np.zeros(len(cx2_cid)) - 100
-    cx2_top_truepos_score = np.zeros(len(cx2_cid)) - 100
-    cx2_top_trueneg_rank  = np.zeros(len(cx2_cid)) - 100
-    cx2_top_trueneg_score = np.zeros(len(cx2_cid)) - 100
-    cx2_top_score         = np.zeros(len(cx2_cid)) - 100
-    for qcx, qcid in enumerate(cx2_cid):
-        qnx = cx2_nx[qcx]
-        res = cx2_res[qcx]
-        # The score is the sum of the feature scores
-        cx2_score = np.array([np.sum(fs) for fs in res.cx2_fs])
-        top_cx = np.argsort(cx2_score)[::-1]
-        top_score = cx2_score[top_cx]
-        top_nx = cx2_nx[top_cx]
-        # Remove query from true positives ranks
-        _truepos_ranks, = np.where(top_nx == qnx)
-        # Get TRUE POSTIIVE ranks
-        truepos_ranks = _truepos_ranks[top_cx[_truepos_ranks] != qcx]
-        # Get BEST True Positive and BEST True Negative
-        if len(truepos_ranks) > 0:
-            top_truepos_rank = truepos_ranks.min()
-            bot_truepos_rank = truepos_ranks.max()
-            true_neg_range   = np.arange(0, bot_truepos_rank+2)
-            top_trueneg_rank = np.setdiff1d(true_neg_range, truepos_ranks).min()
-            top_trupos_score = top_score[top_truepos_rank]
-        else:
-            top_trueneg_rank = 0
-            top_truepos_rank = np.NAN
-            top_trupos_score = np.NAN
-        # Append stats to output
-        cx2_top_truepos_rank[qcx]  = top_truepos_rank
-        cx2_top_truepos_score[qcx] = top_trupos_score
-        cx2_top_trueneg_rank[qcx]  = top_trueneg_rank
-        cx2_top_trueneg_score[qcx] = top_score[top_trueneg_rank]
-        cx2_top_score[qcx]         = top_score[0]
-    # difference between the top score and the actual best score
-    cx2_score_disp = cx2_top_score - cx2_top_true_score
-    #
-    # Easy to digest results
-    num_chips = len(cx2_top_truepos_rank)
-    num_with_gtruth = (1 - np.isnan(cx2_top_truepos_rank)).sum()
-    num_rank_less5 = (cx2_top_truepos_rank < 5).sum()
-    num_rank_less1 = (cx2_top_truepos_rank < 1).sum()
-    
-    # Display ranking results
-    rankres_str = ('#TTP = top true positive #TTN = top true negative\n')
-    rankres_header = '#CID, TTP RANK, TTN RANK, TTP SCORE, TTN SCORE, SCORE DISP, NAME\n'
-    rankres_str += rankres_header
-    todisp = np.vstack([cx2_cid,
-                        cx2_top_truepos_rank,
-                        cx2_top_trueneg_rank,
-                        cx2_top_truepos_score,
-                        cx2_top_trueneg_score,
-                        cx2_score_disp, 
-                        cx2_nx]).T
-    for (cid, ttpr, ttnr, ttps, ttns, sdisp, nx) in todisp:
-        rankres_str+=('%4d, %8.0f, %8.0f, %9.2f, %9.2f, %10.2f, %s\n' %\
-              (cid, ttpr, ttnr, ttps, ttns, sdisp, nx2_name[nx]) )
-    rankres_str += rankres_header
-
-    rankres_str += '#Num Chips: %d \n' % num_chips
-    rankres_str += '#Num Chips with at least one match: %d \n' % num_with_gtruth
-    rankres_str += '#Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
-    rankres_str += '#Ranks <= 1: %d / %d\n' % (num_rank_less1, num_with_gtruth)
-    
-    print(rankres_str)
-    result_csv = 'results_ground_truth_rank.csv'
-    with open(result_csv, 'w') as file:
-        file.write(rankres_str)
-    os.system('gvim '+result_csv)
-
-def unpack_freak(cx2_desc):
-    cx2_unpacked_freak = []
-    for descs in cx2_desc:
-        unpacked_desc = []
-        for d in descs:
-            bitstr = ''.join([('{0:#010b}'.format(byte))[2:] for byte in d])
-            d_bool = np.array([int(bit) for bit in bitstr],dtype=bool)
-            unpacked_desc.append(d_bool)
-        cx2_unpacked_freak.append(unpacked_desc)
-
-def show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12, fignum=1):
-    cx2_rchip_path = hs_cpaths.cx2_rchip_path
-    rchip1 = cv2.imread(cx2_rchip_path[qcx])
-    rchip2 = cv2.imread(cx2_rchip_path[cx])
-    kpts1  = cx2_kpts[qcx]
-    kpts2  = cx2_kpts[cx]
-
-    rchip1_kpts = draw_kpts(rchip1, kpts1[fm12[:,0],:])
-    rchip2_kpts = draw_kpts(rchip2, kpts2[fm12[:,1],:])
-    img = draw_matches(rchip1_kpts, rchip2_kpts, qkpts, kpts, fm12, vert=True)
-    fig = plt.figure(fignum)
-    fig.clf()
-    plt.imshow(img)
-    fig.show()
+class HotSpotter(DynStruct):
+    def __init__(self):
+        super(HotSpotter, self).__init__()
+        self.tables = None
+        self.feats  = None
+        self.cpaths = None
+        self.dirs   = None
 
 if __name__ == '__main__':
     import chip_compute2, feature_compute2, load_data2
@@ -317,6 +243,12 @@ if __name__ == '__main__':
     # --- LOAD FEATURES --- #
     hs_feats  = feature_compute2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
 
+    hs = HotSpotter()
+    hs.tables = hs_tables
+    hs.feats  = hs_feats
+    hs.cpaths = hs_cpaths
+    hs.dirs   = hs_dirs
+
     ## DEV ONLY CODE ##
     __DEV_MODE__ = True
     if __DEV_MODE__: 
@@ -329,72 +261,16 @@ if __name__ == '__main__':
         exec(hs_feats.execstr('hs_feats'))
         exec(hs_tables.execstr('hs_tables'))
         exec(hs_dirs.execstr('hs_dirs'))
-        #cx2_feats = cx2_feats_hesaff
-        cx2_feats = cx2_feats_sift
-        cx2_desc  = [d for (k,d) in cx2_feats]
-        cx2_kpts  = [k for (k,d) in cx2_feats]
+        __FEAT_TYPE__ = 'SIFT'
+        hs_feats.set_feat_type(__FEAT_TYPE__)
+        cx2_kpts = hs_feats.cx2_kpts
+        cx2_desc = hs_feats.cx2_kpts
         qcx = 1
         #cx  = 1
         # All of these functions operate on one qcx (except precompute I guess)
-        exec(get_exec_src(precompute_args_1vM))
-        exec(get_exec_src(assign_feat_matches_1vM))
+        exec(get_exec_src(precompute_index_1vM))
+        exec(get_exec_src(assign_matches_1vM))
         #exec(get_exec_src(spatially_verify))
-
-        #sys.exit(1)
-
-        #import imp
-        #import cvransac2
-        #imp.reload(cvransac2)
-        #from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC
-
-        #http://scikit-image.org/docs/dev/api/skimage.transform.html#estimate-transform
-        #with Timer(msg=None):
-            #H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd) 
-        #with Timer(msg=None):
-            #H2, inliers2 = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
-        #with Timer(msg=None):
-            #H3, inliers3 = H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
-
-        #H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd) 
-        #H2, inliers2 = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
-        #H3, inliers3 = H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
-
-        #rchip1 = cv2.imread(cx2_rchip_path[qcx])
-        #rchip2 = cv2.imread(cx2_rchip_path[cx])
-
-        #import skimage.transform
-        #rchip1_H1 = skimage.transform.fast_homography(rchip1, H1)
-        #rchip1_H2 = skimage.transform.fast_homography(rchip1, H2)
-        #rchip1_H3 = skimage.transform.fast_homography(rchip1, H3)
-        #import hotspotter.tpl.cv2 as cv2
-        
-        # http://stackoverflow.com/questions/8181872/finding-homography-and-warping-perspective
-        #H = findHomography( src2Dfeatures, dst2Dfeatures, outlierMask, RANSAC, 3);
-
-        
-        #rchip1_H = cv2.warpPerspective(rchip2, H, rchip2.shape[0:2], cv2.INTER_LANCZOS4)
-        #rchip1_H= cv2.warpPerspective(rchip2, H, rchip2.size(), cv2.INTER_LANCZOS4)
-        #rchip2_H1 = cv2.warpPerspective(rchip2, linalg.inv(H1), rchip1.size(), cv2.INTER_LANCZOS4)
-        #rchip2_H2 = cv2.warpPerspective(rchip2, linalg.inv(H2), rchip1.size(), cv2.INTER_LANCZOS4)
-        #rchip2_H3 = cv2.warpPerspective(rchip2, linalg.inv(H3), rchip1.size(), cv2.INTER_LANCZOS4)
-
-
-        #cmd = 'H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)'
-        #from hotspotter.helpers import profile
-        #profile(cmd)
-
-        #H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd) 
-        # Show what it did
-        #fm12_SV1 = fm12[inliers1, :]
-        #fm12_SV2 = fm12[inliers2, :]
-        #fm12_SV3 = fm12[inliers3, :]
-
-        #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12,     fignum=0)
-        #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV1, fignum=1)
-        #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV2, fignum=2)
-        #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV3, fignum=3)
-
-        #tile_all_figures()
 
         try: 
             __IPYTHON__

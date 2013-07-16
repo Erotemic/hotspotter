@@ -1,6 +1,7 @@
 import os, sys, string
+import fnmatch
 import numpy as np
-from hotspotter.helpers import checkpath, unit_test, ensure_path, symlink
+from hotspotter.helpers import checkpath, unit_test, ensure_path, symlink, remove_files_in_dir
 from hotspotter.helpers import myprint
 from hotspotter.other.ConcretePrintable import DynStruct
 
@@ -39,6 +40,10 @@ class HotspotterDirs(DynStruct):
         ensure_path(self.feat_dir)
         if not os.path.islink(self.internal_sym):
             symlink(internal_dir, self.internal_sym, noraise=True)
+
+    def delete_computed_dir(self):
+        computed_dir = self.internal_dir + '/computed'
+        remove_files_in_dir(computed_dir, recursive=True)
 
 def tryindex(list, val):
     try: 

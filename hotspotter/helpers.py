@@ -321,8 +321,8 @@ class Timer(object):
         self.tstart = -1
 
     def __enter__(self):
-        if not self.msg is None:
-            sys.stdout.write('Timing: '+self.msg+'\n')
+        #if not self.msg is None:
+            #sys.stdout.write('---tic---'+self.msg+'  \n')
         sys.stdout.flush()
         self.tstart = time.time()
 
@@ -330,7 +330,9 @@ class Timer(object):
         ellapsed = (time.time() - self.tstart)
         if not self.msg is None and len(self.msg) <= 0:
             self.outlist.append(ellapsed)
-        sys.stdout.write('  ...took '+str(ellapsed)+' seconds\n')
+        #sys.stdout.write('___toc___'+self.msg+' = %.4fs \n\n' % ellapsed)
+        #sys.stdout.write('___toc___'+self.msg+' = %.4fs \n\n' % ellapsed)
+        sys.stdout.write('...toc(%.4fs, ' % ellapsed + '"' + self.msg + '"' + ')\n')
         sys.stdout.flush()
 
 import matplotlib.pyplot as plt
@@ -349,6 +351,14 @@ def figure(fignum, doclf=False, title=None, **kwargs):
         ax.set_title(title)
         fig.canvas.set_window_title('fig '+str(fignum)+' '+title)
     return fig
+
+
+def reload_modules():
+    import imp
+    import drawing_functions2
+    import hotspotter.helpers
+    imp.reload(drawing_functions2)
+    imp.reload(hotspotter.helpers)
 
 
 def symlink(source, link_name, noraise=False):

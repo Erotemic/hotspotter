@@ -1,7 +1,5 @@
-import matplotlib
+import drawing_functions2 as df2
 import sys
-print('Configuring matplotlib for Qt4')
-matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from hotspotter.Parallelize import parallel_compute
@@ -12,7 +10,7 @@ from hotspotter.tpl.pyflann import FLANN
 import hotspotter.tpl.cv2  as cv2
 from itertools import chain
 from numpy import linalg
-from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC
+from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC, H_homog_from_CV2SAC
 
 __K__ = 2
 __NUM_RERANK__     = 50
@@ -72,9 +70,8 @@ def __runall(cx2_desc, cx2_kpts, fn_precomp_args=None, fn_assign_feat_matches=No
                 res.cx2_fs = matches_scores[1]
     return cx2_res
 
-def spatially_verify(qcx, cx, cx2_kpts, cx2_fm, cx2_fs):
+def spatially_verify(qcx, cx2_kpts, cx2_fm, cx2_fs):
     qkpts = cx2_kpts[qcx]
-
     cx2_cscore = np.array([np.sum(fs) for fs in cx2_fs])
     top_cx = cx2_cscore.argsort()[::-1]
 
@@ -92,7 +89,7 @@ def spatially_verify(qcx, cx, cx2_kpts, cx2_fm, cx2_fs):
     kpts2_m =  kpts[mx2,:].T
     assert kpts1_m.shape[0] == 5 and kpts2_m.shape[0] == 5, 'needs ellipses'
     # Get match threshold 10% of matching keypoint extent diagonal
-    img2_extent = (kpts2_m[0:2,:].min(1) - kpts2_m[0:2,:].max(1))[0:2]
+    img2_extent = (kpts2_m[0:2,:].max(1) - kpts2_m[0:2,:].min(1))[0:2]
     xy_thresh_sqrd = np.sum(img2_extent**2)/100
 
     #H, inliers = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
@@ -116,6 +113,7 @@ def precompute_args_1vM(cx2_cid, cx2_desc, hs_dirs):
         try:
             print('Attempting to load flann index')
             flann_1vM.load_index(flann_1vM_path, ax2_desc)
+            print('...successfully loaded flann index')
             load_success = True
         except Exception as ex:
             print('Cannot load FLANN index'+repr(ex))
@@ -133,7 +131,7 @@ def LNBNN_fn(vdist, ndist): return ndist - vdist
 
 score_fn = LNRAT_fn
 def assign_feat_matches_1vM(qcx, cx2_cid, cx2_desc, ax2_cx, ax2_fx, flann_1vM):
-    print('Assigning 1vM feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
+    print('Assigning 1vM feature matches from qcx=%d to %d chips' % (qcx, len(cx2_cid)))
     isQueryIndexed = True
     qdesc = cx2_desc[qcx]
     K = __K__+1 if isQueryIndexed else __K__
@@ -333,13 +331,16 @@ if __name__ == '__main__':
         exec(hs_dirs.execstr('hs_dirs'))
         #cx2_feats = cx2_feats_hesaff
         cx2_feats = cx2_feats_sift
-        cx2_desc   = [d for (k,d) in cx2_feats]
-        cx2_kpts   = [k for (k,d) in cx2_feats]
-        qcx = 0
-        cx  = 1
+        cx2_desc  = [d for (k,d) in cx2_feats]
+        cx2_kpts  = [k for (k,d) in cx2_feats]
+        qcx = 1
+        #cx  = 1
+        # All of these functions operate on one qcx (except precompute I guess)
         exec(get_exec_src(precompute_args_1vM))
         exec(get_exec_src(assign_feat_matches_1vM))
-        exec(get_exec_src(spatially_verify))
+        #exec(get_exec_src(spatially_verify))
+
+        #sys.exit(1)
 
         #import imp
         #import cvransac2
@@ -347,32 +348,31 @@ if __name__ == '__main__':
         #from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC
 
         #http://scikit-image.org/docs/dev/api/skimage.transform.html#estimate-transform
-        with Timer():
-            H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd) 
-        with Timer():
-            H2, inliers2 = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
-        with Timer():
-            H3, inliers3 = H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
+        #with Timer(msg=None):
+            #H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd) 
+        #with Timer(msg=None):
+            #H2, inliers2 = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
+        #with Timer(msg=None):
+            #H3, inliers3 = H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
 
-        H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd) 
-        H2, inliers2 = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
-        H3, inliers3 = H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
+        #H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd) 
+        #H2, inliers2 = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
+        #H3, inliers3 = H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
 
-        rchip1 = cv2.imread(cx2_rchip_path[qcx])
-        rchip2 = cv2.imread(cx2_rchip_path[cx])
+        #rchip1 = cv2.imread(cx2_rchip_path[qcx])
+        #rchip2 = cv2.imread(cx2_rchip_path[cx])
 
         #import skimage.transform
         #rchip1_H1 = skimage.transform.fast_homography(rchip1, H1)
         #rchip1_H2 = skimage.transform.fast_homography(rchip1, H2)
         #rchip1_H3 = skimage.transform.fast_homography(rchip1, H3)
-        import hotspotter.tpl.cv2 as cv2
+        #import hotspotter.tpl.cv2 as cv2
         
         # http://stackoverflow.com/questions/8181872/finding-homography-and-warping-perspective
         #H = findHomography( src2Dfeatures, dst2Dfeatures, outlierMask, RANSAC, 3);
 
-        H, mask = cv2.findHomography(kpts2_m[0:2,:].T, kpts2_m[0:2,:].T)
+        
         #rchip1_H = cv2.warpPerspective(rchip2, H, rchip2.shape[0:2], cv2.INTER_LANCZOS4)
-        rchip1_H = cv2.warpPerspective(rchip2, H, rchip2.shape[0:2])
         #rchip1_H= cv2.warpPerspective(rchip2, H, rchip2.size(), cv2.INTER_LANCZOS4)
         #rchip2_H1 = cv2.warpPerspective(rchip2, linalg.inv(H1), rchip1.size(), cv2.INTER_LANCZOS4)
         #rchip2_H2 = cv2.warpPerspective(rchip2, linalg.inv(H2), rchip1.size(), cv2.INTER_LANCZOS4)
@@ -393,9 +393,8 @@ if __name__ == '__main__':
         #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV1, fignum=1)
         #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV2, fignum=2)
         #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV3, fignum=3)
-        plt.imshow(rchip1_H)
 
-        tile_all_figures()
+        #tile_all_figures()
 
         try: 
             __IPYTHON__

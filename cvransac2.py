@@ -187,6 +187,18 @@ def transform_xy(H3x3, xy):
         H_xy = H_xyz[0:2,:] / H_xyz[2,:]
     return H_xy
 
+import hotspotter.tpl.cv2 as cv2
+def H_homog_from_CV2SAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
+    xy1_m   = kpts1_m[0:2,:]
+    xy2_m   = kpts2_m[0:2,:]
+
+    method = cv2.RANSAC # RANSAC-based robust method
+    method = 0 # a regular method using all the points
+    method = cv2.LMEDS # Least-Median robust method
+
+    H, inliers = cv2.findHomography(xy1_m.T, xy2_m.T, cv2.RANSAC, np.sqrt(xy_thresh_sqrd))
+    return H, np.array(inliers, dtype=bool).flatten()
+
 def H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     'Python Computer Visions Random Sample Consensus'
     from PCV.geometry import homography
@@ -200,11 +212,14 @@ def H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     # Get RANSAC inliers
     model = homography.RansacModel() 
     try: 
-        H, inliers = homography.H_from_ransac(fp,tp,model, 500, np.sqrt(xy_thresh_sqrd))
+        H, pcv_inliers = homography.H_from_ransac(fp, tp, model, 500, np.sqrt(xy_thresh_sqrd))
     except ValueError as ex:
         print(ex)
         H = np.eye(3)
         inliers = []
+    # Convert to the format I'm expecting
+    inliers = np.zeros(kpts1_m.shape[1], dtype=bool)
+    inliers[pcv_inliers] = True
     return H, inliers
 
 def H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
@@ -221,8 +236,8 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
         - Object retrieval fast, Philbin1, Chum1, et al 
         input: matching 
     '''
-    #assert kpts1_m.shape[1] == kpts2_m.shape[1], 'RanSaC works on matches!'
-    #assert kpts1_m.shape[0] == 5 and kpts2_m.shape[0] == 5, 'RanSaC works on ellipses!'
+    assert kpts1_m.shape[1] == kpts2_m.shape[1], 'RanSaC works on matches!'
+    assert kpts1_m.shape[0] == 5 and kpts2_m.shape[0] == 5, 'RanSaC works on ellipses!'
 
     num_m = kpts1_m.shape[1] # num matches
 

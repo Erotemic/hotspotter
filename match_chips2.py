@@ -11,6 +11,7 @@ from drawing_functions2 import draw_matches, draw_kpts, tile_all_figures
 from hotspotter.tpl.pyflann import FLANN
 import hotspotter.tpl.cv2  as cv2
 from itertools import chain
+from numpy import linalg
 from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC
 
 __K__ = 2
@@ -121,6 +122,7 @@ def precompute_args_1vM(cx2_cid, cx2_desc, hs_dirs):
     if not load_success:
         with Timer(msg='rebuilding FLANN index'):
             flann_1vM.build_index(ax2_desc, **__FLANN_PARAMS__)
+            flann_1vM.save_index(flan_path)
     flann_1vM.ax2_desc = ax2_desc # dont let this loose scope
     return cx2_cid, cx2_desc, ax2_cx, ax2_fx, flann_1vM
 

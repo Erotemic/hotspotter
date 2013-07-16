@@ -369,9 +369,14 @@ if __name__ == '__main__':
         
         # http://stackoverflow.com/questions/8181872/finding-homography-and-warping-perspective
         #H = findHomography( src2Dfeatures, dst2Dfeatures, outlierMask, RANSAC, 3);
-        rchip2_H1 = cv2.warpPerspective(rchip2, linalg.inv(H1), rchip1.size(), cv2.INTER_LANCZOS4)
-        rchip2_H2 = cv2.warpPerspective(rchip2, linalg.inv(H2), rchip1.size(), cv2.INTER_LANCZOS4)
-        rchip2_H3 = cv2.warpPerspective(rchip2, linalg.inv(H3), rchip1.size(), cv2.INTER_LANCZOS4)
+
+        H, mask = cv2.findHomography(kpts2_m[0:2,:].T, kpts2_m[0:2,:].T)
+        #rchip1_H = cv2.warpPerspective(rchip2, H, rchip2.shape[0:2], cv2.INTER_LANCZOS4)
+        rchip1_H = cv2.warpPerspective(rchip2, H, rchip2.shape[0:2])
+        #rchip1_H= cv2.warpPerspective(rchip2, H, rchip2.size(), cv2.INTER_LANCZOS4)
+        #rchip2_H1 = cv2.warpPerspective(rchip2, linalg.inv(H1), rchip1.size(), cv2.INTER_LANCZOS4)
+        #rchip2_H2 = cv2.warpPerspective(rchip2, linalg.inv(H2), rchip1.size(), cv2.INTER_LANCZOS4)
+        #rchip2_H3 = cv2.warpPerspective(rchip2, linalg.inv(H3), rchip1.size(), cv2.INTER_LANCZOS4)
 
 
         #cmd = 'H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)'
@@ -380,14 +385,15 @@ if __name__ == '__main__':
 
         #H1, inliers1 = H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd) 
         # Show what it did
-        fm12_SV1 = fm12[inliers1, :]
-        fm12_SV2 = fm12[inliers2, :]
-        fm12_SV3 = fm12[inliers3, :]
+        #fm12_SV1 = fm12[inliers1, :]
+        #fm12_SV2 = fm12[inliers2, :]
+        #fm12_SV3 = fm12[inliers3, :]
 
-        show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12,     fignum=0)
-        show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV1, fignum=1)
-        show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV2, fignum=2)
-        show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV3, fignum=3)
+        #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12,     fignum=0)
+        #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV1, fignum=1)
+        #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV2, fignum=2)
+        #show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12_SV3, fignum=3)
+        imshow(rchip1_H)
 
         tile_all_figures()
 

@@ -1,4 +1,5 @@
 import drawing_functions2 as df2
+import chip_compute2, feature_compute2, load_data2
 import report_results2
 import sys
 import matplotlib.pyplot as plt
@@ -20,8 +21,7 @@ __FLANN_PARAMS__ = {'algorithm' :'kdtree',
                     'trees'     :4,
                     'checks'    :128}
 __FEAT_TYPE__ = 'HESAFF'
-__xy_thresh_percent__ = .10
-
+__xy_thresh_percent__ = .05
 
 def runall_match(hs):
     with Timer(msg=None):
@@ -63,7 +63,7 @@ def __run_matching(hs, fn_assign, *args):
         assign_times.append(toc(tt_A))
         # Spatially verify the assigned matches
         tt_V = tic('verify(qcx=%d)' % qcx)
-        (cx2_fm_SV, cx2_fs_SV) = spatially_verify(qcx, cx2_kpts, cx2_fm, cx2_fs)
+        (cx2_fm_SV, cx2_fs_SV) = spatially_verify_1vX(qcx, cx2_kpts, cx2_fm, cx2_fs)
         verify_times.append(toc(tt_V))
         # Assign output to a query result
         res = cx2_res[qcx]
@@ -79,51 +79,46 @@ def __run_matching(hs, fn_assign, *args):
     return cx2_res
 
 #@profile
-def spatially_verify(qcx, cx2_kpts, cx2_fm, cx2_fs):
-    qkpts = cx2_kpts[qcx]
+def spatially_verify(kpts1, kpts2, fm, fs):
+    '''1) compute a robust transform from img2 -> img1
+       2) keep feature matches which are inliers '''
+    # ugg transpose, I like row first, but ransac seems not to
+    kpts1_m = kpts1[fm[:,0],:].T
+    kpts2_m = kpts2[fm[:,1],:].T
+    # -----------------------------------------------
+    # TODO: SHOULD THIS HAPPEN HERE? (ISSUE XY_THRESH)
+    # Get match threshold 10% of matching keypoint extent diagonal
+    img1_extent = (kpts1_m[0:2,:].max(1) - kpts1_m[0:2,:].min(1))[0:2]
+    xy_thresh1_sqrd = np.sum(img1_extent**2) * (__xy_thresh_percent__**2)
+    # -----------------------------------------------
+    H, inliers = H_homog_from_DELSAC(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
+    fm_SV = fm[inliers,:]
+    fs_SV = fs[inliers,:]
+    return fm_SV, fs_SV
+
+#@profile
+def spatially_verify_1vX(qcx, cx2_kpts, cx2_fm, cx2_fs):
+    qkpts1 = cx2_kpts[qcx]
     cx2_cscore = np.array([np.sum(fs) for fs in cx2_fs])
     top_cx = cx2_cscore.argsort()[::-1]
-
     num_rerank = min(len(top_cx), __NUM_RERANK__)
     # -----------------------------------------------
     # TODO: SHOULD THIS HAPPEN HERE? (ISSUE XY_THRESH)
-    #img1_extent = (qkpts[:,0:2].max(0) - qkpts[:,0:2].min(0))[0:2]
+    #img1_extent = (qkpts1[:,0:2].max(0) - qkpts1[:,0:2].min(0))[0:2]
     #xy_thresh1_sqrd = np.sum(img1_extent**2) * __xy_thresh_percent__
     # -----------------------------------------------
-
     # Precompute output container
-    cx2_fm_SV = [[] for _ in xrange(len(cx2_cid))]
-    cx2_fs_SV = [[] for _ in xrange(len(cx2_cid))]
-
-    # for the top __NUM_RERANK__ results
-    # 1) compute a robust transform from img2 -> img1
-    # 2) keep feature matches which are inliers
+    cx2_fm_SV = [[] for _ in xrange(len(cx2_fm))]
+    cx2_fs_SV = [[] for _ in xrange(len(cx2_fs))]
+    # spatially verify the top __NUM_RERANK__ results
     for topx in xrange(num_rerank):
-        cx = top_cx[topx]
-
-        kpts = cx2_kpts[cx]
-        fm = cx2_fm[cx]
-        fs = cx2_fs[cx]
-        mx1  = fm[:,0]
-        mx2  = fm[:,1]
-
-        # ugg transpose, I like row first, but ransac seems not to
-        kpts1_m = qkpts[mx1,:].T
-        kpts2_m =  kpts[mx2,:].T
-
-        # -----------------------------------------------
-        # TODO: SHOULD THIS HAPPEN HERE? (ISSUE XY_THRESH)
-        # Get match threshold 10% of matching keypoint extent diagonal
-        img1_extent = (kpts1_m[0:2,:].max(1) - kpts1_m[0:2,:].min(1))[0:2]
-        xy_thresh1_sqrd = np.sum(img1_extent**2) * __xy_thresh_percent__
-        # -----------------------------------------------
-
-        H, inliers = H_homog_from_DELSAC(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
-        fm_SV = fm[inliers,:]
-        fs_SV = fs[inliers,:]
-
+        cx    = top_cx[topx]
+        kpts2 = cx2_kpts[cx]
+        fm    = cx2_fm[cx]
+        fs    = cx2_fs[cx]
+        fm_SV, fs_SV = spatially_verify(qkpts1, kpts2, fm, fs)
         cx2_fm_SV[cx] = fm_SV
-        cx2_fm_SV[cx] = fs_SV
+        cx2_fs_SV[cx] = fs_SV
     return cx2_fm_SV, cx2_fs_SV
 
 
@@ -210,17 +205,22 @@ def assign_matches_1v1(qcx, cx2_cid, cx2_desc):
         sys.stdout.write('.')
         sys.stdout.flush()
         if cx == qcx: continue
-        (fx2_qfx, fx2_dist) = flann_1v1.nn_index(desc, 2, **__FLANN_PARAMS__)
-        # Lowe's ratio test
-        fx2_ratio = np.divide(fx2_dist[:,1]+1, fx2_dist[:,0]+1)
-        fx, = np.where(fx2_ratio > 1.5)
-        qfx = fx2_qfx[fx,0]
-        cx2_fm[cx] = np.array(zip(qfx, fx))
-        cx2_fs[cx] = fx2_ratio[fx]
+        (fm, fs) = match_1v1(qdesc, desc, flann_1v1)
+        cx2_fm[cx] = fm
+        cx2_fs[cx] = fs
     sys.stdout.write('DONE')
     flann_1v1.delete_index()
     return cx2_fm, cx2_fs
 
+def match_1v1(qdesc, desc, flann_1v1=None):
+    (fx2_qfx, fx2_dist) = flann_1v1.nn_index(desc, 2, **__FLANN_PARAMS__)
+    # Lowe's ratio test
+    fx2_ratio = np.divide(fx2_dist[:,1]+1, fx2_dist[:,0]+1)
+    fx, = np.where(fx2_ratio > 1.5)
+    qfx = fx2_qfx[fx,0]
+    fm = np.array(zip(qfx, fx))
+    fs = fx2_ratio[fx]
+    return (fm, fs)
 
 class HotSpotter(DynStruct):
     def __init__(self):
@@ -230,27 +230,31 @@ class HotSpotter(DynStruct):
         self.cpaths = None
         self.dirs   = None
 
-if __name__ == '__main__':
-    import chip_compute2, feature_compute2, load_data2
-    from multiprocessing import freeze_support
-    freeze_support()
-    # --- CHOOSE DATABASE --- #
-    db_dir = load_data2.MOTHERS
+# TODO, this should go in a more abstracted module
+def load_hotspotter(db_dir):
     # --- LOAD DATA --- #
     hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
     # --- LOAD CHIPS --- #
     hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
     # --- LOAD FEATURES --- #
     hs_feats  = feature_compute2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
-
+    # --- BUILD HOTSPOTTER --- #
     hs = HotSpotter()
     hs.tables = hs_tables
     hs.feats  = hs_feats
     hs.cpaths = hs_cpaths
     hs.dirs   = hs_dirs
+    return hs
+
+if __name__ == '__main__':
+    from multiprocessing import freeze_support
+    freeze_support()
+    # --- CHOOSE DATABASE --- #
+    db_dir = load_data2.MOTHERS
+    hs = load_hotspotter(db_dir)
 
     ## DEV ONLY CODE ##
-    __DEV_MODE__ = True
+    __DEV_MODE__ = False
     if __DEV_MODE__: 
         print(hs_cpaths)
         print(hs_dirs)
@@ -270,7 +274,7 @@ if __name__ == '__main__':
         # All of these functions operate on one qcx (except precompute I guess)
         exec(get_exec_src(precompute_index_1vM))
         exec(get_exec_src(assign_matches_1vM))
-        #exec(get_exec_src(spatially_verify))
+        #exec(get_exec_src(spatially_verify_1vX))
 
         try: 
             __IPYTHON__

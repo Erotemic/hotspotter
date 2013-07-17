@@ -418,7 +418,7 @@ def get_exec_src(func):
         src = before+after
     return src
 
-def remove_file(iom, fpath):
+def remove_file(fpath):
     try:
         os.remove(fpath)
     except OSError as e:

@@ -169,3 +169,14 @@ def show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12, fignum=0, title=None):
                                    kpts1, kpts2,
                                    fm12, vert=True)
     imshow(chipkptsmatches, fignum=fignum, title=title)
+
+def show_matches2(rchip1, rchip2, kpts1, kpts2, fm12, fignum=0, title=None):
+    img_rchip_kpts1 = draw_kpts(rchip1, kpts1[fm12[:,0],:])
+    img_rchip_kpts2 = draw_kpts(rchip2, kpts2[fm12[:,1],:])
+    img_matches = draw_matches(img_rchip_kpts1, img_rchip_kpts2,
+                               kpts1, kpts2, fm12, vert=True)
+    imshow(img_matches, fignum=fignum, title=title)
+
+def show_keypoints(rchip, kpts, fignum=0, title=None):
+    img_rchip_kpts = draw_kpts(rchip, kpts)
+    imshow(img_rchip_kpts, fignum=fignum, title=title)

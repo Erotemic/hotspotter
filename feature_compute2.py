@@ -55,23 +55,28 @@ def cvkpts2_kpts(cvkpts):
     kpts = hstack((kpts_xy, kpts_ell))
     return kpts
 
-def __comp_cv_feats(rchip_path, feats_path, detector, extractor):
-    rchip = cv2.imread(rchip_path)
+def __compute(rchip, detector, extractor):
     _cvkpts = detector.detect(rchip)  
     # gravity vector
     for cvkp in iter(_cvkpts): cvkp.angle = 0
     cvkpts, cvdesc = extractor.compute(rchip, _cvkpts)
     kpts = cvkpts2_kpts(cvkpts)
     desc = array(cvdesc, dtype=uint8)
+    return (kpts, desc)
+
+def __precompute(rchip_path, feats_path, compute_fn):
+    rchip = cv2.imread(rchip_path)
+    (kpts, desc) = compute_fn(rchip)
     np.savez(feats_path, kpts, desc)
     return (kpts, desc)
+
 
 # =======================================
 # Global opencv detectors and extractors      
 # =======================================
 ## Common keypoint detector
-common_detector  = cv2.FeatureDetector_create('SURF')
-#common_detector  = cv2.FeatureDetector_create('SIFT')
+__detector  = cv2.FeatureDetector_create('SURF')
+#__detector  = cv2.FeatureDetector_create('SIFT')
 ## SIFT extractor settings
 sift_extractor = cv2.DescriptorExtractor_create('SIFT')
 ## FREAK extractor settings
@@ -79,19 +84,34 @@ freak_extractor = cv2.DescriptorExtractor_create('FREAK')
 freak_extractor.setBool('orientationNormalized', False)
 
 # =======================================
+# Module Functions          
+# =======================================
+
+def compute_hesaff(rchip):
+    return hotspotter.tpl.hesaff.compute_hesaff(rchip)
+def compute_sift(rchip):
+    return __compute(rchip, __detector, sift_extractor)
+def compute_freak(rchip):
+    return __compute(rchip, __detector, freak_extractor)
+
+type2_compute_fn = {
+    'HESAFF' : compute_hesaff,
+    'SIFT'   : compute_sift,
+    'FREAK'  : compute_freak
+}
+def compute_features(rchip, type):
+    return type2_compute_fn[type](rchip)
+
+# =======================================
 # Parallelizable Work Functions          
 # =======================================
 
-def compute_hesaff(rchip_path, feats_path):
-    return hotspotter.tpl.hesaff.compute_hesaff(rchip_path, feats_path)
-
-def compute_sift(rchip_path, feats_path):
-    return __comp_cv_feats(rchip_path, feats_path,
-                           common_detector, sift_extractor)
-
-def compute_freak(rchip_path, feats_path):
-    return __comp_cv_feats(rchip_path, feats_path,
-                           common_detector, freak_extractor)
+def precompute_hesaff(rchip_path, feats_path):
+    return hotspotter.tpl.hesaff.precompute_hesaff(rchip_path, feats_path)
+def precompute_sift(rchip_path, feats_path):
+    return __precompute(rchip_path, feats_path, compute_sift)
+def precompute_freak(rchip_path, feats_path):
+    return __precompute(rchip_path, feats_path, compute_freak)
 
 def load_features(feats_path):
     npz = np.load(feats_path)
@@ -134,28 +154,26 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     print('\n=============================')
     print('Computing and loading features')
     print('=============================')
-
-    # --- BUILD TASK INFORMATION --- #
+    # --- GET INPUT --- #
     # Paths to features
     feat_dir       = hs_dirs.feat_dir
     cx2_rchip_path = hs_cpaths.cx2_rchip_path
     cx2_cid        = hs_tables.cx2_cid
-    
+    # --- COMPUTE FEATURE PATHS --- # 
     cx2_hesaff_path = [ feat_dir+'/CID_%d_hesaff.npz' % cid for cid in cx2_cid]
     cx2_sift_path   = [ feat_dir+'/CID_%d_sift.npz'   % cid for cid in cx2_cid]
     cx2_freak_path  = [ feat_dir+'/CID_%d_freak.npz'  % cid for cid in cx2_cid]
-    
     # --- COMPUTE FEATURES --- # 
     print('Computing features')
-    parallel_compute(compute_hesaff, [cx2_rchip_path, cx2_hesaff_path])
-    parallel_compute(compute_sift,   [cx2_rchip_path, cx2_sift_path])
-    parallel_compute(compute_freak,  [cx2_rchip_path, cx2_freak_path]) 
+    parallel_compute(precompute_hesaff, [cx2_rchip_path, cx2_hesaff_path])
+    parallel_compute(precompute_sift,   [cx2_rchip_path, cx2_sift_path])
+    parallel_compute(precompute_freak,  [cx2_rchip_path, cx2_freak_path]) 
     # --- LOAD FEATURES --- # 
     print('Loading features')
     cx2_feats_hesaff = parallel_compute(load_features, [cx2_hesaff_path], 1)
     cx2_feats_sift   = parallel_compute(load_features, [cx2_sift_path], 1)
     cx2_feats_freak  = parallel_compute(load_features, [cx2_freak_path], 1)
-
+    # --- BUILD OUTPUT --- #
     hs_feats = HotspotterChipFeatures()
     hs_feats.cx2_feats_hesaff = cx2_feats_hesaff
     hs_feats.cx2_feats_sift   = cx2_feats_sift
@@ -178,17 +196,3 @@ if __name__ == '__main__':
     hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
     # --- LOAD FEATURES --- #
     hs_feats  = load_chip_features(hs_dirs, hs_tables, hs_cpaths)
-
-# GRAVEYARD
-    #cx2_sift_kpts, cx2_sift_desc = \
-    #     ([ k for k,d in cx2_sift_feats ], [ d for k,d in cx2_sift_feats ])
-
-'''
-from feature_compute2 import *
-detector = common_detector
-extractor = sift_extractor
-
-rchip = cv2.imread(rchip_path)
-_cvkpts = detector.detect(rchip)  
-print_cvkpt(_cvkpts)
-'''    

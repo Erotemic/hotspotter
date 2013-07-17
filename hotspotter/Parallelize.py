@@ -62,6 +62,7 @@ def parallelize_tasks(task_list, num_procs, msg=''):
     '''
     Used for embarissingly parallel tasks, which write output to disk
     '''
+    print(msg)
     with Timer(msg=msg) as t:
         if num_procs > 1:
             if False:

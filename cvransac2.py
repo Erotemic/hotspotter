@@ -244,14 +244,14 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     # min number of matches to compute transform
     min_num_inliers = 3 
     if num_m < min_num_inliers: return  np.eye(3), ones(num_m, dtype=np.uint32)
-    if num_m == 0: return np.eye(3), []
+    if num_m == 0: return np.eye(3), np.array([])
 
     # Estimate initial inliers with some RANSAC variant
     aff_inliers = func_aff_inlier(kpts1_m, kpts2_m, xy_thresh_sqrd)
 
     # If we cannot estimate a good correspondence 
     if len(aff_inliers) < min_num_inliers:
-        return aff_inliers 
+        return np.eye(3), aff_inliers  
 
     # Homogonize+Normalize
     xy1_m    = kpts1_m[0:2,:] 
@@ -264,7 +264,7 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
         H_prime = compute_homog(xyz_norm1, xyz_norm2)
         H = linalg.solve(T2, H_prime).dot(T1)                # Unnormalize
     except linalg.LinAlgError:
-        return None
+        return np.eye(3), np.array([])
 
     # Estimate final inliers
     xy1_mHt = transform_xy(H, xy1_m)                        # Transform Kpts1 to Kpts2-space

@@ -236,8 +236,8 @@ print('-----------------')
 print('Show warped matches')
 df2.show_matches2(rchip1, rchip2, qkpts1,  kpts2,  fm,    fignum=26, title='nMatch=%d' % len(fm))
 df2.show_matches2(rchip1, rchip2, qkpts1,  kpts2,  fm_SV, fignum=27, title='nMatch_SV=%d' % len(fm_SV))
-df2.show_matches2(rchip1, wchip2, _qkpts1,  kpts2,  wfm, fignum=28, title='nMatchWarped=%d' % len(wfm))
-df2.show_matches2(rchip1, wchip2, _qkpts1,  kpts2,  wfm_SV, fignum=29, title='nMatchWarped_SV=%d' % len(wfm_SV))
+df2.show_matches2(rchip1, wchip2, _qkpts1,  kpts2, wfm, fignum=28, title='nMatchWarped=%d' % len(wfm))
+df2.show_matches2(rchip1, wchip2, _qkpts1,  kpts2, wfm_SV, fignum=29, title='nMatchWarped_SV=%d' % len(wfm_SV))
 
 # inspect scores
 print('-----------------')

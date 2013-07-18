@@ -20,8 +20,11 @@ __1v1_RAT_THRESH__ = 1.5
 __FLANN_PARAMS__ = {'algorithm' :'kdtree',
                     'trees'     :4,
                     'checks'    :128}
-__FEAT_TYPE__ = 'HESAFF'
+__FEAT_TYPE__ = 'SIFT'
 __xy_thresh_percent__ = .05
+
+def printDBG(msg):
+    pass
 
 def runall_match(hs):
     with Timer(msg=None):
@@ -36,8 +39,8 @@ class HotspotterQueryResult(DynStruct):
         self.qcx    = -1
         self.cx2_fm = []
         self.cx2_fs = []
-        self.cx2_fm_SV = []
-        self.cx2_fs_SV = []
+        self.cx2_fm_V = []
+        self.cx2_fs_V = []
 
 # Work function that is the basic matching pipeline. 
 # specific functions need to be bound: 
@@ -63,15 +66,15 @@ def __run_matching(hs, fn_assign, *args):
         assign_times.append(toc(tt_A))
         # Spatially verify the assigned matches
         tt_V = tic('verify(qcx=%d)' % qcx)
-        (cx2_fm_SV, cx2_fs_SV) = spatially_verify_1vX(qcx, cx2_kpts, cx2_fm, cx2_fs)
+        (cx2_fm_V, cx2_fs_V) = spatially_verify_1vX(qcx, cx2_kpts, cx2_fm, cx2_fs)
         verify_times.append(toc(tt_V))
         # Assign output to a query result
         res = cx2_res[qcx]
         res.qcx = qcx
         res.cx2_fm    = cx2_fm
         res.cx2_fs    = cx2_fs
-        res.cx2_fm_SV = cx2_fm_SV
-        res.cx2_fs_SV = cx2_fs_SV
+        res.cx2_fm_V = cx2_fm_V
+        res.cx2_fs_V = cx2_fs_V
     if len(skip_list) > 0:
         print('Skipped more queries than you should have: %r ' % skip_list)
     total_time = toc(tt_ALL)
@@ -79,10 +82,12 @@ def __run_matching(hs, fn_assign, *args):
     return cx2_res
 
 #@profile
-def spatially_verify(kpts1, kpts2, fm, fs):
+def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
     '''1) compute a robust transform from img2 -> img1
        2) keep feature matches which are inliers '''
     # ugg transpose, I like row first, but ransac seems not to
+    if len(fm) == 0: 
+        return (np.empty((0,2)),np.empty((0,1)), np.eye(3))
     kpts1_m = kpts1[fm[:,0],:].T
     kpts2_m = kpts2[fm[:,1],:].T
     # -----------------------------------------------
@@ -90,36 +95,50 @@ def spatially_verify(kpts1, kpts2, fm, fs):
     # Get match threshold 10% of matching keypoint extent diagonal
     img1_extent = (kpts1_m[0:2,:].max(1) - kpts1_m[0:2,:].min(1))[0:2]
     xy_thresh1_sqrd = np.sum(img1_extent**2) * (__xy_thresh_percent__**2)
+    if not DBG is None:
+        print('---------------------------------------')
+        print('INFO: spatially_verify xy threshold:')
+        print(' * Threshold is %.1f%% of diagonal length' % (__xy_thresh_percent__*100))
+        print(' * img1_extent = %r '     % img1_extent)
+        print(' * img1_diag_len = %.2f ' % np.sqrt(np.sum(img1_extent**2)))
+        print(' * xy_thresh1_sqrd=%.2f'  % np.sqrt(xy_thresh1_sqrd))
+        print('---------------------------------------')
     # -----------------------------------------------
-    H, inliers = H_homog_from_DELSAC(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
-    fm_SV = fm[inliers,:]
-    fs_SV = fs[inliers,:]
-    return fm_SV, fs_SV
+    H, inliers = func_homog(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
+    fm_V = fm[inliers,:]
+    fs_V = fs[inliers,:]
+    return fm_V, fs_V, H
+
+def spatially_verify(kpts1, kpts2, fm, fs, DBG=None):
+    ''' Concrete implementation of spatial verification
+        using the deterministic ellipse based sample conensus'''
+    return __spatially_verify(H_homog_from_DELSAC, kpts1, kpts2, fm, fs, DBG)
+spatially_verify.__doc__ += '\n'+__spatially_verify.__doc__
 
 #@profile
 def spatially_verify_1vX(qcx, cx2_kpts, cx2_fm, cx2_fs):
-    qkpts1 = cx2_kpts[qcx]
+    kpts1     = cx2_kpts[qcx]
     cx2_cscore = np.array([np.sum(fs) for fs in cx2_fs])
-    top_cx = cx2_cscore.argsort()[::-1]
+    top_cx     = cx2_cscore.argsort()[::-1]
     num_rerank = min(len(top_cx), __NUM_RERANK__)
     # -----------------------------------------------
     # TODO: SHOULD THIS HAPPEN HERE? (ISSUE XY_THRESH)
-    #img1_extent = (qkpts1[:,0:2].max(0) - qkpts1[:,0:2].min(0))[0:2]
+    #img1_extent = (kpts1[:,0:2].max(0) - qkpts1[:,0:2].min(0))[0:2]
     #xy_thresh1_sqrd = np.sum(img1_extent**2) * __xy_thresh_percent__
     # -----------------------------------------------
     # Precompute output container
-    cx2_fm_SV = [[] for _ in xrange(len(cx2_fm))]
-    cx2_fs_SV = [[] for _ in xrange(len(cx2_fs))]
+    cx2_fm_V = [[] for _ in xrange(len(cx2_fm))]
+    cx2_fs_V = [[] for _ in xrange(len(cx2_fs))]
     # spatially verify the top __NUM_RERANK__ results
     for topx in xrange(num_rerank):
         cx    = top_cx[topx]
         kpts2 = cx2_kpts[cx]
         fm    = cx2_fm[cx]
         fs    = cx2_fs[cx]
-        fm_SV, fs_SV = spatially_verify(qkpts1, kpts2, fm, fs)
-        cx2_fm_SV[cx] = fm_SV
-        cx2_fs_SV[cx] = fs_SV
-    return cx2_fm_SV, cx2_fs_SV
+        fm_V, fs_V, H = spatially_verify(kpts1, kpts2, fm, fs)
+        cx2_fm_V[cx] = fm_V
+        cx2_fs_V[cx] = fs_V
+    return cx2_fm_V, cx2_fs_V
 
 
 #@profile
@@ -159,19 +178,30 @@ def precompute_index_1vM(hs):
     return flann_1vM
 
 # Feature scoring functions
-def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist+1, vdist+1)) 
-def RATIO_fn(vdist, ndist): return np.divide(ndist+1, vdist+1)
+def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+1E-8)+1) 
+def RATIO_fn(vdist, ndist): return np.divide(ndist, vdist+1E-8)
 def LNBNN_fn(vdist, ndist): return ndist - vdist 
-score_fn = LNRAT_fn
+score_fn = RATIO_fn
 
 #@profile
 def assign_matches_1vM(qcx, cx2_cid, cx2_desc, flann_1vM):
+    '''
+    Matches desc1 vs all database descriptors using 
+    Input:
+        qcx       - query chip index
+        cx2_cid   - chip ID lookup table (for removing self matches)
+        cx2_desc  - chip descriptor lookup table
+        flann_1vM - prebuild FLANN index of aggregated database descriptors
+    Output: 
+        cx2_fm - C x Mx2 array of matching feature indexes
+        cx2_fs - C x Mx1 array of matching feature scores
+    '''
     print('Assigning 1vM feature matches from qcx=%d to %d chips' % (qcx, len(cx2_cid)))
     isQueryIndexed = True
-    qdesc = cx2_desc[qcx]
+    desc1 = cx2_desc[qcx]
     K = __K__+1 if isQueryIndexed else __K__
     # Find each query descriptor's K+1 nearest neighbors
-    (qfx2_ax, qfx2_dists) = flann_1vM.nn_index(qdesc, K+1, **__FLANN_PARAMS__)
+    (qfx2_ax, qfx2_dists) = flann_1vM.nn_index(desc1, K+1, **__FLANN_PARAMS__)
     vote_dists = qfx2_dists[:, 0:K]
     norm_dists = qfx2_dists[:, K] # K+1th descriptor for normalization
     # Score the feature matches
@@ -182,7 +212,7 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, flann_1vM):
     # Build feature matches
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
-    num_qf = len(qdesc)
+    num_qf = len(desc1)
     qfx2_qfx = np.tile(np.arange(num_qf).reshape(num_qf,1), (1,K)) 
     iter_matches = iter(zip(qfx2_qfx.flat, qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat))
     for qfx, cx,fx,score in iter_matches:
@@ -196,31 +226,75 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, flann_1vM):
 
 def assign_matches_1v1(qcx, cx2_cid, cx2_desc):
     print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
-    qdesc = cx2_desc[qcx]
+    desc1 = cx2_desc[qcx]
     flann_1v1 = FLANN()
-    flann_1v1.build_index(qdesc, **__FLANN_PARAMS__)
+    flann_1v1.build_index(desc1, **__FLANN_PARAMS__)
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
-    for cx, desc in enumerate(cx2_desc):
+    for cx, desc2 in enumerate(cx2_desc):
         sys.stdout.write('.')
         sys.stdout.flush()
         if cx == qcx: continue
-        (fm, fs) = match_1v1(qdesc, desc, flann_1v1)
+        (fm, fs) = match_1v1(desc2, flann_1v1)
         cx2_fm[cx] = fm
         cx2_fs[cx] = fs
     sys.stdout.write('DONE')
     flann_1v1.delete_index()
     return cx2_fm, cx2_fs
 
-def match_1v1(qdesc, desc, flann_1v1=None):
-    (fx2_qfx, fx2_dist) = flann_1v1.nn_index(desc, 2, **__FLANN_PARAMS__)
-    # Lowe's ratio test
-    fx2_ratio = np.divide(fx2_dist[:,1]+1, fx2_dist[:,0]+1)
-    fx, = np.where(fx2_ratio > 1.5)
+def match_1v1(desc2, flann_1v1, ratio_thresh=1.2, burst_thresh=None, DBG=True):
+    '''
+    Matches desc2 vs desc1 using Lowe's ratio test
+    Input:
+        desc2         - other descriptors (N2xD)
+        flann_1v1     - prebuild FLANN index of desc1 (query descriptors (N1xD)) 
+    Thresholds: 
+        ratio_thresh = 1.2 - keep match if dist(2)/dist(1) > ratio_thresh
+        burst_thresh = 1   - keep match if 0 < matching_freq(desc1) <= burst_thresh 
+    Output: 
+        fm - Mx2 array of matching feature indexes
+        fs - Mx1 array of matching feature scores
+    '''
+    # features to their matching query features
+    (fx2_qfx, fx2_dist) = flann_1v1.nn_index(desc2, 2, **__FLANN_PARAMS__)
+    # RATIO TEST
+    fx2_ratio  = np.divide(fx2_dist[:,1], fx2_dist[:,0]+1E-8)
+    fx_passratio, = np.where(fx2_ratio > ratio_thresh)
+    fx = fx_passratio
+    # BURSTINESS TEST
+    # Find frequency of descriptor matches
+    # Select the query features which only matched < burst_thresh
+    # Convert qfx to fx
+    # FIXME: there is probably a better way of doing this.
+    if not burst_thresh is None:
+        qfx2_frequency = np.bincount(fx2_qfx[:,0])
+        qfx_occuring   = qfx2_frequency > 0
+        qfx_nonbursty  = qfx2_frequency <= burst_thresh
+        qfx_nonbursty_unique,= np.where(np.bitwise_and(qfx_occuring, qfx_nonbursty))
+        _qfx_set      = set(qfx_nonbursty_unique.tolist())
+        fx2_nonbursty = [_qfx in _qfx_set for _qfx in iter(fx2_qfx[:,0])]
+        fx_nonbursty, = np.where(fx2_nonbursty)
+        fx  = np.intersect1d(fx, fx_nonbursty, assume_unique=True)
+    # RETURN 1v1 matches and scores
     qfx = fx2_qfx[fx,0]
-    fm = np.array(zip(qfx, fx))
-    fs = fx2_ratio[fx]
+    fm  = np.array(zip(qfx, fx))
+    fs  = fx2_ratio[fx]
+    # DEBUG
+    if DBG:
+        print('-------------')
+        print('Matching 1v1:')
+        print(' * Ratio threshold: %r ' % ratio_thresh)
+        print(' * Burst threshold: %r ' % burst_thresh)
+        print(' * fx_passratio.shape   = %r ' % (  fx_passratio.shape,))
+        if not burst_thresh is None:
+            print(' * fx_nonbursty.shape   = %r ' % (  fx_nonbursty.shape,))
+        print(' * fx.shape   = %r ' % (  fx.shape,))
+        print(' * qfx.shape  = %r ' % (  qfx.shape,))
     return (fm, fs)
+
+def warp_chip(rchip2, H, rchip1):
+    rchip2W = cv2.warpPerspective(rchip2, H, rchip1.shape[0:2][::-1])
+    return rchip2W
 
 class HotSpotter(DynStruct):
     def __init__(self):
@@ -238,6 +312,7 @@ def load_hotspotter(db_dir):
     hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
     # --- LOAD FEATURES --- #
     hs_feats  = feature_compute2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
+    hs_feats.set_feat_type(__FEAT_TYPE__)
     # --- BUILD HOTSPOTTER --- #
     hs = HotSpotter()
     hs.tables = hs_tables
@@ -265,8 +340,6 @@ if __name__ == '__main__':
         exec(hs_feats.execstr('hs_feats'))
         exec(hs_tables.execstr('hs_tables'))
         exec(hs_dirs.execstr('hs_dirs'))
-        __FEAT_TYPE__ = 'SIFT'
-        hs_feats.set_feat_type(__FEAT_TYPE__)
         cx2_kpts = hs_feats.cx2_kpts
         cx2_desc = hs_feats.cx2_kpts
         qcx = 1

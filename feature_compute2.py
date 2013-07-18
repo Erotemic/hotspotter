@@ -103,7 +103,21 @@ def set_opencv_params(opencv_class, param_dict):
             raise Exception('Unknown opencv param. name: '+str(param_name) + ' type: '+str(param_type))
         opencv_pref[param_name] = param_val
 
-detector_options = ['SIFT', 'SURF', 'MSER', 'STAR', 'DENSE', 'HARRIS', 'Dense', 'SimpleBlob'] 
+#http://docs.opencv.org/modules/features2d/doc/common_interfaces_of_feature_detectors.html?highlight=surffeaturedetector#surffeaturedetector
+'''
+"FAST"  FastFeatureDetector
+"STAR"  StarFeatureDetector
+"SIFT"  SIFT (nonfree module) - Hessian Trace
+"SURF"  SURF (nonfree module) - Hessian Determinant
+"ORB"  ORB
+"BRISK"  BRISK
+"MSER"  MSER
+"GFTT" GoodFeaturesToTrackDetector
+"HARRIS"  GoodFeaturesToTrackDetector with Harris detector enabled
+"Dense"  DenseFeatureDetector
+"SimpleBlob"  SimpleBlobDetector
+'''
+detector_options = ['SIFT', 'SURF', 'MSER', 'STAR', 'DENSE', 'HARRIS', 'SimpleBlob'] 
 
 extractor_options = ['SIFT', 'SURF', 'FREAK', 'ORB', 'BRISK', 'FAST', 'GFTT',
                      'GridFAST', 'PyramidStar']

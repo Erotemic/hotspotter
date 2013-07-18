@@ -40,16 +40,16 @@ def show_all_figures():
 
 import sys
 def tile_all_figures():
-    row_first = False
-    num_rows=3
+    row_first = True
+    num_rows=4
     num_cols=4
     hpad = 0 #75
     wpad = 0
     h = 250
     w = 350
+    x_off, y_off = (0,0)
     if sys.platform == 'win32':
-        x_off = 40
-        y_off = 40
+        x_off, yoff = (40, 40)
 
     all_figures = get_all_figures()
     for i, fig in enumerate(all_figures):
@@ -150,7 +150,7 @@ def draw_matches(rchip1, rchip2, kpts1, kpts2, fm12, vert=False, color=(255,0,0)
         match_img = cv2.line(match_img, pt1, pt2, color)
     return match_img
 
-def draw_matches2(kpts1, kpts2, fm, kpts2_offset=(0,0), color=(1.,0.,0.), alpha=.5):
+def draw_matches2(kpts1, kpts2, fm, fs=None, kpts2_offset=(0,0), color=(1.,0.,0.), alpha=.4):
     # input data
     ax = plt.gca()
     woff, hoff = kpts2_offset
@@ -161,14 +161,30 @@ def draw_matches2(kpts1, kpts2, fm, kpts2_offset=(0,0), color=(1.,0.,0.), alpha=
                          kpts2_m[0]+woff,
                          kpts1_m[1],
                          kpts2_m[1]+hoff))
-    # sexy loop
+    ''' 
+    OLD WAY: 
     line_actors = [ plt.Line2D((x1,x2), 
                                (y1,y2))
-                            for (x1,x2,y1,y2) in xxyy_iter ]
+                           for (x1,x2,y1,y2) in xxyy_iter ]
     # add lines
     line_collection = matplotlib.collections.PatchCollection(line_actors,
                                                              color=color,
                                                              alpha=alpha)
+    '''
+    if fs is None:
+        segments  = [ ((x1, y1), (x2,y2)) for (x1,x2,y1,y2) in xxyy_iter ] 
+        colors    = [ color for fx in xrange(len(fm)) ] 
+        linewidth = [ 1.5 for fx in xrange(len(fm)) ] 
+    else:
+        cmap = plt.get_cmap('hot')
+        mins = fs.min()
+        maxs = fs.max()
+        segments  = [ ((x1, y1), (x2,y2)) for (x1,x2,y1,y2) in xxyy_iter ] 
+        colors    = [ cmap(.1+ .9*(fs[fx]-mins)/(maxs-mins)) for fx in xrange(len(fm)) ] 
+        linewidth = [ 1.5 for fx in xrange(len(fm)) ] 
+
+    line_collection = matplotlib.collections.LineCollection(segments, linewidth, colors,
+                                          alpha=alpha)
     ax.add_collection(line_collection)
 
 def draw_kpts2(kpts, color=(0.,0.,1.), alpha=.5, offset=(0,0)):
@@ -214,19 +230,7 @@ def draw_kpts(_rchip, _kpts, color=(0,0,255)):
         kpts_img = cv2.circle(kpts_img, center, radius, color)
     return kpts_img
 
-# ---- CHIP DISPLAY COMMANDS ----
-
-def imshow(img, fignum=0, title=None):
-    printDBG('*** imshow in fig=%d title=%r *** ' % (fignum, title))
-    fig = figure(fignum, doclf=True, title=title)
-    plt.imshow(img)
-    ax = fig.gca()
-    ax.set_xticks([])
-    ax.set_yticks([])
-    try:
-        fig.tight_layout()
-    except Exception as ex:
-        print('!! Exception durring fig.tight_layout: '+repr(ex))
+# ---- OLD CHIP DISPLAY COMMANDS ----
 
 def show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12, fignum=0, title=None):
     printDBG('*** Showing %d matches between cxs=(%d,%d) ***' % (len(fm12), qcx, cx))
@@ -245,10 +249,23 @@ def show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12, fignum=0, title=None):
                                    fm12, vert=True)
     imshow(chipkptsmatches, fignum=fignum, title=title)
 
-def show_matches2(rchip1, rchip2,
-                  kpts1, kpts2,
-                  fm, fignum=0, title=None,
-                  vert=True):
+# ---- CHIP DISPLAY COMMANDS ----
+
+def imshow(img, fignum=0, title=None):
+    printDBG('*** imshow in fig=%d title=%r *** ' % (fignum, title))
+    fig = figure(fignum, doclf=True, title=title)
+    plt.imshow(img)
+    ax = fig.gca()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    try:
+        fig.tight_layout()
+    except Exception as ex:
+        print('!! Exception durring fig.tight_layout: '+repr(ex))
+
+
+def show_matches2(rchip1, rchip2, kpts1, kpts2,
+                  fm, fs=None, fignum=0, title=None, vert=True):
     '''Draws feature matches 
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''
@@ -266,6 +283,9 @@ def show_matches2(rchip1, rchip2,
     match_img[0:h1, 0:w1, :] = rchip1
     match_img[hoff:(hoff+h2), woff:(woff+w2), :] = rchip2
     # get matching keypoints + offset
+    if len(fm) == 0:
+        imshow(match_img,fignum=fignum,title=title)
+        return
     kpts1_m = kpts1[fm[:,0]]
     kpts2_m = kpts2[fm[:,1]]
     # matplotlib stuff
@@ -273,13 +293,13 @@ def show_matches2(rchip1, rchip2,
     if __OLD_WAY__:
         _img1 = draw_kpts(rchip1, kpts1_m)
         _img2 = draw_kpts(rchip2, kpts2_m)
-        image = draw_matches(_img1, _img2,  kpts1, kpts2, fm, vert=True)
-        imshow(image,fignum=fignum,title=title)
+        old_image = draw_matches(_img1, _img2,  kpts1, kpts2, fm, vert=True)
+        imshow(old_image,fignum=fignum,title=title)
     else:
-        imshow(match_img, fignum=fignum, title=title)
+        imshow(match_img,fignum=fignum,title=title)
     draw_kpts2(kpts1_m)
     draw_kpts2(kpts2_m,offset=(woff,hoff))
-    draw_matches2(kpts1,kpts2,fm,kpts2_offset=(woff,hoff))
+    draw_matches2(kpts1,kpts2,fm,fs,kpts2_offset=(woff,hoff))
 
 def show_keypoints(rchip,kpts,fignum=0,title=None):
     imshow(rchip,fignum=fignum,title=title)

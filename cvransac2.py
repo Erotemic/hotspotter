@@ -192,11 +192,11 @@ def H_homog_from_CV2SAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     xy1_m   = kpts1_m[0:2,:]
     xy2_m   = kpts2_m[0:2,:]
 
+    #method = 0 # a regular method using all the points
+    #method = cv2.LMEDS # Least-Median robust method
     method = cv2.RANSAC # RANSAC-based robust method
-    method = 0 # a regular method using all the points
-    method = cv2.LMEDS # Least-Median robust method
 
-    H, inliers = cv2.findHomography(xy1_m.T, xy2_m.T, cv2.RANSAC, np.sqrt(xy_thresh_sqrd))
+    H, inliers = cv2.findHomography(xy1_m.T, xy2_m.T, method, np.sqrt(xy_thresh_sqrd))
     H = H if not H is None else np.eye(3)
     return H, np.array(inliers, dtype=bool).flatten()
 
@@ -243,7 +243,7 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
 
     # min number of matches to compute transform
     min_num_inliers = 3 
-    if num_m < min_num_inliers: return  np.eye(3), ones(num_m, dtype=np.uint32)
+    if num_m < min_num_inliers: return  np.eye(3), np.ones(num_m, dtype=np.uint32)
     if num_m == 0: return np.eye(3), np.array([])
 
     # Estimate initial inliers with some RANSAC variant
@@ -260,11 +260,16 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     (xyz_norm2, T2) = homogo_normalize_pts(xy2_m[:,aff_inliers])
 
     # Compute Normalized Homog
-    try: 
-        H_prime = compute_homog(xyz_norm1, xyz_norm2)
-        H = linalg.solve(T2, H_prime).dot(T1)                # Unnormalize
-    except linalg.LinAlgError:
-        return np.eye(3), np.array([])
+    __AFFINE_OVERRIDE__ = True
+    if __AFFINE_OVERRIDE__:
+        H = cv2.getAffineTransform(xy1_m[:,aff_inliers], xy2_m[:,aff_inliers])
+    else: 
+        # H = cv2.getPerspectiveTransform(xy1_m[:,aff_inliers], xy2_m[:,aff_inliers])
+        try: 
+            H_prime = compute_homog(xyz_norm1, xyz_norm2)
+            H = linalg.solve(T2, H_prime).dot(T1)                # Unnormalize
+        except linalg.LinAlgError:
+            return np.eye(3), np.array([])
 
     # Estimate final inliers
     xy1_mHt = transform_xy(H, xy1_m)                        # Transform Kpts1 to Kpts2-space

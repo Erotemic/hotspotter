@@ -95,3 +95,25 @@ def unpack_freak(cx2_desc):
             d_bool = np.array([int(bit) for bit in bitstr],dtype=bool)
             unpacked_desc.append(d_bool)
         cx2_unpacked_freak.append(unpacked_desc)
+
+
+# SPATIAL VERIFICATION PARAMS SETUP
+img1_extent = (kpts1_m[0:2,:].max(1) - kpts1_m[0:2,:].min(1))[0:2]
+img2_extent = (kpts2_m[0:2,:].max(1) - kpts2_m[0:2,:].min(1))[0:2]
+xy_thresh12_sqrd = np.sum(img1_extent**2) * (__xy_thresh_percent__**2)
+xy_thresh21_sqrd = np.sum(img2_extent**2) * (__xy_thresh_percent__**2)
+
+__PRINT_THRESH_INFO__ = False
+if __PRINT_THRESH_INFO__:
+    print('---------------------------------------')
+    print(' * Threshold is %.1f%% of diagonal length' % (__xy_thresh_percent__*100))
+    print('Computing the xy_threshold:')
+    print(' * img1_extent = %r ' % img1_extent)
+    print(' * img2_extent = %r ' % img2_extent)
+    print(' * img1_diag_len = %.2f ' % np.sqrt(np.sum(img1_extent**2)))
+    print(' * img2_diag_len = %.2f ' % np.sqrt(np.sum(img2_extent**2)))
+    print(' * xy_thresh12_sqrd=%.2f' % np.sqrt(xy_thresh12_sqrd))
+    print(' * xy_thresh21_sqrd=%.2f' % np.sqrt(xy_thresh21_sqrd))
+    print('---------------------------------------')
+
+

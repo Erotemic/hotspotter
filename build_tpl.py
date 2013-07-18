@@ -237,14 +237,14 @@ def build_flann(nomake=False):
     
 def localize_hesaff():
     print('____ Localizing hessaff ____')
-    hesaff_build = __CODE__+'/hesaff/build'
-    hesaff_pybnd = __CODE__+'/hesaff/python_bindings'
+    hesaff_build = __CODE__ + '/hesaff/build'
+    hesaff_pybnd = __CODE__ + '/hesaff/python_bindings'
     check_path(hesaff_build)
     tpl_hesaff = tpl_root + '/hesaff'
     ensure_path(tpl_hesaff) 
     copy_all(hesaff_build, tpl_hesaff, 'hesaff*')
     copy_all(hesaff_pybnd, tpl_hesaff, '*.py')
-    os.system('chmod +x '+tpl_hesaff+'/hesaff*')
+    os.system('chmod +x ' + tpl_hesaff + '/hesaff*')
 
 def localize_opencv():
     print('____ Localizing opencv ____')

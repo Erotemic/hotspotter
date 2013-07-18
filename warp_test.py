@@ -26,14 +26,14 @@ from numpy.linalg import inv
 __VIEW_TOP__ = 10
 
 __SHOW_PLAIN_CHIPS__ = False
-__SHOW_KPTS_CHIPS__ = False
+__SHOW_KPTS_CHIPS__ = True
 __SHOW_ASSIGNED_FEATURE_MATCHES__ = False
 __SHOW_INLIER_MATCHES__ = False
 __SHOW_WARP__ = False
 __OTHER_X__ = 0
 __xy_thresh_percent__ = mc2.__xy_thresh_percent__
 __FEAT_TYPE__ = 'HESAFF'
-__WARP_FEATURE_TYPE__ = 'HESAFF'
+__WARP_FEATURE_TYPE__ = 'SIFT'
 __oldfeattype = None
 
 
@@ -117,8 +117,8 @@ if __SHOW_PLAIN_CHIPS__:
     df2.imshow(rchip1, fignum=9001, title='querychip qcx=%d' % qcx)
     df2.imshow(rchip2, fignum=9002, title='reschip  cx=%d' %  cx)
 if __SHOW_KPTS_CHIPS__:
-    df2.show_keypoints(rchip1, kpts1, fignum=2, title='With Keypoints qcx=%d' % qcx)
-    df2.show_keypoints(rchip2, kpts2, fignum=3, title='With Keypoints  cx=%d' %  cx)
+    df2.show_keypoints(rchip1, kpts1, fignum=2, title='qcx=%d nkpts=%d' % (qcx,len(kpts1)))
+    df2.show_keypoints(rchip2, kpts2, fignum=3, title='cx=%d nkpts=%d' % (cx,len(kpts1)))
 
 # ASSIGNED MATCHES
 print('---------------------------------------')
@@ -185,7 +185,6 @@ def __test_warp(homog_tup, testname, fignum):
     #rchip1_H1 = cv2.warpPerspective(rchip1,      H1, rchip2.shape[0:2][::-1])
     with Timer(msg='Testing warp: '+testname):
         rchip2_H1 = cv2.warpPerspective(rchip2, inv(H1), rchip1.shape[0:2][::-1])
-
     if __SHOW_WARP__:
         #df2.imshow(rchip1_H1, fignum=fignum+0, title=testname+' warped querychip1')
         df2.imshow(rchip2_H1, fignum=fignum+1, title=testname+' warped reschip2')
@@ -203,8 +202,8 @@ qdesc1 = cx2_desc[qcx]
 
 # CHOOSE output from one of previous algorithms
 (H, inliers) = delsac_homog
-fm_SV = fm[inliers,:]
-fs_SV = fs[inliers,:]
+fm_SV = fm[inliers]
+fs_SV = fs[inliers]
 
 wchip2 = wrchip2_delsac
 #
@@ -212,10 +211,10 @@ with Timer(msg='detect features in warped chip'):
     wkpts2, wdesc2 = fc2.compute_features(wchip2, __WARP_FEATURE_TYPE__)
     # If we are using a different feature type compute one for the query image
     # too
-    if not hs.feats.feat_type == __WARP_FEATURE_TYPE__:
-        _qkpts1, _qdesc1 = fc2.compute_features(rchip1, __WARP_FEATURE_TYPE__)
-    else: 
-        _qkpts1, _qdesc1 = qkpts1, qdesc1
+    #if not hs.feats.feat_type == __WARP_FEATURE_TYPE__:
+    _qkpts1, _qdesc1 = fc2.compute_features(rchip1, __WARP_FEATURE_TYPE__)
+    #else: 
+        #_qkpts1, _qdesc1 = qkpts1, qdesc1
 
 # match keypoints 1v1 style
 if __WARP_FEATURE_TYPE__ != 'FREAK':
@@ -227,15 +226,22 @@ else:
     raise NotImplemented('!!!')
 
 # show warped with keypoints
-df2.show_keypoints(wchip2, wkpts2, fignum=30, title='warped+keypoints')
+print('-----------------')
+print('Show warped with keypoints')
+df2.show_keypoints(rchip1, _qkpts1, fignum=300, title='nWarpedKpts=%r ' % len(_qkpts1))
+df2.show_keypoints(wchip2, wkpts2, fignum=30, title='nWarpedKpts=%r ' % len(wkpts2))
 
 # show warped matches
-df2.show_matches2(rchip1, rchip2, qkpts1,  kpts2,  fm,    fignum=26, title='Assigned Matches')
-df2.show_matches2(rchip1, rchip2, qkpts1,  kpts2,  fm_SV, fignum=27, title='Assigned+Verified')
-df2.show_matches2(rchip1, wchip2, _qkpts1, wkpts2, wfm,   fignum=28, title='Warped Matches')
-df2.show_matches2(rchip1, wchip2, _qkpts1, wkpts2, wfm_SV,fignum=29, title='Warped+Verified')
+print('-----------------')
+print('Show warped matches')
+df2.show_matches2(rchip1, rchip2, qkpts1,  kpts2,  fm,    fignum=26, title='nMatch=%d' % len(fm))
+df2.show_matches2(rchip1, rchip2, qkpts1,  kpts2,  fm_SV, fignum=27, title='nMatch_SV=%d' % len(fm_SV))
+df2.show_matches2(rchip1, wchip2, _qkpts1,  kpts2,  wfm, fignum=28, title='nMatchWarped=%d' % len(wfm))
+df2.show_matches2(rchip1, wchip2, _qkpts1,  kpts2,  wfm_SV, fignum=29, title='nMatchWarped_SV=%d' % len(wfm_SV))
 
 # inspect scores
+print('-----------------')
+print('Inspect scores')
 print('Assigned matching score  : '+str(fs.sum()))
 print('Verified matching score  : '+str(fs_SV.sum()))
 print('Warped matching score    : '+str(wfs.sum()))

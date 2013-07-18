@@ -10,6 +10,7 @@ into a global set of helper functions.
 Wow, pylint is nice for cleaning.
 '''
 
+from hotspotter.other.AbstractPrintable import printableVal
 import cPickle
 import code
 import numpy as np
@@ -19,7 +20,7 @@ import time
 import types
 import shutil
 import warnings
-from fnmatch import fnmatch
+import fnmatch
 from sys import stdout as sout
 
 def _print(msg):
@@ -51,7 +52,6 @@ def myprint(input=None, prefix='', indent='', lbl=''):
     elif type(input) == types.StringType:
         _println(input)
     elif type(input) == types.DictType:
-        from hotspotter.other.AbstractPrintable import printableVal
         _println(printableVal(input))
     else: #
         _println(indent+'{')
@@ -65,8 +65,6 @@ def myprint(input=None, prefix='', indent='', lbl=''):
                 #val = '<built-in method>'
             _println(indent+'  '+attr+' : '+val)
         _println(indent+'}')
-
-import os
 
 def longest_existing_path(_path):
     while True: 
@@ -159,7 +157,7 @@ def copy_all(src_dir, dest_dir, glob_str_list):
         glob_str_list = [glob_str_list]
     for _fname in os.listdir(src_dir):
         for glob_str in glob_str_list:
-            if fnmatch(_fname, glob_str):
+            if fnmatch.fnmatch(_fname, glob_str):
                 src = os.path.normpath(os.path.join(src_dir, _fname))
                 dst = os.path.normpath(os.path.join(dest_dir, _fname))
                 copy(src, dst)
@@ -282,9 +280,8 @@ def keyboard(banner=None):
     namespace = frame.f_globals.copy()
     namespace.update(frame.f_locals)
     try:
-        code.interact(banner=banner, local=namespace)
-        #import IPython
-        #IPython.embed_kernel(module=None,local_ns=namespace)
+        import IPython
+        IPython.embed_kernel(module=None,local_ns=namespace)
     except SystemExit:
         return
 
@@ -426,8 +423,6 @@ def remove_file(fpath):
         return False
     return True
 
-import os
-import fnmatch
 def remove_files_in_dir(dpath, fname_pattern='*', recursive=False):
     print('Removing files:')
     print('  * in dpath = %r ' % dpath) 

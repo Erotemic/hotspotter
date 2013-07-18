@@ -1,7 +1,7 @@
 from __future__ import division
 from hotspotter.Parallelize import parallel_compute
 from hotspotter.helpers import normalize
-from hotspotter.other.ConcretePrintable import DynStruct
+from hotspotter.other.ConcretePrintable import DynStruct, Pref
 from numpy import array, cos, float32, hstack, pi, round, sqrt, uint8, zeros
 import hotspotter.tpl.cv2 as cv2
 import hotspotter.tpl.hesaff
@@ -75,13 +75,56 @@ def __precompute(rchip_path, feats_path, compute_fn):
 # Global opencv detectors and extractors      
 # =======================================
 ## Common keypoint detector
-__detector  = cv2.FeatureDetector_create('SURF')
+def get_opencv_params(opencv_class):
+    opencv_pref = Pref()
+    for param_name in opencv_class.getParams():
+        param_type = opencv_class.paramType(param_name)
+        if param_type in [0, 9, 11]:
+            param_val = opencv_class.getInt(param_name)
+        elif param_type == 1:
+            param_val = opencv_class.getBool(param_name)
+        elif param_type in [2,7]:
+            param_val = opencv_class.getDouble(param_name)
+        else:
+            raise Exception('Unknown opencv param. name: '+str(param_name) + ' type: '+str(param_type))
+        opencv_pref[param_name] = param_val
+        return opencv_pref
+
+def set_opencv_params(opencv_class, param_dict):
+    for param_name, param_val in param_dict.iteritems():
+        param_type = opencv_class.paramType(param_name)
+        if param_type in [0, 9, 11]:
+            opencv_class.setInt(param_name, param_val)
+        elif param_type == 1:
+            opencv_class.setBool(param_name, param_val)
+        elif param_type in [2,7]:
+            opencv_class.setDouble(param_name, param_val)
+        else:
+            raise Exception('Unknown opencv param. name: '+str(param_name) + ' type: '+str(param_type))
+        opencv_pref[param_name] = param_val
+
+detector_options = ['SIFT', 'SURF', 'MSER', 'STAR', 'DENSE', 'HARRIS', 'Dense', 'SimpleBlob'] 
+
+extractor_options = ['SIFT', 'SURF', 'FREAK', 'ORB', 'BRISK', 'FAST', 'GFTT',
+                     'GridFAST', 'PyramidStar']
+
+__detector = cv2.FeatureDetector_create('MSER')
+detector_params = get_opencv_params(__detector)
+detector_params.printme()
+
+
 #__detector  = cv2.FeatureDetector_create('SIFT')
 ## SIFT extractor settings
 sift_extractor = cv2.DescriptorExtractor_create('SIFT')
+## SURF extractor settings
+surf_extractor = cv2.DescriptorExtractor_create('SURF')
 ## FREAK extractor settings
 freak_extractor = cv2.DescriptorExtractor_create('FREAK')
 freak_extractor.setBool('orientationNormalized', False)
+# Adapt the descriptor
+__detector = cv2.PyramidAdaptedFeatureDetector(__detector)
+#__detector = cv2.GridAdapatedFeatureDetector(__detector)
+#__detector = cv2.AdjusterAdapter(__detector)
 
 # =======================================
 # Module Functions          

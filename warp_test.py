@@ -91,7 +91,6 @@ def cx2_other_cx(cx):
 df2.reset()
 
 
-
 # VIEW TOP SCORES AND GROUND TRUTH SCORES
 print('\n\n=============================')
 print(' INSPECTING QCX MATCHES      ')
@@ -125,6 +124,8 @@ def print_top_scores(_cx2_fs, lbl):
     print('---------------------------------------')
 print_top_scores(cx2_fs,   '(assigned)')
 print_top_scores(cx2_fs_V, '(assigned+V)')
+
+
 
 # INPUT CHIPS
 cx = other_cx[__OTHER_X__]
@@ -213,25 +214,25 @@ desc1_1vM = cx2_desc[qcx]
 
 kpts2_1vM = cx2_kpts[cx]
 desc2_1vM = cx2_desc[cx]
+# 1W recomputed but not actually warped (sanity check)
 with Timer(msg='detect features in warped rchip2W'):
     kpts2W, desc2W = fc2.compute_features(rchip2W,  __WARP_FEATURE_TYPE__)
-
-# Recomputed but not actually warped (sanity check)
-with Timer(msg='(sanity check) detect in non-warped rchip1'):
-    kpts1, desc1 = fc2.compute_features(rchip1, __WARP_FEATURE_TYPE__)
-with Timer(msg='(sanity check) detect in non-warped rchip2'):
-    kpts2, desc2 = fc2.compute_features(rchip2, __WARP_FEATURE_TYPE__)
+    kpts1W, desc1W = fc2.compute_features(rchip1,   __WARP_FEATURE_TYPE__)
 
 # REMATCH warped keypoints 1v1 style
 print('---------------------------------------')
 print('Rematching warped keypoints 1v1 style  ')
 if __WARP_FEATURE_TYPE__ == 'FREAK':
     raise NotImplemented('!!!')
-flann_1v1 = FLANN()
-flann_1v1.build_index(desc1, **mc2.__FLANN_PARAMS__)
-#desc2 =  desc2W
-fm_W,  fs_W  = mc2.match_1v1(desc2W, flann_1v1)
-fm_WV, fs_WV, _ = mc2.spatially_verify(kpts1, kpts2W, fm_W, fs_W)
+
+
+def match_and_verify_1v1(kpts1, kpts2, desc1, desc2):
+    flannW = FLANN()
+    flannW.build_index(desc1, **mc2.__FLANN_PARAMS__)
+    fm_W,  fs_W     = mc2.match_1v1(desc2W, flannW)
+    fm_WV, fs_WV, _ = mc2.spatially_verify(kpts1, kpts2W, fm_W, fs_W)
+    flannW.delete_index()
+    return 
 
 
 # INVESTIGATE: See what 1v1 scores look like next to 1vM
@@ -248,17 +249,44 @@ def one_vs_one_pipeline(rchip1, rchip2, kpts1, kpts2):
     fm_V, fs_V,  H = mc2.spatially_verify(kpts1, kpts2, fm, fs)
     # Warp using H from Matching
     rchip2_W          = mc2.warp_chip(rchip2, H, rchip1)
-    # 
+    # Redetect features in both images
     kpts2_W, desc2_W  = fc2.compute_features( rchip21v1W, __WARP_FEATURE_TYPE__)
+    # Rematch + Reverify
     fm_W,  fs_W       = mc2.match_1v1(desc2_W,  _flann)
     fm_WV, fs_WV, H_W = mc2.spatially_verify(kpts1, kpts2_W, fm_W, fs_W)
 
-with Timer(msg='1v1 assign, verify, warp, redetect, reassign, reverify'):
+def show_match_results(rchip1, rchip2, kpts1, kpts2, fm, fs, fm_V, fs_V, fignum=0):
+    print('-----------------')
+    print('1vM - show matches')
+    num_m = len(fm)
+    num_mV = len(fm_V)
+    score = fs.sum()
+    scoreV = fs_V.sum()
+
+    _title1 = 'num_m  = %r' % num_m
+    _title2 = 'num_mV = %r' % num_mV
+    _title3 = 'len(kpts1) = %r' % len(kpts1)
+    _title5 = 'len(kpts1) = %r' % len(kpts1)
+    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, fignum+0, _title1)
+    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, fignum+1, _title2)
+    df2.show_keypoints(rchip1, kpts1_1vM, fignum+3, _title3)
+    df2.show_keypoints(rchip2, kpts2_1vM, fignum+4, _title4)
 
 print('---------------------------------------')
 
 # Arguments to show matches
-_chip_kpts1vM  = (rchip1, rchip2,  kpts1_1vM, kpts2_1vM)
+print('1vM - show matches')
+show_match_results(rchip1, rchip2, kpts1, kpts2W, fm, fs, fm_V, fs_V, 100)
+
+print('1vM + Warped - showing keypoints and matches')
+show_match_results(rchip1, rchip2W,    kpts1, kpts2)
+
+print('1v1 - showing keypoints and matches')
+show_match_results(rchip1, rchip21v1W, kpts1, kpts21v1W)
+
+print('1v1 + Warped - showing keypoints and matches')
+show_match_results(rchip1, rchip2,     kpts1, kpts2_1vM)
+
 _chip_kptsW    = (rchip1, rchip2W, kpts1,     kpts2W)
 _chip_kpts1v1  = (rchip1, rchip2,  kpts1,     kpts2)
 _chip_kpts1v1W = (rchip1, rchip21v1W, kpts1,  kpts21v1W)

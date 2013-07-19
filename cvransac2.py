@@ -260,7 +260,7 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     (xyz_norm2, T2) = homogo_normalize_pts(xy2_m[:,aff_inliers])
 
     # Compute Normalized Homog
-    __AFFINE_OVERRIDE__ = True
+    __AFFINE_OVERRIDE__ = False
     if __AFFINE_OVERRIDE__:
         H = cv2.getAffineTransform(xy1_m[:,aff_inliers], xy2_m[:,aff_inliers])
     else: 

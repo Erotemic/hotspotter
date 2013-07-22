@@ -47,21 +47,20 @@ Proposal for similarity / distinctiveness measure:
     We are familiar enough with the problem to do thought experiments
 '''
 
+# TEST Query index
+qcx = 0
+__OTHER_X__ = 2
+
 
 # TEST PARAMETERS
-qcx = 0
-
 __VIEW_TOP__ = 10
 __SHOW_PLAIN_CHIPS__ = True
 __SHOW_KPTS_CHIPS__ = True
 __SHOW_ASSIGNED_FEATURE_MATCHES__ = False
 __SHOW_INLIER_MATCHES__ = False
 __SHOW_WARP__ = False
-__OTHER_X__ = 2
 __WARP_FEATURE_TYPE__ = 'HESAFF'
 __oldfeattype = None
-mc2.__xy_thresh_percent__ = mc2.__xy_thresh_percent__
-mc2.__FEAT_TYPE__ = mc2.__FEAT_TYPE__
 
 
 

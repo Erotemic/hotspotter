@@ -11,7 +11,7 @@ import load_data2, chip_compute2
 import cv2
 
 
-__NUM_PROCS__ = 1
+__NUM_PROCS__ = 9
 #def old_cvkpts2_kpts(cvkpts)
     #kpts = zeros((len(cvkpts), 5), dtype=float32)
     #fx = 0
@@ -26,9 +26,8 @@ __NUM_PROCS__ = 1
     #return (kpts, desc)
 
 def root_sift(desc):
-    '''
-    Takes the square root of each descriptor and
-    returns the features in the range 0 to 255 (as uint8) '''
+    ''' Takes the square root of each descriptor and returns the features in the
+    range 0 to 255 (as uint8) '''
     desc_ = array([sqrt(d) for d in normalize(desc)])
     desc_ = array([round(255.0 * d) for d in normalize(desc_)], dtype=uint8)
     return desc_
@@ -46,10 +45,9 @@ def print_cvkpt(cvkp):
         print('  '+attr+' '+str(val))
     
 def cvkpts2_kpts(cvkpts):
-    ''' 
-    Converts cv2 keypoints into the elliptical [x,y,a,d,c] format 
-    SIFT descriptors are computed with a radius of 
-    r = 3*sqrt(3*s);  s = (r/3)**2 / 3 ;  s = r**2/27 '''
+    ''' Converts cv2 keypoints into the elliptical [x,y,a,d,c] format SIFT
+    descriptors are computed with a radius of r = 3*sqrt(3*s);  s = (r/3)**2 / 3
+    ;  s = r**2/27 '''
     kpts_xy      = array([cvkp.pt for cvkp in cvkpts])
     #kpts_octave = [cvkp.octave for cvkp in cv_fpts]
     #kpts_theta  = [cos(cvkp.angle) * tau / 360 for cvkp in cv_fpts] # tauday.com
@@ -75,27 +73,25 @@ def kpts_inv_sqrtm(kpts):
         dIS = 1/np.sqrt(d)
     return np.hstack([xy, aIS, cIS, dIS]).T
 
-
 def __compute(rchip, detector, extractor):
+    'returns keypoints and descriptors'
     _cvkpts = detector.detect(rchip)  
-    # gravity vector
-    for cvkp in iter(_cvkpts): cvkp.angle = 0
+    for cvkp in iter(_cvkpts): cvkp.angle = 0 # gravity vector
     cvkpts, cvdesc = extractor.compute(rchip, _cvkpts)
     kpts = cvkpts2_kpts(cvkpts)
     desc = array(cvdesc, dtype=uint8)
     return (kpts, desc)
 
 def __precompute(rchip_path, feats_path, compute_func):
+    'saves keypoints and descriptors to disk'
     rchip = cv2.imread(rchip_path)
     (kpts, desc) = compute_func(rchip)
     np.savez(feats_path, kpts, desc)
     return (kpts, desc)
 
-
 # =======================================
 # Global cv2 detectors and extractors      
 # =======================================
-## Common keypoint detector
 def get_cv2_params(cv2_class):
     cv2_pref = Pref()
     for param_name in iter(cv2_class.getParams()):
@@ -111,17 +107,6 @@ def get_cv2_params(cv2_class):
         cv2_pref[param_name] = param_val
     return cv2_pref
 
-# IDEAS: 
-#  put a descriptor at a spot.
-#  see how it varies as you slowly move it away
-# ----
-# learn what that should be such that is linear with NN? 
-# ----
-# compute all detectors and just visualize those
-# ----
-# make sure that keypoints are plotted correctly w/ cv2 keypoints
-# ----
-# implement coverage measure
 def set_cv2_params(cv2_class, param_dict):
     for param_name, param_val in param_dict.iteritems():
         param_type = cv2_class.paramType(param_name)
@@ -135,27 +120,21 @@ def set_cv2_params(cv2_class, param_dict):
             raise Exception('Unknown cv2 param. name: '+str(param_name) + ' type: '+str(param_type))
         cv2_pref[param_name] = param_val
 
-cv2_detector_types = ['BRISK', 'Dense', 'FAST', 'GFTT', 'HARRIS',
-                      'MSER', 'ORB', 'SIFT', 'STAR', 'SURF', 'SimpleBlob']
-
+cv2_detector_types  = ['BRISK', 'Dense', 'FAST', 'GFTT', 'HARRIS',
+                       'MSER', 'ORB', 'SIFT', 'STAR', 'SURF', 'SimpleBlob']
 cv2_extractor_types = ['BRISK', 'FAST', 'FREAK', 'GFTT', 'GridFAST',
                        'ORB', 'PyramidStar', 'SIFT', 'SURF']
-
-
-if sys.platform == 'win32':
-    _win32_broken_extractors = ['FAST', 'GFTT', 'GridFAST', 'PyramidStar', 'ORB']
-    cv2_extractor_types = np.setdiff1d(cv2_extractor_types,
-                                       _win32_broken_extractors).tolist()
-
+# These extractors give segfaults
+__off_list = ['FAST', 'GFTT', 'GridFAST', 'PyramidStar', 'ORB']
+cv2_extractor_types = np.setdiff1d(cv2_extractor_types, __off_list).tolist()
 
 #=========================================
 # Create detector instances
 #=========================================
-__detector = cv2.FeatureDetector_create('SURF')
 #__detector  = cv2.FeatureDetector_create('SIFT')
-# Adapt the descriptor
-__detector = cv2.PyramidAdaptedFeatureDetector(__detector)
+__detector = cv2.FeatureDetector_create('SURF')
 #__detector = cv2.GridAdaptedFeatureDetector(__detector)
+__detector = cv2.PyramidAdaptedFeatureDetector(__detector)
 #__detector = cv2.AdjusterAdapter(__detector)
 
 #=========================================
@@ -180,45 +159,6 @@ def compute_sift(rchip):
 def compute_freak(rchip):
     return __compute(rchip, __detector, freak_extractor)
 
-type2_compute_func = {
-    'HESAFF' : compute_hesaff,
-    'SIFT'   : compute_sift,
-    'FREAK'  : compute_freak }
-
-def compute_features(rchip, extractor_type):
-    return type2_compute_func[extractor_type](rchip)
-
-def cv2_kpts_test(rchip, detect_type, pyramid_adapted=False, grid_adapted=False):
-    print('  * Creating detector: '+str(detect_type))
-    detector  = cv2.FeatureDetector_create(detect_type)
-    if grid_adapted:
-        print('  * Adapting to grid')
-        detector = cv2.GridAdaptedFeatureDetector(detector)
-    if pyramid_adapted: 
-        print('  * Adapting to pyramid')
-        detector = cv2.PyramidAdaptedFeatureDetector(detector)
-    cvkpts = detector.detect(rchip)  
-    print('  * found len(cvkpts)=%d' % (len(cvkpts)))
-    return cvkpts
-
-
-def cv2_feats_test(rchip, extract_type, detect_type,
-                   pyramid_adapted=False, grid_adapted=False):
-    print('  * Creating detector: '+str(detect_type))
-    detector  = cv2.FeatureDetector_create(detect_type)
-    print('  * Creating extractor: '+str(extract_type))
-    extractor = cv2.DescriptorExtractor_create(extract_type)
-    if grid_adapted:
-        print('  * Adapting to grid')
-        detector = cv2.GridAdapatedFeatureDetector(detector)
-    if pyramid_adapted: 
-        print('  * Adapting to pyramid')
-        detector = cv2.PyramidAdaptedFeatureDetector(detector)
-    print('  * ... computing')
-    (kpts, desc) =  __compute(rchip, detector, extractor)
-    print('  * found kpts.shape=%r, desc.shape=%r' % (kpts.shape, desc.shape))
-    return (kpts, desc)
-
 # =======================================
 # Parallelizable Work Functions          
 # =======================================
@@ -236,63 +176,35 @@ def load_features(feats_path):
     desc = npz['arr_1']
     return (kpts, desc)
 
+#==========================================
+# Dynamic Test Functions
+#==========================================
+type2_compute_func = {
+    'HESAFF' : compute_hesaff,
+    'SIFT'   : compute_sift,
+    'FREAK'  : compute_freak }
 
-# =======================================
-# Tests
-# =======================================
+def compute_features(rchip, extractor_type):
+    return type2_compute_func[extractor_type](rchip)
 
+def cv2_kpts(rchip, detect_type, pyramid=False, grid=False):
+    detector  = cv2.FeatureDetector_create(detect_type)
+    if pyramid: 
+        detector = cv2.PyramidAdaptedFeatureDetector(detector)
+    if grid:
+        detector = cv2.GridAdaptedFeatureDetector(detector)
+    cvkpts = detector.detect(rchip)  
+    return cvkpts
 
-def print(msg):
-    sys.stdout.write(msg+'\n')
-    sys.stdout.flush()
-
-def print_detector_params():
-    for detector_type in iter(cv2_detector_types):
-        print('Printing Params cv2.FeatureDetector: %r ' % detector_type)
-        detector = cv2.FeatureDetector_create(detector_type)
-        detector_params = get_cv2_params(detector)
-        print(str(detector_params).replace('Pref\n',''))
-
-def run_tests():
-    import itertools
-    from PIL import Image
-    import matplotlib.cbook as cbook
-    import matplotlib.pyplot as plt
-    grace_file = cbook.get_sample_data('grace_hopper.png')
-    test_img = np.asarray(Image.open(grace_file).convert('L'))
-    plt.imshow(test_img)
-    plt.set_cmap('gray')
-
-    # First Just try all keypoint detectors:
-    if 'kpts' in sys.argv:
-        cv_flags = cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-        for fignum, detector_type in enumerate(cv2_detector_types):
-            print('Testing detector=%s' % (detector_type))
-            try: 
-                cvkpts = cv2_kpts_test(test_img, detector_type,
-                                       pyramid_adapted=True, grid_adapted=True)
-                img = cv2.drawKeypoints(test_img, cvkpts, flags=cv_flags)
-                df2.imshow(img, fignum=fignum, title=detector_type + ' '+str(len(cvkpts)))
-            except Exception as ex:
-                print(repr(ex))
-        df2.present()
-    else:
-        skip_descs = ['SURF']
-        #skip_descs = ['FREAK']
-        bad_combos = [('MSER','FREAK'), 
-                      ('ORB', 'FREAK')]
-        # Try all combinations of feature detectors / extractors
-        feat_type_perms = itertools.product(cv2_detector_types, cv2_extractor_types)
-        for detector_type, extract_type in feat_type_perms:
-            if (detector_type, extract_type) in bad_combos or extract_type in skip_descs:
-                print('Skipping bad combo detector=%s extractor=%s' % (detector_type, extract_type))
-                continue
-            print('Testing detector=%s extractor=%s' % (detector_type, extract_type))
-            try: 
-                kpts, desc = cv2_feats_test(test_img, extract_type, detector_type)
-            except Exception as ex:
-                print(repr(ex))
-
+def cv2_feats(rchip, extract_type, detect_type, pyramid=False, grid=False):
+    detector  = cv2.FeatureDetector_create(detect_type)
+    extractor = cv2.DescriptorExtractor_create(extract_type)
+    if grid:
+        detector = cv2.GridAdapatedFeatureDetector(detector)
+    if pyramid: 
+        detector = cv2.PyramidAdaptedFeatureDetector(detector)
+    (kpts, desc) =  __compute(rchip, detector, extractor)
+    return (kpts, desc)
 
 # =======================================
 # Main Script 
@@ -362,8 +274,6 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
 
-    # Run Tests
-
     __DEV_MODE__ = False
     if __DEV_MODE__ or 'devmode' in sys.argv:
         # --- CHOOSE DATABASE --- #
@@ -374,6 +284,4 @@ if __name__ == '__main__':
         hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
         # --- LOAD FEATURES --- #
         hs_feats  = load_chip_features(hs_dirs, hs_tables, hs_cpaths)
-    else:
-        run_tests()
 

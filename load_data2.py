@@ -8,6 +8,10 @@ from hotspotter.other.ConcretePrintable import DynStruct
 def printDBG(msg, lbl=''):
     print('DBG: '+lbl+str(msg))
 
+rdir_img      = '/images'
+rdir_internal = '/.hs_internals'
+rdir_chip     = rdir_internal + '/computed/chips'
+
 class HotspotterTables(DynStruct):
     def __init__(self):
         super(HotspotterTables, self).__init__()
@@ -27,10 +31,10 @@ class HotspotterDirs(DynStruct):
         internal_dir = db_dir + '/.hs_internals'
         # Class variables
         self.db_dir       = db_dir
-        self.img_dir      = db_dir + '/images'
+        self.img_dir      = db_dir + rdir_img
         self.internal_sym = db_dir + '/Shortcut-to-hs_internals'
-        self.internal_dir = internal_dir
-        self.chip_dir     = internal_dir + '/computed/chips'
+        self.internal_dir = db_dir + internal_dir
+        self.chip_dir     = db_dir + rdir_chip
         self.rchip_dir    = internal_dir + '/computed/temp'
         self.feat_dir     = internal_dir + '/computed/feats'
         # Make directories if needbe

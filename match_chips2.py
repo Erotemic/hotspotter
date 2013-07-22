@@ -9,19 +9,18 @@ from hotspotter.other.ConcretePrintable import DynStruct
 from hotspotter.helpers import Timer, get_exec_src, check_path, tic, toc
 from drawing_functions2 import draw_matches, draw_kpts, tile_all_figures
 from hotspotter.tpl.pyflann import FLANN
-import cv2
+import hotspotter.tpl.cv2  as cv2
 from itertools import chain
 from numpy import linalg
 from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC, H_homog_from_CV2SAC
+import params2
 
-__K__ = 2
-__NUM_RERANK__     = 50
-__1v1_RAT_THRESH__ = 1.5
-__FLANN_PARAMS__ = {'algorithm' :'kdtree',
-                    'trees'     :4,
-                    'checks'    :128}
-__FEAT_TYPE__ = 'HESAFF'
-__xy_thresh_percent__ = .05
+__K__ = params2.__K__
+__NUM_RERANK__   = params2.__NUM_RERANK__
+__RATIO_THRESH__ = params2.__RATIO_THRESH__
+__FLANN_PARAMS__ = params2.__FLANN_PARAMS__
+__FEAT_TYPE__    = params2.__FEAT_TYPE__ 
+__XY_THRESH__    = params2.__XY_THRESH__ = .05
 
 def printDBG(msg):
     pass
@@ -292,15 +291,15 @@ def match_1v1(desc2, flann_1v1, ratio_thresh=1.2, burst_thresh=None, DBG=True):
         print(' * qfx.shape  = %r ' % (  qfx.shape,))
     return (fm, fs)
 
+
+cv2_matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
+def cv2_match(desc1, desc2):
+    K = 1
+    raw_matches = matcher.knnMatch(desc1, desc2, K)
+    matches = [(m1.trainIdx, m1.queryIdx) for m1 in raw_matches]
+
 def warp_chip(rchip2, H, rchip1):
-    # OutputArray src = rchip2
-    # InputArray dst = return value
-    # InputArray M = H
-    # Size dsize=(w,h)
-    # flags = INTER_LINEAR, INTER_NEAREST, INTER_LINEAR 
-    # borderMode = BORDER_CONSTANT / BORDER_REPLICATE
-    dsize = rchip1.shape[0:2][::-1]
-    rchip2W = cv2.warpPerspective(rchip2, H, dsize)
+    rchip2W = cv2.warpPerspective(rchip2, H, rchip1.shape[0:2][::-1])
     return rchip2W
 
 class HotSpotter(DynStruct):

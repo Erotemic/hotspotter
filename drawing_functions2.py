@@ -1,24 +1,37 @@
 import matplotlib
-print('Configuring matplotlib for Qt4')
-matplotlib.use('Qt4Agg')
-matplotlib.rcParams['toolbar'] = 'None'
+if matplotlib.get_backend() != 'Qt4Agg':
+    print('Configuring matplotlib for Qt4Agg')
+    matplotlib.use('Qt4Agg', warn=True, force=True)
+    matplotlib.rcParams['toolbar'] = 'None'
 from matplotlib import gridspec
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle, Circle
-from matplotlib.pyplot import draw, figure, get_cmap, gray
-from matplotlib.transforms import Affine2D
 from matplotlib.collections import PatchCollection
-import warnings
-#import pylab
-#pylab.set_cmap('gray')
-import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle, Circle
+from matplotlib.transforms import Affine2D
 import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import types
+import warnings
+
+def test_img(index=0):
+    import matplotlib.cbook as cbook
+    from PIL import Image
+    sample_fnames = ['grace_hopper.jpg',
+                     'lena.png',
+                     'ada.png']
+    if index <= len(sample_fnames):
+        test_file = cbook.get_sample_data(sample_fnames[index])
+    else:
+        import load_data2
+        chip_dir  = load_data2.MOTHERS+load_data2.rdir_chip
+        test_file = chip_dir+'/CID_%d.png' % (1+index-len(sample_fnames))
+    test_img = np.asarray(Image.open(test_file).convert('L'))
+    return test_img
 
 def printDBG(msg):
     #print(msg)
     pass
-
 
 # ---- GENERAL FIGURE COMMANDS ----
 def get_all_figures():
@@ -39,29 +52,28 @@ def show_all_figures():
         fig.canvas.draw()
 
 import sys
-def tile_all_figures():
-    row_first = True
-    num_rows=4
-    num_cols=4
-    hpad = 0 #75
-    wpad = 0
-    h = 250
-    w = 350
-    x_off, y_off = (0,0)
+def tile_all_figures(num_rc=(4,4),
+                     wh=(350,250),
+                     xy_off=(0,0),
+                     wh_off=(0,10),
+                     row_first=True):
+    num_rows,num_cols = num_rc
+    w,h = wh
+    x_off, y_off = xy_off
+    w_off, h_off = wh_off
     if sys.platform == 'win32':
         x_off, yoff = (40, 40)
-
     all_figures = get_all_figures()
     for i, fig in enumerate(all_figures):
         qtwin = fig.canvas.manager.window
         if not isinstance(qtwin, matplotlib.backends.backend_qt4.MainWindow):
             raise NotImplemented('need to add more window manager handlers')
         if row_first:
-            y = (i % num_rows)*(h+hpad)
-            x = (int(i/num_rows))*w
+            y = (i % num_rows)*(h+h_off)
+            x = (int(i/num_rows))*(w+w_off)
         else:
-            x = (i % num_cols)*w
-            y = (int(i/num_cols))*(h+hpad)
+            x = (i % num_cols)*(w+w_off)
+            y = (int(i/num_cols))*(h+h_off)
         x+=x_off
         y+=y_off
         qtwin.setGeometry(x,y,w,h)
@@ -97,9 +109,9 @@ def close_all_figures():
 def reset():
     close_all_figures()
 
-def present():
+def present(*args, **kwargs):
     print('Presenting figures...')
-    tile_all_figures()
+    tile_all_figures(*args, **kwargs)
     show_all_figures()
     bring_to_front_all_figures()
     try:
@@ -109,22 +121,50 @@ def present():
         print('Running from command line Python')
         plt.show()
 
-def figure(fignum, doclf=False, title=None):
-    fig = plt.figure(fignum)
+'''
+import drawing_functions2 as df2
+import matplotlib.pyplot as plt
+img = df2.test_img()
+
+import imp
+imp.reload(df2)
+'''
+
+def __parse_fignum(fignum_, plotnum_=111):
+    'Extendend fignum format = fignum.plotnum'
+    if type(fignum_) == types.StringType:
+        (fignum2, plotnum2) = map(int, fignum.split('.'))
+    elif type(fignum_) == types.FloatType:
+        (fignum2, plotnum2) = (int(fignum_), int(round(fignum_*1000)) - int(fignum_)*1000)
+    else:
+        (fignum2, plotnum2) = (fignum_, plotnum_)
+    return fignum2, plotnum2
+
+def figure(fignum=None, doclf=False, title=None, plotnum=111, figtitle=None):
+    fignum, plotnum = __parse_fignum(fignum, plotnum)
+    fig = plt.figure(num=fignum)
     axes_list = fig.get_axes()
     if not 'user_stat_list' in fig.__dict__.keys() or doclf:
         fig.user_stat_list = []
         fig.user_notes = []
     fig.df2_closed = False
     if doclf or len(axes_list) == 0:
-        fig.clf()
-        ax = plt.subplot(111)
-        printDBG('*** NEW FIGURE '+str(fignum)+' ***')
+        #if plotnum==111:
+            #fig.clf()
+        ax = plt.subplot(plotnum)
+        ax.cla()
+        printDBG('*** NEW FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
     else: 
-        ax  = axes_list[0]
+        printDBG('*** OLD FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
+        ax = plt.subplot(plotnum)
+        #ax  = axes_list[0]
     if not title is None:
         ax.set_title(title)
-        fig.canvas.set_window_title('fig '+str(fignum)+' '+title)
+        # Add title to figure
+        if figtitle is None and fignum == 111:
+            figtitle = title
+        if not figtitle is None:
+            fig.canvas.set_window_title('fig '+str(fignum)+' '+figtitle)
     return fig
     
 # ---- IMAGE CREATION FUNCTIONS ---- 
@@ -230,6 +270,12 @@ def draw_kpts(_rchip, _kpts, color=(0,0,255)):
         kpts_img = cv2.circle(kpts_img, center, radius, color)
     return kpts_img
 
+def cv2_draw_kpts(img, cvkpts):
+    cv_flags = cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+    kpts_img = cv2.drawKeypoints(img, cvkpts, flags=cv_flags)
+    return kpts_img
+
+
 # ---- OLD CHIP DISPLAY COMMANDS ----
 
 def show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12, fignum=0, title=None):
@@ -251,17 +297,22 @@ def show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12, fignum=0, title=None):
 
 # ---- CHIP DISPLAY COMMANDS ----
 
-def imshow(img, fignum=0, title=None):
-    printDBG('*** imshow in fig=%d title=%r *** ' % (fignum, title))
-    fig = figure(fignum, doclf=True, title=title)
+def imshow(img, fignum=0, title=None, figtitle=None):
+    printDBG('*** imshow in fig=%r title=%r *** ' % (fignum, title))
+    fignum, plotnum = __parse_fignum(fignum)
+    printDBG('   * fignum = %r, plotnum = %r ' % (fignum, plotnum))
+    fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle)
     plt.imshow(img)
+    plt.set_cmap('gray')
     ax = fig.gca()
     ax.set_xticks([])
     ax.set_yticks([])
     try:
-        fig.tight_layout()
+        if plotnum == 111:
+            fig.tight_layout()
     except Exception as ex:
         print('!! Exception durring fig.tight_layout: '+repr(ex))
+        raise
 
 
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
@@ -304,3 +355,5 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
 def show_keypoints(rchip,kpts,fignum=0,title=None):
     imshow(rchip,fignum=fignum,title=title)
     draw_kpts2(kpts)
+
+

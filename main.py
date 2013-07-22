@@ -41,8 +41,8 @@ def ensure_tpl_libs():
         is_executable = lambda fname: bin(int(oct(os.stat(fname).st_mode)[4]))[4]
         if not is_executable(hesaff_fname): 
             os.system('chmod 775 '+hesaff_fname)
-        print('Can import hotspotter.tpl.cv2?')
-        import hotspotter.tpl.cv2
+        print('Can import cv2?')
+        import cv2
         print(' ... yes')
         print('Can import hotspotter.tpl.pyflann?')
         import hotspotter.tpl.pyflann

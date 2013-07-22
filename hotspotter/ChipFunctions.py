@@ -4,7 +4,7 @@ from hotspotter.algo.imalgos import contrast_stretch
 from hotspotter.algo.imalgos import histeq
 from hotspotter.other.logger import logmsg, logdbg, logerr, logio, logwarn, func_log
 #from hotspotter.tpl.other.shiftableBF import shiftableBF
-import hotspotter.tpl.cv2 as cv2
+import cv2
 import hotspotter.Parallelize
 import os.path
 import types

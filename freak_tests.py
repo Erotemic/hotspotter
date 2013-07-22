@@ -2,7 +2,7 @@ import matplotlib
 print('Configuring matplotlib for Qt4')
 matplotlib.use('Qt4Agg')
 
-import hotspotter.tpl.cv2 as cv2
+import cv2
 
 
 from pylab import *
@@ -34,7 +34,8 @@ def black_bar(img):
     Places a vertical black bar in a numpy or opencv image
     '''
     img2 = np.copy(img)
-    mid  = img2.shape[1]/2
+    print('Adding black bar to img2.shape = %r' % (img2.shape,))
+    mid  = img2.shape[1]/2.0
     hw   = 2
     img2[:, (mid-hw):(mid+hw)] = 0
     return img2
@@ -102,7 +103,9 @@ def detect_and_extract(img,
         for key, val in cv_params.iteritems():
             # TODO: This is not always gaurenteed to be a bool
             extractor.setBool(key, val)
-    with Timer(msg='Extracting %d %s descriptors' % (len(cv_kpts2), desc_type)):
+    msg='Extracting %d %s descriptors' % (len(cv_kpts2), desc_type)
+    print(msg)
+    with Timer(msg=msg):
         cv_kpts, cv_descs = extractor.compute(img, cv_kpts2)
     print('+%s has %d keypoints\n' % (desc_type, len(cv_kpts)))
     return cv_kpts, cv_descs
@@ -157,9 +160,13 @@ def close_all_figures():
 
 # Define Image
 if sys.platform == 'win32':
-    chip_fpath = 'D:/data/work/PZ_flankhack/images/img-0000001.jpg'
+    chip_fpath = r'D:\data\work\HSDB_zebra_with_mothers\images\Nid-01_106--Cid-mom-01_106.tif'
 else: 
     chip_fpath =   '/media/Store/data/work/zebra_with_mothers/06_410/1.JPG'
+
+if not os.path.exists(chip_fpath):
+    print("PATH DOES NOT EXIST: "+str(chip_fpath))
+    sys.exit(1)
 
 # OpenCV Feature Detector Benchmarks
 # http://computer-vision-talks.com/2011/01/comparison-of-the-opencvs-feature-detection-algorithms-2/
@@ -170,7 +177,7 @@ else:
 
 import load_data2
 db_dir = load_data2.MOTHERS
-hs_tables = load_data2.load_csv_tables(db_dir)
+hs_tables, hs_dirs = load_data2.load_csv_tables(db_dir)
 exec(hs_tables.execstr('hs_tables'))
 print(hs_tables)
 

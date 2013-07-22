@@ -9,7 +9,7 @@ from hotspotter.other.ConcretePrintable import DynStruct
 from hotspotter.helpers import Timer, get_exec_src, check_path, tic, toc
 from drawing_functions2 import draw_matches, draw_kpts, tile_all_figures
 from hotspotter.tpl.pyflann import FLANN
-import hotspotter.tpl.cv2  as cv2
+import cv2
 from itertools import chain
 from numpy import linalg
 from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC, H_homog_from_CV2SAC
@@ -20,7 +20,7 @@ __1v1_RAT_THRESH__ = 1.5
 __FLANN_PARAMS__ = {'algorithm' :'kdtree',
                     'trees'     :4,
                     'checks'    :128}
-__FEAT_TYPE__ = 'SIFT'
+__FEAT_TYPE__ = 'HESAFF'
 __xy_thresh_percent__ = .05
 
 def printDBG(msg):
@@ -293,7 +293,14 @@ def match_1v1(desc2, flann_1v1, ratio_thresh=1.2, burst_thresh=None, DBG=True):
     return (fm, fs)
 
 def warp_chip(rchip2, H, rchip1):
-    rchip2W = cv2.warpPerspective(rchip2, H, rchip1.shape[0:2][::-1])
+    # OutputArray src = rchip2
+    # InputArray dst = return value
+    # InputArray M = H
+    # Size dsize=(w,h)
+    # flags = INTER_LINEAR, INTER_NEAREST, INTER_LINEAR 
+    # borderMode = BORDER_CONSTANT / BORDER_REPLICATE
+    dsize = rchip1.shape[0:2][::-1]
+    rchip2W = cv2.warpPerspective(rchip2, H, dsize)
     return rchip2W
 
 class HotSpotter(DynStruct):

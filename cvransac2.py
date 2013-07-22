@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 from numpy import linalg
 from warnings import catch_warnings, simplefilter 
 import scipy.sparse
@@ -106,6 +107,7 @@ def aff_inliers_from_randomsac(kpts1_m, kpts2_m, xy_thresh_sqrd, nIter=500, nSam
         selx = match_indexes[:nSamp]
         fp = xyz1_m[:,selx]
         tp = xyz2_m[:,selx]
+        # TODO Use cv2.getAffineTransformation
         H_aff12  = H_affine_from_points(fp, tp)
         # Transform XY-Positions
         xyz1_mAt = H_aff12.dot(xyz1_m)  
@@ -187,7 +189,6 @@ def transform_xy(H3x3, xy):
         H_xy = H_xyz[0:2,:] / H_xyz[2,:]
     return H_xy
 
-import hotspotter.tpl.cv2 as cv2
 def H_homog_from_CV2SAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     xy1_m   = kpts1_m[0:2,:]
     xy2_m   = kpts2_m[0:2,:]
@@ -260,9 +261,19 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     (xyz_norm2, T2) = homogo_normalize_pts(xy2_m[:,aff_inliers])
 
     # Compute Normalized Homog
-    __AFFINE_OVERRIDE__ = False
+    __AFFINE_OVERRIDE__ = True
     if __AFFINE_OVERRIDE__:
-        H = cv2.getAffineTransform(xy1_m[:,aff_inliers], xy2_m[:,aff_inliers])
+        #src = _homogonize_pts(xy1_m[:,aff_inliers])
+        #dst = _homogonize_pts(xy2_m[:,aff_inliers])
+        #H_ = H_affine_from_points(src, dst)
+        src = np.float32(xy1_m[:,aff_inliers].T)
+        dst = np.float32(xy2_m[:,aff_inliers].T)
+        fullAffine = True
+        H_2x3 = cv2.estimateRigidTransform(src[0:3,:], dst[0:3,:], fullAffine)
+        if H_2x3 == None:
+            H_2x3 = np.array(((1.,0.,0.),(0.,1.,0.)))
+
+        H = np.vstack([H_2x3, ([0.,0.,1.],)])
     else: 
         # H = cv2.getPerspectiveTransform(xy1_m[:,aff_inliers], xy2_m[:,aff_inliers])
         try: 

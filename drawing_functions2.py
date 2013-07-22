@@ -13,7 +13,7 @@ import warnings
 #pylab.set_cmap('gray')
 import numpy as np
 import matplotlib.pyplot as plt
-import hotspotter.tpl.cv2 as cv2
+import cv2
 
 def printDBG(msg):
     #print(msg)
@@ -200,20 +200,20 @@ def draw_kpts2(kpts, color=(0.,0.,1.), alpha=.5, offset=(0,0)):
     a = kptsT[2]
     c = kptsT[3]
     d = kptsT[4]
-    
+
     # Manually Calculated sqrtm(inv(A) for A in kpts)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         aIS = 1/np.sqrt(a) 
         cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
         dIS = 1/np.sqrt(d)
+    kpts_iter = iter(zip(x,y,aIS,cIS,dIS))
     # This has to be the sexiest piece of code I've ever written
-    kptsInvSqrtIter = iter(zip(x,y,aIS,cIS,dIS))
     ell_actors = [ Circle( (0,0), 1, 
                            transform=Affine2D([( a_, 0 , x),
                                                ( c_, d_, y),
                                                ( 0 , 0 , 1)]) )
-                 for (x,y,a_,c_,d_) in kptsInvSqrtIter ]
+                 for (x,y,a_,c_,d_) in kpts_iter ]
     ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
     ellipse_collection.set_facecolor('none')
     ellipse_collection.set_transform(pltTrans)

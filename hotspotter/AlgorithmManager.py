@@ -1,4 +1,3 @@
-import hotspotter.tpl.cv2 as cv2
 import os
 import types
 import subprocess
@@ -7,6 +6,7 @@ import numpy as np
 from hotspotter.other.logger  import logmsg, logdbg, logerr, logwarn
 from hotspotter.other.ConcretePrintable import DynStruct, Pref 
 from hotspotter.other.AbstractPrintable import AbstractManager
+import cv2
 from PIL import Image, ImageOps
 import re
 

@@ -11,7 +11,7 @@ from hotspotter.other.AbstractPrintable import *
 from hotspotter.other.ConcretePrintable import *
 from hotspotter.other.logger import *
 import hotspotter.ChipFunctions
-import hotspotter.tpl.cv2 as cv2
+import cv2
 import matplotlib.pyplot as plt
 from hotspotter.ChipFunctions import normalize, read_oriented_chip
 

@@ -45,6 +45,14 @@ Proposal for similarity / distinctiveness measure:
     Make as non-huristic as possible
 
     We are familiar enough with the problem to do thought experiments
+
+
+-----
+
+Not to far away from where we currently are: Lionfish paper
+* When are two animals not the same
+
+
 '''
 
 # TEST Query index

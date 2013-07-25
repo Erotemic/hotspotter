@@ -25,10 +25,71 @@ __XY_THRESH__    = params2.__XY_THRESH__ = .05
 def printDBG(msg):
     pass
 
+
+class Matcher(object):
+    def __init__(self, hs):
+        if hs.feats.feat_type == 'FREAK':
+            pass
+            self.__func_nn_1vM = self.__nn_1vM_flann
+        else:
+            self.flann_1vM = precompute_index_1vM(hs)
+            self.__func_nn_1vM = self.__nn_1vM_flann
+        pass
+
+    def nn_1vM(self, desc1, K):
+        return self.__func_nn_1vM(desc1, K)
+
+    def __nn_1vM_flann(self, desc1, K):
+        (qfx2_ax, qfx2_dists) = flann_1vM.nn_index(desc1, K+1, **__FLANN_PARAMS__)
+
+    def __nn_1vM_freak(self, desc1, K): 
+        pass
+    def precompute_1vM_index(self, hs):
+        pass
+
+#@profile
+def precompute_index_1vM(hs):
+    cx2_cid   = hs.tables.cx2_cid
+    cx2_desc  = hs.feats.cx2_desc
+    feat_dir  = hs.dirs.feat_dir
+    feat_type = hs.feats.feat_type
+    print('Precomputing one vs many information')
+    cx2_nFeats = [len(k) for k in cx2_desc]
+    _ax2_cx = [[cx_]*nFeats for (cx_, nFeats) in iter(zip(range(len(cx2_cid)), cx2_nFeats))]
+    _ax2_fx = [range(nFeats) for nFeats in iter(cx2_nFeats)]
+    ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
+    ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
+    ax2_desc   = np.vstack(cx2_desc)
+    # Build (or reload) one vs many flann index
+    flann_1vM = FLANN()
+    flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
+    load_success = False
+    if check_path(flann_1vM_path):
+        try:
+            print('Attempting to load flann index')
+            flann_1vM.load_index(flann_1vM_path, ax2_desc)
+            print('...successfully loaded flann index')
+            load_success = True
+        except Exception as ex:
+            print('Cannot load FLANN index'+repr(ex))
+    if not load_success:
+        with Timer(msg='rebuilding FLANN index'):
+            flann_1vM.build_index(ax2_desc, **__FLANN_PARAMS__)
+            flann_1vM.save_index(flann_1vM_path)
+    # Keep relevant data in the flann object. 
+    # as to prevent them from loosing scope
+    flann_1vM.ax2_desc = ax2_desc 
+    flann_1vM.ax2_cx   = ax2_cx 
+    flann_1vM.ax2_fx   = ax2_fx 
+    return flann_1vM
+
 def runall_match(hs):
     with Timer(msg=None):
         flann_1vM = precompute_index_1vM(hs)
     #functools.partial
+
+    matcher_1vM = Matcher('1vM', hs)
+
     cx2_res_1vM = __run_matching(hs, assign_matches_1vM, flann_1vM)
     cx2_res_1v1 = __run_matching(hs, assign_matches_1v1)
 
@@ -140,41 +201,7 @@ def spatially_verify_1vX(qcx, cx2_kpts, cx2_fm, cx2_fs):
     return cx2_fm_V, cx2_fs_V
 
 
-#@profile
-def precompute_index_1vM(hs):
-    cx2_cid   = hs.tables.cx2_cid
-    cx2_desc  = hs.feats.cx2_desc
-    feat_dir  = hs.dirs.feat_dir
-    feat_type = hs.feats.feat_type
-    print('Precomputing one vs many information')
-    cx2_nFeats = [len(k) for k in cx2_desc]
-    _ax2_cx = [[cx_]*nFeats for (cx_, nFeats) in iter(zip(range(len(cx2_cid)), cx2_nFeats))]
-    _ax2_fx = [range(nFeats) for nFeats in iter(cx2_nFeats)]
-    ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
-    ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
-    ax2_desc   = np.vstack(cx2_desc)
-    # Build (or reload) one vs many flann index
-    flann_1vM = FLANN()
-    flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
-    load_success = False
-    if check_path(flann_1vM_path):
-        try:
-            print('Attempting to load flann index')
-            flann_1vM.load_index(flann_1vM_path, ax2_desc)
-            print('...successfully loaded flann index')
-            load_success = True
-        except Exception as ex:
-            print('Cannot load FLANN index'+repr(ex))
-    if not load_success:
-        with Timer(msg='rebuilding FLANN index'):
-            flann_1vM.build_index(ax2_desc, **__FLANN_PARAMS__)
-            flann_1vM.save_index(flann_1vM_path)
-    # Keep relevant data in the flann object. 
-    # as to prevent them from loosing scope
-    flann_1vM.ax2_desc = ax2_desc 
-    flann_1vM.ax2_cx   = ax2_cx 
-    flann_1vM.ax2_fx   = ax2_fx 
-    return flann_1vM
+
 
 # Feature scoring functions
 def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+1E-8)+1) 

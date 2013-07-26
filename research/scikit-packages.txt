@@ -1,0 +1,62 @@
+joncrall@Hyrule:~/code/hotspotter/research$ pip search scikit
+scikit-learn              - A set of python modules for machine learning and data mining
+scikits-image             - Image processing routines for SciPy
+  INSTALLED: 0.7.1 (latest)
+scikits.bvp_solver        - Python package for solving two-point boundary value problems
+sndfileio                 - Common API for reading and writing soundfiles.  * Uses
+                            installed packages if found (scikits.audiolab) * Implements
+                            reading uncompressed formats correctly in any format. * The
+                            data is independent of the encoding. All data is presented as
+                            float64 * Bitdepth is handled automatically depending on the
+                            the actual data
+scikits.talkbox           - Talkbox, a set of python modules for speech/signal processing
+scikits.audiolab          - A python module to make noise from numpy arrays
+scikits.statsmodels       - Statistical computations and models for use with SciPy
+  INSTALLED: 0.3.1 (latest)
+scikits.samplerate        - A python module for high quality audio resampling
+scikit-fmm                - An extension module implimenting the fast marching method
+scikit-rf                 - Object Oriented Microwave Engineering
+scikits.bootstrap         - Bootstrap confidence interval estimation routines for SciPy
+scikits.odes              - A python module for ordinary differential equation
+                            anddifferential algebraic equation solvers
+scikit-image              - Image processing routines for SciPy
+  INSTALLED: 0.9dev
+  LATEST:    0.8.2
+scikits.datasmooth        - Scikits data smoothing package
+scikits.timeseries        - Time series manipulation
+scikits.optimization      - A python module for numerical optimization
+featureimpact             - Compute the statistical impact of features given a scikit-learn
+                            estimator
+scikits.ann               - Approximate Nearest Neighbor library wrapper for Numpy
+scikits.fitting           - Framework for fitting functions to data with SciPy
+scikits.cuda              - Python interface to GPU-powered libraries
+scikit-commpy             - Digital Communication Algorithms with Python
+scikits.scattpy           - Light Scattering methods for Python
+scikits.impute            - Framework for missing data imputation
+scikits.vectorplot        - Vector fields plotting algorithms.
+scikit-aero               - Aeronautical engineering calculations in Python.
+scikits.hydroclimpy       - Environmental time series manipulation
+scikits.eartho            - Earth Observation routines for SciPy
+scikits.learn             - A set of python modules for machine learning and data mining
+scikit-vi                 - Scikit providing Virtual Instruments
+scikits.sparse            - Scikits sparse matrix package
+scikits.example           - Scikits example package
+scikits.bvp1lg            - Boundary value problem (legacy) solvers for ODEs
+
+
+sudo apt-get install libsndfile1-dev
+sudo apt-get install libsndfile1
+sudo python -c "
+import os
+scikit_list = ['scikit-learn'
+               'scikits-image',
+               'scikits.audiolab',
+               'scikits.sparse',
+               'scikits.learn',
+               'scikits.optimization',
+               'scikits.cuda',
+               'scikits.ann' ]
+for scikit in iter(scikit_list):
+    os.system('pip install '+scikit)
+"
+

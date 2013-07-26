@@ -90,17 +90,17 @@ def checkpath(_path):
     '''Checks to see if the argument _path exists.'''
     # Do the work
     _path = os.path.normpath(_path)
-    print('Checking ' + _path + '...')
+    sys.stdout.write('Checking ' + repr(_path))
     if os.path.exists(_path):
         if os.path.isfile(_path):
-            path_type = 'FILE'
+            path_type = 'file'
         if os.path.isdir(_path): 
-            path_type = 'DIR'
-        print(path_type + '... Exists')
+            path_type = 'directory'
+        sys.stdout.write('... exists ('+path_type+')\n')
     else:
-        print('!!! Does not exist')
+        print('\n  ! Does not exist')
         _longest_path = longest_existing_path(_path)
-        print('... The longest existing path is: ' + _longest_path)
+        print('... The longest existing path is: ' + repr(_longest_path))
         return False
     return True
 def check_path(_path):

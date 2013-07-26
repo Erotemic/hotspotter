@@ -1,6 +1,21 @@
-def report_results(cx2_res, hs_tables):
-    cx2_cid = hs_tables.cx2_cid
-    cx2_nx  = hs_tables.cx2_nx
+import numpy as np
+import datetime
+
+
+def write_rank_results(cx2_res, hs, matcher):
+    match_type  = matcher.match_type+'_'
+    feat_type   = hs.feats.feat_type+'_'
+    expt_type   = match_type+feat_type
+    report_type = 'rank_'
+    timestamp   = get_timestamp()
+    rankres_csv = 'results_'+expt_type+report_type+timestamp+'.csv'
+    rankres_str = rank_results(cx2_res, hs.tables, expt_type=expt_type)
+    write_to(rankres_csv, rankres_str)
+
+def rank_results(cx2_res, hs_tables, expt_type=''):
+    cx2_cid  = hs_tables.cx2_cid
+    cx2_nx   = hs_tables.cx2_nx
+    nx2_name = hs_tables.nx2_name
     cx2_top_truepos_rank  = np.zeros(len(cx2_cid)) - 100
     cx2_top_truepos_score = np.zeros(len(cx2_cid)) - 100
     cx2_top_trueneg_rank  = np.zeros(len(cx2_cid)) - 100
@@ -36,7 +51,7 @@ def report_results(cx2_res, hs_tables):
         cx2_top_trueneg_score[qcx] = top_score[top_trueneg_rank]
         cx2_top_score[qcx]         = top_score[0]
     # difference between the top score and the actual best score
-    cx2_score_disp = cx2_top_score - cx2_top_true_score
+    cx2_score_disp = cx2_top_score - cx2_top_truepos_score
     #
     # Easy to digest results
     num_chips = len(cx2_top_truepos_rank)
@@ -60,13 +75,22 @@ def report_results(cx2_res, hs_tables):
               (cid, ttpr, ttnr, ttps, ttns, sdisp, nx2_name[nx]) )
     rankres_str += rankres_header
 
+    rankres_str += '#Experiment: '+expt_type
     rankres_str += '#Num Chips: %d \n' % num_chips
     rankres_str += '#Num Chips with at least one match: %d \n' % num_with_gtruth
     rankres_str += '#Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
     rankres_str += '#Ranks <= 1: %d / %d\n' % (num_rank_less1, num_with_gtruth)
     
-    print(rankres_str)
-    result_csv = 'results_ground_truth_rank.csv'
-    with open(result_csv, 'w') as file:
-        file.write(rankres_str)
+    return rankres_str
+
+def get_timestamp():
+    now = datetime.datetime.now()
+    return 'ymd-%04d-%02d-%02d_hm-%02d-%02d' % (now.year, now.month, now.day, now.hour, now.minute) 
+
+    return time
+def write_to(filename, to_write):
+    with open(filename, 'w') as file:
+        file.write(to_write)
+
+def gvim(string):
     os.system('gvim '+result_csv)

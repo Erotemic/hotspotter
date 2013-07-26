@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from hotspotter.Parallelize import parallel_compute
 from hotspotter.other.ConcretePrintable import DynStruct
-from hotspotter.helpers import Timer, get_exec_src, check_path, tic, toc
+from hotspotter.helpers import Timer, get_exec_src, check_path, tic, toc, myprint
 from drawing_functions2 import draw_matches, draw_kpts, tile_all_figures
 from hotspotter.tpl.pyflann import FLANN
 import hotspotter.tpl.cv2  as cv2
@@ -21,46 +21,124 @@ __RATIO_THRESH__ = params2.__RATIO_THRESH__
 __FLANN_PARAMS__ = params2.__FLANN_PARAMS__
 __FEAT_TYPE__    = params2.__FEAT_TYPE__ 
 __XY_THRESH__    = params2.__XY_THRESH__ = .05
+__FEAT_TYPE__    = 'FREAK'
 
 def printDBG(msg):
     pass
 
+def runall_match(hs):
+    #functools.partial
+    hs.printme2()
+    #cx2_res_1vM = __run_matching(hs, Matcher(hs, '1vM'))
+    cx2_res_1v1 = __run_matching(hs, Matcher(hs, '1v1'))
 
 class Matcher(object):
-    def __init__(self, hs):
-        if hs.feats.feat_type == 'FREAK':
-            pass
-            self.__func_nn_1vM = self.__nn_1vM_flann
+    '''Wrapper class: assigns matches based on matching and feature prefs'''
+    def __init__(self, hs, match_type='1vM'):
+        feat_type  = hs.feats.feat_type
+        self.feat_type  = feat_type
+        self.match_type = match_type
+        self.__flann_1v1      = None
+        self.__assign_matches = None
+        # Curry the correct functions
+        if   match_type == '1vM' and feat_type == 'FREAK':
+            self.__assign_matches = assign_matches_1vM_FREAK
+        elif match_type == '1v1' and feat_type == 'FREAK':
+            self.__assign_matches = assign_matches_1v1_FREAK
+        elif match_type == '1vM':
+            self.__flann_1vM = precompute_index_1vM(hs)
+            self.__assign_matches = self.__assign_matches_1vM
+        elif match_type == '1v1':
+            self.__assign_matches = assign_matches_1v1
         else:
-            self.flann_1vM = precompute_index_1vM(hs)
-            self.__func_nn_1vM = self.__nn_1vM_flann
-        pass
+           raise Exception('Unknown match_type: '+repr(match_type))
+    # Function which calls the correct matcher
+    def assign_matches(self, qcx, cx2_cid, cx2_desc):
+        return self.__assign_matches(qcx, cx2_cid, cx2_desc)
+    # Helper functions
+    def __assign_matches_1vM(self, qcx, cx2_cid, cx2_desc):
+        return assign_matches_1vM(qcx, cx2_cid, cx2_desc, self.__flann_1vM)
 
-    def nn_1vM(self, desc1, K):
-        return self.__func_nn_1vM(desc1, K)
+def assign_matches_1vM_FREAK(qcx, cx2_cid, cx2_desc):
+    return None
 
-    def __nn_1vM_flann(self, desc1, K):
-        (qfx2_ax, qfx2_dists) = flann_1vM.nn_index(desc1, K+1, **__FLANN_PARAMS__)
+cv2_matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
+def match_1v1_FREAK(desc1, desc2):
+    raw_matches = cv2_matcher.knnMatch(desc1, desc2, 1)
+    fm = np.array([(m1[0].queryIdx-1, m1[0].trainIdx-1) for m1 in iter(raw_matches)])
+    #for (qx, tx) in iter(fm):
+        #if tx >= len(desc2) or qx >= len(desc1):
+            #print(repr(tx))
+            #print(repr(qx))
+            #print(repr(len(desc1)))
+            #print(repr(len(desc2)))
+            #raise Exception('Error')
 
-    def __nn_1vM_freak(self, desc1, K): 
-        pass
-    def precompute_1vM_index(self, hs):
-        pass
+    fs = np.array([1/m1[0].distance for m1 in iter(raw_matches)])
+    return fm, fs
 
-#@profile
-def precompute_index_1vM(hs):
+def assign_matches_1v1_FREAK(qcx, cx2_cid, cx2_desc):
+    print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
+    desc1 = cx2_desc[qcx]
+    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    for cx, desc2 in enumerate(cx2_desc):
+        sys.stdout.write('.'); sys.stdout.flush()
+        if cx == qcx: continue
+        fm, fs = match_1v1_FREAK(desc1, desc2)
+        #print('fm.shape = %r ' % (repr(fm.shape),))
+        #print('fm.max = %r ' % (repr(fm.max(0)),))
+        #print('fm.min = %r ' % (repr(fm.min(0)),))
+        #print('fs.shape = %r ' % (repr(fs.shape),))
+        #print('desc1.shape = %r ' % (repr(desc1.shape),))
+        #print('desc2.shape = %r ' % (repr(desc2.shape),))
+        cx2_fm[cx] = fm
+        cx2_fs[cx] = fs
+    sys.stdout.write('DONE')
+    return cx2_fm, cx2_fs
+
+def assign_matches_1v1(qcx, cx2_cid, cx2_desc):
+    print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
+    desc1 = cx2_desc[qcx]
+    flann_1v1 = FLANN()
+    flann_1v1.build_index(desc1, **__FLANN_PARAMS__)
+    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    for cx, desc2 in enumerate(cx2_desc):
+        sys.stdout.write('.')
+        sys.stdout.flush()
+        if cx == qcx: continue
+        (fm, fs) = match_1v1(desc2, flann_1v1)
+        cx2_fm[cx] = fm
+        cx2_fs[cx] = fs
+    sys.stdout.write('DONE')
+    flann_1v1.delete_index()
+    return cx2_fm, cx2_fs
+
+def cv2_match(desc1, desc2):
+    K = 1
+    cv2_matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
+    raw_matches = cv2_matcher.knnMatch(desc1, desc2, K)
+    matches = [(m1.trainIdx, m1.queryIdx) for m1 in raw_matches]
+
+def aggregate_descriptors_1vM(hs):
     cx2_cid   = hs.tables.cx2_cid
     cx2_desc  = hs.feats.cx2_desc
-    feat_dir  = hs.dirs.feat_dir
     feat_type = hs.feats.feat_type
-    print('Precomputing one vs many information')
+    print('Aggregating descriptors for one vs many')
     cx2_nFeats = [len(k) for k in cx2_desc]
     _ax2_cx = [[cx_]*nFeats for (cx_, nFeats) in iter(zip(range(len(cx2_cid)), cx2_nFeats))]
     _ax2_fx = [range(nFeats) for nFeats in iter(cx2_nFeats)]
     ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
     ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
     ax2_desc   = np.vstack(cx2_desc)
+    return ax2_cx, ax2_fx, ax2_desc
+
+#@profile
+def precompute_index_1vM(hs):
     # Build (or reload) one vs many flann index
+    feat_dir  = hs.dirs.feat_dir
+    ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
     flann_1vM = FLANN()
     flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
     load_success = False
@@ -83,16 +161,6 @@ def precompute_index_1vM(hs):
     flann_1vM.ax2_fx   = ax2_fx 
     return flann_1vM
 
-def runall_match(hs):
-    with Timer(msg=None):
-        flann_1vM = precompute_index_1vM(hs)
-    #functools.partial
-
-    matcher_1vM = Matcher('1vM', hs)
-
-    cx2_res_1vM = __run_matching(hs, assign_matches_1vM, flann_1vM)
-    cx2_res_1v1 = __run_matching(hs, assign_matches_1v1)
-
 class HotspotterQueryResult(DynStruct):
     def __init__(self):
         super(HotspotterQueryResult, self).__init__()
@@ -106,11 +174,10 @@ class HotspotterQueryResult(DynStruct):
 # specific functions need to be bound: 
 # 
 # fn_assign - assign feature matches
-def __run_matching(hs, fn_assign, *args):
-    cx2_cid    = hs.tables.cx2_cid
-    cx2_kpts, cx2_desc = hs.get_feats(__FEAT_TYPE__)
-    cx2_desc   = [d for (k,d) in cx2_feats]
-    cx2_kpts   = [k for (k,d) in cx2_feats]
+def __run_matching(hs, matcher):
+    cx2_cid  = hs.tables.cx2_cid
+    cx2_desc = hs.feats.cx2_desc
+    cx2_kpts = hs.feats.cx2_kpts 
     cx2_res = [HotspotterQueryResult() for _ in xrange(len(cx2_cid))]
     tt_ALL = tic('all queries')
     assign_times = []
@@ -122,11 +189,11 @@ def __run_matching(hs, fn_assign, *args):
             continue
         tt_A = tic('query(qcx=%d)' % qcx)
         # Assign matches with the chosen function (1v1) or (1vM)
-        (cx2_fm, cx2_fs) = fn_assign(qcx, cx2_cid, cx2_desc, *args)
+        (cx2_fm, cx2_fs) = matcher.assign_matches(qcx, cx2_cid, cx2_desc)
         assign_times.append(toc(tt_A))
         # Spatially verify the assigned matches
         tt_V = tic('verify(qcx=%d)' % qcx)
-        (cx2_fm_V, cx2_fs_V) = spatially_verify_1vX(qcx, cx2_kpts, cx2_fm, cx2_fs)
+        (cx2_fm_V, cx2_fs_V) = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
         verify_times.append(toc(tt_V))
         # Assign output to a query result
         res = cx2_res[qcx]
@@ -138,7 +205,8 @@ def __run_matching(hs, fn_assign, *args):
     if len(skip_list) > 0:
         print('Skipped more queries than you should have: %r ' % skip_list)
     total_time = toc(tt_ALL)
-    report_results2.report_results(cx2_res, hs.tables)
+    # Write results out to disk
+    report_results2.write_rank_results(cx2_res, hs, matcher)
     return cx2_res
 
 #@profile
@@ -154,11 +222,11 @@ def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
     # TODO: SHOULD THIS HAPPEN HERE? (ISSUE XY_THRESH)
     # Get match threshold 10% of matching keypoint extent diagonal
     img1_extent = (kpts1_m[0:2,:].max(1) - kpts1_m[0:2,:].min(1))[0:2]
-    xy_thresh1_sqrd = np.sum(img1_extent**2) * (__xy_thresh_percent__**2)
+    xy_thresh1_sqrd = np.sum(img1_extent**2) * (__XY_THRESH__**2)
     if not DBG is None:
         print('---------------------------------------')
         print('INFO: spatially_verify xy threshold:')
-        print(' * Threshold is %.1f%% of diagonal length' % (__xy_thresh_percent__*100))
+        print(' * Threshold is %.1f%% of diagonal length' % (__XY_THRESH__*100))
         print(' * img1_extent = %r '     % img1_extent)
         print(' * img1_diag_len = %.2f ' % np.sqrt(np.sum(img1_extent**2)))
         print(' * xy_thresh1_sqrd=%.2f'  % np.sqrt(xy_thresh1_sqrd))
@@ -176,7 +244,7 @@ def spatially_verify(kpts1, kpts2, fm, fs, DBG=None):
 spatially_verify.__doc__ += '\n'+__spatially_verify.__doc__
 
 #@profile
-def spatially_verify_1vX(qcx, cx2_kpts, cx2_fm, cx2_fs):
+def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
     kpts1     = cx2_kpts[qcx]
     cx2_cscore = np.array([np.sum(fs) for fs in cx2_fs])
     top_cx     = cx2_cscore.argsort()[::-1]
@@ -199,8 +267,6 @@ def spatially_verify_1vX(qcx, cx2_kpts, cx2_fm, cx2_fs):
         cx2_fm_V[cx] = fm_V
         cx2_fs_V[cx] = fs_V
     return cx2_fm_V, cx2_fs_V
-
-
 
 
 # Feature scoring functions
@@ -250,25 +316,7 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, flann_1vM):
     for cx in xrange(len(cx2_cid)): cx2_fs[cx] = np.array(cx2_fs[cx])
     return cx2_fm, cx2_fs
 
-def assign_matches_1v1(qcx, cx2_cid, cx2_desc):
-    print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
-    desc1 = cx2_desc[qcx]
-    flann_1v1 = FLANN()
-    flann_1v1.build_index(desc1, **__FLANN_PARAMS__)
-    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
-    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
-    for cx, desc2 in enumerate(cx2_desc):
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        if cx == qcx: continue
-        (fm, fs) = match_1v1(desc2, flann_1v1)
-        cx2_fm[cx] = fm
-        cx2_fs[cx] = fs
-    sys.stdout.write('DONE')
-    flann_1v1.delete_index()
-    return cx2_fm, cx2_fs
-
-def match_1v1(desc2, flann_1v1, ratio_thresh=1.2, burst_thresh=None, DBG=True):
+def match_1v1(desc2, flann_1v1, ratio_thresh=1.2, burst_thresh=None, DBG=False):
     '''
     Matches desc2 vs desc1 using Lowe's ratio test
     Input:
@@ -318,13 +366,6 @@ def match_1v1(desc2, flann_1v1, ratio_thresh=1.2, burst_thresh=None, DBG=True):
         print(' * qfx.shape  = %r ' % (  qfx.shape,))
     return (fm, fs)
 
-
-cv2_matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
-def cv2_match(desc1, desc2):
-    K = 1
-    raw_matches = matcher.knnMatch(desc1, desc2, K)
-    matches = [(m1.trainIdx, m1.queryIdx) for m1 in raw_matches]
-
 def warp_chip(rchip2, H, rchip1):
     rchip2W = cv2.warpPerspective(rchip2, H, rchip1.shape[0:2][::-1])
     return rchip2W
@@ -361,6 +402,11 @@ if __name__ == '__main__':
     db_dir = load_data2.MOTHERS
     hs = load_hotspotter(db_dir)
 
+    __TEST_MODE__ = True
+    if __TEST_MODE__:
+        runall_match(hs)
+        pass
+
     ## DEV ONLY CODE ##
     __DEV_MODE__ = False
     if __DEV_MODE__: 
@@ -380,7 +426,7 @@ if __name__ == '__main__':
         # All of these functions operate on one qcx (except precompute I guess)
         exec(get_exec_src(precompute_index_1vM))
         exec(get_exec_src(assign_matches_1vM))
-        #exec(get_exec_src(spatially_verify_1vX))
+        #exec(get_exec_src(spatially_verify_matches))
 
         try: 
             __IPYTHON__

@@ -33,7 +33,7 @@ class HotspotterDirs(DynStruct):
         self.db_dir       = db_dir
         self.img_dir      = db_dir + rdir_img
         self.internal_sym = db_dir + '/Shortcut-to-hs_internals'
-        self.internal_dir = db_dir + internal_dir
+        self.internal_dir = db_dir + rdir_internal
         self.chip_dir     = db_dir + rdir_chip
         self.rchip_dir    = internal_dir + '/computed/temp'
         self.feat_dir     = internal_dir + '/computed/feats'
@@ -84,7 +84,15 @@ def load_csv_tables(db_dir):
     hasNameTbl = checkpath(name_table)
     hasImgTbl  = checkpath(image_table)
     if not all([hasDbDir, hasImgDir, hasChipTbl, hasNameTbl, hasImgTbl]):
-        raise Exception('Data tables are missing')
+        errmsg = ''
+        errmsg+=('\n\n!!!!!\n\n')
+        errmsg+=('  ! The datatables seem to not be loaded')
+        errmsg+=(' Files in internal dir: '+repr(internal_dir))
+        for fname in os.listdir(internal_dir):
+            errmsg+=('   ! fname') 
+        errmsg+=('\n\n!!!!!\n\n')
+        print(errmsg)
+        raise Exception(errmsg)
     print('-------------------------')
     print('Loading database tables: ')
     cid_lines  = [] 

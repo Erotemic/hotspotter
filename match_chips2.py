@@ -12,9 +12,11 @@ from drawing_functions2 import draw_matches, draw_kpts, tile_all_figures
 from hotspotter.tpl.pyflann import FLANN
 from itertools import chain
 from numpy import linalg
+import cvransac2
 from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC, H_homog_from_CV2SAC
 import params2
-from algos import akmeans
+import algos
+from algos import akmeans, precompute_akmeans
 import imp
 imp.reload(cvransac2)
 imp.reload(algos)
@@ -25,7 +27,7 @@ __RATIO_THRESH__ = params2.__RATIO_THRESH__
 __FLANN_PARAMS__ = params2.__FLANN_PARAMS__
 __FEAT_TYPE__    = params2.__FEAT_TYPE__ 
 __XY_THRESH__    = params2.__XY_THRESH__ = .05
-__FEAT_TYPE__    = 'FREAK'
+__FEAT_TYPE__    = 'HESAFF'
 
 
 def printDBG(msg):
@@ -36,6 +38,69 @@ def runall_match(hs):
     hs.printme2()
     #cx2_res_1vM = __run_matching(hs, Matcher(hs, '1vM'))
     cx2_res_1v1 = __run_matching(hs, Matcher(hs, '1v1'))
+
+def assign_features_to_bow_vector(vocab):
+
+   
+class Vocabulary(object):
+    def __init__(self):
+        self.words = None
+
+def precompute_bag_of_words(hs):
+    import scipy.sparse
+    import sklearn.preprocessing 
+    # Build (or reload) one vs many flann index
+    __VOCAB_SIZE__ = 1000
+
+    feat_dir  = hs.dirs.feat_dir
+    num_clusters = __VOCAB_SIZE__
+
+    # Compute words
+    ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
+    ax2_wx, words = precompute_akmeans(ax2_desc,  num_clusters, force_recomp=False)
+
+    # Compute Inverted File
+    wx2_axs = [[] for _ in xrange(num_clusters)]
+    for ax, wx in enumerate(ax2_wx):
+        wx2_axs[wx].append(ax)
+    wx2_cxs = [[ax2_cx[ax] for ax in ax_list] for ax_list in wx2_axs]
+    wx2_fxs = [[ax2_fx[ax] for ax in ax_list] for ax_list in wx2_axs]
+    '''
+    from hotspotter.helpers import mystats
+    mystats(wx2_idf)
+    '''
+    # Create visual-word-vectors for each chip
+    sparse_cols = ax2_wx
+    sparse_rows = ax2_cx
+    # The term frequency (TF) is implicit in the coo format
+    sparse_data = np.ones(len(ax2_cx), dtype=np.uint8)
+    # Sparse format = coordinate list ;  rows = cxs ; cols = wxs
+    sparse_coo_format = (sparse_data, (sparse_rows, sparse_cols))
+    # Build sparse matrix
+    cx2_bow_coo = scipy.sparse.coo_matrix(sparse_coo_format, dtype=np.float, copy=True)
+    # Normalize each visual vector
+    cx2_bow_csr = scipy.sparse.csr_matrix(cx2_bow_coo, copy=False)
+    cx2_bow_csr = sklearn.preprocessing.normalize(cx2_bow_csr, norm='l2', axis=1, copy=False)
+    # Calculate inverse document frequency (IDF)
+    # chip indexes (cxs) are the documents
+    num_chips = np.float(len(hs.tables.cx2_cid))
+    wx2_df    = np.array([len(set(cx_list)) for cx_list in wx2_cxs], dtype=np.float)
+    wx2_idf   = np.log2( num_chips / wx2_df )
+    wx2_idf.shape = (1, wx2_idf.size)
+    # Preweight the bow vectors
+    idf_sparse = scipy.sparse.csr_matrix(wx2_idf)
+    cx2_bow = scipy.sparse.vstack([row.multiply(idf_sparse) for row in cx2_bow_csr], format='csr')
+    # Renormalize
+    cx2_bow = sklearn.preprocessing.normalize(cx2_bow, norm='l2', axis=1, copy=False)
+    
+    return words, wx2_axs, cx2_bow
+
+
+def test():
+    # cx 0's visual vector
+    vvector = cx2_bow[0]
+    # calc its distance 
+    cx2_score = (cx2_bow.dot(vvector.T)).todense()
 
 
 class Matcher(object):
@@ -408,7 +473,7 @@ if __name__ == '__main__':
     db_dir = load_data2.MOTHERS
     hs = load_hotspotter(db_dir)
 
-    __TEST_MODE__ = True
+    __TEST_MODE__ = False
     if __TEST_MODE__:
         runall_match(hs)
         pass
@@ -430,8 +495,8 @@ if __name__ == '__main__':
         qcx = 1
         #cx  = 1
         # All of these functions operate on one qcx (except precompute I guess)
-        exec(get_exec_src(precompute_index_1vM))
-        exec(get_exec_src(assign_matches_1vM))
+        #exec(get_exec_src(precompute_index_1vM))
+        #exec(get_exec_src(assign_matches_1vM))
         #exec(get_exec_src(spatially_verify_matches))
 
         try: 

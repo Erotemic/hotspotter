@@ -211,19 +211,36 @@ def __setstate__(self, in_dict):
     self.__dict__.update(in_dict)
 '''
 #---------------
+import cPickle
 def sanatize_fname(fname):
     ext = '.pkl'
     if fname.rfind(ext) != max(len(fname) - len(ext), 0):
         fname += ext
     return fname
-def save(obj, fname):
-    'A simple save function using cPickle'
-    with open(sanatize_fname(fname), 'wb') as file:
+
+def save_pkl(fname, obj):
+    with open(fname, 'wb') as file:
         cPickle.dump(obj, file)
-def load(fname):
-    'A simple load function using cPickle'
-    with open(sanatize_fname(fname), 'wb') as file:
+
+def load_pkl(fname):
+    with open(fname, 'wb') as file:
         return cPickle.load(file)
+
+def save_npz(fname, *args):
+    with open(fname, 'wb') as file:
+        np.savez(file, *args)
+
+def load_npz(fname):
+    npz = np.load(fname)
+    return tuple(npz[key] for key in sorted(npz.keys()))
+
+
+def hashstr_md5(data):
+    import hashlib
+    return hashlib.md5(data).hexdigest()
+    
+
+
 #---------------
 def printWARN(warn_msg, category=UserWarning):
     print(warn_msg)
@@ -415,8 +432,10 @@ def get_exec_src(func):
         src = before+after
     return src
 
-def remove_file(fpath):
+def remove_file(fpath, verbose=True):
     try:
+        if verbose:
+            print('Removing '+fpath)
         os.remove(fpath)
     except OSError as e:
         printWARN('OSError: %s,\n Could not delete %s' % (str(e), fpath))

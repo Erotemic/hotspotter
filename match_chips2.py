@@ -2,6 +2,7 @@ import drawing_functions2 as df2
 import chip_compute2, feature_compute2, load_data2
 import report_results2
 import sys
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from hotspotter.Parallelize import parallel_compute
@@ -9,11 +10,15 @@ from hotspotter.other.ConcretePrintable import DynStruct
 from hotspotter.helpers import Timer, get_exec_src, check_path, tic, toc, myprint
 from drawing_functions2 import draw_matches, draw_kpts, tile_all_figures
 from hotspotter.tpl.pyflann import FLANN
-import hotspotter.tpl.cv2  as cv2
 from itertools import chain
 from numpy import linalg
 from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC, H_homog_from_CV2SAC
 import params2
+import algos
+
+import imp
+imp.reload(cvransac2)
+imp.reload(algos)
 
 __K__ = params2.__K__
 __NUM_RERANK__   = params2.__NUM_RERANK__
@@ -23,6 +28,7 @@ __FEAT_TYPE__    = params2.__FEAT_TYPE__
 __XY_THRESH__    = params2.__XY_THRESH__ = .05
 __FEAT_TYPE__    = 'FREAK'
 
+
 def printDBG(msg):
     pass
 
@@ -31,6 +37,7 @@ def runall_match(hs):
     hs.printme2()
     #cx2_res_1vM = __run_matching(hs, Matcher(hs, '1vM'))
     cx2_res_1v1 = __run_matching(hs, Matcher(hs, '1v1'))
+
 
 class Matcher(object):
     '''Wrapper class: assigns matches based on matching and feature prefs'''

@@ -3,14 +3,8 @@ from hotspotter.helpers import alloc_lists
 from hotspotter.other.ConcretePrintable import Pref
 from hotspotter.tpl.pyflann import FLANN
 #from __future__ import print_function
-
-def flann_one_time(data_vecs, query_vecs, K, flann_args):
+#def flann_one_time(data_vecs, query_vecs, K, flann_args):
     #N = query_vecs.shape[0]
-    flann       = FLANN()
-    flann.build_index(data_vecs, **flann_args)
-    (index_list, dist_list) = flann.nn_index(query_vecs, K, checks=flann_args['checks'])
-    return (index_list, dist_list)
-
 # TODO: Clean up vector dtype format. Probably too much casting going on
 # Paramatarize this in AlgoManager
 def approximate_kmeans(data, K=1e6, max_iters=1000, flann_pref=None):
@@ -31,6 +25,10 @@ def approximate_kmeans(data, K=1e6, max_iters=1000, flann_pref=None):
     for iterx in xrange(0,max_iters):
         print "Iteration " + str(iterx)
         # Step 1: Find Nearest Neighbors
+        flann       = FLANN()
+        flann.build_index(data_vecs, **flann_args)
+        (index_list, dist_list) = flann.nn_index(query_vecs, K, checks=flann_args['checks'])
+        return (index_list, dist_list)
         datax2_centx, _ = flann_one_time(cent, float_data, 1, flann_args)
         # Step 2: Assign data to cluster centers
         datax_sort = datax2_centx.argsort()

@@ -9,7 +9,7 @@ from hotspotter.Parallelize import parallel_compute
 from hotspotter.other.ConcretePrintable import DynStruct
 from hotspotter.helpers import Timer, get_exec_src, check_path, tic, toc, myprint
 from drawing_functions2 import draw_matches, draw_kpts, tile_all_figures
-from hotspotter.tpl.pyflann import FLANN
+import pyflann
 from itertools import chain
 from numpy import linalg
 import cvransac2
@@ -29,7 +29,6 @@ __FEAT_TYPE__    = params2.__FEAT_TYPE__
 __XY_THRESH__    = params2.__XY_THRESH__ = .05
 __FEAT_TYPE__    = 'HESAFF'
 
-
 def printDBG(msg):
     pass
 
@@ -40,11 +39,17 @@ def runall_match(hs):
     cx2_res_1v1 = __run_matching(hs, Matcher(hs, '1v1'))
 
 def assign_features_to_bow_vector(vocab):
-
+    pass
    
 class Vocabulary(object):
-    def __init__(self):
-        self.words = None
+    def __init__(self, words, cx2_bow, ax2_cx, ax2_fx):
+        self.words   = words
+        self.cx2_bow = cx2_bow
+        self.ax2_cx  = ax2_cx
+        self.ax2_fx  = ax2_fx
+
+        #self.words_flann = pyflann.FLANN()
+        #self.words_flann.build_index(words, **__FLANN_PARAMS__)
 
 def precompute_bag_of_words(hs):
     import scipy.sparse
@@ -92,8 +97,8 @@ def precompute_bag_of_words(hs):
     cx2_bow = scipy.sparse.vstack([row.multiply(idf_sparse) for row in cx2_bow_csr], format='csr')
     # Renormalize
     cx2_bow = sklearn.preprocessing.normalize(cx2_bow, norm='l2', axis=1, copy=False)
-    
-    return words, wx2_axs, cx2_bow
+    vocab = Vocabulary(words, cx2_bow, ax2_cx, ax2_fx)
+    return vocab
 
 
 def test():
@@ -171,7 +176,7 @@ def assign_matches_1v1_FREAK(qcx, cx2_cid, cx2_desc):
 def assign_matches_1v1(qcx, cx2_cid, cx2_desc):
     print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
     desc1 = cx2_desc[qcx]
-    flann_1v1 = FLANN()
+    flann_1v1 = pyflann.FLANN()
     flann_1v1.build_index(desc1, **__FLANN_PARAMS__)
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
@@ -210,7 +215,7 @@ def precompute_index_1vM(hs):
     # Build (or reload) one vs many flann index
     feat_dir  = hs.dirs.feat_dir
     ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
-    flann_1vM = FLANN()
+    flann_1vM = pyflann.FLANN()
     flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
     load_success = False
     if check_path(flann_1vM_path):

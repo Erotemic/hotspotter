@@ -14,8 +14,7 @@ from itertools import chain
 from numpy import linalg
 from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC, H_homog_from_CV2SAC
 import params2
-import algos
-
+from algos import akmeans
 import imp
 imp.reload(cvransac2)
 imp.reload(algos)

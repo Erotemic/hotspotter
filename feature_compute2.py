@@ -274,7 +274,7 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
 
-    __DEV_MODE__ = False
+    __DEV_MODE__ = True
     if __DEV_MODE__ or 'devmode' in sys.argv:
         # --- CHOOSE DATABASE --- #
         db_dir = load_data2.MOTHERS

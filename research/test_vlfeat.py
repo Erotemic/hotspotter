@@ -19,4 +19,3 @@ kernelsize=10
 maxdist=10.0
 
 vl.vl_quickvis(I, ratio, kernelsize, maxdist)
-

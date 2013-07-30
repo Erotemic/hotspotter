@@ -17,3 +17,4 @@ desktop.ini
 *.pyc
 *.pkl
 *.png
+.hidden

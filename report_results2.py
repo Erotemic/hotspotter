@@ -75,6 +75,7 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
               (cid, ttpr, ttnr, ttps, ttns, sdisp, nx2_name[nx]) )
     rankres_str += rankres_header
 
+    rankres_str += get_timestamp(type='comment')
     rankres_str += '#Experiment: '+expt_type
     rankres_str += '#Num Chips: %d \n' % num_chips
     rankres_str += '#Num Chips with at least one match: %d \n' % num_with_gtruth
@@ -83,11 +84,16 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
     
     return rankres_str
 
-def get_timestamp():
+def get_timestamp(type='filename'):
     now = datetime.datetime.now()
-    return 'ymd-%04d-%02d-%02d_hm-%02d-%02d' % (now.year, now.month, now.day, now.hour, now.minute) 
+    if type == 'filename':
+        stamp = 'ymd-%04d-%02d-%02d_hm-%02d-%02d' % (now.year, now.month, now.day, now.hour, now.minute) 
+    if type == 'comment':
+        stamp = '# (yyyy-mm-dd hh:mm) %04d-%02d-%02d %02d:%02d' % (now.year, now.month, now.day, now.hour, now.minute) 
+    return stamp
 
     return time
+
 def write_to(filename, to_write):
     with open(filename, 'w') as file:
         file.write(to_write)

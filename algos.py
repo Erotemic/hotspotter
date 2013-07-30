@@ -1,6 +1,9 @@
-import pyflann
+import drawing_functions2 as df2
+import matplotlib.pyplot as plt
 import numpy as np
+import pyflann
 import sys
+from sklearn.decomposition import PCA
 
 __FLANN_PARAMS__ = {
     'algorithm' : 'kdtree', 
@@ -81,9 +84,6 @@ def akmeans(data, num_clusters=1e6, MAX_ITERS=500,
 
 def plot_clusters(data, datax2_clusterx, clusters):
     # http://www.janeriksolem.net/2012/03/isomap-with-scikit-learn.html
-    import matplotlib.pyplot as plt
-    from sklearn.preprocessing import normalize
-    from sklearn.decomposition import PCA
     print('Doing PCA')
     num_pca_dims = min(3, data.shape[1])
     pca = PCA(copy=True, n_components=num_pca_dims, whiten=False).fit(data)

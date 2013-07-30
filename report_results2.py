@@ -1,5 +1,6 @@
 import numpy as np
 import datetime
+import textwrap
 from hotspotter.helpers import ensurepath
 
 def write_rank_results(cx2_res, hs, matcher):
@@ -13,6 +14,14 @@ def write_rank_results(cx2_res, hs, matcher):
     rankres_str = rank_results(cx2_res, hs.tables, expt_type=expt_type)
     write_to(rankres_csv, rankres_str)
 
+def get_true_positive_ranks(qcx, top_cx, cx2_nx):
+    'Returns the ranking of the other chips which should have scored high'
+    top_nx = cx2_nx[top_cx]
+    qnx    = cx2_nx[qcx]
+    _truepos_ranks, = np.where(top_nx == qnx)
+    truepos_ranks = _truepos_ranks[top_cx[_truepos_ranks] != qcx]
+    return truepos_ranks
+
 def rank_results(cx2_res, hs_tables, expt_type=''):
     cx2_cid  = hs_tables.cx2_cid
     cx2_nx   = hs_tables.cx2_nx
@@ -22,19 +31,16 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
     cx2_top_trueneg_rank  = np.zeros(len(cx2_cid)) - 100
     cx2_top_trueneg_score = np.zeros(len(cx2_cid)) - 100
     cx2_top_score         = np.zeros(len(cx2_cid)) - 100
+
     for qcx, qcid in enumerate(cx2_cid):
-        qnx = cx2_nx[qcx]
         res = cx2_res[qcx]
         # The score is the sum of the feature scores
         cx2_score = np.array([np.sum(fs) for fs in res.cx2_fs])
         top_cx = np.argsort(cx2_score)[::-1]
         top_score = cx2_score[top_cx]
-        top_nx = cx2_nx[top_cx]
-        # Remove query from true positives ranks
-        _truepos_ranks, = np.where(top_nx == qnx)
-        # Get TRUE POSTIIVE ranks
-        truepos_ranks = _truepos_ranks[top_cx[_truepos_ranks] != qcx]
-        # Get BEST True Positive and BEST True Negative
+        # Get true postiive ranks
+        truepos_ranks = get_true_positive_ranks(qcx, top_cx, cx2_nx)
+        # Find statitics about the true positives (and negatives)
         if len(truepos_ranks) > 0:
             top_truepos_rank = truepos_ranks.min()
             bot_truepos_rank = truepos_ranks.max()
@@ -60,10 +66,22 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
     num_rank_less5 = (cx2_top_truepos_rank < 5).sum()
     num_rank_less1 = (cx2_top_truepos_rank < 1).sum()
     
-    # Display ranking results
-    rankres_str = ('#TTP = top true positive #TTN = top true negative\n')
-    rankres_header = '#CID, TTP RANK, TTN RANK, TTP SCORE, TTN SCORE, SCORE DISP, NAME\n'
-    rankres_str += rankres_header
+    # Output ranking results
+
+    # Build the experiment csv metadata
+    rankres_metadata = textwrap.dedent('''
+    # Rank Result Metadata:
+    #   CID        = Query chip-id
+    #   TTP RANK   = top (lowest) true positive rank
+    #   TTN RANK   = top (lowest) true negative rank
+    #   TTP SCORE  = top true positive score
+    #   SCORE DISP = disparity between top-score and top-true-positive-score
+    #   NAME       = Query chip-name''')
+
+    # Build the experiemnt csv header
+    rankres_csv_header = '#CID, TTP RANK, TTN RANK, TTP SCORE, TTN SCORE, SCORE DISP, NAME'
+
+    # Build the experiment csv data lines
     todisp = np.vstack([cx2_cid,
                         cx2_top_truepos_rank,
                         cx2_top_trueneg_rank,
@@ -71,17 +89,31 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
                         cx2_top_trueneg_score,
                         cx2_score_disp, 
                         cx2_nx]).T
+    rankres_csv_lines = []
     for (cid, ttpr, ttnr, ttps, ttns, sdisp, nx) in todisp:
-        rankres_str+=('%4d, %8.0f, %8.0f, %9.2f, %9.2f, %10.2f, %s\n' %\
+        csv_line = ('%4d, %8.0f, %8.0f, %9.2f, %9.2f, %10.2f, %s' %\
               (cid, ttpr, ttnr, ttps, ttns, sdisp, nx2_name[nx]) )
-    rankres_str += rankres_header
+        rankres_csv_lines.append(csv_line)
 
-    rankres_str += get_timestamp(format='comment')
-    rankres_str += '#Experiment: '+expt_type
-    rankres_str += '#Num Chips: %d \n' % num_chips
-    rankres_str += '#Num Chips with at least one match: %d \n' % num_with_gtruth
-    rankres_str += '#Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
-    rankres_str += '#Ranks <= 1: %d / %d\n' % (num_rank_less1, num_with_gtruth)
+    # Build the experiment summary report
+    rankres_summary  = ''
+    rankres_summary += '# Experiment Summary: '+expt_type+'\n'
+    rankres_summary +=  get_timestamp(format='comment')+'\n'
+    rankres_summary += '# Num Chips: %d \n' % num_chips
+    rankres_summary += '# Num Chips with at least one match: %d \n' % num_with_gtruth
+    rankres_summary += '# Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
+    rankres_summary += '# Ranks <= 1: %d / %d\n' % (num_rank_less1, num_with_gtruth)
+
+    print(rankres_summary)
+
+    # Concateate parts into a csv file and return
+
+    rankres_csv_str = '\n'.join(rankres_csv_lines)
+    rankres_str = '\n'.join([rankres_summary, 
+                             rankres_metadata,
+                             rankres_csv_header,
+                             rankres_csv_str])
+
     return rankres_str
 
 def get_timestamp(format='filename'):

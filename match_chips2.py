@@ -103,7 +103,7 @@ def precompute_bag_of_words(hs):
     # Renormalize
     cx2_bow = sklearn.preprocessing.normalize(cx2_bow, norm=bow_norm, axis=1, copy=False)
     # Return vocabulary
-    vocab = Vocabulary(words, flann_words, cx2_bow, wx2_cxs, wx2_fxs)
+    vocab = Vocabulary(words, flann_words, cx2_bow, wx2_idf, wx2_cxs, wx2_fxs)
     vocab.printme()
     return vocab
 
@@ -214,8 +214,8 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, one_vs_many):
     # Score the feature matches
     qfx2_score = np.array([score_fn(_vdist.T, norm_dists) for _vdist in vote_dists.T]).T
     # Vote using the inverted file 
-    qfx2_cx = flann_1vM.ax2_cx[qfx2_ax[:,0:K]]
-    qfx2_fx = flann_1vM.ax2_fx[qfx2_ax[:,0:K]]
+    qfx2_cx = ax2_cx[qfx2_ax[:,0:K]]
+    qfx2_fx = ax2_fx[qfx2_ax[:,0:K]]
     # Build feature matches
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
@@ -237,7 +237,6 @@ def assign_matches_1vM_BINARY(qcx, cx2_cid, cx2_desc):
 def aggregate_descriptors_1vM(hs):
     cx2_cid   = hs.tables.cx2_cid
     cx2_desc  = hs.feats.cx2_desc
-    feat_type = hs.feats.feat_type
     print('Aggregating descriptors for one vs many')
     cx2_nFeats = [len(k) for k in cx2_desc]
     _ax2_cx = [[cx_]*nFeats for (cx_, nFeats) in iter(zip(range(len(cx2_cid)), cx2_nFeats))]
@@ -254,6 +253,7 @@ def aggregate_descriptors_1vM(hs):
 def precompute_index_1vM(hs):
     # Build (or reload) one vs many flann index
     feat_dir  = hs.dirs.feat_dir
+    feat_type = hs.feats.feat_type
     ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
     flann_1vM = pyflann.FLANN()
     flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
@@ -498,11 +498,12 @@ def run_matching(hs, matcher):
 # Wrapper/Data classes
 #========================================
 class Vocabulary(DynStruct):
-    def __init__(self, words, flann_words, cx2_bow, wx2_cxs, wx2_fxs):
+    def __init__(self, words, flann_words, cx2_bow, wx2_idf, wx2_cxs, wx2_fxs):
         super(Vocabulary, self).__init__()
         self.words       = words
         self.flann_words = flann_words
         self.cx2_bow     = cx2_bow
+        self.wx2_idf     = wx2_idf
         self.wx2_cxs     = wx2_cxs
         self.wx2_fxs     = wx2_fxs
 
@@ -526,6 +527,7 @@ class QueryResult(DynStruct):
     def __init__(self):
         super(QueryResult, self).__init__()
         self.qcx    = -1
+        self.algo   = ''
         # Assigned features matches
         self.cx2_fm = []
         self.cx2_fs = []
@@ -588,7 +590,7 @@ class Matcher(object):
         return self.__assign_matches(qcx, cx2_cid, cx2_desc)
     # class helpers
     def __assign_matches_1vM(self, qcx, cx2_cid, cx2_desc):
-        return assign_matches_1vM(qcx, cx2_cid, cx2_desc, self.__flann_1vM)
+        return assign_matches_1vM(qcx, cx2_cid, cx2_desc, self.__one_vs_many)
 
 #========================================
 # DRIVER CODE
@@ -615,8 +617,8 @@ def load_hotspotter(db_dir):
 def runall_match(hs):
     #functools.partial
     hs.printme2()
-    #cx2_res_1vM = run_matching(hs, Matcher(hs, '1vM'))
-    cx2_res_1v1 = run_matching(hs, Matcher(hs, '1v1'))
+    cx2_res_1vM = run_matching(hs, Matcher(hs, '1vM'))
+    #cx2_res_1v1 = run_matching(hs, Matcher(hs, '1v1'))
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
@@ -629,7 +631,7 @@ if __name__ == '__main__':
     cx2_cid = hs.tables.cx2_cid
     qcx = 1
 
-    __TEST_MODE__ = False
+    __TEST_MODE__ = True
     if __TEST_MODE__:
         runall_match(hs)
         pass

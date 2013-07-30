@@ -267,6 +267,13 @@ def load_csv_tables(db_dir):
     hs_tables.cx2_theta    = np.array(cx2_theta)
     hs_tables.px2_propname = np.array(px2_propname)
     hs_tables.px2_cx2_prop = np.array(px2_cx2_prop)
+
+    # HACK
+    #hs_tables.cx2_cid = hs_tables.cx2_cid[0:10]
+    #hs_tables.cx2_nx = hs_tables.cx2_nx[0:10]
+    #hs_tables.cx2_gx = hs_tables.cx2_gx[0:10]
+    #hs_tables.cx2_roi = hs_tables.cx2_roi[0:10]
+    #hs_tables.cx2_theta = hs_tables.cx2_theta[0:10]
     print('===============================')
     print('Done Loading hotspotter csv tables: '+str(db_dir))
     print('===============================\n\n')

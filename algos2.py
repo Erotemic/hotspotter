@@ -91,27 +91,23 @@ multikey_dists = {
     ('euclidian', 'l2')        :  1,
     ('manhattan', 'l1')        :  2,
     ('minkowski', 'lp')        :  3, # I guess p is the order?
-    ('max_dist' , 'linf')      :  4
+    ('max_dist' , 'linf')      :  4,
     ('l2_simple')              : 12, # For low dimensional points
-
     ('hellinger')              :  6,
-    ('hik','histintersect')    :  5
     # Nonparametric test statistics
+    ('hik','histintersect')    :  5,
     ('chi_square', 'cs')       :  7,
     # Information-thoery divergences
     ('kullback_leibler', 'kl') :  8,
-    # 
     ('hamming')                :  9, # xor and bitwise sum
     ('hamming_lut')            : 10, # xor (sums with lookup table ; if no sse2)
     ('hamming_popcnt')         : 11, # population count (number of 1 bits)
-
 }
 
 
  #Hamming distance functor - counts the bit differences between two strings - useful for the Brief descriptor
  #bit count of A exclusive XOR'ed with B
 
-struct HammingLUT
 flann_distances = {"euclidean"        : 1, 
                    "manhattan"        : 2, 
                    "minkowski"        : 3,
@@ -123,7 +119,7 @@ flann_distances = {"euclidean"        : 1,
                    "kullback_leibler" : 8,
                    "kl"               : 8 }
 
-pyflann.set_distance_type('euclidian', order=0)
+pyflann.set_distance_type('hellinger', order=0)
 
 __FLANN_PARAMS__ = mother_hesaff_tuned_params
 

@@ -1,6 +1,6 @@
 import numpy as np
 import datetime
-
+from hotspotter.helpers import ensurepath
 
 def write_rank_results(cx2_res, hs, matcher):
     match_type  = matcher.match_type+'_'
@@ -8,7 +8,8 @@ def write_rank_results(cx2_res, hs, matcher):
     expt_type   = match_type+feat_type
     report_type = 'rank_'
     timestamp   = get_timestamp()
-    rankres_csv = 'results_'+expt_type+report_type+timestamp+'.csv'
+    ensurepath('results')
+    rankres_csv = 'results/'+expt_type+report_type+timestamp+'.csv'
     rankres_str = rank_results(cx2_res, hs.tables, expt_type=expt_type)
     write_to(rankres_csv, rankres_str)
 
@@ -75,24 +76,22 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
               (cid, ttpr, ttnr, ttps, ttns, sdisp, nx2_name[nx]) )
     rankres_str += rankres_header
 
-    rankres_str += get_timestamp(type='comment')
+    rankres_str += get_timestamp(format='comment')
     rankres_str += '#Experiment: '+expt_type
     rankres_str += '#Num Chips: %d \n' % num_chips
     rankres_str += '#Num Chips with at least one match: %d \n' % num_with_gtruth
     rankres_str += '#Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
     rankres_str += '#Ranks <= 1: %d / %d\n' % (num_rank_less1, num_with_gtruth)
-    
     return rankres_str
 
-def get_timestamp(type='filename'):
+def get_timestamp(format='filename'):
     now = datetime.datetime.now()
-    if type == 'filename':
-        stamp = 'ymd-%04d-%02d-%02d_hm-%02d-%02d' % (now.year, now.month, now.day, now.hour, now.minute) 
-    if type == 'comment':
-        stamp = '# (yyyy-mm-dd hh:mm) %04d-%02d-%02d %02d:%02d' % (now.year, now.month, now.day, now.hour, now.minute) 
+    time_tup = (now.year, now.month, now.day, now.hour, now.minute)
+    time_formats = {
+        'filename': 'ymd-%04d-%02d-%02d_hm-%02d-%02d',
+        'comment' : '# (yyyy-mm-dd hh:mm) %04d-%02d-%02d %02d:%02d' }
+    stamp = time_formats[format] % time_tup
     return stamp
-
-    return time
 
 def write_to(filename, to_write):
     with open(filename, 'w') as file:

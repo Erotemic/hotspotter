@@ -4,11 +4,10 @@
 # Hotspotter Frontend Imports
 import drawing_functions2 as df2
 # Hotspotter Imports
-from algos import akmeans, precompute_akmeans
 from cvransac2 import H_homog_from_DELSAC
 from hotspotter.helpers import Timer, get_exec_src, check_path, tic, toc, myprint, printWARN
 from hotspotter.other.ConcretePrintable import DynStruct
-import algos
+import algos2
 import chip_compute2
 import cvransac2
 import feature_compute2
@@ -29,7 +28,14 @@ import imp
 import sys
 # Imp Module Reloads
 #imp.reload(cvransac2)
-#imp.reload(algos)
+#imp.reload(algos2)
+
+
+def myreload():
+    import imp
+    imp.reload(cvransac2)
+    imp.reload(df2)
+    imp.reload(algos2)
 
 #========================================
 # Parameters and Debugging
@@ -51,16 +57,21 @@ def printDBG(msg):
 def assign_features_to_bow_vector(vocab):
     pass
 
+bow_norm = 'l2'
 def precompute_bag_of_words(hs):
     # Build (or reload) one vs many flann index
-    __VOCAB_SIZE__ = 1000
-
+    __VOCAB_SIZE__ = 10000
     feat_dir  = hs.dirs.feat_dir
     num_clusters = __VOCAB_SIZE__
 
     # Compute words
     ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
-    ax2_wx, words = precompute_akmeans(ax2_desc,  num_clusters, force_recomp=False)
+    ax2_wx, words = algos2.precompute_akmeans(ax2_desc, num_clusters, force_recomp=False)
+
+    # Build a NN index for the words
+    flann_words = pyflann.FLANN()
+    flann_words_params = flann_words.build_index(words, algorithm='linear')
+    print flann_words_params
 
     # Compute Inverted File
     wx2_axs = [[] for _ in xrange(num_clusters)]
@@ -68,90 +79,107 @@ def precompute_bag_of_words(hs):
         wx2_axs[wx].append(ax)
     wx2_cxs = [[ax2_cx[ax] for ax in ax_list] for ax_list in wx2_axs]
     wx2_fxs = [[ax2_fx[ax] for ax in ax_list] for ax_list in wx2_axs]
-    '''
-    from hotspotter.helpers import mystats
-    mystats(wx2_idf)
-    '''
+
     # Create visual-word-vectors for each chip
-    sparse_cols = ax2_wx
-    sparse_rows = ax2_cx
+    # Build bow using coorindate list coo matrix
+    coo_cols = ax2_wx
+    coo_rows = ax2_cx
     # The term frequency (TF) is implicit in the coo format
-    sparse_data = np.ones(len(ax2_cx), dtype=np.uint8)
-    # Sparse format = coordinate list ;  rows = cxs ; cols = wxs
-    sparse_coo_format = (sparse_data, (sparse_rows, sparse_cols))
-    # Build sparse matrix
-    cx2_bow_coo = scipy.sparse.coo_matrix(sparse_coo_format, dtype=np.float, copy=True)
+    coo_values = np.ones(len(ax2_cx), dtype=np.uint8)
+    coo_format = (coo_values, (coo_rows, coo_cols))
+    coo_cx2_bow = scipy.sparse.coo_matrix(coo_format, dtype=np.float, copy=True)
     # Normalize each visual vector
-    cx2_bow_csr = scipy.sparse.csr_matrix(cx2_bow_coo, copy=False)
-    cx2_bow_csr = sklearn.preprocessing.normalize(cx2_bow_csr, norm='l2', axis=1, copy=False)
+    csr_cx2_bow = scipy.sparse.csr_matrix(coo_cx2_bow, copy=False)
+    csr_cx2_bow = sklearn.preprocessing.normalize(csr_cx2_bow, norm=bow_norm, axis=1, copy=False)
     # Calculate inverse document frequency (IDF)
     # chip indexes (cxs) are the documents
     num_chips = np.float(len(hs.tables.cx2_cid))
-    wx2_df    = np.array([len(set(cx_list)) for cx_list in wx2_cxs], dtype=np.float)
-    wx2_idf   = np.log2( num_chips / wx2_df )
+    wx2_df  = [len(set(cx_list)) for cx_list in wx2_cxs]
+    wx2_idf = np.log2(num_chips / np.array(wx2_df, dtype=np.float))
     wx2_idf.shape = (1, wx2_idf.size)
     # Preweight the bow vectors
     idf_sparse = scipy.sparse.csr_matrix(wx2_idf)
-    cx2_bow = scipy.sparse.vstack([row.multiply(idf_sparse) for row in cx2_bow_csr], format='csr')
+    cx2_bow = scipy.sparse.vstack([row.multiply(idf_sparse) for row in csr_cx2_bow], format='csr')
     # Renormalize
-    cx2_bow = sklearn.preprocessing.normalize(cx2_bow, norm='l2', axis=1, copy=False)
-    vocab = Vocabulary(words, cx2_bow, ax2_cx, ax2_fx)
+    cx2_bow = sklearn.preprocessing.normalize(cx2_bow, norm=bow_norm, axis=1, copy=False)
+    # Return vocabulary
+    vocab = Vocabulary(words, flann_words, cx2_bow, wx2_cxs, wx2_fxs)
+    vocab.printme()
     return vocab
 
-def test():
-    # cx 0's visual vector
-    vvector = cx2_bow[0]
-    # calc its distance 
-    cx2_score = (cx2_bow.dot(vvector.T)).todense()
+def truncate_vvec(vvec, thresh):
+    shape = vvec.shape
+    vvec_flat = vvec.toarray().ravel()
+    vvec_flat = vvec_flat * (vvec_flat > thresh)
+    vvec_trunc = scipy.sparse.csr_matrix(vvec_flat)
+    vvec_trunc = sklearn.preprocessing.normalize(vvec_trunc, norm=bow_norm, axis=1, copy=False)
+    return vvec_trunc
 
-def assign_matches_BOW():
+def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
+    cx2_bow = vocab.cx2_bow
+    wx2_cxs = vocab.wx2_cxs
+    wx2_fxs = vocab.wx2_fxs
+    words   = vocab.words
+    flann_words = vocab.flann_words
+    # This is not robust to out of database queries
+    vvec = cx2_bow[qcx]
+    # Compute distance to every database vector
+    cx2_score = (cx2_bow.dot(vvec.T)).toarray()
+    # Assign each query descriptor to a word
+    qdesc = np.array(cx2_desc[qcx], dtype=words.dtype)
+    (qfx2_wx, __word_dist) = flann_words.nn_index(qdesc, 1)
+    # Vote for the chips
+    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    vvec_flat = np.array(vvec.toarray()).ravel()
+    qcx2_wx    = np.flatnonzero(vvec_flat)
+
+    cx2_nx = hs.tables.cx2_nx
+    qnx = cx2_nx[qcx]
+    other_cx, = np.where(cx2_nx == qnx)
+
+    vvec2 = truncate_vvec(vvec, .04)
+    vvec2_flat = vvec2.toarray().ravel()
+
+    cx2_score = (cx2_bow.dot(vvec.T)).toarray().ravel()
+    top_cxs = cx2_score.argsort()[::-1]
+
+    cx2_score2 = (cx2_bow.dot(vvec2.T)).toarray().ravel()
+    top_cxs2 = cx2_score2.argsort()[::-1]
+
+    comp_str = ''
+    for t,s,t2,s2 in np.vstack([top_cxs, cx2_score, top_cxs2, cx2_score2]).T:
+        m1 = [' ','*'][t in other_cx]
+        m2 = [' ','*'][t2 in other_cx] 
+        comp_str += m1 + '%4d %4.2f %4d %4.2f' % (t,s,t2,s2) + m2 + '\n'
+    print comp_str
+    df2.close_all_figures()
+    df2.show_signature(vvec_flat, fignum=2)
+    df2.show_signature(vvec2_flat, fignum=3)
+    df2.present()
+
+    #df2.show_histogram(qcx2_wx, fignum=1)
+    _tmp = 0
+    _tmp2 = 0
+    for qfx, wx in enumerate(qfx2_wx):
+        cx_list = wx2_cxs[wx]
+        fx_list = wx2_fxs[wx]
+        _qfs = vvec_flat[wx]
+        for (cx, fx) in zip(cx_list, fx_list): 
+            _tmp+=1
+            if cx == qcx: continue
+            _tmp2+=1
+            fm  = (qfx, fx)
+            _fs = cx2_bow[cx, wx]
+            fs  = _qfs * _fs
+            cx2_fm[cx].append(fm)
+            cx2_fs[cx].append(fs)
+    
     pass
 
 #========================================
 # One-vs-Many 
 #========================================
-
-def assign_matches_1vM_BINARY(qcx, cx2_cid, cx2_desc):
-    return None
-
-def aggregate_descriptors_1vM(hs):
-    cx2_cid   = hs.tables.cx2_cid
-    cx2_desc  = hs.feats.cx2_desc
-    feat_type = hs.feats.feat_type
-    print('Aggregating descriptors for one vs many')
-    cx2_nFeats = [len(k) for k in cx2_desc]
-    _ax2_cx = [[cx_]*nFeats for (cx_, nFeats) in iter(zip(range(len(cx2_cid)), cx2_nFeats))]
-    _ax2_fx = [range(nFeats) for nFeats in iter(cx2_nFeats)]
-    ax2_cx  = np.array(list(itertools.chain.from_iterable(_ax2_cx)))
-    ax2_fx  = np.array(list(itertools.chain.from_iterable(_ax2_fx)))
-    ax2_desc   = np.vstack(cx2_desc)
-    return ax2_cx, ax2_fx, ax2_desc
-
-
-#@profile
-def precompute_index_1vM(hs):
-    # Build (or reload) one vs many flann index
-    feat_dir  = hs.dirs.feat_dir
-    ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
-    flann_1vM = pyflann.FLANN()
-    flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
-    load_success = False
-    if check_path(flann_1vM_path):
-        try:
-            print('Trying to load FLANN index')
-            flann_1vM.load_index(flann_1vM_path, ax2_desc)
-            print('...success')
-            load_success = True
-        except Exception as ex:
-            print('...cannot load FLANN index'+repr(ex))
-    if not load_success:
-        with Timer(msg='rebuilding FLANN index'):
-            flann_1vM.build_index(ax2_desc, **__FLANN_PARAMS__)
-            flann_1vM.save_index(flann_1vM_path)
-    # Return a one-vs-many structure
-    one_vs_many = OneVsMany(flann_1vM, ax2_desc, ax2_cx, ax2_fx)
-    return one_vs_many
-
 
 # Feature scoring functions
 def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+1E-8)+1) 
@@ -160,19 +188,22 @@ def LNBNN_fn(vdist, ndist): return ndist - vdist
 score_fn = RATIO_fn
 
 #@profile
-def assign_matches_1vM(qcx, cx2_cid, cx2_desc, flann_1vM):
+def assign_matches_1vM(qcx, cx2_cid, cx2_desc, one_vs_many):
     '''
     Matches desc1 vs all database descriptors using 
     Input:
-        qcx       - query chip index
-        cx2_cid   - chip ID lookup table (for removing self matches)
-        cx2_desc  - chip descriptor lookup table
-        flann_1vM - prebuild FLANN index of aggregated database descriptors
+        qcx        - query chip index
+        cx2_cid     - chip ID lookup table (for removing self matches)
+        cx2_desc    - chip descriptor lookup table
+        one_vs_many - class with FLANN index of database descriptors
     Output: 
         cx2_fm - C x Mx2 array of matching feature indexes
         cx2_fs - C x Mx1 array of matching feature scores
     '''
     print('Assigning 1vM feature matches from qcx=%d to %d chips' % (qcx, len(cx2_cid)))
+    flann_1vM = one_vs_many.flann_1vM
+    ax2_cx    = one_vs_many.ax2_cx
+    ax2_fx    = one_vs_many.ax2_fx
     isQueryIndexed = True
     desc1 = cx2_desc[qcx]
     K = __K__+1 if isQueryIndexed else __K__
@@ -200,6 +231,48 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, flann_1vM):
     for cx in xrange(len(cx2_cid)): cx2_fs[cx] = np.array(cx2_fs[cx])
     return cx2_fm, cx2_fs
 
+def assign_matches_1vM_BINARY(qcx, cx2_cid, cx2_desc):
+    return None
+
+def aggregate_descriptors_1vM(hs):
+    cx2_cid   = hs.tables.cx2_cid
+    cx2_desc  = hs.feats.cx2_desc
+    feat_type = hs.feats.feat_type
+    print('Aggregating descriptors for one vs many')
+    cx2_nFeats = [len(k) for k in cx2_desc]
+    _ax2_cx = [[cx_]*nFeats for (cx_, nFeats) in iter(zip(range(len(cx2_cid)), cx2_nFeats))]
+    _ax2_fx = [range(nFeats) for nFeats in iter(cx2_nFeats)]
+    ax2_cx  = np.array(list(itertools.chain.from_iterable(_ax2_cx)))
+    ax2_fx  = np.array(list(itertools.chain.from_iterable(_ax2_fx)))
+    ax2_desc = np.vstack(cx2_desc)
+    #ax2_desc_white = whiten(ax2_desc)
+    #data = ax2_desc_white
+    #data = scale_to_byte_range(data)
+    return ax2_cx, ax2_fx, ax2_desc
+
+#@profile
+def precompute_index_1vM(hs):
+    # Build (or reload) one vs many flann index
+    feat_dir  = hs.dirs.feat_dir
+    ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
+    flann_1vM = pyflann.FLANN()
+    flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
+    load_success = False
+    if check_path(flann_1vM_path):
+        try:
+            print('Trying to load FLANN index')
+            flann_1vM.load_index(flann_1vM_path, ax2_desc)
+            print('...success')
+            load_success = True
+        except Exception as ex:
+            print('...cannot load FLANN index'+repr(ex))
+    if not load_success:
+        with Timer(msg='rebuilding FLANN index'):
+            flann_1vM.build_index(ax2_desc, **__FLANN_PARAMS__)
+            flann_1vM.save_index(flann_1vM_path)
+    # Return a one-vs-many structure
+    one_vs_many = OneVsMany(flann_1vM, ax2_desc, ax2_cx, ax2_fx)
+    return one_vs_many
 
 #========================================
 # One-vs-One 
@@ -424,21 +497,20 @@ def run_matching(hs, matcher):
 #========================================
 # Wrapper/Data classes
 #========================================
-class Vocabulary(object):
-    def __init__(self, words, cx2_bow, ax2_cx, ax2_fx):
+class Vocabulary(DynStruct):
+    def __init__(self, words, flann_words, cx2_bow, wx2_cxs, wx2_fxs):
         super(Vocabulary, self).__init__()
-        self.words   = words
-        self.cx2_bow = cx2_bow
-        self.ax2_cx  = ax2_cx
-        self.ax2_fx  = ax2_fx
-        #self.words_flann = pyflann.FLANN()
-        #self.words_flann.build_index(words, **__FLANN_PARAMS__)
+        self.words       = words
+        self.flann_words = flann_words
+        self.cx2_bow     = cx2_bow
+        self.wx2_cxs     = wx2_cxs
+        self.wx2_fxs     = wx2_fxs
 
-class OneVsMany(object): # TODO: rename this
+class OneVsMany(DynStruct): # TODO: rename this
     def __init__(self, flann_1vM, ax2_desc, ax2_cx, ax2_fx):
         super(OneVsMany, self).__init__()
         self.flann_1vM = flann_1vM
-        self.ax2_desc  = ax2_desc
+        self.ax2_desc  = ax2_desc # not used, but needs to maintain scope
         self.ax2_cx = ax2_cx
         self.ax2_fx = ax2_fx
 
@@ -552,8 +624,12 @@ if __name__ == '__main__':
     # --- CHOOSE DATABASE --- #
     db_dir = load_data2.MOTHERS
     hs = load_hotspotter(db_dir)
+    cx2_kpts = hs.feats.cx2_kpts
+    cx2_desc = hs.feats.cx2_desc
+    cx2_cid = hs.tables.cx2_cid
+    qcx = 1
 
-    __TEST_MODE__ = True
+    __TEST_MODE__ = False
     if __TEST_MODE__:
         runall_match(hs)
         pass
@@ -570,14 +646,13 @@ if __name__ == '__main__':
         exec(hs_feats.execstr('hs_feats'))
         exec(hs_tables.execstr('hs_tables'))
         exec(hs_dirs.execstr('hs_dirs'))
-        cx2_kpts = hs_feats.cx2_kpts
-        cx2_desc = hs_feats.cx2_kpts
-        qcx = 1
         #cx  = 1
         # All of these functions operate on one qcx (except precompute I guess)
         #exec(get_exec_src(precompute_index_1vM))
         #exec(get_exec_src(assign_matches_1vM))
         #exec(get_exec_src(spatially_verify_matches))
+        #exec(get_exec_src(precompute_bag_of_words))
+        
 
         try: 
             __IPYTHON__

@@ -314,6 +314,21 @@ def imshow(img, fignum=0, title=None, figtitle=None):
         print('!! Exception durring fig.tight_layout: '+repr(ex))
         raise
 
+def show_histogram(data, bins=None, **kwargs):
+    if bins is None:
+        dmin = data.min()
+        dmax = data.max()
+        bins = dmax - dmin
+    fig = figure(**kwargs)
+    ax  = plt.gca()
+    ax.hist(data, bins=bins, range=(dmin,dmax))
+    #help(np.bincount)
+    fig.show()
+
+def show_signature(sig, **kwargs):
+    fig = figure(**kwargs)
+    plt.plot(sig)
+    fig.show()
 
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
                   fm, fs=None, fignum=0, title=None, vert=True):

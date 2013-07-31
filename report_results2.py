@@ -159,6 +159,7 @@ def print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False):
     print_top_res_scores(hs, res, view_top, SV)
 
 def print_top_res_scores(hs, res, view_top=10, SV=False):
+    res.printme()
     qcx = res.qcx
     cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
     lbl = ['(assigned)', '(assigned+V)'][SV]
@@ -238,11 +239,14 @@ def get_tt_bt_tf_cxs(hs, res, SV):
     tt_cx, tt_rank, tt_score = get_nth_truepos_match(res,  hs,  0, SV)
     bt_cx, bt_rank, bt_score = get_nth_truepos_match(res,  hs, -1, SV)
     tf_cx, tf_rank, tf_score = get_nth_falsepos_match(res, hs,  0, SV)
-    titles = ('TT '+str(tt_rank), 'BT '+str(bt_rank), 'TF '+str(tf_rank))
+    titles = ('TT '+str(tt_rank)+' ', 'BT '+str(bt_rank)+' ', 'TF '+str(tf_rank)+' ')
     cxs = (tt_cx, bt_cx, tf_cx)
     return cxs, titles
 
 def visualize_res_tt_bt_tf(hs, res):
+    print('Visualizing result: ')
+    res.printme()
+
     SV = False
     qcx = res.qcx
     _fn = qcx
@@ -276,25 +280,29 @@ if __name__ == '__main__':
     arg_list_1v1 = ['1v1','one-vs-one','ovo']
     arg_list_1vM = ['1vm','one-vs-many','ovm']
 
-    arg_1vM = True or any([arg1v1 in argv for arg1v1 in arg_list_1v1])
-    arg_1v1 = False or any([arg1vM in argv for arg1vM in arg_list_1vM])
+    arg_1v1 = False or any([arg1v1 in argv for arg1v1 in arg_list_1v1])
+    arg_1vM = True or any([arg1vM in argv for arg1vM in arg_list_1vM])
 
     df2.close_all_figures()
-    if arg_1vM:
-        qcx2_res = mc2.run_one_vs_one(hs)
-    if arg_1v1: 
-        qcx2_res = mc2.run_one_vs_many(hs)
+    try:
+        if arg_1vM:
+            qcx2_res = mc2.run_one_vs_many(hs)
+        if arg_1v1: 
+            qcx2_res = mc2.run_one_vs_one(hs)
 
-    if arg_1vM or arg_1v1:
-        qcx = 1
-        print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False)
-        print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=True)
-        visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
+        if arg_1vM or arg_1v1:
+            qcx = 1
+            print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False)
+            print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=True)
+            visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
 
-    def dinspect(qcx):
-        df2.close_all_figures()
-        visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
-        df2.present()
+        def dinspect(qcx):
+            df2.close_all_figures()
+            visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
+            df2.present()
+    except Exception as ex:
+        print(repr(ex))
+
     'dev inspect'
 
     # Execing df2.present does an IPython aware plt.show()

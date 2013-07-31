@@ -12,11 +12,13 @@ def printDBG(msg, lbl=''):
 # paths relative to dbdir
 rdir_img      = '/images'
 rdir_internal = '/.hs_internals'
-rdir_computed = '/.hs_interanls/computed'
+rdir_computed = '/.hs_internals/computed'
 rdir_chip     = '/.hs_internals/computed/chips'
 rdir_rchip    = '/.hs_internals/computed/temp'
 rdir_feat     = '/.hs_internals/computed/feats'
 rdir_results  = '/.hs_internals/computed/results'
+rdir_qres     = '/.hs_internals/computed/query_results'
+
 
 class HotspotterTables(DynStruct):
     def __init__(self):
@@ -44,13 +46,17 @@ class HotspotterDirs(DynStruct):
         self.rchip_dir    = db_dir + rdir_rchip
         self.feat_dir     = db_dir + rdir_feat
         self.result_dir   = db_dir + rdir_results
+        self.qres_dir     = db_dir + rdir_qres
         # Make directories if needbe
         ensure_path(self.internal_dir)
+        ensure_path(self.computed_dir)
         ensure_path(self.chip_dir)
         ensure_path(self.rchip_dir)
         ensure_path(self.feat_dir)
         ensure_path(self.result_dir)
         ensure_path(self.rchip_dir)
+        ensure_path(self.qres_dir)
+
 
         if not os.path.islink(self.internal_sym):
             symlink(internal_dir, self.internal_sym, noraise=True)
@@ -63,6 +69,11 @@ class HotspotterDirs(DynStruct):
         db_dir = os.path.normpath(self.db_dir)
         print('opening db_dir: %r ' % db_dir)
         helpers.vd(db_dir)
+
+    def vcd(self):
+        computed_dir = os.path.normpath(self.computed_dir)
+        print('opening computed_dir: %r ' % computed_dir)
+        helpers.vd(computed_dir)
 
 def tryindex(list, val):
     try: 
@@ -295,6 +306,8 @@ def load_csv_tables(db_dir):
 
     if 'vdd' in sys.argv:
         hs_dirs.vdd()
+    if 'vcd' in sys.argv:
+        hs_dirs.vcd()
 
     return hs_dirs, hs_tables
 

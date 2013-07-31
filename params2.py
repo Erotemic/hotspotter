@@ -44,6 +44,7 @@ mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
 __FLANN_ONCE_PARAMS__ = mother_hesaff_tuned_params
 __FLANN_PARAMS__      = hs1_params
 
+__LAZY_MATCHING__ = True
 
 __WHITEN_FEATS__ = False
 

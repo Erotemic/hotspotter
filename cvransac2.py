@@ -203,9 +203,9 @@ def H_homog_from_CV2SAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     H = H if not H is None else np.eye(3)
     return H, np.array(inliers, dtype=bool).flatten()
 
+from PCV.geometry import homography
 def H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     'Python Computer Visions Random Sample Consensus'
-    from PCV.geometry import homography
     # Get xy points
     xy1_m = kpts1_m[0:2,:] 
     xy2_m = kpts2_m[0:2,:] 

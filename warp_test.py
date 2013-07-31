@@ -19,10 +19,9 @@ imp.reload(df2)
 imp.reload(fc2)
 imp.reload(mc2)
 imp.reload(hotspotter.helpers)
-from hotspotter.helpers import *
+from helpers import *
 from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC, H_homog_from_CV2SAC
-from hotspotter.tpl.pyflann import FLANN
-from numpy.linalg import inv
+from pyflann import FLANN
 
 #TODO: 
 '''
@@ -90,9 +89,9 @@ if __oldfeattype != mc2.__FEAT_TYPE__:
     cx2_kpts = hs.feats.cx2_kpts
     cx2_desc = hs.feats.cx2_desc
     flann_1vM = mc2.precompute_index_1vM(hs)
-    cx2_fm, cx2_fs = mc2.assign_matches_1vM(qcx, cx2_cid, cx2_desc, flann_1vM)
+    cx2_fm, cx2_fs, _ = mc2.assign_matches_1vM(qcx, cx2_cid, cx2_desc, flann_1vM)
     __oldfeattype = mc2.__FEAT_TYPE__
-cx2_fm_V, cx2_fs_V = mc2.spatially_verify_1vX(qcx, cx2_kpts, cx2_fm, cx2_fs)
+cx2_fm_V, cx2_fs_V, _ = mc2.spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
 def cx2_other_cx(cx):
     nx = cx2_nx[cx]
     other_cx_, = np.where(cx2_nx == nx)
@@ -258,7 +257,7 @@ def show_match_results(rchip1, rchip2, kpts1, kpts2, fm, fs, fm_V, fs_V, fignum=
     _title1 = 'num_m  = %r' % num_m
     _title2 = 'num_mV = %r' % num_mV
     _title3 = 'len(kpts1) = %r' % len(kpts1)
-    _title4 = 'len(kpts1) = %r' % len(kpts1)
+    _title4 = 'len(kpts2) = %r' % len(kpts2)
     # TODO: MAKE THESE SUBPLOTS
     df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, fignum+0, _title1)
     df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm_V, fs_V, fignum+1, _title2)
@@ -291,4 +290,4 @@ arg_1v1_W = res_1v1_W + aug_1v1_W
 show_match_results(*arg_1v1_W)
 
 # FREAK 
-df2.present()
+exec(df2.present())

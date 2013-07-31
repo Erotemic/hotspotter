@@ -173,6 +173,53 @@ def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
 # One-vs-Many 
 #========================================
 
+class OneVsMany(DynStruct): # TODO: rename this
+    def __init__(self, flann_1vM, ax2_desc, ax2_cx, ax2_fx):
+        super(OneVsMany, self).__init__()
+        self.flann_1vM = flann_1vM
+        self.ax2_desc  = ax2_desc # not used, but needs to maintain scope
+        self.ax2_cx = ax2_cx
+        self.ax2_fx = ax2_fx
+
+def aggregate_descriptors_1vM(hs):
+    cx2_cid   = hs.tables.cx2_cid
+    cx2_desc  = hs.feats.cx2_desc
+    print('Aggregating descriptors for one vs many')
+    cx2_nFeats = [len(k) for k in cx2_desc]
+    _ax2_cx = [[cx_]*nFeats for (cx_, nFeats) in iter(zip(range(len(cx2_cid)), cx2_nFeats))]
+    _ax2_fx = [range(nFeats) for nFeats in iter(cx2_nFeats)]
+    ax2_cx  = np.array(list(itertools.chain.from_iterable(_ax2_cx)))
+    ax2_fx  = np.array(list(itertools.chain.from_iterable(_ax2_fx)))
+    ax2_desc = np.vstack(cx2_desc)
+    # Whitening should have already happened
+    return ax2_cx, ax2_fx, ax2_desc
+
+#@profile
+def precompute_index_1vM(hs):
+    # Build (or reload) one vs many flann index
+    feat_dir  = hs.dirs.feat_dir
+    feat_type = hs.feats.feat_type
+    ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
+    flann_1vM = pyflann.FLANN()
+    flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
+    load_success = False
+    if checkpath(flann_1vM_path):
+        try:
+            print('Trying to load FLANN index')
+            flann_1vM.load_index(flann_1vM_path, ax2_desc)
+            print('...success')
+            load_success = True
+        except Exception as ex:
+            print('...cannot load FLANN index'+repr(ex))
+    if not load_success:
+        with Timer(msg='rebuilding FLANN index'):
+            flann_1vM.build_index(ax2_desc, **__FLANN_PARAMS__)
+            flann_1vM.save_index(flann_1vM_path)
+    # Return a one-vs-many structure
+    one_vs_many = OneVsMany(flann_1vM, ax2_desc, ax2_cx, ax2_fx)
+    return one_vs_many
+
+
 # Feature scoring functions
 def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+1E-8)+1) 
 def RATIO_fn(vdist, ndist): return np.divide(ndist, vdist+1E-8)
@@ -227,43 +274,6 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, one_vs_many):
 def assign_matches_1vM_BINARY(qcx, cx2_cid, cx2_desc):
     return None
 
-def aggregate_descriptors_1vM(hs):
-    cx2_cid   = hs.tables.cx2_cid
-    cx2_desc  = hs.feats.cx2_desc
-    print('Aggregating descriptors for one vs many')
-    cx2_nFeats = [len(k) for k in cx2_desc]
-    _ax2_cx = [[cx_]*nFeats for (cx_, nFeats) in iter(zip(range(len(cx2_cid)), cx2_nFeats))]
-    _ax2_fx = [range(nFeats) for nFeats in iter(cx2_nFeats)]
-    ax2_cx  = np.array(list(itertools.chain.from_iterable(_ax2_cx)))
-    ax2_fx  = np.array(list(itertools.chain.from_iterable(_ax2_fx)))
-    ax2_desc = np.vstack(cx2_desc)
-    # Whitening should have already happened
-    return ax2_cx, ax2_fx, ax2_desc
-
-#@profile
-def precompute_index_1vM(hs):
-    # Build (or reload) one vs many flann index
-    feat_dir  = hs.dirs.feat_dir
-    feat_type = hs.feats.feat_type
-    ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
-    flann_1vM = pyflann.FLANN()
-    flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
-    load_success = False
-    if checkpath(flann_1vM_path):
-        try:
-            print('Trying to load FLANN index')
-            flann_1vM.load_index(flann_1vM_path, ax2_desc)
-            print('...success')
-            load_success = True
-        except Exception as ex:
-            print('...cannot load FLANN index'+repr(ex))
-    if not load_success:
-        with Timer(msg='rebuilding FLANN index'):
-            flann_1vM.build_index(ax2_desc, **__FLANN_PARAMS__)
-            flann_1vM.save_index(flann_1vM_path)
-    # Return a one-vs-many structure
-    one_vs_many = OneVsMany(flann_1vM, ax2_desc, ax2_cx, ax2_fx)
-    return one_vs_many
 
 #========================================
 # One-vs-One 
@@ -453,11 +463,10 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
         kpts2 = cx2_kpts[cx]
         fm    = cx2_fm[cx]
         fs    = cx2_fs[cx]
-
         fm_V, fs_V, H = spatially_verify(kpts1, kpts2, fm, fs)
         cx2_fm_V[cx] = fm_V
         cx2_fs_V[cx] = fs_V
-    cx2_score_V = [np.sum(fs) for fs in cx2_fs_V]
+    cx2_score_V = np.array([np.sum(fs) for fs in cx2_fs_V])
     return cx2_fm_V, cx2_fs_V, cx2_score_V
 
 def warp_chip(rchip2, H, rchip1):
@@ -476,39 +485,18 @@ class Vocabulary(DynStruct):
         self.wx2_cxs     = wx2_cxs
         self.wx2_fxs     = wx2_fxs
 
-class OneVsMany(DynStruct): # TODO: rename this
-    def __init__(self, flann_1vM, ax2_desc, ax2_cx, ax2_fx):
-        super(OneVsMany, self).__init__()
-        self.flann_1vM = flann_1vM
-        self.ax2_desc  = ax2_desc # not used, but needs to maintain scope
-        self.ax2_cx = ax2_cx
-        self.ax2_fx = ax2_fx
-
-class HotSpotter(DynStruct):
-    def __init__(self):
-        super(HotSpotter, self).__init__()
-        self.tables = None
-        self.feats  = None
-        self.cpaths = None
-        self.dirs   = None
-
-import os
-from helpers import ensurepath
-__QueryResults_path__ = os.path.realpath('results/queryresults')
-__AlgorithmUID__ = 'HESAFF-1vM'
-ensurepath(__QueryResults_path__)
 class QueryResult(DynStruct):
     def __init__(self, qcx):
         super(QueryResult, self).__init__()
         self.qcx    = qcx
         # Assigned features matches
-        self.cx2_fm = []
-        self.cx2_fs = []
-        self.cx2_score = []
+        self.cx2_fm = np.array([])
+        self.cx2_fs = np.array([])
+        self.cx2_score = np.array([])
         # Spatially verified feature matches
-        self.cx2_fm_V = []
-        self.cx2_fs_V = []
-        self.cx2_score_V = []
+        self.cx2_fm_V = np.array([])
+        self.cx2_fs_V = np.array([])
+        self.cx2_score_V = np.array([])
 
     def __get_info(self, SV=True):
         cx2_score = self.cx2_score_V if SV else self.cx2_score
@@ -523,18 +511,20 @@ class QueryResult(DynStruct):
             cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
         return cx2_score, cx2_fm, cx2_fs
 
-    def get_fpath(self):
-        fname = 'result_'+__AlgorithmUID__+'_qcx=%d.npz' % self.qcx
-        fpath = os.path.join(__QueryResults_path__, fname)
+    def get_fpath(self, hs):
+        algo_uid = hs.algo_uid()
+        qres_dir = hs.dirs.qres_dir 
+        fname = 'result_'+algo_uid+'_qcx=%d.npz' % self.qcx
+        fpath = os.path.join(qres_dir, fname)
         return fpath
     
-    def save(self):
-        fpath = self.get_fpath()
+    def save(self, hs):
+        fpath = self.get_fpath(hs)
         print('Saving results to '+repr(fpath))
         return self.save_result(fpath)
 
-    def load(self):
-        fpath = self.get_fpath()
+    def load(self, hs):
+        fpath = self.get_fpath(hs)
         if checkpath(fpath):
             return self.load_result(fpath)
         return False
@@ -565,8 +555,8 @@ class QueryResult(DynStruct):
 class Matcher(object):
     '''Wrapper class: assigns matches based on matching and feature prefs'''
     def __init__(self, hs, match_type='1vM'):
-        feat_type  = hs.feats.feat_type
-        self.feat_type  = feat_type
+        print('Creating matcher: '+str(match_type))
+        self.feat_type  = hs.feats.feat_type
         self.match_type = match_type
         # Possible indexing structures
         self.__one_vs_many    = None
@@ -574,21 +564,23 @@ class Matcher(object):
         # Curry the correct functions
         self.__assign_matches = None
         if   match_type == 'BOW':
-            __one_vs_many = precompute_bag_of_words(hs)
-            self.__one_vs_many    = __one_vs_many
-            self.__assign_matches = assign_matches_BOW
-            pass
+            raise NotImplementedError(match_type)
+            #self.__vocabulary     = precompute_bag_of_words(hs)
+            #self.__assign_matches = self.__assign_matches_BOW
         elif match_type == 'bBOW':
-            pass
+            raise NotImplementedError(match_type)
         elif match_type == 'b1vM':
-            self.__assign_matches = assign_matches_1vM_BINARY
+            raise NotImplementedError(match_type)
+            #self.__assign_matches = assign_matches_1vM_BINARY
         elif match_type == 'b1v1':
-            self.__assign_matches = assign_matches_1v1_BINARY
+            raise NotImplementedError(match_type)
+            #self.__assign_matches = assign_matches_1v1_BINARY
         elif match_type == '1vM':
             self.__one_vs_many = precompute_index_1vM(hs)
             self.__assign_matches = self.__assign_matches_1vM
         elif match_type == '1v1':
-            self.__assign_matches = assign_matches_1v1
+            raise NotImplementedError(match_type)
+            #self.__assign_matches = assign_matches_1v1
         else:
            raise Exception('Unknown match_type: '+repr(match_type))
     def assign_matches(self, qcx, cx2_cid, cx2_desc):
@@ -597,11 +589,12 @@ class Matcher(object):
     # class helpers
     def __assign_matches_1vM(self, qcx, cx2_cid, cx2_desc):
         return assign_matches_1vM(qcx, cx2_cid, cx2_desc, self.__one_vs_many)
+    def __assign_matches_BOW(self, qcx, cx2_cid, cx2_desc):
+        return assign_matches_BOW(qcx, cx2_cid, cx2_desc, self.__vocabulary)
 
 #========================================
 # Work Functions
 #========================================
-__LAZY_MATCHING__ = True
 def run_matching(hs, matcher):
     '''Runs the full matching pipeline using the abstracted classes'''
     cx2_cid  = hs.tables.cx2_cid
@@ -617,7 +610,7 @@ def run_matching(hs, matcher):
             skip_list.append(qcx)
             continue
         res = qcx2_res[qcx]
-        if __LAZY_MATCHING__ and res.load():
+        if params.__LAZY_MATCHING__ and res.load(hs):
             continue
         tt_A = tic('query(qcx=%d)' % qcx)
         # Assign matches with the chosen function (1v1) or (1vM)
@@ -635,7 +628,7 @@ def run_matching(hs, matcher):
         res.cx2_fm_V = cx2_fm_V
         res.cx2_fs_V = cx2_fs_V
         res.cx2_score_V = cx2_score_V
-        res.save()
+        res.save(hs)
     if len(skip_list) > 0:
         print('Skipped more queries than you should have: %r ' % skip_list)
     total_time = toc(tt_ALL)
@@ -644,16 +637,18 @@ def run_matching(hs, matcher):
     return qcx2_res
 
 def run_one_vs_many(hs):
-    return run_matching(hs, Matcher(hs, '1vM'))
+    matcher = hs.use_matcher('1vM')
+    return run_matching(hs, matcher)
 
 def run_one_vs_one(hs):
-    return run_matching(hs, Matcher(hs, '1v1'))
+    matcher = hs.use_matcher('1v1')
+    return run_matching(hs, matcher)
 
 def runall_match(hs):
     #functools.partial
     hs.printme2()
     qcx2_res_1vM = run_one_vs_many()
-    qcx2_res_1v1 = run_one_vs_one()
+    #qcx2_res_1v1 = run_one_vs_one()
 
 
 #========================================
@@ -661,6 +656,22 @@ def runall_match(hs):
 #========================================
 
 # TODO, this should go in a more abstracted module
+class HotSpotter(DynStruct):
+    def __init__(self):
+        super(HotSpotter, self).__init__()
+        self.tables = None
+        self.feats  = None
+        self.cpaths = None
+        self.dirs   = None
+        self.matcher = None
+
+    def algo_uid(self):
+        return self.feats.feat_type+'_'+self.matcher.match_type
+
+    def use_matcher(self, match_type):
+        self.matcher = Matcher(self, match_type)
+        return self.matcher
+
 def load_hotspotter(db_dir):
     'Loads a hs class'
     # --- LOAD DATA --- #
@@ -671,10 +682,11 @@ def load_hotspotter(db_dir):
     hs_feats  = feature_compute2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
     # --- BUILD HOTSPOTTER --- #
     hs = HotSpotter()
-    hs.tables = hs_tables
-    hs.feats  = hs_feats
-    hs.cpaths = hs_cpaths
-    hs.dirs   = hs_dirs
+    hs.tables  = hs_tables
+    hs.feats   = hs_feats
+    hs.cpaths  = hs_cpaths
+    hs.dirs    = hs_dirs
+    hs.use_matcher('1vM')
     return hs
 
 if __name__ == '__main__':

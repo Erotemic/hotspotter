@@ -120,6 +120,7 @@ def present(*args, **kwargs):
     import textwrap
     return textwrap.dedent(r'''
     import helpers
+    import matplotlib.pyplot as plt
     embedded = False
     if not helpers.inIPython():
         if '--cmd' in sys.argv:

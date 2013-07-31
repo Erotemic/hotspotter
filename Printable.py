@@ -3,119 +3,6 @@ import re
 import types
 import numpy as np
 import os.path
-#---------------
-def npArrInfo(arr):
-    info = DynStruct()
-    info.shapestr  = '['+' x '.join([str(x) for x in arr.shape])+']'
-    info.dtypestr  = str(arr.dtype)
-    if info.dtypestr == 'bool':
-        info.bittotal = 'T=%d, F=%d' % (sum(arr), sum(1-arr))
-    elif info.dtypestr == 'object':
-        info.minmaxstr = 'NA'
-    elif info.dtypestr[0] == '|':
-        info.minmaxstr = 'NA'
-    else:
-        info.minmaxstr = '(%s,%s)' % ( str( arr.min() if len(arr) > 0 else None ), str( arr.max() if len(arr) > 0 else None ) )
-    return info
-#---------------
-_lbl2_header = {
-        'cid'  : 'ChipID'      ,\
-        'nid'  : 'NameID'      ,\
-        'gid'  : 'ImgID'       ,\
-        'roi'  : 'roi[tl_x  tl_y  w  h]',\
-        'cx'   : 'ChipIndex'   ,\
-        'nx'   : 'NameIndex'   ,\
-        'gx'   : 'ImageIndex'  ,\
-        'cxs'  : 'ChipIndexes' ,\
-        'cids' : 'ChipIDs',\
-        'name' : 'Name',\
-        'gname': 'ImageName',\
-        'theta': 'theta',\
-        'num_c': 'Num Chips',\
-        'aif'  : 'AllIndexesFound',\
-    }
-def _lbls2_headers(lbls):
-    'Converts lookup keys to readable names if possible'
-    return [_lbl2_header[l] if l in _lbl2_header.keys() else l for l in lbls]
-
-def _lbls2_maxvals(lbls, hs):
-    '''
-    Finds the maximum value seen so far in the managers
-    Uses this to figure out how big to make column spacing
-    If the info doesnt exist, then defaults to spacing of 10
-    '''
-    cm = hs.cm
-    nm = hs.nm
-    gm = hs.gm
-    _lbl2_maxval = {
-        'cid'  : int(cm.max_cid),\
-        'aif'  : 2,\
-        'nid'  : int(nm.max_nid),\
-        'gid'  : int(gm.max_gid),\
-        'roi'  :      cm.max_roi,\
-        'cx'   : int(cm.max_cx) ,\
-        'nx'   : int(nm.max_nx) ,\
-        'gx'   : int(gm.max_gx) ,\
-        'cxs'  : int(cm.max_cx) ,\
-        'cids' :         '',\
-        'name' : nm.max_name,\
-        'gname': gm.max_gname,\
-        'num_c': 10,\
-        'theta': 10.0
-    }
-    return [_lbl2_maxval[l] if l in _lbl2_header.keys() else l for l in lbls]
-
-def lbls2_format(lbls, hs):
-    headers = _lbls2_headers(lbls)
-    maxvals = _lbls2_maxvals(lbls, hs)
-    #A list of (space,format) tuples
-    _spcfmt = [_table_fmt(m, h) for m, h in zip(maxvals, headers)]
-    header_space_list = [ t[0] for t in _spcfmt ]
-    data_format_list  = [ t[1] for t in _spcfmt ]
-    head_format_list  = ', '.join(['{:>%d}']*len(lbls)) % tuple(header_space_list)
-    header = head_format_list.format(*headers)
-    data_format = ', '.join(data_format_list)
-    return (header, data_format)
-
-def _table_fmt(max_val, lbl=""):
-    '''
-    Table Formater: gives you the python string to format your data
-    Input:  longest value
-    Output: (nSpaces, formatStr)
-    '''
-    if max_val == 0:
-        max_val = 1
-    if type(max_val) is types.IntType or type(max_val) == np.uint32:
-        spaces = max(int(np.log10(max_val)), len(lbl))+1
-        fmtstr = '{:>%dd}' % spaces
-    elif type(max_val) is types.FloatType:
-        _nDEC = 3
-        if _nDEC == 0:
-            spaces = max(int(np.log10(max_val)), len(lbl))+1
-            fmtstr = '{:>%d.0f}' % (spaces)
-        else:
-            spaces = max(int(np.log10(max_val))+1+_nDEC, len(lbl))+1
-            fmtstr = '{:>%d.%df}' % (spaces, _nDEC)
-    elif type(max_val) is types.ListType:
-        _SEP    = '  '
-        _rBrace = ' ]'
-        _lBrace = '[ '
-        # Recursively format elements in the list
-        _items  = [_table_fmt(x) for x in max_val]
-        _spc    = [ t[0] for t in _items]
-        _fmt    = [ t[1] for t in _items]
-        spaces  = sum(_spc)+((len(_items)-1)*len(_SEP))+len(_rBrace)+len(_lBrace)
-        if spaces < len(lbl):
-            _lBrace = ' '*(len(lbl)-spaces) + _lBrace
-            #raise Exception('The label is expected to be shorter than the list')
-        fmtstr  = _lBrace+_SEP.join(_fmt)+_rBrace
-    elif type(max_val) is types.StringType:
-        spaces = len(max_val)+1
-        fmtstr = '{:>%d}' % (spaces) 
-    else:
-        raise Exception('Unknown Type for '+str(type(max_val))+'\n label:\"'+str(lbl)+'\" max_val:'+str(max_val) )
-    return (spaces, fmtstr)
-#-----------
 
 class AbstractPrintable(object):
     'A base class that prints its attributes instead of the memory address'
@@ -130,7 +17,7 @@ class AbstractPrintable(object):
         return head+('\n'+body).replace('\n','\n    ')
 
     def printme(self):
-        print(self)
+        print(str(self))
 
     def printme2(self, 
                  type_bit=True, 
@@ -231,49 +118,6 @@ def printableVal(val,type_bit=True, justlength=False):
     _valstr = re.sub('\n *$','', _valstr) # Replace empty lines 
     return _valstr
 #---------------
-class AbstractManager(AbstractPrintable):
-    def __init__(self, hs, child_print_exclude=[]):
-        super(AbstractManager, self).__init__(['hs'] + child_print_exclude)
-        self.hs = hs # ref to core HotSpotter
-#---------------
-class AbstractDataManager(AbstractManager):
-    ' Superclass for chip/name/table managers '
-    def __init__(self, hs, child_print_exclude=[]):
-        super(AbstractDataManager, self).__init__(hs, child_print_exclude+['x2_lbl'])
-
-    def x2_info(self, valid_xs, lbls):
-        ''' Used to print out formated information'''
-        # Get the formating string, so the data looks nice
-        format_tup = lbls2_format(lbls, self.hs)
-        # header formating string
-        header     = format_tup[0]
-        # data formating string
-        dat_format = format_tup[1]
-        # Write info on how many we are writing
-        ret  = '# NumData %d\n' % valid_xs.size
-        ret += '#'+header+'\n'
-        # Ensure iterability
-        if not np.iterable(valid_xs):
-            valid_xs = [valid_xs]
-
-        # Do work. Get the format data for each valid index and 
-        # format it into a nice printable string
-        for x in iter(valid_xs):
-            tup = tuple()
-            for lbl in lbls:
-                try:
-                    # Use x2_lbl property to get what you need
-                    val = self.x2_lbl[lbl](x)
-                    if type(val) in [np.uint32, np.bool_, np.bool]:
-                        val = int(val)
-                    if type(val) == types.StringType or val == []:
-                        raise TypeError
-                    tup = tup+tuple(val)
-                except TypeError:
-                    tup = tup+tuple([val])
-            ret += ' '+dat_format.format(*tup)+'\n'
-        return ret
-
 
 class DynStruct(AbstractPrintable):
     ' dynamical add and remove members '
@@ -281,10 +125,6 @@ class DynStruct(AbstractPrintable):
         super(DynStruct, self).__init__(child_exclude_list)
         if type(copy_dict) == types.DictType:
             self.add_dict(copy_dict)
-        #if copy_class != None and isinstance(copy_class, object):
-            #import inspect
-            #self.copied_class_str = repr(copy_class)
-           # self.add_dict({name:attribute for (name, attribute) in inspect.getmembers(copy_class) if name.find('__') != 0 and str(type(attribute)) != "<type 'builtin_function_or_method'>" and str(type(attribute)) != "<type 'instancemethod'>"})
 
     def dynget(self, *prop_list):
         return tuple([self.__dict__[prop_name] for prop_name in prop_list])
@@ -336,8 +176,18 @@ class DynStruct(AbstractPrintable):
             if not key in self._printable_exclude:
                 execstr+=key+' = '+local_name+'.'+key+'\n'
         return execstr
-        #return '''
-#for (key, val) in %s.__dict__.iteritems():
-    #if not key in %s._printable_exclude:
-        #exec(key+' = %s.'+key)''' % tuple([local_name]*3)
+
 #---------------
+def npArrInfo(arr):
+    info = DynStruct()
+    info.shapestr  = '['+' x '.join([str(x) for x in arr.shape])+']'
+    info.dtypestr  = str(arr.dtype)
+    if info.dtypestr == 'bool':
+        info.bittotal = 'T=%d, F=%d' % (sum(arr), sum(1-arr))
+    elif info.dtypestr == 'object':
+        info.minmaxstr = 'NA'
+    elif info.dtypestr[0] == '|':
+        info.minmaxstr = 'NA'
+    else:
+        info.minmaxstr = '(%s,%s)' % ( str( arr.min() if len(arr) > 0 else None ), str( arr.max() if len(arr) > 0 else None ) )
+    return info

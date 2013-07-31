@@ -230,14 +230,14 @@ def load_pkl(fname):
     with open(fname, 'wb') as file:
         return cPickle.load(file)
 
-def save_npz(fname, *args):
+def save_npz(fname, *args, **kwargs):
     print(' * save_npz: %r ' % fname)
-    with open(fname, 'wb') as file:
-        np.savez(file, *args)
+    np.savez(fname, *args, **kwargs)
 
 def load_npz(fname):
     print(' * load_npz: %r ' % fname)
     npz = np.load(fname)
+    print(' * npz.keys() = %r '+str(npz.keys()))
     return tuple(npz[key] for key in sorted(npz.keys()))
 
 def hashstr_md5(data):

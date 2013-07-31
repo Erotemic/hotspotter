@@ -291,10 +291,12 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type):
             new_desc = ax2_desc_white[index:offset]
             cx2_desc[cx] = new_desc
             index += offset
+    else:
+        print(' * not whitening features')
     #if __WHITEN_INDIVIDUAL__: # I dont think this is the way to go
     #    cx2_desc = [algos.whiten(d) for (k,d) in cx2_feats]
 
-    helpers.save_npz(cx2_feats_fpath, cx2_kpts, cx2_desc)
+    helpers.save_npz(cx2_feats_fpath, cx2_kpts=cx2_kpts, cx2_desc=cx2_desc)
 
     return cx2_kpts, cx2_desc
     

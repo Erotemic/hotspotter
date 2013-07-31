@@ -6,8 +6,8 @@ import drawing_functions2 as df2
 # Hotspotter Imports
 from cvransac2 import H_homog_from_DELSAC
 from helpers import checkpath
-from hotspotter.helpers import Timer, get_exec_src, check_path, tic, toc, myprint, printWARN
-from hotspotter.other.ConcretePrintable import DynStruct
+from helpers import Timer, get_exec_src, tic, toc, myprint, printWARN
+from Printable import DynStruct
 import algos2
 import chip_compute2
 import cvransac2
@@ -50,7 +50,6 @@ __RATIO_THRESH__ = params.__RATIO_THRESH__
 __FLANN_PARAMS__ = params.__FLANN_PARAMS__
 __FEAT_TYPE__    = params.__FEAT_TYPE__ 
 __XY_THRESH__    = params.__XY_THRESH__ = .05
-__FEAT_TYPE__    = 'HESAFF'
 
 def printDBG(msg):
     pass
@@ -243,9 +242,7 @@ def aggregate_descriptors_1vM(hs):
     ax2_cx  = np.array(list(itertools.chain.from_iterable(_ax2_cx)))
     ax2_fx  = np.array(list(itertools.chain.from_iterable(_ax2_fx)))
     ax2_desc = np.vstack(cx2_desc)
-    #ax2_desc_white = whiten(ax2_desc)
-    #data = ax2_desc_white
-    #data = scale_to_byte_range(data)
+    # Whitening should have already happened
     return ax2_cx, ax2_fx, ax2_desc
 
 #@profile
@@ -257,7 +254,7 @@ def precompute_index_1vM(hs):
     flann_1vM = pyflann.FLANN()
     flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
     load_success = False
-    if check_path(flann_1vM_path):
+    if checkpath(flann_1vM_path):
         try:
             print('Trying to load FLANN index')
             flann_1vM.load_index(flann_1vM_path, ax2_desc)
@@ -633,11 +630,17 @@ def run_matching(hs, matcher):
     report_results2.write_rank_results(cx2_res, hs, matcher)
     return cx2_res
 
+def run_one_vs_many(hs):
+    return run_matching(hs, Matcher(hs, '1vM'))
+
+def run_one_vs_one(hs):
+    return run_matching(hs, Matcher(hs, '1v1'))
+
 def runall_match(hs):
     #functools.partial
     hs.printme2()
-    cx2_res_1vM = run_matching(hs, Matcher(hs, '1vM'))
-    #cx2_res_1v1 = run_matching(hs, Matcher(hs, '1v1'))
+    cx2_res_1vM = run_one_vs_many()
+    cx2_res_1v1 = run_one_vs_one()
 
 
 #========================================
@@ -653,7 +656,6 @@ def load_hotspotter(db_dir):
     hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
     # --- LOAD FEATURES --- #
     hs_feats  = feature_compute2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
-    hs_feats.set_feat_type(__FEAT_TYPE__)
     # --- BUILD HOTSPOTTER --- #
     hs = HotSpotter()
     hs.tables = hs_tables

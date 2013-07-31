@@ -1,22 +1,23 @@
-from __future__ import division, print_function
+from __future__ import division
+#from __init__ import *
+# import hotspotter modules
 import drawing_functions2 as df2
-import match_chips2 as mc2
-from hotspotter.Parallelize import parallel_compute
-from hotspotter.helpers import normalize
-from hotspotter.other.ConcretePrintable import DynStruct, Pref
-from numpy import array, cos, float32, hstack, pi, round, sqrt, uint8, zeros
-import algos2
 import algos2 as algos
-import sys
-import hotspotter.tpl.hesaff
-import numpy as np
-import load_data2, chip_compute2
-import params2
+import match_chips2 as mc2
 import params2 as params
+import tpl.hesaff as hesaff
+import helpers
+from Parallelize import parallel_compute
+from Pref import Pref
+from Printable import DynStruct
+# import scientific modules
+from numpy import array, cos, float32, hstack, pi, round, sqrt, uint8, zeros
+import numpy as np
 import cv2
+# import python modules
+import sys
 
 
-__NUM_PROCS__ = 9
 #def old_cvkpts2_kpts(cvkpts)
     #kpts = zeros((len(cvkpts), 5), dtype=float32)
     #fx = 0
@@ -33,13 +34,13 @@ __NUM_PROCS__ = 9
 def root_sift(desc):
     ''' Takes the square root of each descriptor and returns the features in the
     range 0 to 255 (as uint8) '''
-    desc_ = array([sqrt(d) for d in normalize(desc)])
-    desc_ = array([round(255.0 * d) for d in normalize(desc_)], dtype=uint8)
+    desc_ = array([sqrt(d) for d in algos.norm_zero_one(desc)])
+    desc_ = array([round(255.0 * d) for d in algos.norm_zero_one(desc_)], dtype=uint8)
     return desc_
 
 def print_cvkpt(cvkp):
     import types
-    from hotspotter.helpers import public_attributes
+    from helpers import public_attributes
     if type(cvkp) == types.ListType:
         [print_cvkpt(kp) for kp in cvkp]
         return
@@ -158,7 +159,7 @@ freak_extractor.setBool('orientationNormalized', False)
 # =======================================
 
 def compute_hesaff(rchip):
-    return hotspotter.tpl.hesaff.compute_hesaff(rchip)
+    return hesaff.compute_hesaff(rchip)
 def compute_sift(rchip):
     return __compute(rchip, __detector, sift_extractor)
 def compute_freak(rchip):
@@ -169,7 +170,7 @@ def compute_freak(rchip):
 # =======================================
 
 def precompute_hesaff(rchip_path, feats_path):
-    return hotspotter.tpl.hesaff.precompute_hesaff(rchip_path, feats_path)
+    return hesaff.precompute_hesaff(rchip_path, feats_path)
 def precompute_sift(rchip_path, feats_path):
     return __precompute(rchip_path, feats_path, compute_sift)
 def precompute_freak(rchip_path, feats_path):
@@ -243,20 +244,60 @@ class HotspotterChipFeatures(DynStruct):
             cx2_feats = self.cx2_feats_sift
         elif self.feat_type.upper() == 'FREAK':
             cx2_feats = self.cx2_feats_freak
-        cx2_desc = [algos.whiten(d) for (k,d) in cx2_feats]
-        cx2_kpts  = [k for (k,d) in cx2_feats]
         self.cx2_kpts = cx2_kpts
         self.cx2_desc = cx2_desc
 
 def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type):
+    print('Loading '+feat_type+' features')
+    whiten = params.__WHITEN_FEATS__
+    computed_dir = params.__COMPUTED_DIR__
+    helpers.ensuredir(computed_dir)
+    suffix = '_'.join([feat_type, ['','white'][whiten]])+'.npz'
+    cx2_feats_fpath = computed_dir + '/cx2_feats_'+suffix
+    
+    if helpers.checkpath(cx2_feats_fpath):
+        helpers.print_(' * attempting to load cx2_feats from disk')
+        helpers.flush()
+        loaded = False
+        try: 
+            cx2_kpts, cx2_desc = helpers.load_npz(cx2_feats_fpath)
+            helpers.println('...success')
+            loaded = True
+        except Exception as ex:
+            helpers.println('...failure')
+            print(repr(ex))
+            helpers.remove_file(cx2_feats_fpath)
+        if loaded:
+            return cx2_kpts, cx2_desc
+
+    print(' * Loading original '+feat_type+' features')
     cx2_feat_path = [ feat_dir+'/CID_%d_%s.npz' % (cid, feat_type) for cid in cx2_cid]
     # Compute features
-    print('Loading '+feat_type)
     precompute_func = type2_precompute_func[feat_type]
-    parallel_compute(precompute_func, [cx2_rchip_path, cx2_feat_path], __NUM_PROCS__)
+    parallel_compute(precompute_func, [cx2_rchip_path, cx2_feat_path], params.__NUM_PROCS__)
+
     # Load features
     cx2_feats = parallel_compute(load_features, [cx2_feat_path], 1)
-    return cx2_feats
+    cx2_kpts  = [k for (k,d) in cx2_feats]
+    cx2_desc  = [d for (k,d) in cx2_feats]
+    # Whiten descriptors
+    if whiten:
+        print(' * Whitening features')
+        ax2_desc = np.vstack(cx2_desc)
+        ax2_desc_white = algos.scale_to_byte(algos.whiten(ax2_desc))
+        index = 0
+        for cx in xrange(len(cx2_desc)):
+            old_desc = cx2_desc[cx]
+            offset = len(old_desc)
+            new_desc = ax2_desc_white[index:offset]
+            cx2_desc[cx] = new_desc
+            index += offset
+    #if __WHITEN_INDIVIDUAL__: # I dont think this is the way to go
+    #    cx2_desc = [algos.whiten(d) for (k,d) in cx2_feats]
+
+    helpers.save_npz(cx2_feats_fpath, cx2_kpts, cx2_desc)
+
+    return cx2_kpts, cx2_desc
     
     
 def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
@@ -268,28 +309,14 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     feat_dir       = hs_dirs.feat_dir
     cx2_rchip_path = hs_cpaths.cx2_rchip_path
     cx2_cid        = hs_tables.cx2_cid
-    # --- COMPUTE FEATURE PATHS --- # 
-    #cx2_hesaff_path = [ feat_dir+'/CID_%d_hesaff.npz' % cid for cid in cx2_cid]
-    #cx2_sift_path   = [ feat_dir+'/CID_%d_sift.npz'   % cid for cid in cx2_cid]
-    #cx2_freak_path  = [ feat_dir+'/CID_%d_freak.npz'  % cid for cid in cx2_cid]
-    ## --- COMPUTE FEATURES --- # 
-    #print('Computing features')
-    #parallel_compute(precompute_hesaff, [cx2_rchip_path, cx2_hesaff_path], __NUM_PROCS__)
-    #parallel_compute(precompute_sift,   [cx2_rchip_path, cx2_sift_path],   __NUM_PROCS__)
-    #parallel_compute(precompute_freak,  [cx2_rchip_path, cx2_freak_path],  __NUM_PROCS__) 
-    ## --- LOAD FEATURES --- # 
-    #print('Loading features')
-    #cx2_feats_hesaff = parallel_compute(load_features, [cx2_hesaff_path], 1)
-    #cx2_feats_sift   = parallel_compute(load_features, [cx2_sift_path], 1)
-    #cx2_feats_freak  = parallel_compute(load_features, [cx2_freak_path], 1)
-    # --- BUILD OUTPUT --- #
     hs_feats = HotspotterChipFeatures()
-    #hs_feats.cx2_feats_hesaff = cx2_feats_hesaff
-    #hs_feats.cx2_feats_sift   = cx2_feats_sift
-    #hs_feats.cx2_feats_freak  = cx2_feats_freak
-    hs_feats.cx2_feats_hesaff = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'HESAFF')
-    hs_feats.cx2_feats_sift   = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'SIFT')
-    hs_feats.cx2_feats_freak  = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'FREAK')
+    # Load all the types of features
+    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, params.__FEAT_TYPE__)
+    hs_feats.feat_type = params.__FEAT_TYPE__
+    hs_feats.cx2_kpts = cx2_kpts
+    hs_feats.cx2_desc = cx2_desc
+    #hs_feats.cx2_feats_sift   = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'SIFT')
+    #hs_feats.cx2_feats_freak  = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'FREAK')
     print('=============================')
     print('Done computing and loading features')
     print('=============================\n\n')
@@ -307,7 +334,7 @@ if __name__ == '__main__':
         db_dir = load_data2.MOTHERS
         # --- LOAD DATA --- #
         hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
-        hs_dirs.vdd()
+        #hs_dirs.vdd()
         # --- LOAD CHIPS --- #
         hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
         # --- LOAD FEATURES --- #
@@ -315,4 +342,3 @@ if __name__ == '__main__':
         hs_feats.set_feat_type(mc2.__FEAT_TYPE__)
         cx2_desc  = hs_feats.cx2_desc
         cx2_kpts  = hs_feats.cx2_kpts
-

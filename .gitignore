@@ -18,3 +18,9 @@ desktop.ini
 *.pkl
 *.png
 .hidden
+
+*.exe
+*.dll
+*.ln
+*.a.*
+*.so.*

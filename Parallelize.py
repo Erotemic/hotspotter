@@ -1,7 +1,7 @@
 # http://docs.python.org/2/library/multiprocessing.html
 from __future__ import print_function, division
 import multiprocessing as mp
-from hotspotter.helpers import Timer
+from helpers import Timer
 import sys
 import os.path
 

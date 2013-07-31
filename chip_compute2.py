@@ -1,15 +1,14 @@
 from __future__ import division
 from PIL import Image
-from hotspotter.Parallelize import parallel_compute
-from hotspotter.algo.imalgos import histeq
-from hotspotter.helpers import ensure_path, mystats, myprint
-from hotspotter.other.ConcretePrintable import DynStruct
+from Parallelize import parallel_compute
+from Printable import DynStruct
+from helpers import ensure_path, mystats, myprint
+import algos2 as algos
 import load_data2
 import numpy as np
 import os, sys
+import params2 as params
 
-
-__HISTEQ__ = False
 
 # =======================================
 # Parallelizable Work Functions          
@@ -34,8 +33,8 @@ def compute_chip(img_path, chip_path, roi, new_size):
     # Scale chip, but do not rotate
     chip = raw_chip.convert('L').resize(new_size, Image.ANTIALIAS)
     # Preprocessing based on preferences
-    if __HISTEQ__:
-        chip = histeq(chip)
+    if params.__HISTEQ__:
+        chip = algos.histeq(chip)
     # Save chip to disk
     chip.save(chip_path, 'PNG')
     return True

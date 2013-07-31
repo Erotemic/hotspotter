@@ -1,3 +1,9 @@
+import os.path
+
+
+# Number of processessors
+__NUM_PROCS__ = 9
+
 # Feature type to use
 __FEAT_TYPE__    = 'HESAFF'
 # Number of matches for one-vs-many
@@ -37,3 +43,10 @@ mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
                               'trees'              : 1}
 __FLANN_ONCE_PARAMS__ = mother_hesaff_tuned_params
 __FLANN_PARAMS__      = hs1_params
+
+
+__COMPUTED_DIR__ = os.path.realpath('results/computed')
+
+__WHITEN_FEATS__ = False
+
+__HISTEQ__ = False

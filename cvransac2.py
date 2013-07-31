@@ -1,8 +1,8 @@
-import numpy as np
-import cv2
+from helpers import printWARN
 from numpy import linalg
 from warnings import catch_warnings, simplefilter 
-from helpers import printWARN
+import cv2
+import numpy as np
 import scipy.sparse
 import scipy.sparse.linalg
 
@@ -283,7 +283,7 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
             H_prime = compute_homog(xyz_norm1, xyz_norm2)
             H = linalg.solve(T2, H_prime).dot(T1)                # Unnormalize
         except linalg.LinAlgError as ex:
-            printWARN('Warning 285 '+repr(ex))
+            #printWARN('Warning 285 '+repr(ex), )
             return None
 
     # Estimate final inliers

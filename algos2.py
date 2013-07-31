@@ -1,18 +1,34 @@
 import drawing_functions2 as df2
+from PIL import Image, ImageOps
+from helpers import load_npz, save_npz, checkpath, remove_file, vd, hashstr_md5, myprint
+from numpy import asarray, percentile, uint8, uint16
 from os.path import realpath
-import sklearn.decomposition
+import helpers
 import imp
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import pyflann
-import sys
 import params2
 import params2 as params
-import hotspotter.helpers
-from hotspotter.helpers import load_npz, save_npz, checkpath, remove_file, vd, hashstr_md5, myprint
+import pyflann
+import sklearn.decomposition
+import sys
 #imp.reload(sys.modules['hotspotter.helpers'])
 #imp.reload(sys.modules['params2'])
+
+def histeq(pil_img):
+    img = asarray(pil_img)
+    try:
+        from skimage import exposure
+        'Local histogram equalization'
+        # Equalization
+        img_eq_float64 = exposure.equalize_hist(img)
+        return Image.fromarray(uint8(np.round(img_eq_float64*255)))
+    except Exception as ex:
+        from tpl.other import imtools
+        print('Scikits not found: %s' % str(ex))
+        print('Using fallback histeq')
+        return Image.fromarray(imtools.histeq(img)).convert('L')
 
 def tune_flann(data):
     flann = pyflann.FLANN()
@@ -181,8 +197,8 @@ def whiten(data):
     return data_out
 def norm_zero_one(data):
     return (data - data.min()) / (data.max() - data.min())
-def scale_to_byte_range(data):
-    return np.array(norm_zero_one(data) * 255, dtype=np.uint8)
+def scale_to_byte(data):
+    return np.array(np.round(norm_zero_one(data) * 255), dtype=np.uint8)
 
 def plot_clusters(data, datax2_clusterx, clusters):
     # http://www.janeriksolem.net/2012/03/isomap-with-scikit-learn.html

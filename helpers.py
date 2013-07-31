@@ -22,6 +22,9 @@ import warnings
 import fnmatch
 from sys import stdout as sout
 
+def cmd(command):
+    os.system(command)
+
 def _print(msg):
     sout.write(msg)
 def _println(msg):
@@ -79,6 +82,9 @@ def longest_existing_path(_path):
     return _path
 
 def normalize(array, dim=0):
+    return norm_zero_one(array, dim)
+
+def norm_zero_one(array, dim=0):
     'normalizes a numpy array from 0 to 1'
     array_max  = array.max(dim)
     array_min  = array.min(dim)
@@ -95,7 +101,7 @@ def checkpath(_path):
             path_type = 'file'
         if os.path.isdir(_path): 
             path_type = 'directory'
-        println('... exists ('+path_type+')')
+        println('...('+path_type+') exists')
     else:
         println('... does not exist')
         #print('\n  ! Does not exist')
@@ -168,10 +174,10 @@ def ensurepath(_path):
         print('... Making directory: ' + _path)
         os.makedirs(_path)
     return True
-
+def ensuredir(_path):
+    return ensurepath(_path)
 def ensure_path(_path):
     return ensurepath(_path)
-
 def assertpath(_path):
     if not checkpath(_path):
         raise AssertionError('Asserted path does not exist: '+_path)
@@ -203,14 +209,6 @@ def str2(obj):
     else:
         return str(obj)
 #---------------
-'''
-def __getstate__(self):
-    out_dict = self.__dict__.copy()
-    return odict
-def __setstate__(self, in_dict):
-    self.__dict__.update(in_dict)
-'''
-#---------------
 import cPickle
 def sanatize_fname(fname):
     ext = '.pkl'
@@ -227,20 +225,19 @@ def load_pkl(fname):
         return cPickle.load(file)
 
 def save_npz(fname, *args):
+    print(' * save_npz: %r ' % fname)
     with open(fname, 'wb') as file:
         np.savez(file, *args)
 
 def load_npz(fname):
+    print(' * load_npz: %r ' % fname)
     npz = np.load(fname)
     return tuple(npz[key] for key in sorted(npz.keys()))
-
 
 def hashstr_md5(data):
     import hashlib
     return hashlib.md5(data).hexdigest()
     
-
-
 #---------------
 def __DEPRICATED__(func):
     'deprication decorator'
@@ -503,7 +500,16 @@ def endl():
     sout.flush()
     return '\n'
 def printINFO(msg, *args):
-    msg = 'INFO: '+printINFO
+    msg = 'INFO: '+str(msg)+''.join(map(str,args))
+    return println_(msg, *args)
+
+def printDBG(msg, *args):
+    msg = 'DEBUG: '+str(msg)+''.join(map(str,args))
+    return println_(msg, *args)
+
+def printERR(msg, *args):
+    msg = 'ERROR: '+str(msg)+''.join(map(str,args))
+    raise Exception(msg)
     return println_(msg, *args)
 
 def printWARN(warn_msg, category=UserWarning):
@@ -586,6 +592,14 @@ def module_explore(module_, seen=None, maxdepth=2, nonmodules=False):
 '''
 exec(open('helpers.py','r').read())
 '''
+'''
+def __getstate__(self):
+    out_dict = self.__dict__.copy()
+    return odict
+def __setstate__(self, in_dict):
+    self.__dict__.update(in_dict)
+'''
+#---------------
 
 if __name__ == '__main__':
     print('You ran helpers as main!')

@@ -1,8 +1,9 @@
 import numpy as np
 import datetime
 import textwrap
+import sys
 from os.path import realpath, join
-from hotspotter.helpers import ensurepath
+from helpers import ensurepath
 
 
 def get_expt_type(hs, matcher):
@@ -142,3 +143,18 @@ def write_to(filename, to_write):
 
 def gvim(string):
     os.system('gvim '+result_csv)
+
+
+if __name__ == '__main__':
+    from multiprocessing import freeze_support
+    freeze_support()
+    import match_chips2 as mc2
+    import load_data2
+    # --- CHOOSE DATABASE --- #
+    db_dir = load_data2.MOTHERS
+    hs = mc2.load_hotspotter(db_dir)
+    argv = set([arg.lower() for arg in sys.argv])
+    if any([arg1v1.lower() in argv for arg1v1 in ['1v1','one-vs-one','ovo']]):
+        cx2_res = mc2.run_one_vs_one(hs)
+    if any([arg1vM.lower() in argv for arg1vM in ['1vM','one-vs-many','ovm']]):
+        cx2_res = mc2.run_one_vs_many(hs)

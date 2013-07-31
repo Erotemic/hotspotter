@@ -5,6 +5,7 @@
 import drawing_functions2 as df2
 # Hotspotter Imports
 from cvransac2 import H_homog_from_DELSAC
+from helpers import checkpath
 from hotspotter.helpers import Timer, get_exec_src, check_path, tic, toc, myprint, printWARN
 from hotspotter.other.ConcretePrintable import DynStruct
 import algos2
@@ -403,7 +404,7 @@ def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
     # Get match threshold 10% of matching keypoint extent diagonal
     img1_extent = (kpts1_m[0:2,:].max(1) - kpts1_m[0:2,:].min(1))[0:2]
     xy_thresh1_sqrd = np.sum(img1_extent**2) * (__XY_THRESH__**2)
-    dodbg = True if DBG is None else __DEBUG__
+    dodbg = False if DBG is None else __DEBUG__
     if dodbg:
         print('---------------------------------------')
         print('INFO: spatially_verify xy threshold:')
@@ -413,13 +414,18 @@ def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
         print(' * xy_thresh1_sqrd=%.2f'  % np.sqrt(xy_thresh1_sqrd))
         print('---------------------------------------')
     # -----------------------------------------------
-    H, inliers = func_homog(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
+    hinlier_tup = func_homog(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
     if dodbg:
         print('  * ===')
         print('  * Found '+str(len(inliers))+' inliers')
         print('  * with transform H='+repr(H))
         print('  * fm.shape = %r fs.shape = %r' % (fm.shape, fs.shape))
 
+    if not hinlier_tup is None:
+        H, inliers = hinlier_tup
+    else:
+        H = np.eye(3)
+        inliers = []
     if len(inliers) > 0:
         fm_V = fm[inliers,:]
         fs_V = fs[inliers,:]
@@ -463,47 +469,6 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
 def warp_chip(rchip2, H, rchip1):
     rchip2W = cv2.warpPerspective(rchip2, H, rchip1.shape[0:2][::-1])
     return rchip2W
-
-#========================================
-# Work Functions
-#========================================
-
-def run_matching(hs, matcher):
-    '''Runs the full matching pipeline using the abstracted classes'''
-    cx2_cid  = hs.tables.cx2_cid
-    cx2_desc = hs.feats.cx2_desc
-    cx2_kpts = hs.feats.cx2_kpts 
-    cx2_res = [QueryResult() for _ in xrange(len(cx2_cid))]
-    tt_ALL = tic('all queries')
-    assign_times = []
-    verify_times = []
-    skip_list = []
-    for qcx, qcid in enumerate(cx2_cid):
-        if qcid == 0: 
-            skip_list.append(qcx)
-            continue
-        tt_A = tic('query(qcx=%d)' % qcx)
-        # Assign matches with the chosen function (1v1) or (1vM)
-        (cx2_fm, cx2_fs) = matcher.assign_matches(qcx, cx2_cid, cx2_desc)
-        assign_times.append(toc(tt_A))
-        # Spatially verify the assigned matches
-        tt_V = tic('verify(qcx=%d)' % qcx)
-        (cx2_fm_V, cx2_fs_V) = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
-        verify_times.append(toc(tt_V))
-        # Assign output to a query result
-        res = cx2_res[qcx]
-        res.qcx = qcx
-        res.cx2_fm    = cx2_fm
-        res.cx2_fs    = cx2_fs
-        res.cx2_fm_V = cx2_fm_V
-        res.cx2_fs_V = cx2_fs_V
-    if len(skip_list) > 0:
-        print('Skipped more queries than you should have: %r ' % skip_list)
-    total_time = toc(tt_ALL)
-    # Write results out to disk
-    report_results2.write_rank_results(cx2_res, hs, matcher)
-    return cx2_res
-
 #========================================
 # Wrapper/Data classes
 #========================================
@@ -533,11 +498,15 @@ class HotSpotter(DynStruct):
         self.cpaths = None
         self.dirs   = None
 
+import os
+from helpers import ensurepath
+__QueryResults_path__ = os.path.realpath('results/queryresults')
+__AlgorithmUID__ = 'HESAFF-1vM'
+ensurepath(__QueryResults_path__)
 class QueryResult(DynStruct):
-    def __init__(self):
+    def __init__(self, qcx):
         super(QueryResult, self).__init__()
-        self.qcx    = -1
-        self.algo   = ''
+        self.qcx    = qcx
         # Assigned features matches
         self.cx2_fm = []
         self.cx2_fs = []
@@ -545,27 +514,44 @@ class QueryResult(DynStruct):
         self.cx2_fm_V = []
         self.cx2_fs_V = []
 
-    def save_result(rr, rr_dpath, rr_suffix):
-        'Saves the result to the given database'
-        to_save  = rr.__dict__.copy()
-        rr_fpath = rr.rr_fpath(rr_dpath, rr_suffix)
-        np.savez(rr_fpath, **to_save)
+    def get_fpath(self):
+        fname = 'result_'+__AlgorithmUID__+'_qcx=%d.npz' % self.qcx
+        fpath = os.path.join(__QueryResults_path__, fname)
+        return fpath
+    
+    def save(self):
+        fpath = self.get_fpath()
+        print('Saving results to '+repr(fpath))
+        return self.save_result(fpath)
 
-    def load_result(rr, rr_dpath, rr_suffix):
+    def load(self):
+        fpath = self.get_fpath()
+        if checkpath(fpath):
+            return self.load_result(fpath)
+        return False
+
+    def save_result(self, fpath):
+        'Saves the result to the given database'
+        to_save  = self.__dict__.copy()
+        np.savez(fpath, **to_save)
+        return True
+
+    def load_result(self, fpath):
         'Loads the result from the given database'
-        rr_fpath = rr.rr_fpath(rr_dpath, rr_suffix)
         try:
-            npz = np.load(rr_fpath)
+            npz = np.load(fpath)
             for _key in npz.files:
                 if _key in ['qcx']:
-                    rr.__dict__[_key] = npz[_key].tolist()
+                    self.__dict__[_key] = npz[_key].tolist()
                 else: 
-                    rr.__dict__[_key] = npz[_key]
+                    self.__dict__[_key] = npz[_key]
             # Numpy saving is werid. gotta cast
+            return True
         except Exception as ex:
-            os.remove(rr_fpath)
+            os.remove(fpath)
             printWARN('Load Result Exception : ' + str(ex) + 
-                    '\nResult was corrupted for cx=%d' % rr.qcx)
+                    '\nResult was corrupted for qcx=%d' % self.qcx)
+            return False
 
 class Matcher(object):
     '''Wrapper class: assigns matches based on matching and feature prefs'''
@@ -604,6 +590,57 @@ class Matcher(object):
         return assign_matches_1vM(qcx, cx2_cid, cx2_desc, self.__one_vs_many)
 
 #========================================
+# Work Functions
+#========================================
+__LAZY_MATCHING__ = True
+def run_matching(hs, matcher):
+    '''Runs the full matching pipeline using the abstracted classes'''
+    cx2_cid  = hs.tables.cx2_cid
+    cx2_desc = hs.feats.cx2_desc
+    cx2_kpts = hs.feats.cx2_kpts 
+    # qcx2_res
+    cx2_res = [QueryResult(qcx) for qcx in xrange(len(cx2_cid))]
+    tt_ALL = tic('all queries')
+    assign_times = []
+    verify_times = []
+    skip_list = []
+    for qcx, qcid in enumerate(cx2_cid):
+        if qcid == 0: 
+            skip_list.append(qcx)
+            continue
+        res = cx2_res[qcx]
+        if __LAZY_MATCHING__ and res.load():
+            continue
+        tt_A = tic('query(qcx=%d)' % qcx)
+        # Assign matches with the chosen function (1v1) or (1vM)
+        (cx2_fm, cx2_fs) = matcher.assign_matches(qcx, cx2_cid, cx2_desc)
+        assign_times.append(toc(tt_A))
+        # Spatially verify the assigned matches
+        tt_V = tic('verify(qcx=%d)' % qcx)
+        (cx2_fm_V, cx2_fs_V) = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
+        verify_times.append(toc(tt_V))
+        # Assign output to a query result
+        res.qcx = qcx
+        res.cx2_fm    = cx2_fm
+        res.cx2_fs    = cx2_fs
+        res.cx2_fm_V = cx2_fm_V
+        res.cx2_fs_V = cx2_fs_V
+        res.save()
+    if len(skip_list) > 0:
+        print('Skipped more queries than you should have: %r ' % skip_list)
+    total_time = toc(tt_ALL)
+    # Write results out to disk
+    report_results2.write_rank_results(cx2_res, hs, matcher)
+    return cx2_res
+
+def runall_match(hs):
+    #functools.partial
+    hs.printme2()
+    cx2_res_1vM = run_matching(hs, Matcher(hs, '1vM'))
+    #cx2_res_1v1 = run_matching(hs, Matcher(hs, '1v1'))
+
+
+#========================================
 # DRIVER CODE
 #========================================
 
@@ -624,12 +661,6 @@ def load_hotspotter(db_dir):
     hs.cpaths = hs_cpaths
     hs.dirs   = hs_dirs
     return hs
-
-def runall_match(hs):
-    #functools.partial
-    hs.printme2()
-    cx2_res_1vM = run_matching(hs, Matcher(hs, '1vM'))
-    #cx2_res_1v1 = run_matching(hs, Matcher(hs, '1v1'))
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
@@ -655,10 +686,10 @@ if __name__ == '__main__':
         print(hs_tables)
         print(hs_feats)
         # Convinent but bad # 
-        exec(hs_cpaths.execstr('hs_cpaths'))
-        exec(hs_feats.execstr('hs_feats'))
-        exec(hs_tables.execstr('hs_tables'))
-        exec(hs_dirs.execstr('hs_dirs'))
+        #exec(hs_cpaths.execstr('hs_cpaths'))
+        #exec(hs_feats.execstr('hs_feats'))
+        #exec(hs_tables.execstr('hs_tables'))
+        #exec(hs_dirs.execstr('hs_dirs'))
         #cx  = 1
         # All of these functions operate on one qcx (except precompute I guess)
         #exec(get_exec_src(precompute_index_1vM))

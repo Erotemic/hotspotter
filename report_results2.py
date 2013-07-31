@@ -21,7 +21,6 @@ def write_report(report_str, report_type, expt_type, results_path):
 def write_rank_results(cx2_res, hs, matcher, results_path='results'):
     expt_type = get_expt_type(hs, matcher)
     rankres_str = rank_results(cx2_res, hs.tables, expt_type=expt_type)
-    print(rankres_str)
     report_type = 'rank_'
     write_report(rankres_str, report_type, expt_type, results_path)
 
@@ -45,6 +44,7 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
 
     for qcx, qcid in enumerate(cx2_cid):
         res = cx2_res[qcx]
+        if res.cx2_fs is None or len(res.cx2_fs) == 0: continue
         # The score is the sum of the feature scores
         cx2_score = np.array([np.sum(fs) for fs in res.cx2_fs])
         top_cx = np.argsort(cx2_score)[::-1]
@@ -107,7 +107,7 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
         rankres_csv_lines.append(csv_line)
 
     # Build the experiment summary report
-    rankres_summary  = ''
+    rankres_summary  = '\n'
     rankres_summary += '# Experiment Summary: '+expt_type+'\n'
     rankres_summary +=  get_timestamp(format='comment')+'\n'
     rankres_summary += '# Num Chips: %d \n' % num_chips

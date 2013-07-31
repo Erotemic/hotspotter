@@ -1,4 +1,3 @@
-from __future__ import print_function
 '''
 This is less of a helper function file and more of a pile of things 
 where I wasn't sure of where to put. 
@@ -475,6 +474,115 @@ def profile(cmd):
     os.system(view_cmd)
     return True
 
+def profile_lines(fname):
+    import __init__
+    hs_path = os.path.split(__init__.__file__)
+    lineprofile_path = hs_path, '.lineprofile'
+    ensurepath('')
+
 #http://www.huyng.com/posts/python-performance-analysis/
 #Once youve gotten your code setup with the @profile decorator, use kernprof.py to run your script.
 #kernprof.py -l -v fib.py
+
+
+def println(msg, *args):
+    args = args+tuple('\n',)
+    return print_(msg, *args)
+def print_(msg, *args):
+    msg_ = str(msg)+''.join(map(str,args))
+    sout.write(msg_)
+    return msg_
+def flush():
+    sout.flush()
+    return ''
+def endl():
+    print_('\n')
+    sout.flush()
+    return '\n'
+
+import types
+
+def truncate_str(str, maxlen=110):
+    if len(str) < maxlen:
+        return str
+    else:
+        truncmsg = ' /* TRUNCATED */ '
+        maxlen_= maxlen - len(truncmsg)
+        lowerb = int(maxlen_ * .8) 
+        upperb = maxlen_ - lowerb
+        return str[:lowerb]+truncmsg+str[-upperb:]
+    
+def module_explore(module_, seen=None, maxdepth=2, nonmodules=False):
+    def __childiter(module):
+        for aname in iter(dir(module)):
+            if aname.find('_') == 0: 
+                continue
+            try:
+                yield module.__dict__[aname], aname
+            except KeyError as ex:
+                print repr(ex)
+                pass
+    def __module_explore(module, indent, seen, depth, maxdepth, nonmodules):
+        valid_children = []
+        ret = u''
+        modname = str(module.__name__)
+        #modname = repr(module)
+        for child, aname in __childiter(module):
+            try: 
+                childtype = type(child)
+                if not childtype == types.ModuleType:
+                    if nonmodules:
+                        print_(depth)
+                        fullstr = indent+'    '+str(aname)+' = '+repr(child)
+                        truncstr = println(truncate_str(fullstr))
+                        ret +=  truncstr
+                    continue
+                childname = str(child.__name__)
+                if not seen is None:
+                    if childname in seen: 
+                        continue
+                    elif maxdepth is None:
+                      seen.add(childname)
+                if childname.find('_') == 0: 
+                    continue
+                valid_children.append(child)
+            except Exception as ex:
+                print repr(ex)
+                pass
+        # Print 
+        print_(depth)
+        ret += println(indent+modname)
+        # Recurse
+        if not maxdepth is None and depth >= maxdepth: 
+            return ret
+        ret += ''.join([__module_explore(child,
+                                         indent+'    ', 
+                                         seen, depth+1,
+                                         maxdepth,
+                                         nonmodules) \
+                       for child in iter(valid_children)])
+
+        return ret
+    ret = ''
+    ret += println('Exploring: '+str(module_))
+    ret += __module_explore(module_, '     ', seen, 0, maxdepth, nonmodules)
+    #print ret
+    flush()
+    return ret
+'''
+exec(open('helpers.py','r').read())
+'''
+
+if __name__ == '__main__':
+    print('You ran helpers as main!')
+    import algos2
+    import sklearn
+    module = algos2
+    seen = set(['numpy','matplotlib', 'scipy', 'pyflann', 'sklearn', 'skimage', 'cv2'])
+
+    hs2_basic = set(['drawing_functions2', 'params2', 'mc2'])
+    python_basic = set(['os','sys', 'warnings', 'inspect','copy', 'imp','types'])
+    tpl_basic = set(['pyflann', 'cv2'])
+    science_basic = set(['numpy','matplotlib', 'matplotlib.pyplot', 'scipy'])
+    seen = set(list(python_basic) + list(science_basic) + list(tpl_basic))
+    module_explore(sklearn, maxdepth=10, seen=seen, nonmodules=False)

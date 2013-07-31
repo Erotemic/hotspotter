@@ -1,18 +1,29 @@
 import numpy as np
 import datetime
 import textwrap
+from os.path import realpath, join
 from hotspotter.helpers import ensurepath
 
-def write_rank_results(cx2_res, hs, matcher):
-    match_type  = matcher.match_type+'_'
-    feat_type   = hs.feats.feat_type+'_'
-    expt_type   = match_type+feat_type
-    report_type = 'rank_'
-    timestamp   = get_timestamp()
-    ensurepath('results')
-    rankres_csv = 'results/'+expt_type+report_type+timestamp+'.csv'
+
+def get_expt_type(hs, matcher):
+    expt_type = '_'.join([matcher.match_type, hs.feats.feat_type])
+    return expt_type
+
+def write_report(report_str, report_type, expt_type, results_path):
+    timestamp = get_timestamp()
+    csv_fname    = expt_type+report_type+timestamp+'.csv'
+    results_path = realpath(results_path)
+    ensurepath(results_path)
+    rankres_csv = join(results_path, csv_fname)
+    
+    write_to(rankres_csv, report_str)
+
+def write_rank_results(cx2_res, hs, matcher, results_path='results'):
+    expt_type = get_expt_type(hs, matcher)
     rankres_str = rank_results(cx2_res, hs.tables, expt_type=expt_type)
-    write_to(rankres_csv, rankres_str)
+    print(rankres_str)
+    report_type = 'rank_'
+    write_report(rankres_str, report_type, expt_type, results_path)
 
 def get_true_positive_ranks(qcx, top_cx, cx2_nx):
     'Returns the ranking of the other chips which should have scored high'
@@ -76,7 +87,7 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
     #   TTN RANK   = top (lowest) true negative rank
     #   TTP SCORE  = top true positive score
     #   SCORE DISP = disparity between top-score and top-true-positive-score
-    #   NAME       = Query chip-name''')
+    #   NAME       = Query chip-name''').strip()
 
     # Build the experiemnt csv header
     rankres_csv_header = '#CID, TTP RANK, TTN RANK, TTP SCORE, TTN SCORE, SCORE DISP, NAME'
@@ -102,15 +113,15 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
     rankres_summary += '# Num Chips: %d \n' % num_chips
     rankres_summary += '# Num Chips with at least one match: %d \n' % num_with_gtruth
     rankres_summary += '# Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
-    rankres_summary += '# Ranks <= 1: %d / %d\n' % (num_rank_less1, num_with_gtruth)
+    rankres_summary += '# Ranks <= 1: %d / %d' % (num_rank_less1, num_with_gtruth)
 
     print(rankres_summary)
 
     # Concateate parts into a csv file and return
 
     rankres_csv_str = '\n'.join(rankres_csv_lines)
-    rankres_str = '\n'.join([rankres_summary, 
-                             rankres_metadata,
+    rankres_str = '\n'.join([rankres_summary+'\n', 
+                             rankres_metadata+'\n',
                              rankres_csv_header,
                              rankres_csv_str])
 

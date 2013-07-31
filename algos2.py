@@ -7,32 +7,12 @@ import numpy as np
 import os
 import pyflann
 import sys
+import params2
+import params2 as params
 import hotspotter.helpers
-imp.reload(sys.modules['hotspotter.helpers'])
 from hotspotter.helpers import load_npz, save_npz, checkpath, remove_file, vd, hashstr_md5, myprint
-
-mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
-                              'branching'          : 16,
-                              'build_weight'       : 0.009999999776482582,
-                              'cb_index'           : 0.20000000298023224,
-                              'centers_init'       : 'default',
-                              'checks'             : 154,
-                              'cores'              : 0,
-                              'eps'                : 0.0,
-                              'iterations'         : 5,
-                              'key_size_'          : 20L,
-                              'leaf_max_size'      : 4,
-                              'log_level'          : 'warning',
-                              'max_neighbors'      : -1,
-                              'memory_weight'      : 0.0,
-                              'multi_probe_level_' : 2L,
-                              'random_seed'        : 94222758,
-                              'sample_fraction'    : 0.10000000149011612,
-                              'sorted'             : 1,
-                              'speedup'            : 23.30769157409668,
-                              'table_number_'      : 12L,
-                              'target_precision'   : 0.8999999761581421,
-                              'trees'              : 1}
+#imp.reload(sys.modules['hotspotter.helpers'])
+#imp.reload(sys.modules['params2'])
 
 def tune_flann(data):
     flann = pyflann.FLANN()
@@ -48,7 +28,7 @@ def tune_flann(data):
     flann.delete_index()
     return tuned_params
 
-#__FLANN_PARAMS__ = {
+#__FLANN_ONCE_PARAMS__ = {
     #'algorithm' : 'kdtree', 
     #'trees'     : 8,
     #'checks'    : 128 }
@@ -121,12 +101,10 @@ flann_distances = {"euclidean"        : 1,
 
 pyflann.set_distance_type('hellinger', order=0)
 
-__FLANN_PARAMS__ = mother_hesaff_tuned_params
-
 def ann_flann_once(dpts, qpts, num_neighbors):
     flann = pyflann.FLANN()
-    flann.build_index(dpts, **__FLANN_PARAMS__)
-    checks = __FLANN_PARAMS__['checks']
+    flann.build_index(dpts, **__FLANN_ONCE_PARAMS__)
+    checks = __FLANN_ONCE_PARAMS__['checks']
     (qx2_dx, qx2_dist) = flann.nn_index(qpts, num_neighbors, checks=checks)
     return (qx2_dx, qx2_dist)
 

@@ -13,6 +13,8 @@ import cvransac2
 import feature_compute2
 import load_data2
 import params2
+import params2 as params
+from params2 import *
 import report_results2
 # Math and Science Imports
 import cv2
@@ -29,6 +31,7 @@ import sys
 # Imp Module Reloads
 #imp.reload(cvransac2)
 #imp.reload(algos2)
+#imp.reload(params2)
 
 
 def myreload():
@@ -40,12 +43,12 @@ def myreload():
 #========================================
 # Parameters and Debugging
 #========================================
-__K__ = params2.__K__
-__NUM_RERANK__   = params2.__NUM_RERANK__
-__RATIO_THRESH__ = params2.__RATIO_THRESH__
-__FLANN_PARAMS__ = params2.__FLANN_PARAMS__
-__FEAT_TYPE__    = params2.__FEAT_TYPE__ 
-__XY_THRESH__    = params2.__XY_THRESH__ = .05
+__K__ = params.__K__
+__NUM_RERANK__   = params.__NUM_RERANK__
+__RATIO_THRESH__ = params.__RATIO_THRESH__
+__FLANN_PARAMS__ = params.__FLANN_PARAMS__
+__FEAT_TYPE__    = params.__FEAT_TYPE__ 
+__XY_THRESH__    = params.__XY_THRESH__ = .05
 __FEAT_TYPE__    = 'HESAFF'
 
 def printDBG(msg):
@@ -63,23 +66,19 @@ def precompute_bag_of_words(hs):
     __VOCAB_SIZE__ = 10000
     feat_dir  = hs.dirs.feat_dir
     num_clusters = __VOCAB_SIZE__
-
     # Compute words
     ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
     ax2_wx, words = algos2.precompute_akmeans(ax2_desc, num_clusters, force_recomp=False)
-
     # Build a NN index for the words
     flann_words = pyflann.FLANN()
     flann_words_params = flann_words.build_index(words, algorithm='linear')
     print flann_words_params
-
     # Compute Inverted File
     wx2_axs = [[] for _ in xrange(num_clusters)]
     for ax, wx in enumerate(ax2_wx):
         wx2_axs[wx].append(ax)
     wx2_cxs = [[ax2_cx[ax] for ax in ax_list] for ax_list in wx2_axs]
     wx2_fxs = [[ax2_fx[ax] for ax in ax_list] for ax_list in wx2_axs]
-
     # Create visual-word-vectors for each chip
     # Build bow using coorindate list coo matrix
     coo_cols = ax2_wx
@@ -174,8 +173,7 @@ def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
             fs  = _qfs * _fs
             cx2_fm[cx].append(fm)
             cx2_fs[cx].append(fs)
-    
-    pass
+    return cx2_fs, cx2_fm
 
 #========================================
 # One-vs-Many 
@@ -569,7 +567,8 @@ class Matcher(object):
         # Curry the correct functions
         self.__assign_matches = None
         if   match_type == 'BOW':
-            self.__one_vs_many = precompute_vocabulary(hs)
+            __one_vs_many = precompute_bag_of_words(hs)
+            self.__one_vs_many    = __one_vs_many
             self.__assign_matches = assign_matches_BOW
             pass
         elif match_type == 'bBOW':
@@ -631,7 +630,7 @@ if __name__ == '__main__':
     cx2_cid = hs.tables.cx2_cid
     qcx = 1
 
-    __TEST_MODE__ = True
+    __TEST_MODE__ = False
     if __TEST_MODE__:
         runall_match(hs)
         pass

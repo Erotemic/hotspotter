@@ -1,13 +1,18 @@
 from __future__ import division, print_function
 import drawing_functions2 as df2
+import match_chips2 as mc2
 from hotspotter.Parallelize import parallel_compute
 from hotspotter.helpers import normalize
 from hotspotter.other.ConcretePrintable import DynStruct, Pref
 from numpy import array, cos, float32, hstack, pi, round, sqrt, uint8, zeros
+import algos2
+import algos2 as algos
 import sys
 import hotspotter.tpl.hesaff
 import numpy as np
 import load_data2, chip_compute2
+import params2
+import params2 as params
 import cv2
 
 
@@ -232,14 +237,16 @@ class HotspotterChipFeatures(DynStruct):
             return
         print('Setting feature type to: '+feat_type)
         self.feat_type = feat_type
-        if self.feat_type == 'HESAFF':
+        if self.feat_type.upper() == 'HESAFF':
             cx2_feats = self.cx2_feats_hesaff
-        elif self.feat_type == 'SIFT':
+        elif self.feat_type.upper() == 'SIFT':
             cx2_feats = self.cx2_feats_sift
-        elif self.feat_type == 'FREAK':
+        elif self.feat_type.upper() == 'FREAK':
             cx2_feats = self.cx2_feats_freak
-        self.cx2_desc  = [d for (k,d) in cx2_feats]
-        self.cx2_kpts  = [k for (k,d) in cx2_feats]
+        cx2_desc = [algos.whiten(d) for (k,d) in cx2_feats]
+        cx2_kpts  = [k for (k,d) in cx2_feats]
+        self.cx2_kpts = cx2_kpts
+        self.cx2_desc = cx2_desc
 
 
 def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type):
@@ -306,3 +313,7 @@ if __name__ == '__main__':
         hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
         # --- LOAD FEATURES --- #
         hs_feats  = load_chip_features(hs_dirs, hs_tables, hs_cpaths)
+        hs_feats.set_feat_type(mc2.__FEAT_TYPE__)
+
+        self.cx2_desc  = [whiten(d) for (k,d) in cx2_feats]
+        self.cx2_kpts  = [k for (k,d) in cx2_feats]

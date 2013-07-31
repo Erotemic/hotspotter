@@ -1,8 +1,9 @@
 import os, sys, string
 import fnmatch
 import numpy as np
-from hotspotter.helpers import checkpath, unit_test, ensure_path, symlink, remove_files_in_dir
-from hotspotter.helpers import myprint
+import helpers
+from helpers import checkpath, unit_test, ensure_path, symlink, remove_files_in_dir
+from helpers import myprint, vd
 from hotspotter.other.ConcretePrintable import DynStruct
 
 def printDBG(msg, lbl=''):
@@ -48,6 +49,11 @@ class HotspotterDirs(DynStruct):
     def delete_computed_dir(self):
         computed_dir = self.internal_dir + '/computed'
         remove_files_in_dir(computed_dir, recursive=True)
+
+    def vdd(self):
+        db_dir = os.path.normpath(repr(self.db_dir))
+        print('vd('+db_dir+')')
+        helpers.vd(db_dir)
 
 def tryindex(list, val):
     try: 
@@ -278,8 +284,6 @@ def load_csv_tables(db_dir):
     print('Done Loading hotspotter csv tables: '+str(db_dir))
     print('===============================\n\n')
     return hs_dirs, hs_tables
-
-    
 
 def __print_chiptableX(hs_tables):
     #print(hs_tables.execstr('hs_tables'))

@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 from numpy import linalg
 from warnings import catch_warnings, simplefilter 
+from helpers import printWARN
 import scipy.sparse
 import scipy.sparse.linalg
 
@@ -31,6 +32,7 @@ def compute_homog(xyz_norm1, xyz_norm2):
     try:
         (_U, _s, V) = linalg.svd(Mbynine)
     except MemoryError:
+        printWARN('warning 35 cvransac:'+repr(ex))
         # TODO: is sparse calculation faster than not?
         # sparse seems to be 4 times slower
         # the SVD itself is actually 37 times slower
@@ -216,7 +218,7 @@ def H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     try: 
         H, pcv_inliers = homography.H_from_ransac(fp, tp, model, 500, np.sqrt(xy_thresh_sqrd))
     except ValueError as ex:
-        print('!!! Error in H_homog_from_PCVSAC'+repr(ex))
+        printWARN('Warning 221 from H_homog_from_PCVSAC'+repr(ex))
         return np.eye(3), []
     # Convert to the format I'm expecting
     inliers = np.zeros(kpts1_m.shape[1], dtype=bool)
@@ -244,15 +246,16 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
 
     # min number of matches to compute transform
     min_num_inliers = 3 
-    if num_m < min_num_inliers: return  np.eye(3), np.ones(num_m, dtype=np.uint32)
-    if num_m == 0: return np.eye(3), np.array([])
+    if num_m < min_num_inliers or num_m == 0: 
+        return  np.eye(3), np.array([])
 
     # Estimate initial inliers with some RANSAC variant
     aff_inliers = func_aff_inlier(kpts1_m, kpts2_m, xy_thresh_sqrd)
 
     # If we cannot estimate a good correspondence 
     if len(aff_inliers) < min_num_inliers:
-        return np.eye(3), aff_inliers  
+        printWARN('Warning: ransac.homog returning identity and []')
+        return np.eye(3), np.array([])
 
     # Homogonize+Normalize
     xy1_m    = kpts1_m[0:2,:] 
@@ -261,8 +264,9 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     (xyz_norm2, T2) = homogo_normalize_pts(xy2_m[:,aff_inliers])
 
     # Compute Normalized Homog
-    __AFFINE_OVERRIDE__ = True
+    __AFFINE_OVERRIDE__ = False
     if __AFFINE_OVERRIDE__:
+        printINFO('Affine Override')
         #src = _homogonize_pts(xy1_m[:,aff_inliers])
         #dst = _homogonize_pts(xy2_m[:,aff_inliers])
         #H_ = H_affine_from_points(src, dst)
@@ -279,7 +283,8 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
         try: 
             H_prime = compute_homog(xyz_norm1, xyz_norm2)
             H = linalg.solve(T2, H_prime).dot(T1)                # Unnormalize
-        except linalg.LinAlgError:
+        except linalg.LinAlgError as ex:
+            printWARN('Warning 285 returning eye'+repr(ex))
             return np.eye(3), np.array([])
 
     # Estimate final inliers

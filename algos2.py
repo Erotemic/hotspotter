@@ -1,6 +1,6 @@
 import drawing_functions2 as df2
 from os.path import realpath
-import sklearn
+import sklearn.decomposition
 import imp
 import matplotlib.pyplot as plt
 import numpy as np

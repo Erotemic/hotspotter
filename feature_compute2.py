@@ -248,7 +248,6 @@ class HotspotterChipFeatures(DynStruct):
         self.cx2_kpts = cx2_kpts
         self.cx2_desc = cx2_desc
 
-
 def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type):
     cx2_feat_path = [ feat_dir+'/CID_%d_%s.npz' % (cid, feat_type) for cid in cx2_cid]
     # Compute features
@@ -260,7 +259,6 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type):
     return cx2_feats
     
     
-
 def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     print('\n=============================')
     print('Computing and loading features')
@@ -309,11 +307,12 @@ if __name__ == '__main__':
         db_dir = load_data2.MOTHERS
         # --- LOAD DATA --- #
         hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
+        hs_dirs.vdd()
         # --- LOAD CHIPS --- #
         hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
         # --- LOAD FEATURES --- #
         hs_feats  = load_chip_features(hs_dirs, hs_tables, hs_cpaths)
         hs_feats.set_feat_type(mc2.__FEAT_TYPE__)
+        cx2_desc  = hs_feats.cx2_desc
+        cx2_kpts  = hs_feats.cx2_kpts
 
-        self.cx2_desc  = [whiten(d) for (k,d) in cx2_feats]
-        self.cx2_kpts  = [k for (k,d) in cx2_feats]

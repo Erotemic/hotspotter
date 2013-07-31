@@ -403,7 +403,8 @@ def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
     # Get match threshold 10% of matching keypoint extent diagonal
     img1_extent = (kpts1_m[0:2,:].max(1) - kpts1_m[0:2,:].min(1))[0:2]
     xy_thresh1_sqrd = np.sum(img1_extent**2) * (__XY_THRESH__**2)
-    if not DBG is None:
+    dodbg = True if DBG is None else __DEBUG__
+    if dodbg:
         print('---------------------------------------')
         print('INFO: spatially_verify xy threshold:')
         print(' * Threshold is %.1f%% of diagonal length' % (__XY_THRESH__*100))
@@ -413,8 +414,18 @@ def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
         print('---------------------------------------')
     # -----------------------------------------------
     H, inliers = func_homog(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
-    fm_V = fm[inliers,:]
-    fs_V = fs[inliers,:]
+    if dodbg:
+        print('  * ===')
+        print('  * Found '+str(len(inliers))+' inliers')
+        print('  * with transform H='+repr(H))
+        print('  * fm.shape = %r fs.shape = %r' % (fm.shape, fs.shape))
+
+    if len(inliers) > 0:
+        fm_V = fm[inliers,:]
+        fs_V = fs[inliers,:]
+    else: 
+        fm_V = np.array([])
+        fs_V = np.array([])
     return fm_V, fs_V, H
 
 def spatially_verify(kpts1, kpts2, fm, fs, DBG=None):
@@ -443,6 +454,7 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
         kpts2 = cx2_kpts[cx]
         fm    = cx2_fm[cx]
         fs    = cx2_fs[cx]
+
         fm_V, fs_V, H = spatially_verify(kpts1, kpts2, fm, fs)
         cx2_fm_V[cx] = fm_V
         cx2_fs_V[cx] = fs_V
@@ -630,7 +642,7 @@ if __name__ == '__main__':
     cx2_cid = hs.tables.cx2_cid
     qcx = 1
 
-    __TEST_MODE__ = False
+    __TEST_MODE__ = False or ('test' in sys.argv)
     if __TEST_MODE__:
         runall_match(hs)
         pass

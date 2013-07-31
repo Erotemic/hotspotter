@@ -8,7 +8,7 @@ into a global set of helper functions.
 
 Wow, pylint is nice for cleaning.
 '''
-
+import drawing_functions2 as df2
 from hotspotter.other.AbstractPrintable import printableVal
 import cPickle
 import code
@@ -241,10 +241,6 @@ def hashstr_md5(data):
 
 
 #---------------
-def printWARN(warn_msg, category=UserWarning):
-    print(warn_msg)
-    warnings.warn(warn_msg, category=category)
-#---------------
 def __DEPRICATED__(func):
     'deprication decorator'
     warn_msg = 'Depricated call to: %s' % func.__name__
@@ -476,13 +472,19 @@ def profile(cmd):
 
 def profile_lines(fname):
     import __init__
+    import shutil
     hs_path = os.path.split(__init__.__file__)
-    lineprofile_path = hs_path, '.lineprofile'
-    ensurepath('')
+    lineprofile_path = os.path.join(hs_path, '.lineprofile')
+    ensurepath(lineprofile_path)
+    shutil.copy('*', lineprofile_path+'/*')
 
 #http://www.huyng.com/posts/python-performance-analysis/
 #Once youve gotten your code setup with the @profile decorator, use kernprof.py to run your script.
 #kernprof.py -l -v fib.py
+
+#---------------
+# printing and logging
+#---------------
 
 
 def println(msg, *args):
@@ -499,6 +501,17 @@ def endl():
     print_('\n')
     sout.flush()
     return '\n'
+def printINFO(msg, *args):
+    msg = 'INFO: '+printINFO
+    return println_(msg, *args)
+
+def printWARN(warn_msg, category=UserWarning):
+    warn_msg = 'Warning: '+warn_msg
+    sout.write(warn_msg+'\n')
+    sout.flush()
+    warnings.warn(warn_msg, category=category)
+    sout.flush()
+    return warn_msg
 
 import types
 
@@ -583,6 +596,10 @@ if __name__ == '__main__':
     hs2_basic = set(['drawing_functions2', 'params2', 'mc2'])
     python_basic = set(['os','sys', 'warnings', 'inspect','copy', 'imp','types'])
     tpl_basic = set(['pyflann', 'cv2'])
-    science_basic = set(['numpy','matplotlib', 'matplotlib.pyplot', 'scipy'])
+    science_basic = set(['numpy',
+                         'matplotlib',
+                         'matplotlib.pyplot',
+                         'scipy',
+                         'scipy.sparse'])
     seen = set(list(python_basic) + list(science_basic) + list(tpl_basic))
     module_explore(sklearn, maxdepth=10, seen=seen, nonmodules=False)

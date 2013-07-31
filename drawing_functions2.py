@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import types
 import warnings
+import helpers
 
 def test_img(index=0):
     import matplotlib.cbook as cbook
@@ -110,16 +111,38 @@ def reset():
     close_all_figures()
 
 def present(*args, **kwargs):
+    'execing present should cause IPython magic'
     print('Presenting figures...')
     tile_all_figures(*args, **kwargs)
     show_all_figures()
     bring_to_front_all_figures()
-    try:
-        print('Running from IPython')
-        __IPYTHON__
-    except Exception as ex: 
-        print('Running from command line Python')
-        plt.show()
+    # Return an exec string
+    import textwrap
+    return textwrap.dedent(r'''
+    import helpers
+    embedded = False
+    if not helpers.inIPython():
+        if '--cmd' in sys.argv:
+            print('Requested IPython shell with --cmd argument.')
+            if helpers.haveIPython():
+                print('Found IPython')
+                try: 
+                    import IPython
+                    print('Presenting in new ipython shell.')
+                    embedded = True
+                    IPython.embed()
+                except Exception as ex:
+                    printWARN(repr(ex)+'\n!!!!!!!!')
+                    embedded = False
+            else:
+                print('IPython is not installed')
+        if not embedded: 
+            print('Presenting in normal shell.')
+            print('... plt.show()')
+            plt.show()
+    else: 
+        print('Presenting in current ipython shell.')
+    ''')
 
 '''
 import drawing_functions2 as df2
@@ -161,7 +184,7 @@ def figure(fignum=None, doclf=False, title=None, plotnum=111, figtitle=None):
     if not title is None:
         ax.set_title(title)
         # Add title to figure
-        if figtitle is None and fignum == 111:
+        if figtitle is None and plotnum == 111:
             figtitle = title
         if not figtitle is None:
             fig.canvas.set_window_title('fig '+str(fignum)+' '+figtitle)
@@ -351,21 +374,36 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
     # get matching keypoints + offset
     if len(fm) == 0:
         imshow(match_img,fignum=fignum,title=title)
-        return
-    kpts1_m = kpts1[fm[:,0]]
-    kpts2_m = kpts2[fm[:,1]]
-    # matplotlib stuff
-    __OLD_WAY__ = False
-    if __OLD_WAY__:
-        _img1 = draw_kpts(rchip1, kpts1_m)
-        _img2 = draw_kpts(rchip2, kpts2_m)
-        old_image = draw_matches(_img1, _img2,  kpts1, kpts2, fm, vert=True)
-        imshow(old_image,fignum=fignum,title=title)
-    else:
+    else: 
+        kpts1_m = kpts1[fm[:,0]]
+        kpts2_m = kpts2[fm[:,1]]
+        # matplotlib stuff
         imshow(match_img,fignum=fignum,title=title)
-    draw_kpts2(kpts1_m)
-    draw_kpts2(kpts2_m,offset=(woff,hoff))
-    draw_matches2(kpts1,kpts2,fm,fs,kpts2_offset=(woff,hoff))
+        draw_kpts2(kpts1_m)
+        draw_kpts2(kpts2_m,offset=(woff,hoff))
+        draw_matches2(kpts1,kpts2,fm,fs,kpts2_offset=(woff,hoff))
+
+def show_matches3(res, hs, cx, SV=True, fignum=0, title_aug=None):
+    cx2_rchip_path = hs.cpaths.cx2_rchip_path
+    cx2_kpts = hs.feats.cx2_kpts
+    qcx = res.qcx
+    rchip1 = cv2.imread(cx2_rchip_path[qcx])
+    rchip2 = cv2.imread(cx2_rchip_path[cx])
+    kpts1  = cx2_kpts[qcx]
+    kpts2  = cx2_kpts[cx]
+    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
+    score = cx2_score[cx]
+    fm    = cx2_fm[cx]
+    fs    = cx2_fs[cx]
+    nMatches = len(fm)
+    title='qcx(%r) vs cx(%r)\n #matches=%r score=%.2f' % (qcx, cx, nMatches, score)
+    if not title_aug is None:
+        title = title_aug + title
+    if SV:
+        title += '(+V)'
+    show_matches2(rchip1, rchip2, kpts1,  kpts2, 
+                  fm, fs, fignum=fignum, title=title)
+
 
 def show_keypoints(rchip,kpts,fignum=0,title=None):
     imshow(rchip,fignum=fignum,title=title)

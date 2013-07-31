@@ -25,8 +25,14 @@ from sys import stdout as sout
 def cmd(command):
     os.system(command)
 
+def write_to(fname, to_write):
+    println(' * Writing to text file: %r ' % fname)
+    with open(fname, 'w') as file:
+        file.write(to_write)
+
 def _print(msg):
     sout.write(msg)
+
 def _println(msg):
     sout.write(msg+'\n')
 
@@ -264,14 +270,14 @@ def dircheck(dpath,makedir=True):
         os.makedirs(dpath)
     return True
 
-def in_IPython():
+def inIPython():
     try:
         __IPYTHON__
         return True
     except NameError as nex:
         return False
 
-def have_IPython():
+def haveIPython():
     try:
         import IPython
         return True
@@ -600,6 +606,14 @@ def __setstate__(self, in_dict):
     self.__dict__.update(in_dict)
 '''
 #---------------
+def myreload():
+    import imp
+    #imp.reload(cvransac2)
+    imp.reload(df2)
+    imp.reload(algos2)
+    imp.reload(mc2)
+    imp.reload(report_results2)
+    imp.reload(helpers)
 
 if __name__ == '__main__':
     print('You ran helpers as main!')

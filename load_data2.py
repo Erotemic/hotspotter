@@ -9,9 +9,14 @@ from Printable import DynStruct
 def printDBG(msg, lbl=''):
     print('DBG: '+lbl+str(msg))
 
+# paths relative to dbdir
 rdir_img      = '/images'
 rdir_internal = '/.hs_internals'
-rdir_chip     = rdir_internal + '/computed/chips'
+rdir_computed = '/.hs_interanls/computed'
+rdir_chip     = '/.hs_internals/computed/chips'
+rdir_rchip    = '/.hs_internals/computed/temp'
+rdir_feat     = '/.hs_internals/computed/feats'
+rdir_results  = '/.hs_internals/computed/results'
 
 class HotspotterTables(DynStruct):
     def __init__(self):
@@ -29,25 +34,29 @@ class HotspotterTables(DynStruct):
 class HotspotterDirs(DynStruct):
     def __init__(self, db_dir):
         super(HotspotterDirs, self).__init__()
-        internal_dir = db_dir + '/.hs_internals'
         # Class variables
         self.db_dir       = db_dir
         self.img_dir      = db_dir + rdir_img
         self.internal_sym = db_dir + '/Shortcut-to-hs_internals'
         self.internal_dir = db_dir + rdir_internal
+        self.computed_dir = db_dir + rdir_computed
         self.chip_dir     = db_dir + rdir_chip
-        self.rchip_dir    = internal_dir + '/computed/temp'
-        self.feat_dir     = internal_dir + '/computed/feats'
+        self.rchip_dir    = db_dir + rdir_rchip
+        self.feat_dir     = db_dir + rdir_feat
+        self.result_dir   = db_dir + rdir_results
         # Make directories if needbe
         ensure_path(self.internal_dir)
         ensure_path(self.chip_dir)
         ensure_path(self.rchip_dir)
         ensure_path(self.feat_dir)
+        ensure_path(self.result_dir)
+        ensure_path(self.rchip_dir)
+
         if not os.path.islink(self.internal_sym):
             symlink(internal_dir, self.internal_sym, noraise=True)
 
     def delete_computed_dir(self):
-        computed_dir = self.internal_dir + '/computed'
+        computed_dir = self.computed_dir
         remove_files_in_dir(computed_dir, recursive=True)
 
     def vdd(self):

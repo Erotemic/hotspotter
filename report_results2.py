@@ -1,29 +1,28 @@
+import drawing_functions2 as df2
+import helpers
 import numpy as np
 import datetime
 import textwrap
 import sys
 from os.path import realpath, join
-from helpers import ensurepath
-
 
 def get_expt_type(hs, matcher):
     expt_type = '_'.join([matcher.match_type, hs.feats.feat_type])
     return expt_type
 
-def write_report(report_str, report_type, expt_type, results_path):
-    timestamp = get_timestamp()
-    csv_fname    = expt_type+report_type+timestamp+'.csv'
-    results_path = realpath(results_path)
-    ensurepath(results_path)
-    rankres_csv = join(results_path, csv_fname)
-    
-    write_to(rankres_csv, report_str)
+def write_report(hs, report_str, report_type, expt_type):
+    result_dir = hs.dirs.result_dir
+    timestamp  = get_timestamp()
+    csv_fname  = expt_type+report_type+timestamp+'.csv'
+    helpers.ensurepath(result_dir)
+    rankres_csv = join(result_dir, csv_fname)
+    helpers.write_to(rankres_csv, report_str)
 
-def write_rank_results(cx2_res, hs, matcher, results_path='results'):
+def write_rank_results(hs, matcher, qcx2_res):
     expt_type = get_expt_type(hs, matcher)
-    rankres_str = rank_results(cx2_res, hs.tables, expt_type=expt_type)
+    rankres_str = rank_results(qcx2_res, hs.tables, expt_type=expt_type)
     report_type = 'rank_'
-    write_report(rankres_str, report_type, expt_type, results_path)
+    write_report(hs, rankres_str, report_type, expt_type)
 
 def get_true_positive_ranks(qcx, top_cx, cx2_nx):
     'Returns the ranking of the other chips which should have scored high'
@@ -33,7 +32,15 @@ def get_true_positive_ranks(qcx, top_cx, cx2_nx):
     truepos_ranks = _truepos_ranks[top_cx[_truepos_ranks] != qcx]
     return truepos_ranks
 
-def rank_results(cx2_res, hs_tables, expt_type=''):
+def get_false_positive_ranks(qcx, top_cx, cx2_nx):
+    'Returns the ranking of the other chips which should have scored high'
+    top_nx = cx2_nx[top_cx]
+    qnx    = cx2_nx[qcx]
+    _falsepos_ranks, = np.where(top_nx != qnx)
+    falsepos_ranks = _falsepos_ranks[top_cx[_falsepos_ranks] != qcx]
+    return falsepos_ranks
+
+def rank_results(qcx2_res, hs_tables, expt_type=''):
     cx2_cid  = hs_tables.cx2_cid
     cx2_nx   = hs_tables.cx2_nx
     nx2_name = hs_tables.nx2_name
@@ -44,7 +51,7 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
     cx2_top_score         = np.zeros(len(cx2_cid)) - 100
 
     for qcx, qcid in enumerate(cx2_cid):
-        res = cx2_res[qcx]
+        res = qcx2_res[qcx]
         if res.cx2_fs is None or len(res.cx2_fs) == 0: continue
         # The score is the sum of the feature scores
         cx2_score = np.array([np.sum(fs) for fs in res.cx2_fs])
@@ -84,14 +91,14 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
     rankres_metadata = textwrap.dedent('''
     # Rank Result Metadata:
     #   CID        = Query chip-id
-    #   TTP RANK   = top (lowest) true positive rank
-    #   TTN RANK   = top (lowest) true negative rank
-    #   TTP SCORE  = top true positive score
+    #   TT RANK   = top true positive rank
+    #   TF RANK   = top false positive rank
+    #   TT SCORE  = top true positive score
     #   SCORE DISP = disparity between top-score and top-true-positive-score
     #   NAME       = Query chip-name''').strip()
 
     # Build the experiemnt csv header
-    rankres_csv_header = '#CID, TTP RANK, TTN RANK, TTP SCORE, TTN SCORE, SCORE DISP, NAME'
+    rankres_csv_header = '#CID, TT RANK, TF RANK, TT SCORE, TF SCORE, SCORE DISP, NAME'
 
     # Build the experiment csv data lines
     todisp = np.vstack([cx2_cid,
@@ -102,9 +109,9 @@ def rank_results(cx2_res, hs_tables, expt_type=''):
                         cx2_score_disp, 
                         cx2_nx]).T
     rankres_csv_lines = []
-    for (cid, ttpr, ttnr, ttps, ttns, sdisp, nx) in todisp:
+    for (cid, ttr, ttnr, tts, ttns, sdisp, nx) in todisp:
         csv_line = ('%4d, %8.0f, %8.0f, %9.2f, %9.2f, %10.2f, %s' %\
-              (cid, ttpr, ttnr, ttps, ttns, sdisp, nx2_name[nx]) )
+              (cid, ttr, ttnr, tts, ttns, sdisp, nx2_name[nx]) )
         rankres_csv_lines.append(csv_line)
 
     # Build the experiment summary report
@@ -137,24 +144,158 @@ def get_timestamp(format='filename'):
     stamp = time_formats[format] % time_tup
     return stamp
 
-def write_to(filename, to_write):
-    with open(filename, 'w') as file:
-        file.write(to_write)
-
 def gvim(string):
     os.system('gvim '+result_csv)
 
+def cx2_other_cx(hs, cx):
+    cx2_nx   = hs.tables.cx2_nx
+    nx = cx2_nx[cx]
+    other_cx_, = np.where(cx2_nx == nx)
+    other_cx  = other_cx_[other_cx_ != cx]
+    return other_cx
+
+def print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False):
+    res = qcx2_res[qcx]
+    print_top_res_scores(hs, res, view_top, SV)
+
+def print_top_res_scores(hs, res, view_top=10, SV=False):
+    qcx = res.qcx
+    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
+    lbl = ['(assigned)', '(assigned+V)'][SV]
+    cx2_nx     = hs.tables.cx2_nx
+    nx2_name   = hs.tables.nx2_name
+    qnx        = cx2_nx[qcx]
+    other_cx   = cx2_other_cx(hs, qcx)
+    top_cx     = cx2_score.argsort()[::-1]
+    top_scores = cx2_score[top_cx] 
+    top_nx     = cx2_nx[top_cx]
+    view_top   = min(len(top_scores), view_top)
+    print('---------------------------------------')
+    print('Inspecting matches of qcx=%d name=%s' % (qcx, nx2_name[qnx]))
+    print(' * Matched against %d other chips' % len(cx2_score))
+    print(' * Ground truth chip indexes:\n   other_cx=%r' % other_cx)
+    print('The ground truth scores '+lbl+' are: ')
+    for cx in iter(other_cx):
+        score = cx2_score[cx]
+        print('--> cx=%4d, score=%6.2f' % (cx, score))
+    print('---------------------------------------')
+    print(('The top %d chips and scores '+lbl+' are: ') % view_top)
+    for topx in xrange(view_top):
+        tscore = top_scores[topx]
+        tcx    = top_cx[topx]
+        tnx    = cx2_nx[tcx]
+        _mark = '-->' if tnx == qnx else '  -'
+        print(_mark+' cx=%4d, score=%6.2f' % (tcx, tscore))
+    print('---------------------------------------')
+    print('---------------------------------------')
+
+def get_tp_matches(res, hs, SV):
+    qcx = res.qcx
+    cx2_nx = hs.tables.cx2_nx
+    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
+    top_cx = np.argsort(cx2_score)[::-1]
+    top_score = cx2_score[top_cx]
+    # Get true postive ranks (groundtruth)
+    truepos_ranks  = get_true_positive_ranks(qcx, top_cx, cx2_nx)
+    truepos_scores = top_score[truepos_ranks]
+    truepos_cxs    = top_cx[truepos_ranks]
+    return truepos_cxs, truepos_ranks, truepos_scores
+
+def get_fp_matches(res, hs, SV):
+    qcx = res.qcx
+    cx2_nx = hs.tables.cx2_nx
+    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
+    top_cx = np.argsort(cx2_score)[::-1]
+    top_score = cx2_score[top_cx]
+    # Get false postive ranks (non-groundtruth)
+    falsepos_ranks  = get_false_positive_ranks(qcx, top_cx, cx2_nx)
+    falsepos_scores = top_score[falsepos_ranks]
+    falsepos_cxs    = top_cx[falsepos_ranks]
+    return falsepos_cxs, falsepos_ranks, falsepos_scores
+
+def get_nth_truepos_match(res, hs, n, SV):
+    truepos_cxs, truepos_ranks, truepos_scores = get_tp_matches(res, hs, SV)
+    nth_cx    = truepos_cxs[n]
+    nth_rank  = truepos_ranks[n]
+    nth_score = truepos_scores[n]
+    print('Getting the nth=%r true pos cx,rank,score=(%r, %r, %r)' % \
+          (n, nth_cx, nth_rank, nth_score))
+    return nth_cx, nth_rank, nth_score
+
+def get_nth_falsepos_match(res, hs, n, SV):
+    falsepos_cxs, falsepos_ranks, falsepos_scores = get_fp_matches(res, hs, SV)
+    nth_cx    = falsepos_cxs[n]
+    nth_rank  = falsepos_ranks[n]
+    nth_score = falsepos_scores[n]
+    print('Getting the nth=%r false pos cx,rank,score=(%r, %r, %r)' % \
+          (n, nth_cx, nth_rank, nth_score))
+    return nth_cx, nth_rank, nth_score
+
+
+def get_tt_bt_tf_cxs(hs, res, SV):
+    'Returns the top and bottom true positives and top false positive'
+    qcx = res.qcx
+    tt_cx, tt_rank, tt_score = get_nth_truepos_match(res,  hs,  0, SV)
+    bt_cx, bt_rank, bt_score = get_nth_truepos_match(res,  hs, -1, SV)
+    tf_cx, tf_rank, tf_score = get_nth_falsepos_match(res, hs,  0, SV)
+    titles = ('TT '+str(tt_rank), 'BT '+str(bt_rank), 'TF '+str(tf_rank))
+    cxs = (tt_cx, bt_cx, tf_cx)
+    return cxs, titles
+
+def visualize_res_tt_bt_tf(hs, res):
+    SV = False
+    qcx = res.qcx
+    _fn = qcx
+    cxs, titles = get_tt_bt_tf_cxs(hs, res, SV)
+    df2.show_matches3(res, hs, cxs[0], SV, fignum=_fn+.231, title_aug=titles[0])
+    df2.show_matches3(res, hs, cxs[1], SV, fignum=_fn+.232, title_aug=titles[1])
+    df2.show_matches3(res, hs, cxs[2], SV, fignum=_fn+.233, title_aug=titles[2])
+    SV = True
+    cxsV, titlesV = get_tt_bt_tf_cxs(hs, res, SV)
+    df2.show_matches3(res, hs, cxsV[0], SV, fignum=_fn+.234, title_aug=titlesV[0])
+    df2.show_matches3(res, hs, cxsV[1], SV, fignum=_fn+.235, title_aug=titlesV[1])
+    df2.show_matches3(res, hs, cxsV[2], SV, fignum=_fn+.236, title_aug=titlesV[2])
+
+def visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx):
+    res = qcx2_res[qcx]
+    visualize_res_tt_bt_tf(hs, res)
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     import match_chips2 as mc2
     import load_data2
+    import imp
+    #imp.reload(df2)
+    #imp.reload(mc2)
     # --- CHOOSE DATABASE --- #
     db_dir = load_data2.MOTHERS
     hs = mc2.load_hotspotter(db_dir)
     argv = set([arg.lower() for arg in sys.argv])
-    if any([arg1v1.lower() in argv for arg1v1 in ['1v1','one-vs-one','ovo']]):
-        cx2_res = mc2.run_one_vs_one(hs)
-    if any([arg1vM.lower() in argv for arg1vM in ['1vM','one-vs-many','ovm']]):
-        cx2_res = mc2.run_one_vs_many(hs)
+
+    arg_list_1v1 = ['1v1','one-vs-one','ovo']
+    arg_list_1vM = ['1vm','one-vs-many','ovm']
+
+    arg_1vM = True or any([arg1v1 in argv for arg1v1 in arg_list_1v1])
+    arg_1v1 = False or any([arg1vM in argv for arg1vM in arg_list_1vM])
+
+    df2.close_all_figures()
+    if arg_1vM:
+        qcx2_res = mc2.run_one_vs_one(hs)
+    if arg_1v1: 
+        qcx2_res = mc2.run_one_vs_many(hs)
+
+    if arg_1vM or arg_1v1:
+        qcx = 1
+        print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False)
+        print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=True)
+        visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
+
+    def dinspect(qcx):
+        df2.close_all_figures()
+        visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
+        df2.present()
+    'dev inspect'
+
+    # Execing df2.present does an IPython aware plt.show()
+    exec(df2.present())

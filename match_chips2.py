@@ -16,7 +16,7 @@ import load_data2
 import params2
 import params2 as params
 from params2 import *
-import report_results2
+import report_results2 as rr2
 # Math and Science Imports
 import cv2
 import matplotlib.pyplot as plt
@@ -27,19 +27,13 @@ import scipy.sparse
 import sklearn.preprocessing 
 # Python Imports
 import itertools
-import imp
 import sys
 # Imp Module Reloads
+import imp
 #imp.reload(cvransac2)
 #imp.reload(algos2)
 #imp.reload(params2)
-
-
-def myreload():
-    import imp
-    imp.reload(cvransac2)
-    imp.reload(df2)
-    imp.reload(algos2)
+#imp.reload(rr2)
 
 #========================================
 # Parameters and Debugging
@@ -173,7 +167,7 @@ def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
             fs  = _qfs * _fs
             cx2_fm[cx].append(fm)
             cx2_fs[cx].append(fs)
-    return cx2_fs, cx2_fm
+    return cx2_fs, cx2_fm, cx2_score
 
 #========================================
 # One-vs-Many 
@@ -227,7 +221,8 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, one_vs_many):
     # Convert to numpy
     for cx in xrange(len(cx2_cid)): cx2_fm[cx] = np.array(cx2_fm[cx])
     for cx in xrange(len(cx2_cid)): cx2_fs[cx] = np.array(cx2_fs[cx])
-    return cx2_fm, cx2_fs
+    cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+    return cx2_fm, cx2_fs, cx2_score
 
 def assign_matches_1vM_BINARY(qcx, cx2_cid, cx2_desc):
     return None
@@ -325,6 +320,7 @@ def assign_matches_1v1(qcx, cx2_cid, cx2_desc):
         cx2_fs[cx] = fs
     sys.stdout.write('DONE')
     flann_1v1.delete_index()
+    cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     return cx2_fm, cx2_fs
 
 def cv2_match(desc1, desc2):
@@ -427,8 +423,8 @@ def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
         fm_V = fm[inliers,:]
         fs_V = fs[inliers,:]
     else: 
-        fm_V = np.array([])
-        fs_V = np.array([])
+        fm_V = np.empty((0,2))
+        fs_V = np.array((0,1))
     return fm_V, fs_V, H
 
 def spatially_verify(kpts1, kpts2, fm, fs, DBG=None):
@@ -440,8 +436,8 @@ spatially_verify.__doc__ += '\n'+__spatially_verify.__doc__
 #@profile
 def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
     kpts1     = cx2_kpts[qcx]
-    cx2_cscore = np.array([np.sum(fs) for fs in cx2_fs])
-    top_cx     = cx2_cscore.argsort()[::-1]
+    cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+    top_cx     = cx2_score.argsort()[::-1]
     num_rerank = min(len(top_cx), __NUM_RERANK__)
     # -----------------------------------------------
     # TODO: SHOULD THIS HAPPEN HERE? (ISSUE XY_THRESH)
@@ -461,7 +457,8 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
         fm_V, fs_V, H = spatially_verify(kpts1, kpts2, fm, fs)
         cx2_fm_V[cx] = fm_V
         cx2_fs_V[cx] = fs_V
-    return cx2_fm_V, cx2_fs_V
+    cx2_score_V = [np.sum(fs) for fs in cx2_fs_V]
+    return cx2_fm_V, cx2_fs_V, cx2_score_V
 
 def warp_chip(rchip2, H, rchip1):
     rchip2W = cv2.warpPerspective(rchip2, H, rchip1.shape[0:2][::-1])
@@ -507,9 +504,24 @@ class QueryResult(DynStruct):
         # Assigned features matches
         self.cx2_fm = []
         self.cx2_fs = []
+        self.cx2_score = []
         # Spatially verified feature matches
         self.cx2_fm_V = []
         self.cx2_fs_V = []
+        self.cx2_score_V = []
+
+    def __get_info(self, SV=True):
+        cx2_score = self.cx2_score_V if SV else self.cx2_score
+        cx2_fm    = self.cx2_fm_V if SV else self.cx2_fm
+        cx2_fs    = self.cx2_fs_V if SV else self.cx2_fs
+        return cx2_score, cx2_fm, cx2_fs
+
+    def get_info(self, SV=True):
+        cx2_score, cx2_fm, cx2_fs = self.__get_info(SV)
+        if len(cx2_score) == 0:
+            print('cx2_score.525')
+            cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+        return cx2_score, cx2_fm, cx2_fs
 
     def get_fpath(self):
         fname = 'result_'+__AlgorithmUID__+'_qcx=%d.npz' % self.qcx
@@ -595,8 +607,7 @@ def run_matching(hs, matcher):
     cx2_cid  = hs.tables.cx2_cid
     cx2_desc = hs.feats.cx2_desc
     cx2_kpts = hs.feats.cx2_kpts 
-    # qcx2_res
-    cx2_res = [QueryResult(qcx) for qcx in xrange(len(cx2_cid))]
+    qcx2_res = [QueryResult(qcx) for qcx in xrange(len(cx2_cid))]
     tt_ALL = tic('all queries')
     assign_times = []
     verify_times = []
@@ -605,30 +616,32 @@ def run_matching(hs, matcher):
         if qcid == 0: 
             skip_list.append(qcx)
             continue
-        res = cx2_res[qcx]
+        res = qcx2_res[qcx]
         if __LAZY_MATCHING__ and res.load():
             continue
         tt_A = tic('query(qcx=%d)' % qcx)
         # Assign matches with the chosen function (1v1) or (1vM)
-        (cx2_fm, cx2_fs) = matcher.assign_matches(qcx, cx2_cid, cx2_desc)
+        (cx2_fm, cx2_fs, cx2_score) = matcher.assign_matches(qcx, cx2_cid, cx2_desc)
         assign_times.append(toc(tt_A))
         # Spatially verify the assigned matches
         tt_V = tic('verify(qcx=%d)' % qcx)
-        (cx2_fm_V, cx2_fs_V) = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
+        (cx2_fm_V, cx2_fs_V, cx2_score_V) = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
         verify_times.append(toc(tt_V))
         # Assign output to a query result
         res.qcx = qcx
         res.cx2_fm    = cx2_fm
         res.cx2_fs    = cx2_fs
+        res.cx2_score = cx2_score
         res.cx2_fm_V = cx2_fm_V
         res.cx2_fs_V = cx2_fs_V
+        res.cx2_score_V = cx2_score_V
         res.save()
     if len(skip_list) > 0:
         print('Skipped more queries than you should have: %r ' % skip_list)
     total_time = toc(tt_ALL)
     # Write results out to disk
-    report_results2.write_rank_results(cx2_res, hs, matcher)
-    return cx2_res
+    rr2.write_rank_results(hs, matcher, qcx2_res)
+    return qcx2_res
 
 def run_one_vs_many(hs):
     return run_matching(hs, Matcher(hs, '1vM'))
@@ -639,8 +652,8 @@ def run_one_vs_one(hs):
 def runall_match(hs):
     #functools.partial
     hs.printme2()
-    cx2_res_1vM = run_one_vs_many()
-    cx2_res_1v1 = run_one_vs_one()
+    qcx2_res_1vM = run_one_vs_many()
+    qcx2_res_1v1 = run_one_vs_one()
 
 
 #========================================
@@ -699,7 +712,6 @@ if __name__ == '__main__':
         #exec(get_exec_src(spatially_verify_matches))
         #exec(get_exec_src(precompute_bag_of_words))
         
-
         try: 
             __IPYTHON__
         except: 

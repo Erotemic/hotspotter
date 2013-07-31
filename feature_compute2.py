@@ -18,6 +18,7 @@ import cv2
 import sys
 
 
+
 #def old_cvkpts2_kpts(cvkpts)
     #kpts = zeros((len(cvkpts), 5), dtype=float32)
     #fx = 0
@@ -250,10 +251,8 @@ class HotspotterChipFeatures(DynStruct):
 def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type):
     print('Loading '+feat_type+' features')
     whiten = params.__WHITEN_FEATS__
-    computed_dir = params.__COMPUTED_DIR__
-    helpers.ensuredir(computed_dir)
     suffix = '_'.join([feat_type, ['','white'][whiten]])+'.npz'
-    cx2_feats_fpath = computed_dir + '/cx2_feats_'+suffix
+    cx2_feats_fpath = feat_dir + '/cx2_feats_'+suffix
     
     if helpers.checkpath(cx2_feats_fpath):
         helpers.print_(' * attempting to load cx2_feats from disk')

@@ -45,8 +45,6 @@ __FLANN_ONCE_PARAMS__ = mother_hesaff_tuned_params
 __FLANN_PARAMS__      = hs1_params
 
 
-__COMPUTED_DIR__ = os.path.realpath('results/computed')
-
 __WHITEN_FEATS__ = False
 
 __HISTEQ__ = False

@@ -41,7 +41,6 @@ import imp
 __K__ = params.__K__
 __NUM_RERANK__   = params.__NUM_RERANK__
 __RATIO_THRESH__ = params.__RATIO_THRESH__
-__FLANN_PARAMS__ = params.__FLANN_PARAMS__
 __FEAT_TYPE__    = params.__FEAT_TYPE__ 
 __XY_THRESH__    = params.__XY_THRESH__ = .05
 
@@ -201,7 +200,7 @@ def precompute_index_1vM(hs):
     feat_type = hs.feats.feat_type
     ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
     flann_1vM = pyflann.FLANN()
-    flann_1vM_path = feat_dir + '/flann_1vM_'+feat_type+'.index'
+    flann_1vM_path = feat_dir + '/flann_onevsmany_'+feat_type+'.index'
     load_success = False
     if checkpath(flann_1vM_path):
         try:
@@ -213,7 +212,7 @@ def precompute_index_1vM(hs):
             print('...cannot load FLANN index'+repr(ex))
     if not load_success:
         with Timer(msg='rebuilding FLANN index'):
-            flann_1vM.build_index(ax2_desc, **__FLANN_PARAMS__)
+            flann_1vM.build_index(ax2_desc, **params.__FLANN_PARAMS__)
             flann_1vM.save_index(flann_1vM_path)
     # Return a one-vs-many structure
     one_vs_many = OneVsMany(flann_1vM, ax2_desc, ax2_cx, ax2_fx)
@@ -247,7 +246,8 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, one_vs_many):
     desc1 = cx2_desc[qcx]
     K = __K__+1 if isQueryIndexed else __K__
     # Find each query descriptor's K+1 nearest neighbors
-    (qfx2_ax, qfx2_dists) = flann_1vM.nn_index(desc1, K+1, **__FLANN_PARAMS__)
+    checks = params.__FLANN_PARAMS__['checks']
+    (qfx2_ax, qfx2_dists) = flann_1vM.nn_index(desc1, K+1, checks=checks)
     vote_dists = qfx2_dists[:, 0:K]
     norm_dists = qfx2_dists[:, K] # K+1th descriptor for normalization
     # Score the feature matches
@@ -318,7 +318,7 @@ def assign_matches_1v1(qcx, cx2_cid, cx2_desc):
     print('Assigning 1v1 feature matches from cx=%d to %d chips' % (qcx, len(cx2_cid)))
     desc1 = cx2_desc[qcx]
     flann_1v1 = pyflann.FLANN()
-    flann_1v1.build_index(desc1, **__FLANN_PARAMS__)
+    flann_1v1.build_index(desc1, **params.__FLANN_PARAMS__)
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
     for cx, desc2 in enumerate(cx2_desc):
@@ -353,7 +353,8 @@ def match_1v1(desc2, flann_1v1, ratio_thresh=1.2, burst_thresh=None, DBG=False):
         fm - Mx2 array of matching feature indexes
         fs - Mx1 array of matching feature scores '''
     # features to their matching query features
-    (fx2_qfx, fx2_dist) = flann_1v1.nn_index(desc2, 2, **__FLANN_PARAMS__)
+    checks = params.__FLANN_PARAMS__['checks']
+    (fx2_qfx, fx2_dist) = flann_1v1.nn_index(desc2, 2, checks=checks)
     # RATIO TEST
     fx2_ratio  = np.divide(fx2_dist[:,1], fx2_dist[:,0]+1E-8)
     fx_passratio, = np.where(fx2_ratio > ratio_thresh)

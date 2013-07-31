@@ -233,28 +233,30 @@ class HotspotterChipFeatures(DynStruct):
         self.cx2_kpts = None
         self.feat_type = None
     #
-    def set_feat_type(self, feat_type):
-        if feat_type == self.feat_type:
-            print('Feature type is already: '+feat_type)
-            return
-        print('Setting feature type to: '+feat_type)
-        self.feat_type = feat_type
-        if self.feat_type.upper() == 'HESAFF':
-            cx2_feats = self.cx2_feats_hesaff
-        elif self.feat_type.upper() == 'SIFT':
-            cx2_feats = self.cx2_feats_sift
-        elif self.feat_type.upper() == 'FREAK':
-            cx2_feats = self.cx2_feats_freak
-        self.cx2_kpts = cx2_kpts
-        self.cx2_desc = cx2_desc
+    #def set_feat_type(self, feat_type):
+        #if feat_type == self.feat_type:
+            #print('Feature type is already: '+feat_type)
+            #return
+        #print('Setting feature type to: '+feat_type)
+        #self.feat_type = feat_type
+        #if self.feat_type.upper() == 'HESAFF':
+            #cx2_feats = self.cx2_feats_hesaff
+        #elif self.feat_type.upper() == 'SIFT':
+            #cx2_feats = self.cx2_feats_sift
+        #elif self.feat_type.upper() == 'FREAK':
+            #cx2_feats = self.cx2_feats_freak
+        #self.cx2_kpts = cx2_kpts
+        #self.cx2_desc = cx2_desc
 
 def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type):
     print('Loading '+feat_type+' features')
     whiten = params.__WHITEN_FEATS__
     suffix = '_'.join([feat_type, ['','white'][whiten]])+'.npz'
     cx2_feats_fpath = feat_dir + '/cx2_feats_'+suffix
-    
-    if helpers.checkpath(cx2_feats_fpath):
+
+    # Do not load the descriptors because its done in the wrong order
+    __OVERRIDE_LOAD__ = True
+    if helpers.checkpath(cx2_feats_fpath) and not __OVERRIDE_LOAD__:
         helpers.print_(' * attempting to load cx2_feats from disk')
         helpers.flush()
         loaded = False
@@ -340,6 +342,3 @@ if __name__ == '__main__':
         hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
         # --- LOAD FEATURES --- #
         hs_feats  = load_chip_features(hs_dirs, hs_tables, hs_cpaths)
-        hs_feats.set_feat_type(mc2.__FEAT_TYPE__)
-        cx2_desc  = hs_feats.cx2_desc
-        cx2_kpts  = hs_feats.cx2_kpts

@@ -68,54 +68,53 @@ def tune_flann(data):
 
 # MAKE SURE YOU EDIT index.py in pyflann
 
-flann_algos = {
-    'linear'        : 0,
-    'kdtree'        : 1,
-    'kmeans'        : 2,
-    'composite'     : 3,
-    'kdtree_single' : 4,
-    'hierarchical'  : 5,
-    'lsh'           : 6, # locality sensitive hashing
-    'kdtree_cuda'   : 7, 
-    'saved'         : 254, # dont use
-    'autotuned'     : 255,
-}
+#flann_algos = {
+    #'linear'        : 0,
+    #'kdtree'        : 1,
+    #'kmeans'        : 2,
+    #'composite'     : 3,
+    #'kdtree_single' : 4,
+    #'hierarchical'  : 5,
+    #'lsh'           : 6, # locality sensitive hashing
+    #'kdtree_cuda'   : 7, 
+    #'saved'         : 254, # dont use
+    #'autotuned'     : 255,
+#}
 
-
-multikey_dists = {
-    # Huristic distances
-    ('euclidian', 'l2')        :  1,
-    ('manhattan', 'l1')        :  2,
-    ('minkowski', 'lp')        :  3, # I guess p is the order?
-    ('max_dist' , 'linf')      :  4,
-    ('l2_simple')              : 12, # For low dimensional points
-    ('hellinger')              :  6,
-    # Nonparametric test statistics
-    ('hik','histintersect')    :  5,
-    ('chi_square', 'cs')       :  7,
-    # Information-thoery divergences
-    ('kullback_leibler', 'kl') :  8,
-    ('hamming')                :  9, # xor and bitwise sum
-    ('hamming_lut')            : 10, # xor (sums with lookup table ; if no sse2)
-    ('hamming_popcnt')         : 11, # population count (number of 1 bits)
-}
+#multikey_dists = {
+    ## Huristic distances
+    #('euclidian', 'l2')        :  1,
+    #('manhattan', 'l1')        :  2,
+    #('minkowski', 'lp')        :  3, # I guess p is the order?
+    #('max_dist' , 'linf')      :  4,
+    #('l2_simple')              : 12, # For low dimensional points
+    #('hellinger')              :  6,
+    ## Nonparametric test statistics
+    #('hik','histintersect')    :  5,
+    #('chi_square', 'cs')       :  7,
+    ## Information-thoery divergences
+    #('kullback_leibler', 'kl') :  8,
+    #('hamming')                :  9, # xor and bitwise sum
+    #('hamming_lut')            : 10, # xor (sums with lookup table ; if no sse2)
+    #('hamming_popcnt')         : 11, # population count (number of 1 bits)
+#}
 
 
  #Hamming distance functor - counts the bit differences between two strings - useful for the Brief descriptor
  #bit count of A exclusive XOR'ed with B
 
-flann_distances = {"euclidean"        : 1, 
-                   "manhattan"        : 2, 
-                   "minkowski"        : 3,
-                   "max_dist"         : 4,
-                   "hik"              : 5,
-                   "hellinger"        : 6,
-                   "chi_square"       : 7,
-                   "cs"               : 7,
-                   "kullback_leibler" : 8,
-                   "kl"               : 8 }
+#flann_distances = {"euclidean"        : 1, 
+                   #"manhattan"        : 2, 
+                   #"minkowski"        : 3,
+                   #"max_dist"         : 4,
+                   #"hik"              : 5,
+                   #"hellinger"        : 6,
+                   #"chi_square"       : 7,
+                   #"cs"               : 7,
+                   #"kullback_leibler" : 8,
+                   #"kl"               : 8 }
 
-pyflann.set_distance_type('hellinger', order=0)
+#pyflann.set_distance_type('hellinger', order=0)
 
 def ann_flann_once(dpts, qpts, num_neighbors):
     flann = pyflann.FLANN()
@@ -229,7 +228,6 @@ def plot_clusters(data, datax2_clusterx, clusters):
         ax.scatter(data_x, data_y, data_z, s=20,  c=data_colors, marker='o')
         ax.scatter(clus_x, clus_y, clus_z, s=500, c=clus_colors, marker='*')
     return fig
-
 
 def precompute_akmeans(data, num_clusters=1e6, MAX_ITERS=200, force_recomp=False):
     'precompute akmeans'

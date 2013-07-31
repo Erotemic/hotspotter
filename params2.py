@@ -15,7 +15,7 @@ __NUM_RERANK__   = 50
 # Percentage of the diagonal length of keypoint extent
 __XY_THRESH__    = .05
 hs1_params = {'algorithm' :'kdtree',
-              'trees'     :4,
+              'trees'     :8,
               'checks'    :128}
 
 # Unwhitened
@@ -41,7 +41,8 @@ mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
                               'table_number_'      : 12L,
                               'target_precision'   : 0.8999999761581421,
                               'trees'              : 1}
-__FLANN_ONCE_PARAMS__ = mother_hesaff_tuned_params
+
+__FLANN_ONCE_PARAMS__ = hs1_params
 __FLANN_PARAMS__      = hs1_params
 
 __LAZY_MATCHING__ = True

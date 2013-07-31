@@ -361,32 +361,6 @@ class Timer(object):
         sys.stdout.write('...toc(%.4fs, ' % ellapsed + '"' + self.msg + '"' + ')\n')
         sys.stdout.flush()
 
-import matplotlib.pyplot as plt
-def figure(fignum, doclf=False, title=None, **kwargs):
-    fig = plt.figure(fignum, **kwargs)
-    axes_list = fig.get_axes()
-    if not 'user_stat_list' in fig.__dict__.keys() or doclf:
-        fig.user_stat_list = []
-        fig.user_notes = []
-    if doclf or len(axes_list) == 0:
-        fig.clf()
-        ax = plt.subplot(111)
-    else: 
-        ax  = axes_list[0]
-    if not title is None:
-        ax.set_title(title)
-        fig.canvas.set_window_title('fig '+str(fignum)+' '+title)
-    return fig
-
-
-def reload_modules():
-    import imp
-    import drawing_functions2
-    import hotspotter.helpers
-    imp.reload(drawing_functions2)
-    imp.reload(hotspotter.helpers)
-
-
 def symlink(source, link_name, noraise=False):
     try: 
         import os
@@ -458,12 +432,12 @@ def remove_files_in_dir(dpath, fname_pattern='*', recursive=False):
     print('... Removed %d/%d files' % (num_removed, num_matched))
     return True
 
-def profile(cmd):
+def profile(cmd, globals=globals(), locals=locals()):
     # Meliae # from meliae import loader # om = loader.load('filename.json') # s = om.summarize();
     import cProfile, sys, os
     print('Profiling Command: '+cmd)
     cProfOut_fpath = 'OpenGLContext.profile'
-    cProfile.runctx( cmd, globals(), locals(), filename=cProfOut_fpath )
+    cProfile.runctx( cmd, globals, locals, filename=cProfOut_fpath )
     # RUN SNAKE
     print('Profiled Output: '+cProfOut_fpath)
     if sys.platform == 'win32':

@@ -10,19 +10,9 @@ def printDBG(msg):
     #print(msg)
     pass
 
-
 # ========================================================
 # Driver functions (reports results for entire experiment)
 # ========================================================
-
-last_report = None
-
-def view_last_report():
-    global last_report
-    if last_report is None: 
-        print('no report')
-    else:
-        helpers.gvim(last_report)
 
 def write_rank_results(hs, qcx2_res):
     rankres_str = rank_results(hs, qcx2_res)
@@ -30,7 +20,6 @@ def write_rank_results(hs, qcx2_res):
     write_report(hs, rankres_str, report_type)
 
 def write_report(hs, report_str, report_type):
-    global last_report
     result_dir = hs.dirs.result_dir
     algo_uid   = hs.algo_uid()
     timestamp  = get_timestamp()
@@ -38,7 +27,7 @@ def write_report(hs, report_str, report_type):
     helpers.ensurepath(result_dir)
     rankres_csv = join(result_dir, csv_fname)
     helpers.write_to(rankres_csv, report_str)
-    last_report = rankres_csv
+    helpers.gvim(rankres_csv)
 
 def get_true_positive_ranks(qcx, top_cx, cx2_nx):
     'Returns the ranking of the other chips which should have scored high'
@@ -114,7 +103,7 @@ def rank_results(hs, qcx2_res):
     #   NAME       = Query chip-name''').strip()
 
     # Build the experiemnt csv header
-    rankres_csv_header = '#CID, TT RANK, TF RANK, TT SCORE, TF SCORE, SCORE DISP, NAME'
+    rankres_csv_header = '#CID,  TT RANK,  TF RANK,  TT SCORE,  TF SCORE, SCORE DISP, NX'
 
     # Build the experiment csv data lines
     todisp = np.vstack([cx2_cid,
@@ -126,8 +115,8 @@ def rank_results(hs, qcx2_res):
                         cx2_nx]).T
     rankres_csv_lines = []
     for (cid, ttr, ttnr, tts, ttns, sdisp, nx) in todisp:
-        csv_line = ('%4d, %8.0f, %8.0f, %9.2f, %9.2f, %10.2f, %s' %\
-              (cid, ttr, ttnr, tts, ttns, sdisp, nx2_name[nx]) )
+        csv_line = ('%4d, %8.0f, %8.0f, %9.2f, %9.2f, %10.2f, %4d' %\
+              (cid, ttr, ttnr, tts, ttns, sdisp, nx) )
         rankres_csv_lines.append(csv_line)
 
     # Build the experiment summary report
@@ -172,7 +161,6 @@ def print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False):
     print_top_res_scores(hs, res, view_top, SV)
 
 def print_top_res_scores(hs, res, view_top=10, SV=False):
-    res.printme()
     qcx = res.qcx
     cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
     lbl = ['(assigned)', '(assigned+V)'][SV]
@@ -252,14 +240,15 @@ def get_tt_bt_tf_cxs(hs, res, SV):
     tt_cx, tt_rank, tt_score = get_nth_truepos_match(res,  hs,  0, SV)
     bt_cx, bt_rank, bt_score = get_nth_truepos_match(res,  hs, -1, SV)
     tf_cx, tf_rank, tf_score = get_nth_falsepos_match(res, hs,  0, SV)
-    titles = ('TT '+str(tt_rank)+' ', 'BT '+str(bt_rank)+' ', 'TF '+str(tf_rank)+' ')
+    titles = ('TopTP rank='+str(tt_rank)+' ',
+              'BotTP rank='+str(bt_rank)+' ',
+              'TopFP rank='+str(tf_rank)+' ')
     cxs = (tt_cx, bt_cx, tf_cx)
     return cxs, titles
 
 def visualize_res_tt_bt_tf(hs, res):
-    print('Visualizing result: ')
-    res.printme()
-
+    #print('Visualizing result: ')
+    #res.printme()
     SV = False
     qcx = res.qcx
     _fn = qcx
@@ -298,14 +287,15 @@ if __name__ == '__main__':
     try:
         qcx2_res = mc2.run_default(hs)
         qcx = 1
-        print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False)
-        print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=True)
+        #print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False)
+        #print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=True)
         visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
 
         def dinspect(qcx):
             df2.close_all_figures()
             visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
             df2.present()
+
     except Exception as ex:
         print(repr(ex))
         raise
@@ -313,4 +303,4 @@ if __name__ == '__main__':
     'dev inspect'
 
     # Execing df2.present does an IPython aware plt.show()
-    exec(df2.present(wh=(600,400)))
+    exec(df2.present(wh=(900,600)))

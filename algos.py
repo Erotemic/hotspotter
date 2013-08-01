@@ -29,19 +29,53 @@ def histeq(pil_img):
         print('Using fallback histeq')
         return Image.fromarray(imtools.histeq(img)).convert('L')
 
-def tune_flann(data):
+def tune_flann(data, **kwargs):
     flann = pyflann.FLANN()
     num_data = len(data)
-    # Reduce to a smaller dataset
-    datax = np.arange(num_data)
-    np.random.shuffle(datax)
-    _num_data    = int(num_data*.3)
-    _datax       = datax[0:_num_data]
-    _data        = data[_datax]
-    tuned_params = flann.build_index(_data, algorithm='autotuned')
+    flann_atkwargs = dict(algorithm='autotuned',
+                                 target_precision=.01,
+                                 build_weight=0.01,
+                                 memory_weight=0.0,
+                                 sample_fraction=0.001)
+    flann_atkwargs.update(kwargs)
+
+    suffix = repr(flann_atkwargs)
+    badchar_list = ',{}\': '
+    for badchar in badchar_list:
+        suffix = suffix.replace(badchar, '')
+
+    print flann_atkwargs
+
+    tuned_params = flann.build_index(data, **flann_atkwargs)
+
     myprint(tuned_params)
+
+    out_file = 'flann_tuned'+suffix
+    helpers.write_to(out_file, repr(tunned_params))
     flann.delete_index()
     return tuned_params
+
+def __tune():
+    tune_flann(sample_fraction=.03, target_precision=.9, build_weight=.01)
+    tune_flann(sample_fraction=.03, target_precision=.8, build_weight=.5)
+    tune_flann(sample_fraction=.03, target_precision=.8, build_weight=.9)
+    tune_flann(sample_fraction=.03, target_precision=.98, build_weight=.5)
+    tune_flann(sample_fraction=.03, target_precision=.95, build_weight=.01)
+    tune_flann(sample_fraction=.03, target_precision=.98, build_weight=.9)
+
+    tune_flann(sample_fraction=.3, target_precision=.9, build_weight=.01)
+    tune_flann(sample_fraction=.3, target_precision=.8, build_weight=.5)
+    tune_flann(sample_fraction=.3, target_precision=.8, build_weight=.9)
+    tune_flann(sample_fraction=.3, target_precision=.98, build_weight=.5)
+    tune_flann(sample_fraction=.3, target_precision=.95, build_weight=.01)
+    tune_flann(sample_fraction=.3, target_precision=.98, build_weight=.9)
+
+    tune_flann(sample_fraction=1, target_precision=.9, build_weight=.01)
+    tune_flann(sample_fraction=1, target_precision=.8, build_weight=.5)
+    tune_flann(sample_fraction=1, target_precision=.8, build_weight=.9)
+    tune_flann(sample_fraction=1, target_precision=.98, build_weight=.5)
+    tune_flann(sample_fraction=1, target_precision=.95, build_weight=.01)
+    tune_flann(sample_fraction=1, target_precision=.98, build_weight=.9)
 
 #__FLANN_ONCE_PARAMS__ = {
     #'algorithm' : 'kdtree', 

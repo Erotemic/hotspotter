@@ -65,6 +65,7 @@ def assign_features_to_bow_vector(vocab):
 
 bow_norm = 'l2'
 def precompute_bag_of_words(hs):
+    print('__PRECOMPUTING_BAG_OF_WORDS__')
     # Build (or reload) one vs many flann index
     __VOCAB_SIZE__ = 10000
     feat_dir  = hs.dirs.feat_dir
@@ -75,7 +76,7 @@ def precompute_bag_of_words(hs):
     # Build a NN index for the words
     flann_words = pyflann.FLANN()
     flann_words_params = flann_words.build_index(words, algorithm='linear')
-    print flann_words_params
+    print(' * bag of words is using linear NN search')
     # Compute Inverted File
     wx2_axs = [[] for _ in xrange(num_clusters)]
     for ax, wx in enumerate(ax2_wx):
@@ -111,7 +112,6 @@ def precompute_bag_of_words(hs):
     wx2_idf = np.array(wx2_idf)
     wx2_idf.shape = (wx2_idf.size,)
     vocab = Vocabulary(words, flann_words, cx2_bow, wx2_idf, wx2_cxs, wx2_fxs)
-    vocab.printme()
     return vocab
 
 def truncate_vvec(vvec, thresh):
@@ -649,6 +649,10 @@ def run_matching(hs, matcher):
         res = qcx2_res[qcx]
         # load query from cache if possible
         cache_load_success = params.__CACHE_QUERY__ and res.load(hs)
+
+        if qcx in params.__FORCE_REQUERY_CX__:
+            cache_load_success = False
+
         # Get what data we have if we are redoing things
         if params.__RESAVE_QUERY__ or params.__REVERIFY_QUERY__:
             cx2_fm      = res.cx2_fm
@@ -677,12 +681,12 @@ def run_matching(hs, matcher):
         res.cx2_score_V = cx2_score_V
         # Cache query result
         if not cache_load_success or params.__REVERIFY_QUERY__ or params.__RESAVE_QUERY__:
-            tt_save = tic('caching query')
+            #tt_save = tic('caching query')
             res.save(hs)
-            tt_save = toc(tt_save)
+            #toc(tt_save)
     if len(skip_list) > 0:
         print('Skipped more queries than you should have: %r ' % skip_list)
-    total_time = toc(tt_ALL)
+    #total_time = toc(tt_ALL)
     # Write results out to disk
     rr2.write_rank_results(hs, qcx2_res)
     return qcx2_res

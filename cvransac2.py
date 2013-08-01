@@ -284,7 +284,7 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
             H = linalg.solve(T2, H_prime).dot(T1)                # Unnormalize
         except linalg.LinAlgError as ex:
             #printWARN('Warning 285 '+repr(ex), )
-            return None
+            return np.eye(3), aff_inliers
 
     # Estimate final inliers
     xy1_mHt = transform_xy(H, xy1_m)                        # Transform Kpts1 to Kpts2-space

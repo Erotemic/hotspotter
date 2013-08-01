@@ -403,7 +403,7 @@ def show_matches3(res, hs, cx, SV=True, fignum=0, title_aug=None):
     fm    = cx2_fm[cx]
     fs    = cx2_fs[cx]
     nMatches = len(fm)
-    title='qcx(%r) vs cx(%r)\n #matches=%r score=%.2f' % (qcx, cx, nMatches, score)
+    title='qx%r v cx%r\n #match=%r score=%.2f' % (qcx, cx, nMatches, score)
     if not title_aug is None:
         title = title_aug + title
     if SV:

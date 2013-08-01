@@ -351,3 +351,5 @@ if __name__ == '__main__':
         hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
         # --- LOAD FEATURES --- #
         hs_feats  = load_chip_features(hs_dirs, hs_tables, hs_cpaths)
+        cx2_desc = hs_feats.cx2_desc
+        cx2_kpts = hs_feats.cx2_kpts

@@ -96,9 +96,9 @@ def myprint(input=None, prefix='', indent='', lbl=''):
             _println(indent+'  '+attr+' : '+val)
         _println(indent+'}')
 
-def gvim(string):
+def gvim(fname):
     'its the only editor that matters'
-    os.system('gvim '+result_csv)
+    os.system('gvim '+fname)
 
 def longest_existing_path(_path):
     while True: 
@@ -288,7 +288,7 @@ def save_npz(fname, *args, **kwargs):
 def load_npz(fname):
     print(' * load_npz: %r ' % fname)
     npz = np.load(fname)
-    print(' * npz.keys() = %r '+str(npz.keys()))
+    #print(' * npz.keys() = %r '+str(npz.keys()))
     return tuple(npz[key] for key in sorted(npz.keys()))
 
 def hashstr_md5(data):

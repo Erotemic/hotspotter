@@ -2,7 +2,6 @@ import os.path
 import sys
 import helpers
 
-
 # Number of processessors
 __NUM_PROCS__ = 9
 # Feature type to use

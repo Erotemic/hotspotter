@@ -59,7 +59,7 @@ class HotspotterDirs(DynStruct):
 
 
         if not os.path.islink(self.internal_sym):
-            symlink(internal_dir, self.internal_sym, noraise=True)
+            symlink(self.internal_dir, self.internal_sym, noraise=True)
 
     def delete_computed_dir(self):
         computed_dir = self.computed_dir

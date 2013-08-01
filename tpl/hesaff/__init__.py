@@ -1,12 +1,14 @@
 import subprocess
 import numpy as np
-import os
+import os, sys
 from os.path import dirname, realpath, join
 from PIL import Image
 #import threading
 #__hesaff_lock = threading.Lock()
 
 hesaff_exe = join(realpath(dirname(__file__)), 'hesaff')
+if sys.platform == 'win32':
+    hesaff_exe += '.exe'
 __HOME__ = os.path.expanduser('~')
 hesaff_tmp_dir = os.path.join(__HOME__, '.tmp_hesaff') 
 if not os.path.exists(hesaff_tmp_dir):

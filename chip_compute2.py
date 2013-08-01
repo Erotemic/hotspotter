@@ -3,11 +3,11 @@ from PIL import Image
 from Parallelize import parallel_compute
 from Printable import DynStruct
 from helpers import ensure_path, mystats, myprint
-import algos2 as algos
+import algos
 import load_data2
 import numpy as np
 import os, sys
-import params2 as params
+import params
 
 
 # =======================================

@@ -5,17 +5,17 @@
 import drawing_functions2 as df2
 # Hotspotter Imports
 from cvransac2 import H_homog_from_DELSAC
-from helpers import checkpath
+import helpers
 from helpers import Timer, get_exec_src, tic, toc, myprint, printWARN
 from Printable import DynStruct
-import algos2
+import algos
+import helpers
 import chip_compute2
 import cvransac2
 import feature_compute2
 import load_data2
-import params2
-import params2 as params
-from params2 import *
+import params
+from params import *
 import report_results2 as rr2
 # Math and Science Imports
 import cv2
@@ -31,8 +31,8 @@ import sys
 # Imp Module Reloads
 import imp
 #imp.reload(cvransac2)
-#imp.reload(algos2)
-#imp.reload(params2)
+#imp.reload(algos)
+#imp.reload(params)
 #imp.reload(rr2)
 
 #========================================
@@ -49,7 +49,17 @@ def printDBG(msg):
 #========================================
 # Bag-of-Words
 #========================================
-   
+
+class Vocabulary(DynStruct):
+    def __init__(self, words, flann_words, cx2_bow, wx2_idf, wx2_cxs, wx2_fxs):
+        super(Vocabulary, self).__init__()
+        self.words       = words
+        self.flann_words = flann_words
+        self.cx2_bow     = cx2_bow
+        self.wx2_idf     = wx2_idf
+        self.wx2_cxs     = wx2_cxs
+        self.wx2_fxs     = wx2_fxs
+  
 def assign_features_to_bow_vector(vocab):
     pass
 
@@ -61,7 +71,7 @@ def precompute_bag_of_words(hs):
     num_clusters = __VOCAB_SIZE__
     # Compute words
     ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
-    ax2_wx, words = algos2.precompute_akmeans(ax2_desc, num_clusters, force_recomp=False)
+    ax2_wx, words = algos.precompute_akmeans(ax2_desc, num_clusters, force_recomp=False)
     # Build a NN index for the words
     flann_words = pyflann.FLANN()
     flann_words_params = flann_words.build_index(words, algorithm='linear')
@@ -95,6 +105,11 @@ def precompute_bag_of_words(hs):
     # Renormalize
     cx2_bow = sklearn.preprocessing.normalize(cx2_bow, norm=bow_norm, axis=1, copy=False)
     # Return vocabulary
+
+    wx2_fxs = np.array(wx2_fxs)
+    wx2_cxs = np.array(wx2_cxs)
+    wx2_idf = np.array(wx2_idf)
+    wx2_idf.shape = (wx2_idf.size,)
     vocab = Vocabulary(words, flann_words, cx2_bow, wx2_idf, wx2_cxs, wx2_fxs)
     vocab.printme()
     return vocab
@@ -107,24 +122,10 @@ def truncate_vvec(vvec, thresh):
     vvec_trunc = sklearn.preprocessing.normalize(vvec_trunc, norm=bow_norm, axis=1, copy=False)
     return vvec_trunc
 
-def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
-    cx2_bow = vocab.cx2_bow
-    wx2_cxs = vocab.wx2_cxs
-    wx2_fxs = vocab.wx2_fxs
-    words   = vocab.words
-    flann_words = vocab.flann_words
-    # This is not robust to out of database queries
-    vvec = cx2_bow[qcx]
-    # Compute distance to every database vector
-    cx2_score = (cx2_bow.dot(vvec.T)).toarray()
-    # Assign each query descriptor to a word
-    qdesc = np.array(cx2_desc[qcx], dtype=words.dtype)
-    (qfx2_wx, __word_dist) = flann_words.nn_index(qdesc, 1)
-    # Vote for the chips
-    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
-    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+def test__():
     vvec_flat = np.array(vvec.toarray()).ravel()
-    qcx2_wx    = np.flatnonzero(vvec_flat)
+    qcx2_wx   = np.flatnonzero(vvec_flat)
+    cx2_score = (cx2_bow.dot(vvec.T)).toarray().ravel()
 
     cx2_nx = hs.tables.cx2_nx
     qnx = cx2_nx[qcx]
@@ -149,24 +150,64 @@ def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
     df2.show_signature(vvec_flat, fignum=2)
     df2.show_signature(vvec2_flat, fignum=3)
     df2.present()
-
     #df2.show_histogram(qcx2_wx, fignum=1)
-    _tmp = 0
-    _tmp2 = 0
+    pass
+
+def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
+    cx2_bow = vocab.cx2_bow
+    wx2_cxs = vocab.wx2_cxs
+    wx2_fxs = vocab.wx2_fxs
+    wx2_idf = vocab.wx2_idf
+    words   = vocab.words
+    flann_words = vocab.flann_words
+    # This is not robust to out of database queries
+    vvec = cx2_bow[qcx]
+    # Compute distance to every database vector
+    cx2_score = (cx2_bow.dot(vvec.T)).toarray().flatten()
+    # Assign each query descriptor to a word
+    qdesc = np.array(cx2_desc[qcx], dtype=words.dtype)
+    (qfx2_wx, __word_dist) = flann_words.nn_index(qdesc, 1)
+    # Vote for the chips
+
+    #t = helpers.tic()
+    #cx2_fm = [[] for _ in xrange(len(cx2_cid))]
+    #cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    #qfx2_cxlist = wx2_cxs[qfx2_wx] 
+    #qfx2_fxlist = wx2_fxs[qfx2_wx] 
+    #qfx2_fs = wx2_idf[qfx2_wx] 
+    #for qfx, (fs, cx_list, fx_list) in enumerate(zip(qfx2_fs, 
+                                                     #qfx2_cxlist, 
+                                                     #qfx2_fxlist)):
+        #for (cx, fx) in zip(cx_list, fx_list): 
+            #if cx == qcx: continue
+            #fm  = (qfx, fx)
+            #cx2_fm[cx].append(fm)
+            #cx2_fs[cx].append(fs)
+    #cx2_fm_ = cx2_fm
+    #cx2_fs_ = cx2_fs
+    #print helpers.toc(t)
+
+    #t = helpers.tic()
+    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
     for qfx, wx in enumerate(qfx2_wx):
         cx_list = wx2_cxs[wx]
         fx_list = wx2_fxs[wx]
-        _qfs = vvec_flat[wx]
+        fs = wx2_idf[wx]
+        #_qfs = vvec_flat[wx]
         for (cx, fx) in zip(cx_list, fx_list): 
-            _tmp+=1
             if cx == qcx: continue
-            _tmp2+=1
             fm  = (qfx, fx)
-            _fs = cx2_bow[cx, wx]
-            fs  = _qfs * _fs
+            #_fs = cx2_bow[cx, wx]
+            #fs  = _qfs * _fs
             cx2_fm[cx].append(fm)
             cx2_fs[cx].append(fs)
-    return cx2_fs, cx2_fm, cx2_score
+    #print helpers.toc(t)
+
+    # Convert to numpy
+    for cx in xrange(len(cx2_cid)): cx2_fm[cx] = np.array(cx2_fm[cx])
+    for cx in xrange(len(cx2_cid)): cx2_fs[cx] = np.array(cx2_fs[cx])
+    return cx2_fm, cx2_fs, cx2_score
 
 #========================================
 # One-vs-Many 
@@ -200,9 +241,10 @@ def precompute_index_1vM(hs):
     feat_type = hs.feats.feat_type
     ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
     flann_1vM = pyflann.FLANN()
-    flann_1vM_path = feat_dir + '/flann_onevsmany_'+feat_type+'.index'
+    feat_uid = hs.feat_uid()
+    flann_1vM_path = feat_dir + '/flann_One-vs-Many_'+feat_uid+'.index'
     load_success = False
-    if checkpath(flann_1vM_path):
+    if helpers.checkpath(flann_1vM_path):
         try:
             print('Trying to load FLANN index')
             flann_1vM.load_index(flann_1vM_path, ax2_desc)
@@ -274,7 +316,6 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, one_vs_many):
 def assign_matches_1vM_BINARY(qcx, cx2_cid, cx2_desc):
     return None
 
-
 #========================================
 # One-vs-One 
 #========================================
@@ -331,7 +372,7 @@ def assign_matches_1v1(qcx, cx2_cid, cx2_desc):
     sys.stdout.write('DONE')
     flann_1v1.delete_index()
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
-    return cx2_fm, cx2_fs
+    return cx2_fm, cx2_fs, cx2_score
 
 def cv2_match(desc1, desc2):
     K = 1
@@ -473,18 +514,10 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
 def warp_chip(rchip2, H, rchip1):
     rchip2W = cv2.warpPerspective(rchip2, H, rchip1.shape[0:2][::-1])
     return rchip2W
-#========================================
-# Wrapper/Data classes
-#========================================
-class Vocabulary(DynStruct):
-    def __init__(self, words, flann_words, cx2_bow, wx2_idf, wx2_cxs, wx2_fxs):
-        super(Vocabulary, self).__init__()
-        self.words       = words
-        self.flann_words = flann_words
-        self.cx2_bow     = cx2_bow
-        self.wx2_idf     = wx2_idf
-        self.wx2_cxs     = wx2_cxs
-        self.wx2_fxs     = wx2_fxs
+
+#=========================
+# Query Result Class
+#=========================
 
 class QueryResult(DynStruct):
     def __init__(self, qcx):
@@ -513,9 +546,9 @@ class QueryResult(DynStruct):
         return cx2_score, cx2_fm, cx2_fs
 
     def get_fpath(self, hs):
-        algo_uid = hs.algo_uid()
+        query_uid = hs.query_uid()
         qres_dir = hs.dirs.qres_dir 
-        fname = 'result_'+algo_uid+'_qcx=%d.npz' % self.qcx
+        fname = 'result_'+query_uid+'_qcx=%d.npz' % self.qcx
         fpath = os.path.join(qres_dir, fname)
         return fpath
     
@@ -526,7 +559,7 @@ class QueryResult(DynStruct):
 
     def load(self, hs):
         fpath = self.get_fpath(hs)
-        if checkpath(fpath):
+        if helpers.checkpath(fpath):
             return self.load_result(fpath)
         return False
 
@@ -541,7 +574,7 @@ class QueryResult(DynStruct):
         try:
             npz = np.load(fpath)
             for _key in npz.files:
-                if _key in ['qcx']:
+                if _key in ['qcx']: # hack
                     self.__dict__[_key] = npz[_key].tolist()
                 else: 
                     self.__dict__[_key] = npz[_key]
@@ -549,13 +582,17 @@ class QueryResult(DynStruct):
             return True
         except Exception as ex:
             os.remove(fpath)
-            printWARN('Load Result Exception : ' + str(ex) + 
+            printWARN('Load Result Exception : ' + repr(ex) + 
                     '\nResult was corrupted for qcx=%d' % self.qcx)
             return False
 
-class Matcher(object):
+#=========================
+# Matcher Class
+#=========================
+
+class Matcher(DynStruct):
     '''Wrapper class: assigns matches based on matching and feature prefs'''
-    def __init__(self, hs, match_type='1vM'):
+    def __init__(self, hs, match_type):
         print('Creating matcher: '+str(match_type))
         self.feat_type  = hs.feats.feat_type
         self.match_type = match_type
@@ -565,9 +602,13 @@ class Matcher(object):
         # Curry the correct functions
         self.__assign_matches = None
         if   match_type == 'BOW':
-            raise NotImplementedError(match_type)
-            #self.__vocabulary     = precompute_bag_of_words(hs)
-            #self.__assign_matches = self.__assign_matches_BOW
+            self.__vocabulary     = precompute_bag_of_words(hs)
+            self.__assign_matches = self.__assign_matches_BOW
+        elif match_type == '1vM':
+            self.__one_vs_many = precompute_index_1vM(hs)
+            self.__assign_matches = self.__assign_matches_1vM
+        elif match_type == '1v1':
+            self.__assign_matches = assign_matches_1v1
         elif match_type == 'bBOW':
             raise NotImplementedError(match_type)
         elif match_type == 'b1vM':
@@ -576,12 +617,6 @@ class Matcher(object):
         elif match_type == 'b1v1':
             raise NotImplementedError(match_type)
             #self.__assign_matches = assign_matches_1v1_BINARY
-        elif match_type == '1vM':
-            self.__one_vs_many = precompute_index_1vM(hs)
-            self.__assign_matches = self.__assign_matches_1vM
-        elif match_type == '1v1':
-            raise NotImplementedError(match_type)
-            #self.__assign_matches = assign_matches_1v1
         else:
            raise Exception('Unknown match_type: '+repr(match_type))
     def assign_matches(self, qcx, cx2_cid, cx2_desc):
@@ -596,6 +631,7 @@ class Matcher(object):
 #========================================
 # Work Functions
 #========================================
+
 def run_matching(hs, matcher):
     '''Runs the full matching pipeline using the abstracted classes'''
     cx2_cid  = hs.tables.cx2_cid
@@ -611,17 +647,27 @@ def run_matching(hs, matcher):
             skip_list.append(qcx)
             continue
         res = qcx2_res[qcx]
-        if params.__LAZY_MATCHING__ and res.load(hs):
-            continue
-        tt_A = tic('query(qcx=%d)' % qcx)
+        # load query from cache if possible
+        cache_load_success = params.__CACHE_QUERY__ and res.load(hs)
+        # Get what data we have if we are redoing things
+        if params.__RESAVE_QUERY__ or params.__REVERIFY_QUERY__:
+            cx2_fm      = res.cx2_fm
+            cx2_fs      = res.cx2_fs
+            cx2_score   = res.cx2_score
+            cx2_fm_V    = res.cx2_fm_V
+            cx2_fs_V    = res.cx2_fs_V
+            cx2_score_V = res.cx2_score_V
         # Assign matches with the chosen function (1v1) or (1vM)
-        (cx2_fm, cx2_fs, cx2_score) = matcher.assign_matches(qcx, cx2_cid, cx2_desc)
-        assign_times.append(toc(tt_A))
+        if not cache_load_success:
+            tt_A = tic('assign(qcx=%d)' % qcx)
+            (cx2_fm, cx2_fs, cx2_score) = matcher.assign_matches(qcx, cx2_cid, cx2_desc)
+            assign_times.append(toc(tt_A))
         # Spatially verify the assigned matches
-        tt_V = tic('verify(qcx=%d)' % qcx)
-        (cx2_fm_V, cx2_fs_V, cx2_score_V) = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
-        verify_times.append(toc(tt_V))
-        # Assign output to a query result
+        if not cache_load_success or params.__REVERIFY_QUERY__:
+            tt_V = tic('verify(qcx=%d)' % qcx)
+            (cx2_fm_V, cx2_fs_V, cx2_score_V) = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
+            verify_times.append(toc(tt_V))
+        # Assign output to the query result 
         res.qcx = qcx
         res.cx2_fm    = cx2_fm
         res.cx2_fs    = cx2_fs
@@ -629,28 +675,45 @@ def run_matching(hs, matcher):
         res.cx2_fm_V = cx2_fm_V
         res.cx2_fs_V = cx2_fs_V
         res.cx2_score_V = cx2_score_V
-        res.save(hs)
+        # Cache query result
+        if not cache_load_success or params.__REVERIFY_QUERY__ or params.__RESAVE_QUERY__:
+            tt_save = tic('caching query')
+            res.save(hs)
+            tt_save = toc(tt_save)
     if len(skip_list) > 0:
         print('Skipped more queries than you should have: %r ' % skip_list)
     total_time = toc(tt_ALL)
     # Write results out to disk
-    rr2.write_rank_results(hs, matcher, qcx2_res)
+    rr2.write_rank_results(hs, qcx2_res)
+    return qcx2_res
+
+
+def run_default(hs):
+    matcher = hs.use_matcher(params.__MATCH_TYPE__)
+    qcx2_res = run_matching(hs, matcher)
     return qcx2_res
 
 def run_one_vs_many(hs):
     matcher = hs.use_matcher('1vM')
-    return run_matching(hs, matcher)
+    qcx2_res_1vM = run_matching(hs, matcher)
+    return qcx2_res_1vM
 
 def run_one_vs_one(hs):
     matcher = hs.use_matcher('1v1')
-    return run_matching(hs, matcher)
+    qcx2_res_1v1 = run_matching(hs, matcher)
+    return qcx2_res_1v1
+
+def run_bag_of_words(hs):
+    matcher = hs.use_matcher('BOW')
+    qcx2_res_BOW = run_matching(hs, matcher)
+    return qcx2_res_BOW
 
 def runall_match(hs):
     #functools.partial
     hs.printme2()
-    qcx2_res_1vM = run_one_vs_many()
+    #qcx2_res_1vM = run_one_vs_many()
+    qcx2_res_BOW  = run_bag_of_words()
     #qcx2_res_1v1 = run_one_vs_one()
-
 
 #========================================
 # DRIVER CODE
@@ -658,53 +721,77 @@ def runall_match(hs):
 
 # TODO, this should go in a more abstracted module
 class HotSpotter(DynStruct):
-    def __init__(self):
-        super(HotSpotter, self).__init__()
-        self.tables = None
-        self.feats  = None
-        self.cpaths = None
-        self.dirs   = None
-        self.matcher = None
+    def __init__(hs, db_dir=None):
+        super(HotSpotter, hs).__init__()
+        hs.tables = None
+        hs.feats  = None
+        hs.cpaths = None
+        hs.dirs   = None
+        hs.matcher = None
+        if not db_dir is None:
+            hs.load_database(db_dir)
 
-    def algo_uid(self):
-        return self.feats.feat_type+'_'+self.matcher.match_type
+    def load_database(hs, db_dir):
+        # Load data
+        hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
+        hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
+        hs_feats  = feature_compute2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
+        # Build hotspotter structure
+        hs.tables  = hs_tables
+        hs.feats   = hs_feats
+        hs.cpaths  = hs_cpaths
+        hs.dirs    = hs_dirs
+        hs.use_matcher(params.__MATCH_TYPE__)
 
-    def use_matcher(self, match_type):
-        self.matcher = Matcher(self, match_type)
-        return self.matcher
+    # TODO: This UID code is repeated in feature_compute2. needs to be better
+    # integrated
 
-def load_hotspotter(db_dir):
-    'Loads a hs class'
-    # --- LOAD DATA --- #
-    hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
-    # --- LOAD CHIPS --- #
-    hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
-    # --- LOAD FEATURES --- #
-    hs_feats  = feature_compute2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
-    # --- BUILD HOTSPOTTER --- #
-    hs = HotSpotter()
-    hs.tables  = hs_tables
-    hs.feats   = hs_feats
-    hs.cpaths  = hs_cpaths
-    hs.dirs    = hs_dirs
-    hs.use_matcher('1vM')
-    return hs
+    def algo_uid(hs):
+        return hs.query_uid()
+
+    def query_uid(hs):
+        feat_type = hs.feats.feat_type
+        match_type = hs.matcher.match_type
+        uid_depends = [feat_type,
+                       match_type,
+                       ['','white'][params.__WHITEN_FEATS__]]
+        query_uid = '_'.join(uid_depends)
+        return query_uid
+
+    def feat_uid(hs):
+        feat_type = params.__FEAT_TYPE__
+        uid_depends = [feat_type,
+                    ['','white'][params.__WHITEN_FEATS__]]
+        feat_uid = '_'.join(uid_depends)
+        return feat_uid
+
+    def chip_uid(hs):
+        uid_depends = [['','histeq'][params.__HISTEQ__]]
+        chip_uid = '_'.join(uid_depends)
+        return chip_uid
+
+    def use_matcher(hs, match_type):
+        hs.matcher = Matcher(hs, match_type)
+        return hs.matcher
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     # --- CHOOSE DATABASE --- #
     db_dir = load_data2.MOTHERS
-    hs = load_hotspotter(db_dir)
+    hs = HotSpotter(db_dir)
     cx2_kpts = hs.feats.cx2_kpts
     cx2_desc = hs.feats.cx2_desc
-    cx2_cid = hs.tables.cx2_cid
+    cx2_cid  = hs.tables.cx2_cid
     qcx = 1
 
     __TEST_MODE__ = False or ('test' in sys.argv)
     if __TEST_MODE__:
         runall_match(hs)
         pass
+
+    if 'bow' in sys.argv:
+        exec(get_exec_src(precompute_bag_of_words)) 
 
     ## DEV ONLY CODE ##
     __DEV_MODE__ = False
@@ -729,3 +816,5 @@ if __name__ == '__main__':
             __IPYTHON__
         except: 
             plt.show()
+
+    exec(df2.present())

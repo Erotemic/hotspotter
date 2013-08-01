@@ -85,7 +85,8 @@ cx2_rchip_path = hs.cpaths.cx2_rchip_path
 # rerun query if feature type has changed
 if __oldfeattype != mc2.__FEAT_TYPE__:
     print('The feature type is new or has changed')
-    hs.feats.set_feat_type(mc2.__FEAT_TYPE__)
+    raise Exception('Relevant code removed')
+    #hs.feats.set_feat_type(mc2.__FEAT_TYPE__)
     cx2_kpts = hs.feats.cx2_kpts
     cx2_desc = hs.feats.cx2_desc
     flann_1vM = mc2.precompute_index_1vM(hs)

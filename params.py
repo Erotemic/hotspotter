@@ -1,11 +1,14 @@
 import os.path
+import sys
+import helpers
 
 
 # Number of processessors
 __NUM_PROCS__ = 9
-
 # Feature type to use
 __FEAT_TYPE__    = 'HESAFF'
+# Matching type
+__MATCH_TYPE__   = '1v1'
 # Number of matches for one-vs-many
 __K__            = 2
 # Thresholds for one-vs-one
@@ -14,9 +17,9 @@ __RATIO_THRESH__ = 1.5
 __NUM_RERANK__   = 50
 # Percentage of the diagonal length of keypoint extent
 __XY_THRESH__    = .05
-hs1_params = {'algorithm' :'kdtree',
-              'trees'     :8,
-              'checks'    :128}
+hs1_params = {'algorithm':'kdtree',
+              'trees'    :4,
+              'checks'   :128}
 
 # Unwhitened
 mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
@@ -45,8 +48,37 @@ mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
 __FLANN_ONCE_PARAMS__ = hs1_params
 __FLANN_PARAMS__      = hs1_params
 
-__LAZY_MATCHING__ = True
+print(' * Setting default parameters')
+print(' * Reading command line parameters')
 
-__WHITEN_FEATS__ = False
+__CACHE_QUERY__ = True
+__REVERIFY_QUERY__ = False
+__RESAVE_QUERY__ = True
 
-__HISTEQ__ = False
+__WHITEN_FEATS__  = False
+__HISTEQ__        = False
+
+if '--histeq' in sys.argv:
+    print(' * with histogram equalization')
+    __HISTEQ__ = True
+if '--whiten' in sys.argv:
+    print(' * with whitening')
+    __WHITEN_FEATS__ = True
+if '--1v1' in sys.argv:
+    __MATCH_TYPE__ = '1v1'
+if '--1vM' in sys.argv:
+    __MATCH_TYPE__ = '1vM'
+if '--BOW' in sys.argv:
+    __MATCH_TYPE__ = 'BOW'
+
+if '--cache-query' in sys.argv:
+    __CACHE_QUERY__ = True
+if '--nocache-query' in sys.argv:
+    __CACHE_QUERY__ = False
+
+
+if '--resave-query' in sys.argv:
+    __RESAVE_QUERY__ = False # 4H4X5
+
+if '--print-checks' in sys.argv:
+    helpers.__PRINT_CHECKS__ = True

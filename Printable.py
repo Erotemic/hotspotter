@@ -91,7 +91,6 @@ def printableVal(val,type_bit=True, justlength=False):
         if info.dtypestr == 'bool':
             _valstr = '{ shape:'+info.shapestr+' bittotal: '+info.bittotal+'}'# + '\n  |_____'
         else: 
-            print info.dtypestr
             _valstr = '{ shape:'+info.shapestr+' mM:'+info.minmaxstr+' }'# + '\n  |_____'
     # String
     elif type(val) is types.StringType:

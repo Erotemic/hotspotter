@@ -22,6 +22,28 @@ import warnings
 import fnmatch
 from sys import stdout as sout
 
+__PRINT_CHECKS__ = False
+
+def info(var, lbl):
+    if types(var) == np.ndarray:
+        return npinfo(var, lbl)
+    if types(var) == types.ListType:
+        return listinfo(var, lbl)
+
+def npinfo(ndarr, lbl='ndarr'):
+    info = ''
+    info+=(lbl+': shape=%r ; dtype=%r' % (ndarr.shape, ndarr.dtype))
+    return info
+
+def listinfo(list, lbl='ndarr'):
+    if type(list) != types.ListType:
+        raise Exception('!!')
+    info = ''
+    type_set = set([])
+    for _ in iter(list): type_set.add(str(type(_)))
+    info+=(lbl+': len=%r ; types=%r' % (len(list), type_set))
+    return info
+
 def cmd(command):
     os.system(command)
 
@@ -74,6 +96,10 @@ def myprint(input=None, prefix='', indent='', lbl=''):
             _println(indent+'  '+attr+' : '+val)
         _println(indent+'}')
 
+def gvim(string):
+    'its the only editor that matters'
+    os.system('gvim '+result_csv)
+
 def longest_existing_path(_path):
     while True: 
         _path_new = os.path.dirname(_path)
@@ -101,6 +127,9 @@ def checkpath(_path):
     '''Checks to see if the argument _path exists.'''
     # Do the work
     _path = os.path.normpath(_path)
+    if not __PRINT_CHECKS__:
+        return os.path.exists(_path)
+
     print_('Checking ' + repr(_path))
     if os.path.exists(_path):
         if os.path.isfile(_path):
@@ -222,9 +251,31 @@ def sanatize_fname(fname):
         fname += ext
     return fname
 
-def save_pkl(fname, obj):
+
+def tryload(fname):
+    if checkpath(fname):
+        print_(' * attempting to load cx2_feats from disk')
+        flush()
+        loaded = False
+        try: 
+            data = load_npz(fname)
+            println('...success')
+            loaded = True
+        except Exception as ex:
+            println('...failure')
+            print(repr(ex))
+            remove_file(fname)
+        if loaded:
+            if type(data) == types.TupleType:
+                # hack
+                data = data[0]
+            return data
+    return None
+
+
+def save_pkl(fname, data):
     with open(fname, 'wb') as file:
-        cPickle.dump(obj, file)
+        cPickle.dump(data, file)
 
 def load_pkl(fname):
     with open(fname, 'wb') as file:
@@ -481,16 +532,16 @@ def endl():
     return '\n'
 def printINFO(msg, *args):
     msg = 'INFO: '+str(msg)+''.join(map(str,args))
-    return println_(msg, *args)
+    return println(msg, *args)
 
 def printDBG(msg, *args):
     msg = 'DEBUG: '+str(msg)+''.join(map(str,args))
-    return println_(msg, *args)
+    return println(msg, *args)
 
 def printERR(msg, *args):
     msg = 'ERROR: '+str(msg)+''.join(map(str,args))
     raise Exception(msg)
-    return println_(msg, *args)
+    return println(msg, *args)
 
 def printWARN(warn_msg, category=UserWarning):
     warn_msg = 'Warning: '+warn_msg
@@ -584,19 +635,19 @@ def myreload():
     import imp
     #imp.reload(cvransac2)
     imp.reload(df2)
-    imp.reload(algos2)
+    imp.reload(algos)
     imp.reload(mc2)
     imp.reload(report_results2)
     imp.reload(helpers)
 
 if __name__ == '__main__':
     print('You ran helpers as main!')
-    import algos2
+    import algos
     import sklearn
-    module = algos2
+    module = algos
     seen = set(['numpy','matplotlib', 'scipy', 'pyflann', 'sklearn', 'skimage', 'cv2'])
 
-    hs2_basic = set(['drawing_functions2', 'params2', 'mc2'])
+    hs2_basic = set(['drawing_functions2', 'params', 'mc2'])
     python_basic = set(['os','sys', 'warnings', 'inspect','copy', 'imp','types'])
     tpl_basic = set(['pyflann', 'cv2'])
     science_basic = set(['numpy',

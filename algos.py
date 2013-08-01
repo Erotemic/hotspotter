@@ -8,13 +8,12 @@ import imp
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import params2
-import params2 as params
+import params
 import pyflann
 import sklearn.decomposition
 import sys
 #imp.reload(sys.modules['hotspotter.helpers'])
-#imp.reload(sys.modules['params2'])
+#imp.reload(sys.modules['params'])
 
 def histeq(pil_img):
     img = asarray(pil_img)
@@ -118,8 +117,8 @@ def tune_flann(data):
 
 def ann_flann_once(dpts, qpts, num_neighbors):
     flann = pyflann.FLANN()
-    flann.build_index(dpts, **__FLANN_ONCE_PARAMS__)
-    checks = __FLANN_ONCE_PARAMS__['checks']
+    flann.build_index(dpts, **params.__FLANN_ONCE_PARAMS__)
+    checks = params.__FLANN_ONCE_PARAMS__['checks']
     (qx2_dx, qx2_dist) = flann.nn_index(qpts, num_neighbors, checks=checks)
     return (qx2_dx, qx2_dist)
 
@@ -163,8 +162,8 @@ def __akmeans_iterate(data, clusters, datax2_clusterx_old, MAX_ITERS=500,
     return (datax2_clusterx, clusters)
 
 #@profile
-def akmeans(data, num_clusters=1e6, MAX_ITERS=500,
-            AVE_UNCHANGED_THRESH=30, AVE_UNCHANGED_WINDOW=10):
+def akmeans(data, num_clusters=1e6, MAX_ITERS=150,
+            AVE_UNCHANGED_THRESH=30, AVE_UNCHANGED_WINDOW=None):
     '''Approximiate K-Means (using FLANN)
     Input: data - np.array with rows of data. dtype must be np.float32
     Description: Quickly partitions data into K=num_clusters clusters.
@@ -172,6 +171,9 @@ def akmeans(data, num_clusters=1e6, MAX_ITERS=500,
     Each datapoint is assigned to its approximate nearest cluster center. 
     The cluster centers are recomputed. 
     Repeat until convergence.'''
+
+    if AVE_UNCHANGED_WINDOW is None:
+        AVE_UNCHANGED_WINDOW = int(len(data) / 500)
     print('Running akmeans: data.shape=%r ; num_clusters=%r' % (data.shape, num_clusters))
     print('  * will converge when the average number of label changes is less than %r over a window of %r iterations' % (AVE_UNCHANGED_THRESH, AVE_UNCHANGED_WINDOW))
     # Setup akmeans iterations
@@ -185,7 +187,7 @@ def akmeans(data, num_clusters=1e6, MAX_ITERS=500,
     clusters            = np.copy(data[clusterx2_datax])
     datax2_clusterx_old = -np.ones(len(data), dtype=np.int32)
     # This function does the work
-    (datax2_clusterx, clusters) = __akmeans_iterate(data, clusters, datax2_clusterx_old, MAX_ITERS,AVE_UNCHANGED_THRESH, AVE_UNCHANGED_WINDOW)
+    (datax2_clusterx, clusters) = __akmeans_iterate(data, clusters, datax2_clusterx_old, MAX_ITERS, AVE_UNCHANGED_THRESH, AVE_UNCHANGED_WINDOW)
     return (datax2_clusterx, clusters)
 
 def whiten(data):
@@ -251,7 +253,6 @@ if __name__ == '__main__':
     __REAL_DATA_MODE__ = True
     if __REAL_DATA_MODE__:
         exec(open('feature_compute2.py').read())
-        hs_feats.set_feat_type('HESAFF')
         cx2_desc = hs_feats.cx2_desc
         data = np.vstack(cx2_desc)
         datax2_clusterx, clusters = precompute_akmeans(data, num_clusters, force_recomp=True)

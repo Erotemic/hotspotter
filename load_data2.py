@@ -395,11 +395,7 @@ def test_load_csv():
 
 # Test load csv tables
 if __name__ == '__main__':
-    from load_data2 import *
+    import drawing_functions2 as df2
+    helpers.__PRINT_CHECKS__ = True #might as well
     hs_dirs, hs_tables = test_load_csv()
-    if '--cmd' in sys.argv:
-        from hotspotter.helpers import in_IPython, have_IPython
-        run_exec = False
-        if not in_IPython() and have_IPython():
-            import IPython
-            IPython.embed()
+    exec(df2.present())

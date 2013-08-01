@@ -6,23 +6,39 @@ import textwrap
 import sys
 from os.path import realpath, join
 
-def get_expt_type(hs, matcher):
-    expt_type = '_'.join([matcher.match_type, hs.feats.feat_type])
-    return expt_type
+def printDBG(msg):
+    #print(msg)
+    pass
 
-def write_report(hs, report_str, report_type, expt_type):
+
+# ========================================================
+# Driver functions (reports results for entire experiment)
+# ========================================================
+
+last_report = None
+
+def view_last_report():
+    global last_report
+    if last_report is None: 
+        print('no report')
+    else:
+        helpers.gvim(last_report)
+
+def write_rank_results(hs, qcx2_res):
+    rankres_str = rank_results(hs, qcx2_res)
+    report_type = 'rank_'
+    write_report(hs, rankres_str, report_type)
+
+def write_report(hs, report_str, report_type):
+    global last_report
     result_dir = hs.dirs.result_dir
+    algo_uid   = hs.algo_uid()
     timestamp  = get_timestamp()
-    csv_fname  = expt_type+report_type+timestamp+'.csv'
+    csv_fname  = algo_uid+report_type+timestamp+'.csv'
     helpers.ensurepath(result_dir)
     rankres_csv = join(result_dir, csv_fname)
     helpers.write_to(rankres_csv, report_str)
-
-def write_rank_results(hs, matcher, qcx2_res):
-    expt_type = get_expt_type(hs, matcher)
-    rankres_str = rank_results(qcx2_res, hs.tables, expt_type=expt_type)
-    report_type = 'rank_'
-    write_report(hs, rankres_str, report_type, expt_type)
+    last_report = rankres_csv
 
 def get_true_positive_ranks(qcx, top_cx, cx2_nx):
     'Returns the ranking of the other chips which should have scored high'
@@ -40,10 +56,10 @@ def get_false_positive_ranks(qcx, top_cx, cx2_nx):
     falsepos_ranks = _falsepos_ranks[top_cx[_falsepos_ranks] != qcx]
     return falsepos_ranks
 
-def rank_results(qcx2_res, hs_tables, expt_type=''):
-    cx2_cid  = hs_tables.cx2_cid
-    cx2_nx   = hs_tables.cx2_nx
-    nx2_name = hs_tables.nx2_name
+def rank_results(hs, qcx2_res):
+    cx2_cid  = hs.tables.cx2_cid
+    cx2_nx   = hs.tables.cx2_nx
+    nx2_name = hs.tables.nx2_name
     cx2_top_truepos_rank  = np.zeros(len(cx2_cid)) - 100
     cx2_top_truepos_score = np.zeros(len(cx2_cid)) - 100
     cx2_top_trueneg_rank  = np.zeros(len(cx2_cid)) - 100
@@ -116,7 +132,7 @@ def rank_results(qcx2_res, hs_tables, expt_type=''):
 
     # Build the experiment summary report
     rankres_summary  = '\n'
-    rankres_summary += '# Experiment Summary: '+expt_type+'\n'
+    rankres_summary += '# Experiment Settings (hs.algo_uid): '+hs.algo_uid()+'\n'
     rankres_summary +=  get_timestamp(format='comment')+'\n'
     rankres_summary += '# Num Chips: %d \n' % num_chips
     rankres_summary += '# Num Chips with at least one match: %d \n' % num_with_gtruth
@@ -143,9 +159,6 @@ def get_timestamp(format='filename'):
         'comment' : '# (yyyy-mm-dd hh:mm) %04d-%02d-%02d %02d:%02d' }
     stamp = time_formats[format] % time_tup
     return stamp
-
-def gvim(string):
-    os.system('gvim '+result_csv)
 
 def cx2_other_cx(hs, cx):
     cx2_nx   = hs.tables.cx2_nx
@@ -219,7 +232,7 @@ def get_nth_truepos_match(res, hs, n, SV):
     nth_cx    = truepos_cxs[n]
     nth_rank  = truepos_ranks[n]
     nth_score = truepos_scores[n]
-    print('Getting the nth=%r true pos cx,rank,score=(%r, %r, %r)' % \
+    printDBG('Getting the nth=%r true pos cx,rank,score=(%r, %r, %r)' % \
           (n, nth_cx, nth_rank, nth_score))
     return nth_cx, nth_rank, nth_score
 
@@ -228,7 +241,7 @@ def get_nth_falsepos_match(res, hs, n, SV):
     nth_cx    = falsepos_cxs[n]
     nth_rank  = falsepos_ranks[n]
     nth_score = falsepos_scores[n]
-    print('Getting the nth=%r false pos cx,rank,score=(%r, %r, %r)' % \
+    printDBG('Getting the nth=%r false pos cx,rank,score=(%r, %r, %r)' % \
           (n, nth_cx, nth_rank, nth_score))
     return nth_cx, nth_rank, nth_score
 
@@ -259,10 +272,16 @@ def visualize_res_tt_bt_tf(hs, res):
     df2.show_matches3(res, hs, cxsV[0], SV, fignum=_fn+.234, title_aug=titlesV[0])
     df2.show_matches3(res, hs, cxsV[1], SV, fignum=_fn+.235, title_aug=titlesV[1])
     df2.show_matches3(res, hs, cxsV[2], SV, fignum=_fn+.236, title_aug=titlesV[2])
+    df2.set_figtitle('fig '+str(_fn)+' -- ' + hs.query_uid())
 
 def visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx):
     res = qcx2_res[qcx]
     visualize_res_tt_bt_tf(hs, res)
+
+
+def visualize_all_qcx_tt_bt_tf(hs, qcx2_res):
+    for qcx, res in enumerate(qcx2_res):
+        visualize_res_tt_bt_tf(res)
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
@@ -274,27 +293,14 @@ if __name__ == '__main__':
     #imp.reload(mc2)
     # --- CHOOSE DATABASE --- #
     db_dir = load_data2.MOTHERS
-    hs = mc2.load_hotspotter(db_dir)
-    argv = set([arg.lower() for arg in sys.argv])
-
-    arg_list_1v1 = ['1v1','one-vs-one','ovo']
-    arg_list_1vM = ['1vm','one-vs-many','ovm']
-
-    arg_1v1 = False or any([arg1v1 in argv for arg1v1 in arg_list_1v1])
-    arg_1vM = True or any([arg1vM in argv for arg1vM in arg_list_1vM])
-
+    hs = mc2.HotSpotter(db_dir)
     df2.close_all_figures()
     try:
-        if arg_1vM:
-            qcx2_res = mc2.run_one_vs_many(hs)
-        if arg_1v1: 
-            qcx2_res = mc2.run_one_vs_one(hs)
-
-        if arg_1vM or arg_1v1:
-            qcx = 1
-            print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False)
-            print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=True)
-            visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
+        qcx2_res = mc2.run_default(hs)
+        qcx = 1
+        print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False)
+        print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=True)
+        visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
 
         def dinspect(qcx):
             df2.close_all_figures()
@@ -302,8 +308,9 @@ if __name__ == '__main__':
             df2.present()
     except Exception as ex:
         print(repr(ex))
+        raise
 
     'dev inspect'
 
     # Execing df2.present does an IPython aware plt.show()
-    exec(df2.present())
+    exec(df2.present(wh=(600,400)))

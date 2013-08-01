@@ -2,9 +2,9 @@ from __future__ import division
 #from __init__ import *
 # import hotspotter modules
 import drawing_functions2 as df2
-import algos2 as algos
+import algos
 import match_chips2 as mc2
-import params2 as params
+import params
 import tpl.hesaff as hesaff
 import helpers
 from Parallelize import parallel_compute
@@ -18,6 +18,13 @@ import cv2
 import sys
 
 
+def printDEBUG(msg):
+    print msg
+
+def default_feature_preferences():
+    prefs = Pref()
+    prefs.feat_type = Pref('HESAFF')
+    prefs.whiten    = Pref(params.__WHITEN__)
 
 #def old_cvkpts2_kpts(cvkpts)
     #kpts = zeros((len(cvkpts), 5), dtype=float32)
@@ -60,7 +67,7 @@ def cvkpts2_kpts(cvkpts):
     #kpts_theta  = [cos(cvkp.angle) * tau / 360 for cvkp in cv_fpts] # tauday.com
     kpts_theta   = [cos(cvkp.angle) * pi / 180 for cvkp in cvkpts]
     kpts_radius  = [float(cvkp.size)/2.0 for cvkp in cvkpts]
-    #kpts_ell     = [array((r, 0, r)) for r in kpts_radius]
+    #kpts_ell    = [array((r, 0, r)) for r in kpts_radius]
     kpts_scale   = [1 / (r**2) for r in kpts_radius]
     kpts_ell     = [array((s, 0, s)) for s in kpts_scale]
     kpts = hstack((kpts_xy, kpts_ell))
@@ -223,85 +230,86 @@ def cv2_feats(rchip, extract_type, detect_type, pyramid=False, grid=False):
 # =======================================
 
 class HotspotterChipFeatures(DynStruct):
-    #
     def __init__(self):
         super(HotspotterChipFeatures, self).__init__()
-        self.cx2_feats_hesaff = []
-        self.cx2_feats_sift   = []
-        self.cx2_feats_freak  = []
+        self.is_binary = False
         self.cx2_desc = None
         self.cx2_kpts = None
         self.feat_type = None
-    #
-    #def set_feat_type(self, feat_type):
-        #if feat_type == self.feat_type:
-            #print('Feature type is already: '+feat_type)
-            #return
-        #print('Setting feature type to: '+feat_type)
-        #self.feat_type = feat_type
-        #if self.feat_type.upper() == 'HESAFF':
-            #cx2_feats = self.cx2_feats_hesaff
-        #elif self.feat_type.upper() == 'SIFT':
-            #cx2_feats = self.cx2_feats_sift
-        #elif self.feat_type.upper() == 'FREAK':
-            #cx2_feats = self.cx2_feats_freak
-        #self.cx2_kpts = cx2_kpts
-        #self.cx2_desc = cx2_desc
+        # DEP
+        self.cx2_feats_hesaff = []
+        self.cx2_feats_sift   = []
+        self.cx2_feats_freak  = []
 
-def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type):
-    print('Loading '+feat_type+' features')
-    whiten = params.__WHITEN_FEATS__
-    suffix = '_'.join([feat_type, ['','white'][whiten]])+'.npz'
-    cx2_feats_fpath = feat_dir + '/cx2_feats_'+suffix
+    
+def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid):
+    print('Loading '+feat_type+' features: UID='+str(feat_uid))
+    '''
+    feat_uid = get_feat_uid()
+    feat_type = params.__FEAT_TYPE__
+    '''
+    cx2_kpts_fpath = feat_dir + '/cx2_kpts_'+feat_uid+'.npz'
+    cx2_desc_fpath = feat_dir + '/cx2_desc_'+feat_uid+'.npz'
 
-    # Do not load the descriptors because its done in the wrong order
-    __OVERRIDE_LOAD__ = True
-    if helpers.checkpath(cx2_feats_fpath) and not __OVERRIDE_LOAD__:
-        helpers.print_(' * attempting to load cx2_feats from disk')
-        helpers.flush()
-        loaded = False
-        try: 
-            cx2_kpts, cx2_desc = helpers.load_npz(cx2_feats_fpath)
-            helpers.println('...success')
-            loaded = True
-        except Exception as ex:
-            helpers.println('...failure')
-            print(repr(ex))
-            helpers.remove_file(cx2_feats_fpath)
-        if loaded:
-            return cx2_kpts, cx2_desc
-
-    print(' * Loading original '+feat_type+' features')
-    cx2_feat_path = [ feat_dir+'/CID_%d_%s.npz' % (cid, feat_type) for cid in cx2_cid]
-    # Compute features
-    precompute_func = type2_precompute_func[feat_type]
-    parallel_compute(precompute_func, [cx2_rchip_path, cx2_feat_path], params.__NUM_PROCS__)
-
-    # Load features
-    cx2_feats = parallel_compute(load_features, [cx2_feat_path], 1)
-    cx2_kpts  = [k for (k,d) in cx2_feats]
-    cx2_desc  = [d for (k,d) in cx2_feats]
-    # Whiten descriptors
-    if whiten:
-        print(' * Whitening features')
-        ax2_desc = np.vstack(cx2_desc)
-        ax2_desc_white = algos.scale_to_byte(algos.whiten(ax2_desc))
-        index = 0
-        for cx in xrange(len(cx2_desc)):
-            old_desc = cx2_desc[cx]
-            offset = len(old_desc)
-            new_desc = ax2_desc_white[index:offset]
-            cx2_desc[cx] = new_desc
-            index += offset
+    # Try to read cache
+    cx2_kpts = helpers.tryload(cx2_kpts_fpath)
+    cx2_desc = helpers.tryload(cx2_desc_fpath)
+    __OVERLOAD__ = False
+    if (not cx2_kpts is None and not cx2_desc is None) and not __OVERLOAD__:
+        # This is pretty dumb. Gotta have a more intelligent save/load
+        cx2_desc_ = cx2_desc.tolist()
+        cx2_kpts  = cx2_kpts.tolist()
+        print(' * Loaded cx2_kpts and cx2_desc from cache')
+        #print all([np.all(desc == desc_) for desc, desc_ in zip(cx2_desc, cx2_desc_)])
     else:
-        print(' * not whitening features')
+        # Recompute if you cant
+        print(' * Loading original '+feat_type+' features')
+        cx2_feat_path = [ feat_dir+'/CID_%d_%s.npz' % (cid, feat_type) for cid in cx2_cid]
+        # Compute features
+        precompute_func = type2_precompute_func[feat_type]
+        parallel_compute(precompute_func, [cx2_rchip_path, cx2_feat_path], params.__NUM_PROCS__)
+
+        # Load features
+        cx2_feats = parallel_compute(load_features, [cx2_feat_path], 1)
+        cx2_kpts  = [k for (k,d) in cx2_feats]
+        cx2_desc  = [d for (k,d) in cx2_feats]
+        # Whiten descriptors
+        if params.__WHITEN_FEATS__:
+            print(' * Whitening features')
+            #print (' * Stacking '+str(len(cx2_desc))+' features')
+            #print helpers.info(cx2_desc, 'cx2_desc')
+            ax2_desc = np.vstack(cx2_desc)
+            ax2_desc_white = algos.scale_to_byte(algos.whiten(ax2_desc))
+            #print (' * '+helpers.info(ax2_desc, 'ax2_desc'))
+            #print (' * '+helpers.info(ax2_desc_white, 'ax2_desc_white'))
+            index = 0
+            offset = 0
+            #print ('Looping through '+str(len(cx2_desc))+' features')
+            for cx in xrange(len(cx2_desc)):
+                old_desc = cx2_desc[cx]
+                print (' * '+helpers.info(old_desc, 'old_desc'))
+                offset = len(old_desc)
+                new_desc = ax2_desc_white[index:(index+offset)]
+                #print ('index=%r ; offset=%r ; new_desc.shape=%r' % (offset, index, helpers.info(new_desc,'new_desc')))
+                cx2_desc[cx] = new_desc
+                index += offset
+            #print ('index=%r ; offset=%r ; new_desc.shape=%r' % (index, offset, new_desc.shape,))
+            #print ' * '+helpers.info(cx2_desc, 'cx2_desc')
+        else:
+            print(' * not whitening features')
+        helpers.save_npz(cx2_desc_fpath, cx2_desc)
+        helpers.save_npz(cx2_kpts_fpath, cx2_kpts)
     #if __WHITEN_INDIVIDUAL__: # I dont think this is the way to go
     #    cx2_desc = [algos.whiten(d) for (k,d) in cx2_feats]
 
-    helpers.save_npz(cx2_feats_fpath, cx2_kpts=cx2_kpts, cx2_desc=cx2_desc)
-
+    # cache the data
     return cx2_kpts, cx2_desc
     
+def get_feat_uid(feat_type=params.__FEAT_TYPE__, whiten=params.__WHITEN_FEATS__):
+    uid_depends = [feat_type,
+                   ['','white'][params.__WHITEN_FEATS__]]
+    feat_uid = '_'.join(uid_depends)
+    return feat_uid
     
 def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     print('\n=============================')
@@ -314,7 +322,8 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     cx2_cid        = hs_tables.cx2_cid
     hs_feats = HotspotterChipFeatures()
     # Load all the types of features
-    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, params.__FEAT_TYPE__)
+    feat_uid = get_feat_uid()
+    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, params.__FEAT_TYPE__, feat_uid)
     hs_feats.feat_type = params.__FEAT_TYPE__
     hs_feats.cx2_kpts = cx2_kpts
     hs_feats.cx2_desc = cx2_desc
@@ -330,7 +339,7 @@ if __name__ == '__main__':
     freeze_support()
 
     __DEV_MODE__ = True
-    if __DEV_MODE__ or 'devmode' in sys.argv:
+    if __DEV_MODE__ or 'test' in sys.argv:
         import load_data2
         import chip_compute2
         # --- CHOOSE DATABASE --- #

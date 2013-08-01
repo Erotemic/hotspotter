@@ -254,7 +254,7 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
 
     # If we cannot estimate a good correspondence 
     if len(aff_inliers) < min_num_inliers:
-        return None
+        return np.eye(3), aff_inliers
 
     # Homogonize+Normalize
     xy1_m    = kpts1_m[0:2,:] 

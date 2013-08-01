@@ -252,7 +252,12 @@ class Pref(DynStruct):
         return self.save()
 
     # QT THINGS
-    def createQPreferenceModel(self):
+    def createQWidget(self):
+        editpref_widget = EditPrefWidget(self)
+        editpref_widget.show()
+        return editpref_widget
+
+    def _createQPreferenceModel(self):
         'Creates a QStandardItemModel that you can connect to a QTreeView'
         return QPreferenceModel(self)
 
@@ -426,4 +431,57 @@ class QPreferenceModel(QAbstractItemModel):
                 return QVariant("Pref Value")
         return QVariant()
 
+from hotspotter.front.EditPrefSkel import Ui_editPrefSkel
+from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
+        QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal, \
+        QStandardItem, QStandardItemModel, QString, QObject
 
+class EditPrefWidget(QWidget):
+    'The Settings Pane; Subclass of Main Windows.'
+    def __init__(self, pref_struct):
+        super( EditPrefWidget, self ).__init__()
+        self.pref_skel = Ui_editPrefSkel()
+        self.pref_skel.setupUi(self)
+        self.pref_model = None
+        #self.pref_skel.redrawBUT.clicked.connect(fac.redraw)
+        #self.pref_skel.defaultPrefsBUT.clicked.connect(fac.default_prefs)
+        #self.pref_skel.unloadFeaturesAndModelsBUT.clicked.connect(fac.unload_features_and_models)
+
+    @pyqtSlot(Pref, name='populatePrefTreeSlot')
+    def populatePrefTreeSlot(self, pref_struct):
+        'Populates the Preference Tree Model'
+        printDBG('Bulding Preference Model of: '+repr(pref_struct))
+        self.pref_model = pref_struct._createQPreferenceModel()
+        printDBG('Built: '+repr(self.pref_model))
+        self.pref_skel.prefTreeView.setModel(self.pref_model)
+        self.pref_skel.prefTreeView.header().resizeSection(0,250)
+
+def initQtApp():
+    # Attach to QtConsole's QApplication if able
+    from PyQt4.Qt import QCoreApplication, QApplication
+    app = QCoreApplication.instance() 
+    isRootApp = app is None
+    if isRootApp: # if not in qtconsole
+        # configure matplotlib 
+        import matplotlib
+        print('Configuring matplotlib for Qt4')
+        matplotlib.use('Qt4Agg')
+        # Run new root application
+        print('Starting new QApplication')
+        app = QApplication(sys.argv)
+    else: 
+        print('Running using parent QApplication')
+    return app, isRootApp 
+if __name__ == '__main__':
+    app, isRootApp = initQtApp()
+
+    pref_root = Pref()
+    pref_root.a = Pref('fdsa')
+    pref_root.b = Pref('fdsb')
+    pref_root.c = Pref('fdsc')
+    pref_root.createQWidget()
+
+    if isRootApp:
+        print('Running the application event loop')
+        sys.stdout.flush()
+        sys.exit(app.exec_())

@@ -14,21 +14,7 @@ import numpy as np
 import types
 import warnings
 import helpers
-
-def test_img(index=0):
-    import matplotlib.cbook as cbook
-    from PIL import Image
-    sample_fnames = ['grace_hopper.jpg',
-                     'lena.png',
-                     'ada.png']
-    if index <= len(sample_fnames):
-        test_file = cbook.get_sample_data(sample_fnames[index])
-    else:
-        import load_data2
-        chip_dir  = load_data2.MOTHERS+load_data2.rdir_chip
-        test_file = chip_dir+'/CID_%d.png' % (1+index-len(sample_fnames))
-    test_img = np.asarray(Image.open(test_file).convert('L'))
-    return test_img
+import textwrap
 
 def printDBG(msg):
     #print(msg)
@@ -117,7 +103,6 @@ def present(*args, **kwargs):
     show_all_figures()
     bring_to_front_all_figures()
     # Return an exec string
-    import textwrap
     return textwrap.dedent(r'''
     import helpers
     import matplotlib.pyplot as plt
@@ -153,6 +138,22 @@ img = df2.test_img()
 import imp
 imp.reload(df2)
 '''
+
+def test_img(index=0):
+    import matplotlib.cbook as cbook
+    from PIL import Image
+    sample_fnames = ['grace_hopper.jpg',
+                     'lena.png',
+                     'ada.png']
+    if index <= len(sample_fnames):
+        test_file = cbook.get_sample_data(sample_fnames[index])
+    else:
+        import load_data2
+        chip_dir  = load_data2.MOTHERS+load_data2.rdir_chip
+        test_file = chip_dir+'/CID_%d.png' % (1+index-len(sample_fnames))
+    test_img = np.asarray(Image.open(test_file).convert('L'))
+    return test_img
+
 
 def __parse_fignum(fignum_, plotnum_=111):
     'Extendend fignum format = fignum.plotnum'
@@ -190,6 +191,11 @@ def figure(fignum=None, doclf=False, title=None, plotnum=111, figtitle=None):
         if not figtitle is None:
             fig.canvas.set_window_title('fig '+str(fignum)+' '+figtitle)
     return fig
+
+def set_figtitle(figtitle):
+    fig = plt.gcf()
+    fig.canvas.set_window_title(figtitle)
+
     
 # ---- IMAGE CREATION FUNCTIONS ---- 
 

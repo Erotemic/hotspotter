@@ -1,4 +1,5 @@
 import timeit
+import textwrap
 # QUESTION: list allocation 
 setup = '''
 import numpy as np
@@ -63,3 +64,15 @@ timeit.timeit(x2, setup=setup, number=number)
 
 
 
+# Test how bad casting to np.arrays is
+setup = textwrap.dedent('''
+import numpy as np
+x = [np.array([1,2,3,4,5]), 
+        np.array([1,352,3,4,5]),
+        np.array([1,2,12,4,5]), 
+        np.array([1,2,3,4,55])]''')
+print timeit.timeit('np.array(x)',setup=setup, number=10000)
+print timeit.timeit('pass',setup=setup, number=10000)
+print timeit.timeit('x',setup=setup, number=10000)
+
+# TODO: Plot number as a graph

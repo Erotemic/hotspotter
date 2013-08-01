@@ -10,8 +10,9 @@ DATA = 'D:/data' if sys.platform == 'win32' else '/data'
 test_map = {
     'new_database_dir'   : DATA+'/test/new_database',\
     'new_hotspotter_dir' : DATA+'/test/hotspotter',\
-    'branch'             : 'next',\
-    'REPO'               : 'git@hyrule.cs.rpi.edu'
+    'branch'             : 'master',\
+    #'REPO'               : 'git@hyrule.cs.rpi.edu:'
+    'REPO'               : 'https://github.com:Erotemic/'
 }
 # Turn all map keys into variables for testing
 for (key,val) in test_map.iteritems():

@@ -34,8 +34,8 @@ def execute_syscalls(syscalls):
 def setup_submodules():
     server  = 'https://github.com/Erotemic/'
     # User Private Server if available
-    if git_fetch_url() == 'git@hyrule.cs.rpi.edu:hotspotter.git':
-        server = 'git@hyrule.cs.rpi.edu:'
+    #if git_fetch_url() == 'git@hyrule.cs.rpi.edu:hotspotter.git':
+        #server = 'git@hyrule.cs.rpi.edu:'
     execute_syscalls('''
     git submodule add '''+server+'''tpl-hotspotter.git hotspotter/tpl
     git submodule update --init

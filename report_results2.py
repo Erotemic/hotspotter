@@ -281,7 +281,7 @@ if __name__ == '__main__':
     #imp.reload(df2)
     #imp.reload(mc2)
     # --- CHOOSE DATABASE --- #
-    db_dir = load_data2.MOTHERS
+    db_dir = load_data2.DEFAULT
     hs = mc2.HotSpotter(db_dir)
     df2.close_all_figures()
     try:

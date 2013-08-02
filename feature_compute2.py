@@ -343,7 +343,7 @@ if __name__ == '__main__':
         import load_data2
         import chip_compute2
         # --- CHOOSE DATABASE --- #
-        db_dir = load_data2.MOTHERS
+        db_dir = load_data2.DEFAULT
         # --- LOAD DATA --- #
         hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
         #hs_dirs.vdd()

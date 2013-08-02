@@ -431,7 +431,7 @@ class QPreferenceModel(QAbstractItemModel):
                 return QVariant("Pref Value")
         return QVariant()
 
-from hotspotter.front.EditPrefSkel import Ui_editPrefSkel
+from frontend.EditPrefSkel import Ui_editPrefSkel
 from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
         QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal, \
         QStandardItem, QStandardItemModel, QString, QObject

@@ -32,7 +32,7 @@ def compute_homog(xyz_norm1, xyz_norm2):
     try:
         (_U, _s, V) = linalg.svd(Mbynine)
     except MemoryError:
-        printWARN('warning 35 cvransac:'+repr(ex))
+        printWARN('warning 35 ransac:'+repr(ex))
         # TODO: is sparse calculation faster than not?
         # sparse seems to be 4 times slower
         # the SVD itself is actually 37 times slower
@@ -203,8 +203,8 @@ def H_homog_from_CV2SAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     H = H if not H is None else np.eye(3)
     return H, np.array(inliers, dtype=bool).flatten()
 
-from PCV.geometry import homography
 def H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
+    from PCV.geometry import homography
     'Python Computer Visions Random Sample Consensus'
     # Get xy points
     xy1_m = kpts1_m[0:2,:] 
@@ -292,3 +292,6 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     inliers = sqrd_dist_error < xy_thresh_sqrd
     return H, inliers
 
+
+if __name__ == '__main__':
+    print 'No test script!'

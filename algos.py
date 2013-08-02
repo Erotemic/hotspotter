@@ -1,6 +1,5 @@
 import drawing_functions2 as df2
 from PIL import Image, ImageOps
-from helpers import load_npz, save_npz, checkpath, remove_file, vd, hashstr_md5, myprint
 from numpy import asarray, percentile, uint8, uint16
 from os.path import realpath
 import helpers
@@ -48,7 +47,7 @@ def tune_flann(data, **kwargs):
 
     tuned_params = flann.build_index(data, **flann_atkwargs)
 
-    myprint(tuned_params)
+    helpers.myprint(tuned_params)
 
     out_file = 'flann_tuned'+suffix
     helpers.write_to(out_file, repr(tunned_params))
@@ -209,7 +208,8 @@ def akmeans(data, num_clusters=1e6, MAX_ITERS=150,
     if AVE_UNCHANGED_WINDOW is None:
         AVE_UNCHANGED_WINDOW = int(len(data) / 500)
     print('Running akmeans: data.shape=%r ; num_clusters=%r' % (data.shape, num_clusters))
-    print('  * will converge when the average number of label changes is less than %r over a window of %r iterations' % (AVE_UNCHANGED_THRESH, AVE_UNCHANGED_WINDOW))
+    print('  * will converge when the average number of label changes is less than %r over a window of %r iterations' % \
+          (AVE_UNCHANGED_THRESH, AVE_UNCHANGED_WINDOW))
     # Setup akmeans iterations
     dtype_ = np.float32  # assert data.dtype == float32
     data   = np.array(data, dtype_) 
@@ -265,18 +265,25 @@ def plot_clusters(data, datax2_clusterx, clusters):
         ax.scatter(clus_x, clus_y, clus_z, s=500, c=clus_colors, marker='*')
     return fig
 
-def precompute_akmeans(data, num_clusters=1e6, MAX_ITERS=200, force_recomp=False):
+def precompute_akmeans(data, num_clusters=1e6, MAX_ITERS=200,
+                       force_recomp=False, cache_dir=None):
     'precompute akmeans'
-    data_md5 = str(data.shape).replace(' ','')+hashstr_md5(data)
-    fname = realpath('precomp_akmeans_k%d_%s.npz' % (num_clusters, data_md5))
+    data_md5 = str(data.shape).replace(' ','')+helpers.hashstr_md5(data)
+    fname = 'precomp_akmeans_k%d_%s.npz' % (num_clusters, data_md5)
+
+    if cache_dir is None:
+        fpath = realpath(fname)
+    else:
+        fpath = join(fpath, fname)
+    
     if force_recomp:
-        remove_file(fname)
-    checkpath(fname)
+        helpers.remove_file(fpath)
+    helpers.checkpath(fpath)
     try: 
-        (datax2_clusterx, clusters) = load_npz(fname)
+        (datax2_clusterx, clusters) = helpers.load_npz(fname)
     except Exception as ex:
         (datax2_clusterx, clusters) = akmeans(data, num_clusters)
-        save_npz(fname, datax2_clusterx, clusters)
+        helpers.save_npz(fname, datax2_clusterx, clusters)
     return (datax2_clusterx, clusters)
 
 if __name__ == '__main__':

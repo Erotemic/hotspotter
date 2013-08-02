@@ -1,3 +1,8 @@
+'''
+Module: load_data
+    Loads the paths and table information from which all other data is computed.
+    This is the first script run in the loading pipeline. 
+'''
 import os, sys, string
 import fnmatch
 import numpy as np
@@ -10,15 +15,15 @@ def printDBG(msg, lbl=''):
     print('DBG: '+lbl+str(msg))
 
 # paths relative to dbdir
-rdir_img      = '/images'
-rdir_internal = '/.hs_internals'
-rdir_computed = '/.hs_internals/computed'
-rdir_chip     = '/.hs_internals/computed/chips'
-rdir_rchip    = '/.hs_internals/computed/temp'
-rdir_feat     = '/.hs_internals/computed/feats'
-rdir_results  = '/.hs_internals/computed/results'
-rdir_qres     = '/.hs_internals/computed/query_results'
-
+RDIR_IMG      = '/images'
+RDIR_INTERNAL = '/.hs_internals'
+RDIR_COMPUTED = '/.hs_internals/computed'
+RDIR_CHIP     = '/.hs_internals/computed/chips'
+RDIR_RCHIP    = '/.hs_internals/computed/temp'
+RDIR_CACHE    = '/.hs_internals/computed/cache'
+RDIR_FEAT     = '/.hs_internals/computed/feats'
+RDIR_RESULTS  = '/.hs_internals/computed/results'
+RDIR_QRES     = '/.hs_internals/computed/query_results'
 
 class HotspotterTables(DynStruct):
     def __init__(self):
@@ -38,15 +43,15 @@ class HotspotterDirs(DynStruct):
         super(HotspotterDirs, self).__init__()
         # Class variables
         self.db_dir       = db_dir
-        self.img_dir      = db_dir + rdir_img
-        self.internal_sym = db_dir + '/Shortcut-to-hs_internals'
-        self.internal_dir = db_dir + rdir_internal
-        self.computed_dir = db_dir + rdir_computed
-        self.chip_dir     = db_dir + rdir_chip
-        self.rchip_dir    = db_dir + rdir_rchip
-        self.feat_dir     = db_dir + rdir_feat
-        self.result_dir   = db_dir + rdir_results
-        self.qres_dir     = db_dir + rdir_qres
+        self.img_dir      = db_dir + RDIR_IMG
+        self.internal_dir = db_dir + RDIR_INTERNAL
+        self.computed_dir = db_dir + RDIR_COMPUTED
+        self.chip_dir     = db_dir + RDIR_CHIP
+        self.rchip_dir    = db_dir + RDIR_RCHIP
+        self.feat_dir     = db_dir + RDIR_FEAT
+        self.cache_dir    = db_dir + RDIR_CACHE
+        self.result_dir   = db_dir + RDIR_RESULTS
+        self.qres_dir     = db_dir + RDIR_QRES
         # Make directories if needbe
         ensure_path(self.internal_dir)
         ensure_path(self.computed_dir)
@@ -56,10 +61,10 @@ class HotspotterDirs(DynStruct):
         ensure_path(self.result_dir)
         ensure_path(self.rchip_dir)
         ensure_path(self.qres_dir)
-
-
-        if not os.path.islink(self.internal_sym):
-            symlink(self.internal_dir, self.internal_sym, noraise=True)
+        # Shortcut to internals
+        internal_sym = db_dir + '/Shortcut-to-hs_internals'
+        if not os.path.islink(internal_sym):
+            symlink(self.internal_dir, internal_sym, noraise=True)
 
     def delete_computed_dir(self):
         computed_dir = self.computed_dir
@@ -94,7 +99,6 @@ def load_csv_tables(db_dir):
     #print(hs_dirs.execstr('hs_dirs'))
     feat_dir     = hs_dirs.feat_dir
     img_dir      = hs_dirs.img_dir
-    internal_sym = hs_dirs.internal_sym
     rchip_dir    = hs_dirs.rchip_dir
     chip_dir     = hs_dirs.chip_dir
     internal_dir = hs_dirs.internal_dir
@@ -104,19 +108,19 @@ def load_csv_tables(db_dir):
     name_table   = internal_dir + '/name_table.csv'
     image_table  = internal_dir + '/image_table.csv' # TODO: Make optional
     # --- CHECKS ---
-    hasDbDir   = checkpath(db_dir)
-    hasImgDir  = checkpath(img_dir)
-    hasChipTbl = checkpath(chip_table)
-    hasNameTbl = checkpath(name_table)
-    hasImgTbl  = checkpath(image_table)
-    if not all([hasDbDir, hasImgDir, hasChipTbl, hasNameTbl, hasImgTbl]):
-        errmsg = ''
-        errmsg+=('\n\n!!!!!\n\n')
-        errmsg+=('  ! The datatables seem to not be loaded')
-        errmsg+=(' Files in internal dir: '+repr(internal_dir))
+    has_dbdir   = checkpath(db_dir)
+    has_imgdir  = checkpath(img_dir)
+    has_chiptbl = checkpath(chip_table)
+    has_nametbl = checkpath(name_table)
+    has_imgtbl  = checkpath(image_table)
+    if not all([has_dbdir, has_imgdir, has_chiptbl, has_nametbl, has_imgtbl]):
+        errmsg  = ''
+        errmsg += ('\n\n!!!!!\n\n')
+        errmsg += ('  ! The datatables seem to not be loaded')
+        errmsg += (' Files in internal dir: '+repr(internal_dir))
         for fname in os.listdir(internal_dir):
-            errmsg+=('   ! fname') 
-        errmsg+=('\n\n!!!!!\n\n')
+            errmsg += ('   ! fname') 
+        errmsg += ('\n\n!!!!!\n\n')
         print(errmsg)
         raise Exception(errmsg)
     print('-------------------------')
@@ -380,11 +384,22 @@ NAUTS   = WORK_DIR+'/NAUT_Dan'
 GZ_ALL  = WORK_DIR+'/GZ_ALL'
 WS_HARD = WORK_DIR+'/WS_hard'
 MOTHERS = WORK_DIR+'/HSDB_zebra_with_mothers'
+OXFORD  = WORK_DIR+'/Oxford_Buildings'
 
+DEFAULT = NAUTS
+
+dev_databases = {
+    'FROGS'   : FROGS,
+    'NAUTS'   : NAUTS,
+    'GZ_ALL'  : GZ_ALL,
+    'WS_HARD' : WS_HARD,
+    'MOTHERS' : MOTHERS,
+    'OXFORD'  : OXFORD,
+    'DEFAULT' : DEFAULT}
 
 @unit_test
 def test_load_csv():
-    db_dir = MOTHERS
+    db_dir = DEFAULT
     hs_dirs, hs_tables = load_csv_tables(db_dir)
     print_chiptable(hs_tables)
     __print_chiptableX(hs_tables)

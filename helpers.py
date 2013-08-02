@@ -9,7 +9,7 @@ into a global set of helper functions.
 Wow, pylint is nice for cleaning.
 '''
 import drawing_functions2 as df2
-from hotspotter.other.AbstractPrintable import printableVal
+from Printable import printableVal
 import cPickle
 import code
 import numpy as np
@@ -633,7 +633,7 @@ def __setstate__(self, in_dict):
 #---------------
 def myreload():
     import imp
-    #imp.reload(cvransac2)
+    #imp.reload(spatial_verification)
     imp.reload(df2)
     imp.reload(algos)
     imp.reload(mc2)

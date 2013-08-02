@@ -11,16 +11,16 @@ import feature_compute2   as fc2
 import match_chips2       as mc2
 import cv2
 import load_data2
-import cvransac2
+import spatial_verification
 import hotspotter.helpers
 import imp
-imp.reload(cvransac2)
+imp.reload(spatial_verification)
 imp.reload(df2)
 imp.reload(fc2)
 imp.reload(mc2)
 imp.reload(hotspotter.helpers)
 from helpers import *
-from cvransac2 import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC, H_homog_from_CV2SAC
+from spatial_verification import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC, H_homog_from_CV2SAC
 from pyflann import FLANN
 
 #TODO: 
@@ -77,7 +77,7 @@ print('Initializing warp test')
 # reload data if hs was deleted
 if not 'hs' in vars():
     print('hs is not in vars... reloading')
-    hs = mc2.load_hotspotter(load_data2.MOTHERS)
+    hs = mc2.load_hotspotter(load_data2.DEFAULT)
 cx2_cid  = hs.tables.cx2_cid
 cx2_nx   = hs.tables.cx2_nx
 nx2_name = hs.tables.nx2_name
@@ -188,7 +188,10 @@ def __test_homog(func_homog, testname, fignum):
         df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm_V, fs_V, fignum, title_str)
     return (fm_V, fs_V, H)
 print('Testing different ways to calculate homography')
-pcvsac_Vtup = __test_homog(H_homog_from_PCVSAC, 'PCVSaC',  5)
+try: 
+    pcvsac_Vtup = __test_homog(H_homog_from_PCVSAC, 'PCVSaC',  5)
+except Exception as ex:
+    print('cant import PCV')
 ransac_Vtup = __test_homog(H_homog_from_RANSAC, 'RanSaC',  7)
 delsac_Vtup = __test_homog(H_homog_from_DELSAC, 'DElSaC',  9)
 cv2sac_Vtup = __test_homog(H_homog_from_CV2SAC, 'CV2SaC', 11)

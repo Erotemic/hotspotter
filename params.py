@@ -10,8 +10,10 @@ __FEAT_TYPE__    = 'HESAFF'
 __MATCH_TYPE__   = '1vM'
 # Number of matches for one-vs-many
 __K__            = 2
+# Vocab size for bag of words
+__VOCAB_SIZE__ = 1e6
 # Thresholds for one-vs-one
-__RATIO_THRESH__ = 1.5
+#__RATIO_THRESH__ = 1.5
 # Number of top matches to spatially re-rank
 __NUM_RERANK__   = 50
 # Percentage of the diagonal length of keypoint extent
@@ -50,9 +52,11 @@ __FLANN_PARAMS__      = hs1_params
 print(' * Setting default parameters')
 print(' * Reading command line parameters')
 
-__CACHE_QUERY__ = True
+__VERBOSE_CACHE__ = False
+
+__CACHE_QUERY__    = True
 __REVERIFY_QUERY__ = False
-__RESAVE_QUERY__ = False
+__RESAVE_QUERY__   = False
 
 __WHITEN_FEATS__  = False
 __HISTEQ__        = False

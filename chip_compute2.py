@@ -108,7 +108,7 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     # --- LOAD DATA --- #
-    db_dir = load_data2.MOTHERS
+    db_dir = load_data2.DEFAULT
     hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
     # --- LOAD CHIPS --- #
     hs_cpaths = load_chip_paths(hs_dirs, hs_tables)

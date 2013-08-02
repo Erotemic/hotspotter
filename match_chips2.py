@@ -57,6 +57,22 @@ class Vocabulary(DynStruct):
         self.wx2_idf     = wx2_idf
         self.wx2_cxs     = wx2_cxs
         self.wx2_fxs     = wx2_fxs
+
+class VisualVocab(DynStruct):
+    '''Visual words computed from a dataqbase 
+       and their inverse document frequency'''
+    def __init__(self, words, wx2_tfidf):
+        super(BagOfWords, self).__init__()
+        self.words       = words
+        self.wx2_idf     = wx2_idf
+        self.flann_words = flann_words
+
+class InvertedFile(DynStruct):
+    'Points from word index to chip and feature index'
+    def __init__(self, words, wx2_tfidf):
+        super(BagOfWords, self).__init__()
+        self.wx2_cxs     = wx2_cxs
+        self.wx2_fxs     = wx2_fxs
   
 def assign_features_to_bow_vector(vocab):
     pass
@@ -80,13 +96,14 @@ def precompute_bag_of_words(hs):
     print('__PRECOMPUTING_BAG_OF_WORDS__')
     # Build (or reload) one vs many flann index
     feat_dir  = hs.dirs.feat_dir
+    cache_dir = hs.dirs.cache_dir
     num_clusters = params.__VOCAB_SIZE__
     # Compute words
     ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
     ax2_wx, words = algos.precompute_akmeans(ax2_desc, 
                                              num_clusters,
                                              force_recomp=False, 
-                                             cache_dir=hs.dirs.cache_dir)
+                                             cache_dir=cache_dir)
     # Build a NN index for the words
     flann_words = pyflann.FLANN()
     algorithm = 'default'
@@ -189,7 +206,6 @@ def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
     qdesc = np.array(cx2_desc[qcx], dtype=words.dtype)
     (qfx2_wx, __word_dist) = flann_words.nn_index(qdesc, 1)
     # Vote for the chips
-
     #t = helpers.tic()
     #cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     #cx2_fs = [[] for _ in xrange(len(cx2_cid))]
@@ -207,7 +223,6 @@ def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
     #cx2_fm_ = cx2_fm
     #cx2_fs_ = cx2_fs
     #print helpers.toc(t)
-
     #t = helpers.tic()
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
@@ -224,7 +239,6 @@ def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
             cx2_fm[cx].append(fm)
             cx2_fs[cx].append(fs)
     #print helpers.toc(t)
-
     # Convert to numpy
     for cx in xrange(len(cx2_cid)): cx2_fm[cx] = np.array(cx2_fm[cx])
     for cx in xrange(len(cx2_cid)): cx2_fs[cx] = np.array(cx2_fs[cx])
@@ -233,8 +247,9 @@ def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
 #========================================
 # One-vs-Many 
 #========================================
-
 class OneVsMany(DynStruct): # TODO: rename this
+    '''Contains a one-vs-many index and the 
+       inverted information needed for voting'''
     def __init__(self, flann_1vM, ax2_desc, ax2_cx, ax2_fx):
         super(OneVsMany, self).__init__()
         self.flann_1vM = flann_1vM
@@ -283,7 +298,6 @@ def precompute_index_1vM(hs):
     one_vs_many = OneVsMany(flann_1vM, ax2_desc, ax2_cx, ax2_fx)
     return one_vs_many
 
-
 # Feature scoring functions
 def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+1E-8)+1) 
 def RATIO_fn(vdist, ndist): return np.divide(ndist, vdist+1E-8)
@@ -301,8 +315,7 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, one_vs_many):
         one_vs_many - class with FLANN index of database descriptors
     Output: 
         cx2_fm - C x Mx2 array of matching feature indexes
-        cx2_fs - C x Mx1 array of matching feature scores
-    '''
+        cx2_fs - C x Mx1 array of matching feature scores'''
     helpers.println('Assigning 1vM feature matches from qcx=%d to %d chips'\
                     % (qcx, len(cx2_cid)))
     flann_1vM = one_vs_many.flann_1vM
@@ -348,43 +361,6 @@ def assign_matches_1vM_BINARY(qcx, cx2_cid, cx2_desc):
 #========================================
 # One-vs-One 
 #========================================
-
-cv2_matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
-def match_1v1_BINARY(desc1, desc2):
-    raw_matches = cv2_matcher.knnMatch(desc1, desc2, 1)
-    fm = np.array([(m1[0].queryIdx-1, m1[0].trainIdx-1)
-                   for m1 in iter(raw_matches)])
-    #for (qx, tx) in iter(fm):
-        #if tx >= len(desc2) or qx >= len(desc1):
-            #print(repr(tx))
-            #print(repr(qx))
-            #print(repr(len(desc1)))
-            #print(repr(len(desc2)))
-            #raise Exception('Error')
-    fs = np.array([1/m1[0].distance for m1 in iter(raw_matches)])
-    return fm, fs
-
-def assign_matches_1v1_BINARY(qcx, cx2_cid, cx2_desc):
-    print('Assigning 1v1 feature matches from cx=%d to %d chips'\
-          % (qcx, len(cx2_cid)))
-    desc1 = cx2_desc[qcx]
-    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
-    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
-    for cx, desc2 in enumerate(cx2_desc):
-        sys.stdout.write('.'); sys.stdout.flush()
-        if cx == qcx: continue
-        fm, fs = match_1v1_BINARY(desc1, desc2)
-        #print('fm.shape = %r ' % (repr(fm.shape), ))
-        #print('fm.max = %r ' % (repr(fm.max(0)), ))
-        #print('fm.min = %r ' % (repr(fm.min(0)), ))
-        #print('fs.shape = %r ' % (repr(fs.shape), ))
-        #print('desc1.shape = %r ' % (repr(desc1.shape), ))
-        #print('desc2.shape = %r ' % (repr(desc2.shape), ))
-        cx2_fm[cx] = fm
-        cx2_fs[cx] = fs
-    sys.stdout.write('DONE')
-    return cx2_fm, cx2_fs
-
 def assign_matches_1v1(qcx, cx2_cid, cx2_desc):
     print('Assigning 1v1 feature matches from cx=%d to %d chips'\
           % (qcx, len(cx2_cid)))
@@ -466,7 +442,6 @@ def match_1v1(desc2, flann_1v1, ratio_thresh=1.2, burst_thresh=None, DBG=False):
 #========================================
 # SPATIAL VERIFIACTION 
 #========================================
-
 #@profile
 def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
     '''1) compute a robust transform from img2 -> img1
@@ -624,9 +599,9 @@ class QueryResult(DynStruct):
 #=========================
 # Matcher Class
 #=========================
-
 class Matcher(DynStruct):
-    '''Wrapper class: assigns matches based on matching and feature prefs'''
+    '''Wrapper class: assigns matches based on
+       matching and feature prefs'''
     def __init__(self, hs, match_type):
         print('Creating matcher: '+str(match_type))
         self.feat_type  = hs.feats.feat_type
@@ -644,14 +619,6 @@ class Matcher(DynStruct):
             self.__assign_matches = self.__assign_matches_1vM
         elif match_type == '1v1':
             self.__assign_matches = assign_matches_1v1
-        elif match_type == 'bBOW':
-            raise NotImplementedError(match_type)
-        elif match_type == 'b1vM':
-            raise NotImplementedError(match_type)
-            #self.__assign_matches = assign_matches_1vM_BINARY
-        elif match_type == 'b1v1':
-            raise NotImplementedError(match_type)
-            #self.__assign_matches = assign_matches_1v1_BINARY
         else:
             raise Exception('Unknown match_type: '+repr(match_type))
     def assign_matches(self, qcx, cx2_cid, cx2_desc):
@@ -666,7 +633,6 @@ class Matcher(DynStruct):
 #========================================
 # Work Functions
 #========================================
-
 def run_matching(hs, matcher):
     '''Runs the full matching pipeline using the abstracted classes'''
     cx2_cid  = hs.tables.cx2_cid
@@ -681,15 +647,12 @@ def run_matching(hs, matcher):
         if qcid == 0: 
             skip_list.append(qcx)
             continue
-
         helpers.print_ ('query(qcx=%4d)->' % qcx)
         res = qcx2_res[qcx]
-
         # load query from cache if possible
         cache_load_success = params.__CACHE_QUERY__ and res.load(hs)
         if qcx in params.__FORCE_REQUERY_CX__:
             cache_load_success = False
-
         # Get what data we have if we are redoing things
         if cache_load_success or\
            params.__RESAVE_QUERY__ or params.__REVERIFY_QUERY__:
@@ -739,7 +702,6 @@ def run_matching(hs, matcher):
     rr2.write_rank_results(hs, qcx2_res)
     return qcx2_res
 
-
 def run_default(hs):
     matcher = hs.use_matcher(params.__MATCH_TYPE__)
     qcx2_res = run_matching(hs, matcher)
@@ -770,7 +732,6 @@ def runall_match(hs):
 #========================================
 # DRIVER CODE
 #========================================
-
 # TODO, this should go in a more abstracted module
 class HotSpotter(DynStruct):
     def __init__(hs, db_dir=None):
@@ -797,7 +758,6 @@ class HotSpotter(DynStruct):
 
     # TODO: This UID code is repeated in feature_compute2. needs to be better
     # integrated
-
     def algo_uid(hs):
         return hs.query_uid()
 
@@ -863,10 +823,8 @@ if __name__ == '__main__':
         #exec(get_exec_src(assign_matches_1vM))
         #exec(get_exec_src(spatially_verify_matches))
         #exec(get_exec_src(precompute_bag_of_words))
-        
         try: 
             __IPYTHON__
         except: 
             plt.show()
-
     exec(df2.present())

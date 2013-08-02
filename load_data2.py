@@ -394,8 +394,14 @@ dev_databases = {
     'GZ_ALL'  : GZ_ALL,
     'WS_HARD' : WS_HARD,
     'MOTHERS' : MOTHERS,
-    'OXFORD'  : OXFORD,
-    'DEFAULT' : DEFAULT}
+    'OXFORD'  : OXFORD}
+
+print('____LOAD DATA____')
+for argv in iter(sys.argv):
+    if argv.upper() in dev_databases.keys():
+        print(' * User changed default database. Previously: '+str(DEFAULT))
+        DEFAULT = dev_databases[argv.upper()]
+print('Default database is: '+str(DEFAULT))
 
 @unit_test
 def test_load_csv():
@@ -414,3 +420,4 @@ if __name__ == '__main__':
     helpers.__PRINT_CHECKS__ = True #might as well
     hs_dirs, hs_tables = test_load_csv()
     exec(df2.present())
+

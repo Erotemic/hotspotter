@@ -1,10 +1,10 @@
-from helpers import printWARN
-from numpy import linalg
+from helpers import printWARN, printINFO
 from warnings import catch_warnings, simplefilter 
 import cv2
+import numpy.linalg as linalg
 import numpy as np
-import scipy.sparse
-import scipy.sparse.linalg
+import scipy.sparse as sparse
+import scipy.sparse.linalg as sparse_linalg
 
 #skimage.transform
 # http://stackoverflow.com/questions/11462781/fast-2d-rigid-body-transformations-in-numpy-scipy
@@ -31,14 +31,13 @@ def compute_homog(xyz_norm1, xyz_norm2):
     # Solve for the nullspace of the Mbynine
     try:
         (_U, _s, V) = linalg.svd(Mbynine)
-    except MemoryError:
+    except MemoryError as ex:
         printWARN('warning 35 ransac:'+repr(ex))
-        # TODO: is sparse calculation faster than not?
         # sparse seems to be 4 times slower
         # the SVD itself is actually 37 times slower
         print('Singular Value Decomposition Ran Out of Memory. Trying with a sparse matrix')
-        MbynineSparse = scipy.sparse.lil_matrix(Mbynine)
-        (_U, _s, V) = scipy.sparse.linalg.svds(MbynineSparse)
+        MbynineSparse = sparse.lil_matrix(Mbynine)
+        (_U, _s, V) = sparse_linalg.svds(MbynineSparse)
     # Rearange the nullspace into a homography
     h = V[-1,:] # (transposed in matlab)
     H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]  ) )
@@ -283,7 +282,7 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
             H_prime = compute_homog(xyz_norm1, xyz_norm2)
             H = linalg.solve(T2, H_prime).dot(T1)                # Unnormalize
         except linalg.LinAlgError as ex:
-            #printWARN('Warning 285 '+repr(ex), )
+            printWARN('Warning 285 '+repr(ex), )
             return np.eye(3), aff_inliers
 
     # Estimate final inliers
@@ -292,6 +291,50 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     inliers = sqrd_dist_error < xy_thresh_sqrd
     return H, inliers
 
+def test():
+    weird_A = np.array([(2.7, 4.2, 10),
+                        (1.7, 3.1, 20),
+                        (2.2, 2.4, 1.1)])
+
+    num_mat = 2000
+    frac_in = .5
+    num_inl = int(num_mat * frac_in)
+    kpts1_m = np.random.rand(5, num_mat)
+    kpts2_m = np.random.rand(5, num_mat)
+
+    kpts2_cor = kpts1_m[:, 0:num_inl]
+
+    x_cor = kpts2_cor[0]
+    y_cor = kpts2_cor[1]
+    z_cor = np.ones(num_inl)
+    a_cor = kpts2_cor[2]
+    zeros = np.zeros(num_inl)
+    c_cor = kpts2_cor[3]
+    d_cor = kpts2_cor[4]
+
+    kpts2_mats = np.array([(a_cor, zeros, x_cor),
+                           (c_cor, d_cor, y_cor), 
+                           (zeros, zeros, z_cor)]).T
+
+    # Do some weird transform on some keypoints
+    import scipy.linalg
+    for x in xrange(num_inl):
+        mat = weird_A.dot(kpts2_mats[x].T)
+        mat /= mat[2,2]
+        kpts2_m[0,x] = mat[0,2]
+        kpts2_m[1,x] = mat[1,2]
+        kpts2_m[2,x] = mat[0,0]
+        kpts2_m[3,x] = mat[1,0]
+        kpts2_m[4,x] = mat[1,2]
+
+    # Find some inliers? 
+    xy_thresh_sqrd = 7
+    H, inliers = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
+
+
 
 if __name__ == '__main__':
-    print 'No test script!'
+    print 'Testing spatial_verification.py'
+    print test()
+
+

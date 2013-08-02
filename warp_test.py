@@ -12,15 +12,17 @@ import match_chips2       as mc2
 import cv2
 import load_data2
 import spatial_verification
-import hotspotter.helpers
+import helpers
 import imp
 imp.reload(spatial_verification)
 imp.reload(df2)
 imp.reload(fc2)
 imp.reload(mc2)
-imp.reload(hotspotter.helpers)
+imp.reload(helpers)
+import params
 from helpers import *
-from spatial_verification import H_homog_from_RANSAC, H_homog_from_DELSAC, H_homog_from_PCVSAC, H_homog_from_CV2SAC
+import spatial_verification
+import cython_spatial_verification
 from pyflann import FLANN
 
 #TODO: 
@@ -56,7 +58,7 @@ Not to far away from where we currently are: Lionfish paper
 
 # TEST Query index
 qcx = 0
-__OTHER_X__ = 2
+__OTHER_X__ = 0
 
 
 # TEST PARAMETERS
@@ -77,21 +79,19 @@ print('Initializing warp test')
 # reload data if hs was deleted
 if not 'hs' in vars():
     print('hs is not in vars... reloading')
-    hs = mc2.load_hotspotter(load_data2.DEFAULT)
+    hs = mc2.HotSpotter(load_data2.DEFAULT)
 cx2_cid  = hs.tables.cx2_cid
 cx2_nx   = hs.tables.cx2_nx
 nx2_name = hs.tables.nx2_name
 cx2_rchip_path = hs.cpaths.cx2_rchip_path
 # rerun query if feature type has changed
-if __oldfeattype != mc2.__FEAT_TYPE__:
+if __oldfeattype != params.__FEAT_TYPE__:
     print('The feature type is new or has changed')
-    raise Exception('Relevant code removed')
-    #hs.feats.set_feat_type(mc2.__FEAT_TYPE__)
     cx2_kpts = hs.feats.cx2_kpts
     cx2_desc = hs.feats.cx2_desc
     flann_1vM = mc2.precompute_index_1vM(hs)
     cx2_fm, cx2_fs, _ = mc2.assign_matches_1vM(qcx, cx2_cid, cx2_desc, flann_1vM)
-    __oldfeattype = mc2.__FEAT_TYPE__
+    __oldfeattype = params.__FEAT_TYPE__
 cx2_fm_V, cx2_fs_V, _ = mc2.spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
 def cx2_other_cx(cx):
     nx = cx2_nx[cx]
@@ -188,16 +188,16 @@ def __test_homog(func_homog, testname, fignum):
         df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm_V, fs_V, fignum, title_str)
     return (fm_V, fs_V, H)
 print('Testing different ways to calculate homography')
-try: 
-    pcvsac_Vtup = __test_homog(H_homog_from_PCVSAC, 'PCVSaC',  5)
-except Exception as ex:
-    print('cant import PCV')
-ransac_Vtup = __test_homog(H_homog_from_RANSAC, 'RanSaC',  7)
-delsac_Vtup = __test_homog(H_homog_from_DELSAC, 'DElSaC',  9)
-cv2sac_Vtup = __test_homog(H_homog_from_CV2SAC, 'CV2SaC', 11)
+delsac_Vtup = __test_homog(cython_spatial_verification.H_homog_from_DELSAC, 'CYTHON_DElSaC',  5)
+ransac_Vtup = __test_homog(spatial_verification.H_homog_from_RANSAC, 'RanSaC',  7)
+ransac_Vtup = __test_homog(cython_spatial_verification.H_homog_from_RANSAC, 'CYTHON RanSaC',  7)
+delsac_Vtup = __test_homog(spatial_verification.H_homog_from_DELSAC, 'DElSaC',  9)
+cv2sac_Vtup = __test_homog(spatial_verification.H_homog_from_CV2SAC, 'CV2SaC', 11)
+cv2sac_Vtup = __test_homog(cython_spatial_verification.H_homog_from_CV2SAC, 'CYTHON CV2SaC', 11)
 print('---------------------------------------')
 
 
+sys.exit(1)
 # WARP IMAGES
 print('---------------------------------------')
 print('Warping Images')
@@ -231,7 +231,7 @@ def __pipe_detect(rchip1, rchip2_W):
 
 def __pipe_match(desc1, desc2):
     flann_ = FLANN()
-    flann_.build_index(desc1, **mc2.__FLANN_PARAMS__)
+    flann_.build_index(desc1, **params.__FLANN_PARAMS__)
     fm, fs = mc2.match_1v1(desc2, flann_)
     return fm, fs
 

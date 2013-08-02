@@ -1,6 +1,19 @@
-import os.path
+'''Parameters module:
+    stores a bunch of global variables used by the other modules
+    It also reads from sys.argv'''
 import sys
+import os.path
 import helpers
+
+print('    ____ IMPORT PARAMS ____')
+print(' * __name__ = %s' % __name__)
+print(' * sys.argv = %r' % sys.argv)
+print(' * sys.checkinterval   = %r' % sys.getcheckinterval())
+print(' * sys.defaultencoding = %r' % sys.getdefaultencoding())
+print(' * sys.filesystemencoding = %r' % sys.getfilesystemencoding())
+print(' * sys.prefix = %r' % sys.prefix)
+
+
 
 # Number of processessors
 __NUM_PROCS__ = 9
@@ -48,9 +61,6 @@ mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
 
 __FLANN_ONCE_PARAMS__ = hs1_params
 __FLANN_PARAMS__      = hs1_params
-
-print(' * Setting default parameters')
-print(' * Reading command line parameters')
 
 __VERBOSE_CACHE__ = False
 

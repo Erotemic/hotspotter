@@ -48,11 +48,11 @@ def printDBG(msg):
 #========================================
 
 class Vocabulary(DynStruct):
-    def __init__(self, words, flann_words, cx2_bow, wx2_idf, wx2_cxs, wx2_fxs):
+    def __init__(self, words, flann_words, cx2_vvec, wx2_idf, wx2_cxs, wx2_fxs):
         super(Vocabulary, self).__init__()
         self.words       = words
         self.flann_words = flann_words
-        self.cx2_bow     = cx2_bow
+        self.cx2_vvec     = cx2_vvec
         self.wx2_idf     = wx2_idf
         self.wx2_cxs     = wx2_cxs
         self.wx2_fxs     = wx2_fxs
@@ -76,76 +76,67 @@ class InvertedFile(DynStruct):
 def assign_features_to_bow_vector(vocab):
     pass
 
-def compute_bow2(hs, train_cx):
-    pass
-
 def __get_train_desc(hs, train_cx=None):
     cx2_desc = hs.feats.cx2_desc
-    if train_cx is None: 
-        tx_desc = cx2_desc
-    else:
-        tx_desc = cx2_desc[train_cx]
-    train_desc = np.vstack(tx_desc)
+    tx2_desc = cx2_desc if train_cx is None else cx2_desc[train_cx]
+    train_desc = np.vstack(tx2_desc)
     return train_desc
 
-def __compute_words(hs, num_words, train_cx=None):
-    cache_dir  = hs.dirs.cache_dir
-    train_desc = __get_train_desc(hs, train_cx)
+# step 1  
+def __compute_vocabulary(train_desc, num_words, cache_dir=None):
+    '''Computes a vocabulary of size num_words given a set of training data'''
+    # Cluster descriptors into a visual vocabulary
     _, words = algos.precompute_akmeans(train_desc, num_words,
-                                        force_recomp=False, 
+                                        force_recomp=False,
                                         cache_dir=cache_dir)
+    # Index the vocabulary for fast nearest neighbor search
     algorithm = 'default'
+    print(' * bag of words is using '+algorithm+' NN search')
     flann_words = pyflann.FLANN()
     flann_words_params = flann_words.build_index(words, algorithm=algorithm)
-    print(' * bag of words is using '+algorithm+' NN search')
     return words, flann_words
+
+def compute_bow2(hs):
+    cache_dir  = hs.dirs.cache_dir
+    train_desc = __get_train_desc(hs, train_cx)
+    num_words = hs.params.num_words
+    train_cx  = hs.params.train_cx
+    cx2_desc  = hs.feats.cx2_desc
+    # Compute vocabulary words from a training set
+    train_cx = cx2_desc[train_cx]
+    words, flann_words = __compute_vocabulary(num_words, train_cx, cache_dir)
+    # Assign tfidf-weighted visual vectors to each database chip
+    sample_cx = None # sample entire database
+    sample_cx = range(len(cx2_desc))
+    ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, sample_cx)
+    cx2_tf_vvec = __assign_tf_vvec(ax2_desc, ax2_cx, words, flann_words)
+    wx2_idf = __idf(wx2_cx, len(cx2_desc))
+    cx2_tfidf_vvec = algos.sparse_multiply_rows(cx2_tf_vvec, wx2_idf)
+    cx2_vvec = algos.sparse_normalize_rows(cx2_vvec)
+    # Build the inverted file
+    wx2_fxs, wx2_cxs = __compute_inverted_file(ax2_wx, ax2_fx, ax2_cx):
+
+def __assign_tf_vvec(ax2_desc, ax2_cx, words, flann_words):
+    # Assign each descriptor to its nearest visual word
+    ax2_wx = flann_words.nn_index(ax2_desc, 1, checks=128)
+    # Build sparse visual vectors with term frequency weights 
+    coo_cols = ax2_wx  
+    coo_rows = ax2_cx
+    coo_values = np.ones(len(ax2_cx), dtype=np.uint8)
+    coo_format = (coo_values, (coo_rows, coo_cols))
+    # Build in coo format. Return in csr format. 
+    coo_cx2_vvec = spsparse.coo_matrix(coo_format, dtype=np.float, copy=True)
+    cx2_tf_vvec = spsparse.csr_matrix(coo_cx2_vvec, copy=False)
+    return cx2_tf_vvec
 
 def __idf(wx2_cxs, num_train):
     r'''The inverse document frequency of the w\th word is 
     idf_w = log( #documents / #documents containing the w\th word'''
     # idf_w = log(Number of documents / Number of docs containing word_j)
-    wx2_df  = np.array([len(set(cx_list))
-                        for cx_list in wx2_cxs], dtype=np.float)
-    wx2_idf = np.log2(np.float(num_train) / wx2_df)
+    wx2_df  = np.array([len(set(cx_list)) for cx_list in wx2_cxs],
+                       dtype=np.float)
+    wx2_idf = np.array(np.log2(np.float(num_train) / wx2_df))
     return wx2_idf
-
-def __compute_vvec_tfidf(cx2_desc, words, flann_words):
-    cx2_desc = hs.feats.cx2_desc
-    ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc)
-    # TODO: Have the ability to remove descriptors from 
-    # the inverted file (and probably tf-idf scores too)
-    # Compute word assignments of database descriptors
-    checks = 128
-    ax2_wx = flann_words.nn_index(ax2_desc, 1, checks=checks)
-    # Build coo sparse visual vectors 
-    coo_cols = ax2_wx
-    coo_rows = ax2_cx
-    coo_values = np.ones(len(ax2_cx), dtype=np.uint8)
-    coo_format = (coo_values, (coo_rows, coo_cols))
-    coo_cx2_bow = spsparse.coo_matrix(coo_format, dtype=np.float, copy=True)
-    # Convert to csr format
-    csr_cx2_bow = spsparse.csr_matrix(coo_cx2_bow, copy=False)
-    # Compute inverse document frequency (IDF)
-    num_train = len(train_cxs)
-    wx2_idf = __idf(wx2_cxs, num_train)
-    wx2_idf.shape = (1, wx2_idf.size) # need this shape for next step
-    # Preweight the bow vectors
-    idf_sparse = spsparse.csr_matrix(wx2_idf)
-    cx2_bow    = alsos.sparse_multiply_rows(csr_cx2_bow, idf_sparse)
-    # Normalize
-    cx2_bow = alsos.sparse_normalize_rows(cx2_bow)
-    # Postprocessing
-    wx2_idf = np.array(wx2_idf)
-    wx2_idf.shape = (wx2_idf.size, )
-    return cx2_bow, wx2_idf
-
-def __compute_vocabulary(hs, train_cxs):
-    # hotspotter data
-    cx2_cid  = hs.tables.cx2_cid
-    cx2_desc = hs.feats.cx2_desc
-    # training information
-    tx2_cid  = cx2_cid[train_cxs]
-    tx2_desc = cx2_desc[train_cxs]
 
 def __compute_inverted_file(ax2_wx, ax2_fx, ax2_cx):
     'Computes lookup table from wordx to featx and chipx'
@@ -160,10 +151,11 @@ def __compute_inverted_file(ax2_wx, ax2_fx, ax2_cx):
     wx2_cxs = np.array(wx2_cxs)
     return wx2_fxs, wx2_cxs
 
-def __aggregate_descriptors(cx2_desc, sample_cx=None):
-    print('Aggregating descriptors for one vs many')
+def __aggregate_descriptors(cx2_desc, sample_cx):
+    '''Aggregates a sample set of descriptors. 
+    Returns descriptors, chipxs, and featxs indexed by ax'''
+    print('Aggregating descriptors')
     if sample_cx is None:
-        sample_cx = range(len(cx2_cid))
     # sample the descriptors you wish to aggregate
     sx2_desc = cx2_desc[sample_cx]
     sx2_numfeat = [len(k) for k in iter(cx2_desc[sample_cx])]
@@ -177,53 +169,31 @@ def __aggregate_descriptors(cx2_desc, sample_cx=None):
     return ax2_cx, ax2_fx, ax2_desc
 
 def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
-    cx2_bow = vocab.cx2_bow
+    cx2_vvec = vocab.cx2_vvec
     wx2_cxs = vocab.wx2_cxs
     wx2_fxs = vocab.wx2_fxs
     wx2_idf = vocab.wx2_idf
     words   = vocab.words
     flann_words = vocab.flann_words
     # This is not robust to out of database queries
-    vvec = cx2_bow[qcx]
+    vvec = cx2_vvec[qcx]
     # Compute distance to every database vector
-    cx2_score = (cx2_bow.dot(vvec.T)).toarray().flatten()
+    cx2_score = (cx2_vvec.dot(vvec.T)).toarray().flatten()
     # Assign each query descriptor to a word
     qdesc = np.array(cx2_desc[qcx], dtype=words.dtype)
     (qfx2_wx, __word_dist) = flann_words.nn_index(qdesc, 1)
     # Vote for the chips
-    #t = helpers.tic()
-    #cx2_fm = [[] for _ in xrange(len(cx2_cid))]
-    #cx2_fs = [[] for _ in xrange(len(cx2_cid))]
-    #qfx2_cxlist = wx2_cxs[qfx2_wx] 
-    #qfx2_fxlist = wx2_fxs[qfx2_wx] 
-    #qfx2_fs = wx2_idf[qfx2_wx] 
-    #for qfx, (fs, cx_list, fx_list) in enumerate(zip(qfx2_fs, 
-                                                     #qfx2_cxlist, 
-                                                     #qfx2_fxlist)):
-        #for (cx, fx) in zip(cx_list, fx_list): 
-            #if cx == qcx: continue
-            #fm  = (qfx, fx)
-            #cx2_fm[cx].append(fm)
-            #cx2_fs[cx].append(fs)
-    #cx2_fm_ = cx2_fm
-    #cx2_fs_ = cx2_fs
-    #print helpers.toc(t)
-    #t = helpers.tic()
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
     for qfx, wx in enumerate(qfx2_wx):
         cx_list = wx2_cxs[wx]
         fx_list = wx2_fxs[wx]
         fs = wx2_idf[wx]
-        #_qfs = vvec_flat[wx]
         for (cx, fx) in zip(cx_list, fx_list): 
             if cx == qcx: continue
             fm  = (qfx, fx)
-            #_fs = cx2_bow[cx, wx]
-            #fs  = _qfs * _fs
             cx2_fm[cx].append(fm)
             cx2_fs[cx].append(fs)
-    #print helpers.toc(t)
     # Convert to numpy
     for cx in xrange(len(cx2_cid)): cx2_fm[cx] = np.array(cx2_fm[cx])
     for cx in xrange(len(cx2_cid)): cx2_fs[cx] = np.array(cx2_fs[cx])
@@ -243,8 +213,10 @@ class OneVsMany(DynStruct): # TODO: rename this
         self.ax2_fx = ax2_fx
 
 def aggregate_descriptors_1vM(hs):
+    '''aggregates all descriptors for 1vM search'''
     cx2_desc  = hs.feats.cx2_desc
-    return __aggregate_descriptors(cx2_desc, sample_cx=None)
+    sample_cx = range(len(cx2_desc))
+    return __aggregate_descriptors(cx2_desc, sample_cx)
 
 #@profile
 def precompute_index_1vM(hs):

@@ -21,8 +21,10 @@ import scipy.sparse as spsparse
 def sparse_normalize_rows(csr_mat):
     return sklpreproc.normalize(csr_mat, norm='l2', axis=1, copy=False)
 
-def sparse_multiply_rows(csr_mat, csr_vec):
+def sparse_multiply_rows(csr_mat, vec):
     'Row-wise multiplication of a sparse matrix by a sparse vector'
+    csr_vec = spsparse.csr_matrix(vec, copy=False)
+    csr_vec.shape = (1, csr_vec.size)
     sparse_stack = [row.multiply(csr_vec) for row in csr_mat]
     return spsparse.vstack(sparse_stack, format='csr')
 

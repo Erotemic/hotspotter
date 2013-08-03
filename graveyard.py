@@ -96,3 +96,28 @@ def test__():
     df2.present()
     #df2.show_histogram(qcx2_wx, fignum=1)
     pass
+
+        #_qfs = vvec_flat[wx]
+            #_fs = cx2_bow[cx, wx]
+            #fs  = _qfs * _fs
+    #print helpers.toc(t)
+
+
+    #t = helpers.tic()
+    #cx2_fm = [[] for _ in xrange(len(cx2_cid))]
+    #cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    #qfx2_cxlist = wx2_cxs[qfx2_wx] 
+    #qfx2_fxlist = wx2_fxs[qfx2_wx] 
+    #qfx2_fs = wx2_idf[qfx2_wx] 
+    #for qfx, (fs, cx_list, fx_list) in enumerate(zip(qfx2_fs, 
+                                                     #qfx2_cxlist, 
+                                                     #qfx2_fxlist)):
+        #for (cx, fx) in zip(cx_list, fx_list): 
+            #if cx == qcx: continue
+            #fm  = (qfx, fx)
+            #cx2_fm[cx].append(fm)
+            #cx2_fs[cx].append(fs)
+    #cx2_fm_ = cx2_fm
+    #cx2_fs_ = cx2_fs
+    #print helpers.toc(t)
+    #t = helpers.tic()

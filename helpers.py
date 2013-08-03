@@ -98,7 +98,8 @@ def myprint(input=None, prefix='', indent='', lbl=''):
 
 def gvim(fname):
     'its the only editor that matters'
-    os.system('gvim '+fname)
+    import subprocess
+    proc = subprocess.Popen('gvim '+fname)
 
 def longest_existing_path(_path):
     while True: 

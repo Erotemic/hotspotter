@@ -28,7 +28,8 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pyflann
-import scipy.sparse
+import scipy as sp
+import scipy.sparse as spsparse
 import sklearn.preprocessing 
 # Imp Module Reloads
 #import imp
@@ -40,8 +41,6 @@ import sklearn.preprocessing
 #========================================
 # Parameters and Debugging
 #========================================
-BOW_NORM = 'l2'
-
 def printDBG(msg):
     pass
 #========================================
@@ -77,11 +76,68 @@ class InvertedFile(DynStruct):
 def assign_features_to_bow_vector(vocab):
     pass
 
-def __compute_words(desc, num_words):
+def compute_bow2(hs, train_cx):
     pass
 
-def __compute_tfidf(cx2_desc, words):
-    pass
+def __get_train_desc(hs, train_cx=None):
+    cx2_desc = hs.feats.cx2_desc
+    if train_cx is None: 
+        tx_desc = cx2_desc
+    else:
+        tx_desc = cx2_desc[train_cx]
+    train_desc = np.vstack(tx_desc)
+    return train_desc
+
+def __compute_words(hs, num_words, train_cx=None):
+    cache_dir  = hs.dirs.cache_dir
+    train_desc = __get_train_desc(hs, train_cx)
+    _, words = algos.precompute_akmeans(train_desc, num_words,
+                                        force_recomp=False, 
+                                        cache_dir=cache_dir)
+    algorithm = 'default'
+    flann_words = pyflann.FLANN()
+    flann_words_params = flann_words.build_index(words, algorithm=algorithm)
+    print(' * bag of words is using '+algorithm+' NN search')
+    return words, flann_words
+
+def __idf(wx2_cxs, num_train):
+    r'''The inverse document frequency of the w\th word is 
+    idf_w = log( #documents / #documents containing the w\th word'''
+    # idf_w = log(Number of documents / Number of docs containing word_j)
+    wx2_df  = np.array([len(set(cx_list))
+                        for cx_list in wx2_cxs], dtype=np.float)
+    wx2_idf = np.log2(np.float(num_train) / wx2_df)
+    return wx2_idf
+
+def __compute_vvec_tfidf(cx2_desc, words, flann_words):
+    cx2_desc = hs.feats.cx2_desc
+    ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc)
+    # TODO: Have the ability to remove descriptors from 
+    # the inverted file (and probably tf-idf scores too)
+    # Compute word assignments of database descriptors
+    checks = 128
+    ax2_wx = flann_words.nn_index(ax2_desc, 1, checks=checks)
+    # Build coo sparse visual vectors 
+    coo_cols = ax2_wx
+    coo_rows = ax2_cx
+    coo_values = np.ones(len(ax2_cx), dtype=np.uint8)
+    coo_format = (coo_values, (coo_rows, coo_cols))
+    coo_cx2_bow = spsparse.coo_matrix(coo_format, dtype=np.float, copy=True)
+    # Convert to csr format
+    csr_cx2_bow = spsparse.csr_matrix(coo_cx2_bow, copy=False)
+    # Compute inverse document frequency (IDF)
+    num_train = len(train_cxs)
+    wx2_idf = __idf(wx2_cxs, num_train)
+    wx2_idf.shape = (1, wx2_idf.size) # need this shape for next step
+    # Preweight the bow vectors
+    idf_sparse = spsparse.csr_matrix(wx2_idf)
+    cx2_bow    = alsos.sparse_multiply_rows(csr_cx2_bow, idf_sparse)
+    # Normalize
+    cx2_bow = alsos.sparse_normalize_rows(cx2_bow)
+    # Postprocessing
+    wx2_idf = np.array(wx2_idf)
+    wx2_idf.shape = (wx2_idf.size, )
+    return cx2_bow, wx2_idf
 
 def __compute_vocabulary(hs, train_cxs):
     # hotspotter data
@@ -91,105 +147,34 @@ def __compute_vocabulary(hs, train_cxs):
     tx2_cid  = cx2_cid[train_cxs]
     tx2_desc = cx2_desc[train_cxs]
 
-
-def precompute_bag_of_words(hs):
-    print('__PRECOMPUTING_BAG_OF_WORDS__')
-    # Build (or reload) one vs many flann index
-    feat_dir  = hs.dirs.feat_dir
-    cache_dir = hs.dirs.cache_dir
-    num_clusters = params.__VOCAB_SIZE__
-    # Compute words
-    ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
-    ax2_wx, words = algos.precompute_akmeans(ax2_desc, 
-                                             num_clusters,
-                                             force_recomp=False, 
-                                             cache_dir=cache_dir)
-    # Build a NN index for the words
-    flann_words = pyflann.FLANN()
-    algorithm = 'default'
-    flann_words_params = flann_words.build_index(words, algorithm=algorithm)
-    print(' * bag of words is using '+linear+' NN search')
+def __compute_inverted_file(ax2_wx, ax2_fx, ax2_cx):
+    'Computes lookup table from wordx to featx and chipx'
     # Compute Inverted File
     wx2_axs = [[] for _ in xrange(num_clusters)]
     for ax, wx in enumerate(ax2_wx):
         wx2_axs[wx].append(ax)
     wx2_cxs = [[ax2_cx[ax] for ax in ax_list] for ax_list in wx2_axs]
     wx2_fxs = [[ax2_fx[ax] for ax in ax_list] for ax_list in wx2_axs]
-    # Create visual-word-vectors for each chip
-    # Build bow using coorindate list coo matrix
-    coo_cols = ax2_wx
-    coo_rows = ax2_cx
-    # The term frequency (TF) is implicit in the coo format
-    coo_values = np.ones(len(ax2_cx), dtype=np.uint8)
-    coo_format = (coo_values, (coo_rows, coo_cols))
-    coo_cx2_bow = scipy.sparse.coo_matrix(
-        coo_format, dtype=np.float, copy=True)
-    # Normalize each visual vector
-    csr_cx2_bow = scipy.sparse.csr_matrix(coo_cx2_bow, copy=False)
-    csr_cx2_bow = sklearn.preprocessing.normalize(
-        csr_cx2_bow, norm=BOW_NORM, axis=1, copy=False)
-    # Calculate inverse document frequency (IDF)
-    # chip indexes (cxs) are the documents
-    num_chips = np.float(len(hs.tables.cx2_cid))
-    wx2_df  = [len(set(cx_list)) for cx_list in wx2_cxs]
-    wx2_idf = np.log2(num_chips / np.array(wx2_df, dtype=np.float))
-    wx2_idf.shape = (1, wx2_idf.size)
-    # Preweight the bow vectors
-    idf_sparse = scipy.sparse.csr_matrix(wx2_idf)
-    cx2_bow = scipy.sparse.vstack(
-        [row.multiply(idf_sparse) for row in csr_cx2_bow], format='csr')
-    # Renormalize
-    cx2_bow = sklearn.preprocessing.normalize(
-        cx2_bow, norm=BOW_NORM, axis=1, copy=False)
-    # Return vocabulary
-
+    # Postprocess
     wx2_fxs = np.array(wx2_fxs)
     wx2_cxs = np.array(wx2_cxs)
-    wx2_idf = np.array(wx2_idf)
-    wx2_idf.shape = (wx2_idf.size, )
-    vocab = Vocabulary(words, flann_words, cx2_bow, wx2_idf, wx2_cxs, wx2_fxs)
-    return vocab
+    return wx2_fxs, wx2_cxs
 
-def truncate_vvec(vvec, thresh):
-    shape = vvec.shape
-    vvec_flat = vvec.toarray().ravel()
-    vvec_flat = vvec_flat * (vvec_flat > thresh)
-    vvec_trunc = scipy.sparse.csr_matrix(vvec_flat)
-    vvec_trunc = sklearn.preprocessing.normalize(
-        vvec_trunc, norm=BOW_NORM, axis=1, copy=False)
-    return vvec_trunc
-
-def test__():
-    vvec_flat = np.array(vvec.toarray()).ravel()
-    qcx2_wx   = np.flatnonzero(vvec_flat)
-    cx2_score = (cx2_bow.dot(vvec.T)).toarray().ravel()
-
-    cx2_nx = hs.tables.cx2_nx
-    qnx = cx2_nx[qcx]
-    other_cx, = np.where(cx2_nx == qnx)
-
-    vvec2 = truncate_vvec(vvec, .04)
-    vvec2_flat = vvec2.toarray().ravel()
-
-    cx2_score = (cx2_bow.dot(vvec.T)).toarray().ravel()
-    top_cxs = cx2_score.argsort()[::-1]
-
-    cx2_score2 = (cx2_bow.dot(vvec2.T)).toarray().ravel()
-    top_cxs2 = cx2_score2.argsort()[::-1]
-
-    comp_str = ''
-    tst2s2_list = np.vstack([top_cxs, cx2_score, top_cxs2, cx2_score2]).T
-    for t, s, t2, s2 in tst2s2_list:
-        m1 = [' ', '*'][t in other_cx]
-        m2 = [' ', '*'][t2 in other_cx] 
-        comp_str += m1 + '%4d %4.2f %4d %4.2f' % (t, s, t2, s2) + m2 + '\n'
-    print comp_str
-    df2.close_all_figures()
-    df2.show_signature(vvec_flat, fignum=2)
-    df2.show_signature(vvec2_flat, fignum=3)
-    df2.present()
-    #df2.show_histogram(qcx2_wx, fignum=1)
-    pass
+def __aggregate_descriptors(cx2_desc, sample_cx=None):
+    print('Aggregating descriptors for one vs many')
+    if sample_cx is None:
+        sample_cx = range(len(cx2_cid))
+    # sample the descriptors you wish to aggregate
+    sx2_desc = cx2_desc[sample_cx]
+    sx2_numfeat = [len(k) for k in iter(cx2_desc[sample_cx])]
+    cx_numfeat_iter = iter(zip(sample_cx, cx2_numfeat))
+    # create indexes from agg desc back to chipx and featx
+    _ax2_cx = [[cx]*num_feats for (cx, num_feats) in cx_numfeat_iter]
+    _ax2_fx = [range(num_feats) for num_feats in iter(cx2_numfeat)]
+    ax2_cx  = np.array(list(itertools.chain.from_iterable(_ax2_cx)))
+    ax2_fx  = np.array(list(itertools.chain.from_iterable(_ax2_fx)))
+    ax2_desc = np.vstack(cx2_desc)
+    return ax2_cx, ax2_fx, ax2_desc
 
 def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
     cx2_bow = vocab.cx2_bow
@@ -258,19 +243,8 @@ class OneVsMany(DynStruct): # TODO: rename this
         self.ax2_fx = ax2_fx
 
 def aggregate_descriptors_1vM(hs):
-    cx2_cid   = hs.tables.cx2_cid
     cx2_desc  = hs.feats.cx2_desc
-    print('Aggregating descriptors for one vs many')
-    cx2_numfeat = [len(k) for k in cx2_desc]
-    cx_numfeat_iter = enumerate(cx2_numfeat)
-    #iter(zip(range(len(cx2_cid)), cx2_numfeat))
-    _ax2_cx = [[cx_]*num_feats for (cx_, num_feats) in cx_numfeat_iter]
-    _ax2_fx = [range(num_feats) for num_feats in iter(cx2_numfeat)]
-    ax2_cx  = np.array(list(itertools.chain.from_iterable(_ax2_cx)))
-    ax2_fx  = np.array(list(itertools.chain.from_iterable(_ax2_fx)))
-    ax2_desc = np.vstack(cx2_desc)
-    # Whitening should have already happened
-    return ax2_cx, ax2_fx, ax2_desc
+    return __aggregate_descriptors(cx2_desc, sample_cx=None)
 
 #@profile
 def precompute_index_1vM(hs):

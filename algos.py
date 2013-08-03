@@ -10,9 +10,21 @@ import os
 import params
 import pyflann
 import sklearn.decomposition
+import sklearn.preprocessing as sklpreproc
 import sys
+import sklearn
+import scipy as sp
+import scipy.sparse as spsparse
 #imp.reload(sys.modules['hotspotter.helpers'])
 #imp.reload(sys.modules['params'])
+
+def sparse_normalize_rows(csr_mat):
+    return sklpreproc.normalize(csr_mat, norm='l2', axis=1, copy=False)
+
+def sparse_multiply_rows(csr_mat, csr_vec):
+    'Row-wise multiplication of a sparse matrix by a sparse vector'
+    sparse_stack = [row.multiply(csr_vec) for row in csr_mat]
+    return spsparse.vstack(sparse_stack, format='csr')
 
 def histeq(pil_img):
     img = asarray(pil_img)

@@ -27,7 +27,8 @@ def write_report(hs, report_str, report_type):
     helpers.ensurepath(result_dir)
     rankres_csv = join(result_dir, csv_fname)
     helpers.write_to(rankres_csv, report_str)
-    helpers.gvim(rankres_csv)
+    if '--gvim' in sys.argv:
+        helpers.gvim(rankres_csv)
 
 def get_true_positive_ranks(qcx, top_cx, cx2_nx):
     'Returns the ranking of the other chips which should have scored high'

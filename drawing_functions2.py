@@ -48,19 +48,21 @@ def tile_all_figures(num_rc=(4,4),
     w,h = wh
     x_off, y_off = xy_off
     w_off, h_off = wh_off
+    x_pad, y_pad = (0, 0)
     if sys.platform == 'win32':
-        x_off, yoff = (40, 40)
+        x_off, yoff = (x_off+40, y_off+40)
+        x_pad, y_pad = (0, 40)
     all_figures = get_all_figures()
     for i, fig in enumerate(all_figures):
         qtwin = fig.canvas.manager.window
         if not isinstance(qtwin, matplotlib.backends.backend_qt4.MainWindow):
             raise NotImplemented('need to add more window manager handlers')
         if row_first:
-            y = (i % num_rows)*(h+h_off)
-            x = (int(i/num_rows))*(w+w_off)
+            y = (i % num_rows)*(h+h_off) + 40
+            x = (int(i/num_rows))*(w+w_off) + x_pad
         else:
-            x = (i % num_cols)*(w+w_off)
-            y = (int(i/num_cols))*(h+h_off)
+            x = (i % num_cols)*(w+w_off) + 40
+            y = (int(i/num_cols))*(h+h_off) + y_pad
         x+=x_off
         y+=y_off
         qtwin.setGeometry(x,y,w,h)

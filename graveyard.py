@@ -121,3 +121,31 @@ def test__():
     #cx2_fs_ = cx2_fs
     #print helpers.toc(t)
     #t = helpers.tic()
+
+# the inverted file (and probably tf-idf scores too)
+# Compute word assignments of database descriptors
+def __assign_tfidf_vvec(cx2_desc, words, flann_words):
+    '''
+    Input: cx2_desc 
+    Description: 
+        Assigns the descriptors in each chip to a visual word
+        Makes a sparse vector weighted by chip term frequency
+        Compute the iverse document frequency 
+    Output: cx2_vvec, wx2_idf
+    '''
+    # Compute inverse document frequency (IDF)
+    num_train = len(train_cxs)
+    wx2_idf   = __idf(wx2_cxs, num_train)
+    # Preweight the bow vectors
+    cx2_vvec  = algos.sparse_multiply_rows(csr_cx2_vvec, wx2_idf)
+    # Normalize
+    cx2_vvec = algos.sparse_normalize_rows(cx2_vvec)
+    return cx2_vvec, wx2_idf
+
+def __compute_vocabulary(hs, train_cxs):
+    # hotspotter data
+    cx2_cid  = hs.tables.cx2_cid
+    cx2_desc = hs.feats.cx2_desc
+    # training information
+    tx2_cid  = cx2_cid[train_cxs]
+    tx2_desc = cx2_desc[train_cxs]

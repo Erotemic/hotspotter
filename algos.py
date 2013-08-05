@@ -1,7 +1,7 @@
 import drawing_functions2 as df2
 from PIL import Image, ImageOps
 from numpy import asarray, percentile, uint8, uint16
-from os.path import realpath
+from os.path import realpath, join
 import helpers
 import imp
 import matplotlib.pyplot as plt
@@ -24,7 +24,7 @@ def sparse_normalize_rows(csr_mat):
 def sparse_multiply_rows(csr_mat, vec):
     'Row-wise multiplication of a sparse matrix by a sparse vector'
     csr_vec = spsparse.csr_matrix(vec, copy=False)
-    csr_vec.shape = (1, csr_vec.size)
+    #csr_vec.shape = (1, csr_vec.size)
     sparse_stack = [row.multiply(csr_vec) for row in csr_mat]
     return spsparse.vstack(sparse_stack, format='csr')
 
@@ -284,12 +284,7 @@ def precompute_akmeans(data, num_clusters=1e6, MAX_ITERS=200,
     'precompute akmeans'
     data_md5 = str(data.shape).replace(' ','')+helpers.hashstr_md5(data)
     fname = 'precomp_akmeans_k%d_%s.npz' % (num_clusters, data_md5)
-
-    if cache_dir is None:
-        fpath = realpath(fname)
-    else:
-        fpath = join(fpath, fname)
-    
+    fpath = realpath(fname) if cache_dir is None else join(cache_dir, fname)
     if force_recomp:
         helpers.remove_file(fpath)
     helpers.checkpath(fpath)

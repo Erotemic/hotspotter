@@ -344,12 +344,12 @@ if __name__ == '__main__':
         import chip_compute2
         # --- CHOOSE DATABASE --- #
         db_dir = load_data2.DEFAULT
-        # --- LOAD DATA --- #
-        hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
-        #hs_dirs.vdd()
-        # --- LOAD CHIPS --- #
-        hs_cpaths = chip_compute2.load_chip_paths(hs_dirs, hs_tables)
-        # --- LOAD FEATURES --- #
-        hs_feats  = load_chip_features(hs_dirs, hs_tables, hs_cpaths)
-        cx2_desc = hs_feats.cx2_desc
-        cx2_kpts = hs_feats.cx2_kpts
+        hs = mc2.HotSpotter(db_dir)
+        cx2_desc = hs.feats.cx2_desc
+        cx2_kpts = hs.feats.cx2_kpts
+        cx2_cid  = hs.tables.cx2_cid
+        cx2_nx   = hs.tables.cx2_nx
+        nx2_name = hs.tables.nx2_name
+
+
+

@@ -76,3 +76,39 @@ print timeit.timeit('pass',setup=setup, number=10000)
 print timeit.timeit('x',setup=setup, number=10000)
 
 # TODO: Plot number as a graph
+
+import timeit
+setup = '''
+import numpy as np
+num_words = 10
+wx2_axs = [[] for _ in xrange(num_words)]
+ax2_wx = [1,2,3,4,5,5,5,5,4,3,2,7,4,2,3,6,3,5,7]
+'''
+
+try1 = '''
+for ax, wx in enumerate(ax2_wx): 
+    wx2_axs[wx].append(ax)
+'''
+
+try2 = '''
+wx2_append = [axs.append for axs in iter(wx2_axs)]
+[wx2_append[wx](ax) for (ax, wx) in enumerate(ax2_wx)]
+'''
+print(timeit.timeit(try1, setup=setup, number=100000))
+print(timeit.timeit(try2, setup=setup, number=100000))
+
+try3 = '''
+[wx2_axs[wx].append(ax) for (ax, wx) in enumerate(ax2_wx)]
+'''
+
+try4 = '''
+map(lambda tup: wx2_axs[tup[1]].append(tup[0]), enumerate(ax2_wx))
+'''
+print(timeit.timeit(try4, setup=setup, number=100000))
+
+
+timeit.timeit('ax2_wx[0]', setup=setup, number=10000)
+
+print(timeit.timeit(try3, setup=setup, number=100000))
+
+

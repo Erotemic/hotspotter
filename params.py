@@ -20,11 +20,11 @@ __NUM_PROCS__ = 9
 # Feature type to use
 __FEAT_TYPE__    = 'HESAFF'
 # Matching type
-__MATCH_TYPE__   = '1vM'
+__MATCH_TYPE__   = 'vsmany'
 # Number of matches for one-vs-many
 __K__            = 2
 # Vocab size for bag of words
-__VOCAB_SIZE__ = 1e6
+__NUM_WORDS__    = 1e6
 # Thresholds for one-vs-one
 #__RATIO_THRESH__ = 1.5
 # Number of top matches to spatially re-rank
@@ -77,12 +77,12 @@ if '--histeq' in sys.argv:
 if '--whiten' in sys.argv or '--white' in sys.argv:
     print(' * with whitening')
     __WHITEN_FEATS__ = True
-if '--1v1' in sys.argv:
-    __MATCH_TYPE__ = '1v1'
-if '--1vM' in sys.argv:
-    __MATCH_TYPE__ = '1vM'
-if '--BOW' in sys.argv:
-    __MATCH_TYPE__ = 'BOW'
+if '--vsone' in sys.argv:
+    __MATCH_TYPE__ = 'vsone'
+if '--vsmany' in sys.argv:
+    __MATCH_TYPE__ = 'vsmany'
+if '--bagofwords' in sys.argv:
+    __MATCH_TYPE__ = 'bagofwords'
 
 if '--cache-query' in sys.argv:
     __CACHE_QUERY__ = True

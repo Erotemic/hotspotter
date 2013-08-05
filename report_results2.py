@@ -286,7 +286,7 @@ if __name__ == '__main__':
     hs = mc2.HotSpotter(db_dir)
     df2.close_all_figures()
     try:
-        qcx2_res = mc2.run_default(hs)
+        qcx2_res = mc2.run_matching(hs)
         qcx = 1
         #print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False)
         #print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=True)

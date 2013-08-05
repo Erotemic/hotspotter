@@ -1,6 +1,6 @@
 '''
 Module match_chips: 
-    Runs 1v1, 1vM, and BoW matching
+    Runs vsone, vsmany, and bagofwords matching
 '''
 #========================================
 # IMPORTS
@@ -31,62 +31,55 @@ import pyflann
 import scipy as sp
 import scipy.sparse as spsparse
 import sklearn.preprocessing 
-# Imp Module Reloads
-#import imp
-#imp.reload(spatial_verification)
-#imp.reload(algos)
-#imp.reload(params)
-#imp.reload(rr2)
 
-#========================================
-# Parameters and Debugging
-#========================================
-def printDBG(msg):
-    pass
 #========================================
 # Bag-of-Words
 #========================================
-
-class Vocabulary(DynStruct):
+class BagOfWords(DynStruct):
     def __init__(self, words, flann_words, cx2_vvec, wx2_idf, wx2_cxs, wx2_fxs):
-        super(Vocabulary, self).__init__()
+        super(BagOfWords, self).__init__()
         self.words       = words
         self.flann_words = flann_words
-        self.cx2_vvec     = cx2_vvec
+        self.cx2_vvec    = cx2_vvec
         self.wx2_idf     = wx2_idf
         self.wx2_cxs     = wx2_cxs
         self.wx2_fxs     = wx2_fxs
 
-class VisualVocab(DynStruct):
-    '''Visual words computed from a dataqbase 
-       and their inverse document frequency'''
-    def __init__(self, words, wx2_tfidf):
-        super(BagOfWords, self).__init__()
-        self.words       = words
-        self.wx2_idf     = wx2_idf
-        self.flann_words = flann_words
-
-class InvertedFile(DynStruct):
-    'Points from word index to chip and feature index'
-    def __init__(self, words, wx2_tfidf):
-        super(BagOfWords, self).__init__()
-        self.wx2_cxs     = wx2_cxs
-        self.wx2_fxs     = wx2_fxs
-  
-def assign_features_to_bow_vector(vocab):
-    pass
-
-def __get_train_desc(hs, train_cx=None):
-    cx2_desc = hs.feats.cx2_desc
-    tx2_desc = cx2_desc if train_cx is None else cx2_desc[train_cx]
-    train_desc = np.vstack(tx2_desc)
-    return train_desc
+# precompute the bag of words model
+def precompute_bag_of_words(hs):
+    '''Builds a vocabulary with train_sample_cx
+    Creates an indexed database with database_sample_cx'''
+    print('Precomputing bag of words')
+    # Read params
+    train_sample_cx    = hs.train_sample_cx
+    database_sample_cx = hs.database_sample_cx
+    cache_dir  = hs.dirs.cache_dir
+    cx2_desc   = hs.feats.cx2_desc
+    vocab_size = params.__NUM_WORDS__
+    cx2_desc   = hs.feats.cx2_desc
+    # Compute vocabulary
+    words, flann_words = __compute_vocabulary\
+            (cx2_desc, train_sample_cx, vocab_size, cache_dir)
+    # Assign visual vectors to the database
+    cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf = __index_database_to_vocabulary\
+            (cx2_desc, words, flann_words, database_sample_cx)
+    bagofwords = BagOfWords(words, flann_words, cx2_vvec, wx2_idf, wx2_cxs, wx2_fxs)
+    return bagofwords
 
 # step 1  
-def __compute_vocabulary(train_desc, num_words, cache_dir=None):
-    '''Computes a vocabulary of size num_words given a set of training data'''
+def __compute_vocabulary(cx2_desc, train_sample_cx, vocab_size, cache_dir=None):
+    '''Computes a vocabulary of size vocab_size given a set of training data'''
+    # Make a training set of descriptors to build the vocabulary
+    tx2_desc   = cx2_desc[train_sample_cx]
+    train_desc = np.vstack(tx2_desc)
+    num_train_desc = train_desc.shape[0]
+    if vocab_size > num_train_desc:
+        helpers.printWARN('Vocab size: %r is less than #train descriptors: %r' %\
+                  (vocab_size, num_train_desc))
+        vocab_size = num_train_desc / 2
+    # Build the vocabualry
     # Cluster descriptors into a visual vocabulary
-    _, words = algos.precompute_akmeans(train_desc, num_words,
+    _, words = algos.precompute_akmeans(train_desc, vocab_size,
                                         force_recomp=False,
                                         cache_dir=cache_dir)
     # Index the vocabulary for fast nearest neighbor search
@@ -96,93 +89,70 @@ def __compute_vocabulary(train_desc, num_words, cache_dir=None):
     flann_words_params = flann_words.build_index(words, algorithm=algorithm)
     return words, flann_words
 
-def compute_bow2(hs):
-    cache_dir  = hs.dirs.cache_dir
-    train_desc = __get_train_desc(hs, train_cx)
-    num_words = hs.params.num_words
-    train_cx  = hs.params.train_cx
-    cx2_desc  = hs.feats.cx2_desc
-    # Compute vocabulary words from a training set
-    train_cx = cx2_desc[train_cx]
-    words, flann_words = __compute_vocabulary(num_words, train_cx, cache_dir)
-    # Assign tfidf-weighted visual vectors to each database chip
-    sample_cx = None # sample entire database
-    sample_cx = range(len(cx2_desc))
-    ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, sample_cx)
-    cx2_tf_vvec = __assign_tf_vvec(ax2_desc, ax2_cx, words, flann_words)
-    wx2_idf = __idf(wx2_cx, len(cx2_desc))
-    cx2_tfidf_vvec = algos.sparse_multiply_rows(cx2_tf_vvec, wx2_idf)
-    cx2_vvec = algos.sparse_normalize_rows(cx2_vvec)
-    # Build the inverted file
-    wx2_fxs, wx2_cxs = __compute_inverted_file(ax2_wx, ax2_fx, ax2_cx):
-
-def __assign_tf_vvec(ax2_desc, ax2_cx, words, flann_words):
+# step 2
+def __index_database_to_vocabulary(cx2_desc, words, flann_words,database_sample_cx):
+    '''Assigns each database chip a visual-vector and returns 
+       data for the inverted file'''
+    sample_cx   = database_sample_cx
+    num_database = len(database_sample_cx)
+    ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, database_sample_cx)
     # Assign each descriptor to its nearest visual word
-    ax2_wx = flann_words.nn_index(ax2_desc, 1, checks=128)
+    ax2_desc    = np.array(ax2_desc, dtype=np.float32) # enforce float32
+    ax2_wx, _ = flann_words.nn_index(ax2_desc, 1, checks=128)
+    # Build inverse word to ax
+    wx2_axs = [[] for _ in xrange(len(words))]
+    for ax, wx in enumerate(ax2_wx):
+        wx2_axs[wx].append(ax)
+    # Compute inverted file: words -> database
+    wx2_cxs = np.array([[ax2_cx[ax] for ax in ax_list] for ax_list in wx2_axs])
+    wx2_fxs = np.array([[ax2_fx[ax] for ax in ax_list] for ax_list in wx2_axs])
     # Build sparse visual vectors with term frequency weights 
     coo_cols = ax2_wx  
     coo_rows = ax2_cx
     coo_values = np.ones(len(ax2_cx), dtype=np.uint8)
     coo_format = (coo_values, (coo_rows, coo_cols))
-    # Build in coo format. Return in csr format. 
     coo_cx2_vvec = spsparse.coo_matrix(coo_format, dtype=np.float, copy=True)
-    cx2_tf_vvec = spsparse.csr_matrix(coo_cx2_vvec, copy=False)
-    return cx2_tf_vvec
-
-def __idf(wx2_cxs, num_train):
-    r'''The inverse document frequency of the w\th word is 
-    idf_w = log( #documents / #documents containing the w\th word'''
-    # idf_w = log(Number of documents / Number of docs containing word_j)
+    cx2_tf_vvec  = spsparse.csr_matrix(coo_cx2_vvec, copy=False)
+    # Compute idf_w = log(Number of documents / Number of docs containing word_j)
     wx2_df  = np.array([len(set(cx_list)) for cx_list in wx2_cxs],
                        dtype=np.float)
-    wx2_idf = np.array(np.log2(np.float(num_train) / wx2_df))
-    return wx2_idf
+    wx2_idf = np.array(np.log2(np.float(num_database) / wx2_df))
+    # Compute tf-idf
+    print wx2_idf.shape
+    cx2_tfidf_vvec = algos.sparse_multiply_rows(cx2_tf_vvec, wx2_idf)
+    # Normalize
+    cx2_vvec = algos.sparse_normalize_rows(cx2_tfidf_vvec)
+    return cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf
 
-def __compute_inverted_file(ax2_wx, ax2_fx, ax2_cx):
-    'Computes lookup table from wordx to featx and chipx'
-    # Compute Inverted File
-    wx2_axs = [[] for _ in xrange(num_clusters)]
-    for ax, wx in enumerate(ax2_wx):
-        wx2_axs[wx].append(ax)
-    wx2_cxs = [[ax2_cx[ax] for ax in ax_list] for ax_list in wx2_axs]
-    wx2_fxs = [[ax2_fx[ax] for ax in ax_list] for ax_list in wx2_axs]
-    # Postprocess
-    wx2_fxs = np.array(wx2_fxs)
-    wx2_cxs = np.array(wx2_cxs)
-    return wx2_fxs, wx2_cxs
+def __quantize_desc_to_tfidf_vvec(desc_, wx2_idf, words, flann_words):
+    # Assign each descriptor to its nearest visual word
+    desc = np.array(desc_, np.float32)
+    fx2_wx, _ = flann_words.nn_index(desc, 1, checks=128)
+    #TODO: soft assignment here
+    # Build sparse visual vectors with term frequency weights 
+    lil_vvec = spsparse.lil_matrix((len(words),1))
+    for wx in iter(fx2_wx):
+        lil_vvec[wx,0] += 1
+    tf_vvec = spsparse.csr_matrix(lil_vvec.T, copy=False)
+    # Compute tf-idf
+    tfidf_vvec = algos.sparse_multiply_rows(tf_vvec, wx2_idf)
+    # Normalize
+    vvec = algos.sparse_normalize_rows(tfidf_vvec)
+    return vvec, fx2_wx
 
-def __aggregate_descriptors(cx2_desc, sample_cx):
-    '''Aggregates a sample set of descriptors. 
-    Returns descriptors, chipxs, and featxs indexed by ax'''
-    print('Aggregating descriptors')
-    if sample_cx is None:
-    # sample the descriptors you wish to aggregate
-    sx2_desc = cx2_desc[sample_cx]
-    sx2_numfeat = [len(k) for k in iter(cx2_desc[sample_cx])]
-    cx_numfeat_iter = iter(zip(sample_cx, cx2_numfeat))
-    # create indexes from agg desc back to chipx and featx
-    _ax2_cx = [[cx]*num_feats for (cx, num_feats) in cx_numfeat_iter]
-    _ax2_fx = [range(num_feats) for num_feats in iter(cx2_numfeat)]
-    ax2_cx  = np.array(list(itertools.chain.from_iterable(_ax2_cx)))
-    ax2_fx  = np.array(list(itertools.chain.from_iterable(_ax2_fx)))
-    ax2_desc = np.vstack(cx2_desc)
-    return ax2_cx, ax2_fx, ax2_desc
-
-def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
-    cx2_vvec = vocab.cx2_vvec
-    wx2_cxs = vocab.wx2_cxs
-    wx2_fxs = vocab.wx2_fxs
-    wx2_idf = vocab.wx2_idf
-    words   = vocab.words
-    flann_words = vocab.flann_words
-    # This is not robust to out of database queries
-    vvec = cx2_vvec[qcx]
+# Used by Matcher class to assign matches to a bag-of-words database
+def assign_matches_bagofwords(qcx, cx2_cid, cx2_desc, bagofwords):
+    cx2_vvec    = bagofwords.cx2_vvec
+    wx2_cxs     = bagofwords.wx2_cxs
+    wx2_fxs     = bagofwords.wx2_fxs
+    wx2_idf     = bagofwords.wx2_idf
+    words       = bagofwords.words
+    flann_words = bagofwords.flann_words
+    # Assign the query descriptors a visual vector
+    vvec, qfx2_wx = __quantize_desc_to_tfidf_vvec(cx2_desc[qcx], wx2_idf, words, flann_words)
     # Compute distance to every database vector
     cx2_score = (cx2_vvec.dot(vvec.T)).toarray().flatten()
-    # Assign each query descriptor to a word
-    qdesc = np.array(cx2_desc[qcx], dtype=words.dtype)
-    (qfx2_wx, __word_dist) = flann_words.nn_index(qdesc, 1)
-    # Vote for the chips
+    # Assign feature to feature matches (for spatial verification)
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
     for qfx, wx in enumerate(qfx2_wx):
@@ -191,7 +161,7 @@ def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
         fs = wx2_idf[wx]
         for (cx, fx) in zip(cx_list, fx_list): 
             if cx == qcx: continue
-            fm  = (qfx, fx)
+            fm = (qfx, fx)
             cx2_fm[cx].append(fm)
             cx2_fs[cx].append(fs)
     # Convert to numpy
@@ -205,43 +175,60 @@ def assign_matches_BOW(qcx, cx2_cid, cx2_desc, vocab):
 class OneVsMany(DynStruct): # TODO: rename this
     '''Contains a one-vs-many index and the 
        inverted information needed for voting'''
-    def __init__(self, flann_1vM, ax2_desc, ax2_cx, ax2_fx):
+    def __init__(self, flann_vsmany, ax2_desc, ax2_cx, ax2_fx):
         super(OneVsMany, self).__init__()
-        self.flann_1vM = flann_1vM
+        self.flann_vsmany = flann_vsmany
         self.ax2_desc  = ax2_desc # not used, but needs to maintain scope
         self.ax2_cx = ax2_cx
         self.ax2_fx = ax2_fx
 
-def aggregate_descriptors_1vM(hs):
-    '''aggregates all descriptors for 1vM search'''
+def __aggregate_descriptors(cx2_desc, sample_cx):
+    '''Aggregates a sample set of descriptors. 
+    Returns descriptors, chipxs, and featxs indexed by ax'''
+    # sample the descriptors you wish to aggregate
+    sx2_cx   = sample_cx
+    sx2_desc = cx2_desc[sx2_cx]
+    sx2_numfeat = [len(k) for k in iter(cx2_desc[sx2_cx])]
+    cx_numfeat_iter = iter(zip(sx2_cx, sx2_numfeat))
+    # create indexes from agg desc back to chipx and featx
+    _ax2_cx = [[cx]*num_feats for (cx, num_feats) in cx_numfeat_iter]
+    _ax2_fx = [range(num_feats) for num_feats in iter(sx2_numfeat)]
+    ax2_cx  = np.array(list(itertools.chain.from_iterable(_ax2_cx)))
+    ax2_fx  = np.array(list(itertools.chain.from_iterable(_ax2_fx)))
+    ax2_desc = np.vstack(cx2_desc[sample_cx])
+    return ax2_cx, ax2_fx, ax2_desc
+
+def aggregate_descriptors_vsmany(hs):
+    '''aggregates all descriptors for vsmany search'''
+    print('Aggregating descriptors for one-vs-many')
     cx2_desc  = hs.feats.cx2_desc
     sample_cx = range(len(cx2_desc))
     return __aggregate_descriptors(cx2_desc, sample_cx)
 
 #@profile
-def precompute_index_1vM(hs):
+def precompute_index_vsmany(hs):
     # Build (or reload) one vs many flann index
     feat_dir  = hs.dirs.feat_dir
     feat_type = hs.feats.feat_type
-    ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_1vM(hs)
-    flann_1vM = pyflann.FLANN()
+    ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_vsmany(hs)
+    flann_vsmany = pyflann.FLANN()
     feat_uid = hs.feat_uid()
-    flann_1vM_path = feat_dir + '/flann_One-vs-Many_'+feat_uid+'.index'
+    flann_vsmany_path = feat_dir + '/flann_One-vs-Many_'+feat_uid+'.index'
     load_success = False
-    if helpers.checkpath(flann_1vM_path):
+    if helpers.checkpath(flann_vsmany_path):
         try:
             print('Trying to load FLANN index')
-            flann_1vM.load_index(flann_1vM_path, ax2_desc)
+            flann_vsmany.load_index(flann_vsmany_path, ax2_desc)
             print('...success')
             load_success = True
         except Exception as ex:
             print('...cannot load FLANN index'+repr(ex))
     if not load_success:
         with Timer(msg='rebuilding FLANN index'):
-            flann_1vM.build_index(ax2_desc, **params.__FLANN_PARAMS__)
-            flann_1vM.save_index(flann_1vM_path)
+            flann_vsmany.build_index(ax2_desc, **params.__FLANN_PARAMS__)
+            flann_vsmany.save_index(flann_vsmany_path)
     # Return a one-vs-many structure
-    one_vs_many = OneVsMany(flann_1vM, ax2_desc, ax2_cx, ax2_fx)
+    one_vs_many = OneVsMany(flann_vsmany, ax2_desc, ax2_cx, ax2_fx)
     return one_vs_many
 
 # Feature scoring functions
@@ -251,9 +238,8 @@ def LNBNN_fn(vdist, ndist): return ndist - vdist
 score_fn = RATIO_fn
 
 #@profile
-def assign_matches_1vM(qcx, cx2_cid, cx2_desc, one_vs_many):
-    '''
-    Matches desc1 vs all database descriptors using 
+def assign_matches_vsmany(qcx, cx2_cid, cx2_desc, one_vs_many):
+    '''Matches desc1 vs all database descriptors using 
     Input:
         qcx        - query chip index
         cx2_cid     - chip ID lookup table (for removing self matches)
@@ -262,30 +248,30 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, one_vs_many):
     Output: 
         cx2_fm - C x Mx2 array of matching feature indexes
         cx2_fs - C x Mx1 array of matching feature scores'''
-    helpers.println('Assigning 1vM feature matches from qcx=%d to %d chips'\
+    helpers.println('Assigning vsmany feature matches from qcx=%d to %d chips'\
                     % (qcx, len(cx2_cid)))
-    flann_1vM = one_vs_many.flann_1vM
+    flann_vsmany = one_vs_many.flann_vsmany
     ax2_cx    = one_vs_many.ax2_cx
     ax2_fx    = one_vs_many.ax2_fx
     isQueryIndexed = True
     desc1 = cx2_desc[qcx]
-    k_1vM = params.__K__+1 if isQueryIndexed else params.__K__
+    k_vsmany = params.__K__+1 if isQueryIndexed else params.__K__
     # Find each query descriptor's k+1 nearest neighbors
     checks = params.__FLANN_PARAMS__['checks']
-    (qfx2_ax, qfx2_dists) = flann_1vM.nn_index(desc1, k_1vM+1, checks=checks)
-    vote_dists = qfx2_dists[:, 0:k_1vM]
-    norm_dists = qfx2_dists[:, k_1vM] # k+1th descriptor for normalization
+    (qfx2_ax, qfx2_dists) = flann_vsmany.nn_index(desc1, k_vsmany+1, checks=checks)
+    vote_dists = qfx2_dists[:, 0:k_vsmany]
+    norm_dists = qfx2_dists[:, k_vsmany] # k+1th descriptor for normalization
     # Score the feature matches
     qfx2_score = np.array([score_fn(_vdist.T, norm_dists)
                            for _vdist in vote_dists.T]).T
     # Vote using the inverted file 
-    qfx2_cx = ax2_cx[qfx2_ax[:, 0:k_1vM]]
-    qfx2_fx = ax2_fx[qfx2_ax[:, 0:k_1vM]]
+    qfx2_cx = ax2_cx[qfx2_ax[:, 0:k_vsmany]]
+    qfx2_fx = ax2_fx[qfx2_ax[:, 0:k_vsmany]]
     # Build feature matches
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
     num_qf = len(desc1)
-    qfx2_qfx = np.tile(np.arange(num_qf).reshape(num_qf, 1), (1, k_1vM)) 
+    qfx2_qfx = np.tile(np.arange(num_qf).reshape(num_qf, 1), (1, k_vsmany)) 
     iter_matches = iter(zip(qfx2_qfx.flat, qfx2_cx.flat,
                             qfx2_fx.flat, qfx2_score.flat))
     for qfx, cx, fx, score in iter_matches:
@@ -301,29 +287,29 @@ def assign_matches_1vM(qcx, cx2_cid, cx2_desc, one_vs_many):
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     return cx2_fm, cx2_fs, cx2_score
 
-def assign_matches_1vM_BINARY(qcx, cx2_cid, cx2_desc):
+def assign_matches_vsmany_BINARY(qcx, cx2_cid, cx2_desc):
     return None
 
 #========================================
 # One-vs-One 
 #========================================
-def assign_matches_1v1(qcx, cx2_cid, cx2_desc):
-    print('Assigning 1v1 feature matches from cx=%d to %d chips'\
+def assign_matches_vsone(qcx, cx2_cid, cx2_desc):
+    print('Assigning vsone feature matches from cx=%d to %d chips'\
           % (qcx, len(cx2_cid)))
     desc1 = cx2_desc[qcx]
-    flann_1v1 = pyflann.FLANN()
-    flann_1v1.build_index(desc1, **params.__FLANN_PARAMS__)
+    flann_vsone = pyflann.FLANN()
+    flann_vsone.build_index(desc1, **params.__FLANN_PARAMS__)
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
     for cx, desc2 in enumerate(cx2_desc):
         sys.stdout.write('.')
         sys.stdout.flush()
         if cx == qcx: continue
-        (fm, fs) = match_1v1(desc2, flann_1v1)
+        (fm, fs) = match_vsone(desc2, flann_vsone)
         cx2_fm[cx] = fm
         cx2_fs[cx] = fs
     sys.stdout.write('DONE')
-    flann_1v1.delete_index()
+    flann_vsone.delete_index()
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     return cx2_fm, cx2_fs, cx2_score
 
@@ -334,12 +320,12 @@ def cv2_match(desc1, desc2):
     matches = [(m1.trainIdx, m1.queryIdx) for m1 in raw_matches]
 
 #@profile
-def match_1v1(desc2, flann_1v1, ratio_thresh=1.2, burst_thresh=None, DBG=False):
+def match_vsone(desc2, flann_vsone, ratio_thresh=1.2, burst_thresh=None, DBG=False):
     '''
     Matches desc2 vs desc1 using Lowe's ratio test
     Input:
         desc2         - other descriptors (N2xD)
-        flann_1v1     - FLANN index of desc1 (query descriptors (N1xD)) 
+        flann_vsone     - FLANN index of desc1 (query descriptors (N1xD)) 
     Thresholds: 
         ratio_thresh = 1.2 - keep if dist(2)/dist(1) > ratio_thresh
         burst_thresh = 1   - keep if 0 < matching_freq(desc1) <= burst_thresh
@@ -348,7 +334,7 @@ def match_1v1(desc2, flann_1v1, ratio_thresh=1.2, burst_thresh=None, DBG=False):
         fs - Mx1 array of matching feature scores '''
     # features to their matching query features
     checks = params.__FLANN_PARAMS__['checks']
-    (fx2_qfx, fx2_dist) = flann_1v1.nn_index(desc2, 2, checks=checks)
+    (fx2_qfx, fx2_dist) = flann_vsone.nn_index(desc2, 2, checks=checks)
     # RATIO TEST
     fx2_ratio  = np.divide(fx2_dist[:, 1], fx2_dist[:, 0]+1E-8)
     fx_passratio, = np.where(fx2_ratio > ratio_thresh)
@@ -368,14 +354,14 @@ def match_1v1(desc2, flann_1v1, ratio_thresh=1.2, burst_thresh=None, DBG=False):
         fx2_nonbursty = [_qfx in _qfx_set for _qfx in iter(fx2_qfx[:, 0])]
         fx_nonbursty, = np.where(fx2_nonbursty)
         fx  = np.intersect1d(fx, fx_nonbursty, assume_unique=True)
-    # RETURN 1v1 matches and scores
+    # RETURN vsone matches and scores
     qfx = fx2_qfx[fx, 0]
     fm  = np.array(zip(qfx, fx))
     fs  = fx2_ratio[fx]
     # DEBUG
     if DBG:
         print('-------------')
-        print('Matching 1v1:')
+        print('Matching vsone:')
         print(' * Ratio threshold: %r ' % ratio_thresh)
         print(' * Burst threshold: %r ' % burst_thresh)
         print(' * fx_passratio.shape   = %r ' % (  fx_passratio.shape, ))
@@ -554,33 +540,34 @@ class Matcher(DynStruct):
         self.match_type = match_type
         # Possible indexing structures
         self.__one_vs_many    = None
-        self.__vocabulary     = None
+        self.__bag_of_words     = None
         # Curry the correct functions
         self.__assign_matches = None
-        if   match_type == 'BOW':
-            self.__vocabulary     = precompute_bag_of_words(hs)
-            self.__assign_matches = self.__assign_matches_BOW
-        elif match_type == '1vM':
-            self.__one_vs_many = precompute_index_1vM(hs)
-            self.__assign_matches = self.__assign_matches_1vM
-        elif match_type == '1v1':
-            self.__assign_matches = assign_matches_1v1
+        if   match_type == 'bagofwords':
+            self.__bag_of_words   = precompute_bag_of_words(hs)
+            self.__assign_matches = self.__assign_matches_bagofwords
+        elif match_type == 'vsmany':
+            self.__one_vs_many = precompute_index_vsmany(hs)
+            self.__assign_matches = self.__assign_matches_vsmany
+        elif match_type == 'vsone':
+            self.__assign_matches = assign_matches_vsone
         else:
             raise Exception('Unknown match_type: '+repr(match_type))
     def assign_matches(self, qcx, cx2_cid, cx2_desc):
         'Function which calls the correct matcher'
         return self.__assign_matches(qcx, cx2_cid, cx2_desc)
-    # class helpers
-    def __assign_matches_1vM(self, qcx, cx2_cid, cx2_desc):
-        return assign_matches_1vM(qcx, cx2_cid, cx2_desc, self.__one_vs_many)
-    def __assign_matches_BOW(self, qcx, cx2_cid, cx2_desc):
-        return assign_matches_BOW(qcx, cx2_cid, cx2_desc, self.__vocabulary)
+    # query helpers
+    def __assign_matches_vsmany(self, qcx, cx2_cid, cx2_desc):
+        return assign_matches_vsmany(qcx, cx2_cid, cx2_desc, self.__one_vs_many)
+    def __assign_matches_bagofwords(self, qcx, cx2_cid, cx2_desc):
+        return assign_matches_bagofwords(qcx, cx2_cid, cx2_desc, self.__bag_of_words)
 
 #========================================
 # Work Functions
 #========================================
-def run_matching(hs, matcher):
+def run_matching(hs):
     '''Runs the full matching pipeline using the abstracted classes'''
+    matcher  = hs.matcher
     cx2_cid  = hs.tables.cx2_cid
     cx2_desc = hs.feats.cx2_desc
     cx2_kpts = hs.feats.cx2_kpts 
@@ -609,7 +596,7 @@ def run_matching(hs, matcher):
             cx2_fm_V    = res.cx2_fm_V
             cx2_fs_V    = res.cx2_fs_V
             cx2_score_V = res.cx2_score_V
-        # Assign matches with the chosen function (1v1) or (1vM)
+        # Assign matches with the chosen function (vsone) or (vsmany)
         if not cache_load_success:
             tt_A = tic('assign')
             (cx2_fm, cx2_fs, cx2_score) = \
@@ -648,38 +635,22 @@ def run_matching(hs, matcher):
     rr2.write_rank_results(hs, qcx2_res)
     return qcx2_res
 
-def run_default(hs):
-    matcher = hs.use_matcher(params.__MATCH_TYPE__)
-    qcx2_res = run_matching(hs, matcher)
+def run_matching_type(hs, match_type=params.__MATCH_TYPE__):
+    matcher = hs.use_matcher(match_type)
+    qcx2_res = run_matching(hs)
     return qcx2_res
-
-def run_one_vs_many(hs):
-    matcher = hs.use_matcher('1vM')
-    qcx2_res_1vM = run_matching(hs, matcher)
-    return qcx2_res_1vM
-
-def run_one_vs_one(hs):
-    matcher = hs.use_matcher('1v1')
-    qcx2_res_1v1 = run_matching(hs, matcher)
-    return qcx2_res_1v1
-
-def run_bag_of_words(hs):
-    matcher = hs.use_matcher('BOW')
-    qcx2_res_BOW = run_matching(hs, matcher)
-    return qcx2_res_BOW
 
 def runall_match(hs):
     #functools.partial
     hs.printme2()
-    #qcx2_res_1vM = run_one_vs_many()
-    qcx2_res_BOW  = run_bag_of_words()
-    #qcx2_res_1v1 = run_one_vs_one()
+    match_types = ['vsmany', 'vsone', 'bagofwords']
+    qcx2_res_bagofwords  = run_matching_type(hs, 'bagofwords')
 
 #========================================
 # DRIVER CODE
 #========================================
-# TODO, this should go in a more abstracted module
 class HotSpotter(DynStruct):
+    '''The HotSpotter main class is a root handle to all relevant data'''
     def __init__(hs, db_dir=None):
         super(HotSpotter, hs).__init__()
         hs.tables = None
@@ -687,9 +658,10 @@ class HotSpotter(DynStruct):
         hs.cpaths = None
         hs.dirs   = None
         hs.matcher = None
+        hs.train_sample_cx =  [0, 2, 3, 4, 5]
+        hs.database_sample_cx =  [0, 2, 3, 4, 5]
         if not db_dir is None:
             hs.load_database(db_dir)
-
     def load_database(hs, db_dir):
         # Load data
         hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
@@ -701,12 +673,10 @@ class HotSpotter(DynStruct):
         hs.cpaths  = hs_cpaths
         hs.dirs    = hs_dirs
         hs.use_matcher(params.__MATCH_TYPE__)
-
     # TODO: This UID code is repeated in feature_compute2. needs to be better
     # integrated
     def algo_uid(hs):
         return hs.query_uid()
-
     def query_uid(hs):
         feat_type = hs.feats.feat_type
         match_type = hs.matcher.match_type
@@ -715,19 +685,16 @@ class HotSpotter(DynStruct):
                        ['', 'white'][params.__WHITEN_FEATS__]]
         query_uid = '_'.join(uid_depends)
         return query_uid
-
     def feat_uid(hs):
         feat_type = params.__FEAT_TYPE__
         uid_depends = [feat_type,
                     ['', 'white'][params.__WHITEN_FEATS__]]
         feat_uid = '_'.join(uid_depends)
         return feat_uid
-
     def chip_uid(hs):
         uid_depends = [['', 'histeq'][params.__HISTEQ__]]
         chip_uid = '_'.join(uid_depends)
         return chip_uid
-
     def use_matcher(hs, match_type):
         hs.matcher = Matcher(hs, match_type)
         return hs.matcher
@@ -752,12 +719,8 @@ if __name__ == '__main__':
         exec(get_exec_src(precompute_bag_of_words)) 
 
     ## DEV ONLY CODE ##
-    __DEV_MODE__ = False
+    __DEV_MODE__ = True
     if __DEV_MODE__: 
-        print(hs_cpaths)
-        print(hs_dirs)
-        print(hs_tables)
-        print(hs_feats)
         # Convinent but bad # 
         #exec(hs_cpaths.execstr('hs_cpaths'))
         #exec(hs_feats.execstr('hs_feats'))
@@ -765,12 +728,26 @@ if __name__ == '__main__':
         #exec(hs_dirs.execstr('hs_dirs'))
         #cx  = 1
         # All of these functions operate on one qcx (except precompute I guess)
-        #exec(get_exec_src(precompute_index_1vM))
-        #exec(get_exec_src(assign_matches_1vM))
+        #exec(get_exec_src(precompute_index_vsmany))
+        #exec(get_exec_src(assign_matches_vsmany))
         #exec(get_exec_src(spatially_verify_matches))
         #exec(get_exec_src(precompute_bag_of_words))
+
+        debug_compute_bagofwords = True
+        if debug_compute_bagofwords:
+            naut_train_sample_cx = [1, 3, 5]
+            naut_database_sample_cx = [1, 3, 5]
+            naut_test_query    = [0, 2, 4]
+            train_sample_cx    = naut_train_sample_cx
+            database_sample_cx = naut_database_sample_cx
+            cache_dir  = hs.dirs.cache_dir
+            cx2_desc   = hs.feats.cx2_desc
+            vocab_size = params.__NUM_WORDS__
+            cx2_desc   = hs.feats.cx2_desc
+            exec(get_exec_src(precompute_bag_of_words))
         try: 
             __IPYTHON__
         except: 
             plt.show()
+
     exec(df2.present())

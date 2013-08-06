@@ -3,6 +3,7 @@ Module: load_data
     Loads the paths and table information from which all other data is computed.
     This is the first script run in the loading pipeline. 
 '''
+import re
 import os, sys, string
 import fnmatch
 import types
@@ -202,7 +203,7 @@ def load_csv_tables(db_dir):
         cid_lines = open(chip_table,'r').readlines()
         # Header Markers
         header_numdata   = '# NumData '
-        header_csvformat = '# ChipID,'
+        header_csvformat_re = '# *ChipID,'
         # Default Header Variables
         chip_csv_format = ['ChipID', 'ImgID',  'NameID',   'roi[tl_x  tl_y  w  h]',  'theta']
         num_data   = -1
@@ -214,7 +215,7 @@ def load_csv_tables(db_dir):
             csv_line = csv_line.strip('\n')
             if csv_line.find('#') != 0:
                 break # Break after header
-            if csv_line.find(header_csvformat) == 0:
+            if not re.search(header_csvformat_re, csv_line) is None:
                 chip_csv_format = [_.strip() for _ in csv_line.strip('#').split(',')]
             if csv_line.find(header_numdata) == 0:
                 num_data = int(csv_line.replace(header_numdata,''))
@@ -229,6 +230,7 @@ def load_csv_tables(db_dir):
         gname_x = tryindex(chip_csv_format, 'Image')
         name_x  = tryindex(chip_csv_format, 'Name')
         required_x = [cid_x, gid_x, gname_x, nid_x, name_x, roi_x, theta_x]
+        print chip_csv_format
         prop_x_list = np.setdiff1d(range(len(chip_csv_format)), required_x).tolist()
         # Hotspotter Chip Tables
         cx2_cid   = []
@@ -251,7 +253,7 @@ def load_csv_tables(db_dir):
             # Load Chip Image Info
             if gid_x != -1:
                 gid = int(csv_fields[gid_x])
-                gx = gid2_gx[gid]
+                gx  = gid2_gx[gid]
             elif gname_x != -1:
                 gname = csv_fields[gname_x]
                 gx = gx2_name.index(gname)
@@ -291,8 +293,8 @@ def load_csv_tables(db_dir):
     hs_tables = HotspotterTables()
     #hs_tables.gid2_gx = gid2_gx
     #hs_tables.nid2_nx  = nid2_nx
-    hs_tables.gx2_gname  = np.array(gx2_gname)
-    hs_tables.nx2_name   = np.array(nx2_name)
+    hs_tables.gx2_gname    = np.array(gx2_gname)
+    hs_tables.nx2_name     = np.array(nx2_name)
     hs_tables.cx2_cid      = np.array(cx2_cid)
     hs_tables.cx2_nx       = np.array(cx2_nx)
     hs_tables.cx2_gx       = np.array(cx2_gx)
@@ -468,6 +470,10 @@ def test_load_csv():
 # Test load csv tables
 if __name__ == '__main__':
     import drawing_functions2 as df2
-    helpers.__PRINT_CHECKS__ = True #might as well
-    hs_dirs, hs_tables = test_load_csv()
+    if '--test' in sys.argv:
+        helpers.__PRINT_CHECKS__ = True #might as well
+        hs_dirs, hs_tables = test_load_csv()
+    else:
+        db_dir = DEFAULT
+        hs_dirs, hs_tables = load_csv_tables(db_dir)
     exec(df2.present())

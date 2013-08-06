@@ -157,8 +157,17 @@ def cx2_other_cx(hs, cx):
     other_cx  = other_cx_[other_cx_ != cx]
     return other_cx
 
-def get_oxsty_mAP_score(hs, qcx2_res):
-    pass
+def get_oxsty_mAP_score(hs, res, SV):
+    qcx = res.qcx
+    qnx = hs.tables.cx2_nx[qcx]
+    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
+    top_cx = cx2_score.argsort()[::-1]
+    top_gx = hs.tables.cx2_gx[top_cx]
+    top_gname = hs.tables.gx2_gname[top_gx]
+
+
+    ground_truth_query = 
+    ranked_list = [top_gname.replace('.jpg')]
     
 
 def print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False):

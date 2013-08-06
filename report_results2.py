@@ -157,6 +157,10 @@ def cx2_other_cx(hs, cx):
     other_cx  = other_cx_[other_cx_ != cx]
     return other_cx
 
+def get_oxsty_mAP_score(hs, qcx2_res):
+    pass
+    
+
 def print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False):
     res = qcx2_res[qcx]
     print_top_res_scores(hs, res, view_top, SV)

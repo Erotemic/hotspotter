@@ -1,9 +1,11 @@
+'''
+Computes feature representations
+'''
 from __future__ import division
 #from __init__ import *
 # import hotspotter modules
 import drawing_functions2 as df2
 import algos
-import match_chips2 as mc2
 import params
 import tpl.hesaff as hesaff
 import helpers
@@ -16,6 +18,7 @@ import numpy as np
 import cv2
 # import python modules
 import sys
+print('LOAD_MODULE: feature_compute2.py')
 
 
 def printDEBUG(msg):
@@ -337,10 +340,12 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
+    print('IN: feature_compute2.py: __name__ == \'__main__\'')
 
     __DEV_MODE__ = True
     if __DEV_MODE__ or 'test' in sys.argv:
         import load_data2
+        import match_chips2 as mc2
         import chip_compute2
         # --- CHOOSE DATABASE --- #
         db_dir = load_data2.DEFAULT
@@ -351,5 +356,4 @@ if __name__ == '__main__':
         cx2_nx   = hs.tables.cx2_nx
         nx2_name = hs.tables.nx2_name
 
-
-
+    exec(df2.present())

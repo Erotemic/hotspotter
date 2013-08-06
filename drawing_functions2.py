@@ -1,3 +1,6 @@
+'''
+Lots of functions for drawing and plotting visiony things
+'''
 import matplotlib
 if matplotlib.get_backend() != 'Qt4Agg':
     print('Configuring matplotlib for Qt4Agg')
@@ -15,6 +18,8 @@ import types
 import warnings
 import helpers
 import textwrap
+print('LOAD_MODULE: drawing_functions2.py')
+
 
 def printDBG(msg):
     #print(msg)

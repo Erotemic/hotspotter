@@ -13,7 +13,7 @@ import os
 import drawing_functions2 as df2
 # Hotspotter Imports
 import helpers
-from helpers import Timer, get_exec_src, tic, toc, printWARN
+from helpers import Timer, tic, toc, printWARN
 from Printable import DynStruct
 import algos
 import helpers
@@ -31,6 +31,10 @@ import pyflann
 import scipy as sp
 import scipy.sparse as spsparse
 import sklearn.preprocessing 
+print ('LOAD_MODULE: match_chips2.py')
+sys.stdout.flush()
+
+
 
 #========================================
 # Bag-of-Words
@@ -55,9 +59,9 @@ def precompute_bag_of_words(hs):
     cx2_desc   = hs.feats.cx2_desc
     vocab_size = params.__NUM_WORDS__
     cx2_desc   = hs.feats.cx2_desc
-    train_sample_cx    = range(len(cx2_desc) if hs.train_sample_cx is None 
+    train_sample_cx    = range(len(cx2_desc)) if hs.train_sample_cx is None \
                                else hs.train_sample_cx
-    database_sample_cx = range(len(cx2_desc) if hs.database_sample_cx is None 
+    database_sample_cx = range(len(cx2_desc)) if hs.database_sample_cx is None \
                                else hs.database_sample_cx
     # Compute vocabulary
     words, flann_words = __compute_vocabulary\
@@ -99,7 +103,7 @@ def __index_database_to_vocabulary(cx2_desc, words, flann_words,database_sample_
     num_database = len(database_sample_cx)
     ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, database_sample_cx)
     # Assign each descriptor to its nearest visual word
-    ax2_desc    = np.array(ax2_desc, dtype=np.float32) # enforce float32
+    ax2_desc    = np.array(ax2_desc, dtype=params.__BOW_DTYPE__)
     ax2_wx, _ = flann_words.nn_index(ax2_desc, 1, checks=128)
     # Build inverse word to ax
     wx2_axs = [[] for _ in xrange(len(words))]
@@ -128,7 +132,7 @@ def __index_database_to_vocabulary(cx2_desc, words, flann_words,database_sample_
 
 def __quantize_desc_to_tfidf_vvec(desc_, wx2_idf, words, flann_words):
     # Assign each descriptor to its nearest visual word
-    desc = np.array(desc_, np.float32)
+    desc = np.array(desc_, params.__BOW_DTYPE__)
     fx2_wx, _ = flann_words.nn_index(desc, 1, checks=128)
     #TODO: soft assignment here
     # Build sparse visual vectors with term frequency weights 
@@ -546,9 +550,11 @@ class Matcher(DynStruct):
         # Curry the correct functions
         self.__assign_matches = None
         if   match_type == 'bagofwords':
+            print(' precomputing bag of words')
             self.__bag_of_words   = precompute_bag_of_words(hs)
             self.__assign_matches = self.__assign_matches_bagofwords
         elif match_type == 'vsmany':
+            print(' precomputing one vs many')
             self.__one_vs_many = precompute_index_vsmany(hs)
             self.__assign_matches = self.__assign_matches_vsmany
         elif match_type == 'vsone':
@@ -677,11 +683,20 @@ class HotSpotter(DynStruct):
         hs.feats   = hs_feats
         hs.cpaths  = hs_cpaths
         hs.dirs    = hs_dirs
+
+        database_sample_fname = hs.dirs.internal_dir+'/database_sample.txt'
+        test_sample_fname = hs.dirs.internal_dir+'/test_sample.txt'
+        train_sample_fname = hs.dirs.internal_dir+'/train_sample.txt'
+        if helpers.checkpath(database_sample_fname):
+            hs.database_sample_cx = eval(open(database_sample_fname,'r').read())
+        if helpers.checkpath(test_sample_fname):
+            hs.database_sample_cx = eval(open(test_sample_fname,'r').read())
+        if helpers.checkpath(train_sample_fname):
+            hs.database_sample_cx = eval(open(train_sample_fname,'r').read())
         hs.use_matcher(params.__MATCH_TYPE__)
 
-    def set_train_test_database(train_sample_cx, 
-                                test_sample_cx, 
-                                database_sample_cx)
+    def set_train_test_database(train_sample_cx, test_sample_cx,
+                                database_sample_cx):
         hs.train_sample_cx    = train_sample_cx
         hs.test_sample_cx     = test_sample_cx
         hs.database_sample_cx = database_sample_cx
@@ -714,6 +729,8 @@ class HotSpotter(DynStruct):
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
+    print('IN: match_chips2.py: __name__ == '+__name__)
+
     # --- CHOOSE DATABASE --- #
     db_dir = load_data2.DEFAULT
     hs = HotSpotter(db_dir)
@@ -727,12 +744,13 @@ if __name__ == '__main__':
         runall_match(hs)
         pass
 
-    if 'bow' in sys.argv:
-        exec(get_exec_src(precompute_bag_of_words)) 
+    #if 'bow' in sys.argv:
+        #exec(helpers.get_exec_src(precompute_bag_of_words)) 
 
     ## DEV ONLY CODE ##
-    __DEV_MODE__ = True
+    __DEV_MODE__ = False
     if __DEV_MODE__: 
+        print('DEVMODE IS ON: match_chips2')
         # Convinent but bad # 
         #exec(hs_cpaths.execstr('hs_cpaths'))
         #exec(hs_feats.execstr('hs_feats'))
@@ -740,12 +758,12 @@ if __name__ == '__main__':
         #exec(hs_dirs.execstr('hs_dirs'))
         #cx  = 1
         # All of these functions operate on one qcx (except precompute I guess)
-        #exec(get_exec_src(precompute_index_vsmany))
-        #exec(get_exec_src(assign_matches_vsmany))
-        #exec(get_exec_src(spatially_verify_matches))
-        #exec(get_exec_src(precompute_bag_of_words))
+        #exec(helpers.get_exec_src(precompute_index_vsmany))
+        #exec(helpers.get_exec_src(assign_matches_vsmany))
+        #exec(helpers.get_exec_src(spatially_verify_matches))
+        #exec(helpers.get_exec_src(precompute_bag_of_words))
 
-        debug_compute_bagofwords = True
+        debug_compute_bagofwords = False
         if debug_compute_bagofwords:
             naut_train_sample_cx = [1, 3, 5]
             naut_database_sample_cx = [1, 3, 5]
@@ -756,7 +774,7 @@ if __name__ == '__main__':
             cx2_desc   = hs.feats.cx2_desc
             vocab_size = params.__NUM_WORDS__
             cx2_desc   = hs.feats.cx2_desc
-            exec(get_exec_src(precompute_bag_of_words))
+            #exec(helpers.get_exec_src(precompute_bag_of_words))
         try: 
             __IPYTHON__
         except: 

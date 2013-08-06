@@ -11,6 +11,8 @@ import helpers
 from helpers import checkpath, unit_test, ensure_path, symlink, remove_files_in_dir
 from helpers import myprint
 from Printable import DynStruct
+print ('LOAD_MODULE: load_data2.py')
+
 
 def printDBG(msg, lbl=''):
     print('DBG: '+lbl+str(msg))
@@ -446,12 +448,11 @@ dev_databases = {
     'OXFORD'  : OXFORD,
     'PARIS'   : PARIS}
 
-print('____module: LOAD DATA____')
 for argv in iter(sys.argv):
     if argv.upper() in dev_databases.keys():
         print(' * User changed default database. Previously: '+str(DEFAULT))
         DEFAULT = dev_databases[argv.upper()]
-print('Default database is: '+str(DEFAULT))
+print(' * load_data: Default database is: '+str(DEFAULT))
 
 @unit_test
 def test_load_csv():

@@ -1,4 +1,3 @@
-from PyQt4.Qt import QAbstractItemModel, QModelIndex, QVariant, Qt, QObject, QComboBox
 from helpers import printDBG, printERR, printINFO
 from Printable import DynStruct
 import cPickle
@@ -7,6 +6,8 @@ import sys
 import os.path
 import traceback
 import numpy as np
+
+__HAVE_PYQT__ = False
 
 class Pref(DynStruct):
     '''
@@ -253,13 +254,19 @@ class Pref(DynStruct):
 
     # QT THINGS
     def createQWidget(self):
-        editpref_widget = EditPrefWidget(self)
-        editpref_widget.show()
-        return editpref_widget
+        if not __HAVE_PYQT__:
+            raise Exception('Running without pyqt. cannot create')
+        else:
+            editpref_widget = EditPrefWidget(self)
+            editpref_widget.show()
+            return editpref_widget
 
     def _createQPreferenceModel(self):
         'Creates a QStandardItemModel that you can connect to a QTreeView'
-        return QPreferenceModel(self)
+        if not __HAVE_PYQT__:
+            raise Exception('Running without pyqt. cannot create')
+        else:
+            return QPreferenceModel(self)
 
     def qt_get_parent(self):
         return self._tree.parent
@@ -330,158 +337,161 @@ def report_thread_error(fn):
             raise 
     return report_thread_error_wrapper
 
-class QPreferenceModel(QAbstractItemModel):
-    'Convention states only items with column index 0 can have children'
-    @report_thread_error
-    def __init__(self, pref_struct, parent=None):
-        super(QPreferenceModel, self).__init__(parent)
-        self.rootPref  = pref_struct
-    #-----------
-    @report_thread_error
-    def index2Pref(self, index=QModelIndex()):
-        '''Internal helper method'''
-        if index.isValid():
-            item = index.internalPointer()
-            if item:
-                return item
-        return self.rootPref
-    #-----------
-    # Overloaded ItemModel Read Functions
-    @report_thread_error
-    def rowCount(self, parent=QModelIndex()):
-        parentPref = self.index2Pref(parent)
-        return parentPref.qt_row_count()
 
-    @report_thread_error
-    def columnCount(self, parent=QModelIndex()):
-        parentPref = self.index2Pref(parent)
-        return parentPref.qt_col_count()
+if __HAVE_PYQT__:
+    from frontend.EditPrefSkel import Ui_editPrefSkel
+    from PyQt4.Qt import QAbstractItemModel, QModelIndex, QVariant, Qt,\
+            QObject, QComboBox, QMainWindow, QTableWidgetItem, QMessageBox,\
+            QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal,\
+            QStandardItem, QStandardItemModel, QString, QObject
 
-    @report_thread_error
-    def data(self, index, role=Qt.DisplayRole):
-        '''Returns the data stored under the given role 
-        for the item referred to by the index.'''
-        if not index.isValid():
-            return QVariant()
-        if role != Qt.DisplayRole and role != Qt.EditRole:
-            return QVariant()
-        nodePref = self.index2Pref(index)
-        return QVariant(nodePref.qt_get_data(index.column()))
+    class QPreferenceModel(QAbstractItemModel):
+        'Convention states only items with column index 0 can have children'
+        @report_thread_error
+        def __init__(self, pref_struct, parent=None):
+            super(QPreferenceModel, self).__init__(parent)
+            self.rootPref  = pref_struct
+        #-----------
+        @report_thread_error
+        def index2Pref(self, index=QModelIndex()):
+            '''Internal helper method'''
+            if index.isValid():
+                item = index.internalPointer()
+                if item:
+                    return item
+            return self.rootPref
+        #-----------
+        # Overloaded ItemModel Read Functions
+        @report_thread_error
+        def rowCount(self, parent=QModelIndex()):
+            parentPref = self.index2Pref(parent)
+            return parentPref.qt_row_count()
 
-    @report_thread_error
-    def index(self, row, col, parent=QModelIndex()):
-        '''Returns the index of the item in the model specified
-        by the given row, column and parent index.'''
-        if parent.isValid() and parent.column() != 0:
-            return QModelIndex()
-        parentPref = self.index2Pref(parent)
-        childPref  = parentPref.qt_get_child(row)
-        if childPref:
-            return self.createIndex(row, col, childPref)
-        else:
-            return QModelIndex()
+        @report_thread_error
+        def columnCount(self, parent=QModelIndex()):
+            parentPref = self.index2Pref(parent)
+            return parentPref.qt_col_count()
 
-    @report_thread_error
-    def parent(self, index=None):
-        '''Returns the parent of the model item with the given index.
-        If the item has no parent, an invalid QModelIndex is returned.'''
-        if index is None: # Overload with QObject.parent()
-            return QObject.parent(self)
-        if not index.isValid():
-            return QModelIndex()
-        nodePref = self.index2Pref(index)
-        parentPref = nodePref.qt_get_parent()
-        if parentPref == self.rootPref:
-            return QModelIndex()
-        return self.createIndex(parentPref.qt_parents_index_of_me(), 0, parentPref)
-    
-    #-----------
-    # Overloaded ItemModel Write Functions
-    @report_thread_error
-    def flags(self, index):
-        'Returns the item flags for the given index.'
-        if index.column() == 0:
-            # The First Column is just a label and unchangable
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        if not index.isValid():
+        @report_thread_error
+        def data(self, index, role=Qt.DisplayRole):
+            '''Returns the data stored under the given role 
+            for the item referred to by the index.'''
+            if not index.isValid():
+                return QVariant()
+            if role != Qt.DisplayRole and role != Qt.EditRole:
+                return QVariant()
+            nodePref = self.index2Pref(index)
+            return QVariant(nodePref.qt_get_data(index.column()))
+
+        @report_thread_error
+        def index(self, row, col, parent=QModelIndex()):
+            '''Returns the index of the item in the model specified
+            by the given row, column and parent index.'''
+            if parent.isValid() and parent.column() != 0:
+                return QModelIndex()
+            parentPref = self.index2Pref(parent)
+            childPref  = parentPref.qt_get_child(row)
+            if childPref:
+                return self.createIndex(row, col, childPref)
+            else:
+                return QModelIndex()
+
+        @report_thread_error
+        def parent(self, index=None):
+            '''Returns the parent of the model item with the given index.
+            If the item has no parent, an invalid QModelIndex is returned.'''
+            if index is None: # Overload with QObject.parent()
+                return QObject.parent(self)
+            if not index.isValid():
+                return QModelIndex()
+            nodePref = self.index2Pref(index)
+            parentPref = nodePref.qt_get_parent()
+            if parentPref == self.rootPref:
+                return QModelIndex()
+            return self.createIndex(parentPref.qt_parents_index_of_me(), 0, parentPref)
+        
+        #-----------
+        # Overloaded ItemModel Write Functions
+        @report_thread_error
+        def flags(self, index):
+            'Returns the item flags for the given index.'
+            if index.column() == 0:
+                # The First Column is just a label and unchangable
+                return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            if not index.isValid():
+                return Qt.ItemFlag(0)
+            childPref = self.index2Pref(index)
+            if childPref:
+                if childPref.qt_is_editable():
+                    return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
             return Qt.ItemFlag(0)
-        childPref = self.index2Pref(index)
-        if childPref:
-            if childPref.qt_is_editable():
-                return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        return Qt.ItemFlag(0)
 
-    @report_thread_error
-    def setData(self, index, data, role=Qt.EditRole):
-        'Sets the role data for the item at index to value.'
-        if role != Qt.EditRole:
-            return False
-        leafPref = self.index2Pref(index)
-        result = leafPref.qt_set_leaf_data(data)
-        if result == True:
-            self.dataChanged.emit(index, index)
-        return result
+        @report_thread_error
+        def setData(self, index, data, role=Qt.EditRole):
+            'Sets the role data for the item at index to value.'
+            if role != Qt.EditRole:
+                return False
+            leafPref = self.index2Pref(index)
+            result = leafPref.qt_set_leaf_data(data)
+            if result == True:
+                self.dataChanged.emit(index, index)
+            return result
 
-    @report_thread_error
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            if section == 0:
-                return QVariant("Pref Name")
-            if section == 1:
-                return QVariant("Pref Value")
-        return QVariant()
+        @report_thread_error
+        def headerData(self, section, orientation, role=Qt.DisplayRole):
+            if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+                if section == 0:
+                    return QVariant("Pref Name")
+                if section == 1:
+                    return QVariant("Pref Value")
+            return QVariant()
 
-from frontend.EditPrefSkel import Ui_editPrefSkel
-from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
-        QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal, \
-        QStandardItem, QStandardItemModel, QString, QObject
+    class EditPrefWidget(QWidget):
+        'The Settings Pane; Subclass of Main Windows.'
+        def __init__(self, pref_struct):
+            super( EditPrefWidget, self ).__init__()
+            self.pref_skel = Ui_editPrefSkel()
+            self.pref_skel.setupUi(self)
+            self.pref_model = None
+            #self.pref_skel.redrawBUT.clicked.connect(fac.redraw)
+            #self.pref_skel.defaultPrefsBUT.clicked.connect(fac.default_prefs)
+            #self.pref_skel.unloadFeaturesAndModelsBUT.clicked.connect(fac.unload_features_and_models)
 
-class EditPrefWidget(QWidget):
-    'The Settings Pane; Subclass of Main Windows.'
-    def __init__(self, pref_struct):
-        super( EditPrefWidget, self ).__init__()
-        self.pref_skel = Ui_editPrefSkel()
-        self.pref_skel.setupUi(self)
-        self.pref_model = None
-        #self.pref_skel.redrawBUT.clicked.connect(fac.redraw)
-        #self.pref_skel.defaultPrefsBUT.clicked.connect(fac.default_prefs)
-        #self.pref_skel.unloadFeaturesAndModelsBUT.clicked.connect(fac.unload_features_and_models)
+        @pyqtSlot(Pref, name='populatePrefTreeSlot')
+        def populatePrefTreeSlot(self, pref_struct):
+            'Populates the Preference Tree Model'
+            printDBG('Bulding Preference Model of: '+repr(pref_struct))
+            self.pref_model = pref_struct._createQPreferenceModel()
+            printDBG('Built: '+repr(self.pref_model))
+            self.pref_skel.prefTreeView.setModel(self.pref_model)
+            self.pref_skel.prefTreeView.header().resizeSection(0,250)
 
-    @pyqtSlot(Pref, name='populatePrefTreeSlot')
-    def populatePrefTreeSlot(self, pref_struct):
-        'Populates the Preference Tree Model'
-        printDBG('Bulding Preference Model of: '+repr(pref_struct))
-        self.pref_model = pref_struct._createQPreferenceModel()
-        printDBG('Built: '+repr(self.pref_model))
-        self.pref_skel.prefTreeView.setModel(self.pref_model)
-        self.pref_skel.prefTreeView.header().resizeSection(0,250)
+    def initQtApp():
+        # Attach to QtConsole's QApplication if able
+        from PyQt4.Qt import QCoreApplication, QApplication
+        app = QCoreApplication.instance() 
+        isRootApp = app is None
+        if isRootApp: # if not in qtconsole
+            # configure matplotlib 
+            import matplotlib
+            print('Configuring matplotlib for Qt4')
+            matplotlib.use('Qt4Agg')
+            # Run new root application
+            print('Starting new QApplication')
+            app = QApplication(sys.argv)
+        else: 
+            print('Running using parent QApplication')
+        return app, isRootApp 
+    if __name__ == '__main__':
+        app, isRootApp = initQtApp()
 
-def initQtApp():
-    # Attach to QtConsole's QApplication if able
-    from PyQt4.Qt import QCoreApplication, QApplication
-    app = QCoreApplication.instance() 
-    isRootApp = app is None
-    if isRootApp: # if not in qtconsole
-        # configure matplotlib 
-        import matplotlib
-        print('Configuring matplotlib for Qt4')
-        matplotlib.use('Qt4Agg')
-        # Run new root application
-        print('Starting new QApplication')
-        app = QApplication(sys.argv)
-    else: 
-        print('Running using parent QApplication')
-    return app, isRootApp 
-if __name__ == '__main__':
-    app, isRootApp = initQtApp()
+        pref_root = Pref()
+        pref_root.a = Pref('fdsa')
+        pref_root.b = Pref('fdsb')
+        pref_root.c = Pref('fdsc')
+        pref_root.createQWidget()
 
-    pref_root = Pref()
-    pref_root.a = Pref('fdsa')
-    pref_root.b = Pref('fdsb')
-    pref_root.c = Pref('fdsc')
-    pref_root.createQWidget()
-
-    if isRootApp:
-        print('Running the application event loop')
-        sys.stdout.flush()
-        sys.exit(app.exec_())
+        if isRootApp:
+            print('Running the application event loop')
+            sys.stdout.flush()
+            sys.exit(app.exec_())

@@ -20,7 +20,10 @@ import types
 import shutil
 import warnings
 import fnmatch
+import inspect
+import textwrap
 from sys import stdout as sout
+print('LOAD_MODULE: helpers.py')
 
 __PRINT_CHECKS__ = False
 
@@ -383,8 +386,10 @@ def tic(msg=None):
     return (msg, time.time())
 
 def toc(tt):
-    ellapsed = (time.time() - tt[1])
-    sys.stdout.write('...toc(%.4fs, ' % ellapsed + '"' + str(tt[0]) + '"' + ')\n')
+    (msg, start_time) = tt
+    ellapsed = (time.time() - start_time)
+    if msg != None: 
+        sys.stdout.write('...toc(%.4fs, ' % ellapsed + '"' + str(msg) + '"' + ')\n')
     return ellapsed
 
 
@@ -433,9 +438,20 @@ def symlink(source, link_name, noraise=False):
         if not noraise:
             raise
 
+IPYTHON_EMBED_STR = r'''
+try: 
+    import IPython
+    print('Presenting in new ipython shell.')
+    embedded = True
+    IPython.embed()
+except Exception as ex:
+    printWARN(repr(ex)+'\n!!!!!!!!')
+    embedded = False
+'''
+
+
 def get_exec_src(func):
-    import inspect
-    import textwrap
+    print(' ! Getting executable source for: '+func.func_name)
     _src = inspect.getsource(func)
     src = textwrap.dedent(_src[_src.find(':')+1:])
     # Remove return statments

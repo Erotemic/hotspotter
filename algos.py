@@ -14,7 +14,9 @@ import sklearn.preprocessing as sklpreproc
 import sys
 import sklearn
 import scipy as sp
+import signal
 import scipy.sparse as spsparse
+print('LOAD_MODULE: algos.py')
 #imp.reload(sys.modules['hotspotter.helpers'])
 #imp.reload(sys.modules['params'])
 
@@ -170,15 +172,24 @@ def ann_flann_once(dpts, qpts, num_neighbors):
     return (qx2_dx, qx2_dist)
 
 #@profile
-def __akmeans_iterate(data, clusters, datax2_clusterx_old, MAX_ITERS=500,
-                      AVE_UNCHANGED_THRESH=30, AVE_UNCHANGED_WINDOW=10):
+def __akmeans_iterate(data,
+                      clusters,
+                      datax2_clusterx_old,
+                      max_iters=500,
+                      ave_unchanged_thresh=30,
+                      ave_unchanged_window=10):
     num_data = data.shape[0]
     num_clusters = clusters.shape[0]
-    xx2_unchanged = np.zeros(AVE_UNCHANGED_WINDOW, dtype=np.int32) + AVE_UNCHANGED_THRESH*10
-    print('Printing akmeans info in format: (iterx, mean(#unchanged), #unchanged)')
-    for xx in xrange(0, MAX_ITERS): 
+    xx2_unchanged = np.zeros(ave_unchanged_window, dtype=np.int32) + len(data)
+    print('Starting iterations:')
+    print('Printing akmeans info in format: time (iterx, mean(#switched), #unchanged)')
+    for xx in xrange(0, max_iters): 
         # 1) Find each datapoints nearest cluster center
+        tt = helpers.tic()
+        sys.stdout.write('...tic')
         (datax2_clusterx, _dist) = ann_flann_once(clusters, data, 1)
+        ellapsed = helpers.toc(tt)
+        sys.stdout.write('...toc(%.4fs)' % ellapsed)
         # 2) Find new cluster datapoints
         datax_sort    = datax2_clusterx.argsort()
         clusterx_sort = datax2_clusterx[datax_sort]
@@ -189,44 +200,51 @@ def __akmeans_iterate(data, clusters, datax2_clusterx_old, MAX_ITERS=500,
                 clusterx2_dataLRx[clusterx_sort[_L]] = (_L, _R)
                 _L = _R
         # 3) Compute new cluster centers
+        sys.stdout.write('+')
         for clusterx, dataLRx in enumerate(clusterx2_dataLRx):
             if dataLRx is None: continue # ON EMPTY CLUSTER
             (_L, _R) = dataLRx
             clusters[clusterx] = np.mean(data[datax_sort[_L:_R]], axis=0)
+            if params.__BOW_DTYPE__ == np.uint8:
+                clusters[clusterx] = np.array(np.round(clusters[clusterx]), dtype=params.__BOW_DTYPE__)
         # 4) Check for convergence (no change of cluster id)
+        sys.stdout.write('+')
         num_changed = (datax2_clusterx_old != datax2_clusterx).sum()
-        xx2_unchanged[xx % AVE_UNCHANGED_WINDOW] = num_changed
+        xx2_unchanged[xx % ave_unchanged_window] = num_changed
         ave_unchanged = xx2_unchanged.mean()
         sys.stdout.write('  ('+str(xx)+', '+str(num_changed)+', '+str(ave_unchanged)+'), \n')
-        if ave_unchanged < AVE_UNCHANGED_THRESH:
+        if ave_unchanged < ave_unchanged_thresh:
             break
         else: # Iterate
             datax2_clusterx_old = datax2_clusterx
             if xx % 5 == 0: 
                 sys.stdout.flush()
-    print('  * AKMEANS: converged in %d/%d iters' % (xx+1, MAX_ITERS))
+    print('  * AKMEANS: converged in %d/%d iters' % (xx+1, max_iters))
     sys.stdout.flush()
     return (datax2_clusterx, clusters)
 
 #@profile
-def akmeans(data, num_clusters=1e6, MAX_ITERS=150,
-            AVE_UNCHANGED_THRESH=30, AVE_UNCHANGED_WINDOW=None):
+def akmeans(data,
+            num_clusters=1e6, 
+            max_iters=150,
+            ave_unchanged_thresh=30,
+            ave_unchanged_window=None):
     '''Approximiate K-Means (using FLANN)
-    Input: data - np.array with rows of data. dtype must be np.float32
+    Input: data - np.array with rows of data.
     Description: Quickly partitions data into K=num_clusters clusters.
     Cluter centers are randomly assigned to datapoints. 
     Each datapoint is assigned to its approximate nearest cluster center. 
     The cluster centers are recomputed. 
     Repeat until convergence.'''
 
-    if AVE_UNCHANGED_WINDOW is None:
-        AVE_UNCHANGED_WINDOW = int(len(data) / 500)
+    if ave_unchanged_window is None:
+        ave_unchanged_window = int(len(data) / 500)
     print('Running akmeans: data.shape=%r ; num_clusters=%r' % (data.shape, num_clusters))
-    print('  * will converge when the average number of label changes is less than %r over a window of %r iterations' % \
-          (AVE_UNCHANGED_THRESH, AVE_UNCHANGED_WINDOW))
+    print('  * dtype = %r ' % params.__BOW_DTYPE__)
+    print('  * will converge when average #cluster switches < %r over a window of %r iterations' % \
+          (ave_unchanged_thresh, ave_unchanged_window))
     # Setup akmeans iterations
-    dtype_ = np.float32  # assert data.dtype == float32
-    data   = np.array(data, dtype_) 
+    data   = np.array(data, params.__BOW_DTYPE__) 
     num_data = data.shape[0]
     # Initialize to random cluster clusters
     datax_rand = np.arange(0,num_data);
@@ -235,7 +253,12 @@ def akmeans(data, num_clusters=1e6, MAX_ITERS=150,
     clusters            = np.copy(data[clusterx2_datax])
     datax2_clusterx_old = -np.ones(len(data), dtype=np.int32)
     # This function does the work
-    (datax2_clusterx, clusters) = __akmeans_iterate(data, clusters, datax2_clusterx_old, MAX_ITERS, AVE_UNCHANGED_THRESH, AVE_UNCHANGED_WINDOW)
+    (datax2_clusterx, clusters) = __akmeans_iterate(data,
+                                                    clusters,
+                                                    datax2_clusterx_old,
+                                                    max_iters,
+                                                    ave_unchanged_thresh,
+                                                    ave_unchanged_window)
     return (datax2_clusterx, clusters)
 
 def whiten(data):
@@ -279,7 +302,42 @@ def plot_clusters(data, datax2_clusterx, clusters):
         ax.scatter(clus_x, clus_y, clus_z, s=500, c=clus_colors, marker='*')
     return fig
 
-def precompute_akmeans(data, num_clusters=1e6, MAX_ITERS=200,
+import textwrap
+
+def force_quit_akmeans(signal, frame):
+    try: 
+        print(textwrap.dedent('''
+        Caught Ctrl+C in:
+            function: %r
+            stacksize: %r
+            line_no: %r
+                            ''') % \
+            (frame.f_code.co_name, 
+            frame.f_code.co_stacksize,
+            frame.f_lineno))
+        exec(df2.present()) 
+        target_frame = frame
+        target_frame_coname = '__akmeans_iterate'
+        while True:
+            if target_frame.f_code.co_name == target_frame_coname:
+                break
+            if target_frame.f_code.co_name == '<module>':
+                print('Traced back to module level. Missed frame: '+target_frame_coname)
+                break
+            target_frame = target_frame.f_back
+            print target_frame.f_code.co_name
+
+        fpath = target_frame.f_back.f_back.f_locals['fpath']
+
+        data            = target_frame.f_locals['data']
+        clusters        = target_frame.f_locals['clusters']
+        datax2_clusterx = target_frame.f_locals['datax2_clusterx']
+        helpers.save_npz(fpath+'.earlystop', datax2_clusterx, clusters)
+    except Exception as ex: 
+        print(repr(ex))
+        exec(helpers.IPYTHON_EMBED_STR)
+
+def precompute_akmeans(data, num_clusters=1e6, max_iters=200,
                        force_recomp=False, cache_dir=None):
     'precompute akmeans'
     data_md5 = str(data.shape).replace(' ','')+helpers.hashstr_md5(data)
@@ -291,8 +349,17 @@ def precompute_akmeans(data, num_clusters=1e6, MAX_ITERS=200,
     try: 
         (datax2_clusterx, clusters) = helpers.load_npz(fname)
     except Exception as ex:
+        print(' ... load failed. Running akmeans with manual stopping')
+        print('Press Ctrl+C to stop k-means early (and save)')
+        # set ctrl+c behavior to early stop akmeans
+        signal.signal(signal.SIGINT, force_quit_akmeans)
+        # run akmeans
         (datax2_clusterx, clusters) = akmeans(data, num_clusters)
+        # save result
+        print('Removing Ctrl+C signal handler')
         helpers.save_npz(fname, datax2_clusterx, clusters)
+        # reset ctrl+c behavior
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
     return (datax2_clusterx, clusters)
 
 if __name__ == '__main__':

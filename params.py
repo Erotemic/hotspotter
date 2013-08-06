@@ -3,9 +3,10 @@
     It also reads from sys.argv'''
 import sys
 import os.path
+import numpy as np
 import helpers
+print('LOAD_MODULE: params.py')
 
-print('    ____ IMPORT PARAMS ____')
 print(' * __name__ = %s' % __name__)
 print(' * sys.argv = %r' % sys.argv)
 print(' * sys.checkinterval   = %r' % sys.getcheckinterval())
@@ -13,7 +14,7 @@ print(' * sys.defaultencoding = %r' % sys.getdefaultencoding())
 print(' * sys.filesystemencoding = %r' % sys.getfilesystemencoding())
 print(' * sys.prefix = %r' % sys.prefix)
 
-
+__BOW_DTYPE__ = np.uint8
 
 # Number of processessors
 __NUM_PROCS__ = 9
@@ -24,7 +25,7 @@ __MATCH_TYPE__   = 'vsmany'
 # Number of matches for one-vs-many
 __K__            = 2
 # Vocab size for bag of words
-__NUM_WORDS__    = 1e6
+__NUM_WORDS__    = 1e4
 # Thresholds for one-vs-one
 #__RATIO_THRESH__ = 1.5
 # Number of top matches to spatially re-rank
@@ -35,6 +36,13 @@ hs1_params = {'algorithm':'kdtree',
               'trees'    :4,
               'checks'   :128}
 
+quick_and_dirty_params = {'algorithm':'kdtree',
+              'trees'    :8,
+              'checks'   :8}
+
+philbin_params = {'algorithm':'kdtree',
+              'trees'    :8,
+              'checks'   :128}
 # Unwhitened
 mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
                               'branching'          : 16,
@@ -59,7 +67,7 @@ mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
                               'target_precision'   : 0.8999999761581421,
                               'trees'              : 1}
 
-__FLANN_ONCE_PARAMS__ = hs1_params
+__FLANN_ONCE_PARAMS__ = quick_and_dirty_params
 __FLANN_PARAMS__      = hs1_params
 
 __VERBOSE_CACHE__ = False
@@ -102,3 +110,5 @@ if '--print-checks' in sys.argv:
 # MAJOR HACKS 
 #__FORCE_REQUERY_CX__ = set([0,1])
 __FORCE_REQUERY_CX__ = set([])
+
+print(' ...Finished loading params.py')

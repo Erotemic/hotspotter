@@ -103,6 +103,8 @@ def __compute_vocabulary(cx2_desc, train_sample_cx, vocab_size, cache_dir=None):
 def __index_database_to_vocabulary(cx2_desc, words, words_flann,database_sample_cx):
     '''Assigns each database chip a visual-vector and returns 
        data for the inverted file'''
+    # TODO: Save precomputations here
+    print('Assigning each database chip a bag-of-words vector')
     sample_cx   = database_sample_cx
     num_database = len(database_sample_cx)
     ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, database_sample_cx)
@@ -134,7 +136,7 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann,database_sample_
     cx2_vvec = algos.sparse_normalize_rows(cx2_tfidf_vvec)
     return cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf
 
-def __quantize_desc_to_tfidf_vvec(des_, wx2_idf, words, words_flann):
+def __quantize_desc_to_tfidf_vvec(desc, wx2_idf, words, words_flann):
     # Assign each descriptor to its nearest visual word
     #desc = np.array(desc_, params.__BOW_DTYPE__)
     fx2_wx, _ = words_flann.nn_index(desc, 1, checks=128)

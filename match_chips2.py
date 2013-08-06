@@ -51,12 +51,14 @@ def precompute_bag_of_words(hs):
     Creates an indexed database with database_sample_cx'''
     print('Precomputing bag of words')
     # Read params
-    train_sample_cx    = hs.train_sample_cx
-    database_sample_cx = hs.database_sample_cx
     cache_dir  = hs.dirs.cache_dir
     cx2_desc   = hs.feats.cx2_desc
     vocab_size = params.__NUM_WORDS__
     cx2_desc   = hs.feats.cx2_desc
+    train_sample_cx    = range(len(cx2_desc) if hs.train_sample_cx is None 
+                               else hs.train_sample_cx
+    database_sample_cx = range(len(cx2_desc) if hs.database_sample_cx is None 
+                               else hs.database_sample_cx
     # Compute vocabulary
     words, flann_words = __compute_vocabulary\
             (cx2_desc, train_sample_cx, vocab_size, cache_dir)
@@ -572,11 +574,13 @@ def run_matching(hs):
     cx2_desc = hs.feats.cx2_desc
     cx2_kpts = hs.feats.cx2_kpts 
     qcx2_res = [QueryResult(qcx) for qcx in xrange(len(cx2_cid))]
+    test_sample_cx = range(len(cx2_cid)) if hs.test_sample_cx else hs.test_sample_cx
     tt_ALL = tic('all queries')
-    assign_times = []
+    assign_times = [] # metadata
     verify_times = []
-    skip_list = []
-    for qcx, qcid in enumerate(cx2_cid):
+    skip_list    = []
+    for qcx in iter(test_sample_cx):
+        qcid = cx2_cid[qcx]
         if qcid == 0: 
             skip_list.append(qcx)
             continue
@@ -658,8 +662,9 @@ class HotSpotter(DynStruct):
         hs.cpaths = None
         hs.dirs   = None
         hs.matcher = None
-        hs.train_sample_cx =  [0, 2, 3, 4, 5]
-        hs.database_sample_cx =  [0, 2, 3, 4, 5]
+        hs.train_sample_cx    = None
+        hs.test_sample_cx     = None
+        hs.database_sample_cx = None
         if not db_dir is None:
             hs.load_database(db_dir)
     def load_database(hs, db_dir):
@@ -673,6 +678,13 @@ class HotSpotter(DynStruct):
         hs.cpaths  = hs_cpaths
         hs.dirs    = hs_dirs
         hs.use_matcher(params.__MATCH_TYPE__)
+
+    def set_train_test_database(train_sample_cx, 
+                                test_sample_cx, 
+                                database_sample_cx)
+        hs.train_sample_cx    = train_sample_cx
+        hs.test_sample_cx     = test_sample_cx
+        hs.database_sample_cx = database_sample_cx
     # TODO: This UID code is repeated in feature_compute2. needs to be better
     # integrated
     def algo_uid(hs):

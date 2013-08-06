@@ -149,3 +149,159 @@ def __compute_vocabulary(hs, train_cxs):
     # training information
     tx2_cid  = cx2_cid[train_cxs]
     tx2_desc = cx2_desc[train_cxs]
+
+
+
+#------------------- convert
+@helpers.__DEPRICATED__
+def __read_ox_gtfile_OLD(gt_fpath, gt_name, quality):
+    ox_chip_info_list = []
+    with open(gt_fpath,'r') as file:
+        line_list = file.read().splitlines()
+        for line in line_list:
+            if line == '': continue
+            fields = line.split(' ')
+            gname = fields[0].replace('oxc1_','')+'.jpg'
+            if gname.find('paris_') >= 0: 
+                # PARIS HACK >:(
+                #Because they just cant keep their paths consistent 
+                paris_hack = gname[6:gname.rfind('_')]
+                gname = paris_hack+'/'+gname
+            if gname in corrupted_gname_list: continue
+            if len(fields) > 1: #quality == query
+                roi = map(lambda x: int(round(float(x))),fields[1:])
+            else: # quality in ['good','ok','junk']
+                gpath = os.path.join(img_dpath, gname)
+                (w,h) = Image.open(gpath).size
+                roi = [0,0,w,h]
+            ox_chip_info = (gt_name, gname, roi, quality, gt_fpath)
+            ox_chip_info_list.append(ox_chip_info)
+    return ox_chip_info_list
+                     
+@helpers.__DEPRICATED__
+def convert_from_oxford_sytle_OLD(db_dir):
+    hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
+
+    # Get directories for the oxford groundtruth
+    oxford_gt_dpath      = join(db_dir, 'oxford_style_gt')
+    corrupted_file_fpath = join(db_dir, 'corrupted_files.txt')
+
+    # Check for corrupted files (Looking at your Paris Buildings Dataset)
+    corrupted_gname_list = []
+    if helpers.checkpath(corrupted_file_fpath):
+        with open(corrupted_file_fpath) as f:
+            corrupted_gname_list = f.read().splitlines()
+        corrupted_gname_list = set(corrupted_gname_list)
+    print('Loading Oxford Style Images')
+
+    # Recursively get relative path of all files in img_dpath
+    img_dpath  = join(db_dir, 'images')
+    gname_list = [join(relpath(root, img_dpath), fname).replace('\\','/').replace('./','')\
+                    for (root,dlist,flist) in os.walk(img_dpath)
+                    for fname in flist]
+
+    print('Loading Oxford Style Names and Chips')
+    # Read the Oxford Style Groundtruth files
+    gt_fname_list = os.listdir(oxford_gt_dpath)
+
+    print('There are %d ground truth files' % len(gt_fname_list))
+    total_chips = 0
+    quality2_nchips = {'good':0,'bad':0,'ok':0,'junk':0,'query':0}
+    gtname2_nchips = {}
+    qtx2_nchips = []
+    ox_chip_info_list = []
+    for gt_fname in iter(gt_fname_list):
+        #Get gt_name, quality, and num from fname
+        (gt_name, quality, num) = __oxgtfile2_oxgt_tup(gt_fname)
+        gt_fpath = join(oxford_gt_dpath, gt_fname)
+        ox_chip_info_sublist = __read_ox_gtfile_OLD(gt_fpath, gt_name, quality)
+        num_subchips = len(ox_chip_info_sublist)
+        ox_chip_info_list.extend(ox_chip_info_sublist)
+        # Sanity
+        # count number of chips
+        quality2_nchips[quality] += num_subchips
+        total_chips              += num_subchips
+        if not gt_name in gtname2_nchips.keys():
+            gtname2_nchips[gt_name] = 0
+        gtname2_nchips[gt_name] += num_subchips
+        qtx2_nchips.append(num_subchips)
+
+    import numpy as np
+    print('Total num: %d ' % total_chips)
+    print('Quality breakdown: '+repr(quality2_nchips).replace(',',',\n    '))
+    print('GtName breakdown: '+repr(gtname2_nchips).replace(',',',\n    '))
+    print('Quality Sanity Total %d: ' % np.array(map(int, quality2_nchips.values())).sum())
+    print('Gt_Name Sanity Total %d: ' % np.array(map(int, gtname2_nchips.values())).sum())
+
+    gtx2_name  = [tup[0] for tup in iter(ox_chip_info_list)]
+    gtx2_gname = [tup[1] for tup in iter(ox_chip_info_list)]
+
+    unique_gnames = set(gtx2_gname)
+
+    print('Total chips: %d ' % len(gtx2_gname))
+    print('Unique chip gnames: %d ' % len(unique_gnames))
+
+    gname2_info = {}
+    query_images = []
+    for (name, gname, roi,  quality, fpath) in iter(ox_chip_info_list):
+        if quality == 'query':
+            query_images.append(gname)
+        if not gname in gname2_info.keys():
+            gname2_info[gname] = []
+        gname2_info[gname].append((name, quality, roi, fpath))
+
+    for gname in gname2_info.keys():
+        info_list = gname2_info[gname]
+        print '-------------'
+        print '\n    '.join(map(repr, [gname]+info_list))
+
+
+    print('This part prints out which files the query images exist in')
+    import subprocess
+    os.chdir(oxford_gt_dpath)
+    for qimg in query_images:
+        print('-----')
+        qimg = qimg.replace('.jpg','')
+        cmd = ['grep', qimg, '*.txt']
+        cmd2 = ' '.join(cmd)
+        os.system(cmd2)
+
+    print('Num query images: ' + str(len(query_images)))
+    print('Num unique query images: ' + str(len(set(query_images))))
+
+
+    print('Total images: %d ' % len(gname_list))
+    print('Total unique images: %d ' % len(set(gname_list)))
+
+    len(ox_chip_info_list)
+    print '\n'.join((repr(cinfo) for cinfo in iter(ox_chip_info_list)))
+    # HACKISH Duplicate detection. Eventually this should actually be in the codebase
+    print('Detecting and Removing Duplicate Ground Truth')
+    dup_cx_list = []
+    for nx in nm.get_valid_nxs():
+        cx_list = array(nm.nx2_cx_list[nx])
+        gx_list = cm.cx2_gx[cx_list]
+        (unique_gx, unique_x) = np.unique(gx_list, return_index=True)
+        name = nm.nx2_name[nx]
+        for gx in gx_list[unique_x]:
+            bit = False
+            gname = gm.gx2_gname[gx]
+            x_list = pylab.find(gx_list == gx)
+            cx_list2  = cx_list[x_list]
+            roi_list2 = cm.cx2_roi[cx_list2]
+            roi_hash = lambda roi: roi[0]+roi[1]*10000+roi[2]*100000000+roi[3]*1000000000000
+            (_, unique_x2) = np.unique(map(roi_hash, roi_list2), return_index=True)
+            non_unique_x2 = np.setdiff1d(np.arange(0,len(cx_list2)), unique_x2)
+            for nux2 in non_unique_x2:
+                cx_  = cx_list2[nux2]
+                dup_cx_list += [cx_]
+                roi_ = roi_list2[nux2]
+                print('Duplicate: cx=%4d, gx=%4d, nx=%4d roi=%r' % (cx_, gx, nx, roi_) )
+                print('           Name:%s, Image:%s' % (name, gname) )
+                bit = True
+            if bit:
+                print('-----------------')
+    for cx in dup_cx_list:
+        cm.remove_chip(cx)
+
+#---------end convert

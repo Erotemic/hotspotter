@@ -5,6 +5,7 @@ Module: load_data
 '''
 import os, sys, string
 import fnmatch
+import types
 import numpy as np
 import helpers
 from helpers import checkpath, unit_test, ensure_path, symlink, remove_files_in_dir
@@ -374,6 +375,53 @@ def print_chiptable(hs_tables):
     print('=======================================================')
 
 
+def make_csv_table(column_labels, column_list, header):
+    if len(column_labels) == 0: 
+        print('No columns')
+        return header
+    column_len  = [len(col) for col in column_list]
+    num_data =  column_len[0] 
+    if num_data == 0:
+        print('No data')
+        return header
+    if any([num_data != clen for clen in column_len]):
+        print('inconsistent column length')
+        return header
+
+    column_type = [type(col[0]) for col in column_list]
+
+    csv_rows = []
+    csv_rows.append(header)
+    csv_rows.append('# NumData '+str(num_data))
+
+    column_maxlen = []
+    column_str_list = []
+    
+    for col, lbl, coltype in iter(zip(column_list, column_labels, column_type)):
+        if coltype == types.ListType:
+            col_str  = [str(c).replace(',',' ') for c in iter(col)]
+        else:
+            col_str  = [str(c) for c in iter(col)]
+        col_lens = [len(s) for s in iter(col_str)]
+        max_len  = max(col_lens)
+        max_len  = max(len(lbl), max_len)
+        column_maxlen.append(max_len)
+        column_str_list.append(col_str)
+
+    fmtstr = ','.join(['%'+str(maxlen+2)+'s' for maxlen in column_maxlen])
+    csv_rows.append('# '+fmtstr % tuple(column_labels))
+    for row in zip(*column_str_list):
+        csv_rows.append('  ' + fmtstr % row)
+
+    csv_text = '\n'.join(csv_rows)
+    return csv_text
+
+
+
+        
+
+
+
 # MODULE GLOBAL VARIABLES
 WORK_DIR = 'D:/data/work'
 if sys.platform == 'linux2':
@@ -385,6 +433,7 @@ GZ_ALL  = WORK_DIR+'/GZ_ALL'
 WS_HARD = WORK_DIR+'/WS_hard'
 MOTHERS = WORK_DIR+'/HSDB_zebra_with_mothers'
 OXFORD  = WORK_DIR+'/Oxford_Buildings'
+PARIS   = WORK_DIR+'/Paris_Buildings'
 
 DEFAULT = NAUTS
 
@@ -394,9 +443,10 @@ dev_databases = {
     'GZ_ALL'  : GZ_ALL,
     'WS_HARD' : WS_HARD,
     'MOTHERS' : MOTHERS,
-    'OXFORD'  : OXFORD}
+    'OXFORD'  : OXFORD,
+    'PARIS'   : PARIS}
 
-print('____LOAD DATA____')
+print('____module: LOAD DATA____')
 for argv in iter(sys.argv):
     if argv.upper() in dev_databases.keys():
         print(' * User changed default database. Previously: '+str(DEFAULT))
@@ -420,4 +470,3 @@ if __name__ == '__main__':
     helpers.__PRINT_CHECKS__ = True #might as well
     hs_dirs, hs_tables = test_load_csv()
     exec(df2.present())
-

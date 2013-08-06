@@ -34,6 +34,8 @@ MODULES = \
     'PIL'
 ]
 
+
+#'parse'
 INSTALL_OPTIONAL = \
 [
     'python-qt>=.50',

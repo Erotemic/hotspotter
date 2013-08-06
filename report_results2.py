@@ -273,6 +273,88 @@ def visualize_all_qcx_tt_bt_tf(hs, qcx2_res):
     for qcx, res in enumerate(qcx2_res):
         visualize_res_tt_bt_tf(res)
 
+
+def compute_average_precision(res, k):
+    '''
+    % from wikipedia: http://en.wikipedia.org/wiki/Information_retrieval#Mean_average_precision
+    $p(r)$ = precision as a function of recall $r$
+    $AveP$ = $\int_0^1 p(r) dr$ = $\sum_{k=1}^n P(k) \del r(k)$
+
+    $k$ is the rank in sequence of retrieved documents
+    $n$ is the number of retrieved documents
+
+    $\del r(k) = r(k) - r(k-1)$ = change in recall 
+    '''
+    pass
+
+def compute_mean_average_precision(res, k):
+    '''
+    MAP = 1/Q \sum_{q=1}^Q AveP(q) 
+    '''
+
+# Score a single query for name consistency
+# Written: 5-28-2013 
+def res2_name_consistency(hs, res):
+    '''Score a single query for name consistency
+    Input: 
+        res - query result
+    Returns: Dict
+        error_chip - degree of chip error
+        name_error - degree of name error
+        gt_pos_name - 
+        gt_pos_chip - 
+    '''
+    # Defaults to -1 if no ground truth is in the top results
+    cm, nm = em.hs.get_managers('cm','nm')
+    qcx  = res.rr.qcx
+    qnid = res.rr.qnid
+    qnx   = nm.nid2_nx[qnid]
+    ret = {'name_error':-1,      'chip_error':-1,
+           'gt_pos_chip':-1,     'gt_pos_name':-1, 
+           'chip_precision': -1, 'chip_recall':-1}
+    if qnid == nm.UNIDEN_NID: exec('return ret')
+    # ----
+    # Score Top Chips
+    top_cx = res.cx_sort()
+    gt_pos_chip_list = (1+pylab.find(qnid == cm.cx2_nid(top_cx)))
+    # If a correct chip was in the top results
+    # Reward more chips for being in the top X
+    if len(gt_pos_chip_list) > 0:
+        # Use summation formula sum_i^n i = n(n+1)/2
+        ret['gt_pos_chip'] = gt_pos_chip_list.min()
+        _N = len(gt_pos_chip_list)
+        _SUM_DENOM = float(_N * (_N + 1)) / 2.0
+        ret['chip_error'] = float(gt_pos_chip_list.sum())/_SUM_DENOM
+    # Calculate Precision / Recall (depends on the # threshold/max_results)
+    ground_truth_cxs = np.setdiff1d(np.array(nm.nx2_cx_list[qnx]), np.array([qcx]))
+    true_positives  = top_cx[gt_pos_chip_list-1]
+    false_positives = np.setdiff1d(top_cx, true_positives)
+    false_negatives = np.setdiff1d(ground_truth_cxs, top_cx)
+
+    nTP = float(len(true_positives)) # Correct result
+    nFP = float(len(false_positives)) # Unexpected result
+    nFN = float(len(false_negatives)) # Missing result
+    #nTN = float( # Correct absence of result
+
+    ret['chip_precision'] = nTP / (nTP + nFP)
+    ret['chip_recall']    = nTP / (nTP + nFN)
+    #ret['true_negative_rate'] = nTN / (nTN + nFP)
+    #ret['accuracy'] = (nTP + nFP) / (nTP + nTN + nFP + nFN)
+    # ----
+    # Score Top Names
+    (top_nx, _) = res.nxcx_sort()
+    gt_pos_name_list = (1+pylab.find(qnid == nm.nx2_nid[top_nx]))
+    # If a correct name was in the top results
+    if len(gt_pos_name_list) > 0: 
+        ret['gt_pos_name'] = gt_pos_name_list.min() 
+        # N should always be 1
+        _N = len(gt_pos_name_list)
+        _SUM_DENOM = float(_N * (_N + 1)) / 2.0
+        ret['name_error'] = float(gt_pos_name_list.sum())/_SUM_DENOM
+    # ---- 
+    # RETURN RESULTS
+    return ret
+
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()

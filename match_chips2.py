@@ -592,6 +592,7 @@ def run_matching(hs):
     assign_times = [] # metadata
     verify_times = []
     skip_list    = []
+    print('Running matching on: %r' % test_sample_cx)
     for qcx in iter(test_sample_cx):
         qcid = cx2_cid[qcx]
         if qcid == 0: 

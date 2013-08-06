@@ -93,6 +93,18 @@ def rank_results(hs, qcx2_res):
     
     # Output ranking results
 
+    # TODO: CID
+    # TODO: Top True Positive Rank
+    # TODO: Top True Positive Score
+    # TODO: Top True Positive CID
+    # TODO: Bottom True Positive Rank
+    # TODO: Bottom True Positive Score
+    # TODO: Bottom True Positive CID
+    # TODO: Top False Positive Rank
+    # TODO: Top False Positive Score
+    # TODO: Top False Positive CID
+    # TODO: mAP score
+
     # Build the experiment csv metadata
     rankres_metadata = textwrap.dedent('''
     # Rank Result Metadata:
@@ -158,16 +170,36 @@ def cx2_other_cx(hs, cx):
     return other_cx
 
 def get_oxsty_mAP_score(hs, res, SV):
+    # find oxford ground truth directory
+    cwd = os.getcwd()
+    oxford_gt_dir = join(hs.dirs.db_dir, 'oxford_style_gt')
+    # build groundtruth query
     qcx = res.qcx
     qnx = hs.tables.cx2_nx[qcx]
+    oxnum_px  = hs.tables.px2_propname.index('oxnum')
+    cx2_oxnum = hs.tables.px2_cx2_prop[oxnum_px]
+    qoxnum = cx2_oxnum[qcx]
+    qname  = nx2_name[qnx]
+    #groundtruth_query = 
+    # build ranked list
     cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
     top_cx = cx2_score.argsort()[::-1]
     top_gx = hs.tables.cx2_gx[top_cx]
     top_gname = hs.tables.gx2_gname[top_gx]
-
-
-    ground_truth_query = 
+    # run oxford mAP code
+    ground_truth_query = qname+'_'+oxnum
     ranked_list = [top_gname.replace('.jpg')]
+    ranked_list_fname = join(hs.dirs.result_dir, 'ranked_list_'+ground_truth_query+'.txt')
+    helpers.write(ranked_list_fname, '\n'.join(ranked_list))
+    os.chdir(oxford_gt_dir)
+    import subprocess
+    from subprocess import PIPE
+    cmd = ('../compute_ap '+ground_truth_query+' '+ranked_list_fname)
+    print('Executing: %r ' % cmd)
+    proc = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE)
+    (out, err) = proc.communicate()
+    return_code = proc.returncode
+    os.chdir(cwd)
     
 
 def print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False):

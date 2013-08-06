@@ -20,6 +20,34 @@ print('LOAD_MODULE: algos.py')
 #imp.reload(sys.modules['hotspotter.helpers'])
 #imp.reload(sys.modules['params'])
 
+def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
+    ''' Tries to load a cached flann index before doing anything'''
+    print('Precomputing flann index: '+lbl)
+    flann_params = params.__FLANN_PARAMS__ if flann_params is None else flann_params
+    cache_dir = '.' if cache_dir is None else cache_dir
+    flann_lbl = str(flann_params.values())
+    flann_lbl = flann_lbl.replace(',',' ').replace(' ','').replace('"','').replace('\'','').replace(']','').replace('[','')
+    shape_lbl = str(data.shape).replace(' ','')
+    md5_lbl   = helpers.hashstr_md5(data)
+    flann_fname = lbl+'F'+flann_lbl+'_'+shape_lbl+'_'+md5_lbl+'.flann'
+    flann_fpath = join(cache_dir, flann_fname)
+    flann = pyflann.FLANN()
+    load_success = False
+    if helpers.checkpath(flann_fpath):
+        try:
+            print('Trying to load FLANN index: '+flann_fpath)
+            flann.load_index(flann_fpath, data)
+            print('...success')
+            load_success = True
+        except Exception as ex:
+            print('...cannot load FLANN index'+repr(ex))
+    if not load_success:
+        with helpers.Timer(msg='rebuilding FLANN index'):
+            flann.build_index(data, **flann_params)
+        print('Saving FLANN index to: '+flann_fpath)
+        flann.save_index(flann_fpath)
+    return flann
+
 def sparse_normalize_rows(csr_mat):
     return sklpreproc.normalize(csr_mat, norm='l2', axis=1, copy=False)
 
@@ -205,8 +233,9 @@ def __akmeans_iterate(data,
             if dataLRx is None: continue # ON EMPTY CLUSTER
             (_L, _R) = dataLRx
             clusters[clusterx] = np.mean(data[datax_sort[_L:_R]], axis=0)
-            if params.__BOW_DTYPE__ == np.uint8:
-                clusters[clusterx] = np.array(np.round(clusters[clusterx]), dtype=params.__BOW_DTYPE__)
+            #if params.__BOW_DTYPE__ == np.uint8:
+            #clusters[clusterx] = np.array(np.round(clusters[clusterx]), dtype=params.__BOW_DTYPE__)
+            clusters[clusterx] = np.array(np.round(clusters[clusterx]), dtype=np.uint8)
         # 4) Check for convergence (no change of cluster id)
         sys.stdout.write('+')
         num_changed = (datax2_clusterx_old != datax2_clusterx).sum()
@@ -240,11 +269,11 @@ def akmeans(data,
     if ave_unchanged_window is None:
         ave_unchanged_window = int(len(data) / 500)
     print('Running akmeans: data.shape=%r ; num_clusters=%r' % (data.shape, num_clusters))
-    print('  * dtype = %r ' % params.__BOW_DTYPE__)
+    #print('  * dtype = %r ' % params.__BOW_DTYPE__)
     print('  * will converge when average #cluster switches < %r over a window of %r iterations' % \
           (ave_unchanged_thresh, ave_unchanged_window))
     # Setup akmeans iterations
-    data   = np.array(data, params.__BOW_DTYPE__) 
+    #data   = np.array(data, params.__BOW_DTYPE__) 
     num_data = data.shape[0]
     # Initialize to random cluster clusters
     datax_rand = np.arange(0,num_data);
@@ -303,7 +332,6 @@ def plot_clusters(data, datax2_clusterx, clusters):
     return fig
 
 import textwrap
-
 def force_quit_akmeans(signal, frame):
     try: 
         print(textwrap.dedent('''
@@ -348,6 +376,7 @@ def precompute_akmeans(data, num_clusters=1e6, max_iters=200,
     helpers.checkpath(fpath)
     try: 
         (datax2_clusterx, clusters) = helpers.load_npz(fname)
+        print(' ... load success.')
     except Exception as ex:
         print(' ... load failed. Running akmeans with manual stopping')
         print('Press Ctrl+C to stop k-means early (and save)')

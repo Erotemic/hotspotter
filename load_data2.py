@@ -65,6 +65,7 @@ class HotspotterDirs(DynStruct):
         ensure_path(self.result_dir)
         ensure_path(self.rchip_dir)
         ensure_path(self.qres_dir)
+        ensure_path(self.cache_dir)
         # Shortcut to internals
         internal_sym = db_dir + '/Shortcut-to-hs_internals'
         if not os.path.islink(internal_sym):

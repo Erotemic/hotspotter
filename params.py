@@ -25,7 +25,7 @@ __MATCH_TYPE__   = 'vsmany'
 # Number of matches for one-vs-many
 __K__            = 2
 # Vocab size for bag of words
-__NUM_WORDS__    = 1e4
+__NUM_WORDS__    = 1e6
 # Thresholds for one-vs-one
 #__RATIO_THRESH__ = 1.5
 # Number of top matches to spatially re-rank
@@ -67,7 +67,7 @@ mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
                               'target_precision'   : 0.8999999761581421,
                               'trees'              : 1}
 
-__FLANN_ONCE_PARAMS__ = quick_and_dirty_params
+__FLANN_ONCE_PARAMS__ = philbin_params
 __FLANN_PARAMS__      = hs1_params
 
 __VERBOSE_CACHE__ = False

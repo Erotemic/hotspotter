@@ -50,6 +50,26 @@ def listinfo(list, lbl='ndarr'):
 def cmd(command):
     os.system(command)
 
+def eval_from(fname, err_onread=True):
+    'evaluate a line from a test file'
+    print('Evaling: %r ' % fname)
+    text = read_from(fname)
+    if text is None:
+        if err_onread:
+            raise Exception('Error reading: %r' % fname)
+        print(' * could not eval: %r ' % fname)
+        return None
+    return eval(text)
+
+def read_from(fname):
+    if not checkpath(fname):
+        println(' * FILE DOES NOT EXIST!')
+        return None
+    println(' * Reading from text file: %r ' % fname)
+    text = open(fname,'r').read()
+    println(' * Read %d characters' % len(text))
+    return text
+
 def write_to(fname, to_write):
     println(' * Writing to text file: %r ' % fname)
     with open(fname, 'w') as file:
@@ -286,8 +306,10 @@ def load_pkl(fname):
         return cPickle.load(file)
 
 def save_npz(fname, *args, **kwargs):
-    print(' * save_npz: %r ' % fname)
+    print_(' * save_npz: %r ' % fname)
+    flush()
     np.savez(fname, *args, **kwargs)
+    print('... success')
 
 def load_npz(fname):
     print(' * load_npz: %r ' % fname)

@@ -20,7 +20,7 @@ from PIL import Image
 def __oxgtfile2_oxsty_gttup(gt_fname):
     # num is an id not a number of chips
     '''parases the groundtruth filename for: groundtruth name, quality_lbl, and num'''
-    gt_format = '{}_{}_{}.txt'
+    gt_format = '{}_{:d}_{:D}.txt'
     name, num, quality = parse.parse(gt_format, gt_fname)
     return (name, num, quality)
 
@@ -48,8 +48,12 @@ def __read_oxsty_gtfile(gt_fpath, name, quality, img_dpath, corrupted_gname_set)
             oxsty_chip_info_list.append(oxsty_chip_info)
     return oxsty_chip_info_list
 
+def matches_image(fname):
+    fname_ = fname.lower()
+    return any([fnmatch.fnmatch(fname_, pat) for pat in ['*.jpg', '*.png']])
+
+#db_dir = load_data2.PARIS
 db_dir = load_data2.OXFORD
-db_dir = load_data2.PARIS
 def convert_from_oxford_style(db_dir):
     # Get directories for the oxford groundtruth
     oxford_gt_dpath      = join(db_dir, 'oxford_style_gt')
@@ -64,9 +68,6 @@ def convert_from_oxford_style(db_dir):
     # Recursively get relative path of all files in img_dpath
     print('Loading Oxford Style Images from: '+db_dir)
     img_dpath  = join(db_dir, 'images')
-    def matches_image(fname):
-        fname_ = fname.lower()
-        return any([fnmatch.fnmatch(fname_, pat) for pat in ['*.jpg', '*.png']])
     gname_list_ = [join(relpath(root, img_dpath), fname).replace('\\','/').replace('./','')\
                     for (root,dlist,flist) in os.walk(img_dpath)
                     for fname in iter(flist)]

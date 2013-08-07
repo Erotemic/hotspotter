@@ -1,104 +1,141 @@
-import load_data2
-import match_chips2 as mc2
-from Pref import Pref
+# We have 5,202,157 descriptors
+# They claim to have 16,334,970 descriptors
 
+def reload_modules():
+    import imp
+    imp.reload(mc2)
+    imp.reload(helpers)
 
-def default_preferences():
-    root = Pref()
-    
-    pref_feat = Pref()
-    pref_feat.kpts_type = Pref(2,choices=['DOG','HESS','HESAFF'])
-    pref_feat.desc_type = Pref(0,choices=['SIFT'])
+def get_oxsty_mAP_score(hs, cx2_res, SV=False):
+    query_mAP_list = []
+    for qcx in (hs.test_sample_cx):
+        res = cx2_res[qcx]
+        mAP = get_oxsty_mAP_score_from_res(hs, res, SV)
+        query_mAP_list.append(mAP)
 
-    pref_bow = Pref()
-    pref_bow.vocab_size = 1e5
+    total_mAP = np.mean(np.array(query_mAP_list))
+    return total_mAP, query_mAP_list
 
-    pref_1v1 = Pref()
-    
-    pref_1vM = Pref()
+import subprocess
+from subprocess import PIPE
+import os
+from os.path import join
 
+def get_oxsty_mAP_score_from_res(hs, res, SV):
+    # find oxford ground truth directory
+    cwd = os.getcwd()
+    oxford_gt_dir = join(hs.dirs.db_dir, 'oxford_style_gt')
+    # build groundtruth query
+    qcx = res.qcx
+    qnx = hs.tables.cx2_nx[qcx]
+    oxnum_px = np.where(hs.tables.px2_propname == 'oxnum')[0][0]
+    #oxnum_px  = hs.tables.px2_propname.index('oxnum')
+    cx2_oxnum = hs.tables.px2_cx2_prop[oxnum_px]
+    qoxnum = cx2_oxnum[qcx]
+    qname  = hs.tables.nx2_name[qnx]
+    #groundtruth_query = 
+    # build ranked list
+    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
+    top_cx = cx2_score.argsort()[::-1]
+    top_gx = hs.tables.cx2_gx[top_cx]
+    top_gname = hs.tables.gx2_gname[top_gx]
+    # build mAP args
+    ground_truth_query = qname+'_'+qoxnum
+    # build ranked list of gnames (remove duplicates)
+    seen = set([])
+    ranked_list = []
+    for gname in iter(top_gname):
+        gname_ = gname.replace('.jpg','')
+        if not gname_ in seen: 
+            seen.add(gname_)
+            ranked_list.append(gname_)
+    ranked_list2 = [gname.replace('.jpg','') for gname in top_gname]
+    SV_aug = ['','SV_'][SV]
+    ranked_list_fname = join(hs.dirs.result_dir, 'ranked_list_'+SV_aug+ground_truth_query+'.txt')
+    helpers.write_to(ranked_list_fname, '\n'.join(ranked_list))
+    # execute external mAP code
+    os.chdir(oxford_gt_dir)
+    args = ('../compute_ap', ground_truth_query, ranked_list_fname)
+    cmdstr  = ' '.join(args)
+    print('Executing: %r ' % cmdstr)
+    proc = subprocess.Popen(args, stdout=PIPE, stderr=PIPE)
+    (out, err) = proc.communicate()
+    return_code = proc.returncode
+    os.chdir(cwd)
+    mAP = float(out.strip())
+    return mAP
 
 def oxford_bag_of_words_reproduce_philbin07():
+    import load_data2
+    import match_chips2 as mc2
+    import params
+    import numpy as np
+    import helpers
+
+    # TODO: No resize chips
+    # TODO: Orientation assignment / Mikj detectors
+
+    # I guess no orientation
+    #These three models take advantage of the fact that images are usually
+    #displayed on the web with the correct (upright) orientation. For this
+    #reason, we have not allowed for in-plane image rotations.
+
     '''
+    We ﬁnd that the two-way transfer error with scale threshold performs the
+    best on the data. In cases where a simpler one-way transfer error sufﬁces,
+    we can speed up veriﬁcation when there is a high visual-word
+    multiplicity between the two images (usually for smaller vocabularies). We
+    merely need to ﬁnd the spatially closest matching feature in the target to a
+    particular query feature and check whether this single distance is less than
+    the threshold. This is done using a 2D k-d tree, to provide logarithmic
+    time search. In all experiments where “spatial” is speciﬁed, we have
+    used our spatial veriﬁcation procedure to re-rank up to the top 1000
+    images. 
     
+    We consider spatial veriﬁcation to be “successful” if we ﬁnd a
+    transformation with at least 4 inlier correspondences. We re-rank the
+    images by scoring them equal to the sum of the idf values for the inlier
+    words andh place spatially veriﬁed images above unveriﬁed ones in the
+    ranking. 
     
-Image collection: 11 Oxford landmarks (ie particular part of a building) and distractors.
+    We abort the re-ranking early (after considering fewer than 1000
+    images) if we process 20 images in a row without a successful spatial
+    veriﬁcation. We ﬁnd this gives a good trade-off between speed and accuracy
+    '''
 
-Landmark images were taken from Flickr [3], using queries such as “Oxford Christ Church” and “Oxford Radcliffe Camera.”
-Distractors were taken by seaching on “Oxford” alone.
-The entire dataset consists of 5,062 high resolution (1024 × 768) images.
+    helpers.__PRINT_CHECKS__ = True
+    # The vocab sizes run by philbin et al 
+    vocab_sizes = [1e4, 2e4, 5e4, 1e6, 1.25e6] 
 
-For each landmark we chose 5 different query regions.
-The ﬁve queries are used so that retrieval performance can be averaged over any individual query peculiarities.
+    rerank_nums = [100,200,400,800]
 
-We obtain ground truth manually by searching over the entire dataset for the 11 landmarks.
+    dof = [3,4,5]
 
-Images are assigned one of four possible labels:
-    (1) Good – a nice, clear picture of the object/building.
-    (2) OK – more than 25% of the object is clearly visible.
-    (3) Junk – less than 25% of the object is visible, or there is a very high level of occlusion or distortion. 
-    (4) Absent – the object is not present. 
-    
-    The number of occurrences of the different landmarks range between 7 and 220 good and ok images.
-    
-In addition to this labelled set, we use two other datasets to stress-test
-retrieval performance when scaling up. These consist of images crawled from
-Flickr’s list of most popular tags. The images in our datasets will not in
-general be disjoint when crawled from Flickr, so we remove exact duplicates from the sets. 
+    # They use 8 trees in for their AKMEANS. Unsure how many checks
+    philbin_params = {'algorithm':'kdtree',
+                      'trees'    :8,
+                      'checks'   :64}
 
-We then assume that these datasets contain no occurrences of the objects being
-searched for, so they act as distractors, testing both the performance and
-scalability of our system. 
+    params.__NUM_WORDS__ = vocab_sizes[0]
+    params.__NUM_RERANK__ = rerank_nums[0]
+    params.__FLANN_ONCE_PARAMS__ = philbin_params
+    dbdir = load_data2.OXFORD
+    hs = mc2.HotSpotter(dbdir, load_matcher=False)
 
+    db_sample_cx = hs.database_sample_cx
+    tr_sample_cx = hs.train_sample_cx
+    te_sample_cx = hs.test_sample_cx
 
-100K dataset: Crawled from Flickr's 145 most popular tags and
-consists of 99,782 high resolution (1024 × 768) images.  
+    assert db_sample_cx == tr_sample_cx
+    assert len(set(te_sample_cx)) == 55
 
-1M dataset. Crawled from Flickr's 450 most popular tags and
-consists of 1,040,801 medium resolution (500 × 333) images.
+    print('Database shape: '+str(np.vstack(hs.feats.cx2_desc[db_sample_cx]).shape))
 
-Table 1: 
- _____________________________________________________
-|Dataset # images     # features   Size of descriptors|
-|-----------------------------------------------------|
-|5K         5,062     16,334,970                1.9 GB|
-|100K      99,782    277,770,833               33.1 GB|
-|1M     1,040,801  1,186,469,709              141.4 GB|
-|-----------------------------------------------------|
-|Total  1,145,645  1,480,575,512              176.4 GB|
-|-----------------------------------------------------|
-
-To evaluate the performance we use the average precision (AP) measure computed
-as the area under the precision-recall curve for a query. 
-
-Precision is defined as the ratio of retrieved positive images to the total number retrieved.
-
-Recall is defined as the ratio of the number of retrieved positive images to the total
-number of positive images in the corpus. 
-
-We compute an average precision score for each of the 5 queries for a landmark,
-averaging these to obtain a mean Average Precision (mAP) score.
-
-The average of these mAP scores is used as a single number to evaluate the
-overall performance. 
-
-In computing the average precision, we use the Good and Ok images as positive
-examples of the landmark in question, Absent images as negative examples and
-Junk images as null examples. These null examples are treated as though they are
-not present in the database – our score is unaffected whether they are returned
-or not.
-
-'''
-    OXFORD = load_data.OXFORD
-    hs = mc2.HotSpotter(dbdir)
-    oxford_train_cxs    = []
-    oxford_test_cxs     = []
-    oxford_database_cxs = []
-    hs.set_train_test_database(oxford_train_cxs, 
-                               oxford_test_cxs, 
-                               oxford_database_cxs)
     hs.use_matcher('bagofwords')
     cx2_res = mc2.run_matching(hs)
+
+    total_mAP, mAP_list       = get_oxsty_mAP_score(hs, cx2_res, SV=False)
+    total_mAP_SV, mAP_list_SV = get_oxsty_mAP_score(hs, cx2_res, SV=True)
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support

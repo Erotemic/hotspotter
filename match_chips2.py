@@ -32,9 +32,6 @@ import scipy as sp
 import scipy.sparse as spsparse
 import sklearn.preprocessing 
 print ('LOAD_MODULE: match_chips2.py')
-sys.stdout.flush()
-
-
 
 #========================================
 # Bag-of-Words
@@ -126,11 +123,10 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann,database_sample_
     coo_cx2_vvec = spsparse.coo_matrix(coo_format, dtype=np.float, copy=True)
     cx2_tf_vvec  = spsparse.csr_matrix(coo_cx2_vvec, copy=False)
     # Compute idf_w = log(Number of documents / Number of docs containing word_j)
-    wx2_df  = np.array([len(set(cx_list)) for cx_list in wx2_cxs],
-                       dtype=np.float)
+    print('Computing tf-idf')
+    wx2_df  = np.array([len(set(cxs)) for cxs in wx2_cxs], dtype=np.float)
     wx2_idf = np.array(np.log2(np.float(num_database) / wx2_df))
     # Compute tf-idf
-    print wx2_idf.shape
     cx2_tfidf_vvec = algos.sparse_multiply_rows(cx2_tf_vvec, wx2_idf)
     # Normalize
     cx2_vvec = algos.sparse_normalize_rows(cx2_tfidf_vvec)
@@ -144,7 +140,7 @@ def __quantize_desc_to_tfidf_vvec(desc, wx2_idf, words, words_flann):
     # Build sparse visual vectors with term frequency weights 
     lil_vvec = spsparse.lil_matrix((len(words),1))
     for wx in iter(fx2_wx):
-        lil_vvec[wx,0] += 1
+        lil_vvec[wx, 0] += 1
     tf_vvec = spsparse.csr_matrix(lil_vvec.T, copy=False)
     # Compute tf-idf
     tfidf_vvec = algos.sparse_multiply_rows(tf_vvec, wx2_idf)
@@ -332,9 +328,8 @@ def cv2_match(desc1, desc2):
     matches = [(m1.trainIdx, m1.queryIdx) for m1 in raw_matches]
 
 #@profile
-def match_vsone(desc2, vsone_flann, ratio_thresh=1.2, burst_thresh=None, DBG=False):
-    '''
-    Matches desc2 vs desc1 using Lowe's ratio test
+def match_vsone(desc2, vsone_flann, ratio_thresh=1.2, burst_thresh=None):
+    '''Matches desc2 vs desc1 using Lowe's ratio test
     Input:
         desc2         - other descriptors (N2xD)
         vsone_flann     - FLANN index of desc1 (query descriptors (N1xD)) 
@@ -352,10 +347,8 @@ def match_vsone(desc2, vsone_flann, ratio_thresh=1.2, burst_thresh=None, DBG=Fal
     fx_passratio, = np.where(fx2_ratio > ratio_thresh)
     fx = fx_passratio
     # BURSTINESS TEST
-    # Find frequency of descriptor matches
+    # Find frequency of descriptor matches. Convert qfx to fx
     # Select the query features which only matched < burst_thresh
-    # Convert qfx to fx
-    # FIXME: there is probably a better way of doing this.
     if not burst_thresh is None:
         qfx2_frequency = np.bincount(fx2_qfx[:, 0])
         qfx_occuring   = qfx2_frequency > 0
@@ -370,17 +363,6 @@ def match_vsone(desc2, vsone_flann, ratio_thresh=1.2, burst_thresh=None, DBG=Fal
     qfx = fx2_qfx[fx, 0]
     fm  = np.array(zip(qfx, fx))
     fs  = fx2_ratio[fx]
-    # DEBUG
-    if DBG:
-        print('-------------')
-        print('Matching vsone:')
-        print(' * Ratio threshold: %r ' % ratio_thresh)
-        print(' * Burst threshold: %r ' % burst_thresh)
-        print(' * fx_passratio.shape   = %r ' % (  fx_passratio.shape, ))
-        if not burst_thresh is None:
-            print(' * fx_nonbursty.shape   = %r ' % (  fx_nonbursty.shape, ))
-        print(' * fx.shape   = %r ' % (  fx.shape, ))
-        print(' * qfx.shape  = %r ' % (  qfx.shape, ))
     return (fm, fs)
 
 #========================================
@@ -397,26 +379,11 @@ def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
     kpts1_m = kpts1[fm[:, 0], :].T
     kpts2_m = kpts2[fm[:, 1], :].T
     # -----------------------------------------------
-    # TODO: SHOULD THIS HAPPEN HERE? (ISSUE XY_THRESH)
     # Get match threshold 10% of matching keypoint extent diagonal
     img1_extent = (kpts1_m[0:2, :].max(1) - kpts1_m[0:2, :].min(1))[0:2]
     xy_thresh1_sqrd = np.sum(img1_extent**2) * (xy_thresh**2)
-    dodbg = False if DBG is None else __DEBUG__
-    if dodbg:
-        print('---------------------------------------')
-        print('INFO: spatially_verify xy threshold:')
-        print(' * Threshold is %.1f%% of diagonal length' % (xy_thresh*100))
-        print(' * img1_extent = %r '     % img1_extent)
-        print(' * img1_diag_len = %.2f ' % np.sqrt(np.sum(img1_extent**2)))
-        print(' * xy_thresh1_sqrd=%.2f'  % np.sqrt(xy_thresh1_sqrd))
-        print('---------------------------------------')
     # -----------------------------------------------
     hinlier_tup = func_homog(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
-    if dodbg:
-        print('  * ===')
-        print('  * Found '+str(len(inliers))+' inliers')
-        print('  * with transform H='+repr(H))
-        print('  * fm.shape = %r fs.shape = %r' % (fm.shape, fs.shape))
     if not hinlier_tup is None:
         H, inliers = hinlier_tup
     else:
@@ -443,11 +410,6 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     top_cx     = cx2_score.argsort()[::-1]
     num_rerank = min(len(top_cx), params.__NUM_RERANK__)
-    # -----------------------------------------------
-    # TODO: SHOULD THIS HAPPEN HERE? (ISSUE XY_THRESH)
-    #img1_extent = (kpts1[:, 0:2].max(0) - qkpts1[:, 0:2].min(0))[0:2]
-    #xy_thresh1_sqrd = np.sum(img1_extent**2) * __xy_thresh_percent__
-    # -----------------------------------------------
     # Precompute output container
     cx2_fm_V = [[] for _ in xrange(len(cx2_fm))]
     cx2_fs_V = [[] for _ in xrange(len(cx2_fs))]
@@ -462,10 +424,6 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
         cx2_fs_V[cx] = fs_V
     cx2_score_V = np.array([np.sum(fs) for fs in cx2_fs_V])
     return cx2_fm_V, cx2_fs_V, cx2_score_V
-
-def warp_chip(rchip2, H, rchip1):
-    rchip2W = cv2.warpPerspective(rchip2, H, rchip1.shape[0:2][::-1])
-    return rchip2W
 
 #=========================
 # Query Result Class
@@ -483,12 +441,14 @@ class QueryResult(DynStruct):
         self.cx2_fs_V = np.array([])
         self.cx2_score_V = np.array([])
 
+    @helpers.__DEPRICATED__
     def __get_info(self, SV=True):
         cx2_score = self.cx2_score_V if SV else self.cx2_score
         cx2_fm    = self.cx2_fm_V if SV else self.cx2_fm
         cx2_fs    = self.cx2_fs_V if SV else self.cx2_fs
         return cx2_score, cx2_fm, cx2_fs
 
+    @helpers.__DEPRICATED__
     def get_info(self, SV=True):
         cx2_score, cx2_fm, cx2_fs = self.__get_info(SV)
         if len(cx2_score) == 0:
@@ -669,7 +629,7 @@ def runall_match(hs):
 #========================================
 class HotSpotter(DynStruct):
     '''The HotSpotter main class is a root handle to all relevant data'''
-    def __init__(hs, db_dir=None):
+    def __init__(hs, db_dir=None, load_matcher=True):
         super(HotSpotter, hs).__init__()
         hs.tables = None
         hs.feats  = None
@@ -680,8 +640,8 @@ class HotSpotter(DynStruct):
         hs.test_sample_cx     = None
         hs.database_sample_cx = None
         if not db_dir is None:
-            hs.load_database(db_dir)
-    def load_database(hs, db_dir):
+            hs.load_database(db_dir, load_matcher)
+    def load_database(hs, db_dir, load_matcher=True):
         # Load data
         hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
         hs_cpaths = cc2.load_chip_paths(hs_dirs, hs_tables)
@@ -692,22 +652,20 @@ class HotSpotter(DynStruct):
         hs.cpaths  = hs_cpaths
         hs.dirs    = hs_dirs
 
-        database_sample_fname = hs.dirs.internal_dir+'/database_sample.txt'
-        test_sample_fname = hs.dirs.internal_dir+'/test_sample.txt'
-        train_sample_fname = hs.dirs.internal_dir+'/train_sample.txt'
-        if helpers.checkpath(database_sample_fname):
-            hs.database_sample_cx = eval(open(database_sample_fname,'r').read())
-        if helpers.checkpath(test_sample_fname):
-            hs.database_sample_cx = eval(open(test_sample_fname,'r').read())
-        if helpers.checkpath(train_sample_fname):
-            hs.database_sample_cx = eval(open(train_sample_fname,'r').read())
-        hs.use_matcher(params.__MATCH_TYPE__)
+        hs.load_test_train_database()
 
-    def set_train_test_database(train_sample_cx, test_sample_cx,
-                                database_sample_cx):
-        hs.train_sample_cx    = train_sample_cx
-        hs.test_sample_cx     = test_sample_cx
-        hs.database_sample_cx = database_sample_cx
+        if load_matcher: 
+            hs.use_matcher(params.__MATCH_TYPE__)
+
+    def load_test_train_database(hs):
+        'tries to load test / train / database sample from internal dir'
+        database_sample_fname = hs.dirs.internal_dir+'/database_sample.txt'
+        test_sample_fname     = hs.dirs.internal_dir+'/test_sample.txt'
+        train_sample_fname    = hs.dirs.internal_dir+'/train_sample.txt'
+        hs.database_sample_cx = helpers.eval_from(database_sample_fname, False)
+        hs.test_sample_cx     = helpers.eval_from(test_sample_fname, False)
+        hs.train_sample_cx    = helpers.eval_from(database_sample_fname, False)
+
     # TODO: This UID code is repeated in feature_compute2. needs to be better
     # integrated
     def algo_uid(hs):

@@ -305,3 +305,124 @@ def convert_from_oxford_sytle_OLD(db_dir):
         cm.remove_chip(cx)
 
 #---------end convert
+#@profile
+def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
+    '''1) compute a robust transform from img2 -> img1
+       2) keep feature matches which are inliers '''
+    # ugg transpose, I like row first, but ransac seems not to
+    if len(fm) == 0: 
+        return (np.empty((0, 2)), np.empty((0, 1)), np.eye(3))
+    xy_thresh = params.__XY_THRESH__
+    kpts1_m = kpts1[fm[:, 0], :].T
+    kpts2_m = kpts2[fm[:, 1], :].T
+    # -----------------------------------------------
+    # TODO: SHOULD THIS HAPPEN HERE? (ISSUE XY_THRESH)
+    # Get match threshold 10% of matching keypoint extent diagonal
+    img1_extent = (kpts1_m[0:2, :].max(1) - kpts1_m[0:2, :].min(1))[0:2]
+    xy_thresh1_sqrd = np.sum(img1_extent**2) * (xy_thresh**2)
+    dodbg = False if DBG is None else __DEBUG__
+    if dodbg:
+        print('---------------------------------------')
+        print('INFO: spatially_verify xy threshold:')
+        print(' * Threshold is %.1f%% of diagonal length' % (xy_thresh*100))
+        print(' * img1_extent = %r '     % img1_extent)
+        print(' * img1_diag_len = %.2f ' % np.sqrt(np.sum(img1_extent**2)))
+        print(' * xy_thresh1_sqrd=%.2f'  % np.sqrt(xy_thresh1_sqrd))
+        print('---------------------------------------')
+    # -----------------------------------------------
+    hinlier_tup = func_homog(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
+    if dodbg:
+        print('  * ===')
+        print('  * Found '+str(len(inliers))+' inliers')
+        print('  * with transform H='+repr(H))
+        print('  * fm.shape = %r fs.shape = %r' % (fm.shape, fs.shape))
+    if not hinlier_tup is None:
+        H, inliers = hinlier_tup
+    else:
+        H = np.eye(3)
+        inliers = []
+    if len(inliers) > 0:
+        fm_V = fm[inliers, :]
+        fs_V = fs[inliers, :]
+    else: 
+        fm_V = np.empty((0, 2))
+        fs_V = np.array((0, 1))
+    return fm_V, fs_V, H
+
+def spatially_verify(kpts1, kpts2, fm, fs, DBG=None):
+    ''' Concrete implementation of spatial verification
+        using the deterministic ellipse based sample conensus'''
+    ransac_func = spatial_verification.H_homog_from_DELSAC
+    return __spatially_verify(ransac_func, kpts1, kpts2, fm, fs, DBG)
+spatially_verify.__doc__ += '\n'+__spatially_verify.__doc__
+
+#@profile
+def match_vsone(desc2, vsone_flann, ratio_thresh=1.2, burst_thresh=None, DBG=False):
+    '''
+    Matches desc2 vs desc1 using Lowe's ratio test
+    Input:
+        desc2         - other descriptors (N2xD)
+        vsone_flann     - FLANN index of desc1 (query descriptors (N1xD)) 
+    Thresholds: 
+        ratio_thresh = 1.2 - keep if dist(2)/dist(1) > ratio_thresh
+        burst_thresh = 1   - keep if 0 < matching_freq(desc1) <= burst_thresh
+    Output: 
+        fm - Mx2 array of matching feature indexes
+        fs - Mx1 array of matching feature scores '''
+    # features to their matching query features
+    checks = params.__FLANN_PARAMS__['checks']
+    (fx2_qfx, fx2_dist) = vsone_flann.nn_index(desc2, 2, checks=checks)
+    # RATIO TEST
+    fx2_ratio  = np.divide(fx2_dist[:, 1], fx2_dist[:, 0]+1E-8)
+    fx_passratio, = np.where(fx2_ratio > ratio_thresh)
+    fx = fx_passratio
+    # BURSTINESS TEST
+    # Find frequency of descriptor matches
+    # Select the query features which only matched < burst_thresh
+    # Convert qfx to fx
+    # FIXME: there is probably a better way of doing this.
+    if not burst_thresh is None:
+        qfx2_frequency = np.bincount(fx2_qfx[:, 0])
+        qfx_occuring   = qfx2_frequency > 0
+        qfx_nonbursty  = qfx2_frequency <= burst_thresh
+        qfx_nonbursty_unique, = np.where(
+            np.bitwise_and(qfx_occuring, qfx_nonbursty))
+        _qfx_set      = set(qfx_nonbursty_unique.tolist())
+        fx2_nonbursty = [_qfx in _qfx_set for _qfx in iter(fx2_qfx[:, 0])]
+        fx_nonbursty, = np.where(fx2_nonbursty)
+        fx  = np.intersect1d(fx, fx_nonbursty, assume_unique=True)
+    # RETURN vsone matches and scores
+    qfx = fx2_qfx[fx, 0]
+    fm  = np.array(zip(qfx, fx))
+    fs  = fx2_ratio[fx]
+    # DEBUG
+    if DBG:
+        print('-------------')
+        print('Matching vsone:')
+        print(' * Ratio threshold: %r ' % ratio_thresh)
+        print(' * Burst threshold: %r ' % burst_thresh)
+        print(' * fx_passratio.shape   = %r ' % (  fx_passratio.shape, ))
+        if not burst_thresh is None:
+            print(' * fx_nonbursty.shape   = %r ' % (  fx_nonbursty.shape, ))
+        print(' * fx.shape   = %r ' % (  fx.shape, ))
+        print(' * qfx.shape  = %r ' % (  qfx.shape, ))
+    return (fm, fs)
+
+def warp_chip(rchip2, H, rchip1):
+    rchip2W = cv2.warpPerspective(rchip2, H, rchip1.shape[0:2][::-1])
+    return rchip2W
+
+def default_preferences():
+    root = Pref()
+    
+    pref_feat = Pref()
+    pref_feat.kpts_type = Pref(2,choices=['DOG','HESS','HESAFF'])
+    pref_feat.desc_type = Pref(0,choices=['SIFT'])
+
+    pref_bow = Pref()
+    pref_bow.vocab_size = 1e5
+
+    pref_1v1 = Pref()
+    
+    pref_1vM = Pref()
+

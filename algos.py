@@ -214,10 +214,12 @@ def __akmeans_iterate(data,
     for xx in xrange(0, max_iters): 
         # 1) Find each datapoints nearest cluster center
         tt = helpers.tic()
-        sys.stdout.write('...tic')
+        helpers.print_('...tic')
+        helpers.flush()
         (datax2_clusterx, _dist) = ann_flann_once(clusters, data, 1)
         ellapsed = helpers.toc(tt)
-        sys.stdout.write('...toc(%.4fs)' % ellapsed)
+        helpers.print_('...toc(%.4fs)' % ellapsed)
+        helpers.flush()
         # 2) Find new cluster datapoints
         datax_sort    = datax2_clusterx.argsort()
         clusterx_sort = datax2_clusterx[datax_sort]
@@ -228,7 +230,8 @@ def __akmeans_iterate(data,
                 clusterx2_dataLRx[clusterx_sort[_L]] = (_L, _R)
                 _L = _R
         # 3) Compute new cluster centers
-        sys.stdout.write('+')
+        helpers.print_('+')
+        helpers.flush()
         for clusterx, dataLRx in enumerate(clusterx2_dataLRx):
             if dataLRx is None: continue # ON EMPTY CLUSTER
             (_L, _R) = dataLRx
@@ -237,11 +240,13 @@ def __akmeans_iterate(data,
             #clusters[clusterx] = np.array(np.round(clusters[clusterx]), dtype=params.__BOW_DTYPE__)
             clusters[clusterx] = np.array(np.round(clusters[clusterx]), dtype=np.uint8)
         # 4) Check for convergence (no change of cluster id)
-        sys.stdout.write('+')
+        helpers.print_('+')
+        helpers.flush()
         num_changed = (datax2_clusterx_old != datax2_clusterx).sum()
         xx2_unchanged[xx % ave_unchanged_window] = num_changed
         ave_unchanged = xx2_unchanged.mean()
-        sys.stdout.write('  ('+str(xx)+', '+str(num_changed)+', '+str(ave_unchanged)+'), \n')
+        helpers.print_('  ('+str(xx)+', '+str(num_changed)+', '+str(ave_unchanged)+'), \n')
+        helpers.flush()
         if ave_unchanged < ave_unchanged_thresh:
             break
         else: # Iterate
@@ -353,7 +358,7 @@ def force_quit_akmeans(signal, frame):
                 print('Traced back to module level. Missed frame: '+target_frame_coname)
                 break
             target_frame = target_frame.f_back
-            print target_frame.f_code.co_name
+            print 'Is target frame?: '+target_frame.f_code.co_name
 
         fpath = target_frame.f_back.f_back.f_locals['fpath']
 

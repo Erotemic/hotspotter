@@ -349,7 +349,7 @@ if __name__ == '__main__':
         import chip_compute2
         # --- CHOOSE DATABASE --- #
         db_dir = load_data2.DEFAULT
-        hs = mc2.HotSpotter(db_dir)
+        hs = mc2.HotSpotter(db_dir, load_matcher=False)
         cx2_desc = hs.feats.cx2_desc
         cx2_kpts = hs.feats.cx2_kpts
         cx2_cid  = hs.tables.cx2_cid

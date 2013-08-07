@@ -30,22 +30,6 @@ def write_report(hs, report_str, report_type):
     if '--gvim' in sys.argv:
         helpers.gvim(rankres_csv)
 
-def get_true_positive_ranks(qcx, top_cx, cx2_nx):
-    'Returns the ranking of the other chips which should have scored high'
-    top_nx = cx2_nx[top_cx]
-    qnx    = cx2_nx[qcx]
-    _truepos_ranks, = np.where(top_nx == qnx)
-    truepos_ranks = _truepos_ranks[top_cx[_truepos_ranks] != qcx]
-    return truepos_ranks
-
-def get_false_positive_ranks(qcx, top_cx, cx2_nx):
-    'Returns the ranking of the other chips which should have scored high'
-    top_nx = cx2_nx[top_cx]
-    qnx    = cx2_nx[qcx]
-    _falsepos_ranks, = np.where(top_nx != qnx)
-    falsepos_ranks = _falsepos_ranks[top_cx[_falsepos_ranks] != qcx]
-    return falsepos_ranks
-
 def rank_results(hs, qcx2_res):
     cx2_cid  = hs.tables.cx2_cid
     cx2_nx   = hs.tables.cx2_nx
@@ -150,7 +134,6 @@ def rank_results(hs, qcx2_res):
                              rankres_metadata+'\n',
                              rankres_csv_header,
                              rankres_csv_str])
-
     return rankres_str
 
 def get_timestamp(format='filename'):
@@ -169,38 +152,10 @@ def cx2_other_cx(hs, cx):
     other_cx  = other_cx_[other_cx_ != cx]
     return other_cx
 
-def get_oxsty_mAP_score(hs, res, SV):
-    # find oxford ground truth directory
-    cwd = os.getcwd()
-    oxford_gt_dir = join(hs.dirs.db_dir, 'oxford_style_gt')
-    # build groundtruth query
-    qcx = res.qcx
-    qnx = hs.tables.cx2_nx[qcx]
-    oxnum_px  = hs.tables.px2_propname.index('oxnum')
-    cx2_oxnum = hs.tables.px2_cx2_prop[oxnum_px]
-    qoxnum = cx2_oxnum[qcx]
-    qname  = nx2_name[qnx]
-    #groundtruth_query = 
-    # build ranked list
-    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
-    top_cx = cx2_score.argsort()[::-1]
-    top_gx = hs.tables.cx2_gx[top_cx]
-    top_gname = hs.tables.gx2_gname[top_gx]
-    # run oxford mAP code
-    ground_truth_query = qname+'_'+oxnum
-    ranked_list = [top_gname.replace('.jpg')]
-    ranked_list_fname = join(hs.dirs.result_dir, 'ranked_list_'+ground_truth_query+'.txt')
-    helpers.write(ranked_list_fname, '\n'.join(ranked_list))
-    os.chdir(oxford_gt_dir)
-    import subprocess
-    from subprocess import PIPE
-    cmd = ('../compute_ap '+ground_truth_query+' '+ranked_list_fname)
-    print('Executing: %r ' % cmd)
-    proc = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE)
-    (out, err) = proc.communicate()
-    return_code = proc.returncode
-    os.chdir(cwd)
-    
+def dump_top_images(hs, qcx2_res):
+    for qcx in hs.test_sample_cx:
+        res = qcx2_res[qcx]
+    df2.show_matches3(res, hs, cxs[0], SV, fignum=_fn+.231, title_aug=titles[0])
 
 def print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False):
     res = qcx2_res[qcx]
@@ -237,7 +192,60 @@ def print_top_res_scores(hs, res, view_top=10, SV=False):
     print('---------------------------------------')
     print('---------------------------------------')
 
-def get_tp_matches(res, hs, SV):
+# NEW STUFF
+
+def intersect_ordered(list1, list2):
+    'returns list1 elements that are also in list2 preserves order of list1'
+    set2 = set(list2)
+    new_list = [item for item in iter(list1) if item in set2]
+    #new_list =[]
+    #for item in iter(list1):
+        #if item in set2:
+            #new_list.append(item)
+    return new_list
+
+
+def get_top_matches_cx_and_scores(hs, res, SV):
+    cx2_score = res.cx2_score_V if SV else res.cx2_score
+    cx2_fm    = res.cx2_fm_V    if SV else res.cx2_fm
+    cx2_fs    = res.cx2_fs_V    if SV else res.cx2_fs
+    qcx = res.qcx
+    # get top chip indexes which were in the database
+    db_sample_cx = hs.database_sample_cx
+    unfilt_top_cx = np.argsort(cx2_score)[::-1]
+    top_cx = np.array(intersect_ordered(unfilt_top_cx, db_sample_cx))
+    top_score = cx2_score[top_cx]
+    return top_cx, top_score
+
+def __get_top_matches_true_and_false(hs, res, top_cx, top_score):
+    qcx    = res.qcx
+    top_nx = hs.tables.cx2_nx[top_cx]
+    qnx    = hs.tables.cx2_nx[qcx]
+    truepos_ranks  = np.where(np.logical_and(top_nx == qnx, top_cx != qcx))[0]
+    falsepos_ranks = np.where(np.logical_and(top_nx != qnx, top_cx != qcx))[0]
+    return truepos_ranks, falsepos_ranks
+def get_top_matches_true_and_false(hs, res, SV):
+    top_cx, top_score = get_top_matches_cx_and_scores(hs, res, SV)
+    return __get_top_matches_true_and_false(hs, res, top_cx, top_score)
+
+# OLD STUFF
+def get_true_positive_ranks(qcx, top_cx, cx2_nx):
+    'Returns the ranking of the other chips which should have scored high'
+    top_nx = cx2_nx[top_cx]
+    qnx    = cx2_nx[qcx]
+    _truepos_ranks, = np.where(top_nx == qnx)
+    truepos_ranks = _truepos_ranks[top_cx[_truepos_ranks] != qcx]
+    return truepos_ranks
+
+def get_false_positive_ranks(qcx, top_cx, cx2_nx):
+    'Returns the ranking of the other chips which should have scored high'
+    top_nx = cx2_nx[top_cx]
+    qnx    = cx2_nx[qcx]
+    _falsepos_ranks, = np.where(top_nx != qnx)
+    falsepos_ranks = _falsepos_ranks[top_cx[_falsepos_ranks] != qcx]
+    return falsepos_ranks
+
+def get_true_matches(res, hs, SV):
     qcx = res.qcx
     cx2_nx = hs.tables.cx2_nx
     cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
@@ -249,7 +257,7 @@ def get_tp_matches(res, hs, SV):
     truepos_cxs    = top_cx[truepos_ranks]
     return truepos_cxs, truepos_ranks, truepos_scores
 
-def get_fp_matches(res, hs, SV):
+def get_false_matches(res, hs, SV):
     qcx = res.qcx
     cx2_nx = hs.tables.cx2_nx
     cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
@@ -262,7 +270,7 @@ def get_fp_matches(res, hs, SV):
     return falsepos_cxs, falsepos_ranks, falsepos_scores
 
 def get_nth_truepos_match(res, hs, n, SV):
-    truepos_cxs, truepos_ranks, truepos_scores = get_tp_matches(res, hs, SV)
+    truepos_cxs, truepos_ranks, truepos_scores = get_true_matches(res, hs, SV)
     nth_cx    = truepos_cxs[n]
     nth_rank  = truepos_ranks[n]
     nth_score = truepos_scores[n]
@@ -271,7 +279,7 @@ def get_nth_truepos_match(res, hs, n, SV):
     return nth_cx, nth_rank, nth_score
 
 def get_nth_falsepos_match(res, hs, n, SV):
-    falsepos_cxs, falsepos_ranks, falsepos_scores = get_fp_matches(res, hs, SV)
+    falsepos_cxs, falsepos_ranks, falsepos_scores = get_false_matches(res, hs, SV)
     nth_cx    = falsepos_cxs[n]
     nth_rank  = falsepos_ranks[n]
     nth_score = falsepos_scores[n]

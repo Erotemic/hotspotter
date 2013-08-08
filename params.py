@@ -79,6 +79,9 @@ __RESAVE_QUERY__   = False
 __WHITEN_FEATS__  = False
 __HISTEQ__        = False
 
+__CHIP_SQRT_AREA__ = None# 500
+__ORIGINAL_IMAGE__ = True
+
 if '--histeq' in sys.argv:
     print(' * with histogram equalization')
     __HISTEQ__ = True

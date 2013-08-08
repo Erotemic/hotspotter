@@ -13,31 +13,38 @@ import params
 # =======================================
 # Parallelizable Work Functions          
 # =======================================
-def compute_chip(img_path, chip_path, roi, new_size):
-    ''' 
-    Crops chip from image
-    Converts to grayscale
-    Resizes to standard size
-    Equalizes the histogram
-    Saves as png
-    '''
+def precompute_chip_bare(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip.save(chip_path, 'PNG')
+    return True
+
+# Preprocessing based on preferences
+def precompute_chip_histeq(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = algos.histeq(chip)
+    chip.save(chip_path, 'PNG')
+    return True
+
+def __compute_chip(img_path, chip_path, roi, new_size):
+    '''Crops chip from image ; Converts to grayscale ; 
+    Resizes to standard size ; Equalizes the histogram
+    Saves as png'''
     # Read image
     img = Image.open(img_path)
     [img_w, img_h] = [ gdim - 1 for gdim in img.size ]
     # Ensure ROI is within bounds
-    [roi_x, roi_y, roi_w, roi_h] = [ max(0, cdim) for cdim in roi]
+    [roi_x, roi_y, roi_w, roi_h] = [max(0, cdim) for cdim in roi]
     roi_x2 = min(img_w, roi_x + roi_w)
     roi_y2 = min(img_h, roi_y + roi_h)
+    # http://docs.wand-py.org/en/0.3.3/guide/resizecrop.html#crop-images
     # Crop out ROI: left, upper, right, lower
+    #img.transform(resize='x100')
+    #img.transform(resize='640x480>')
     raw_chip = img.crop((roi_x, roi_y, roi_x2, roi_y2))
     # Scale chip, but do not rotate
     chip = raw_chip.convert('L').resize(new_size, Image.ANTIALIAS)
-    # Preprocessing based on preferences
-    if params.__HISTEQ__:
-        chip = algos.histeq(chip)
     # Save chip to disk
-    chip.save(chip_path, 'PNG')
-    return True
+    return chip
 
 def rotate_chip(chip_path, rchip_path, theta):
     ''' reads chip, rotates, and saves'''
@@ -75,21 +82,41 @@ def load_chip_paths(hs_dirs, hs_tables):
     ''' TODO: These should be functions
     Maybe you can change them to objects so they work like lists but dont 
     use up so much memory. Make them more like indexable generators'''
+    # Get parameters
+    sqrt_area = params.__CHIP_SQRT_AREA__
+    histeq    = params.__HISTEQ__
+    chip_params = dict(sqrt_area=sqrt_area, histeq=histeq)
+    print(' * sqrt(target_area) = %r' % sqrt_area)
+    print(' * histeq = %r' % histeq)
+
+    resize_img_bit = not (sqrt_area is None or sqrt_area <= 0)
+    histeq_suffix = ['','.eq'][histeq]
+    resize_suffix = ['', ('.%r' % sqrt_area)][resize_img_bit] 
+    suffix = histeq_suffix+resize_suffix 
     # Full image path
-    cx2_img_path    = [ img_dir+'/'+gx2_gname[gx]   for gx  in cx2_gx ]
+    cx2_img_path = [img_dir+'/'+gx2_gname[gx] for gx in cx2_gx]
     # Paths to chip, rotated chip
-    cx2_chip_path   = [ chip_dir+'/CID_%d.png'        % cid for cid in cx2_cid]
-    cx2_rchip_path  = [rchip_dir+'/CID_%d.rot.png'    % cid for cid in cx2_cid]
+    chip_format  = chip_dir+'/CID_%d'+suffix+'.png'
+    rchip_format = rchip_dir+'/CID_%d'+suffix+'.rot.png'
+    cx2_chip_path   = [chip_format % cid for cid in cx2_cid]
+    cx2_rchip_path  = [rchip_format % cid for cid in cx2_cid]
     # Normalized chip size
-    __At__ = 500.0 ** 2 # target area
-    def _resz(w, h):
-        ht = np.sqrt(__At__ * h / w)
-        wt = w * ht / h
-        return (int(round(wt)), int(round(ht)))
-    cx2_chip_sz = [_resz(float(w), float(h)) for (x,y,w,h) in cx2_roi]
     cx2_imgchip_sz = [(float(w), float(h)) for (x,y,w,h) in cx2_roi]
+    if resize_img_bit:
+        target_area = sqrt_area ** 2
+        def _resz(w, h):
+            ht = np.sqrt(target_area * h / w)
+            wt = w * ht / h
+            return (int(round(wt)), int(round(ht)))
+        cx2_chip_sz = [_resz(float(w), float(h)) for (x,y,w,h) in cx2_roi]
+    else: # no rescaling
+        cx2_chip_sz = [(int(w), int(h)) for (x,y,w,h) in cx2_roi]
     # --- COMPUTE CHIPS --- # 
-    parallel_compute(compute_chip, arg_list=[cx2_img_path, cx2_chip_path,
+    if histeq:
+        compute_chip = compute_chip_histeq
+    else:
+        compute_chip = precompute_chip_bare
+    parallel_compute(precompute_chip_bare, arg_list=[cx2_img_path, cx2_chip_path,
                                              cx2_roi, cx2_chip_sz])
     # --- ROTATE CHIPS --- # 
     parallel_compute(rotate_chip, arg_list=[cx2_chip_path,

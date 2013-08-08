@@ -39,6 +39,7 @@ def rank_results(hs, qcx2_res):
     cx2_top_trueneg_rank  = np.zeros(len(cx2_cid)) - 100
     cx2_top_trueneg_score = np.zeros(len(cx2_cid)) - 100
     cx2_top_score         = np.zeros(len(cx2_cid)) - 100
+    SV = True
 
     for qcx, qcid in enumerate(cx2_cid):
         res = qcx2_res[qcx]
@@ -48,21 +49,23 @@ def rank_results(hs, qcx2_res):
         top_cx = np.argsort(cx2_score)[::-1]
         top_score = cx2_score[top_cx]
         # Get true postiive ranks
-        truepos_ranks = get_true_positive_ranks(qcx, top_cx, cx2_nx)
+        truepos_tup, falsepos_tup = get_matchs_true_and_false(hs, res, SV)
+        (truepos_cxs, truepos_scores, truepos_ranks) = truepos_tup
+        (falsepos_cxs, falsepos_scores, falsepos_scores) = falsepos_tup
         # Find statitics about the true positives (and negatives)
         if len(truepos_ranks) > 0:
             top_truepos_rank = truepos_ranks.min()
             bot_truepos_rank = truepos_ranks.max()
             true_neg_range   = np.arange(0, bot_truepos_rank+2)
             top_trueneg_rank = np.setdiff1d(true_neg_range, truepos_ranks).min()
-            top_trupos_score = top_score[top_truepos_rank]
+            top_truepos_score = top_score[top_truepos_rank]
         else:
             top_trueneg_rank = 0
             top_truepos_rank = np.NAN
-            top_trupos_score = np.NAN
+            top_truepos_score = np.NAN
         # Append stats to output
         cx2_top_truepos_rank[qcx]  = top_truepos_rank
-        cx2_top_truepos_score[qcx] = top_trupos_score
+        cx2_top_truepos_score[qcx] = top_truepos_score
         cx2_top_trueneg_rank[qcx]  = top_trueneg_rank
         cx2_top_trueneg_score[qcx] = top_score[top_trueneg_rank]
         cx2_top_score[qcx]         = top_score[0]
@@ -204,7 +207,6 @@ def intersect_ordered(list1, list2):
             #new_list.append(item)
     return new_list
 
-
 def get_top_matches_cx_and_scores(hs, res, SV):
     cx2_score = res.cx2_score_V if SV else res.cx2_score
     cx2_fm    = res.cx2_fm_V    if SV else res.cx2_fm
@@ -225,8 +227,19 @@ def __get_top_matches_true_and_false(hs, res, top_cx, top_score):
     falsepos_ranks = np.where(np.logical_and(top_nx != qnx, top_cx != qcx))[0]
     return truepos_ranks, falsepos_ranks
 def get_top_matches_true_and_false(hs, res, SV):
-    top_cx, top_score = get_top_matches_cx_and_scores(hs, res, SV)
+    top_cx, top_score = get_top_matches_cx_and_scores(hs, res, sv)
     return __get_top_matches_true_and_false(hs, res, top_cx, top_score)
+
+def get_matchs_true_and_false(hs, res, SV):
+    top_cx, top_score = get_top_matches_cx_and_scores(hs, res, SV)
+    truepos_ranks, falsepos_ranks = __get_top_matches_true_and_false(hs, res, top_cx, top_score)
+    truepos_scores = top_score[truepos_ranks]
+    truepos_cxs    = top_cx[truepos_ranks]
+    falsepos_scores = top_score[falsepos_ranks]
+    falsepos_cxs    = top_cx[falsepos_ranks]
+    truepos_tup  = (truepos_cxs, truepos_scores, truepos_ranks)
+    falsepos_tup = (falsepos_cxs, falsepos_scores, falsepos_scores)
+    return truepos_tup, falsepos_tup
 
 # OLD STUFF
 def get_true_positive_ranks(qcx, top_cx, cx2_nx):
@@ -235,6 +248,8 @@ def get_true_positive_ranks(qcx, top_cx, cx2_nx):
     qnx    = cx2_nx[qcx]
     _truepos_ranks, = np.where(top_nx == qnx)
     truepos_ranks = _truepos_ranks[top_cx[_truepos_ranks] != qcx]
+    falsepos_scores = top_score[falsepos_ranks]
+    falsepos_cxs    = top_cx[falsepos_ranks]
     return truepos_ranks
 
 def get_false_positive_ranks(qcx, top_cx, cx2_nx):
@@ -269,6 +284,14 @@ def get_false_matches(res, hs, SV):
     falsepos_cxs    = top_cx[falsepos_ranks]
     return falsepos_cxs, falsepos_ranks, falsepos_scores
 
+def draw_relevant(cx2_res, hs):
+    SV = True
+    for qcx in iter(hs.test_sample_cx):
+        res = cx2_res[qcx]
+        (tt_cx, bt_cx, tf_cx), titles = get_tt_bt_tf_cxs(hs, res)
+        # HERE
+    return cxs, titles
+
 def get_nth_truepos_match(res, hs, n, SV):
     truepos_cxs, truepos_ranks, truepos_scores = get_true_matches(res, hs, SV)
     nth_cx    = truepos_cxs[n]
@@ -291,9 +314,16 @@ def get_nth_falsepos_match(res, hs, n, SV):
 def get_tt_bt_tf_cxs(hs, res, SV):
     'Returns the top and bottom true positives and top false positive'
     qcx = res.qcx
-    tt_cx, tt_rank, tt_score = get_nth_truepos_match(res,  hs,  0, SV)
-    bt_cx, bt_rank, bt_score = get_nth_truepos_match(res,  hs, -1, SV)
-    tf_cx, tf_rank, tf_score = get_nth_falsepos_match(res, hs,  0, SV)
+    truepos_tup, falsepos_tup = get_matchs_true_and_false(hs, res, SV)
+    truepos_cxs,  truepos_scores,  truepos_ranks   = truepos_tup
+    falsepos_cxs, falsepos_scores, falsepos_scores = falsepos_tup
+
+    nth_true = lambda n: (truepos_cxs[n], truepos_scores[n], truepos_ranks[n])
+    nth_false = lambda n: (truepos_cxs[n], truepos_scores[n], truepos_ranks[n])
+
+    tt_cx, tt_rank, tt_score = nth_true(0)
+    bt_cx, bt_rank, bt_score = nth_true(-1)
+    tf_cx, tf_rank, tf_score = nth_false(0)
     titles = ('TopTP rank='+str(tt_rank)+' ',
               'BotTP rank='+str(bt_rank)+' ',
               'TopFP rank='+str(tf_rank)+' ')

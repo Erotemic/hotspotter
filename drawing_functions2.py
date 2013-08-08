@@ -26,6 +26,13 @@ def printDBG(msg):
     pass
 
 # ---- GENERAL FIGURE COMMANDS ----
+
+def save_figure(fignum, fpath=None):
+    fig = plt.figure(fignum)
+    if fpath is None
+       fpath = fig.title
+    fig.savefig(fpath)
+
 def get_all_figures():
     all_figures_=[manager.canvas.figure for manager in
                  matplotlib._pylab_helpers.Gcf.get_all_fig_managers()]

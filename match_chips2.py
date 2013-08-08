@@ -22,7 +22,7 @@ import load_data2
 import params
 import chip_compute2 as cc2
 import feature_compute2 as fc2
-import report_results2 as rr2
+import report_results2
 # Math and Science Imports
 import cv2
 import matplotlib.pyplot as plt
@@ -610,7 +610,7 @@ def run_matching(hs):
         print('Skipped more queries than you should have: %r ' % skip_list)
     #total_time = toc(tt_ALL)
     # Write results out to disk
-    rr2.write_rank_results(hs, qcx2_res)
+    report_results2.write_rank_results(hs, qcx2_res)
     return qcx2_res
 
 def run_matching_type(hs, match_type=params.__MATCH_TYPE__):

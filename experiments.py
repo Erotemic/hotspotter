@@ -1,5 +1,15 @@
 # We have 5,202,157 descriptors
 # They claim to have 16,334,970 descriptors
+import helpers
+import load_data2
+import match_chips2 as mc2
+import numpy as np
+import os
+import params
+import subprocess
+import sys 
+from os.path import join
+from subprocess import PIPE
 
 def reload_modules():
     import imp
@@ -15,11 +25,6 @@ def get_oxsty_mAP_score(hs, cx2_res, SV=False):
 
     total_mAP = np.mean(np.array(query_mAP_list))
     return total_mAP, query_mAP_list
-
-import subprocess
-from subprocess import PIPE
-import os
-from os.path import join
 
 def get_oxsty_mAP_score_from_res(hs, res, SV):
     # find oxford ground truth directory
@@ -65,7 +70,7 @@ def get_oxsty_mAP_score_from_res(hs, res, SV):
     mAP = float(out.strip())
     return mAP
 
-def oxford_bag_of_words_reproduce_philbin07():
+def reproduce_philbin07_oxford():
     import load_data2
     import match_chips2 as mc2
     import params
@@ -80,28 +85,6 @@ def oxford_bag_of_words_reproduce_philbin07():
     #displayed on the web with the correct (upright) orientation. For this
     #reason, we have not allowed for in-plane image rotations.
 
-    '''
-    We ﬁnd that the two-way transfer error with scale threshold performs the
-    best on the data. In cases where a simpler one-way transfer error sufﬁces,
-    we can speed up veriﬁcation when there is a high visual-word
-    multiplicity between the two images (usually for smaller vocabularies). We
-    merely need to ﬁnd the spatially closest matching feature in the target to a
-    particular query feature and check whether this single distance is less than
-    the threshold. This is done using a 2D k-d tree, to provide logarithmic
-    time search. In all experiments where “spatial” is speciﬁed, we have
-    used our spatial veriﬁcation procedure to re-rank up to the top 1000
-    images. 
-    
-    We consider spatial veriﬁcation to be “successful” if we ﬁnd a
-    transformation with at least 4 inlier correspondences. We re-rank the
-    images by scoring them equal to the sum of the idf values for the inlier
-    words andh place spatially veriﬁed images above unveriﬁed ones in the
-    ranking. 
-    
-    We abort the re-ranking early (after considering fewer than 1000
-    images) if we process 20 images in a row without a successful spatial
-    veriﬁcation. We ﬁnd this gives a good trade-off between speed and accuracy
-    '''
 
     helpers.__PRINT_CHECKS__ = True
     # The vocab sizes run by philbin et al 
@@ -141,4 +124,5 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
 
-    oxford_bag_of_words()
+    if 'test' in sys.argv: 
+        reproduce_philbin07_oxford()

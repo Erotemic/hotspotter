@@ -190,6 +190,7 @@ def __parse_fignum(fignum_, plotnum_=111):
     if type(fignum_) == types.StringType:
         (fignum2, plotnum2) = map(int, fignum.split('.'))
     elif type(fignum_) == types.FloatType:
+        raise Exception('Error. This is bad buisness')
         (fignum2, plotnum2) = (int(fignum_), int(round(fignum_*1000)) - int(fignum_)*1000)
     else:
         (fignum2, plotnum2) = (fignum_, plotnum_)
@@ -252,6 +253,8 @@ def draw_matches(rchip1, rchip2, kpts1, kpts2, fm12, vert=False, color=(255,0,0)
 
 def draw_matches2(kpts1, kpts2, fm, fs=None, kpts2_offset=(0,0), color=(1.,0.,0.), alpha=.4):
     # input data
+    if len(fm) == 0: 
+        return
     ax = plt.gca()
     woff, hoff = kpts2_offset
     # Draw line collection
@@ -357,9 +360,9 @@ def show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12, fignum=0, title=None):
 
 # ---- CHIP DISPLAY COMMANDS ----
 
-def imshow(img, fignum=0, title=None, figtitle=None):
+def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111):
     printDBG('*** imshow in fig=%r title=%r *** ' % (fignum, title))
-    fignum, plotnum = __parse_fignum(fignum)
+    fignum, plotnum = __parse_fignum(fignum,plotnum)
     printDBG('   * fignum = %r, plotnum = %r ' % (fignum, plotnum))
     fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle)
     plt.imshow(img)
@@ -391,7 +394,8 @@ def show_signature(sig, **kwargs):
     fig.show()
 
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
-                  fm, fs=None, fignum=0, title=None, vert=True):
+                  fm, fs=None, fignum=0, plotnum=111,
+                  title=None, vert=True):
     '''Draws feature matches 
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''
@@ -410,17 +414,23 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
     match_img[hoff:(hoff+h2), woff:(woff+w2), :] = rchip2
     # get matching keypoints + offset
     if len(fm) == 0:
-        imshow(match_img,fignum=fignum,title=title)
+        imshow(match_img,fignum=fignum,plotnum=plotnum,title=title)
     else: 
         kpts1_m = kpts1[fm[:,0]]
         kpts2_m = kpts2[fm[:,1]]
         # matplotlib stuff
-        imshow(match_img,fignum=fignum,title=title)
+        imshow(match_img,fignum=fignum,plotnum=plotnum,title=title)
         draw_kpts2(kpts1_m)
         draw_kpts2(kpts2_m,offset=(woff,hoff))
         draw_matches2(kpts1,kpts2,fm,fs,kpts2_offset=(woff,hoff))
 
-def show_matches3(res, hs, cx, SV=True, fignum=0, title_aug=None):
+def show_matches3(res, hs, cx, SV=True, fignum=0, plotnum=111, title_aug=None):
+    print('Showing matches from '+str(res.qcx)+' to '+str(cx)+' in fignum'+repr(fignum))
+    if np.isnan(cx):
+        nan_img = np.zeros((100,100), dtype=np.uint8)
+        title='(qx%r v NAN)' % (res.qcx)
+        imshow(nan_img,fignum=fignum,plotnum=plotnum,title=title)
+        return 
     cx2_rchip_path = hs.cpaths.cx2_rchip_path
     cx2_kpts = hs.feats.cx2_kpts
     qcx = res.qcx
@@ -441,7 +451,7 @@ def show_matches3(res, hs, cx, SV=True, fignum=0, title_aug=None):
     if SV:
         title += '(+V)'
     show_matches2(rchip1, rchip2, kpts1,  kpts2, 
-                  fm, fs, fignum=fignum, title=title)
+                  fm, fs, fignum=fignum, plotnum=plotnum, title=title)
 
 
 def show_keypoints(rchip,kpts,fignum=0,title=None):

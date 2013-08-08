@@ -26,10 +26,12 @@ def dump_qcx_tt_bt_tf(hs, qcx2_res):
     if '--vd' in sys.argv:
         helpers.vd(dump_dir)
     for qcx in hs.test_sample_cx:
+        df2.close_all_figures()
         res = qcx2_res[qcx]
         visualize_res_tt_bt_tf(hs, res)
         fig_fname = 'ttbttf_qcx' + str(qcx) + '--' + hs.query_uid() + '.jpg'
         fig_fpath = join(dump_dir, fig_fname)
+        print fig_fpath
         df2.save_figure(qcx, fig_fpath)
     df2.close_all_figures()
     return dump_dir
@@ -62,6 +64,7 @@ def rank_results(hs, qcx2_res):
 
     SV = True
     test_sample_cx = hs.test_sample_cx
+    db_sample_cx   = hs.database_sample_cx
     for qcx in iter(test_sample_cx):
         res = qcx2_res[qcx]
         cx2_score = res.cx2_score_V if SV else res.cx2_score
@@ -97,7 +100,7 @@ def rank_results(hs, qcx2_res):
 
     # Easy to digest results
     num_chips = len(test_sample_cx)
-    num_nonquery = len(np.setdiff1d(hs.database_sample_cx, hs.test_sample_cx))
+    num_nonquery = len(np.setdiff1d(db_sample_cx, test_sample_cx))
     num_with_gtruth = (1 - np.isnan(qcx2_top_true_rank[test_sample_cx])).sum()
     num_rank_less5 = (qcx2_top_true_rank[test_sample_cx] < 5).sum()
     num_rank_less1 = (qcx2_top_true_rank[test_sample_cx] < 1).sum()
@@ -262,13 +265,17 @@ def get_tt_bt_tf_cxs(hs, res, SV):
     false_cxs, false_scores, false_ranks = false_tup
     nth_true = lambda n: (true_cxs[n], true_ranks[n], true_scores[n])
     nth_false = lambda n: (false_cxs[n], false_ranks[n], false_scores[n])
+    if len(true_ranks) == 0:
+        tt_cx, tt_r, tt_s = (np.nan, np.nan, np.nan)
+        bt_cx, bt_r, bt_s = (np.nan, np.nan, np.nan)
+    else:
+        tt_cx, tt_r, tt_s = nth_true(0)
+        bt_cx, bt_r, bt_s = nth_true(-1)
+    tf_cx, tf_r, tf_s = nth_false(0)
 
-    tt_cx, tt_rank, tt_score = nth_true(0)
-    bt_cx, bt_rank, bt_score = nth_true(-1)
-    tf_cx, tf_rank, tf_score = nth_false(0)
-    titles = ('best True rank='+str(tt_rank)+' ',
-              'worst True rank='+str(bt_rank)+' ',
-              'best False rank='+str(tf_rank)+' ')
+    titles = ('best True rank='+str(tt_r)+' ',
+              'worst True rank='+str(bt_r)+' ',
+              'best False rank='+str(tf_r)+' ')
     cxs = (tt_cx, bt_cx, tf_cx)
     return cxs, titles
 
@@ -279,14 +286,14 @@ def visualize_res_tt_bt_tf(hs, res):
     qcx = res.qcx
     _fn = qcx
     cxs, titles = get_tt_bt_tf_cxs(hs, res, SV)
-    df2.show_matches3(res, hs, cxs[0], SV, fignum=_fn+.231, title_aug=titles[0])
-    df2.show_matches3(res, hs, cxs[1], SV, fignum=_fn+.232, title_aug=titles[1])
-    df2.show_matches3(res, hs, cxs[2], SV, fignum=_fn+.233, title_aug=titles[2])
+    df2.show_matches3(res, hs, cxs[0], SV, fignum=_fn, plotnum=231, title_aug=titles[0])
+    df2.show_matches3(res, hs, cxs[1], SV, fignum=_fn, plotnum=232, title_aug=titles[1])
+    df2.show_matches3(res, hs, cxs[2], SV, fignum=_fn, plotnum=233, title_aug=titles[2])
     SV = True
     cxsV, titlesV = get_tt_bt_tf_cxs(hs, res, SV)
-    df2.show_matches3(res, hs, cxsV[0], SV, fignum=_fn+.234, title_aug=titlesV[0])
-    df2.show_matches3(res, hs, cxsV[1], SV, fignum=_fn+.235, title_aug=titlesV[1])
-    df2.show_matches3(res, hs, cxsV[2], SV, fignum=_fn+.236, title_aug=titlesV[2])
+    df2.show_matches3(res, hs, cxsV[0], SV, fignum=_fn, plotnum=234, title_aug=titlesV[0])
+    df2.show_matches3(res, hs, cxsV[1], SV, fignum=_fn, plotnum=235, title_aug=titlesV[1])
+    df2.show_matches3(res, hs, cxsV[2], SV, fignum=_fn, plotnum=236, title_aug=titlesV[2])
     fig_title = 'fig '+str(_fn)+' -- ' + hs.query_uid()
     df2.set_figtitle(fig_title)
     #df2.set_figsize(_fn, 1200,675)

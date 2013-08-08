@@ -653,6 +653,7 @@ class HotSpotter(DynStruct):
             hs.database_sample_cx = range(len(hs.feats.cx2_desc))
             hs.test_sample_cx = range(len(hs.feats.cx2_desc))
             hs.train_sample_cx = range(len(hs.feats.cx2_desc))
+        #hs.test_sample_cx = np.array([0,2,3])
 
 
         db_sample_cx = range(len(cx2_desc)) if hs.database_sample_cx is None \

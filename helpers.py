@@ -258,7 +258,7 @@ def vd(dname=None):
     os_type       = sys.platform
     open_prog_map = {'win32':'explorer.exe', 'linux2':'nautilus', 'darwin':'open'}
     open_prog     = open_prog_map[os_type]
-    os.system(open_prog+' '+dname)
+    os.system(open_prog+' '+os.path.normpath(dname))
         
 def str2(obj):
     if type(obj) == types.DictType:

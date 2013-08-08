@@ -20,18 +20,35 @@ import helpers
 import textwrap
 print('LOAD_MODULE: drawing_functions2.py')
 
+DPI = 80
+#FIGSIZE = (24) # default windows fullscreen
+FIGSIZE = (20,10) 
+
 
 def printDBG(msg):
     #print(msg)
     pass
 
 # ---- GENERAL FIGURE COMMANDS ----
-
-def save_figure(fignum, fpath=None):
-    fig = plt.figure(fignum)
-    if fpath is None
+def save_figure(fignum=None, fpath=None):
+    if fignum is None:
+        fig = plt.gcf()
+    else:
+        fig = plt.figure(fignum, figsize=FIGSIZE, dpi=DPI)
+    fignum = fig.number
+    if fpath is None:
        fpath = fig.title
-    fig.savefig(fpath)
+    print('Saving figure to: '+repr(fpath))
+    fig.savefig(fpath, dpi=DPI)
+
+def set_figsize(fignum, width, height):
+    if fignum is None:
+        fig = plt.gcf()
+    else:
+        fig = plt.figure(fignum, figsize=FIGSIZE, dpi=DPI)
+    qtwin = fig.canvas.manager.window
+    qtwin.setGeometry(40,40,width,height)
+    fig.canvas.draw()
 
 def get_all_figures():
     all_figures_=[manager.canvas.figure for manager in
@@ -49,7 +66,6 @@ def show_all_figures():
     for fig in iter(get_all_figures()):
         fig.show()
         fig.canvas.draw()
-
 import sys
 def tile_all_figures(num_rc=(4,4),
                      wh=(350,250),
@@ -181,7 +197,7 @@ def __parse_fignum(fignum_, plotnum_=111):
 
 def figure(fignum=None, doclf=False, title=None, plotnum=111, figtitle=None):
     fignum, plotnum = __parse_fignum(fignum, plotnum)
-    fig = plt.figure(num=fignum)
+    fig = plt.figure(num=fignum, figsize=FIGSIZE, dpi=DPI)
     axes_list = fig.get_axes()
     if not 'user_stat_list' in fig.__dict__.keys() or doclf:
         fig.user_stat_list = []
@@ -412,12 +428,14 @@ def show_matches3(res, hs, cx, SV=True, fignum=0, title_aug=None):
     rchip2 = cv2.imread(cx2_rchip_path[cx])
     kpts1  = cx2_kpts[qcx]
     kpts2  = cx2_kpts[cx]
-    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
+    cx2_score = res.cx2_score_V if SV else res.cx2_score
+    cx2_fm    = res.cx2_fm_V if SV else res.cx2_fm
+    cx2_fs    = res.cx2_fs_V if SV else res.cx2_fs
     score = cx2_score[cx]
     fm    = cx2_fm[cx]
     fs    = cx2_fs[cx]
     nMatches = len(fm)
-    title='qx%r v cx%r\n #match=%r score=%.2f' % (qcx, cx, nMatches, score)
+    title='(qx%r v cx%r)\n #match=%r score=%.2f' % (qcx, cx, nMatches, score)
     if not title_aug is None:
         title = title_aug + title
     if SV:

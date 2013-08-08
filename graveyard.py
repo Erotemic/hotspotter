@@ -426,3 +426,124 @@ def default_preferences():
     
     pref_1vM = Pref()
 
+def get_nth_truepos_match(res, hs, n, SV):
+    truepos_cxs, truepos_ranks, truepos_scores = get_true_matches(res, hs, SV)
+    nth_cx    = truepos_cxs[n]
+    nth_rank  = truepos_ranks[n]
+    nth_score = truepos_scores[n]
+    printDBG('Getting the nth=%r true pos cx,rank,score=(%r, %r, %r)' % \
+          (n, nth_cx, nth_rank, nth_score))
+    return nth_cx, nth_rank, nth_score
+
+def get_nth_falsepos_match(res, hs, n, SV):
+    falsepos_cxs, falsepos_ranks, falsepos_scores = get_false_matches(res, hs, SV)
+    nth_cx    = falsepos_cxs[n]
+    nth_rank  = falsepos_ranks[n]
+    nth_score = falsepos_scores[n]
+    printDBG('Getting the nth=%r false pos cx,rank,score=(%r, %r, %r)' % \
+          (n, nth_cx, nth_rank, nth_score))
+    return nth_cx, nth_rank, nth_score
+
+def get_true_positive_ranks(qcx, top_cx, cx2_nx):
+    'Returns the ranking of the other chips which should have scored high'
+    top_nx = cx2_nx[top_cx]
+    qnx    = cx2_nx[qcx]
+    _truepos_ranks, = np.where(top_nx == qnx)
+    truepos_ranks = _truepos_ranks[top_cx[_truepos_ranks] != qcx]
+    falsepos_scores = top_score[falsepos_ranks]
+    falsepos_cxs    = top_cx[falsepos_ranks]
+    return truepos_ranks
+
+def get_false_positive_ranks(qcx, top_cx, cx2_nx):
+    'Returns the ranking of the other chips which should have scored high'
+    top_nx = cx2_nx[top_cx]
+    qnx    = cx2_nx[qcx]
+    _falsepos_ranks, = np.where(top_nx != qnx)
+    falsepos_ranks = _falsepos_ranks[top_cx[_falsepos_ranks] != qcx]
+    return falsepos_ranks
+
+def get_true_matches(res, hs, SV):
+    qcx = res.qcx
+    cx2_nx = hs.tables.cx2_nx
+    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
+    top_cx = np.argsort(cx2_score)[::-1]
+    top_score = cx2_score[top_cx]
+    # Get true postive ranks (groundtruth)
+    truepos_ranks  = get_true_positive_ranks(qcx, top_cx, cx2_nx)
+    truepos_scores = top_score[truepos_ranks]
+    truepos_cxs    = top_cx[truepos_ranks]
+    return truepos_cxs, truepos_ranks, truepos_scores
+
+def get_false_matches(res, hs, SV):
+    qcx = res.qcx
+    cx2_nx = hs.tables.cx2_nx
+    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
+    top_cx = np.argsort(cx2_score)[::-1]
+    top_score = cx2_score[top_cx]
+    # Get false postive ranks (non-groundtruth)
+    falsepos_ranks  = get_false_positive_ranks(qcx, top_cx, cx2_nx)
+    falsepos_scores = top_score[falsepos_ranks]
+    falsepos_cxs    = top_cx[falsepos_ranks]
+
+# Score a single query for name consistency
+# Written: 5-28-2013 
+def res2_name_consistency(hs, res):
+    '''Score a single query for name consistency
+    Input: 
+        res - query result
+    Returns: Dict
+        error_chip - degree of chip error
+        name_error - degree of name error
+        gt_pos_name - 
+        gt_pos_chip - 
+    '''
+    # Defaults to -1 if no ground truth is in the top results
+    cm, nm = em.hs.get_managers('cm','nm')
+    qcx  = res.rr.qcx
+    qnid = res.rr.qnid
+    qnx   = nm.nid2_nx[qnid]
+    ret = {'name_error':-1,      'chip_error':-1,
+           'gt_pos_chip':-1,     'gt_pos_name':-1, 
+           'chip_precision': -1, 'chip_recall':-1}
+    if qnid == nm.UNIDEN_NID: exec('return ret')
+    # ----
+    # Score Top Chips
+    top_cx = res.cx_sort()
+    gt_pos_chip_list = (1+pylab.find(qnid == cm.cx2_nid(top_cx)))
+    # If a correct chip was in the top results
+    # Reward more chips for being in the top X
+    if len(gt_pos_chip_list) > 0:
+        # Use summation formula sum_i^n i = n(n+1)/2
+        ret['gt_pos_chip'] = gt_pos_chip_list.min()
+        _N = len(gt_pos_chip_list)
+        _SUM_DENOM = float(_N * (_N + 1)) / 2.0
+        ret['chip_error'] = float(gt_pos_chip_list.sum())/_SUM_DENOM
+    # Calculate Precision / Recall (depends on the # threshold/max_results)
+    ground_truth_cxs = np.setdiff1d(np.array(nm.nx2_cx_list[qnx]), np.array([qcx]))
+    true_positives  = top_cx[gt_pos_chip_list-1]
+    false_positives = np.setdiff1d(top_cx, true_positives)
+    false_negatives = np.setdiff1d(ground_truth_cxs, top_cx)
+
+    nTP = float(len(true_positives)) # Correct result
+    nFP = float(len(false_positives)) # Unexpected result
+    nFN = float(len(false_negatives)) # Missing result
+    #nTN = float( # Correct absence of result
+
+    ret['chip_precision'] = nTP / (nTP + nFP)
+    ret['chip_recall']    = nTP / (nTP + nFN)
+    #ret['true_negative_rate'] = nTN / (nTN + nFP)
+    #ret['accuracy'] = (nTP + nFP) / (nTP + nTN + nFP + nFN)
+    # ----
+    # Score Top Names
+    (top_nx, _) = res.nxcx_sort()
+    gt_pos_name_list = (1+pylab.find(qnid == nm.nx2_nid[top_nx]))
+    # If a correct name was in the top results
+    if len(gt_pos_name_list) > 0: 
+        ret['gt_pos_name'] = gt_pos_name_list.min() 
+        # N should always be 1
+        _N = len(gt_pos_name_list)
+        _SUM_DENOM = float(_N * (_N + 1)) / 2.0
+        ret['name_error'] = float(gt_pos_name_list.sum())/_SUM_DENOM
+    # ---- 
+    # RETURN RESULTS
+    return reteturn falsepos_cxs, falsepos_ranks, falsepos_scores

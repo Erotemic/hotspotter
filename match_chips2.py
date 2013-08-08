@@ -210,7 +210,7 @@ def aggregate_descriptors_vsmany(hs):
     '''aggregates all descriptors for vsmany search'''
     print('Aggregating descriptors for one-vs-many')
     cx2_desc  = hs.feats.cx2_desc
-    sample_cx = range(len(cx2_desc))
+    sample_cx = np.arange(len(cx2_desc))
     return __aggregate_descriptors(cx2_desc, sample_cx)
 
 #@profile
@@ -441,20 +441,6 @@ class QueryResult(DynStruct):
         self.cx2_fs_V = np.array([])
         self.cx2_score_V = np.array([])
 
-    @helpers.__DEPRICATED__
-    def __get_info(self, SV=True):
-        cx2_score = self.cx2_score_V if SV else self.cx2_score
-        cx2_fm    = self.cx2_fm_V if SV else self.cx2_fm
-        cx2_fs    = self.cx2_fs_V if SV else self.cx2_fs
-        return cx2_score, cx2_fm, cx2_fs
-
-    @helpers.__DEPRICATED__
-    def get_info(self, SV=True):
-        cx2_score, cx2_fm, cx2_fs = self.__get_info(SV)
-        if len(cx2_score) == 0:
-            print('cx2_score.525')
-            cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
-        return cx2_score, cx2_fm, cx2_fs
 
     def get_fpath(self, hs):
         query_uid = hs.query_uid()
@@ -651,9 +637,7 @@ class HotSpotter(DynStruct):
         hs.feats   = hs_feats
         hs.cpaths  = hs_cpaths
         hs.dirs    = hs_dirs
-
         hs.load_test_train_database()
-
         if load_matcher: 
             hs.use_matcher(params.__MATCH_TYPE__)
 
@@ -665,6 +649,14 @@ class HotSpotter(DynStruct):
         hs.database_sample_cx = helpers.eval_from(database_sample_fname, False)
         hs.test_sample_cx     = helpers.eval_from(test_sample_fname, False)
         hs.train_sample_cx    = helpers.eval_from(database_sample_fname, False)
+        if hs.database_sample_cx is None and hs.test_sample_cx is None and hs.train_sample_cx is None: 
+            hs.database_sample_cx = range(len(hs.feats.cx2_desc))
+            hs.test_sample_cx = range(len(hs.feats.cx2_desc))
+            hs.train_sample_cx = range(len(hs.feats.cx2_desc))
+
+
+        db_sample_cx = range(len(cx2_desc)) if hs.database_sample_cx is None \
+                               else hs.database_sample_cx
 
     # TODO: This UID code is repeated in feature_compute2. needs to be better
     # integrated

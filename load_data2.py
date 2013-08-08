@@ -380,7 +380,7 @@ def print_chiptable(hs_tables):
     print('=======================================================')
 
 
-def make_csv_table(column_labels, column_list, header):
+def make_csv_table(column_labels, column_list, header, column_type=None):
     if len(column_labels) == 0: 
         print('No columns')
         return header
@@ -393,7 +393,8 @@ def make_csv_table(column_labels, column_list, header):
         print('inconsistent column length')
         return header
 
-    column_type = [type(col[0]) for col in column_list]
+    if column_type is None:
+        column_type = [type(col[0]) for col in column_list]
 
     csv_rows = []
     csv_rows.append(header)
@@ -401,10 +402,19 @@ def make_csv_table(column_labels, column_list, header):
 
     column_maxlen = []
     column_str_list = []
+
+    def _toint(c):
+        if np.isnan(c):
+            return 'nan'
+        return ('%d') % int(c)
     
     for col, lbl, coltype in iter(zip(column_list, column_labels, column_type)):
         if coltype == types.ListType:
             col_str  = [str(c).replace(',',' ') for c in iter(col)]
+        elif coltype == types.FloatType:
+            col_str = [('%.2f') % float(c) for c in iter(col)]
+        elif coltype == types.IntType:
+            col_str = [_toint(c) for c in iter(col)]
         else:
             col_str  = [str(c) for c in iter(col)]
         col_lens = [len(s) for s in iter(col_str)]

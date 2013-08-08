@@ -17,7 +17,7 @@ print(' * sys.prefix = %r' % sys.prefix)
 __BOW_DTYPE__ = np.uint8
 
 # Number of processessors
-__NUM_PROCS__ = 9
+__NUM_PROCS__ = 8
 # Feature type to use
 __FEAT_TYPE__    = 'HESAFF'
 # Matching type
@@ -25,7 +25,7 @@ __MATCH_TYPE__   = 'vsmany'
 # Number of matches for one-vs-many
 __K__            = 2
 # Vocab size for bag of words
-__NUM_WORDS__    = 1e6
+__NUM_WORDS__    = 1e5
 # Thresholds for one-vs-one
 #__RATIO_THRESH__ = 1.5
 # Number of top matches to spatially re-rank

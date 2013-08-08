@@ -275,7 +275,7 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid):
         # Load features
         cx2_feats = parallel_compute(load_features, [cx2_feat_path], 1)
         cx2_kpts  = [k for (k,d) in cx2_feats]
-        cx2_desc  = [d for (k,d) in cx2_feats]
+        cx2_desc  = np.array([d for (k,d) in cx2_feats])
         # Whiten descriptors
         if params.__WHITEN_FEATS__:
             print(' * Whitening features')

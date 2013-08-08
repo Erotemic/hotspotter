@@ -1,4 +1,5 @@
 import drawing_functions2 as df2
+import load_data2
 import helpers
 import numpy as np
 import datetime
@@ -19,6 +20,20 @@ def write_rank_results(hs, qcx2_res):
     report_type = 'rank_'
     write_report(hs, rankres_str, report_type)
 
+def dump_qcx_tt_bt_tf(hs, qcx2_res):
+    dump_dir = join(hs.dirs.result_dir, 'tt_bt_tf')
+    helpers.ensurepath(dump_dir)
+    if '--vd' in sys.argv:
+        helpers.vd(dump_dir)
+    for qcx in hs.test_sample_cx:
+        res = qcx2_res[qcx]
+        visualize_res_tt_bt_tf(hs, res)
+        fig_fname = 'ttbttf_qcx' + str(qcx) + '--' + hs.query_uid() + '.jpg'
+        fig_fpath = join(dump_dir, fig_fname)
+        df2.save_figure(qcx, fig_fpath)
+    df2.close_all_figures()
+    return dump_dir
+
 def write_report(hs, report_str, report_type):
     result_dir = hs.dirs.result_dir
     algo_uid   = hs.algo_uid()
@@ -32,111 +47,97 @@ def write_report(hs, report_str, report_type):
 
 def rank_results(hs, qcx2_res):
     cx2_cid  = hs.tables.cx2_cid
-    cx2_nx   = hs.tables.cx2_nx
-    nx2_name = hs.tables.nx2_name
-    cx2_top_truepos_rank  = np.zeros(len(cx2_cid)) - 100
-    cx2_top_truepos_score = np.zeros(len(cx2_cid)) - 100
-    cx2_top_trueneg_rank  = np.zeros(len(cx2_cid)) - 100
-    cx2_top_trueneg_score = np.zeros(len(cx2_cid)) - 100
-    cx2_top_score         = np.zeros(len(cx2_cid)) - 100
-    SV = True
 
-    for qcx, qcid in enumerate(cx2_cid):
+    qcx2_top_true_rank   = np.zeros(len(cx2_cid)) - 100
+    qcx2_top_true_score  = np.zeros(len(cx2_cid)) - 100
+    qcx2_top_true_cx     = np.zeros(len(cx2_cid)) - 100
+
+    qcx2_bot_true_rank   = np.zeros(len(cx2_cid)) - 100
+    qcx2_bot_true_score  = np.zeros(len(cx2_cid)) - 100
+    qcx2_bot_true_cx     = np.zeros(len(cx2_cid)) - 100
+
+    qcx2_top_false_rank   = np.zeros(len(cx2_cid)) - 100
+    qcx2_top_false_score  = np.zeros(len(cx2_cid)) - 100
+    qcx2_top_false_cx     = np.zeros(len(cx2_cid)) - 100
+
+    SV = True
+    test_sample_cx = hs.test_sample_cx
+    for qcx in iter(test_sample_cx):
         res = qcx2_res[qcx]
-        if res.cx2_fs is None or len(res.cx2_fs) == 0: continue
+        cx2_score = res.cx2_score_V if SV else res.cx2_score
         # The score is the sum of the feature scores
-        cx2_score = np.array([np.sum(fs) for fs in res.cx2_fs])
         top_cx = np.argsort(cx2_score)[::-1]
         top_score = cx2_score[top_cx]
         # Get true postiive ranks
-        truepos_tup, falsepos_tup = get_matchs_true_and_false(hs, res, SV)
-        (truepos_cxs, truepos_scores, truepos_ranks) = truepos_tup
-        (falsepos_cxs, falsepos_scores, falsepos_scores) = falsepos_tup
+        true_tup, false_tup = get_matchs_true_and_false(hs, res, SV)
+        (true_cxs,  true_scores,  true_ranks)  = true_tup
+        (false_cxs, false_scores, false_ranks) = false_tup
+        nth_true  = lambda n: (true_cxs[n],  true_ranks[n],  true_scores[n])
+        nth_false = lambda n: (false_cxs[n], false_ranks[n], false_scores[n])
         # Find statitics about the true positives (and negatives)
-        if len(truepos_ranks) > 0:
-            top_truepos_rank = truepos_ranks.min()
-            bot_truepos_rank = truepos_ranks.max()
-            true_neg_range   = np.arange(0, bot_truepos_rank+2)
-            top_trueneg_rank = np.setdiff1d(true_neg_range, truepos_ranks).min()
-            top_truepos_score = top_score[top_truepos_rank]
+        if len(true_ranks) == 0:
+            tt_cx, tt_r, tt_s = (np.nan, np.nan, np.nan)
+            bt_cx, bt_r, bt_s = (np.nan, np.nan, np.nan)
         else:
-            top_trueneg_rank = 0
-            top_truepos_rank = np.NAN
-            top_truepos_score = np.NAN
+            tt_cx, tt_r, tt_s = nth_true(0)
+            bt_cx, bt_r, bt_s = nth_true(-1)
+        tf_cx, tf_r, tf_s = nth_false(0)
         # Append stats to output
-        cx2_top_truepos_rank[qcx]  = top_truepos_rank
-        cx2_top_truepos_score[qcx] = top_truepos_score
-        cx2_top_trueneg_rank[qcx]  = top_trueneg_rank
-        cx2_top_trueneg_score[qcx] = top_score[top_trueneg_rank]
-        cx2_top_score[qcx]         = top_score[0]
-    # difference between the top score and the actual best score
-    cx2_score_disp = cx2_top_score - cx2_top_truepos_score
-    #
+        qcx2_top_true_rank[qcx]   = tt_r
+        qcx2_top_true_score[qcx]  = tt_s
+        qcx2_top_true_cx[qcx]     = tt_cx
+        #
+        qcx2_bot_true_rank[qcx]   = bt_r
+        qcx2_bot_true_score[qcx]  = bt_s
+        qcx2_bot_true_cx[qcx]     = bt_cx
+        #
+        qcx2_top_false_rank[qcx]  = tf_r
+        qcx2_top_false_score[qcx] = tf_s
+        qcx2_top_false_cx[qcx]    = tf_cx
+
     # Easy to digest results
-    num_chips = len(cx2_top_truepos_rank)
-    num_with_gtruth = (1 - np.isnan(cx2_top_truepos_rank)).sum()
-    num_rank_less5 = (cx2_top_truepos_rank < 5).sum()
-    num_rank_less1 = (cx2_top_truepos_rank < 1).sum()
+    num_chips = len(test_sample_cx)
+    num_nonquery = len(np.setdiff1d(hs.database_sample_cx, hs.test_sample_cx))
+    num_with_gtruth = (1 - np.isnan(qcx2_top_true_rank[test_sample_cx])).sum()
+    num_rank_less5 = (qcx2_top_true_rank[test_sample_cx] < 5).sum()
+    num_rank_less1 = (qcx2_top_true_rank[test_sample_cx] < 1).sum()
     
     # Output ranking results
-
-    # TODO: CID
-    # TODO: Top True Positive Rank
-    # TODO: Top True Positive Score
-    # TODO: Top True Positive CID
-    # TODO: Bottom True Positive Rank
-    # TODO: Bottom True Positive Score
-    # TODO: Bottom True Positive CID
-    # TODO: Top False Positive Rank
-    # TODO: Top False Positive Score
-    # TODO: Top False Positive CID
     # TODO: mAP score
-
     # Build the experiment csv metadata
-    rankres_metadata = textwrap.dedent('''
+
+    header = '# Experiment Settings (hs.algo_uid): '+hs.algo_uid()+'\n'
+    header +=  get_timestamp(format='comment')+'\n'
+    header += '# Num Query Chips: %d \n' % num_chips
+    header += '# Num Query Chips with at least one match: %d \n' % num_with_gtruth
+    header += '# Num NonQuery Chips: %d \n' % num_nonquery
+    header += '# Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
+    header += '# Ranks <= 1: %d / %d\n\n' % (num_rank_less1, num_with_gtruth)
+
+    header += textwrap.dedent('''
     # Rank Result Metadata:
-    #   CID        = Query chip-id
-    #   TT RANK   = top true positive rank
-    #   TF RANK   = top false positive rank
-    #   TT SCORE  = top true positive score
-    #   SCORE DISP = disparity between top-score and top-true-positive-score
-    #   NAME       = Query chip-name''').strip()
+    #   QCX  = Query chip-index
+    #   TT   = top true  
+    #   BT   = bottom true
+    #   TF   = top false''').strip()
 
     # Build the experiemnt csv header
-    rankres_csv_header = '#CID,  TT RANK,  TF RANK,  TT SCORE,  TF SCORE, SCORE DISP, NX'
+    column_labels = ['QCX', 'TT RANK', 'TT SCORE', 'TT CX', 'BT RANK', 
+                     'BT SCORE', 'BT CX', 'TF RANK', 'TF SCORE', 'TF CX']
 
-    # Build the experiment csv data lines
-    todisp = np.vstack([cx2_cid,
-                        cx2_top_truepos_rank,
-                        cx2_top_trueneg_rank,
-                        cx2_top_truepos_score,
-                        cx2_top_trueneg_score,
-                        cx2_score_disp, 
-                        cx2_nx]).T
-    rankres_csv_lines = []
-    for (cid, ttr, ttnr, tts, ttns, sdisp, nx) in todisp:
-        csv_line = ('%4d, %8.0f, %8.0f, %9.2f, %9.2f, %10.2f, %4d' %\
-              (cid, ttr, ttnr, tts, ttns, sdisp, nx) )
-        rankres_csv_lines.append(csv_line)
+    column_list = [test_sample_cx, 
+                   qcx2_top_true_rank[test_sample_cx],
+                   qcx2_top_true_score[test_sample_cx],
+                   qcx2_top_true_cx[test_sample_cx],
+                   qcx2_bot_true_rank[test_sample_cx],
+                   qcx2_bot_true_score[test_sample_cx],
+                   qcx2_bot_true_cx[test_sample_cx],
+                   qcx2_top_false_rank[test_sample_cx],
+                   qcx2_top_false_score[test_sample_cx],
+                   qcx2_top_false_cx[test_sample_cx]]
 
-    # Build the experiment summary report
-    rankres_summary  = '\n'
-    rankres_summary += '# Experiment Settings (hs.algo_uid): '+hs.algo_uid()+'\n'
-    rankres_summary +=  get_timestamp(format='comment')+'\n'
-    rankres_summary += '# Num Chips: %d \n' % num_chips
-    rankres_summary += '# Num Chips with at least one match: %d \n' % num_with_gtruth
-    rankres_summary += '# Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
-    rankres_summary += '# Ranks <= 1: %d / %d' % (num_rank_less1, num_with_gtruth)
-
-    print(rankres_summary)
-
-    # Concateate parts into a csv file and return
-
-    rankres_csv_str = '\n'.join(rankres_csv_lines)
-    rankres_str = '\n'.join([rankres_summary+'\n', 
-                             rankres_metadata+'\n',
-                             rankres_csv_header,
-                             rankres_csv_str])
+    column_type = [int, int, float, int, int, float, int, int, float, int]
+    rankres_str = load_data2.make_csv_table(column_labels, column_list, header, column_type)
     return rankres_str
 
 def get_timestamp(format='filename'):
@@ -166,7 +167,7 @@ def print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False):
 
 def print_top_res_scores(hs, res, view_top=10, SV=False):
     qcx = res.qcx
-    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
+    cx2_score = res.cx2_score_V if SV else res.cx2_score
     lbl = ['(assigned)', '(assigned+V)'][SV]
     cx2_nx     = hs.tables.cx2_nx
     nx2_name   = hs.tables.nx2_name
@@ -209,11 +210,10 @@ def intersect_ordered(list1, list2):
 
 def get_top_matches_cx_and_scores(hs, res, SV):
     cx2_score = res.cx2_score_V if SV else res.cx2_score
-    cx2_fm    = res.cx2_fm_V    if SV else res.cx2_fm
-    cx2_fs    = res.cx2_fs_V    if SV else res.cx2_fs
     qcx = res.qcx
     # get top chip indexes which were in the database
-    db_sample_cx = hs.database_sample_cx
+    db_sample_cx = range(len(cx2_desc)) if hs.database_sample_cx is None \
+                               else hs.database_sample_cx
     unfilt_top_cx = np.argsort(cx2_score)[::-1]
     top_cx = np.array(intersect_ordered(unfilt_top_cx, db_sample_cx))
     top_score = cx2_score[top_cx]
@@ -223,67 +223,29 @@ def __get_top_matches_true_and_false(hs, res, top_cx, top_score):
     qcx    = res.qcx
     top_nx = hs.tables.cx2_nx[top_cx]
     qnx    = hs.tables.cx2_nx[qcx]
-    truepos_ranks  = np.where(np.logical_and(top_nx == qnx, top_cx != qcx))[0]
-    falsepos_ranks = np.where(np.logical_and(top_nx != qnx, top_cx != qcx))[0]
-    return truepos_ranks, falsepos_ranks
+    true_ranks  = np.where(np.logical_and(top_nx == qnx, top_cx != qcx))[0]
+    false_ranks = np.where(np.logical_and(top_nx != qnx, top_cx != qcx))[0]
+    return true_ranks, false_ranks
+
 def get_top_matches_true_and_false(hs, res, SV):
     top_cx, top_score = get_top_matches_cx_and_scores(hs, res, sv)
     return __get_top_matches_true_and_false(hs, res, top_cx, top_score)
 
 def get_matchs_true_and_false(hs, res, SV):
     top_cx, top_score = get_top_matches_cx_and_scores(hs, res, SV)
-    truepos_ranks, falsepos_ranks = __get_top_matches_true_and_false(hs, res, top_cx, top_score)
-    truepos_scores = top_score[truepos_ranks]
-    truepos_cxs    = top_cx[truepos_ranks]
-    falsepos_scores = top_score[falsepos_ranks]
-    falsepos_cxs    = top_cx[falsepos_ranks]
-    truepos_tup  = (truepos_cxs, truepos_scores, truepos_ranks)
-    falsepos_tup = (falsepos_cxs, falsepos_scores, falsepos_scores)
-    return truepos_tup, falsepos_tup
+    true_ranks, false_ranks = __get_top_matches_true_and_false(hs, res, top_cx, top_score)
+    # Get true score / cx
+    true_scores = top_score[true_ranks]
+    true_cxs    = top_cx[true_ranks]
+    # Get false score / cx
+    false_scores = top_score[false_ranks]
+    false_cxs    = top_cx[false_ranks]
+    # Put them in tuple and return
+    true_tup  = (true_cxs, true_scores, true_ranks)
+    false_tup = (false_cxs, false_scores, false_ranks)
+    return true_tup, false_tup
 
 # OLD STUFF
-def get_true_positive_ranks(qcx, top_cx, cx2_nx):
-    'Returns the ranking of the other chips which should have scored high'
-    top_nx = cx2_nx[top_cx]
-    qnx    = cx2_nx[qcx]
-    _truepos_ranks, = np.where(top_nx == qnx)
-    truepos_ranks = _truepos_ranks[top_cx[_truepos_ranks] != qcx]
-    falsepos_scores = top_score[falsepos_ranks]
-    falsepos_cxs    = top_cx[falsepos_ranks]
-    return truepos_ranks
-
-def get_false_positive_ranks(qcx, top_cx, cx2_nx):
-    'Returns the ranking of the other chips which should have scored high'
-    top_nx = cx2_nx[top_cx]
-    qnx    = cx2_nx[qcx]
-    _falsepos_ranks, = np.where(top_nx != qnx)
-    falsepos_ranks = _falsepos_ranks[top_cx[_falsepos_ranks] != qcx]
-    return falsepos_ranks
-
-def get_true_matches(res, hs, SV):
-    qcx = res.qcx
-    cx2_nx = hs.tables.cx2_nx
-    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
-    top_cx = np.argsort(cx2_score)[::-1]
-    top_score = cx2_score[top_cx]
-    # Get true postive ranks (groundtruth)
-    truepos_ranks  = get_true_positive_ranks(qcx, top_cx, cx2_nx)
-    truepos_scores = top_score[truepos_ranks]
-    truepos_cxs    = top_cx[truepos_ranks]
-    return truepos_cxs, truepos_ranks, truepos_scores
-
-def get_false_matches(res, hs, SV):
-    qcx = res.qcx
-    cx2_nx = hs.tables.cx2_nx
-    cx2_score, cx2_fm, cx2_fs = res.get_info(SV)
-    top_cx = np.argsort(cx2_score)[::-1]
-    top_score = cx2_score[top_cx]
-    # Get false postive ranks (non-groundtruth)
-    falsepos_ranks  = get_false_positive_ranks(qcx, top_cx, cx2_nx)
-    falsepos_scores = top_score[falsepos_ranks]
-    falsepos_cxs    = top_cx[falsepos_ranks]
-    return falsepos_cxs, falsepos_ranks, falsepos_scores
-
 def draw_relevant(cx2_res, hs):
     SV = True
     for qcx in iter(hs.test_sample_cx):
@@ -292,41 +254,21 @@ def draw_relevant(cx2_res, hs):
         # HERE
     return cxs, titles
 
-def get_nth_truepos_match(res, hs, n, SV):
-    truepos_cxs, truepos_ranks, truepos_scores = get_true_matches(res, hs, SV)
-    nth_cx    = truepos_cxs[n]
-    nth_rank  = truepos_ranks[n]
-    nth_score = truepos_scores[n]
-    printDBG('Getting the nth=%r true pos cx,rank,score=(%r, %r, %r)' % \
-          (n, nth_cx, nth_rank, nth_score))
-    return nth_cx, nth_rank, nth_score
-
-def get_nth_falsepos_match(res, hs, n, SV):
-    falsepos_cxs, falsepos_ranks, falsepos_scores = get_false_matches(res, hs, SV)
-    nth_cx    = falsepos_cxs[n]
-    nth_rank  = falsepos_ranks[n]
-    nth_score = falsepos_scores[n]
-    printDBG('Getting the nth=%r false pos cx,rank,score=(%r, %r, %r)' % \
-          (n, nth_cx, nth_rank, nth_score))
-    return nth_cx, nth_rank, nth_score
-
-
 def get_tt_bt_tf_cxs(hs, res, SV):
     'Returns the top and bottom true positives and top false positive'
     qcx = res.qcx
-    truepos_tup, falsepos_tup = get_matchs_true_and_false(hs, res, SV)
-    truepos_cxs,  truepos_scores,  truepos_ranks   = truepos_tup
-    falsepos_cxs, falsepos_scores, falsepos_scores = falsepos_tup
-
-    nth_true = lambda n: (truepos_cxs[n], truepos_scores[n], truepos_ranks[n])
-    nth_false = lambda n: (truepos_cxs[n], truepos_scores[n], truepos_ranks[n])
+    true_tup, false_tup = get_matchs_true_and_false(hs, res, SV)
+    true_cxs,  true_scores,  true_ranks  = true_tup
+    false_cxs, false_scores, false_ranks = false_tup
+    nth_true = lambda n: (true_cxs[n], true_ranks[n], true_scores[n])
+    nth_false = lambda n: (false_cxs[n], false_ranks[n], false_scores[n])
 
     tt_cx, tt_rank, tt_score = nth_true(0)
     bt_cx, bt_rank, bt_score = nth_true(-1)
     tf_cx, tf_rank, tf_score = nth_false(0)
-    titles = ('TopTP rank='+str(tt_rank)+' ',
-              'BotTP rank='+str(bt_rank)+' ',
-              'TopFP rank='+str(tf_rank)+' ')
+    titles = ('best True rank='+str(tt_rank)+' ',
+              'worst True rank='+str(bt_rank)+' ',
+              'best False rank='+str(tf_rank)+' ')
     cxs = (tt_cx, bt_cx, tf_cx)
     return cxs, titles
 
@@ -345,16 +287,15 @@ def visualize_res_tt_bt_tf(hs, res):
     df2.show_matches3(res, hs, cxsV[0], SV, fignum=_fn+.234, title_aug=titlesV[0])
     df2.show_matches3(res, hs, cxsV[1], SV, fignum=_fn+.235, title_aug=titlesV[1])
     df2.show_matches3(res, hs, cxsV[2], SV, fignum=_fn+.236, title_aug=titlesV[2])
-    df2.set_figtitle('fig '+str(_fn)+' -- ' + hs.query_uid())
+    fig_title = 'fig '+str(_fn)+' -- ' + hs.query_uid()
+    df2.set_figtitle(fig_title)
+    #df2.set_figsize(_fn, 1200,675)
+    return _fn, fig_title
 
 def visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx):
     res = qcx2_res[qcx]
-    visualize_res_tt_bt_tf(hs, res)
+    return visualize_res_tt_bt_tf(hs, res)
 
-
-def visualize_all_qcx_tt_bt_tf(hs, qcx2_res):
-    for qcx, res in enumerate(qcx2_res):
-        visualize_res_tt_bt_tf(res)
 
 
 def compute_average_precision(res, k):
@@ -375,68 +316,7 @@ def compute_mean_average_precision(res, k):
     MAP = 1/Q \sum_{q=1}^Q AveP(q) 
     '''
 
-# Score a single query for name consistency
-# Written: 5-28-2013 
-def res2_name_consistency(hs, res):
-    '''Score a single query for name consistency
-    Input: 
-        res - query result
-    Returns: Dict
-        error_chip - degree of chip error
-        name_error - degree of name error
-        gt_pos_name - 
-        gt_pos_chip - 
-    '''
-    # Defaults to -1 if no ground truth is in the top results
-    cm, nm = em.hs.get_managers('cm','nm')
-    qcx  = res.rr.qcx
-    qnid = res.rr.qnid
-    qnx   = nm.nid2_nx[qnid]
-    ret = {'name_error':-1,      'chip_error':-1,
-           'gt_pos_chip':-1,     'gt_pos_name':-1, 
-           'chip_precision': -1, 'chip_recall':-1}
-    if qnid == nm.UNIDEN_NID: exec('return ret')
-    # ----
-    # Score Top Chips
-    top_cx = res.cx_sort()
-    gt_pos_chip_list = (1+pylab.find(qnid == cm.cx2_nid(top_cx)))
-    # If a correct chip was in the top results
-    # Reward more chips for being in the top X
-    if len(gt_pos_chip_list) > 0:
-        # Use summation formula sum_i^n i = n(n+1)/2
-        ret['gt_pos_chip'] = gt_pos_chip_list.min()
-        _N = len(gt_pos_chip_list)
-        _SUM_DENOM = float(_N * (_N + 1)) / 2.0
-        ret['chip_error'] = float(gt_pos_chip_list.sum())/_SUM_DENOM
-    # Calculate Precision / Recall (depends on the # threshold/max_results)
-    ground_truth_cxs = np.setdiff1d(np.array(nm.nx2_cx_list[qnx]), np.array([qcx]))
-    true_positives  = top_cx[gt_pos_chip_list-1]
-    false_positives = np.setdiff1d(top_cx, true_positives)
-    false_negatives = np.setdiff1d(ground_truth_cxs, top_cx)
 
-    nTP = float(len(true_positives)) # Correct result
-    nFP = float(len(false_positives)) # Unexpected result
-    nFN = float(len(false_negatives)) # Missing result
-    #nTN = float( # Correct absence of result
-
-    ret['chip_precision'] = nTP / (nTP + nFP)
-    ret['chip_recall']    = nTP / (nTP + nFN)
-    #ret['true_negative_rate'] = nTN / (nTN + nFP)
-    #ret['accuracy'] = (nTP + nFP) / (nTP + nTN + nFP + nFN)
-    # ----
-    # Score Top Names
-    (top_nx, _) = res.nxcx_sort()
-    gt_pos_name_list = (1+pylab.find(qnid == nm.nx2_nid[top_nx]))
-    # If a correct name was in the top results
-    if len(gt_pos_name_list) > 0: 
-        ret['gt_pos_name'] = gt_pos_name_list.min() 
-        # N should always be 1
-        _N = len(gt_pos_name_list)
-        _SUM_DENOM = float(_N * (_N + 1)) / 2.0
-        ret['name_error'] = float(gt_pos_name_list.sum())/_SUM_DENOM
-    # ---- 
-    # RETURN RESULTS
-    return ret
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
@@ -455,7 +335,9 @@ if __name__ == '__main__':
         qcx = 1
         #print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False)
         #print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=True)
-        visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
+        if '--dump' in sys.argv:
+            dump_qcx_tt_bt_tf(hs, qcx2_res)
+        #visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx)
 
         def dinspect(qcx):
             df2.close_all_figures()

@@ -23,7 +23,6 @@ print('LOAD_MODULE: algos.py')
 def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
     ''' Tries to load a cached flann index before doing anything'''
     print('Precomputing flann index: '+lbl)
-    flann_params = params.__FLANN_PARAMS__ if flann_params is None else flann_params
     cache_dir = '.' if cache_dir is None else cache_dir
     flann_lbl = str(flann_params.values())
     flann_lbl = flann_lbl.replace(',',' ').replace(' ','').replace('"','').replace('\'','').replace(']','').replace('[','')
@@ -120,11 +119,6 @@ def __tune():
     tune_flann(sample_fraction=1, target_precision=.95, build_weight=.01)
     tune_flann(sample_fraction=1, target_precision=.98, build_weight=.9)
 
-#__FLANN_ONCE_PARAMS__ = {
-    #'algorithm' : 'kdtree', 
-    #'trees'     : 8,
-    #'checks'    : 128 }
-
 # Look at /flann/algorithms/dist.h for distance clases
 
 #distance_translation = {"euclidean"        : 1, 
@@ -192,10 +186,10 @@ def __tune():
 
 #pyflann.set_distance_type('hellinger', order=0)
 
-def ann_flann_once(dpts, qpts, num_neighbors):
+def ann_flann_once(dpts, qpts, num_neighbors, flann_params):
     flann = pyflann.FLANN()
-    flann.build_index(dpts, **params.__FLANN_ONCE_PARAMS__)
-    checks = params.__FLANN_ONCE_PARAMS__['checks']
+    flann.build_index(dpts, **flann_params) 
+    checks = flann_params['checks']
     (qx2_dx, qx2_dist) = flann.nn_index(qpts, num_neighbors, checks=checks)
     return (qx2_dx, qx2_dist)
 
@@ -203,9 +197,10 @@ def ann_flann_once(dpts, qpts, num_neighbors):
 def __akmeans_iterate(data,
                       clusters,
                       datax2_clusterx_old,
-                      max_iters=500,
-                      ave_unchanged_thresh=30,
-                      ave_unchanged_window=10):
+                      max_iters,
+                      flann_params,
+                      ave_unchanged_thresh,
+                      ave_unchanged_window):
     num_data = data.shape[0]
     num_clusters = clusters.shape[0]
     xx2_unchanged = np.zeros(ave_unchanged_window, dtype=np.int32) + len(data)
@@ -216,7 +211,7 @@ def __akmeans_iterate(data,
         tt = helpers.tic()
         helpers.print_('...tic')
         helpers.flush()
-        (datax2_clusterx, _dist) = ann_flann_once(clusters, data, 1)
+        (datax2_clusterx, _dist) = ann_flann_once(clusters, data, 1, flann_params)
         ellapsed = helpers.toc(tt)
         helpers.print_('...toc(%.4fs)' % ellapsed)
         helpers.flush()
@@ -259,8 +254,9 @@ def __akmeans_iterate(data,
 
 #@profile
 def akmeans(data,
-            num_clusters=1e6, 
-            max_iters=150,
+            num_clusters, 
+            max_iters=100,
+            flann_params=None,
             ave_unchanged_thresh=30,
             ave_unchanged_window=None):
     '''Approximiate K-Means (using FLANN)
@@ -270,14 +266,13 @@ def akmeans(data,
     Each datapoint is assigned to its approximate nearest cluster center. 
     The cluster centers are recomputed. 
     Repeat until convergence.'''
-
     if ave_unchanged_window is None:
         ave_unchanged_window = int(len(data) / 500)
     print('Running akmeans: data.shape=%r ; num_clusters=%r' % (data.shape, num_clusters))
     #print('  * dtype = %r ' % params.__BOW_DTYPE__)
     print('  * will converge when average #cluster switches < %r over a window of %r iterations' % \
           (ave_unchanged_thresh, ave_unchanged_window))
-    # Setup akmeans iterations
+    # Setup iterations
     #data   = np.array(data, params.__BOW_DTYPE__) 
     num_data = data.shape[0]
     # Initialize to random cluster clusters
@@ -291,6 +286,7 @@ def akmeans(data,
                                                     clusters,
                                                     datax2_clusterx_old,
                                                     max_iters,
+                                                    flann_params,
                                                     ave_unchanged_thresh,
                                                     ave_unchanged_window)
     return (datax2_clusterx, clusters)
@@ -370,9 +366,9 @@ def force_quit_akmeans(signal, frame):
         print(repr(ex))
         exec(helpers.IPYTHON_EMBED_STR)
 
-def precompute_akmeans(data, num_clusters=1e6, max_iters=200,
-                       force_recomp=False, cache_dir=None):
-    'precompute akmeans'
+def precompute_akmeans(data, num_clusters, max_iters=100, flann_params=None,
+                       cache_dir=None, force_recomp=False):
+    'precompute aproximate kmeans'
     data_md5 = str(data.shape).replace(' ','')+helpers.hashstr_md5(data)
     fname = 'precomp_akmeans_k%d_%s.npz' % (num_clusters, data_md5)
     fpath = realpath(fname) if cache_dir is None else join(cache_dir, fname)
@@ -380,20 +376,17 @@ def precompute_akmeans(data, num_clusters=1e6, max_iters=200,
         helpers.remove_file(fpath)
     helpers.checkpath(fpath)
     try: 
-        (datax2_clusterx, clusters) = helpers.load_npz(fname)
+        (datax2_clusterx, clusters) = helpers.load_npz(fpath)
         print(' ... load success.')
     except Exception as ex:
         print(' ... load failed. Running akmeans with manual stopping')
         print('Press Ctrl+C to stop k-means early (and save)')
-        # set ctrl+c behavior to early stop akmeans
+        # set ctrl+c behavior to early stop clustering
         signal.signal(signal.SIGINT, force_quit_akmeans)
-        # run akmeans
-        (datax2_clusterx, clusters) = akmeans(data, num_clusters)
-        # save result
+        (datax2_clusterx, clusters) = akmeans(data, num_clusters, max_iters, flann_params)
         print('Removing Ctrl+C signal handler')
-        helpers.save_npz(fname, datax2_clusterx, clusters)
-        # reset ctrl+c behavior
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        helpers.save_npz(fpath, datax2_clusterx, clusters)
+        signal.signal(signal.SIGINT, signal.SIG_DFL) # reset ctrl+c behavior
     return (datax2_clusterx, clusters)
 
 if __name__ == '__main__':
@@ -406,10 +399,10 @@ if __name__ == '__main__':
         exec(open('feature_compute2.py').read())
         cx2_desc = hs_feats.cx2_desc
         data = np.vstack(cx2_desc)
-        datax2_clusterx, clusters = precompute_akmeans(data, num_clusters, force_recomp=True)
+        #datax2_clusterx, clusters = xxprecompute_akmeans(data, num_clusters, force_recomp=True)
     else:
         data = np.random.rand(1000, 3)
-        datax2_clusterx, clusters = akmeans(data, num_clusters)
+        #datax2_clusterx, clusters = akmeans(data, num_clusters)
 
 
     fig = plot_clusters(data, datax2_clusterx, clusters)

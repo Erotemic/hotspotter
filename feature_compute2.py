@@ -245,20 +245,14 @@ class HotspotterChipFeatures(DynStruct):
         self.cx2_feats_freak  = []
 
     
-def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid):
+def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, cache_dir):
     print('Loading '+feat_type+' features: UID='+str(feat_uid))
-    '''
-    feat_uid = get_feat_uid()
-    feat_type = params.__FEAT_TYPE__
-    '''
-    cx2_kpts_fpath = feat_dir + '/cx2_kpts_'+feat_uid+'.npz'
-    cx2_desc_fpath = feat_dir + '/cx2_desc_'+feat_uid+'.npz'
-
+    cx2_kpts_fpath = cache_dir + '/cx2_kpts'+feat_uid+'.npz'
+    cx2_desc_fpath = cache_dir + '/cx2_desc'+feat_uid+'.npz'
     # Try to read cache
     cx2_kpts = helpers.tryload(cx2_kpts_fpath)
     cx2_desc = helpers.tryload(cx2_desc_fpath)
-    __OVERLOAD__ = False
-    if (not cx2_kpts is None and not cx2_desc is None) and not __OVERLOAD__:
+    if (not cx2_kpts is None and not cx2_desc is None):
         # This is pretty dumb. Gotta have a more intelligent save/load
         cx2_desc_ = cx2_desc.tolist()
         cx2_kpts  = cx2_kpts.tolist()
@@ -308,12 +302,6 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid):
     # cache the data
     return cx2_kpts, cx2_desc
     
-def get_feat_uid(feat_type=params.__FEAT_TYPE__, whiten=params.__WHITEN_FEATS__):
-    uid_depends = [feat_type,
-                   ['','white'][params.__WHITEN_FEATS__]]
-    feat_uid = '_'.join(uid_depends)
-    return feat_uid
-    
 def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     print('\n=============================')
     print('Computing and loading features')
@@ -321,12 +309,13 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     # --- GET INPUT --- #
     # Paths to features
     feat_dir       = hs_dirs.feat_dir
+    cache_dir      = hs_dirs.cache_dir
     cx2_rchip_path = hs_cpaths.cx2_rchip_path
     cx2_cid        = hs_tables.cx2_cid
     hs_feats = HotspotterChipFeatures()
     # Load all the types of features
-    feat_uid = get_feat_uid()
-    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, params.__FEAT_TYPE__, feat_uid)
+    feat_uid = params.get_feat_uid()
+    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, params.__FEAT_TYPE__, feat_uid, cache_dir)
     hs_feats.feat_type = params.__FEAT_TYPE__
     hs_feats.cx2_kpts = cx2_kpts
     hs_feats.cx2_desc = cx2_desc
@@ -349,7 +338,7 @@ if __name__ == '__main__':
         import chip_compute2
         # --- CHOOSE DATABASE --- #
         db_dir = load_data2.DEFAULT
-        hs = mc2.HotSpotter(db_dir, load_matcher=False)
+        hs = load_data2.HotSpotter(db_dir, load_matcher=False)
         cx2_desc = hs.feats.cx2_desc
         cx2_kpts = hs.feats.cx2_kpts
         cx2_cid  = hs.tables.cx2_cid

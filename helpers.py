@@ -22,10 +22,21 @@ import warnings
 import fnmatch
 import inspect
 import textwrap
+from os.path import join, relpath
+import fnmatch
 from sys import stdout as sout
 print('LOAD_MODULE: helpers.py')
 
 __PRINT_CHECKS__ = False
+
+# reloads this module when I mess with it
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
+
+def indent(string, indent = '    '):
+    return indent+string.replace('\n','\n'+indent)
 
 def info(var, lbl):
     if types(var) == np.ndarray:
@@ -228,6 +239,26 @@ def copy_all(src_dir, dest_dir, glob_str_list):
                 copy(src, dst)
                 break
 
+def matches_image(fname):
+    fname_ = fname.lower()
+    return any([fnmatch.fnmatch(fname_, pat) for pat in ['*.jpg', '*.png']])
+
+def list_images(img_dpath, ignore_list=[], recursive=True):
+    ignore_set = set(ignore_list)
+    gname_list_ = []
+    assert_path(img_dpath)
+    # Get all the files in a directory recursively
+    for root, dlist, flist in os.walk(img_dpath):
+        for fname in iter(flist):
+            gname = join(relpath(root, img_dpath), fname).replace('\\','/').replace('./','')
+            gname_list_.append(gname)
+        if not recursive:
+            break
+    # Filter out non images or ignorables
+    gname_list = [gname for gname in iter(gname_list_) 
+                  if not gname in ignore_set and matches_image(gname)]
+    return gname_list
+
 def ensurepath(_path):
     if not checkpath(_path):
         print('... Making directory: ' + _path)
@@ -253,11 +284,11 @@ def join_mkdir(*args):
 
 def vd(dname=None):
     'View directory'
-    if dname is None: 
-        dname = os.getcwd()
-    os_type       = sys.platform
-    open_prog_map = {'win32':'explorer.exe', 'linux2':'nautilus', 'darwin':'open'}
-    open_prog     = open_prog_map[os_type]
+    print('View Directory: '+dname)
+    dname = os.getcwd() if dname is None else dname
+    open_prog = {'win32' :'explorer.exe',
+                 'linux2':'nautilus',
+                 'darwin':'open'}[sys.platform]
     os.system(open_prog+' '+os.path.normpath(dname))
         
 def str2(obj):
@@ -320,6 +351,41 @@ def load_npz(fname):
 def hashstr_md5(data):
     import hashlib
     return hashlib.md5(data).hexdigest()
+
+class CacheException(Exception):
+    pass
+
+def load_cache_npz(input_data, lbl='', cache_dir='.'):
+    md5_lbl    = hashstr_md5(input_data)
+    shape_lbl  = str(input_data.shape).replace(' ','')
+    data_fname = lbl+'_'+shape_lbl+'_'+md5_lbl+'.npz'
+    data_fpath = os.path.join(cache_dir, data_fname)
+    if checkpath(data_fpath):
+        try:
+            print_('Trying to load cached data: %r' % data_fpath)
+            flush()
+            npz = npz.load(data_fpath)
+            data = npz[0]
+            print('...success')
+            return data
+        except Exception as ex:
+            printWARN(' loading cache: '+repr(ex))
+            pass
+    raise CacheException('...cannot load cached data: %r ' % data_fpath)
+
+def save_cache_npz(input_data, data, lbl='', cache_dir='.'):
+    md5_lbl    = hashstr_md5(input_data)
+    shape_lbl  = str(input_data.shape).replace(' ','')
+    data_fname = lbl+'_'+shape_lbl+'_'+md5_lbl+'.npz'
+    data_fpath = os.path.join(cache_dir, data_fname)
+    print_(' * caching data: %r' % data_fpath)
+    flush()
+    np.savez(data_fpath, data)
+    print('...success')
+
+def cache_npz_decorator(npz_func):
+    def __func_wrapper(input_data, *args, **kwargs):
+        ret = npz_func(*args, **kwargs)
     
 #---------------
 def __DEPRICATED__(func):
@@ -589,6 +655,16 @@ def printWARN(warn_msg, category=UserWarning):
     warnings.warn(warn_msg, category=category)
     sout.flush()
     return warn_msg
+
+def intersect_ordered(list1, list2):
+    'returns list1 elements that are also in list2 preserves order of list1'
+    set2 = set(list2)
+    new_list = [item for item in iter(list1) if item in set2]
+    #new_list =[]
+    #for item in iter(list1):
+        #if item in set2:
+            #new_list.append(item)
+    return new_list
 
 import types
 

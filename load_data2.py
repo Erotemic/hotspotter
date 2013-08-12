@@ -9,11 +9,19 @@ import fnmatch
 import types
 import numpy as np
 import helpers
+import params
+import textwrap
 from helpers import checkpath, unit_test, ensure_path, symlink, remove_files_in_dir
 from helpers import myprint
 from Printable import DynStruct
+# rename: data_managers? 
 print ('LOAD_MODULE: load_data2.py')
 
+# reloads this module when I mess with it
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
 
 def printDBG(msg, lbl=''):
     print('DBG: '+lbl+str(msg))
@@ -29,19 +37,121 @@ RDIR_FEAT     = '/.hs_internals/computed/feats'
 RDIR_RESULTS  = '/.hs_internals/computed/results'
 RDIR_QRES     = '/.hs_internals/computed/query_results'
 
-class HotspotterTables(DynStruct):
-    def __init__(self):
-        super(HotspotterTables, self).__init__()
-        self.gx2_gname    = []
-        self.nx2_name     = []
-        self.cx2_cid      = []
-        self.cx2_nx       = []
-        self.cx2_gx       = []
-        self.cx2_roi      = []
-        self.cx2_theta    = []
-        self.px2_propname = []
-        self.px2_cx2_prop = []
+#========================================
+# DRIVER CODE
+#========================================
 
+def NewHotSpotter():
+    hs_tables = HotspotterTables()
+
+# ___CLASS HOTSPOTTER____
+class HotSpotter(DynStruct):
+    '''The HotSpotter main class is a root handle to all relevant data'''
+    def __init__(hs, db_dir=None, load_matcher=True, samples_from_file=False):
+        super(HotSpotter, hs).__init__()
+        hs.tables = None
+        hs.feats  = None
+        hs.cpaths = None
+        hs.dirs   = None
+        hs.matcher = None
+        hs.train_sample_cx    = None
+        hs.test_sample_cx     = None
+        hs.database_sample_cx = None
+        if not db_dir is None:
+            hs.load_database(db_dir, load_matcher)
+    #---------------
+    def load_database(hs, db_dir, load_matcher=True, samples_from_file=False):
+        import chip_compute2 as cc2
+        import feature_compute2 as fc2
+        # Load data
+        hs_dirs, hs_tables = load_csv_tables(db_dir)
+        hs_cpaths = cc2.load_chip_paths(hs_dirs, hs_tables)
+        hs_feats  = fc2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
+        # Build hotspotter structure
+        hs.tables  = hs_tables
+        hs.feats   = hs_feats
+        hs.cpaths  = hs_cpaths
+        hs.dirs    = hs_dirs
+        # Load sample sets
+        hs.database_sample_cx = None
+        hs.test_sample_cx     = None
+        hs.train_sample_cx    = None
+        if samples_from_file:
+            hs.default_test_train_database_samples()
+        else:
+            hs.default_test_train_database_samples()
+        # Load Matcher
+        if load_matcher: 
+            hs.load_matcher()
+    #---------------
+    def load_matcher(hs):
+        import match_chips2 as mc2
+        hs.matcher = mc2.Matcher(hs, params.__MATCH_TYPE__)
+    #---------------
+    def default_test_train_database_samples(hs):
+        print(textwrap.dedent('''
+        =============================
+        Using all data as sample set
+        ============================='''))
+        hs.database_sample_cx = range(len(hs.feats.cx2_desc))
+        hs.test_sample_cx     = range(len(hs.feats.cx2_desc))
+        hs.train_sample_cx    = range(len(hs.feats.cx2_desc))
+
+    def load_test_train_database_samples_from_file(hs):
+        'tries to load test / train / database sample from internal dir'
+        print(textwrap.dedent('''
+        =============================
+        Loading sample sets from disk
+        ============================='''))
+        database_sample_fname = hs.dirs.internal_dir+'/database_sample.txt'
+        test_sample_fname     = hs.dirs.internal_dir+'/test_sample.txt'
+        train_sample_fname    = hs.dirs.internal_dir+'/train_sample.txt'
+        hs.database_sample_cx = helpers.eval_from(database_sample_fname, False)
+        hs.test_sample_cx     = helpers.eval_from(test_sample_fname, False)
+        hs.train_sample_cx    = helpers.eval_from(database_sample_fname, False)
+        if hs.database_sample_cx is None and hs.test_sample_cx is None and hs.train_sample_cx is None: 
+            hs.default_test_train_database_samples()
+        #hs.test_sample_cx = np.array([0,2,3])
+        #db_sample_cx = range(len(cx2_desc)) if hs.database_sample_cx is None \
+                               #else hs.database_sample_cx
+    #---------------
+    def delete_computed_dir(hs):
+        computed_dir = hs.dirs.computed_dir
+        helpers.remove_files_in_dir(computed_dir, recursive=True)
+    #---------------
+    def vdd(hs):
+        db_dir = os.path.normpath(hs.dirs.db_dir)
+        print('opening db_dir: %r ' % db_dir)
+        helpers.vd(db_dir)
+    #---------------
+    def vcd(hs):
+        computed_dir = os.path.normpath(hs.dirs.computed_dir)
+        print('opening computed_dir: %r ' % computed_dir)
+        helpers.vd(computed_dir)
+# ______________________________
+
+# ___CLASS HOTSPOTTER TABLES____
+class HotspotterTables(DynStruct):
+    def __init__(self, 
+                 gx2_gname = [],
+                 nx2_name  = [],
+                 cx2_cid   = [],
+                 cx2_nx    = [],
+                 cx2_gx    = [],
+                 cx2_roi   = [],
+                 cx2_theta = [],
+                 prop_dict = {}):
+        super(HotspotterTables, self).__init__()
+        self.gx2_gname    = np.array(gx2_gname)
+        self.nx2_name     = np.array(nx2_name)
+        self.cx2_cid      = np.array(cx2_cid)
+        self.cx2_nx       = np.array(cx2_nx)
+        self.cx2_gx       = np.array(cx2_gx)
+        self.cx2_roi      = np.array(cx2_roi)
+        self.cx2_theta    = np.array(cx2_theta)
+        self.prop_dict    = prop_dict
+
+# ___CLASS HOTSPOTTER DIRS________
 class HotspotterDirs(DynStruct):
     def __init__(self, db_dir):
         super(HotspotterDirs, self).__init__()
@@ -70,20 +180,6 @@ class HotspotterDirs(DynStruct):
         internal_sym = db_dir + '/Shortcut-to-hs_internals'
         if not os.path.islink(internal_sym):
             symlink(self.internal_dir, internal_sym, noraise=True)
-
-    def delete_computed_dir(self):
-        computed_dir = self.computed_dir
-        remove_files_in_dir(computed_dir, recursive=True)
-
-    def vdd(self):
-        db_dir = os.path.normpath(self.db_dir)
-        print('opening db_dir: %r ' % db_dir)
-        helpers.vd(db_dir)
-
-    def vcd(self):
-        computed_dir = os.path.normpath(self.computed_dir)
-        print('opening computed_dir: %r ' % computed_dir)
-        helpers.vd(computed_dir)
 
 def tryindex(list, val):
     try: 
@@ -121,7 +217,7 @@ def load_csv_tables(db_dir):
     if not all([has_dbdir, has_imgdir, has_chiptbl, has_nametbl, has_imgtbl]):
         errmsg  = ''
         errmsg += ('\n\n!!!!!\n\n')
-        errmsg += ('  ! The datatables seem to not be loaded')
+        errmsg += ('  ! The data tables seem to not be loaded')
         errmsg += (' Files in internal dir: '+repr(internal_dir))
         for fname in os.listdir(internal_dir):
             errmsg += ('   ! fname') 
@@ -232,7 +328,6 @@ def load_csv_tables(db_dir):
         name_x  = tryindex(chip_csv_format, 'Name')
         required_x = [cid_x, gid_x, gname_x, nid_x, name_x, roi_x, theta_x]
         print chip_csv_format
-        prop_x_list = np.setdiff1d(range(len(chip_csv_format)), required_x).tolist()
         # Hotspotter Chip Tables
         cx2_cid   = []
         cx2_nx    = []
@@ -240,9 +335,13 @@ def load_csv_tables(db_dir):
         cx2_roi   = []
         cx2_theta = []
         # x is a csv field index in this context
-        px2_propname = [chip_csv_format[x] for x in prop_x_list]
-        px2_cx2_prop = [[] for px in prop_x_list]
-        print('  * num_user_properties: '+str(len(prop_x_list)))
+        # get csv indexes which are unknown properties
+        prop_x_list  = np.setdiff1d(range(len(chip_csv_format)), required_x).tolist()
+        px2_prop_key = [chip_csv_format[x] for x in prop_x_list]
+        prop_dict = {}
+        for prop in iter(px2_prop_key):
+            prop_dict[prop] = []
+        print('  * num_user_properties: '+str(len(prop_dict.keys())))
         # Parse Chip Table
         for line_num, csv_line in enumerate(cid_lines):
             csv_line = csv_line.strip('\n\r\t ')
@@ -280,7 +379,9 @@ def load_csv_tables(db_dir):
             cx2_roi.append(roi)
             cx2_theta.append(theta)
             for px, x in enumerate(prop_x_list): 
-                px2_cx2_prop[px].append(csv_fields[x])
+                prop = px2_prop_key[px]
+                prop_val = csv_fields[x]
+                prop_dict[prop].append(prop_val)
     except Exception as ex:
         print('Failed parsing: '+str(''.join(cid_lines)))
         print('Failed on line number:  '+str(line_num))
@@ -291,36 +392,19 @@ def load_csv_tables(db_dir):
     print('  * Loaded: '+str(len(cx2_cid))+' chips')
     print('  * Done loading chip table')
     # Return all information from load_tables
-    hs_tables = HotspotterTables()
     #hs_tables.gid2_gx = gid2_gx
     #hs_tables.nid2_nx  = nid2_nx
-    hs_tables.gx2_gname    = np.array(gx2_gname)
-    hs_tables.nx2_name     = np.array(nx2_name)
-    hs_tables.cx2_cid      = np.array(cx2_cid)
-    hs_tables.cx2_nx       = np.array(cx2_nx)
-    hs_tables.cx2_gx       = np.array(cx2_gx)
-    hs_tables.cx2_roi      = np.array(cx2_roi)
-    hs_tables.cx2_theta    = np.array(cx2_theta)
-    hs_tables.px2_propname = np.array(px2_propname)
-    hs_tables.px2_cx2_prop = np.array(px2_cx2_prop)
-
-    # HACK
-    #hs_tables.cx2_cid = hs_tables.cx2_cid[0:10]
-    #hs_tables.cx2_nx = hs_tables.cx2_nx[0:10]
-    #hs_tables.cx2_gx = hs_tables.cx2_gx[0:10]
-    #hs_tables.cx2_roi = hs_tables.cx2_roi[0:10]
-    #hs_tables.cx2_theta = hs_tables.cx2_theta[0:10]
+    hs_tables =  HotspotterTables(gx2_gname, nx2_name, cx2_cid, cx2_nx,
+                                  cx2_gx, cx2_roi, cx2_theta, prop_dict)
     print('===============================')
     print('Done Loading hotspotter csv tables: '+str(db_dir))
     print('===============================\n\n')
 
     if 'vdd' in sys.argv:
-        hs_dirs.vdd()
+        helpers.vd(hs_dirs.db_dir)
     if 'vcd' in sys.argv:
-        hs_dirs.vcd()
-
+        helpers.vd(hs.dirs.computed_dir)
     return hs_dirs, hs_tables
-
     
 
 def __print_chiptableX(hs_tables):
@@ -432,11 +516,6 @@ def make_csv_table(column_labels, column_list, header, column_type=None):
     return csv_text
 
 
-
-        
-
-
-
 # MODULE GLOBAL VARIABLES
 WORK_DIR = 'D:/data/work'
 if sys.platform == 'linux2':
@@ -449,6 +528,7 @@ WS_HARD = WORK_DIR+'/WS_hard'
 MOTHERS = WORK_DIR+'/HSDB_zebra_with_mothers'
 OXFORD  = WORK_DIR+'/Oxford_Buildings'
 PARIS   = WORK_DIR+'/Paris_Buildings'
+SONOGRAMS = WORK_DIR+'/sonograms'
 
 DEFAULT = NAUTS
 

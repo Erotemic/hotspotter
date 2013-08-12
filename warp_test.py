@@ -79,7 +79,7 @@ print('Initializing warp test')
 # reload data if hs was deleted
 if not 'hs' in vars():
     print('hs is not in vars... reloading')
-    hs = mc2.HotSpotter(load_data2.DEFAULT)
+    hs = load_data2.HotSpotter(load_data2.DEFAULT)
 cx2_cid  = hs.tables.cx2_cid
 cx2_nx   = hs.tables.cx2_nx
 nx2_name = hs.tables.nx2_name
@@ -231,7 +231,7 @@ def __pipe_detect(rchip1, rchip2_W):
 
 def __pipe_match(desc1, desc2):
     flann_ = FLANN()
-    flann_.build_index(desc1, **params.__FLANN_PARAMS__)
+    flann_.build_index(desc1, **params.__VSMANY_FLANN_PARAMS__)
     fm, fs = mc2.match_1v1(desc2, flann_)
     return fm, fs
 

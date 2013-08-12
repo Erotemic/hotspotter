@@ -89,20 +89,17 @@ def load_chip_paths(hs_dirs, hs_tables):
     print(' * sqrt(target_area) = %r' % sqrt_area)
     print(' * histeq = %r' % histeq)
 
-    resize_img_bit = not (sqrt_area is None or sqrt_area <= 0)
-    histeq_suffix = ['','.eq'][histeq]
-    resize_suffix = ['', ('.%r' % sqrt_area)][resize_img_bit] 
-    suffix = histeq_suffix+resize_suffix 
+    chip_uid = params.get_chip_uid()
     # Full image path
     cx2_img_path = [img_dir+'/'+gx2_gname[gx] for gx in cx2_gx]
     # Paths to chip, rotated chip
-    chip_format  = chip_dir+'/CID_%d'+suffix+'.png'
-    rchip_format = rchip_dir+'/CID_%d'+suffix+'.rot.png'
+    chip_format  = chip_dir+'/CID_%d'+chip_uid+'.png'
+    rchip_format = rchip_dir+'/CID_%d'+chip_uid+'.rot.png'
     cx2_chip_path   = [chip_format % cid for cid in cx2_cid]
     cx2_rchip_path  = [rchip_format % cid for cid in cx2_cid]
     # Normalized chip size
     cx2_imgchip_sz = [(float(w), float(h)) for (x,y,w,h) in cx2_roi]
-    if resize_img_bit:
+    if not (sqrt_area is None or sqrt_area <= 0):
         target_area = sqrt_area ** 2
         def _resz(w, h):
             ht = np.sqrt(target_area * h / w)

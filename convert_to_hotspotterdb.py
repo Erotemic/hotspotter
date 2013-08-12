@@ -9,6 +9,34 @@ import os
 import parse
 from PIL import Image
 
+# Port of Philbin07 code to python
+def compute_ap(groundtruth_query, ranked_list):
+    good_set = set(open(groundtruth_query + '_good.txt').readlines())
+    ok_set   = set(open(groundtruth_query + '_ok.txt').readlines())
+    junk_set = set(open(groundtruth_query + '_junk.txt').readlines())
+    pos_set  = set.union(good_set, ok_set)
+    ap = compute_ap(pos_set, junk_set, ranked_list);
+
+def compute_ap(pos, amb, ranked_list)
+    old_recall = 0.0
+    old_precision = 1.0
+    ap = 0.0
+    intersect_size = 0;
+    j = 0
+    for i in xrange(ranked_list):
+        if amb.count(ranked_list[i]): continue;
+        if pos.count(ranked_list[i]): intersect_size+=1
+
+        recall    = intersect_size / float(len(pos))
+        precision = intersect_size / (j + 1.0)
+
+        ap += (recall - old_recall)*((old_precision + precision)/2.0)
+
+        old_recall = recall
+        old_precision = precision
+        j+=1
+    return ap
+
 # what I think needs to be done:
 # all images become chips
 # just read the query images
@@ -41,7 +69,7 @@ def __read_oxsty_gtfile(gt_fpath, name, quality, img_dpath, corrupted_gname_set)
             if len(fields) > 1: # if has roi
                 roi =  map(int, map(round, map(float, fields[1:])))
             else: 
-                gpath = os.path.join(img_dpath, gname)
+                gpath = join(img_dpath, gname)
                 (w,h) = Image.open(gpath).size
                 roi = [0,0,w,h]
             oxsty_chip_info = (gname, roi)
@@ -174,7 +202,7 @@ def convert_from_oxford_style(db_dir):
             add_to_hs_tables(gname, names[0], rois[0], qualities[0])
 
     for gname in gname_without_groundtruth_list:
-        gpath = os.path.join(img_dpath, gname)
+        gpath = join(img_dpath, gname)
         (w,h) = Image.open(gpath).size
         roi = [0, 0, w, h]
         add_to_hs_tables(gname, '____', roi, 'unknown')
@@ -220,6 +248,90 @@ def convert_from_oxford_style(db_dir):
     helpers.write_to(test_sample_fname,     repr(test_sample_cx))
     helpers.write_to(train_sample_fname,    repr(train_sample_cx))
     helpers.write_to(database_sample_fname, repr(database_sample_cx))
+
+
+# Converts the name_num.jpg image format into a database
+def convert_named_chips(db_dir, image_dpath=None):
+    from PIL import Image
+    from os.path import join
+    import helpers
+    import load_data2
+    import numpy as np
+    import os
+    import parse
+    # --- Initialize ---
+    gt_format = '{}_{:d}.jpg'
+    if img_dpath is None:
+        img_dpath = db_dir + '/images'
+    print('Converting db_dir=%r and img_dpath=%r' % (db_dir, img_dpath)) 
+    # --- Build Image Table ---
+    helpers.print_('Building name table: ')
+    gx2_gname = helpers.list_images(img_dpath)
+    gx2_gid   = range(1,len(gx2_gname)+1)
+    print('There are %d images' % len(gx2_gname))
+    # ---- Build Name Table ---
+    helpers.print_('Building name table: ')
+    name_set = set([])
+    for gx, gname in enumerate(gx2_gname):
+        name, num = parse.parse(gt_format, gname)
+        name_set.add(name)
+    nx2_name  = ['____', '____'] + list(name_set)
+    nx2_nid   = [1, 1]+range(2,len(name_set)+2)
+    print('There are %d names' % (len(nx2_name)-2))
+    # ---- Build Chip Table ---
+    helpers.print_('Building chip table: ')
+    cx2_cid     = []
+    cx2_theta   = []
+    cx2_roi     = []
+    cx2_nx      = []
+    cx2_gx      = []
+    cid = 1
+    def add_to_hs_tables(cid, gname, name, roi, theta=0):
+        nx = nx2_name.index(name)
+        gx = gx2_gname.index(gname)
+        cx2_cid.append(cid)
+        cx2_roi.append(roi)
+        cx2_nx.append(nx)
+        cx2_gx.append(gx)
+        cx2_theta.append(0)
+    for gx, gname in enumerate(gx2_gname):
+        name, num = parse.parse(gt_format, gname)
+        img_fpath = join(img_dpath, img_fname)
+        (w,h) = Image.open(img_fpath).size
+        roi = [1, 1, w, h]
+        add_to_hs_tables(cid, gname, name, roi)
+        cid += 1
+    cx2_nid = np.array(nx2_nid)[cx2_nx]
+    cx2_gid = np.array(gx2_gid)[cx2_gx]
+    print('There are %d chips' % (cid-1))
+
+    # Make chip_table.csv
+    header = '# chip table'
+    column_labels = ['ChipID', 'ImgID', 'NameID', 'roi[tl_x  tl_y  w  h]', 'theta']
+    column_list   = [cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta]
+    chip_table = load_data2.make_csv_table(column_labels, column_list, header)
+
+    # Make name_table.csv
+    column_labels = ['nid', 'name']
+    column_list   = [nx2_nid[2:], nx2_name[2:]] # dont write ____ for backcomp
+    header = '# name table'
+    name_table = load_data2.make_csv_table(column_labels, column_list, header)
+
+    # Make image_table.csv 
+    column_labels = ['gid', 'gname', 'aif'] # do aif for backwards compatibility
+    gx2_aif = np.ones(len(gx2_gid), dtype=np.uint32)
+    column_list   = [gx2_gid, gx2_gname, gx2_aif]
+    header = '# image table'
+    image_table = load_data2.make_csv_table(column_labels, column_list, header)
+
+    # Write tables
+    chip_table_fname  = join(db_dir, '.hs_internals',  'chip_table.csv')
+    name_table_fname  = join(db_dir, '.hs_internals',  'name_table.csv')
+    image_table_fname = join(db_dir, '.hs_internals', 'image_table.csv')
+    
+    helpers.write_to(chip_table_fname, chip_table)
+    helpers.write_to(name_table_fname, name_table)
+    helpers.write_to(image_table_fname, image_table)
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support

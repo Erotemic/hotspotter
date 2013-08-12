@@ -9,6 +9,7 @@ Module match_chips:
 import itertools
 import sys
 import os
+import textwrap
 # Hotspotter Frontend Imports
 import drawing_functions2 as df2
 # Hotspotter Imports
@@ -20,8 +21,6 @@ import helpers
 import spatial_verification
 import load_data2
 import params
-import chip_compute2 as cc2
-import feature_compute2 as fc2
 import report_results2
 # Math and Science Imports
 import cv2
@@ -51,71 +50,93 @@ def precompute_bag_of_words(hs):
     '''Builds a vocabulary with train_sample_cx
     Creates an indexed database with database_sample_cx'''
     print('Precomputing bag of words')
-    # Read params
+    # Unwrap parameters
     cache_dir  = hs.dirs.cache_dir
     cx2_desc   = hs.feats.cx2_desc
-    vocab_size = params.__NUM_WORDS__
-    cx2_desc   = hs.feats.cx2_desc
-    train_sample_cx    = range(len(cx2_desc)) if hs.train_sample_cx is None \
-                               else hs.train_sample_cx
-    database_sample_cx = range(len(cx2_desc)) if hs.database_sample_cx is None \
-                               else hs.database_sample_cx
+    train_cxs  = hs.train_sample_cx
+    train_cxs = range(len(cx2_desc)) if train_cxs is None else train_cxs
+    db_cxs     = hs.database_sample_cx
+    db_cxs    = range(len(cx2_desc)) if db_cxs    is None else db_cxs
+    vocab_size = params.__BOW_NUM_WORDS__
     # Compute vocabulary
-    words, words_flann = __compute_vocabulary\
-            (cx2_desc, train_sample_cx, vocab_size, cache_dir)
+    print(textwrap.dedent('''
+    =============================
+    Build visual vocabulary with %d words
+    =============================''' % (vocab_size)))
+    _comp_vocab_args   = (cx2_desc, train_cxs, vocab_size, cache_dir)
+    words, words_flann = __compute_vocabulary(*_comp_vocab_args)
     # Assign visual vectors to the database
-    cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf = __index_database_to_vocabulary\
-            (cx2_desc, words, words_flann, database_sample_cx)
-    bagofwords = BagOfWords(words, words_flann, cx2_vvec, wx2_idf, wx2_cxs, wx2_fxs)
+    print(textwrap.dedent('''
+    =============================
+    Index database with visual vocabulary
+    ============================='''))
+    _index_vocab_args = (cx2_desc, words, words_flann, db_cxs, cache_dir)
+    _index_vocab_ret  = __index_database_to_vocabulary(*_index_vocab_args)
+    cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf = _index_vocab_ret
+    # return as a BagOfWords object
+    _bow_args = (words, words_flann, cx2_vvec, wx2_idf, wx2_cxs, wx2_fxs)
+    bagofwords = BagOfWords(*_bow_args)
     return bagofwords
 
 # step 1  
-def __compute_vocabulary(cx2_desc, train_sample_cx, vocab_size, cache_dir=None):
+def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
     '''Computes a vocabulary of size vocab_size given a set of training data'''
     # Make a training set of descriptors to build the vocabulary
-    tx2_desc   = cx2_desc[train_sample_cx]
+    tx2_desc   = cx2_desc[train_cxs]
     train_desc = np.vstack(tx2_desc)
     num_train_desc = train_desc.shape[0]
     if vocab_size > num_train_desc:
-        helpers.printWARN('Vocab size: %r is less than #train descriptors: %r' %\
-                  (vocab_size, num_train_desc))
+        msg = 'vocab_size(%r) > #train_desc(%r)' % (vocab_size, num_train_desc)
+        helpers.printWARN(msg)
         vocab_size = num_train_desc / 2
-    # Build the vocabualry
     # Cluster descriptors into a visual vocabulary
-    _, words = algos.precompute_akmeans(train_desc, vocab_size,
-                                        force_recomp=False,
-                                        cache_dir=cache_dir)
+    akmeans_flann_params = params.__BOW_AKMEANS_FLANN_PARAMS__
+    _, words = algos.precompute_akmeans(train_desc, vocab_size, 100,
+                                        akmeans_flann_params, cache_dir,
+                                        force_recomp=False)
     # Index the vocabulary for fast nearest neighbor search
-    # TODO: Cache the nearest neighbor index
-    #algorithm = 'default'
-    #algorithm = 'linear'
-    #print(' * bag of words is using '+algorithm+' NN search')
-    #words_flann = pyflann.FLANN()
-    #words_flann_params = words_flann.build_index(words, algorithm=algorithm)
-    #print(' * finished building index')
-    words_flann = algos.precompute_flann(words, cache_dir, lbl='words')
+    words_flann_params = params.__BOW_WORDS_FLANN_PARAMS__
+    words_flann = algos.precompute_flann(words, cache_dir, lbl='words',
+                                         flann_params=words_flann_params)
     return words, words_flann
 
 # step 2
-def __index_database_to_vocabulary(cx2_desc, words, words_flann,database_sample_cx):
+def __index_database_to_vocabulary(cx2_desc, words, words_flann, db_cxs, cache_dir):
     '''Assigns each database chip a visual-vector and returns 
        data for the inverted file'''
     # TODO: Save precomputations here
     print('Assigning each database chip a bag-of-words vector')
-    sample_cx   = database_sample_cx
-    num_database = len(database_sample_cx)
-    ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, database_sample_cx)
+    num_database = len(db_cxs)
+    ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, db_cxs)
+    matcher_uid = params.get_matcher_uid()
+    try: 
+        cx2_vvec = helpers.load_cache_npz(ax2_desc, 'cx2_vvec'+matcher_uid, cache_dir)
+        wx2_cxs  = helpers.load_cache_npz(ax2_desc, 'wx2_cxs'+matcher_uid, cache_dir)
+        wx2_fxs  = helpers.load_cache_npz(ax2_desc, 'wx2_fxs'+matcher_uid, cache_dir)
+        wx2_idf  = helpers.load_cache_npz(ax2_desc, 'wx2_idf'+matcher_uid, cache_dir)
+        print(' * successful cache load: vocabulary indexed databased.')
+        return cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf
+    except helpers.CacheException as ex:
+        print(' * '+repr(ex))
+
+    print(' * quantizing each descriptor to a word')
     # Assign each descriptor to its nearest visual word
-    #ax2_desc    = np.array(ax2_desc, dtype=params.__BOW_DTYPE__)
+    print('...this may take awhile with no indication of progress')
+    tic1 = helpers.tic('quantizing each descriptor to a word')
     ax2_wx, _ = words_flann.nn_index(ax2_desc, 1, checks=128)
+    helpers.toc(tic1)
     # Build inverse word to ax
+    tic2 = helpers.tic('finsh database indexing')
+    print(' * building inverse word to ax map')
     wx2_axs = [[] for _ in xrange(len(words))]
     for ax, wx in enumerate(ax2_wx):
         wx2_axs[wx].append(ax)
     # Compute inverted file: words -> database
+    print(' * building inverted file word -> database')
     wx2_cxs = np.array([[ax2_cx[ax] for ax in ax_list] for ax_list in wx2_axs])
     wx2_fxs = np.array([[ax2_fx[ax] for ax in ax_list] for ax_list in wx2_axs])
     # Build sparse visual vectors with term frequency weights 
+    print(' * building sparse visual words')
     coo_cols = ax2_wx  
     coo_rows = ax2_cx
     coo_values = np.ones(len(ax2_cx), dtype=np.uint8)
@@ -123,13 +144,23 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann,database_sample_
     coo_cx2_vvec = spsparse.coo_matrix(coo_format, dtype=np.float, copy=True)
     cx2_tf_vvec  = spsparse.csr_matrix(coo_cx2_vvec, copy=False)
     # Compute idf_w = log(Number of documents / Number of docs containing word_j)
-    print('Computing tf-idf')
-    wx2_df  = np.array([len(set(cxs)) for cxs in wx2_cxs], dtype=np.float)
+    print(' * computing tf-idf')
+    wx2_df  = np.array([len(set(cxs))+1 for cxs in wx2_cxs], dtype=np.float)
     wx2_idf = np.array(np.log2(np.float(num_database) / wx2_df))
     # Compute tf-idf
+    print(' * preweighting with tf-idf')
     cx2_tfidf_vvec = algos.sparse_multiply_rows(cx2_tf_vvec, wx2_idf)
     # Normalize
+    print(' * normalizing')
+    cx2_tfidf_vvec = algos.sparse_multiply_rows(cx2_tf_vvec, wx2_idf)
     cx2_vvec = algos.sparse_normalize_rows(cx2_tfidf_vvec)
+    helpers.toc(tic2)
+    # Save to cache
+    print(' * saving to cache')
+    helpers.save_cache_npz(ax2_desc, cx2_vvec, 'cx2_vvec'+matcher_uid, cache_dir)
+    helpers.save_cache_npz(ax2_desc, wx2_cxs, 'wx2_cxs'+matcher_uid, cache_dir)
+    helpers.save_cache_npz(ax2_desc, wx2_fxs, 'wx2_fxs'+matcher_uid, cache_dir)
+    helpers.save_cache_npz(ax2_desc, wx2_idf, 'wx2_idf'+matcher_uid, cache_dir)
     return cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf
 
 def __quantize_desc_to_tfidf_vvec(desc, wx2_idf, words, words_flann):
@@ -190,11 +221,11 @@ class OneVsMany(DynStruct): # TODO: rename this
         self.ax2_cx = ax2_cx
         self.ax2_fx = ax2_fx
 
-def __aggregate_descriptors(cx2_desc, sample_cx):
+def __aggregate_descriptors(cx2_desc, db_cxs):
     '''Aggregates a sample set of descriptors. 
     Returns descriptors, chipxs, and featxs indexed by ax'''
     # sample the descriptors you wish to aggregate
-    sx2_cx   = sample_cx
+    sx2_cx   = db_cxs
     sx2_desc = cx2_desc[sx2_cx]
     sx2_numfeat = [len(k) for k in iter(cx2_desc[sx2_cx])]
     cx_numfeat_iter = iter(zip(sx2_cx, sx2_numfeat))
@@ -203,38 +234,32 @@ def __aggregate_descriptors(cx2_desc, sample_cx):
     _ax2_fx = [range(num_feats) for num_feats in iter(sx2_numfeat)]
     ax2_cx  = np.array(list(itertools.chain.from_iterable(_ax2_cx)))
     ax2_fx  = np.array(list(itertools.chain.from_iterable(_ax2_fx)))
-    ax2_desc = np.vstack(cx2_desc[sample_cx])
+    ax2_desc = np.vstack(cx2_desc[sx2_cx])
     return ax2_cx, ax2_fx, ax2_desc
 
 def aggregate_descriptors_vsmany(hs):
     '''aggregates all descriptors for vsmany search'''
     print('Aggregating descriptors for one-vs-many')
     cx2_desc  = hs.feats.cx2_desc
-    sample_cx = np.arange(len(cx2_desc))
-    return __aggregate_descriptors(cx2_desc, sample_cx)
+    db_cxs    = hs.database_sample_cx
+    db_cxs    = range(len(cx2_desc)) if db_cxs    is None else db_cxs
+    return __aggregate_descriptors(cx2_desc, db_cxs)
 
 #@profile
 def precompute_index_vsmany(hs):
+    print(textwrap.dedent('''
+    =============================
+    Building one-vs-many index
+    ============================='''))
     # Build (or reload) one vs many flann index
-    feat_dir  = hs.dirs.feat_dir
-    feat_type = hs.feats.feat_type
+    cache_dir  = hs.dirs.cache_dir
     ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_vsmany(hs)
-    vsmany_flann = pyflann.FLANN()
-    feat_uid = hs.feat_uid()
-    vsmany_flann_path = feat_dir + '/flann_One-vs-Many_'+feat_uid+'.index'
-    load_success = False
-    if helpers.checkpath(vsmany_flann_path):
-        try:
-            print('Trying to load FLANN index')
-            vsmany_flann.load_index(vsmany_flann_path, ax2_desc)
-            print('...success')
-            load_success = True
-        except Exception as ex:
-            print('...cannot load FLANN index'+repr(ex))
-    if not load_success:
-        with Timer(msg='rebuilding FLANN index'):
-            vsmany_flann.build_index(ax2_desc, **params.__FLANN_PARAMS__)
-            vsmany_flann.save_index(vsmany_flann_path)
+    # Precompute flann index
+    matcher_uid = params.get_matcher_uid()
+    vsmany_flann_params = params.__VSMANY_FLANN_PARAMS__
+    vsmany_flann = algos.precompute_flann(ax2_desc, cache_dir=cache_dir,
+                                          lbl=matcher_uid,
+                                          flann_params=vsmany_flann_params)
     # Return a one-vs-many structure
     one_vs_many = OneVsMany(vsmany_flann, ax2_desc, ax2_cx, ax2_fx)
     return one_vs_many
@@ -263,9 +288,9 @@ def assign_matches_vsmany(qcx, cx2_cid, cx2_desc, one_vs_many):
     ax2_fx    = one_vs_many.ax2_fx
     isQueryIndexed = True
     desc1 = cx2_desc[qcx]
-    k_vsmany = params.__K__+1 if isQueryIndexed else params.__K__
+    k_vsmany = params.__VSMANY_K__+1 if isQueryIndexed else params.__VSMANY_K__
     # Find each query descriptor's k+1 nearest neighbors
-    checks = params.__FLANN_PARAMS__['checks']
+    checks = params.__VSMANY_FLANN_PARAMS__['checks']
     (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, k_vsmany+1, checks=checks)
     vote_dists = qfx2_dists[:, 0:k_vsmany]
     norm_dists = qfx2_dists[:, k_vsmany] # k+1th descriptor for normalization
@@ -306,14 +331,17 @@ def assign_matches_vsone(qcx, cx2_cid, cx2_desc):
           % (qcx, len(cx2_cid)))
     desc1 = cx2_desc[qcx]
     vsone_flann = pyflann.FLANN()
-    vsone_flann.build_index(desc1, **params.__FLANN_PARAMS__)
+    vsone_flann_params =  params.__VSONE_FLANN_PARAMS__
+    ratio_thresh = params.__VSONE_RATIO_THRESH__
+    checks = vsone_flann_params['checks']
+    vsone_flann.build_index(desc1, **vsone_flann_params)
     cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     cx2_fs = [[] for _ in xrange(len(cx2_cid))]
     for cx, desc2 in enumerate(cx2_desc):
         sys.stdout.write('.')
         sys.stdout.flush()
         if cx == qcx: continue
-        (fm, fs) = match_vsone(desc2, vsone_flann)
+        (fm, fs) = match_vsone(desc2, vsone_flann, checks)
         cx2_fm[cx] = fm
         cx2_fs[cx] = fs
     sys.stdout.write('DONE')
@@ -328,7 +356,7 @@ def cv2_match(desc1, desc2):
     matches = [(m1.trainIdx, m1.queryIdx) for m1 in raw_matches]
 
 #@profile
-def match_vsone(desc2, vsone_flann, ratio_thresh=1.2, burst_thresh=None):
+def match_vsone(desc2, vsone_flann, checks, ratio_thresh=1.2, burst_thresh=None):
     '''Matches desc2 vs desc1 using Lowe's ratio test
     Input:
         desc2         - other descriptors (N2xD)
@@ -340,7 +368,6 @@ def match_vsone(desc2, vsone_flann, ratio_thresh=1.2, burst_thresh=None):
         fm - Mx2 array of matching feature indexes
         fs - Mx1 array of matching feature scores '''
     # features to their matching query features
-    checks = params.__FLANN_PARAMS__['checks']
     (fx2_qfx, fx2_dist) = vsone_flann.nn_index(desc2, 2, checks=checks)
     # RATIO TEST
     fx2_ratio  = np.divide(fx2_dist[:, 1], fx2_dist[:, 0]+1E-8)
@@ -441,9 +468,8 @@ class QueryResult(DynStruct):
         self.cx2_fs_V = np.array([])
         self.cx2_score_V = np.array([])
 
-
     def get_fpath(self, hs):
-        query_uid = hs.query_uid()
+        query_uid = params.get_query_uid()
         qres_dir = hs.dirs.qres_dir 
         fname = 'result_'+query_uid+'_qcx=%d.npz' % self.qcx
         fpath = os.path.join(qres_dir, fname)
@@ -528,6 +554,10 @@ class Matcher(DynStruct):
 #========================================
 def run_matching(hs):
     '''Runs the full matching pipeline using the abstracted classes'''
+    print(textwrap.dedent('''
+    =============================
+    Running Matching
+    ============================='''))
     matcher  = hs.matcher
     cx2_cid  = hs.tables.cx2_cid
     cx2_desc = hs.feats.cx2_desc
@@ -539,6 +569,10 @@ def run_matching(hs):
     verify_times = []
     skip_list    = []
     print('Running matching on: %r' % test_sample_cx)
+
+    force_requery_cx_set = params.__FORCE_REQUERY_CX__
+    reverify_query = params.__REVERIFY_QUERY__
+    resave_query = params.__RESAVE_QUERY__
     for qcx in iter(test_sample_cx):
         qcid = cx2_cid[qcx]
         if qcid == 0: 
@@ -548,11 +582,10 @@ def run_matching(hs):
         res = qcx2_res[qcx]
         # load query from cache if possible
         cache_load_success = params.__CACHE_QUERY__ and res.load(hs)
-        if qcx in params.__FORCE_REQUERY_CX__:
+        if qcx in force_requery_cx_set:
             cache_load_success = False
         # Get what data we have if we are redoing things
-        if cache_load_success or\
-           params.__RESAVE_QUERY__ or params.__REVERIFY_QUERY__:
+        if cache_load_success or resave_query or reverify_query:
             helpers.print_('load_cache->')
             cx2_fm      = res.cx2_fm
             cx2_fs      = res.cx2_fs
@@ -569,7 +602,7 @@ def run_matching(hs):
         else: 
             helpers.print_('cache_assign->')
         # Spatially verify the assigned matches
-        if not cache_load_success or params.__REVERIFY_QUERY__:
+        if not cache_load_success or reverify_query:
             tt_V = tic('verify')
             (cx2_fm_V, cx2_fs_V, cx2_score_V) = \
                     spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
@@ -585,12 +618,9 @@ def run_matching(hs):
         res.cx2_fs_V = cx2_fs_V
         res.cx2_score_V = cx2_score_V
         # Cache query result
-        if not cache_load_success or\
-           params.__REVERIFY_QUERY__ or params.__RESAVE_QUERY__:
+        if not cache_load_success or reverify_query or resave_query:
             helpers.print_('')
-            #tt_save = tic('caching query')
             res.save(hs)
-            #toc(tt_save)
         helpers.println('endquery;')       
     if len(skip_list) > 0:
         print('Skipped more queries than you should have: %r ' % skip_list)
@@ -599,91 +629,7 @@ def run_matching(hs):
     report_results2.write_rank_results(hs, qcx2_res)
     return qcx2_res
 
-def run_matching_type(hs, match_type=params.__MATCH_TYPE__):
-    matcher = hs.use_matcher(match_type)
-    qcx2_res = run_matching(hs)
-    return qcx2_res
 
-def runall_match(hs):
-    #functools.partial
-    hs.printme2()
-    match_types = ['vsmany', 'vsone', 'bagofwords']
-    qcx2_res_bagofwords  = run_matching_type(hs, 'bagofwords')
-
-#========================================
-# DRIVER CODE
-#========================================
-class HotSpotter(DynStruct):
-    '''The HotSpotter main class is a root handle to all relevant data'''
-    def __init__(hs, db_dir=None, load_matcher=True):
-        super(HotSpotter, hs).__init__()
-        hs.tables = None
-        hs.feats  = None
-        hs.cpaths = None
-        hs.dirs   = None
-        hs.matcher = None
-        hs.train_sample_cx    = None
-        hs.test_sample_cx     = None
-        hs.database_sample_cx = None
-        if not db_dir is None:
-            hs.load_database(db_dir, load_matcher)
-    def load_database(hs, db_dir, load_matcher=True):
-        # Load data
-        hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
-        hs_cpaths = cc2.load_chip_paths(hs_dirs, hs_tables)
-        hs_feats  = fc2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
-        # Build hotspotter structure
-        hs.tables  = hs_tables
-        hs.feats   = hs_feats
-        hs.cpaths  = hs_cpaths
-        hs.dirs    = hs_dirs
-        hs.load_test_train_database()
-        if load_matcher: 
-            hs.use_matcher(params.__MATCH_TYPE__)
-
-    def load_test_train_database(hs):
-        'tries to load test / train / database sample from internal dir'
-        database_sample_fname = hs.dirs.internal_dir+'/database_sample.txt'
-        test_sample_fname     = hs.dirs.internal_dir+'/test_sample.txt'
-        train_sample_fname    = hs.dirs.internal_dir+'/train_sample.txt'
-        hs.database_sample_cx = helpers.eval_from(database_sample_fname, False)
-        hs.test_sample_cx     = helpers.eval_from(test_sample_fname, False)
-        hs.train_sample_cx    = helpers.eval_from(database_sample_fname, False)
-        if hs.database_sample_cx is None and hs.test_sample_cx is None and hs.train_sample_cx is None: 
-            hs.database_sample_cx = range(len(hs.feats.cx2_desc))
-            hs.test_sample_cx = range(len(hs.feats.cx2_desc))
-            hs.train_sample_cx = range(len(hs.feats.cx2_desc))
-        #hs.test_sample_cx = np.array([0,2,3])
-
-
-        db_sample_cx = range(len(cx2_desc)) if hs.database_sample_cx is None \
-                               else hs.database_sample_cx
-
-    # TODO: This UID code is repeated in feature_compute2. needs to be better
-    # integrated
-    def algo_uid(hs):
-        return hs.query_uid()
-    def query_uid(hs):
-        feat_type = hs.feats.feat_type
-        match_type = hs.matcher.match_type
-        uid_depends = [feat_type,
-                       match_type,
-                       ['', 'white'][params.__WHITEN_FEATS__]]
-        query_uid = '_'.join(uid_depends)
-        return query_uid
-    def feat_uid(hs):
-        feat_type = params.__FEAT_TYPE__
-        uid_depends = [feat_type,
-                    ['', 'white'][params.__WHITEN_FEATS__]]
-        feat_uid = '_'.join(uid_depends)
-        return feat_uid
-    def chip_uid(hs):
-        uid_depends = [['', 'histeq'][params.__HISTEQ__]]
-        chip_uid = '_'.join(uid_depends)
-        return chip_uid
-    def use_matcher(hs, match_type):
-        hs.matcher = Matcher(hs, match_type)
-        return hs.matcher
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
@@ -692,7 +638,7 @@ if __name__ == '__main__':
 
     # --- CHOOSE DATABASE --- #
     db_dir = load_data2.DEFAULT
-    hs = HotSpotter(db_dir)
+    hs = load_data2.HotSpotter(db_dir)
     cx2_kpts = hs.feats.cx2_kpts
     cx2_desc = hs.feats.cx2_desc
     cx2_cid  = hs.tables.cx2_cid
@@ -731,7 +677,7 @@ if __name__ == '__main__':
             database_sample_cx = naut_database_sample_cx
             cache_dir  = hs.dirs.cache_dir
             cx2_desc   = hs.feats.cx2_desc
-            vocab_size = params.__NUM_WORDS__
+            vocab_size = params.__BOW_NUM_WORDS__
             cx2_desc   = hs.feats.cx2_desc
             #exec(helpers.get_exec_src(precompute_bag_of_words))
         try: 

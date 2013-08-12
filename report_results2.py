@@ -1,9 +1,12 @@
 import drawing_functions2 as df2
 import load_data2
+import subprocess
+import params
 import helpers
 import numpy as np
 import datetime
 import textwrap
+import os
 import sys
 from os.path import realpath, join
 
@@ -15,12 +18,19 @@ def printDBG(msg):
 # Driver functions (reports results for entire experiment)
 # ========================================================
 
-def write_rank_results(hs, qcx2_res):
-    rankres_str = rank_results(hs, qcx2_res)
-    report_type = 'rank_'
-    write_report(hs, rankres_str, report_type)
+def write_rank_results(hs, qcx2_res, SV=True):
+    rankres_str = rank_results(hs, qcx2_res, SV)
+    write_report(hs, rankres_str, 'rank_', SV)
+
+def write_oxsty_mAP_results(hs, qcx2_res, SV=True):
+    oxsty_map_csv = oxsty_mAP_results(hs, qcx2_res, SV)
+    write_report(hs, oxsty_map_csv, 'oxsty-mAP_', SV)
 
 def dump_qcx_tt_bt_tf(hs, qcx2_res):
+    print(textwrap.dedent('''
+    =============================
+    Dumping results
+    ============================='''))
     dump_dir = join(hs.dirs.result_dir, 'tt_bt_tf')
     helpers.ensurepath(dump_dir)
     if '--vd' in sys.argv:
@@ -29,40 +39,48 @@ def dump_qcx_tt_bt_tf(hs, qcx2_res):
         df2.close_all_figures()
         res = qcx2_res[qcx]
         visualize_res_tt_bt_tf(hs, res)
-        fig_fname = 'ttbttf_qcx' + str(qcx) + '--' + hs.query_uid() + '.jpg'
+        fig_fname = 'ttbttf_qcx' + str(qcx) + '--' + params.get_query_uid() + '.jpg'
         fig_fpath = join(dump_dir, fig_fname)
         print fig_fpath
         df2.save_figure(qcx, fig_fpath)
     df2.close_all_figures()
     return dump_dir
 
-def write_report(hs, report_str, report_type):
+def write_report(hs, report_str, report_type, SV):
     result_dir = hs.dirs.result_dir
-    algo_uid   = hs.algo_uid()
+    query_uid  = params.get_query_uid()
     timestamp  = get_timestamp()
-    csv_fname  = algo_uid+report_type+timestamp+'.csv'
+    SV_aug = ['_SVoff_','_SVon_'][SV] #TODO: SV should go into params
+    csv_fname  = report_type+query_uid+SV_aug+timestamp+'.csv'
     helpers.ensurepath(result_dir)
     rankres_csv = join(result_dir, csv_fname)
     helpers.write_to(rankres_csv, report_str)
     if '--gvim' in sys.argv:
         helpers.gvim(rankres_csv)
 
-def rank_results(hs, qcx2_res):
-    cx2_cid  = hs.tables.cx2_cid
 
+# TODO: Better plots
+# TODO: Make SV a parameter?
+def plot_stem(hs, qcx2_res, SV):
+    pass
+
+
+def rank_results(hs, qcx2_res, SV):
+    'Builds csv files showing the cxs/scores/ranks of the query results'
+    cx2_cid  = hs.tables.cx2_cid
+    #---
     qcx2_top_true_rank   = np.zeros(len(cx2_cid)) - 100
     qcx2_top_true_score  = np.zeros(len(cx2_cid)) - 100
     qcx2_top_true_cx     = np.zeros(len(cx2_cid)) - 100
-
+    #---
     qcx2_bot_true_rank   = np.zeros(len(cx2_cid)) - 100
     qcx2_bot_true_score  = np.zeros(len(cx2_cid)) - 100
     qcx2_bot_true_cx     = np.zeros(len(cx2_cid)) - 100
-
+    #---
     qcx2_top_false_rank   = np.zeros(len(cx2_cid)) - 100
     qcx2_top_false_score  = np.zeros(len(cx2_cid)) - 100
     qcx2_top_false_cx     = np.zeros(len(cx2_cid)) - 100
-
-    SV = True
+    #---
     test_sample_cx = hs.test_sample_cx
     db_sample_cx   = hs.database_sample_cx
     for qcx in iter(test_sample_cx):
@@ -97,37 +115,36 @@ def rank_results(hs, qcx2_res):
         qcx2_top_false_rank[qcx]  = tf_r
         qcx2_top_false_score[qcx] = tf_s
         qcx2_top_false_cx[qcx]    = tf_cx
-
     # Easy to digest results
     num_chips = len(test_sample_cx)
     num_nonquery = len(np.setdiff1d(db_sample_cx, test_sample_cx))
     num_with_gtruth = (1 - np.isnan(qcx2_top_true_rank[test_sample_cx])).sum()
     num_rank_less5 = (qcx2_top_true_rank[test_sample_cx] < 5).sum()
     num_rank_less1 = (qcx2_top_true_rank[test_sample_cx] < 1).sum()
-    
     # Output ranking results
     # TODO: mAP score
     # Build the experiment csv metadata
-
-    header = '# Experiment Settings (hs.algo_uid): '+hs.algo_uid()+'\n'
+    SV_aug = ['_SVoff_','_SVon_'][SV] #TODO: SV should go into params
+    query_uid = params.get_query_uid()+SV_aug
+    header = '# Experiment Settings (params.query_uid):'+query_uid+'\n'
     header +=  get_timestamp(format='comment')+'\n'
     header += '# Num Query Chips: %d \n' % num_chips
     header += '# Num Query Chips with at least one match: %d \n' % num_with_gtruth
     header += '# Num NonQuery Chips: %d \n' % num_nonquery
     header += '# Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
     header += '# Ranks <= 1: %d / %d\n\n' % (num_rank_less1, num_with_gtruth)
-
+    #---
+    header += '# Full Parameters: \n' + helpers.indent(params.param_string(),'#') + '\n\n'
+    #---
     header += textwrap.dedent('''
     # Rank Result Metadata:
     #   QCX  = Query chip-index
     #   TT   = top true  
     #   BT   = bottom true
     #   TF   = top false''').strip()
-
     # Build the experiemnt csv header
     column_labels = ['QCX', 'TT RANK', 'TT SCORE', 'TT CX', 'BT RANK', 
                      'BT SCORE', 'BT CX', 'TF RANK', 'TF SCORE', 'TF CX']
-
     column_list = [test_sample_cx, 
                    qcx2_top_true_rank[test_sample_cx],
                    qcx2_top_true_score[test_sample_cx],
@@ -138,7 +155,6 @@ def rank_results(hs, qcx2_res):
                    qcx2_top_false_rank[test_sample_cx],
                    qcx2_top_false_score[test_sample_cx],
                    qcx2_top_false_cx[test_sample_cx]]
-
     column_type = [int, int, float, int, int, float, int, int, float, int]
     rankres_str = load_data2.make_csv_table(column_labels, column_list, header, column_type)
     return rankres_str
@@ -199,18 +215,81 @@ def print_top_res_scores(hs, res, view_top=10, SV=False):
     print('---------------------------------------')
     print('---------------------------------------')
 
+# OXFORD STUFF
+def oxsty_mAP_results(hs, qcx2_res, SV):
+    # Check directorys where ranked lists of images names will be put
+    SV_aug = ['_SVoff_','_SVon_'][SV] #TODO: SV should go into params
+    qres_dir  = hs.dirs.qres_dir
+    query_uid = params.get_query_uid()
+    oxsty_qres_dname = 'oxsty_qres' + query_uid + SV_aug
+    oxsty_qres_dpath = join(qres_dir, oxsty_qres_dname)
+    helpers.ensure_path(oxsty_qres_dpath)
+    # Get the mAP scores using philbins program
+    query_mAP_list = []
+    query_mAP_cx   = []
+    for qcx in (hs.test_sample_cx):
+        res = qcx2_res[qcx]
+        mAP = get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath)
+        query_mAP_list.append(mAP)
+        query_mAP_cx.append(qcx)
+    # Calculate the total mAP score for the experiemnt
+    total_mAP = np.mean(np.array(query_mAP_list))
+    # build a CSV file with the results
+    header  = '# Oxford Style Map Scores'
+    header  = '# total mAP score = %r ' % total_mAP
+    header +=  get_timestamp(format='comment')+'\n'
+    header += '# Full Parameters: \n#' + params.param_string().replace('\n','\n#')+'\n\n'
+    column_labels = ['QCX', 'mAP']
+    column_list   = [query_mAP_cx, query_mAP_list]
+    oxsty_map_csv = load_data2.make_csv_table(column_labels, column_list, header)
+    return oxsty_map_csv
+
+def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath):
+    # find oxford ground truth directory
+    cwd = os.getcwd()
+    oxford_gt_dir = join(hs.dirs.db_dir, 'oxford_style_gt')
+    # build groundtruth query
+    qcx = res.qcx
+    qnx = hs.tables.cx2_nx[qcx]
+    cx2_oxnum = hs.tables.prop_dict['oxnum']
+    qoxnum = cx2_oxnum[qcx]
+    qname  = hs.tables.nx2_name[qnx]
+    # build ranked list
+    cx2_score = res.cx2_score_V if SV else res.cx2_score
+    top_cx = cx2_score.argsort()[::-1]
+    top_gx = hs.tables.cx2_gx[top_cx]
+    top_gname = hs.tables.gx2_gname[top_gx]
+    # build mAP args
+    ground_truth_query = qname+'_'+qoxnum
+    # build ranked list of gnames (remove duplicates)
+    seen = set([])
+    ranked_list = []
+    for gname in iter(top_gname):
+        gname_ = gname.replace('.jpg','')
+        if not gname_ in seen: 
+            seen.add(gname_)
+            ranked_list.append(gname_)
+    ranked_list2 = [gname.replace('.jpg','') for gname in top_gname]
+    # Write the ranked list of images names
+    cx_aug = 'qcx_'+str(qcx)
+    ranked_list_fname = 'ranked_list_' + cx_aug + ground_truth_query + '.txt'
+    ranked_list_fpath = join(oxsty_qres_dpath, ranked_list_fname)
+    helpers.write_to(ranked_list_fpath, '\n'.join(ranked_list))
+    # execute external mAP code: 
+    # ./compute_ap [GROUND_TRUTH] [RANKED_LIST]
+    os.chdir(oxford_gt_dir)
+    args = ('../compute_ap', ground_truth_query, ranked_list_fpath)
+    cmdstr  = ' '.join(args)
+    print('Executing: %r ' % cmdstr)
+    PIPE = subprocess.PIPE
+    proc = subprocess.Popen(args, stdout=PIPE, stderr=PIPE)
+    (out, err) = proc.communicate()
+    return_code = proc.returncode
+    os.chdir(cwd)
+    mAP = float(out.strip())
+    return mAP
+
 # NEW STUFF
-
-def intersect_ordered(list1, list2):
-    'returns list1 elements that are also in list2 preserves order of list1'
-    set2 = set(list2)
-    new_list = [item for item in iter(list1) if item in set2]
-    #new_list =[]
-    #for item in iter(list1):
-        #if item in set2:
-            #new_list.append(item)
-    return new_list
-
 def get_top_matches_cx_and_scores(hs, res, SV):
     cx2_score = res.cx2_score_V if SV else res.cx2_score
     qcx = res.qcx
@@ -218,7 +297,7 @@ def get_top_matches_cx_and_scores(hs, res, SV):
     db_sample_cx = range(len(cx2_desc)) if hs.database_sample_cx is None \
                                else hs.database_sample_cx
     unfilt_top_cx = np.argsort(cx2_score)[::-1]
-    top_cx = np.array(intersect_ordered(unfilt_top_cx, db_sample_cx))
+    top_cx = np.array(helpers.intersect_ordered(unfilt_top_cx, db_sample_cx))
     top_score = cx2_score[top_cx]
     return top_cx, top_score
 
@@ -249,14 +328,6 @@ def get_matchs_true_and_false(hs, res, SV):
     return true_tup, false_tup
 
 # OLD STUFF
-def draw_relevant(cx2_res, hs):
-    SV = True
-    for qcx in iter(hs.test_sample_cx):
-        res = cx2_res[qcx]
-        (tt_cx, bt_cx, tf_cx), titles = get_tt_bt_tf_cxs(hs, res)
-        # HERE
-    return cxs, titles
-
 def get_tt_bt_tf_cxs(hs, res, SV):
     'Returns the top and bottom true positives and top false positive'
     qcx = res.qcx
@@ -294,7 +365,7 @@ def visualize_res_tt_bt_tf(hs, res):
     df2.show_matches3(res, hs, cxsV[0], SV, fignum=_fn, plotnum=234, title_aug=titlesV[0])
     df2.show_matches3(res, hs, cxsV[1], SV, fignum=_fn, plotnum=235, title_aug=titlesV[1])
     df2.show_matches3(res, hs, cxsV[2], SV, fignum=_fn, plotnum=236, title_aug=titlesV[2])
-    fig_title = 'fig '+str(_fn)+' -- ' + hs.query_uid()
+    fig_title = 'fig '+str(_fn)+' -- ' + params.get_query_uid()
     df2.set_figtitle(fig_title)
     #df2.set_figsize(_fn, 1200,675)
     return _fn, fig_title
@@ -302,28 +373,6 @@ def visualize_res_tt_bt_tf(hs, res):
 def visuzlize_qcx_tt_bt_tf(hs, qcx2_res, qcx):
     res = qcx2_res[qcx]
     return visualize_res_tt_bt_tf(hs, res)
-
-
-
-def compute_average_precision(res, k):
-    '''
-    % from wikipedia: http://en.wikipedia.org/wiki/Information_retrieval#Mean_average_precision
-    $p(r)$ = precision as a function of recall $r$
-    $AveP$ = $\int_0^1 p(r) dr$ = $\sum_{k=1}^n P(k) \del r(k)$
-
-    $k$ is the rank in sequence of retrieved documents
-    $n$ is the number of retrieved documents
-
-    $\del r(k) = r(k) - r(k-1)$ = change in recall 
-    '''
-    pass
-
-def compute_mean_average_precision(res, k):
-    '''
-    MAP = 1/Q \sum_{q=1}^Q AveP(q) 
-    '''
-
-
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
@@ -335,7 +384,7 @@ if __name__ == '__main__':
     #imp.reload(mc2)
     # --- CHOOSE DATABASE --- #
     db_dir = load_data2.DEFAULT
-    hs = mc2.HotSpotter(db_dir)
+    hs = load_data2.HotSpotter(db_dir)
     df2.close_all_figures()
     try:
         qcx2_res = mc2.run_matching(hs)
@@ -354,8 +403,6 @@ if __name__ == '__main__':
     except Exception as ex:
         print(repr(ex))
         raise
-
-    'dev inspect'
 
     # Execing df2.present does an IPython aware plt.show()
     exec(df2.present(wh=(900,600)))

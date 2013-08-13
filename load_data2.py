@@ -16,7 +16,7 @@ from helpers import checkpath, unit_test, ensure_path, symlink, remove_files_in_
 from helpers import myprint
 from Printable import DynStruct
 # rename: data_managers? 
-print ('LOAD_MODULE: load_data2.py')
+#print ('LOAD_MODULE: load_data2.py')
 
 # reloads this module when I mess with it
 def reload_module():
@@ -136,10 +136,27 @@ class HotSpotter(DynStruct):
         other_cx_, = np.where(cx2_nx == nx)
         other_cx  = other_cx_[other_cx_ != cx]
         return other_cx
+    #--------------
     def get_chip(hs, cx):
         return cv2.imread(hs.cpaths.cx2_rchip_path[cx])
+    #--------------
     def get_kpts(hs, cx):
         return hs.feats.cx2_kpts[cx]
+    #--------------
+    def get_assigned_matches(hs, qcx):
+        cx2_desc = hs.feats.cx2_desc
+        assign_matches = hs.matcher.assign_matches
+        cx2_fm, cx2_fs, cx2_score = assign_matches(qcx, cx2_desc)
+        return cx2_fm, cx2_fs, cx2_score
+    #--------------
+    def get_assigned_matches_to(hs, qcx, cx):
+        cx2_fm, cx2_fs, cx2_score = hs.get_assigned_matches(qcx)
+        fm = cx2_fm[cx]
+        fs = cx2_fs[cx]
+        score = cx2_score[cx]
+        return fm, fs, score
+
+
 # ______________________________
 
 # ___CLASS HOTSPOTTER TABLES____
@@ -421,7 +438,7 @@ def load_csv_tables(db_dir):
     if 'vdd' in sys.argv:
         helpers.vd(hs_dirs.db_dir)
     if 'vcd' in sys.argv:
-        helpers.vd(hs.dirs.computed_dir)
+        helpers.vd(hs_dirs.computed_dir)
     return hs_dirs, hs_tables
     
 
@@ -566,9 +583,9 @@ dev_databases = {
 
 for argv in iter(sys.argv):
     if argv.upper() in dev_databases.keys():
-        print(' * User changed default database. Previously: '+str(DEFAULT))
+        #print(' * User changed default database. Previously: '+str(DEFAULT))
         DEFAULT = dev_databases[argv.upper()]
-print(' * load_data: Default database is: '+str(DEFAULT))
+#print(' * load_data: Default database is: '+str(DEFAULT))
 
 @unit_test
 def test_load_csv():

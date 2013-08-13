@@ -16,7 +16,7 @@ import sklearn
 import scipy as sp
 import signal
 import scipy.sparse as spsparse
-print('LOAD_MODULE: algos.py')
+#print('LOAD_MODULE: algos.py')
 #imp.reload(sys.modules['hotspotter.helpers'])
 #imp.reload(sys.modules['params'])
 

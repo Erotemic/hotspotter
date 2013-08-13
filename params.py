@@ -5,14 +5,14 @@ import sys
 import os.path
 import numpy as np
 import helpers
-print('LOAD_MODULE: params.py')
+#print('LOAD_MODULE: params.py')
 
-print(' * __name__ = %s' % __name__)
-print(' * sys.argv = %r' % sys.argv)
-print(' * sys.checkinterval   = %r' % sys.getcheckinterval())
-print(' * sys.defaultencoding = %r' % sys.getdefaultencoding())
-print(' * sys.filesystemencoding = %r' % sys.getfilesystemencoding())
-print(' * sys.prefix = %r' % sys.prefix)
+#print(' * __name__ = %s' % __name__)
+#print(' * sys.argv = %r' % sys.argv)
+#print(' * sys.checkinterval   = %r' % sys.getcheckinterval())
+#print(' * sys.defaultencoding = %r' % sys.getdefaultencoding())
+#print(' * sys.filesystemencoding = %r' % sys.getfilesystemencoding())
+#print(' * sys.prefix = %r' % sys.prefix)
 
 #__BOW_DTYPE__ = np.uint8
 
@@ -189,7 +189,7 @@ if '--print-checks' in sys.argv:
 #__FORCE_REQUERY_CX__ = set([0,1])
 __FORCE_REQUERY_CX__ = set([])
 
-print(' ...Finished loading params.py')
+#print(' ...Finished loading params.py')
 
 if __name__ == '__main__':
     print ('Entering param __main__')

@@ -71,133 +71,6 @@ def homogo_normalize_pts(xy):
     T   = _normalize_pts(xyz)
     xyz_norm = T.dot(xyz)
     return (xyz_norm, T)
-#
-def inlier_check(xy1_mAt, xy2_m):
-    xy_err_sqrd = sum( np.power(xy1_mAt - xy2_m, 2) , 0)
-    _inliers, = np.where(xy_err_sqrd < xy_thresh_sqrd)
-
-#http://jameshensman.wordpress.com/2010/06/14/multiple-matrix-multiplication-in-numpy/
-def matrix_from_acd(acd_arr):
-    '''
-    Input: 3xN array represnting a lower triangular matrix
-    Output Nx2x2 array of N, 2x2 lower triangular matrixes
-    '''
-    num_ells = acd_arr.shape[1]
-    a = acd_arr[0]
-    c = acd_arr[1]
-    b = np.zeros(num_ells)
-    d = acd_arr[2]
-    abcd_mat = np.rollaxis(np.array([(a, b), (c, d)]),2)
-    return abcd_mat
-
-'''
-# Define two matrices
-A = np.random.randn(100,2,2) # DATA
-B = np.random.randn(2,2) # OPERATOR
-
-#Right multiplication (operator on right) 
-AB = [a*B for a in A]
-#or faster version: 
-AB = np.dot(A,B)
-
-Left multiplication  (operator on left)  
-#BA = [B*a for a in A]
-or faster version: 
-#BA = np.transpose(np.dot(np.transpose(A,(0,2,1)),B.T),(0,2,1))
- '''
-def right_multiply_H_with_acd(acd_arr, H):
-    # AB = np.dot(A,B)
-    pass
-
-def left_multiply_H_with_acd(H, acd_arr):
-    # (BA).T = A.T B.T
-    '''
-    acd_H = [(w, x), * [(a, 0),
-             (y, z)]    (c, d)] =
-            [(w*a+x*c, x*d),
-             (y*a+z*c, z*d)]
-    x is 0 in our case'''
-    [(w,_),(y,z)] = H
-    a = acd_arr[0]
-    c = acd_arr[1]
-    d = acd_arr[2]
-    acd_H = np.array([(w*a), (y*a+z*c), (z*d)])
-    return acd_H
-
-'''
-The determinant of a multiplied matrix is the multiplicatin of determinants
-from numpy.linalg import det
-A = np.random.randn(2,2)
-B = np.random.randn(2,2)
-print det(A.dot(B)) 
-print det(B.dot(A)) 
-print det(A) * det(B)
-'''
-
-def test_realdata():
-    import load_data2
-    import params
-    import drawing_functions2 as df2
-    import helpers
-    params.reload_module()
-    load_data2.reload_module()
-    df2.reload_module()
-
-    db_dir = load_data2.NAUTS
-    hs = load_data2.HotSpotter(db_dir)
-    assign_matches = hs.matcher.assign_matches
-    qcx = 0
-    #cx = 2
-    cx = hs.get_other_cxs(qcx)[0]
-    cx2_desc = hs.feats.cx2_desc
-    cx2_fm, cx2_fs, cx2_score = assign_matches(qcx, cx2_desc)
-    # Get chips
-    rchip1 = hs.get_chip(qcx)
-    rchip2 = hs.get_chip(cx)
-    # Get keypoints
-    kpts1 = hs.get_kpts(qcx)
-    kpts2 = hs.get_kpts(cx)
-    # Get features
-    fm = cx2_fm[cx]
-    fs = cx2_fs[cx]
-    score = cx2_score[cx]
-    # Get feature matches 
-    kpts1_m = kpts1[fm[:, 0], :].T
-    kpts2_m = kpts2[fm[:, 1], :].T
-    # -----------------------------------------------
-    # Get match threshold 10% of matching keypoint extent diagonal
-    xy_thresh = params.__XY_THRESH__
-    img1_extent = (kpts1_m[0:2, :].max(1) - kpts1_m[0:2, :].min(1))[0:2]
-    xy_thresh_sqrd = np.sum(img1_extent**2) * (xy_thresh**2)
-    
-    title='(qx%r v cx%r)\n #match=%r score=%.2f' % (qcx, cx, len(fm), score)
-    df2.show_matches2(rchip1, rchip2, kpts1,  kpts2, fm, fs, title=title)
-
-    np.random.seed(6)
-    subst = helpers.random_indexes(len(fm),len(fm))
-    kpts1_m = kpts1[fm[subst, 0], :].T
-    kpts2_m = kpts2[fm[subst, 1], :].T
-
-    df2.reload_module()
-    df2.SHOW_LINES = True
-    df2.ELL_LINEWIDTH = 2
-    df2.LINE_ALPHA = .5
-    df2.ELL_ALPHA  = 1
-    df2.reset()
-    df2.show_keypoints(rchip1, kpts1_m.T, fignum=0, plotnum=121)
-    df2.show_keypoints(rchip2, kpts2_m.T, fignum=0, plotnum=122)
-    df2.show_matches2(rchip1, rchip2, kpts1_m.T,  kpts2_m.T, title=title, fignum=1, vert=False)
-
-    import spatial_verification
-    spatial_verification.reload_module()
-    with helpers.Timer():
-        best_inliers1 = spatial_verification.aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd)
-    with helpers.Timer():
-        best_inliers2 = spatial_verification.aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd)
-
-    df2.show_matches2(rchip1, rchip2, kpts1_m.T[best_inliers1], kpts2_m.T[best_inliers1], title=title, fignum=2, vert=False)
-    df2.show_matches2(rchip1, rchip2, kpts1_m.T[best_inliers2], kpts2_m.T[best_inliers2], title=title, fignum=3, vert=False)
-    df2.present(wh=(600,400))
 
 # This new function is much faster .035 vs .007
 def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
@@ -277,30 +150,6 @@ def aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd):
             best_inliers = _inliers
     return best_inliers
 
-def aff_inliers_from_randomsac(kpts1_m, kpts2_m, xy_thresh_sqrd, nIter=500, nSamp=3):
-    best_inliers = []
-    xy1_m    = kpts1_m[0:2,:] # keypoint xy coordinates matches
-    xy2_m    = kpts2_m[0:2,:]
-    num_m = xy1_m.shape[1]
-    match_indexes = np.arange(0,num_m)
-    xyz1_m = _homogonize_pts(xy1_m)
-    xyz2_m = _homogonize_pts(xy2_m)
-    for iterx in xrange(nIter):
-        np.random.shuffle(match_indexes)
-        selx = match_indexes[:nSamp]
-        fp = xyz1_m[:,selx]
-        tp = xyz2_m[:,selx]
-        # TODO Use cv2.getAffineTransformation
-        H_aff12  = H_affine_from_points(fp, tp)
-        # Transform XY-Positions
-        xyz1_mAt = H_aff12.dot(xyz1_m)  
-        xy_err_sqrd = sum( np.power(xyz1_mAt - xyz2_m, 2) , 0)
-        _inliers, = np.where(xy_err_sqrd < xy_thresh_sqrd)
-        # See if more inliers than previous best
-        if len(_inliers) > len(best_inliers):
-            best_inliers = _inliers
-    return best_inliers
-
 
 def transform_xy(H3x3, xy):
     xyz = _homogonize_pts(xy)
@@ -322,14 +171,9 @@ def H_homog_from_CV2SAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     H = H if not H is None else np.eye(3)
     return H, np.array(inliers, dtype=bool).flatten()
 
-
 def H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     ' Deterministic Elliptical Sample Consensus'
     return __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, aff_inliers_from_ellshape2)
-
-def H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
-    ' Random Sample Consensus'
-    return __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, aff_inliers_from_randomsac)
 
 def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     ''' RanSaC: 
@@ -433,6 +277,64 @@ def test():
 
 if __name__ == '__main__':
     print 'Testing spatial_verification.py'
-    print test()
+    print test_realdata()
 
+def test_realdata():
+    import load_data2
+    import params
+    import drawing_functions2 as df2
+    import helpers
+    import spatial_verification
+    #params.reload_module()
+    #load_data2.reload_module()
+    #df2.reload_module()
+
+    db_dir = load_data2.NAUTS
+    hs = load_data2.HotSpotter(db_dir)
+    assign_matches = hs.matcher.assign_matches
+    qcx = 0
+    cx = hs.get_other_cxs(qcx)[0]
+    fm, fs, score = hs.get_assigned_matches_to(qcx, cx)
+    # Get chips
+    rchip1 = hs.get_chip(qcx)
+    rchip2 = hs.get_chip(cx)
+    # Get keypoints
+    kpts1 = hs.get_kpts(qcx)
+    kpts2 = hs.get_kpts(cx)
+    # Get feature matches 
+    kpts1_m = kpts1[fm[:, 0], :].T
+    kpts2_m = kpts2[fm[:, 1], :].T
+    # -----------------------------------------------
+    # Get match threshold 10% of matching keypoint extent diagonal
+    xy_thresh = params.__XY_THRESH__
+    img1_extent = (kpts1_m[0:2, :].max(1) - kpts1_m[0:2, :].min(1))[0:2]
+    xy_thresh_sqrd = np.sum(img1_extent**2) * (xy_thresh**2)
+    
+    title='(qx%r v cx%r)\n #match=%r' % (qcx, cx, len(fm))
+    df2.show_matches2(rchip1, rchip2, kpts1,  kpts2, fm, fs, title=title)
+
+    np.random.seed(6)
+    subst = helpers.random_indexes(len(fm),len(fm))
+    kpts1_m = kpts1[fm[subst, 0], :].T
+    kpts2_m = kpts2[fm[subst, 1], :].T
+
+    df2.reload_module()
+    df2.SHOW_LINES = True
+    df2.ELL_LINEWIDTH = 2
+    df2.LINE_ALPHA = .5
+    df2.ELL_ALPHA  = 1
+    df2.reset()
+    df2.show_keypoints(rchip1, kpts1_m.T, fignum=0, plotnum=121)
+    df2.show_keypoints(rchip2, kpts2_m.T, fignum=0, plotnum=122)
+    df2.show_matches2(rchip1, rchip2, kpts1_m.T,  kpts2_m.T, title=title, fignum=1, vert=False)
+
+    spatial_verification.reload_module()
+    with helpers.Timer():
+        best_inliers1 = spatial_verification.aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd)
+    with helpers.Timer():
+        best_inliers2 = spatial_verification.aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd)
+
+    df2.show_matches2(rchip1, rchip2, kpts1_m.T[best_inliers1], kpts2_m.T[best_inliers1], title=title, fignum=2, vert=False)
+    df2.show_matches2(rchip1, rchip2, kpts1_m.T[best_inliers2], kpts2_m.T[best_inliers2], title=title, fignum=3, vert=False)
+    df2.present(wh=(600,400))
 

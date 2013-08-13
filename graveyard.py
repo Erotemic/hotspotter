@@ -631,3 +631,96 @@ def H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     inliers = np.zeros(kpts1_m.shape[1], dtype=bool)
     inliers[pcv_inliers] = True
     return H, inliers
+
+#
+def inlier_check(xy1_mAt, xy2_m):
+    xy_err_sqrd = sum( np.power(xy1_mAt - xy2_m, 2) , 0)
+    _inliers, = np.where(xy_err_sqrd < xy_thresh_sqrd)
+
+#http://jameshensman.wordpress.com/2010/06/14/multiple-matrix-multiplication-in-numpy/
+def matrix_from_acd(acd_arr):
+    '''
+    Input: 3xN array represnting a lower triangular matrix
+    Output Nx2x2 array of N, 2x2 lower triangular matrixes
+    '''
+    num_ells = acd_arr.shape[1]
+    a = acd_arr[0]
+    c = acd_arr[1]
+    b = np.zeros(num_ells)
+    d = acd_arr[2]
+    abcd_mat = np.rollaxis(np.array([(a, b), (c, d)]),2)
+    return abcd_mat
+
+'''
+# Define two matrices
+A = np.random.randn(100,2,2) # DATA
+B = np.random.randn(2,2) # OPERATOR
+
+#Right multiplication (operator on right) 
+AB = [a*B for a in A]
+#or faster version: 
+AB = np.dot(A,B)
+
+Left multiplication  (operator on left)  
+#BA = [B*a for a in A]
+or faster version: 
+#BA = np.transpose(np.dot(np.transpose(A,(0,2,1)),B.T),(0,2,1))
+ '''
+def right_multiply_H_with_acd(acd_arr, H):
+    # AB = np.dot(A,B)
+    pass
+
+def left_multiply_H_with_acd(H, acd_arr):
+    # (BA).T = A.T B.T
+    '''
+    acd_H = [(w, x), * [(a, 0),
+             (y, z)]    (c, d)] =
+            [(w*a+x*c, x*d),
+             (y*a+z*c, z*d)]
+    x is 0 in our case'''
+    [(w,_),(y,z)] = H
+    a = acd_arr[0]
+    c = acd_arr[1]
+    d = acd_arr[2]
+    acd_H = np.array([(w*a), (y*a+z*c), (z*d)])
+    return acd_H
+
+'''
+The determinant of a multiplied matrix is the multiplicatin of determinants
+from numpy.linalg import det
+A = np.random.randn(2,2)
+B = np.random.randn(2,2)
+print det(A.dot(B)) 
+print det(B.dot(A)) 
+print det(A) * det(B)
+'''
+
+def H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
+    ' Random Sample Consensus'
+    return __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, aff_inliers_from_randomsac)
+
+
+def aff_inliers_from_randomsac(kpts1_m, kpts2_m, xy_thresh_sqrd, nIter=500, nSamp=3):
+    best_inliers = []
+    xy1_m    = kpts1_m[0:2,:] # keypoint xy coordinates matches
+    xy2_m    = kpts2_m[0:2,:]
+    num_m = xy1_m.shape[1]
+    match_indexes = np.arange(0,num_m)
+    xyz1_m = _homogonize_pts(xy1_m)
+    xyz2_m = _homogonize_pts(xy2_m)
+    for iterx in xrange(nIter):
+        np.random.shuffle(match_indexes)
+        selx = match_indexes[:nSamp]
+        fp = xyz1_m[:,selx]
+        tp = xyz2_m[:,selx]
+        # TODO Use cv2.getAffineTransformation
+        H_aff12  = H_affine_from_points(fp, tp)
+        # Transform XY-Positions
+        xyz1_mAt = H_aff12.dot(xyz1_m)  
+        xy_err_sqrd = sum( np.power(xyz1_mAt - xyz2_m, 2) , 0)
+        _inliers, = np.where(xy_err_sqrd < xy_thresh_sqrd)
+        # See if more inliers than previous best
+        if len(_inliers) > len(best_inliers):
+            best_inliers = _inliers
+    return best_inliers
+

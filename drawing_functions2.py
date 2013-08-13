@@ -3,7 +3,7 @@ Lots of functions for drawing and plotting visiony things
 '''
 import matplotlib
 if matplotlib.get_backend() != 'Qt4Agg':
-    print('Configuring matplotlib for Qt4Agg')
+    #print('Configuring matplotlib for Qt4Agg')
     matplotlib.use('Qt4Agg', warn=True, force=True)
     matplotlib.rcParams['toolbar'] = 'None'
 from matplotlib import gridspec
@@ -18,7 +18,7 @@ import types
 import warnings
 import helpers
 import textwrap
-print('LOAD_MODULE: drawing_functions2.py')
+#print('LOAD_MODULE: drawing_functions2.py')
 
 DPI = 80
 #FIGSIZE = (24) # default windows fullscreen
@@ -155,22 +155,22 @@ def present(*args, **kwargs):
     embedded = False
     if not helpers.inIPython():
         if '--cmd' in sys.argv:
-            print('Requested IPython shell with --cmd argument.')
+            print('df2: Requested IPython shell with --cmd argument.')
             if helpers.haveIPython():
-                print('Found IPython')
+                print('df2: Found IPython')
                 try: 
                     import IPython
-                    print('Presenting in new ipython shell.')
+                    print('df2: Presenting in new ipython shell.')
                     embedded = True
                     IPython.embed()
                 except Exception as ex:
                     printWARN(repr(ex)+'\n!!!!!!!!')
                     embedded = False
             else:
-                print('IPython is not installed')
+                print('df2: IPython is not installed')
         if not embedded: 
-            print('Presenting in normal shell.')
-            print('... plt.show()')
+            print('df2: Presenting in normal shell.')
+            print('df2: ... plt.show()')
             plt.show()
     else: 
         print('Presenting in current ipython shell.')

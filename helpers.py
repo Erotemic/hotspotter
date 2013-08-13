@@ -25,7 +25,7 @@ import textwrap
 from os.path import join, relpath
 import fnmatch
 from sys import stdout as sout
-print('LOAD_MODULE: helpers.py')
+#print('LOAD_MODULE: helpers.py')
 
 __PRINT_CHECKS__ = False
 

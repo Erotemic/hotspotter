@@ -29,7 +29,7 @@ import pyflann
 import scipy as sp
 import scipy.sparse as spsparse
 import sklearn.preprocessing 
-print ('LOAD_MODULE: match_chips2.py')
+#print ('LOAD_MODULE: match_chips2.py')
 
 #========================================
 # Bag-of-Words
@@ -635,24 +635,18 @@ if __name__ == '__main__':
     freeze_support()
     print('IN: match_chips2.py: __name__ == '+__name__)
 
-    # --- CHOOSE DATABASE --- #
-    db_dir = load_data2.DEFAULT
-    hs = load_data2.HotSpotter(db_dir)
-    cx2_kpts = hs.feats.cx2_kpts
-    cx2_desc = hs.feats.cx2_desc
-    qcx = 1
-
-    __TEST_MODE__ = False or ('--test' in sys.argv)
-    if __TEST_MODE__:
-        runall_match(hs)
+    if 'test' in sys.argv:
+        db_dir = load_data2.DEFAULT
+        hs = load_data2.HotSpotter(db_dir)
+        run_matching(hs)
         pass
-
-    #if 'bow' in sys.argv:
-        #exec(helpers.get_exec_src(precompute_bag_of_words)) 
 
     ## DEV ONLY CODE ##
     __DEV_MODE__ = False
     if __DEV_MODE__: 
+        cx2_kpts = hs.feats.cx2_kpts
+        cx2_desc = hs.feats.cx2_desc
+        qcx = 1
         print('DEVMODE IS ON: match_chips2')
         # Convinent but bad # 
         #exec(hs_cpaths.execstr('hs_cpaths'))
@@ -665,22 +659,6 @@ if __name__ == '__main__':
         #exec(helpers.get_exec_src(assign_matches_vsmany))
         #exec(helpers.get_exec_src(spatially_verify_matches))
         #exec(helpers.get_exec_src(precompute_bag_of_words))
-
-        debug_compute_bagofwords = False
-        if debug_compute_bagofwords:
-            naut_train_sample_cx = [1, 3, 5]
-            naut_database_sample_cx = [1, 3, 5]
-            naut_test_query    = [0, 2, 4]
-            train_sample_cx    = naut_train_sample_cx
-            database_sample_cx = naut_database_sample_cx
-            cache_dir  = hs.dirs.cache_dir
-            cx2_desc   = hs.feats.cx2_desc
-            vocab_size = params.__BOW_NUM_WORDS__
-            cx2_desc   = hs.feats.cx2_desc
-            #exec(helpers.get_exec_src(precompute_bag_of_words))
-        try: 
-            __IPYTHON__
-        except: 
-            plt.show()
+        #exec(helpers.get_exec_src(precompute_bag_of_words))
 
     exec(df2.present())

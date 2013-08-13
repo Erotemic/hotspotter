@@ -22,7 +22,7 @@ imp.reload(helpers)
 import params
 from helpers import *
 import spatial_verification
-import cython_spatial_verification
+#import cython_spatial_verification
 from pyflann import FLANN
 
 #TODO: 
@@ -80,7 +80,6 @@ print('Initializing warp test')
 if not 'hs' in vars():
     print('hs is not in vars... reloading')
     hs = load_data2.HotSpotter(load_data2.DEFAULT)
-cx2_cid  = hs.tables.cx2_cid
 cx2_nx   = hs.tables.cx2_nx
 nx2_name = hs.tables.nx2_name
 cx2_rchip_path = hs.cpaths.cx2_rchip_path
@@ -89,8 +88,8 @@ if __oldfeattype != params.__FEAT_TYPE__:
     print('The feature type is new or has changed')
     cx2_kpts = hs.feats.cx2_kpts
     cx2_desc = hs.feats.cx2_desc
-    flann_1vM = mc2.precompute_index_1vM(hs)
-    cx2_fm, cx2_fs, _ = mc2.assign_matches_1vM(qcx, cx2_cid, cx2_desc, flann_1vM)
+    vsmany_index = mc2.precompute_index_vsmany(hs)
+    cx2_fm, cx2_fs, _ = mc2.assign_matches_vsmany(qcx, cx2_desc, vsmany_index)
     __oldfeattype = params.__FEAT_TYPE__
 cx2_fm_V, cx2_fs_V, _ = mc2.spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
 def cx2_other_cx(cx):
@@ -110,7 +109,7 @@ other_cx = cx2_other_cx(qcx)
 print('Inspecting matches of qcx=%d name=%s' % (qcx, nx2_name[qnx]))
 print(' * Matched against %d other chips' % len(cx2_fm))
 print(' * Ground truth chip indexes:\n   other_cx=%r' % other_cx)
-# Get spatially verified initial 1vM scores
+# Get spatially verified initial vsmany scores
 def print_top_scores(_cx2_fs, lbl):
     cx2_score  = np.array([np.sum(fs) for fs in _cx2_fs])
     top_cx     = cx2_score.argsort()[::-1]
@@ -154,8 +153,8 @@ if __SHOW_PLAIN_CHIPS__:
     df2.imshow(rchip1, fignum=9001, title='querychip qcx=%d' % qcx)
     df2.imshow(rchip2, fignum=9002, title='reschip  cx=%d' %  cx)
 if __SHOW_KPTS_CHIPS__:
-    df2.show_keypoints(rchip1, kpts1, fignum=202, title='qcx=%d nkpts=%d' % (qcx,len(kpts1)))
-    df2.show_keypoints(rchip2, kpts2, fignum=203, title='cx=%d nkpts=%d' % (cx,len(kpts1)))
+    df2.show_keypoints(rchip1, kpts1, fignum=902, title='qcx=%d nkpts=%d' % (qcx,len(kpts1)))
+    df2.show_keypoints(rchip2, kpts2, fignum=903, title='cx=%d nkpts=%d' % (cx,len(kpts1)))
 
 
 
@@ -172,7 +171,7 @@ if __SHOW_ASSIGNED_FEATURE_MATCHES__:
     print('Drawing the assigned matches')
     title_str = 'qcx=%d cx=%d nMatches=%d' % (qcx, cx, len(fm))
     print(title_str)
-    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, 4, title_str)
+    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, 4, 111, title_str)
 print('---------------------------------------')
 
 
@@ -185,32 +184,34 @@ def __test_homog(func_homog, testname, fignum):
     title_str = ('nInliers=%d '+testname+' V__') % len(fm_V)
     print('L____'+title_str+'\n')
     if __SHOW_INLIER_MATCHES__:
-        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm_V, fs_V, fignum, title_str)
+        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm_V, fs_V, fignum, 111, title_str)
     return (fm_V, fs_V, H)
 print('Testing different ways to calculate homography')
-delsac_Vtup = __test_homog(cython_spatial_verification.H_homog_from_DELSAC, 'CYTHON_DElSaC',  5)
-ransac_Vtup = __test_homog(spatial_verification.H_homog_from_RANSAC, 'RanSaC',  7)
-ransac_Vtup = __test_homog(cython_spatial_verification.H_homog_from_RANSAC, 'CYTHON RanSaC',  7)
+#delsac_Vtup = __test_homog(cython_spatial_verification.H_homog_from_DELSAC, 'CYTHON_DElSaC',  5)
+#ransac_Vtup = __test_homog(spatial_verification.H_homog_from_RANSAC, 'RanSaC',  7)
+#ransac_Vtup = __test_homog(cython_spatial_verification.H_homog_from_RANSAC, 'CYTHON RanSaC',  7)
 delsac_Vtup = __test_homog(spatial_verification.H_homog_from_DELSAC, 'DElSaC',  9)
-cv2sac_Vtup = __test_homog(spatial_verification.H_homog_from_CV2SAC, 'CV2SaC', 11)
-cv2sac_Vtup = __test_homog(cython_spatial_verification.H_homog_from_CV2SAC, 'CYTHON CV2SaC', 11)
+#cv2sac_Vtup = __test_homog(spatial_verification.H_homog_from_CV2SAC, 'CV2SaC', 11)
+#cv2sac_Vtup = __test_homog(cython_spatial_verification.H_homog_from_CV2SAC, 'CYTHON CV2SaC', 11)
 print('---------------------------------------')
 
 
-sys.exit(1)
+#sys.exit(1)
 # WARP IMAGES
+def warp_chip(rchip2, H, rchip1):
+    rchip2W = cv2.warpPerspective(rchip2, H, rchip1.shape[0:2][::-1])
+    return rchip2W
 print('---------------------------------------')
 print('Warping Images')
 def __test_warp(Vtup, testname, fignum):
     H_21 = Vtup[2]
     with Timer(msg='Warped with H from '+testname):
-        rchip2_W = mc2.warp_chip(rchip2, H_21, rchip1) 
+        rchip2_W = warp_chip(rchip2, H_21, rchip1) 
     if __SHOW_WARP__:
         title_str = testname+' Result rchip2_W'
         print(' * Showing: '+str(title_str))
         df2.imshow(rchip2_W, fignum=fignum+1, title=title_str)
     return rchip2_W
-#cv2sac_rchip2_W = __test_warp(cv2sac_Vtup, 'PCVSaC', 12)
 #ransac_rchip2_W = __test_warp(ransac_Vtup, 'RanSaC', 20)
 delsac_rchip2_W = __test_warp(delsac_Vtup, 'DElSaC', 16)
 #pcvsac_rchip2_W = __test_warp(pcvsac_Vtup, 'CV2SaC', 24)
@@ -219,8 +220,8 @@ delsac_rchip2_W = __test_warp(delsac_Vtup, 'DElSaC', 16)
 # PARAM CHOICE: output from one of previous algorithms
 (fm_V, fs_V, H) = delsac_Vtup
 rchip2_W         = delsac_rchip2_W
-# Homography from 1vM spatial verification
-H_1vM = H
+# Homography from vsmany spatial verification
+H_vsmany = H
 
 def __pipe_detect(rchip1, rchip2_W):
     # 1W recomputed but not actually warped (sanity check)
@@ -232,24 +233,24 @@ def __pipe_detect(rchip1, rchip2_W):
 def __pipe_match(desc1, desc2):
     flann_ = FLANN()
     flann_.build_index(desc1, **params.__VSMANY_FLANN_PARAMS__)
-    fm, fs = mc2.match_1v1(desc2, flann_)
+    fm, fs = mc2.match_vsone(desc2, flann_, 64)
     return fm, fs
 
 def __pipe_verify(kpts1, kpts2, fm, fs):
     fm_V, fs_V, H = mc2.spatially_verify(kpts1, kpts2, fm, fs)
     return fm_V, fs_V, H
 
-def fmatch_1v1(rchip1, rchip2, kpts1, kpts2, desc1, desc2):
+def fmatch_vsone(rchip1, rchip2, kpts1, kpts2, desc1, desc2):
     (fm, fs)        = __pipe_match(desc1, desc2)
     (fm_V, fs_V, H) = __pipe_verify(kpts1, kpts2, fm, fs)
-    results_1v1 = (rchip1, rchip2, kpts1, kpts2, fm, fs, fm_V, fs_V)
-    return results_1v1, H
+    results_vsone = (rchip1, rchip2, kpts1, kpts2, fm, fs, fm_V, fs_V)
+    return results_vsone, H
 
 def fmatch_warp(rchip1, rchip2, H):
-    rchip2_W = mc2.warp_chip(rchip2, H, rchip1)
+    rchip2_W = warp_chip(rchip2, H, rchip1)
     kpts1_W, desc1_W = fc2.compute_features( rchip1,   __WARP_FEATURE_TYPE__)
     kpts2_W, desc2_W = fc2.compute_features( rchip2_W, __WARP_FEATURE_TYPE__)
-    results_warp, _ = fmatch_1v1(rchip1, rchip2_W, kpts1_W, kpts2_W, desc1_W, desc2_W)
+    results_warp, _ = fmatch_vsone(rchip1, rchip2_W, kpts1_W, kpts2_W, desc1_W, desc2_W)
     return results_warp
 
 def show_match_results(rchip1, rchip2, kpts1, kpts2, fm, fs, fm_V, fs_V, fignum=0, big_title=''):
@@ -263,35 +264,35 @@ def show_match_results(rchip1, rchip2, kpts1, kpts2, fm, fs, fm_V, fs_V, fignum=
     _title3 = 'len(kpts1) = %r' % len(kpts1)
     _title4 = 'len(kpts2) = %r' % len(kpts2)
     # TODO: MAKE THESE SUBPLOTS
-    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, fignum+0, _title1)
-    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm_V, fs_V, fignum+1, _title2)
-    df2.show_keypoints(rchip1, kpts1, fignum+3, _title3)
-    df2.show_keypoints(rchip2, kpts2, fignum+4, _title4)
+    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, fignum+0, 111, _title1)
+    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm_V, fs_V, fignum+1, 111, _title2)
+    df2.show_keypoints(rchip1, kpts1, fignum+2, _title3)
+    df2.show_keypoints(rchip2, kpts2, fignum+3, _title4)
 
 # Run through the pipelines
-print('1vM')
-res_1vM   = (rchip1, rchip2, kpts1, kpts2, fm, fs, fm_V, fs_V)
-aug_1vM   = (100, '1vM')
-arg_1vM = res_1vM + aug_1vM
-show_match_results(*arg_1vM)
+print('vsmany')
+res_vsmany   = (rchip1, rchip2, kpts1, kpts2, fm, fs, fm_V, fs_V)
+aug_vsmany   = (100, 'vsmany')
+arg_vsmany = res_vsmany + aug_vsmany
+show_match_results(*arg_vsmany)
 
-print('Warped using 1vM')
-res_1vM_W = fmatch_warp(rchip1, rchip2, H_1vM) 
-aug_1vM_W = (200, 'Warped using 1vM inliers')
-arg_1vM_W = res_1vM_W + aug_1vM_W
-show_match_results(*arg_1vM_W)
+print('Warped using vsmany')
+res_vsmany_W = fmatch_warp(rchip1, rchip2, H_vsmany) 
+aug_vsmany_W = (200, 'Warped using vsmany inliers')
+arg_vsmany_W = res_vsmany_W + aug_vsmany_W
+show_match_results(*arg_vsmany_W)
 
-print('1v1')
-res_1v1, H_1v1 = fmatch_1v1(rchip1, rchip2, kpts1, kpts2, desc1, desc2) 
-aug_1v1 = (300, '1v1')
-arg_1v1 = res_1v1 + aug_1v1
-show_match_results(*arg_1v1)
+print('vsone')
+res_vsone, H_vsone = fmatch_vsone(rchip1, rchip2, kpts1, kpts2, desc1, desc2) 
+aug_vsone = (300, 'vsone')
+arg_vsone = res_vsone + aug_vsone
+show_match_results(*arg_vsone)
 
-print('Warped using 1v1')
-res_1v1_W = fmatch_warp(rchip1, rchip2, H_1v1) 
-aug_1v1_W = (400, 'Warped using 1v1 inliers')
-arg_1v1_W = res_1v1_W + aug_1v1_W
-show_match_results(*arg_1v1_W)
+print('Warped using vsone')
+res_vsone_W = fmatch_warp(rchip1, rchip2, H_vsone) 
+aug_vsone_W = (400, 'Warped using vsone inliers')
+arg_vsone_W = res_vsone_W + aug_vsone_W
+show_match_results(*arg_vsone_W)
 
 # FREAK 
 exec(df2.present())

@@ -18,7 +18,7 @@ import numpy as np
 import cv2
 # import python modules
 import sys
-print('LOAD_MODULE: feature_compute2.py')
+#print('LOAD_MODULE: feature_compute2.py')
 
 
 def printDEBUG(msg):

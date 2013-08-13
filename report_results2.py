@@ -61,6 +61,20 @@ def write_report(hs, report_str, report_type, SV):
 
 # TODO: Better plots
 # TODO: Make SV a parameter?
+'''
+Stem Plot of ranks
+Output the false matches which score higher than the true matches
+the number of ground truth images. The ranks of each. 
+The hard pairs
+
+For each Chip: 
+    All Good Matches
+    All Bad  Matches
+
+Lowest Scoring Correct Matches
+Highest Scoring Incorrect Matches
+Disparity between the two. 
+'''
 def plot_stem(hs, qcx2_res, SV):
     pass
 

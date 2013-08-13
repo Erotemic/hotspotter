@@ -5,10 +5,13 @@ import numpy.linalg as linalg
 import numpy as np
 import scipy.sparse as sparse
 import scipy.sparse.linalg as sparse_linalg
-
 #skimage.transform
 # http://stackoverflow.com/questions/11462781/fast-2d-rigid-body-transformations-in-numpy-scipy
 # skimage.transform.fast_homography(im, H)
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
 
 # Generate 6 degrees of freedom homography transformation
 def compute_homog(xyz_norm1, xyz_norm2):
@@ -69,6 +72,185 @@ def homogo_normalize_pts(xy):
     xyz_norm = T.dot(xyz)
     return (xyz_norm, T)
 #
+def inlier_check(xy1_mAt, xy2_m):
+    xy_err_sqrd = sum( np.power(xy1_mAt - xy2_m, 2) , 0)
+    _inliers, = np.where(xy_err_sqrd < xy_thresh_sqrd)
+
+#http://jameshensman.wordpress.com/2010/06/14/multiple-matrix-multiplication-in-numpy/
+def matrix_from_acd(acd_arr):
+    '''
+    Input: 3xN array represnting a lower triangular matrix
+    Output Nx2x2 array of N, 2x2 lower triangular matrixes
+    '''
+    num_ells = acd_arr.shape[1]
+    a = acd_arr[0]
+    c = acd_arr[1]
+    b = np.zeros(num_ells)
+    d = acd_arr[2]
+    abcd_mat = np.rollaxis(np.array([(a, b), (c, d)]),2)
+    return abcd_mat
+
+'''
+# Define two matrices
+A = np.random.randn(100,2,2) # DATA
+B = np.random.randn(2,2) # OPERATOR
+
+#Right multiplication (operator on right) 
+AB = [a*B for a in A]
+#or faster version: 
+AB = np.dot(A,B)
+
+Left multiplication  (operator on left)  
+#BA = [B*a for a in A]
+or faster version: 
+#BA = np.transpose(np.dot(np.transpose(A,(0,2,1)),B.T),(0,2,1))
+ '''
+def right_multiply_H_with_acd(acd_arr, H):
+    # AB = np.dot(A,B)
+    pass
+
+def left_multiply_H_with_acd(H, acd_arr):
+    # (BA).T = A.T B.T
+    '''
+    acd_H = [(w, x), * [(a, 0),
+             (y, z)]    (c, d)] =
+            [(w*a+x*c, x*d),
+             (y*a+z*c, z*d)]
+    x is 0 in our case'''
+    [(w,_),(y,z)] = H
+    a = acd_arr[0]
+    c = acd_arr[1]
+    d = acd_arr[2]
+    acd_H = np.array([(w*a), (y*a+z*c), (z*d)])
+    return acd_H
+
+'''
+The determinant of a multiplied matrix is the multiplicatin of determinants
+from numpy.linalg import det
+A = np.random.randn(2,2)
+B = np.random.randn(2,2)
+print det(A.dot(B)) 
+print det(B.dot(A)) 
+print det(A) * det(B)
+'''
+
+def test_realdata():
+    import load_data2
+    import params
+    import drawing_functions2 as df2
+    import helpers
+    params.reload_module()
+    load_data2.reload_module()
+    df2.reload_module()
+
+    db_dir = load_data2.NAUTS
+    hs = load_data2.HotSpotter(db_dir)
+    assign_matches = hs.matcher.assign_matches
+    qcx = 0
+    #cx = 2
+    cx = hs.get_other_cxs(qcx)[0]
+    cx2_desc = hs.feats.cx2_desc
+    cx2_fm, cx2_fs, cx2_score = assign_matches(qcx, cx2_desc)
+    # Get chips
+    rchip1 = hs.get_chip(qcx)
+    rchip2 = hs.get_chip(cx)
+    # Get keypoints
+    kpts1 = hs.get_kpts(qcx)
+    kpts2 = hs.get_kpts(cx)
+    # Get features
+    fm = cx2_fm[cx]
+    fs = cx2_fs[cx]
+    score = cx2_score[cx]
+    # Get feature matches 
+    kpts1_m = kpts1[fm[:, 0], :].T
+    kpts2_m = kpts2[fm[:, 1], :].T
+    # -----------------------------------------------
+    # Get match threshold 10% of matching keypoint extent diagonal
+    xy_thresh = params.__XY_THRESH__
+    img1_extent = (kpts1_m[0:2, :].max(1) - kpts1_m[0:2, :].min(1))[0:2]
+    xy_thresh_sqrd = np.sum(img1_extent**2) * (xy_thresh**2)
+    
+    title='(qx%r v cx%r)\n #match=%r score=%.2f' % (qcx, cx, len(fm), score)
+    df2.show_matches2(rchip1, rchip2, kpts1,  kpts2, fm, fs, title=title)
+
+    np.random.seed(6)
+    subst = helpers.random_indexes(len(fm),len(fm))
+    kpts1_m = kpts1[fm[subst, 0], :].T
+    kpts2_m = kpts2[fm[subst, 1], :].T
+
+    df2.reload_module()
+    df2.SHOW_LINES = True
+    df2.ELL_LINEWIDTH = 2
+    df2.LINE_ALPHA = .5
+    df2.ELL_ALPHA  = 1
+    df2.reset()
+    df2.show_keypoints(rchip1, kpts1_m.T, fignum=0, plotnum=121)
+    df2.show_keypoints(rchip2, kpts2_m.T, fignum=0, plotnum=122)
+    df2.show_matches2(rchip1, rchip2, kpts1_m.T,  kpts2_m.T, title=title, fignum=1, vert=False)
+
+    import spatial_verification
+    spatial_verification.reload_module()
+    with helpers.Timer():
+        best_inliers1 = spatial_verification.aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd)
+    with helpers.Timer():
+        best_inliers2 = spatial_verification.aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd)
+
+    df2.show_matches2(rchip1, rchip2, kpts1_m.T[best_inliers1], kpts2_m.T[best_inliers1], title=title, fignum=2, vert=False)
+    df2.show_matches2(rchip1, rchip2, kpts1_m.T[best_inliers2], kpts2_m.T[best_inliers2], title=title, fignum=3, vert=False)
+    df2.present(wh=(600,400))
+
+# This new function is much faster .035 vs .007
+def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
+    '''Estimates inliers deterministically using elliptical shapes'''
+    # EXPLOITS LOWER TRIANGULAR MATRIXES
+    best_inliers = []
+    x1_m    = kpts1_m[0,:] # keypoint xy coordinates matches
+    y1_m    = kpts1_m[1,:] # keypoint xy coordinates matches
+    x2_m    = kpts2_m[0,:]
+    y2_m    = kpts2_m[1,:]
+    acd1_m   = kpts1_m[2:5,:] # keypoint shape matrix [a 0; c d] matches
+    acd2_m   = kpts2_m[2:5,:]
+    # Precompute the determinant of matrix 2 (a*d - b*c), but b = 0
+    det1_m = acd1_m[0] * acd1_m[2]
+    det2_m = acd2_m[0] * acd2_m[2]
+    # Need the inverse of acd2_m:  1/det * [(d, -b), (-c, a)]
+    inv2_m = np.array((acd2_m[2], -acd2_m[1], acd2_m[0])) / det2_m
+    # Precompute lower triangular affine tranforms inv2_m (dot) acd1_m
+    # [(a2*a1), (c2*a1+d2*c1), (d2*d1)]
+    H_aff12_a = (inv2_m[0] * acd1_m[0])
+    H_aff12_c = (inv2_m[1] * acd1_m[0] + inv2_m[2] * acd1_m[1])
+    H_aff12_d = (inv2_m[2] * acd1_m[2])
+    H_det_list = H_aff12_a * H_aff12_d
+    scale_thresh_high = 2.0 ** 2
+    scale_thresh_low  = 1.0/scale_thresh_high
+    # Enumerate All Hypothesis (Match transformations)
+    for mx in xrange(len(x1_m)): 
+        x1 = x1_m[mx]
+        y1 = y1_m[mx]
+        x2 = x2_m[mx]
+        y2 = y2_m[mx]
+        Ha = H_aff12_a[mx]
+        Hc = H_aff12_c[mx]
+        Hd = H_aff12_d[mx]
+        Hdet = H_det_list[mx]
+        # Translate and transform xy-positions using H_aff12
+        x1_mAt = x2 + (H_aff12_a * (x1_m - x1))
+        y1_mAt = y2 + (H_aff12_c * (x1_m - x1)) + (H_aff12_d * (y1_m - y1))
+        # Get transformed determinant
+        det1_mAt = det1_m * Hdet
+        # Check Error in position and scale
+        xy_sqrd_err = (x1_mAt - x2_m)**2 + (y1_mAt - y2_m)**2
+        scale_sqrd_err = det1_mAt / det2_m
+        # Check to see if outliers are within bounds
+        xy_inliers = xy_sqrd_err < xy_thresh_sqrd
+        s1_inliers = scale_sqrd_err > scale_thresh_low
+        s2_inliers = scale_sqrd_err < scale_thresh_high
+        _inliers, = np.where(np.logical_and(np.logical_and(xy_inliers, s1_inliers), s2_inliers))
+        # See if more inliers than previous best
+        if len(_inliers) > len(best_inliers):
+            best_inliers = _inliers
+    return best_inliers
+
 def aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd):
     '''Estimates inliers deterministically using elliptical shapes'''
     best_inliers = []
@@ -86,7 +268,7 @@ def aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd):
         # Compute Affine Tranform 
         # from img1 to img2 = (E2\E1) 
         H_aff12  = linalg.inv(A2).dot(A1)
-        # Transform XY-Positions
+        # Translate and transform XY-Positions
         xy1_mAt = xy2 + H_aff12.dot( (xy1_m - xy1) ) 
         xy_err_sqrd = sum( np.power(xy1_mAt - xy2_m, 2) , 0)
         _inliers, = np.where(xy_err_sqrd < xy_thresh_sqrd)
@@ -119,68 +301,6 @@ def aff_inliers_from_randomsac(kpts1_m, kpts2_m, xy_thresh_sqrd, nIter=500, nSam
             best_inliers = _inliers
     return best_inliers
 
-# From PCV (python computer vision) code
-def H_homog_from_points(fp,tp):
-    """ Find homography H, such that fp is mapped to tp using the 
-        linear DLT method. Points are conditioned automatically.  """
-    # condition points (important for numerical reasons)
-    # --from points--
-    fp_mean = np.mean(fp[:2], axis=1)
-    maxstd = np.max(np.std(fp[:2], axis=1)) + 1e-9
-    C1 = np.diag([1/maxstd, 1/maxstd, 1]) 
-    C1[0:2,2] = -fp_mean[0:2] / maxstd
-    fp = np.dot(C1,fp)
-    # --to points--
-    tp_mean = np.mean(tp[:2], axis=1)
-    maxstd = np.max(np.std(tp[:2], axis=1)) + 1e-9
-    C2 = np.diag([1/maxstd, 1/maxstd, 1])
-    C2[0:2,2] = -tp_mean[0:2] / maxstd
-    tp = np.dot(C2,tp)
-    # create matrix for linear method, 2 rows for each correspondence pair
-    num_matches = fp.shape[1]
-    A = np.zeros((2*num_matches,9))
-    for i in xrange(num_matches):        
-        A[2*i] =   [        -fp[0][i],         -fp[1][i],       -1,
-                                    0,                 0,        0,
-                    tp[0][i]*fp[0][i], tp[0][i]*fp[1][i], tp[0][i]]
-
-        A[2*i+1] = [                0,                 0,        0,
-                            -fp[0][i],         -fp[1][i],       -1,
-                    tp[1][i]*fp[0][i], tp[1][i]*fp[1][i], tp[1][i]]
-    U,S,V = linalg.svd(A)
-    H = V[8].reshape((3,3))    
-    # decondition
-    H = np.dot(linalg.inv(C2),np.dot(H,C1))
-    # normalize and return
-    return H / H[2,2]
-
-# From PCV (python computer vision) code
-def H_affine_from_points(fp,tp):
-    """ Find H, affine transformation, such that tp is affine transf of fp. """
-    # condition points
-    # --from points--
-    fp_mean = np.mean(fp[:2], axis=1)
-    maxstd = np.max(np.std(fp[:2], axis=1)) + 1e-9
-    C1 = np.diag([1/maxstd, 1/maxstd, 1]) 
-    C1[0:2,2] = -fp_mean[0:2] / maxstd
-    fp_cond = np.dot(C1,fp)
-    # --to points--
-    tp_mean = np.mean(tp[:2], axis=1)
-    C2 = C1.copy() #must use same scaling for both point sets
-    C2[0:2,2] = -tp_mean[0:2] / maxstd
-    tp_cond = np.dot(C2, tp)
-    # conditioned points have mean zero, so translation is zero
-    A = np.concatenate((fp_cond[:2], tp_cond[:2]), axis=0)
-    U,S,V = linalg.svd(A.T)
-    # create B and C matrices as Hartley-Zisserman (2:nd ed) p 130.
-    tmp = V[:2].T
-    B = tmp[:2]
-    C = tmp[2:4]
-    tmp2 = np.concatenate((C.dot(linalg.pinv(B)),np.zeros((2,1))), axis=1) 
-    H = np.vstack((tmp2,[0,0,1]))
-    # decondition
-    H = (linalg.inv(C2)).dot(H.dot(C1))
-    return H / H[2,2]
 
 def transform_xy(H3x3, xy):
     xyz = _homogonize_pts(xy)
@@ -202,31 +322,10 @@ def H_homog_from_CV2SAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     H = H if not H is None else np.eye(3)
     return H, np.array(inliers, dtype=bool).flatten()
 
-def H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
-    from PCV.geometry import homography
-    'Python Computer Visions Random Sample Consensus'
-    # Get xy points
-    xy1_m = kpts1_m[0:2,:] 
-    xy2_m = kpts2_m[0:2,:] 
-    # Homogonize points
-    fp = np.vstack([xy1_m, np.ones((1,xy1_m.shape[1]))])
-    tp = np.vstack([xy2_m, np.ones((1,xy2_m.shape[1]))])
-    # Get match threshold 10% of image diagonal
-    # Get RANSAC inliers
-    model = homography.RansacModel() 
-    try: 
-        H, pcv_inliers = homography.H_from_ransac(fp, tp, model, 500, np.sqrt(xy_thresh_sqrd))
-    except ValueError as ex:
-        printWARN('Warning 221 from H_homog_from_PCVSAC'+repr(ex))
-        return np.eye(3), []
-    # Convert to the format I'm expecting
-    inliers = np.zeros(kpts1_m.shape[1], dtype=bool)
-    inliers[pcv_inliers] = True
-    return H, inliers
 
 def H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     ' Deterministic Elliptical Sample Consensus'
-    return __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, aff_inliers_from_ellshape)
+    return __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, aff_inliers_from_ellshape2)
 
 def H_homog_from_RANSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     ' Random Sample Consensus'
@@ -330,7 +429,6 @@ def test():
     # Find some inliers? 
     xy_thresh_sqrd = 7
     H, inliers = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
-
 
 
 if __name__ == '__main__':

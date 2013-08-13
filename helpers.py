@@ -313,7 +313,8 @@ def tryload(fname):
         flush()
         loaded = False
         try: 
-            data = load_npz(fname)
+            npz = np.load(fname)
+            data = npz['arr_0']
             println('...success')
             loaded = True
         except Exception as ex:
@@ -326,6 +327,13 @@ def tryload(fname):
                 data = data[0]
             return data
     return None
+
+def random_indexes(max_index, subset_size):
+    subst_ = np.arange(0, max_index)
+    np.random.shuffle(subst_)
+    subst = subst_[0:min(subset_size, max_index)]
+    return subst
+
 
 
 def save_pkl(fname, data):

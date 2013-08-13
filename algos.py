@@ -20,19 +20,30 @@ print('LOAD_MODULE: algos.py')
 #imp.reload(sys.modules['hotspotter.helpers'])
 #imp.reload(sys.modules['params'])
 
+# HACK: Flann indexes wont load correctly on Ooo
+__OVERRIDE_FLANN_CACHE__ = sys.platform == 'win32'
+def remove_chars(instr, illegals_chars):
+    outstr = instr
+    for ill_char in iter(illegals_chars):
+        outstr = outstr.replace(ill_char, '')
+    return outstr
+
 def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
     ''' Tries to load a cached flann index before doing anything'''
     print('Precomputing flann index: '+lbl)
     cache_dir = '.' if cache_dir is None else cache_dir
-    flann_lbl = str(flann_params.values())
-    flann_lbl = flann_lbl.replace(',',' ').replace(' ','').replace('"','').replace('\'','').replace(']','').replace('[','')
-    shape_lbl = str(data.shape).replace(' ','')
-    md5_lbl   = helpers.hashstr_md5(data)
-    flann_fname = lbl+'F'+flann_lbl+'_'+shape_lbl+'_'+md5_lbl+'.flann'
-    flann_fpath = join(cache_dir, flann_fname)
+    # Generate a unique filename for data and flann parameters
+    fparams_uid = remove_chars(str(flann_params.values()), ', \'[]')
+    md5_uid     = helpers.hashstr_md5(data)
+    shape_uid   = remove_chars(str(data.shape), ' ')
+    flann_suffix = '_' + fparams_uid + '_' + md5_uid + shape_uid + '.flann'
+    # Append any user labels
+    flann_fname = 'flann_index' + lbl + flann_suffix
+    flann_fpath = os.path.normpath(join(cache_dir, flann_fname))
+    # Load the index if it exists
     flann = pyflann.FLANN()
     load_success = False
-    if helpers.checkpath(flann_fpath):
+    if helpers.checkpath(flann_fpath) and not __OVERRIDE_FLANN_CACHE__:
         try:
             print('Trying to load FLANN index: '+flann_fpath)
             flann.load_index(flann_fpath, data)
@@ -41,6 +52,7 @@ def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
         except Exception as ex:
             print('...cannot load FLANN index'+repr(ex))
     if not load_success:
+        # Rebuild the index otherwise
         with helpers.Timer(msg='rebuilding FLANN index'):
             flann.build_index(data, **flann_params)
         print('Saving FLANN index to: '+flann_fpath)

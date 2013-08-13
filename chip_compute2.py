@@ -74,7 +74,7 @@ def load_chip_paths(hs_dirs, hs_tables):
     cx2_roi      = hs_tables.cx2_roi
     gx2_gname    = hs_tables.gx2_gname
 
-    print('\n=============================')
+    print('=============================')
     print('Precomputing chips and loading chip paths')
     print('=============================')
     
@@ -124,7 +124,7 @@ def load_chip_paths(hs_dirs, hs_tables):
     hs_cpaths.cx2_rchip_path = cx2_rchip_path
     print('=============================')
     print('Done Precomputing chips and loading chip paths')
-    print('=============================\n\n')
+    print('=============================\n')
 
     return hs_cpaths
 

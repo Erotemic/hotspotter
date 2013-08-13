@@ -24,6 +24,22 @@ DPI = 80
 #FIGSIZE = (24) # default windows fullscreen
 FIGSIZE = (20,10) 
 
+LINE_ALPHA = .4
+ELL_ALPHA  = .5
+ELL_LINEWIDTH = 1
+
+LINE_COLOR = (1, 0, 0)
+LINE_CMAP  = 'hot'
+LINE_WIDTH = 1.4
+ELL_COLOR  = (0, 0, 1)
+
+SHOW_LINES = True
+SHOW_ELLS  = True
+
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
 
 def printDBG(msg):
     #print(msg)
@@ -232,7 +248,8 @@ def set_figtitle(figtitle):
 
 # adapted from:
 # http://jayrambhia.com/blog/sift-keypoint-matching-using-python-opencv/
-def draw_matches(rchip1, rchip2, kpts1, kpts2, fm12, vert=False, color=(255,0,0)):
+def draw_matches(rchip1, rchip2, kpts1, kpts2, fm12, vert=False):
+    global LINE_COLOR
     h1, w1 = rchip1.shape[0:2]
     h2, w2 = rchip2.shape[0:2]
     woff = 0; hoff = 0 # offsets 
@@ -248,11 +265,20 @@ def draw_matches(rchip1, rchip2, kpts1, kpts2, fm12, vert=False, color=(255,0,0)
     for kx1, kx2 in iter(fm12):
         pt1 = (int(kpts1[kx1,0]),      int(kpts1[kx1,1]))
         pt2 = (int(kpts2[kx2,0])+woff, int(kpts2[kx2,1])+hoff)
-        match_img = cv2.line(match_img, pt1, pt2, color)
+        match_img = cv2.line(match_img, pt1, pt2, LINE_COLOR*255)
     return match_img
 
-def draw_matches2(kpts1, kpts2, fm, fs=None, kpts2_offset=(0,0), color=(1.,0.,0.), alpha=.4):
+def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
+    global LINE_ALPHA
+    global SHOW_LINE
+    global LINE_CMAP
+    global LINE_COLOR
+    global LINE_WIDTH
     # input data
+    if not SHOW_LINES:
+        return 
+    if fm is None: # assume kpts are in director correspondence
+        assert kpts1.shape == kpts2.shape
     if len(fm) == 0: 
         return
     ax = plt.gca()
@@ -264,33 +290,31 @@ def draw_matches2(kpts1, kpts2, fm, fs=None, kpts2_offset=(0,0), color=(1.,0.,0.
                          kpts2_m[0]+woff,
                          kpts1_m[1],
                          kpts2_m[1]+hoff))
-    ''' 
-    OLD WAY: 
-    line_actors = [ plt.Line2D((x1,x2), 
-                               (y1,y2))
-                           for (x1,x2,y1,y2) in xxyy_iter ]
-    # add lines
-    line_collection = matplotlib.collections.PatchCollection(line_actors,
-                                                             color=color,
-                                                             alpha=alpha)
-    '''
-    if fs is None:
+    if fs is None: # Draw with solid color
         segments  = [ ((x1, y1), (x2,y2)) for (x1,x2,y1,y2) in xxyy_iter ] 
-        colors    = [ color for fx in xrange(len(fm)) ] 
-        linewidth = [ 1.5 for fx in xrange(len(fm)) ] 
-    else:
-        cmap = plt.get_cmap('hot')
+        colors    = [ LINE_COLOR for fx in xrange(len(fm)) ] 
+        linewidth = [ LINE_WIDTH for fx in xrange(len(fm)) ] 
+    else: # Draw with colors proportional to score difference
+        cmap = plt.get_cmap(LINE_CMAP)
         mins = fs.min()
         maxs = fs.max()
         segments  = [ ((x1, y1), (x2,y2)) for (x1,x2,y1,y2) in xxyy_iter ] 
         colors    = [ cmap(.1+ .9*(fs[fx]-mins)/(maxs-mins)) for fx in xrange(len(fm)) ] 
-        linewidth = [ 1.5 for fx in xrange(len(fm)) ] 
+        linewidth = [ LINE_WIDTH for fx in xrange(len(fm)) ] 
 
-    line_collection = matplotlib.collections.LineCollection(segments, linewidth, colors,
-                                          alpha=alpha)
+    line_collection = matplotlib.collections.LineCollection(segments,
+                                                            linewidth, 
+                                                            colors,
+                                                            alpha=LINE_ALPHA)
     ax.add_collection(line_collection)
 
-def draw_kpts2(kpts, color=(0.,0.,1.), alpha=.5, offset=(0,0)):
+def draw_kpts2(kpts, offset=(0,0)):
+    global SHOW_ELLS
+    global ELL_COLOR
+    global ELL_ALPHA
+    global ELL_LINEWIDTH
+    if not SHOW_ELLS:
+        return
     # get matplotlib info
     ax = plt.gca()
     pltTrans = ax.transData
@@ -320,17 +344,18 @@ def draw_kpts2(kpts, color=(0.,0.,1.), alpha=.5, offset=(0,0)):
     ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
     ellipse_collection.set_facecolor('none')
     ellipse_collection.set_transform(pltTrans)
-    ellipse_collection.set_alpha(alpha)
-    ellipse_collection.set_edgecolor(color)
+    ellipse_collection.set_alpha(ELL_ALPHA)
+    ellipse_collection.set_linewidth(ELL_LINEWIDTH)
+    ellipse_collection.set_edgecolor(ELL_COLOR)
     ax.add_collection(ellipse_collection)
     
-def draw_kpts(_rchip, _kpts, color=(0,0,255)):
+def draw_kpts(_rchip, _kpts):
     kpts_img = np.copy(_rchip)
     # Draw circles
     for (x,y,a,d,c) in iter(_kpts):
         center = (int(x), int(y))
         radius = int(3*np.sqrt(1/a))
-        kpts_img = cv2.circle(kpts_img, center, radius, color)
+        kpts_img = cv2.circle(kpts_img, center, radius, ELL_COLOR*255)
     return kpts_img
 
 def cv2_draw_kpts(img, cvkpts):
@@ -394,20 +419,23 @@ def show_signature(sig, **kwargs):
     fig.show()
 
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
-                  fm, fs=None, fignum=0, plotnum=111,
+                  fm=None, fs=None, fignum=0, plotnum=111,
                   title=None, vert=True):
     '''Draws feature matches 
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''
+    if fm is None:
+        assert kpts1.shape == kpts2.shape
+        fm = np.tile(np.arange(0, len(kpts1)), (2,1)).T
     # get chip dimensions 
     (h1,w1) = rchip1.shape[0:2]
     (h2,w2) = rchip2.shape[0:2]
     woff = 0; hoff = 0 
     if vert: wB=max(w1,w2); hB=h1+h2; hoff=h1
     else:    hB=max(h1,h2); wB=w1+w2; woff=w1
-    vert = True
-    if vert: wB=max(w1,w2); hB=h1+h2; hoff=h1
-    else:    hB=max(h1,h2); wB=w1+w2; woff=w1
+    #vert = True
+    #if vert: wB=max(w1,w2); hB=h1+h2; hoff=h1
+    #else:    hB=max(h1,h2); wB=w1+w2; woff=w1
     # concatentate images
     match_img = np.zeros((hB, wB, 3), np.uint8)
     match_img[0:h1, 0:w1, :] = rchip1
@@ -421,41 +449,43 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
         # matplotlib stuff
         imshow(match_img,fignum=fignum,plotnum=plotnum,title=title)
         draw_kpts2(kpts1_m)
-        draw_kpts2(kpts2_m,offset=(woff,hoff))
-        draw_matches2(kpts1,kpts2,fm,fs,kpts2_offset=(woff,hoff))
+        draw_kpts2(kpts2_m, offset=(woff,hoff))
+        draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
 
 def show_matches3(res, hs, cx, SV=True, fignum=0, plotnum=111, title_aug=None):
-    print('Showing matches from '+str(res.qcx)+' to '+str(cx)+' in fignum'+repr(fignum))
+    qcx = res.qcx
+    cx2_score = res.cx2_score_V if SV else res.cx2_score
+    cx2_fm    = res.cx2_fm_V if SV else res.cx2_fm
+    cx2_fs    = res.cx2_fs_V if SV else res.cx2_fs
+    title_suff = '(+V)' if SV else None
+    return show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum, plotnum, title_aug, title_suff)
+
+def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111, title_pref=None, title_suff=None):
+    print('Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))
     if np.isnan(cx):
         nan_img = np.zeros((100,100), dtype=np.uint8)
-        title='(qx%r v NAN)' % (res.qcx)
+        title='(qx%r v NAN)' % (qcx)
         imshow(nan_img,fignum=fignum,plotnum=plotnum,title=title)
         return 
     cx2_rchip_path = hs.cpaths.cx2_rchip_path
     cx2_kpts = hs.feats.cx2_kpts
-    qcx = res.qcx
     rchip1 = cv2.imread(cx2_rchip_path[qcx])
     rchip2 = cv2.imread(cx2_rchip_path[cx])
     kpts1  = cx2_kpts[qcx]
     kpts2  = cx2_kpts[cx]
-    cx2_score = res.cx2_score_V if SV else res.cx2_score
-    cx2_fm    = res.cx2_fm_V if SV else res.cx2_fm
-    cx2_fs    = res.cx2_fs_V if SV else res.cx2_fs
     score = cx2_score[cx]
     fm    = cx2_fm[cx]
     fs    = cx2_fs[cx]
-    nMatches = len(fm)
-    title='(qx%r v cx%r)\n #match=%r score=%.2f' % (qcx, cx, nMatches, score)
-    if not title_aug is None:
-        title = title_aug + title
-    if SV:
-        title += '(+V)'
-    show_matches2(rchip1, rchip2, kpts1,  kpts2, 
-                  fm, fs, fignum=fignum, plotnum=plotnum, title=title)
+    title='(qx%r v cx%r)\n #match=%r score=%.2f' % (qcx, cx, len(fm), score)
+    if not title_pref is None:
+        title = title_pref + title
+    if not title_suff is None:
+        title = title + title_suff
+    return show_matches2(rchip1, rchip2, kpts1,  kpts2, fm, fs, fignum=fignum, plotnum=plotnum, title=title)
 
 
-def show_keypoints(rchip,kpts,fignum=0,title=None):
-    imshow(rchip,fignum=fignum,title=title)
+def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
+    imshow(rchip,fignum=fignum,title=title,**kwargs)
     draw_kpts2(kpts)
 
 

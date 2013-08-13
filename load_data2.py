@@ -6,6 +6,7 @@ Module: load_data
 import re
 import os, sys, string
 import fnmatch
+import cv2
 import types
 import numpy as np
 import helpers
@@ -128,6 +129,17 @@ class HotSpotter(DynStruct):
         computed_dir = os.path.normpath(hs.dirs.computed_dir)
         print('opening computed_dir: %r ' % computed_dir)
         helpers.vd(computed_dir)
+    #--------------
+    def get_other_cxs(hs, cx):
+        cx2_nx   = hs.tables.cx2_nx
+        nx = cx2_nx[cx]
+        other_cx_, = np.where(cx2_nx == nx)
+        other_cx  = other_cx_[other_cx_ != cx]
+        return other_cx
+    def get_chip(hs, cx):
+        return cv2.imread(hs.cpaths.cx2_rchip_path[cx])
+    def get_kpts(hs, cx):
+        return hs.feats.cx2_kpts[cx]
 # ______________________________
 
 # ___CLASS HOTSPOTTER TABLES____
@@ -247,8 +259,9 @@ def load_csv_tables(db_dir):
             name = csv_fields[1]
             nid2_nx[nid] = len(nx2_name)
             nx2_name.append(name)
-        print('      * Loaded '+str(len(nx2_name)-2)+' names (excluding unknown names)')
-        print('      * Done loading name table')
+        if params.__VERBOSE_LOAD_DATA__:
+            print('      * Loaded '+str(len(nx2_name)-2)+' names (excluding unknown names)')
+            print('      * Done loading name table')
 
         # -------------------
         # --- READ IMAGES --- 
@@ -257,7 +270,8 @@ def load_csv_tables(db_dir):
         print('... Loading images')
         # Load Image Table 
         # <LEGACY CODE>
-        print('    ... Loading image table: '+image_table)
+        if params.__VERBOSE_LOAD_DATA__:
+            print('    ... Loading image table: '+image_table)
         gid2_gx = {}
         gid_lines = open(image_table,'r').readlines()
         for line_num, csv_line in enumerate(gid_lines):
@@ -274,10 +288,11 @@ def load_csv_tables(db_dir):
             gx2_gname.append(gname)
         nTableImgs = len(gx2_gname)
         fromTableNames = set(gx2_gname)
-        print('          * table specified '+str(nTableImgs)+' images')
-        # </LEGACY CODE>
-        # Load Image Directory
-        print('    ... Loading image directory: '+img_dir)
+        if params.__VERBOSE_LOAD_DATA__:
+            print('          * table specified '+str(nTableImgs)+' images')
+            # </LEGACY CODE>
+            # Load Image Directory
+            print('    ... Loading image directory: '+img_dir)
         nDirImgs = 0
         nDirImgsAlready = 0
         for fname in os.listdir(img_dir):
@@ -287,10 +302,11 @@ def load_csv_tables(db_dir):
                     continue
                 gx2_gname.append(fname)
                 nDirImgs += 1
-        print('          * dir specified '+str(nDirImgs)+' images')
-        print('          * '+str(nDirImgsAlready)+' were already specified in the table')
-        print('  * Loaded '+str(len(gx2_gname))+' images')
-        print('  * Done loading images')
+        if params.__VERBOSE_LOAD_DATA__:
+            print('          * dir specified '+str(nDirImgs)+' images')
+            print('          * '+str(nDirImgsAlready)+' were already specified in the table')
+            print('  * Loaded '+str(len(gx2_gname))+' images')
+            print('  * Done loading images')
 
         # ------------------
         # --- READ CHIPS --- 
@@ -316,8 +332,9 @@ def load_csv_tables(db_dir):
                 chip_csv_format = [_.strip() for _ in csv_line.strip('#').split(',')]
             if csv_line.find(header_numdata) == 0:
                 num_data = int(csv_line.replace(header_numdata,''))
-        print('  * num_chips: '+str(num_data))
-        print('  * chip_csv_format: '+str(chip_csv_format))
+        if params.__VERBOSE_LOAD_DATA__:
+            print('  * num_chips: '+str(num_data))
+            print('  * chip_csv_format: '+str(chip_csv_format))
         cid_x   = tryindex(chip_csv_format, 'ChipID')
         gid_x   = tryindex(chip_csv_format, 'ImgID')
         nid_x   = tryindex(chip_csv_format, 'NameID')
@@ -327,7 +344,6 @@ def load_csv_tables(db_dir):
         gname_x = tryindex(chip_csv_format, 'Image')
         name_x  = tryindex(chip_csv_format, 'Name')
         required_x = [cid_x, gid_x, gname_x, nid_x, name_x, roi_x, theta_x]
-        print chip_csv_format
         # Hotspotter Chip Tables
         cx2_cid   = []
         cx2_nx    = []
@@ -341,7 +357,8 @@ def load_csv_tables(db_dir):
         prop_dict = {}
         for prop in iter(px2_prop_key):
             prop_dict[prop] = []
-        print('  * num_user_properties: '+str(len(prop_dict.keys())))
+        if params.__VERBOSE_LOAD_DATA__:
+            print('  * num_user_properties: '+str(len(prop_dict.keys())))
         # Parse Chip Table
         for line_num, csv_line in enumerate(cid_lines):
             csv_line = csv_line.strip('\n\r\t ')
@@ -389,8 +406,9 @@ def load_csv_tables(db_dir):
         print('Failed on fields:       '+repr(csv_fields))
         raise
 
-    print('  * Loaded: '+str(len(cx2_cid))+' chips')
-    print('  * Done loading chip table')
+    if params.__VERBOSE_LOAD_DATA__:
+        print('  * Loaded: '+str(len(cx2_cid))+' chips')
+        print('  * Done loading chip table')
     # Return all information from load_tables
     #hs_tables.gid2_gx = gid2_gx
     #hs_tables.nid2_nx  = nid2_nx
@@ -398,7 +416,7 @@ def load_csv_tables(db_dir):
                                   cx2_gx, cx2_roi, cx2_theta, prop_dict)
     print('===============================')
     print('Done Loading hotspotter csv tables: '+str(db_dir))
-    print('===============================\n\n')
+    print('===============================\n')
 
     if 'vdd' in sys.argv:
         helpers.vd(hs_dirs.db_dir)
@@ -464,8 +482,8 @@ def print_chiptable(hs_tables):
     print('=======================================================')
 
 
-def make_csv_table(column_labels, column_list, header, column_type=None):
-    if len(column_labels) == 0: 
+def make_csv_table(column_labels=None, column_list=[], header='', column_type=None):
+    if len(column_list) == 0: 
         print('No columns')
         return header
     column_len  = [len(col) for col in column_list]
@@ -486,6 +504,9 @@ def make_csv_table(column_labels, column_list, header, column_type=None):
 
     column_maxlen = []
     column_str_list = []
+
+    if column_labels is None:
+        column_labels = ['']*len(column_list)
 
     def _toint(c):
         if np.isnan(c):
@@ -522,6 +543,7 @@ if sys.platform == 'linux2':
     WORK_DIR = '/media/Store/data/work'
 # Common databases I use
 FROGS   = WORK_DIR+'/FROG_tufts'
+JAGUARS = WORK_DIR+'/JAG_Jaguar_Data'
 NAUTS   = WORK_DIR+'/NAUT_Dan'
 GZ_ALL  = WORK_DIR+'/GZ_ALL'
 WS_HARD = WORK_DIR+'/WS_hard'
@@ -533,6 +555,7 @@ SONOGRAMS = WORK_DIR+'/sonograms'
 DEFAULT = NAUTS
 
 dev_databases = {
+    'JAG'     : JAGUARS,
     'FROGS'   : FROGS,
     'NAUTS'   : NAUTS,
     'GZ_ALL'  : GZ_ALL,

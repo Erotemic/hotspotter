@@ -112,3 +112,43 @@ timeit.timeit('ax2_wx[0]', setup=setup, number=10000)
 print(timeit.timeit(try3, setup=setup, number=100000))
 
 
+
+#-------------
+# Test ways of componentwise anding a lists of booleans
+import timeit
+setup = '''
+import numpy as np
+a = np.random.rand(1000)
+b = np.random.rand(1000)
+c = np.random.rand(1000)
+out = np.zeros((3,len(a)), dtype=np.bool)
+'''
+
+test1 = '''
+_inliers1 = [ix for ix, tup in 
+            enumerate(zip(a > .5, b > .5, c > .5)) 
+            if all(tup)]
+'''
+
+# WINNER
+test2 = '''
+_inliers2, = np.where(np.logical_and(np.logical_and(a > .5, b > .5), c > .5))
+'''
+
+test3 = '''
+_inliers3, = np.where(np.vstack([a > .5, b > .5, c > .5]).all(0))
+'''
+
+test4 = '''
+np.greater(a, .5, out[0])
+np.greater(b, .5, out[1])
+np.greater(c, .5, out[2])
+_inliers4, = np.where(out.all(0))
+'''
+
+print timeit.timeit(test1, setup=setup, number=10000)
+print timeit.timeit(test2, setup=setup, number=10000)
+print timeit.timeit(test3, setup=setup, number=10000)
+print timeit.timeit(test4, setup=setup, number=10000)
+
+

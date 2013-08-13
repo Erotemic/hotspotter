@@ -31,7 +31,7 @@ __VSONE_RATIO_THRESH__ = 1.5
 # Number of top matches to spatially re-rank
 __NUM_RERANK__   = 50
 # Percentage of the diagonal length of keypoint extent
-__XY_THRESH__    = .05
+__XY_THRESH__    = .1
 hs1_params = {'algorithm':'kdtree',
               'trees'    :4,
               'checks'   :128}
@@ -73,6 +73,7 @@ __VSONE_FLANN_PARAMS__       = hs1_params
 
 
 __VERBOSE_CACHE__ = False
+__VERBOSE_LOAD_DATA__ = False
 
 __CACHE_QUERY__    = True
 __REVERIFY_QUERY__ = False

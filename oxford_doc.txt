@@ -108,3 +108,23 @@ def compute_mean_average_precision(res, k):
     '''
     MAP = 1/Q \sum_{q=1}^Q AveP(q) 
     '''
+
+# For spatial Verification 
+# Tried Several Error functions including
+
+* One way tranfer error (from query to target and vis-versa)
+* Two way transer error
+* Two way transer with a threshold on the expected. 
+
+We find that the two way transfer error with scale threshold performs best on
+the data. 
+
+Transform is successful if there are at least 4 inlier correspondences
+
+re-rank the images by scoring them equal to the sum of the idf values for the
+inlier words. 
+
+
+Abort re-ranking if 20 images are processed in a row without success. 
+
+

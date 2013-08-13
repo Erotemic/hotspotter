@@ -21,7 +21,6 @@ import helpers
 import spatial_verification
 import load_data2
 import params
-import report_results2
 # Math and Science Imports
 import cv2
 import matplotlib.pyplot as plt
@@ -35,9 +34,9 @@ print ('LOAD_MODULE: match_chips2.py')
 #========================================
 # Bag-of-Words
 #========================================
-class BagOfWords(DynStruct):
+class BagOfWordsIndex(DynStruct):
     def __init__(self, words, words_flann, cx2_vvec, wx2_idf, wx2_cxs, wx2_fxs):
-        super(BagOfWords, self).__init__()
+        super(BagOfWordsIndex, self).__init__()
         self.words       = words
         self.words_flann = words_flann
         self.cx2_vvec    = cx2_vvec
@@ -73,10 +72,10 @@ def precompute_bag_of_words(hs):
     _index_vocab_args = (cx2_desc, words, words_flann, db_cxs, cache_dir)
     _index_vocab_ret  = __index_database_to_vocabulary(*_index_vocab_args)
     cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf = _index_vocab_ret
-    # return as a BagOfWords object
+    # return as a BagOfWordsIndex object
     _bow_args = (words, words_flann, cx2_vvec, wx2_idf, wx2_cxs, wx2_fxs)
-    bagofwords = BagOfWords(*_bow_args)
-    return bagofwords
+    bow_index = BagOfWordsIndex(*_bow_args)
+    return bow_index
 
 # step 1  
 def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
@@ -180,42 +179,42 @@ def __quantize_desc_to_tfidf_vvec(desc, wx2_idf, words, words_flann):
     return vvec, fx2_wx
 
 # Used by Matcher class to assign matches to a bag-of-words database
-def assign_matches_bagofwords(qcx, cx2_cid, cx2_desc, bagofwords):
-    cx2_vvec    = bagofwords.cx2_vvec
-    wx2_cxs     = bagofwords.wx2_cxs
-    wx2_fxs     = bagofwords.wx2_fxs
-    wx2_idf     = bagofwords.wx2_idf
-    words       = bagofwords.words
-    words_flann = bagofwords.words_flann
+def assign_matches_bagofwords(qcx, cx2_desc, bow_index):
+    cx2_vvec    = bow_index.cx2_vvec
+    wx2_cxs     = bow_index.wx2_cxs
+    wx2_fxs     = bow_index.wx2_fxs
+    wx2_idf     = bow_index.wx2_idf
+    words       = bow_index.words
+    words_flann = bow_index.words_flann
     # Assign the query descriptors a visual vector
     vvec, qfx2_wx = __quantize_desc_to_tfidf_vvec(cx2_desc[qcx], wx2_idf, words, words_flann)
     # Compute distance to every database vector
     cx2_score = (cx2_vvec.dot(vvec.T)).toarray().flatten()
     # Assign feature to feature matches (for spatial verification)
-    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
-    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fm = [[] for _ in xrange(len(cx2_desc))]
+    cx2_fs = [[] for _ in xrange(len(cx2_desc))]
     for qfx, wx in enumerate(qfx2_wx):
         cx_list = wx2_cxs[wx]
         fx_list = wx2_fxs[wx]
-        fs = wx2_idf[wx]
+        fs = wx2_idf[wx] # feature score is the sum of the idf values
         for (cx, fx) in zip(cx_list, fx_list): 
             if cx == qcx: continue
             fm = (qfx, fx)
             cx2_fm[cx].append(fm)
             cx2_fs[cx].append(fs)
     # Convert to numpy
-    for cx in xrange(len(cx2_cid)): cx2_fm[cx] = np.array(cx2_fm[cx])
-    for cx in xrange(len(cx2_cid)): cx2_fs[cx] = np.array(cx2_fs[cx])
+    for cx in xrange(len(cx2_desc)): cx2_fm[cx] = np.array(cx2_fm[cx])
+    for cx in xrange(len(cx2_desc)): cx2_fs[cx] = np.array(cx2_fs[cx])
     return cx2_fm, cx2_fs, cx2_score
 
 #========================================
 # One-vs-Many 
 #========================================
-class OneVsMany(DynStruct): # TODO: rename this
+class VsManyIndex(DynStruct): # TODO: rename this
     '''Contains a one-vs-many index and the 
        inverted information needed for voting'''
     def __init__(self, vsmany_flann, ax2_desc, ax2_cx, ax2_fx):
-        super(OneVsMany, self).__init__()
+        super(VsManyIndex, self).__init__()
         self.vsmany_flann = vsmany_flann
         self.ax2_desc  = ax2_desc # not used, but needs to maintain scope
         self.ax2_cx = ax2_cx
@@ -257,12 +256,13 @@ def precompute_index_vsmany(hs):
     # Precompute flann index
     matcher_uid = params.get_matcher_uid()
     vsmany_flann_params = params.__VSMANY_FLANN_PARAMS__
-    vsmany_flann = algos.precompute_flann(ax2_desc, cache_dir=cache_dir,
+    vsmany_flann = algos.precompute_flann(ax2_desc, 
+                                          cache_dir=cache_dir,
                                           lbl=matcher_uid,
                                           flann_params=vsmany_flann_params)
     # Return a one-vs-many structure
-    one_vs_many = OneVsMany(vsmany_flann, ax2_desc, ax2_cx, ax2_fx)
-    return one_vs_many
+    vsmany_index = VsManyIndex(vsmany_flann, ax2_desc, ax2_cx, ax2_fx)
+    return vsmany_index
 
 # Feature scoring functions
 def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+1E-8)+1) 
@@ -271,21 +271,22 @@ def LNBNN_fn(vdist, ndist): return ndist - vdist
 score_fn = RATIO_fn
 
 #@profile
-def assign_matches_vsmany(qcx, cx2_cid, cx2_desc, one_vs_many):
+def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
     '''Matches desc1 vs all database descriptors using 
     Input:
         qcx        - query chip index
-        cx2_cid     - chip ID lookup table (for removing self matches)
         cx2_desc    - chip descriptor lookup table
-        one_vs_many - class with FLANN index of database descriptors
+        vsmany_index - class with FLANN index of database descriptors
     Output: 
         cx2_fm - C x Mx2 array of matching feature indexes
         cx2_fs - C x Mx1 array of matching feature scores'''
+
+    # vsmany_index = hs.matcher._Matcher__vsmany_index
     helpers.println('Assigning vsmany feature matches from qcx=%d to %d chips'\
-                    % (qcx, len(cx2_cid)))
-    vsmany_flann = one_vs_many.vsmany_flann
-    ax2_cx    = one_vs_many.ax2_cx
-    ax2_fx    = one_vs_many.ax2_fx
+                    % (qcx, len(cx2_desc)))
+    vsmany_flann = vsmany_index.vsmany_flann
+    ax2_cx    = vsmany_index.ax2_cx
+    ax2_fx    = vsmany_index.ax2_fx
     isQueryIndexed = True
     desc1 = cx2_desc[qcx]
     k_vsmany = params.__VSMANY_K__+1 if isQueryIndexed else params.__VSMANY_K__
@@ -301,8 +302,8 @@ def assign_matches_vsmany(qcx, cx2_cid, cx2_desc, one_vs_many):
     qfx2_cx = ax2_cx[qfx2_ax[:, 0:k_vsmany]]
     qfx2_fx = ax2_fx[qfx2_ax[:, 0:k_vsmany]]
     # Build feature matches
-    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
-    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fm = [[] for _ in xrange(len(cx2_desc))]
+    cx2_fs = [[] for _ in xrange(len(cx2_desc))]
     num_qf = len(desc1)
     qfx2_qfx = np.tile(np.arange(num_qf).reshape(num_qf, 1), (1, k_vsmany)) 
     iter_matches = iter(zip(qfx2_qfx.flat, qfx2_cx.flat,
@@ -313,30 +314,30 @@ def assign_matches_vsmany(qcx, cx2_cid, cx2_desc, one_vs_many):
         cx2_fm[cx].append((qfx, fx))
         cx2_fs[cx].append(score)
     # Convert to numpy
-    for cx in xrange(len(cx2_cid)): 
+    for cx in xrange(len(cx2_desc)): 
         cx2_fm[cx] = np.array(cx2_fm[cx])
-    for cx in xrange(len(cx2_cid)): 
+    for cx in xrange(len(cx2_desc)): 
         cx2_fs[cx] = np.array(cx2_fs[cx])
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     return cx2_fm, cx2_fs, cx2_score
 
-def assign_matches_vsmany_BINARY(qcx, cx2_cid, cx2_desc):
+def assign_matches_vsmany_BINARY(qcx, cx2_desc):
     return None
 
 #========================================
 # One-vs-One 
 #========================================
-def assign_matches_vsone(qcx, cx2_cid, cx2_desc):
+def assign_matches_vsone(qcx, cx2_desc):
     print('Assigning vsone feature matches from cx=%d to %d chips'\
-          % (qcx, len(cx2_cid)))
+          % (qcx, len(cx2_desc)))
     desc1 = cx2_desc[qcx]
     vsone_flann = pyflann.FLANN()
     vsone_flann_params =  params.__VSONE_FLANN_PARAMS__
     ratio_thresh = params.__VSONE_RATIO_THRESH__
     checks = vsone_flann_params['checks']
     vsone_flann.build_index(desc1, **vsone_flann_params)
-    cx2_fm = [[] for _ in xrange(len(cx2_cid))]
-    cx2_fs = [[] for _ in xrange(len(cx2_cid))]
+    cx2_fm = [[] for _ in xrange(len(cx2_desc))]
+    cx2_fs = [[] for _ in xrange(len(cx2_desc))]
     for cx, desc2 in enumerate(cx2_desc):
         sys.stdout.write('.')
         sys.stdout.flush()
@@ -393,10 +394,10 @@ def match_vsone(desc2, vsone_flann, checks, ratio_thresh=1.2, burst_thresh=None)
     return (fm, fs)
 
 #========================================
-# SPATIAL VERIFIACTION 
+# Spatial verifiaction 
 #========================================
 #@profile
-def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
+def __spatially_verify(ransac_func, kpts1, kpts2, fm, fs, DBG=None):
     '''1) compute a robust transform from img2 -> img1
        2) keep feature matches which are inliers '''
     # ugg transpose, I like row first, but ransac seems not to
@@ -410,7 +411,7 @@ def __spatially_verify(func_homog, kpts1, kpts2, fm, fs, DBG=None):
     img1_extent = (kpts1_m[0:2, :].max(1) - kpts1_m[0:2, :].min(1))[0:2]
     xy_thresh1_sqrd = np.sum(img1_extent**2) * (xy_thresh**2)
     # -----------------------------------------------
-    hinlier_tup = func_homog(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
+    hinlier_tup = ransac_func(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
     if not hinlier_tup is None:
         H, inliers = hinlier_tup
     else:
@@ -441,6 +442,8 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
     cx2_fm_V = [[] for _ in xrange(len(cx2_fm))]
     cx2_fs_V = [[] for _ in xrange(len(cx2_fs))]
     # spatially verify the top __NUM_RERANK__ results
+    bad_consecutive_reranks = 0
+    max_bad_consecutive_reranks = 20 # stop if more than 20 bad reranks
     for topx in xrange(num_rerank):
         cx    = top_cx[topx]
         kpts2 = cx2_kpts[cx]
@@ -449,6 +452,13 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
         fm_V, fs_V, H = spatially_verify(kpts1, kpts2, fm, fs)
         cx2_fm_V[cx] = fm_V
         cx2_fs_V[cx] = fs_V
+        if len(fm_V) == 0:
+            bad_consecutive_reranks += 1
+            if bad_consecutive_reranks > max_bad_consecutive_reranks:
+                print(' * Too many bad consecutive spatial verifications')
+                break
+        else: 
+            bad_consecutive_reranks = 0
     cx2_score_V = np.array([np.sum(fs) for fs in cx2_fs_V])
     return cx2_fm_V, cx2_fs_V, cx2_score_V
 
@@ -524,30 +534,30 @@ class Matcher(DynStruct):
         self.feat_type  = hs.feats.feat_type
         self.match_type = match_type
         # Possible indexing structures
-        self.__one_vs_many    = None
-        self.__bag_of_words     = None
+        self.__vsmany_index    = None
+        self.__bow_index    = None
         # Curry the correct functions
         self.__assign_matches = None
         if   match_type == 'bagofwords':
             print(' precomputing bag of words')
-            self.__bag_of_words   = precompute_bag_of_words(hs)
+            self.__bow_index   = precompute_bag_of_words(hs)
             self.__assign_matches = self.__assign_matches_bagofwords
         elif match_type == 'vsmany':
             print(' precomputing one vs many')
-            self.__one_vs_many = precompute_index_vsmany(hs)
+            self.__vsmany_index = precompute_index_vsmany(hs)
             self.__assign_matches = self.__assign_matches_vsmany
         elif match_type == 'vsone':
             self.__assign_matches = assign_matches_vsone
         else:
             raise Exception('Unknown match_type: '+repr(match_type))
-    def assign_matches(self, qcx, cx2_cid, cx2_desc):
+    def assign_matches(self, qcx, cx2_desc):
         'Function which calls the correct matcher'
-        return self.__assign_matches(qcx, cx2_cid, cx2_desc)
+        return self.__assign_matches(qcx, cx2_desc)
     # query helpers
-    def __assign_matches_vsmany(self, qcx, cx2_cid, cx2_desc):
-        return assign_matches_vsmany(qcx, cx2_cid, cx2_desc, self.__one_vs_many)
-    def __assign_matches_bagofwords(self, qcx, cx2_cid, cx2_desc):
-        return assign_matches_bagofwords(qcx, cx2_cid, cx2_desc, self.__bag_of_words)
+    def __assign_matches_vsmany(self, qcx, cx2_desc):
+        return assign_matches_vsmany(qcx, cx2_desc, self.__vsmany_index)
+    def __assign_matches_bagofwords(self, qcx, cx2_desc):
+        return assign_matches_bagofwords(qcx, cx2_desc, self.__bow_index)
 
 #========================================
 # Work Functions
@@ -558,26 +568,20 @@ def run_matching(hs):
     =============================
     Running Matching
     ============================='''))
-    matcher  = hs.matcher
-    cx2_cid  = hs.tables.cx2_cid
+    assign_matches  = hs.matcher.assign_matches
     cx2_desc = hs.feats.cx2_desc
     cx2_kpts = hs.feats.cx2_kpts 
-    qcx2_res = [QueryResult(qcx) for qcx in xrange(len(cx2_cid))]
-    test_sample_cx = range(len(cx2_cid)) if hs.test_sample_cx is None else hs.test_sample_cx
+    qcx2_res = [QueryResult(qcx) for qcx in xrange(len(cx2_desc))]
+    test_sample_cx = hs.test_sample_cx
     tt_ALL = tic('all queries')
     assign_times = [] # metadata
     verify_times = []
-    skip_list    = []
     print('Running matching on: %r' % test_sample_cx)
 
     force_requery_cx_set = params.__FORCE_REQUERY_CX__
-    reverify_query = params.__REVERIFY_QUERY__
-    resave_query = params.__RESAVE_QUERY__
+    reverify_query       = params.__REVERIFY_QUERY__
+    resave_query         = params.__RESAVE_QUERY__
     for qcx in iter(test_sample_cx):
-        qcid = cx2_cid[qcx]
-        if qcid == 0: 
-            skip_list.append(qcx)
-            continue
         helpers.print_ ('query(qcx=%4d)->' % qcx)
         res = qcx2_res[qcx]
         # load query from cache if possible
@@ -596,8 +600,7 @@ def run_matching(hs):
         # Assign matches with the chosen function (vsone) or (vsmany)
         if not cache_load_success:
             tt_A = tic('assign')
-            (cx2_fm, cx2_fs, cx2_score) = \
-                    matcher.assign_matches(qcx, cx2_cid, cx2_desc)
+            cx2_fm, cx2_fs, cx2_score = assign_matches(qcx, cx2_desc)
             assign_times.append(toc(tt_A))
         else: 
             helpers.print_('cache_assign->')
@@ -622,11 +625,7 @@ def run_matching(hs):
             helpers.print_('')
             res.save(hs)
         helpers.println('endquery;')       
-    if len(skip_list) > 0:
-        print('Skipped more queries than you should have: %r ' % skip_list)
     #total_time = toc(tt_ALL)
-    # Write results out to disk
-    report_results2.write_rank_results(hs, qcx2_res)
     return qcx2_res
 
 
@@ -641,7 +640,6 @@ if __name__ == '__main__':
     hs = load_data2.HotSpotter(db_dir)
     cx2_kpts = hs.feats.cx2_kpts
     cx2_desc = hs.feats.cx2_desc
-    cx2_cid  = hs.tables.cx2_cid
     qcx = 1
 
     __TEST_MODE__ = False or ('--test' in sys.argv)

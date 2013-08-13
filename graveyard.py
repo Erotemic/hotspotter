@@ -547,3 +547,87 @@ def res2_name_consistency(hs, res):
     # ---- 
     # RETURN RESULTS
     return reteturn falsepos_cxs, falsepos_ranks, falsepos_scores
+
+# From PCV (python computer vision) code
+def H_homog_from_points(fp,tp):
+    """ Find homography H, such that fp is mapped to tp using the 
+        linear DLT method. Points are conditioned automatically.  """
+    # condition points (important for numerical reasons)
+    # --from points--
+    fp_mean = np.mean(fp[:2], axis=1)
+    maxstd = np.max(np.std(fp[:2], axis=1)) + 1e-9
+    C1 = np.diag([1/maxstd, 1/maxstd, 1]) 
+    C1[0:2,2] = -fp_mean[0:2] / maxstd
+    fp = np.dot(C1,fp)
+    # --to points--
+    tp_mean = np.mean(tp[:2], axis=1)
+    maxstd = np.max(np.std(tp[:2], axis=1)) + 1e-9
+    C2 = np.diag([1/maxstd, 1/maxstd, 1])
+    C2[0:2,2] = -tp_mean[0:2] / maxstd
+    tp = np.dot(C2,tp)
+    # create matrix for linear method, 2 rows for each correspondence pair
+    num_matches = fp.shape[1]
+    A = np.zeros((2*num_matches,9))
+    for i in xrange(num_matches):        
+        A[2*i] =   [        -fp[0][i],         -fp[1][i],       -1,
+                                    0,                 0,        0,
+                    tp[0][i]*fp[0][i], tp[0][i]*fp[1][i], tp[0][i]]
+
+        A[2*i+1] = [                0,                 0,        0,
+                            -fp[0][i],         -fp[1][i],       -1,
+                    tp[1][i]*fp[0][i], tp[1][i]*fp[1][i], tp[1][i]]
+    U,S,V = linalg.svd(A)
+    H = V[8].reshape((3,3))    
+    # decondition
+    H = np.dot(linalg.inv(C2),np.dot(H,C1))
+    # normalize and return
+    return H / H[2,2]
+
+# From PCV (python computer vision) code
+def H_affine_from_points(fp,tp):
+    """ Find H, affine transformation, such that tp is affine transf of fp. """
+    # condition points
+    # --from points--
+    fp_mean = np.mean(fp[:2], axis=1)
+    maxstd = np.max(np.std(fp[:2], axis=1)) + 1e-9
+    C1 = np.diag([1/maxstd, 1/maxstd, 1]) 
+    C1[0:2,2] = -fp_mean[0:2] / maxstd
+    fp_cond = np.dot(C1,fp)
+    # --to points--
+    tp_mean = np.mean(tp[:2], axis=1)
+    C2 = C1.copy() #must use same scaling for both point sets
+    C2[0:2,2] = -tp_mean[0:2] / maxstd
+    tp_cond = np.dot(C2, tp)
+    # conditioned points have mean zero, so translation is zero
+    A = np.concatenate((fp_cond[:2], tp_cond[:2]), axis=0)
+    U,S,V = linalg.svd(A.T)
+    # create B and C matrices as Hartley-Zisserman (2:nd ed) p 130.
+    tmp = V[:2].T
+    B = tmp[:2]
+    C = tmp[2:4]
+    tmp2 = np.concatenate((C.dot(linalg.pinv(B)),np.zeros((2,1))), axis=1) 
+    H = np.vstack((tmp2,[0,0,1]))
+    # decondition
+    H = (linalg.inv(C2)).dot(H.dot(C1))
+    return H / H[2,2]
+def H_homog_from_PCVSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
+    from PCV.geometry import homography
+    'Python Computer Visions Random Sample Consensus'
+    # Get xy points
+    xy1_m = kpts1_m[0:2,:] 
+    xy2_m = kpts2_m[0:2,:] 
+    # Homogonize points
+    fp = np.vstack([xy1_m, np.ones((1,xy1_m.shape[1]))])
+    tp = np.vstack([xy2_m, np.ones((1,xy2_m.shape[1]))])
+    # Get match threshold 10% of image diagonal
+    # Get RANSAC inliers
+    model = homography.RansacModel() 
+    try: 
+        H, pcv_inliers = homography.H_from_ransac(fp, tp, model, 500, np.sqrt(xy_thresh_sqrd))
+    except ValueError as ex:
+        printWARN('Warning 221 from H_homog_from_PCVSAC'+repr(ex))
+        return np.eye(3), []
+    # Convert to the format I'm expecting
+    inliers = np.zeros(kpts1_m.shape[1], dtype=bool)
+    inliers[pcv_inliers] = True
+    return H, inliers

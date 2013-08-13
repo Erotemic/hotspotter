@@ -303,7 +303,7 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, 
     return cx2_kpts, cx2_desc
     
 def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
-    print('\n=============================')
+    print('=============================')
     print('Computing and loading features')
     print('=============================')
     # --- GET INPUT --- #
@@ -323,7 +323,7 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     #hs_feats.cx2_feats_freak  = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'FREAK')
     print('=============================')
     print('Done computing and loading features')
-    print('=============================\n\n')
+    print('=============================\n')
     return hs_feats
 
 if __name__ == '__main__':

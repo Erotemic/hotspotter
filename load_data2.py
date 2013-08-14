@@ -569,6 +569,11 @@ OXFORD  = WORK_DIR+'/Oxford_Buildings'
 PARIS   = WORK_DIR+'/Paris_Buildings'
 SONOGRAMS = WORK_DIR+'/sonograms'
 
+viewpoint_pairs = [(19, 20), (110, 108), (16, 17)]
+lighting_pairs = [(49, 50), (93, 94)]
+confused_pairs = []
+occlusion= [(64,65)]
+
 DEFAULT = NAUTS
 
 dev_databases = {

@@ -29,6 +29,12 @@ from sys import stdout as sout
 
 __PRINT_CHECKS__ = False
 
+def remove_chars(instr, illegals_chars):
+    outstr = instr
+    for ill_char in iter(illegals_chars):
+        outstr = outstr.replace(ill_char, '')
+    return outstr
+
 # reloads this module when I mess with it
 def reload_module():
     import imp

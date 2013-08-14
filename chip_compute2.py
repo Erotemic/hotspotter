@@ -25,6 +25,13 @@ def precompute_chip_histeq(img_path, chip_path, roi, new_size):
     chip.save(chip_path, 'PNG')
     return True
 
+def precompute_chip_myequalize(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = myequalize_chip(chip)
+    chip.save(chip_path, 'PNG')
+    return True
+
+
 def __compute_chip(img_path, chip_path, roi, new_size):
     '''Crops chip from image ; Converts to grayscale ; 
     Resizes to standard size ; Equalizes the histogram
@@ -52,6 +59,95 @@ def rotate_chip(chip_path, rchip_path, theta):
     degrees = theta * 180. / np.pi
     rchip = chip.rotate(degrees, resample=Image.BICUBIC, expand=1)
     rchip.save(rchip_path, 'PNG')
+
+import scipy.signal
+import scipy.ndimage.filters as filters
+
+def myequalize_chip(chip):
+    #chip = hs.get_chip(1)
+    chip = np.asarray(chip)
+    if len(chip.shape) == 3:
+        print('chip shape')
+        chip = chip.sum(2) / 3
+    chipw, chiph = chip.shape[0:2]
+    half_w = chipw/10
+    half_h = chiph/10
+    x1 = round(chipw/2 - half_w)
+    y1 = round(chiph/2 - half_h)
+    x2 = round(chipw/2 + half_w)
+    y2 = round(chiph/2 + half_h)
+    area = chip[x1:x2, y1:y2]
+    #df2.reset()
+    #df2.figure(1, doclf=True)
+    # for local maxima
+    intensity  = area.flatten()
+    freq, _  = np.histogram(intensity, 64)
+    #df2.figure(4)
+    #def test(freq):
+        #num_samp =  len(freq)
+        ##plt.plot(np.linspace(0, 255, num_samp), freq)
+        ##maxpos =  scipy.signal.argrelextrema(freq, np.greater)[0]
+        ##widths = np.array(map(round, [num_samp*.1, num_samp*.2]), dtype=np.int32)
+        #maxpos = filters.maximum_filter(freq, 2)
+        ##maxpos = scipy.signal.find_peaks_cwt(freq, widths)
+        #maxima = 255 * np.array(maxpos) / len(freq)
+        #print maxima
+        #return maxima
+    #maxima8 = test(freq8)
+    #maxima32 = test(freq32)
+    #maxima64 = test(freq64)
+    #maxima128 = test(freq128)
+    def localmax(freq):
+        to_return = []
+        maxpos = []
+        nsamp = len(freq)
+        for ix in xrange(nsamp):
+            prev = freq[max(0, ix-1)]
+            item = freq[ix]
+            next = freq[min(nsamp-1, ix+1)]
+            if item >= prev and item <=next and (item != prev and item != next):
+                maxpos.append(ix)
+        return maxpos
+    maxpos = localmax(freq)
+    min_int = intensity.min()
+    max_int = intensity.max()
+    maxima = min_int + (max_int - min_int) * np.array(maxpos) / len(freq)
+    if len(maxima) > 2:
+        low = float(maxima[0])
+        high = float(maxima[-1])
+    else:
+        low = min_int 
+        high = max_int
+    retchip = (chip - low) * 255 / (high - low)
+    retchip[retchip < 0] = 0
+    retchip[retchip > 255] = 255 
+    retchip = Image.fromarray(retchip).convert('L')
+    return retchip
+    #take peak values, and softpeak values
+    '''
+    peak_height_weight = 1
+    close_peak_weight = .25
+    far_scalefactor = 2
+    far_meandist_weight = .25
+    far_numpeak_weight = .25
+
+    def peak_strength(peak, signal)
+        closest_peak = signal.nearest_peak(peak)
+        close_dist = closet_peak.dist
+        far_dist  = close_dist * far_scalefactor
+        far_peak_list = signal.radius_search(peak, radius=far_dist)
+        far_mean_dist = np.mean([f.dist for f in far_peak_list])
+        num_far_peaks = len(far_peak_list)  
+        
+        part_ret  = close_peak_weight   * peak.height
+        part_ret /= close_peak_weight   * close_peak.height
+        part_ret *= close_disk_weight   * close_dist
+        part_ret /= far_numpeak_weight  * num_far_peaks
+        part_ret /= far_meandist_weight * far_mean_dist
+    '''
+    # peak strength measure
+    # peak height (closest_peak
+    df2.present()
 
 # =======================================
 # Main Script 
@@ -85,11 +181,13 @@ def load_chip_paths(hs_dirs, hs_tables):
     # Get parameters
     sqrt_area = params.__CHIP_SQRT_AREA__
     histeq    = params.__HISTEQ__
+    myeq      = params.__MYEQ__
     chip_params = dict(sqrt_area=sqrt_area, histeq=histeq)
     print(' * sqrt(target_area) = %r' % sqrt_area)
     print(' * histeq = %r' % histeq)
-
+    print(' * myeq = %r' % myeq)
     chip_uid = params.get_chip_uid()
+    print(' * chip_uid = %r' % chip_uid)
     # Full image path
     cx2_img_path = [img_dir+'/'+gx2_gname[gx] for gx in cx2_gx]
     # Paths to chip, rotated chip
@@ -109,15 +207,28 @@ def load_chip_paths(hs_dirs, hs_tables):
     else: # no rescaling
         cx2_chip_sz = [(int(w), int(h)) for (x,y,w,h) in cx2_roi]
     # --- COMPUTE CHIPS --- # 
-    if histeq:
-        compute_chip = compute_chip_histeq
-    else:
-        compute_chip = precompute_chip_bare
-    parallel_compute(precompute_chip_bare, arg_list=[cx2_img_path, cx2_chip_path,
-                                             cx2_roi, cx2_chip_sz])
+    # HACK COMMENT
+    #if histeq:
+        #compute_chip = compute_chip_histeq
+    #elif myeq: 
+        #compute_chip = precompute_chip_myequalize
+    #else:
+        #compute_chip = precompute_chip_bare
+    compute_chip = precompute_chip_myequalize
+
+    chip_lazy = True
+    if '--nochipcache' in sys.argv:
+        chip_lazy = False
+
+    parallel_compute(precompute_chip_myequalize, arg_list=[cx2_img_path, cx2_chip_path,
+                                             cx2_roi, cx2_chip_sz],
+                     lazy=chip_lazy, 
+                    num_procs=params.__NUM_PROCS__)
     # --- ROTATE CHIPS --- # 
     parallel_compute(rotate_chip, arg_list=[cx2_chip_path,
-                                            cx2_rchip_path, cx2_theta])
+                                            cx2_rchip_path, cx2_theta],
+                                            lazy=chip_lazy, 
+                                            num_procs=params.__NUM_PROCS__)
     # --- RETURN CHIP PATHS --- #
     hs_cpaths = HotspotterChipPaths()
     hs_cpaths.cx2_chip_path  = cx2_chip_path

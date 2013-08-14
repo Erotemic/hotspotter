@@ -18,6 +18,7 @@ import types
 import warnings
 import helpers
 import textwrap
+import os
 #print('LOAD_MODULE: drawing_functions2.py')
 
 DPI = 80
@@ -47,15 +48,27 @@ def printDBG(msg):
 
 # ---- GENERAL FIGURE COMMANDS ----
 def save_figure(fignum=None, fpath=None):
+    # Find the figure
     if fignum is None:
         fig = plt.gcf()
     else:
         fig = plt.figure(fignum, figsize=FIGSIZE, dpi=DPI)
     fignum = fig.number
     if fpath is None:
-       fpath = fig.title
+        # Find the title
+        fpath = fig.canvas.get_window_title()
+    # Sanatize the filename
+    [dpath, fname_clean] = os.path.split(fpath)
+    fname_clean = fname_clean.replace(' ','_')
+    fname_clean = fname_clean.replace('\n','--')
+    fpath_clean = os.path.join(dpath, fname_clean)
+    root, ext = os.path.splitext(fpath_clean)
+    # Check for correct extensions
+    if not ext.lower() in ['.jpg','.png']:
+        fpath_clean += '.png'
+    fpath_clean = os.path.normpath(fpath_clean)
     print('Saving figure to: '+repr(fpath))
-    fig.savefig(fpath, dpi=DPI)
+    fig.savefig(fpath_clean, dpi=DPI)
 
 def set_figsize(fignum, width, height):
     if fignum is None:
@@ -142,6 +155,13 @@ def close_all_figures():
 def reset():
     close_all_figures()
 
+def draw():
+    show_all_figures()
+
+def update():
+    draw()
+    bring_to_front_all_figures()
+
 def present(*args, **kwargs):
     'execing present should cause IPython magic'
     print('Presenting figures...')
@@ -212,6 +232,29 @@ def __parse_fignum(fignum_, plotnum_=111):
         (fignum2, plotnum2) = (fignum_, plotnum_)
     return fignum2, plotnum2
 
+import pylab
+def draw_stems(x_data, y_data):
+    markerline, stemlines, baseline = pylab.stem(x_data, y_data, '-.')
+    pylab.setp(markerline, 'markerfacecolor', 'b')
+    pylab.setp(baseline, 'color','r', 'linewidth', 2)
+
+def set_xticks(tick_set):
+    ax = plt.gca()
+    ax.set_xticks(tick_set)
+
+def set_yticks(tick_set):
+    ax = plt.gca()
+    ax.set_yticks(tick_set)
+
+def set_xlabel(lbl):
+    ax = plt.gca()
+    ax.set_xlabel(lbl)
+
+def set_ylabel(lbl):
+    ax = plt.gca()
+    ax.set_ylabel(lbl)
+
+
 def figure(fignum=None, doclf=False, title=None, plotnum=111, figtitle=None):
     fignum, plotnum = __parse_fignum(fignum, plotnum)
     fig = plt.figure(num=fignum, figsize=FIGSIZE, dpi=DPI)
@@ -236,7 +279,7 @@ def figure(fignum=None, doclf=False, title=None, plotnum=111, figtitle=None):
         if figtitle is None and plotnum == 111:
             figtitle = title
         if not figtitle is None:
-            fig.canvas.set_window_title('fig '+str(fignum)+' '+figtitle)
+            fig.canvas.set_window_title('fig '+repr(fignum)+' '+figtitle)
     return fig
 
 def set_figtitle(figtitle):
@@ -308,7 +351,7 @@ def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
                                                             alpha=LINE_ALPHA)
     ax.add_collection(line_collection)
 
-def draw_kpts2(kpts, offset=(0,0)):
+def draw_kpts2(kpts, offset=(0,0), ell=False, pts=True):
     global SHOW_ELLS
     global ELL_COLOR
     global ELL_ALPHA
@@ -324,30 +367,35 @@ def draw_kpts2(kpts, offset=(0,0)):
     kptsT = kpts.T
     x = kptsT[0] + offset[0]
     y = kptsT[1] + offset[1]
-    a = kptsT[2]
-    c = kptsT[3]
-    d = kptsT[4]
+    if ell:
+        a = kptsT[2]
+        c = kptsT[3]
+        d = kptsT[4]
 
-    # Manually Calculated sqrtm(inv(A) for A in kpts)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        aIS = 1/np.sqrt(a) 
-        cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
-        dIS = 1/np.sqrt(d)
-    kpts_iter = iter(zip(x,y,aIS,cIS,dIS))
-    # This has to be the sexiest piece of code I've ever written
-    ell_actors = [ Circle( (0,0), 1, 
-                           transform=Affine2D([( a_, 0 , x),
-                                               ( c_, d_, y),
-                                               ( 0 , 0 , 1)]) )
-                 for (x,y,a_,c_,d_) in kpts_iter ]
-    ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
-    ellipse_collection.set_facecolor('none')
-    ellipse_collection.set_transform(pltTrans)
-    ellipse_collection.set_alpha(ELL_ALPHA)
-    ellipse_collection.set_linewidth(ELL_LINEWIDTH)
-    ellipse_collection.set_edgecolor(ELL_COLOR)
-    ax.add_collection(ellipse_collection)
+        # Manually Calculated sqrtm(inv(A) for A in kpts)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            aIS = 1/np.sqrt(a) 
+            cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
+            dIS = 1/np.sqrt(d)
+        kpts_iter = iter(zip(x,y,aIS,cIS,dIS))
+        # This has to be the sexiest piece of code I've ever written
+        ell_actors = [ Circle( (0,0), 1, 
+                            transform=Affine2D([( a_, 0 , x),
+                                                ( c_, d_, y),
+                                                ( 0 , 0 , 1)]) )
+                    for (x,y,a_,c_,d_) in kpts_iter ]
+        ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
+        ellipse_collection.set_facecolor('none')
+        ellipse_collection.set_transform(pltTrans)
+        ellipse_collection.set_alpha(ELL_ALPHA)
+        ellipse_collection.set_linewidth(ELL_LINEWIDTH)
+        ellipse_collection.set_edgecolor(ELL_COLOR)
+        ax.add_collection(ellipse_collection)
+
+    if pts:
+        ax.plot(x, y, 'ro', markersize=0)
+
     
 def draw_kpts(_rchip, _kpts):
     kpts_img = np.copy(_rchip)
@@ -402,6 +450,69 @@ def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111):
         print('!! Exception durring fig.tight_layout: '+repr(ex))
         raise
 
+def draw_histpdf(data, label=None):
+    freq, _ = draw_hist(data)
+    draw_pdf(data, draw_support=False, scale_to=freq.max(), label=label)
+
+def legend():
+    ax = plt.gca()
+    ax.legend(**{'fontsize':18})
+    
+import types
+def draw_hist(data, bins=None):
+    if type(data) == types.ListType:
+        data = np.array(data)
+    if bins is None:
+        dmin = data.min()
+        dmax = data.max()
+        bins = dmax - dmin
+    ax  = plt.gca()
+    freq, bins_, patches = ax.hist(data, range=(dmin,dmax))
+    return freq, bins_
+    
+def variation_trunctate(data):
+    ax = plt.gca()
+    data = np.array(data)
+    trunc_max = data.mean() + data.std() * 2
+    trunc_min = np.floor(data.min())
+    ax.set_xlim(trunc_min,trunc_max)
+    #trunc_xticks = np.linspace(0, int(trunc_max),11)
+    #trunc_xticks = trunc_xticks[trunc_xticks >= trunc_min]
+    #trunc_xticks = np.append([int(trunc_min)], trunc_xticks)
+    #no_zero_yticks = ax.get_yticks()[ax.get_yticks() > 0]
+    #ax.set_xticks(trunc_xticks)
+    #ax.set_yticks(no_zero_yticks)
+    
+import scipy.stats
+def draw_pdf(data, draw_support=True, scale_to=None, label=None, colorx=0):
+    data = np.array(data)
+    fig = plt.gcf()
+    ax = plt.gca()
+    bw_factor = .05
+    line_color = plt.get_cmap('gist_rainbow')(colorx)
+    # Estimate a pdf
+    data_pdf = scipy.stats.gaussian_kde(data, bw_factor)
+    data_pdf.covariance_factor = bw_factor
+    # Get probability of seen data
+    probability = data_pdf(data)
+    # Get probability of unseen data data
+    x_data = np.linspace(0, data.max(), 500)
+    y_data = data_pdf(x_data)
+    # Scale if requested
+    if not scale_to is None:
+        scale_factor = scale_to / y_data.max()
+        y_data *= scale_factor
+        probability *= scale_factor
+    #Plot the actual datas on near the bottom perterbed in Y
+    if draw_support:
+        pdfrange = probability.max() - probability.min() 
+        perb   = (np.random.randn(len(data))) * pdfrange/30.
+        preb_y_data = np.abs([pdfrange/50. for _ in data]+perb)
+        ax.plot(data, preb_y_data, 'o', color=line_color, figure=fig, alpha=.1)
+    # Plot the pdf (unseen data)
+    ax.plot(x_data, y_data, color=line_color, label=label)
+    
+    
 def show_histogram(data, bins=None, **kwargs):
     if bins is None:
         dmin = data.min()
@@ -448,6 +559,8 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
         kpts2_m = kpts2[fm[:,1]]
         # matplotlib stuff
         imshow(match_img,fignum=fignum,plotnum=plotnum,title=title)
+        draw_kpts2(kpts1, ell=False)
+        draw_kpts2(kpts2, offset=(woff,hoff), ell=False)
         draw_kpts2(kpts1_m)
         draw_kpts2(kpts2_m, offset=(woff,hoff))
         draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
@@ -459,6 +572,18 @@ def show_matches3(res, hs, cx, SV=True, fignum=0, plotnum=111, title_aug=None):
     cx2_fs    = res.cx2_fs_V if SV else res.cx2_fs
     title_suff = '(+V)' if SV else None
     return show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum, plotnum, title_aug, title_suff)
+
+def show_all_matches(hs, res): 
+    SV = True
+    qcx = res.qcx
+    fignum=0
+    title_aug=None
+    others = hs.get_other_cxs(qcx)
+    num_others = len(others)
+    plotnum=num_others*100 + 11
+    for ox, cx in enumerate(others):
+        show_matches3(res, hs, cx, plotnum=plotnum+cx)
+
 
 def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111, title_pref=None, title_suff=None):
     print('Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))
@@ -487,5 +612,3 @@ def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111,
 def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     imshow(rchip,fignum=fignum,title=title,**kwargs)
     draw_kpts2(kpts)
-
-

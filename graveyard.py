@@ -408,9 +408,6 @@ def match_vsone(desc2, vsone_flann, ratio_thresh=1.2, burst_thresh=None, DBG=Fal
         print(' * qfx.shape  = %r ' % (  qfx.shape, ))
     return (fm, fs)
 
-def warp_chip(rchip2, H, rchip1):
-    rchip2W = cv2.warpPerspective(rchip2, H, rchip1.shape[0:2][::-1])
-    return rchip2W
 
 def default_preferences():
     root = Pref()

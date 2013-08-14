@@ -22,20 +22,15 @@ import scipy.sparse as spsparse
 
 # HACK: Flann indexes wont load correctly on Ooo
 __OVERRIDE_FLANN_CACHE__ = sys.platform == 'win32'
-def remove_chars(instr, illegals_chars):
-    outstr = instr
-    for ill_char in iter(illegals_chars):
-        outstr = outstr.replace(ill_char, '')
-    return outstr
 
 def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
     ''' Tries to load a cached flann index before doing anything'''
     print('Precomputing flann index: '+lbl)
     cache_dir = '.' if cache_dir is None else cache_dir
     # Generate a unique filename for data and flann parameters
-    fparams_uid = remove_chars(str(flann_params.values()), ', \'[]')
+    fparams_uid = helpers.remove_chars(str(flann_params.values()), ', \'[]')
     md5_uid     = helpers.hashstr_md5(data)
-    shape_uid   = remove_chars(str(data.shape), ' ')
+    shape_uid   = helpers.remove_chars(str(data.shape), ' ')
     flann_suffix = '_' + fparams_uid + '_' + md5_uid + shape_uid + '.flann'
     # Append any user labels
     flann_fname = 'flann_index' + lbl + flann_suffix

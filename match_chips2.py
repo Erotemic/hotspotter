@@ -444,6 +444,7 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
     # spatially verify the top __NUM_RERANK__ results
     bad_consecutive_reranks = 0
     max_bad_consecutive_reranks = 20 # stop if more than 20 bad reranks
+    __OVERRIDE__ = False
     for topx in xrange(num_rerank):
         cx    = top_cx[topx]
         kpts2 = cx2_kpts[cx]
@@ -452,7 +453,7 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
         fm_V, fs_V, H = spatially_verify(kpts1, kpts2, fm, fs)
         cx2_fm_V[cx] = fm_V
         cx2_fs_V[cx] = fs_V
-        if len(fm_V) == 0:
+        if len(fm_V) == 0 and __OVERRIDE__:
             bad_consecutive_reranks += 1
             if bad_consecutive_reranks > max_bad_consecutive_reranks:
                 print(' * Too many bad consecutive spatial verifications')

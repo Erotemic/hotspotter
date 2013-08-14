@@ -29,7 +29,7 @@ __BOW_NUM_WORDS__  = long(5e4)
 # Thresholds for one-vs-one
 __VSONE_RATIO_THRESH__ = 1.5
 # Number of top matches to spatially re-rank
-__NUM_RERANK__   = 50
+__NUM_RERANK__   = 1000
 # Percentage of the diagonal length of keypoint extent
 __XY_THRESH__    = .1
 hs1_params = {'algorithm':'kdtree',
@@ -81,6 +81,7 @@ __RESAVE_QUERY__   = False
 
 __WHITEN_FEATS__  = False
 __HISTEQ__        = False
+__MYEQ__          = True
 
 __CHIP_SQRT_AREA__ = 750
 
@@ -106,10 +107,12 @@ def param_string():
 def get_chip_uid():
     global __CHIP_SQRT_AREA__
     global __HISTEQ__
+    global __MYEQ__
     isorig = (__CHIP_SQRT_AREA__ is None or __CHIP_SQRT_AREA__ <= 0)
     histeq = ['','_histeq'][__HISTEQ__]
+    myeq = ['','_myEQ'][__MYEQ__]
     resize = ['_szorig', ('_sz%r' % __CHIP_SQRT_AREA__)][not isorig] 
-    chip_uid = histeq + resize
+    chip_uid = histeq + resize + myeq
     return chip_uid
 
 def get_feat_uid():
@@ -184,6 +187,10 @@ if '--resave-query' in sys.argv:
 
 if '--print-checks' in sys.argv:
     helpers.__PRINT_CHECKS__ = True
+
+if '--serial' in sys.argv:
+    __NUM_PROCS__ = 1
+
 
 # MAJOR HACKS 
 #__FORCE_REQUERY_CX__ = set([0,1])

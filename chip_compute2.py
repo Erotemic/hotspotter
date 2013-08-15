@@ -8,30 +8,13 @@ import load_data2
 import numpy as np
 import os, sys
 import params
+import scipy.signal
+import scipy.ndimage.filters as filters
 
 
 # =======================================
 # Parallelizable Work Functions          
 # =======================================
-def precompute_chip_bare(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
-    chip.save(chip_path, 'PNG')
-    return True
-
-# Preprocessing based on preferences
-def precompute_chip_histeq(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
-    chip = algos.histeq(chip)
-    chip.save(chip_path, 'PNG')
-    return True
-
-def precompute_chip_myequalize(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
-    chip = myequalize_chip(chip)
-    chip.save(chip_path, 'PNG')
-    return True
-
-
 def __compute_chip(img_path, chip_path, roi, new_size):
     '''Crops chip from image ; Converts to grayscale ; 
     Resizes to standard size ; Equalizes the histogram
@@ -53,6 +36,55 @@ def __compute_chip(img_path, chip_path, roi, new_size):
     # Save chip to disk
     return chip
 
+# Why doesn't this work? 
+def make_compute_chip_func(preproc_func_list):
+    def custom_compute_chip(img_path, chip_path, roi, new_size):
+        chip = __compute_chip(img_path, chip_path, roi, new_size)
+        for preproc_func in iter(preproc_func_list):
+            print preproc_func.__name__
+            chip = preproc_func(chip)
+        chip.save(chip_path, 'PNG')
+        return True
+    return custom_compute_chip
+
+def compute_bare_chip(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip.save(chip_path, 'PNG')
+    return True
+
+def compute_reg_norm_and_histeq_chip(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = region_normalize_chip(chip)
+    chip = histeq(chip)
+    chip.save(chip_path, 'PNG')
+    return True
+
+def compute_reg_norm_chip(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = region_normalize_chip(chip)
+    chip.save(chip_path, 'PNG')
+    return True
+
+def compute_histeq_chip(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = histeq(chip)
+    chip.save(chip_path, 'PNG')
+    return True
+
+def histeq(pil_img):
+    img = np.asarray(pil_img)
+    try:
+        from skimage import exposure
+        'Local histogram equalization'
+        # Equalization
+        img_eq_float64 = exposure.equalize_hist(img)
+        return Image.fromarray(np.uint8(np.round(img_eq_float64*255)))
+    except Exception as ex:
+        from tpl.other import imtools
+        print('Scikits not found: %s' % str(ex))
+        print('Using fallback histeq')
+        return Image.fromarray(imtools.histeq(img)).convert('L')
+
 def rotate_chip(chip_path, rchip_path, theta):
     ''' reads chip, rotates, and saves'''
     chip = Image.open(chip_path)
@@ -60,94 +92,37 @@ def rotate_chip(chip_path, rchip_path, theta):
     rchip = chip.rotate(degrees, resample=Image.BICUBIC, expand=1)
     rchip.save(rchip_path, 'PNG')
 
-import scipy.signal
-import scipy.ndimage.filters as filters
-
-def myequalize_chip(chip):
+def region_normalize_chip(chip):
     #chip = hs.get_chip(1)
-    chip = np.asarray(chip)
-    if len(chip.shape) == 3:
-        print('chip shape')
-        chip = chip.sum(2) / 3
-    chipw, chiph = chip.shape[0:2]
-    half_w = chipw/10
-    half_h = chiph/10
-    x1 = round(chipw/2 - half_w)
-    y1 = round(chiph/2 - half_h)
-    x2 = round(chipw/2 + half_w)
-    y2 = round(chiph/2 + half_h)
-    area = chip[x1:x2, y1:y2]
-    #df2.reset()
-    #df2.figure(1, doclf=True)
-    # for local maxima
-    intensity  = area.flatten()
-    freq, _  = np.histogram(intensity, 64)
-    #df2.figure(4)
-    #def test(freq):
-        #num_samp =  len(freq)
-        ##plt.plot(np.linspace(0, 255, num_samp), freq)
-        ##maxpos =  scipy.signal.argrelextrema(freq, np.greater)[0]
-        ##widths = np.array(map(round, [num_samp*.1, num_samp*.2]), dtype=np.int32)
-        #maxpos = filters.maximum_filter(freq, 2)
-        ##maxpos = scipy.signal.find_peaks_cwt(freq, widths)
-        #maxima = 255 * np.array(maxpos) / len(freq)
-        #print maxima
-        #return maxima
-    #maxima8 = test(freq8)
-    #maxima32 = test(freq32)
-    #maxima64 = test(freq64)
-    #maxima128 = test(freq128)
-    def localmax(freq):
-        to_return = []
-        maxpos = []
-        nsamp = len(freq)
-        for ix in xrange(nsamp):
-            prev = freq[max(0, ix-1)]
-            item = freq[ix]
-            next = freq[min(nsamp-1, ix+1)]
-            if item >= prev and item <=next and (item != prev and item != next):
-                maxpos.append(ix)
-        return maxpos
-    maxpos = localmax(freq)
+    chip_ = np.asarray(chip, dtype=np.float)
+    chipw, chiph = chip_.shape
+    half_w = chipw * .1
+    half_h = chiph * .1
+    x1 = chipw/2 - half_w
+    y1 = chiph/2 - half_h
+    x2 = chipw/2 + half_w
+    y2 = chiph/2 + half_h
+    (x1,y1,x2,y2) = map(int, map(round, (x1,y1,x2,y2)))
+    area = chip_[x1:x2, y1:y2]
+    intensity = area.flatten()
+    freq, _  = np.histogram(intensity, 32)
+    #algos.viz_localmax(freq)
+    maxpos  = algos.localmax(freq)
     min_int = intensity.min()
     max_int = intensity.max()
-    maxima = min_int + (max_int - min_int) * np.array(maxpos) / len(freq)
+    maxima = min_int + (max_int - min_int) * np.array(maxpos) / float(len(freq))
     if len(maxima) > 2:
-        low = float(maxima[0])
+        low  = float(maxima[0])
         high = float(maxima[-1])
     else:
-        low = min_int 
-        high = max_int
-    retchip = (chip - low) * 255 / (high - low)
-    retchip[retchip < 0] = 0
-    retchip[retchip > 255] = 255 
-    retchip = Image.fromarray(retchip).convert('L')
+        low  = float(min_int)
+        high = float(max_int)
+    chip_ = (chip_ - low) * 255.0 / (high - low)
+    chip_ = chip_.round()
+    chip_[chip_ < 0] = 0
+    chip_[chip_ > 255] = 255 
+    retchip = Image.fromarray(chip_).convert('L')
     return retchip
-    #take peak values, and softpeak values
-    '''
-    peak_height_weight = 1
-    close_peak_weight = .25
-    far_scalefactor = 2
-    far_meandist_weight = .25
-    far_numpeak_weight = .25
-
-    def peak_strength(peak, signal)
-        closest_peak = signal.nearest_peak(peak)
-        close_dist = closet_peak.dist
-        far_dist  = close_dist * far_scalefactor
-        far_peak_list = signal.radius_search(peak, radius=far_dist)
-        far_mean_dist = np.mean([f.dist for f in far_peak_list])
-        num_far_peaks = len(far_peak_list)  
-        
-        part_ret  = close_peak_weight   * peak.height
-        part_ret /= close_peak_weight   * close_peak.height
-        part_ret *= close_disk_weight   * close_dist
-        part_ret /= far_numpeak_weight  * num_far_peaks
-        part_ret /= far_meandist_weight * far_mean_dist
-    '''
-    # peak strength measure
-    # peak height (closest_peak
-    df2.present()
 
 # =======================================
 # Main Script 
@@ -159,7 +134,7 @@ class HotspotterChipPaths(DynStruct):
         self.cx2_chip_path  = []
         self.cx2_rchip_path = []
 
-def load_chip_paths(hs_dirs, hs_tables):
+def load_chip_paths(hs_dirs, hs_tables, hs=None):
     img_dir      = hs_dirs.img_dir
     rchip_dir    = hs_dirs.rchip_dir
     chip_dir     = hs_dirs.chip_dir
@@ -173,27 +148,25 @@ def load_chip_paths(hs_dirs, hs_tables):
     print('=============================')
     print('Precomputing chips and loading chip paths')
     print('=============================')
-    
-    # --- BUILD TASK INFORMATION --- #
-    ''' TODO: These should be functions
-    Maybe you can change them to objects so they work like lists but dont 
-    use up so much memory. Make them more like indexable generators'''
+
     # Get parameters
-    sqrt_area = params.__CHIP_SQRT_AREA__
-    histeq    = params.__HISTEQ__
-    myeq      = params.__MYEQ__
+    sqrt_area   = params.__CHIP_SQRT_AREA__
+    histeq      = params.__HISTEQ__
+    region_norm = params.__REGION_NORM__
     chip_params = dict(sqrt_area=sqrt_area, histeq=histeq)
+    chip_uid = params.get_chip_uid()
+
     print(' * sqrt(target_area) = %r' % sqrt_area)
     print(' * histeq = %r' % histeq)
-    print(' * myeq = %r' % myeq)
-    chip_uid = params.get_chip_uid()
+    print(' * region_norm = %r' % region_norm)
     print(' * chip_uid = %r' % chip_uid)
+
     # Full image path
     cx2_img_path = [img_dir+'/'+gx2_gname[gx] for gx in cx2_gx]
     # Paths to chip, rotated chip
-    chip_format  = chip_dir+'/CID_%d'+chip_uid+'.png'
+    chip_format  =  chip_dir+'/CID_%d'+chip_uid+'.png'
     rchip_format = rchip_dir+'/CID_%d'+chip_uid+'.rot.png'
-    cx2_chip_path   = [chip_format % cid for cid in cx2_cid]
+    cx2_chip_path   = [chip_format  % cid for cid in cx2_cid]
     cx2_rchip_path  = [rchip_format % cid for cid in cx2_cid]
     # Normalized chip size
     cx2_imgchip_sz = [(float(w), float(h)) for (x,y,w,h) in cx2_roi]
@@ -206,57 +179,59 @@ def load_chip_paths(hs_dirs, hs_tables):
         cx2_chip_sz = [_resz(float(w), float(h)) for (x,y,w,h) in cx2_roi]
     else: # no rescaling
         cx2_chip_sz = [(int(w), int(h)) for (x,y,w,h) in cx2_roi]
+
     # --- COMPUTE CHIPS --- # 
-    # HACK COMMENT
-    #if histeq:
-        #compute_chip = compute_chip_histeq
-    #elif myeq: 
-        #compute_chip = precompute_chip_myequalize
-    #else:
-        #compute_chip = precompute_chip_bare
-    compute_chip = precompute_chip_myequalize
+    pcc_kwargs = {
+        'arg_list'  : [cx2_img_path, cx2_chip_path, cx2_roi, cx2_chip_sz],
+        'lazy'      : (not '--nochipcache' in sys.argv),
+        'num_procs' : params.__NUM_PROCS__ }
+    #(img_path, chip_path, roi, new_size) = zip(*pcc_kwargs['arg_list'])[109]
+    # Make a compute chip function with all the preprocessing your heart desires
+    #preproc_func_list = []
+    #if region_norm: 
+        #preproc_func_list.append(region_normalize_chip)
+    #if histeq: 
+        #preproc_func_list.append(algos.histeq)
+    #custom_compute_chip = make_compute_chip_func(preproc_func_list)
 
-    chip_lazy = True
-    if '--nochipcache' in sys.argv:
-        chip_lazy = False
+    if region_norm and histeq: 
+        parallel_compute(compute_reg_norm_and_histeq_chip, **pcc_kwargs)
+    elif region_norm: 
+        parallel_compute(compute_reg_norm_chip, **pcc_kwargs)
+    elif histeq: 
+        parallel_compute(compute_histeq_chip, **pcc_kwargs)
+    else:
+        parallel_compute(compute_bare_chip, **pcc_kwargs)
 
-    parallel_compute(precompute_chip_myequalize, arg_list=[cx2_img_path, cx2_chip_path,
-                                             cx2_roi, cx2_chip_sz],
-                     lazy=chip_lazy, 
-                    num_procs=params.__NUM_PROCS__)
     # --- ROTATE CHIPS --- # 
-    parallel_compute(rotate_chip, arg_list=[cx2_chip_path,
-                                            cx2_rchip_path, cx2_theta],
-                                            lazy=chip_lazy, 
-                                            num_procs=params.__NUM_PROCS__)
+    pcc_kwargs['arg_list'] = [cx2_chip_path, cx2_rchip_path, cx2_theta] 
+    parallel_compute(rotate_chip, **pcc_kwargs)
+
     # --- RETURN CHIP PATHS --- #
-    hs_cpaths = HotspotterChipPaths()
-    hs_cpaths.cx2_chip_path  = cx2_chip_path
-    hs_cpaths.cx2_rchip_path = cx2_rchip_path
+
     print('=============================')
     print('Done Precomputing chips and loading chip paths')
     print('=============================\n')
+
+    # Build hotspotter path object
+    hs_cpaths = HotspotterChipPaths()
+    hs_cpaths.cx2_chip_path  = cx2_chip_path
+    hs_cpaths.cx2_rchip_path = cx2_rchip_path
+    
+    if not hs is None:
+        hs.cpaths = hs_cpaths
 
     return hs_cpaths
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
+    import load_data2
     freeze_support()
     # --- LOAD DATA --- #
     db_dir = load_data2.DEFAULT
     hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
+    hs = load_data2.HotSpotter(None)
+    hs.tables = hs_tables
+    hs.dirs   = hs_dirs
     # --- LOAD CHIPS --- #
     hs_cpaths = load_chip_paths(hs_dirs, hs_tables)
-
-# GRAVEYARD
-'''
-    __DBG_INFO__ = False
-
-    if __DBG_INFO__:
-        cx2_chip_sf = [(w/wt, h/ht)
-                    for ((w,h),(wt,ht)) in zip(cx2_imgchip_sz, cx2_chip_sz)]
-        cx2_sf_ave = [(sf1 + sf2) / 2 for (sf1, sf2) in cx2_chip_sf]
-        cx2_sf_err = [np.abs(sf1 - sf2) for (sf1, sf2) in cx2_chip_sf]
-        myprint(mystats(cx2_sf_ave),lbl='ave scale factor')
-        myprint(mystats(cx2_sf_err),lbl='ave scale factor error')
-'''

@@ -721,3 +721,15 @@ def aff_inliers_from_randomsac(kpts1_m, kpts2_m, xy_thresh_sqrd, nIter=500, nSam
             best_inliers = _inliers
     return best_inliers
 
+# GRAVEYARD
+'''
+    __DBG_INFO__ = False
+
+    if __DBG_INFO__:
+        cx2_chip_sf = [(w/wt, h/ht)
+                    for ((w,h),(wt,ht)) in zip(cx2_imgchip_sz, cx2_chip_sz)]
+        cx2_sf_ave = [(sf1 + sf2) / 2 for (sf1, sf2) in cx2_chip_sf]
+        cx2_sf_err = [np.abs(sf1 - sf2) for (sf1, sf2) in cx2_chip_sf]
+        myprint(mystats(cx2_sf_ave),lbl='ave scale factor')
+        myprint(mystats(cx2_sf_err),lbl='ave scale factor error')
+'''

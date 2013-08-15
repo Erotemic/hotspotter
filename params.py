@@ -74,6 +74,7 @@ __VSONE_FLANN_PARAMS__       = hs1_params
 
 __VERBOSE_CACHE__ = False
 __VERBOSE_LOAD_DATA__ = False
+__VERBOSE_MATCHING__ = False
 
 __CACHE_QUERY__    = True
 __REVERIFY_QUERY__ = False
@@ -81,7 +82,7 @@ __RESAVE_QUERY__   = False
 
 __WHITEN_FEATS__  = False
 __HISTEQ__        = False
-__MYEQ__          = True
+__REGION_NORM__   = False
 
 __CHIP_SQRT_AREA__ = 750
 
@@ -107,12 +108,12 @@ def param_string():
 def get_chip_uid():
     global __CHIP_SQRT_AREA__
     global __HISTEQ__
-    global __MYEQ__
+    global __REGION_NORM__
     isorig = (__CHIP_SQRT_AREA__ is None or __CHIP_SQRT_AREA__ <= 0)
     histeq = ['','_histeq'][__HISTEQ__]
-    myeq = ['','_myEQ'][__MYEQ__]
+    myeq = ['','_regnorm'][__REGION_NORM__]
     resize = ['_szorig', ('_sz%r' % __CHIP_SQRT_AREA__)][not isorig] 
-    chip_uid = histeq + resize + myeq
+    chip_uid = resize + histeq + myeq
     return chip_uid
 
 def get_feat_uid():
@@ -163,6 +164,8 @@ def reload_module():
 if '--histeq' in sys.argv:
     print(' * with histogram equalization')
     __HISTEQ__ = True
+if '--regnorm' in sys.argv:
+    __REGION_NORM__ = True
 if '--whiten' in sys.argv or '--white' in sys.argv:
     print(' * with whitening')
     __WHITEN_FEATS__ = True

@@ -28,6 +28,7 @@ from sys import stdout as sout
 #print('LOAD_MODULE: helpers.py')
 
 __PRINT_CHECKS__ = False
+__PRINT_WRITES__ = False
 
 def remove_chars(instr, illegals_chars):
     outstr = instr
@@ -88,7 +89,8 @@ def read_from(fname):
     return text
 
 def write_to(fname, to_write):
-    println(' * Writing to text file: %r ' % fname)
+    if __PRINT_WRITES__:
+        println(' * Writing to text file: %r ' % fname)
     with open(fname, 'w') as file:
         file.write(to_write)
 
@@ -139,7 +141,7 @@ def myprint(input=None, prefix='', indent='', lbl=''):
 def gvim(fname):
     'its the only editor that matters'
     import subprocess
-    proc = subprocess.Popen('gvim '+fname)
+    proc = subprocess.Popen(['gvim',fname])
 
 def longest_existing_path(_path):
     while True: 

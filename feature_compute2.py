@@ -243,7 +243,6 @@ class HotspotterChipFeatures(DynStruct):
         self.cx2_feats_hesaff = []
         self.cx2_feats_sift   = []
         self.cx2_feats_freak  = []
-
     
 def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, cache_dir):
     print('Loading '+feat_type+' features: UID='+str(feat_uid))
@@ -260,14 +259,15 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, 
         #print all([np.all(desc == desc_) for desc, desc_ in zip(cx2_desc, cx2_desc_)])
     else:
         # Recompute if you cant
-        print(' * Loading original '+feat_type+' features')
-        cx2_feat_path = [ feat_dir+'/CID_%d_%s.npz' % (cid, feat_type) for cid in cx2_cid]
+        print(' * Loading original '+feat_uid+' features')
+        cx2_feat_path = [ feat_dir+'/CID_%d_%s.npz' % (cid, feat_uid) for cid in cx2_cid]
         # Compute features
         precompute_func = type2_precompute_func[feat_type]
-        parallel_compute(precompute_func, [cx2_rchip_path, cx2_feat_path], params.__NUM_PROCS__)
+        parallel_compute(precompute_func, [cx2_rchip_path, cx2_feat_path])
 
-        # Load features
-        cx2_feats = parallel_compute(load_features, [cx2_feat_path], 1)
+        # Load features (with single thread!)
+        #cx2_feats = parallel_compute(load_features, [cx2_feat_path], num_procs=1)
+        cx2_feats = [load_features(feat_path) for feat_path in iter(cx2_feat_path)]
         cx2_kpts  = [k for (k,d) in cx2_feats]
         cx2_desc  = np.array([d for (k,d) in cx2_feats])
         # Whiten descriptors

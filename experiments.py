@@ -11,7 +11,7 @@ import params
 import report_results2
 import sys 
 
-helpers.__PRINT_CHECKS__ = True
+#helpers.__PRINT_CHECKS__ = True
 
 # TODO: No resize chips
 # TODO: Orientation assignment / Mikj detectors
@@ -38,7 +38,7 @@ def philbin07_oxford():
     dbdir = load_data2.OXFORD
     hs = load_data2.HotSpotter(dbdir, load_matcher=False)
     # Load train / test / database samples
-    hs.load_test_train_database_samples_from_file()
+    hs.load_test_train_database_samples_from_file(test_sample_fname='test_sample55.txt')
     # Quick Sanity Checks
     db_sample_cx = hs.database_sample_cx
     tr_sample_cx = hs.train_sample_cx
@@ -54,7 +54,8 @@ def philbin07_oxford():
     report_results2.write_oxsty_mAP_results(hs, qcx2_res, SV=False)
     report_results2.write_rank_results(hs, qcx2_res, SV=True)
     report_results2.write_rank_results(hs, qcx2_res, SV=False)
-    report_results2.dump_qcx_tt_bt_tf(hs, qcx2_res)
+    report_results2.dump_all(hs, qcx2_res)
+    
 
 db_dir = load_data2.JAGUARS
 def run_experiment():
@@ -68,19 +69,19 @@ def run_experiment():
     import params
     import report_results2
     import sys 
-    print params.param_string()
     db_dir = load_data2.DEFAULT
     print(textwrap.dedent('''
     ======================
     Running Experiment on: %r
     ======================''' % db_dir))
-    algo_uid = params.get_algo_uid()
+    print params.param_string()
+
     hs = load_data2.HotSpotter(db_dir)
     qcx2_res = mc2.run_matching(hs)
     report_results2.write_rank_results(hs, qcx2_res, SV=True)
     report_results2.write_rank_results(hs, qcx2_res, SV=False)
     #report_results2.dump_qcx_tt_bt_tf(hs, qcx2_res)
-    report_results2.plot_summary_visualizations(hs, qcx2_res, True)
+    report_results2.plot_summary_visualizations(hs, qcx2_res)
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
@@ -89,10 +90,16 @@ if __name__ == '__main__':
 
     arg_map = {
         'philbin07' : philbin07_oxford,
-        'test'  : run_experiment }
+        'default'   : run_experiment }
 
     print ('Valid arguments are:\n    '+ '\n    '.join(arg_map.keys()))
+
+    has_arg = False
     for argv in sys.argv:
         if argv in arg_map.keys():
             print('Running '+str(argv))
             arg_map[argv]()
+            has_arg = True
+
+    if not has_arg:
+        run_experiment()

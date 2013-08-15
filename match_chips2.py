@@ -577,13 +577,18 @@ def run_matching(hs):
     tt_ALL = tic('all queries')
     assign_times = [] # metadata
     verify_times = []
-    print('Running matching on: %r' % test_sample_cx)
 
+    verbose_matching = params.__VERBOSE_MATCHING__
     force_requery_cx_set = params.__FORCE_REQUERY_CX__
     reverify_query       = params.__REVERIFY_QUERY__
     resave_query         = params.__RESAVE_QUERY__
+
+    if verbose_matching:
+        print('Running matching on: %r' % test_sample_cx)
+
     for qcx in iter(test_sample_cx):
-        helpers.print_ ('query(qcx=%4d)->' % qcx)
+        if verbose_matching:
+            helpers.print_ ('query(qcx=%4d)->' % qcx)
         res = qcx2_res[qcx]
         # load query from cache if possible
         cache_load_success = params.__CACHE_QUERY__ and res.load(hs)
@@ -591,7 +596,8 @@ def run_matching(hs):
             cache_load_success = False
         # Get what data we have if we are redoing things
         if cache_load_success or resave_query or reverify_query:
-            helpers.print_('load_cache->')
+            if verbose_matching:
+                helpers.print_('load_cache->')
             cx2_fm      = res.cx2_fm
             cx2_fs      = res.cx2_fs
             cx2_score   = res.cx2_score
@@ -604,7 +610,8 @@ def run_matching(hs):
             cx2_fm, cx2_fs, cx2_score = assign_matches(qcx, cx2_desc)
             assign_times.append(toc(tt_A))
         else: 
-            helpers.print_('cache_assign->')
+            if verbose_matching:
+                helpers.print_('cache_assign->')
         # Spatially verify the assigned matches
         if not cache_load_success or reverify_query:
             tt_V = tic('verify')
@@ -612,7 +619,8 @@ def run_matching(hs):
                     spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
             verify_times.append(toc(tt_V))
         else: 
-            helpers.print_('cache_verify->')
+            if verbose_matching:
+                helpers.print_('cache_verify->')
         # Assign output to the query result 
         res.qcx = qcx
         res.cx2_fm    = cx2_fm
@@ -625,8 +633,12 @@ def run_matching(hs):
         if not cache_load_success or reverify_query or resave_query:
             helpers.print_('')
             res.save(hs)
-        helpers.println('endquery;')       
+        if verbose_matching:
+            helpers.println('endquery;')       
+        if not verbose_matching:
+            helpers.print_('.'); helpers.flush()
     #total_time = toc(tt_ALL)
+    print('')
     return qcx2_res
 
 

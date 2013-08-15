@@ -4,9 +4,12 @@ Module: load_data
     This is the first script run in the loading pipeline. 
 '''
 import re
-import os, sys, string
+import os
+import sys
+from os.path import join
 import fnmatch
 import cv2
+from PIL import Image
 import types
 import numpy as np
 import helpers
@@ -98,18 +101,23 @@ class HotSpotter(DynStruct):
         hs.test_sample_cx     = range(len(hs.feats.cx2_desc))
         hs.train_sample_cx    = range(len(hs.feats.cx2_desc))
 
-    def load_test_train_database_samples_from_file(hs):
+    def load_test_train_database_samples_from_file(hs,
+                                                   db_sample_fname='database_sample.txt',
+                                                   test_sample_fname='test_sample.txt',
+                                                   train_sample_fname='train_sample.txt',):
         'tries to load test / train / database sample from internal dir'
         print(textwrap.dedent('''
         =============================
-        Loading sample sets from disk
+        Loading sample sets from disk relative to internal_dir
         ============================='''))
-        database_sample_fname = hs.dirs.internal_dir+'/database_sample.txt'
-        test_sample_fname     = hs.dirs.internal_dir+'/test_sample.txt'
-        train_sample_fname    = hs.dirs.internal_dir+'/train_sample.txt'
-        hs.database_sample_cx = helpers.eval_from(database_sample_fname, False)
-        hs.test_sample_cx     = helpers.eval_from(test_sample_fname, False)
-        hs.train_sample_cx    = helpers.eval_from(database_sample_fname, False)
+        internal_dir = hs.dirs.internal_dir
+        db_sample_fpath    = join(internal_dir, db_sample_fname)
+        test_sample_fpath  = join(internal_dir, test_sample_fname)
+        train_sample_fpath = join(internal_dir, train_sample_fname)
+
+        hs.database_sample_cx = helpers.eval_from(db_sample_fpath, False)
+        hs.test_sample_cx     = helpers.eval_from(test_sample_fpath, False)
+        hs.train_sample_cx    = helpers.eval_from(train_sample_fpath, False)
         if hs.database_sample_cx is None and hs.test_sample_cx is None and hs.train_sample_cx is None: 
             hs.default_test_train_database_samples()
         #hs.test_sample_cx = np.array([0,2,3])
@@ -139,6 +147,10 @@ class HotSpotter(DynStruct):
     #--------------
     def get_chip(hs, cx):
         return cv2.imread(hs.cpaths.cx2_rchip_path[cx])
+    #--------------
+    def get_chip_pil(hs, cx):
+        chip = Image.open(hs.cpaths.cx2_rchip_path[cx])
+        return chip
     #--------------
     def get_kpts(hs, cx):
         return hs.feats.cx2_kpts[cx]
@@ -313,7 +325,7 @@ def load_csv_tables(db_dir):
         nDirImgs = 0
         nDirImgsAlready = 0
         for fname in os.listdir(img_dir):
-            if len(fname) > 4 and string.lower(fname[-4:]) in ['.jpg', '.png', '.tiff']:
+            if len(fname) > 4 and fname[-4:].lower() in ['.jpg', '.png', '.tiff']:
                 if fname in fromTableNames: 
                     nDirImgsAlready += 1
                     continue
@@ -537,6 +549,8 @@ def make_csv_table(column_labels=None, column_list=[], header='', column_type=No
             col_str = [('%.2f') % float(c) for c in iter(col)]
         elif coltype == types.IntType:
             col_str = [_toint(c) for c in iter(col)]
+        elif coltype == types.StringType:
+            col_str = [str(c) for c in iter(col)]
         else:
             col_str  = [str(c) for c in iter(col)]
         col_lens = [len(s) for s in iter(col_str)]
@@ -553,38 +567,68 @@ def make_csv_table(column_labels=None, column_list=[], header='', column_type=No
     csv_text = '\n'.join(csv_rows)
     return csv_text
 
+# for mothers dataset
+viewpoint_pairs = [
+    (19, 20),
+    (110, 108),
+    (108, 112), # 108 is very dark
+    (16, 17),
+    (73,71),
+    (75,78)
+]
+
+image_quality = [
+    (27, 26), # minor viewpoint
+    (67,68), #stupid hard case (query from 68 to 67 direction is better (start with foal)
+    (52,53),
+    (73,71)
+]
+
+lighting_pairs = [
+    (49, 50), #brush occlusion on legs
+    (93, 94),
+    (105,104)
+]
+
+confused_pairs = []
+
+occlusion= [
+    (64,65)
+]
+
 
 # MODULE GLOBAL VARIABLES
 WORK_DIR = 'D:/data/work'
 if sys.platform == 'linux2':
     WORK_DIR = '/media/Store/data/work'
+
 # Common databases I use
-FROGS   = WORK_DIR+'/FROG_tufts'
-JAGUARS = WORK_DIR+'/JAG_Jaguar_Data'
-NAUTS   = WORK_DIR+'/NAUT_Dan'
-GZ_ALL  = WORK_DIR+'/GZ_ALL'
-WS_HARD = WORK_DIR+'/WS_hard'
-MOTHERS = WORK_DIR+'/HSDB_zebra_with_mothers'
-OXFORD  = WORK_DIR+'/Oxford_Buildings'
-PARIS   = WORK_DIR+'/Paris_Buildings'
+FROGS     = WORK_DIR+'/FROG_tufts'
+JAGUARS   = WORK_DIR+'/JAG_Jaguar_Data'
+NAUTS     = WORK_DIR+'/NAUT_Dan'
+GZ_ALL    = WORK_DIR+'/GZ_ALL'
+WS_HARD   = WORK_DIR+'/WS_hard'
+MOTHERS   = WORK_DIR+'/HSDB_zebra_with_mothers'
+OXFORD    = WORK_DIR+'/Oxford_Buildings'
+PARIS     = WORK_DIR+'/Paris_Buildings'
 SONOGRAMS = WORK_DIR+'/sonograms'
 
-viewpoint_pairs = [(19, 20), (110, 108), (16, 17)]
-lighting_pairs = [(49, 50), (93, 94)]
-confused_pairs = []
-occlusion= [(64,65)]
 
-DEFAULT = NAUTS
+if sys.platform == 'linux2':
+    DEFAULT = MOTHERS
+else:
+    DEFAULT = NAUTS
 
 dev_databases = {
-    'JAG'     : JAGUARS,
-    'FROGS'   : FROGS,
-    'NAUTS'   : NAUTS,
-    'GZ_ALL'  : GZ_ALL,
-    'WS_HARD' : WS_HARD,
-    'MOTHERS' : MOTHERS,
-    'OXFORD'  : OXFORD,
-    'PARIS'   : PARIS}
+    'SONOGRAMS' : SONOGRAMS,
+    'JAG'       : JAGUARS,
+    'FROGS'     : FROGS,
+    'NAUTS'     : NAUTS,
+    'GZ_ALL'    : GZ_ALL,
+    'WS_HARD'   : WS_HARD,
+    'MOTHERS'   : MOTHERS,
+    'OXFORD'    : OXFORD,
+    'PARIS'     : PARIS}
 
 for argv in iter(sys.argv):
     if argv.upper() in dev_databases.keys():

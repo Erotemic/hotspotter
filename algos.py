@@ -1,6 +1,5 @@
 import drawing_functions2 as df2
 from PIL import Image, ImageOps
-from numpy import asarray, percentile, uint8, uint16
 from os.path import realpath, join
 import helpers
 import imp
@@ -22,6 +21,35 @@ import scipy.sparse as spsparse
 
 # HACK: Flann indexes wont load correctly on Ooo
 __OVERRIDE_FLANN_CACHE__ = sys.platform == 'win32'
+
+# reloads this module when I mess with it
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
+
+def localmax(signal1d):
+    maxpos = []
+    nsamp = len(signal1d)
+    for ix in xrange(nsamp):
+        _prev = signal1d[max(0, ix-1)]
+        _item = signal1d[ix]
+        _next = signal1d[min(nsamp-1, ix+1)]
+        if (_item >= _prev and _item >= _next) and\
+           (_item != _prev and _item != _next):
+            maxpos.append(ix)
+    return maxpos
+
+def viz_localmax(signal1d):
+    #signal1d = np.array(hist)
+    signal1d = np.array(signal1d)
+    maxpos = np.array(localmax(signal1d))
+    x_data = range(len(signal1d))
+    y_data = signal1d
+    fig = df2.figure('localmax vizualization')
+    df2.plot(x_data, y_data)
+    df2.plot(maxpos, signal1d[maxpos], 'ro')
+    df2.update()
 
 def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
     ''' Tries to load a cached flann index before doing anything'''
@@ -63,20 +91,6 @@ def sparse_multiply_rows(csr_mat, vec):
     #csr_vec.shape = (1, csr_vec.size)
     sparse_stack = [row.multiply(csr_vec) for row in csr_mat]
     return spsparse.vstack(sparse_stack, format='csr')
-
-def histeq(pil_img):
-    img = asarray(pil_img)
-    try:
-        from skimage import exposure
-        'Local histogram equalization'
-        # Equalization
-        img_eq_float64 = exposure.equalize_hist(img)
-        return Image.fromarray(uint8(np.round(img_eq_float64*255)))
-    except Exception as ex:
-        from tpl.other import imtools
-        print('Scikits not found: %s' % str(ex))
-        print('Using fallback histeq')
-        return Image.fromarray(imtools.histeq(img)).convert('L')
 
 def tune_flann(data, **kwargs):
     flann = pyflann.FLANN()

@@ -26,7 +26,7 @@ DPI = 80
 FIGSIZE = (20,10) 
 
 LINE_ALPHA = .4
-ELL_ALPHA  = .5
+ELL_ALPHA  = .3
 ELL_LINEWIDTH = 1
 
 LINE_COLOR = (1, 0, 0)
@@ -34,16 +34,19 @@ LINE_CMAP  = 'hot'
 LINE_WIDTH = 1.4
 ELL_COLOR  = (0, 0, 1)
 
-SHOW_LINES = True
+SHOW_LINES = True #True
 SHOW_ELLS  = True
+
+POINT_SIZE = 2
 
 def reload_module():
     import imp
     import sys
+    print 'reloading '+__name__
     imp.reload(sys.modules[__name__])
 
 def printDBG(msg):
-    #print(msg)
+    print(msg)
     pass
 
 # ---- GENERAL FIGURE COMMANDS ----
@@ -223,8 +226,10 @@ def test_img(index=0):
 
 def __parse_fignum(fignum_, plotnum_=111):
     'Extendend fignum format = fignum.plotnum'
+    # This entir function was a bad idea. needs to go
     if type(fignum_) == types.StringType:
-        (fignum2, plotnum2) = map(int, fignum.split('.'))
+        (fignum2, plotnum2) = (fignum_, plotnum_)
+        #(fignum2, plotnum2) = map(int, fignum.split('.'))
     elif type(fignum_) == types.FloatType:
         raise Exception('Error. This is bad buisness')
         (fignum2, plotnum2) = (int(fignum_), int(round(fignum_*1000)) - int(fignum_)*1000)
@@ -254,6 +259,8 @@ def set_ylabel(lbl):
     ax = plt.gca()
     ax.set_ylabel(lbl)
 
+def plot(*args, **kwargs):
+    return plt.plot(*args, **kwargs)
 
 def figure(fignum=None, doclf=False, title=None, plotnum=111, figtitle=None):
     fignum, plotnum = __parse_fignum(fignum, plotnum)
@@ -351,11 +358,13 @@ def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
                                                             alpha=LINE_ALPHA)
     ax.add_collection(line_collection)
 
-def draw_kpts2(kpts, offset=(0,0), ell=False, pts=True):
+def draw_kpts2(kpts, offset=(0,0), ell=True, pts=False):
+    printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
     global SHOW_ELLS
     global ELL_COLOR
     global ELL_ALPHA
     global ELL_LINEWIDTH
+    global POINT_SIZE
     if not SHOW_ELLS:
         return
     # get matplotlib info
@@ -394,7 +403,11 @@ def draw_kpts2(kpts, offset=(0,0), ell=False, pts=True):
         ax.add_collection(ellipse_collection)
 
     if pts:
-        ax.plot(x, y, 'ro', markersize=0)
+        ax.plot(x, y, linestyle='None', 
+                marker='o',
+                markerfacecolor='r',
+                markersize=POINT_SIZE, 
+                markeredgewidth=0)
 
     
 def draw_kpts(_rchip, _kpts):
@@ -553,14 +566,15 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
     match_img[hoff:(hoff+h2), woff:(woff+w2), :] = rchip2
     # get matching keypoints + offset
     if len(fm) == 0:
+        printDBG('There are no feature matches to plot!')
         imshow(match_img,fignum=fignum,plotnum=plotnum,title=title)
     else: 
         kpts1_m = kpts1[fm[:,0]]
         kpts2_m = kpts2[fm[:,1]]
         # matplotlib stuff
         imshow(match_img,fignum=fignum,plotnum=plotnum,title=title)
-        draw_kpts2(kpts1, ell=False)
-        draw_kpts2(kpts2, offset=(woff,hoff), ell=False)
+        draw_kpts2(kpts1, ell=False, pts=True)
+        draw_kpts2(kpts2, offset=(woff,hoff), ell=False, pts=True)
         draw_kpts2(kpts1_m)
         draw_kpts2(kpts2_m, offset=(woff,hoff))
         draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
@@ -584,9 +598,8 @@ def show_all_matches(hs, res):
     for ox, cx in enumerate(others):
         show_matches3(res, hs, cx, plotnum=plotnum+cx)
 
-
 def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111, title_pref=None, title_suff=None):
-    print('Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))
+    printDBG('Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))
     if np.isnan(cx):
         nan_img = np.zeros((100,100), dtype=np.uint8)
         title='(qx%r v NAN)' % (qcx)

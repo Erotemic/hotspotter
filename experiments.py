@@ -20,24 +20,16 @@ import sys
 #displayed on the web with the correct (upright) orientation. For this
 #reason, we have not allowed for in-plane image rotations.
 def philbin07_oxford():
-    # The vocab sizes run by philbin et al 
-    vocab_sizes = [1e4, 2e4, 5e4, 1e6, 1.25e6] 
-    rerank_nums = [100, 200, 400, 800]
-    # They use 8 trees in for their AKMEANS. Unsure how many checks
-    philbin_akmeans_params = {'algorithm':'kdtree',
-                              'trees'    :8,
-                              'checks'   :64}
-    # Degrees of freedom is fixed at 5 for now
-    # dof = [3, 4, 5]
     params.__MATCH_TYPE__        = 'bagofwords'
-    params.__BOW_NUM_WORDS__     = vocab_sizes[3]
-    params.__NUM_RERANK__        = rerank_nums[3]
+    params.__BOW_NUM_WORDS__     = [1e4, 2e4, 5e4, 1e6, 1.25e6][3]
+    params.__NUM_RERANK__        = [100, 200, 400, 800, 1000][3]
     params.__CHIP_SQRT_AREA__    = None
-    params.__BOW_AKMEANS_FLANN_PARAMS__ = philbin_akmeans_params  # For AKMEANS
-    # Load Oxford Dataset
+    params.__BOW_AKMEANS_FLANN_PARAMS__ = dict(algorithm='kdtree',
+                                               trees=8, checks=64)
+    # I'm not sure if checks parameter is set correctly
     dbdir = load_data2.OXFORD
     hs = load_data2.HotSpotter(dbdir, load_matcher=False)
-    # Load train / test / database samples
+    # Use the 55 cannonical test cases 
     hs.load_test_train_database_samples_from_file(test_sample_fname='test_sample55.txt')
     # Quick Sanity Checks
     db_sample_cx = hs.database_sample_cx
@@ -82,6 +74,7 @@ def run_experiment():
     report_results2.write_rank_results(hs, qcx2_res, SV=False)
     #report_results2.dump_qcx_tt_bt_tf(hs, qcx2_res)
     report_results2.plot_summary_visualizations(hs, qcx2_res)
+    report_results2.dump_all(hs, qcx2_res)
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
@@ -89,7 +82,7 @@ if __name__ == '__main__':
     freeze_support()
 
     arg_map = {
-        'philbin07' : philbin07_oxford,
+        'philbin' : philbin07_oxford,
         'default'   : run_experiment }
 
     print ('Valid arguments are:\n    '+ '\n    '.join(arg_map.keys()))

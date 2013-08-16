@@ -614,10 +614,11 @@ PARIS     = WORK_DIR+'/Paris_Buildings'
 SONOGRAMS = WORK_DIR+'/sonograms'
 
 
-if sys.platform == 'linux2':
-    DEFAULT = MOTHERS
-else:
-    DEFAULT = NAUTS
+#if sys.platform == 'linux2':
+    #DEFAULT = MOTHERS
+#else:
+    #DEFAULT = NAUTS
+DEFAULT = MOTHERS
 
 dev_databases = {
     'SONOGRAMS' : SONOGRAMS,

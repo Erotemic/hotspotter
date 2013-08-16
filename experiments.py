@@ -81,7 +81,8 @@ def run_experiment():
     report_results2.write_rank_results(hs, qcx2_res, SV=True)
     report_results2.write_rank_results(hs, qcx2_res, SV=False)
     #report_results2.dump_qcx_tt_bt_tf(hs, qcx2_res)
-    report_results2.plot_summary_visualizations(hs, qcx2_res)
+    #report_results2.plot_summary_visualizations(hs, qcx2_res)
+    report_results2.dump_all(hs, qcx2_res)
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support

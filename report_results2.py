@@ -117,10 +117,13 @@ def stem_plot(hs, qcx2_res):
     df2.save_figure(fpath=join(summary_dir, title))
     #df2.set_yticks(list(seen_ranks))
 
-def dump_all(hs, qcx2_res):
-    plot_summary_visualizations(hs, qcx2_res)
-    dump_problems(hs, qcx2_res)
-    dump_qcx_tt_bt_tf(hs, qcx2_res)
+def dump_all(hs, qcx2_res, summary=True, problems=True, ttbttf=True):
+    if summary:
+        plot_summary_visualizations(hs, qcx2_res)
+    if problems: 
+        dump_problems(hs, qcx2_res)
+    if ttbttf: 
+        dump_qcx_tt_bt_tf(hs, qcx2_res)
 
 def dump_problems(hs, qcx2_res):
     compiled_results = compile_results(hs, qcx2_res)

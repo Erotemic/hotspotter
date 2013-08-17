@@ -51,7 +51,10 @@ def NewHotSpotter():
 # ___CLASS HOTSPOTTER____
 class HotSpotter(DynStruct):
     '''The HotSpotter main class is a root handle to all relevant data'''
-    def __init__(hs, db_dir=None, load_matcher=True, samples_from_file=False):
+    def __init__(hs, db_dir=None,
+                 load_matcher=True,
+                 load_features=True,
+                 samples_from_file=False):
         super(HotSpotter, hs).__init__()
         hs.tables = None
         hs.feats  = None
@@ -62,20 +65,26 @@ class HotSpotter(DynStruct):
         hs.test_sample_cx     = None
         hs.database_sample_cx = None
         if not db_dir is None:
-            hs.load_database(db_dir, load_matcher)
+            hs.load_database(db_dir, load_matcher, load_features)
     #---------------
-    def load_database(hs, db_dir, load_matcher=True, samples_from_file=False):
+    def load_database(hs, db_dir,
+                      load_matcher=True,
+                      load_features=True,
+                      samples_from_file=False):
         import chip_compute2 as cc2
         import feature_compute2 as fc2
         # Load data
         hs_dirs, hs_tables = load_csv_tables(db_dir)
         hs_cpaths = cc2.load_chip_paths(hs_dirs, hs_tables)
-        hs_feats  = fc2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
-        # Build hotspotter structure
         hs.tables  = hs_tables
-        hs.feats   = hs_feats
         hs.cpaths  = hs_cpaths
         hs.dirs    = hs_dirs
+        hs.feats   = None
+        if load_features:
+            hs_feats  = fc2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
+            hs.feats  = hs_feats
+        else: 
+            print('Not Loading Features!!')
         # Load sample sets
         hs.database_sample_cx = None
         hs.test_sample_cx     = None
@@ -97,9 +106,9 @@ class HotSpotter(DynStruct):
         =============================
         Using all data as sample set
         ============================='''))
-        hs.database_sample_cx = range(len(hs.feats.cx2_desc))
-        hs.test_sample_cx     = range(len(hs.feats.cx2_desc))
-        hs.train_sample_cx    = range(len(hs.feats.cx2_desc))
+        hs.database_sample_cx = range(len(hs.tables.cx2_cid))
+        hs.test_sample_cx     = range(len(hs.tables.cx2_cid))
+        hs.train_sample_cx    = range(len(hs.tables.cx2_cid))
 
     def load_test_train_database_samples_from_file(hs,
                                                    db_sample_fname='database_sample.txt',
@@ -115,9 +124,9 @@ class HotSpotter(DynStruct):
         test_sample_fpath  = join(internal_dir, test_sample_fname)
         train_sample_fpath = join(internal_dir, train_sample_fname)
 
-        hs.database_sample_cx = helpers.eval_from(db_sample_fpath, False)
-        hs.test_sample_cx     = helpers.eval_from(test_sample_fpath, False)
-        hs.train_sample_cx    = helpers.eval_from(train_sample_fpath, False)
+        hs.database_sample_cx = np.array(helpers.eval_from(db_sample_fpath, False))
+        hs.test_sample_cx     = np.array(helpers.eval_from(test_sample_fpath, False))
+        hs.train_sample_cx    = np.array(helpers.eval_from(train_sample_fpath, False))
         if hs.database_sample_cx is None and hs.test_sample_cx is None and hs.train_sample_cx is None: 
             hs.default_test_train_database_samples()
         #hs.test_sample_cx = np.array([0,2,3])
@@ -221,6 +230,9 @@ class HotspotterDirs(DynStruct):
         internal_sym = db_dir + '/Shortcut-to-hs_internals'
         if not os.path.islink(internal_sym):
             symlink(self.internal_dir, internal_sym, noraise=True)
+        results_sym = db_dir + '/Shortcut-to-results'
+        if not os.path.islink(internal_sym):
+            symlink(self.result_dir, results_sym, noraise=True)
 
 def tryindex(list, val):
     try: 
@@ -538,8 +550,16 @@ def make_csv_table(column_labels=None, column_list=[], header='', column_type=No
         column_labels = ['']*len(column_list)
 
     def _toint(c):
-        if np.isnan(c):
-            return 'nan'
+        try: 
+            if np.isnan(c):
+                return 'nan'
+        except TypeError as ex:
+            print('------')
+            print('_toint(c) failed')
+            print('c = %r ' % c)
+            print('type(c) = %r ' % type(c))
+            print('------')
+            raise
         return ('%d') % int(c)
     
     for col, lbl, coltype in iter(zip(column_list, column_labels, column_type)):

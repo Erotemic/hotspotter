@@ -267,9 +267,52 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, 
 
         # Load features (with single thread!)
         #cx2_feats = parallel_compute(load_features, [cx2_feat_path], num_procs=1)
-        cx2_feats = [load_features(feat_path) for feat_path in iter(cx2_feat_path)]
-        cx2_kpts  = [k for (k,d) in cx2_feats]
-        cx2_desc  = np.array([d for (k,d) in cx2_feats])
+        cx2_kpts = []
+        cx2_desc = []
+
+        # Debug loading (seems to use lots of memory)
+        fmt_str = helpers.make_progress_fmt_str(len(cx2_feat_path),
+                                                lbl='Loading feature: ')
+        print('\n')
+        try: 
+            for cx, feat_path in enumerate(cx2_feat_path):
+                npz = np.load(feat_path)
+                kpts = npz['arr_0']
+                desc = npz['arr_1']
+                npz.close()
+                cx2_kpts.append(kpts)
+                cx2_desc.append(desc)
+                helpers.print_(fmt_str % cx)
+        except MemoryError as ex:
+            print('\n------------')
+            print('Out of memory')
+            print('Trying to read: %r' % feat_path)
+            print('len(cx2_kpts) = %d' % len(cx2_kpts))
+            print('len(cx2_desc) = %d' % len(cx2_desc))
+            desc_mem_use = 0
+            import drawing_functions2 as df2
+            #exec(df2.present())
+
+            kpts_bits, num_kpts, _ = helpers.numpy_list_num_bits(cx2_kpts, np.float32, 5)
+            desc_bits, num_desc, _ = helpers.numpy_list_num_bits(cx2_desc, np.uint8, 128)
+            print('#kpts = %r ; bits(kpts)=%r ; MB(kpts)=%r' % (num_kpts,
+                                                                kpts_bits,
+                                                                kpts_bits / 8 / 2.0**20))
+            print('#desc = %r ; bits(desc)=%r ; MB(desc)=%r' % (num_desc,
+                                                                desc_bits,
+                                                                desc_bits / 8 / 2.0**20))
+            #print('kpts = %r' % len(kpts_mem_use) / 5.0)
+            #print('#desc = %r' % len(desc_mem_use) / 128.0)
+            while True:
+                cmd = raw_input('enter debug command (quit to exit)')
+                if cmd == 'quit': 
+                    break
+                exec(cmd)
+            raise
+
+        #cx2_feats = [load_features(feat_path) for feat_path in iter(cx2_feat_path)]
+        #cx2_kpts  = [k for (k,d) in cx2_feats]
+        #cx2_desc  = np.array([d for (k,d) in cx2_feats])
         # Whiten descriptors
         if params.__WHITEN_FEATS__:
             print(' * Whitening features')
@@ -315,7 +358,8 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     hs_feats = HotspotterChipFeatures()
     # Load all the types of features
     feat_uid = params.get_feat_uid()
-    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, params.__FEAT_TYPE__, feat_uid, cache_dir)
+    feat_type = params.__FEAT_TYPE__
+    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, cache_dir)
     hs_feats.feat_type = params.__FEAT_TYPE__
     hs_feats.cx2_kpts = cx2_kpts
     hs_feats.cx2_desc = cx2_desc
@@ -336,13 +380,25 @@ if __name__ == '__main__':
         import load_data2
         import match_chips2 as mc2
         import chip_compute2
+        import params
         # --- CHOOSE DATABASE --- #
-        db_dir = load_data2.DEFAULT
-        hs = load_data2.HotSpotter(db_dir, load_matcher=False)
-        cx2_desc = hs.feats.cx2_desc
-        cx2_kpts = hs.feats.cx2_kpts
+        __dbg_feat__ = True
+        if __dbg_feat__:
+            params.__CHIP_SQRT_AREA__ = None
+            db_dir = load_data2.OXFORD
+        else:
+            db_dir = load_data2.DEFAULT
+        hs = load_data2.HotSpotter(db_dir, 
+                                   load_features=not __dbg_feat__, 
+                                   load_matcher=False)
         cx2_cid  = hs.tables.cx2_cid
         cx2_nx   = hs.tables.cx2_nx
         nx2_name = hs.tables.nx2_name
+        hs_dirs = hs.dirs
+        hs_tables = hs.tables
+        hs_cpaths = hs.cpaths
+
+        cx2_desc = hs.feats.cx2_desc
+        cx2_kpts = hs.feats.cx2_kpts
 
     exec(df2.present())

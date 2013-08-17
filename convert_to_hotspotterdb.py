@@ -17,7 +17,7 @@ def compute_ap(groundtruth_query, ranked_list):
     pos_set  = set.union(good_set, ok_set)
     ap = compute_ap(pos_set, junk_set, ranked_list);
 
-def compute_ap(pos, amb, ranked_list)
+def compute_ap(pos, amb, ranked_list):
     old_recall = 0.0
     old_precision = 1.0
     ap = 0.0
@@ -85,6 +85,7 @@ db_dir = load_data2.OXFORD
 def convert_from_oxford_style(db_dir):
     # Get directories for the oxford groundtruth
     oxford_gt_dpath      = join(db_dir, 'oxford_style_gt')
+    helpers.assertpath(oxford_gt_dpath)
     # Check for corrupted files (Looking at your Paris Buildings Dataset)
     corrupted_file_fpath = join(oxford_gt_dpath, 'corrupted_files.txt')
     corrupted_gname_set = set([])
@@ -96,6 +97,7 @@ def convert_from_oxford_style(db_dir):
     # Recursively get relative path of all files in img_dpath
     print('Loading Oxford Style Images from: '+db_dir)
     img_dpath  = join(db_dir, 'images')
+    helpers.assertpath(img_dpath)
     gname_list_ = [join(relpath(root, img_dpath), fname).replace('\\','/').replace('./','')\
                     for (root,dlist,flist) in os.walk(img_dpath)
                     for fname in iter(flist)]
@@ -175,19 +177,18 @@ def convert_from_oxford_style(db_dir):
     cx2_gx      = []
     cx2_oxnum   = []
   
-    cid = [1] # bad solution to non-local scope problem
     def add_to_hs_tables(gname, name, roi, quality, num=''):
+        cid = len(cx2_cid) + 1
         nx = nx2_name.index(name)
         gx = gx2_gname.index(gname)
-        cx2_cid.append(cid[0])
+        cx2_cid.append(cid)
         cx2_roi.append(roi)
         cx2_quality.append(quality)
         cx2_nx.append(nx)
         cx2_gx.append(gx)
         cx2_theta.append(0)
         cx2_oxnum.append(num)
-        cid[0] += 1
-        sys.stdout.write(('\b'*10)+'cid = %4d' % cid[0])
+        sys.stdout.write(('\b'*10)+'cid = %4d' % cid)
         
     for gname, roi, name, num in query_chips:
         add_to_hs_tables(gname, name, roi, 'query', num)
@@ -213,42 +214,55 @@ def convert_from_oxford_style(db_dir):
     # Make chip_table.csv
     header = '# chip table'
     column_labels = ['ChipID', 'ImgID', 'NameID', 'roi[tl_x  tl_y  w  h]', 'theta', 'oxnum']
+    column_type   = [int, int, int, list, int, str]
     column_list   = [cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta, cx2_oxnum]
-    chip_table = load_data2.make_csv_table(column_labels, column_list, header)
+    chip_table = load_data2.make_csv_table(column_labels, column_list, header, column_type)
 
     # Make name_table.csv
     column_labels = ['nid', 'name']
     column_list   = [nx2_nid[2:], nx2_name[2:]] # dont write ____ for backcomp
+    column_type   = [int, str]
     header = '# name table'
-    name_table = load_data2.make_csv_table(column_labels, column_list, header)
+    name_table = load_data2.make_csv_table(column_labels, column_list, header, column_type)
 
     # Make image_table.csv 
     column_labels = ['gid', 'gname', 'aif'] # do aif for backwards compatibility
     gx2_aif = np.ones(len(gx2_gid), dtype=np.uint32)
     column_list   = [gx2_gid, gx2_gname, gx2_aif]
+    column_type   = [int, str, int]
     header = '# image table'
-    image_table = load_data2.make_csv_table(column_labels, column_list, header)
+    image_table = load_data2.make_csv_table(column_labels, column_list, header, column_type)
 
-    test_sample_cx  = range(0, len(query_chips))
-    train_sample_cx = range(len(query_chips), len(cx2_cid))
-    database_sample_cx = range(len(query_chips), len(cx2_cid))
+    # Make test / train / database samples
+    test_sample55_cx = range(0, len(query_chips))
+    db_sample_cx     = range(len(query_chips), len(cx2_cid))
+    test_sample_cx   = db_sample_cx
+    train_sample_cx  = db_sample_cx
 
-    chip_table_fname  = join(db_dir, '.hs_internals',  'chip_table.csv')
-    name_table_fname  = join(db_dir, '.hs_internals',  'name_table.csv')
-    image_table_fname = join(db_dir, '.hs_internals', 'image_table.csv')
+    # Build filenames
+    internal_dir = join(db_dir, '.hs_internals')
+    helpers.ensurepath(internal_dir)
+    chip_table_fname  = join(internal_dir,  'chip_table.csv')
+    name_table_fname  = join(internal_dir,  'name_table.csv')
+    image_table_fname = join(internal_dir, 'image_table.csv')
     
-    test_sample_fname     = join(db_dir, '.hs_internals', 'test_sample.txt')
-    train_sample_fname    = join(db_dir, '.hs_internals', 'train_sample.txt')
-    database_sample_fname = join(db_dir, '.hs_internals', 'database_sample.txt')
+    test_sample55_fpath  = join(internal_dir, 'test_sample55.txt')
+    test_sample_fpath  = join(internal_dir, 'test_sample.txt')
+    train_sample_fpath = join(internal_dir, 'train_sample.txt')
+    db_sample_fpath    = join(internal_dir, 'database_sample.txt')
 
+    # Write converted format to disk
+    old_print_writes = helpers.__PRINT_WRITES__
+    helpers.__PRINT_WRITES__ = True
     helpers.write_to(chip_table_fname, chip_table)
     helpers.write_to(name_table_fname, name_table)
     helpers.write_to(image_table_fname, image_table)
 
-    helpers.write_to(test_sample_fname,     repr(test_sample_cx))
-    helpers.write_to(train_sample_fname,    repr(train_sample_cx))
-    helpers.write_to(database_sample_fname, repr(database_sample_cx))
-
+    helpers.write_to(test_sample_fpath,  repr(test_sample_cx))
+    helpers.write_to(test_sample55_fpath,  repr(test_sample55_cx))
+    helpers.write_to(train_sample_fpath, repr(train_sample_cx))
+    helpers.write_to(db_sample_fpath,    repr(db_sample_cx))
+    helpers.__PRINT_WRITES__ = old_print_writes
 
 # Converts the name_num.jpg image format into a database
 def convert_named_chips(db_dir, image_dpath=None):
@@ -325,9 +339,11 @@ def convert_named_chips(db_dir, image_dpath=None):
     image_table = load_data2.make_csv_table(column_labels, column_list, header)
 
     # Write tables
-    chip_table_fname  = join(db_dir, '.hs_internals',  'chip_table.csv')
-    name_table_fname  = join(db_dir, '.hs_internals',  'name_table.csv')
-    image_table_fname = join(db_dir, '.hs_internals', 'image_table.csv')
+    internal_dir      = join(db_dir, '.hs_internals')
+    helpers.ensurepath(internal_dir)
+    chip_table_fname  = join(internal_dir,  'chip_table.csv')
+    name_table_fname  = join(internal_dir,  'name_table.csv')
+    image_table_fname = join(internal_dir, 'image_table.csv')
     
     helpers.write_to(chip_table_fname, chip_table)
     helpers.write_to(name_table_fname, name_table)
@@ -336,8 +352,10 @@ def convert_named_chips(db_dir, image_dpath=None):
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
-    # --- LOAD DATA --- #
-    #db_dir = load_data2.OXFORD
-    #convert_from_oxford_sytle(db_dir)
-    convert_from_oxford_style(load_data2.PARIS)
-    convert_from_oxford_style(load_data2.OXFORD)
+    helpers.__PRINT_CHECKS__ = True
+    oxsty_convert_list = [load_data2.OXFORD, load_data2.PARIS]
+    for db_dir in oxsty_convert_list:
+        print('\n-- Begin Convert --\n{')
+        if helpers.checkpath(db_dir):
+            convert_from_oxford_style(db_dir)
+        print('}\n')

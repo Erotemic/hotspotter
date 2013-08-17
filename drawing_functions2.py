@@ -46,7 +46,7 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 
 def printDBG(msg):
-    print(msg)
+    #print(msg)
     pass
 
 # ---- GENERAL FIGURE COMMANDS ----
@@ -187,7 +187,7 @@ def present(*args, **kwargs):
                     embedded = True
                     IPython.embed()
                 except Exception as ex:
-                    printWARN(repr(ex)+'\n!!!!!!!!')
+                    helpers.printWARN(repr(ex)+'\n!!!!!!!!')
                     embedded = False
             else:
                 print('df2: IPython is not installed')

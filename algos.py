@@ -388,10 +388,14 @@ def force_quit_akmeans(signal, frame):
         exec(helpers.IPYTHON_EMBED_STR)
 
 def precompute_akmeans(data, num_clusters, max_iters=100, flann_params=None,
-                       cache_dir=None, force_recomp=False):
+                       cache_dir=None, force_recomp=False,
+                       same_data=True):
     'precompute aproximate kmeans'
     data_md5 = str(data.shape).replace(' ','')+helpers.hashstr_md5(data)
-    fname = 'precomp_akmeans_k%d_%s.npz' % (num_clusters, data_md5)
+    if same_data:
+        fname = 'precomp_akmeans_k%d_%s.npz' % (num_clusters, data_md5)
+    else:
+        fname = 'precomp_akmeans_k%d.npz' % num_clusters
     fpath = realpath(fname) if cache_dir is None else join(cache_dir, fname)
     if force_recomp:
         helpers.remove_file(fpath)

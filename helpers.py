@@ -68,6 +68,36 @@ def listinfo(list, lbl='ndarr'):
 def cmd(command):
     os.system(command)
 
+def make_progress_fmt_str(max_val, lbl='Progress: '):
+    r'makes format string that prints progress: %Xd/MAX_VAL with backspaces'
+    max_str = str(max_val)
+    dnumstr = str(len(max_str))
+    fmt_str = lbl+'%'+dnumstr+'d/'+max_str
+    fmt_str = '\b'*(len(fmt_str)-len(dnumstr)+len(max_str)) + fmt_str
+    return fmt_str
+
+#expected_type = np.float32
+#expected_dims = 5
+def numpy_list_num_bits(nparr_list, expected_type, expected_dims): 
+    num_bits = 0
+    num_items = 0
+    num_elemt = 0
+    bit_per_item = {np.float32:32, np.uint8:8}[expected_type]
+    for nparr in iter(nparr_list):
+        arr_len, arr_dims = nparr.shape
+        if not nparr.dtype.type is expected_type: 
+            msg = 'Expected Type: '+repr(expected_type)
+            msg += 'Got Type: '+repr(nparr.dtype)
+            raise Exception(msg)
+        if arr_dims != expected_dims: 
+            msg = 'Expected Dims: '+repr(expected_dims)
+            msg += 'Got Dims: '+repr(arr_dims)
+            raise Exception(msg)
+        num_bits += len(nparr) * expected_dims * bit_per_item
+        num_elemt += len(nparr) * expected_dims
+        num_items += len(nparr) 
+    return num_bits,  num_items, num_elemt
+
 def eval_from(fname, err_onread=True):
     'evaluate a line from a test file'
     print('Evaling: %r ' % fname)

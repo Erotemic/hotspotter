@@ -11,30 +11,54 @@ import os
 import sys
 from os.path import realpath, join
 
+# reloads this module when I mess with it
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
+
 def printDBG(msg):
     #print(msg)
     pass
 
-# TODO: Better plots
-# TODO: Make SV a parameter?
 '''
 Stem Plot of ranks
 Output the false matches which score higher than the true matches
 the number of ground truth images. The ranks of each. 
 The hard pairs
-
 For each Chip: 
     All Good Matches
     All Bad  Matches
-
 Lowest Scoring Correct Matches
 Highest Scoring Incorrect Matches
 Disparity between the two. 
 '''
 
-df2.reset()
-df2.reset()
-df2.reload_module()
+def dump_all(hs, qcx2_res, 
+             matrix=True,
+             summary=True, 
+             problems=True,
+             ttbttf=True,
+             ranks=True,
+             oxford=False):
+    if matrix:
+        write_matrix_results(hs, qcx2_res, SV=True)
+        viz_score_matrix(hs, qcx2_res, SV=True)
+    if ranks:
+        write_rank_results(hs, qcx2_res, SV=True)
+        write_rank_results(hs, qcx2_res, SV=False)
+    if oxford:
+        write_oxsty_mAP_results(hs, qcx2_res, SV=True)
+        write_oxsty_mAP_results(hs, qcx2_res, SV=False)
+    if summary:
+        plot_summary_visualizations(hs, qcx2_res)
+    if problems: 
+        dump_problems(hs, qcx2_res)
+    if ttbttf: 
+        dump_qcx_tt_bt_tf(hs, qcx2_res)
+
+#df2.reset()
+#df2.reload_module()
 
 class ResultType(DynStruct):
     def __init__(self):
@@ -43,7 +67,6 @@ class ResultType(DynStruct):
         self.cxs    = []
         self.scores = []
         self.ranks  = []
-
     def append(self, qcx, cx, rank, score):
         self.qcxs.append(qcx)
         self.cxs.append(cx)
@@ -51,6 +74,10 @@ class ResultType(DynStruct):
         self.ranks.append(rank)
 
 def compile_results(hs, qcx2_res):
+    '''
+    Organizes results into a data structure so different "types"
+    of results can be visualized
+    '''
     SV = True
     true          = ResultType()
     false         = ResultType()
@@ -96,6 +123,84 @@ def compile_results(hs, qcx2_res):
     compiled_results.problem_false = problem_false
     return compiled_results
 
+def __score_matrix_data(hs, qcx2_res, SV=True):
+    cx2_nx = hs.tables.cx2_nx
+    nx2_cxs = {}
+    for cx, nx in enumerate(cx2_nx):
+        if not nx in nx2_cxs.keys():
+            nx2_cxs[nx] = []
+        nx2_cxs[nx].append(cx)
+    # Sort by the number of views per name
+    nx_list = nx2_cxs.keys()
+    nx_size = []
+    for nx in nx_list:
+        nx_size.append(len(nx2_cxs[nx]))
+    nx_sorted = [x for (y,x) in sorted(zip(nx_size, nx_list))]
+    # Build a sorted list of cxs
+    cx_sorted = []
+    test_cx_set = set(hs.test_sample_cx)
+    for nx in iter(nx_sorted):
+        cxs = nx2_cxs[nx]
+        cx_sorted.extend(sorted(cxs))
+    # get matrix data rows
+    row_label_cx = []
+    row_scores = []
+    for qcx in iter(cx_sorted):
+        if not qcx in test_cx_set: continue
+        res = qcx2_res[qcx]
+        cx2_score = res.cx2_score_V if SV else res.cx2_score
+        row_label_cx.append(qcx)
+        row_scores.append(cx2_score[cx_sorted])
+    col_label_cx = cx_sorted
+    # convert to numpy matrix array
+    score_matrix = np.array(row_scores)
+    # Fill diagonal with -1's
+    np.fill_diagonal(score_matrix, -np.ones(len(row_label_cx)))
+    return score_matrix, col_label_cx, row_label_cx
+
+def find_std_inliers(data, m=2):
+    return abs(data - np.mean(data)) < m * np.std(data)
+
+def viz_score_matrix(hs, qcx2_res, SV=True):
+    SV = True
+    (score_matrix, col_label_cx, row_label_cx) =\
+            __score_matrix_data(hs, qcx2_res, SV=True)
+    inliers = find_std_inliers(score_matrix)
+    max_inlier = score_matrix[inliers].max()
+    # Truncate outliers
+    score_matrix[score_matrix > max_inlier] = max_inlier
+    dim = 0 # None
+    score_img = helpers.norm_zero_one(score_matrix, dim=dim)
+    df2.imshow(score_img)
+
+
+def matrix_results(hs, qcx2_res, SV=True):
+    # Build nx2_cxs
+    cx2_gx = hs.tables.cx2_gx
+    gx2_gname = hs.tables.gx2_gname
+    def cx2_gname(cx):
+        return [os.path.splitext(gname)[0] for gname in gx2_gname[cx2_gx]]
+    (score_matrix, col_label_cx, row_label_cx) =\
+            __score_matrix_data(hs, qcx2_res, SV=True)
+    col_label_gname = cx2_gname(col_label_cx)
+    row_label_gname = cx2_gname(row_label_cx)
+    timestamp =  get_timestamp(format='comment')+'\n'
+    header = '\n'.join(
+        ['# Result score matrix',
+         '# Generated on: '+timestamp,
+         '# Format: rows separated by newlines, cols separated by commas',
+         '# num_queries  / rows = '+repr(len(row_label_gname)),
+         '# num_database / cols = '+repr(len(col_label_gname)),
+         '# row_labels = '+repr(row_label_gname),
+         '# col_labels = '+repr(col_label_gname)])
+    row_strings = []
+    for row in score_matrix:
+        row_str = map(lambda x: '%5.2f' % x, row)
+        row_strings.append(', '.join(row_str))
+    body = '\n'.join(row_strings)
+    matrix_str = '\n'.join([header,body])
+    return matrix_str
+
 def stem_plot(hs, qcx2_res):
     compiled_results = compile_results(hs, qcx2_res)
     true = compiled_results.true
@@ -117,13 +222,6 @@ def stem_plot(hs, qcx2_res):
     df2.save_figure(fpath=join(summary_dir, title))
     #df2.set_yticks(list(seen_ranks))
 
-def dump_all(hs, qcx2_res, summary=True, problems=True, ttbttf=True):
-    if summary:
-        plot_summary_visualizations(hs, qcx2_res)
-    if problems: 
-        dump_problems(hs, qcx2_res)
-    if ttbttf: 
-        dump_qcx_tt_bt_tf(hs, qcx2_res)
 
 def dump_problems(hs, qcx2_res):
     compiled_results = compile_results(hs, qcx2_res)
@@ -260,9 +358,22 @@ def plot_summary_visualizations(hs, qcx2_res):
     df2.legend()
     df2.save_figure(fpath=join(summary_dir, title))
 
+    # Draw matrix scores 
+    title = 'Score Matrix\n'+query_uid
+    df2.figure(fignum=8+fignum, doclf=True, title=title)
+    viz_score_matrix(hs, qcx2_res, SV=True)
+    df2.set_xlabel('database')
+    df2.set_ylabel('queries')
+    df2.save_figure(fpath=join(summary_dir, title))
+
+
 # ========================================================
 # Driver functions (reports results for entire experiment)
 # ========================================================
+
+def write_matrix_results(hs, qcx2_res, SV=True):
+    matrix_str = matrix_results(hs, qcx2_res, SV)
+    __write_report(hs, matrix_str, 'score_matrix', SV)
 
 def write_rank_results(hs, qcx2_res, SV=True):
     rankres_str = rank_results(hs, qcx2_res, SV)
@@ -293,20 +404,21 @@ def dump_qcx_tt_bt_tf(hs, qcx2_res):
     return dump_dir
 
 def __write_report(hs, report_str, report_type, SV):
-    result_dir = hs.dirs.result_dir
+    result_dir    = hs.dirs.result_dir
     timestamp_dir = join(result_dir, 'timestamped_results')
     helpers.ensurepath(timestamp_dir)
-    query_uid = params.get_query_uid()
-    timestamp = get_timestamp()
-    SV_aug = ['_SVOFF_','_SVon_'][SV] #TODO: SV should go into params
-    csv_fname  = report_type+query_uid+SV_aug+'.csv'
-    csv_timestamp_fname  = report_type+query_uid+SV_aug+timestamp+'.csv'
     helpers.ensurepath(result_dir)
-    rankres_csv = join(result_dir, csv_fname)
-    helpers.write_to(rankres_csv, report_str)
-    helpers.write_to(csv_timestamp_fname, report_str)
+    timestamp = get_timestamp()
+    query_uid = params.get_query_uid()
+    SV_aug = ['_SVOFF_','_SVon_'][SV] #TODO: SV should go into params
+    csv_timestamp_fname = report_type+query_uid+SV_aug+timestamp+'.csv'
+    csv_timestamp_fpath = join(timestamp_dir, csv_timestamp_fname)
+    csv_fname  = report_type+query_uid+SV_aug+'.csv'
+    csv_fpath = join(result_dir, csv_fname)
+    helpers.write_to(csv_fpath, report_str)
+    helpers.write_to(csv_timestamp_fpath, report_str)
     if '--gvim' in sys.argv:
-        helpers.gvim(rankres_csv)
+        helpers.gvim(csv_fpath)
 
 def train_zebraness_descriptor(hs, qcx2_res):
     hs.feats.cx2_desc
@@ -458,11 +570,6 @@ def get_timestamp(format='filename'):
         'comment' : '# (yyyy-mm-dd hh:mm) %04d-%02d-%02d %02d:%02d' }
     stamp = time_formats[format] % time_tup
     return stamp
-
-def dump_top_images(hs, qcx2_res):
-    for qcx in hs.test_sample_cx:
-        res = qcx2_res[qcx]
-    df2.show_matches3(res, hs, cxs[0], SV, fignum=_fn+.231, title_aug=titles[0])
 
 def print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False):
     res = qcx2_res[qcx]

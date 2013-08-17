@@ -1,5 +1,3 @@
-# We have 5,202,157 descriptors
-# They claim to have 16,334,970 descriptors
 from os.path import join
 import helpers
 import textwrap
@@ -11,15 +9,19 @@ import params
 import report_results2
 import sys 
 
-#helpers.__PRINT_CHECKS__ = True
+db_dir = load_data2.JAGUARS
+def run_experiment():
+    db_dir = load_data2.DEFAULT
+    print(textwrap.dedent('''
+    ======================
+    Running Experiment on: %r
+    ======================''' % db_dir))
+    print params.param_string()
+    hs = load_data2.HotSpotter(db_dir)
+    qcx2_res = mc2.run_matching(hs)
+    report_results2.dump_all(hs, qcx2_res)
 
-# TODO: No resize chips
-# TODO: Orientation assignment / Mikj detectors
-# I guess no orientation
-#These three models take advantage of the fact that images are usually
-#displayed on the web with the correct (upright) orientation. For this
-#reason, we have not allowed for in-plane image rotations.
-def philbin07_oxford():
+def oxford_philbin07():
     params.__MATCH_TYPE__        = 'bagofwords'
     params.__BOW_NUM_WORDS__     = [1e4, 2e4, 5e4, 1e6, 1.25e6][3]
     params.__NUM_RERANK__        = [100, 200, 400, 800, 1000][3]
@@ -42,39 +44,33 @@ def philbin07_oxford():
     hs.load_matcher()
     # Run the matching
     qcx2_res = mc2.run_matching(hs)
-    report_results2.write_oxsty_mAP_results(hs, qcx2_res, SV=True)
-    report_results2.write_oxsty_mAP_results(hs, qcx2_res, SV=False)
-    report_results2.write_rank_results(hs, qcx2_res, SV=True)
-    report_results2.write_rank_results(hs, qcx2_res, SV=False)
-    report_results2.dump_all(hs, qcx2_res)
-    
+    report_results2.dump_all(hs, qcx2_res, oxford=True)
 
-db_dir = load_data2.JAGUARS
-def run_experiment():
-    from os.path import join
-    import helpers
-    import textwrap
-    import load_data2
-    import match_chips2 as mc2
-    import numpy as np
-    import os
-    import params
-    import report_results2
-    import sys 
-    db_dir = load_data2.DEFAULT
-    print(textwrap.dedent('''
-    ======================
-    Running Experiment on: %r
-    ======================''' % db_dir))
-    print params.param_string()
-
-    hs = load_data2.HotSpotter(db_dir)
+def oxford_bow():
+    params.__MATCH_TYPE__     = 'bagofwords'
+    params.__CHIP_SQRT_AREA__ = None
+    params.__BOW_NUM_WORDS__  = [1e4, 2e4, 5e4, 1e6, 1.25e6][0]
+    dbdir = load_data2.OXFORD
+    hs = load_data2.HotSpotter(dbdir)
     qcx2_res = mc2.run_matching(hs)
-    report_results2.write_rank_results(hs, qcx2_res, SV=True)
-    report_results2.write_rank_results(hs, qcx2_res, SV=False)
-    #report_results2.dump_qcx_tt_bt_tf(hs, qcx2_res)
-    #report_results2.plot_summary_visualizations(hs, qcx2_res)
-    report_results2.dump_all(hs, qcx2_res)
+    report_results2.dump_all(hs, qcx2_res, oxford=True)
+
+def oxford_vsmany():
+    params.__MATCH_TYPE__     = 'vsmany'
+    params.__CHIP_SQRT_AREA__ = None
+    dbdir = load_data2.OXFORD
+    hs = load_data2.HotSpotter(dbdir)
+    qcx2_res = mc2.run_matching(hs)
+    report_results2.dump_all(hs, qcx2_res, oxford=True)
+    pass
+    
+def mothers_vsmany():
+    params.__MATCH_TYPE__     = 'vsmany'
+    run_experiment()
+
+def mothers_bow():
+    params.__MATCH_TYPE__     = 'bagofwords'
+    run_experiment()
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
@@ -82,8 +78,12 @@ if __name__ == '__main__':
     freeze_support()
 
     arg_map = {
-        'philbin' : philbin07_oxford,
-        'default'   : run_experiment }
+        'philbin'       : oxford_philbin07,
+        'oxford-bow'    : oxford_bow,
+        'oxford-vsmany' : oxford_vsmany,
+        'mothers-bow'    : mothers_bow,
+        'mothers-vsmany' : mothers_vsmany,
+        'default'       : run_experiment }
 
     print ('Valid arguments are:\n    '+ '\n    '.join(arg_map.keys()))
 

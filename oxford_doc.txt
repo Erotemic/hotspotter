@@ -128,3 +128,10 @@ inlier words.
 Abort re-ranking if 20 images are processed in a row without success. 
 
 
+# TODO: Orientation assignment / Mikj detectors
+# I guess no orientation
+#These three models take advantage of the fact that images are usually
+#displayed on the web with the correct (upright) orientation. For this
+#reason, we have not allowed for in-plane image rotations.
+# We have 5,202,157 descriptors
+# They claim to have 16,334,970 descriptors

@@ -92,7 +92,8 @@ def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
     akmeans_flann_params = params.__BOW_AKMEANS_FLANN_PARAMS__
     _, words = algos.precompute_akmeans(train_desc, vocab_size, 100,
                                         akmeans_flann_params, cache_dir,
-                                        force_recomp=False)
+                                        force_recomp=False, 
+                                        same_data=False)
     # Index the vocabulary for fast nearest neighbor search
     words_flann_params = params.__BOW_WORDS_FLANN_PARAMS__
     words_flann = algos.precompute_flann(words, cache_dir, lbl='words',

@@ -26,9 +26,9 @@ def compute_homog(xyz_norm1, xyz_norm2):
         (g,h,i) =  v2*xyz_norm1[:,ilx]
         (j,k,l) =     xyz_norm1[:,ilx]
         (p,q,r) = -u2*xyz_norm1[:,ilx]
-        Mbynine[ilx*2:(ilx+1)*2,:]  = np.array(\
-            [(0, 0, 0, d, e, f, g, h, i),
-             (j, k, l, 0, 0, 0, p, q, r) ] )
+        Mbynine[ilx*2:(ilx+1)*2,:]  = np.array((
+            (0, 0, 0, d, e, f, g, h, i),
+            (j, k, l, 0, 0, 0, p, q, r)))
     # Solve for the nullspace of the Mbynine
     try:
         (_U, _s, V) = linalg.svd(Mbynine)
@@ -58,7 +58,7 @@ def homography_inliers(kpts1_m,
     scale_thresh_low  = 1.0/scale_thresh_high
     # Not enough data
     if kpts1_m.shape[1] < min_num_inliers or kpts1_m.shape[1] == 0: 
-        return  None
+        return None
     # keypoint xy coordinates shape=(dim, num)
     def normalize_points(x_m, y_m):
         'Returns a transformation to normalize points to mean=0, stddev=1'
@@ -69,8 +69,8 @@ def homography_inliers(kpts1_m,
         tx = -mean_x * sx
         ty = -mean_y * sy
         T = np.array([(sx, 0, tx),
-                    (0, sy, ty),
-                    (0,  0,  1)])
+                      (0, sy, ty),
+                      (0,  0,  1)])
         x_norm = (x_m - mean_x) * sx
         y_norm = (y_m - mean_y) * sy
         return x_norm, y_norm, T
@@ -87,11 +87,11 @@ def homography_inliers(kpts1_m,
                                  scale_thresh_high)
     # Cannot find good affine correspondence
     if len(aff_inliers) < min_num_inliers:
-        return np.eye(3), aff_inliers
-
-
+        return None
     try: 
         H_prime = compute_homog(xyz_norm1, xyz_norm2)
+        # Computes ax = b
+        # x = linalg.solve(a, b)
         H = linalg.solve(T2, H_prime).dot(T1)                # Unnormalize
     except linalg.LinAlgError as ex:
         printWARN('Warning 285 '+repr(ex), )
@@ -109,47 +109,70 @@ def homography_inliers(kpts1_m,
     # Need the inverse of acd2_m:  1/det * [(d, -b), (-c, a)]
     # Precompute lower triangular affine tranforms inv2_m (dot) acd1_m
     # [(a2*a1), (c2*a1+d2*c1), (d2*d1)]
+
+# --------------------------------
+# Linear algebra functions on lower triangular matrices
+def det_acd(acd):
+    'Lower triangular determinant'
+    return acd[0] * acd[2]
+
+def inv_acd(acd, det):
+    'Lower triangular inverse'
+    return np.array((acd[2], -acd[1], acd[0])) / det
+
+def dot_acd(acd1, acd2): 
+    'Lower triangular dot product'
+    a = (acd1[0] * acd2[0])
+    c = (acd1[1] * acd2[0] + acd1[2] * acd2[1])
+    d = (acd1[2] * acd2[2])
+    return np.array([a, c, d])
+
+def xy_error_acd(x1, y1, x2, y2):
+    'Aligned points spatial error'
+    return (x1 - x2)**2 + (x1 - y1)**2
+# --------------------------------
+
 def affine_inliers(x1_m, y1_m, acd1_m,
                    x2_m, y2_m, acd2_m, 
                    xy_thresh, 
                    scale_thresh_high,
                    scale_thresh_low):
     '''Estimates inliers deterministically using elliptical shapes'''
-    def det_acd(acd):
-        return acd[0] * acd[2]
-    def inv_acd(acd, det):
-        return np.array((acd[2], -acd[1], acd[0])) / det
-    def dot_acd(acd1, acd2): 
-        a = (acd1[0] * acd2[0])
-        c = (acd1[1] * acd2[0] + acd1[2] * acd2[1])
-        d = (acd1[2] * acd2[2])
-        return np.array([a, c, d])
-    def xy_error_acd(x1, y1, x2, y2):
-        return (x1 - x2)**2 + (x1 - y1)**2
     best_inliers = []
+    # Get keypoint scales (determinant)
     det1_m = det_acd(acd1_m)
     det2_m = det_acd(acd2_m)
+    # Compute all transforms from kpts1 to kpts2 (enumerate all hypothesis)
     inv2_m = inv_acd(acd2_m, det2_m)
-    A = dot_acd(inv2_m, acd1_m)
-    Adet = det_acd(A)
-    # Enumerate All Hypothesis (Match transformations)
+    A_list = dot_acd(inv2_m, acd1_m)
+    # Compute scale change of all transformations 
+    Adet_list = det_acd(A)
+    # Test all hypothesis 
     mx = 1
     for mx in xrange(len(x1_m)): 
-        A11 = A[0,mx]
-        A21 = A[1,mx]
-        A22 = A[2,mx]
+        A11 = A_list[0,mx]
+        A21 = A_list[1,mx]
+        A22 = A_list[2,mx]
+        Adet = Adet_list[mx]
+        x1_hypoth = x1_m[mx]
+        x2_hypoth = x2_m[mx]
+        y1_hypoth = y1_m[mx]
+        y2_hypoth = y2_m[mx]
+
         # Translate x1_m -> x1_mt
-        x1_mt = x2_m[mx] + (A11 * (x1_m - x1_m[mx]))
-        y1_mt = y2_m[mx] + (A21 * (x1_m - x1_m[mx])) + (A22 * (y1_m - y1_m[mx]))
+        x1_mt = x2_hypoth + (A11 * (x1_m - x1_hypoth))
+        y1_mt = y2_hypoth + (A21 * (x1_m - x1_hypoth)) + (A22 * (y1_m - y1_m[mx]))
         # Get transformed determinant det(A) * det(acd) 
-        det1_mt = det1_m * Adet[mx]
-        # Check Error in position and scale (most of these are squared)
+        det1_mt = det1_m * Adet
+        # Find xy-(squared)-error 
         xy_err    = xy_error_acd(x1_m, y1_mt, x2_m, y2_m) 
+        # Find scale-(squared)-error
         scale_err = det1_mt / det2_m
-        # Test xy and scale inliers
+        # Test xy inliers
         xy_inliers = xy_err < xy_thresh
-        #scale_inliers = np.logical_and(scale_err > scale_thresh_low,
-                                       #scale_err < scale_thresh_high)
+        # Test scale inliers
+        scale_inliers = np.logical_and(scale_err > scale_thresh_low,
+                                       scale_err < scale_thresh_high)
         #hypothesis_inliers, = np.where(np.logical_and(xy_inliers, scale_inliers))
         hypothesis_inliers, = np.where(xy_inliers)
         # See if more inliers than previous best

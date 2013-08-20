@@ -229,22 +229,6 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
         return np.eye(3), aff_inliers
 
     # Estimate final inliers
-    acd1_m   = kpts1_m[2:5,:] # keypoint shape matrix [a 0; c d] matches
-    acd2_m   = kpts2_m[2:5,:]
-    # Precompute the determinant of matrix 2 (a*d - b*c), but b = 0
-    det1_m = acd1_m[0] * acd1_m[2]
-    det2_m = acd2_m[0] * acd2_m[2]
-
-    det1_mAt = det1_m * Hdet
-    # Check Error in position and scale
-    xy_sqrd_err = (x1_mAt - x2_m)**2 + (y1_mAt - y2_m)**2
-    scale_sqrd_err = det1_mAt / det2_m
-    # Check to see if outliers are within bounds
-    xy_inliers = xy_sqrd_err < xy_thresh_sqrd
-    s1_inliers = scale_sqrd_err > scale_thresh_low
-    s2_inliers = scale_sqrd_err < scale_thresh_high
-    _inliers, = np.where(np.logical_and(np.logical_and(xy_inliers, s1_inliers), s2_inliers))
-
     xy1_mHt = transform_xy(H, xy1_m)                        # Transform Kpts1 to Kpts2-space
     sqrd_dist_error = np.sum( (xy1_mHt - xy2_m)**2, axis=0) # Final Inlier Errors
     inliers = sqrd_dist_error < xy_thresh_sqrd
@@ -289,7 +273,6 @@ def test():
     # Find some inliers? 
     xy_thresh_sqrd = 7
     H, inliers = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
-
 
 if __name__ == '__main__':
     print 'Testing spatial_verification.py'

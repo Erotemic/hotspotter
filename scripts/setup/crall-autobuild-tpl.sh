@@ -1,1 +1,0 @@
-~/code/opencv/autobuild.sh

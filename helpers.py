@@ -837,3 +837,12 @@ if __name__ == '__main__':
                          'scipy.sparse'])
     seen = set(list(python_basic) + list(science_basic) + list(tpl_basic))
     module_explore(sklearn, maxdepth=10, seen=seen, nonmodules=False)
+
+def get_timestamp(format='filename'):
+    now = datetime.datetime.now()
+    time_tup = (now.year, now.month, now.day, now.hour, now.minute)
+    time_formats = {
+        'filename': 'ymd-%04d-%02d-%02d_hm-%02d-%02d',
+        'comment' : '# (yyyy-mm-dd hh:mm) %04d-%02d-%02d %02d:%02d' }
+    stamp = time_formats[format] % time_tup
+    return stamp

@@ -61,7 +61,7 @@ def dump_all(hs, qcx2_res,
 #df2.reset()
 #df2.reload_module()
 
-class ResultType(DynStruct):
+class OrganizedResult(DynStruct):
     def __init__(self):
         super(DynStruct, self).__init__()
         self.qcxs   = []
@@ -80,13 +80,13 @@ def compile_results(hs, qcx2_res):
     of results can be visualized
     '''
     SV = True
-    true          = ResultType()
-    false         = ResultType()
-    top_true      = ResultType()
-    top_false     = ResultType()
-    bot_true      = ResultType()
-    problem_true  = ResultType()
-    problem_false = ResultType()
+    true          = OrganizedResult()
+    false         = OrganizedResult()
+    top_true      = OrganizedResult()
+    top_false     = OrganizedResult()
+    bot_true      = OrganizedResult()
+    problem_true  = OrganizedResult()
+    problem_false = OrganizedResult()
     for qcx in hs.test_sample_cx:
         res = qcx2_res[qcx]
         true_tup, false_tup = get_matches_true_and_false(hs, res, SV)
@@ -114,15 +114,15 @@ def compile_results(hs, qcx2_res):
             if topx == 0:
                 top_false.append(qcx, cx, rank+1, score)
             topx += 1
-    compiled_results = DynStruct()
-    compiled_results.true          = true
-    compiled_results.false         = false
-    compiled_results.top_true      = top_true
-    compiled_results.top_false     = top_false
-    compiled_results.bot_true      = bot_true
-    compiled_results.problem_true  = problem_true
-    compiled_results.problem_false = problem_false
-    return compiled_results
+    all_results = DynStruct()
+    all_results.true          = true
+    all_results.false         = false
+    all_results.top_true      = top_true
+    all_results.top_false     = top_false
+    all_results.bot_true      = bot_true
+    all_results.problem_true  = problem_true
+    all_results.problem_false = problem_false
+    return all_results
 
 def __score_matrix_data(hs, qcx2_res, SV=True):
     cx2_nx = hs.tables.cx2_nx
@@ -185,7 +185,7 @@ def matrix_results(hs, qcx2_res, SV=True):
             __score_matrix_data(hs, qcx2_res, SV=True)
     col_label_gname = cx2_gname(col_label_cx)
     row_label_gname = cx2_gname(row_label_cx)
-    timestamp =  get_timestamp(format='comment')+'\n'
+    timestamp =  helpers.get_timestamp(format='comment')+'\n'
     header = '\n'.join(
         ['# Result score matrix',
          '# Generated on: '+timestamp,
@@ -203,8 +203,8 @@ def matrix_results(hs, qcx2_res, SV=True):
     return matrix_str
 
 def stem_plot(hs, qcx2_res):
-    compiled_results = compile_results(hs, qcx2_res)
-    true = compiled_results.true
+    all_results = compile_results(hs, qcx2_res)
+    true = all_results.true
     SV = True
     SV_aug = ['_SVOFF','_SVon'][SV] #TODO: SV should go into params
     query_uid = params.get_query_uid().strip('_')+SV_aug
@@ -225,12 +225,12 @@ def stem_plot(hs, qcx2_res):
 
 
 def dump_problems(hs, qcx2_res):
-    compiled_results = compile_results(hs, qcx2_res)
-    top_true = compiled_results.top_true
-    top_false = compiled_results.top_false
-    bot_true = compiled_results.bot_true
-    problem_false = compiled_results.top_false
-    problem_true = compiled_results.bot_true
+    all_results = compile_results(hs, qcx2_res)
+    top_true = all_results.top_true
+    top_false = all_results.top_false
+    bot_true = all_results.bot_true
+    problem_false = all_results.top_false
+    problem_true = all_results.bot_true
     SV = True
     SV_aug = ['_SVOFF','_SVon'][SV] #TODO: SV should go into params
     query_uid = params.get_query_uid().strip('_')+SV_aug
@@ -248,15 +248,15 @@ def dump_problems(hs, qcx2_res):
     dump_matches(hs, bot_true_dump_dir, bot_true, qcx2_res, SV)
     dump_matches(hs, top_false_dump_dir, top_false, qcx2_res, SV)
 
-def dump_matches(hs, dump_dir, compiled_result, qcx2_res, SV):
+def dump_matches(hs, dump_dir, organized_result, qcx2_res, SV):
     helpers.ensurepath(dump_dir)
     cx2_gx = hs.tables.cx2_gx
     gx2_gname = hs.tables.gx2_gname
     # Get lists out of compiled results
-    qcx_list   = compiled_result.qcxs
-    cx_list    = compiled_result.cxs
-    rank_list  = compiled_result.ranks
-    score_list = compiled_result.scores
+    qcx_list   = organized_result.qcxs
+    cx_list    = organized_result.cxs
+    rank_list  = organized_result.ranks
+    score_list = organized_result.scores
     # loop over each query / result of interest
     for qcx, cx, score, rank in zip(qcx_list, cx_list, score_list, rank_list):
         query_gname, _  = os.path.splitext(gx2_gname[cx2_gx[qcx]])
@@ -277,12 +277,12 @@ def plot_summary_visualizations(hs, qcx2_res):
     '''Plots (and outputs data): 
         rank stem plot
         rank histogram '''
-    compiled_results = compile_results(hs, qcx2_res)
-    true = compiled_results.true
-    false = compiled_results.false
-    top_true = compiled_results.top_true
-    top_false = compiled_results.top_false
-    bot_true = compiled_results.bot_true
+    all_results = compile_results(hs, qcx2_res)
+    true        = all_results.true
+    false       = all_results.false
+    top_true    = all_results.top_true
+    top_false   = all_results.top_false
+    bot_true    = all_results.bot_true
 
     SV = True
     SV_aug = ['_SVOFF','_SVon'][SV] #TODO: SV should go into params
@@ -409,7 +409,7 @@ def __write_report(hs, report_str, report_type, SV):
     timestamp_dir = join(result_dir, 'timestamped_results')
     helpers.ensurepath(timestamp_dir)
     helpers.ensurepath(result_dir)
-    timestamp = get_timestamp()
+    timestamp = helpers.get_timestamp()
     query_uid = params.get_query_uid()
     SV_aug = ['_SVOFF_','_SVon_'][SV] #TODO: SV should go into params
     csv_timestamp_fname = report_type+query_uid+SV_aug+timestamp+'.csv'
@@ -496,7 +496,7 @@ def rank_results(hs, qcx2_res, SV):
     SV_aug = ['_SVOFF_','_SVon_'][SV] #TODO: SV should go into params
     query_uid = params.get_query_uid()+SV_aug
     header = '# Experiment Settings (params.query_uid):'+query_uid+'\n'
-    header +=  get_timestamp(format='comment')+'\n'
+    header +=  helpers.get_timestamp(format='comment')+'\n'
     scalar_summary = '# Num Query Chips: %d \n' % num_chips
     scalar_summary += '# Num Query Chips with at least one match: %d \n' % num_with_gtruth
     scalar_summary += '# Num NonQuery Chips: %d \n' % num_nonquery
@@ -563,15 +563,6 @@ def rank_results(hs, qcx2_res, SV):
     rankres_str = load_data2.make_csv_table(column_labels, column_list, header, column_type)
     return rankres_str
 
-def get_timestamp(format='filename'):
-    now = datetime.datetime.now()
-    time_tup = (now.year, now.month, now.day, now.hour, now.minute)
-    time_formats = {
-        'filename': 'ymd-%04d-%02d-%02d_hm-%02d-%02d',
-        'comment' : '# (yyyy-mm-dd hh:mm) %04d-%02d-%02d %02d:%02d' }
-    stamp = time_formats[format] % time_tup
-    return stamp
-
 def print_top_qcx_scores(hs, qcx2_res, qcx, view_top=10, SV=False):
     res = qcx2_res[qcx]
     print_top_res_scores(hs, res, view_top, SV)
@@ -630,7 +621,7 @@ def oxsty_mAP_results(hs, qcx2_res, SV):
     # build a CSV file with the results
     header  = '# Oxford Style Map Scores'
     header  = '# total mAP score = %r ' % total_mAP
-    header +=  get_timestamp(format='comment')+'\n'
+    header +=  helpers.get_timestamp(format='comment')+'\n'
     header += '# Full Parameters: \n#' + params.param_string().replace('\n','\n#')+'\n\n'
     column_labels = ['QCX', 'mAP']
     column_list   = [query_mAP_cx, query_mAP_list]

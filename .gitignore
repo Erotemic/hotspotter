@@ -18,8 +18,8 @@ OpenGLContext.profile
 *.pyc
 *.pkl
 *.png
+*.sift
 .hidden
-
 *.exe
 *.dll
 *.ln

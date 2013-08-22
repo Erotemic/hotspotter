@@ -8,7 +8,6 @@ if matplotlib.get_backend() != 'Qt4Agg':
     matplotlib.rcParams['toolbar'] = 'None'
 from matplotlib import gridspec
 from matplotlib.collections import PatchCollection
-from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle, Circle
 from matplotlib.transforms import Affine2D
 from PyQt4.QtCore import Qt

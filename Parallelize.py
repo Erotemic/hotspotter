@@ -6,6 +6,12 @@ import sys
 import os.path
 import params
 
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
+
+
 def _calculate(func, args):
     result = func(*args)
     #arg_names = func.func_code.co_varnames[:func.func_code.co_argcount]

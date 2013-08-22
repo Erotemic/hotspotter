@@ -177,6 +177,20 @@ class HotSpotter(DynStruct):
         score = cx2_score[cx]
         return fm, fs, score
 
+# Testing helper functions
+def get_sv_test_data():
+    import load_data2
+    db_dir = load_data2.DEFAULT
+    hs = load_data2.HotSpotter(db_dir)
+    qcx = 0
+    cx = hs.get_other_cxs(qcx)[0]
+    fm, fs, score = hs.get_assigned_matches_to(qcx, cx)
+    rchip1 = hs.get_chip(qcx)
+    rchip2 = hs.get_chip(cx)
+    # Get keypoints
+    kpts1 = hs.get_kpts(qcx)
+    kpts2 = hs.get_kpts(cx)
+    return (hs, qcx, cx, fm, rchip1, rchip2, kpts1, kpts2)
 
 # ______________________________
 
@@ -653,7 +667,8 @@ dev_databases = {
 
 for argv in iter(sys.argv):
     if argv.upper() in dev_databases.keys():
-        #print(' * User changed default database. Previously: '+str(DEFAULT))
+        print('\n'.join([' * Default Database set to:'+argv.upper(),
+                         ' * Previously: '+str(DEFAULT)]))
         DEFAULT = dev_databases[argv.upper()]
 #print(' * load_data: Default database is: '+str(DEFAULT))
 

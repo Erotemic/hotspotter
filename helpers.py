@@ -36,6 +36,13 @@ def remove_chars(instr, illegals_chars):
         outstr = outstr.replace(ill_char, '')
     return outstr
 
+def list_replace(instr, list_ser, list_repl=None):
+    if list_repl is None:
+        list_repl = [''] * len(list_ser)
+    for ser, repl in zip(list_ser, list_repl):
+        instr = instr.replace(ser, repl)
+    return instr
+
 # reloads this module when I mess with it
 def reload_module():
     import imp
@@ -130,7 +137,7 @@ def _print(msg):
 def _println(msg):
     sout.write(msg+'\n')
 
-img_ext_set = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
+IMG_EXTENSIONS = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
 
 def public_attributes(input):
     public_attr_list = []
@@ -351,7 +358,7 @@ def tryload(fname):
         flush()
         loaded = False
         try: 
-            npz = np.load(fname)
+            npz = np.load(fname, mmap_mode='r+')
             data = npz['arr_0']
             println('...success')
             loaded = True
@@ -390,7 +397,7 @@ def save_npz(fname, *args, **kwargs):
 
 def load_npz(fname):
     print(' * load_npz: %r ' % fname)
-    npz = np.load(fname)
+    npz = np.load(fname, mmap_mode='r+')
     #print(' * npz.keys() = %r '+str(npz.keys()))
     return tuple(npz[key] for key in sorted(npz.keys()))
 
@@ -800,6 +807,18 @@ def myreload():
     imp.reload(mc2)
     imp.reload(report_results2)
     imp.reload(helpers)
+
+def dict_execstr(dict, local_name):
+    '''returns a string which when evaluated will
+        add the stored variables to the current namespace
+        
+        localname is the name of the variable in the current scope
+        * use locals().update(dyn.to_dict()) instead
+    '''
+    execstr = ''
+    execstr = '\n'.join((key+' = '+local_name+'['+repr(key)+']'
+                        for (key, val) in dict.iteritems()))
+    return execstr
 
 if __name__ == '__main__':
     print('You ran helpers as main!')

@@ -31,6 +31,12 @@ import scipy.sparse as spsparse
 import sklearn.preprocessing 
 #print ('LOAD_MODULE: match_chips2.py')
 
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
+
+
 #========================================
 # Bag-of-Words
 #========================================
@@ -510,7 +516,7 @@ class QueryResult(DynStruct):
     def load_result(self, fpath):
         'Loads the result from the given database'
         try:
-            npz = np.load(fpath)
+            npz = np.load(fpath, mmap_mode='r+')
             for _key in npz.files:
                 if _key in ['qcx']: # hack
                     self.__dict__[_key] = npz[_key].tolist()

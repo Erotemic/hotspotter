@@ -4,6 +4,12 @@ import types
 import numpy as np
 import os.path
 
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
+
+
 class AbstractPrintable(object):
     'A base class that prints its attributes instead of the memory address'
 

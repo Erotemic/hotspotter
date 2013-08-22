@@ -9,6 +9,18 @@ import params
 import report_results2
 import sys 
 
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
+
+def param_config1():
+    params.__RANK_EQ__ = True
+
+def param_config2():
+    params.__RANK_EQ__ = False
+
+
 db_dir = load_data2.JAGUARS
 def run_experiment():
     db_dir = load_data2.DEFAULT
@@ -72,6 +84,12 @@ def mothers_bow():
     params.__MATCH_TYPE__     = 'bagofwords'
     run_experiment()
 
+import load_data2 as ld2
+def demo():
+    pass
+#ld2.DEFAULT
+
+
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     import load_data2
@@ -93,6 +111,9 @@ if __name__ == '__main__':
             print('Running '+str(argv))
             arg_map[argv]()
             has_arg = True
+        elif argv.find('param') > -1:
+            param_config1()
+            run_experiment
 
     if not has_arg:
         run_experiment()

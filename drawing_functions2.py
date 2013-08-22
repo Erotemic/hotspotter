@@ -11,6 +11,7 @@ from matplotlib.collections import PatchCollection
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle, Circle
 from matplotlib.transforms import Affine2D
+from PyQt4.QtCore import Qt
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,6 +20,7 @@ import warnings
 import helpers
 import textwrap
 import os
+import sys
 #print('LOAD_MODULE: drawing_functions2.py')
 
 DPI = 80
@@ -28,11 +30,11 @@ FIGSIZE = (20,10)
 LINE_ALPHA = .4
 ELL_ALPHA  = .3
 ELL_LINEWIDTH = 1
+ELL_COLOR  = (0, 0, 1)
 
 LINE_COLOR = (1, 0, 0)
 LINE_CMAP  = 'hot'
 LINE_WIDTH = 1.4
-ELL_COLOR  = (0, 0, 1)
 
 SHOW_LINES = True #True
 SHOW_ELLS  = True
@@ -50,6 +52,31 @@ def printDBG(msg):
     pass
 
 # ---- GENERAL FIGURE COMMANDS ----
+def sanatize_img_fpath(fpath):
+    [dpath, fname_clean] = os.path.split(fpath)
+    search_replace_list = [(' ', '_'), ('\n', '--'), ('\\', ''), ('/','')]
+    for old, new in search_replace_list:
+        fname_clean = fname_clean.replace(old, new)
+    fpath_clean = os.path.join(dpath, fname_clean)
+    root, ext = os.path.splitext(fpath_clean)
+    # Check for correct extensions
+    if not ext.lower() in helpers.IMG_EXTENSIONS:
+        fpath_clean += '.png'
+    fpath_clean = os.path.normpath(fpath_clean)
+    return fpath_clean
+
+def save(fig, fpath=None):
+    if fpath is None:
+        # Find the title
+        fpath = fig.canvas.get_window_title()
+    if fpath is None: 
+        fpath = 'Figure'+str(fig.number)+'.png'
+    # Sanatize the filename
+    fpath_clean = sanatize_img_fpath(fpath)
+    print('Saving figure to: '+repr(fpath_clean))
+    fig.savefig(fpath_clean, dpi=DPI)
+
+
 def save_figure(fignum=None, fpath=None):
     # Find the figure
     if fignum is None:
@@ -61,26 +88,32 @@ def save_figure(fignum=None, fpath=None):
         # Find the title
         fpath = fig.canvas.get_window_title()
     # Sanatize the filename
-    [dpath, fname_clean] = os.path.split(fpath)
-    fname_clean = fname_clean.replace(' ','_')
-    fname_clean = fname_clean.replace('\n','--')
-    fpath_clean = os.path.join(dpath, fname_clean)
-    root, ext = os.path.splitext(fpath_clean)
-    # Check for correct extensions
-    if not ext.lower() in ['.jpg','.png']:
-        fpath_clean += '.png'
-    fpath_clean = os.path.normpath(fpath_clean)
-    print('Saving figure to: '+repr(fpath))
+    fpath_clean = sanatize_img_fpath(fpath)
+    print('Saving figure to: '+repr(fpath_clean))
     fig.savefig(fpath_clean, dpi=DPI)
 
-def set_figsize(fignum, width, height):
+def update_figure_size(fignum, width, height):
     if fignum is None:
         fig = plt.gcf()
     else:
         fig = plt.figure(fignum, figsize=FIGSIZE, dpi=DPI)
+    set_geometry(fig, 40, 40, width, height)
+    fig.canvas.draw()
+
+def set_geometry(fig, x, y, w, h):
     qtwin = fig.canvas.manager.window
     qtwin.setGeometry(40,40,width,height)
-    fig.canvas.draw()
+
+def get_geometry():
+    fig = plt.gcf()
+    qtwin = fig.canvas.manager.window
+    (x,y,w,h) = qtwin.geometry().getCoords()
+    return (x,y,w,h)
+
+def save_figsize():
+    fig = plt.gcf()
+    (x,y,w,h) = get_geometry()
+    fig.df2_geometry = (x,y,w,h)
 
 def get_all_figures():
     all_figures_=[manager.canvas.figure for manager in
@@ -91,15 +124,15 @@ def get_all_figures():
         if not 'df2_closed' in fig.__dict__.keys() or not fig.df2_closed:
             all_figures.append(fig)
     # Return all the figures sorted by their number
-    all_figures = sorted(all_figures, key=lambda fig: fig.number)
+    all_figures = sorted(all_figures, key=lambda fig:fig.number)
     return all_figures
 
-def show_all_figures():
+def all_figures_show():
     for fig in iter(get_all_figures()):
         fig.show()
         fig.canvas.draw()
-import sys
-def tile_all_figures(num_rc=(4,4),
+
+def all_figures_tile(num_rc=(4,4),
                      wh=(350,250),
                      xy_off=(0,0),
                      wh_off=(0,10),
@@ -126,51 +159,50 @@ def tile_all_figures(num_rc=(4,4),
         x+=x_off
         y+=y_off
         qtwin.setGeometry(x,y,w,h)
-#myprint(fig.canvas.manager.window) 
-# the manager should be a qt window
 
-def bring_to_front_all_figures():
-    from PyQt4.QtCore import Qt
+def all_figures_bring_to_front():
     all_figures = get_all_figures()
-    for i, fig in enumerate(all_figures):
-        qtwin = fig.canvas.manager.window
-        if not isinstance(qtwin, matplotlib.backends.backend_qt4.MainWindow):
-            raise NotImplemented('need to add more window manager handlers')
-        qtwin.raise_()
-        qtwin.activateWindow()
-        qtwin.setWindowFlags(Qt.WindowStaysOnTopHint)
-        qtwin.show()
-        qtwin.setWindowFlags(Qt.WindowFlags(0))
-        qtwin.show()
-        #what is difference between show and show normal?
+    for fig in iter(all_figures):
+        bring_to_front(fig)
 
 def close_all_figures():
-    from PyQt4.QtCore import Qt
     all_figures = get_all_figures()
-    for i, fig in enumerate(all_figures):
-        fig.clf()
-        fig.df2_closed = True
-        qtwin = fig.canvas.manager.window
-        if not isinstance(qtwin, matplotlib.backends.backend_qt4.MainWindow):
-            raise NotImplemented('need to add more window manager handlers')
-        qtwin.close()
+    for fig in iter(all_figures):
+        close_figure(fig)
+
+def close_figure(fig):
+    fig.clf()
+    fig.df2_closed = True
+    qtwin = fig.canvas.manager.window
+    qtwin.close()
+
+def bring_to_front(fig):
+    #what is difference between show and show normal?
+    qtwin = fig.canvas.manager.window
+    qtwin.raise_()
+    qtwin.activateWindow()
+    qtwin.setWindowFlags(Qt.WindowStaysOnTopHint)
+    qtwin.show()
+    qtwin.setWindowFlags(Qt.WindowFlags(0))
+    qtwin.show()
+
 
 def reset():
     close_all_figures()
 
 def draw():
-    show_all_figures()
+    all_figures_show()
 
 def update():
     draw()
-    bring_to_front_all_figures()
+    all_figures_bring_to_front()
 
 def present(*args, **kwargs):
     'execing present should cause IPython magic'
     print('Presenting figures...')
-    tile_all_figures(*args, **kwargs)
-    show_all_figures()
-    bring_to_front_all_figures()
+    all_figures_tile(*args, **kwargs)
+    all_figures_show()
+    all_figures_bring_to_front()
     # Return an exec string
     return textwrap.dedent(r'''
     import helpers
@@ -262,7 +294,8 @@ def set_ylabel(lbl):
 def plot(*args, **kwargs):
     return plt.plot(*args, **kwargs)
 
-def figure(fignum=None, doclf=False, title=None, plotnum=111, figtitle=None):
+def figure(fignum=None, doclf=False, title=None, plotnum=111,
+           figtitle=None, **kwargs):
     fignum, plotnum = __parse_fignum(fignum, plotnum)
     fig = plt.figure(num=fignum, figsize=FIGSIZE, dpi=DPI)
     axes_list = fig.get_axes()
@@ -408,49 +441,71 @@ def draw_kpts2(kpts, offset=(0,0), ell=True, pts=False):
                 markerfacecolor='r',
                 markersize=POINT_SIZE, 
                 markeredgewidth=0)
+        
+def inv_sqrtm_acd(acd):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        eps = 1e-9
+        a = acd[0]
+        c = acd[1]
+        d = acd[2]
+        _a = 1.0 / np.sqrt(a) 
+        _c = (c / np.sqrt(d) - c / np.sqrt(d)) / (a - d + eps)
+        _d = 1.0 / np.sqrt(d)
+        return _a, _c, _d
 
-    
-def draw_kpts(_rchip, _kpts):
-    kpts_img = np.copy(_rchip)
-    # Draw circles
-    for (x,y,a,d,c) in iter(_kpts):
-        center = (int(x), int(y))
-        radius = int(3*np.sqrt(1/a))
-        kpts_img = cv2.circle(kpts_img, center, radius, ELL_COLOR*255)
-    return kpts_img
+def draw_kpts_scale_color(kpts, offset=(0,0), ell=True, pts=False):
+    printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
+    # get matplotlib info
+    ax = plt.gca()
+    pltTrans = ax.transData
+    ell_actors = []
+    eps = 1E-9
+    # data
+    kptsT = kpts.T
+    x = kptsT[0] + offset[0]
+    y = kptsT[1] + offset[1]
+    acd = kptsT[2:5]
+    if ell:
+        a = kptsT[2]
+        c = kptsT[3]
+        d = kptsT[4]
+        with warnings.catch_warnings():
+        # Manually Calculated sqrtm(inv(A) for A in kpts)
+            aIS = 1/np.sqrt(a) 
+            cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
+            dIS = 1/np.sqrt(d)
+        kpts_iter = iter(zip(x,y,aIS,cIS,dIS))
+        # This has to be the sexiest piece of code I've ever written
+        ell_actors = [ Circle( (0,0), 1, 
+                            transform=Affine2D([( a_, 0 , x),
+                                                ( c_, d_, y),
+                                                ( 0 , 0 , 1)]) )
+                    for (x,y,a_,c_,d_) in kpts_iter ]
+        ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
+        ellipse_collection.set_facecolor('none')
+        ellipse_collection.set_transform(pltTrans)
+        ellipse_collection.set_alpha(ELL_ALPHA)
+        ellipse_collection.set_linewidth(ELL_LINEWIDTH)
+        ellipse_collection.set_edgecolor(ELL_COLOR)
+        ax.add_collection(ellipse_collection)
 
-def cv2_draw_kpts(img, cvkpts):
-    cv_flags = cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-    kpts_img = cv2.drawKeypoints(img, cvkpts, flags=cv_flags)
-    return kpts_img
+    if pts:
+        ax.plot(x, y, linestyle='None', 
+                marker='o',
+                markerfacecolor='r',
+                markersize=POINT_SIZE, 
+                markeredgewidth=0)
 
-
-# ---- OLD CHIP DISPLAY COMMANDS ----
-
-def show_matches(qcx, cx, hs_cpaths, cx2_kpts, fm12, fignum=0, title=None):
-    printDBG('*** Showing %d matches between cxs=(%d,%d) ***' % (len(fm12), qcx, cx))
-    cx2_rchip_path = hs_cpaths.cx2_rchip_path
-    rchip1 = cv2.imread(cx2_rchip_path[qcx])
-    rchip2 = cv2.imread(cx2_rchip_path[cx])
-    kpts1  = cx2_kpts[qcx]
-    kpts2  = cx2_kpts[cx]
-    assert kpts1.shape[1] == 5, 'kpts1 must be Nx5 ellipse'
-    assert kpts2.shape[1] == 5, 'kpts2 must be Nx5 ellipse'
-    assert  fm12.shape[1] == 2, 'fm must be Mx2'
-    rchipkpts1 = draw_kpts(rchip1, kpts1[fm12[:,0],:])
-    rchipkpts2 = draw_kpts(rchip2, kpts2[fm12[:,1],:])
-    chipkptsmatches = draw_matches(rchipkpts1, rchipkpts2,
-                                   kpts1, kpts2,
-                                   fm12, vert=True)
-    imshow(chipkptsmatches, fignum=fignum, title=title)
 
 # ---- CHIP DISPLAY COMMANDS ----
 
-def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111):
+def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111, **kwargs):
     printDBG('*** imshow in fig=%r title=%r *** ' % (fignum, title))
     fignum, plotnum = __parse_fignum(fignum,plotnum)
     printDBG('   * fignum = %r, plotnum = %r ' % (fignum, plotnum))
-    fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle)
+    fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle,
+                **kwargs)
     plt.imshow(img)
     plt.set_cmap('gray')
     ax = fig.gca()
@@ -544,7 +599,8 @@ def show_signature(sig, **kwargs):
 
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
                   fm=None, fs=None, fignum=0, plotnum=111,
-                  title=None, vert=True):
+                  title=None, vert=True, all_kpts=True, 
+                  draw_lines=True, **kwargs):
     '''Draws feature matches 
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''
@@ -567,17 +623,22 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
     # get matching keypoints + offset
     if len(fm) == 0:
         printDBG('There are no feature matches to plot!')
-        imshow(match_img,fignum=fignum,plotnum=plotnum,title=title)
+        imshow(match_img,fignum=fignum,plotnum=plotnum,title=title, **kwargs)
     else: 
         kpts1_m = kpts1[fm[:,0]]
         kpts2_m = kpts2[fm[:,1]]
         # matplotlib stuff
-        imshow(match_img,fignum=fignum,plotnum=plotnum,title=title)
-        draw_kpts2(kpts1, ell=False, pts=True)
-        draw_kpts2(kpts2, offset=(woff,hoff), ell=False, pts=True)
+        imshow(match_img,fignum=fignum,plotnum=plotnum,title=title, **kwargs)
+        # Draw all keypoints as simple points
+        if all_kpts:
+            draw_kpts2(kpts1, ell=False, pts=True)
+            draw_kpts2(kpts2, offset=(woff,hoff), ell=False, pts=True)
+        # Draw matching ellipses
         draw_kpts2(kpts1_m)
         draw_kpts2(kpts2_m, offset=(woff,hoff))
-        draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
+        # Draw matching lines
+        if draw_lines:
+            draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
 
 def show_matches3(res, hs, cx, SV=True, fignum=0, plotnum=111, title_aug=None):
     qcx = res.qcx

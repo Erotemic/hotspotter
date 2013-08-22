@@ -7,7 +7,7 @@ from __future__ import division
 import drawing_functions2 as df2
 import algos
 import params
-import tpl.hesaff as hesaff
+import tpl.external_features.external_feature_interface as extern_feats
 import helpers
 from Parallelize import parallel_compute
 from Pref import Pref
@@ -20,6 +20,10 @@ import cv2
 import sys
 #print('LOAD_MODULE: feature_compute2.py')
 
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
 
 def printDEBUG(msg):
     print msg
@@ -170,7 +174,7 @@ freak_extractor.setBool('orientationNormalized', False)
 # =======================================
 
 def compute_hesaff(rchip):
-    return hesaff.compute_hesaff(rchip)
+    return extern_feats.compute_hesaff(rchip)
 def compute_sift(rchip):
     return __compute(rchip, __detector, sift_extractor)
 def compute_freak(rchip):
@@ -181,14 +185,14 @@ def compute_freak(rchip):
 # =======================================
 
 def precompute_hesaff(rchip_path, feats_path):
-    return hesaff.precompute_hesaff(rchip_path, feats_path)
+    return extern_feats.precompute_hesaff(rchip_path, feats_path)
 def precompute_sift(rchip_path, feats_path):
     return __precompute(rchip_path, feats_path, compute_sift)
 def precompute_freak(rchip_path, feats_path):
     return __precompute(rchip_path, feats_path, compute_freak)
 
 def load_features(feats_path):
-    npz = np.load(feats_path)
+    npz = np.load(feats_path, mmap_mode='r+')
     kpts = npz['arr_0']
     desc = npz['arr_1']
     return (kpts, desc)
@@ -276,13 +280,14 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, 
         print('\n')
         try: 
             for cx, feat_path in enumerate(cx2_feat_path):
-                npz = np.load(feat_path)
+                npz = np.load(feat_path, mmap_mode='r+')
                 kpts = npz['arr_0']
                 desc = npz['arr_1']
                 npz.close()
                 cx2_kpts.append(kpts)
                 cx2_desc.append(desc)
                 helpers.print_(fmt_str % cx)
+            cx2_desc = np.array(cx2_desc)
         except MemoryError as ex:
             print('\n------------')
             print('Out of memory')

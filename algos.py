@@ -19,9 +19,6 @@ import scipy.sparse as spsparse
 #imp.reload(sys.modules['hotspotter.helpers'])
 #imp.reload(sys.modules['params'])
 
-# HACK: Flann indexes wont load correctly on Ooo
-__OVERRIDE_FLANN_CACHE__ = sys.platform == 'win32'
-
 # reloads this module when I mess with it
 def reload_module():
     import imp
@@ -66,7 +63,7 @@ def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
     # Load the index if it exists
     flann = pyflann.FLANN()
     load_success = False
-    if helpers.checkpath(flann_fpath) and not __OVERRIDE_FLANN_CACHE__:
+    if helpers.checkpath(flann_fpath):
         try:
             print('Trying to load FLANN index: '+flann_fpath)
             flann.load_index(flann_fpath, data)

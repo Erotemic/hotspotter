@@ -10,7 +10,20 @@ import os, sys
 import params
 import scipy.signal
 import scipy.ndimage.filters as filters
+from tpl.other import imtools
 
+import warnings
+
+import skimage
+import skimage.morphology
+import skimage.filter.rank
+import skimage.exposure
+import skimage.util
+
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
 
 # =======================================
 # Parallelizable Work Functions          
@@ -36,6 +49,13 @@ def __compute_chip(img_path, chip_path, roi, new_size):
     # Save chip to disk
     return chip
 
+def rotate_chip(chip_path, rchip_path, theta):
+    ''' reads chip, rotates, and saves'''
+    chip = Image.open(chip_path)
+    degrees = theta * 180. / np.pi
+    rchip = chip.rotate(degrees, resample=Image.BICUBIC, expand=1)
+    rchip.save(rchip_path, 'PNG')
+
 # Why doesn't this work? 
 def make_compute_chip_func(preproc_func_list):
     def custom_compute_chip(img_path, chip_path, roi, new_size):
@@ -49,6 +69,13 @@ def make_compute_chip_func(preproc_func_list):
 
 def compute_bare_chip(img_path, chip_path, roi, new_size):
     chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip.save(chip_path, 'PNG')
+    return True
+
+def compute_otsu_thresh_chip(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = region_normalize_chip(chip)
+    chip = histeq(chip)
     chip.save(chip_path, 'PNG')
     return True
 
@@ -71,26 +98,81 @@ def compute_histeq_chip(img_path, chip_path, roi, new_size):
     chip.save(chip_path, 'PNG')
     return True
 
+def compute_contrast_stretch_chip(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = contrast_strech(chip)
+    chip.save(chip_path, 'PNG')
+    return True
+
+def compute_localeq_contr_chip(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = local_equalize(chip)
+    chip.save(chip_path, 'PNG')
+    return True
+
+def compute_localeq_chip(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = local_equalize(chip)
+    chip = contrast_strech(chip)
+    chip.save(chip_path, 'PNG')
+    return True
+
+def compute_rankeq_chip(img_path, chip_path, roi, new_size):
+    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = rank_equalize(chip)
+    chip.save(chip_path, 'PNG')
+    return True
+
+# ---------------
+# Preprocessing algos
+
+def chip_decorator(func):
+    def wrapper(*arg, **kwargs):
+        return func(*arg, **kwargs)
+    wrapper.__name__ = 'chip_decorator_'+func.__name__
+
+def contrast_strech(chip):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        chip_ = pil2_float_img(chip)
+        p2 = np.percentile(chip_, 2)
+        p98 = np.percentile(chip_, 98)
+        chip_ = skimage.exposure.equalize_hist(chip_)
+        retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
+    return retchip
+
+def local_equalize(chip):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        chip_ = skimage.util.img_as_uint(chip)
+        chip_ = skimage.exposure.equalize_adapthist(chip_, clip_limit=0.03)
+        retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
+    return retchip
+
+def rank_equalize(chip):
+    #chip_ = skimage.util.img_as_ubyte(chip)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        chip_ = pil2_float_img(chip)
+        selem = skimage.morphology.disk(30)
+        chip_ = skimage.filter.rank.equalize(chip_, selem=selem)
+        retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
+        return retchip
+
+def skimage_historam_equalize(chip):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        chip_ = pil2_float_img(chip)
+        p2 = np.percentile(chip_, 2)
+        p98 = np.percentile(chip_, 98)
+        chip_ = skimage.exposure.rescale_intensity(chip_, in_range=(p2, p98))
+        retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
+    return retchip
+
+
 def histeq(pil_img):
     img = np.asarray(pil_img)
-    try:
-        from skimage import exposure
-        'Local histogram equalization'
-        # Equalization
-        img_eq_float64 = exposure.equalize_hist(img)
-        return Image.fromarray(np.uint8(np.round(img_eq_float64*255)))
-    except Exception as ex:
-        from tpl.other import imtools
-        print('Scikits not found: %s' % str(ex))
-        print('Using fallback histeq')
-        return Image.fromarray(imtools.histeq(img)).convert('L')
-
-def rotate_chip(chip_path, rchip_path, theta):
-    ''' reads chip, rotates, and saves'''
-    chip = Image.open(chip_path)
-    degrees = theta * 180. / np.pi
-    rchip = chip.rotate(degrees, resample=Image.BICUBIC, expand=1)
-    rchip.save(rchip_path, 'PNG')
+    return Image.fromarray(imtools.histeq(img)).convert('L')
 
 def region_normalize_chip(chip):
     #chip = hs.get_chip(1)
@@ -124,6 +206,13 @@ def region_normalize_chip(chip):
     retchip = Image.fromarray(chip_).convert('L')
     return retchip
 
+def pil2_float_img(chip):
+    return skimage.util.img_as_float(chip)
+    #chip_ = np.asarray(chip, dtype=np.float)
+    #if chip_.max() > 1:
+        #chip_ /= 255.0
+    return chip_
+
 # =======================================
 # Main Script 
 # =======================================
@@ -153,12 +242,19 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
     sqrt_area   = params.__CHIP_SQRT_AREA__
     histeq      = params.__HISTEQ__
     region_norm = params.__REGION_NORM__
+    rankeq     = params.__RANK_EQ__
+    localeq    = params.__LOCAL_EQ__
+    maxcontr    = params.__MAXCONTRAST__
+
     chip_params = dict(sqrt_area=sqrt_area, histeq=histeq)
     chip_uid = params.get_chip_uid()
 
     print(' * sqrt(target_area) = %r' % sqrt_area)
     print(' * histeq = %r' % histeq)
     print(' * region_norm = %r' % region_norm)
+    print(' * rankeq = %r' % rankeq)
+    print(' * localeq = %r' % localeq)
+    print(' * maxcontr = %r' % maxcontr)
     print(' * chip_uid = %r' % chip_uid)
 
     # Full image path
@@ -200,6 +296,14 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
         parallel_compute(compute_reg_norm_chip, **pcc_kwargs)
     elif histeq: 
         parallel_compute(compute_histeq_chip, **pcc_kwargs)
+    elif rankeq:
+        parallel_compute(compute_rankeq_chip, **pcc_kwargs)
+    elif localeq and maxcontr:
+        parallel_compute(compute_localeq_contr_chip, **pcc_kwargs)
+    elif localeq:
+        parallel_compute(compute_localeq_chip, **pcc_kwargs)
+    elif maxcontr:
+        parallel_compute(compute_contrast_stretch_chip, **pcc_kwargs)
     else:
         parallel_compute(compute_bare_chip, **pcc_kwargs)
 

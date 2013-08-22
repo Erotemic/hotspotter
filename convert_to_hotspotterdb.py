@@ -9,6 +9,11 @@ import os
 import parse
 from PIL import Image
 
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
+
 # Port of Philbin07 code to python
 def compute_ap(groundtruth_query, ranked_list):
     good_set = set(open(groundtruth_query + '_good.txt').readlines())

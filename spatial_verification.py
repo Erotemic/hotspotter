@@ -288,7 +288,7 @@ def test_realdata():
     #load_data2.reload_module()
     #df2.reload_module()
 
-    db_dir = load_data2.MOTHERS
+    db_dir = load_data2.DEFAULT
     hs = load_data2.HotSpotter(db_dir)
     assign_matches = hs.matcher.assign_matches
     qcx = 0

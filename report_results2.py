@@ -34,6 +34,7 @@ Highest Scoring Incorrect Matches
 Disparity between the two. 
 '''
 
+# exec(helpers.get_exec_src(experiments.run_experiment))
 def dump_all(hs, qcx2_res, 
              matrix=True,
              summary=True, 
@@ -293,13 +294,13 @@ def plot_summary_visualizations(hs, qcx2_res):
 
     # Visualize rankings with the stem plot
     title = 'Rankings Stem Plot\n'+query_uid
-    df2.figure(fignum=1+fignum, doclf=True, title=title)
+    fig = df2.figure(fignum=1+fignum, doclf=True, title=title)
     df2.draw_stems(true.qcxs, true.ranks)
     slice_num = int(np.ceil(np.log10(len(hs.test_sample_cx))))
     df2.set_xticks(hs.test_sample_cx[::slice_num])
     df2.set_xlabel('query chip indeX (qcx)')
     df2.set_ylabel('groundtruth chip ranks')
-    df2.save_figure(fpath=join(summary_dir, title))
+    df2.save(fig, fpath=join(summary_dir, title))
     #df2.set_yticks(list(seen.ranks))
 
     # Draw true rank histogram
@@ -768,7 +769,6 @@ if __name__ == '__main__':
     #imp.reload(mc2)
     # --- CHOOSE DATABASE --- #
     db_dir = load_data2.DEFAULT
-    db_dir = load_data2.MOTHERS
     hs = load_data2.HotSpotter(db_dir)
     qcx2_res = mc2.run_matching(hs)
     df2.close_all_figures()

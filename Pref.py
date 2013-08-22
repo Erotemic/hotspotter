@@ -9,6 +9,12 @@ import numpy as np
 
 __HAVE_PYQT__ = False
 
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
+
+
 class Pref(DynStruct):
     '''
     Structure for Creating Preferences. 

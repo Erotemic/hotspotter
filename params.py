@@ -32,6 +32,8 @@ __VSONE_RATIO_THRESH__ = 1.5
 __NUM_RERANK__   = 1000
 # Percentage of the diagonal length of keypoint extent
 __XY_THRESH__    = .1
+__SCALE_THRESH__ = .5
+
 hs1_params = {'algorithm':'kdtree',
               'trees'    :4,
               'checks'   :128}
@@ -80,9 +82,14 @@ __CACHE_QUERY__    = True
 __REVERIFY_QUERY__ = False
 __RESAVE_QUERY__   = False
 
-__WHITEN_FEATS__  = False
-__HISTEQ__        = False
-__REGION_NORM__   = False
+__WHITEN_FEATS__   = False
+
+__HISTEQ__         = False
+__REGION_NORM__    = False
+__RANK_EQ__        = False
+__LOCAL_EQ__       = False
+__MAXCONTRAST__    = False
+
 
 __CHIP_SQRT_AREA__ = 750
 
@@ -109,11 +116,17 @@ def get_chip_uid():
     global __CHIP_SQRT_AREA__
     global __HISTEQ__
     global __REGION_NORM__
+    global __RANK_EQ__
+    global __LOCAL_EQ__
+    global __MAXCONTRAST__
     isorig = (__CHIP_SQRT_AREA__ is None or __CHIP_SQRT_AREA__ <= 0)
     histeq = ['','_histeq'][__HISTEQ__]
     myeq = ['','_regnorm'][__REGION_NORM__]
+    rankeq = ['','_rankeq'][__RANK_EQ__]
+    localeq = ['','_localeq'][__LOCAL_EQ__]
+    maxcontrast = ['','_maxcont'][__MAXCONTRAST__]
     resize = ['_szorig', ('_sz%r' % __CHIP_SQRT_AREA__)][not isorig] 
-    chip_uid = resize + histeq + myeq
+    chip_uid = resize + histeq + myeq + rankeq + localeq + maxcontrast
     return chip_uid
 
 def get_feat_uid():
@@ -166,6 +179,16 @@ if '--histeq' in sys.argv:
     __HISTEQ__ = True
 if '--regnorm' in sys.argv:
     __REGION_NORM__ = True
+if '--rankeq' in sys.argv:
+    __RANK_EQ__ = True
+if '--norankeq' in sys.argv:
+    __RANK_EQ__ = False
+if '--localeq' in sys.argv:
+    __LOCAL_EQ__ = True
+if '--maxcont' in sys.argv:
+    __MAXCONTRAST__ = True
+
+
 if '--whiten' in sys.argv or '--white' in sys.argv:
     print(' * with whitening')
     __WHITEN_FEATS__ = True

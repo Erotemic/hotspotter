@@ -151,4 +151,19 @@ print timeit.timeit(test2, setup=setup, number=10000)
 print timeit.timeit(test3, setup=setup, number=10000)
 print timeit.timeit(test4, setup=setup, number=10000)
 
+#-------------
+# Test ways of componentwise anding a lists of booleans
+import timeit
+setup = '''
+import helpers
+func1 = lambda var: str(type(var))
+def func2(var): return str(type(var))
+'''
+
+test1 = '[func1(val) for val in globals().itervalues()]'
+test2 = '[func2(val) for val in globals().itervalues()]'
+
+print timeit.timeit(test1, setup=setup, number=100000)
+print timeit.timeit(test2, setup=setup, number=100000)
+
 

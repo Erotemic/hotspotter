@@ -7,7 +7,7 @@ from __future__ import division
 import drawing_functions2 as df2
 import algos
 import params
-import tpl.external_features.external_feature_interface as extern_feats
+import tpl.extern_feat as extern_feat
 import helpers
 from Parallelize import parallel_compute
 from Pref import Pref
@@ -247,14 +247,26 @@ class HotspotterChipFeatures(DynStruct):
         self.cx2_feats_hesaff = []
         self.cx2_feats_sift   = []
         self.cx2_feats_freak  = []
+
+def tryload(fname):
+    if helpers.checkpath(fname):
+        try: 
+            npz = np.load(fname, mmap_mode='r+')
+            data = npz['arr_0']
+            return data
+        except Exception as ex:
+            print(repr(ex))
+            remove_file(fname)
+    return None
     
 def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, cache_dir):
     print('Loading '+feat_type+' features: UID='+str(feat_uid))
     cx2_kpts_fpath = cache_dir + '/cx2_kpts'+feat_uid+'.npz'
     cx2_desc_fpath = cache_dir + '/cx2_desc'+feat_uid+'.npz'
     # Try to read cache
-    cx2_kpts = helpers.tryload(cx2_kpts_fpath)
-    cx2_desc = helpers.tryload(cx2_desc_fpath)
+    print('Attempting load of cx2_kpts and cx2_desc')
+    cx2_kpts = tryload(cx2_kpts_fpath)
+    cx2_desc = tryload(cx2_desc_fpath)
     if (not cx2_kpts is None and not cx2_desc is None):
         # This is pretty dumb. Gotta have a more intelligent save/load
         cx2_desc_ = cx2_desc.tolist()

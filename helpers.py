@@ -11,20 +11,21 @@ Wow, pylint is nice for cleaning.
 import drawing_functions2 as df2
 from Printable import printableVal
 import cPickle
+import cStringIO
 import code
 import numpy as np
 import os, os.path, sys
 import sys
+import inspect
 import time
 import types
+import datetime
 import shutil
 import warnings
 import fnmatch
-import inspect
 import textwrap
 from os.path import join, relpath
 import fnmatch
-from sys import stdout as sout
 #print('LOAD_MODULE: helpers.py')
 
 __PRINT_CHECKS__ = False
@@ -36,10 +37,9 @@ def remove_chars(instr, illegals_chars):
         outstr = outstr.replace(ill_char, '')
     return outstr
 
-def list_replace(instr, list_ser, list_repl=None):
-    if list_repl is None:
-        list_repl = [''] * len(list_ser)
-    for ser, repl in zip(list_ser, list_repl):
+def list_replace(instr, search_list=[], repl_list=None):
+    repl_list = [''] * len(search_list) if repl_list is None else repl_list
+    for ser, repl in zip(search_list, repl_list):
         instr = instr.replace(ser, repl)
     return instr
 
@@ -132,10 +132,10 @@ def write_to(fname, to_write):
         file.write(to_write)
 
 def _print(msg):
-    sout.write(msg)
+    sys.stdout.write(msg)
 
 def _println(msg):
-    sout.write(msg+'\n')
+    sys.stdout.write(msg+'\n')
 
 IMG_EXTENSIONS = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
 
@@ -203,25 +203,23 @@ def norm_zero_one(array, dim=0):
     array_exnt = np.subtract(array_max, array_min)
     return np.divide(np.subtract(array, array_min), array_exnt)
 
+__CHECKPATH_VERBOSE__ = False
 def checkpath(_path):
     '''Checks to see if the argument _path exists.'''
     # Do the work
     _path = os.path.normpath(_path)
     if not __PRINT_CHECKS__:
         return os.path.exists(_path)
-
     print_('Checking ' + repr(_path))
     if os.path.exists(_path):
-        if os.path.isfile(_path):
-            path_type = 'file'
-        if os.path.isdir(_path): 
-            path_type = 'directory'
-        println('...('+path_type+') exists')
+        path_type = 'file' if os.path.isfile(_path) else 'directory'
+        println('...(%s) exists' % (path_type,))
     else:
         println('... does not exist')
-        #print('\n  ! Does not exist')
-        #_longest_path = longest_existing_path(_path)
-        #print('... The longest existing path is: ' + repr(_longest_path))
+        if __CHECKPATH_VERBOSE__:
+            print('\n  ! Does not exist')
+            _longest_path = longest_existing_path(_path)
+            print('... The longest existing path is: ' + repr(_longest_path))
         return False
     return True
 def check_path(_path):
@@ -272,6 +270,37 @@ def copy(src, dst):
         print('... Copying ')
     print('    '+src+' -> \n    '+dst)
     shutil.copy(src, dst)
+
+def grep(string, pattern):
+    if not type(string) is types.StringType:#-> convert input to a string
+        string = repr(string)
+    matching_lines = [] # Find all matching lines
+    for line in string.split('\n'):
+        if not fnmatch.fnmatch(string, pattern):
+            continue
+        matching_lines.append(line)
+    return matching_lines
+
+def glob(dirname, pattern, recursive=False):
+    matching_fnames = []
+    for root, dirs, files in os.walk(dirname):
+        for fname in files:
+            if not fnmatch.fnmatch(fname, pattern): 
+                continue
+            matching_fnames.append(join(root, fname))
+        if not recursive: 
+            break
+    return matching_fnames
+
+def print_grep(*args, **kwargs):
+    matching_lines = grep(*args, **kwargs)
+    print('Matching Lines:') # Print matching lines
+    print('\n    '.join(matching_lines))
+
+def print_glob(*args, **kwargs):
+    matching_fnames = glob(*args, **kwargs)
+    print('Matching Fnames:') # Print matching fnames
+    print('\n    '.join(matching_fnames))
 
 def copy_all(src_dir, dest_dir, glob_str_list):
     if type(glob_str_list) != types.ListType:
@@ -351,27 +380,6 @@ def sanatize_fname(fname):
         fname += ext
     return fname
 
-
-def tryload(fname):
-    if checkpath(fname):
-        print_(' * attempting to load cx2_feats from disk')
-        flush()
-        loaded = False
-        try: 
-            npz = np.load(fname, mmap_mode='r+')
-            data = npz['arr_0']
-            println('...success')
-            loaded = True
-        except Exception as ex:
-            println('...failure')
-            print(repr(ex))
-            remove_file(fname)
-        if loaded:
-            if type(data) == types.TupleType:
-                # hack
-                data = data[0]
-            return data
-    return None
 
 def random_indexes(max_index, subset_size):
     subst_ = np.arange(0, max_index)
@@ -533,6 +541,41 @@ def toc(tt):
         sys.stdout.write('...toc(%.4fs, ' % ellapsed + '"' + str(msg) + '"' + ')\n')
     return ellapsed
 
+# from http://stackoverflow.com/questions/6796492/python-temporarily-redirect-stdout-stderr
+class RedirectStdout(object):
+    def __init__(self, msg=None):
+        self._stdout_old = sys.stdout
+        self.stream = cStringIO.StringIO()
+        self.record = '<no record>'
+        self.msg = msg
+    def start(self):
+        sys.stdout.flush()
+        sys.stdout = self.stream
+    def stop(self):
+        self.stream.flush()
+        sys.stdout = self._stdout_old
+        self.stream.seek(0)
+        self.record = self.stream.read()
+        return self.record
+    def __enter__(self):
+        self.start()
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop()
+        if not self.msg is None:
+            print(indent(self.record, self.msg))
+
+__STDOUT__ = sys.stdout
+__STDERR__ = sys.stdout
+
+
+def reset_streams():
+    sys.stdout.flush()
+    sys.stderr.flush()
+    sys.stdout = __STDOUT__
+    sys.stderr = __STDERR__
+    sys.stdout.flush()
+    sys.stderr.flush()
+    print('Reset stdout and stderr')
 
 import sys
 class Timer(object):
@@ -579,6 +622,77 @@ def symlink(source, link_name, noraise=False):
         if not noraise:
             raise
 
+# <EXPLORE FUNCTIONS>
+
+def explore_stack():
+    stack = inspect.stack()
+    tup = stack[0]
+    for ix, tup in reversed(list(enumerate(stack))):
+        frame = tup[0]
+        print('--- Frame %2d: ---' % (ix))
+        print_frame(frame)
+        print('\n')
+        #next_frame = curr_frame.f_back
+
+def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
+    def __childiter(module):
+        for aname in iter(dir(module)):
+            if aname.find('_') == 0: 
+                continue
+            try:
+                yield module.__dict__[aname], aname
+            except KeyError as ex:
+                print repr(ex)
+                pass
+    def __explore_module(module, indent, seen, depth, maxdepth, nonmodules):
+        valid_children = []
+        ret = u''
+        modname = str(module.__name__)
+        #modname = repr(module)
+        for child, aname in __childiter(module):
+            try: 
+                childtype = type(child)
+                if not childtype == types.ModuleType:
+                    if nonmodules:
+                        print_(depth)
+                        fullstr = indent+'    '+str(aname)+' = '+repr(child)
+                        truncstr = println(truncate_str(fullstr))
+                        ret +=  truncstr
+                    continue
+                childname = str(child.__name__)
+                if not seen is None:
+                    if childname in seen: 
+                        continue
+                    elif maxdepth is None:
+                      seen.add(childname)
+                if childname.find('_') == 0: 
+                    continue
+                valid_children.append(child)
+            except Exception as ex:
+                print repr(ex)
+                pass
+        # Print 
+        #print_(depth)
+        ret += println(indent+modname)
+        # Recurse
+        if not maxdepth is None and depth >= maxdepth: 
+            return ret
+        ret += ''.join([__explore_module(child,
+                                         indent+'    ', 
+                                         seen, depth+1,
+                                         maxdepth,
+                                         nonmodules) \
+                       for child in iter(valid_children)])
+
+        return ret
+    ret = ''
+    ret += println('Exploring: '+str(module_))
+    ret += __explore_module(module_, '     ', seen, 0, maxdepth, nonmodules)
+    #print ret
+    flush()
+    return ret
+# </EXPLORE FUNCTIONS>
+
 IPYTHON_EMBED_STR = r'''
 try: 
     import IPython
@@ -590,29 +704,119 @@ except Exception as ex:
     embedded = False
 '''
 
+def pack_into(instr, textwidth=160, breakchars=' ', break_words=True):
+    newlines = ['']
+    word_list = instr.split(breakchars)
+    for word in word_list:
+        if len(newlines[-1]) + len(word) > textwidth:
+            newlines.append('')
+        while break_words and len(word) > textwidth:
+            newlines[-1] += word[:textwidth]
+            newlines.append('')
+            word = word[textwidth:]
+        newlines[-1] += word+' '
+    return '\n'.join(newlines)
 
-def get_exec_src(func):
+def print_list(list):
+    if list is None: return 'None'
+    toprint = '\n'.join([repr(item) for item in list])
+    print toprint
+    return toprint
+
+def print_frame(frame):
+    frame = frame if 'frame' in vars() else inspect.currentframe()
+    attr_list = ['f_code.co_name', 'f_back', 'f_lineno',
+                   'f_code.co_names', 'f_code.co_filename']
+    obj_name = 'frame'
+    execstr_print_list = ['print("%r=%%r" %% (%r,))' % (_execstr, _execstr)
+                         for _execstr in execstr_attr_list(obj_name, attr_list)]
+    execstr = '\n'.join(execstr_print_list)
+    exec(execstr)
+    local_varnames = pack_into('; '.join(frame.f_locals.keys()))
+    print local_varnames
+    #if len(local_varnames) > 360: 
+        #print local_varnames[0:360]+'...'#hack
+    #else:
+    print('--- End Frame ---')
+
+def search_stack_for_localvar(varname):
+    curr_frame = inspect.currentframe()
+    print(' * Searching parent frames for: '+str(varname))
+    frame_no = 0
+    while not curr_frame.f_back is None:
+        if varname in curr_frame.f_locals.keys():
+            print(' * Found in frame: '+str(frame_no))
+            return curr_frame.f_locals[varname]
+        frame_no += 1
+        curr_frame = curr_frame.f_back
+    print('... Found nothing in all '+str(frame_no)+' frames.')
+    return None
+
+
+def get_parent_locals():
+    this_frame = inspect.currentframe()
+    call_frame = this_frame.f_back
+    parent_frame = call_frame.f_back
+    if parent_frame is None:
+        return None
+    return parent_frame.f_locals
+# <EXEC_CODE>
+#---
+def execstr_parent_locals():
+    parent_locals = get_parent_locals()
+    return execstr_dict(parent_locals, 'parent_locals')
+#---
+def execstr_attr_list(obj_name, attr_list=None):
+    #if attr_list is None:
+        #exec(execstr_parent_locals())
+        #exec('attr_list = dir('+obj_name+')')
+    execstr_list = [obj_name+'.'+attr for attr in attr_list]
+    return execstr_list
+#---
+def execstr_dict(dict, local_name):
+    #if local_name is None:
+        #local_name = dict
+        #exec(execstr_parent_locals())
+        #exec('dict = local_name')
+    execstr = '\n'.join((key+' = '+local_name+'['+repr(key)+']'
+                        for (key, val) in dict.iteritems()))
+    return execstr
+@__DEPRICATED__
+def dict_execstr(dict, local_name=None):
+    return execstr_dict(dict, local_name)
+#---
+def execstr_func(func):
     print(' ! Getting executable source for: '+func.func_name)
     _src = inspect.getsource(func)
-    src = textwrap.dedent(_src[_src.find(':')+1:])
+    execstr = textwrap.dedent(_src[_src.find(':')+1:])
     # Remove return statments
     while True:
-        ret_start = src.find('return')
-        if ret_start == -1:
-            break
-        middle   = src[ret_start:]
-        ret_end1 = middle.find(';')
-        ret_end2 = middle.find('\n')
-        if ret_end1 == -1:
-            ret_end1 = ret_end2
-        ret_end = min(ret_end1, ret_end2)
-        if ret_end == -1 or ret_end == len(src):
-            ret_end = len(src)-1
-        ret_end = ret_start + ret_end + 1
-        before = src[:ret_start]
-        after  = src[ret_end:]
-        src = before+after
-    return src
+        ret_x = execstr.find('return')  # Find first 'return'
+        if ret_x == -1: break # Fail condition
+        middle   = execstr[ret_x:]
+        # The characters which might make a return not have its own line
+        stmt_break_list = '\n;'
+        for stmt_break in stmt_break_list:
+            ret_endx = middle.find(stmt_break)
+        if ret_end1 > -1:
+            ret_endx = ret_end2
+        elif ret_end2 > -1:
+            ret_endx = ret_end1
+        else:
+            ret_endx = len(execstr)-1
+        # now have variables ret_x, ret_endx
+        before = execstr[:ret_x]
+        after  = execstr[ret_endx:]
+        execstr = before+after
+    return execstr
+def execstr_src(func):
+    return execstr_func(func)
+@__DEPRICATED__
+def get_exec_src(func):
+    return execstr_func(func)
+#---
+# </EXEC_CODE>
+
 
 def remove_file(fpath, verbose=True):
     try:
@@ -679,14 +883,14 @@ def println(msg, *args):
     return print_(msg, *args)
 def print_(msg, *args):
     msg_ = str(msg)+''.join(map(str,args))
-    sout.write(msg_)
+    sys.stdout.write(msg_)
     return msg_
 def flush():
-    sout.flush()
+    sys.stdout.flush()
     return ''
 def endl():
     print_('\n')
-    sout.flush()
+    sys.stdout.flush()
     return '\n'
 def printINFO(msg, *args):
     msg = 'INFO: '+str(msg)+''.join(map(str,args))
@@ -703,10 +907,11 @@ def printERR(msg, *args):
 
 def printWARN(warn_msg, category=UserWarning):
     warn_msg = 'Warning: '+warn_msg
-    sout.write(warn_msg+'\n')
-    sout.flush()
+    sys.stdout.write(warn_msg+'\n')
+    sys.stdout.flush()
+    raise Exception('fda')
     warnings.warn(warn_msg, category=category)
-    sout.flush()
+    sys.stdout.flush()
     return warn_msg
 
 def intersect_ordered(list1, list2):
@@ -719,8 +924,6 @@ def intersect_ordered(list1, list2):
             #new_list.append(item)
     return new_list
 
-import types
-
 def truncate_str(str, maxlen=110):
     if len(str) < maxlen:
         return str
@@ -731,100 +934,21 @@ def truncate_str(str, maxlen=110):
         upperb = maxlen_ - lowerb
         return str[:lowerb]+truncmsg+str[-upperb:]
     
-def module_explore(module_, seen=None, maxdepth=2, nonmodules=False):
-    def __childiter(module):
-        for aname in iter(dir(module)):
-            if aname.find('_') == 0: 
-                continue
-            try:
-                yield module.__dict__[aname], aname
-            except KeyError as ex:
-                print repr(ex)
-                pass
-    def __module_explore(module, indent, seen, depth, maxdepth, nonmodules):
-        valid_children = []
-        ret = u''
-        modname = str(module.__name__)
-        #modname = repr(module)
-        for child, aname in __childiter(module):
-            try: 
-                childtype = type(child)
-                if not childtype == types.ModuleType:
-                    if nonmodules:
-                        print_(depth)
-                        fullstr = indent+'    '+str(aname)+' = '+repr(child)
-                        truncstr = println(truncate_str(fullstr))
-                        ret +=  truncstr
-                    continue
-                childname = str(child.__name__)
-                if not seen is None:
-                    if childname in seen: 
-                        continue
-                    elif maxdepth is None:
-                      seen.add(childname)
-                if childname.find('_') == 0: 
-                    continue
-                valid_children.append(child)
-            except Exception as ex:
-                print repr(ex)
-                pass
-        # Print 
-        print_(depth)
-        ret += println(indent+modname)
-        # Recurse
-        if not maxdepth is None and depth >= maxdepth: 
-            return ret
-        ret += ''.join([__module_explore(child,
-                                         indent+'    ', 
-                                         seen, depth+1,
-                                         maxdepth,
-                                         nonmodules) \
-                       for child in iter(valid_children)])
-
-        return ret
-    ret = ''
-    ret += println('Exploring: '+str(module_))
-    ret += __module_explore(module_, '     ', seen, 0, maxdepth, nonmodules)
-    #print ret
-    flush()
-    return ret
-'''
-exec(open('helpers.py','r').read())
-'''
-'''
-def __getstate__(self):
-    out_dict = self.__dict__.copy()
-    return odict
-def __setstate__(self, in_dict):
-    self.__dict__.update(in_dict)
-'''
 #---------------
-def myreload():
-    import imp
-    #imp.reload(spatial_verification)
-    imp.reload(df2)
-    imp.reload(algos)
-    imp.reload(mc2)
-    imp.reload(report_results2)
-    imp.reload(helpers)
-
-def dict_execstr(dict, local_name):
-    '''returns a string which when evaluated will
-        add the stored variables to the current namespace
-        
-        localname is the name of the variable in the current scope
-        * use locals().update(dyn.to_dict()) instead
-    '''
-    execstr = ''
-    execstr = '\n'.join((key+' = '+local_name+'['+repr(key)+']'
-                        for (key, val) in dict.iteritems()))
-    return execstr
+def get_timestamp(format='filename'):
+    now = datetime.datetime.now()
+    time_tup = (now.year, now.month, now.day, now.hour, now.minute)
+    time_formats = {
+        'filename': 'ymd-%04d-%02d-%02d_hm-%02d-%02d',
+        'comment' : '# (yyyy-mm-dd hh:mm) %04d-%02d-%02d %02d:%02d' }
+    stamp = time_formats[format] % time_tup
+    return stamp
 
 if __name__ == '__main__':
     print('You ran helpers as main!')
     import algos
     import sklearn
-    module = algos
+    module = sys.modules[__name__]
     seen = set(['numpy','matplotlib', 'scipy', 'pyflann', 'sklearn', 'skimage', 'cv2'])
 
     hs2_basic = set(['drawing_functions2', 'params', 'mc2'])
@@ -836,13 +960,6 @@ if __name__ == '__main__':
                          'scipy',
                          'scipy.sparse'])
     seen = set(list(python_basic) + list(science_basic) + list(tpl_basic))
-    module_explore(sklearn, maxdepth=10, seen=seen, nonmodules=False)
-
-def get_timestamp(format='filename'):
-    now = datetime.datetime.now()
-    time_tup = (now.year, now.month, now.day, now.hour, now.minute)
-    time_formats = {
-        'filename': 'ymd-%04d-%02d-%02d_hm-%02d-%02d',
-        'comment' : '# (yyyy-mm-dd hh:mm) %04d-%02d-%02d %02d:%02d' }
-    stamp = time_formats[format] % time_tup
-    return stamp
+    seen = set([])
+    print('seen=%r' % seen)
+    explore_module(module, maxdepth=0, seen=seen, nonmodules=False)

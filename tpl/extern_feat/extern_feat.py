@@ -6,6 +6,11 @@ from PIL import Image
 #import threading
 #__hesaff_lock = threading.Lock()
 
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
+
 EXE_EXT = {'win32':'.exe', 'darwin':'.mac', 'linux2':'.ln'}[sys.platform]
 
 #__file__ = os.path.realpath('external_feature_interface.py')

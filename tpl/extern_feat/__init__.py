@@ -8,4 +8,4 @@ Downloaded hesaff from:
     https://github.com/perdoch/hesaff
 '''
 
-from external_feature_interface import *
+from extern_feat import *

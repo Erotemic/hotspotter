@@ -1,0 +1,466 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>mainSkel</class>
+ <widget class="QMainWindow" name="mainSkel">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>927</width>
+    <height>573</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>HotSpotter</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout_2">
+    <item row="1" column="1">
+     <layout class="QHBoxLayout" name="root_hlayout">
+      <item>
+       <widget class="QTabWidget" name="tablesTabWidget">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="image_view">
+         <property name="minimumSize">
+          <size>
+           <width>445</width>
+           <height>0</height>
+          </size>
+         </property>
+         <attribute name="title">
+          <string>Image Table</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="0">
+           <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
+             <widget class="QTableWidget" name="image_TBL">
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="chip_view">
+         <attribute name="title">
+          <string>Chip Table</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
+           <layout class="QVBoxLayout" name="verticalLayout_3">
+            <item>
+             <widget class="QTableWidget" name="chip_TBL">
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="result_view">
+         <attribute name="title">
+          <string>Results Table</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_4">
+            <item>
+             <widget class="QTableWidget" name="res_TBL">
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="2" column="1">
+     <layout class="QHBoxLayout" name="status_HLayout">
+      <item>
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>fignum: </string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="fignumSPIN"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="state_LBL">
+        <property name="text">
+         <string>State: Unloaded Gui State</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Image-ID:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="sel_cid_SPIN">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label">
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+        <property name="text">
+         <string>Chip-ID:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="sel_gid_SPIN">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>927</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionOpen_Database"/>
+    <addaction name="actionSave_Database"/>
+    <addaction name="actionImport_Images"/>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>Convenience</string>
+    </property>
+    <addaction name="actionConvertImage2Chip"/>
+    <addaction name="actionBatch_Change_Name"/>
+    <addaction name="separator"/>
+    <addaction name="actionAdd_Metadata_Property"/>
+    <addaction name="actionAssign_Matches_Above_Threshold"/>
+    <addaction name="actionIncrease_ROI_Size"/>
+    <addaction name="separator"/>
+    <addaction name="actionOpen_Data_Directory"/>
+    <addaction name="actionOpen_Source_Directory"/>
+    <addaction name="actionOpen_Internal_Directory"/>
+   </widget>
+   <widget class="QMenu" name="menuOptions">
+    <property name="title">
+     <string>Options</string>
+    </property>
+    <addaction name="actionTogEll"/>
+    <addaction name="actionTogPts"/>
+    <addaction name="separator"/>
+    <addaction name="actionTogPlt"/>
+    <addaction name="separator"/>
+    <addaction name="actionPreferences"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionView_Documentation"/>
+    <addaction name="actionHelpWorkflow"/>
+    <addaction name="actionHelpTroubles"/>
+    <addaction name="separator"/>
+    <addaction name="actionHelpCMD"/>
+    <addaction name="separator"/>
+    <addaction name="actionWriteLogs"/>
+   </widget>
+   <widget class="QMenu" name="menuActions">
+    <property name="title">
+     <string>Actions</string>
+    </property>
+    <addaction name="actionQuery"/>
+    <addaction name="separator"/>
+    <addaction name="actionAdd_ROI"/>
+    <addaction name="actionReselect_ROI"/>
+    <addaction name="actionReselect_Orientation"/>
+    <addaction name="actionRemove_Chip"/>
+    <addaction name="separator"/>
+    <addaction name="actionNext"/>
+   </widget>
+   <widget class="QMenu" name="menuExperiments">
+    <property name="title">
+     <string>Experiments</string>
+    </property>
+    <addaction name="actionMatching_Experiment"/>
+    <addaction name="actionName_Consistency_Experiment"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuActions"/>
+   <addaction name="menuOptions"/>
+   <addaction name="menuView"/>
+   <addaction name="menuExperiments"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <action name="actionOpen_Database">
+   <property name="text">
+    <string>Open Database</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionSave_Database">
+   <property name="text">
+    <string>Save Database</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionImport_Images">
+   <property name="text">
+    <string>Import Images</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="actionOpen_Data_Directory">
+   <property name="text">
+    <string>View Data Directory</string>
+   </property>
+  </action>
+  <action name="actionOpen_Source_Directory">
+   <property name="text">
+    <string>View Source Directory</string>
+   </property>
+  </action>
+  <action name="actionTogEll">
+   <property name="text">
+    <string>Toggle Ellipses</string>
+   </property>
+   <property name="shortcut">
+    <string>E</string>
+   </property>
+  </action>
+  <action name="actionUndockDisplay">
+   <property name="text">
+    <string>Undock Display</string>
+   </property>
+  </action>
+  <action name="actionTogPlt">
+   <property name="text">
+    <string>Toggle PlotWidget</string>
+   </property>
+  </action>
+  <action name="actionHelpCMD">
+   <property name="text">
+    <string>Command Line Help</string>
+   </property>
+  </action>
+  <action name="actionHelpGUI">
+   <property name="text">
+    <string>GUI Help</string>
+   </property>
+  </action>
+  <action name="actionHelpTroubles">
+   <property name="text">
+    <string>Troubleshooting</string>
+   </property>
+  </action>
+  <action name="actionHelpWorkflow">
+   <property name="text">
+    <string>Workflow Help</string>
+   </property>
+  </action>
+  <action name="actionTogPts">
+   <property name="text">
+    <string>Toggle Points</string>
+   </property>
+   <property name="shortcut">
+    <string>P</string>
+   </property>
+  </action>
+  <action name="actionAdd_ROI">
+   <property name="text">
+    <string>Add ROI</string>
+   </property>
+   <property name="shortcut">
+    <string>A</string>
+   </property>
+  </action>
+  <action name="actionReselect_ROI">
+   <property name="text">
+    <string>Reselect ROI</string>
+   </property>
+   <property name="shortcut">
+    <string>R</string>
+   </property>
+  </action>
+  <action name="actionNext">
+   <property name="text">
+    <string>Select Next</string>
+   </property>
+   <property name="toolTip">
+    <string>Selects the next unidentified CID or Untagged GID</string>
+   </property>
+   <property name="shortcut">
+    <string>N</string>
+   </property>
+  </action>
+  <action name="actionRemove_Chip">
+   <property name="text">
+    <string>Remove Chip</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Del</string>
+   </property>
+  </action>
+  <action name="actionQuery">
+   <property name="text">
+    <string>Query</string>
+   </property>
+   <property name="shortcut">
+    <string>Q</string>
+   </property>
+  </action>
+  <action name="actionPrev">
+   <property name="text">
+    <string>Prev</string>
+   </property>
+  </action>
+  <action name="actionWriteLogs">
+   <property name="text">
+    <string>Write Logs</string>
+   </property>
+  </action>
+  <action name="actionOpen_Internal_Directory">
+   <property name="text">
+    <string>View Internal Directory</string>
+   </property>
+  </action>
+  <action name="actionPreferences">
+   <property name="text">
+    <string>Edit Preferences</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionQuit">
+   <property name="text">
+    <string>Quit</string>
+   </property>
+  </action>
+  <action name="actionConvertImage2Chip">
+   <property name="text">
+    <string>Convert All Images to Chips</string>
+   </property>
+  </action>
+  <action name="actionBatch_Change_Name">
+   <property name="text">
+    <string>Batch Change Name</string>
+   </property>
+  </action>
+  <action name="actionReselect_Orientation">
+   <property name="text">
+    <string>Reselect Orientation</string>
+   </property>
+   <property name="shortcut">
+    <string>O</string>
+   </property>
+  </action>
+  <action name="actionAdd_Metadata_Property">
+   <property name="text">
+    <string>Add Metadata Property</string>
+   </property>
+  </action>
+  <action name="actionAssign_Matches_Above_Threshold">
+   <property name="text">
+    <string>Assign Matches Above Threshold</string>
+   </property>
+  </action>
+  <action name="actionMatching_Experiment">
+   <property name="text">
+    <string>Matching Experiment</string>
+   </property>
+  </action>
+  <action name="actionName_Consistency_Experiment">
+   <property name="text">
+    <string>Run Name Consistency Experiment</string>
+   </property>
+  </action>
+  <action name="actionIncrease_ROI_Size">
+   <property name="text">
+    <string>Increase all ROI Sizes</string>
+   </property>
+  </action>
+  <action name="actionView_Documentation">
+   <property name="text">
+    <string>View Documentation</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

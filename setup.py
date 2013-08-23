@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-
 from distutils.core import setup
 from distutils.util import convert_path
 from fnmatch import fnmatchcase
 from os.path import dirname, realpath, join, exists, normpath, isdir, isfile, normpath
-from hs_setup.git_helpers import *
-from hs_setup.configure import *
+import hs_scripts.setup.git_helpers as git_helpers
+#from hs_scripts.setup.configure as hs_configure
 import os
+import textwrap
 import shutil
 import subprocess
 import sys
@@ -83,10 +83,10 @@ AUTHOR_EMAIL        = 'hotspotter.ir@gmail.com'
 MAINTAINER          = AUTHOR
 MAINTAINER_EMAIL    = AUTHOR_EMAIL
 DESCRIPTION         = 'Image Search for Large Animal Databases.'
-LONG_DESCRIPTION    = open('DESCRIPTION.txt').read()
+LONG_DESCRIPTION    = open('doc/DESCRIPTION.txt').read()
 URL                 = 'http://www.cs.rpi.edu/~cralljp'
 DOWNLOAD_URL        = 'https://github.com/Erotemic/hotspotter/archive/release.zip'
-LICENSE             = 'GPL'
+LICENSE             = 'GNU'
 PLATFORMS           = ['Windows', 'Linux', 'Mac OS-X']
 MAJOR               = 0
 MINOR               = 0
@@ -119,26 +119,27 @@ def write_text(filename, text, mode='w'):
         except Exception as e:
             print(e)
 
-def write_version_py(filename=join('hotspotter', 'generated_version.py')):
-    cnt = ''' # THIS FILE IS GENERATED FROM HOTSPOTTER SETUP.PY
-short_version = '%(version)s'
-version = '%(version)s'
-git_revision = '%(git_revision)s'
-full_version = '%(version)s.dev-%(git_revision)s'
-release = %(isrelease)s
-
-if not release:
-    version = full_version
-'''
+def write_version_py(filename=None):
+    if filename is None:
+        hsdir = os.path.split(realpath(__file__))[0]
+        filename = join(hsdir, 'generated_version.py')
+    cnt = textwrap.dedent('''
+    # THIS FILE IS GENERATED FROM HOTSPOTTER SETUP.PY
+    short_version = '%(version)s'
+    version = '%(version)s'
+    git_revision = '%(git_revision)s'
+    full_version = '%(version)s.dev-%(git_revision)s'
+    release = %(isrelease)s
+    if not release:
+        version = full_version''')
     FULL_VERSION = VERSION
     if isdir('.git'):
-        GIT_REVISION = git_version()
+        GIT_REVISION = git_helpers.git_version()
+    # must be a source distribution, use existing version file
     elif exists(filename):
-        # must be a source distribution, use existing version file
         GIT_REVISION = 'RELEASE'
     else:
         GIT_REVISION = 'unknown-git'
-
     FULL_VERSION += '.dev-' + GIT_REVISION
     text = cnt % {'version': VERSION,
                   'full_version': FULL_VERSION,
@@ -146,18 +147,15 @@ if not release:
                   'isrelease': str(ISRELEASED)}
     write_text(filename, text)
 
-
 def ensure_findable_windows_dlls():
     numpy_core = r'C:\Python27\Lib\site-packages\numpy\core'
     numpy_libs = ['libiomp5md.dll', 'libifcoremd.dll', 'libiompstubs5md.dll', 'libmmd.dll']
     pydll_dir  = r'C:\Python27\DLLs'
-
     for nplib in numpy_libs:
         dest = join(pydll_dir, nplib)
         if not exists(dest):
             src = join(numpy_core, nplib)
             shutil.copyfile(src, dest)
-
     zmqpyd_target = r'C:\Python27\DLLs\libzmq.pyd'
     if not exists(zmqpyd_target):
         #HACK http://stackoverflow.com/questions/14870825/
@@ -262,7 +260,8 @@ def package_application():
     setup(**setup_kwargs)
 
     if sys.platform == 'darwin':
-        subprocess.call(["cp", "-r", "hotspotter/tpl/lib/darwin", "dist/HotSpotter.app/Contents/Resources/lib/"])
+        subprocess.call(['cp', '-r', 'hotspotter/tpl/lib/darwin',
+                         'dist/HotSpotter.app/Contents/Resources/lib/'])
 
 def get_info_setup_kwarg():
     return dict(
@@ -304,6 +303,20 @@ def build_pyinstaller():
         shutil.copyfile("hs_setup/hsicon.icns", "dist/HotSpotter.app/Contents/Resources/icon-windowed.icns")
         shutil.copyfile("hs_setup/Info.plist", "dist/HotSpotter.app/Contents/Info.plist")
 
+import helpers
+def compile_ui():
+    'Compiles the qt designer *.ui files into python code'
+    pyuic4_cmd = {'win32'  : 'C:\Python27\Lib\site-packages\PyQt4\pyuic4',
+                  'linux2' : 'pyuic4',
+                  'darwin' : 'pyuic4'}[sys.platform]
+    widget_dir = join(dirname(realpath(__file__)), 'frontend')
+    print('Compiling qt designer files in %r' % widget_dir)
+    for widget_ui in helpers.glob(widget_dir, '*.ui'):
+        widget_py = os.path.splitext(widget_ui)[0]+'.py'
+        cmd = pyuic4_cmd+' -x '+widget_ui+' -o '+widget_py
+        print('compile_ui()>'+cmd)
+        os.system(cmd)
+
 if __name__ == '__main__':
     import sys
     print 'Entering HotSpotter setup'
@@ -314,12 +327,12 @@ if __name__ == '__main__':
         if cmd in ['fix_issues', 'configure']:
             configure()
             sys.exit(0)
-        if cmd == 'compile_widgets':
-            compile_widgets()
+        if cmd == 'compile_ui':
+            compile_ui()
             sys.exit(0)
         if cmd in ['build_pyinstaller', 'build_installer']:
             build_pyinstaller()
             sys.exit(0)
         if cmd in ['localize', 'setup_localize.py']:
             from setup_localize import *
-    package_application()
+    #package_application()

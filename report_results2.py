@@ -5,7 +5,6 @@ import subprocess
 import params
 import helpers
 import numpy as np
-import datetime
 import textwrap
 import os
 import sys
@@ -126,18 +125,19 @@ def compile_results(hs, qcx2_res):
 
 def __score_matrix_data(hs, qcx2_res, SV=True):
     cx2_nx = hs.tables.cx2_nx
+    # Build name-to-chips dict
     nx2_cxs = {}
     for cx, nx in enumerate(cx2_nx):
         if not nx in nx2_cxs.keys():
             nx2_cxs[nx] = []
         nx2_cxs[nx].append(cx)
-    # Sort by the number of views per name
+    # Sort names by number of chips
     nx_list = nx2_cxs.keys()
     nx_size = []
     for nx in nx_list:
         nx_size.append(len(nx2_cxs[nx]))
     nx_sorted = [x for (y,x) in sorted(zip(nx_size, nx_list))]
-    # Build a sorted list of cxs
+    # Build sorted chip list
     cx_sorted = []
     test_cx_set = set(hs.test_sample_cx)
     for nx in iter(nx_sorted):

@@ -654,9 +654,9 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
                 childtype = type(child)
                 if not childtype == types.ModuleType:
                     if nonmodules:
-                        print_(depth)
+                        #print_(depth)
                         fullstr = indent+'    '+str(aname)+' = '+repr(child)
-                        truncstr = println(truncate_str(fullstr))
+                        truncstr = truncate_str(fullstr)+'\n'
                         ret +=  truncstr
                     continue
                 childname = str(child.__name__)
@@ -673,7 +673,7 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
                 pass
         # Print 
         #print_(depth)
-        ret += println(indent+modname)
+        ret += indent+modname+'\n'
         # Recurse
         if not maxdepth is None and depth >= maxdepth: 
             return ret
@@ -683,11 +683,10 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
                                          maxdepth,
                                          nonmodules) \
                        for child in iter(valid_children)])
-
         return ret
-    ret = ''
-    ret += println('Exploring: '+str(module_))
-    ret += __explore_module(module_, '     ', seen, 0, maxdepth, nonmodules)
+    #ret += 
+    #println('#module = '+str(module_))
+    ret = __explore_module(module_, '     ', seen, 0, maxdepth, nonmodules)
     #print ret
     flush()
     return ret
@@ -782,8 +781,8 @@ def execstr_dict(dict, local_name):
                         for (key, val) in dict.iteritems()))
     return execstr
 @__DEPRICATED__
-def dict_execstr(dict, local_name=None):
-    return execstr_dict(dict, local_name)
+def dict_execstr(dict_, local_name=None):
+    return execstr_dict(dict_, local_name)
 #---
 def execstr_func(func):
     print(' ! Getting executable source for: '+func.func_name)
@@ -791,22 +790,20 @@ def execstr_func(func):
     execstr = textwrap.dedent(_src[_src.find(':')+1:])
     # Remove return statments
     while True:
-        ret_x = execstr.find('return')  # Find first 'return'
-        if ret_x == -1: break # Fail condition
-        middle   = execstr[ret_x:]
+        stmtx = execstr.find('return')  # Find first 'return'
+        if stmtx == -1: break # Fail condition
         # The characters which might make a return not have its own line
-        stmt_break_list = '\n;'
-        for stmt_break in stmt_break_list:
-            ret_endx = middle.find(stmt_break)
-        if ret_end1 > -1:
-            ret_endx = ret_end2
-        elif ret_end2 > -1:
-            ret_endx = ret_end1
-        else:
-            ret_endx = len(execstr)-1
-        # now have variables ret_x, ret_endx
-        before = execstr[:ret_x]
-        after  = execstr[ret_endx:]
+        stmt_endx = len(execstr)-1
+        for stmt_break in '\n;':
+            print execstr
+            print ''
+            print stmtx
+            stmt_endx_new = execstr[stmtx:].find(stmt_break)
+            if -1 < stmt_endx_new < stmt_endx:
+                stmt_endx = stmt_endx_new
+        # now have variables stmt_x, stmt_endx
+        before = execstr[:stmtx]
+        after  = execstr[stmt_endx:]
         execstr = before+after
     return execstr
 def execstr_src(func):
@@ -909,7 +906,6 @@ def printWARN(warn_msg, category=UserWarning):
     warn_msg = 'Warning: '+warn_msg
     sys.stdout.write(warn_msg+'\n')
     sys.stdout.flush()
-    raise Exception('fda')
     warnings.warn(warn_msg, category=category)
     sys.stdout.flush()
     return warn_msg

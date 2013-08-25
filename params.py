@@ -14,8 +14,27 @@ import helpers
 #print(' * sys.filesystemencoding = %r' % sys.getfilesystemencoding())
 #print(' * sys.prefix = %r' % sys.prefix)
 
-#__BOW_DTYPE__ = np.uint8
+# MODULE GLOBAL VARIABLES
+WORK_DIR = 'D:/data/work'
+if sys.platform == 'linux2':
+    WORK_DIR = '/media/Store/data/work'
 
+# Common databases I use
+FROGS     = WORK_DIR+'/FROG_tufts'
+JAGUARS   = WORK_DIR+'/JAG_Jaguar_Data'
+NAUTS     = WORK_DIR+'/NAUT_Dan'
+GZ_ALL    = WORK_DIR+'/GZ_ALL'
+WS_HARD   = WORK_DIR+'/WS_hard'
+MOTHERS   = WORK_DIR+'/HSDB_zebra_with_mothers'
+OXFORD    = WORK_DIR+'/Oxford_Buildings'
+PARIS     = WORK_DIR+'/Paris_Buildings'
+SONOGRAMS = WORK_DIR+'/sonograms'
+
+
+DEFAULT = MOTHERS
+#DEFAULT = NAUTS
+#__BOW_DTYPE__ = np.uint8
+__DATABASE__ = NAUTS
 # Number of processessors
 __NUM_PROCS__ = 8
 # Feature type to use
@@ -90,8 +109,20 @@ __RANK_EQ__        = False
 __LOCAL_EQ__       = False
 __MAXCONTRAST__    = False
 
-
 __CHIP_SQRT_AREA__ = 750
+
+dev_databases = {
+    'SONOGRAMS' : SONOGRAMS,
+    'JAG'       : JAGUARS,
+    'FROGS'     : FROGS,
+    'NAUTS'     : NAUTS,
+    'GZ_ALL'    : GZ_ALL,
+    'WS_HARD'   : WS_HARD,
+    'MOTHERS'   : MOTHERS,
+    'OXFORD'    : OXFORD,
+    'PARIS'     : PARIS}
+
+
 
 def param_string():
     global __MATCH_TYPE__
@@ -168,6 +199,46 @@ def get_algo_uid():
 
 # -------------------
 
+def mothers_problem_pairs():
+    '''MOTHERS Dataset: difficult (qcx, cx) query/result pairs'''
+    #-
+    viewpoint \
+            = [
+        ( 16,  17),
+        ( 19,  20),
+        ( 73,  71),
+        ( 75,  78),
+        (108, 112), # query is very dark
+        (110, 108),
+                ]
+    #-
+    quality   \
+            = [
+        (27, 26),   #minor viewpoint
+        (52, 53),
+        (67, 68),   #stupid hard case (query from 68 to 67 direction is better (start with foal)
+        (73, 71),
+    ]
+    #-
+    lighting  \
+            = [
+        (105, 104),
+        ( 49,  50), #brush occlusion on legs
+        ( 93,  94),
+    ]
+    #-
+    confused  \
+            = [
+    ]
+    #-
+    occluded  \
+            = [
+        (64,65),
+    ]
+    #-
+    return locals()
+
+
 # reloads this module when I mess with it
 def reload_module():
     import imp
@@ -217,6 +288,12 @@ if '--print-checks' in sys.argv:
 if '--serial' in sys.argv:
     __NUM_PROCS__ = 1
 
+for argv in iter(sys.argv):
+    if argv.upper() in dev_databases.keys():
+        print('\n'.join([' * Default Database set to:'+argv.upper(),
+                         ' * Previously: '+str(DEFAULT)]))
+        DEFAULT = dev_databases[argv.upper()]
+#print(' * load_data: Default database is: '+str(DEFAULT))
 
 # MAJOR HACKS 
 #__FORCE_REQUERY_CX__ = set([0,1])

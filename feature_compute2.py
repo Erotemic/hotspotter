@@ -174,7 +174,7 @@ freak_extractor.setBool('orientationNormalized', False)
 # =======================================
 
 def compute_hesaff(rchip):
-    return extern_feats.compute_hesaff(rchip)
+    return extern_feat.compute_hesaff(rchip)
 def compute_sift(rchip):
     return __compute(rchip, __detector, sift_extractor)
 def compute_freak(rchip):
@@ -185,7 +185,7 @@ def compute_freak(rchip):
 # =======================================
 
 def precompute_hesaff(rchip_path, feats_path):
-    return extern_feats.precompute_hesaff(rchip_path, feats_path)
+    return extern_feat.precompute_hesaff(rchip_path, feats_path)
 def precompute_sift(rchip_path, feats_path):
     return __precompute(rchip_path, feats_path, compute_sift)
 def precompute_freak(rchip_path, feats_path):

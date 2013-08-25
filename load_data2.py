@@ -3,23 +3,24 @@ Module: load_data
     Loads the paths and table information from which all other data is computed.
     This is the first script run in the loading pipeline. 
 '''
-import re
-import os
-import sys
+# Standard
 from os.path import join
-import fnmatch
 import cv2
-from PIL import Image
-import types
-import numpy as np
+import fnmatch
 import helpers
-import params
+import os
+import re
+import sys
 import textwrap
+import types
+# Science
+import numpy as np
+from PIL import Image
+# Hotspotter
+from Printable import DynStruct
 from helpers import checkpath, unit_test, ensure_path, symlink, remove_files_in_dir
 from helpers import myprint
-from Printable import DynStruct
-# rename: data_managers? 
-#print ('LOAD_MODULE: load_data2.py')
+import params
 
 # reloads this module when I mess with it
 def reload_module():
@@ -601,80 +602,26 @@ def make_csv_table(column_labels=None, column_list=[], header='', column_type=No
     csv_text = '\n'.join(csv_rows)
     return csv_text
 
-# for mothers dataset
-viewpoint_pairs = [
-    (19, 20),
-    (110, 108),
-    (108, 112), # 108 is very dark
-    (16, 17),
-    (73,71),
-    (75,78)
-]
-
-image_quality = [
-    (27, 26), # minor viewpoint
-    (67,68), #stupid hard case (query from 68 to 67 direction is better (start with foal)
-    (52,53),
-    (73,71)
-]
-
-lighting_pairs = [
-    (49, 50), #brush occlusion on legs
-    (93, 94),
-    (105,104)
-]
-
-confused_pairs = []
-
-occlusion= [
-    (64,65)
-]
-
-
-# MODULE GLOBAL VARIABLES
-WORK_DIR = 'D:/data/work'
-if sys.platform == 'linux2':
-    WORK_DIR = '/media/Store/data/work'
 
 # Common databases I use
-FROGS     = WORK_DIR+'/FROG_tufts'
-JAGUARS   = WORK_DIR+'/JAG_Jaguar_Data'
-NAUTS     = WORK_DIR+'/NAUT_Dan'
-GZ_ALL    = WORK_DIR+'/GZ_ALL'
-WS_HARD   = WORK_DIR+'/WS_hard'
-MOTHERS   = WORK_DIR+'/HSDB_zebra_with_mothers'
-OXFORD    = WORK_DIR+'/Oxford_Buildings'
-PARIS     = WORK_DIR+'/Paris_Buildings'
-SONOGRAMS = WORK_DIR+'/sonograms'
-
+FROGS     = params.WORK_DIR+'/FROG_tufts'
+JAGUARS   = params.WORK_DIR+'/JAG_Jaguar_Data'
+NAUTS     = params.WORK_DIR+'/NAUT_Dan'
+GZ_ALL    = params.WORK_DIR+'/GZ_ALL'
+WS_HARD   = params.WORK_DIR+'/WS_hard'
+MOTHERS   = params.WORK_DIR+'/HSDB_zebra_with_mothers'
+OXFORD    = params.WORK_DIR+'/Oxford_Buildings'
+PARIS     = params.WORK_DIR+'/Paris_Buildings'
+SONOGRAMS = params.WORK_DIR+'/sonograms'
 
 #if sys.platform == 'linux2':
     #DEFAULT = MOTHERS
 #else:
-    #DEFAULT = NAUTS
-DEFAULT = MOTHERS
-
-dev_databases = {
-    'SONOGRAMS' : SONOGRAMS,
-    'JAG'       : JAGUARS,
-    'FROGS'     : FROGS,
-    'NAUTS'     : NAUTS,
-    'GZ_ALL'    : GZ_ALL,
-    'WS_HARD'   : WS_HARD,
-    'MOTHERS'   : MOTHERS,
-    'OXFORD'    : OXFORD,
-    'PARIS'     : PARIS}
-
-for argv in iter(sys.argv):
-    if argv.upper() in dev_databases.keys():
-        print('\n'.join([' * Default Database set to:'+argv.upper(),
-                         ' * Previously: '+str(DEFAULT)]))
-        DEFAULT = dev_databases[argv.upper()]
-#print(' * load_data: Default database is: '+str(DEFAULT))
+DEFAULT = params.DEFAULT
 
 @unit_test
 def test_load_csv():
-    db_dir = DEFAULT
+    db_dir = params.DEFAULT
     hs_dirs, hs_tables = load_csv_tables(db_dir)
     print_chiptable(hs_tables)
     __print_chiptableX(hs_tables)
@@ -690,6 +637,6 @@ if __name__ == '__main__':
         helpers.__PRINT_CHECKS__ = True #might as well
         hs_dirs, hs_tables = test_load_csv()
     else:
-        db_dir = DEFAULT
+        db_dir = params.DEFAULT
         hs_dirs, hs_tables = load_csv_tables(db_dir)
     exec(df2.present())

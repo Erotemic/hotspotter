@@ -1,4 +1,5 @@
 from __init__ import *
+rrr()
 
 def reload_module():
     import imp
@@ -7,22 +8,19 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 
 def dev():
-    return module_execstr()
-
-def module_execstr():
     execstr = open("dev.py").read()
+    #exec(execstr)
     return execstr
 
 def test_data():
-    print('\n\n * ================== * ')
-    print('Loading test data')
-    #from __init__ import *
-    helpers.reload_module()
     db_dir = ld2.DEFAULT
+    print('\n\n * ================== * ')
+    print('Loading test data: '+db_dir)
+    #from __init__ import *
     #rsout = helpers.RedirectStdout()
     #rsout.start()
-    with helpers.RedirectStdout('test_data>'):
-        hs = ld2.HotSpotter(db_dir)
+    #with helpers.RedirectStdout('test_data>'):
+    hs = ld2.HotSpotter(db_dir)
     #record = rsout.stop()
     #print helpers.indent(record, 'test_data>')
     qcx = 0
@@ -39,6 +37,8 @@ def test_data():
     return locals()
 
 if __name__ == '__main__':
+    from multiprocessing import freeze_support
+    freeze_support()
     #helpers.explore_stack()
     print(textwrap.dedent('''
     __+----------------------+__
@@ -60,14 +60,16 @@ if __name__ == '__main__':
     test_locals_info = ''.join(type_val_iter)
     print('===============')
     print('Adding test locals to namespace: '+test_locals_info)
-    exec(helpers.execstr_dict(test_locals, 'test_locals'))
+    dict_ = test_locals
+    exec(helpers.execstr_dict(dict_, 'test_locals'))
 
     experiments.param_config1()
     print('\n\n===============')
     print('Parameters:')
     print params.param_string()
 
-    run_expt_str = helpers.execstr_func(experiments.run_experiment)
+    func = experiments.run_experiment
+    run_expt_str = helpers.execstr_func(func)
     print('Try these: ')
     print('exec(run_expt_str)')
 

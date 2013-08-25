@@ -185,6 +185,10 @@ def bring_to_front(fig):
     qtwin.setWindowFlags(Qt.WindowFlags(0))
     qtwin.show()
 
+def show():
+    all_figures_show()
+    all_figures_bring_to_front()
+    plt.show()
 
 def reset():
     close_all_figures()
@@ -503,8 +507,7 @@ def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111, **kwargs):
     printDBG('*** imshow in fig=%r title=%r *** ' % (fignum, title))
     fignum, plotnum = __parse_fignum(fignum,plotnum)
     printDBG('   * fignum = %r, plotnum = %r ' % (fignum, plotnum))
-    fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle,
-                **kwargs)
+    fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
     plt.imshow(img)
     plt.set_cmap('gray')
     ax = fig.gca()
@@ -639,7 +642,7 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
         if draw_lines:
             draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
 
-def show_matches3(res, hs, cx, SV=True, fignum=0, plotnum=111, title_aug=None):
+def show_matches3(res, hs, cx, SV=True, fignum=3, plotnum=111, title_aug=None):
     qcx = res.qcx
     cx2_score = res.cx2_score_V if SV else res.cx2_score
     cx2_fm    = res.cx2_fm_V if SV else res.cx2_fm
@@ -647,16 +650,19 @@ def show_matches3(res, hs, cx, SV=True, fignum=0, plotnum=111, title_aug=None):
     title_suff = '(+V)' if SV else None
     return show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum, plotnum, title_aug, title_suff)
 
-def show_all_matches(hs, res): 
+def show_all_matches(hs, res, SV=True, fignum=3): 
     SV = True
     qcx = res.qcx
-    fignum=0
     title_aug=None
     others = hs.get_other_cxs(qcx)
     num_others = len(others)
-    plotnum=num_others*100 + 11
+    plotnum= 100 + num_others*10 + 1 
+    figure(fignum=fignum, plotnum=plotnum, figtitle='all matches qcx=%r' % qcx)
+    print 'figure(plotnum)='+str(plotnum)
     for ox, cx in enumerate(others):
-        show_matches3(res, hs, cx, plotnum=plotnum+cx)
+        plotnumcx = plotnum + ox
+        print 'plot_to: plotnum='+str(plotnumcx)
+        show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx)
 
 def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111, title_pref=None, title_suff=None):
     printDBG('Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))

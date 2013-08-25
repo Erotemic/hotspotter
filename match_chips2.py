@@ -655,11 +655,10 @@ if __name__ == '__main__':
     freeze_support()
     print('IN: match_chips2.py: __name__ == '+__name__)
 
-    if 'test' in sys.argv:
-        db_dir = load_data2.DEFAULT
-        hs = load_data2.HotSpotter(db_dir)
-        run_matching(hs)
-        pass
+    db_dir = load_data2.DEFAULT
+    hs = load_data2.HotSpotter(db_dir)
+    qcx2_res = run_matching(hs)
+    pass
 
     ## DEV ONLY CODE ##
     __DEV_MODE__ = False

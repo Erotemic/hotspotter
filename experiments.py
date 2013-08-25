@@ -21,17 +21,24 @@ def param_config2():
     params.__RANK_EQ__ = False
 
 
-db_dir = load_data2.JAGUARS
-def run_experiment():
+def run_experiment(hs=None):
+    '''
+    Runs experiment and dumps result
+    returns qcx2_res, hs
+    '''
     db_dir = load_data2.DEFAULT
+    if not hs is None:
+        db_dir = hs.db_dir
     print(textwrap.dedent('''
     ======================
     Running Experiment on: %r
-    ======================''' % db_dir))
-    print params.param_string()
-    hs = load_data2.HotSpotter(db_dir)
+    Params: %s
+    ======================''' % (db_dir,helpers.indent(params.param_string()))))
+    print 
+    hs = hs if not hs is None else load_data2.HotSpotter(db_dir)
     qcx2_res = mc2.run_matching(hs)
     report_results2.dump_all(hs, qcx2_res)
+    return qcx2_res, hs
 
 def oxford_philbin07():
     params.__MATCH_TYPE__        = 'bagofwords'

@@ -1,7 +1,8 @@
 # Hotspotter imports
 import drawing_functions2 as df2
 import helpers
-import load_data2
+import load_data2 as ld2
+import match_chips2 as mc2
 import oxsty_results
 import params
 from Printable import DynStruct
@@ -44,93 +45,8 @@ def dump_matrix_results(hs, qcx2_res, all_results, SV=True):
     __dump_report(hs, matrix_str, 'score_matrix', SV)
 
 def dump_rank_results(hs, qcx2_res, all_results, SV=True):
-    rankres_str = rank_results(hs, qcx2_res, all_results, SV)
+    rankres_str = get_rankres_str(hs, qcx2_res, all_results, SV)
     __dump_report(hs, rankres_str, 'rank', SV)
-
-# ===========================
-# Helper Functions
-# ===========================
-def __dump_report(hs, report_str, report_type, SV):
-    result_dir    = hs.dirs.result_dir
-    timestamp_dir = join(result_dir, 'timestamped_results')
-    helpers.ensurepath(timestamp_dir)
-    helpers.ensurepath(result_dir)
-    timestamp = helpers.get_timestamp()
-    query_uid = params.get_query_uid()
-    SV_aug = ['_SVOFF_','_SVon_'][SV] #TODO: SV should go into params
-    csv_timestamp_fname = report_type+query_uid+SV_aug+timestamp+'.csv'
-    csv_timestamp_fpath = join(timestamp_dir, csv_timestamp_fname)
-    csv_fname  = report_type+query_uid+SV_aug+'.csv'
-    csv_fpath = join(result_dir, csv_fname)
-    #if __DUMP__: 
-    helpers.write_to(csv_fpath, report_str)
-    helpers.write_to(csv_timestamp_fpath, report_str)
-    if '--gvim' in sys.argv:
-        helpers.gvim(csv_fpath)
-
-def __dump_figure():
-    if __DUMP__:
-        fpath = join(outdir, title)
-        df2.save_figure(fpath=fpath)
-    else: # __BROWSE__
-        df2.show()
-
-# ===========================
-# Drawing stuff
-# ===========================
-def dump_gt_matches(hs, qcx2_res):
-    'Displays the matches to ground truth for all queries'
-    for qcx in xrange(0, len(qcx2_res)):
-        df2.reset()
-        df2.show_all_matches(hs, res, fignum)
-        __dump_figure()
-
-def plot_stem(true, title, fignum=1, **kwargs):
-    # Visualize rankings with the stem plot
-    df2.figure(fignum=fignum, doclf=True, title=title)
-    df2.draw_stems(true.qcxs, true.ranks)
-    slice_num = int(np.ceil(np.log10(len(true.qcxs))))
-    df2.set_xticks(hs.test_sample_cx[::slice_num])
-    df2.set_xlabel('query chip indeX (qcx)')
-    df2.set_ylabel('groundtruth chip ranks')
-    #df2.set_yticks(list(seen_ranks))
-
-def plot_histogram(ranks, title):
-    df2.figure(fignum=1, doclf=True, title=title)
-    df2.draw_histpdf(ranks, label=('P(rank | true match)'))
-    df2.set_xlabel('ground truth ranks')
-    df2.set_ylabel('frequency')
-    df2.legend()
-
-def plot_pdf(scores, title, label, colorx):
-    df2.figure(fignum=1, doclf=True, title=title)
-    df2.draw_pdf(true.scores, label=label, colorx=colorx)
-    #df2.variation_trunctate(true.scores)
-    #df2.variation_trunctate(false.scores)
-    df2.set_xlabel('score')
-    df2.set_ylabel('frequency')
-    df2.legend()
-
-def plot_score_matrix(hs, score_matrix, title, **kwargs):
-    df2.figure(fignum=1, doclf=True, title=title)
-    inliers = find_std_inliers(score_matrix)
-    max_inlier = score_matrix[inliers].max()
-    # Truncate outliers
-    score_matrix[score_matrix > max_inlier] = max_inlier
-    dim = 0 # None
-    score_img = helpers.norm_zero_one(score_matrix, dim=dim)
-    df2.set_xlabel('database')
-    df2.set_ylabel('queries')
-    df2.imshow(score_img)
-
-def draw_and_save(func, data, title, outdir='.', **kwargs):
-    df2.reset()
-    title = 'Rankings Stem Plot\n'+query_uid
-    func(data, title=title, **kwargs)
-    if __DUMP__:
-        df2.save_figure(fpath=join(outdir, title))
-    else: 
-        df2.plt.show()
 
 def dump_summary_visualizations(hs, qcx2_res, all_results, SV=True):
     '''Plots (and outputs data): 
@@ -143,7 +59,7 @@ def dump_summary_visualizations(hs, qcx2_res, all_results, SV=True):
     summary_dir = join(result_dir, 'summary_vizualizations')
     helpers.ensurepath(summary_dir)
     # Visualize rankings with the stem plot
-    draw_and_save(plot_stem, true, 'Rankings Stem Plot\n'+query_uid,
+    draw_and_save(plot_stem, all_results.true, 'Rankings Stem Plot\n'+query_uid,
                   outdir=summary_dir)
     draw_and_save(plot_histogram, all_results.true.ranks,
                   'True Match Rankings Histogram\n'+query_uid,
@@ -171,6 +87,88 @@ def dump_summary_visualizations(hs, qcx2_res, all_results, SV=True):
     draw_and_save(plot_score_matrix, all_results.score_matrix,
                   'Score Matrix\n'+query_uid, 
                   outdir=summary_dir)
+
+# ===========================
+# Helper Functions
+# ===========================
+def __dump_report(hs, report_str, report_type, SV):
+    result_dir    = hs.dirs.result_dir
+    timestamp_dir = join(result_dir, 'timestamped_results')
+    helpers.ensurepath(timestamp_dir)
+    helpers.ensurepath(result_dir)
+    timestamp = helpers.get_timestamp()
+    query_uid = params.get_query_uid()
+    SV_aug = ['_SVOFF_','_SVon_'][SV] #TODO: SV should go into params
+    csv_timestamp_fname = report_type+query_uid+SV_aug+timestamp+'.csv'
+    csv_timestamp_fpath = join(timestamp_dir, csv_timestamp_fname)
+    csv_fname  = report_type+query_uid+SV_aug+'.csv'
+    csv_fpath = join(result_dir, csv_fname)
+    #if __DUMP__: 
+    helpers.write_to(csv_fpath, report_str)
+    helpers.write_to(csv_timestamp_fpath, report_str)
+    if '--gvim' in sys.argv:
+        helpers.gvim(csv_fpath)
+
+def __dump_figure(outdir, title):
+    if __DUMP__:
+        fpath = join(outdir, title)
+        df2.save_figure(fpath=fpath)
+    else: # __BROWSE__
+        df2.show()
+
+def draw_and_save(func, data, title, outdir='.', **kwargs):
+    df2.reset()
+    func(data, title=title, **kwargs)
+    __dump_figure(outdir, title)
+
+# ===========================
+# Drawing stuff
+# ===========================
+def dump_gt_matches(hs, qcx2_res):
+    'Displays the matches to ground truth for all queries'
+    for qcx in xrange(0, len(qcx2_res)):
+        df2.reset()
+        df2.show_all_matches(hs, res, fignum)
+        __dump_figure(outdir, title)
+
+def plot_stem(true, title, fignum=1, **kwargs):
+    # Visualize rankings with the stem plot
+    #title = 'Rankings Stem Plot\n'+query_uid
+    df2.figure(fignum=fignum, doclf=True, title=title)
+    df2.draw_stems(true.qcxs, true.ranks)
+    slice_num = int(np.ceil(np.log10(len(true.qcxs))))
+    df2.set_xticks(hs.test_sample_cx[::slice_num])
+    df2.set_xlabel('query chip indeX (qcx)')
+    df2.set_ylabel('groundtruth chip ranks')
+    #df2.set_yticks(list(seen_ranks))
+
+def plot_histogram(ranks, title):
+    df2.figure(fignum=1, doclf=True, title=title)
+    df2.draw_histpdf(ranks, label=('P(rank | true match)'))
+    df2.set_xlabel('ground truth ranks')
+    df2.set_ylabel('frequency')
+    df2.legend()
+
+def plot_pdf(scores, title, label, colorx):
+    df2.figure(fignum=1, doclf=True, title=title)
+    df2.draw_pdf(scores, label=label, colorx=colorx)
+    #df2.variation_trunctate(true.scores)
+    #df2.variation_trunctate(false.scores)
+    df2.set_xlabel('score')
+    df2.set_ylabel('frequency')
+    df2.legend()
+
+def plot_score_matrix(hs, score_matrix, title, **kwargs):
+    df2.figure(fignum=1, doclf=True, title=title)
+    inliers = find_std_inliers(score_matrix)
+    max_inlier = score_matrix[inliers].max()
+    # Truncate outliers
+    score_matrix[score_matrix > max_inlier] = max_inlier
+    dim = 0 # None
+    score_img = helpers.norm_zero_one(score_matrix, dim=dim)
+    df2.set_xlabel('database')
+    df2.set_ylabel('queries')
+    df2.imshow(score_img)
 
 def dump_problems(hs, qcx2_res, all_results):
     top_true = all_results.top_true
@@ -212,7 +210,7 @@ def dump_matches(hs, dump_dir, org_res, qcx2_res, SV):
         fig_fpath = join(dump_dir, big_title)
         df2.save_figure(qcx, fig_fpath+'.png')
 
-def rank_results(hs, qcx2_res, all_results, SV=True):
+def get_rankres_str(hs, qcx2_res, all_results, SV=True):
     'Builds csv files showing the cxs/scores/ranks of the query results'
     #if not 'all_results' in vars() or all_results is None:
     if not 'SV' in vars(): SV = True
@@ -281,7 +279,7 @@ def rank_results(hs, qcx2_res, all_results, SV=True):
         qcx2_top_false_rank[test_sample_cx], test_sample_gname, ]
     column_type = [int, int, int, int, int, 
                    float, float, float, int, int, int, str,]
-    rankres_str = load_data2.make_csv_table(column_labels, column_list, header, column_type)
+    rankres_str = ld2.make_csv_table(column_labels, column_list, header, column_type)
     problem_true_pairs = zip(all_results.problem_true.qcxs, all_results.problem_true.cxs)
     problem_false_pairs = zip(all_results.problem_false.qcxs, all_results.problem_false.cxs)
     problem_str = '\n'.join( [
@@ -308,11 +306,13 @@ class OrganizedResult(DynStruct):
         self.scores.append(score)
         self.ranks.append(rank)
     def iter(self):
+        'useful for plotting'
         result_iter = izip(self.qcxs, self.cxs, self.scores, self.ranks)
         for qcx, cx, score, rank in result_iter:
             yield qcx, cx, score, rank
     def qcx_arrays(self, hs):
-        cx2_cid = hs.tables.cx2_cid
+        'useful for reportres_str'
+        cx2_cid     = hs.tables.cx2_cid
         qcx2_rank   = np.zeros(len(cx2_cid)) - 2
         qcx2_score  = np.zeros(len(cx2_cid)) - 2
         qcx2_cx     = np.arange(len(cx2_cid)) * -1
@@ -322,8 +322,6 @@ class OrganizedResult(DynStruct):
             qcx2_score[qcx] = score
             qcx2_cx[qcx] = score
         return qcx2_rank, qcx2_score, qcx2_cx
-
-
 
 def compile_results(hs, qcx2_res, SV=True):
     'Organizes results into a visualizable data structure'
@@ -347,10 +345,7 @@ def compile_results(hs, qcx2_res, SV=True):
         last_rank     = -1
         skipped_ranks = set([])
         # True matches loop
-        # Record the TRUE match
-        # Record that there was a FALSE-POSITIVE and missed true match
-        # Record the TOP-RANKED true match
-        # Record the BOTTOM-RANKED true match
+        # Record: all_true, missed_true, top_true, bot_true
         topx = 0
         for cx, score, rank in zip(*true_tup):
             true.append(qcx, cx, rank+1, score)
@@ -364,9 +359,7 @@ def compile_results(hs, qcx2_res, SV=True):
         if topx > 1: 
             bot_true.append(qcx, cx, rank+1, score)
         # False matches loop
-        # Record the FALSE match
-        # Record previously seen FALSE-POSITIVE
-        # Record the TOP-RANKED false match
+        # Record the all_false, false_positive, top_false
         topx = 0
         for cx, score, rank in zip(*false_tup):
             false.append(qcx, cx, rank+1, score)
@@ -430,10 +423,9 @@ def res2_true_and_false(hs, res, SV):
         SV = True
     if not 'res' in vars():
         qcx2res[qcx]
+    db_sample_cx = hs.database_sample_cx
     qcx = res.qcx
     cx2_score = res.cx2_score_V if SV else res.cx2_score
-    db_sample_cx = range(len(cx2_desc)) if hs.database_sample_cx is None \
-                               else hs.database_sample_cx
     unfilt_top_cx = np.argsort(cx2_score)[::-1]
     # Get top chip indexes and scores
     top_cx    = np.array(helpers.intersect_ordered(unfilt_top_cx, db_sample_cx))
@@ -459,46 +451,42 @@ def res2_true_and_false(hs, res, SV):
 #===============================
 # MAIN SCRIPT
 #===============================
+def dinspect(qcx, cx=None, SV=True, reset=True):
+    df2.reload_module()
+    fignum=2
+    res = qcx2_res[qcx]
+    print('dinspect matches from qcx=%r' % qcx)
+    if reset:
+        print('reseting')
+        df2.reset()
+    if cx is None:
+        df2.show_all_matches(hs, res, fignum)
+    else: 
+        df2.show_matches3(res, hs, cx, fignum, SV=SV)
+    df2.present(wh=(900,600))
+
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
-    import match_chips2 as mc2
-    import load_data2
-    import imp
-    #imp.reload(df2)
-    #imp.reload(mc2)
-    # --- CHOOSE DATABASE --- #
+    # Params
     SV = True
-    hs = load_data2.HotSpotter(load_data2.DEFAULT)
+    hs = ld2.HotSpotter(ld2.DEFAULT)
     qcx2_res = mc2.run_matching(hs)
     all_results = compile_results(hs, qcx2_res, SV)
+    # Labels
     SV_aug = ['_SVOFF_','_SVon_'][SV] #TODO: SV should go into params
     query_uid = params.get_query_uid()+SV_aug
-    dump_rank_results(hs, qcx2_res, all_results, SV)
-    def dinspect(qcx, cx=None, SV=True, reset=True):
-        df2.reload_module()
-        fignum=2
-        res = qcx2_res[qcx]
-        print('dinspect matches from qcx=%r' % qcx)
-        if reset:
-            print('reseting')
-            df2.reset()
-        if cx is None:
-            df2.show_all_matches(hs, res, fignum)
-        else: 
-            df2.show_matches3(res, hs, cx, fignum, SV=SV)
-        df2.present(wh=(900,600))
+    #dump_rank_results(hs, qcx2_res, all_results, SV)
     if '--browse' in sys.argv:
         __DUMP__ = False
-        browse()
     if '--summary' in sys.argv:
         dump_summary_visualizations(hs, qcx2_res, all_results, SV)
-    #if '--dump-problems' in sys.argv:
-        #dump_problems(hs, qcx2_res)
-    #if '--dump' in sys.argv or '--dump-problems' in sys.argv:
-        #dump_all(hs, qcx2_res)
     if '--stem' in sys.argv:
         plot_stem(all_results.true, 'Rankings Stem Plot\n'+query_uid)
+    if '--dump' in sys.argv :
+        dump_all(hs, qcx2_res)
+    #if '--dump-problems' in sys.argv:
+        #dump_problems(hs, qcx2_res)
     #dinspect(18)
     problem_true_pairs = zip(all_results.problem_true.qcxs, all_results.problem_true.cxs)
     problem_false_pairs = zip(all_results.problem_false.qcxs, all_results.problem_false.cxs)

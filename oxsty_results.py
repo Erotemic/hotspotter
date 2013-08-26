@@ -16,11 +16,17 @@ from itertools import izip
 from os.path import realpath, join
 
 # OXFORD STUFF
-def write_mAP_results(hs, qcx2_res, all_results, SV=True):
-    oxsty_map_csv = oxsty_mAP_results(hs, qcx2_res, all_results, SV)
+def write_mAP_results(allres):
+    hs = allres.hs
+    qcx2_res = hs.qcx2_res
+    SV = allres.SV
+    oxsty_map_csv = oxsty_mAP_results(hs, qcx2_res, SV)
     __dump_report(hs, oxsty_map_csv, 'oxsty-mAP', SV)
 
-def oxsty_results(hs, qcx2_res, SV):
+def oxsty_mAP_results(hs, qcx2_res, SV):
+    hs = allres.hs
+    qcx2_res = allres.qcx2_res
+    SV = allres.SV
     # Check directorys where ranked lists of images names will be put
     SV_aug = ['_SVOFF_','_SVON_'][SV] #TODO: SV should go into params
     qres_dir  = hs.dirs.qres_dir

@@ -45,6 +45,8 @@ def reload_module():
     import sys
     print 'reloading '+__name__
     imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
 def printDBG(msg):
     #print(msg)
@@ -76,7 +78,7 @@ def save(fig, fpath=None):
     fig.savefig(fpath_clean, dpi=DPI)
 
 
-def save_figure(fignum=None, fpath=None):
+def save_figure(fignum=None, fpath=None, usetitle=False):
     # Find the figure
     if fignum is None:
         fig = plt.gcf()
@@ -86,9 +88,12 @@ def save_figure(fignum=None, fpath=None):
     if fpath is None:
         # Find the title
         fpath = fig.canvas.get_window_title()
+    if usetitle:
+        title = fig.canvas.get_window_title()
+        fpath = os.path.join(fpath, title)
     # Sanatize the filename
     fpath_clean = sanatize_img_fpath(fpath)
-    print('Saving figure to: '+repr(fpath_clean))
+    print('df2.save_figure> '+repr(os.path.split(fpath_clean)[1]))
     fig.savefig(fpath_clean, dpi=DPI)
 
 def update_figure_size(fignum, width, height):
@@ -274,9 +279,17 @@ def __parse_fignum(fignum_, plotnum_=111):
 
 import pylab
 def draw_stems(x_data, y_data):
-    markerline, stemlines, baseline = pylab.stem(x_data, y_data, '-.')
+    x_data = np.array(x_data)
+    y_data = np.array(y_data)
+    x_data = x_data[y_data.argsort()[::-1]]
+    y_data = y_data[y_data.argsort()[::-1]]
+
+    markerline, stemlines, baseline = pylab.stem(x_data, y_data, linefmt='-')
     pylab.setp(markerline, 'markerfacecolor', 'b')
-    pylab.setp(baseline, 'color','r', 'linewidth', 2)
+    pylab.setp(baseline, 'linewidth', 0)
+    ax = plt.gca()
+    ax.set_xlim(min(x_data)-1, max(x_data)+1)
+    ax.set_ylim(min(y_data)-1, max(max(y_data), max(x_data))+1)
 
 def set_xticks(tick_set):
     ax = plt.gca()
@@ -394,7 +407,7 @@ def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
                                                             alpha=LINE_ALPHA)
     ax.add_collection(line_collection)
 
-def draw_kpts2(kpts, offset=(0,0), ell=True, pts=False):
+def draw_kpts2(kpts, offset=(0,0), ell=True, pts=False, pts_color='r'):
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
     global SHOW_ELLS
     global ELL_COLOR
@@ -441,7 +454,7 @@ def draw_kpts2(kpts, offset=(0,0), ell=True, pts=False):
     if pts:
         ax.plot(x, y, linestyle='None', 
                 marker='o',
-                markerfacecolor='r',
+                markerfacecolor=pts_color,
                 markersize=POINT_SIZE, 
                 markeredgewidth=0)
         
@@ -503,12 +516,13 @@ def draw_kpts_scale_color(kpts, offset=(0,0), ell=True, pts=False):
 
 # ---- CHIP DISPLAY COMMANDS ----
 
-def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111, **kwargs):
+def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111,
+           interpolation='nearest', **kwargs):
     printDBG('*** imshow in fig=%r title=%r *** ' % (fignum, title))
     fignum, plotnum = __parse_fignum(fignum,plotnum)
     printDBG('   * fignum = %r, plotnum = %r ' % (fignum, plotnum))
     fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
-    plt.imshow(img)
+    plt.imshow(img, interpolation=interpolation)
     plt.set_cmap('gray')
     ax = fig.gca()
     ax.set_xticks([])
@@ -636,8 +650,8 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
             draw_kpts2(kpts1, ell=False, pts=True)
             draw_kpts2(kpts2, offset=(woff,hoff), ell=False, pts=True)
         # Draw matching ellipses
-        draw_kpts2(kpts1_m)
-        draw_kpts2(kpts2_m, offset=(woff,hoff))
+        draw_kpts2(kpts1_m, pts=True, pts_color='g')
+        draw_kpts2(kpts2_m, offset=(woff,hoff), pts=True, pts_color='g')
         # Draw matching lines
         if draw_lines:
             draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
@@ -657,12 +671,17 @@ def show_all_matches(hs, res, SV=True, fignum=3):
     others = hs.get_other_cxs(qcx)
     num_others = len(others)
     plotnum= 100 + num_others*10 + 1 
-    figure(fignum=fignum, plotnum=plotnum, figtitle='all matches qcx=%r' % qcx)
-    print 'figure(plotnum)='+str(plotnum)
+    if num_others == 0:
+        print('no known matches to qcx=%r' % qcx)
+        return
+    figtitle='all matches qcx=%r' % qcx
+    figure(fignum=fignum, plotnum=plotnum)
+    #print 'figure(plotnum)='+str(plotnum)
     for ox, cx in enumerate(others):
         plotnumcx = plotnum + ox
-        print 'plot_to: plotnum='+str(plotnumcx)
+        #print 'plot_to: plotnum='+str(plotnumcx)
         show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx)
+    set_figtitle(figtitle)
 
 def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111, title_pref=None, title_suff=None):
     printDBG('Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))

@@ -178,16 +178,14 @@ def get_matcher_uid():
         matcher_uid += '_W%d' % __BOW_NUM_WORDS__
     if __MATCH_TYPE__ == 'vsmany':
         matcher_uid += '_k%d' % __VSMANY_K__
+    if __MATCH_TYPE__ == 'vsone':
+        query_uid += 'rat'+str(__RATIO_THRESH__)
     # depends on feat
     matcher_uid += get_feat_uid()
     return matcher_uid
 
 def get_query_uid():
     query_uid = ''
-    if __MATCH_TYPE__ == 'vsmany':
-        query_uid += '_k'+str(__VSMANY_K__)
-    if __MATCH_TYPE__ == 'vsone':
-        query_uid += 'rat'+str(__RATIO_THRESH__)
     query_uid += '_sv'+str(__NUM_RERANK__)+'_'+str(__XY_THRESH__)
     query_uid += get_matcher_uid()
     return query_uid

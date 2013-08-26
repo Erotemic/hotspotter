@@ -1,5 +1,5 @@
 from __init__ import *
-rrr()
+#rrr()
 
 def reload_module():
     import imp

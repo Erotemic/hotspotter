@@ -17,282 +17,38 @@ import textwrap
 from itertools import izip
 from os.path import realpath, join
 
-__DUMP__ = False # or __BROWSE__
+__DUMP__ = True # or __BROWSE__
 
 def reload_module():
     import imp, sys
     imp.reload(sys.modules[__name__])
 
-# ===========================
-# Driver functions
-# ===========================
-def dump_all(hs, qcx2_res, matrix=True, summary=True, 
-             problems=True, ranks=True, oxford=False):
-    if matrix:
-        dump_matrix_results(hs, qcx2_res, all_results, SV=SV)
-        viz_score_matrix(hs, qcx2_res, all_results, SV=SV)
-    if ranks:
-        dump_rank_results(hs, qcx2_res, all_results, SV=SV)
-    if oxford:
-        oxsty_results.dump_mAP_results(hs, qcx2_res, SV=SV)
-    if summary:
-        plot_summary_visualizations(hs, qcx2_res)
-    if problems: 
-        dump_problems(hs, qcx2_res)
-
-def dump_matrix_results(hs, qcx2_res, all_results, SV=True):
-    matrix_str = matrix_results(hs, qcx2_res, all_results, SV)
-    __dump_report(hs, matrix_str, 'score_matrix', SV)
-
-def dump_rank_results(hs, qcx2_res, all_results, SV=True):
-    rankres_str = get_rankres_str(hs, qcx2_res, all_results, SV)
-    __dump_report(hs, rankres_str, 'rank', SV)
-
-def dump_summary_visualizations(hs, qcx2_res, all_results, SV=True):
-    '''Plots (and outputs data): 
-        rank stem plot
-        rank histogram '''
-    SV = SV if 'SV' in vars() else True
-    SV_aug = ['_SVOFF','_SVon'][SV] #TODO: SV should go into params
-    query_uid = params.get_query_uid().strip('_')+SV_aug
-    result_dir = hs.dirs.result_dir
-    summary_dir = join(result_dir, 'summary_vizualizations')
-    helpers.ensurepath(summary_dir)
-    # Visualize rankings with the stem plot
-    draw_and_save(plot_stem, all_results.true, 'Rankings Stem Plot\n'+query_uid,
-                  outdir=summary_dir)
-    draw_and_save(plot_histogram, all_results.true.ranks,
-                  'True Match Rankings Histogram\n'+query_uid,
-                  outdir=summary_dir)
-    draw_and_save(plot_pdf, all_results.true.scores,
-                  'True Match Score Frequencies\n'+query_uid,
-                  outdir=summary_dir,
-                  label='P(score | true match)', colorx=0.0)
-    draw_and_save(plot_pdf, all_results.false.scores,
-                  'False Match Score Frequencies\n'+query_uid,
-                  outdir=summary_dir,
-                  label='P(score | false match)', colorx=.2)
-    draw_and_save(plot_pdf, all_results.top_true.scores,
-                  'Top True Match Score Frequencies\n'+query_uid,
-                  outdir=summary_dir,
-                  label='P(score | top true match)', colorx=.4)
-    draw_and_save(plot_pdf, all_results.bot_true.scores,
-                  'Top True Match Score Frequencies\n'+query_uid,
-                  outdir=summary_dir,
-                  label='P(score | bot true match)', colorx=.6)
-    draw_and_save(plot_pdf, all_results.top_false.scores,
-                  'Top False Match Score Frequencies\n'+query_uid,
-                  outdir=summary_dir,
-                  label='P(score | top false match)', colorx=.9)
-    draw_and_save(plot_score_matrix, all_results.score_matrix,
-                  'Score Matrix\n'+query_uid, 
-                  outdir=summary_dir)
-
-# ===========================
-# Helper Functions
-# ===========================
-def __dump_report(hs, report_str, report_type, SV):
-    result_dir    = hs.dirs.result_dir
-    timestamp_dir = join(result_dir, 'timestamped_results')
-    helpers.ensurepath(timestamp_dir)
-    helpers.ensurepath(result_dir)
-    timestamp = helpers.get_timestamp()
-    query_uid = params.get_query_uid()
-    SV_aug = ['_SVOFF_','_SVon_'][SV] #TODO: SV should go into params
-    csv_timestamp_fname = report_type+query_uid+SV_aug+timestamp+'.csv'
-    csv_timestamp_fpath = join(timestamp_dir, csv_timestamp_fname)
-    csv_fname  = report_type+query_uid+SV_aug+'.csv'
-    csv_fpath = join(result_dir, csv_fname)
-    #if __DUMP__: 
-    helpers.write_to(csv_fpath, report_str)
-    helpers.write_to(csv_timestamp_fpath, report_str)
-    if '--gvim' in sys.argv:
-        helpers.gvim(csv_fpath)
-
-def __dump_figure(outdir, title):
-    if __DUMP__:
-        fpath = join(outdir, title)
-        df2.save_figure(fpath=fpath)
-    else: # __BROWSE__
-        df2.show()
-
-def draw_and_save(func, data, title, outdir='.', **kwargs):
-    df2.reset()
-    func(data, title=title, **kwargs)
-    __dump_figure(outdir, title)
-
-# ===========================
-# Drawing stuff
-# ===========================
-def dump_gt_matches(hs, qcx2_res):
-    'Displays the matches to ground truth for all queries'
-    for qcx in xrange(0, len(qcx2_res)):
-        df2.reset()
-        df2.show_all_matches(hs, res, fignum)
-        __dump_figure(outdir, title)
-
-def plot_stem(true, title, fignum=1, **kwargs):
-    # Visualize rankings with the stem plot
-    #title = 'Rankings Stem Plot\n'+query_uid
-    df2.figure(fignum=fignum, doclf=True, title=title)
-    df2.draw_stems(true.qcxs, true.ranks)
-    slice_num = int(np.ceil(np.log10(len(true.qcxs))))
-    df2.set_xticks(hs.test_sample_cx[::slice_num])
-    df2.set_xlabel('query chip indeX (qcx)')
-    df2.set_ylabel('groundtruth chip ranks')
-    #df2.set_yticks(list(seen_ranks))
-
-def plot_histogram(ranks, title):
-    df2.figure(fignum=1, doclf=True, title=title)
-    df2.draw_histpdf(ranks, label=('P(rank | true match)'))
-    df2.set_xlabel('ground truth ranks')
-    df2.set_ylabel('frequency')
-    df2.legend()
-
-def plot_pdf(scores, title, label, colorx):
-    df2.figure(fignum=1, doclf=True, title=title)
-    df2.draw_pdf(scores, label=label, colorx=colorx)
-    #df2.variation_trunctate(true.scores)
-    #df2.variation_trunctate(false.scores)
-    df2.set_xlabel('score')
-    df2.set_ylabel('frequency')
-    df2.legend()
-
-def plot_score_matrix(hs, score_matrix, title, **kwargs):
-    df2.figure(fignum=1, doclf=True, title=title)
-    inliers = find_std_inliers(score_matrix)
-    max_inlier = score_matrix[inliers].max()
-    # Truncate outliers
-    score_matrix[score_matrix > max_inlier] = max_inlier
-    dim = 0 # None
-    score_img = helpers.norm_zero_one(score_matrix, dim=dim)
-    df2.set_xlabel('database')
-    df2.set_ylabel('queries')
-    df2.imshow(score_img)
-
-def dump_problems(hs, qcx2_res, all_results):
-    top_true = all_results.top_true
-    top_false = all_results.top_false
-    bot_true = all_results.bot_true
-    problem_false = all_results.top_false
-    problem_true = all_results.bot_true
-    SV = True
-    SV_aug = ['_SVOFF','_SVon'][SV] #TODO: SV should go into params
-    query_uid = params.get_query_uid().strip('_')+SV_aug
-    result_dir = hs.dirs.result_dir
-    # Dump problem cases
-    problem_true_dump_dir  = join(result_dir, 'problem_true'+query_uid)
-    problem_false_dump_dir = join(result_dir, 'problem_false'+query_uid)
-    top_true_dump_dir      = join(result_dir, 'top_true'+query_uid)
-    bot_true_dump_dir      = join(result_dir, 'bot_true'+query_uid)
-    top_false_dump_dir     = join(result_dir, 'top_false'+query_uid)
-    dump_matches(hs, problem_true_dump_dir, problem_true, qcx2_res, SV)
-    dump_matches(hs, problem_false_dump_dir, problem_false, qcx2_res, SV)
-    dump_matches(hs, top_true_dump_dir, top_true, qcx2_res, SV)
-    dump_matches(hs, bot_true_dump_dir, bot_true, qcx2_res, SV)
-    dump_matches(hs, top_false_dump_dir, top_false, qcx2_res, SV)
-
-def dump_matches(hs, dump_dir, org_res, qcx2_res, SV):
-    helpers.ensurepath(dump_dir)
-    cx2_gx = hs.tables.cx2_gx
-    gx2_gname = hs.tables.gx2_gname
-    # loop over each query / result of interest
-    for qcx, cx, score, rank in org_res.iter():
-        query_gname, _  = os.path.splitext(gx2_gname[cx2_gx[qcx]])
-        result_gname, _ = os.path.splitext(gx2_gname[cx2_gx[cx]])
-        df2.reset()
-        res = qcx2_res[qcx]
-        big_title = 'score=%.2f_rank=%d_q=%s_r=%s' % \
-                (score, rank, query_gname, result_gname)
-        df2.show_matches3(res, hs, cx, False, fignum=1, plotnum=121)
-        df2.show_matches3(res, hs, cx,  True, fignum=1, plotnum=122)
-        df2.set_figtitle(big_title)
-        fig_fpath = join(dump_dir, big_title)
-        df2.save_figure(qcx, fig_fpath+'.png')
-
-def get_rankres_str(hs, qcx2_res, all_results, SV=True):
-    'Builds csv files showing the cxs/scores/ranks of the query results'
-    #if not 'all_results' in vars() or all_results is None:
-    if not 'SV' in vars(): SV = True
-    #---
-    cx2_cid  = hs.tables.cx2_cid
-    test_sample_cx = hs.test_sample_cx
-    db_sample_cx = hs.database_sample_cx
-    #---
-    qcx2_top_true_rank, qcx2_top_true_score, qcx2_top_true_cx  =\
-            all_results.top_true.qcx_arrays(hs)
-    qcx2_bot_true_rank, qcx2_bot_true_score, qcx2_bot_true_cx  =\
-            all_results.bot_true.qcx_arrays(hs)
-    qcx2_top_false_rank, qcx2_top_false_score, qcx2_top_false_cx =\
-            all_results.top_false.qcx_arrays(hs)
-    #---
-    qcx2_numgt = np.zeros(len(cx2_cid)) - 2
-    for qcx in test_sample_cx:
-        qcx2_numgt[qcx] = len(hs.get_other_cxs(qcx))
-    #---
-    # Easy to digest results
-    num_chips = len(test_sample_cx)
-    num_nonquery = len(np.setdiff1d(db_sample_cx, test_sample_cx))
-    num_with_gtruth = (1 - np.isnan(qcx2_top_true_rank[test_sample_cx])).sum()
-    num_rank_less5 = (qcx2_top_true_rank[test_sample_cx] < 5).sum()
-    num_rank_less1 = (qcx2_top_true_rank[test_sample_cx] < 1).sum()
-    # Output ranking results
-    # TODO: mAP score
-    # Build the experiment csv metadata
-    SV_aug = ['_SVOFF_','_SVon_'][SV] #TODO: SV should go into params
-    query_uid = params.get_query_uid()+SV_aug
-    header = '# Experiment Settings (params.query_uid):'+query_uid+'\n'
-    header +=  helpers.get_timestamp(format='comment')+'\n'
-    scalar_summary  = '# Num Query Chips: %d \n' % num_chips
-    scalar_summary += '# Num Query Chips with at least one match: %d \n' % num_with_gtruth
-    scalar_summary += '# Num NonQuery Chips: %d \n' % num_nonquery
-    scalar_summary += '# Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
-    scalar_summary += '# Ranks <= 1: %d / %d\n\n' % (num_rank_less1, num_with_gtruth)
-    header += scalar_summary
-    print scalar_summary
-    #---
-    header += '# Full Parameters: \n' + helpers.indent(params.param_string(),'#') + '\n\n'
-    #---
-    header += textwrap.dedent('''
-    # Rank Result Metadata:
-    #   QCX  = Query chip-index
-    # QGNAME = Query images name
-    # NUMGT  = Num ground truth matches
-    #    TT  = top true  
-    #    BT  = bottom true
-    #    TF  = top false''').strip()
-    # Build the experiemnt csv header
-    test_sample_gx = hs.tables.cx2_gx[test_sample_cx]
-    test_sample_gname = hs.tables.gx2_gname[test_sample_gx]
-    test_sample_gname = [g.replace('.jpg','') for g in test_sample_gname]
-    column_labels = ['QCX', 'NUM GT',
-                     'TT CX', 'BT CX', 'TF CX',
-                     'TT SCORE', 'BT SCORE', 'TF SCORE', 
-                     'TT RANK', 'BT RANK', 'TF RANK',
-                     'QGNAME', ]
-    column_list = [
-        test_sample_cx, qcx2_numgt[test_sample_cx],
-        qcx2_top_true_cx[test_sample_cx], qcx2_bot_true_cx[test_sample_cx],
-        qcx2_top_false_cx[test_sample_cx], qcx2_top_true_score[test_sample_cx],
-        qcx2_bot_true_score[test_sample_cx], qcx2_top_false_score[test_sample_cx],
-        qcx2_top_true_rank[test_sample_cx], qcx2_bot_true_rank[test_sample_cx],
-        qcx2_top_false_rank[test_sample_cx], test_sample_gname, ]
-    column_type = [int, int, int, int, int, 
-                   float, float, float, int, int, int, str,]
-    rankres_str = ld2.make_csv_table(column_labels, column_list, header, column_type)
-    problem_true_pairs = zip(all_results.problem_true.qcxs, all_results.problem_true.cxs)
-    problem_false_pairs = zip(all_results.problem_false.qcxs, all_results.problem_false.cxs)
-    problem_str = '\n'.join( [
-        '#Problem Cases: ',
-        '# problem_true_pairs = '+repr(problem_true_pairs),
-        '# problem_false_pairs = '+repr(problem_false_pairs)])
-    print(problem_str+'\n')
-    rankres_str += '\n'+problem_str
-    return rankres_str
-
 # ========================================================
-# Organize results functions
+# Report result initialization 
 # ========================================================
+class AllResults(DynStruct):
+    'Data container for all compiled results'
+    def __init__(self, hs, qcx2_res, SV):
+        super(DynStruct, self).__init__()
+        self.hs       = hs
+        self.qcx2_res = qcx2_res
+        self.SV = SV
+        self.rankres_str         = None
+        self.title_suffix        = None
+        self.scalar_summary      = None
+        self.problem_false_pairs = None
+        self.problem_true_pairs  = None
+        self.matrix_str          = None
+
+    def __str__(allres):
+        toret=('+======================')
+        toret+=('| All Results ')
+        toret+=('| title_suffix=%s' % str(allres.title_suffix))
+        toret+=('| scalar_summary=\n%s' % helpers.indent(str(allres.scalar_summary), '|   '))
+        toret+=('| problem_false_pairs=\n%r' % allres.problem_false_pairs)
+        toret+=('| problem_true_pairs=\n%r' % allres.problem_true_pairs)
+        return toret
+
 class OrganizedResult(DynStruct):
     def __init__(self):
         super(DynStruct, self).__init__()
@@ -320,22 +76,53 @@ class OrganizedResult(DynStruct):
         for (qcx, cx, score, rank) in self.iter():
             qcx2_rank[qcx] = rank
             qcx2_score[qcx] = score
-            qcx2_cx[qcx] = score
+            qcx2_cx[qcx] = cx
         return qcx2_rank, qcx2_score, qcx2_cx
+    def printme3(self):
+        for qcx, cx, score, rank in self.iter():
+            print('%4d %4d %6.1f %4d' % (qcx, cx, score, rank))
 
-def compile_results(hs, qcx2_res, SV=True):
-    'Organizes results into a visualizable data structure'
-    if not 'SV' in vars():
+
+def res2_true_and_false(hs, res, SV):
+    'Organizes results into true positive and false positive sets'
+    if not 'SV' in vars(): 
         SV = True
-    cx2_cid  = hs.tables.cx2_cid
-    # ---
-    true          = OrganizedResult()
-    false         = OrganizedResult()
-    top_true      = OrganizedResult()
-    top_false     = OrganizedResult()
-    bot_true      = OrganizedResult()
-    problem_true  = OrganizedResult()
-    problem_false = OrganizedResult()
+    if not 'res' in vars():
+        res = qcx2_res[qcx]
+    db_sample_cx = hs.database_sample_cx
+    qcx = res.qcx
+    cx2_score = res.cx2_score_V if SV else res.cx2_score
+    unfilt_top_cx = np.argsort(cx2_score)[::-1]
+    # Get top chip indexes and scores
+    top_cx    = np.array(helpers.intersect_ordered(unfilt_top_cx, db_sample_cx))
+    top_score = cx2_score[top_cx]
+    # Get the true and false ground truth ranks
+    qnx         = hs.tables.cx2_nx[qcx]
+    top_nx      = hs.tables.cx2_nx[top_cx]
+    true_ranks  = np.where(np.logical_and(top_nx == qnx, top_cx != qcx))[0]
+    false_ranks = np.where(np.logical_and(top_nx != qnx, top_cx != qcx))[0]
+    # Construct the true positive tuple
+    true_scores  = top_score[true_ranks]
+    true_cxs     = top_cx[true_ranks]
+    true_tup     = (true_cxs, true_scores, true_ranks)
+    # Construct the false positive tuple
+    false_scores = top_score[false_ranks]
+    false_cxs    = top_cx[false_ranks]
+    false_tup    = (false_cxs, false_scores, false_ranks)
+    # Return tuples
+    return true_tup, false_tup
+
+def init_organized_results(allres):
+    print(' * init organized results')
+    hs = allres.hs
+    qcx2_res = allres.qcx2_res
+    allres.true          = OrganizedResult()
+    allres.false         = OrganizedResult()
+    allres.top_true      = OrganizedResult()
+    allres.top_false     = OrganizedResult()
+    allres.bot_true      = OrganizedResult()
+    allres.problem_true  = OrganizedResult()
+    allres.problem_false = OrganizedResult()
     # -----------------
     # Query result loop
     for qcx in hs.test_sample_cx:
@@ -344,46 +131,38 @@ def compile_results(hs, qcx2_res, SV=True):
         true_tup, false_tup = res2_true_and_false(hs, res, SV)
         last_rank     = -1
         skipped_ranks = set([])
-        # True matches loop
         # Record: all_true, missed_true, top_true, bot_true
         topx = 0
         for cx, score, rank in zip(*true_tup):
-            true.append(qcx, cx, rank+1, score)
+            allres.true.append(qcx, cx, rank, score)
             if rank - last_rank > 1:
                 skipped_ranks.add(rank-1)
-                problem_true.append(qcx, cx, rank+1, score)
+                allres.problem_true.append(qcx, cx, rank, score)
             if topx == 0:
-                top_true.append(qcx, cx, rank+1, score)
+                allres.top_true.append(qcx, cx, rank, score)
             last_rank = rank
             topx += 1
         if topx > 1: 
-            bot_true.append(qcx, cx, rank+1, score)
-        # False matches loop
+            allres.bot_true.append(qcx, cx, rank, score)
         # Record the all_false, false_positive, top_false
         topx = 0
         for cx, score, rank in zip(*false_tup):
-            false.append(qcx, cx, rank+1, score)
+            allres.false.append(qcx, cx, rank, score)
             if rank in skipped_ranks:
-                problem_false.append(qcx, cx, rank+1, score)
+                allres.problem_false.append(qcx, cx, rank, score)
             if topx == 0:
-                top_false.append(qcx, cx, rank+1, score)
+                allres.top_false.append(qcx, cx, rank, score)
             topx += 1
-    # End Query Loop
-    # -----------------
-    score_matrix = build_score_matrix(hs, qcx2_res, SV)
-    all_results = DynStruct()
-    all_results.true          = true
-    all_results.false         = false
-    all_results.top_true      = top_true
-    all_results.top_false     = top_false
-    all_results.bot_true      = bot_true
-    all_results.problem_true  = problem_true
-    all_results.problem_false = problem_false
-    all_results.score_matrix = score_matrix
-    return all_results
+    # qcx arrays for ttbttf
+    allres.top_true_qcx_arrays  = allres.top_true.qcx_arrays(hs)
+    allres.bot_true_qcx_arrays  = allres.bot_true.qcx_arrays(hs)
+    allres.top_false_qcx_arrays = allres.top_false.qcx_arrays(hs)
 
-def build_score_matrix(hs, qcx2_res, SV=True):
-    SV = SV  if 'SV' in vars() else True
+def init_score_matrix(allres):
+    print(' * init score matrix')
+    hs = allres.hs
+    SV = allres.SV
+    qcx2_res = allres.qcx2_res
     cx2_nx = hs.tables.cx2_nx
     # Build name-to-chips dict
     nx2_cxs = {}
@@ -415,38 +194,392 @@ def build_score_matrix(hs, qcx2_res, SV=True):
     score_matrix = np.array(row_scores)
     # Fill diagonal with -1's
     np.fill_diagonal(score_matrix, -np.ones(len(row_label_cx)))
-    return score_matrix, col_label_cx, row_label_cx
+    # Add score matrix to allres
+    allres.score_matrix = score_matrix
+    allres.col_label_cx = col_label_cx
+    allres.row_label_cx = row_label_cx
 
-def res2_true_and_false(hs, res, SV):
-    'Organizes results into true positive and false positive sets'
-    if not 'SV' in vars(): 
-        SV = True
-    if not 'res' in vars():
-        qcx2res[qcx]
+def init_allres(hs, qcx2_res, SV=True):
+    'Organizes results into a visualizable data structure'
+    # Make AllResults data containter
+    allres = AllResults(hs, qcx2_res, SV)
+    SV_aug = ['_SVOFF','_SVon'][allres.SV]
+    allres.title_suffix = params.get_query_uid() + SV_aug
+    allres.summary_dir = join(hs.dirs.result_dir, 'summary_plots')
+    helpers.ensurepath(allres.summary_dir)
+    print('+======================')
+    print('| Initializing all results')
+    print('| Title suffix: '+allres.title_suffix)
+    #---
+    hs = allres.hs
+    qcx2_res = allres.qcx2_res
+    cx2_cid  = hs.tables.cx2_cid
+    # Initialize
+    init_score_matrix(allres)
+    init_organized_results(allres)
+    # Build
+    build_rankres_str(allres)
+    build_matrix_str(allres)
+    return allres
+
+# ========================================================
+# Build textfile result strings
+# ========================================================
+def build_matrix_str(allres):
+    hs = allres.hs
+    cx2_gx = hs.tables.cx2_gx
+    gx2_gname = hs.tables.gx2_gname
+    def cx2_gname(cx):
+        return [os.path.splitext(gname)[0] for gname in gx2_gname[cx2_gx]]
+    col_label_gname = cx2_gname(allres.col_label_cx)
+    row_label_gname = cx2_gname(allres.row_label_cx)
+    timestamp =  helpers.get_timestamp(format='comment')+'\n'
+    header = '\n'.join(
+        ['# Result score matrix',
+         '# Generated on: '+timestamp,
+         '# Format: rows separated by newlines, cols separated by commas',
+         '# num_queries  / rows = '+repr(len(row_label_gname)),
+         '# num_database / cols = '+repr(len(col_label_gname)),
+         '# row_labels = '+repr(row_label_gname),
+         '# col_labels = '+repr(col_label_gname)])
+    row_strings = []
+    for row in allres.score_matrix:
+        row_str = map(lambda x: '%5.2f' % x, row)
+        row_strings.append(', '.join(row_str))
+    body = '\n'.join(row_strings)
+    matrix_str = '\n'.join([header,body])
+    allres.matrix_str = matrix_str
+
+def build_rankres_str(allres):
+    'Builds csv files showing the cxs/scores/ranks of the query results'
+    hs = allres.hs
+    SV = allres.SV
+    qcx2_res = allres.qcx2_res
+    cx2_cid  = hs.tables.cx2_cid
+    test_sample_cx = hs.test_sample_cx
     db_sample_cx = hs.database_sample_cx
+    # Get organized data for csv file
+    (qcx2_top_true_rank,
+    qcx2_top_true_score,
+    qcx2_top_true_cx)  = allres.top_true_qcx_arrays
+
+    (qcx2_bot_true_rank,
+    qcx2_bot_true_score,
+    qcx2_bot_true_cx)  = allres.bot_true_qcx_arrays 
+
+    (qcx2_top_false_rank, 
+    qcx2_top_false_score,
+    qcx2_top_false_cx) = allres.top_false_qcx_arrays
+    # Number of groundtruth per query 
+    qcx2_numgt = np.zeros(len(cx2_cid)) - 2
+    for qcx in test_sample_cx:
+        qcx2_numgt[qcx] = len(hs.get_other_cxs(qcx))
+    # Easy to digest results
+    num_chips = len(test_sample_cx)
+    num_nonquery = len(np.setdiff1d(db_sample_cx, test_sample_cx))
+    num_with_gtruth = (1 - np.isnan(qcx2_top_true_rank[test_sample_cx])).sum()
+    num_rank_less5 = (qcx2_top_true_rank[test_sample_cx] < 5).sum()
+    num_rank_less1 = (qcx2_top_true_rank[test_sample_cx] < 1).sum()
+    # CSV Metadata 
+    header = '# Experiment allres.title_suffix = '+allres.title_suffix+'\n'
+    header +=  helpers.get_timestamp(format='comment')+'\n'
+    # Scalar summary
+    scalar_summary  = '# Num Query Chips: %d \n' % num_chips
+    scalar_summary += '# Num Query Chips with at least one match: %d \n' % num_with_gtruth
+    scalar_summary += '# Num NonQuery Chips: %d \n' % num_nonquery
+    scalar_summary += '# Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
+    scalar_summary += '# Ranks <= 1: %d / %d\n\n' % (num_rank_less1, num_with_gtruth)
+    header += scalar_summary
+    # Experiment parameters
+    header += '# Full Parameters: \n' + helpers.indent(params.param_string(),'#') + '\n\n'
+    # More Metadata
+    header += textwrap.dedent('''
+    # Rank Result Metadata:
+    #   QCX  = Query chip-index
+    # QGNAME = Query images name
+    # NUMGT  = Num ground truth matches
+    #    TT  = top true  
+    #    BT  = bottom true
+    #    TF  = top false''').strip()
+    # Build the CSV table
+    test_sample_gx = hs.tables.cx2_gx[test_sample_cx]
+    test_sample_gname = hs.tables.gx2_gname[test_sample_gx]
+    test_sample_gname = [g.replace('.jpg','') for g in test_sample_gname]
+    column_labels = ['QCX', 'NUM GT',
+                     'TT CX', 'BT CX', 'TF CX',
+                     'TT SCORE', 'BT SCORE', 'TF SCORE', 
+                     'TT RANK', 'BT RANK', 'TF RANK',
+                     'QGNAME', ]
+    column_list = [
+        test_sample_cx, qcx2_numgt[test_sample_cx],
+        qcx2_top_true_cx[test_sample_cx], qcx2_bot_true_cx[test_sample_cx],
+        qcx2_top_false_cx[test_sample_cx], qcx2_top_true_score[test_sample_cx],
+        qcx2_bot_true_score[test_sample_cx], qcx2_top_false_score[test_sample_cx],
+        qcx2_top_true_rank[test_sample_cx], qcx2_bot_true_rank[test_sample_cx],
+        qcx2_top_false_rank[test_sample_cx], test_sample_gname, ]
+    column_type = [int, int, int, int, int, 
+                   float, float, float, int, int, int, str,]
+    rankres_str = ld2.make_csv_table(column_labels, column_list, header, column_type)
+    # Put some more data at the end
+    problem_true_pairs = zip(allres.problem_true.qcxs, allres.problem_true.cxs)
+    problem_false_pairs = zip(allres.problem_false.qcxs, allres.problem_false.cxs)
+    problem_str = '\n'.join( [
+        '#Problem Cases: ',
+        '# problem_true_pairs = '+repr(problem_true_pairs),
+        '# problem_false_pairs = '+repr(problem_false_pairs)])
+    rankres_str += '\n'+problem_str
+    # Attach results to allres structure
+    allres.rankres_str = rankres_str
+    allres.scalar_summary = scalar_summary
+    allres.problem_false_pairs = problem_false_pairs
+    allres.problem_true_pairs = problem_true_pairs
+
+# ===========================
+# Helper Functions
+# ===========================
+def __dump_text_report(allres, report_type):
+    if not 'report_type' in vars():
+        report_type = 'rankres_str'
+    print('report_results> Dumping textfile: '+report_type)
+    report_str = allres.__dict__[report_type]
+    # Get directories
+    result_dir    = allres.hs.dirs.result_dir
+    timestamp_dir = join(result_dir, 'timestamped_results')
+    helpers.ensurepath(timestamp_dir)
+    helpers.ensurepath(result_dir)
+    # Write to timestamp and result dir
+    timestamp = helpers.get_timestamp()
+    csv_timestamp_fname = report_type+allres.title_suffix+timestamp+'.csv'
+    csv_timestamp_fpath = join(timestamp_dir, csv_timestamp_fname)
+    csv_fname  = report_type+allres.title_suffix+'.csv'
+    csv_fpath = join(result_dir, csv_fname)
+    helpers.write_to(csv_fpath, report_str)
+    helpers.write_to(csv_timestamp_fpath, report_str)
+
+def dump_orgres_matches(allres, orgres_type):
+    orgres = allres.__dict__[orgres_type]
+    hs = allres.hs
+    qcx2_res = allres.qcx2_res
+    # loop over each query / result of interest
+    for qcx, cx, score, rank in orgres.iter():
+        query_gname, _  = os.path.splitext(hs.tables.gx2_gname[hs.tables.cx2_gx[qcx]])
+        result_gname, _ = os.path.splitext(hs.tables.gx2_gname[hs.tables.cx2_gx[cx]])
+        res = qcx2_res[qcx]
+        df2.figure(fignum=1, plotnum=121)
+        df2.show_matches3(res, hs, cx, SV=False, fignum=1, plotnum=121)
+        df2.show_matches3(res, hs, cx, SV=True,  fignum=1, plotnum=122)
+        big_title = 'score=%.2f_rank=%d_q=%s_r=%s' % \
+                (score, rank, query_gname, result_gname)
+        df2.set_figtitle(big_title)
+        __dump_or_browse(allres, orgres_type+'_matches'+allres.title_suffix)
+
+def __dump_or_browse(allres, subdir=None):
+    if __DUMP__:
+        print('report_results> Dumping Image')
+        fpath = allres.hs.dirs.result_dir
+        if not subdir is None: 
+            fpath = join(fpath, subdir)
+            helpers.ensurepath(fpath)
+        df2.save_figure(fpath=fpath, usetitle=True)
+    else: # __BROWSE__
+        print('report_results> Browsing Image')
+        df2.show()
+    df2.reset()
+
+def plot_tt_bt_tf_matches(allres, qcx):
+    #print('Visualizing result: ')
+    #res.printme()
+    res = allres.qcx2_res[qcx]
+
+    ranks = (allres.top_true_qcx_arrays[0][qcx],
+             allres.bot_true_qcx_arrays[0][qcx],
+             allres.top_false_qcx_arrays[0][qcx])
+
+    scores = (allres.top_true_qcx_arrays[1][qcx],
+             allres.bot_true_qcx_arrays[1][qcx],
+             allres.top_false_qcx_arrays[1][qcx])
+
+    cxs = (allres.top_true_qcx_arrays[2][qcx],
+           allres.bot_true_qcx_arrays[2][qcx],
+           allres.top_false_qcx_arrays[2][qcx])
+
+    titles = ('best True rank='+str(ranks[0])+' ',
+              'worst True rank='+str(ranks[1])+' ',
+              'best False rank='+str(ranks[2])+' ')
+
+    df2.figure(fignum=1, plotnum=231)
+    df2.show_matches3(res, hs, cxs[0], False, fignum=1, plotnum=131, title_aug=titles[0])
+    df2.show_matches3(res, hs, cxs[1], False, fignum=1, plotnum=132, title_aug=titles[1])
+    df2.show_matches3(res, hs, cxs[2], False, fignum=1, plotnum=133, title_aug=titles[2])
+    fig_title = 'fig qcx='+str(qcx)+' TT BT TF -- ' + allres.title_suffix
+    df2.set_figtitle(fig_title)
+    #df2.set_figsize(_fn, 1200,675)
+
+# ===========================
+# Driver functions
+# ===========================
+def dump_all(allres, 
+             text=False,
+             stem=False, 
+             matrix=False,
+             pdf=False, 
+             hist=False,
+             oxford=False, 
+             ttbttf=False,
+             problems=True,
+             gtmatches=True):
+    if text:
+        dump_text_results(allres)
+    if oxford:
+        oxsty_results.write_mAP_results(allres)
+    #
+    if stem:
+        dump_rank_stems(allres)
+    if matrix:
+        dump_score_matrixes(allres)
+    if hist:
+        dump_rank_hists(allres)
+    if pdf:
+        dump_score_pdfs(allres)
+    #
+    if ttbttf: 
+        dump_ttbttf_matches(allres)
+    if problems: 
+        dump_problem_matches(allres)
+    if gtmatches: 
+        dump_gt_matches(allres)
+
+def dump_score_matrixes(allres):
+    plot_score_matrix(allres)
+
+def dump_text_results(allres):
+    __dump_text_report(allres, 'rankres_str')
+    __dump_text_report(allres, 'matrix_str')
+    
+def dump_problem_matches(allres):
+    dump_orgres_matches(allres, 'problem_false')
+    dump_orgres_matches(allres, 'problem_true')
+
+def dump_rank_stems(allres):
+    plot_rank_stem(allres, 'true')
+
+def dump_rank_hists(allres):
+    plot_rank_histogram(allres, 'true')
+
+def dump_score_pdfs(allres):
+    plot_score_pdf(allres, 'true', colorx=0.0, variation_truncate=True)
+    plot_score_pdf(allres, 'false', colorx=.2)
+    plot_score_pdf(allres, 'top_true', colorx=.4, variation_truncate=True)
+    plot_score_pdf(allres, 'bot_true', colorx=.6)
+    plot_score_pdf(allres, 'top_false', colorx=.9)
+
+def dump_gt_matches(allres):
+    hs = allres.hs
+    qcx2_res = allres.qcx2_res
+    'Displays the matches to ground truth for all queries'
+    for qcx in xrange(0, len(qcx2_res)):
+        res = qcx2_res[qcx]
+        df2.show_all_matches(hs, res, fignum=1)
+        __dump_or_browse(allres, 'gt_matches'+allres.title_suffix)
+
+# ===========================
+# Result Plotting
+# ===========================
+
+def plot_rank_stem(allres, orgres_type):
+    print(' * plotting rank stem')
+    # Visualize rankings with the stem plot
+    df2.reload_module()
+    title = orgres_type+'rankings stem plot\n'+allres.title_suffix
+    orgres = allres.__dict__[orgres_type]
+    fig = df2.figure(fignum=1, doclf=True, title=title)
+    x_data = orgres.qcxs
+    y_data = orgres.ranks
+    df2.draw_stems(x_data, y_data)
+    slice_num = int(np.ceil(np.log10(len(orgres.qcxs))))
+    df2.set_xticks(hs.test_sample_cx[::slice_num])
+    df2.set_xlabel('query chip indeX (qcx)')
+    df2.set_ylabel('groundtruth chip ranks')
+    #df2.set_yticks(list(seen_ranks))
+    __dump_or_browse(allres, 'rankviz')
+
+def plot_rank_histogram(allres, orgres_type): 
+    print(' * plotting rank histogram')
+    ranks = allres.__dict__[orgres_type].ranks
+    label = 'P(rank | '+orgres_type+' match)'
+    title = orgres_type+' match rankings histogram\n'+allres.title_suffix
+    df2.figure(fignum=1, doclf=True, title=title)
+    df2.draw_histpdf(ranks, label=label) # FIXME
+    df2.set_xlabel('ground truth ranks')
+    df2.set_ylabel('frequency')
+    df2.legend()
+    __dump_or_browse(allres, 'rankviz')
+    
+def plot_score_pdf(allres, orgres_type, colorx=0.0, variation_truncate=False): 
+    print(' * plotting score pdf')
+    title  = orgres_type+' match score frequencies\n'+allres.title_suffix
+    scores = allres.__dict__[orgres_type].scores
+    label  = 'P(score | '+orgres_type+')'
+    df2.figure(fignum=1, doclf=True, title=title)
+    df2.draw_pdf(scores, label=label, colorx=colorx)
+    if variation_truncate:
+        df2.variation_trunctate(scores)
+    #df2.variation_trunctate(false.scores)
+    df2.set_xlabel('score')
+    df2.set_ylabel('frequency')
+    df2.legend()
+    __dump_or_browse(allres, 'scoreviz')
+
+def plot_score_matrix(allres):
+    print(' * plotting score matrix')
+    score_matrix = allres.score_matrix
+    title = 'Score Matrix\n'+allres.title_suffix
+    # Find inliers
+    #inliers = helpers.find_std_inliers(score_matrix)
+    #max_inlier = score_matrix[inliers].max()
+    # Trunate above 255
+    score_img = np.copy(score_matrix)
+    score_img[score_img < 0] = 0
+    score_img[score_img > 255] = 255
+    dim = 0
+    #score_img = helpers.norm_zero_one(score_img, dim=dim)
+    df2.figure(fignum=1, doclf=True, title=title)
+    df2.imshow(score_img, fignum=1)
+    df2.set_xlabel('database')
+    df2.set_ylabel('queries')
+    __dump_or_browse(allres, 'scoreviz')
+
+def print_top_res_scores(hs, res, view_top=10, SV=False):
     qcx = res.qcx
     cx2_score = res.cx2_score_V if SV else res.cx2_score
-    unfilt_top_cx = np.argsort(cx2_score)[::-1]
-    # Get top chip indexes and scores
-    top_cx    = np.array(helpers.intersect_ordered(unfilt_top_cx, db_sample_cx))
-    top_score = cx2_score[top_cx]
-    # Get the true and false ground truth ranks
-    qnx         = hs.tables.cx2_nx[qcx]
-    top_nx      = hs.tables.cx2_nx[top_cx]
-    true_ranks  = np.where(np.logical_and(top_nx == qnx, top_cx != qcx))[0]
-    false_ranks = np.where(np.logical_and(top_nx != qnx, top_cx != qcx))[0]
-    # Construct the true positive tuple
-    true_scores  = top_score[true_ranks]
-    true_cxs     = top_cx[true_ranks]
-    true_tup     = (true_cxs, true_scores, true_ranks)
-    # Construct the false positive tuple
-    false_scores = top_score[false_ranks]
-    false_cxs    = top_cx[false_ranks]
-    false_tup    = (false_cxs, false_scores, false_ranks)
-    # Return tuples
-    return true_tup, false_tup
-#===============================
-
+    lbl = ['(assigned)', '(assigned+V)'][SV]
+    cx2_nx     = hs.tables.cx2_nx
+    nx2_name   = hs.tables.nx2_name
+    qnx        = cx2_nx[qcx]
+    other_cx   = hs.get_other_cxs(qcx)
+    top_cx     = cx2_score.argsort()[::-1]
+    top_scores = cx2_score[top_cx] 
+    top_nx     = cx2_nx[top_cx]
+    view_top   = min(len(top_scores), np.uint32(view_top))
+    print('---------------------------------------')
+    print('Inspecting matches of qcx=%d name=%s' % (qcx, nx2_name[qnx]))
+    print(' * Matched against %d other chips' % len(cx2_score))
+    print(' * Ground truth chip indexes:\n   other_cx=%r' % other_cx)
+    print('The ground truth scores '+lbl+' are: ')
+    for cx in iter(other_cx):
+        score = cx2_score[cx]
+        print('--> cx=%4d, score=%6.2f' % (cx, score))
+    print('---------------------------------------')
+    print(('The top %d chips and scores '+lbl+' are: ') % view_top)
+    for topx in xrange(view_top):
+        tscore = top_scores[topx]
+        tcx    = top_cx[topx]
+        if tcx == qcx: continue
+        tnx    = cx2_nx[tcx]
+        _mark = '-->' if tnx == qnx else '  -'
+        print(_mark+' cx=%4d, score=%6.2f' % (tcx, tscore))
+    print('---------------------------------------')
+    print('---------------------------------------')
 
 #===============================
 # MAIN SCRIPT
@@ -469,25 +602,22 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     # Params
-    SV = True
-    hs = ld2.HotSpotter(ld2.DEFAULT)
-    qcx2_res = mc2.run_matching(hs)
-    all_results = compile_results(hs, qcx2_res, SV)
-    # Labels
-    SV_aug = ['_SVOFF_','_SVon_'][SV] #TODO: SV should go into params
-    query_uid = params.get_query_uid()+SV_aug
-    #dump_rank_results(hs, qcx2_res, all_results, SV)
-    if '--browse' in sys.argv:
-        __DUMP__ = False
-    if '--summary' in sys.argv:
-        dump_summary_visualizations(hs, qcx2_res, all_results, SV)
-    if '--stem' in sys.argv:
-        plot_stem(all_results.true, 'Rankings Stem Plot\n'+query_uid)
-    if '--dump' in sys.argv :
-        dump_all(hs, qcx2_res)
-    #if '--dump-problems' in sys.argv:
-        #dump_problems(hs, qcx2_res)
+    print('Main: report_results')
+    allres = helpers.search_stack_for_localvar('allres')
+    if allres is None:
+        hs = ld2.HotSpotter(ld2.DEFAULT)
+        qcx2_res = mc2.run_matching(hs)
+        SV = True
+        # Initialize Results
+        allres = init_allres(hs, qcx2_res, SV)
+    # Do something
+    #browse='--browse' in sys.argv
+    #stem='--stem' in sys.argv
+    #hist='--hist' in sys.argv
+    #pdf='--pdf'   in sys.argv
+    dump_all(allres)
+    if '--vrd' in sys.argv:
+        helpers.vd(allres.hs.dirs.result_dir)
     #dinspect(18)
-    problem_true_pairs = zip(all_results.problem_true.qcxs, all_results.problem_true.cxs)
-    problem_false_pairs = zip(all_results.problem_false.qcxs, all_results.problem_false.cxs)
+    print allres
     exec(df2.present(wh=(900,600)))

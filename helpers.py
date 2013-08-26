@@ -815,6 +815,9 @@ def get_exec_src(func):
 # </EXEC_CODE>
 
 
+def find_std_inliers(data, m=2):
+    return abs(data - np.mean(data)) < m * np.std(data)
+
 def remove_file(fpath, verbose=True):
     try:
         if verbose:

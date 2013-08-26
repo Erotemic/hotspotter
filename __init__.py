@@ -63,6 +63,7 @@ import time
 import traceback
 import types
 import warnings
+from itertools import izip
 #1-866-2420
 
 from os.path import join, relpath, realpath, normpath, dirname
@@ -137,7 +138,7 @@ def print_loaded_modules():
         # do dot hack
         mod_names = list(set([name if name.find('.') == -1 else name[0:name.find('.')] for name in mod_names]))
         #print(helpers.indent('\n'.join(sorted(mod_names))))
-        #print(helpers.indent('\n'.join(sorted(mod_names))))
+        print(helpers.indent('\n'.join(sorted(mod_names))))
     for key, modlist in mymods_dict.iteritems():
         print ('Module  Type: '+str(key))
         print (' #loaded='+str(len(modlist)))
@@ -161,6 +162,7 @@ def rrr():
 def reload2():
     'Reloads all modules'
     reload_all_hotspotter_modules()
+
 def reload():
     'Reloads all modules'
     pref.reload_module()

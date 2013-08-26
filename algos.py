@@ -50,7 +50,7 @@ def viz_localmax(signal1d):
 
 def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
     ''' Tries to load a cached flann index before doing anything'''
-    print('Precomputing flann index: '+lbl)
+    print('algos> Precomputing flann index: '+lbl)
     cache_dir = '.' if cache_dir is None else cache_dir
     # Generate a unique filename for data and flann parameters
     fparams_uid = helpers.remove_chars(str(flann_params.values()), ', \'[]')
@@ -65,17 +65,17 @@ def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
     load_success = False
     if helpers.checkpath(flann_fpath):
         try:
-            print('Trying to load FLANN index: '+flann_fpath)
+            print('algos> Trying to load FLANN index: '+os.path.split(flann_fpath)[1])
             flann.load_index(flann_fpath, data)
             print('...success')
             load_success = True
         except Exception as ex:
-            print('...cannot load FLANN index'+repr(ex))
+            print('algos> ...cannot load FLANN index'+repr(ex))
     if not load_success:
         # Rebuild the index otherwise
         with helpers.Timer(msg='rebuilding FLANN index'):
             flann.build_index(data, **flann_params)
-        print('Saving FLANN index to: '+flann_fpath)
+        print('algos> Saving FLANN index to: '+os.path.split(flann_fpath)[1])
         flann.save_index(flann_fpath)
     return flann
 
@@ -222,8 +222,8 @@ def __akmeans_iterate(data,
     num_data = data.shape[0]
     num_clusters = clusters.shape[0]
     xx2_unchanged = np.zeros(ave_unchanged_window, dtype=np.int32) + len(data)
-    print('Starting iterations:')
-    print('Printing akmeans info in format: time (iterx, mean(#switched), #unchanged)')
+    print('algos> Starting iterations:')
+    print('algos> Printing akmeans info in format: time (iterx, mean(#switched), #unchanged)')
     for xx in xrange(0, max_iters): 
         # 1) Find each datapoints nearest cluster center
         tt = helpers.tic()
@@ -266,7 +266,7 @@ def __akmeans_iterate(data,
             datax2_clusterx_old = datax2_clusterx
             if xx % 5 == 0: 
                 sys.stdout.flush()
-    print('  * AKMEANS: converged in %d/%d iters' % (xx+1, max_iters))
+    print('algos>  * AKMEANS: converged in %d/%d iters' % (xx+1, max_iters))
     sys.stdout.flush()
     return (datax2_clusterx, clusters)
 
@@ -286,9 +286,9 @@ def akmeans(data,
     Repeat until convergence.'''
     if ave_unchanged_window is None:
         ave_unchanged_window = int(len(data) / 500)
-    print('Running akmeans: data.shape=%r ; num_clusters=%r' % (data.shape, num_clusters))
+    print('algos> Running akmeans: data.shape=%r ; num_clusters=%r' % (data.shape, num_clusters))
     #print('  * dtype = %r ' % params.__BOW_DTYPE__)
-    print('  * will converge when average #cluster switches < %r over a window of %r iterations' % \
+    print('algos> * will converge when average #cluster switches < %r over a window of %r iterations' % \
           (ave_unchanged_thresh, ave_unchanged_window))
     # Setup iterations
     #data   = np.array(data, params.__BOW_DTYPE__) 
@@ -322,12 +322,12 @@ def scale_to_byte(data):
 
 def plot_clusters(data, datax2_clusterx, clusters):
     # http://www.janeriksolem.net/2012/03/isomap-with-scikit-learn.html
-    print('Doing PCA')
+    print('algos> Doing PCA')
     num_pca_dims = min(3, data.shape[1])
     pca = sklearn.decomposition.PCA(copy=True, n_components=num_pca_dims, whiten=False).fit(data)
     pca_data = pca.transform(data)
     pca_clusters = pca.transform(clusters)
-    print('...Finished PCA')
+    print('algos> ...Finished PCA')
 
     fig = plt.figure(1)
     fig.clf()
@@ -354,6 +354,7 @@ import textwrap
 def force_quit_akmeans(signal, frame):
     try: 
         print(textwrap.dedent('''
+        --- algos ---
         Caught Ctrl+C in:
             function: %r
             stacksize: %r
@@ -399,16 +400,20 @@ def precompute_akmeans(data, num_clusters, max_iters=100, flann_params=None,
     helpers.checkpath(fpath)
     try: 
         (datax2_clusterx, clusters) = helpers.load_npz(fpath)
-        print(' ... load success.')
+        print('algos> ... load success.')
     except Exception as ex:
-        print(' ... load failed. Running akmeans with manual stopping')
-        print('Press Ctrl+C to stop k-means early (and save)')
+        print('algos> %r ' % (ex,))
+        print('algos> fpath=%r' % (fpath,))
+        print('contents: %s' % ('\n  '.join(os.listdir(os.path.dirname(fpath))),))
+
+        print('algos> ... load failed. Running akmeans with manual stopping')
+        print('algos> Press Ctrl+C to stop k-means early (and save)')
         # set ctrl+c behavior to early stop clustering
-        signal.signal(signal.SIGINT, force_quit_akmeans)
+        #signal.signal(signal.SIGINT, force_quit_akmeans)
         (datax2_clusterx, clusters) = akmeans(data, num_clusters, max_iters, flann_params)
-        print('Removing Ctrl+C signal handler')
+        print('algos> Removing Ctrl+C signal handler')
         helpers.save_npz(fpath, datax2_clusterx, clusters)
-        signal.signal(signal.SIGINT, signal.SIG_DFL) # reset ctrl+c behavior
+        #signal.signal(signal.SIGINT, signal.SIG_DFL) # reset ctrl+c behavior
     return (datax2_clusterx, clusters)
 
 if __name__ == '__main__':

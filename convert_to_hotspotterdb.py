@@ -270,7 +270,7 @@ def convert_from_oxford_style(db_dir):
     helpers.__PRINT_WRITES__ = old_print_writes
 
 # Converts the name_num.jpg image format into a database
-def convert_named_chips(db_dir, image_dpath=None):
+def convert_named_chips(db_dir, img_dpath=None):
     from PIL import Image
     from os.path import join
     import helpers
@@ -315,7 +315,7 @@ def convert_named_chips(db_dir, image_dpath=None):
         cx2_theta.append(0)
     for gx, gname in enumerate(gx2_gname):
         name, num = parse.parse(gt_format, gname)
-        img_fpath = join(img_dpath, img_fname)
+        img_fpath = join(img_dpath, gname)
         (w,h) = Image.open(img_fpath).size
         roi = [1, 1, w, h]
         add_to_hs_tables(cid, gname, name, roi)

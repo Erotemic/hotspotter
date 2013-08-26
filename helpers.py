@@ -8,6 +8,7 @@ into a global set of helper functions.
 
 Wow, pylint is nice for cleaning.
 '''
+from __future__ import division
 import drawing_functions2 as df2
 from Printable import printableVal
 import cPickle
@@ -28,8 +29,12 @@ from os.path import join, relpath
 import fnmatch
 #print('LOAD_MODULE: helpers.py')
 
+IMG_EXTENSIONS = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
+
 __PRINT_CHECKS__ = False
 __PRINT_WRITES__ = False
+
+VERY_VERBOSE = False
 
 def remove_chars(instr, illegals_chars):
     outstr = instr
@@ -105,30 +110,36 @@ def numpy_list_num_bits(nparr_list, expected_type, expected_dims):
         num_items += len(nparr) 
     return num_bits,  num_items, num_elemt
 
-def eval_from(fname, err_onread=True):
+def eval_from(fpath, err_onread=True):
     'evaluate a line from a test file'
-    print('Evaling: %r ' % fname)
-    text = read_from(fname)
+    print('helpers> Evaling: fpath=%r' % fpath)
+    text = read_from(fpath)
     if text is None:
         if err_onread:
-            raise Exception('Error reading: %r' % fname)
-        print(' * could not eval: %r ' % fname)
+            raise Exception('Error reading: fpath=%r' % fpath)
+        print('helpers> * could not eval: %r ' % fpath)
         return None
     return eval(text)
 
-def read_from(fname):
-    if not checkpath(fname):
-        println(' * FILE DOES NOT EXIST!')
+
+def read_from(fpath):
+    if not checkpath(fpath):
+        println('helpers> * FILE DOES NOT EXIST!')
         return None
-    println(' * Reading from text file: %r ' % fname)
-    text = open(fname,'r').read()
-    println(' * Read %d characters' % len(text))
+    print('helpers> * Reading text file: %r ' % os.path.split(fpath)[1])
+    try: 
+        text = open(fpath,'r').read()
+    except Exception as ex:
+        print('helpers> * Error reading fpath=%r' % fpath)
+        raise
+    if VERY_VERBOSE:
+        print('helpers> * Read %d characters' % len(text))
     return text
 
-def write_to(fname, to_write):
+def write_to(fpath, to_write):
     if __PRINT_WRITES__:
-        println(' * Writing to text file: %r ' % fname)
-    with open(fname, 'w') as file:
+        println('helpers> * Writing to text file: %r ' % fpath)
+    with open(fpath, 'w') as file:
         file.write(to_write)
 
 def _print(msg):
@@ -136,8 +147,6 @@ def _print(msg):
 
 def _println(msg):
     sys.stdout.write(msg+'\n')
-
-IMG_EXTENSIONS = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
 
 def public_attributes(input):
     public_attr_list = []
@@ -210,16 +219,16 @@ def checkpath(_path):
     _path = os.path.normpath(_path)
     if not __PRINT_CHECKS__:
         return os.path.exists(_path)
-    print_('Checking ' + repr(_path))
+    print_('helpers> Checking %r' % _path)
     if os.path.exists(_path):
         path_type = 'file' if os.path.isfile(_path) else 'directory'
         println('...(%s) exists' % (path_type,))
     else:
         println('... does not exist')
         if __CHECKPATH_VERBOSE__:
-            print('\n  ! Does not exist')
+            print('helpers> \n  ! Does not exist')
             _longest_path = longest_existing_path(_path)
-            print('... The longest existing path is: ' + repr(_longest_path))
+            print('helpers> ... The longest existing path is: %r' % _longest_path)
         return False
     return True
 def check_path(_path):
@@ -234,41 +243,41 @@ def copy_task(cp_list, test=False, nooverwrite=False, print_tasks=True):
     num_overwrite = 0
     _cp_tasks = [] # Build this list with the actual tasks
     if nooverwrite:
-        print('Removed: copy task ')
+        print('helpers> Removed: copy task ')
     else:
-        print('Begining copy+overwrite task.')
+        print('helpers> Begining copy+overwrite task.')
     for (src, dst) in iter(cp_list):
         if os.path.exists(dst):
             num_overwrite += 1
             if print_tasks:
-                print('!!! Overwriting ')
+                print('helpers> !!! Overwriting ')
             if not nooverwrite:
                 _cp_tasks.append((src, dst))
         else:
             if print_tasks:
-                print('... Copying ')
+                print('helpers> ... Copying ')
                 _cp_tasks.append((src, dst))
         if print_tasks:
-            print('    '+src+' -> \n    '+dst)
-    print('About to copy %d files' % len(cp_list))
+            print('helpers>    '+src+' -> \n    '+dst)
+    print('helpers> About to copy %d files' % len(cp_list))
     if nooverwrite:
-        print('Skipping %d tasks which would have overwriten files' % num_overwrite)
+        print('helpers> Skipping %d tasks which would have overwriten files' % num_overwrite)
     else:
-        print('There will be %d overwrites' % num_overwrite)
+        print('helpers> There will be %d overwrites' % num_overwrite)
     if not test: 
-        print('... Copying')
+        print('helpers>... Copying')
         for (src, dst) in iter(_cp_tasks):
             shutil.copy(src, dst)
-        print('... Finished copying')
+        print('helpers>... Finished copying')
     else:
-        print('... In test mode. Nothing was copied.')
+        print('helpers>... In test mode. Nothing was copied.')
 
 def copy(src, dst):
     if os.path.exists(dst):
-        print('!!! Overwriting ')
+        print('helpers> !!! Overwriting ')
     else:
-        print('... Copying ')
-    print('    '+src+' -> \n    '+dst)
+        print('helpers> ... Copying ')
+    print('helpers>    '+src+' -> \n    '+dst)
     shutil.copy(src, dst)
 
 def grep(string, pattern):
@@ -335,7 +344,7 @@ def list_images(img_dpath, ignore_list=[], recursive=True):
 
 def ensurepath(_path):
     if not checkpath(_path):
-        print('... Making directory: ' + _path)
+        print('helpers>... Making directory: ' + _path)
         os.makedirs(_path)
     return True
 def ensuredir(_path):
@@ -389,23 +398,33 @@ def random_indexes(max_index, subset_size):
 
 
 
-def save_pkl(fname, data):
-    with open(fname, 'wb') as file:
+def save_pkl(fpath, data):
+    with open(fpath, 'wb') as file:
         cPickle.dump(data, file)
 
-def load_pkl(fname):
-    with open(fname, 'wb') as file:
+def load_pkl(fpath):
+    with open(fpath, 'wb') as file:
         return cPickle.load(file)
 
-def save_npz(fname, *args, **kwargs):
-    print_(' * save_npz: %r ' % fname)
+def save_npz(fpath, *args, **kwargs):
+    print_(' * save_npz: %r ' % fpath)
     flush()
-    np.savez(fname, *args, **kwargs)
+    np.savez(fpath, *args, **kwargs)
     print('... success')
 
-def load_npz(fname):
-    print(' * load_npz: %r ' % fname)
-    npz = np.load(fname, mmap_mode='r+')
+def file_bytes(fpath):
+    return os.stat(fpath).st_size
+
+def file_megabytes(fpath):
+    return os.stat(fpath).st_size / (2.0 ** 20)
+
+def file_megabytes_str(fpath):
+    return ('%.2f MB' % file_megabytes(fpath))
+
+def load_npz(fpath):
+    print('helpers> load_npz: %r ' % os.path.split(fpath)[1])
+    print('helpers> filesize is: '+ file_megabytes_str(fpath))
+    npz = np.load(fpath, mmap_mode='r+')
     #print(' * npz.keys() = %r '+str(npz.keys()))
     return tuple(npz[key] for key in sorted(npz.keys()))
 
@@ -416,32 +435,46 @@ def hashstr_md5(data):
 class CacheException(Exception):
     pass
 
-def load_cache_npz(input_data, lbl='', cache_dir='.'):
+def __cache_data_fpath(input_data, lbl, cache_dir):
     md5_lbl    = hashstr_md5(input_data)
     shape_lbl  = str(input_data.shape).replace(' ','')
     data_fname = lbl+'_'+shape_lbl+'_'+md5_lbl+'.npz'
     data_fpath = os.path.join(cache_dir, data_fname)
-    if checkpath(data_fpath):
+    return data_fpath
+
+def load_cache_npz(input_data, lbl='', cache_dir='.', is_sparse=False):
+    data_fpath = __cache_data_fpath(input_data, lbl, cache_dir)
+    cachefile_exists = checkpath(data_fpath)
+    if cachefile_exists:
         try:
-            print_('Trying to load cached data: %r' % data_fpath)
+            print('load_cache> Trying to load cached data: %r' % os.path.split(data_fpath)[1])
+            print('load_cache> Cache filesize: ' + file_megabytes_str(data_fpath))
             flush()
-            npz = npz.load(data_fpath)
-            data = npz[0]
+            if is_sparse:
+                data = cPickle.load(data_fpath)
+            else:
+                npz = np.load(data_fpath)
+                data = npz['arr_0']
             print('...success')
             return data
         except Exception as ex:
-            printWARN(' loading cache: '+repr(ex))
-            pass
-    raise CacheException('...cannot load cached data: %r ' % data_fpath)
+            print('...failure')
+            print('load_cache> %r ' % ex)
+            print('load_cache>...cannot load data_fpath=%r ' % data_fpath)
+            raise CacheException(repr(ex))
+    else:
+        raise CacheException('nonexistant file: %r' % data_fpath)
+    raise CacheException('other failure')
 
-def save_cache_npz(input_data, data, lbl='', cache_dir='.'):
-    md5_lbl    = hashstr_md5(input_data)
-    shape_lbl  = str(input_data.shape).replace(' ','')
-    data_fname = lbl+'_'+shape_lbl+'_'+md5_lbl+'.npz'
-    data_fpath = os.path.join(cache_dir, data_fname)
-    print_(' * caching data: %r' % data_fpath)
+def save_cache_npz(input_data, data, lbl='', cache_dir='.', is_sparse=False):
+    data_fpath = __cache_data_fpath(input_data, lbl, cache_dir)
+    print('helpers> caching data: %r' % os.path.split(data_fpath)[1])
     flush()
-    np.savez(data_fpath, data)
+    if is_sparse:
+        with open(data_fpath, 'wb') as outfile:
+            cPickle.dump(data, outfile, cPickle.HIGHEST_PROTOCOL)
+    else:
+        np.savez(data_fpath, data)
     print('...success')
 
 def cache_npz_decorator(npz_func):
@@ -537,7 +570,7 @@ def tic(msg=None):
 def toc(tt):
     (msg, start_time) = tt
     ellapsed = (time.time() - start_time)
-    if msg != None: 
+    if not msg is None: 
         sys.stdout.write('...toc(%.4fs, ' % ellapsed + '"' + str(msg) + '"' + ')\n')
     return ellapsed
 
@@ -575,7 +608,7 @@ def reset_streams():
     sys.stderr = __STDERR__
     sys.stdout.flush()
     sys.stderr.flush()
-    print('Reset stdout and stderr')
+    print('helprs> Reset stdout and stderr')
 
 import sys
 class Timer(object):
@@ -616,7 +649,7 @@ def symlink(source, link_name, noraise=False):
             flags = 1 if os.path.isdir(source) else 0
             if csl(link_name, source, flags) == 0:
                 warnings.warn(warn_msg, category=UserWarning)
-                print(' Unable to create symbolic liwk on windows.')
+                print('helpers> Unable to create symbolic liwk on windows.')
                 raise ctypes.WinError()
     except Exception as ex:
         if not noraise:
@@ -821,7 +854,7 @@ def find_std_inliers(data, m=2):
 def remove_file(fpath, verbose=True):
     try:
         if verbose:
-            print('Removing '+fpath)
+            print('helpers> Removing '+fpath)
         os.remove(fpath)
     except OSError as e:
         printWARN('OSError: %s,\n Could not delete %s' % (str(e), fpath))
@@ -829,7 +862,7 @@ def remove_file(fpath, verbose=True):
     return True
 
 def remove_files_in_dir(dpath, fname_pattern='*', recursive=False):
-    print('Removing files:')
+    print('helpers> Removing files:')
     print('  * in dpath = %r ' % dpath) 
     print('  * matching pattern = %r' % fname_pattern) 
     print('  * recursive = %r' % recursive) 
@@ -842,17 +875,17 @@ def remove_files_in_dir(dpath, fname_pattern='*', recursive=False):
             num_removed += remove_file(os.path.join(root, fname))
         if not recursive:
             break
-    print('... Removed %d/%d files' % (num_removed, num_matched))
+    print('helpers> ... Removed %d/%d files' % (num_removed, num_matched))
     return True
 
 def profile(cmd, globals=globals(), locals=locals()):
     # Meliae # from meliae import loader # om = loader.load('filename.json') # s = om.summarize();
     import cProfile, sys, os
-    print('Profiling Command: '+cmd)
+    print('helpers> Profiling Command: '+cmd)
     cProfOut_fpath = 'OpenGLContext.profile'
     cProfile.runctx( cmd, globals, locals, filename=cProfOut_fpath )
     # RUN SNAKE
-    print('Profiled Output: '+cProfOut_fpath)
+    print('helpers> Profiled Output: '+cProfOut_fpath)
     if sys.platform == 'win32':
         rsr_fpath = 'C:/Python27/Scripts/runsnake.exe'
     else:
@@ -944,7 +977,7 @@ def get_timestamp(format='filename'):
     return stamp
 
 if __name__ == '__main__':
-    print('You ran helpers as main!')
+    print('helpers> You ran helpers as main!')
     import algos
     import sklearn
     module = sys.modules[__name__]
@@ -960,5 +993,5 @@ if __name__ == '__main__':
                          'scipy.sparse'])
     seen = set(list(python_basic) + list(science_basic) + list(tpl_basic))
     seen = set([])
-    print('seen=%r' % seen)
+    print('helpers> seen=%r' % seen)
     explore_module(module, maxdepth=0, seen=seen, nonmodules=False)

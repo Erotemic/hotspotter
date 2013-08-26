@@ -327,7 +327,7 @@ if __name__ == '__main__':
         if cmd in ['fix_issues', 'configure']:
             configure()
             sys.exit(0)
-        if cmd == 'compile_ui':
+        if cmd in ['buildui', 'ui', 'compile_ui']:
             compile_ui()
             sys.exit(0)
         if cmd in ['build_pyinstaller', 'build_installer']:

@@ -3,10 +3,10 @@ from __future__ import division
 print('Calling hotspotter.__init__')
 #import scipy.ndimage.filters as filters
 
+import hotspotter.drawing_functions2 as df2
 import hotspotter.Pref as pref
 import hotspotter.algos as algos
 import hotspotter.chip_compute2 as cc2
-import hotspotter.drawing_functions2 as df2
 import hotspotter.experiments as experiments
 import hotspotter.helpers as helpers
 import hotspotter.load_data2 as ld2
@@ -24,22 +24,29 @@ import matplotlib.pyplot
 import matplotlib.pyplot as plt
 import pylab
 
+# OpenCV
 import cv2
+# Python Fast Library for Approximage Nearest Neighbors
 import pyflann
+# Python Image Library
 import PIL.Image
 import PIL.ImageOps
+# Numpy
 import numpy as np 
 import numpy.linalg
+# Scipy
 import scipy
 import scipy.signal
 import scipy.ndimage.filters
 import scipy.sparse
 import scipy.sparse.linalg
+# Science Kit Image
 import skimage
 import skimage.exposure
 import skimage.filter.rank
 import skimage.morphology
 import skimage.util
+# Science Kit Learn
 import sklearn.preprocessing
 
 import cPickle
@@ -66,7 +73,7 @@ import warnings
 from itertools import izip
 #1-866-2420
 
-from os.path import join, relpath, realpath, normpath, dirname
+from os.path import join, relpath, realpath, normpath, dirname, exists
 from PIL import Image
 from hotspotter.Parallelize import parallel_compute
 from hotspotter.Printable import DynStruct
@@ -184,8 +191,8 @@ __file__ = realpath('../hotspotter/__init__.py')
 HSDIR = dirname(__file__)
 '''
 
-
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
+    print('Main: __init__.py')
     #experiments.demo()

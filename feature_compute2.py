@@ -18,6 +18,7 @@ import numpy as np
 import cv2
 # import python modules
 import sys
+import os
 #print('LOAD_MODULE: feature_compute2.py')
 
 def reload_module():
@@ -265,6 +266,10 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, 
     cx2_desc_fpath = cache_dir + '/cx2_desc'+feat_uid+'.npz'
     # Try to read cache
     print('Attempting load of cx2_kpts and cx2_desc')
+    if all(map(os.path.exists, [cx2_kpts_fpath, cx2_desc_fpath])):
+        print('cx2_desc filesize: ' + (helpers.file_megabytes_str(cx2_desc_fpath)))
+        print('cx2_kpts filesize: ' + (helpers.file_megabytes_str(cx2_kpts_fpath)))
+
     cx2_kpts = tryload(cx2_kpts_fpath)
     cx2_desc = tryload(cx2_desc_fpath)
     if (not cx2_kpts is None and not cx2_desc is None):
@@ -364,7 +369,7 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, 
     
 def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     print('=============================')
-    print('Computing and loading features')
+    print('fc2> Computing and loading features')
     print('=============================')
     # --- GET INPUT --- #
     # Paths to features
@@ -382,9 +387,6 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     hs_feats.cx2_desc = cx2_desc
     #hs_feats.cx2_feats_sift   = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'SIFT')
     #hs_feats.cx2_feats_freak  = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'FREAK')
-    print('=============================')
-    print('Done computing and loading features')
-    print('=============================\n')
     return hs_feats
 
 if __name__ == '__main__':

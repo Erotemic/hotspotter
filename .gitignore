@@ -3,6 +3,7 @@ Result*
 results*
 build
 temp
+research/notingit
 hs_setup/Output
 dist
 hotspotter/generated_version.py

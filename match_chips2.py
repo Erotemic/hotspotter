@@ -54,7 +54,10 @@ class BagOfWordsIndex(DynStruct):
 def precompute_bag_of_words(hs):
     '''Builds a vocabulary with train_sample_cx
     Creates an indexed database with database_sample_cx'''
-    print('Precomputing bag of words')
+    print(textwrap.dedent('''
+    =============================
+    mc2> Precompute Bag-of-Words
+    ============================='''))
     # Unwrap parameters
     cache_dir  = hs.dirs.cache_dir
     cx2_desc   = hs.feats.cx2_desc
@@ -65,16 +68,16 @@ def precompute_bag_of_words(hs):
     vocab_size = params.__BOW_NUM_WORDS__
     # Compute vocabulary
     print(textwrap.dedent('''
-    =============================
-    Build visual vocabulary with %d words
-    =============================''' % (vocab_size)))
+    -----------------------------
+    precompute_bow 1/2: Build visual vocabulary with %d words
+    -----------------------------''' % (vocab_size)))
     _comp_vocab_args   = (cx2_desc, train_cxs, vocab_size, cache_dir)
     words, words_flann = __compute_vocabulary(*_comp_vocab_args)
     # Assign visual vectors to the database
     print(textwrap.dedent('''
-    =============================
-    Index database with visual vocabulary
-    ============================='''))
+    -----------------------------
+    precompute_bow 2/2: Index database with visual vocabulary
+    -----------------------------'''))
     _index_vocab_args = (cx2_desc, words, words_flann, db_cxs, cache_dir)
     _index_vocab_ret  = __index_database_to_vocabulary(*_index_vocab_args)
     cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf = _index_vocab_ret
@@ -83,7 +86,8 @@ def precompute_bag_of_words(hs):
     bow_index = BagOfWordsIndex(*_bow_args)
     return bow_index
 
-# step 1  
+# step 1
+__MAX_AKMEANS_ITERS__ = 100
 def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
     '''Computes a vocabulary of size vocab_size given a set of training data'''
     # Make a training set of descriptors to build the vocabulary
@@ -96,7 +100,7 @@ def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
         vocab_size = num_train_desc / 2
     # Cluster descriptors into a visual vocabulary
     akmeans_flann_params = params.__BOW_AKMEANS_FLANN_PARAMS__
-    _, words = algos.precompute_akmeans(train_desc, vocab_size, 100,
+    _, words = algos.precompute_akmeans(train_desc, vocab_size, __MAX_AKMEANS_ITERS__,
                                         akmeans_flann_params, cache_dir,
                                         force_recomp=False, 
                                         same_data=False)
@@ -111,19 +115,19 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, db_cxs, cache_d
     '''Assigns each database chip a visual-vector and returns 
        data for the inverted file'''
     # TODO: Save precomputations here
-    print('Assigning each database chip a bag-of-words vector')
+    print(' * Assigning each database chip a bag-of-words vector')
     num_database = len(db_cxs)
     ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, db_cxs)
     matcher_uid = params.get_matcher_uid()
     try: 
-        cx2_vvec = helpers.load_cache_npz(ax2_desc, 'cx2_vvec'+matcher_uid, cache_dir)
+        cx2_vvec = helpers.load_cache_npz(ax2_desc, 'cx2_vvec'+matcher_uid, cache_dir, is_sparse=True)
         wx2_cxs  = helpers.load_cache_npz(ax2_desc, 'wx2_cxs'+matcher_uid, cache_dir)
         wx2_fxs  = helpers.load_cache_npz(ax2_desc, 'wx2_fxs'+matcher_uid, cache_dir)
         wx2_idf  = helpers.load_cache_npz(ax2_desc, 'wx2_idf'+matcher_uid, cache_dir)
         print(' * successful cache load: vocabulary indexed databased.')
         return cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf
     except helpers.CacheException as ex:
-        print(' * '+repr(ex))
+        print(repr(ex))
 
     print(' * quantizing each descriptor to a word')
     # Assign each descriptor to its nearest visual word
@@ -163,7 +167,13 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, db_cxs, cache_d
     helpers.toc(tic2)
     # Save to cache
     print(' * saving to cache')
-    helpers.save_cache_npz(ax2_desc, cx2_vvec, 'cx2_vvec'+matcher_uid, cache_dir)
+    r'''
+    input_data = ax2_desc
+    data = cx2_vvec
+    lbl='cx2_vvec'+matcher_uid
+
+    '''
+    helpers.save_cache_npz(ax2_desc, cx2_vvec, 'cx2_vvec'+matcher_uid, cache_dir, is_sparse=True)
     helpers.save_cache_npz(ax2_desc, wx2_cxs, 'wx2_cxs'+matcher_uid, cache_dir)
     helpers.save_cache_npz(ax2_desc, wx2_fxs, 'wx2_fxs'+matcher_uid, cache_dir)
     helpers.save_cache_npz(ax2_desc, wx2_idf, 'wx2_idf'+matcher_uid, cache_dir)
@@ -196,6 +206,14 @@ def assign_matches_bagofwords(qcx, cx2_desc, bow_index):
     # Assign the query descriptors a visual vector
     vvec, qfx2_wx = __quantize_desc_to_tfidf_vvec(cx2_desc[qcx], wx2_idf, words, words_flann)
     # Compute distance to every database vector
+    #print '---DBG'
+    #print type(vvec)
+    #print vvec.dtype
+    #print type(cx2_vvec)
+    #print cx2_vvec.dtype
+    #print cx2_vvec
+    #import drawing_functions2 as df2
+    #exec(df2.present())
     cx2_score = (cx2_vvec.dot(vvec.T)).toarray().flatten()
     # Assign feature to feature matches (for spatial verification)
     cx2_fm = [[] for _ in xrange(len(cx2_desc))]
@@ -504,6 +522,8 @@ class QueryResult(DynStruct):
     def load(self, hs):
         fpath = self.get_fpath(hs)
         if helpers.checkpath(fpath):
+            helpers.print_('load_result(filesize=%s)' % helpers.file_megabytes_str(fpath))
+            helpers.flush()
             return self.load_result(fpath)
         return False
 
@@ -574,7 +594,7 @@ def run_matching(hs):
     '''Runs the full matching pipeline using the abstracted classes'''
     print(textwrap.dedent('''
     =============================
-    Running Matching
+    mc2> Running Matching
     ============================='''))
     assign_matches  = hs.matcher.assign_matches
     cx2_desc = hs.feats.cx2_desc
@@ -582,20 +602,18 @@ def run_matching(hs):
     qcx2_res = [QueryResult(qcx) for qcx in xrange(len(cx2_desc))]
     test_sample_cx = hs.test_sample_cx
     tt_ALL = tic('all queries')
-    assign_times = [] # metadata
-    verify_times = []
 
-    verbose_matching = params.__VERBOSE_MATCHING__
+    verbose_matching     = params.__VERBOSE_MATCHING__
     force_requery_cx_set = params.__FORCE_REQUERY_CX__
     reverify_query       = params.__REVERIFY_QUERY__
     resave_query         = params.__RESAVE_QUERY__
-
-    if verbose_matching:
-        print('Running matching on: %r' % test_sample_cx)
-
-    for qcx in iter(test_sample_cx):
+    #if verbose_matching:
+        #print('mc2>test_sample_cx = %r ' % test_sample_cx)
+    total_queries = len(test_sample_cx)
+    print('mc2>Running %d queries' % total_queries)
+    for query_num, qcx in enumerate(test_sample_cx):
         if verbose_matching:
-            helpers.print_ ('query(qcx=%4d)->' % qcx)
+            helpers.print_('query %d>' % qcx)
         res = qcx2_res[qcx]
         # load query from cache if possible
         cache_load_success = params.__CACHE_QUERY__ and res.load(hs)
@@ -603,8 +621,6 @@ def run_matching(hs):
             cache_load_success = False
         # Get what data we have if we are redoing things
         if cache_load_success or resave_query or reverify_query:
-            if verbose_matching:
-                helpers.print_('load_cache->')
             cx2_fm      = res.cx2_fm
             cx2_fs      = res.cx2_fs
             cx2_score   = res.cx2_score
@@ -613,21 +629,21 @@ def run_matching(hs):
             cx2_score_V = res.cx2_score_V
         # Assign matches with the chosen function (vsone) or (vsmany)
         if not cache_load_success:
-            tt_A = tic('assign')
+            tt_A = tic()
+            print('')
+            helpers.print_('query %d> assign %d descriptors' % (qcx, len(cx2_desc)))
             cx2_fm, cx2_fs, cx2_score = assign_matches(qcx, cx2_desc)
-            assign_times.append(toc(tt_A))
-        else: 
-            if verbose_matching:
-                helpers.print_('cache_assign->')
+            assign_time = toc(tt_A)
+            print(' ...%.2f seconds' % (assign_time))
         # Spatially verify the assigned matches
         if not cache_load_success or reverify_query:
-            tt_V = tic('verify')
+            num_matches = np.array([len(fm) for fm in cx2_fm]).sum()
+            tt_V = tic()
+            print('query %d> verify %d matches' % (qcx, num_matches))
             (cx2_fm_V, cx2_fs_V, cx2_score_V) = \
                     spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
-            verify_times.append(toc(tt_V))
-        else: 
-            if verbose_matching:
-                helpers.print_('cache_verify->')
+            verify_time = toc(tt_V)
+            print(' ...%.2f seconds' % (verify_time))
         # Assign output to the query result 
         res.qcx = qcx
         res.cx2_fm    = cx2_fm
@@ -638,12 +654,8 @@ def run_matching(hs):
         res.cx2_score_V = cx2_score_V
         # Cache query result
         if not cache_load_success or reverify_query or resave_query:
-            helpers.print_('')
             res.save(hs)
-        if verbose_matching:
-            helpers.println('endquery;')       
-        if not verbose_matching:
-            helpers.print_('.'); helpers.flush()
+        print(';%d/%d' % (query_num, total_queries))
     #total_time = toc(tt_ALL)
     print('')
     return qcx2_res

@@ -66,7 +66,7 @@ class HotSpotter(DynStruct):
         hs.test_sample_cx     = None
         hs.database_sample_cx = None
         if not db_dir is None:
-            hs.load_database(db_dir, load_matcher, load_features)
+            hs.load_database(db_dir, load_matcher, load_features, samples_from_file)
     #---------------
     def load_database(hs, db_dir,
                       load_matcher=True,
@@ -91,7 +91,7 @@ class HotSpotter(DynStruct):
         hs.test_sample_cx     = None
         hs.train_sample_cx    = None
         if samples_from_file:
-            hs.default_test_train_database_samples()
+            hs.load_test_train_database_samples_from_file()
         else:
             hs.default_test_train_database_samples()
         # Load Matcher
@@ -105,7 +105,7 @@ class HotSpotter(DynStruct):
     def default_test_train_database_samples(hs):
         print(textwrap.dedent('''
         =============================
-        Using all data as sample set
+        hs> Using all data as sample set
         ============================='''))
         hs.database_sample_cx = range(len(hs.tables.cx2_cid))
         hs.test_sample_cx     = range(len(hs.tables.cx2_cid))
@@ -118,7 +118,7 @@ class HotSpotter(DynStruct):
         'tries to load test / train / database sample from internal dir'
         print(textwrap.dedent('''
         =============================
-        Loading sample sets from disk relative to internal_dir
+        hs> Loading sample sets from disk relative to internal_dir
         ============================='''))
         internal_dir = hs.dirs.internal_dir
         db_sample_fpath    = join(internal_dir, db_sample_fname)
@@ -261,7 +261,7 @@ def load_csv_tables(db_dir):
     Returns HotspotterDirs and HotspotterTables
     '''
     print('\n=============================')
-    print('Loading hotspotter csv tables: '+str(db_dir))
+    print('ld2> Loading hotspotter csv tables: '+str(db_dir))
     print('=============================')
     hs_dirs = HotspotterDirs(db_dir)
     #exec(hs_dirs.execstr('hs_dirs'))
@@ -470,9 +470,7 @@ def load_csv_tables(db_dir):
     #hs_tables.nid2_nx  = nid2_nx
     hs_tables =  HotspotterTables(gx2_gname, nx2_name, cx2_cid, cx2_nx,
                                   cx2_gx, cx2_roi, cx2_theta, prop_dict)
-    print('===============================')
     print('Done Loading hotspotter csv tables: '+str(db_dir))
-    print('===============================\n')
 
     if 'vdd' in sys.argv:
         helpers.vd(hs_dirs.db_dir)

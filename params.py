@@ -95,7 +95,7 @@ __VSONE_FLANN_PARAMS__       = hs1_params
 
 __VERBOSE_CACHE__ = False
 __VERBOSE_LOAD_DATA__ = False
-__VERBOSE_MATCHING__ = False
+__VERBOSE_MATCHING__ = True
 
 __CACHE_QUERY__    = True
 __REVERIFY_QUERY__ = False
@@ -121,8 +121,6 @@ dev_databases = {
     'MOTHERS'   : MOTHERS,
     'OXFORD'    : OXFORD,
     'PARIS'     : PARIS}
-
-
 
 def param_string():
     global __MATCH_TYPE__

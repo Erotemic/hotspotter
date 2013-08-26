@@ -235,7 +235,7 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
     gx2_gname    = hs_tables.gx2_gname
 
     print('=============================')
-    print('Precomputing chips and loading chip paths')
+    print('cc2> Precomputing chips and loading chip paths')
     print('=============================')
 
     # Get parameters
@@ -249,13 +249,14 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
     chip_params = dict(sqrt_area=sqrt_area, histeq=histeq)
     chip_uid = params.get_chip_uid()
 
+    print(' * chip_uid    = %r' % chip_uid)
+
     print(' * sqrt(target_area) = %r' % sqrt_area)
-    print(' * histeq = %r' % histeq)
+    print(' * localeq     = %r' % localeq)
+    print(' * maxcontr    = %r' % maxcontr)
+    print(' * histeq      = %r' % histeq)
+    print(' * rankeq      = %r' % rankeq)
     print(' * region_norm = %r' % region_norm)
-    print(' * rankeq = %r' % rankeq)
-    print(' * localeq = %r' % localeq)
-    print(' * maxcontr = %r' % maxcontr)
-    print(' * chip_uid = %r' % chip_uid)
 
     # Full image path
     cx2_img_path = [img_dir+'/'+gx2_gname[gx] for gx in cx2_gx]
@@ -313,9 +314,7 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
 
     # --- RETURN CHIP PATHS --- #
 
-    print('=============================')
     print('Done Precomputing chips and loading chip paths')
-    print('=============================\n')
 
     # Build hotspotter path object
     hs_cpaths = HotspotterChipPaths()

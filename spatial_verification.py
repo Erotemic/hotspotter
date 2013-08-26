@@ -1,5 +1,5 @@
 from helpers import printWARN, printINFO
-from warnings import catch_warnings, simplefilter 
+import warnings
 import cv2
 import numpy.linalg as linalg
 import numpy as np
@@ -35,7 +35,7 @@ def compute_homog(xyz_norm1, xyz_norm2):
     try:
         (_U, _s, V) = linalg.svd(Mbynine)
     except MemoryError as ex:
-        printWARN('warning 35 ransac:'+repr(ex))
+        warnings.warn('warning 35 ransac:'+repr(ex), category=UserWarning)
         # sparse seems to be 4 times slower
         # the SVD itself is actually 37 times slower
         print('Singular Value Decomposition Ran Out of Memory. Trying with a sparse matrix')
@@ -56,8 +56,8 @@ def _normalize_pts(xyz):
     'Returns a transformation to normalize points to mean=0, stddev=1'
     num_xyz = xyz.shape[1]
     com = np.sum(xyz,axis=1) / num_xyz # center of mass
-    with catch_warnings():
-        simplefilter("ignore")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
         sx  = num_xyz / np.sum(abs(xyz[0,:]-com[0]))  # average xy magnitude
         sy  = num_xyz / np.sum(abs(xyz[1,:]-com[1])) 
     tx  = -com[0]*sx
@@ -154,8 +154,8 @@ def aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd):
 def transform_xy(H3x3, xy):
     xyz = _homogonize_pts(xy)
     H_xyz = H3x3.dot(xyz)
-    with catch_warnings():
-        simplefilter("ignore")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
         H_xy = H_xyz[0:2,:] / H_xyz[2,:]
     return H_xy
 
@@ -225,7 +225,7 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
         H_prime = compute_homog(xyz_norm1, xyz_norm2)
         H = linalg.solve(T2, H_prime).dot(T1)                # Unnormalize
     except linalg.LinAlgError as ex:
-        printWARN('Warning 285 '+repr(ex), )
+        warnings.warn('Warning 285 '+repr(ex), category=UserWarning)
         return np.eye(3), aff_inliers
 
     # Estimate final inliers

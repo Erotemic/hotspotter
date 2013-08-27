@@ -106,7 +106,7 @@ def update_figure_size(fignum, width, height):
 
 def set_geometry(fig, x, y, w, h):
     qtwin = fig.canvas.manager.window
-    qtwin.setGeometry(40,40,width,height)
+    qtwin.setGeometry(x, y, w, h)
 
 def get_geometry():
     fig = plt.gcf()
@@ -310,8 +310,12 @@ def set_ylabel(lbl):
 def plot(*args, **kwargs):
     return plt.plot(*args, **kwargs)
 
-def figure(fignum=None, doclf=False, title=None, plotnum=111,
-           figtitle=None, **kwargs):
+def figure(fignum=None,
+           doclf=False,
+           title=None,
+           plotnum=111,
+           figtitle=None,
+           **kwargs):
     fignum, plotnum = __parse_fignum(fignum, plotnum)
     fig = plt.figure(num=fignum, figsize=FIGSIZE, dpi=DPI)
     axes_list = fig.get_axes()
@@ -430,19 +434,23 @@ def draw_kpts2(kpts, offset=(0,0), ell=True, pts=False, pts_color='r'):
         c = kptsT[3]
         d = kptsT[4]
 
-        # Manually Calculated sqrtm(inv(A) for A in kpts)
+        # Sympy Calculated sqrtm(inv(A) for A in kpts)
+        # inv(sqrtm([(a, 0), (c, d)]) = 
+        #  [1/sqrt(a), c/(-sqrt(a)*d - a*sqrt(d))]
+        #  [        0,                  1/sqrt(d)]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             aIS = 1/np.sqrt(a) 
-            cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
+            bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
             dIS = 1/np.sqrt(d)
-        kpts_iter = iter(zip(x,y,aIS,cIS,dIS))
+            #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
+        kpts_iter = iter(zip(x,y,aIS,bIS,dIS))
         # This has to be the sexiest piece of code I've ever written
         ell_actors = [ Circle( (0,0), 1, 
-                            transform=Affine2D([( a_, 0 , x),
-                                                ( c_, d_, y),
+                            transform=Affine2D([( a_, b_, x),
+                                                ( 0 , d_, y),
                                                 ( 0 , 0 , 1)]) )
-                    for (x,y,a_,c_,d_) in kpts_iter ]
+                    for (x,y,a_,b_,d_) in kpts_iter ]
         ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
         ellipse_collection.set_facecolor('none')
         ellipse_collection.set_transform(pltTrans)
@@ -489,13 +497,14 @@ def draw_kpts_scale_color(kpts, offset=(0,0), ell=True, pts=False):
         with warnings.catch_warnings():
         # Manually Calculated sqrtm(inv(A) for A in kpts)
             aIS = 1/np.sqrt(a) 
-            cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
+            bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
             dIS = 1/np.sqrt(d)
-        kpts_iter = iter(zip(x,y,aIS,cIS,dIS))
+            #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
+        kpts_iter = iter(zip(x,y,aIS,bIS,dIS))
         # This has to be the sexiest piece of code I've ever written
         ell_actors = [ Circle( (0,0), 1, 
-                            transform=Affine2D([( a_, 0 , x),
-                                                ( c_, d_, y),
+                            transform=Affine2D([( a_, b_, x),
+                                                ( 0 , d_, y),
                                                 ( 0 , 0 , 1)]) )
                     for (x,y,a_,c_,d_) in kpts_iter ]
         ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)

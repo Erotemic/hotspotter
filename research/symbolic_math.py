@@ -1,100 +1,184 @@
-# https://sympy.googlecode.com/files/sympy-0.7.2.win32.exe
-import sympy
-import sympy.galgebra.GA as GA
-import sympy.galgebra.latex_ex as tex
-import sympy.printing as symprint
+import matplotlib
+if matplotlib.get_backend() != 'Qt4Agg':
+    matplotlib.use('Qt4Agg', warn=True, force=True)
+    matplotlib.rcParams['toolbar'] = 'None'
+import hotspotter.df2 as df2
+import hotspotter.helpers as helpers
+import matplotlib.pyplot as plt
 
-import sympy.abc
-#pip install pexpect
+import numpy as np
+import scipy
 
-#sympy.init_printing(use_unicode=True)
+import matplotlib
+import matplotlib.pyplot as plt
 
-def view(expr):
-    symprint.preview(expr, output='png')
+def numpy_test():
+    # Constants
+    inv   = scipy.linalg.inv
+    sqrtm = scipy.linalg.sqrtm
+    tau = np.pi*2
+    sin = np.sin
+    cos = np.cos
+    # Variables
+    N = 2**3
+    theta = np.linspace(0, tau, N)
+    a, b, c, d = (1, 0, .5, .8)
 
-a, b, c, d = sympy.symbols('a b c d')
-w, x, y, z = sympy.symbols('w x y z')
+    xc = np.array((sin(theta), cos(theta))) # points on unit circle 2xN
 
-#b = 0
+    A = np.array([(a, b),   # maps points on ellipse
+                  (c, d)])  # to points on unit circle
 
-theta = sympy.abc.theta
-tex.LaTeX(theta)
+    # Test data
+    Ainv = inv(A)
 
-sin = sympy.functions.elementary.trigonometric.sin
-cos = sympy.functions.elementary.trigonometric.cos
+    # Test data
+    xe = Ainv.dot(xc)
 
-# Rotation matrix
-Q = sympy.Matrix([(cos(theta), -sin(theta)), (sin(theta), cos(theta))])
-tex.LaTeX(Q)
+    # Test Ellipse
+    E = A.T.dot(A) # equation of ellipse 
+    test = lambda ell: ell.T.dot(E).dot(ell).diagonal()
 
-# From ellipse to unit circle
-A = sympy.Matrix([(a, b), (c, d)])
+    print all(np.abs(1 - test(xe)) < 1e-9)
 
-A = A.subs(b, 0)
+    # Start Plot
+    df2.reset()
+    def plotell(ell):
+        df2.plot(ell[0], ell[1])
+    # Plot Circle
+    fig = df2.figure(1, plotnum=121, title='xc')
+    plotell(xc)
+    # Plot Ellipse
+    fig = df2.figure(1, plotnum=122, title='xe = inv(A).dot(xc)')
+    plotell(xe)
+    # End Plot
+    df2.set_geometry(fig, 1000, 75, 500, 500)
+    df2.update()
 
-E2 = A.T * A
+# E = ellipse
+#
+# points x on ellipse satisfy x.T * E * x = 1
+#
+# A.T * A = E
 
-# Unit circle to ellipse
-E = sympy.Matrix([(w, x), (y, z)])
+# A = transforms points on an ellipse to a unit circle
+def sqrtm_eq():
+    M = np.array([(33, 24), (48, 57)])
+    R1 = np.array([(1, 4), (8, 5)])
+    R2 = np.array([(5, 2), (4, 7)])
+    print M
+    print R1.dot(R1)
+    print R2.dot(R2)
+    '''
 
-E2 = A.T * A
+    matrix is positive semidefinite 
+    if x.conjT.dot(M).dot(x) >= 0
 
-E3 = (Q*A).T * (Q * A)
-
-A.inv("LU")
-
-L_A, U_A, row_swaps = A.LUdecomposition()
-a, b, c, d = sympy.symbols('a b c d')
-w, x, y, z = sympy.symbols('w x y z')
-
-#b = 0
-
-theta = sympy.abc.theta
-tex.LaTeX(theta)
-
-sin = sympy.functions.elementary.trigonometric.sin
-cos = sympy.functions.elementary.trigonometric.cos
-
-# Rotation matrix
-Q = sympy.Matrix([(cos(theta), -sin(theta)), (sin(theta), cos(theta))])
-tex.LaTeX(Q)
-
-# From ellipse to unit circle
-A = sympy.Matrix([(a, b), (c, d)])
-
-# Unit circle to ellipse
-E = sympy.Matrix([(w, x), (y, z)])
-
-E2 = A.T * A
-
-E3 = (Q*A).T * (Q * A)
-
-A.inv("LU")
-
-L_A, U_A, row_swaps_A = A.LUdecomposition()
-L_Q, U_Q, row_swaps_Q = Q.LUdecomposition()
-
-print A
-print E2
-print E3
-
-tex.Format()
-
-tex.LaTeX(theta)
-e2_tex = tex.LaTeX(E2)
-
-symprint.preview(E2)
-
-sympy.Eq(A.transpose().dot(A), E)
+    or if rank(A) = rank(A.conjT.dot(A))
+    '''
 
 
-(xbm, alpha_1, delta__nugamma_r)  = GA.make_symbols('xbm alpha_1 delta__nugamma_r')
-x = alpha_1*xbm/delta__nugamma_r
-print 'x =',x
-tex.LaTeX(x)
-tex.xdvi()
- #----
-from sympy import Matrix
+def sympy_test():
+    # https://sympy.googlecode.com/files/sympy-0.7.2.win32.exe
+    import sympy
+    import sympy.galgebra.GA as GA
+    import sympy.galgebra.latex_ex as tex
+    import sympy.printing as symprint
+    import sympy.abc
+    import sympy.mpmath
 
-A = Matrix([ [2, 3, 5], [3, 6, 2], [8, 3, 6] ])
-x = Matrix(3,1,[3,7,5])
+    a, b, c, d = sympy.symbols('a b c d')
+    theta = sympy.abc.theta
+    sin = sympy.functions.elementary.trigonometric.sin
+    cos = sympy.functions.elementary.trigonometric.cos
+    sqrtm = sympy.mpmath.sqrtm
+
+    xc = (sin(theta), cos(theta))
+    A = sympy.Matrix([(a, b), (c, d)])
+    A = sympy.Matrix([(a, 0), (c, d)])
+    Ainv = A.inv()
+
+    print('Inverse of lower triangular [(a, 0), (c, d)]')
+    print(Ainv) # sub to lower triangular
+    print('--')
+
+    Asqrtm = sqrtm(A)
+
+
+    print('Inverse of lower triangular [(a, 0), (c, d)]')
+    print(Ainv) # sub to lower triangular
+    print('--')
+
+    def asMatrix(list_): 
+        N = int(len(list_) / 2)
+        Z = sympy.Matrix([list_[0:N], list_[N:]])
+        return Z
+
+    def simplify_mat(X):
+        list_ = [_.simplify() for _ in X]
+        Z = asMatrix(list_)
+        return Z
+
+    def symdot(X, Y):
+        Z = asMatrix(X.dot(Y))
+        return Z
+
+    Eq = sympy.Eq
+    solve = sympy.solve
+    a, b, c, d = sympy.symbols('a b c d')
+    w, x, y, z = sympy.symbols('w x y z')
+    R = sympy.Matrix([(w, x), (y, z)])
+    M = symdot(R,R)
+    # Solve in terms of A
+    w1 = solve(Eq(a, M[0]), w)[1].subs(y,0)
+    #sympy.Eq(0, M[1]) # y is 0
+    x1 = solve(Eq(c, M[2]), x)[0]
+    z1 = solve(Eq(d, M[3]), z)[1].subs(y,0)
+    x2 = x1.subs(w, w1).subs(z, z1)
+
+    R_intermsof_A = sympy.Matrix([(w1, x2), (0, z1)])
+
+    print('R = sqrtm(A) in terms of A: ')
+    print(R_intermsof_A)
+
+    print('\nInverse Square Root of Lower Triangular: ')
+    print(simplify_mat(R_intermsof_A.inv()))
+
+    A2 = simplify_mat(R_intermsof_A.dot(R_intermsof_A))
+
+
+    E_ = A.T.dot(A)
+    E = sympy.Matrix([E_[0:2], E_[2:4]])
+    print('Original ellipse matrix: E = A.T.dot(A)')
+    print(E.subs(b,0))
+
+    E_evects = E.eigenvects()
+    E_evals = E.eigenvals()
+
+    e1, e2 = E_evects
+    print('Eigenvect1: ')
+    e1[0].subs(b,0)
+    print('Eigenvect2: ')
+    e1[0].subs(b,0)
+
+
+    xe = Ainv.dot(xc)
+
+
+#A2 = sqrtm(inv(A)).real
+#A3 = inv(sqrtm(A)).real
+#fig = df2.figure(1, plotnum=223, title='')
+#plotell(e2)
+#fig = df2.figure(1, plotnum=224, title='')
+#plotell(e3)
+
+df2.reset()
+real_data()
+
+r'''
+str1 = '\n'.join(helpers.execstr_func(sympy_data).split('\n')[0:-2])
+str2 = '\n'.join(helpers.execstr_func(execute_test).split('\n')[3:])
+
+toexec = str1 + '\n' + str2
+exec(toexec)
+'''

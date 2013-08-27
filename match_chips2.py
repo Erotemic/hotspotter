@@ -512,6 +512,11 @@ class QueryResult(DynStruct):
         return fpath
     
     def save(self, hs):
+        # HACK
+        self.cx2_fm = np.array([])
+        self.cx2_fs = np.array([])
+        self.cx2_score = np.array([])
+        # Forget non spatial scores
         fpath = self.get_fpath(hs)
         if params.__VERBOSE_CACHE__:
             print('caching result: '+repr(fpath))
@@ -539,10 +544,15 @@ class QueryResult(DynStruct):
             npz = np.load(fpath, mmap_mode='r+')
             for _key in npz.files:
                 if _key in ['qcx']: # hack
+                    # Numpy saving is werid. gotta cast
                     self.__dict__[_key] = npz[_key].tolist()
                 else: 
                     self.__dict__[_key] = npz[_key]
-            # Numpy saving is werid. gotta cast
+            # HACK
+            self.cx2_fm = np.array([])
+            self.cx2_fs = np.array([])
+            self.cx2_score = np.array([])
+            # Forget non spatial scores
             return True
         except Exception as ex:
             os.remove(fpath)
@@ -654,6 +664,7 @@ def run_matching(hs):
         res.cx2_score_V = cx2_score_V
         # Cache query result
         if not cache_load_success or reverify_query or resave_query:
+            print('Resaving query')
             res.save(hs)
         print(';%d/%d' % (query_num, total_queries))
     #total_time = toc(tt_ALL)

@@ -1,14 +1,9 @@
 *~
-Result*
 results*
 build
-temp
 research/notingit
-hs_setup/Output
-dist
+hs_scripts/setup/Output
 hotspotter/generated_version.py
-hotspotter_global_logs.log
-hotspotter_logs*.txt
 desktop.ini
 OpenGLContext.profile
 '

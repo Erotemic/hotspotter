@@ -98,16 +98,7 @@ def sympy_test():
     A = sympy.Matrix([(a, 0), (c, d)])
     Ainv = A.inv()
 
-    print('Inverse of lower triangular [(a, 0), (c, d)]')
-    print(Ainv) # sub to lower triangular
-    print('--')
-
-    Asqrtm = sqrtm(A)
-
-
-    print('Inverse of lower triangular [(a, 0), (c, d)]')
-    print(Ainv) # sub to lower triangular
-    print('--')
+    #Asqrtm = sqrtm(A)
 
     def asMatrix(list_): 
         N = int(len(list_) / 2)
@@ -125,27 +116,72 @@ def sympy_test():
 
     Eq = sympy.Eq
     solve = sympy.solve
+
     a, b, c, d = sympy.symbols('a b c d')
     w, x, y, z = sympy.symbols('w x y z')
+
     R = sympy.Matrix([(w, x), (y, z)])
     M = symdot(R,R)
+
     # Solve in terms of A
-    w1 = solve(Eq(a, M[0]), w)[1].subs(y,0)
-    #sympy.Eq(0, M[1]) # y is 0
-    x1 = solve(Eq(c, M[2]), x)[0]
-    z1 = solve(Eq(d, M[3]), z)[1].subs(y,0)
+    eq1 = Eq(a, M[0])
+    eq2 = Eq(c, M[2])
+    eq3 = Eq(d, M[3])
+    w1 = solve(eq1, w)[1].subs(y,0)
+    #y1 = sympy.Eq(0, M[1]) # y is 0
+    x1 = solve(eq2, x)[0]
+    z1 = solve(eq3, z)[1].subs(y,0)
     x2 = x1.subs(w, w1).subs(z, z1)
 
-    R_intermsof_A = sympy.Matrix([(w1, x2), (0, z1)])
+    R_itoA = simplify_mat(sympy.Matrix([(w1, x2), (0, z1)]))
+    Rinv_itoA = simplify_mat(R_itoA.inv())
 
-    print('R = sqrtm(A) in terms of A: ')
-    print(R_intermsof_A)
+    print('Inverse of lower triangular [(a, 0), (c, d)]')
+    print(Ainv) # sub to lower triangular
+    print('--')
 
-    print('\nInverse Square Root of Lower Triangular: ')
-    print(simplify_mat(R_intermsof_A.inv()))
+    print('R = sqrtm(A); in terms of A')
+    print(R_itoA)
+    print('--')
 
+    print('method1')
+    print('inv(sqrtm(A))')
+    print(Rinv_itoA)
+    print('--')
+
+
+    # Solve in terms of A (but from inv)
+    a_, b_, c_, d_ = Ainv
+    eq1_ = Eq(a_, M[0])
+    eq2_ = Eq(c_, M[2])
+    eq3_ = Eq(d_, M[3])
+    w1_ = solve(eq1_, w)[1].subs(y,0)
+    x1_ = solve(eq2_, x)[0]
+    z1_ = solve(eq3_, z)[1].subs(y,0)
+    #sympy.Eq(0, M[1]) # y is 0
+    x2_ = x1_.subs(w, w1_).subs(z, z1_)
+
+    Rinv_itoA_2 = simplify_mat(sympy.Matrix([(w1_, x2_), (0, z1_)]))
+
+    print('method2')
+    print('sqrtm(inv(A))')
+    print(Rinv_itoA_2)
+    print('----')
+
+    print('Checking that A = inv(MM)')
+    print('method1')
+    print simplify_mat(symdot(Rinv_itoA,Rinv_itoA).inv())
+    print('----')
+    print('method2')
+    print simplify_mat(symdot(Rinv_itoA_2,Rinv_itoA_2).inv())
+
+    # hmmm, why not equal? ah, they are equiv
+    sqrt = np.sqrt
+    ans1 = c/(-sqrt(a)*d - a*sqrt(d))
+    ans2 = -c/(a*d*(sqrt(1/a) + sqrt(1/d)))
+    print ans1, ans2
+     #------------------------------
     A2 = simplify_mat(R_intermsof_A.dot(R_intermsof_A))
-
 
     E_ = A.T.dot(A)
     E = sympy.Matrix([E_[0:2], E_[2:4]])

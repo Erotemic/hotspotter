@@ -15,13 +15,15 @@ import subprocess
 import sys
 import textwrap
 from itertools import izip
-from os.path import realpath, join
+from os.path import realpath, join, normpath
 
 __DUMP__ = True # or __BROWSE__
 
 def reload_module():
     import imp, sys
     imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
 # ========================================================
 # Report result initialization 
@@ -221,6 +223,7 @@ def init_allres(hs, qcx2_res, SV=True):
     # Build
     build_rankres_str(allres)
     build_matrix_str(allres)
+    print allres
     return allres
 
 # ========================================================
@@ -432,7 +435,7 @@ def dump_all(allres,
     if text:
         dump_text_results(allres)
     if oxford:
-        oxsty_results.write_mAP_results(allres)
+        dump_oxsty_mAP_results(allres)
     #
     if stem:
         dump_rank_stems(allres)
@@ -452,6 +455,11 @@ def dump_all(allres,
 
 def dump_score_matrixes(allres):
     plot_score_matrix(allres)
+
+
+def dump_oxsty_mAP_results(allres):
+    oxsty_map_csv = oxsty_results.oxsty_mAP_results(allres)
+    __dump_report(hs, oxsty_map_csv, 'oxsty-mAP')
 
 def dump_text_results(allres):
     __dump_text_report(allres, 'rankres_str')
@@ -601,8 +609,27 @@ def dinspect(qcx, cx=None, SV=True, reset=True):
     df2.present(wh=(900,600))
 
 def report_all(hs, qcx2_res, SV=True, **kwargs):
-    allres = init_allres(hs, qcx2_res, SV=True)
-    dump_all(allres, **kwargs)
+    allres = init_allres(hs, qcx2_res, SV=SV)
+    if not 'kwargs' in vars():
+        kwargs = dict(text=True,
+             stem=False, 
+             matrix=False,
+             pdf=False, 
+             hist=False,
+             oxford=False, 
+             ttbttf=False,
+             problems=False,
+             gtmatches=False)
+    try: 
+        dump_all(allres, **kwargs)
+    except Exception as ex:
+        print('\n\n-----------------')
+        print('Caught Error in rr2.dump_all')
+        print(repr(ex))
+        print('Caught Error in rr2.dump_all')
+        print('-----------------\n')
+        return allres, ex
+    return allres
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support

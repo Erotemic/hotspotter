@@ -35,11 +35,14 @@ def reload_module():
     import sys
     imp.reload(sys.modules[__name__])
 
+def rrr():
+    reload_module()
+
 # --- Globals ---
 
 IMG_EXTENSIONS = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
 
-__PRINT_CHECKS__ = False
+__PRINT_CHECKS__ = True
 __PRINT_WRITES__ = False
 
 VERY_VERBOSE = False
@@ -384,7 +387,7 @@ def print_frame(frame):
     attr_list = ['f_code.co_name', 'f_back', 'f_lineno',
                    'f_code.co_names', 'f_code.co_filename']
     obj_name = 'frame'
-    execstr_print_list = ['print("%r=%%r" %% (%r,))' % (_execstr, _execstr)
+    execstr_print_list = ['print("%r=%%r" %% (%s,))' % (_execstr, _execstr)
                          for _execstr in execstr_attr_list(obj_name, attr_list)]
     execstr = '\n'.join(execstr_print_list)
     exec(execstr)
@@ -508,11 +511,12 @@ def longest_existing_path(_path):
     return _path
 
 __CHECKPATH_VERBOSE__ = False
-def checkpath(_path):
+def checkpath(_path, print_checks=None):
     '''Checks to see if the argument _path exists.'''
     # Do the work
+    print_checks = __PRINT_CHECKS__ if print_checks is None else print_checks
     _path = os.path.normpath(_path)
-    if not __PRINT_CHECKS__:
+    if not print_checks:
         return os.path.exists(_path)
     print_('helpers> Checking %r' % _path)
     if os.path.exists(_path):
@@ -701,8 +705,10 @@ def load_npz(fpath):
     print('helpers> load_npz: %r ' % os.path.split(fpath)[1])
     print('helpers> filesize is: '+ file_megabytes_str(fpath))
     npz = np.load(fpath, mmap_mode='r+')
+    data = tuple(npz[key] for key in sorted(npz.keys()))
     #print(' * npz.keys() = %r '+str(npz.keys()))
-    return tuple(npz[key] for key in sorted(npz.keys()))
+    npz.close()
+    return data
 
 def hashstr_md5(data):
     import hashlib
@@ -713,21 +719,22 @@ def load_cache_npz(input_data, lbl='', cache_dir='.', is_sparse=False):
     cachefile_exists = checkpath(data_fpath)
     if cachefile_exists:
         try:
-            print('load_cache> Trying to load cached data: %r' % os.path.split(data_fpath)[1])
-            print('load_cache> Cache filesize: ' + file_megabytes_str(data_fpath))
+            print('helpers.load_cache> Trying to load cached data: %r' % os.path.split(data_fpath)[1])
+            print('helpers.load_cache> Cache filesize: ' + file_megabytes_str(data_fpath))
             flush()
             if is_sparse:
-                with open(data_fpath, 'rb') as infile:
-                    data = cPickle.load(infile)
+                with open(data_fpath, 'rb') as file_:
+                    data = cPickle.load(file_)
             else:
                 npz = np.load(data_fpath)
                 data = npz['arr_0']
+                npz.close()
             print('...success')
             return data
         except Exception as ex:
             print('...failure')
-            print('load_cache> %r ' % ex)
-            print('load_cache>...cannot load data_fpath=%r ' % data_fpath)
+            print('helpers.load_cache> %r ' % ex)
+            print('helpers.load_cache>...cannot load data_fpath=%r ' % data_fpath)
             raise CacheException(repr(ex))
     else:
         raise CacheException('nonexistant file: %r' % data_fpath)
@@ -933,6 +940,22 @@ def profile_lines(fname):
     ensurepath(lineprofile_path)
     shutil.copy('*', lineprofile_path+'/*')
 
+def memory_profile():
+    #http://stackoverflow.com/questions/2629680/deciding-between-subprocess-multiprocessing-and-thread-in-python
+    import guppy
+    import gc
+    print('Collecting garbage')
+    gc.collect()
+    hp = guppy.hpy()
+    print('Waiting for heap output...')
+    heap_output = hp.heap()
+    print(heap_output)
+    # Graphical Browser
+    #hp.pb()
+
+def garbage_collect():
+    import gc
+    gc.collect()
 #http://www.huyng.com/posts/python-performance-analysis/
 #Once youve gotten your code setup with the @profile decorator, use kernprof.py to run your script.
 #kernprof.py -l -v fib.py

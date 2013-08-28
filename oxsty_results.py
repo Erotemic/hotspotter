@@ -13,33 +13,30 @@ import subprocess
 import sys
 import textwrap
 from itertools import izip
-from os.path import realpath, join
+from os.path import realpath, join, normpath
 
 # OXFORD STUFF
-def write_mAP_results(allres):
-    hs = allres.hs
-    qcx2_res = hs.qcx2_res
-    SV = allres.SV
-    oxsty_map_csv = oxsty_mAP_results(hs, qcx2_res, SV)
-    __dump_report(hs, oxsty_map_csv, 'oxsty-mAP', SV)
-
-def oxsty_mAP_results(hs, qcx2_res, SV):
+def oxsty_mAP_results(allres):
     hs = allres.hs
     qcx2_res = allres.qcx2_res
     SV = allres.SV
     # Check directorys where ranked lists of images names will be put
-    SV_aug = ['_SVOFF_','_SVON_'][SV] #TODO: SV should go into params
-    qres_dir  = hs.dirs.qres_dir
-    query_uid = params.get_query_uid()
-    oxsty_qres_dname = 'oxsty_qres' + query_uid + SV_aug
-    oxsty_qres_dpath = join(qres_dir, oxsty_qres_dname)
+    oxsty_qres_dname = 'oxsty_ranked_lists' +allres.title_suffix
+    oxsty_qres_dpath = join(hs.dirs.qres_dir, oxsty_qres_dname)
     helpers.ensure_path(oxsty_qres_dpath)
+
+    oxford_gt_dir = join(hs.dirs.db_dir, 'oxford_style_gt')
+    helpers.assertpath(oxford_gt_dir)
+    compute_ap_exe = normpath(join(oxford_gt_dir, '../compute_ap'))
+    if not helpers.checkpath(compute_ap_exe):
+        compute_ap_exe = normpath(join(oxford_gt_dir, '/compute_ap'))
+    helpers.assertpath(compute_ap_exe)
     # Get the mAP scores using philbins program
     query_mAP_list = []
     query_mAP_cx   = []
-    for qcx in (hs.test_sample_cx):
+    for qcx in iter(hs.test_sample_cx):
         res = qcx2_res[qcx]
-        mAP = get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath)
+        mAP = get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath, compute_ap_exe)
         query_mAP_list.append(mAP)
         query_mAP_cx.append(qcx)
     # Calculate the total mAP score for the experiemnt
@@ -54,10 +51,10 @@ def oxsty_mAP_results(hs, qcx2_res, SV):
     oxsty_map_csv = load_data2.make_csv_table(column_labels, column_list, header)
     return oxsty_map_csv
 
-def get_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath):
+def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
+                                 compute_ap_exe):
     # find oxford ground truth directory
     cwd = os.getcwd()
-    oxford_gt_dir = join(hs.dirs.db_dir, 'oxford_style_gt')
     # build groundtruth query
     qcx = res.qcx
     qnx = hs.tables.cx2_nx[qcx]
@@ -70,6 +67,9 @@ def get_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath):
     top_gx = hs.tables.cx2_gx[top_cx]
     top_gname = hs.tables.gx2_gname[top_gx]
     # build mAP args
+    if qoxnum == '':
+        print("HACK: Adding a dummy qoxynum")
+        qoxnum = '1'
     ground_truth_query = qname+'_'+qoxnum
     # build ranked list of gnames (remove duplicates)
     seen = set([])
@@ -88,14 +88,78 @@ def get_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath):
     # execute external mAP code: 
     # ./compute_ap [GROUND_TRUTH] [RANKED_LIST]
     os.chdir(oxford_gt_dir)
-    args = ('../compute_ap', ground_truth_query, ranked_list_fpath)
+
+    args = (compute_ap_exe, ground_truth_query, ranked_list_fpath)
     cmdstr  = ' '.join(args)
-    print('Executing: %r ' % cmdstr)
-    PIPE = subprocess.PIPE
-    proc = subprocess.Popen(args, stdout=PIPE, stderr=PIPE)
-    (out, err) = proc.communicate()
-    return_code = proc.returncode
+
+    print('Executing: %r' % cmdstr)
+    try:
+        proc_out = run_process(args)
+        out = proc_out.out
+        mAP = float(out.strip())
+    except OSError as ex:
+        print(repr(ex))
+        mAP = -1
     os.chdir(cwd)
-    mAP = float(out.strip())
     return mAP
 
+def run_process(args):
+    proc = subprocess.Popen(args, 
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    toret = object()
+    (toret.out, toret.err) = proc.communicate()
+    toret.return_code = proc.returncode
+    toret.proc = proc
+    return toret
+
+def execute(cmdstr):
+    import shlex
+    args = shlex.split(cmdstr)
+
+    popen_kwargs = {
+    'bufsize'            :     0,
+    'executable'         :  None,
+    'stdin'              :  None, 
+    'stdout'             :  None,
+    'stderr'             :  None,
+    'preexec_fn'         :  None,
+    'close_fds'          : False,
+    'shell'              : False,
+    'cwd'                :  None,
+    'env'                :  None,
+    'universal_newlines' : False,
+    'startupinfo'        :  None,
+    'creationflags'      : 0
+    }
+
+    popen_kwargs['stdout'] = subprocess.PIPE
+    popen_kwargs['stderr'] = subprocess.PIPE
+    popen_kwargs['bufsize'] = -1
+    popen_kwargs['shell'] = True
+    popen_kwargs['close_fds'] = True
+
+    proc = subprocess.Popen(args, **popen_kwargs)
+    (out, err) = proc.communicate()
+    return_code = proc.returncode
+
+def debug_compute_ap_exe(compute_ap_exe,
+                         ground_truth_query,
+                         ranked_list_fpath):
+
+    print('================================')
+    print('Debugging compute_ap executable:')
+    print('-----------')
+    print('Path checks: ')
+    helpers.checkpath(ranked_list_fpath, True)
+    helpers.checkpath(compute_ap_exe, True)
+    print('-----------')
+    print('Command string check:')
+    args = (compute_ap_exe, ground_truth_query, ranked_list_fpath)
+    cmdstr  = ' '.join(args)
+    print(cmdstr)
+    print('-----------')
+    print('Noargs check:')
+    (out, err, return_code) = execute(compute_ap_exe)
+
+    (out, err, return_code) = popen_communicate(cmdstr)

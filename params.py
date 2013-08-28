@@ -276,7 +276,7 @@ if '--reverify' in sys.argv:
     __REVERIFY_QUERY__ = True
 
 if '--resave-query' in sys.argv:
-    __RESAVE_QUERY__ = False # 4H4X5
+    __RESAVE_QUERY__ = True # 4H4X5
 
 if '--print-checks' in sys.argv:
     helpers.__PRINT_CHECKS__ = True

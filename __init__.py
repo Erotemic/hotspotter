@@ -3,17 +3,15 @@ from __future__ import division
 print('Calling hotspotter.__init__')
 #import scipy.ndimage.filters as filters
 
-import hotspotter.drawing_functions2 as df2
-import hotspotter.Pref as pref
+import hotspotter.df2 as df2
+import hotspotter.Pref as Pref
 import hotspotter.algos as algos
 import hotspotter.chip_compute2 as cc2
 import hotspotter.experiments as experiments
 import hotspotter.helpers as helpers
 import hotspotter.load_data2 as ld2
-import hotspotter.load_data2 as load_data2
 import hotspotter.match_chips2 as mc2
 import hotspotter.params as params
-import hotspotter.report_results2 as report_results2
 import hotspotter.report_results2 as rr2
 import hotspotter.spatial_verification2 as sv2
 import hotspotter.tpl.extern_feat as extern_feat

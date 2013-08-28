@@ -27,6 +27,8 @@ def reload_module():
     import imp
     import sys
     imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
 def printDBG(msg, lbl=''):
     print('DBG: '+lbl+str(msg))
@@ -46,17 +48,12 @@ RDIR_QRES     = '/.hs_internals/computed/query_results'
 # DRIVER CODE
 #========================================
 
-def NewHotSpotter():
-    hs_tables = HotspotterTables()
-
 # ___CLASS HOTSPOTTER____
 class HotSpotter(DynStruct):
     '''The HotSpotter main class is a root handle to all relevant data'''
-    def __init__(hs, db_dir=None,
-                 load_matcher=True,
-                 load_features=True,
-                 samples_from_file=False):
+    def __init__(hs, db_dir=None, **kwargs):
         super(HotSpotter, hs).__init__()
+        hs.num_cx = None
         hs.tables = None
         hs.feats  = None
         hs.cpaths = None
@@ -66,43 +63,50 @@ class HotSpotter(DynStruct):
         hs.test_sample_cx     = None
         hs.database_sample_cx = None
         if not db_dir is None:
-            hs.load_database(db_dir, load_matcher, load_features, samples_from_file)
+            hs.load_database(db_dir, **kwargs)
     #---------------
-    def load_database(hs, db_dir,
-                      load_matcher=True,
-                      load_features=True,
-                      samples_from_file=False):
-        import chip_compute2 as cc2
-        import feature_compute2 as fc2
-        # Load data
+    def load_tables(hs, db_dir):
         hs_dirs, hs_tables = load_csv_tables(db_dir)
-        hs_cpaths = cc2.load_chip_paths(hs_dirs, hs_tables)
         hs.tables  = hs_tables
-        hs.cpaths  = hs_cpaths
         hs.dirs    = hs_dirs
-        hs.feats   = None
-        if load_features:
-            hs_feats  = fc2.load_chip_features(hs_dirs, hs_tables, hs_cpaths)
-            hs.feats  = hs_feats
-        else: 
-            print('Not Loading Features!!')
-        # Load sample sets
-        hs.database_sample_cx = None
-        hs.test_sample_cx     = None
-        hs.train_sample_cx    = None
-        if samples_from_file:
-            hs.load_test_train_database_samples_from_file()
-        else:
-            hs.default_test_train_database_samples()
-        # Load Matcher
-        if load_matcher: 
-            hs.load_matcher()
-    #---------------
+        hs.num_cx = len(hs.tables.cx2_cid)
+
+    def load_chips(hs):
+        import chip_compute2 as cc2
+        hs_cpaths = cc2.load_chip_paths(hs.dirs, hs.tables)
+        hs.cpaths  = hs_cpaths
+
+    def load_features(hs, load_kpts=True, load_desc=True):
+        import feature_compute2 as fc2
+        hs_feats  = fc2.load_chip_features(hs.dirs, hs.tables, hs.cpaths, load_kpts, load_desc)
+        hs.feats  = hs_feats
+
     def load_matcher(hs):
         import match_chips2 as mc2
         hs.matcher = mc2.Matcher(hs, params.__MATCH_TYPE__)
     #---------------
-    def default_test_train_database_samples(hs):
+
+    def load_database(hs, db_dir,
+                      load_matcher=True,
+                      load_features=True,
+                      samples_from_file=False):
+        # Load data
+        hs.load_tables(db_dir)
+        hs.load_chips()
+        if load_features:
+            hs.load_features()
+        else: 
+            print('Not Loading Features!!')
+        # Load sample sets
+        if samples_from_file:
+            hs.load_file_samples()
+        else:
+            hs.load_default_samples()
+        # Load Matcher
+        if load_matcher: 
+            hs.load_matcher()
+    #---------------
+    def load_default_samples(hs):
         print(textwrap.dedent('''
         =============================
         hs> Using all data as sample set
@@ -111,10 +115,10 @@ class HotSpotter(DynStruct):
         hs.test_sample_cx     = range(len(hs.tables.cx2_cid))
         hs.train_sample_cx    = range(len(hs.tables.cx2_cid))
 
-    def load_test_train_database_samples_from_file(hs,
-                                                   db_sample_fname='database_sample.txt',
-                                                   test_sample_fname='test_sample.txt',
-                                                   train_sample_fname='train_sample.txt',):
+    def load_file_samples(hs,
+                          db_sample_fname='database_sample.txt',
+                          test_sample_fname='test_sample.txt',
+                          train_sample_fname='train_sample.txt',):
         'tries to load test / train / database sample from internal dir'
         print(textwrap.dedent('''
         =============================
@@ -128,8 +132,10 @@ class HotSpotter(DynStruct):
         hs.database_sample_cx = np.array(helpers.eval_from(db_sample_fpath, False))
         hs.test_sample_cx     = np.array(helpers.eval_from(test_sample_fpath, False))
         hs.train_sample_cx    = np.array(helpers.eval_from(train_sample_fpath, False))
-        if hs.database_sample_cx is None and hs.test_sample_cx is None and hs.train_sample_cx is None: 
-            hs.default_test_train_database_samples()
+        if hs.database_sample_cx is None and\
+           hs.test_sample_cx is None and\
+           hs.train_sample_cx is None: 
+            hs.load_default_samples()
         #hs.test_sample_cx = np.array([0,2,3])
         #db_sample_cx = range(len(cx2_desc)) if hs.database_sample_cx is None \
                                #else hs.database_sample_cx
@@ -177,6 +183,20 @@ class HotSpotter(DynStruct):
         fs = cx2_fs[cx]
         score = cx2_score[cx]
         return fm, fs, score
+    #--------------
+    def free_some_memory(hs):
+        print('Releasing matcher memory')
+        import gc
+        helpers.memory_profile()
+        print("HotSpotter Referrers: "+str(gc.get_referrers(hs)))
+        print("Matcher Referrers: "+str(gc.get_referrers(hs.matcher)))
+        print("Desc Referrers: "+str(gc.get_referrers(hs.feats.cx2_desc)))
+        #reffers = gc.get_referrers(hs.feats.cx2_desc) #del reffers
+        del hs.feats.cx2_desc
+        del hs.matcher
+        gc.collect()
+        helpers.memory_profile()
+        ans = raw_input('good?')
 
 # Testing helper functions
 def get_sv_test_data():

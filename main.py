@@ -129,4 +129,3 @@ if __name__ == '__main__':
     #print('Running the application event loop')
     #helpers.flush()
     #sys.exit(app.exec_())
-

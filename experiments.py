@@ -1,13 +1,14 @@
 from os.path import join
 import helpers
 import textwrap
-import load_data2
+import load_data2 as ld2
 import match_chips2 as mc2
 import numpy as np
 import os
 import params
-import report_results2
+import report_results2 as rr2
 import sys 
+import df2
 
 def reload_module():
     import imp
@@ -25,7 +26,7 @@ def run_experiment(hs=None):
     Runs experiment and report result
     returns qcx2_res, hs
     '''
-    db_dir = load_data2.DEFAULT
+    db_dir = ld2.DEFAULT
     if not hs is None:
         db_dir = hs.db_dir
     print(textwrap.dedent('''
@@ -33,10 +34,10 @@ def run_experiment(hs=None):
     expts> Running Experiment on: %r
     Params: %s
     ======================''' % (db_dir,helpers.indent(params.param_string()))))
-    hs = hs if not hs is None else load_data2.HotSpotter(db_dir)
+    hs = hs if not hs is None else ld2.HotSpotter(db_dir)
     qcx2_res = mc2.run_matching(hs)
-    report_results2.report_all(hs, qcx2_res)
-    return qcx2_res, hs
+    allres = rr2.report_all(hs, qcx2_res)
+    return locals()
 
 def oxford_philbin07():
     params.__MATCH_TYPE__        = 'bagofwords'
@@ -46,10 +47,10 @@ def oxford_philbin07():
     params.__BOW_AKMEANS_FLANN_PARAMS__ = dict(algorithm='kdtree',
                                                trees=8, checks=64)
     # I'm not sure if checks parameter is set correctly
-    db_dir = load_data2.OXFORD
-    hs = load_data2.HotSpotter(db_dir, load_matcher=False)
+    db_dir = ld2.OXFORD
+    hs = ld2.HotSpotter(db_dir, load_matcher=False)
     # Use the 55 cannonical test cases 
-    hs.load_test_train_database_samples_from_file(test_sample_fname='test_sample55.txt')
+    hs.load_file_samples(test_sample_fname='test_sample55.txt')
     # Quick Sanity Checks
     db_sample_cx = hs.database_sample_cx
     tr_sample_cx = hs.train_sample_cx
@@ -61,43 +62,49 @@ def oxford_philbin07():
     hs.load_matcher()
     # Run the matching
     qcx2_res = mc2.run_matching(hs)
-    report_results2.report_all(hs, qcx2_res, oxford=True)
+    allres = rr2.report_all(hs, qcx2_res, oxford=True)
+    return locals()
 
 def oxford_bow():
     params.__MATCH_TYPE__     = 'bagofwords'
     params.__CHIP_SQRT_AREA__ = None
-    params.__BOW_NUM_WORDS__  = [1e4, 2e4, 5e4, 1e6, 1.25e6][0]
-    db_dir = load_data2.OXFORD
-    hs = load_data2.HotSpotter(db_dir, samples_from_file=True)
+    params.__BOW_NUM_WORDS__  = [1e4, 2e4, 5e4, 1e6, 1.25e6][3]
+    db_dir = ld2.OXFORD
+    hs = ld2.HotSpotter()
+    hs.load_tables(db_dir)
+    hs.load_chips()
+    hs.load_features(load_desc=False)
+    hs.load_file_samples()
     assert min(hs.test_sample_cx) == 55
     assert max(hs.test_sample_cx) == 5117
     qcx2_res = mc2.run_matching(hs)
-    report_results2.report_all(hs, qcx2_res, oxford=True)
+    hs.free_some_memory()
+    allres = rr2.report_all(hs, qcx2_res, oxford=False, stem=False, matrix=False)
+    return locals()
 
 def oxford_vsmany():
     params.__MATCH_TYPE__     = 'vsmany'
     params.__CHIP_SQRT_AREA__ = None
-    db_dir = load_data2.OXFORD
-    hs = load_data2.HotSpotter(db_dir, samples_from_file=True)
+    db_dir = ld2.OXFORD
+    hs = ld2.HotSpotter(db_dir, samples_from_file=True)
     qcx2_res = mc2.run_matching(hs)
-    report_results2.report_all(hs, qcx2_res, oxford=True)
+    allres = rr2.report_all(hs, qcx2_res, oxford=False, stem=False, matrix=False)
+    return locals()
     
 def mothers_vsmany():
     params.__MATCH_TYPE__     = 'vsmany'
-    run_experiment()
+    return run_experiment()
 
 def mothers_bow():
     params.__MATCH_TYPE__     = 'bagofwords'
-    run_experiment()
+    return run_experiment()
 
-import load_data2 as ld2
 def demo():
     pass
 #ld2.DEFAULT
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
-    import load_data2
     freeze_support()
 
     arg_map = {
@@ -114,11 +121,18 @@ if __name__ == '__main__':
     for argv in sys.argv:
         if argv in arg_map.keys():
             print('expts> Running '+str(argv))
-            arg_map[argv]()
+            expt_func = arg_map[argv]
+            expt_locals = expt_func()
+            hs = expt_locals['hs']
+            qcx2_res = expt_locals['qcx2_res']
+            allres = expt_locals['allres']
             has_arg = True
-        elif argv.find('param') > -1:
-            param_config1()
-            run_experiment
+        #elif argv.find('param') > -1:
+            #param_config1()
+            #expt_locals = run_experiment()
 
     if not has_arg:
-        run_experiment()
+        expt_locals2 = run_experiment()
+
+
+    exec(df2.present())

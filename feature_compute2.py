@@ -244,23 +244,27 @@ class HotspotterChipFeatures(DynStruct):
         self.cx2_desc = None
         self.cx2_kpts = None
         self.feat_type = None
-        # DEP
-        self.cx2_feats_hesaff = []
-        self.cx2_feats_sift   = []
-        self.cx2_feats_freak  = []
 
 def tryload(fname):
     if helpers.checkpath(fname):
         try: 
-            npz = np.load(fname, mmap_mode='r+')
+            npz = np.load(fname, mmap_mode=None)
             data = npz['arr_0']
+            npz.close()
             return data
         except Exception as ex:
             print(repr(ex))
             remove_file(fname)
     return None
     
-def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, cache_dir):
+def load_chip_feat_type(feat_dir,
+                        cx2_rchip_path,
+                        cx2_cid,
+                        feat_type, 
+                        feat_uid,
+                        cache_dir, 
+                        load_kpts=True, 
+                        load_desc=True):
     print('Loading '+feat_type+' features: UID='+str(feat_uid))
     cx2_kpts_fpath = cache_dir + '/cx2_kpts'+feat_uid+'.npz'
     cx2_desc_fpath = cache_dir + '/cx2_desc'+feat_uid+'.npz'
@@ -271,7 +275,12 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, 
         print('cx2_kpts filesize: ' + (helpers.file_megabytes_str(cx2_kpts_fpath)))
 
     cx2_kpts = tryload(cx2_kpts_fpath)
-    cx2_desc = tryload(cx2_desc_fpath)
+    if load_desc: 
+        cx2_desc = tryload(cx2_desc_fpath)
+    else:
+        #HACK
+        print(' ! Not loading descriptors')
+        cx2_desc = np.array([np.array([])] * len(cx2_kpts))
     if (not cx2_kpts is None and not cx2_desc is None):
         # This is pretty dumb. Gotta have a more intelligent save/load
         cx2_desc_ = cx2_desc.tolist()
@@ -367,7 +376,8 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, 
     # cache the data
     return cx2_kpts, cx2_desc
     
-def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
+def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
+                       load_desc=True):
     print('=============================')
     print('fc2> Computing and loading features')
     print('=============================')
@@ -381,7 +391,14 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths):
     # Load all the types of features
     feat_uid = params.get_feat_uid()
     feat_type = params.__FEAT_TYPE__
-    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, feat_type, feat_uid, cache_dir)
+    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, 
+                                             cx2_rchip_path, 
+                                             cx2_cid, 
+                                             feat_type, 
+                                             feat_uid, 
+                                             cache_dir,
+                                             load_kpts,
+                                             load_desc)
     hs_feats.feat_type = params.__FEAT_TYPE__
     hs_feats.cx2_kpts = cx2_kpts
     hs_feats.cx2_desc = cx2_desc

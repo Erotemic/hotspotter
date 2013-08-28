@@ -36,6 +36,196 @@ def reload_module():
     import sys
     imp.reload(sys.modules[__name__])
 
+FM_DTYPE= np.uint32
+FS_DTYPE= np.float32
+
+def fix_res_types(res):
+    for cx in xrange(len(res.cx2_fm_V)):
+        res.cx2_fm_V[cx] = np.array(res.cx2_fm_V[cx], dtype=FM_DTYPE)
+    for cx in xrange(len(res.cx2_fs_V)):
+        res.cx2_fs_V[cx] = np.array(res.cx2_fs_V[cx], dtype=FS_DTYPE)
+
+def fix_qcx2_res_types(qcx2_res):
+    '''
+    Changes data types of cx2_fm_V and cx2_fs_V
+    '''
+    total_qcx = len(qcx2_res)
+    fmt_str = helpers.make_progress_fmt_str(total_qcx)
+    for qcx in xrange(total_qcx):
+        helpers.print_(fmt_str % (qcx))
+        res = qcx2_res[qcx]
+        fix_res_types(res)
+
+#=========================
+# Query Result Class
+#=========================
+class QueryResult(DynStruct):
+    def __init__(self, qcx):
+        super(QueryResult, self).__init__()
+        self.qcx    = qcx
+        # Assigned features matches
+        self.cx2_fm = np.array([], dtype=FM_DTYPE)
+        self.cx2_fs = np.array([], dtype=FS_DTYPE)
+        self.cx2_score = np.array([])
+        # Spatially verified feature matches
+        self.cx2_fm_V = np.array([], dtype=FM_DTYPE)
+        self.cx2_fs_V = np.array([], dtype=FS_DTYPE)
+        self.cx2_score_V = np.array([])
+
+    def get_fpath(self, hs):
+        query_uid = params.get_query_uid()
+        qres_dir = hs.dirs.qres_dir 
+        fname = 'result_'+query_uid+'_qcx=%d.npz' % self.qcx
+        fpath = os.path.join(qres_dir, fname)
+        return fpath
+    
+    def save(self, hs):
+        # HACK
+        self.cx2_fm = np.array([])
+        self.cx2_fs = np.array([])
+        self.cx2_score = np.array([])
+        # Forget non spatial scores
+        fpath = self.get_fpath(hs)
+        if params.__VERBOSE_CACHE__:
+            print('caching result: '+repr(fpath))
+        else:
+            print('caching result: '+repr(os.path.split(fpath)[1]))
+        return self.save_result(fpath)
+
+    def has_cache(self, hs):
+        fpath = self.get_fpath(hs)
+        return os.path.exists(fpath)
+
+    def cache_bytes(self, hs):
+        fpath = self.get_fpath(hs)
+        return helpers.file_bytes(fpath)
+
+    def load(self, hs):
+        fpath = self.get_fpath(hs)
+        return self.load_result(fpath)
+
+    def save_result(self, fpath):
+        'Saves the result to the given database'
+        to_save  = self.__dict__.copy()
+        np.savez(fpath, **to_save)
+        return True
+
+    def load_result(self, fpath):
+        'Loads the result from the given database'
+        try:
+            with open(fpath, 'rb') as file_:
+                npz = np.load(file_)
+                for _key in npz.files:
+                    if _key in ['qcx']: # hack
+                        # Numpy saving is werid. gotta cast
+                        self.__dict__[_key] = npz[_key].tolist()
+                    else: 
+                        self.__dict__[_key] = npz[_key]
+                npz.close()
+            # HACK
+            self.cx2_fm = np.array([])
+            self.cx2_fs = np.array([])
+            self.cx2_score = np.array([])
+            # Forget non spatial scores
+            return True
+        except Exception as ex:
+            os.remove(fpath)
+            printWARN('Load Result Exception : ' + repr(ex) + 
+                    '\nResult was corrupted for qcx=%d' % self.qcx)
+            return False
+    #def __del__(self):
+        #print("Deleting Query Result")
+
+
+#========================================
+# Work Functions
+#========================================
+def run_matching(hs):
+    '''Runs the full matching pipeline using the abstracted classes'''
+    print(textwrap.dedent('''
+    =============================
+    mc2> Running Matching
+    ============================='''))
+    # Parameters
+    #reverify_query       = params.__REVERIFY_QUERY__
+    #resave_query         = params.__RESAVE_QUERY__
+    verbose_matching     = params.__VERBOSE_MATCHING__
+    test_sample_cx = hs.test_sample_cx
+    print_ = helpers.print_
+    # Create result containers
+    qcx2_res = [QueryResult(qcx) for qcx in xrange(hs.num_cx)]
+    #--------------------
+    # Read cached queries
+    #--------------------
+    total_queries = len(test_sample_cx)
+    print('mc2> Total queries: %d' % total_queries)
+    dirty_test_sample_cx = []
+    clean_test_sample_cx = []
+    fmt_str_filter = helpers.make_progress_fmt_str(total_queries, lbl='mc2> check cache: ')
+    # Filter queries into dirty and clean sets
+    for count, qcx in enumerate(test_sample_cx):
+        print_(fmt_str_filter % (count+1))
+        if qcx2_res[qcx].has_cache(hs):
+            clean_test_sample_cx.append(qcx)
+        else:
+            dirty_test_sample_cx.append(qcx)
+    print('')
+    print('mc2> Num clean queries: %d ' % len(clean_test_sample_cx))
+    print('mc2> Num dirty queries: %d ' % len(dirty_test_sample_cx))
+    # Check how much data we are going to load
+    num_bytes = 0
+    for qcx in iter(clean_test_sample_cx):
+        num_bytes += qcx2_res[qcx].cache_bytes(hs)
+    print('mc2> Loading %dMB cached results' % (num_bytes / (2.0 ** 20)))
+    # Load clean queries from the cache
+    fmt_str_load = helpers.make_progress_fmt_str(len(clean_test_sample_cx),
+                                                 lbl='mc2> load cache: ')
+    for count, qcx in enumerate(clean_test_sample_cx):
+        print_(fmt_str_load % (count+1))
+        qcx2_res[qcx].load(hs)
+    # Return if no dirty queries
+    if len(dirty_test_sample_cx) == 0:
+        print('No dirty queries')
+        return qcx2_res
+    #--------------------
+    # Execute dirty queries
+    #--------------------
+    assign_matches  = hs.matcher.assign_matches
+    cx2_desc = hs.feats.cx2_desc
+    cx2_kpts = hs.feats.cx2_kpts 
+    total_dirty = len(test_sample_cx)
+    print('mc2>Executing %d queries' % total_dirty)
+    for query_num, qcx in enumerate(dirty_test_sample_cx):
+        res = qcx2_res[qcx]
+        #
+        # Assign matches with the chosen function (vsone) or (vsmany)
+        num_qdesc = len(cx2_desc[qcx])
+        print_('query %d/%d> assign %d desc' % (qcx, total_dirty, num_qdesc))
+        tt1 = tic()
+        assign_output = assign_matches(qcx, cx2_desc)
+        (cx2_fm, cx2_fs, cx2_score) = assign_output
+        assign_time = toc(tt1)
+        print(' ...%.2f seconds' % (assign_time))
+        #
+        # Spatially verify the assigned matches
+        num_match = np.array([len(fm) for fm in cx2_fm]).sum()
+        print_('query %d/%d> verify %d matches' % (qcx, total_dirty, num_match))
+        tt2 = tic()
+        sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
+        (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
+        verify_time = toc(tt2)
+        print(' ...%.2f seconds' % (verify_time))
+        #
+        # Assign output to the query result 
+        res.cx2_fm      = cx2_fm
+        res.cx2_fs      = cx2_fs
+        res.cx2_score   = cx2_score
+        res.cx2_fm_V    = cx2_fm_V
+        res.cx2_fs_V    = cx2_fs_V
+        res.cx2_score_V = cx2_score_V
+        res.save(hs)
+        print('%d/%d' % (query_num, ))
+    return qcx2_res
 
 #========================================
 # Bag-of-Words
@@ -49,6 +239,9 @@ class BagOfWordsIndex(DynStruct):
         self.wx2_idf     = wx2_idf
         self.wx2_cxs     = wx2_cxs
         self.wx2_fxs     = wx2_fxs
+    def __del__(self):
+        print("Deleting BagOfWordsIndex")
+        self.words_flann.delete_index()
 
 # precompute the bag of words model
 def precompute_bag_of_words(hs):
@@ -62,9 +255,9 @@ def precompute_bag_of_words(hs):
     cache_dir  = hs.dirs.cache_dir
     cx2_desc   = hs.feats.cx2_desc
     train_cxs  = hs.train_sample_cx
-    train_cxs = range(len(cx2_desc)) if train_cxs is None else train_cxs
+    train_cxs = range(hs.num_cx) if train_cxs is None else train_cxs
     db_cxs     = hs.database_sample_cx
-    db_cxs    = range(len(cx2_desc)) if db_cxs    is None else db_cxs
+    db_cxs    = range(hs.num_cx) if db_cxs    is None else db_cxs
     vocab_size = params.__BOW_NUM_WORDS__
     # Compute vocabulary
     print(textwrap.dedent('''
@@ -228,8 +421,8 @@ def assign_matches_bagofwords(qcx, cx2_desc, bow_index):
             cx2_fm[cx].append(fm)
             cx2_fs[cx].append(fs)
     # Convert to numpy
-    for cx in xrange(len(cx2_desc)): cx2_fm[cx] = np.array(cx2_fm[cx])
-    for cx in xrange(len(cx2_desc)): cx2_fs[cx] = np.array(cx2_fs[cx])
+    for cx in xrange(len(cx2_desc)): cx2_fm[cx] = np.array(cx2_fm[cx], dtype=FM_DTYPE)
+    for cx in xrange(len(cx2_desc)): cx2_fs[cx] = np.array(cx2_fs[cx], dtype=FS_DTYPE)
     return cx2_fm, cx2_fs, cx2_score
 
 #========================================
@@ -244,6 +437,8 @@ class VsManyIndex(DynStruct): # TODO: rename this
         self.ax2_desc  = ax2_desc # not used, but needs to maintain scope
         self.ax2_cx = ax2_cx
         self.ax2_fx = ax2_fx
+    def __del__(self):
+        print("Deleting VsManyIndex")
 
 def __aggregate_descriptors(cx2_desc, db_cxs):
     '''Aggregates a sample set of descriptors. 
@@ -266,7 +461,7 @@ def aggregate_descriptors_vsmany(hs):
     print('Aggregating descriptors for one-vs-many')
     cx2_desc  = hs.feats.cx2_desc
     db_cxs    = hs.database_sample_cx
-    db_cxs    = range(len(cx2_desc)) if db_cxs    is None else db_cxs
+    db_cxs    = range(hs.num_cx) if db_cxs is None else db_cxs
     return __aggregate_descriptors(cx2_desc, db_cxs)
 
 #@profile
@@ -340,9 +535,9 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
         cx2_fs[cx].append(score)
     # Convert to numpy
     for cx in xrange(len(cx2_desc)): 
-        cx2_fm[cx] = np.array(cx2_fm[cx])
+        cx2_fm[cx] = np.array(cx2_fm[cx], dtype=FM_DTYPE)
     for cx in xrange(len(cx2_desc)): 
-        cx2_fs[cx] = np.array(cx2_fs[cx])
+        cx2_fs[cx] = np.array(cx2_fs[cx], dtype=FS_DTYPE)
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     return cx2_fm, cx2_fs, cx2_score
 
@@ -414,8 +609,8 @@ def match_vsone(desc2, vsone_flann, checks, ratio_thresh=1.2, burst_thresh=None)
         fx  = np.intersect1d(fx, fx_nonbursty, assume_unique=True)
     # RETURN vsone matches and scores
     qfx = fx2_qfx[fx, 0]
-    fm  = np.array(zip(qfx, fx))
-    fs  = fx2_ratio[fx]
+    fm  = np.array(zip(qfx, fx), dtype=FM_DTYPE)
+    fs  = np.array(fx2_ratio[fx], dtype=FS_DTYPE)
     return (fm, fs)
 
 #========================================
@@ -489,78 +684,6 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
     return cx2_fm_V, cx2_fs_V, cx2_score_V
 
 #=========================
-# Query Result Class
-#=========================
-class QueryResult(DynStruct):
-    def __init__(self, qcx):
-        super(QueryResult, self).__init__()
-        self.qcx    = qcx
-        # Assigned features matches
-        self.cx2_fm = np.array([])
-        self.cx2_fs = np.array([])
-        self.cx2_score = np.array([])
-        # Spatially verified feature matches
-        self.cx2_fm_V = np.array([])
-        self.cx2_fs_V = np.array([])
-        self.cx2_score_V = np.array([])
-
-    def get_fpath(self, hs):
-        query_uid = params.get_query_uid()
-        qres_dir = hs.dirs.qres_dir 
-        fname = 'result_'+query_uid+'_qcx=%d.npz' % self.qcx
-        fpath = os.path.join(qres_dir, fname)
-        return fpath
-    
-    def save(self, hs):
-        # HACK
-        self.cx2_fm = np.array([])
-        self.cx2_fs = np.array([])
-        self.cx2_score = np.array([])
-        # Forget non spatial scores
-        fpath = self.get_fpath(hs)
-        if params.__VERBOSE_CACHE__:
-            print('caching result: '+repr(fpath))
-        else:
-            print('caching result: '+repr(os.path.split(fpath)[1]))
-        return self.save_result(fpath)
-
-    def load(self, hs):
-        fpath = self.get_fpath(hs)
-        if helpers.checkpath(fpath):
-            helpers.print_('load_result(filesize=%s)' % helpers.file_megabytes_str(fpath))
-            helpers.flush()
-            return self.load_result(fpath)
-        return False
-
-    def save_result(self, fpath):
-        'Saves the result to the given database'
-        to_save  = self.__dict__.copy()
-        np.savez(fpath, **to_save)
-        return True
-
-    def load_result(self, fpath):
-        'Loads the result from the given database'
-        try:
-            npz = np.load(fpath, mmap_mode='r+')
-            for _key in npz.files:
-                if _key in ['qcx']: # hack
-                    # Numpy saving is werid. gotta cast
-                    self.__dict__[_key] = npz[_key].tolist()
-                else: 
-                    self.__dict__[_key] = npz[_key]
-            # HACK
-            self.cx2_fm = np.array([])
-            self.cx2_fs = np.array([])
-            self.cx2_score = np.array([])
-            # Forget non spatial scores
-            return True
-        except Exception as ex:
-            os.remove(fpath)
-            printWARN('Load Result Exception : ' + repr(ex) + 
-                    '\nResult was corrupted for qcx=%d' % self.qcx)
-            return False
-
-#=========================
 # Matcher Class
 #=========================
 class Matcher(DynStruct):
@@ -588,89 +711,20 @@ class Matcher(DynStruct):
             self.__assign_matches = assign_matches_vsone
         else:
             raise Exception('Unknown match_type: '+repr(match_type))
+
+    def __del__(self):
+        print("Deleting Matcher")
+
     def assign_matches(self, qcx, cx2_desc):
         'Function which calls the correct matcher'
         return self.__assign_matches(qcx, cx2_desc)
+
     # query helpers
     def __assign_matches_vsmany(self, qcx, cx2_desc):
         return assign_matches_vsmany(qcx, cx2_desc, self.__vsmany_index)
+
     def __assign_matches_bagofwords(self, qcx, cx2_desc):
         return assign_matches_bagofwords(qcx, cx2_desc, self.__bow_index)
-
-#========================================
-# Work Functions
-#========================================
-def run_matching(hs):
-    '''Runs the full matching pipeline using the abstracted classes'''
-    print(textwrap.dedent('''
-    =============================
-    mc2> Running Matching
-    ============================='''))
-    assign_matches  = hs.matcher.assign_matches
-    cx2_desc = hs.feats.cx2_desc
-    cx2_kpts = hs.feats.cx2_kpts 
-    qcx2_res = [QueryResult(qcx) for qcx in xrange(len(cx2_desc))]
-    test_sample_cx = hs.test_sample_cx
-    tt_ALL = tic('all queries')
-
-    verbose_matching     = params.__VERBOSE_MATCHING__
-    force_requery_cx_set = params.__FORCE_REQUERY_CX__
-    reverify_query       = params.__REVERIFY_QUERY__
-    resave_query         = params.__RESAVE_QUERY__
-    #if verbose_matching:
-        #print('mc2>test_sample_cx = %r ' % test_sample_cx)
-    total_queries = len(test_sample_cx)
-    print('mc2>Running %d queries' % total_queries)
-    for query_num, qcx in enumerate(test_sample_cx):
-        if verbose_matching:
-            helpers.print_('query %d>' % qcx)
-        res = qcx2_res[qcx]
-        # load query from cache if possible
-        cache_load_success = params.__CACHE_QUERY__ and res.load(hs)
-        if qcx in force_requery_cx_set:
-            cache_load_success = False
-        # Get what data we have if we are redoing things
-        if cache_load_success or resave_query or reverify_query:
-            cx2_fm      = res.cx2_fm
-            cx2_fs      = res.cx2_fs
-            cx2_score   = res.cx2_score
-            cx2_fm_V    = res.cx2_fm_V
-            cx2_fs_V    = res.cx2_fs_V
-            cx2_score_V = res.cx2_score_V
-        # Assign matches with the chosen function (vsone) or (vsmany)
-        if not cache_load_success:
-            tt_A = tic()
-            print('')
-            helpers.print_('query %d> assign %d descriptors' % (qcx, len(cx2_desc)))
-            cx2_fm, cx2_fs, cx2_score = assign_matches(qcx, cx2_desc)
-            assign_time = toc(tt_A)
-            print(' ...%.2f seconds' % (assign_time))
-        # Spatially verify the assigned matches
-        if not cache_load_success or reverify_query:
-            num_matches = np.array([len(fm) for fm in cx2_fm]).sum()
-            tt_V = tic()
-            print('query %d> verify %d matches' % (qcx, num_matches))
-            (cx2_fm_V, cx2_fs_V, cx2_score_V) = \
-                    spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
-            verify_time = toc(tt_V)
-            print(' ...%.2f seconds' % (verify_time))
-        # Assign output to the query result 
-        res.qcx = qcx
-        res.cx2_fm    = cx2_fm
-        res.cx2_fs    = cx2_fs
-        res.cx2_score = cx2_score
-        res.cx2_fm_V = cx2_fm_V
-        res.cx2_fs_V = cx2_fs_V
-        res.cx2_score_V = cx2_score_V
-        # Cache query result
-        if not cache_load_success or reverify_query or resave_query:
-            print('Resaving query')
-            res.save(hs)
-        print(';%d/%d' % (query_num, total_queries))
-    #total_time = toc(tt_ALL)
-    print('')
-    return qcx2_res
-
 
 
 if __name__ == '__main__':

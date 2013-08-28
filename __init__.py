@@ -1,17 +1,64 @@
 # the hotspotter python module
 from __future__ import division
-print('Calling hotspotter.__init__')
+print('Initializing HotSpotter: ')
 #import scipy.ndimage.filters as filters
+# your stack overflow question was answered
 
+# Bread and butter
+import os
+from os.path import join, relpath, realpath, normpath, dirname, exists
+import sys
+import types
+import textwrap 
+# IO
+import cStringIO
+import cPickle
+# System
+import subprocess
+import shutil
+# Util
+import traceback
+import code
+import inspect
+# Python magic
+import multiprocessing
+import warnings
+import datetime
+import functools
+import imp
+import itertools
+from itertools import izip
+import signal
+import time
+import re
+import fnmatch
+
+
+print os.environ 
+
+print('\n-------------\n') 
+print(' * PATH = %s' % str(os.environ['PATH']))
+print('\n-------------\n') 
+print(' * PYTHONPATH = %s' % str(os.environ['PYTHONPATH']))
+
+source_dir = os.path.dirname(__file__)
+print('\n * Source directory: '+source_dir)
+if os.environ['PYTHONPATH'].find(source_dir) == -1:
+    toappend = source_dir + os.pathsep
+    os.environ['PYTHONPATH'] = toappend + os.environ['PYTHONPATH']
+
+import hotspotter
+print('Hotspotter: ')
+print dir(hotspotter)
 import hotspotter.df2 as df2
 import hotspotter.Pref as Pref
 import hotspotter.algos as algos
 import hotspotter.chip_compute2 as cc2
-import hotspotter.experiments as experiments
 import hotspotter.helpers as helpers
 import hotspotter.load_data2 as ld2
 import hotspotter.match_chips2 as mc2
 import hotspotter.params as params
+#import hotspotter.report_results2 as report_results2
 import hotspotter.report_results2 as rr2
 import hotspotter.spatial_verification2 as sv2
 import hotspotter.tpl.extern_feat as extern_feat
@@ -71,7 +118,6 @@ import warnings
 from itertools import izip
 #1-866-2420
 
-from os.path import join, relpath, realpath, normpath, dirname, exists
 from PIL import Image
 from hotspotter.Parallelize import parallel_compute
 from hotspotter.Printable import DynStruct

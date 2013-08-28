@@ -16,6 +16,8 @@ import sys
 import textwrap
 from itertools import izip
 from os.path import realpath, join, normpath
+import vizualizations as viz
+import re
 
 __DUMP__ = True # or __BROWSE__
 
@@ -637,13 +639,46 @@ if __name__ == '__main__':
     # Params
     print('Main: report_results')
     allres = helpers.search_stack_for_localvar('allres')
-    if allres is None:
-        hs = ld2.HotSpotter(ld2.DEFAULT)
-        qcx2_res = mc2.run_matching(hs)
-        SV = True
-        # Initialize Results
-        allres = init_allres(hs, qcx2_res, SV)
+    #if allres is None:
+        #hs = ld2.HotSpotter(ld2.DEFAULT)
+        #qcx2_res = mc2.run_matching(hs)
+        #SV = True
+        ## Initialize Results
+        #allres = init_allres(hs, qcx2_res, SV)
     # Do something
+    from fnmatch import fnmatch
+
+    help_ = textwrap.dedent(r'''
+    Enter a command.
+        q (or space) : quit 
+        h            : help
+        cx [cx]    : shows a chip
+    ''')
+    print(help_)
+    firstcmd = 'cx 0'
+    ans = None
+    while True:
+        ans = raw_input('>') if not ans is None else firstcmd
+        if ans == 'q' or ans == ' ':
+            break
+        if allres is None:
+            hs = ld2.HotSpotter(ld2.DEFAULT)
+            qcx2_res = mc2.run_matching(hs)
+            SV = True
+            # Initialize Results
+            allres = init_allres(hs, qcx2_res, SV)
+        if ans == 'h':
+            print help_
+        elif re.match('cx [0-9][0-9]*', ans):
+            cx = int(ans.replace('cx ',''))
+            viz.plot_cx(allres, cx)
+        elif re.match('[0-9][0-9]*', ans):
+            cx = int(ans)
+            viz.plot_cx(allres, cx)
+        else:
+            exec(ans)
+        df2.update()
+
     #browse='--browse' in sys.argv
     #stem='--stem' in sys.argv
     #hist='--hist' in sys.argv

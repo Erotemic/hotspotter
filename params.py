@@ -34,22 +34,29 @@ SONOGRAMS = WORK_DIR+'/sonograms'
 DEFAULT = MOTHERS
 #DEFAULT = NAUTS
 #__BOW_DTYPE__ = np.uint8
-__DATABASE__ = NAUTS
+__DATABASE__ = NAUTS # TODO: UN__
 # Number of processessors
-__NUM_PROCS__ = 8
+__NUM_PROCS__ = 8 # TODO: UN__
+
+
 # Feature type to use
 __FEAT_TYPE__    = 'HESAFF'
 # Matching type
 __MATCH_TYPE__   = 'vsmany'
+
 # Number of matches for one-vs-many
 __VSMANY_K__     = 5
+
 # Vocab size for bag of words
 __BOW_NUM_WORDS__  = long(5e4)
+
 # Thresholds for one-vs-one
 __VSONE_RATIO_THRESH__ = 1.5
+
+# SPATIAL RERANK
 # Number of top matches to spatially re-rank
 __NUM_RERANK__   = 1000
-# Percentage of the diagonal length of keypoint extent
+# % diaglen of keypoint extent
 __XY_THRESH__    = .1
 __SCALE_THRESH__ = .5
 

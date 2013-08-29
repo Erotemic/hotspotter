@@ -16,6 +16,7 @@ import cv2
 # python
 import sys
 import os
+from os.path import exists
 
 def reload_module():
     import imp
@@ -248,7 +249,7 @@ def tryload(fname):
             print(repr(ex))
             remove_file(fname)
     return None
-    
+
 def load_chip_feat_type(feat_dir,
                         cx2_rchip_path,
                         cx2_cid,
@@ -258,21 +259,20 @@ def load_chip_feat_type(feat_dir,
                         load_kpts=True, 
                         load_desc=True):
     print('Loading '+feat_type+' features: UID='+str(feat_uid))
-    cx2_kpts_fpath = cache_dir + '/cx2_kpts'+feat_uid+'.npz'
-    cx2_desc_fpath = cache_dir + '/cx2_desc'+feat_uid+'.npz'
-    # Try to read cache
-    print('Attempting load of cx2_kpts and cx2_desc')
-    if all(map(os.path.exists, [cx2_kpts_fpath, cx2_desc_fpath])):
-        print('cx2_desc filesize: ' + (helpers.file_megabytes_str(cx2_desc_fpath)))
-        print('cx2_kpts filesize: ' + (helpers.file_megabytes_str(cx2_kpts_fpath)))
 
-    cx2_kpts = tryload(cx2_kpts_fpath)
+    dpath = cache_dir
+    uid   = feat_uid
+    ext   = '.npy'
+
+    debug_smart_load(dpath, fname='*', uid=uid, ext='*')
+    # Try to read cache
+    cx2_kpts = smart_load(dpath, 'cx2_kpts', uid, ext, can_fail=True)
     if load_desc: 
-        cx2_desc = tryload(cx2_desc_fpath)
-    else:
-        #HACK
+        cx2_desc = smart_load(dpath, 'cx2_desc', uid, ext, can_fail=True)
+    else: #HACK
         print(' ! Not loading descriptors')
         cx2_desc = np.array([np.array([])] * len(cx2_kpts))
+
     if (not cx2_kpts is None and not cx2_desc is None):
         # This is pretty dumb. Gotta have a more intelligent save/load
         cx2_desc_ = cx2_desc.tolist()
@@ -374,12 +374,12 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
     print('fc2> Computing and loading features')
     print('=============================')
     # --- GET INPUT --- #
+    hs_feats = HotspotterChipFeatures()
     # Paths to features
     feat_dir       = hs_dirs.feat_dir
     cache_dir      = hs_dirs.cache_dir
     cx2_rchip_path = hs_cpaths.cx2_rchip_path
     cx2_cid        = hs_tables.cx2_cid
-    hs_feats = HotspotterChipFeatures()
     # Load all the types of features
     feat_uid = params.get_feat_uid()
     feat_type = params.__FEAT_TYPE__

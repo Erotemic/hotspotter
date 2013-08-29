@@ -1,25 +1,21 @@
-'''
-Computes feature representations
-'''
-from __future__ import division
+''' Computes feature representations '''
 #from __init__ import *
-# import hotspotter modules
+from __future__ import division
+# hotspotter
 import draw_func2 as df2
 import algos
 import params
 import tpl.extern_feat as extern_feat
 import helpers
 from Parallelize import parallel_compute
-from Pref import Pref
 from Printable import DynStruct
-# import scientific modules
+# scientific
 from numpy import array, cos, float32, hstack, pi, round, sqrt, uint8, zeros
 import numpy as np
 import cv2
-# import python modules
+# python
 import sys
 import os
-#print('LOAD_MODULE: feature_compute2.py')
 
 def reload_module():
     import imp
@@ -28,11 +24,6 @@ def reload_module():
 
 def printDEBUG(msg):
     print msg
-
-def default_feature_preferences():
-    prefs = Pref()
-    prefs.feat_type = Pref('HESAFF')
-    prefs.whiten    = Pref(params.__WHITEN__)
 
 #def old_cvkpts2_kpts(cvkpts)
     #kpts = zeros((len(cvkpts), 5), dtype=float32)
@@ -115,6 +106,7 @@ def __precompute(rchip_path, feats_path, compute_func):
 # Global cv2 detectors and extractors      
 # =======================================
 def get_cv2_params(cv2_class):
+    from Pref import Pref
     cv2_pref = Pref()
     for param_name in iter(cv2_class.getParams()):
         param_type = cv2_class.paramType(param_name)
@@ -345,7 +337,7 @@ def load_chip_feat_type(feat_dir,
         #cx2_kpts  = [k for (k,d) in cx2_feats]
         #cx2_desc  = np.array([d for (k,d) in cx2_feats])
         # Whiten descriptors
-        if params.__WHITEN_FEATS__:
+        if params.WHITEN_FEATS:
             print(' * Whitening features')
             #print (' * Stacking '+str(len(cx2_desc))+' features')
             #print helpers.info(cx2_desc, 'cx2_desc')

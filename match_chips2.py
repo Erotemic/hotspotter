@@ -36,9 +36,11 @@ def reload_module():
     import sys
     imp.reload(sys.modules[__name__])
 
-FM_DTYPE= np.uint32
-FS_DTYPE= np.float32
-__MAX_AKMEANS_ITERS__ = 100
+BOW_DTYPE = np.uint8
+FM_DTYPE  = np.uint32
+FS_DTYPE  = np.float32
+
+MAX_AKMEANS_ITERS = 100
 
 def fix_res_types(res):
     for cx in xrange(len(res.cx2_fm_V)):
@@ -87,7 +89,7 @@ class QueryResult(DynStruct):
         self.cx2_score = np.array([])
         # Forget non spatial scores
         fpath = self.get_fpath(hs)
-        if params.__VERBOSE_CACHE__:
+        if params.VERBOSE_CACHE:
             print('caching result: '+repr(fpath))
         else:
             print('caching result: '+repr(os.path.split(fpath)[1]))
@@ -148,9 +150,9 @@ def run_matching(hs):
     mc2> Running Matching
     ============================='''))
     # Parameters
-    #reverify_query       = params.__REVERIFY_QUERY__
-    #resave_query         = params.__RESAVE_QUERY__
-    verbose_matching     = params.__VERBOSE_MATCHING__
+    #reverify_query       = params.REVERIFY_QUERY
+    #resave_query         = params.RESAVE_QUERY
+    verbose_matching     = params.VERBOSE_MATCHING
     test_sample_cx = hs.test_sample_cx
     print_ = helpers.print_
     # Create result containers
@@ -292,13 +294,13 @@ def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
         helpers.printWARN(msg)
         vocab_size = num_train_desc / 2
     # Cluster descriptors into a visual vocabulary
-    akmeans_flann_params = params.__BOW_AKMEANS_FLANN_PARAMS__
-    _, words = algos.precompute_akmeans(train_desc, vocab_size, __MAX_AKMEANS_ITERS__,
+    akmeans_flann_params = params.BOW_AKMEANS_FLANN_PARAMS
+    _, words = algos.precompute_akmeans(train_desc, vocab_size, MAX_AKMEANS_ITERS,
                                         akmeans_flann_params, cache_dir,
                                         force_recomp=False, 
                                         same_data=False)
     # Index the vocabulary for fast nearest neighbor search
-    words_flann_params = params.__BOW_WORDS_FLANN_PARAMS__
+    words_flann_params = params.BOW_WORDS_FLANN_PARAMS
     words_flann = algos.precompute_flann(words, cache_dir, lbl='words',
                                          flann_params=words_flann_params)
     return words, words_flann
@@ -342,7 +344,7 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, db_cxs, cache_d
     print(' * building sparse visual words')
     coo_cols = ax2_wx  
     coo_rows = ax2_cx
-    coo_values = np.ones(len(ax2_cx), dtype=np.uint8)
+    coo_values = np.ones(len(ax2_cx), dtype=BOW_DTYPE)
     coo_format = (coo_values, (coo_rows, coo_cols))
     coo_cx2_vvec = spsparse.coo_matrix(coo_format, dtype=np.float, copy=True)
     cx2_tf_vvec  = spsparse.csr_matrix(coo_cx2_vvec, copy=False)
@@ -475,7 +477,7 @@ def precompute_index_vsmany(hs):
     ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_vsmany(hs)
     # Precompute flann index
     matcher_uid = params.get_matcher_uid()
-    vsmany_flann_params = params.__VSMANY_FLANN_PARAMS__
+    vsmany_flann_params = params.VSMANY_FLANN_PARAMS
     vsmany_flann = algos.precompute_flann(ax2_desc, 
                                           cache_dir=cache_dir,
                                           lbl=matcher_uid,
@@ -511,7 +513,7 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
     desc1 = cx2_desc[qcx]
     k_vsmany = params.__VSMANY_K__+1 if isQueryIndexed else params.__VSMANY_K__
     # Find each query descriptor's k+1 nearest neighbors
-    checks = params.__VSMANY_FLANN_PARAMS__['checks']
+    checks = params.VSMANY_FLANN_PARAMS['checks']
     (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, k_vsmany+1, checks=checks)
     vote_dists = qfx2_dists[:, 0:k_vsmany]
     norm_dists = qfx2_dists[:, k_vsmany] # k+1th descriptor for normalization
@@ -552,7 +554,7 @@ def assign_matches_vsone(qcx, cx2_desc):
           % (qcx, len(cx2_desc)))
     desc1 = cx2_desc[qcx]
     vsone_flann = pyflann.FLANN()
-    vsone_flann_params =  params.__VSONE_FLANN_PARAMS__
+    vsone_flann_params =  params.VSONE_FLANN_PARAMS
     ratio_thresh = params.__VSONE_RATIO_THRESH__
     checks = vsone_flann_params['checks']
     vsone_flann.build_index(desc1, **vsone_flann_params)

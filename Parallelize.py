@@ -32,7 +32,7 @@ def cpu_count():
     return mp.cpu_count()
 
 def parallel_compute(func, arg_list, num_procs=None, lazy=True):
-    num_procs = params.__NUM_PROCS__ if num_procs is None else num_procs
+    num_procs = params.NUM_PROCS if num_procs is None else num_procs
     if lazy:
         task_list = make_task_list_lazy(func, *arg_list)
     else:

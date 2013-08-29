@@ -335,7 +335,7 @@ def load_csv_tables(db_dir):
             name = csv_fields[1]
             nid2_nx[nid] = len(nx2_name)
             nx2_name.append(name)
-        if params.__VERBOSE_LOAD_DATA__:
+        if params.VERBOSE_LOAD_DATA:
             print('      * Loaded '+str(len(nx2_name)-2)+' names (excluding unknown names)')
             print('      * Done loading name table')
 
@@ -346,7 +346,7 @@ def load_csv_tables(db_dir):
         print('... Loading images')
         # Load Image Table 
         # <LEGACY CODE>
-        if params.__VERBOSE_LOAD_DATA__:
+        if params.VERBOSE_LOAD_DATA:
             print('    ... Loading image table: '+image_table)
         gid2_gx = {}
         gid_lines = open(image_table,'r').readlines()
@@ -364,7 +364,7 @@ def load_csv_tables(db_dir):
             gx2_gname.append(gname)
         nTableImgs = len(gx2_gname)
         fromTableNames = set(gx2_gname)
-        if params.__VERBOSE_LOAD_DATA__:
+        if params.VERBOSE_LOAD_DATA:
             print('          * table specified '+str(nTableImgs)+' images')
             # </LEGACY CODE>
             # Load Image Directory
@@ -378,7 +378,7 @@ def load_csv_tables(db_dir):
                     continue
                 gx2_gname.append(fname)
                 nDirImgs += 1
-        if params.__VERBOSE_LOAD_DATA__:
+        if params.VERBOSE_LOAD_DATA:
             print('          * dir specified '+str(nDirImgs)+' images')
             print('          * '+str(nDirImgsAlready)+' were already specified in the table')
             print('  * Loaded '+str(len(gx2_gname))+' images')
@@ -408,7 +408,7 @@ def load_csv_tables(db_dir):
                 chip_csv_format = [_.strip() for _ in csv_line.strip('#').split(',')]
             if csv_line.find(header_numdata) == 0:
                 num_data = int(csv_line.replace(header_numdata,''))
-        if params.__VERBOSE_LOAD_DATA__:
+        if params.VERBOSE_LOAD_DATA:
             print('  * num_chips: '+str(num_data))
             print('  * chip_csv_format: '+str(chip_csv_format))
         cid_x   = tryindex(chip_csv_format, 'ChipID')
@@ -433,7 +433,7 @@ def load_csv_tables(db_dir):
         prop_dict = {}
         for prop in iter(px2_prop_key):
             prop_dict[prop] = []
-        if params.__VERBOSE_LOAD_DATA__:
+        if params.VERBOSE_LOAD_DATA:
             print('  * num_user_properties: '+str(len(prop_dict.keys())))
         # Parse Chip Table
         for line_num, csv_line in enumerate(cid_lines):
@@ -482,7 +482,7 @@ def load_csv_tables(db_dir):
         print('Failed on fields:       '+repr(csv_fields))
         raise
 
-    if params.__VERBOSE_LOAD_DATA__:
+    if params.VERBOSE_LOAD_DATA:
         print('  * Loaded: '+str(len(cx2_cid))+' chips')
         print('  * Done loading chip table')
     # Return all information from load_tables
@@ -652,7 +652,7 @@ def test_load_csv():
 if __name__ == '__main__':
     import draw_func2 as df2
     if '--test' in sys.argv:
-        helpers.__PRINT_CHECKS__ = True #might as well
+        helpers.PRINT_CHECKS = True #might as well
         hs_dirs, hs_tables = test_load_csv()
     else:
         db_dir = params.DEFAULT

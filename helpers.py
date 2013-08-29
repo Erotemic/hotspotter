@@ -42,7 +42,7 @@ def rrr():
 
 IMG_EXTENSIONS = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
 
-__PRINT_CHECKS__ = True
+PRINT_CHECKS = True
 __PRINT_WRITES__ = False
 
 VERY_VERBOSE = False
@@ -514,7 +514,7 @@ __CHECKPATH_VERBOSE__ = False
 def checkpath(_path, print_checks=None):
     '''Checks to see if the argument _path exists.'''
     # Do the work
-    print_checks = __PRINT_CHECKS__ if print_checks is None else print_checks
+    print_checks = PRINT_CHECKS if print_checks is None else print_checks
     _path = os.path.normpath(_path)
     if not print_checks:
         return os.path.exists(_path)

@@ -357,7 +357,7 @@ def convert_named_chips(db_dir, img_dpath=None):
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
-    helpers.__PRINT_CHECKS__ = True
+    helpers.PRINT_CHECKS = True
     oxsty_convert_list = [load_data2.OXFORD, load_data2.PARIS]
     for db_dir in oxsty_convert_list:
         print('\n-- Begin Convert --\n{')

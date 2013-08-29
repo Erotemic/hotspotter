@@ -44,7 +44,7 @@ def oxford_philbin07():
     params.__BOW_NUM_WORDS__     = [1e4, 2e4, 5e4, 1e6, 1.25e6][3]
     params.__NUM_RERANK__        = [100, 200, 400, 800, 1000][3]
     params.__CHIP_SQRT_AREA__    = None
-    params.__BOW_AKMEANS_FLANN_PARAMS__ = dict(algorithm='kdtree',
+    params.BOW_AKMEANS_FLANN_PARAMS = dict(algorithm='kdtree',
                                                trees=8, checks=64)
     # I'm not sure if checks parameter is set correctly
     db_dir = ld2.OXFORD

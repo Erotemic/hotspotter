@@ -7,14 +7,20 @@ import numpy as np
 import helpers
 #print('LOAD_MODULE: params.py')
 
-#print(' * __name__ = %s' % __name__)
-#print(' * sys.argv = %r' % sys.argv)
-#print(' * sys.checkinterval   = %r' % sys.getcheckinterval())
-#print(' * sys.defaultencoding = %r' % sys.getdefaultencoding())
-#print(' * sys.filesystemencoding = %r' % sys.getfilesystemencoding())
-#print(' * sys.prefix = %r' % sys.prefix)
+'''
+print(' * __name__ = %s' % __name__)
+print(' * sys.argv = %r' % sys.argv)
+print(' * sys.checkinterval   = %r' % sys.getcheckinterval())
+print(' * sys.defaultencoding = %r' % sys.getdefaultencoding())
+print(' * sys.filesystemencoding = %r' % sys.getfilesystemencoding())
+print(' * sys.prefix = %r' % sys.prefix)
+'''
 
-# MODULE GLOBAL VARIABLES
+#=====================================================
+# DEV DATABASE GLOBALS
+#=====================================================
+
+
 WORK_DIR = 'D:/data/work'
 if sys.platform == 'linux2':
     WORK_DIR = '/media/Store/data/work'
@@ -30,35 +36,24 @@ OXFORD    = WORK_DIR+'/Oxford_Buildings'
 PARIS     = WORK_DIR+'/Paris_Buildings'
 SONOGRAMS = WORK_DIR+'/sonograms'
 
+dev_databases = {
+    'SONOGRAMS' : SONOGRAMS,
+    'JAG'       : JAGUARS,
+    'FROGS'     : FROGS,
+    'NAUTS'     : NAUTS,
+    'GZ_ALL'    : GZ_ALL,
+    'WS_HARD'   : WS_HARD,
+    'MOTHERS'   : MOTHERS,
+    'OXFORD'    : OXFORD,
+    'PARIS'     : PARIS}
 
-DEFAULT = MOTHERS
 #DEFAULT = NAUTS
-#__BOW_DTYPE__ = np.uint8
-__DATABASE__ = NAUTS # TODO: UN__
-# Number of processessors
-__NUM_PROCS__ = 8 # TODO: UN__
+DEFAULT = MOTHERS
+DATABASE = NAUTS 
 
-
-# Feature type to use
-__FEAT_TYPE__    = 'HESAFF'
-# Matching type
-__MATCH_TYPE__   = 'vsmany'
-
-# Number of matches for one-vs-many
-__VSMANY_K__     = 5
-
-# Vocab size for bag of words
-__BOW_NUM_WORDS__  = long(5e4)
-
-# Thresholds for one-vs-one
-__VSONE_RATIO_THRESH__ = 1.5
-
-# SPATIAL RERANK
-# Number of top matches to spatially re-rank
-__NUM_RERANK__   = 1000
-# % diaglen of keypoint extent
-__XY_THRESH__    = .1
-__SCALE_THRESH__ = .5
+#=====================================================
+# Flann Configurations
+#=====================================================
 
 hs1_params = {'algorithm':'kdtree',
               'trees'    :4,
@@ -68,7 +63,6 @@ quick_and_dirty_params = {'algorithm':'kdtree',
               'trees'    :8,
               'checks'   :8}
 
-# Unwhitened
 mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
                               'branching'          : 16,
                               'build_weight'       : 0.009999999776482582,
@@ -92,42 +86,54 @@ mother_hesaff_tuned_params = {'algorithm'          : 'kmeans',
                               'target_precision'   : 0.8999999761581421,
                               'trees'              : 1}
 
-__BOW_AKMEANS_FLANN_PARAMS__ = {'algorithm':'kdtree',
+BOW_AKMEANS_FLANN_PARAMS = {'algorithm':'kdtree',
                                 'trees'    :8,
                                 'checks'   :64}
-__BOW_WORDS_FLANN_PARAMS__   = hs1_params 
-__VSMANY_FLANN_PARAMS__      = hs1_params
-__VSONE_FLANN_PARAMS__       = hs1_params
+
+BOW_WORDS_FLANN_PARAMS   = hs1_params 
+VSMANY_FLANN_PARAMS      = hs1_params
+VSONE_FLANN_PARAMS       = hs1_params
 
 
-__VERBOSE_CACHE__ = False
-__VERBOSE_LOAD_DATA__ = False
-__VERBOSE_MATCHING__ = True
+VERBOSE_CACHE = False
+VERBOSE_LOAD_DATA = False
+VERBOSE_MATCHING = True
 
-__CACHE_QUERY__    = True
-__REVERIFY_QUERY__ = False
-__RESAVE_QUERY__   = False
+CACHE_QUERY    = True
+REVERIFY_QUERY = False
+RESAVE_QUERY   = False
 
-__WHITEN_FEATS__   = False
+WHITEN_FEATS   = False
 
+NUM_PROCS = 8 # Number of processessors
+
+#=====================================================
+# ALGO GLOBALS
+#=====================================================
+# Double __ means It is an algorithm varaible
+#---  CHIP COMPUTE ---
+__CHIP_SQRT_AREA__ = 750
 __HISTEQ__         = False
 __REGION_NORM__    = False
 __RANK_EQ__        = False
 __LOCAL_EQ__       = False
 __MAXCONTRAST__    = False
+#--- FEATURE COMPUTE ---
+__FEAT_TYPE__    = 'HESAFF'    # Feature type to use
+#--- MATCH CHIPS ---
+__MATCH_TYPE__         = 'vsmany'  # Matching type
+__VSMANY_K__           = 5         # Number of matches for one-vs-many
+__BOW_NUM_WORDS__      = long(5e4) # Vocab size for bag of words
+__VSONE_RATIO_THRESH__ = 1.5       # Thresholds for one-vs-one
+#---------------------
+# SPATIAL VERIFICATION
+__NUM_RERANK__   = 1000 # Number of top matches to spatially re-rank
+__XY_THRESH__    = .1 # % diaglen of keypoint extent
+__SCALE_THRESH__ = .5
 
-__CHIP_SQRT_AREA__ = 750
-
-dev_databases = {
-    'SONOGRAMS' : SONOGRAMS,
-    'JAG'       : JAGUARS,
-    'FROGS'     : FROGS,
-    'NAUTS'     : NAUTS,
-    'GZ_ALL'    : GZ_ALL,
-    'WS_HARD'   : WS_HARD,
-    'MOTHERS'   : MOTHERS,
-    'OXFORD'    : OXFORD,
-    'PARIS'     : PARIS}
+#=====================================================
+# FUNCTIONS
+#=====================================================
 
 def param_string():
     global __MATCH_TYPE__
@@ -135,9 +141,9 @@ def param_string():
     param_list = []
     param_list_append = param_list.append
     def has_bad_dependency(key):
-        bad_depends1 = (key.find('__BOW') == 0    and __MATCH_TYPE__ != 'bagofwords')
-        bad_depends2 = (key.find('__VSMANY') == 0 and __MATCH_TYPE__ != 'vsmany')
-        bad_depends3 = (key.find('__VSONE') == 0  and __MATCH_TYPE__ != 'vsone')
+        bad_depends1 = (key.find('BOW') in [0,2]    and __MATCH_TYPE__ != 'bagofwords')
+        bad_depends2 = (key.find('VSMANY') in [0,2] and __MATCH_TYPE__ != 'vsmany')
+        bad_depends3 = (key.find('VSONE') in [0,2]  and __MATCH_TYPE__ != 'vsone')
         return any([bad_depends1, bad_depends2, bad_depends3])
     for key in globals().iterkeys():
         if re.match('__[A-Z_]*__', key):
@@ -145,7 +151,8 @@ def param_string():
             param_list_append(key + ' = ' + repr(globals()[key]))
     param_str = '\n'.join(param_list)
     return param_str
-# -------------------
+
+#---------------------
 # Strings corresponding to unique ids used by different files
 
 def get_chip_uid():
@@ -167,9 +174,9 @@ def get_chip_uid():
 
 def get_feat_uid():
     global __FEAT_TYPE__
-    global __WHITEN_FEATS__
+    global WHITEN_FEATS
     feat_type = '_'+__FEAT_TYPE__
-    whiten = ['','_white'][__WHITEN_FEATS__]
+    whiten = ['','_white'][WHITEN_FEATS]
     # depends on chip
     feat_uid = feat_type + whiten + get_chip_uid()
     return feat_uid
@@ -265,7 +272,8 @@ if '--maxcont' in sys.argv:
 
 if '--whiten' in sys.argv or '--white' in sys.argv:
     print(' * with whitening')
-    __WHITEN_FEATS__ = True
+    WHITEN_FEATS = True
+
 if '--vsone' in sys.argv:
     __MATCH_TYPE__ = 'vsone'
 if '--vsmany' in sys.argv:
@@ -274,35 +282,28 @@ if '--bagofwords' in sys.argv:
     __MATCH_TYPE__ = 'bagofwords'
 
 if '--cache-query' in sys.argv:
-    __CACHE_QUERY__ = True
+    CACHE_QUERY = True
 if '--nocache-query' in sys.argv:
-    __CACHE_QUERY__ = False
+    CACHE_QUERY = False
 
 
 if '--reverify' in sys.argv:
-    __REVERIFY_QUERY__ = True
+    REVERIFY_QUERY = True
 
 if '--resave-query' in sys.argv:
-    __RESAVE_QUERY__ = True # 4H4X5
+    RESAVE_QUERY = True # 4H4X5
 
 if '--print-checks' in sys.argv:
-    helpers.__PRINT_CHECKS__ = True
+    helpers.PRINT_CHECKS = True
 
 if '--serial' in sys.argv:
-    __NUM_PROCS__ = 1
+    NUM_PROCS = 1
 
 for argv in iter(sys.argv):
     if argv.upper() in dev_databases.keys():
         print('\n'.join([' * Default Database set to:'+argv.upper(),
                          ' * Previously: '+str(DEFAULT)]))
         DEFAULT = dev_databases[argv.upper()]
-#print(' * load_data: Default database is: '+str(DEFAULT))
-
-# MAJOR HACKS 
-#__FORCE_REQUERY_CX__ = set([0,1])
-__FORCE_REQUERY_CX__ = set([])
-
-#print(' ...Finished loading params.py')
 
 if __name__ == '__main__':
     print ('Entering param __main__')

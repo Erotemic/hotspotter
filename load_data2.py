@@ -650,7 +650,7 @@ def test_load_csv():
 
 # Test load csv tables
 if __name__ == '__main__':
-    import drawing_functions2 as df2
+    import draw_func2 as df2
     if '--test' in sys.argv:
         helpers.__PRINT_CHECKS__ = True #might as well
         hs_dirs, hs_tables = test_load_csv()

@@ -4,7 +4,7 @@ Computes feature representations
 from __future__ import division
 #from __init__ import *
 # import hotspotter modules
-import drawing_functions2 as df2
+import draw_func2 as df2
 import algos
 import params
 import tpl.extern_feat as extern_feat
@@ -321,7 +321,7 @@ def load_chip_feat_type(feat_dir,
             print('len(cx2_kpts) = %d' % len(cx2_kpts))
             print('len(cx2_desc) = %d' % len(cx2_desc))
             desc_mem_use = 0
-            import drawing_functions2 as df2
+            import draw_func2 as df2
             #exec(df2.present())
 
             kpts_bits, num_kpts, _ = helpers.numpy_list_num_bits(cx2_kpts, np.float32, 5)

@@ -50,7 +50,7 @@ if os.environ['PYTHONPATH'].find(source_dir) == -1:
 import hotspotter
 print('Hotspotter: ')
 print dir(hotspotter)
-import hotspotter.df2 as df2
+import hotspotter.draw_func as df2
 import hotspotter.Pref as Pref
 import hotspotter.algos as algos
 import hotspotter.chip_compute2 as cc2

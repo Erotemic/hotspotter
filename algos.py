@@ -1,4 +1,4 @@
-import drawing_functions2 as df2
+import draw_func2 as df2
 from PIL import Image, ImageOps
 from os.path import realpath, join
 import helpers

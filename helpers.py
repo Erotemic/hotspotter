@@ -9,7 +9,7 @@ into a global set of helper functions.
 Wow, pylint is nice for cleaning.
 '''
 from __future__ import division
-import drawing_functions2 as df2
+import draw_func2 as df2
 from Printable import printableVal
 import cPickle
 import cStringIO
@@ -1033,7 +1033,7 @@ if __name__ == '__main__':
     module = sys.modules[__name__]
     seen = set(['numpy','matplotlib', 'scipy', 'pyflann', 'sklearn', 'skimage', 'cv2'])
 
-    hs2_basic = set(['drawing_functions2', 'params', 'mc2'])
+    hs2_basic = set(['draw_func2', 'params', 'mc2'])
     python_basic = set(['os','sys', 'warnings', 'inspect','copy', 'imp','types'])
     tpl_basic = set(['pyflann', 'cv2'])
     science_basic = set(['numpy',

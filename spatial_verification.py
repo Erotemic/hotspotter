@@ -281,7 +281,7 @@ if __name__ == '__main__':
 def test_realdata():
     import load_data2
     import params
-    import drawing_functions2 as df2
+    import draw_func2 as df2
     import helpers
     import spatial_verification
     #params.reload_module()
@@ -340,7 +340,7 @@ def test_realdata():
 def test_realdata2():
     import load_data2
     import params
-    import drawing_functions2 as df2
+    import draw_func2 as df2
     import helpers
     import spatial_verification
     #params.reload_module()

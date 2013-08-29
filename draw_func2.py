@@ -20,7 +20,7 @@ import helpers
 import textwrap
 import os
 import sys
-#print('LOAD_MODULE: drawing_functions2.py')
+#print('LOAD_MODULE: draw_func2.py')
 
 DPI = 80
 #FIGSIZE = (24) # default windows fullscreen
@@ -240,7 +240,7 @@ def present(*args, **kwargs):
     ''')
 
 '''
-import drawing_functions2 as df2
+import draw_func2 as df2
 import matplotlib.pyplot as plt
 img = df2.test_img()
 

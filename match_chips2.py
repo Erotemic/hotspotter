@@ -11,7 +11,7 @@ import sys
 import os
 import textwrap
 # Hotspotter Frontend Imports
-import drawing_functions2 as df2
+import draw_func2 as df2
 # Hotspotter Imports
 import helpers
 from helpers import Timer, tic, toc, printWARN
@@ -38,6 +38,7 @@ def reload_module():
 
 FM_DTYPE= np.uint32
 FS_DTYPE= np.float32
+__MAX_AKMEANS_ITERS__ = 100
 
 def fix_res_types(res):
     for cx in xrange(len(res.cx2_fm_V)):
@@ -280,7 +281,6 @@ def precompute_bag_of_words(hs):
     return bow_index
 
 # step 1
-__MAX_AKMEANS_ITERS__ = 100
 def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
     '''Computes a vocabulary of size vocab_size given a set of training data'''
     # Make a training set of descriptors to build the vocabulary
@@ -405,7 +405,7 @@ def assign_matches_bagofwords(qcx, cx2_desc, bow_index):
     #print type(cx2_vvec)
     #print cx2_vvec.dtype
     #print cx2_vvec
-    #import drawing_functions2 as df2
+    #import draw_func2 as df2
     #exec(df2.present())
     cx2_score = (cx2_vvec.dot(vvec.T)).toarray().flatten()
     # Assign feature to feature matches (for spatial verification)

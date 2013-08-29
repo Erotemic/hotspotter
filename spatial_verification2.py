@@ -204,7 +204,7 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
 def test_realdata2():
     import load_data2
     import params
-    import drawing_functions2 as df2
+    import draw_func2 as df2
     import helpers
     import spatial_verification2 as sv2
     params.reload_module()

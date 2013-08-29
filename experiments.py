@@ -8,7 +8,7 @@ import os
 import params
 import report_results2 as rr2
 import sys 
-import df2
+import draw_func as df2
 
 def reload_module():
     import imp

@@ -1,5 +1,5 @@
 # Hotspotter imports
-import drawing_functions2 as df2
+import draw_func2 as df2
 import helpers
 import load_data2 as ld2
 import match_chips2 as mc2

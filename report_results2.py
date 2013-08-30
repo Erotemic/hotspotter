@@ -588,37 +588,6 @@ def plot_score_matrix(allres):
     df2.set_ylabel('queries')
     __dump_or_browse(allres, 'scoreviz')
 
-def print_top_res_scores(hs, res, view_top=10, SV=False):
-    qcx = res.qcx
-    cx2_score = res.cx2_score_V if SV else res.cx2_score
-    lbl = ['(assigned)', '(assigned+V)'][SV]
-    cx2_nx     = hs.tables.cx2_nx
-    nx2_name   = hs.tables.nx2_name
-    qnx        = cx2_nx[qcx]
-    other_cx   = hs.get_other_cxs(qcx)
-    top_cx     = cx2_score.argsort()[::-1]
-    top_scores = cx2_score[top_cx] 
-    top_nx     = cx2_nx[top_cx]
-    view_top   = min(len(top_scores), np.uint32(view_top))
-    print('---------------------------------------')
-    print('Inspecting matches of qcx=%d name=%s' % (qcx, nx2_name[qnx]))
-    print(' * Matched against %d other chips' % len(cx2_score))
-    print(' * Ground truth chip indexes:\n   other_cx=%r' % other_cx)
-    print('The ground truth scores '+lbl+' are: ')
-    for cx in iter(other_cx):
-        score = cx2_score[cx]
-        print('--> cx=%4d, score=%6.2f' % (cx, score))
-    print('---------------------------------------')
-    print(('The top %d chips and scores '+lbl+' are: ') % view_top)
-    for topx in xrange(view_top):
-        tscore = top_scores[topx]
-        tcx    = top_cx[topx]
-        if tcx == qcx: continue
-        tnx    = cx2_nx[tcx]
-        _mark = '-->' if tnx == qnx else '  -'
-        print(_mark+' cx=%4d, score=%6.2f' % (tcx, tscore))
-    print('---------------------------------------')
-    print('---------------------------------------')
 
 #===============================
 # MAIN SCRIPT
@@ -680,13 +649,6 @@ if __name__ == '__main__':
     # Initialize Results
     allres = init_allres(hs, qcx2_res, SV)
     greater5_cxs = allres.greater5_cxs
-
-    def top5_cxs(self):
-        res = self
-        top_cxs = res.cx2_score.argsort()[::-1]
-        num_top = min(5, len(top_cxs))
-        top5_cxs = top_cxs[0:num_top]
-        return top5_cxs
 
     cx = greater5_cxs[0] if len(greater5_cxs) > 0 else 0
     print(allres)

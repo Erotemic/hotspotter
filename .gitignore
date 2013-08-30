@@ -21,3 +21,4 @@ OpenGLContext.profile
 *.ln
 *.a.*
 *.so.*
+.hotspotter

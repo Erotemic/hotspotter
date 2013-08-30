@@ -17,23 +17,78 @@ from itertools import izip
 from os.path import realpath, join, normpath
 import re
 
-DUMP = True # or __BROWSE__
+BROWSE = True
+DUMP = False
 FIGNUM = 1
 
-def cx_info(allres, cx):
-    pass
+def reload_module():
+    import imp, sys
+    imp.reload(sys.modules[__name__])
 
-def plot_cx(allres, cx):
-    title = 'cx: %d\n%s' % (cx, allres.title_suffix)
-    print('Plotting'+title)
-    fig = df2.figure(figure=FIGNUM, doclf=True, title=title)
+def rrr():
+    reload_module()
+
+def cx_info(allres, cx, SV=True):
     hs = allres.hs
-    rchip = hs.get_chip(cx)
-    kpts = hs.feats.cx2_kpts[cx]
-    df2.imshow(rchip, fignum=FIGNUM,  doclf=True, title='cx=%d' % cx)
-    df2.draw_kpts2(kpts)
+    res = allres.qcx2_res[cx]
+    print_top_res_scores(hs, res, view_top=10)
+    gt_cxs = hs.get_other_cxs(cx)
+    print('Ground truth cxs: '+repr(gt_cxs))
+    print('num groundtruth = '+str(len(gt_cxs)))
+    print_top_res_scores(hs, res, view_top=10, SV=True)
 
-def plot_rank_stem(allres, orgres_type):
+def print_top_res_scores(hs, res, view_top=10, SV=True):
+    qcx = res.qcx
+    cx2_score = res.cx2_score_V if SV else res.cx2_score
+    lbl = ['(assigned)', '(assigned+V)'][SV]
+    cx2_nx     = hs.tables.cx2_nx
+    nx2_name   = hs.tables.nx2_name
+    qnx        = cx2_nx[qcx]
+    other_cx   = hs.get_other_cxs(qcx)
+    top_cx     = cx2_score.argsort()[::-1]
+    top_scores = cx2_score[top_cx] 
+    top_nx     = cx2_nx[top_cx]
+    view_top   = min(len(top_scores), np.uint32(view_top))
+    print('---------------------------------------')
+    print('Inspecting matches of qcx=%d name=%s' % (qcx, nx2_name[qnx]))
+    print(' * Matched against %d other chips' % len(cx2_score))
+    print(' * Ground truth chip indexes:\n   other_cx=%r' % other_cx)
+    print('The ground truth scores '+lbl+' are: ')
+    for cx in iter(other_cx):
+        score = cx2_score[cx]
+        print('--> cx=%4d, score=%6.2f' % (cx, score))
+    print('---------------------------------------')
+    print(('The top %d chips and scores '+lbl+' are: ') % view_top)
+    for topx in xrange(view_top):
+        tscore = top_scores[topx]
+        tcx    = top_cx[topx]
+        if tcx == qcx: continue
+        tnx    = cx2_nx[tcx]
+        _mark = '-->' if tnx == qnx else '  -'
+        print(_mark+' cx=%4d, score=%6.2f' % (tcx, tscore))
+    print('---------------------------------------')
+    print('---------------------------------------')
+
+def plot_cx(allres, cx, *args):
+    hs    = allres.hs
+    qcx2_res = allres.qcx2_res
+    cx_info(allres, cx)
+    if 'kpts' in args:
+        rchip = hs.get_chip(cx)
+        kpts  = hs.feats.cx2_kpts[cx]
+        title = 'cx: %d\n%s' % (cx, allres.title_suffix)
+        print('Plotting'+title)
+        fig = df2.imshow(rchip, fignum=FIGNUM+1, title=title, doclf=True)
+        df2.draw_kpts2(kpts)
+    if 'matches' in args: 
+        res = qcx2_res[cx]
+        df2.show_all_matches(hs, res, fignum=FIGNUM+1)
+    if 'top5' in args:
+        res = qcx2_res[cx]
+        df2.show_top5_matches(hs, res, fignum=FIGNUM+2)
+    __dump_or_browse(allres, 'plot_cx')
+
+def plot_rank_stem(allres, orgres_type='true'):
     print(' * plotting rank stem')
     # Visualize rankings with the stem plot
     hs = allres.hs
@@ -99,6 +154,9 @@ def plot_score_matrix(allres):
 
 # Dump logic
 def __dump_or_browse(allres, subdir=None):
+    if BROWSE:
+        print('report_results> Browsing Image')
+        df2.show()
     if DUMP:
         print('report_results> Dumping Image')
         fpath = allres.hs.dirs.result_dir
@@ -106,10 +164,7 @@ def __dump_or_browse(allres, subdir=None):
             fpath = join(fpath, subdir)
             helpers.ensurepath(fpath)
         df2.save_figure(fpath=fpath, usetitle=True)
-    else: # __BROWSE__
-        print('report_results> Browsing Image')
-        df2.show()
-    df2.reset()
+        df2.reset()
 
 def dump_score_matrixes(allres):
     plot_score_matrix(allres)

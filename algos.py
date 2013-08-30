@@ -2,6 +2,7 @@ import draw_func2 as df2
 from PIL import Image, ImageOps
 from os.path import realpath, join
 import helpers
+import fileio as io
 import imp
 import matplotlib.pyplot as plt
 import numpy as np
@@ -48,36 +49,6 @@ def viz_localmax(signal1d):
     df2.plot(maxpos, signal1d[maxpos], 'ro')
     df2.update()
 
-def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
-    ''' Tries to load a cached flann index before doing anything'''
-    print('algos> Precomputing flann index: '+lbl)
-    cache_dir = '.' if cache_dir is None else cache_dir
-    # Generate a unique filename for data and flann parameters
-    fparams_uid = helpers.remove_chars(str(flann_params.values()), ', \'[]')
-    md5_uid     = helpers.hashstr_md5(data)
-    shape_uid   = helpers.remove_chars(str(data.shape), ' ')
-    flann_suffix = '_' + fparams_uid + '_' + md5_uid + shape_uid + '.flann'
-    # Append any user labels
-    flann_fname = 'flann_index' + lbl + flann_suffix
-    flann_fpath = os.path.normpath(join(cache_dir, flann_fname))
-    # Load the index if it exists
-    flann = pyflann.FLANN()
-    load_success = False
-    if helpers.checkpath(flann_fpath):
-        try:
-            print('algos> Trying to load FLANN index: '+os.path.split(flann_fpath)[1])
-            flann.load_index(flann_fpath, data)
-            print('...success')
-            load_success = True
-        except Exception as ex:
-            print('algos> ...cannot load FLANN index'+repr(ex))
-    if not load_success:
-        # Rebuild the index otherwise
-        with helpers.Timer(msg='rebuilding FLANN index'):
-            flann.build_index(data, **flann_params)
-        print('algos> Saving FLANN index to: '+os.path.split(flann_fpath)[1])
-        flann.save_index(flann_fpath)
-    return flann
 
 def sparse_normalize_rows(csr_mat):
     return sklpreproc.normalize(csr_mat, norm='l2', axis=1, copy=False)
@@ -415,6 +386,37 @@ def precompute_akmeans(data, num_clusters, max_iters=100, flann_params=None,
         helpers.save_npz(fpath, datax2_clusterx, clusters)
         #signal.signal(signal.SIGINT, signal.SIG_DFL) # reset ctrl+c behavior
     return (datax2_clusterx, clusters)
+
+def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
+    ''' Tries to load a cached flann index before doing anything'''
+    print('algos> Precomputing flann index: '+lbl)
+    cache_dir = '.' if cache_dir is None else cache_dir
+    # Generate a unique filename for data and flann parameters
+    fparams_uid = helpers.remove_chars(str(flann_params.values()), ', \'[]')
+    md5_uid     = helpers.hashstr_md5(data)
+    shape_uid   = helpers.remove_chars(str(data.shape), ' ')
+    flann_suffix = '_' + fparams_uid + '_' + md5_uid + shape_uid + '.flann'
+    # Append any user labels
+    flann_fname = 'flann_index' + lbl + flann_suffix
+    flann_fpath = os.path.normpath(join(cache_dir, flann_fname))
+    # Load the index if it exists
+    flann = pyflann.FLANN()
+    load_success = False
+    if helpers.checkpath(flann_fpath):
+        try:
+            print('algos> Trying to load FLANN index: '+os.path.split(flann_fpath)[1])
+            flann.load_index(flann_fpath, data)
+            print('...success')
+            load_success = True
+        except Exception as ex:
+            print('algos> ...cannot load FLANN index'+repr(ex))
+    if not load_success:
+        # Rebuild the index otherwise
+        with helpers.Timer(msg='rebuilding FLANN index'):
+            flann.build_index(data, **flann_params)
+        print('algos> Saving FLANN index to: '+os.path.split(flann_fpath)[1])
+        flann.save_index(flann_fpath)
+    return flann
 
 if __name__ == '__main__':
 

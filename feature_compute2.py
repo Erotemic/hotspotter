@@ -90,7 +90,7 @@ def load_chip_feat_type(feat_dir,
     dpath = cache_dir
     uid   = feat_uid
     ext   = '.npy'
-    io.debug_smart_load(dpath, fname='*', uid=uid, ext='.*')
+    #io.debug_smart_load(dpath, fname='*', uid=uid, ext='.*')
     # Try to read cache
     if load_kpts:
         cx2_kpts = io.smart_load(dpath, 'cx2_kpts', uid, ext, can_fail=True)
@@ -225,7 +225,6 @@ if __name__ == '__main__':
         # Load all the types of features
         feat_uid = params.get_feat_uid()
         feat_type = params.__FEAT_TYPE__
-
 
         hs.load_features()
         cx2_desc = hs.feats.cx2_desc

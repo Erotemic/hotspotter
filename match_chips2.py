@@ -41,7 +41,6 @@ BOW_DTYPE = np.uint8
 FM_DTYPE  = np.uint32
 FS_DTYPE  = np.float32
 
-MAX_AKMEANS_ITERS = 100
 
 def fix_res_types(res):
     for cx in xrange(len(res.cx2_fm_V)):
@@ -137,6 +136,13 @@ class QueryResult(DynStruct):
             printWARN('Load Result Exception : ' + repr(ex) + 
                     '\nResult was corrupted for qcx=%d' % self.qcx)
             return False
+
+    def top5_cxs(self):
+        cx2_score = self.cx2_score_V
+        top_cxs = cx2_score.argsort()[::-1]
+        num_top = min(5, len(top_cxs))
+        top5_cxs = top_cxs[0:num_top]
+        return top5_cxs
     #def __del__(self):
         #print("Deleting Query Result")
 
@@ -286,6 +292,10 @@ def precompute_bag_of_words(hs):
 # step 1
 def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
     '''Computes a vocabulary of size vocab_size given a set of training data'''
+    # Read params
+    akm_flann_params   = params.BOW_AKMEANS_FLANN_PARAMS
+    words_flann_params = params.BOW_WORDS_FLANN_PARAMS
+    max_iters          = params.AKMEANS_MAX_ITERS
     # Make a training set of descriptors to build the vocabulary
     tx2_desc   = cx2_desc[train_cxs]
     train_desc = np.vstack(tx2_desc)
@@ -295,13 +305,11 @@ def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
         helpers.printWARN(msg)
         vocab_size = num_train_desc / 2
     # Cluster descriptors into a visual vocabulary
-    akmeans_flann_params = params.BOW_AKMEANS_FLANN_PARAMS
-    _, words = algos.precompute_akmeans(train_desc, vocab_size, MAX_AKMEANS_ITERS,
-                                        akmeans_flann_params, cache_dir,
+    _, words = algos.precompute_akmeans(train_desc, vocab_size, max_iters,
+                                        akm_flann_params, cache_dir,
                                         force_recomp=False, 
                                         same_data=False)
     # Index the vocabulary for fast nearest neighbor search
-    words_flann_params = params.BOW_WORDS_FLANN_PARAMS
     words_flann = algos.precompute_flann(words, cache_dir, lbl='words',
                                          flann_params=words_flann_params)
     return words, words_flann

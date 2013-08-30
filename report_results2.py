@@ -1,3 +1,4 @@
+from __future__ import division
 # Hotspotter imports
 import draw_func2 as df2
 import helpers
@@ -15,6 +16,7 @@ import os
 import subprocess
 import sys
 import textwrap
+from fnmatch import fnmatch
 from itertools import izip
 from os.path import realpath, join, normpath
 import re
@@ -42,15 +44,24 @@ class AllResults(DynStruct):
         self.scalar_summary      = None
         self.problem_false_pairs = None
         self.problem_true_pairs  = None
+        self.greater1_cxs = None
+        self.greater5_cxs = None
         self.matrix_str          = None
 
     def __str__(allres):
+        #print = tores.append
         toret=('+======================')
         toret+=('| All Results ')
         toret+=('| title_suffix=%s' % str(allres.title_suffix))
         toret+=('| scalar_summary=\n%s' % helpers.indent(str(allres.scalar_summary), '|   '))
-        toret+=('| problem_false_pairs=\n%r' % allres.problem_false_pairs)
-        toret+=('| problem_true_pairs=\n%r' % allres.problem_true_pairs)
+        toret+=('|---')
+        toret+=('| greater5_cxs = %r \n' % (allres.greater5_cxs,))
+        toret+=('|---')
+        toret+=('| greater1_cxs = %r \n' % (allres.greater1_cxs,))
+        toret+=('|---')
+        toret=('+======================.')
+        #toret+=('| problem_false_pairs=\n%r' % allres.problem_false_pairs)
+        #toret+=('| problem_true_pairs=\n%r' % allres.problem_true_pairs)
         return toret
 
 class OrganizedResult(DynStruct):
@@ -283,9 +294,23 @@ def build_rankres_str(allres):
     # Easy to digest results
     num_chips = len(test_sample_cx)
     num_nonquery = len(np.setdiff1d(db_sample_cx, test_sample_cx))
-    num_with_gtruth = (1 - np.isnan(qcx2_top_true_rank[test_sample_cx])).sum()
-    num_rank_less5 = (qcx2_top_true_rank[test_sample_cx] < 5).sum()
-    num_rank_less1 = (qcx2_top_true_rank[test_sample_cx] < 1).sum()
+
+    test_sample_cx_with_gt = np.array(test_sample_cx)[qcx2_numgt[test_sample_cx] > 0]
+    num_with_gtruth = len(test_sample_cx_with_gt)
+    def ranks_less_than_(thresh):
+        greater_cxs = np.where(qcx2_top_true_rank[test_sample_cx_with_gt] > thresh)[0]
+        num_greater = len(greater_cxs)
+        num_less = num_with_gtruth - num_greater
+        num_greater =  - num_less
+        frac_less = 100.0 * num_less / num_with_gtruth
+        fmt_tup = (num_less, num_with_gtruth, frac_less, num_greater)
+        return fmt_tup, greater_cxs
+    fmt5_tup, greater5_cxs = ranks_less_than_(5)
+    fmt1_tup, greater1_cxs = ranks_less_than_(1)
+    allres.greater1_cxs = greater1_cxs
+    allres.greater5_cxs = greater5_cxs
+    print('greater5_cxs = %r ' % (allres.greater5_cxs,))
+    print('greater1_cxs = %r ' % (allres.greater1_cxs,))
     # CSV Metadata 
     header = '# Experiment allres.title_suffix = '+allres.title_suffix+'\n'
     header +=  helpers.get_timestamp(format='comment')+'\n'
@@ -293,8 +318,8 @@ def build_rankres_str(allres):
     scalar_summary  = '# Num Query Chips: %d \n' % num_chips
     scalar_summary += '# Num Query Chips with at least one match: %d \n' % num_with_gtruth
     scalar_summary += '# Num NonQuery Chips: %d \n' % num_nonquery
-    scalar_summary += '# Ranks <= 5: %d / %d\n' % (num_rank_less5, num_with_gtruth)
-    scalar_summary += '# Ranks <= 1: %d / %d\n\n' % (num_rank_less1, num_with_gtruth)
+    scalar_summary += '# Ranks <= 5: %d / %d = %.1f%% (missed %d)\n' % (fmt5_tup)
+    scalar_summary += '# Ranks <= 1: %d / %d = %.1f%% (missed %d)\n\n' % (fmt1_tup)
     header += scalar_summary
     # Experiment parameters
     header += '# Full Parameters: \n' + helpers.indent(params.param_string(),'#') + '\n\n'
@@ -337,6 +362,8 @@ def build_rankres_str(allres):
     # Attach results to allres structure
     allres.rankres_str = rankres_str
     allres.scalar_summary = scalar_summary
+    allres.problem_false_pairs = problem_false_pairs
+    allres.problem_true_pairs = problem_true_pairs
     allres.problem_false_pairs = problem_false_pairs
     allres.problem_true_pairs = problem_true_pairs
 
@@ -637,7 +664,7 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     # Params
-    print('Main: report_results')
+    print('__main__ = report_results2.py')
     allres = helpers.search_stack_for_localvar('allres')
     #if allres is None:
         #hs = ld2.HotSpotter(ld2.DEFAULT)
@@ -646,7 +673,37 @@ if __name__ == '__main__':
         ## Initialize Results
         #allres = init_allres(hs, qcx2_res, SV)
     # Do something
-    from fnmatch import fnmatch
+    import vizualizations as viz
+    hs = ld2.HotSpotter(ld2.DEFAULT)
+    qcx2_res = mc2.run_matching(hs)
+    SV = True
+    # Initialize Results
+    allres = init_allres(hs, qcx2_res, SV)
+    greater5_cxs = allres.greater5_cxs
+
+    def top5_cxs(self):
+        res = self
+        top_cxs = res.cx2_score.argsort()[::-1]
+        num_top = min(5, len(top_cxs))
+        top5_cxs = top_cxs[0:num_top]
+        return top5_cxs
+
+    cx = greater5_cxs[0] if len(greater5_cxs) > 0 else 0
+    print(allres)
+    viz.DUMP = False
+    matches = lambda cx: viz.plot_cx(allres, cx, 'matches')
+    top5 = lambda cx: viz.plot_cx(allres, cx, 'top5')
+    selc = lambda cx: viz.plot_cx(allres, cx, 'kpts')
+
+    top5(cx)
+    matches(cx)
+
+    # IPYTHON END
+
+
+
+
+    nonipython_exec = r"""
 
     help_ = textwrap.dedent(r'''
     Enter a command.
@@ -656,36 +713,42 @@ if __name__ == '__main__':
     ''')
     print(help_)
     firstcmd = 'cx 0'
+    firstcmd = 'stem'
     ans = None
+    viz.DUMP = False
     while True:
+        # Read command or run the first one hardcoded in
         ans = raw_input('>') if not ans is None else firstcmd
         if ans == 'q' or ans == ' ':
             break
         if allres is None:
-            hs = ld2.HotSpotter(ld2.DEFAULT)
-            qcx2_res = mc2.run_matching(hs)
-            SV = True
-            # Initialize Results
-            allres = init_allres(hs, qcx2_res, SV)
+            print('Loading hotspotter')
         if ans == 'h':
             print help_
-        elif re.match('cx [0-9][0-9]*', ans):
+        elif re.match('cx [0-9][0-9]*', ans) or\
+             re.match('[0-9][0-9]*', ans):
             cx = int(ans.replace('cx ',''))
-            viz.plot_cx(allres, cx)
-        elif re.match('[0-9][0-9]*', ans):
-            cx = int(ans)
-            viz.plot_cx(allres, cx)
+            selc(cx)
+        elif ans == 'stem':
+            viz.plot_rank_stem(allres, 'true')
         else:
             exec(ans)
         df2.update()
-
     #browse='--browse' in sys.argv
     #stem='--stem' in sys.argv
     #hist='--hist' in sys.argv
     #pdf='--pdf'   in sys.argv
+    viz.DUMP = True
     dump_all(allres)
     if '--vrd' in sys.argv:
-        helpers.vd(allres.hs.dirs.result_dir)
+        helpers.vd(hs.dirs.result_dir)
     #dinspect(18)
-    print allres
+    print(allres)
     exec(df2.present(wh=(900,600)))
+    viz.DUMP = False
+    """
+
+    try:
+        __IPYTHON__
+    except Exception:
+        exec(nonipython_exec)

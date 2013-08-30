@@ -540,6 +540,7 @@ def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111,
     except Exception as ex:
         print('!! Exception durring fig.tight_layout: '+repr(ex))
         raise
+    return fig
 
 def draw_histpdf(data, label=None):
     freq, _ = draw_hist(data)
@@ -671,7 +672,30 @@ def show_matches3(res, hs, cx, SV=True, fignum=3, plotnum=111, title_aug=None):
     title_suff = '(+V)' if SV else None
     return show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum, plotnum, title_aug, title_suff)
 
-def show_all_matches(hs, res, SV=True, fignum=3): 
+def show_all_matches(*args, **kwargs): 
+    show_gt_matches(*args, **kwargs)
+
+def show_top5_matches(hs, res, SV=True, fignum=4): 
+    SV = True
+    qcx = res.qcx
+    title_aug=None
+    top5_cxs = res.top5_cxs()
+    others = top5_cxs
+    num_others = len(others)
+    plotnum= 100 + num_others*10 + 1 
+    if num_others == 0:
+        print('no known matches to qcx=%r' % qcx)
+        return
+    figtitle='qcx=%r -- TOP 5' % qcx
+    figure(fignum=fignum, plotnum=plotnum)
+    #print 'figure(plotnum)='+str(plotnum)
+    for ox, cx in enumerate(others):
+        plotnumcx = plotnum + ox
+        #print 'plot_to: plotnum='+str(plotnumcx)
+        show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx)
+    set_figtitle(figtitle)
+
+def show_gt_matches(hs, res, SV=True, fignum=3): 
     SV = True
     qcx = res.qcx
     title_aug=None
@@ -679,9 +703,9 @@ def show_all_matches(hs, res, SV=True, fignum=3):
     num_others = len(others)
     plotnum= 100 + num_others*10 + 1 
     if num_others == 0:
-        print('no known matches to qcx=%r' % qcx)
+        print('no known ma`tches to qcx=%r' % qcx)
         return
-    figtitle='all matches qcx=%r' % qcx
+    figtitle='qcx=%r -- GroundTruth' % qcx
     figure(fignum=fignum, plotnum=plotnum)
     #print 'figure(plotnum)='+str(plotnum)
     for ox, cx in enumerate(others):
@@ -697,6 +721,9 @@ def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111,
         title='(qx%r v NAN)' % (qcx)
         imshow(nan_img,fignum=fignum,plotnum=plotnum,title=title)
         return 
+    cx2_nx = hs.tables.cx2_nx
+    qnx = cx2_nx[qcx]
+    nx  = cx2_nx[cx]
     cx2_rchip_path = hs.cpaths.cx2_rchip_path
     cx2_kpts = hs.feats.cx2_kpts
     rchip1 = cv2.imread(cx2_rchip_path[qcx])
@@ -706,7 +733,11 @@ def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111,
     score = cx2_score[cx]
     fm    = cx2_fm[cx]
     fs    = cx2_fs[cx]
-    title='(qx%r v cx%r)\n #match=%r score=%.2f' % (qcx, cx, len(fm), score)
+
+    cx_str = '(qx%r v cx%r)' % (qcx, cx)
+    score_str = ' #match=%r score=%.2f' % (len(fm), score)
+    isgt_str = '*true match*' if nx == qnx and qnx > 1 else ''
+    title= cx_str + isgt_str + '\n' + score_str
     if not title_pref is None:
         title = title_pref + title
     if not title_suff is None:

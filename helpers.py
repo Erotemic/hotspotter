@@ -8,7 +8,7 @@ into a global set of helper functions.
 
 Wow, pylint is nice for cleaning.
 '''
-from __future__ import division
+from __future__ import division, print_function
 import draw_func2 as df2
 from Printable import printableVal
 import cPickle
@@ -25,7 +25,7 @@ import shutil
 import warnings
 import fnmatch
 import textwrap
-from os.path import join, relpath
+from os.path import join, relpath, normpath, join, split, isdir, isfile, exists
 import fnmatch
 #print('LOAD_MODULE: helpers.py')
 
@@ -238,7 +238,7 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
             try:
                 yield module.__dict__[aname], aname
             except KeyError as ex:
-                print repr(ex)
+                print(repr(ex))
                 pass
     def __explore_module(module, indent, seen, depth, maxdepth, nonmodules):
         valid_children = []
@@ -265,7 +265,7 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
                     continue
                 valid_children.append(child)
             except Exception as ex:
-                print repr(ex)
+                print(repr(ex))
                 pass
         # Print 
         #print_(depth)
@@ -283,7 +283,7 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
     #ret += 
     #println('#module = '+str(module_))
     ret = __explore_module(module_, '     ', seen, 0, maxdepth, nonmodules)
-    #print ret
+    #print(ret)
     flush()
     return ret
 
@@ -340,7 +340,7 @@ def symlink(source, link_name, noraise=False):
             csl = ctypes.windll.kernel32.CreateSymbolicLinkW
             csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
             csl.restype = ctypes.c_ubyte
-            flags = 1 if os.path.isdir(source) else 0
+            flags = 1 if isdir(source) else 0
             if csl(link_name, source, flags) == 0:
                 warnings.warn(warn_msg, category=UserWarning)
                 print('helpers> Unable to create symbolic liwk on windows.')
@@ -392,9 +392,9 @@ def print_frame(frame):
     execstr = '\n'.join(execstr_print_list)
     exec(execstr)
     local_varnames = pack_into('; '.join(frame.f_locals.keys()))
-    print local_varnames
+    print(local_varnames)
     #if len(local_varnames) > 360: 
-        #print local_varnames[0:360]+'...'#hack
+        #print(local_varnames[0:360]+'...')#hack
     #else:
     print('--- End Frame ---')
 
@@ -428,7 +428,7 @@ def vd(dname=None):
     open_prog = {'win32' :'explorer.exe',
                  'linux2':'nautilus',
                  'darwin':'open'}[sys.platform]
-    os.system(open_prog+' '+os.path.normpath(dname))
+    os.system(open_prog+' '+normpath(dname))
         
 def str2(obj):
     if type(obj) == types.DictType:
@@ -458,11 +458,11 @@ def cmd(command):
 
 @__DEPRICATED__
 def filecheck(fpath):
-    return os.path.exists(fpath)
+    return exists(fpath)
 
 @__DEPRICATED__
 def dircheck(dpath,makedir=True):
-    if not os.path.exists(dpath):
+    if not exists(dpath):
         if not makedir:
             #print('Nonexistant directory: %r ' % dpath)
             return False
@@ -486,12 +486,12 @@ def remove_files_in_dir(dpath, fname_pattern='*', recursive=False):
     print('  * matching pattern = %r' % fname_pattern) 
     print('  * recursive = %r' % recursive) 
     num_removed, num_matched = (0,0)
-    if not os.path.exists(dpath):
+    if not exists(dpath):
         printWARN('!!! dir = %r does not exist!' % dpath)
     for root, dname_list, fname_list in os.walk(dpath):
         for fname in fnmatch.filter(fname_list, fname_pattern):
             num_matched += 1
-            num_removed += remove_file(os.path.join(root, fname))
+            num_removed += remove_file(join(root, fname))
         if not recursive:
             break
     print('helpers> ... Removed %d/%d files' % (num_removed, num_matched))
@@ -500,7 +500,7 @@ def remove_files_in_dir(dpath, fname_pattern='*', recursive=False):
 def longest_existing_path(_path):
     while True: 
         _path_new = os.path.dirname(_path)
-        if os.path.exists(_path_new):
+        if exists(_path_new):
             _path = _path_new
             break
         if _path_new == _path: 
@@ -510,48 +510,68 @@ def longest_existing_path(_path):
         _path = _path_new
     return _path
 
-__CHECKPATH_VERBOSE__ = False
-def checkpath(_path, print_checks=None):
-    '''Checks to see if the argument _path exists.'''
-    # Do the work
-    print_checks = PRINT_CHECKS if print_checks is None else print_checks
-    _path = os.path.normpath(_path)
-    if not print_checks:
-        return os.path.exists(_path)
-    print_('helpers> Checking %r' % _path)
-    if os.path.exists(_path):
-        path_type = 'file' if os.path.isfile(_path) else 'directory'
-        println('...(%s) exists' % (path_type,))
-    else:
-        println('... does not exist')
-        if __CHECKPATH_VERBOSE__:
-            print('helpers> \n  ! Does not exist')
-            _longest_path = longest_existing_path(_path)
-            print('helpers> ... The longest existing path is: %r' % _longest_path)
-        return False
-    return True
-def check_path(_path):
-    return checkpath(_path)
+def path_ndir_split(path, n):
+    path, ndirs = split(path)
+    for i in xrange(n-1):
+        path, name = split(path)
+        ndirs = name + os.path.sep + ndirs
+    return ndirs
 
-def ensurepath(_path):
-    if not checkpath(_path):
-        print('helpers>... Making directory: ' + _path)
-        os.makedirs(_path)
+def get_caller_name():
+    frame = inspect.currentframe()
+    frame = frame.f_back
+    caller_name = None
+    while caller_name in [None, 'ensurepath']:
+        frame = frame.f_back
+        if frame is None: 
+            break 
+        caller_name = frame.f_code.co_name
+    return caller_name
+
+__CHECKPATH_VERBOSE__ = False
+def checkpath(path_, verbose=True):
+    'returns true if path_ exists on the filesystem'
+    path_ = normpath(path_)
+    if verbose:
+        print = print_
+        pretty_path = path_ndir_split(path_, 2)
+        caller_name = get_caller_name()
+        print('%s> Checking %r' % (caller_name, pretty_path))
+        if exists(path_):
+            path_type = 'file' if isfile(path_) else 'directory'
+            println('...(%s) exists' % (path_type,))
+        else:
+            print('... does not exist\n')
+            if __CHECKPATH_VERBOSE__:
+                print('helpers> \n  ! Does not exist\n')
+                _longest_path = longest_existing_path(path_)
+                print('helpers> ... The longest existing path is: %r\n' % _longest_path)
+            return False
+        return True
+    else:
+        return exists(path_)
+def check_path(path_):
+    return checkpath(path_)
+
+def ensurepath(path_):
+    if not checkpath(path_):
+        print('helpers>... Making directory: ' + path_)
+        os.makedirs(path_)
     return True
-def ensuredir(_path):
-    return ensurepath(_path)
-def ensure_path(_path):
-    return ensurepath(_path)
-def assertpath(_path):
-    if not checkpath(_path):
-        raise AssertionError('Asserted path does not exist: '+_path)
-def assert_path(_path):
-    return assertpath(_path)
+def ensuredir(path_):
+    return ensurepath(path_)
+def ensure_path(path_):
+    return ensurepath(path_)
+def assertpath(path_):
+    if not checkpath(path_):
+        raise AssertionError('Asserted path does not exist: '+path_)
+def assert_path(path_):
+    return assertpath(path_)
 
 def join_mkdir(*args):
-    'os.path.join and creates if not exists'
-    output_dir = os.path.join(*args)
-    if not os.path.exists(output_dir):
+    'join and creates if not exists'
+    output_dir = join(*args)
+    if not exists(output_dir):
         print('Making dir: '+output_dir)
         os.mkdir(output_dir)
     return output_dir
@@ -571,7 +591,7 @@ def copy_task(cp_list, test=False, nooverwrite=False, print_tasks=True):
     else:
         print('helpers> Begining copy+overwrite task.')
     for (src, dst) in iter(cp_list):
-        if os.path.exists(dst):
+        if exists(dst):
             num_overwrite += 1
             if print_tasks:
                 print('helpers> !!! Overwriting ')
@@ -597,7 +617,7 @@ def copy_task(cp_list, test=False, nooverwrite=False, print_tasks=True):
         print('helpers>... In test mode. Nothing was copied.')
 
 def copy(src, dst):
-    if os.path.exists(dst):
+    if exists(dst):
         print('helpers> !!! Overwriting ')
     else:
         print('helpers> ... Copying ')
@@ -610,8 +630,8 @@ def copy_all(src_dir, dest_dir, glob_str_list):
     for _fname in os.listdir(src_dir):
         for glob_str in glob_str_list:
             if fnmatch.fnmatch(_fname, glob_str):
-                src = os.path.normpath(os.path.join(src_dir, _fname))
-                dst = os.path.normpath(os.path.join(dest_dir, _fname))
+                src = normpath(join(src_dir, _fname))
+                dst = normpath(join(dest_dir, _fname))
                 copy(src, dst)
                 break
 # ---File / String Search----
@@ -671,7 +691,7 @@ def read_from(fpath):
     if not checkpath(fpath):
         println('helpers> * FILE DOES NOT EXIST!')
         return None
-    print('helpers> * Reading text file: %r ' % os.path.split(fpath)[1])
+    print('helpers> * Reading text file: %r ' % split(fpath)[1])
     try: 
         text = open(fpath,'r').read()
     except Exception as ex:
@@ -702,7 +722,7 @@ def save_npz(fpath, *args, **kwargs):
     print('... success')
 
 def load_npz(fpath):
-    print('helpers> load_npz: %r ' % os.path.split(fpath)[1])
+    print('helpers> load_npz: %r ' % split(fpath)[1])
     print('helpers> filesize is: '+ file_megabytes_str(fpath))
     npz = np.load(fpath, mmap_mode='r+')
     data = tuple(npz[key] for key in sorted(npz.keys()))
@@ -719,7 +739,7 @@ def load_cache_npz(input_data, lbl='', cache_dir='.', is_sparse=False):
     cachefile_exists = checkpath(data_fpath)
     if cachefile_exists:
         try:
-            print('helpers.load_cache> Trying to load cached data: %r' % os.path.split(data_fpath)[1])
+            print('helpers.load_cache> Trying to load cached data: %r' % split(data_fpath)[1])
             print('helpers.load_cache> Cache filesize: ' + file_megabytes_str(data_fpath))
             flush()
             if is_sparse:
@@ -742,7 +762,7 @@ def load_cache_npz(input_data, lbl='', cache_dir='.', is_sparse=False):
 
 def save_cache_npz(input_data, data, lbl='', cache_dir='.', is_sparse=False):
     data_fpath = __cache_data_fpath(input_data, lbl, cache_dir)
-    print('helpers> caching data: %r' % os.path.split(data_fpath)[1])
+    print('helpers> caching data: %r' % split(data_fpath)[1])
     flush()
     if is_sparse:
         with open(data_fpath, 'wb') as outfile:
@@ -762,7 +782,7 @@ def __cache_data_fpath(input_data, lbl, cache_dir):
     md5_lbl    = hashstr_md5(input_data)
     shape_lbl  = str(input_data.shape).replace(' ','')
     data_fname = lbl+'_'+shape_lbl+'_'+md5_lbl+'.npz'
-    data_fpath = os.path.join(cache_dir, data_fname)
+    data_fpath = join(cache_dir, data_fname)
     return data_fpath
 
 def file_bytes(fpath):
@@ -882,9 +902,9 @@ def execstr_func(func):
         # The characters which might make a return not have its own line
         stmt_endx = len(execstr)-1
         for stmt_break in '\n;':
-            print execstr
-            print ''
-            print stmtx
+            print(execstr)
+            print('')
+            print(stmtx)
             stmt_endx_new = execstr[stmtx:].find(stmt_break)
             if -1 < stmt_endx_new < stmt_endx:
                 stmt_endx = stmt_endx_new
@@ -935,8 +955,8 @@ def profile(cmd, globals=globals(), locals=locals()):
 def profile_lines(fname):
     import __init__
     import shutil
-    hs_path = os.path.split(__init__.__file__)
-    lineprofile_path = os.path.join(hs_path, '.lineprofile')
+    hs_path = split(__init__.__file__)
+    lineprofile_path = join(hs_path, '.lineprofile')
     ensurepath(lineprofile_path)
     shutil.copy('*', lineprofile_path+'/*')
 
@@ -976,12 +996,11 @@ def reset_streams():
     sys.stderr.flush()
     print('helprs> Reset stdout and stderr')
 
-
 def print_list(list):
     if list is None: return 'None'
-    toprint = '\n'.join([repr(item) for item in list])
-    print toprint
-    return toprint
+    msg = '\n'.join([repr(item) for item in list])
+    print(msg)
+    return msg
 
 def _print(msg):
     sys.stdout.write(msg)

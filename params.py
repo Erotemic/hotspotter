@@ -20,7 +20,6 @@ print(' * sys.prefix = %r' % sys.prefix)
 # DEV DATABASE GLOBALS
 #=====================================================
 
-
 WORK_DIR = 'D:/data/work'
 if sys.platform == 'linux2':
     WORK_DIR = '/media/Store/data/work'
@@ -136,7 +135,6 @@ __SCALE_THRESH__ = .5
 #=====================================================
 
 def param_string():
-    global __MATCH_TYPE__
     import re
     param_list = []
     param_list_append = param_list.append
@@ -156,12 +154,6 @@ def param_string():
 # Strings corresponding to unique ids used by different files
 
 def get_chip_uid():
-    global __CHIP_SQRT_AREA__
-    global __HISTEQ__
-    global __REGION_NORM__
-    global __RANK_EQ__
-    global __LOCAL_EQ__
-    global __MAXCONTRAST__
     isorig = (__CHIP_SQRT_AREA__ is None or __CHIP_SQRT_AREA__ <= 0)
     histeq = ['','_histeq'][__HISTEQ__]
     myeq = ['','_regnorm'][__REGION_NORM__]
@@ -173,8 +165,6 @@ def get_chip_uid():
     return chip_uid
 
 def get_feat_uid():
-    global __FEAT_TYPE__
-    global WHITEN_FEATS
     feat_type = '_'+__FEAT_TYPE__
     whiten = ['','_white'][WHITEN_FEATS]
     # depends on chip
@@ -182,9 +172,6 @@ def get_feat_uid():
     return feat_uid
 
 def get_matcher_uid():
-    global __MATCH_TYPE__
-    global __VSMANY_K__
-    global __BOW_NUM_WORDS__
     matcher_uid = '_'+__MATCH_TYPE__
     if __MATCH_TYPE__ == 'bagofwords':
         matcher_uid += '_W%d' % __BOW_NUM_WORDS__
@@ -304,6 +291,53 @@ for argv in iter(sys.argv):
         print('\n'.join([' * Default Database set to:'+argv.upper(),
                          ' * Previously: '+str(DEFAULT)]))
         DEFAULT = dev_databases[argv.upper()]
+
+def make_pref_object():
+    'Not finished yet, but its a start'
+    import Pref
+    Pref.rrr()
+    # --- chip compute ---
+    chip = Pref.Pref()
+    chip.chip_sqrt_area = 750
+    chip.histeq         = False
+    chip.region_norm    = False
+    chip.rank_eq        = False
+    chip.local_eq       = False
+    chip.maxcontrast    = False
+    #-----------------------
+    # --- feature compute ---
+    feat = Pref.Pref()
+    feat.feat_type       = 'HESAFF'  # Feature type to use
+    #-----------------------
+    # -- vsone --
+    vsone  = Pref.Pref()
+    vsone.ratio_thresh   = 1.5       # Thresholds for one-vs-one
+    # -- vsmany --
+    vsmany = Pref.Pref()
+    vsmany.k             = 5         # Number of matches for one-vs-many
+    # -- bow --
+    bow = Pref.Pref()
+    bow.bow_num_words    = long(5e4) # Vocab size for bag of words
+    # --- match chips ---
+    match = Pref.Pref()
+    match.__MATCH_TYPE__ = 'vsmany'  # Matching type
+    #-----------------------
+    # --- spatial verification ---
+    verify  = Pref.Pref()
+    verify.num_rerank    = 1000      # Number of top matches to spatially re-rank
+    verify.xy_thresh     = .1        # % diaglen of keypoint extent
+    verify.scale_thresh  = .5
+    #-----------------------
+    # --- all preferences ---
+    prefs = Pref.Pref()
+    prefs.chip = chip
+    prefs.match = match
+    prefs.vsmany = vsmany
+    prefs.vsone = vsone
+    prefs.bow = bow
+    prefs.verify = verify
+    #-----------------------
+    epw = prefs.createQWidget()
 
 if __name__ == '__main__':
     print ('Entering param __main__')

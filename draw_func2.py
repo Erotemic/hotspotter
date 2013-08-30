@@ -1,6 +1,4 @@
-'''
-Lots of functions for drawing and plotting visiony things
-'''
+''' Lots of functions for drawing and plotting visiony things '''
 import matplotlib
 if matplotlib.get_backend() != 'Qt4Agg':
     #print('Configuring matplotlib for Qt4Agg')

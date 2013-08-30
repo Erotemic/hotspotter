@@ -5,6 +5,7 @@ import load_data2 as ld2
 import match_chips2 as mc2
 import oxsty_results
 import params
+import vizualizations as viz
 from Printable import DynStruct
 # Scientific imports
 import numpy as np
@@ -16,7 +17,6 @@ import sys
 import textwrap
 from itertools import izip
 from os.path import realpath, join, normpath
-import vizualizations as viz
 import re
 
 __DUMP__ = True # or __BROWSE__

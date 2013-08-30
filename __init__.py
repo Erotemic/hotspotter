@@ -1,6 +1,5 @@
 # the hotspotter python module
 from __future__ import division
-print('Initializing HotSpotter: ')
 #import scipy.ndimage.filters as filters
 # your stack overflow question was answered
 
@@ -33,28 +32,24 @@ import time
 import re
 import fnmatch
 
-print os.environ 
-
-print('\n-------------\n') 
-print(' * PATH = %s' % str(os.environ['PATH']))
-print('\n-------------\n') 
-print(' * PYTHONPATH = %s' % str(os.environ['PYTHONPATH']))
-
+# Ensure that hotspotter is in the PYTHONPATH
 source_dir = os.path.dirname(__file__)
-print('\n * Source directory: '+source_dir)
+print(' * import hotspotter from: '+source_dir)
 if os.environ['PYTHONPATH'].find(source_dir) == -1:
     toappend = source_dir + os.pathsep
     os.environ['PYTHONPATH'] = toappend + os.environ['PYTHONPATH']
 
-import hotspotter
-print('Hotspotter: ')
-print dir(hotspotter)
-import hotspotter.draw_func as df2
+#import hotspotter
+#print('Hotspotter: ')
+#print dir(hotspotter)
+import hotspotter.draw_func2 as df2
 import hotspotter.Pref as Pref
 import hotspotter.algos as algos
 import hotspotter.chip_compute2 as cc2
 import hotspotter.helpers as helpers
 import hotspotter.load_data2 as ld2
+import hotspotter.fileio as io
+import hotspotter.gui as gui
 import hotspotter.match_chips2 as mc2
 import hotspotter.params as params
 #import hotspotter.report_results2 as report_results2

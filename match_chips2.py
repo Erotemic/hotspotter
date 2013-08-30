@@ -13,6 +13,7 @@ import textwrap
 # Hotspotter Frontend Imports
 import draw_func2 as df2
 # Hotspotter Imports
+import fileio as io
 import helpers
 from helpers import Timer, tic, toc, printWARN
 from Printable import DynStruct

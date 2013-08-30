@@ -733,3 +733,59 @@ def aff_inliers_from_randomsac(kpts1_m, kpts2_m, xy_thresh_sqrd, nIter=500, nSam
         myprint(mystats(cx2_sf_ave),lbl='ave scale factor')
         myprint(mystats(cx2_sf_err),lbl='ave scale factor error')
 '''
+
+            #print('kpts = %r' % len(kpts_mem_use) / 5.0)
+            #print('#desc = %r' % len(desc_mem_use) / 128.0)
+
+        #cx2_feats = [load_features(feat_path) for feat_path in iter(cx2_feat_path)]
+        #cx2_kpts  = [k for (k,d) in cx2_feats]
+        #cx2_desc  = np.array([d for (k,d) in cx2_feats])
+        # Whiten descriptors
+
+# ---------
+# feature_compute2.py
+
+            #print (' * Stacking '+str(len(cx2_desc))+' features')
+            #print helpers.info(cx2_desc, 'cx2_desc')
+
+            #print (' * '+helpers.info(ax2_desc, 'ax2_desc'))
+            #print (' * '+helpers.info(ax2_desc_white, 'ax2_desc_white'))
+
+            #print ('Looping through '+str(len(cx2_desc))+' features')
+
+                #print ('index=%r ; offset=%r ; new_desc.shape=%r' % (offset, index, helpers.info(new_desc,'new_desc')))
+
+            #print ('index=%r ; offset=%r ; new_desc.shape=%r' % (index, offset, new_desc.shape,))
+            #print ' * '+helpers.info(cx2_desc, 'cx2_desc')
+
+    #if __WHITEN_INDIVIDUAL__: # I dont think this is the way to go
+    #    cx2_desc = [algos.whiten(d) for (k,d) in cx2_feats]
+    # cache the data
+
+
+
+# Memory erro stfuff
+            desc_mem_use = 0
+            import draw_func2 as df2
+            #exec(df2.present())
+            kpts_bits, num_kpts, _ = helpers.numpy_list_num_bits(cx2_kpts, np.float32, 5)
+            desc_bits, num_desc, _ = helpers.numpy_list_num_bits(cx2_desc, np.uint8, 128)
+            print('#kpts = %r ; bits(kpts)=%r ; MB(kpts)=%r' % (num_kpts,
+                                                                kpts_bits,
+                                                                kpts_bits / 8 / 2.0**20))
+            print('#desc = %r ; bits(desc)=%r ; MB(desc)=%r' % (num_desc,
+                                                                desc_bits,
+                                                                desc_bits / 8 / 2.0**20))
+            while True:
+                cmd = raw_input('enter debug command (quit to exit)')
+                if cmd == 'quit': 
+                    break
+                exec(cmd)
+
+
+        # Load features (with single thread!)
+        #cx2_feats = parallel_compute(load_features, [cx2_feat_path], num_procs=1)
+def printDEBUG(msg):
+    print msg
+
+

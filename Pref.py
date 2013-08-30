@@ -7,13 +7,19 @@ import os.path
 import traceback
 import numpy as np
 
-__HAVE_PYQT__ = False
+# See if PyQt4 is installed
+try: 
+    import PyQt4
+    HAVE_PYQT = True
+except ImportError as ex:
+    HAVE_PYQT = False
 
 def reload_module():
     import imp
     import sys
     imp.reload(sys.modules[__name__])
-
+def rrr():
+    reload_module()
 
 class Pref(DynStruct):
     '''
@@ -260,7 +266,8 @@ class Pref(DynStruct):
 
     # QT THINGS
     def createQWidget(self):
-        if not __HAVE_PYQT__:
+        import gui
+        if not HAVE_PYQT:
             raise Exception('Running without pyqt. cannot create')
         else:
             editpref_widget = EditPrefWidget(self)
@@ -269,7 +276,7 @@ class Pref(DynStruct):
 
     def _createQPreferenceModel(self):
         'Creates a QStandardItemModel that you can connect to a QTreeView'
-        if not __HAVE_PYQT__:
+        if not HAVE_PYQT:
             raise Exception('Running without pyqt. cannot create')
         else:
             return QPreferenceModel(self)
@@ -344,7 +351,7 @@ def report_thread_error(fn):
     return report_thread_error_wrapper
 
 
-if __HAVE_PYQT__:
+if HAVE_PYQT:
     from frontend.EditPrefSkel import Ui_editPrefSkel
     from PyQt4.Qt import QAbstractItemModel, QModelIndex, QVariant, Qt,\
             QObject, QComboBox, QMainWindow, QTableWidgetItem, QMessageBox,\

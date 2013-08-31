@@ -8,7 +8,7 @@ import os
 import params
 import report_results2 as rr2
 import sys 
-import draw_func as df2
+import draw_func2 as df2
 
 def reload_module():
     import imp
@@ -127,6 +127,7 @@ if __name__ == '__main__':
             qcx2_res = expt_locals['qcx2_res']
             allres = expt_locals['allres']
             has_arg = True
+            print(allres)
         #elif argv.find('param') > -1:
             #param_config1()
             #expt_locals = run_experiment()

@@ -833,7 +833,7 @@ import sys
 class Timer(object):
     ''' Used to time statments with a with statment
     e.g with Timer() as t: some_function()'''
-    def __init__(self, outlist=[], msg=''):
+    def __init__(self, msg='', outlist=[]):
         # outlist is a list to append output to
         self.outlist = outlist
         self.msg = msg
@@ -878,14 +878,60 @@ def execstr_attr_list(obj_name, attr_list=None):
     execstr_list = [obj_name+'.'+attr for attr in attr_list]
     return execstr_list
 
-def execstr_dict(dict, local_name):
+def execstr_dict(dict_, local_name, exclude_list=None):
     #if local_name is None:
-        #local_name = dict
+        #local_name = dict_
         #exec(execstr_parent_locals())
-        #exec('dict = local_name')
-    execstr = '\n'.join((key+' = '+local_name+'['+repr(key)+']'
-                        for (key, val) in dict.iteritems()))
+        #exec('dict_ = local_name')
+    if exclude_list is None: 
+        execstr = '\n'.join((key+' = '+local_name+'['+repr(key)+']'
+                            for (key, val) in dict_.iteritems()))
+    else:
+        if not type(exclude_list) == types.ListType:
+            exclude_list = [exclude_list]
+        exec_list = []
+        for (key, val) in dict_.iteritems():
+            if not any((fnmatch.fnmatch(key, pat) for pat in iter(exclude_list))):
+                exec_list.append(key+' = '+local_name+'['+repr(key)+']')
+        execstr = '\n'.join(exec_list)
     return execstr
+
+def execstr_timeitsetup(dict_, exclude_list=[]):
+    '''
+    Example: 
+    import timeit
+    local_dict = locals().copy()
+    exclude_list=['_*', 'In', 'Out', 'rchip1', 'rchip2']
+    local_dict = locals().copy()
+    setup = helpers.execstr_timeitsetup(local_dict, exclude_list)
+    timeit.timeit('somefunc', setup)
+    '''
+    old_thresh =  np.get_printoptions()['threshold']
+    np.set_printoptions(threshold=1000000000)
+    matches = fnmatch.fnmatch
+    excl_valid_keys = [key for key in dict_.iterkeys() if not any((matches(key, pat) for pat in iter(exclude_list)))]
+    valid_types = set([np.ndarray, np.float32, np.float64, np.int64, int, float])
+    type_valid_keys = [key for key in iter(excl_valid_keys) if type(dict_[key]) in valid_types]
+    exec_list = []
+    for key in type_valid_keys:
+        val = dict_[key]
+        try:
+            val_str = np.array_repr(val)
+        except Exception as ex:
+            val_str = repr(val)
+        exec_list.append(key+' = '+repr(dict_[key]))
+    exec_str  = '\n'.join(exec_list)
+    import_str = textwrap.dedent('''
+    import numpy as np
+    from numpy import array, float32, float64, int32, int64
+    import helpers
+    from spatial_verification2 import *
+                                 ''')
+    setup = import_str + exec_str
+    np.set_printoptions(threshold=old_thresh)
+    return setup
+
+
 @__DEPRICATED__
 def dict_execstr(dict_, local_name=None):
     return execstr_dict(dict_, local_name)

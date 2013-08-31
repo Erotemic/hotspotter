@@ -234,7 +234,6 @@ def run_matching(hs):
         res.cx2_fs_V    = cx2_fs_V
         res.cx2_score_V = cx2_score_V
         res.save(hs)
-        print('%d/%d' % (query_num, ))
     return qcx2_res
 
 #========================================

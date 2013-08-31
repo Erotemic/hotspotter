@@ -5,7 +5,13 @@ import sys
 import os.path
 import numpy as np
 import helpers
-#print('LOAD_MODULE: params.py')
+
+def reload_module():
+    import imp
+    import sys
+    imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
 '''
 print(' * __name__ = %s' % __name__)
@@ -236,12 +242,6 @@ def mothers_problem_pairs():
     #-
     return locals()
 
-
-# reloads this module when I mess with it
-def reload_module():
-    import imp
-    import sys
-    imp.reload(sys.modules[__name__])
 
 if '--histeq' in sys.argv:
     print(' * with histogram equalization')

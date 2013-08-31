@@ -3,6 +3,8 @@ from warnings import catch_warnings, simplefilter
 import cv2
 import numpy.linalg as linalg
 import numpy as np
+import scipy 
+import scipy.linalg
 import scipy.sparse as sparse
 import scipy.sparse.linalg as sparse_linalg
 # skimage.transform
@@ -12,6 +14,8 @@ def reload_module():
     import imp
     import sys
     imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
 # Generate 6 degrees of freedom homography transformation
 def compute_homog(x1_m, y1_m, x2_m, y2_m):
@@ -109,20 +113,30 @@ def homography_inliers(kpts1_m,
     # Precompute lower triangular affine tranforms inv2_m (dot) acd1_m
     # [(a2*a1), (c2*a1+d2*c1), (d2*d1)]
     
-def breakup_kpts(kpts_5xN):
-    _xs   = kpts_5xN[0]
-    _ys   = kpts_5xN[1]
-    _acds = kpts_5xN[2:5] 
+def split_kpts(kpts5xN):
+    'breakup keypoints into position and shape'
+    _xs   = kpts5xN[0]
+    _ys   = kpts5xN[1]
+    _acds = kpts5xN[2:5] 
     return _xs, _ys, _acds
 
 def affine_inliers(kpts1, kpts2, fm, xy_thresh, scale_thresh):
     scale_thresh_low  = scale_thresh ** 2
     scale_thresh_high = 1.0 / scale_thresh_low
     # Get matching keypoints (x, y, ellipse_acd)
-    x1_m, y1_m, acd1_m = breakup_kpts(kpts1[fm[:, 0]].T)
-    x2_m, y2_m, acd2_m = breakup_kpts(kpts2[fm[:, 1]].T)
-    inliers, Aff = __affine_inliers
+    x1_m, y1_m, acd1_m = split_kpts(kpts1[fm[:, 0]].T)
+    x2_m, y2_m, acd2_m = split_kpts(kpts2[fm[:, 1]].T)
 
+    # TODO: Pass in the diag length
+    x2_extent = x2_m.max() - x2_m.min()
+    y2_extent = y2_m.max() - y2_m.min()
+    img2_diaglen_sqrd = x2_extent**2 + y2_extent**2
+    xy_thresh_sqrd = img2_diaglen_sqrd * xy_thresh
+
+    inliers, Aff = __affine_inliers(x1_m, y1_m, acd1_m,
+                                    x2_m, y2_m, acd2_m, xy_thresh, 
+                                    scale_thresh_high, scale_thresh_low)
+    return inliers, Aff
 # --------------------------------
 # Linear algebra functions on lower triangular matrices
 def det_acd(acd):
@@ -139,102 +153,148 @@ def dot_acd(acd1, acd2):
     return np.array([a, c, d])
 def xy_error_acd(x1, y1, x2, y2):
     'Aligned points spatial error'
-    return (x1 - x2)**2 + (x1 - y1)**2
+    return (x1 - x2)**2 + (y1 - y2)**2
 def inv_sqrtm_acd(acd):
     eps = 1e-9
     a = acd[0]
     c = acd[1]
     d = acd[2]
-    _a = 1.0 / np.sqrt(a) 
-    _c = (c / np.sqrt(d) - c / np.sqrt(d)) / (a - d + eps)
-    _d = 1.0 / np.sqrt(d)
+    #_a = 1.0 / np.sqrt(a) 
+    #_c = (c / np.sqrt(d) - c / np.sqrt(d)) / (a - d + eps)
+    #_d = 1.0 / np.sqrt(d)
     return _a, _c, _d
-
-
 # --------------------------------
 
 def __affine_inliers(x1_m, y1_m, acd1_m,
-                     x2_m, y2_m, acd2_m, xy_thresh, 
+                     x2_m, y2_m, acd2_m, xy_thresh_sqrd, 
                      scale_thresh_high, scale_thresh_low):
     'Estimates inliers deterministically using elliptical shapes'
     best_inliers = []
     best_Aff = None
+    best_mx_old = None
     # Get keypoint scales (determinant)
     det1_m = det_acd(acd1_m)
     det2_m = det_acd(acd2_m)
     # Compute all transforms from kpts1 to kpts2 (enumerate all hypothesis)
     inv2_m = inv_acd(acd2_m, det2_m)
+    # The transform from kp1 to kp2 is given as:
+    # A = inv(A2).dot(A1)
     Aff_list = dot_acd(inv2_m, acd1_m)
     # Compute scale change of all transformations 
     detAff_list = det_acd(Aff_list)
     # Test all hypothesis 
-    for mx in xrange(len(x1_m)): 
+    for mx in xrange(len(x1_m)):
+        # --- Get the mth hypothesis ---
         A11 = Aff_list[0,mx]
         A21 = Aff_list[1,mx]
         A22 = Aff_list[2,mx]
         Adet = detAff_list[mx]
-        x1_hypoth = x1_m[mx]
-        x2_hypoth = x2_m[mx]
-        y1_hypoth = y1_m[mx]
-        y2_hypoth = y2_m[mx]
+        x1_hypo = x1_m[mx]
+        x2_hypo = x2_m[mx]
+        y1_hypo = y1_m[mx]
+        y2_hypo = y2_m[mx]
+        # --- Transform from kpts1 to kpts2 ---
+        x1_mt   = x2_hypo + A11*(x1_m - x1_hypo)
+        y1_mt   = y2_hypo + A21*(x1_m - x1_hypo) + A22*(y1_m - y1_hypo)
+        # --- Find (Squared) Error ---
+        xy_err    = (x1_mt - x2_m)**2 + (y1_mt - y2_m)**2 
+        scale_err = Adet * det2_m / det1_m
+        # --- Determine Inliers ---
+        xy_inliers = xy_err < xy_thresh_sqrd 
 
-        # Transform x1_m -> x1_mt
-        x1_mt = x2_hypoth + (A11 * (x1_m - x1_hypoth))
-        # Transform y1_m -> y1_mt
-        y1_mt = y2_hypoth + (A21 * (x1_m - x1_hypoth)) + (A22 * (y1_m - y1_m[mx]))
-        # Get transformed determinant det(A) * det(acd) 
-        det1_mt = det1_m * Adet
-        # Find xy-(squared)-error 
-        xy_err    = xy_error_acd(x1_m, y1_mt, x2_m, y2_m) 
-        # Find scale-(squared)-error
-        scale_err = det1_mt / det2_m
-        # Test xy inliers
-        xy_inliers = xy_err < xy_thresh
-        # Test scale inliers
         scale_inliers = np.logical_and(scale_err > scale_thresh_low,
                                        scale_err < scale_thresh_high)
-        #hypothesis_inliers, = np.where(np.logical_and(xy_inliers, scale_inliers))
-        hypothesis_inliers, = np.where(xy_inliers)
-        # See if more inliers than previous best
-        if len(hypothesis_inliers) > len(best_inliers):
-            best_inliers = hypothesis_inliers
-            best_Aff       = A_list[:, mx]
+        hypo_inliers, = np.where(np.logical_and(xy_inliers, scale_inliers))
+        # --- Update Best Inliers ---
+        if len(hypo_inliers) >= len(best_inliers):
+            best_inliers = hypo_inliers
+            best_Aff     = Aff_list[:, mx]
+            best_mx_old = mx
+    return best_inliers, best_Aff
+
+# The old one is faster. Bullshit
+def __affine_inliers_needs_work(x1_m, y1_m, acd1_m,
+                     x2_m, y2_m, acd2_m, xy_thresh_sqrd, 
+                     scale_thresh_high, scale_thresh_low):
+    'Estimates inliers deterministically using elliptical shapes'
+    # Get keypoint scales (determinant)
+    det1_m = det_acd(acd1_m)
+    det2_m = det_acd(acd2_m)
+    # Precompute transformations for each correspondence
+    inv2_m = inv_acd(acd2_m, det2_m)
+    Aff_list = dot_acd(inv2_m, acd1_m) # A = inv(A2).dot(A1) 
+    detAff_list = det_acd(Aff_list)    # detA = det1 / det2
+    #
+    detAff_list.shape = (1, detAff_list.size)
+    det2_m.shape = (det2_m.size, 1)
+    det1_m.shape = (det1_m.size, 1)
+    AffT = Aff_list.T
+    # Step 1: Compute scale inliers
+    scale_err_mat = (det2_m/det1_m).dot(detAff_list)
+    # Step 2: Compute spatial inliers -- this can be cascaded based on scale
+    # breaking a core tenant of python for some extra speed
+    mx2_xyerr = np.array([
+        (x2_m - (x2_m[mx] + AffT[mx,0]*(x1_m - x1_m[mx]))) ** 2 +\
+        (y2_m - (y2_m[mx] + AffT[mx,1]*(x1_m - x1_m[mx])        +\
+                            AffT[mx,2]*(y1_m - y1_m[mx]))) ** 2
+        for mx in xrange(len(x1_m))])
+
+    mx2_scale_inliers = np.logical_and(scale_err_mat > scale_thresh_low,
+                                       scale_err_mat < scale_thresh_high)
+    mx2_xy_inliers = mx2_xyerr < xy_thresh_sqrd
+    # axis=1 might cause issues. bytes-order is different on hyrule
+    mx2_inliers = np.logical_and(mx2_scale_inliers, mx2_xy_inliers)
+    mx2_num_xy_inliers = mx2_xy_inliers.sum(axis=1) #
+    mx2_num_inliers = mx2_inliers.sum(axis=1)
+    #
+    best_mx = mx2_num_inliers.argsort()[-1]
+    best_Aff = AffT[best_mx]
+    best_inliers = np.where(mx2_inliers[best_mx])[0]
     return best_inliers, best_Aff
 
 def test_realdata2():
+    import numpy.linalg as linalg
+    import numpy as np
+    import scipy.sparse as sparse
+    import scipy.sparse.linalg as sparse_linalg
     import load_data2
     import params
     import draw_func2 as df2
     import helpers
     import spatial_verification2 as sv2
-    params.reload_module()
-    load_data2.reload_module()
-    df2.reload_module()
+    params.rrr()
+    load_data2.rrr()
+    df2.rrr()
     df2.reset()
-    sv2.reload_module()
+    sv2.rrr()
     # Parameters
-    xy_thresh = params.__XY_THRESH__
-    scale_thresh = params.__SCALE_THRESH__
-    # Pick out some data
-    (hs, qcx, cx, fm, rchip1, rchip2, kpts1, kpts2) =\
-            load_data2.get_sv_test_data()
-    # Draw Data
-    df2.reload_module()
     df2.ELL_COLOR = (1, 0, 0)
     df2.ELL_LINEWIDTH = 2
     df2.ELL_ALPHA = .5
+    xy_thresh = params.__XY_THRESH__
+    scale_thresh = params.__SCALE_THRESH__
+    # Pick out some data
+    if not 'hs' in vars():
+        (hs, qcx, cx, fm, rchip1, rchip2, kpts1, kpts2) = load_data2.get_sv_test_data()
+    # Draw assigned matches
     df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs=None,
                       all_kpts=False, draw_lines=False, doclf=True,
                       title='Assigned matches')
+    df2.update()
     # Affine matching tests
     scale_thresh_low  = scale_thresh ** 2
     scale_thresh_high = 1.0 / scale_thresh_low
-    # Get corresponding keypoints (x, y, ellipse_acd)
-    x1_m, y1_m, acd1_m = breakup_kpts(kpts1[fm[:, 0]].T)
-    x2_m, y2_m, acd2_m = breakup_kpts(kpts2[fm[:, 1]].T)
+    # Split into location and shape
+    x1_m, y1_m, acd1_m = sv2.split_kpts(kpts1[fm[:, 0]].T)
+    x2_m, y2_m, acd2_m = sv2.split_kpts(kpts2[fm[:, 1]].T)
     # -----------------------------------------------
     # Get match threshold 10% of matching keypoint extent diagonal
-    aff_inliers1 = sv2.affine_inliers(kpts1, kpts2, fm, xy_thresh_sqrd, scale_thresh)
+    aff_inliers1, Aff1 = sv2.affine_inliers(kpts1, kpts2, fm, scale_thresh, scale_thresh)
+    # Draw affine inliers
+    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[aff_inliers1], fs=None,
+                      all_kpts=False, draw_lines=False, doclf=True,
+                      title='Assigned matches')
+    df2.update()
     #aff_inliers1 = sv2.__affine_inliers(x1_m, y1_m, x2_m, y2_m, 
                                         #acd1_m, acd2_m, xy_thresh_sqrd, scale_thresh)
 

@@ -301,7 +301,7 @@ def build_rankres_str(allres):
         greater_cxs = np.where(qcx2_top_true_rank[test_sample_cx_with_gt] > thresh)[0]
         num_greater = len(greater_cxs)
         num_less = num_with_gtruth - num_greater
-        num_greater =  - num_less
+        num_greater = num_with_gtruth - num_less
         frac_less = 100.0 * num_less / num_with_gtruth
         fmt_tup = (num_less, num_with_gtruth, frac_less, num_greater)
         return fmt_tup, greater_cxs

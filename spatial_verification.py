@@ -33,16 +33,16 @@ def compute_homog(xyz_norm1, xyz_norm2):
              (j, k, l, 0, 0, 0, p, q, r) ] )
     # Solve for the nullspace of the Mbynine
     try:
-        (_U, _s, V) = linalg.svd(Mbynine)
+        (U, S, Vcc) = linalg.svd(Mbynine)
     except MemoryError as ex:
         warnings.warn('warning 35 ransac:'+repr(ex), category=UserWarning)
         # sparse seems to be 4 times slower
         # the SVD itself is actually 37 times slower
         print('Singular Value Decomposition Ran Out of Memory. Trying with a sparse matrix')
         MbynineSparse = sparse.lil_matrix(Mbynine)
-        (_U, _s, V) = sparse_linalg.svds(MbynineSparse)
+        (U, S, Vcc) = sparse_linalg.svds(MbynineSparse)
     # Rearange the nullspace into a homography
-    h = V[-1,:] # (transposed in matlab)
+    h = Vcc[-1]
     H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]  ) )
     return H
 # 
@@ -338,6 +338,12 @@ def test_realdata():
     df2.present(wh=(600,400))
 
 def test_realdata2():
+    from helpers import printWARN, printINFO
+    import warnings
+    import numpy.linalg as linalg
+    import numpy as np
+    import scipy.sparse as sparse
+    import scipy.sparse.linalg as sparse_linalg
     import load_data2
     import params
     import draw_func2 as df2
@@ -384,7 +390,8 @@ def test_realdata2():
     df2.reset()
     df2.show_keypoints(rchip1, kpts1_m.T, fignum=0, plotnum=121)
     df2.show_keypoints(rchip2, kpts2_m.T, fignum=0, plotnum=122)
-    df2.show_matches2(rchip1, rchip2, kpts1_m.T,  kpts2_m.T, title=title, fignum=1, vert=False)
+    df2.show_matches2(rchip1, rchip2, kpts1_m.T,  kpts2_m.T, title=title,
+                      fignum=1, vert=True)
 
     spatial_verification.reload_module()
     with helpers.Timer():

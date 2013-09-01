@@ -33,7 +33,12 @@ import re
 import fnmatch
 
 # Ensure that hotspotter is in the PYTHONPATH
-source_dir = os.path.dirname(__file__)
+try:
+    source_dir = os.path.dirname(__file__)
+except NameError as ex:
+    source_dir = os.getcwd()
+    pass
+
 print(' * import hotspotter from: '+source_dir)
 if os.environ['PYTHONPATH'].find(source_dir) == -1:
     toappend = source_dir + os.pathsep

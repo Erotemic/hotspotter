@@ -135,8 +135,10 @@ __VSONE_RATIO_THRESH__ = 1.5       # Thresholds for one-vs-one
 # SPATIAL VERIFICATION
 __NUM_RERANK__   = 1000 # Number of top matches to spatially re-rank
 __XY_THRESH__    = .1 # % diaglen of keypoint extent
-__SCALE_THRESH__ = .5
-
+__XY_THRESH__    = .002 # % diaglen of keypoint extent
+__SCALE_THRESH_HIGH__ = 2.0
+__SCALE_THRESH_LOW__  = 0.5
+VERIFY_ALGO = 'sv1'
 #=====================================================
 # FUNCTIONS
 #=====================================================
@@ -339,6 +341,7 @@ def make_pref_object():
     prefs.verify = verify
     #-----------------------
     epw = prefs.createQWidget()
+
 
 if __name__ == '__main__':
     print ('Entering param __main__')

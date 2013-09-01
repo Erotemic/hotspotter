@@ -19,7 +19,7 @@ from helpers import Timer, tic, toc, printWARN
 from Printable import DynStruct
 import algos
 import helpers
-import spatial_verification
+import spatial_verification2 as sv2
 import load_data2
 import params
 # Math and Science Imports
@@ -210,7 +210,8 @@ def run_matching(hs):
         #
         # Assign matches with the chosen function (vsone) or (vsmany)
         num_qdesc = len(cx2_desc[qcx])
-        print_('query %d/%d> assign %d desc' % (qcx, total_dirty, num_qdesc))
+        print('query %d/%d>---------------' % (qcx, total_dirty))
+        print('query %d/%d> assign %d desc' % (qcx, total_dirty, num_qdesc))
         tt1 = tic()
         assign_output = assign_matches(qcx, cx2_desc)
         (cx2_fm, cx2_fs, cx2_score) = assign_output
@@ -218,11 +219,13 @@ def run_matching(hs):
         print(' ...%.2f seconds' % (assign_time))
         #
         # Spatially verify the assigned matches
-        num_match = np.array([len(fm) for fm in cx2_fm]).sum()
-        print_('query %d/%d> verify %d matches' % (qcx, total_dirty, num_match))
+        num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
+        print('query %d/%d> verify %d assigned matches' % (qcx, total_dirty, num_assigned))
         tt2 = tic()
         sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
         (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
+        num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
+        print('query %d/%d> verified %d matches' % (qcx, total_dirty, num_verified))
         verify_time = toc(tt2)
         print(' ...%.2f seconds' % (verify_time))
         #
@@ -512,8 +515,7 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
         cx2_fs - C x Mx1 array of matching feature scores'''
 
     # vsmany_index = hs.matcher._Matcher__vsmany_index
-    helpers.println('Assigning vsmany feature matches from qcx=%d to %d chips'\
-                    % (qcx, len(cx2_desc)))
+    #helpers.println('Assigning vsmany feature matches from qcx=%d to %d chips'\ % (qcx, len(cx2_desc)))
     vsmany_flann = vsmany_index.vsmany_flann
     ax2_cx    = vsmany_index.ax2_cx
     ax2_fx    = vsmany_index.ax2_fx
@@ -558,8 +560,7 @@ def assign_matches_vsmany_BINARY(qcx, cx2_desc):
 # One-vs-One 
 #========================================
 def assign_matches_vsone(qcx, cx2_desc):
-    print('Assigning vsone feature matches from cx=%d to %d chips'\
-          % (qcx, len(cx2_desc)))
+    #print('Assigning vsone feature matches from cx=%d to %d chips'\ % (qcx, len(cx2_desc)))
     desc1 = cx2_desc[qcx]
     vsone_flann = pyflann.FLANN()
     vsone_flann_params =  params.VSONE_FLANN_PARAMS
@@ -626,41 +627,102 @@ def match_vsone(desc2, vsone_flann, checks, ratio_thresh=1.2, burst_thresh=None)
 #========================================
 # Spatial verifiaction 
 #========================================
+# Debug data
+'''
+exec(open('__init__.py', 'r').read())
+exec(open('draw_func2.py', 'r').read())
+df2.rrr()
+df2.reset()
+# Drawing Preferences
+df2.LINE_COLOR = (1, 0, 0)
+df2.ELL_COLOR = (0, 0, 1)
+df2.ELL_LINEWIDTH = 2
+df2.ELL_ALPHA = .5
+xy_thresh = params.__XY_THRESH__
+scale_thresh_high = params.__SCALE_THRESH_HIGH__
+scale_thresh_low  = params.__SCALE_THRESH_LOW__
+# Pick out some data
+if not 'hs' in vars():
+    (hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data()
+
+
+kwargs_ = dict(fs=None,
+              all_kpts=True,
+              draw_lines=True, 
+              doclf=True)
+df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm,
+              title='Assigned matches', **kwargs_)
+
+df2.update()
+'''
 #@profile
-def __spatially_verify(ransac_func, kpts1, kpts2, fm, fs, DBG=None):
+import spatial_verification as sv1
+import spatial_verification2 as sv2
+def spatially_verify(kpts1, kpts2, fm, fs, qcx, cx):
     '''1) compute a robust transform from img2 -> img1
-       2) keep feature matches which are inliers '''
+       2) keep feature matches which are inliers 
+       returns fm_V, fs_V, H
+       '''
     # ugg transpose, I like row first, but ransac seems not to
     if len(fm) == 0: 
         return (np.empty((0, 2)), np.empty((0, 1)), np.eye(3))
     xy_thresh = params.__XY_THRESH__
+    scale_thresh_high = params.__SCALE_THRESH_HIGH__
+    scale_thresh_low  = params.__SCALE_THRESH_LOW__
+    verify_algo = params.VERIFY_ALGO
     kpts1_m = kpts1[fm[:, 0], :].T
     kpts2_m = kpts2[fm[:, 1], :].T
-    # -----------------------------------------------
-    # Get match threshold 10% of matching keypoint extent diagonal
-    img1_extent = (kpts1_m[0:2, :].max(1) - kpts1_m[0:2, :].min(1))[0:2]
-    xy_thresh1_sqrd = np.sum(img1_extent**2) * (xy_thresh**2)
-    # -----------------------------------------------
-    hinlier_tup = ransac_func(kpts2_m, kpts1_m, xy_thresh1_sqrd) 
-    if not hinlier_tup is None:
-        H, inliers = hinlier_tup
+    #-----------------------------------------------
+    # spatial threshold is: xy_thresh*100% of matching keypoints diagonal extent
+    #-----------------------------------------------
+    #global sv1_times
+    sv2.rrr()
+    sv1.reload_module()
+    with helpers.Timer('sv1') as t: 
+        hinlier_tup1 = sv1.H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh, 
+                                                scale_thresh_high, scale_thresh_low)
+    with helpers.Timer('sv2') as t: 
+        hinlier_tup2 = sv2.homography_inliers(kpts1, kpts2, fm, xy_thresh, 
+                                                scale_thresh_high, scale_thresh_low)
+    if verify_algo == 'sv1':
+        H, inliers, _, __ = hinlier_tup1
+    if verify_algo == 'sv2':
+        H, inliers, _, __ = hinlier_tup2
     else:
         H = np.eye(3)
         inliers = []
-    if len(inliers) > 0:
-        fm_V = fm[inliers, :]
-        fs_V = fs[inliers, :]
-    else: 
+    DBG=True
+    if DBG: 
+        if hinlier_tup2 is None:
+            hinlier_tup2 = (np.eye(3), [])
+        H1, inliers1, Aff1, aff_inliers1 = hinlier_tup1
+        H2, inliers2, Aff2, aff_inliers2 = hinlier_tup2
+        print('Aff1=\n%r' % Aff1)
+        print('Aff2=\n%r' % Aff2)
+        print('num aff_inliers sv1: %r ' % len(aff_inliers1))
+        print('num aff_inliers sv2: %r ' % len(aff_inliers2))
+        print('num inliers sv1: %r ' % inliers1.sum())
+        print('num inliers sv2: %r ' % len(inliers2))
+        print('H1=\n%r' % H1)
+        print('H2=\n%r' % H2)
+        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[aff_inliers1], fignum=1,
+                          title='sv1 verification affine', **kwargs_)
+        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[inliers1], fignum=2,
+                          title='sv1 verification homog', **kwargs_)
+
+        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[aff_inliers2], fignum=3,
+                          title='sv2 verification affine', **kwargs_)
+        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[inliers2], fignum=4,
+                          title='sv2 verification homog', **kwargs_)
+        df2.rrr()
+        df2.present(num_rc=(2,2), wh=(800,500))
+    if len(inliers) == 0:
         fm_V = np.empty((0, 2))
         fs_V = np.array((0, 1))
+    else:
+        fm_V = fm[inliers, :]
+        fs_V = fs[inliers, :]
     return fm_V, fs_V, H
-
-def spatially_verify(kpts1, kpts2, fm, fs, DBG=None):
-    ''' Concrete implementation of spatial verification
-        using the deterministic ellipse based sample conensus'''
-    ransac_func = spatial_verification.H_homog_from_DELSAC
-    return __spatially_verify(ransac_func, kpts1, kpts2, fm, fs, DBG)
-spatially_verify.__doc__ += '\n'+__spatially_verify.__doc__
 
 #@profile
 def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
@@ -680,7 +742,7 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
         kpts2 = cx2_kpts[cx]
         fm    = cx2_fm[cx]
         fs    = cx2_fs[cx]
-        fm_V, fs_V, H = spatially_verify(kpts1, kpts2, fm, fs)
+        fm_V, fs_V, H = spatially_verify(kpts1, kpts2, fm, fs, qcx, cx)
         cx2_fm_V[cx] = fm_V
         cx2_fs_V[cx] = fs_V
         if len(fm_V) == 0 and __OVERRIDE__:

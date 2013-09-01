@@ -982,12 +982,12 @@ def unit_test(test_func):
     return __unit_test_wraper
 
 
-def profile(cmd, globals=globals(), locals=locals()):
+def profile(cmd, globals_=globals(), locals_=locals()):
     # Meliae # from meliae import loader # om = loader.load('filename.json') # s = om.summarize();
     import cProfile, sys, os
     print('helpers> Profiling Command: '+cmd)
     cProfOut_fpath = 'OpenGLContext.profile'
-    cProfile.runctx( cmd, globals, locals, filename=cProfOut_fpath )
+    cProfile.runctx( cmd, globals_, locals_, filename=cProfOut_fpath )
     # RUN SNAKE
     print('helpers> Profiled Output: '+cProfOut_fpath)
     if sys.platform == 'win32':

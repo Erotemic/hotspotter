@@ -1,3 +1,4 @@
+from __future__ import division
 from helpers import printWARN, printINFO
 import warnings
 import cv2
@@ -33,16 +34,16 @@ def compute_homog(xyz_norm1, xyz_norm2):
              (j, k, l, 0, 0, 0, p, q, r) ] )
     # Solve for the nullspace of the Mbynine
     try:
-        (U, S, Vcc) = linalg.svd(Mbynine)
+        (U, S, Vct) = linalg.svd(Mbynine)
     except MemoryError as ex:
         warnings.warn('warning 35 ransac:'+repr(ex), category=UserWarning)
         # sparse seems to be 4 times slower
         # the SVD itself is actually 37 times slower
         print('Singular Value Decomposition Ran Out of Memory. Trying with a sparse matrix')
         MbynineSparse = sparse.lil_matrix(Mbynine)
-        (U, S, Vcc) = sparse_linalg.svds(MbynineSparse)
+        (U, S, Vct) = sparse_linalg.svds(MbynineSparse)
     # Rearange the nullspace into a homography
-    h = Vcc[-1]
+    h = Vct[-1]
     H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]  ) )
     return H
 # 
@@ -77,6 +78,7 @@ def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
     '''Estimates inliers deterministically using elliptical shapes'''
     # EXPLOITS LOWER TRIANGULAR MATRIXES
     best_inliers = []
+    best_Aff = np.eye(3)
     x1_m    = kpts1_m[0,:] # keypoint xy coordinates matches
     y1_m    = kpts1_m[1,:] # keypoint xy coordinates matches
     x2_m    = kpts2_m[0,:]
@@ -94,8 +96,11 @@ def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
     H_aff12_c = (inv2_m[1] * acd1_m[0] + inv2_m[2] * acd1_m[1])
     H_aff12_d = (inv2_m[2] * acd1_m[2])
     H_det_list = H_aff12_a * H_aff12_d
-    scale_thresh_high = 2.0 ** 2
+    scale_thresh_high = 2.0
     scale_thresh_low  = 1.0/scale_thresh_high
+
+    print("sv1: scale_thresh_high=%r" % scale_thresh_high)
+    print("sv1: scale_thresh_low=%r" % scale_thresh_low)
     # Enumerate All Hypothesis (Match transformations)
     for mx in xrange(len(x1_m)): 
         x1 = x1_m[mx]
@@ -122,7 +127,10 @@ def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
         # See if more inliers than previous best
         if len(_inliers) > len(best_inliers):
             best_inliers = _inliers
-    return best_inliers
+            best_Aff = np.array([(Ha,  0,  x2-Ha*x1      ),
+                                 (Hc, Hd,  y2-Hc*x1-Hd*y1),
+                                 ( 0,  0,               1)])
+    return best_Aff, best_inliers
 
 def aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd):
     '''Estimates inliers deterministically using elliptical shapes'''
@@ -148,7 +156,8 @@ def aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd):
         # See if more inliers than previous best
         if len(_inliers) > len(best_inliers):
             best_inliers = _inliers
-    return best_inliers
+            best_Aff = H_aff12
+    return best_inliers, best_Aff
 
 
 def transform_xy(H3x3, xy):
@@ -171,8 +180,22 @@ def H_homog_from_CV2SAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
     H = H if not H is None else np.eye(3)
     return H, np.array(inliers, dtype=bool).flatten()
 
-def H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd):
+def H_homog_from_DELSAC(kpts1_m, kpts2_m,
+                        xy_thresh,
+                        scale_thresh_high,
+                        scale_thresh_low):
     ' Deterministic Elliptical Sample Consensus'
+    #=====
+    # BUG
+    BUG = False
+    if BUG:
+        img1_extent = (kpts1_m[0:2, :].max(1) - kpts1_m[0:2, :].min(1))[0:2]
+        xy_thresh_sqrd = np.sum(img1_extent**2) * xy_thresh
+    else: # FIX
+        img2_extent = (kpts2_m[0:2, :].max(1) - kpts2_m[0:2, :].min(1))[0:2]
+        diag_len = np.sum(np.array(img2_extent, dtype=np.float64)**2)
+        xy_thresh_sqrd = diag_len * xy_thresh
+    #=====
     return __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, aff_inliers_from_ellshape2)
 
 def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
@@ -191,8 +214,10 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     if num_m < min_num_inliers or num_m == 0: 
         return  None
 
+    print("SV1: xy_thresh_sqrd = %r " % xy_thresh_sqrd)
+
     # Estimate initial inliers with some RANSAC variant
-    aff_inliers = func_aff_inlier(kpts1_m, kpts2_m, xy_thresh_sqrd)
+    Aff, aff_inliers = func_aff_inlier(kpts1_m, kpts2_m, xy_thresh_sqrd)
 
     # If we cannot estimate a good correspondence 
     if len(aff_inliers) < min_num_inliers:
@@ -232,246 +257,7 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     xy1_mHt = transform_xy(H, xy1_m)                        # Transform Kpts1 to Kpts2-space
     sqrd_dist_error = np.sum( (xy1_mHt - xy2_m)**2, axis=0) # Final Inlier Errors
     inliers = sqrd_dist_error < xy_thresh_sqrd
-    return H, inliers
-
-def test():
-    weird_A = np.array([(2.7, 4.2, 10),
-                        (1.7, 3.1, 20),
-                        (2.2, 2.4, 1.1)])
-
-    num_mat = 2000
-    frac_in = .5
-    num_inl = int(num_mat * frac_in)
-    kpts1_m = np.random.rand(5, num_mat)
-    kpts2_m = np.random.rand(5, num_mat)
-
-    kpts2_cor = kpts1_m[:, 0:num_inl]
-
-    x_cor = kpts2_cor[0]
-    y_cor = kpts2_cor[1]
-    z_cor = np.ones(num_inl)
-    a_cor = kpts2_cor[2]
-    zeros = np.zeros(num_inl)
-    c_cor = kpts2_cor[3]
-    d_cor = kpts2_cor[4]
-
-    kpts2_mats = np.array([(a_cor, zeros, x_cor),
-                           (c_cor, d_cor, y_cor), 
-                           (zeros, zeros, z_cor)]).T
-
-    # Do some weird transform on some keypoints
-    import scipy.linalg
-    for x in xrange(num_inl):
-        mat = weird_A.dot(kpts2_mats[x].T)
-        mat /= mat[2,2]
-        kpts2_m[0,x] = mat[0,2]
-        kpts2_m[1,x] = mat[1,2]
-        kpts2_m[2,x] = mat[0,0]
-        kpts2_m[3,x] = mat[1,0]
-        kpts2_m[4,x] = mat[1,2]
-
-    # Find some inliers? 
-    xy_thresh_sqrd = 7
-    H, inliers = H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh_sqrd)
+    return H, inliers, Aff, aff_inliers
 
 if __name__ == '__main__':
     print 'Testing spatial_verification.py'
-    print test_realdata()
-
-def test_realdata():
-    import load_data2
-    import params
-    import draw_func2 as df2
-    import helpers
-    import spatial_verification
-    #params.reload_module()
-    #load_data2.reload_module()
-    #df2.reload_module()
-
-    db_dir = load_data2.DEFAULT
-    hs = load_data2.HotSpotter(db_dir)
-    assign_matches = hs.matcher.assign_matches
-    qcx = 0
-    cx = hs.get_other_cxs(qcx)[0]
-    fm, fs, score = hs.get_assigned_matches_to(qcx, cx)
-    # Get chips
-    rchip1 = hs.get_chip(qcx)
-    rchip2 = hs.get_chip(cx)
-    # Get keypoints
-    kpts1 = hs.get_kpts(qcx)
-    kpts2 = hs.get_kpts(cx)
-    # Get feature matches 
-    kpts1_m = kpts1[fm[:, 0], :].T
-    kpts2_m = kpts2[fm[:, 1], :].T
-    # -----------------------------------------------
-    # Get match threshold 10% of matching keypoint extent diagonal
-    xy_thresh = params.__XY_THRESH__
-    img1_extent = (kpts1_m[0:2, :].max(1) - kpts1_m[0:2, :].min(1))[0:2]
-    xy_thresh_sqrd = np.sum(img1_extent**2) * (xy_thresh**2)
-    
-    title='(qx%r v cx%r)\n #match=%r' % (qcx, cx, len(fm))
-    df2.show_matches2(rchip1, rchip2, kpts1,  kpts2, fm, fs, title=title)
-
-    np.random.seed(6)
-    subst = helpers.random_indexes(len(fm),len(fm))
-    kpts1_m = kpts1[fm[subst, 0], :].T
-    kpts2_m = kpts2[fm[subst, 1], :].T
-
-    df2.reload_module()
-    df2.SHOW_LINES = True
-    df2.ELL_LINEWIDTH = 2
-    df2.LINE_ALPHA = .5
-    df2.ELL_ALPHA  = 1
-    df2.reset()
-    df2.show_keypoints(rchip1, kpts1_m.T, fignum=0, plotnum=121)
-    df2.show_keypoints(rchip2, kpts2_m.T, fignum=0, plotnum=122)
-    df2.show_matches2(rchip1, rchip2, kpts1_m.T,  kpts2_m.T, title=title, fignum=1, vert=False)
-
-    spatial_verification.reload_module()
-    with helpers.Timer():
-        best_inliers1 = spatial_verification.aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd)
-    with helpers.Timer():
-        best_inliers2 = spatial_verification.aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd)
-
-    df2.show_matches2(rchip1, rchip2, kpts1_m.T[best_inliers1], kpts2_m.T[best_inliers1], title=title, fignum=2, vert=False)
-    df2.show_matches2(rchip1, rchip2, kpts1_m.T[best_inliers2], kpts2_m.T[best_inliers2], title=title, fignum=3, vert=False)
-    df2.present(wh=(600,400))
-
-def test_realdata2():
-    from helpers import printWARN, printINFO
-    import warnings
-    import numpy.linalg as linalg
-    import numpy as np
-    import scipy.sparse as sparse
-    import scipy.sparse.linalg as sparse_linalg
-    import load_data2
-    import params
-    import draw_func2 as df2
-    import helpers
-    import spatial_verification
-    #params.reload_module()
-    #load_data2.reload_module()
-    #df2.reload_module()
-
-    db_dir = load_data2.MOTHERS
-    hs = load_data2.HotSpotter(db_dir)
-    assign_matches = hs.matcher.assign_matches
-    qcx = 0
-    cx = hs.get_other_cxs(qcx)[0]
-    fm, fs, score = hs.get_assigned_matches_to(qcx, cx)
-    # Get chips
-    rchip1 = hs.get_chip(qcx)
-    rchip2 = hs.get_chip(cx)
-    # Get keypoints
-    kpts1 = hs.get_kpts(qcx)
-    kpts2 = hs.get_kpts(cx)
-    # Get feature matches 
-    kpts1_m = kpts1[fm[:, 0], :].T
-    kpts2_m = kpts2[fm[:, 1], :].T
-    # -----------------------------------------------
-    # Get match threshold 10% of matching keypoint extent diagonal
-    xy_thresh = params.__XY_THRESH__
-    img1_extent = (kpts1_m[0:2, :].max(1) - kpts1_m[0:2, :].min(1))[0:2]
-    xy_thresh_sqrd = np.sum(img1_extent**2) * (xy_thresh**2)
-    
-    title='(qx%r v cx%r)\n #match=%r' % (qcx, cx, len(fm))
-    df2.show_matches2(rchip1, rchip2, kpts1,  kpts2, fm, fs, title=title)
-
-    np.random.seed(6)
-    subst = helpers.random_indexes(len(fm),len(fm))
-    kpts1_m = kpts1[fm[subst, 0], :].T
-    kpts2_m = kpts2[fm[subst, 1], :].T
-
-    df2.reload_module()
-    df2.SHOW_LINES = True
-    df2.ELL_LINEWIDTH = 2
-    df2.LINE_ALPHA = .5
-    df2.ELL_ALPHA  = 1
-    df2.reset()
-    df2.show_keypoints(rchip1, kpts1_m.T, fignum=0, plotnum=121)
-    df2.show_keypoints(rchip2, kpts2_m.T, fignum=0, plotnum=122)
-    df2.show_matches2(rchip1, rchip2, kpts1_m.T,  kpts2_m.T, title=title,
-                      fignum=1, vert=True)
-
-    spatial_verification.reload_module()
-    with helpers.Timer():
-        aff_inliers1 = spatial_verification.aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd)
-    with helpers.Timer():
-        aff_inliers2 = spatial_verification.aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd)
-
-    # Homogonize+Normalize
-    xy1_m    = kpts1_m[0:2,:] 
-    xy2_m    = kpts2_m[0:2,:]
-    (xyz_norm1, T1) = spatial_verification.homogo_normalize_pts(xy1_m[:,aff_inliers1]) 
-    (xyz_norm2, T2) = spatial_verification.homogo_normalize_pts(xy2_m[:,aff_inliers1])
-
-    H_prime = spatial_verification.compute_homog(xyz_norm1, xyz_norm2)
-    H = linalg.solve(T2, H_prime).dot(T1)                # Unnormalize
-
-    Hdet = linalg.det(H)
-
-    # Estimate final inliers
-    acd1_m   = kpts1_m[2:5,:] # keypoint shape matrix [a 0; c d] matches
-    acd2_m   = kpts2_m[2:5,:]
-    # Precompute the determinant of lower triangular matrix (a*d - b*c); b = 0
-    det1_m = acd1_m[0] * acd1_m[2]
-    det2_m = acd2_m[0] * acd2_m[2]
-
-    # Matrix Multiply xyacd matrix by H
-    # [[A, B, X],      
-    #  [C, D, Y],      
-    #  [E, F, Z]] 
-    # dot 
-    # [(a, 0, x),
-    #  (c, d, y),
-    #  (0, 0, 1)] 
-    # = 
-    # [(a*A + c*B + 0*E,   0*A + d*B + 0*X,   x*A + y*B + 1*X),
-    #  (a*C + c*D + 0*Y,   0*C + d*D + 0*Y,   x*C + y*D + 1*Y),
-    #  (a*E + c*F + 0*Z,   0*E + d*F + 0*Z,   x*E + y*F + 1*Z)]
-    # =
-    # [(a*A + c*B,               d*B,         x*A + y*B + X),
-    #  (a*C + c*D,               d*D,         x*C + y*D + Y),
-    #  (a*E + c*F,               d*F,         x*E + y*F + Z)]
-    # # IF x=0 and y=0
-    # =
-    # [(a*A + c*B,               d*B,         0*A + 0*B + X),
-    #  (a*C + c*D,               d*D,         0*C + 0*D + Y),
-    #  (a*E + c*F,               d*F,         0*E + 0*F + Z)]
-    # =
-    # [(a*A + c*B,               d*B,         X),
-    #  (a*C + c*D,               d*D,         Y),
-    #  (a*E + c*F,               d*F,         Z)]
-    # --- 
-    #  A11 = a*A + c*B
-    #  A21 = a*C + c*D
-    #  A31 = a*E + c*F
-    #  A12 = d*B
-    #  A22 = d*D
-    #  A32 = d*F
-    #  A31 = X
-    #  A32 = Y
-    #  A33 = Z
-    #
-    # det(A) = A11*(A22*A33 - A23*A32) - A12*(A21*A33 - A23*A31) + A13*(A21*A32 - A22*A31)
-
-    det1_mAt = det1_m * Hdet
-    # Check Error in position and scale
-    xy_sqrd_err = (x1_mAt - x2_m)**2 + (y1_mAt - y2_m)**2
-    scale_sqrd_err = det1_mAt / det2_m
-    # Check to see if outliers are within bounds
-    xy_inliers = xy_sqrd_err < xy_thresh_sqrd
-    s1_inliers = scale_sqrd_err > scale_thresh_low
-    s2_inliers = scale_sqrd_err < scale_thresh_high
-    _inliers, = np.where(np.logical_and(np.logical_and(xy_inliers, s1_inliers), s2_inliers))
-
-    xy1_mHt = transform_xy(H, xy1_m)                        # Transform Kpts1 to Kpts2-space
-    sqrd_dist_error = np.sum( (xy1_mHt - xy2_m)**2, axis=0) # Final Inlier Errors
-    inliers = sqrd_dist_error < xy_thresh_sqrd
-
-
-
-    df2.show_matches2(rchip1, rchip2, kpts1_m.T[best_inliers1], kpts2_m.T[aff_inliers1], title=title, fignum=2, vert=False)
-    df2.show_matches2(rchip1, rchip2, kpts1_m.T[best_inliers2], kpts2_m.T[aff_inliers2], title=title, fignum=3, vert=False)
-    df2.present(wh=(600,400))
-

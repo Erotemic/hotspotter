@@ -54,12 +54,12 @@ class AllResults(DynStruct):
         toret+=('| All Results ')
         toret+=('| title_suffix=%s' % str(allres.title_suffix))
         toret+=('| scalar_summary=\n%s' % helpers.indent(str(allres.scalar_summary), '|   '))
-        toret+=('|---')
+        toret+=('|---\n')
         toret+=('| greater5_cxs = %r \n' % (allres.greater5_cxs,))
-        toret+=('|---')
+        toret+=('|---\n')
         toret+=('| greater1_cxs = %r \n' % (allres.greater1_cxs,))
-        toret+=('|---')
-        toret=('+======================.')
+        toret+=('|---\n')
+        toret+=('+======================.')
         #toret+=('| problem_false_pairs=\n%r' % allres.problem_false_pairs)
         #toret+=('| problem_true_pairs=\n%r' % allres.problem_true_pairs)
         return toret
@@ -662,11 +662,7 @@ if __name__ == '__main__':
 
     # IPYTHON END
 
-
-
-
-    nonipython_exec = r"""
-
+    nonipython_exec = textwrap.dedent(r"""
     help_ = textwrap.dedent(r'''
     Enter a command.
         q (or space) : quit 
@@ -708,9 +704,10 @@ if __name__ == '__main__':
     print(allres)
     exec(df2.present(wh=(900,600)))
     viz.DUMP = False
-    """
+    """)
 
     try:
         __IPYTHON__
     except Exception:
-        exec(nonipython_exec)
+        #exec(nonipython_exec)
+        print allres

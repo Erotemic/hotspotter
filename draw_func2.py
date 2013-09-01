@@ -1,4 +1,5 @@
 ''' Lots of functions for drawing and plotting visiony things '''
+from __future__ import division
 import matplotlib
 if matplotlib.get_backend() != 'Qt4Agg':
     #print('Configuring matplotlib for Qt4Agg')
@@ -18,7 +19,31 @@ import helpers
 import textwrap
 import os
 import sys
+import pylab
+import types
 #print('LOAD_MODULE: draw_func2.py')
+
+def execstr_global():
+    execstr = ['global' +key for key in globals().keys()]
+    return execstr
+
+def my_prefs():
+    global LINE_COLOR
+    global ELL_COLOR
+    global ELL_LINEWIDTH
+    global ELL_ALPHA
+    LINE_COLOR = (1, 0, 0)
+    ELL_COLOR = (0, 0, 1)
+    ELL_LINEWIDTH = 2
+    ELL_ALPHA = .5
+
+try:
+    if sys.platform == 'win32':
+        compname = os.environ['COMPUTER_NAME']
+        if compname == 'Ooo':
+            TILE_WITHIN = (-1912, 30, -969, 1071)
+except KeyError:
+    TILE_WITHIN = (0, 30, 969, 1041)
 
 DPI = 80
 #FIGSIZE = (24) # default windows fullscreen
@@ -75,7 +100,6 @@ def save(fig, fpath=None):
     print('Saving figure to: '+repr(fpath_clean))
     fig.savefig(fpath_clean, dpi=DPI)
 
-
 def save_figure(fignum=None, fpath=None, usetitle=False):
     # Find the figure
     if fignum is None:
@@ -95,27 +119,26 @@ def save_figure(fignum=None, fpath=None, usetitle=False):
     fig.savefig(fpath_clean, dpi=DPI)
 
 def update_figure_size(fignum, width, height):
-    if fignum is None:
-        fig = plt.gcf()
-    else:
-        fig = plt.figure(fignum, figsize=FIGSIZE, dpi=DPI)
+    fig = get_fig(fignum)
     set_geometry(fig, 40, 40, width, height)
     fig.canvas.draw()
 
-def set_geometry(fig, x, y, w, h):
+def get_fig(fignum=None):
+    if fignum is None: fig = plt.gcf()
+    else: fig = plt.figure(fignum)
+    return fig
+
+def set_geometry(fignum, x, y, w, h):
+    fig = get_fig(fignum)
     qtwin = fig.canvas.manager.window
     qtwin.setGeometry(x, y, w, h)
 
 def get_geometry():
-    fig = plt.gcf()
+    fig = get_fig(fignum)
     qtwin = fig.canvas.manager.window
-    (x,y,w,h) = qtwin.geometry().getCoords()
+    (x1, y1, x2, y2) = qtwin.geometry().getCoords()
+    (x, y, w, h) = (x1, y1, x2-x1, y2-y1)
     return (x,y,w,h)
-
-def save_figsize():
-    fig = plt.gcf()
-    (x,y,w,h) = get_geometry()
-    fig.df2_geometry = (x,y,w,h)
 
 def get_all_figures():
     all_figures_=[manager.canvas.figure for manager in
@@ -145,7 +168,8 @@ def all_figures_tile(num_rc=(4,4),
     w_off, h_off = wh_off
     x_pad, y_pad = (0, 0)
     if sys.platform == 'win32':
-        x_off, yoff = (x_off+40, y_off+40)
+        #x_off, yoff = (x_off+40, y_off+40)
+        x_off, yoff = (x_off-2000, y_off-1000)
         x_pad, y_pad = (0, 40)
     all_figures = get_all_figures()
     for i, fig in enumerate(all_figures):
@@ -261,34 +285,6 @@ def test_img(index=0):
     test_img = np.asarray(Image.open(test_file).convert('L'))
     return test_img
 
-
-def __parse_fignum(fignum_, plotnum_=111):
-    'Extendend fignum format = fignum.plotnum'
-    # This entir function was a bad idea. needs to go
-    if type(fignum_) == types.StringType:
-        (fignum2, plotnum2) = (fignum_, plotnum_)
-        #(fignum2, plotnum2) = map(int, fignum.split('.'))
-    elif type(fignum_) == types.FloatType:
-        raise Exception('Error. This is bad buisness')
-        (fignum2, plotnum2) = (int(fignum_), int(round(fignum_*1000)) - int(fignum_)*1000)
-    else:
-        (fignum2, plotnum2) = (fignum_, plotnum_)
-    return fignum2, plotnum2
-
-import pylab
-def draw_stems(x_data, y_data):
-    x_data = np.array(x_data)
-    y_data = np.array(y_data)
-    x_data = x_data[y_data.argsort()[::-1]]
-    y_data = y_data[y_data.argsort()[::-1]]
-
-    markerline, stemlines, baseline = pylab.stem(x_data, y_data, linefmt='-')
-    pylab.setp(markerline, 'markerfacecolor', 'b')
-    pylab.setp(baseline, 'linewidth', 0)
-    ax = plt.gca()
-    ax.set_xlim(min(x_data)-1, max(x_data)+1)
-    ax.set_ylim(min(y_data)-1, max(max(y_data), max(x_data))+1)
-
 def set_xticks(tick_set):
     ax = plt.gca()
     ax.set_xticks(tick_set)
@@ -308,13 +304,16 @@ def set_ylabel(lbl):
 def plot(*args, **kwargs):
     return plt.plot(*args, **kwargs)
 
+def set_figtitle(figtitle):
+    fig = plt.gcf()
+    fig.canvas.set_window_title(figtitle)
+
 def figure(fignum=None,
            doclf=False,
            title=None,
            plotnum=111,
            figtitle=None,
            **kwargs):
-    fignum, plotnum = __parse_fignum(fignum, plotnum)
     fig = plt.figure(num=fignum, figsize=FIGSIZE, dpi=DPI)
     axes_list = fig.get_axes()
     if not 'user_stat_list' in fig.__dict__.keys() or doclf:
@@ -339,10 +338,6 @@ def figure(fignum=None,
         if not figtitle is None:
             fig.canvas.set_window_title('fig '+repr(fignum)+' '+figtitle)
     return fig
-
-def set_figtitle(figtitle):
-    fig = plt.gcf()
-    fig.canvas.set_window_title(figtitle)
 
     
 # ---- IMAGE CREATION FUNCTIONS ---- 
@@ -409,7 +404,8 @@ def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
                                                             alpha=LINE_ALPHA)
     ax.add_collection(line_collection)
 
-def draw_kpts2(kpts, offset=(0,0), ell=True, pts=False, pts_color='r'):
+def draw_kpts2(kpts, offset=(0,0), ell=True, 
+               pts=False, pts_color='r', pts_size=2):
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
     global SHOW_ELLS
     global ELL_COLOR
@@ -425,13 +421,23 @@ def draw_kpts2(kpts, offset=(0,0), ell=True, pts=False, pts_color='r'):
     eps = 1E-9
     # data
     kptsT = kpts.T
-    x = kptsT[0] + offset[0]
-    y = kptsT[1] + offset[1]
+    x = kptsT[0,:] + offset[0]
+    y = kptsT[1,:] + offset[1]
+    printDBG('draw_kpts>----------')
+    printDBG('draw_kpts> ell=%r pts=%r' % (ell, pts))
+    printDBG('draw_kpts> drawing kpts.shape=%r' % (kpts.shape,))
+    if pts:
+        printDBG('draw_kpts> drawing pts x.shape=%r y.shape=%r' % (x.shape, y.shape))
+        ax.plot(x, y, linestyle='None', 
+                marker='o',
+                markerfacecolor=pts_color,
+                markersize=pts_size, 
+                markeredgewidth=0)
     if ell:
+        printDBG('draw_kpts> drawing ell kptsT.shape=%r' % (kptsT.shape,))
         a = kptsT[2]
         c = kptsT[3]
         d = kptsT[4]
-
         # Sympy Calculated sqrtm(inv(A) for A in kpts)
         # inv(sqrtm([(a, 0), (c, d)]) = 
         #  [1/sqrt(a), c/(-sqrt(a)*d - a*sqrt(d))]
@@ -445,10 +451,10 @@ def draw_kpts2(kpts, offset=(0,0), ell=True, pts=False, pts_color='r'):
         kpts_iter = iter(zip(x,y,aIS,bIS,dIS))
         # This has to be the sexiest piece of code I've ever written
         ell_actors = [ Circle( (0,0), 1, 
-                            transform=Affine2D([( a_, b_, x),
-                                                ( 0 , d_, y),
+                            transform=Affine2D([( a_, b_, x_),
+                                                ( 0 , d_, y_),
                                                 ( 0 , 0 , 1)]) )
-                    for (x,y,a_,b_,d_) in kpts_iter ]
+                    for (x_,y_,a_,b_,d_) in kpts_iter ]
         ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
         ellipse_collection.set_facecolor('none')
         ellipse_collection.set_transform(pltTrans)
@@ -456,101 +462,29 @@ def draw_kpts2(kpts, offset=(0,0), ell=True, pts=False, pts_color='r'):
         ellipse_collection.set_linewidth(ELL_LINEWIDTH)
         ellipse_collection.set_edgecolor(ELL_COLOR)
         ax.add_collection(ellipse_collection)
-
-    if pts:
-        ax.plot(x, y, linestyle='None', 
-                marker='o',
-                markerfacecolor=pts_color,
-                markersize=POINT_SIZE, 
-                markeredgewidth=0)
-        
-def inv_sqrtm_acd(acd):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        eps = 1e-9
-        a = acd[0]
-        c = acd[1]
-        d = acd[2]
-        _a = 1.0 / np.sqrt(a) 
-        _c = (c / np.sqrt(d) - c / np.sqrt(d)) / (a - d + eps)
-        _d = 1.0 / np.sqrt(d)
-        return _a, _c, _d
-
-def draw_kpts_scale_color(kpts, offset=(0,0), ell=True, pts=False):
-    printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
-    # get matplotlib info
-    ax = plt.gca()
-    pltTrans = ax.transData
-    ell_actors = []
-    eps = 1E-9
-    # data
-    kptsT = kpts.T
-    x = kptsT[0] + offset[0]
-    y = kptsT[1] + offset[1]
-    acd = kptsT[2:5]
-    if ell:
-        a = kptsT[2]
-        c = kptsT[3]
-        d = kptsT[4]
-        with warnings.catch_warnings():
-        # Manually Calculated sqrtm(inv(A) for A in kpts)
-            aIS = 1/np.sqrt(a) 
-            bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
-            dIS = 1/np.sqrt(d)
-            #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
-        kpts_iter = iter(zip(x,y,aIS,bIS,dIS))
-        # This has to be the sexiest piece of code I've ever written
-        ell_actors = [ Circle( (0,0), 1, 
-                            transform=Affine2D([( a_, b_, x),
-                                                ( 0 , d_, y),
-                                                ( 0 , 0 , 1)]) )
-                    for (x,y,a_,c_,d_) in kpts_iter ]
-        ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
-        ellipse_collection.set_facecolor('none')
-        ellipse_collection.set_transform(pltTrans)
-        ellipse_collection.set_alpha(ELL_ALPHA)
-        ellipse_collection.set_linewidth(ELL_LINEWIDTH)
-        ellipse_collection.set_edgecolor(ELL_COLOR)
-        ax.add_collection(ellipse_collection)
-
-    if pts:
-        ax.plot(x, y, linestyle='None', 
-                marker='o',
-                markerfacecolor='r',
-                markersize=POINT_SIZE, 
-                markeredgewidth=0)
-
 
 # ---- CHIP DISPLAY COMMANDS ----
-
-def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111,
-           interpolation='nearest', **kwargs):
-    printDBG('*** imshow in fig=%r title=%r *** ' % (fignum, title))
-    fignum, plotnum = __parse_fignum(fignum,plotnum)
-    printDBG('   * fignum = %r, plotnum = %r ' % (fignum, plotnum))
-    fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
-    plt.imshow(img, interpolation=interpolation)
-    plt.set_cmap('gray')
-    ax = fig.gca()
-    ax.set_xticks([])
-    ax.set_yticks([])
-    try:
-        if plotnum == 111:
-            fig.tight_layout()
-    except Exception as ex:
-        print('!! Exception durring fig.tight_layout: '+repr(ex))
-        raise
-    return fig
+def legend():
+    ax = plt.gca()
+    ax.legend(**{'fontsize':18})
 
 def draw_histpdf(data, label=None):
     freq, _ = draw_hist(data)
     draw_pdf(data, draw_support=False, scale_to=freq.max(), label=label)
 
-def legend():
+def draw_stems(x_data, y_data):
+    x_data = np.array(x_data)
+    y_data = np.array(y_data)
+    x_data = x_data[y_data.argsort()[::-1]]
+    y_data = y_data[y_data.argsort()[::-1]]
+
+    markerline, stemlines, baseline = pylab.stem(x_data, y_data, linefmt='-')
+    pylab.setp(markerline, 'markerfacecolor', 'b')
+    pylab.setp(baseline, 'linewidth', 0)
     ax = plt.gca()
-    ax.legend(**{'fontsize':18})
-    
-import types
+    ax.set_xlim(min(x_data)-1, max(x_data)+1)
+    ax.set_ylim(min(y_data)-1, max(max(y_data), max(x_data))+1)
+
 def draw_hist(data, bins=None):
     if type(data) == types.ListType:
         data = np.array(data)
@@ -604,7 +538,6 @@ def draw_pdf(data, draw_support=True, scale_to=None, label=None, colorx=0):
     # Plot the pdf (unseen data)
     ax.plot(x_data, y_data, color=line_color, label=label)
     
-    
 def show_histogram(data, bins=None, **kwargs):
     if bins is None:
         dmin = data.min()
@@ -620,6 +553,67 @@ def show_signature(sig, **kwargs):
     fig = figure(**kwargs)
     plt.plot(sig)
     fig.show()
+    
+
+def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111,
+           interpolation='nearest', **kwargs):
+    printDBG('*** imshow in fig=%r title=%r *** ' % (fignum, title))
+    printDBG('   * fignum = %r, plotnum = %r ' % (fignum, plotnum))
+    fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
+    plt.imshow(img, interpolation=interpolation)
+    plt.set_cmap('gray')
+    ax = fig.gca()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    try:
+        if plotnum == 111:
+            fig.tight_layout()
+    except Exception as ex:
+        print('!! Exception durring fig.tight_layout: '+repr(ex))
+        raise
+    return fig
+
+def show_top5_matches(hs, res, SV=True, fignum=4): 
+    SV = True
+    qcx = res.qcx
+    title_aug=None
+    top5_cxs = res.top5_cxs()
+    others = top5_cxs
+    num_others = len(others)
+    plotnum= 100 + num_others*10 + 1 
+    if num_others == 0:
+        print('no known matches to qcx=%r' % qcx)
+        return
+    figtitle='qcx=%r -- TOP 5' % qcx
+    figure(fignum=fignum, plotnum=plotnum)
+    #print 'figure(plotnum)='+str(plotnum)
+    for ox, cx in enumerate(others):
+        plotnumcx = plotnum + ox
+        #print 'plot_to: plotnum='+str(plotnumcx)
+        show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx)
+    set_figtitle(figtitle)
+
+def show_all_matches(*args, **kwargs): 
+    show_gt_matches(*args, **kwargs)
+
+def show_gt_matches(hs, res, SV=True, fignum=3): 
+    SV = True
+    qcx = res.qcx
+    title_aug=None
+    others = hs.get_other_cxs(qcx)
+    num_others = len(others)
+    plotnum= 100 + num_others*10 + 1 
+    if num_others == 0:
+        print('no known ma`tches to qcx=%r' % qcx)
+        return
+    figtitle='qcx=%r -- GroundTruth' % qcx
+    figure(fignum=fignum, plotnum=plotnum)
+    #print 'figure(plotnum)='+str(plotnum)
+    for ox, cx in enumerate(others):
+        plotnumcx = plotnum + ox
+        #print 'plot_to: plotnum='+str(plotnumcx)
+        show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx)
+    set_figtitle(figtitle)
 
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
                   fm=None, fs=None, fignum=0, plotnum=111,
@@ -649,17 +643,18 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
         printDBG('There are no feature matches to plot!')
         imshow(match_img,fignum=fignum,plotnum=plotnum,title=title, **kwargs)
     else: 
-        kpts1_m = kpts1[fm[:,0]]
-        kpts2_m = kpts2[fm[:,1]]
         # matplotlib stuff
         imshow(match_img,fignum=fignum,plotnum=plotnum,title=title, **kwargs)
         # Draw all keypoints as simple points
         if all_kpts:
-            draw_kpts2(kpts1, ell=False, pts=True)
-            draw_kpts2(kpts2, offset=(woff,hoff), ell=False, pts=True)
+            draw_kpts2(kpts1, ell=False, pts=True, pts_color='g', pts_size=2)
+            draw_kpts2(kpts2, offset=(woff,hoff), ell=False, pts=True, pts_color='g', pts_size=2)
         # Draw matching ellipses
-        draw_kpts2(kpts1_m, pts=True, pts_color='g')
-        draw_kpts2(kpts2_m, offset=(woff,hoff), pts=True, pts_color='g')
+        orange=np.array((255, 127, 0, 255))/255.0
+        draw_kpts2(kpts1[fm[:,0]],
+                   pts=True, pts_color=orange, pts_size=4)
+        draw_kpts2(kpts2[fm[:,1]], offset=(woff,hoff),
+                   pts=True, pts_color=orange, pts_size=4)
         # Draw matching lines
         if draw_lines:
             draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
@@ -671,48 +666,6 @@ def show_matches3(res, hs, cx, SV=True, fignum=3, plotnum=111, title_aug=None):
     cx2_fs    = res.cx2_fs_V if SV else res.cx2_fs
     title_suff = '(+V)' if SV else None
     return show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum, plotnum, title_aug, title_suff)
-
-def show_all_matches(*args, **kwargs): 
-    show_gt_matches(*args, **kwargs)
-
-def show_top5_matches(hs, res, SV=True, fignum=4): 
-    SV = True
-    qcx = res.qcx
-    title_aug=None
-    top5_cxs = res.top5_cxs()
-    others = top5_cxs
-    num_others = len(others)
-    plotnum= 100 + num_others*10 + 1 
-    if num_others == 0:
-        print('no known matches to qcx=%r' % qcx)
-        return
-    figtitle='qcx=%r -- TOP 5' % qcx
-    figure(fignum=fignum, plotnum=plotnum)
-    #print 'figure(plotnum)='+str(plotnum)
-    for ox, cx in enumerate(others):
-        plotnumcx = plotnum + ox
-        #print 'plot_to: plotnum='+str(plotnumcx)
-        show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx)
-    set_figtitle(figtitle)
-
-def show_gt_matches(hs, res, SV=True, fignum=3): 
-    SV = True
-    qcx = res.qcx
-    title_aug=None
-    others = hs.get_other_cxs(qcx)
-    num_others = len(others)
-    plotnum= 100 + num_others*10 + 1 
-    if num_others == 0:
-        print('no known ma`tches to qcx=%r' % qcx)
-        return
-    figtitle='qcx=%r -- GroundTruth' % qcx
-    figure(fignum=fignum, plotnum=plotnum)
-    #print 'figure(plotnum)='+str(plotnum)
-    for ox, cx in enumerate(others):
-        plotnumcx = plotnum + ox
-        #print 'plot_to: plotnum='+str(plotnumcx)
-        show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx)
-    set_figtitle(figtitle)
 
 def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111, title_pref=None, title_suff=None):
     printDBG('Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))

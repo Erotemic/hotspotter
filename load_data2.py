@@ -201,8 +201,10 @@ class HotSpotter(DynStruct):
 # Testing helper functions
 def get_sv_test_data():
     import load_data2
-    db_dir = load_data2.DEFAULT
-    hs = load_data2.HotSpotter(db_dir)
+    hs = helpers.search_stack_for_localvar('hs')
+    if hs is None:
+        db_dir = load_data2.DEFAULT
+        hs = load_data2.HotSpotter(db_dir)
     qcx = 0
     cx = hs.get_other_cxs(qcx)[0]
     fm, fs, score = hs.get_assigned_matches_to(qcx, cx)
@@ -211,7 +213,7 @@ def get_sv_test_data():
     # Get keypoints
     kpts1 = hs.get_kpts(qcx)
     kpts2 = hs.get_kpts(cx)
-    return (hs, qcx, cx, fm, rchip1, rchip2, kpts1, kpts2)
+    return (hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2)
 
 # ______________________________
 

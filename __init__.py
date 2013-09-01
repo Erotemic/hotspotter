@@ -1,52 +1,83 @@
-# the hotspotter python module
+'''The hotspotter python module'''
+#------------------------------------------------------------------------------
+# Future Imports
 from __future__ import division
-#import scipy.ndimage.filters as filters
-# your stack overflow question was answered
+# Multiprocessing checks
+import multiprocessing as mp
+if mp.current_process().name != 'MainProcess':
+    raise Exception('__init__> Cannot import from parallel process')
+# Matplotlib initialization
+import matplotlib
+if matplotlib.get_backend() != 'Qt4Agg':
+    print('__init__>matplotlib.use(Qt4Agg)')
+    matplotlib.use('Qt4Agg', warn=True, force=True)
+    matplotlib.rcParams['toolbar'] = 'None'
 
-# Bread and butter
+#------------------------------------------------------------------------------
+# Bread and butter imports
 import os
-from os.path import join, relpath, realpath, normpath, dirname, exists
 import sys
-import types
-import textwrap 
-# IO
-import cStringIO
-import cPickle
-# System
-import subprocess
-import shutil
-# Util
-import traceback
-import code
-import inspect
-# Python magic
-import multiprocessing
-import warnings
-import datetime
-import functools
-import imp
-import itertools
-from itertools import izip
-import signal
-import time
-import re
-import fnmatch
-
+from os.path import join, relpath, realpath, normpath, dirname, exists
 # Ensure that hotspotter is in the PYTHONPATH
 try:
     source_dir = os.path.dirname(__file__)
 except NameError as ex:
     source_dir = os.getcwd()
     pass
-
 print(' * import hotspotter from: '+source_dir)
 if os.environ['PYTHONPATH'].find(source_dir) == -1:
     toappend = source_dir + os.pathsep
     os.environ['PYTHONPATH'] = toappend + os.environ['PYTHONPATH']
 
-#import hotspotter
-#print('Hotspotter: ')
-#print dir(hotspotter)
+#------------------------------------------------------------------------------
+# Standard Library
+from itertools import izip
+import cPickle
+import cStringIO
+import code
+import datetime
+import fnmatch
+import functools
+import imp
+import inspect
+import itertools
+import multiprocessing
+import re
+import shutil
+import signal
+import subprocess
+import textwrap 
+import time
+import traceback
+import types
+import warnings
+
+#------------------------------------------------------------------------------
+# Scientific Imports
+import matplotlib.gridspec as gridspec 
+import matplotlib.pyplot as plt
+import pylab
+import cv2
+import pyflann
+import PIL.Image
+import PIL.ImageOps
+import numpy as np 
+import numpy.linalg
+import scipy
+import scipy.signal
+import scipy.ndimage.filters
+import scipy.sparse
+import scipy.sparse.linalg
+import skimage
+import skimage.exposure
+import skimage.filter.rank
+import skimage.morphology
+import skimage.util
+import sklearn.preprocessing
+from PIL import Image
+
+#------------------------------------------------------------------------------
+# Hotspotter Imports
 import hotspotter.draw_func2 as df2
 import hotspotter.Pref as Pref
 import hotspotter.algos as algos
@@ -57,78 +88,21 @@ import hotspotter.fileio as io
 import hotspotter.gui as gui
 import hotspotter.match_chips2 as mc2
 import hotspotter.params as params
-#import hotspotter.report_results2 as report_results2
+import hotspotter.report_results2 as report_results2
 import hotspotter.report_results2 as rr2
 import hotspotter.spatial_verification2 as sv2
+import hotspotter.spatial_verification as sv1
 import hotspotter.tpl.extern_feat as extern_feat
-
-import matplotlib
-import matplotlib.gridspec
-import matplotlib.pyplot
-import matplotlib.pyplot as plt
-import pylab
-
-# OpenCV
-import cv2
-# Python Fast Library for Approximage Nearest Neighbors
-import pyflann
-# Python Image Library
-import PIL.Image
-import PIL.ImageOps
-# Numpy
-import numpy as np 
-import numpy.linalg
-# Scipy
-import scipy
-import scipy.signal
-import scipy.ndimage.filters
-import scipy.sparse
-import scipy.sparse.linalg
-# Science Kit Image
-import skimage
-import skimage.exposure
-import skimage.filter.rank
-import skimage.morphology
-import skimage.util
-# Science Kit Learn
-import sklearn.preprocessing
-
-import cPickle
-import cStringIO
-import code
-import datetime
-import fnmatch
-import functools
-import imp
-import inspect
-import itertools
-import multiprocessing
-import os
-import re
-import shutil
-import signal
-import subprocess
-import sys
-import textwrap 
-import time
-import traceback
-import types
-import warnings
-from itertools import izip
-#1-866-2420
-
-from PIL import Image
 from hotspotter.Parallelize import parallel_compute
 from hotspotter.Printable import DynStruct
-from hotspotter.helpers import *
 
-#import scipy.ndimage.filters
+#------------------------------------------------------------------------------
+# Helper functions
 __version__ = '1.9.9+'+repr(np.complex(0,.001))
 __author__  = 'Jon Crall'
 __email__   = 'hotspotter.ir@gmail.com'
 
-DEVMODE = True
-if DEVMODE:
+if not '__file__' in vars():
     __file__ = realpath('../hotspotter/__init__.py')
 HSDIR = dirname(__file__)
 
@@ -215,27 +189,21 @@ def reload2():
 
 def reload():
     'Reloads all modules'
-    pref.reload_module()
-    algos.reload_module()
     cc2.reload_module()
     df2.reload_module()
-    helpers.reload_module()
     ld2.reload_module()
-    load_data2.reload_module()
     mc2.reload_module()
-    params.reload_module()
-    report_results2.reload_module()
     rr2.reload_module()
     sv2.reload_module()
+    sv1.reload_module()
+    Pref.reload_module()
+    algos.reload_module()
+    helpers.reload_module()
+    params.reload_module()
+    report_results2.reload_module()
     extern_feat.reload_module()
 
-'''
-__file__ = realpath('../hotspotter/__init__.py')
-HSDIR = dirname(__file__)
-'''
-
 if __name__ == '__main__':
-    from multiprocessing import freeze_support
-    freeze_support()
+    mp.freeze_support()
     print('Main: __init__.py')
-    #experiments.demo()
+    print('This script does nothing')

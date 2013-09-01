@@ -487,8 +487,9 @@ if HAVE_PYQT:
         if isRootApp: # if not in qtconsole
             # configure matplotlib 
             import matplotlib
-            print('Configuring matplotlib for Qt4')
-            matplotlib.use('Qt4Agg')
+            if matplotlib.get_backend() != 'Qt4Agg':
+                print('Pref> Configuring matplotlib for Qt4')
+                matplotlib.use('Qt4Agg')
             # Run new root application
             print('Starting new QApplication')
             app = QApplication(sys.argv)

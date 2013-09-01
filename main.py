@@ -6,8 +6,9 @@ import convert_to_hotspotterdb as convert_hsdb
 def config_matplotlib():
     # configure matplotlib 
     import matplotlib
-    print('Configuring matplotlib for Qt4')
-    matplotlib.use('Qt4Agg')
+    if matplotlib.get_backend() != 'Qt4Agg':
+        print('main> Configuring matplotlib for Qt4')
+        matplotlib.use('Qt4Agg')
     
 def catch_ctrl_c(signal, frame):
     print('Caught ctrl+c')

@@ -2,7 +2,7 @@
 from __future__ import division
 import matplotlib
 if matplotlib.get_backend() != 'Qt4Agg':
-    #print('Configuring matplotlib for Qt4Agg')
+    print('df2>matplotlib.use(Qt4Agg)')
     matplotlib.use('Qt4Agg', warn=True, force=True)
     matplotlib.rcParams['toolbar'] = 'None'
 from matplotlib import gridspec
@@ -168,8 +168,8 @@ def all_figures_tile(num_rc=(4,4),
     w_off, h_off = wh_off
     x_pad, y_pad = (0, 0)
     if sys.platform == 'win32':
-        #x_off, yoff = (x_off+40, y_off+40)
-        x_off, yoff = (x_off-2000, y_off-1000)
+        x_off, yoff = (x_off+40, y_off+40)
+        #x_off, yoff = (x_off-2000, y_off-1000)
         x_pad, y_pad = (0, 40)
     all_figures = get_all_figures()
     for i, fig in enumerate(all_figures):

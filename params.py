@@ -138,7 +138,6 @@ __XY_THRESH__    = .1 # % diaglen of keypoint extent
 __XY_THRESH__    = .002 # % diaglen of keypoint extent
 __SCALE_THRESH_HIGH__ = 2.0
 __SCALE_THRESH_LOW__  = 0.5
-VERIFY_ALGO = 'sv1'
 #=====================================================
 # FUNCTIONS
 #=====================================================

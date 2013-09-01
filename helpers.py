@@ -292,6 +292,7 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
 def configure_matplotlib():
     import matplotlib
     if matplotlib.get_backend() != 'Qt4Agg':
+        print('helpers> Configuring matplotlib for Qt4')
         matplotlib.use('Qt4Agg', warn=True, force=True)
         matplotlib.rcParams['toolbar'] = 'None'
     

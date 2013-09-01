@@ -628,100 +628,24 @@ def match_vsone(desc2, vsone_flann, checks, ratio_thresh=1.2, burst_thresh=None)
 # Spatial verifiaction 
 #========================================
 # Debug data
-'''
-exec(open('__init__.py', 'r').read())
-exec(open('draw_func2.py', 'r').read())
-df2.rrr()
-df2.reset()
-# Drawing Preferences
-df2.LINE_COLOR = (1, 0, 0)
-df2.ELL_COLOR = (0, 0, 1)
-df2.ELL_LINEWIDTH = 2
-df2.ELL_ALPHA = .5
-xy_thresh = params.__XY_THRESH__
-scale_thresh_high = params.__SCALE_THRESH_HIGH__
-scale_thresh_low  = params.__SCALE_THRESH_LOW__
-# Pick out some data
-if not 'hs' in vars():
-    (hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data()
-
-
-kwargs_ = dict(fs=None,
-              all_kpts=True,
-              draw_lines=True, 
-              doclf=True)
-df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm,
-              title='Assigned matches', **kwargs_)
-
-df2.update()
-'''
 #@profile
-import spatial_verification as sv1
-import spatial_verification2 as sv2
 def spatially_verify(kpts1, kpts2, fm, fs, qcx, cx):
     '''1) compute a robust transform from img2 -> img1
        2) keep feature matches which are inliers 
-       returns fm_V, fs_V, H
-       '''
-    # ugg transpose, I like row first, but ransac seems not to
-    if len(fm) == 0: 
-        return (np.empty((0, 2)), np.empty((0, 1)), np.eye(3))
-    xy_thresh = params.__XY_THRESH__
+       returns fm_V, fs_V, H '''
+    xy_thresh         = params.__XY_THRESH__
     scale_thresh_high = params.__SCALE_THRESH_HIGH__
     scale_thresh_low  = params.__SCALE_THRESH_LOW__
-    verify_algo = params.VERIFY_ALGO
-    kpts1_m = kpts1[fm[:, 0], :].T
-    kpts2_m = kpts2[fm[:, 1], :].T
-    #-----------------------------------------------
-    # spatial threshold is: xy_thresh*100% of matching keypoints diagonal extent
-    #-----------------------------------------------
-    #global sv1_times
-    sv2.rrr()
-    sv1.reload_module()
-    with helpers.Timer('sv1') as t: 
-        hinlier_tup1 = sv1.H_homog_from_DELSAC(kpts1_m, kpts2_m, xy_thresh, 
-                                                scale_thresh_high, scale_thresh_low)
-    with helpers.Timer('sv2') as t: 
-        hinlier_tup2 = sv2.homography_inliers(kpts1, kpts2, fm, xy_thresh, 
-                                                scale_thresh_high, scale_thresh_low)
-    if verify_algo == 'sv1':
-        H, inliers, _, __ = hinlier_tup1
-    if verify_algo == 'sv2':
-        H, inliers, _, __ = hinlier_tup2
-    else:
-        H = np.eye(3)
-        inliers = []
-    DBG=True
-    if DBG: 
-        if hinlier_tup2 is None:
-            hinlier_tup2 = (np.eye(3), [])
-        H1, inliers1, Aff1, aff_inliers1 = hinlier_tup1
-        H2, inliers2, Aff2, aff_inliers2 = hinlier_tup2
-        print('Aff1=\n%r' % Aff1)
-        print('Aff2=\n%r' % Aff2)
-        print('num aff_inliers sv1: %r ' % len(aff_inliers1))
-        print('num aff_inliers sv2: %r ' % len(aff_inliers2))
-        print('num inliers sv1: %r ' % inliers1.sum())
-        print('num inliers sv2: %r ' % len(inliers2))
-        print('H1=\n%r' % H1)
-        print('H2=\n%r' % H2)
-        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[aff_inliers1], fignum=1,
-                          title='sv1 verification affine', **kwargs_)
-        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[inliers1], fignum=2,
-                          title='sv1 verification homog', **kwargs_)
-
-        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[aff_inliers2], fignum=3,
-                          title='sv2 verification affine', **kwargs_)
-        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[inliers2], fignum=4,
-                          title='sv2 verification homog', **kwargs_)
-        df2.rrr()
-        df2.present(num_rc=(2,2), wh=(800,500))
-    if len(inliers) == 0:
-        fm_V = np.empty((0, 2))
-        fs_V = np.array((0, 1))
-    else:
+    sv_tup = sv2.homography_inliers(kpts1, kpts2, fm, xy_thresh, 
+                                    scale_thresh_high, scale_thresh_low)
+    if not sv_tup is None:
+        H, inliers, Aff, aff_inliers = sv_tup
         fm_V = fm[inliers, :]
         fs_V = fs[inliers, :]
+    else:
+        H = np.eye(3)
+        fm_V = np.empty((0, 2))
+        fs_V = np.array((0, 1))
     return fm_V, fs_V, H
 
 #@profile

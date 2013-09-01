@@ -1,6 +1,7 @@
 import matplotlib
-print('Configuring matplotlib for Qt4')
-matplotlib.use('Qt4Agg')
+if matplotlib.get_backend() != 'Qt4Agg':
+    print('gui> Configuring matplotlib for Qt4')
+    matplotlib.use('Qt4Agg')
 
 import PyQt4.Qt
 import PyQt4.QtCore as QtCore

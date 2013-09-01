@@ -6,9 +6,10 @@ import numpy.linalg as linalg
 import numpy as np
 import scipy.sparse as sparse
 import scipy.sparse.linalg as sparse_linalg
-#skimage.transform
-# http://stackoverflow.com/questions/11462781/fast-2d-rigid-body-transformations-in-numpy-scipy
-# skimage.transform.fast_homography(im, H)
+'''skimage.transform
+http://stackoverflow.com/questions/11462781/
+fast-2d-rigid-body-transformations-in-numpy-scipy
+skimage.transform.fast_homography(im, H)'''
 def reload_module():
     import imp
     import sys
@@ -76,9 +77,10 @@ def homogo_normalize_pts(xy):
 # This new function is much faster .035 vs .007
 def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
     '''Estimates inliers deterministically using elliptical shapes'''
+    global __DBG1__
     # EXPLOITS LOWER TRIANGULAR MATRIXES
     best_inliers = []
-    best_Aff = np.eye(3)
+    best_Aff = (1, 0, 1, 0, 0, 0)
     x1_m    = kpts1_m[0,:] # keypoint xy coordinates matches
     y1_m    = kpts1_m[1,:] # keypoint xy coordinates matches
     x2_m    = kpts2_m[0,:]
@@ -99,9 +101,12 @@ def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
     scale_thresh_high = 2.0
     scale_thresh_low  = 1.0/scale_thresh_high
 
+
+    print("sv1: xy_thresh_sqrd=%r" % xy_thresh_sqrd)
     print("sv1: scale_thresh_high=%r" % scale_thresh_high)
     print("sv1: scale_thresh_low=%r" % scale_thresh_low)
     # Enumerate All Hypothesis (Match transformations)
+    __DBG1__ = []
     for mx in xrange(len(x1_m)): 
         x1 = x1_m[mx]
         y1 = y1_m[mx]
@@ -112,8 +117,8 @@ def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
         Hd = H_aff12_d[mx]
         Hdet = H_det_list[mx]
         # Translate and transform xy-positions using H_aff12
-        x1_mAt = x2 + (H_aff12_a * (x1_m - x1))
-        y1_mAt = y2 + (H_aff12_c * (x1_m - x1)) + (H_aff12_d * (y1_m - y1))
+        x1_mAt = x2 + (Ha * (x1_m - x1))
+        y1_mAt = y2 + (Hc * (x1_m - x1)) + (Hd * (y1_m - y1))
         # Get transformed determinant
         det1_mAt = det1_m * Hdet
         # Check Error in position and scale
@@ -123,13 +128,19 @@ def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
         xy_inliers = xy_sqrd_err < xy_thresh_sqrd
         s1_inliers = scale_sqrd_err > scale_thresh_low
         s2_inliers = scale_sqrd_err < scale_thresh_high
-        _inliers, = np.where(np.logical_and(np.logical_and(xy_inliers, s1_inliers), s2_inliers))
+        _inliers, = np.where(
+            np.logical_and(xy_inliers,
+                           np.logical_and(s2_inliers, s1_inliers)))
         # See if more inliers than previous best
+        __DBG1__.append(x1_mAt)
         if len(_inliers) > len(best_inliers):
             best_inliers = _inliers
-            best_Aff = np.array([(Ha,  0,  x2-Ha*x1      ),
-                                 (Hc, Hd,  y2-Hc*x1-Hd*y1),
-                                 ( 0,  0,               1)])
+            best_Aff = (Ha, Hc, Hd, x1, y1, x2, y2)
+    (Ha, Hc, Hd, x1, y1, x2, y2) = best_Aff
+    best_Aff = np.array([(Ha,  0,  x2-Ha*x1      ),
+                         (Hc, Hd,  y2-Hc*x1-Hd*y1),
+                         ( 0,  0,               1)])
+    #print __DBG1__
     return best_Aff, best_inliers
 
 def aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd):
@@ -187,8 +198,8 @@ def H_homog_from_DELSAC(kpts1_m, kpts2_m,
     ' Deterministic Elliptical Sample Consensus'
     #=====
     # BUG
-    BUG = False
-    if BUG:
+    FIX = True
+    if not FIX:
         img1_extent = (kpts1_m[0:2, :].max(1) - kpts1_m[0:2, :].min(1))[0:2]
         xy_thresh_sqrd = np.sum(img1_extent**2) * xy_thresh
     else: # FIX

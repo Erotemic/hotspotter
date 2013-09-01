@@ -67,21 +67,16 @@ def homography_inliers(kpts1, kpts2, fm,
                        xy_thresh,
                        scale_thresh_high,
                        scale_thresh_low,
-                       min_num_inliers=4, 
-                       diaglen_sqrd=None):
+                       min_num_inliers=4):
     if len(fm) < min_num_inliers:
         return None
     # Not enough data
     # Estimate affine correspondence
     x1_m, y1_m, acd1_m = split_kpts(kpts1[fm[:, 0], :].T)
     x2_m, y2_m, acd2_m = split_kpts(kpts2[fm[:, 1], :].T)
-    # TODO: Pass in the diag length
-    if diaglen_sqrd is None:
-        diaglen_sqrd = calc_diaglen_sqrd(x2_m, y2_m)
+    # Get diagonal length
+    diaglen_sqrd = calc_diaglen_sqrd(x2_m, y2_m)
     xy_thresh_sqrd = diaglen_sqrd * xy_thresh
-    print("sv2: xy_thresh_sqrd=%r" % xy_thresh_sqrd)
-    print("sv2: scale_thresh_high=%r" % scale_thresh_high)
-    print("sv2: scale_thresh_low=%r" % scale_thresh_low)
     Aff, aff_inliers = __affine_inliers(x1_m, y1_m, acd1_m, 
                                    x2_m, y2_m, acd2_m,
                                    xy_thresh_sqrd, 
@@ -153,12 +148,13 @@ def dot_acd(acd1, acd2):
     a = (acd1[0] * acd2[0])
     c = (acd1[1] * acd2[0] + acd1[2] * acd2[1])
     d = (acd1[2] * acd2[2])
-    return np.array([a, c, d])
+    return np.array((a, c, d))
 # --------------------------------
 
 def __affine_inliers(x1_m, y1_m, acd1_m,
                      x2_m, y2_m, acd2_m, xy_thresh_sqrd, 
                      scale_thresh_high, scale_thresh_low):
+    global __DBG2__
     'Estimates inliers deterministically using elliptical shapes'
 #with helpers.Timer('enume all'):
     best_inliers = []
@@ -174,20 +170,24 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
     Aff_list = dot_acd(inv2_m, acd1_m)
     # Compute scale change of all transformations 
     detAff_list = det_acd(Aff_list)
-    # Test all hypothesis 
+    # Test all hypothesis
+    print("sv2: xy_thresh_sqrd=%r" % xy_thresh_sqrd)
+    print("sv2: scale_thresh_high=%r" % scale_thresh_high)
+    print("sv2: scale_thresh_low=%r" % scale_thresh_low)
+    __DBG2__ = []
     for mx in xrange(len(x1_m)):
         # --- Get the mth hypothesis ---
-        A11 = Aff_list[0,mx]
-        A21 = Aff_list[1,mx]
-        A22 = Aff_list[2,mx]
+        Aa = Aff_list[0,mx]
+        Ac = Aff_list[1,mx]
+        Ad = Aff_list[2,mx]
         Adet = detAff_list[mx]
         x1_hypo = x1_m[mx]
-        x2_hypo = x2_m[mx]
         y1_hypo = y1_m[mx]
+        x2_hypo = x2_m[mx]
         y2_hypo = y2_m[mx]
         # --- Transform from kpts1 to kpts2 ---
-        x1_mt   = x2_hypo + A11*(x1_m - x1_hypo)
-        y1_mt   = y2_hypo + A21*(x1_m - x1_hypo) + A22*(y1_m - y1_hypo)
+        x1_mt   = x2_hypo + Aa*(x1_m - x1_hypo)
+        y1_mt   = y2_hypo + Ac*(x1_m - x1_hypo) + Ad*(y1_m - y1_hypo)
         # --- Find (Squared) Error ---
         xy_err    = (x1_mt - x2_m)**2 + (y1_mt - y2_m)**2 
         scale_err = Adet * det1_m / det2_m
@@ -198,18 +198,22 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
         hypo_inliers, = np.where(np.logical_and(xy_inliers, scale_inliers))
         num_hypo_inliers = len(hypo_inliers)
         # --- Update Best Inliers ---
+        __DBG2__.append(x1_mt)
         if num_hypo_inliers > num_best_inliers:
             best_mx = mx 
             best_inliers = hypo_inliers
             num_best_inliers = num_hypo_inliers
-    Aa, Ac, Ad = Aff_list[:, best_mx]
-    x1  = x1_m[best_mx]
-    y1  = y1_m[best_mx]
-    x2  = x2_m[best_mx]
-    y2  = y2_m[best_mx]
+    if not best_mx is None: 
+        (Aa, Ac, Ad) = Aff_list[:, best_mx]
+        (x1, y1, x2, y2) = (x1_m[best_mx], y1_m[best_mx],
+                            x2_m[best_mx], y2_m[best_mx])
+    else: 
+        Aa, Ac, Ad = (1, 0, 1)
+        x1, y1, x2, y2 = (0, 0, 0, 0) 
     best_Aff = np.array([(Aa,  0,  x2-Aa*x1      ),
                          (Ac, Ad,  y2-Ac*x1-Ad*y1),
                          ( 0,  0,               1)])
+    #print __DBG2__
     return best_Aff, best_inliers
 
 
@@ -218,38 +222,21 @@ def show_inliers(hs, qcx, cx, inliers, title='inliers', **kwargs):
     df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[inliers], title=title, **kwargs_)
 
 
-def test_realdata():
-    import numpy.linalg as linalg
-    import numpy as np
-    import scipy.sparse as sparse
-    import scipy.sparse.linalg as sparse_linalg
-    import load_data2
-    import params
-    import draw_func2 as df2
-    import helpers
-    import spatial_verification2 as sv2
-    sv2.rrr()
-    params.rrr()
-    load_data2.rrr()
-    df2.rrr()
+def test():
+    from __init__ import *
+    from spatial_verification2 import *
+    reload()
     df2.reset()
-    xy_thresh = params.__XY_THRESH__
-    scale_thresh = params.__SCALE_THRESH__
+    xy_thresh         = params.__XY_THRESH__
+    scale_thresh_high = params.__SCALE_THRESH_HIGH__
+    scale_thresh_low  = params.__SCALE_THRESH_LOW__
     # Pick out some data
     if not 'hs' in vars():
-        (hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2) = load_data2.get_sv_test_data()
-    # Draw assigned matches
-    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs=None,
-                      all_kpts=False, draw_lines=False, doclf=True,
-                      title='Assigned matches')
-    df2.update()
-    # Affine matching tests
-    scale_thresh_low  = scale_thresh ** 2
-    scale_thresh_high = 1.0 / scale_thresh_low
-    # Split into location and shape
+        (hs, qcx, cx, fm, fs, 
+         rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data()
+    #df2.update()
     x1_m, y1_m, acd1_m = split_kpts(kpts1[fm[:, 0]].T)
     x2_m, y2_m, acd2_m = split_kpts(kpts2[fm[:, 1]].T)
-    # TODO: Pass in the diag length
     x2_extent = x2_m.max() - x2_m.min()
     y2_extent = y2_m.max() - y2_m.min()
     img2_extent = np.array([x2_extent, y2_extent])
@@ -257,9 +244,54 @@ def test_realdata():
     xy_thresh_sqrd = img2_diaglen_sqrd * xy_thresh
     # -----------------------------------------------
     # Get match threshold 10% of matching keypoint extent diagonal
-    aff_inliers1, Aff1 = sv2.affine_inliers(kpts1, kpts2, fm, xy_thresh, scale_thresh)
+    #aff_inliers1, Aff1 = sv2.affine_inliers(kpts1, kpts2, fm, xy_thresh, scale_thresh)
+    '''
+    # Draw assigned matches
+    args_ = [rchip1, rchip2, kpts1, kpts2]
+    df2.show_matches2(*args_+[fm], fs=None,
+                      all_kpts=False, draw_lines=False,
+                      doclf=True, title='Assigned matches')
     # Draw affine inliers
-    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[aff_inliers1], fs=None,
+    df2.show_matches2(*args_+[fm[aff_inliers1]], fs=None,
                       all_kpts=False, draw_lines=False, doclf=True,
                       title='Assigned matches')
+    '''
     df2.update()
+
+def compare():
+    sv1.reload_module()
+    sv2.reload_module()
+    kpts1_m = kpts1[fm[:, 0], :].T
+    kpts2_m = kpts2[fm[:, 1], :].T
+    with helpers.Timer('sv1') as t: 
+        hinlier_tup1 = sv1.H_homog_from_DELSAC(kpts1_m, kpts2_m,
+                                               xy_thresh, 
+                                               scale_thresh_high,
+                                               scale_thresh_low)
+    with helpers.Timer('sv2') as t: 
+        hinlier_tup2 = sv2.homography_inliers(kpts1, kpts2, fm,
+                                              xy_thresh, 
+                                              scale_thresh_high,
+                                              scale_thresh_low)
+    
+    H1, inliers1, Aff1, aff_inliers1 = hinlier_tup1
+    H2, inliers2, Aff2, aff_inliers2 = hinlier_tup2
+    print('Aff1=\n%r' % Aff1)
+    print('Aff2=\n%r' % Aff2)
+    print('num aff_inliers sv1: %r ' % len(aff_inliers1))
+    print('num aff_inliers sv2: %r ' % len(aff_inliers2))
+    print('num inliers sv1: %r ' % inliers1.sum())
+    print('num inliers sv2: %r ' % len(inliers2))
+    print('H1=\n%r' % H1)
+    print('H2=\n%r' % H2)
+    args_ = [rchip1, rchip2, kpts1, kpts2]
+    df2.show_matches2(*args_+[fm[aff_inliers1]], fignum=1, title='sv1 affine')
+    df2.show_matches2(*args_+[fm[inliers1]],     fignum=2, title='sv1 homog')
+    df2.show_matches2(*args_+[fm[aff_inliers2]], fignum=3, title='sv2 affine')
+    df2.show_matches2(*args_+[fm[inliers2]],     fignum=4, title='sv2 homog')
+    df2.present(num_rc=(2,2), wh=(800,500))
+
+if __name__ == '__main__':
+    import multiprocessing as mp
+    mp.freeze_support()
+    print('__main__ = spatial_verification2.py')

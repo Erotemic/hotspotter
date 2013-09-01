@@ -17,12 +17,14 @@ def reload_module():
 def rrr():
     reload_module()
 
+SV_DTYPE = np.float64
+
 # Generate 6 degrees of freedom homography transformation
 def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
     'Computes homography from normalized (0 to 1) point correspondences'
 #with helpers.Timer('computehomog'):
     num_pts = len(x1_mn)
-    Mbynine = np.zeros((2*num_pts,9), dtype=np.float32)
+    Mbynine = np.zeros((2*num_pts,9), dtype=SV_DTYPE)
     for ix in xrange(num_pts): # Loop over inliers
         # Concatinate all 2x9 matrices into an Mx9 matrix
         u2      = x2_mn[ix]
@@ -63,6 +65,13 @@ def calc_diaglen_sqrd(x_m, y_m):
     diaglen_sqrd = x_extent_sqrd + y_extent_sqrd
     return diaglen_sqrd
 
+def split_kpts(kpts5xN):
+    'breakup keypoints into position and shape'
+    _xs   = np.array(kpts5xN[0], dtype=SV_DTYPE)
+    _ys   = np.array(kpts5xN[1], dtype=SV_DTYPE)
+    _acds = np.array(kpts5xN[2:5], dtype=SV_DTYPE)
+    return _xs, _ys, _acds
+
 def homography_inliers(kpts1, kpts2, fm, 
                        xy_thresh,
                        scale_thresh_high,
@@ -85,31 +94,30 @@ def homography_inliers(kpts1, kpts2, fm,
     # Cannot find good affine correspondence
     if len(aff_inliers) < min_num_inliers:
         return None
+    # Get corresponding points and shapes
+    (x1_ma, y1_ma, acd1_m) = (x1_m[aff_inliers], y1_m[aff_inliers],
+                              acd1_m[:,aff_inliers])
+    (x2_ma, y2_ma, acd2_m) = (x2_m[aff_inliers], y2_m[aff_inliers],
+                              acd2_m[:,aff_inliers])
     # keypoint xy coordinates shape=(dim, num)
     def normalize_xy_points(x_m, y_m):
         'Returns a transformation to normalize points to mean=0, stddev=1'
         mean_x = x_m.mean() # center of mass
         mean_y = y_m.mean()
-        sx = 1 /x_m.std()   # average xy magnitude
-        sy = 1 / y_m.std()
-        tx = -mean_x * sx
-        ty = -mean_y * sy
-        T = np.array([(sx, 0, tx),
-                      (0, sy, ty),
+        sx = 1.0 / x_m.std()  # average xy magnitude
+        sy = 1.0 / y_m.std()
+        T = np.array([(sx, 0, -mean_x * sx),
+                      (0, sy, -mean_y * sy),
                       (0,  0,  1)])
         x_norm = (x_m - mean_x) * sx
         y_norm = (y_m - mean_y) * sy
         return x_norm, y_norm, T
-    # Get corresponding points and shapes
-    x1_ma, y1_ma, acd1_m = split_kpts(kpts1[fm[aff_inliers, 0]].T)
-    x2_ma, y2_ma, acd2_m = split_kpts(kpts2[fm[aff_inliers, 1]].T)
     # Normalize affine inliers
     x1_mn, y1_mn, T1 = normalize_xy_points(x1_ma, y1_ma)
     x2_mn, y2_mn, T2 = normalize_xy_points(x2_ma, y2_ma)
     H_prime = compute_homog(x1_mn, y1_mn, x2_mn, y2_mn)
     try: 
-        # Computes ax = b
-        # x = linalg.solve(a, b)
+        # Computes ax = b # x = linalg.solve(a, b)
         H = linalg.solve(T2, H_prime).dot(T1) # Unnormalize
     except linalg.LinAlgError as ex:
         printWARN('Warning 285 '+repr(ex), )
@@ -127,13 +135,6 @@ def homography_inliers(kpts1, kpts2, fm,
     # Estimate final inliers
     inliers, = np.where(xy_err < xy_thresh_sqrd)
     return H, inliers, Aff, aff_inliers
-
-def split_kpts(kpts5xN):
-    'breakup keypoints into position and shape'
-    _xs   = kpts5xN[0]
-    _ys   = kpts5xN[1]
-    _acds = kpts5xN[2:5] 
-    return _xs, _ys, _acds
 
 # --------------------------------
 # Linear algebra functions on lower triangular matrices
@@ -154,7 +155,6 @@ def dot_acd(acd1, acd2):
 def __affine_inliers(x1_m, y1_m, acd1_m,
                      x2_m, y2_m, acd2_m, xy_thresh_sqrd, 
                      scale_thresh_high, scale_thresh_low):
-    global __DBG2__
     'Estimates inliers deterministically using elliptical shapes'
 #with helpers.Timer('enume all'):
     best_inliers = []
@@ -171,10 +171,6 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
     # Compute scale change of all transformations 
     detAff_list = det_acd(Aff_list)
     # Test all hypothesis
-    print("sv2: xy_thresh_sqrd=%r" % xy_thresh_sqrd)
-    print("sv2: scale_thresh_high=%r" % scale_thresh_high)
-    print("sv2: scale_thresh_low=%r" % scale_thresh_low)
-    __DBG2__ = []
     for mx in xrange(len(x1_m)):
         # --- Get the mth hypothesis ---
         Aa = Aff_list[0,mx]
@@ -198,7 +194,6 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
         hypo_inliers, = np.where(np.logical_and(xy_inliers, scale_inliers))
         num_hypo_inliers = len(hypo_inliers)
         # --- Update Best Inliers ---
-        __DBG2__.append(x1_mt)
         if num_hypo_inliers > num_best_inliers:
             best_mx = mx 
             best_inliers = hypo_inliers
@@ -207,13 +202,11 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
         (Aa, Ac, Ad) = Aff_list[:, best_mx]
         (x1, y1, x2, y2) = (x1_m[best_mx], y1_m[best_mx],
                             x2_m[best_mx], y2_m[best_mx])
+        best_Aff = np.array([(Aa,  0,  x2-Aa*x1      ),
+                             (Ac, Ad,  y2-Ac*x1-Ad*y1),
+                             ( 0,  0,               1)])
     else: 
-        Aa, Ac, Ad = (1, 0, 1)
-        x1, y1, x2, y2 = (0, 0, 0, 0) 
-    best_Aff = np.array([(Aa,  0,  x2-Aa*x1      ),
-                         (Ac, Ad,  y2-Ac*x1-Ad*y1),
-                         ( 0,  0,               1)])
-    #print __DBG2__
+        best_Aff = np.eye(3)
     return best_Aff, best_inliers
 
 

@@ -13,11 +13,20 @@ with helpers.Timer('sv2') as t:
                                             scale_thresh_high,
                                             scale_thresh_low)
 
+xyz = np.vstack([xy1_ma, np.ones(len(xy1_ma[0]))])
+
+xy1_ma = sv1.DBG
+x1_ma, y1_ma = sv2.DBG
+
+x_m, y_m = (x1_ma, y1_ma)
+
+xy1_ma[1] == y1_ma
 print('==========')
-print(sv1.__DBG1__[0])
+print(sv1.DBG)
 print('----------')
-print(sv2.__DBG2__[0])
+print(sv2.DBG)
 print('==========')
-print(np.array(sv2.__DBG2__) == np.array(sv1.__DBG1__))
-print('All=%r ' % all(np.array(sv2.__DBG2__) == np.array(sv1.__DBG1__)))
+print(np.array(sv1.DBG) == np.array(sv2.DBG))
+print('All=%r ' % all(np.array(sv1.DBG) == np.array(sv2.DBG)))
+
 

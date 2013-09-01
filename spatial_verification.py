@@ -60,8 +60,13 @@ def _normalize_pts(xyz):
     com = np.sum(xyz,axis=1) / num_xyz # center of mass
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
+        #OLD WAY WAS WRONG. NOT STD
+        '''
         sx  = num_xyz / np.sum(abs(xyz[0,:]-com[0]))  # average xy magnitude
         sy  = num_xyz / np.sum(abs(xyz[1,:]-com[1])) 
+        '''
+        sx  = 1 / np.sqrt(np.sum(abs(xyz[0,:]-com[0])**2)/num_xyz)  # average xy magnitude
+        sy  = 1 / np.sqrt(np.sum(abs(xyz[1,:]-com[1])**2)/num_xyz)
     tx  = -com[0]*sx
     ty  = -com[1]*sy
     T = np.array([(sx, 0, tx), (0, sy, ty), (0, 0, 1)])
@@ -77,7 +82,6 @@ def homogo_normalize_pts(xy):
 # This new function is much faster .035 vs .007
 def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
     '''Estimates inliers deterministically using elliptical shapes'''
-    global __DBG1__
     # EXPLOITS LOWER TRIANGULAR MATRIXES
     best_inliers = []
     best_Aff = (1, 0, 1, 0, 0, 0)
@@ -101,12 +105,7 @@ def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
     scale_thresh_high = 2.0
     scale_thresh_low  = 1.0/scale_thresh_high
 
-
-    print("sv1: xy_thresh_sqrd=%r" % xy_thresh_sqrd)
-    print("sv1: scale_thresh_high=%r" % scale_thresh_high)
-    print("sv1: scale_thresh_low=%r" % scale_thresh_low)
     # Enumerate All Hypothesis (Match transformations)
-    __DBG1__ = []
     for mx in xrange(len(x1_m)): 
         x1 = x1_m[mx]
         y1 = y1_m[mx]
@@ -132,7 +131,6 @@ def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
             np.logical_and(xy_inliers,
                            np.logical_and(s2_inliers, s1_inliers)))
         # See if more inliers than previous best
-        __DBG1__.append(x1_mAt)
         if len(_inliers) > len(best_inliers):
             best_inliers = _inliers
             best_Aff = (Ha, Hc, Hd, x1, y1, x2, y2)
@@ -140,7 +138,6 @@ def aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd):
     best_Aff = np.array([(Ha,  0,  x2-Ha*x1      ),
                          (Hc, Hd,  y2-Hc*x1-Hd*y1),
                          ( 0,  0,               1)])
-    #print __DBG1__
     return best_Aff, best_inliers
 
 def aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd):
@@ -225,15 +222,13 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     if num_m < min_num_inliers or num_m == 0: 
         return  None
 
-    print("SV1: xy_thresh_sqrd = %r " % xy_thresh_sqrd)
-
     # Estimate initial inliers with some RANSAC variant
     Aff, aff_inliers = func_aff_inlier(kpts1_m, kpts2_m, xy_thresh_sqrd)
+
 
     # If we cannot estimate a good correspondence 
     if len(aff_inliers) < min_num_inliers:
         return np.eye(3), aff_inliers
-
     # Homogonize+Normalize
     xy1_m    = kpts1_m[0:2,:] 
     xy2_m    = kpts2_m[0:2,:]

@@ -622,9 +622,17 @@ def report_all(hs, qcx2_res, SV=True, **kwargs):
     try: 
         dump_all(allres, **kwargs)
     except Exception as ex:
+        import sys
+        import traceback
         print('\n\n-----------------')
         print('Caught Error in rr2.dump_all')
         print(repr(ex))
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        print "*** print_tb:"
+        traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+        print "*** print_exception:"
+        traceback.print_exception(exc_type, exc_value, exc_traceback,
+                                  limit=2, file=sys.stdout)
         print('Caught Error in rr2.dump_all')
         print('-----------------\n')
         return allres, ex

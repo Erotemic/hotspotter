@@ -21,23 +21,6 @@ def param_config1():
 def param_config2():
     params.__RANK_EQ__ = False
 
-def run_experiment(hs=None):
-    '''
-    Runs experiment and report result
-    returns qcx2_res, hs
-    '''
-    db_dir = ld2.DEFAULT
-    if not hs is None:
-        db_dir = hs.db_dir
-    print(textwrap.dedent('''
-    ======================
-    expts> Running Experiment on: %r
-    Params: %s
-    ======================''' % (db_dir,helpers.indent(params.param_string()))))
-    hs = hs if not hs is None else ld2.HotSpotter(db_dir)
-    qcx2_res = mc2.run_matching(hs)
-    allres = rr2.report_all(hs, qcx2_res)
-    return locals()
 
 def oxford_philbin07():
     params.__MATCH_TYPE__        = 'bagofwords'
@@ -103,37 +86,51 @@ def demo():
     pass
 #ld2.DEFAULT
 
+def run_experiment(hs=None):
+    ''' Runs experiment and report result
+    returns qcx2_res, hs '''
+    db_dir = ld2.DEFAULT
+    if not hs is None:
+        db_dir = hs.db_dir
+    print(textwrap.dedent('''
+    ======================
+    expts> Running Experiment on: %r
+    Params: %s
+    ======================''' % (db_dir,helpers.indent(params.param_string()))))
+    hs = hs if not hs is None else ld2.HotSpotter(db_dir)
+    qcx2_res = mc2.run_matching(hs)
+    allres = rr2.report_all(hs, qcx2_res)
+    return locals()
+
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
 
     arg_map = {
-        'philbin'       : oxford_philbin07,
-        'oxford-bow'    : oxford_bow,
-        'oxford-vsmany' : oxford_vsmany,
+        'philbin'        : oxford_philbin07,
+        'oxford-bow'     : oxford_bow,
+        'oxford-vsmany'  : oxford_vsmany,
         'mothers-bow'    : mothers_bow,
         'mothers-vsmany' : mothers_vsmany,
-        'default'       : run_experiment }
+        'default'        : run_experiment }
 
     print ('expts> Valid arguments are:\n    '+ '\n    '.join(arg_map.keys()))
 
+    # Default to run_experiment
+    expt_func = run_experiment
+
+    # Change based on user input
     has_arg = False
     for argv in sys.argv:
         if argv in arg_map.keys():
             print('expts> Running '+str(argv))
             expt_func = arg_map[argv]
-            expt_locals = expt_func()
-            hs = expt_locals['hs']
-            qcx2_res = expt_locals['qcx2_res']
-            allres = expt_locals['allres']
-            has_arg = True
-            print(allres)
-        #elif argv.find('param') > -1:
-            #param_config1()
-            #expt_locals = run_experiment()
 
-    if not has_arg:
-        expt_locals2 = run_experiment()
-
+    # Do the experiment
+    expt_locals = expt_func()
+    hs = expt_locals['hs']
+    qcx2_res = expt_locals['qcx2_res']
+    allres = expt_locals['allres']
+    print(allres)
 
     exec(df2.present())

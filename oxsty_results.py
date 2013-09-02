@@ -36,7 +36,8 @@ def oxsty_mAP_results(allres):
     query_mAP_cx   = []
     for qcx in iter(hs.test_sample_cx):
         res = qcx2_res[qcx]
-        mAP = get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath, compute_ap_exe)
+        mAP = get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
+                                           compute_ap_exe, oxford_gt_dir)
         query_mAP_list.append(mAP)
         query_mAP_cx.append(qcx)
     # Calculate the total mAP score for the experiemnt
@@ -52,7 +53,7 @@ def oxsty_mAP_results(allres):
     return oxsty_map_csv
 
 def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
-                                 compute_ap_exe):
+                                 compute_ap_exe, oxford_gt_dir):
     # find oxford ground truth directory
     cwd = os.getcwd()
     # build groundtruth query

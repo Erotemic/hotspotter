@@ -119,7 +119,7 @@ def __smart_save(data, fpath, verbose):
         print(repr(ex))
         raise
 #----
-def __smart_load(fpath, verbose, allow_alternative=True, **kwargs):
+def __smart_load(fpath, verbose, allow_alternative=True, can_fail=False, **kwargs):
     ' helper '
     # Get components of the filesname
     dpath, fname = os.path.split(fpath)
@@ -128,21 +128,23 @@ def __smart_load(fpath, verbose, allow_alternative=True, **kwargs):
     if not exists(fpath):
         print(' * fname=%r does not exist' % fname)
         if allow_alternative:
-            convert_alternative(fpath, verbose, **kwargs)
+            convert_alternative(fpath, verbose, can_fail=can_fail, **kwargs)
     # Ensure a valid extension
     if ext_ == '':
         raise NotImplemented('')
     else:
         load_func = ext2_load_func[ext_]
-        if verbose:
-            print(' * loading '+filesize_str(fpath))
         # Do actual data loading
         try: 
+            if verbose:
+                print(' * loading '+filesize_str(fpath))
             data = load_func(fpath)
         except Exception as ex: 
             print(' ! Exception will loading %r' % fpath)
             print(repr(ex))
-            raise
+            data = None
+            if not can_fail:
+                raise
         print('... loaded data')
     if data is None:
         print('... load failure %r' % fpath)
@@ -150,7 +152,7 @@ def __smart_load(fpath, verbose, allow_alternative=True, **kwargs):
 #----
 
 # --- Util ---
-def convert_alternative(fpath, verbose, can_fail=False):
+def convert_alternative(fpath, verbose, can_fail):
     # check for an alternative (maybe old style) file
     alternatives = find_alternatives(fpath, verbose)
     if len(alternatives) == 0:

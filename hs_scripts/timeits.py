@@ -167,3 +167,29 @@ print timeit.timeit(test1, setup=setup, number=100000)
 print timeit.timeit(test2, setup=setup, number=100000)
 
 
+
+    seen_add = seen.add
+    return np.array([False if fx in seen or seen_add(fx) else True for fx in
+iter(list_)])
+
+def flag_duplB(list_):
+    seen = set([])
+    seen_add = seen.add
+    return np.array([(fx in seen or seen_add(fx)) is True for fx in list_])
+
+def flag_duplC(list_):
+    seen = set([])
+    seen_add = seen.add
+    return np.array([(fx in seen or seen_add(fx)) == True for fx in list_])
+
+list_ = [1,2,3,4,5,6,7,3,2,8,4,30,40,600,30]
+'''
+
+test1 = 'flag_duplA(list_)'
+test2 = 'flag_duplB(list_)'
+test3 = 'flag_duplC(list_)'
+
+print timeit.timeit(test1, setup=setup, number=1000000)
+print timeit.timeit(test2, setup=setup, number=1000000)
+print timeit.timeit(test3, setup=setup, number=1000000)
+

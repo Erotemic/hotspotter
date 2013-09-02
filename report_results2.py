@@ -298,15 +298,16 @@ def build_rankres_str(allres):
     test_sample_cx_with_gt = np.array(test_sample_cx)[qcx2_numgt[test_sample_cx] > 0]
     num_with_gtruth = len(test_sample_cx_with_gt)
     def ranks_less_than_(thresh):
-        greater_cxs = np.where(qcx2_top_true_rank[test_sample_cx_with_gt] > thresh)[0]
+        testcx2_ttr = qcx2_top_true_rank[test_sample_cx_with_gt]
+        greater_cxs = test_sample_cx_with_gt[np.where(testcx2_ttr > thresh)[0]]
         num_greater = len(greater_cxs)
         num_less = num_with_gtruth - num_greater
         num_greater = num_with_gtruth - num_less
         frac_less = 100.0 * num_less / num_with_gtruth
         fmt_tup = (num_less, num_with_gtruth, frac_less, num_greater)
-        return fmt_tup, greater_cxs
-    fmt5_tup, greater5_cxs = ranks_less_than_(5)
-    fmt1_tup, greater1_cxs = ranks_less_than_(1)
+        return greater_cxs, fmt_tup
+    greater5_cxs, fmt5_tup = ranks_less_than_(5)
+    greater1_cxs, fmt1_tup = ranks_less_than_(1)
     allres.greater1_cxs = greater1_cxs
     allres.greater5_cxs = greater5_cxs
     print('greater5_cxs = %r ' % (allres.greater5_cxs,))
@@ -650,15 +651,25 @@ if __name__ == '__main__':
     allres = init_allres(hs, qcx2_res, SV)
     greater5_cxs = allres.greater5_cxs
 
-    cx = greater5_cxs[0] if len(greater5_cxs) > 0 else 0
-    print(allres)
-    viz.DUMP = False
-    matches = lambda cx: viz.plot_cx(allres, cx, 'matches')
+    #Helper drawing functions
+    gt_matches = lambda cx: viz.plot_cx(allres, cx, 'gt_matches')
     top5 = lambda cx: viz.plot_cx(allres, cx, 'top5')
     selc = lambda cx: viz.plot_cx(allres, cx, 'kpts')
 
-    top5(cx)
-    matches(cx)
+    viz.DUMP = True
+    viz.BROWSE = False
+    # Dump text results, the stem plot, and the failure cases
+    dump_text_results(allres)
+    viz.plot_rank_stem(allres, 'true')
+    for cx in greater5_cxs:
+        top5(cx)
+        gt_matches(cx)
+
+    viz.DUMP = False
+    viz.BROWSE = True
+    cx = greater5_cxs[0] if len(greater5_cxs) > 0 else 0
+    #top5(cx)
+    #matches(cx)
 
     # IPYTHON END
 
@@ -709,5 +720,6 @@ if __name__ == '__main__':
     try:
         __IPYTHON__
     except Exception:
+        pass
         #exec(nonipython_exec)
-        print allres
+    print(allres)

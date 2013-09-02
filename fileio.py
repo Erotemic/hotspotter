@@ -9,7 +9,7 @@ import cPickle
 import datetime
 import timeit
 
-import hotspotter.helpers as helpers
+import helpers
 import numpy as np
 
 def reload_module():

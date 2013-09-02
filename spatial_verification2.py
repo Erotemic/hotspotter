@@ -1,5 +1,5 @@
 from helpers import printWARN, printINFO
-from warnings import catch_warnings, simplefilter 
+import warnings
 import cv2
 import numpy.linalg as linalg
 import numpy as np
@@ -42,6 +42,8 @@ def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
         printWARN('Caught MemErr %r during full SVD. Trying sparse SVD.' % (ex))
         MbynineSparse = sparse.lil_matrix(Mbynine)
         (U, S, Vct) = sparse_linalg.svds(MbynineSparse)
+    except linalg.LinAlgError as ex2:
+        return np.eye(3)
     # Rearange the nullspace into a homography
     h = Vct[-1] # (transposed in matlab)
     H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]  ) )
@@ -72,6 +74,19 @@ def split_kpts(kpts5xN):
     _acds = np.array(kpts5xN[2:5], dtype=SV_DTYPE)
     return _xs, _ys, _acds
 
+def normalize_xy_points(x_m, y_m):
+    'Returns a transformation to normalize points to mean=0, stddev=1'
+    mean_x = x_m.mean() # center of mass
+    mean_y = y_m.mean()
+    sx = 1.0 / x_m.std()  # average xy magnitude
+    sy = 1.0 / y_m.std()
+    T = np.array([(sx, 0, -mean_x * sx),
+                    (0, sy, -mean_y * sy),
+                    (0,  0,  1)])
+    x_norm = (x_m - mean_x) * sx
+    y_norm = (y_m - mean_y) * sy
+    return x_norm, y_norm, T
+
 def homography_inliers(kpts1, kpts2, fm, 
                        xy_thresh,
                        scale_thresh_high,
@@ -80,17 +95,18 @@ def homography_inliers(kpts1, kpts2, fm,
     if len(fm) < min_num_inliers:
         return None
     # Not enough data
-    # Estimate affine correspondence
-    x1_m, y1_m, acd1_m = split_kpts(kpts1[fm[:, 0], :].T)
-    x2_m, y2_m, acd2_m = split_kpts(kpts2[fm[:, 1], :].T)
+    # Estimate affine correspondence convert to SV_DTYPE
+    fx1_m, fx2_m = fm[:, 0], fm[:, 1]
+    x1_m, y1_m, acd1_m = split_kpts(kpts1[fx1_m, :].T)
+    x2_m, y2_m, acd2_m = split_kpts(kpts2[fx2_m, :].T)
     # Get diagonal length
     diaglen_sqrd = calc_diaglen_sqrd(x2_m, y2_m)
     xy_thresh_sqrd = diaglen_sqrd * xy_thresh
-    Aff, aff_inliers = __affine_inliers(x1_m, y1_m, acd1_m, 
-                                   x2_m, y2_m, acd2_m,
-                                   xy_thresh_sqrd, 
-                                   scale_thresh_high,
-                                   scale_thresh_low)
+    Aff, aff_inliers = __affine_inliers(x1_m, y1_m, acd1_m, fm[:, 0],
+                                        x2_m, y2_m, acd2_m, fm[:, 1],
+                                        xy_thresh_sqrd, 
+                                        scale_thresh_high,
+                                        scale_thresh_low)
     # Cannot find good affine correspondence
     if len(aff_inliers) < min_num_inliers:
         return None
@@ -99,19 +115,6 @@ def homography_inliers(kpts1, kpts2, fm,
                               acd1_m[:,aff_inliers])
     (x2_ma, y2_ma, acd2_m) = (x2_m[aff_inliers], y2_m[aff_inliers],
                               acd2_m[:,aff_inliers])
-    # keypoint xy coordinates shape=(dim, num)
-    def normalize_xy_points(x_m, y_m):
-        'Returns a transformation to normalize points to mean=0, stddev=1'
-        mean_x = x_m.mean() # center of mass
-        mean_y = y_m.mean()
-        sx = 1.0 / x_m.std()  # average xy magnitude
-        sy = 1.0 / y_m.std()
-        T = np.array([(sx, 0, -mean_x * sx),
-                      (0, sy, -mean_y * sy),
-                      (0,  0,  1)])
-        x_norm = (x_m - mean_x) * sx
-        y_norm = (y_m - mean_y) * sy
-        return x_norm, y_norm, T
     # Normalize affine inliers
     x1_mn, y1_mn, T1 = normalize_xy_points(x1_ma, y1_ma)
     x2_mn, y2_mn, T2 = normalize_xy_points(x2_ma, y2_ma)
@@ -127,11 +130,13 @@ def homography_inliers(kpts1, kpts2, fm,
      (H21, H22, H23),
      (H31, H32, H33)) = H
     # Transform kpts1 to kpts2
-    x1_mt   = H11*(x1_m) + H12*(y1_m) + H13
-    y1_mt   = H21*(x1_m) + H22*(y1_m) + H23
-    z1_mt   = H31*(x1_m) + H32*(y1_m) + H33
+    x1_mt = H11*(x1_m) + H12*(y1_m) + H13
+    y1_mt = H21*(x1_m) + H22*(y1_m) + H23
+    z1_mt = H31*(x1_m) + H32*(y1_m) + H33
     # --- Find (Squared) Error ---
-    xy_err = (x1_mt/z1_mt - x2_m)**2 + (y1_mt/z1_mt - y2_m)**2 
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        xy_err = (x1_mt/z1_mt - x2_m)**2 + (y1_mt/z1_mt - y2_m)**2 
     # Estimate final inliers
     inliers, = np.where(xy_err < xy_thresh_sqrd)
     return H, inliers, Aff, aff_inliers
@@ -151,12 +156,77 @@ def dot_acd(acd1, acd2):
     d = (acd1[2] * acd2[2])
     return np.array((a, c, d))
 # --------------------------------
+'''
+fx1_m  = np.array( (1, 2, 3, 4, 5))
+x1_m   = np.array( (1, 2, 1, 4, 5))
+y1_m   = np.array( (1, 2, 1, 4, 5))
+acd1_m = np.array(((1, 1, 1, 1, 1),
+                   (0, 0, 0, 0, 0),
+                   (1, 1, 1, 1, 1)))
 
-def __affine_inliers(x1_m, y1_m, acd1_m,
-                     x2_m, y2_m, acd2_m, xy_thresh_sqrd, 
+fx2_m  = np.array( (1, 2, 3, 2, 5))
+x2_m   = np.array( (1, 2, 1, 4, 5))
+y2_m   = np.array( (1, 2, 1, 4, 5))
+acd2_m = np.array(((1, 1, 1, 1, 1),
+                   (0, 0, 0, 0, 0),
+                   (1, 1, 1, 1, 1)))
+
+'''
+#---
+# Ensure that a feature doesn't have multiple assignments
+'''
+fx1_uq, fx1_ux, fx1_ui = np.unique(fx1_m, return_index=True, return_inverse=True)
+fx2_uq, fx2_ux, fx2_ui = np.unique(fx2_m, return_index=True, return_inverse=True)
+
+fx_m = fx2_m
+inliers_flag = hypo_inliers
+error = xy_err
+def dupl_items(list_):
+    seen = set()
+    seen_add = seen.add
+    seen_twice = set( x for x in list_ if x in seen or seen_add(x) )
+    return list( seen_twice )
+'''
+def remove_multiassignments(fx_m, inliers, error):
+    '''
+    I think this works, but I haven't integrated it yet.
+    Also, is probably going to be slow.
+    Try pip install hungarian instead
+    '''
+    # Get the inlier feature indexes
+    ilx_to_fx = fx_m[inliers]
+    ux_to_fx, ilx2_to_ux = np.unique(ilx_to_fx, return_inverse=True)
+    # Find which fx are duplicates
+    dupl_ux = dupl_items(ilx2_to_ux)
+    # This is the list of multi-assigned feature indexes
+    fx_mulass = ux_to_fx[dupl_ux]
+    ilx_mulass = [np.where(fx_m == fx)[0] for fx in fx_mulass]
+    # For each multi-assigned inlier, pick one
+    ilx2_flag = np.ones(len(inliers), dtype=np.bool)
+    for ilx_list in ilx_mulass:
+        ilx2_flag[ilx_list] = False
+        keepx = np.argmin(error[inliers[ilx_list]])
+        ilx2_flag[ilx_list[keepx]] = True
+    return inliers[ilx_to_flag]
+
+def flag_unique(list_):
+    seen = set([])
+    seen_add = seen.add
+    return np.array([False if fx in seen or seen_add(fx) else True 
+                     for fx in list_], dtype=np.bool)
+
+def __affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
+                     x2_m, y2_m, acd2_m, fx2_m,
+                     xy_thresh_sqrd, 
                      scale_thresh_high, scale_thresh_low):
-    'Estimates inliers deterministically using elliptical shapes'
+    '''Estimates inliers deterministically using elliptical shapes
+    1_m = img1_matches; 2_m = img2_matches
+    x and y are locations, acd are the elliptical shapes. 
+    fx are the original feature indexes (used for making sure 1 keypoint isn't assigned to 2)
+    '''
 #with helpers.Timer('enume all'):
+    fx1_uq, fx1_ui = np.unique(fx1_m, return_inverse=True)
+    fx2_uq, fx2_ui = np.unique(fx2_m, return_inverse=True)
     best_inliers = []
     num_best_inliers = 0
     best_mx  = None
@@ -173,9 +243,9 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
     # Test all hypothesis
     for mx in xrange(len(x1_m)):
         # --- Get the mth hypothesis ---
-        Aa = Aff_list[0,mx]
-        Ac = Aff_list[1,mx]
-        Ad = Aff_list[2,mx]
+        Aa = Aff_list[0, mx]
+        Ac = Aff_list[1, mx]
+        Ad = Aff_list[2, mx]
         Adet = detAff_list[mx]
         x1_hypo = x1_m[mx]
         y1_hypo = y1_m[mx]
@@ -186,12 +256,28 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
         y1_mt   = y2_hypo + Ac*(x1_m - x1_hypo) + Ad*(y1_m - y1_hypo)
         # --- Find (Squared) Error ---
         xy_err    = (x1_mt - x2_m)**2 + (y1_mt - y2_m)**2 
-        scale_err = Adet * det1_m / det2_m
+        scale_err = Adet * det2_m / det1_m 
         # --- Determine Inliers ---
-        xy_inliers = xy_err < xy_thresh_sqrd 
-        scale_inliers = np.logical_and(scale_err > scale_thresh_low,
-                                       scale_err < scale_thresh_high)
-        hypo_inliers, = np.where(np.logical_and(xy_inliers, scale_inliers))
+        xy_inliers_flag = xy_err < xy_thresh_sqrd 
+        scale_inliers_flag = np.logical_and(scale_err > scale_thresh_low,
+                                            scale_err < scale_thresh_high)
+        hypo_inliers_flag = np.logical_and(xy_inliers_flag, scale_inliers_flag)
+        #---
+        #---------------------------------
+        # TODO: More sophisticated scoring
+        # Currently I'm using the number of inliers as a transformations'
+        # goodness. Also the way I'm accoutning for multiple assignment
+        # does not take into account any error reporting
+        #---------------------------------
+        '''
+        unique_assigned1 = flag_unique(fx1_ui[hypo_inliers_flag])
+        unique_assigned2 = flag_unique(fx2_ui[hypo_inliers_flag])
+        unique_assigned_flag = np.logical_and(unique_assigned1,
+                                              unique_assigned2)
+        hypo_inliers = np.where(hypo_inliers_flag)[0][unique_assigned_flag]
+        '''
+        hypo_inliers = np.where(hypo_inliers_flag)[0]
+        #---
         num_hypo_inliers = len(hypo_inliers)
         # --- Update Best Inliers ---
         if num_hypo_inliers > num_best_inliers:
@@ -230,6 +316,8 @@ def test():
     #df2.update()
     x1_m, y1_m, acd1_m = split_kpts(kpts1[fm[:, 0]].T)
     x2_m, y2_m, acd2_m = split_kpts(kpts2[fm[:, 1]].T)
+    fx1_m = fm[:, 0]
+    fx2_m = fm[:, 1]
     x2_extent = x2_m.max() - x2_m.min()
     y2_extent = y2_m.max() - y2_m.min()
     img2_extent = np.array([x2_extent, y2_extent])

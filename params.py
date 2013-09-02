@@ -134,7 +134,6 @@ __VSONE_RATIO_THRESH__ = 1.5       # Thresholds for one-vs-one
 #---------------------
 # SPATIAL VERIFICATION
 __NUM_RERANK__   = 1000 # Number of top matches to spatially re-rank
-__XY_THRESH__    = .1 # % diaglen of keypoint extent
 __XY_THRESH__    = .002 # % diaglen of keypoint extent
 __SCALE_THRESH_HIGH__ = 2.0
 __SCALE_THRESH_LOW__  = 0.5
@@ -193,7 +192,10 @@ def get_matcher_uid():
 
 def get_query_uid():
     query_uid = ''
-    query_uid += '_sv'+str(__NUM_RERANK__)+'_'+str(__XY_THRESH__)
+    query_uid += '_sv(' + str(__NUM_RERANK__)
+    query_uid += ','   + str(__XY_THRESH__)
+    query_uid += ','   + str(__SCALE_THRESH_HIGH__)
+    query_uid += ','   + str(__SCALE_THRESH_LOW__)+')'
     query_uid += get_matcher_uid()
     return query_uid
 
@@ -289,10 +291,15 @@ if '--serial' in sys.argv:
     NUM_PROCS = 1
 
 for argv in iter(sys.argv):
-    if argv.upper() in dev_databases.keys():
+    argv_u =  argv.upper()
+    if argv_u in dev_databases.keys():
         print('\n'.join([' * Default Database set to:'+argv.upper(),
                          ' * Previously: '+str(DEFAULT)]))
-        DEFAULT = dev_databases[argv.upper()]
+        DEFAULT = dev_databases[argv_u]
+        if argv_u == 'OXFORD':
+            # dont resize oxford photos
+            __CHIP_SQRT_AREA__ = None
+
 
 def make_pref_object():
     'Not finished yet, but its a start'

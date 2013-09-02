@@ -73,20 +73,24 @@ def plot_cx(allres, cx, *args):
     hs    = allres.hs
     qcx2_res = allres.qcx2_res
     cx_info(allres, cx)
+    subdir = 'plot_cx'
     if 'kpts' in args:
         rchip = hs.get_chip(cx)
         kpts  = hs.feats.cx2_kpts[cx]
         title = 'cx: %d\n%s' % (cx, allres.title_suffix)
         print('Plotting'+title)
-        fig = df2.imshow(rchip, fignum=FIGNUM+1, title=title, doclf=True)
+        fig = df2.imshow(rchip, fignum=FIGNUM, title=title, doclf=True)
         df2.draw_kpts2(kpts)
-    if 'matches' in args: 
+    if 'gt_matches' in args: 
         res = qcx2_res[cx]
-        df2.show_all_matches(hs, res, fignum=FIGNUM+1)
+        df2.show_gt_matches(hs, res, fignum=FIGNUM)
+        subdir = 'gt_matches'
     if 'top5' in args:
         res = qcx2_res[cx]
-        df2.show_top5_matches(hs, res, fignum=FIGNUM+2)
-    __dump_or_browse(allres, 'plot_cx')
+        df2.show_top5_matches(hs, res, fignum=FIGNUM)
+        subdir = 'top5'
+    subdir += allres.title_suffix
+    __dump_or_browse(allres, subdir)
 
 def plot_rank_stem(allres, orgres_type='true'):
     print(' * plotting rank stem')

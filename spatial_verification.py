@@ -230,10 +230,10 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     if len(aff_inliers) < min_num_inliers:
         return np.eye(3), aff_inliers
     # Homogonize+Normalize
-    xy1_m    = kpts1_m[0:2,:] 
-    xy2_m    = kpts2_m[0:2,:]
-    (xyz_norm1, T1) = homogo_normalize_pts(xy1_m[:,aff_inliers]) 
-    (xyz_norm2, T2) = homogo_normalize_pts(xy2_m[:,aff_inliers])
+    xy1_m = kpts1_m[0:2, :] 
+    xy2_m = kpts2_m[0:2, :]
+    (xyz_norm1, T1) = homogo_normalize_pts(xy1_m[:, aff_inliers]) 
+    (xyz_norm2, T2) = homogo_normalize_pts(xy2_m[:, aff_inliers])
 
     # Compute Normalized Homog
     #__AFFINE_OVERRIDE__ = False

@@ -55,7 +55,7 @@ def oxford_philbin07():
     db_sample_cx = hs.database_sample_cx
     tr_sample_cx = hs.train_sample_cx
     te_sample_cx = hs.test_sample_cx
-    assert db_sample_cx == tr_sample_cx
+    assert all(db_sample_cx == tr_sample_cx)
     assert len(set(te_sample_cx)) == 55
     print('expts> Database shape: '+str(np.vstack(hs.feats.cx2_desc[db_sample_cx]).shape))
     # Load / Build Vocabulary

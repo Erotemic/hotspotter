@@ -104,12 +104,15 @@ def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
     os.chdir(cwd)
     return mAP
 
+from Printable import DynStruct
 def run_process(args):
     proc = subprocess.Popen(args, 
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
-    toret = object()
-    (toret.out, toret.err) = proc.communicate()
+    toret = DynStruct()
+    (out, err) = proc.communicate()
+    toret.out = out
+    toret.err = err
     toret.return_code = proc.returncode
     toret.proc = proc
     return toret

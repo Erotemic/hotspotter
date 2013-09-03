@@ -300,8 +300,28 @@ def show_inliers(hs, qcx, cx, inliers, title='inliers', **kwargs):
     import load_data2 as ld2
     df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[inliers], title=title, **kwargs_)
 
-
 def test():
+    qcx = 27
+    cx  = 113
+    if not 'hs' in vars():
+        (hs, qcx, cx, fm, fs, 
+         rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data(qcx, cx)
+    args_ = [rchip1, rchip2, kpts1, kpts2]
+
+    H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm, 
+                                                          xy_thresh,
+                                                          scale_thresh_high,
+                                                          scale_thresh_low,
+                                                          min_num_inliers=4)
+    df2.show_matches2(*args_+[fm], fs=None,
+                      all_kpts=False, draw_lines=True,
+                      doclf=True, title='Assigned matches')
+
+    df2.show_matches2(*args_+[fm[aff_inliers1]], fs=None,
+                      all_kpts=False, draw_lines=False, doclf=True,
+                      title='Assigned matches')
+
+def compare1():
     from __init__ import *
     from spatial_verification2 import *
     reload()
@@ -376,3 +396,4 @@ if __name__ == '__main__':
     import multiprocessing as mp
     mp.freeze_support()
     print('__main__ = spatial_verification2.py')
+    test()

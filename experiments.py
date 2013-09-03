@@ -9,6 +9,7 @@ import params
 import report_results2 as rr2
 import sys 
 import draw_func2 as df2
+import itertools
 
 def reload_module():
     import imp
@@ -18,15 +19,12 @@ def reload_module():
 def param_config1():
     params.__RANK_EQ__ = True
 
-def param_config2():
-    params.__RANK_EQ__ = False
-
-
 def oxford_philbin07():
     params.__MATCH_TYPE__        = 'bagofwords'
     params.__BOW_NUM_WORDS__     = [1e4, 2e4, 5e4, 1e6, 1.25e6][3]
     params.__NUM_RERANK__        = [100, 200, 400, 800, 1000][3]
     params.__CHIP_SQRT_AREA__    = None
+    params.__XY_THRESH__    = .01
     params.BOW_AKMEANS_FLANN_PARAMS = dict(algorithm='kdtree',
                                                trees=8, checks=64)
     # I'm not sure if checks parameter is set correctly
@@ -82,29 +80,50 @@ def mothers_bow():
     params.__MATCH_TYPE__     = 'bagofwords'
     return run_experiment()
 
+def param_tweak(expt_func=None):
+    if not 'expt_func' in vars() or expt_func is None:
+        expt_func = run_experiment
+    xy_thresh_tweaks  = [.5, .1, .05, .01, .005, .001]
+    scale_low_tweaks  = [.75, .5, .25]
+    scale_high_tweaks = [2, 4, 8]
+    gen_ = itertools.product(xy_thresh_tweaks, scale_low_tweaks, scale_high_tweaks)
+    result_map = {}
+    db_dir = ld2.DEFAULT
+    hs = ld2.HotSpotter(db_dir)
+    for tup in gen_:
+        print('========================')
+        print('expt> ** param tweak %r ' % (tup,))
+        print('========================')
+        xy_thresh, scale_thresh_high, scale_thresh_low = tup
+        params.__XY_THRESH__         = xy_thresh
+        params.__SCALE_THRESH_LOW__  = scale_thresh_low
+        params.__SCALE_THRESH_HIGH__ = scale_thresh_high
+        expt_locals = expt_func(hs)
+        result_map[tup] = expt_locals['allres']
+
 def demo():
     pass
 #ld2.DEFAULT
 
 def run_experiment(hs=None):
-    ''' Runs experiment and report result
-    returns qcx2_res, hs '''
-    db_dir = ld2.DEFAULT
-    if not hs is None:
-        db_dir = hs.db_dir
-    print(textwrap.dedent('''
-    ======================
-    expts> Running Experiment on: %r
-    Params: %s
-    ======================''' % (db_dir,helpers.indent(params.param_string()))))
-    hs = hs if not hs is None else ld2.HotSpotter(db_dir)
+    'Runs experiment and dumps results. Returns locals={qcx2_res, hs}'
+    if hs is None:
+        db_dir = ld2.DEFAULT
+        hs = ld2.HotSpotter(db_dir)
+    print('======================')
+    print('expts> Running Experiment on hs:\n'+str(hs))
+    print('Params: '+ helpers.indent(params.param_string()))
+    print('======================')
     qcx2_res = mc2.run_matching(hs)
-    allres = rr2.report_all(hs, qcx2_res)
+    allres   = rr2.report_all(hs, qcx2_res)
     return locals()
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
+
+    # Default to run_experiment
+    expt_func = run_experiment
 
     arg_map = {
         'philbin'        : oxford_philbin07,
@@ -113,18 +132,15 @@ if __name__ == '__main__':
         'mothers-bow'    : mothers_bow,
         'mothers-vsmany' : mothers_vsmany,
         'default'        : run_experiment }
-
     print ('expts> Valid arguments are:\n    '+ '\n    '.join(arg_map.keys()))
-
-    # Default to run_experiment
-    expt_func = run_experiment
+    argv = sys.argv
 
     # Change based on user input
     has_arg = False
-    for argv in sys.argv:
-        if argv in arg_map.keys():
-            print('expts> Running '+str(argv))
-            expt_func = arg_map[argv]
+    for arg in argv:
+        if arg in arg_map.keys():
+            print('expts> Running '+str(arg))
+            expt_func = arg_map[arg]
 
     # Do the experiment
     expt_locals = expt_func()

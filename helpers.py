@@ -369,6 +369,7 @@ def haveIPython():
 def keyboard(banner=None):
     ''' Function that mimics the matlab keyboard command '''
     # use exception trick to pick up the current frame
+    print('*** keyboard> INTERACTING WITH IPYTHON ***')
     try:
         raise None
     except:
@@ -381,7 +382,14 @@ def keyboard(banner=None):
         import IPython
         IPython.embed_kernel(module=None,local_ns=namespace)
     except SystemExit:
-        return
+        pass
+    except Exception as ex:
+        print(repr(ex))
+        print('*** keyboard> FAILED TO INTERACT WITH IPYTHON ***')
+        print('probably want to up up')
+        import pdb
+        pdb.set_trace()
+
 
 def print_frame(frame):
     frame = frame if 'frame' in vars() else inspect.currentframe()

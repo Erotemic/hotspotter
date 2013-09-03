@@ -207,7 +207,7 @@ def init_score_matrix(allres):
         row_scores.append(cx2_score[cx_sorted])
     col_label_cx = cx_sorted
     # convert to numpy matrix array
-    score_matrix = np.array(row_scores)
+    score_matrix = np.array(row_scores, dtype=np.float64)
     # Fill diagonal with -1's
     np.fill_diagonal(score_matrix, -np.ones(len(row_label_cx)))
     # Add score matrix to allres

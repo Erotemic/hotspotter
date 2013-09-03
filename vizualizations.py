@@ -69,26 +69,26 @@ def print_top_res_scores(hs, res, view_top=10, SV=True):
     print('---------------------------------------')
     print('---------------------------------------')
 
-def plot_cx(allres, cx, *args):
+def plot_cx(allres, cx, style='kpts', subdir=None):
     hs    = allres.hs
     qcx2_res = allres.qcx2_res
-    cx_info(allres, cx)
-    subdir = 'plot_cx'
-    if 'kpts' in args:
+    #cx_info(allres, cx)
+    if 'kpts' == style:
+        subdir = 'plot_cx' if subdir is None else subdir
         rchip = hs.get_chip(cx)
         kpts  = hs.feats.cx2_kpts[cx]
         title = 'cx: %d\n%s' % (cx, allres.title_suffix)
         print('Plotting'+title)
         fig = df2.imshow(rchip, fignum=FIGNUM, title=title, doclf=True)
         df2.draw_kpts2(kpts)
-    if 'gt_matches' in args: 
+    if 'gt_matches'  == style: 
+        subdir = 'gt_matches' if subdir is None else subdir
         res = qcx2_res[cx]
         df2.show_gt_matches(hs, res, fignum=FIGNUM)
-        subdir = 'gt_matches'
-    if 'top5' in args:
+    if 'top5' == style:
+        subdir = 'top5' if subdir is None else subdir
         res = qcx2_res[cx]
         df2.show_top5_matches(hs, res, fignum=FIGNUM)
-        subdir = 'top5'
     subdir += allres.title_suffix
     __dump_or_browse(allres, subdir)
 
@@ -158,6 +158,8 @@ def plot_score_matrix(allres):
 
 # Dump logic
 def __dump_or_browse(allres, subdir=None):
+    fig = df2.plt.gcf()
+    fig.tight_layout()
     if BROWSE:
         print('report_results> Browsing Image')
         df2.show()

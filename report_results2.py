@@ -461,7 +461,8 @@ def dump_all(allres,
              oxford=False, 
              ttbttf=False,
              problems=False,
-             gtmatches=False):
+             gtmatches=False,
+             missed_top5=True):
     if text:
         dump_text_results(allres)
     if oxford:
@@ -482,6 +483,8 @@ def dump_all(allres,
         dump_problem_matches(allres)
     if gtmatches: 
         dump_gt_matches(allres)
+    if missed_top5:
+        dump_missed_top5(allres)
 
 def dump_score_matrixes(allres):
     plot_score_matrix(allres)
@@ -508,20 +511,27 @@ def dump_rank_hists(allres):
     plot_rank_histogram(allres, 'true')
 
 def dump_score_pdfs(allres):
-    plot_score_pdf(allres, 'true', colorx=0.0, variation_truncate=True)
-    plot_score_pdf(allres, 'false', colorx=.2)
-    plot_score_pdf(allres, 'top_true', colorx=.4, variation_truncate=True)
-    plot_score_pdf(allres, 'bot_true', colorx=.6)
-    plot_score_pdf(allres, 'top_false', colorx=.9)
+    plot_score_pdf(allres, 'true',      colorx=0.0, variation_truncate=True)
+    plot_score_pdf(allres, 'false',     colorx=0.2)
+    plot_score_pdf(allres, 'top_true',  colorx=0.4, variation_truncate=True)
+    plot_score_pdf(allres, 'bot_true',  colorx=0.6)
+    plot_score_pdf(allres, 'top_false', colorx=0.9)
 
 def dump_gt_matches(allres):
-    hs = allres.hs
-    qcx2_res = allres.qcx2_res
     'Displays the matches to ground truth for all queries'
+    qcx2_res = allres.qcx2_res
     for qcx in xrange(0, len(qcx2_res)):
-        res = qcx2_res[qcx]
-        df2.show_all_matches(hs, res, fignum=1)
-        __dump_or_browse(allres, 'gt_matches'+allres.title_suffix)
+        viz.plot_cx(allres, qcx, 'gt_matches')
+
+def dump_missed_top5(allres):
+    'Displays the top5 matches for all queries'
+    qcx2_res = allres.qcx2_res
+    greater5_cxs = allres.greater5_cxs
+    qcx = greater5_cxs[0]
+    for qcx in greater5_cxs:
+        viz.plot_cx(allres, qcx, 'top5', 'missed_top5')
+        viz.plot_cx(allres, qcx, 'gt_matches', 'missed_top5')
+
 
 # ===========================
 # Result Plotting
@@ -668,68 +678,70 @@ if __name__ == '__main__':
 
     viz.DUMP = True
     viz.BROWSE = False
-    # Dump text results, the stem plot, and the failure cases
-    dump_text_results(allres)
-    viz.plot_rank_stem(allres, 'true')
-    for cx in greater5_cxs:
-        top5(cx)
-        gt_matches(cx)
 
-    viz.DUMP = False
-    viz.BROWSE = True
-    cx = greater5_cxs[0] if len(greater5_cxs) > 0 else 0
+    # Dump text results, the stem plot, and the failure cases
+    #dump_text_results(allres)
+    #viz.plot_rank_stem(allres, 'true')
+    #for cx in greater5_cxs:
+        #top5(cx)
+        #gt_matches(cx)
+
+    #viz.DUMP = False
+    #viz.BROWSE = True
+    #cx = greater5_cxs[0] if len(greater5_cxs) > 0 else 0
     #top5(cx)
     #matches(cx)
 
     # IPYTHON END
 
-    nonipython_exec = textwrap.dedent(r"""
-    help_ = textwrap.dedent(r'''
-    Enter a command.
-        q (or space) : quit 
-        h            : help
-        cx [cx]    : shows a chip
-    ''')
-    print(help_)
-    firstcmd = 'cx 0'
-    firstcmd = 'stem'
-    ans = None
-    viz.DUMP = False
-    while True:
-        # Read command or run the first one hardcoded in
-        ans = raw_input('>') if not ans is None else firstcmd
-        if ans == 'q' or ans == ' ':
-            break
-        if allres is None:
-            print('Loading hotspotter')
-        if ans == 'h':
-            print help_
-        elif re.match('cx [0-9][0-9]*', ans) or\
-             re.match('[0-9][0-9]*', ans):
-            cx = int(ans.replace('cx ',''))
-            selc(cx)
-        elif ans == 'stem':
-            viz.plot_rank_stem(allres, 'true')
-        else:
-            exec(ans)
-        df2.update()
-    #browse='--browse' in sys.argv
-    #stem='--stem' in sys.argv
-    #hist='--hist' in sys.argv
-    #pdf='--pdf'   in sys.argv
-    viz.DUMP = True
-    dump_all(allres)
-    if '--vrd' in sys.argv:
-        helpers.vd(hs.dirs.result_dir)
-    #dinspect(18)
-    print(allres)
-    exec(df2.present(wh=(900,600)))
-    viz.DUMP = False
-    """)
+    #nonipython_exec = textwrap.dedent(r"""
+    #help_ = textwrap.dedent(r'''
+    #Enter a command.
+        #q (or space) : quit 
+        #h            : help
+        #cx [cx]    : shows a chip
+    #''')
+    #print(help_)
+    #firstcmd = 'cx 0'
+    #firstcmd = 'stem'
+    #ans = None
+    #viz.DUMP = False
+    #while True:
+        ## Read command or run the first one hardcoded in
+        #ans = raw_input('>') if not ans is None else firstcmd
+        #if ans == 'q' or ans == ' ':
+            #break
+        #if allres is None:
+            #print('Loading hotspotter')
+        #if ans == 'h':
+            #print help_
+        #elif re.match('cx [0-9][0-9]*', ans) or\
+             #re.match('[0-9][0-9]*', ans):
+            #cx = int(ans.replace('cx ',''))
+            #selc(cx)
+        #elif ans == 'stem':
+            #viz.plot_rank_stem(allres, 'true')
+        #else:
+            #exec(ans)
+        #df2.update()
+    ##browse='--browse' in sys.argv
+    ##stem='--stem' in sys.argv
+    ##hist='--hist' in sys.argv
+    ##pdf='--pdf'   in sys.argv
+    #viz.DUMP = True
+    #dump_all(allres)
+    #if '--vrd' in sys.argv:
+        #helpers.vd(hs.dirs.result_dir)
+    ##dinspect(18)
+    #print(allres)
+    #exec(df2.present(wh=(900,600)))
+    #viz.DUMP = False
+    #""")
 
     try:
         __IPYTHON__
     except Exception:
+        dump_all(allres)
         pass
         #exec(nonipython_exec)
     print(allres)

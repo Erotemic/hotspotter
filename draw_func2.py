@@ -405,7 +405,7 @@ def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
     ax.add_collection(line_collection)
 
 def draw_kpts2(kpts, offset=(0,0), ell=True, 
-               pts=False, pts_color='r', pts_size=2):
+               pts=False, pts_color='r', pts_size=2, ell_alpha=None):
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
     global SHOW_ELLS
     global ELL_COLOR
@@ -414,6 +414,8 @@ def draw_kpts2(kpts, offset=(0,0), ell=True,
     global POINT_SIZE
     if not SHOW_ELLS:
         return
+    if ell_alpha is None:
+        ell_alpha = ELL_ALPHA
     # get matplotlib info
     ax = plt.gca()
     pltTrans = ax.transData
@@ -458,7 +460,7 @@ def draw_kpts2(kpts, offset=(0,0), ell=True,
         ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
         ellipse_collection.set_facecolor('none')
         ellipse_collection.set_transform(pltTrans)
-        ellipse_collection.set_alpha(ELL_ALPHA)
+        ellipse_collection.set_alpha(ell_alpha)
         ellipse_collection.set_linewidth(ELL_LINEWIDTH)
         ellipse_collection.set_edgecolor(ELL_COLOR)
         ax.add_collection(ellipse_collection)
@@ -590,7 +592,7 @@ def show_top5_matches(hs, res, SV=True, fignum=4):
     for ox, cx in enumerate(others):
         plotnumcx = plotnum + ox
         #print 'plot_to: plotnum='+str(plotnumcx)
-        show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx)
+        show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx, all_kpts=False, ell_alpha=.5)
     set_figtitle(figtitle)
 
 def show_all_matches(*args, **kwargs): 
@@ -618,7 +620,7 @@ def show_gt_matches(hs, res, SV=True, fignum=3):
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
                   fm=None, fs=None, fignum=0, plotnum=111,
                   title=None, vert=True, all_kpts=True, 
-                  draw_lines=True, **kwargs):
+                  draw_lines=True, ell_alpha=None, **kwargs):
     '''Draws feature matches 
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''
@@ -647,27 +649,30 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
         imshow(match_img,fignum=fignum,plotnum=plotnum,title=title, **kwargs)
         # Draw all keypoints as simple points
         if all_kpts:
-            draw_kpts2(kpts1, ell=False, pts=True, pts_color='g', pts_size=2)
-            draw_kpts2(kpts2, offset=(woff,hoff), ell=False, pts=True, pts_color='g', pts_size=2)
+            draw_kpts2(kpts1, ell=False, pts=True, pts_color='g', pts_size=2, ell_alpha=ell_alpha)
+            draw_kpts2(kpts2, offset=(woff,hoff), ell=False, pts=True,
+                       pts_color='g', pts_size=2, ell_alpha=ell_alpha)
         # Draw matching ellipses
         orange=np.array((255, 127, 0, 255))/255.0
         draw_kpts2(kpts1[fm[:,0]],
-                   pts=True, pts_color=orange, pts_size=4)
+                   pts=True, pts_color=orange, pts_size=4, ell_alpha=ell_alpha)
         draw_kpts2(kpts2[fm[:,1]], offset=(woff,hoff),
-                   pts=True, pts_color=orange, pts_size=4)
+                   pts=True, pts_color=orange, pts_size=4, ell_alpha=ell_alpha)
         # Draw matching lines
         if draw_lines:
             draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
 
-def show_matches3(res, hs, cx, SV=True, fignum=3, plotnum=111, title_aug=None):
+def show_matches3(res, hs, cx, SV=True, fignum=3, plotnum=111, title_aug=None, **kwargs):
     qcx = res.qcx
     cx2_score = res.cx2_score_V if SV else res.cx2_score
     cx2_fm    = res.cx2_fm_V if SV else res.cx2_fm
     cx2_fs    = res.cx2_fs_V if SV else res.cx2_fs
     title_suff = '(+V)' if SV else None
-    return show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum, plotnum, title_aug, title_suff)
+    return show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum,
+                         plotnum, title_aug, title_suff, **kwargs)
 
-def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111, title_pref=None, title_suff=None):
+def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111,
+                  title_pref=None, title_suff=None, **kwargs):
     printDBG('Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))
     if np.isnan(cx):
         nan_img = np.zeros((100,100), dtype=np.uint8)
@@ -695,7 +700,8 @@ def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111,
         title = title_pref + title
     if not title_suff is None:
         title = title + title_suff
-    return show_matches2(rchip1, rchip2, kpts1,  kpts2, fm, fs, fignum=fignum, plotnum=plotnum, title=title)
+    return show_matches2(rchip1, rchip2, kpts1,  kpts2, fm, fs, fignum=fignum,
+                         plotnum=plotnum, title=title, **kwargs)
 
 
 def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):

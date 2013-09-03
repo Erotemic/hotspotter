@@ -490,6 +490,7 @@ def dump_score_matrixes(allres):
 def dump_oxsty_mAP_results(allres):
     oxsty_map_csv = oxsty_results.oxsty_mAP_results(allres)
     allres.oxsty_map_csv = oxsty_map_csv
+    print(oxsty_map_csv)
     __dump_text_report(allres, 'oxsty_map_csv')
 
 def dump_text_results(allres):

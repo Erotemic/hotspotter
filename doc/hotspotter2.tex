@@ -1,0 +1,48 @@
+\title{The Big 3}
+
+\begin{document}
+\begin{section}{Scoring Mechanism}
+\end{section}
+
+\begin{section}{Postive / Negative Decisions}
+\end{section}
+
+\begin{section}{Which information to keep per animal?}
+    Given database $D$
+
+    Let $D$ be the set of database descriptors.
+    $N$ is the number of database features.
+    Let $Q$ be the set of query features.
+    $M$ is the number of query features.
+    Let $E = N \times M$ matrix of database-to-query feature scores. 
+    Let $V = N+M$ matrix of feature descriptors.
+    TODO: Index $E$ and $V$ using different types of features
+    Notes $\E = \T \union \F$.
+
+    Let $\N$ be the N size set of ground-truth names. 
+
+    Let $\T$ the known-true matchings
+    $\T = \{e = (i,j) \where e \txt{is ground-true}\}$
+    $\T = \{(i,j) \where n_i \eq n_j\}$
+    Let $\F$ the known-false matchings
+    $\F = \{e = (i,j) \where e \txt{is ground-false}\}$
+    $\F = \{(i,j) \where n_i \neq n_j\}$
+
+    Let $\E$ be the edge matrix.
+    $\E_{ij} = 1 if feature i matches feature j else 0$
+
+    $\min \sum_{s \in \T} s$
+    $\max \sum_{s \in \F} s$
+
+    $\E = \{(i,j) \where d_i \in \NN_k(\q_j, \D) \and \q_j \in \Q\}$
+    $\V = \{(i,j) \where d_i \in \NN_k(\q_j, \D) \and \q_j \in \Q\}$
+
+    subject to
+
+
+\end{section}
+
+
+\begin{section}{Constructing G=(V,E)}
+
+\end{document}

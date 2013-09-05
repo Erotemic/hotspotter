@@ -42,8 +42,9 @@ def rrr():
 
 IMG_EXTENSIONS = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
 
-PRINT_CHECKS = True
+PRINT_CHECKS = False # True
 __PRINT_WRITES__ = False
+__CHECKPATH_VERBOSE__ = False
 
 VERY_VERBOSE = False
 
@@ -331,6 +332,7 @@ def find_std_inliers(data, m=2):
     return abs(data - np.mean(data)) < m * np.std(data)
 
 def symlink(source, link_name, noraise=False):
+    print('Creating symlink: source=%r link_name=%r' % (source, link_name))
     try: 
         import os
         os_symlink = getattr(os, "symlink", None)
@@ -537,15 +539,14 @@ def get_caller_name():
         caller_name = frame.f_code.co_name
     return caller_name
 
-__CHECKPATH_VERBOSE__ = False
-def checkpath(path_, verbose=True):
+def checkpath(path_, verbose=PRINT_CHECKS):
     'returns true if path_ exists on the filesystem'
     path_ = normpath(path_)
     if verbose:
         print = print_
         pretty_path = path_ndir_split(path_, 2)
         caller_name = get_caller_name()
-        print('%s> Checking %r' % (caller_name, pretty_path))
+        print('%s>checkpath(%r)' % (caller_name, pretty_path))
         if exists(path_):
             path_type = 'file' if isfile(path_) else 'directory'
             println('...(%s) exists' % (path_type,))
@@ -564,7 +565,7 @@ def check_path(path_):
 
 def ensurepath(path_):
     if not checkpath(path_):
-        print('helpers>... Making directory: ' + path_)
+        print('helpers>mkdir(%r)' % path_)
         os.makedirs(path_)
     return True
 def ensuredir(path_):

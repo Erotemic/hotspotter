@@ -78,11 +78,13 @@ def normalize_xy_points(x_m, y_m):
     'Returns a transformation to normalize points to mean=0, stddev=1'
     mean_x = x_m.mean() # center of mass
     mean_y = y_m.mean()
-    sx = 1.0 / x_m.std()  # average xy magnitude
-    sy = 1.0 / y_m.std()
+    std_x = x_m.std()
+    std_y = y_m.std()
+    sx = 1.0 / std_x if std_x > 0 else 1  # average xy magnitude
+    sy = 1.0 / std_y if std_x > 0 else 1
     T = np.array([(sx, 0, -mean_x * sx),
-                    (0, sy, -mean_y * sy),
-                    (0,  0,  1)])
+                  (0, sy, -mean_y * sy),
+                  (0,  0,  1)])
     x_norm = (x_m - mean_x) * sx
     y_norm = (y_m - mean_y) * sy
     return x_norm, y_norm, T
@@ -301,6 +303,11 @@ def show_inliers(hs, qcx, cx, inliers, title='inliers', **kwargs):
     df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[inliers], title=title, **kwargs_)
 
 def test():
+    from __init__ import *
+    import load_data2 as ld2
+    xy_thresh         = params.__XY_THRESH__
+    scale_thresh_high = params.__SCALE_THRESH_HIGH__
+    scale_thresh_low  = params.__SCALE_THRESH_LOW__
     qcx = 27
     cx  = 113
     if not 'hs' in vars():
@@ -315,11 +322,17 @@ def test():
                                                           min_num_inliers=4)
     df2.show_matches2(*args_+[fm], fs=None,
                       all_kpts=False, draw_lines=True,
-                      doclf=True, title='Assigned matches')
+                      doclf=True, title='Assigned matches', fignum=1)
 
-    df2.show_matches2(*args_+[fm[aff_inliers1]], fs=None,
-                      all_kpts=False, draw_lines=False, doclf=True,
-                      title='Assigned matches')
+    df2.show_matches2(*args_+[fm[aff_inliers]], fs=None,
+                      all_kpts=False, draw_lines=True, doclf=True,
+                      title='Affine inliers', fignum=2)
+
+    df2.show_matches2(*args_+[fm[aff_inliers]], fs=None,
+                      all_kpts=False, draw_lines=True, doclf=True,
+                      title='Homography inliers', fignum=3)
+
+    exec(df2.present())
 
 def compare1():
     from __init__ import *

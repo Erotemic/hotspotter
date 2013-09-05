@@ -7,7 +7,6 @@ Module: load_data
 from os.path import join
 import cv2
 import fnmatch
-import helpers
 import os
 import re
 import sys
@@ -18,8 +17,7 @@ import numpy as np
 from PIL import Image
 # Hotspotter
 from Printable import DynStruct
-from helpers import checkpath, unit_test, ensure_path, symlink, remove_files_in_dir
-from helpers import myprint
+import helpers
 import params
 
 # reloads this module when I mess with it
@@ -259,22 +257,24 @@ class HotspotterDirs(DynStruct):
         self.result_dir   = db_dir + RDIR_RESULTS
         self.qres_dir     = db_dir + RDIR_QRES
         # Make directories if needbe
-        ensure_path(self.internal_dir)
-        ensure_path(self.computed_dir)
-        ensure_path(self.chip_dir)
-        ensure_path(self.rchip_dir)
-        ensure_path(self.feat_dir)
-        ensure_path(self.result_dir)
-        ensure_path(self.rchip_dir)
-        ensure_path(self.qres_dir)
-        ensure_path(self.cache_dir)
+        helpers.ensure_path(self.internal_dir)
+        helpers.ensure_path(self.computed_dir)
+        helpers.ensure_path(self.chip_dir)
+        helpers.ensure_path(self.rchip_dir)
+        helpers.ensure_path(self.feat_dir)
+        helpers.ensure_path(self.result_dir)
+        helpers.ensure_path(self.rchip_dir)
+        helpers.ensure_path(self.qres_dir)
+        helpers.ensure_path(self.cache_dir)
+
         # Shortcut to internals
         internal_sym = db_dir + '/Shortcut-to-hs_internals'
         if not os.path.islink(internal_sym):
-            symlink(self.internal_dir, internal_sym, noraise=True)
+            helpers.symlink(self.internal_dir, internal_sym, noraise=False)
+
         results_sym = db_dir + '/Shortcut-to-results'
-        if not os.path.islink(internal_sym):
-            symlink(self.result_dir, results_sym, noraise=True)
+        if not os.path.islink(results_sym):
+            helpers.symlink(self.result_dir, results_sym, noraise=False)
 
 def tryindex(list, val):
     try: 
@@ -304,11 +304,11 @@ def load_csv_tables(db_dir):
     name_table   = internal_dir + '/name_table.csv'
     image_table  = internal_dir + '/image_table.csv' # TODO: Make optional
     # --- CHECKS ---
-    has_dbdir   = checkpath(db_dir)
-    has_imgdir  = checkpath(img_dir)
-    has_chiptbl = checkpath(chip_table)
-    has_nametbl = checkpath(name_table)
-    has_imgtbl  = checkpath(image_table)
+    has_dbdir   = helpers.checkpath(db_dir)
+    has_imgdir  = helpers.checkpath(img_dir)
+    has_chiptbl = helpers.checkpath(chip_table)
+    has_nametbl = helpers.checkpath(name_table)
+    has_imgtbl  = helpers.checkpath(image_table)
     if not all([has_dbdir, has_imgdir, has_chiptbl, has_nametbl, has_imgtbl]):
         errmsg  = ''
         errmsg += ('\n\n!!!!!\n\n')
@@ -629,7 +629,7 @@ def make_csv_table(column_labels=None, column_list=[], header='', column_type=No
 
 
 # Common databases I use
-FROGS     = params.WORK_DIR+'/FROG_tufts'
+FROGS     = params.WORK_DIR+'/Frogs'
 JAGUARS   = params.WORK_DIR+'/JAG_Jaguar_Data'
 NAUTS     = params.WORK_DIR+'/NAUT_Dan'
 GZ_ALL    = params.WORK_DIR+'/GZ_ALL'
@@ -644,7 +644,7 @@ SONOGRAMS = params.WORK_DIR+'/sonograms'
 #else:
 DEFAULT = params.DEFAULT
 
-@unit_test
+@helpers.unit_test
 def test_load_csv():
     db_dir = params.DEFAULT
     hs_dirs, hs_tables = load_csv_tables(db_dir)

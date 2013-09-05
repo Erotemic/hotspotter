@@ -297,9 +297,10 @@ for argv in iter(sys.argv):
                          ' * Previously: '+str(DEFAULT)]))
         DEFAULT = dev_databases[argv_u]
         if argv_u == 'OXFORD':
+            print('Overloading OXFORD parameters')
             # dont resize oxford photos
             __CHIP_SQRT_AREA__ = None
-
+            __BOW_NUM_WORDS__  = long(1e6)
 
 def make_pref_object():
     'Not finished yet, but its a start'

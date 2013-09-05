@@ -15,8 +15,11 @@ import textwrap
 from itertools import izip
 from os.path import realpath, join, normpath
 
+OXSTY_VERBOSE = False
+
 # OXFORD STUFF
 def oxsty_mAP_results(allres):
+    print('oxsty_results> Building oxsty results')
     hs = allres.hs
     qcx2_res = allres.qcx2_res
     SV = allres.SV
@@ -40,17 +43,19 @@ def oxsty_mAP_results(allres):
                                            compute_ap_exe, oxford_gt_dir)
         query_mAP_list.append(mAP)
         query_mAP_cx.append(qcx)
-    # Calculate the total mAP score for the experiemnt
-    total_mAP = np.mean(np.array(query_mAP_list))
+    print('')
+    # Calculate the scalar mAP score for the experiemnt
+    scalar_mAP = np.mean(np.array(query_mAP_list))
+    scalar_mAP_str = '# scalar mAP score = %r\n' % scalar_mAP
     # build a CSV file with the results
-    header  = '# Oxford Style Map Scores'
-    header  = '# total mAP score = %r ' % total_mAP
-    header +=  helpers.get_timestamp(format='comment')+'\n'
+    header  = '# Oxford Style Map Scores: title_suffix=%r\n' % allres.title_suffix
+    header += scalar_mAP_str
+    header += helpers.get_timestamp(format='comment')+'\n'
     header += '# Full Parameters: \n#' + params.param_string().replace('\n','\n#')+'\n\n'
     column_labels = ['QCX', 'mAP']
     column_list   = [query_mAP_cx, query_mAP_list]
     oxsty_map_csv = load_data2.make_csv_table(column_labels, column_list, header)
-    return oxsty_map_csv
+    return oxsty_map_csv, scalar_mAP_str
 
 def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
                                  compute_ap_exe, oxford_gt_dir):
@@ -90,17 +95,36 @@ def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
     # ./compute_ap [GROUND_TRUTH] [RANKED_LIST]
     os.chdir(oxford_gt_dir)
 
+    def filename(path):
+        return os.path.split(path)[1]
+
+    if OXSTY_VERBOSE:
+        printable_cmd = ' '.join((filename(compute_ap_exe),
+                                ground_truth_query,
+                                filename(ranked_list_fpath)))
+        print('Executing: %r' % printable_cmd)
+    else: 
+        helpers.print_('.')
     args = (compute_ap_exe, ground_truth_query, ranked_list_fpath)
+
     cmdstr  = ' '.join(args)
 
-    print('Executing: %r' % cmdstr)
     try:
         proc_out = run_process(args)
         out = proc_out.out
-        mAP = float(out.strip())
     except OSError as ex:
-        print(repr(ex))
-        mAP = -1
+        out = -1
+        if OXSTY_VERBOSE:
+            print(repr(ex))
+        if repr(ex) == "OSError(12, 'Cannot allocate memory')":
+            args_hash = helpers.hashstr_md5(args)
+            proc_err_fname = 'proc_err'+args_hash
+            proc_err_cmd = proc_err_fname+'.cmd'
+            proc_err_out = proc_err_fname+'.out'
+            helpers.write_to(proc_err_cmd, repr(args))
+            if helpers.checkpath(proc_err_out):
+                out = helpers.read_from(proc_err_out)
+    mAP = float(out.strip())
     os.chdir(cwd)
     return mAP
 
@@ -165,5 +189,4 @@ def debug_compute_ap_exe(compute_ap_exe,
     print('-----------')
     print('Noargs check:')
     (out, err, return_code) = execute(compute_ap_exe)
-
     (out, err, return_code) = popen_communicate(cmdstr)

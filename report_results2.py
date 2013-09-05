@@ -16,12 +16,19 @@ import os
 import subprocess
 import sys
 import textwrap
-from fnmatch import fnmatch
+import fnmatch
 from itertools import izip
 from os.path import realpath, join, normpath
 import re
 
 __DUMP__ = True # or __BROWSE__
+
+REPORT_TOP5    = False
+REPORT_MATRIX  = False
+REPORT_STEM    = False
+REPORT_RANKRES = True
+
+REPORT_MATRIX_VIZ = False
 
 def reload_module():
     import imp, sys
@@ -41,6 +48,7 @@ class AllResults(DynStruct):
         self.SV = SV
         self.rankres_str         = None
         self.title_suffix        = None
+        self.scalar_mAP_str      = ' # map = nan'
         self.scalar_summary      = None
         self.problem_false_pairs = None
         self.problem_true_pairs  = None
@@ -50,16 +58,17 @@ class AllResults(DynStruct):
 
     def __str__(allres):
         #print = tores.append
-        toret=('+======================')
-        toret+=('| All Results ')
-        toret+=('| title_suffix=%s' % str(allres.title_suffix))
-        toret+=('| scalar_summary=\n%s' % helpers.indent(str(allres.scalar_summary), '|   '))
+        toret=('+======================\n')
+        toret+=('| All Results \n')
+        toret+=('| title_suffix=%s\n' % str(allres.title_suffix))
+        toret+=('| scalar_summary=\n%s\n' % helpers.indent(str(allres.scalar_summary).strip(), '|   '))
+        toret+=('| '+str(allres.scalar_mAP_str))
         toret+=('|---\n')
         toret+=('| greater5_cxs = %r \n' % (allres.greater5_cxs,))
         toret+=('|---\n')
         toret+=('| greater1_cxs = %r \n' % (allres.greater1_cxs,))
         toret+=('|---\n')
-        toret+=('+======================.')
+        toret+=('+======================.\n')
         #toret+=('| problem_false_pairs=\n%r' % allres.problem_false_pairs)
         #toret+=('| problem_true_pairs=\n%r' % allres.problem_true_pairs)
         return toret
@@ -215,7 +224,7 @@ def init_score_matrix(allres):
     allres.col_label_cx = col_label_cx
     allres.row_label_cx = row_label_cx
 
-def init_allres(hs, qcx2_res, SV=True):
+def init_allres(hs, qcx2_res, SV=True, matrix=REPORT_MATRIX, oxford=False):
     'Organizes results into a visualizable data structure'
     # Make AllResults data containter
     allres = AllResults(hs, qcx2_res, SV)
@@ -223,20 +232,26 @@ def init_allres(hs, qcx2_res, SV=True):
     allres.title_suffix = params.get_query_uid() + SV_aug
     allres.summary_dir = join(hs.dirs.result_dir, 'summary_plots')
     helpers.ensurepath(allres.summary_dir)
-    print('+======================')
-    print('| Initializing all results')
-    print('| Title suffix: '+allres.title_suffix)
+    print('\n======================')
+    print(' * Initializing all results')
+    print(' * Title suffix: '+allres.title_suffix)
     #---
     hs = allres.hs
     qcx2_res = allres.qcx2_res
     cx2_cid  = hs.tables.cx2_cid
     # Initialize
-    init_score_matrix(allres)
+    if matrix: 
+        init_score_matrix(allres)
     init_organized_results(allres)
     # Build
     build_rankres_str(allres)
-    build_matrix_str(allres)
-    print allres
+    if matrix: 
+        build_matrix_str(allres)
+    if oxford is True:
+        oxsty_map_csv, scalar_mAP_str = oxsty_results.oxsty_mAP_results(allres)
+        allres.scalar_mAP_str = scalar_mAP_str
+        allres.oxsty_map_csv = oxsty_map_csv
+    print(allres)
     return allres
 
 # ========================================================
@@ -310,8 +325,8 @@ def build_rankres_str(allres):
     greater1_cxs, fmt1_tup = ranks_less_than_(1)
     allres.greater1_cxs = greater1_cxs
     allres.greater5_cxs = greater5_cxs
-    print('greater5_cxs = %r ' % (allres.greater5_cxs,))
-    print('greater1_cxs = %r ' % (allres.greater1_cxs,))
+    #print('greater5_cxs = %r ' % (allres.greater5_cxs,))
+    #print('greater1_cxs = %r ' % (allres.greater1_cxs,))
     # CSV Metadata 
     header = '# Experiment allres.title_suffix = '+allres.title_suffix+'\n'
     header +=  helpers.get_timestamp(format='comment')+'\n'
@@ -452,25 +467,35 @@ def plot_tt_bt_tf_matches(allres, qcx):
 # ===========================
 # Driver functions
 # ===========================
-def dump_all(allres, 
-             text=True,
-             stem=True, 
-             matrix=True,
+def dump_all(allres,
+             missed_top5=REPORT_TOP5, 
+             rankres=REPORT_RANKRES,
+             stem=REPORT_STEM, 
+             matrix=REPORT_MATRIX,#
+             matrix_viz=REPORT_MATRIX_VIZ,#
              pdf=False, 
              hist=False,
-             oxford=False, 
              ttbttf=False,
              problems=False,
              gtmatches=False,
-             missed_top5=True):
-    if text:
-        dump_text_results(allres)
+             oxford=False):
+
+    print('\n======================')
+    print('rr2> DUMP ALL')
+    print('======================')
+    viz.BROWSE = False
+    viz.DUMP = True
+        
+    if rankres:
+        dump_rankres_str_results(allres)
+    if matrix:
+        dump_matrix_str_results(allres)
     if oxford:
         dump_oxsty_mAP_results(allres)
     #
     if stem:
         dump_rank_stems(allres)
-    if matrix:
+    if matrix_viz:
         dump_score_matrixes(allres)
     if hist:
         dump_rank_hists(allres)
@@ -486,31 +511,40 @@ def dump_all(allres,
     if missed_top5:
         dump_missed_top5(allres)
 
+    print('\n --- END DUMP ALL ---\n')
+
 def dump_score_matrixes(allres):
+    #print('\n---DUMPING SCORE MATRIX---')
     plot_score_matrix(allres)
 
 
 def dump_oxsty_mAP_results(allres):
-    oxsty_map_csv = oxsty_results.oxsty_mAP_results(allres)
-    allres.oxsty_map_csv = oxsty_map_csv
-    print(oxsty_map_csv)
+    #print('\n---DUMPING OXSTYLE RESULTS---')
     __dump_text_report(allres, 'oxsty_map_csv')
 
-def dump_text_results(allres):
+def dump_rankres_str_results(allres):
+    #print('\n---DUMPING RANKRES RESULTS---')
     __dump_text_report(allres, 'rankres_str')
+
+def dump_matrix_str_results(allres):
+    #print('\n---DUMPING MATRIX STRING RESULTS---')
     __dump_text_report(allres, 'matrix_str')
     
 def dump_problem_matches(allres):
+    #print('\n---DUMPING PROBLEM MATCHES---')
     dump_orgres_matches(allres, 'problem_false')
     dump_orgres_matches(allres, 'problem_true')
 
 def dump_rank_stems(allres):
+    #print('\n---DUMPING RANK STEMS---')
     plot_rank_stem(allres, 'true')
 
 def dump_rank_hists(allres):
+    #print('\n---DUMPING RANK HISTS---')
     plot_rank_histogram(allres, 'true')
 
 def dump_score_pdfs(allres):
+    #print('\n---DUMPING SCORE PDF ---')
     plot_score_pdf(allres, 'true',      colorx=0.0, variation_truncate=True)
     plot_score_pdf(allres, 'false',     colorx=0.2)
     plot_score_pdf(allres, 'top_true',  colorx=0.4, variation_truncate=True)
@@ -518,12 +552,14 @@ def dump_score_pdfs(allres):
     plot_score_pdf(allres, 'top_false', colorx=0.9)
 
 def dump_gt_matches(allres):
+    #print('\n---DUMPING GT MATCHES ---')
     'Displays the matches to ground truth for all queries'
     qcx2_res = allres.qcx2_res
     for qcx in xrange(0, len(qcx2_res)):
         viz.plot_cx(allres, qcx, 'gt_matches')
 
 def dump_missed_top5(allres):
+    #print('\n---DUMPING MISSED TOP 5---')
     'Displays the top5 matches for all queries'
     qcx2_res = allres.qcx2_res
     greater5_cxs = allres.greater5_cxs
@@ -620,9 +656,9 @@ def dinspect(qcx, cx=None, SV=True, reset=True):
     df2.present(wh=(900,600))
 
 def report_all(hs, qcx2_res, SV=True, **kwargs):
-    allres = init_allres(hs, qcx2_res, SV=SV)
+    allres = init_allres(hs, qcx2_res, SV=SV, **kwargs)
     if not 'kwargs' in vars():
-        kwargs = dict(text=True,
+        kwargs = dict(rankres=True,
              stem=False, 
              matrix=False,
              pdf=False, 
@@ -637,6 +673,7 @@ def report_all(hs, qcx2_res, SV=True, **kwargs):
         import sys
         import traceback
         print('\n\n-----------------')
+        print('report_all(hs, qcx2_res, SV=%r, **kwargs=%r' % (SV, kwargs))
         print('Caught Error in rr2.dump_all')
         print(repr(ex))
         exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -647,14 +684,85 @@ def report_all(hs, qcx2_res, SV=True, **kwargs):
                                   limit=2, file=sys.stdout)
         print('Caught Error in rr2.dump_all')
         print('-----------------\n')
+        raise
         return allres, ex
     return allres
+
+def read_until(file, target):
+    curent_line = file.readline()
+    while not curent_line is None:
+        if curent_line.find(target) > -1:
+            return curent_line
+        curent_line = file.readline()
+
+def print_result_summaries_list():
+    print('\n<(^_^<)\n')
+    # Print out some summary of all results you have
+    hs = ld2.HotSpotter()
+    hs.load_tables(ld2.DEFAULT)
+    result_file_list = os.listdir(hs.dirs.result_dir)
+
+    sorted_rankres = []
+    for result_fname in iter(result_file_list):  
+        if fnmatch.fnmatch(result_fname, 'rankres_str*.csv'):
+            print result_fname
+            with open(join(hs.dirs.result_dir, result_fname), 'r') as file:
+
+                metaline = file.readline()
+                toprint = metaline
+                # skip 4 metalines
+                [file.readline() for _ in xrange(4)]
+                top5line = file.readline()
+                top1line = file.readline()
+                toprint += top5line+top1line
+                line = read_until(file, '# NumData')
+                num_data = int(line.replace('# NumData',''))
+                file.readline() # header
+                res_data_lines = [file.readline() for _ in xrange(num_data)]
+                res_data_str = np.array([line.split(',') for line in res_data_lines])
+                tt_scores = np.array(res_data_str[:, 5], dtype=np.float)
+                bt_scores = np.array(res_data_str[:, 6], dtype=np.float)
+                tf_scores = np.array(res_data_str[:, 7], dtype=np.float)
+
+                tt_score_sum = sum([score for score in tt_scores if score > 0])
+                bt_score_sum = sum([score for score in bt_scores if score > 0])
+                tf_score_sum = sum([score for score in tf_scores if score > 0])
+
+                toprint += ('tt_scores = %r; ' % tt_score_sum)
+                toprint += ('bt_scores = %r; ' % bt_score_sum)
+                toprint += ('tf_scores = %r; ' % tf_score_sum)
+                sorted_rankres.append(top5line+metaline)
+                print toprint+'\n'
+
+    print('\n(>^_^)>\n')
+
+    sorted_mapscore = []
+    for result_fname in iter(result_file_list):  
+        if fnmatch.fnmatch(result_fname, 'oxsty_map_csv*.csv'):
+            print result_fname
+            with open(join(hs.dirs.result_dir, result_fname), 'r') as file:
+                metaline = file.readline()
+                scoreline = file.readline()
+                toprint = metaline+scoreline
+
+                sorted_mapscore.append(scoreline+metaline)
+                print(toprint)
+
+    print('\n'.join(sorted(sorted_rankres)))
+    print('\n'.join(sorted(sorted_mapscore)))
+
+    print('\n^(^_^)^\n')
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     # Params
     print('__main__ = report_results2.py')
+
+    if '--list' in sys.argv:
+        print_result_summaries_list()
+        sys.exit(1)
+
     allres = helpers.search_stack_for_localvar('allres')
     #if allres is None:
         #hs = ld2.HotSpotter(ld2.DEFAULT)
@@ -668,75 +776,14 @@ if __name__ == '__main__':
     qcx2_res = mc2.run_matching(hs)
     SV = True
     # Initialize Results
-    allres = init_allres(hs, qcx2_res, SV)
+    oxford = ld2.DEFAULT == ld2.OXFORD
+    allres = init_allres(hs, qcx2_res, SV, oxford=oxford, matrix=REPORT_MATRIX)
     greater5_cxs = allres.greater5_cxs
 
     #Helper drawing functions
     gt_matches = lambda cx: viz.plot_cx(allres, cx, 'gt_matches')
     top5 = lambda cx: viz.plot_cx(allres, cx, 'top5')
     selc = lambda cx: viz.plot_cx(allres, cx, 'kpts')
-
-    viz.DUMP = True
-    viz.BROWSE = False
-
-    # Dump text results, the stem plot, and the failure cases
-    #dump_text_results(allres)
-    #viz.plot_rank_stem(allres, 'true')
-    #for cx in greater5_cxs:
-        #top5(cx)
-        #gt_matches(cx)
-
-    #viz.DUMP = False
-    #viz.BROWSE = True
-    #cx = greater5_cxs[0] if len(greater5_cxs) > 0 else 0
-    #top5(cx)
-    #matches(cx)
-
-    # IPYTHON END
-
-    #nonipython_exec = textwrap.dedent(r"""
-    #help_ = textwrap.dedent(r'''
-    #Enter a command.
-        #q (or space) : quit 
-        #h            : help
-        #cx [cx]    : shows a chip
-    #''')
-    #print(help_)
-    #firstcmd = 'cx 0'
-    #firstcmd = 'stem'
-    #ans = None
-    #viz.DUMP = False
-    #while True:
-        ## Read command or run the first one hardcoded in
-        #ans = raw_input('>') if not ans is None else firstcmd
-        #if ans == 'q' or ans == ' ':
-            #break
-        #if allres is None:
-            #print('Loading hotspotter')
-        #if ans == 'h':
-            #print help_
-        #elif re.match('cx [0-9][0-9]*', ans) or\
-             #re.match('[0-9][0-9]*', ans):
-            #cx = int(ans.replace('cx ',''))
-            #selc(cx)
-        #elif ans == 'stem':
-            #viz.plot_rank_stem(allres, 'true')
-        #else:
-            #exec(ans)
-        #df2.update()
-    ##browse='--browse' in sys.argv
-    ##stem='--stem' in sys.argv
-    ##hist='--hist' in sys.argv
-    ##pdf='--pdf'   in sys.argv
-    #viz.DUMP = True
-    #dump_all(allres)
-    #if '--vrd' in sys.argv:
-        #helpers.vd(hs.dirs.result_dir)
-    ##dinspect(18)
-    #print(allres)
-    #exec(df2.present(wh=(900,600)))
-    #viz.DUMP = False
-    #""")
 
     try:
         __IPYTHON__

@@ -150,18 +150,9 @@ class QueryResult(DynStruct):
 #========================================
 # Work Functions
 #========================================
-def run_matching(hs):
-    '''Runs the full matching pipeline using the abstracted classes'''
-    print(textwrap.dedent('''
-    =============================
-    mc2> Running Matching
-    ============================='''))
-    # Parameters
-    #reverify_query       = params.REVERIFY_QUERY
-    #resave_query         = params.RESAVE_QUERY
-    verbose_matching     = params.VERBOSE_MATCHING
-    test_sample_cx = hs.test_sample_cx
+def load_cached_matches(hs):
     print_ = helpers.print_
+    test_sample_cx = hs.test_sample_cx
     # Create result containers
     qcx2_res = [QueryResult(qcx) for qcx in xrange(hs.num_cx)]
     #--------------------
@@ -172,10 +163,11 @@ def run_matching(hs):
     dirty_test_sample_cx = []
     clean_test_sample_cx = []
     fmt_str_filter = helpers.make_progress_fmt_str(total_queries, lbl='mc2> check cache: ')
+    
     # Filter queries into dirty and clean sets
     for count, qcx in enumerate(test_sample_cx):
         print_(fmt_str_filter % (count+1))
-        if qcx2_res[qcx].has_cache(hs):
+        if params.CACHE_QUERY and qcx2_res[qcx].has_cache(hs):
             clean_test_sample_cx.append(qcx)
         else:
             dirty_test_sample_cx.append(qcx)
@@ -193,7 +185,23 @@ def run_matching(hs):
     for count, qcx in enumerate(clean_test_sample_cx):
         print_(fmt_str_load % (count+1))
         qcx2_res[qcx].load(hs)
+    print('')
+    return qcx2_res, dirty_test_sample_cx
+
+
+def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None):
+    '''Runs the full matching pipeline using the abstracted classes'''
+    print(textwrap.dedent('''
+    =============================
+    mc2> Running Matching
+    ============================='''))
+    # Parameters
+    #reverify_query       = params.REVERIFY_QUERY
+    #resave_query         = params.RESAVE_QUERY
+    verbose_matching      = params.VERBOSE_MATCHING
     # Return if no dirty queries
+    if qcx2_res is None:
+        qcx2_res, dirty_test_sample_cx = load_cached_matches(hs)
     if len(dirty_test_sample_cx) == 0:
         print('No dirty queries')
         return qcx2_res
@@ -203,7 +211,7 @@ def run_matching(hs):
     assign_matches  = hs.matcher.assign_matches
     cx2_desc = hs.feats.cx2_desc
     cx2_kpts = hs.feats.cx2_kpts 
-    total_dirty = len(test_sample_cx)
+    total_dirty = len(dirty_test_sample_cx)
     print('mc2>Executing %d queries' % total_dirty)
     for query_num, qcx in enumerate(dirty_test_sample_cx):
         res = qcx2_res[qcx]
@@ -216,7 +224,6 @@ def run_matching(hs):
         assign_output = assign_matches(qcx, cx2_desc)
         (cx2_fm, cx2_fs, cx2_score) = assign_output
         assign_time = toc(tt1)
-        print(' ...%.2f seconds' % (assign_time))
         #
         # Spatially verify the assigned matches
         num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
@@ -227,7 +234,8 @@ def run_matching(hs):
         num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
         print('query %d/%d> verified %d matches' % (qcx, total_dirty, num_verified))
         verify_time = toc(tt2)
-        print(' ...%.2f seconds' % (verify_time))
+        print('...assigned: %.2f seconds' % (assign_time))
+        print('...verified: %.2f seconds' % (verify_time))
         #
         # Assign output to the query result 
         res.cx2_fm      = cx2_fm
@@ -695,7 +703,7 @@ class Matcher(DynStruct):
         self.__bow_index    = None
         # Curry the correct functions
         self.__assign_matches = None
-        if   match_type == 'bagofwords':
+        if match_type == 'bagofwords':
             print(' precomputing bag of words')
             self.__bow_index   = precompute_bag_of_words(hs)
             self.__assign_matches = self.__assign_matches_bagofwords

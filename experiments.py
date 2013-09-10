@@ -19,7 +19,35 @@ def reload_module():
 def param_config1():
     params.__RANK_EQ__ = True
 
-def oxford_philbin07(hs=None):
+def leave_N_names_out(N):
+    nx2_nid = hs.tables.nx2_nid
+    cx2_nx  = hs.tables.cx2_nx
+    nx2_cxs = lambda _:_
+
+    all_nxs   = hs.tables.nx2_nid > 1
+    uniden_nx = hs.tables.nx2_nid <= 1
+    M = len(all_nxs)
+    nxs1, nxs2 = subset_split(all_nxs, N)
+
+    subset0 = nx2_cxs[uniden_nx]
+
+    subset1 = nx2_cxs[nxs1]
+    subset2 = nx2_cxs[nxs2]
+
+    hs.set_db_set(subset1)
+    hs.set_train_set(subset1)
+    hs.set_test_set(subset2)
+
+    #do with TF-IDF on the zebra data set. 
+    #Let M be the total number of *animals* (not images and not chips) in an experimental data set. 
+    #Do a series of leave-N-out (N >= 1) experiments on the TF-IDF scoring,
+    #where the "left out" N are N different zebras, 
+    #so that there are no images of these zebras in the images used to form the vocabulary.
+    #The vocabulary is formed from the remaining M-N animals.
+    #Test how well TF-IDF recognition does with these N animals. 
+    #Repeat for different subsets of N animals.
+
+def oxford_philbin07():
     params.__MATCH_TYPE__        = 'bagofwords'
     params.__BOW_NUM_WORDS__     = [1e4, 2e4, 5e4, 1e6, 1.25e6][3]
     params.__NUM_RERANK__        = [100, 200, 400, 800, 1000][4]

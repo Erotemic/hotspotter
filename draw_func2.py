@@ -707,3 +707,36 @@ def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111,
 def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     imshow(rchip,fignum=fignum,title=title,**kwargs)
     draw_kpts2(kpts)
+
+
+def show_chip(hs, cx, **kwargs):
+    pass
+
+def show_img(hs, cx, **kwargs):
+    cx2_roi = hs.tables.cx2_roi
+    cx2_gx = hs.tables.cx2_gx
+    gx2_gname = hs.tables.gx2_gname
+
+    roi = cx2_roi[cx]
+    gx  = cx2_gx[cx]
+    img_fname = gx2_gname[gx]
+    img_fpath = os.path.join(hs.dirs.img_dir, img_fname)
+
+    img = cv2.imread(img_fpath)
+    imshow(img, **kwargs)
+
+    [rx,ry,rw,rh] = roi
+    rxy = (rx,ry)
+    bbox = matplotlib.patches.Rectangle(rxy,rw,rh) 
+
+    ax = plt.gca()
+
+    bbox_color = [1, 0, 0]
+
+    bbox.set_fill(False)
+    bbox.set_edgecolor(bbox_color)
+    ax.add_patch(bbox)
+
+
+
+

@@ -88,4 +88,3 @@ def segment(img_path, roi):
     seg_chip = np.array(np.round(seg_chip), dtype=np.uint8)  
     return seg_chip
 
-

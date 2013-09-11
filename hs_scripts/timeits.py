@@ -193,3 +193,44 @@ print timeit.timeit(test1, setup=setup, number=1000000)
 print timeit.timeit(test2, setup=setup, number=1000000)
 print timeit.timeit(test3, setup=setup, number=1000000)
 
+
+
+
+def imread_timeittesst():
+    import timeit
+    import cv2
+    import numpy as np
+    import helpers
+    from PIL import Image
+    import matplotlib.pyplot as plt
+    img_fname = '/media/Store/data/work/HSDB_zebra_with_mothers/images/Nid-06_410--Cid-1.JPG'
+
+    setup = '''
+    import cv2
+    import numpy as np
+    from PIL import Image
+    import matplotlib.pyplot as plt
+
+    img_fpath = '/media/Store/data/work/HSDB_zebra_with_mothers/images/Nid-06_410--Cid-1.JPG'
+    '''
+    with helpers.Timer('cv'):
+        img1 = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+    with helpers.Timer('PIL'):
+        img2 = np.asarray(Image.open(img_fpath))
+    with helpers.Timer('plt'):
+        img3 = plt.imread(img_fpath)
+    print('img1.shape = %r ' % (img1.shape,))
+    print('img2.shape = %r ' % (img2.shape,))
+    print('img3.shape = %r ' % (img3.shape,))
+
+    im(img1, 101)
+    im(img2, 102)
+    im(img3, 103)
+
+    test1 = 'cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)'
+    test2 = 'np.asarray(Image.open(img_fpath))'
+    test3 = 'plt.imread(img_fpath)'
+    print('PIL: '+str(timeit.timeit(test2, setup=setup, number=100)))
+    print('PLT: '+str(timeit.timeit(test3, setup=setup, number=100)))
+    print('CV: '+str(timeit.timeit(test1, setup=setup, number=100)))
+    # It looks like OpenCV actually has a slight edge

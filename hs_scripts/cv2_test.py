@@ -4,6 +4,9 @@ import cv2
 import matplotlib.cbook as cbook
 import numpy as np
 
+#cv_build_info = cv2.getBuildInformation()
+#print(cv_build_info)
+
 #---------------
 # Sample Data
 #---------------

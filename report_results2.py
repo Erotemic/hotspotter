@@ -23,9 +23,9 @@ import re
 
 __DUMP__ = True # or __BROWSE__
 
-REPORT_TOP5    = False
+REPORT_TOP5    = True
 REPORT_MATRIX  = False
-REPORT_STEM    = False
+REPORT_STEM    = True
 REPORT_RANKRES = True
 
 REPORT_MATRIX_VIZ = False
@@ -779,6 +779,9 @@ if __name__ == '__main__':
     oxford = ld2.DEFAULT == ld2.OXFORD
     allres = init_allres(hs, qcx2_res, SV, oxford=oxford, matrix=REPORT_MATRIX)
     greater5_cxs = allres.greater5_cxs
+
+    if 'vrd' in sys.argv:
+        hs.vrd()
 
     #Helper drawing functions
     gt_matches = lambda cx: viz.plot_cx(allres, cx, 'gt_matches')

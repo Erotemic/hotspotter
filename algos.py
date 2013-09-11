@@ -25,6 +25,19 @@ def reload_module():
     import imp
     import sys
     imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
+
+def xywh_to_tlbr(roi, img_wh):
+    (img_w, img_h) = img_wh
+    # Ensure ROI is within bounds
+    (x, y, w, h) = roi
+    x1 = max(x,0)
+    y1 = max(y,0)
+    x2 = min(x+w, img_w-1)
+    y2 = min(y+h, img_h-1)
+    return (x1, y1, x2, y2)
+
 
 def localmax(signal1d):
     maxpos = []

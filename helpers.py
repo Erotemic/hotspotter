@@ -848,21 +848,27 @@ class Timer(object):
         self.outlist = outlist
         self.msg = msg
         self.tstart = -1
+        self.tic()
 
-    def __enter__(self):
-        #if not self.msg is None:
-            #sys.stdout.write('---tic---'+self.msg+'  \n')
+    def tic(self):
         sys.stdout.flush()
+        sys.stdout.write('tic('+repr(self.msg)+')')
         self.tstart = time.time()
 
-    def __exit__(self, type, value, trace):
+    def toc(self):
         ellapsed = (time.time() - self.tstart)
         if not self.msg is None and len(self.msg) <= 0:
             self.outlist.append(ellapsed)
         #sys.stdout.write('___toc___'+self.msg+' = %.4fs \n\n' % ellapsed)
         #sys.stdout.write('___toc___'+self.msg+' = %.4fs \n\n' % ellapsed)
-        sys.stdout.write('...toc(%.4fs, ' % ellapsed + '"' + self.msg + '"' + ')\n')
+        sys.stdout.write('...toc(%.4fs, ' % ellapsed + repr(self.msg) + ')\n')
         sys.stdout.flush()
+    def __enter__(self):
+        #if not self.msg is None:
+            #sys.stdout.write('---tic---'+self.msg+'  \n')
+        self.tic()
+    def __exit__(self, type, value, trace):
+        self.toc()
 
 # --- Exec Strings ---
 

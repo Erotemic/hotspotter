@@ -230,4 +230,8 @@ if __name__ == '__main__':
         cx2_desc = hs.feats.cx2_desc
         cx2_kpts = hs.feats.cx2_kpts
 
+    if len(sys.argv) > 1:
+        cx = int(sys.argv[1])
+        df2.show_chip(hs, cx)
+
     exec(df2.present())

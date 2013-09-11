@@ -20,6 +20,8 @@ import skimage.filter.rank
 import skimage.exposure
 import skimage.util
 
+import segmentation
+
 def reload_module():
     import imp
     import sys
@@ -34,16 +36,11 @@ def __compute_chip(img_path, chip_path, roi, new_size):
     Saves as png'''
     # Read image
     img = Image.open(img_path)
-    [img_w, img_h] = [ gdim - 1 for gdim in img.size ]
-    # Ensure ROI is within bounds
-    [roi_x, roi_y, roi_w, roi_h] = [max(0, cdim) for cdim in roi]
-    roi_x2 = min(img_w, roi_x + roi_w)
-    roi_y2 = min(img_h, roi_y + roi_h)
+    (x1, y1, x2, y2) = algos.xywh_to_tlbr(roi, img.size)
     # http://docs.wand-py.org/en/0.3.3/guide/resizecrop.html#crop-images
     # Crop out ROI: left, upper, right, lower
-    #img.transform(resize='x100')
-    #img.transform(resize='640x480>')
-    raw_chip = img.crop((roi_x, roi_y, roi_x2, roi_y2))
+    #img.transform(resize='x100') #img.transform(resize='640x480>')
+    raw_chip = img.crop((x1, y1, x2, y2))
     # Scale chip, but do not rotate
     chip = raw_chip.convert('L').resize(new_size, Image.ANTIALIAS)
     # Save chip to disk
@@ -66,6 +63,14 @@ def make_compute_chip_func(preproc_func_list):
         chip.save(chip_path, 'PNG')
         return True
     return custom_compute_chip
+
+def compute_grabcut_chip(img_path, chip_path, roi, new_size):
+    seg_chip, img_mask = segmentation.segment(img_path, roi, new_size)
+    raw_chip = Image.fromarray(seg_chip)
+    # Scale chip, but do not rotate
+    chip = raw_chip.convert('L').resize(new_size, Image.ANTIALIAS)
+    chip.save(chip_path, 'PNG')
+    return True
 
 def compute_bare_chip(img_path, chip_path, roi, new_size):
     chip = __compute_chip(img_path, chip_path, roi, new_size)
@@ -240,6 +245,7 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
 
     # Get parameters
     sqrt_area   = params.__CHIP_SQRT_AREA__
+    grabcut     = params.__GRABCUT__
     histeq      = params.__HISTEQ__
     region_norm = params.__REGION_NORM__
     rankeq     = params.__RANK_EQ__
@@ -255,6 +261,7 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
     print(' * localeq     = %r' % localeq)
     print(' * maxcontr    = %r' % maxcontr)
     print(' * histeq      = %r' % histeq)
+    print(' * grabcut     = %r' % grabcut)
     print(' * rankeq      = %r' % rankeq)
     print(' * region_norm = %r' % region_norm)
 
@@ -291,6 +298,8 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
         #preproc_func_list.append(algos.histeq)
     #custom_compute_chip = make_compute_chip_func(preproc_func_list)
 
+    if grabcut:
+        parallel_compute(compute_grabcut_chip, **pcc_kwargs)
     if region_norm and histeq: 
         parallel_compute(compute_reg_norm_and_histeq_chip, **pcc_kwargs)
     elif region_norm: 

@@ -1,28 +1,67 @@
 #from __init__ import *
+from __future__ import division
 import numpy as np
+import helpers
 import cv2
+import algos
 import draw_func2 as df2
+import sys
 
+def im(img, fignum=0):
+    df2.imshow(img, fignum=fignum)
+    df2.update()
 
-def test():
-    (hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data()
+def resize_img_and_roi(img_fpath, roi_, new_size=None, sqrt_area=400.0):
+    printDBG('segmentation> imread(%r) ' % img_fpath)
+    full_img = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+    (full_h, full_w) = full_img.shape[:2]                 # Image Shape
+    printDBG('segmentation> full_img.shape=%r' % (full_img.shape,))
+    (rw_, rh_) = roi_[2:]
+    # Ensure that we know the new chip size
+    if new_size is None:
+        target_area = float(sqrt_area) ** 2
+        def _resz(w, h):
+            ht = np.sqrt(target_area * h / w)
+            wt = w * ht / h
+            return (int(round(wt)), int(round(ht)))
+        new_size_ = _resz(rw_, rh_)
+    else:
+        new_size_ = new_size 
+    # Get Scale Factors
+    fx = new_size_[0] / rw_
+    fy = new_size_[1] / rh_
+    print('segemntation> fx=%r fy=%r' % (fx, fy))
+    dsize = (int(round(fx*full_w)), int(round(fy*full_h)))
+    print('segemntation> dsize=%r' % (dsize,))
+    # Resize the image
+    img_resz = cv2.resize(full_img, dsize, interpolation=cv2.INTER_LANCZOS4)
+    # Get new ROI in resized image
+    roi_resz = np.array(np.round(roi_ * fx), dtype=np.int64)
+    return img_resz, roi_resz
+
+def test(cx=0):
+    import load_data2 as ld2
+    import draw_func2 as df2
+    import os
+    if not 'cx' in vars():
+        cx = 0
+    hs = ld2.HotSpotter()
+    hs.load_tables(ld2.DEFAULT)
     # READ IMAGE AND ROI
     cx2_roi = hs.tables.cx2_roi
     cx2_gx = hs.tables.cx2_gx
     gx2_gname = hs.tables.gx2_gname
     #---
-    roi = cx2_roi[cx]
+    roi_ = cx2_roi[cx]
     gx  = cx2_gx[cx]
     img_fname = gx2_gname[gx]
-    img_path = os.path.join(hs.dirs.img_dir, img_fname)
+    img_fpath = os.path.join(hs.dirs.img_dir, img_fname)
     #---
+    seg_chip, img_mask = segment(img_fpath, roi_, new_size=None)
     #print('Showing Input')
     ## Original Image
     #df2.imshow(mask_input, fignum=1, plotnum=122)
     #df2.present()
-    # Crop out chips
-    #chip      = img[ry:(ry+rh), rx:(rx+rw)]
-    #chip_mask = mask[ry:(ry+rh), rx:(rx+rw)]
 
     # IMAGE AND MASK
     #df2.imshow(img,      plotnum=121, fignum=2, doclf=True)
@@ -33,59 +72,145 @@ def test():
     #df2.imshow(chip,       plotnum=131, fignum=3, doclf=True)
     #df2.imshow(color_mask, plotnum=132, fignum=3)
     #df2.imshow(seg_chip,   plotnum=133, fignum=3)
+    df2.show_img(hs, cx, fignum=1, plotnum=131, title='original', doclf=True)
+    df2.imshow(img_mask, fignum=1, plotnum=132, title='mask')
+    df2.imshow(seg_chip, fignum=1, plotnum=133, title='segmented')
 
-    seg_chip = segment(img_path, roi)
+def clean_mask(mask, num_dilate=3, num_erode=3, window_frac=.025):
+    '''Clean the mask
+    (num_erode, num_dilate) = (1, 1)
+    (w, h) = (10, 10)'''
+    w = h = int(round(min(mask.shape) * window_frac))
+    element = cv2.getStructuringElement(cv2.MORPH_CROSS,(w,h))
+    _mask = mask
+    # compute the closing
+    for ix in xrange(num_dilate):
+        _mask = cv2.dilate(_mask, element)
+    for ix in xrange(num_erode):
+        _mask = cv2.erode(_mask, element)
+    return _mask
 
-    df2.show_img(hs, cx, fignum=1, plotnum=121, title='original', doclf=True)
-    df2.imshow(seg_chip, fignum=1, plotnum=122, title='segmented')
-    df2.present()
+def fill_holes(mask):
+    mode = cv2.RETR_CCOMP
+    method = cv2.CHAIN_APPROX_SIMPLE
+    image, contours, hierarchy = cv2.findContours(mask, mode, method)
+    out = cv2.drawContours(image, contours, -1, (1, 0, 0))
+
+def test_clean_mask():
+    mask = chip_mask
+    print('Cleaning')
+    mask2 = clean_mask(mask, 0, 3, .020)
+    mask3 = clean_mask(mask, 3, 0, .023)
+    mask4 = clean_mask(mask, 3, 3, .025)#
+    mask5 = clean_mask(mask4, 2, 3, .025)
+    mask6 = clean_mask(mask5, 1, 0, .025)#
+    mask7 = clean_mask(mask6, 1, 0, .025)
+    mask8 = clean_mask(mask7, 1, 0, .025)
+    mask9 = clean_mask(mask8, 1, 3, .025)
+    print('Drawing')
+    df2.imshow(mask,  plotnum=331)
+    df2.imshow(mask2, plotnum=332)
+    df2.imshow(mask3, plotnum=333)
+    df2.imshow(mask4, plotnum=334)
+    df2.imshow(mask5, plotnum=335)
+    df2.imshow(mask6, plotnum=336)
+    df2.imshow(mask7, plotnum=337)
+    df2.imshow(mask8, plotnum=338)
+    df2.imshow(mask9, plotnum=339)
+    print('Updating')
+    df2.update()
+    print('Done')
+
+# Open CV relevant values:
+# grabcut_mode = cv2.GC_EVAL
+# grabcut_mode = cv2.GC_INIT_WITH_RECT
+# cv2.GC_BGD, cv2.GC_PR_BGD, cv2.GC_PR_FGD, cv2.GC_FGD
+
+def printDBG(msg):
+    print(msg)
+    pass
 
 
-#grabcut_mode = cv2.GC_EVAL
-#grabcut_mode = cv2.GC_INIT_WITH_RECT
-def segment(img_path, roi):
-    img = cv2.imread(img_path)
-    # Grab cut parametrs
-    (w, h) = img.shape[:2]
-    [rx, ry, rw, rh] = roi
-    expand = 10
-    rect = (rx-expand, rw+expand, ry-expand, rh+expand)
-    mask_input = np.zeros((w,h), dtype=np.uint8)
-    bg_model = np.zeros((1, 13 * 5))
-    fg_model = np.zeros((1, 13 * 5))
+def segment(img_fpath, roi_, new_size=None):
+    'Runs grabcut'
+    printDBG('segment(img_fpath=%r, roi=%r)>' % (img_fpath, roi_))
     num_iters = 5
-    # Make mask specify the ROI
-    mask_input[ry:(ry+rh), rx:(rx+rw)] = cv2.GC_PR_FGD
-    grabcut_mode = cv2.GC_INIT_WITH_MASK
-    # Do grab cut
-    (mask, bg_model, fg_model) = cv2.grabCut(img, mask_input, rect,
-                                            bg_model, fg_model,
-                                            num_iters, mode=grabcut_mode)
+    bgd_model = np.zeros((1,13*5),np.float64)
+    fgd_model = np.zeros((1,13*5),np.float64)
+    mode = cv2.GC_INIT_WITH_MASK
+    # Initialize
+    # !!! CV2 READS (H,W) !!!
+    #  WH Unsafe
+    img_resz, roi_resz = resize_img_and_roi(img_fpath, roi_, new_size=new_size)
+    # WH Unsafe
+    (img_h, img_w) = img_resz.shape[:2]                       # Image Shape
+    printDBG(' * img_resz.shape=%r' % ((img_h, img_w),))
+    # WH Safe
+    tlbr = algos.xywh_to_tlbr(roi_resz, (img_w, img_h))  # Rectangle ROI
+    (x1, y1, x2, y2) = tlbr
+    rect = tuple(roi_resz)                               # Initialize: rect 
+    printDBG(' * rect=%r' % (rect,))
+    printDBG(' * tlbr=%r' % (tlbr,))
+    # WH Unsafe
+    _mask = np.zeros((img_h,img_w), dtype=np.uint8) # Initialize: mask
+    _mask[y1:y2, x1:x2] = cv2.GC_PR_FGD             # Set ROI to cv2.GC_PR_FGD 
+    # Grab Cut
+    tt = helpers.Timer(' * cv2.grabCut(img_resz)')
+    cv2.grabCut(img_resz, _mask, rect, bgd_model, fgd_model, num_iters, mode=mode) 
+    tt.toc()
+    img_mask = np.where((_mask==cv2.GC_FGD) + (_mask==cv2.GC_PR_FGD),255,0).astype('uint8')
+    # Crop 
+    chip      = img_resz[y1:y2, x1:x2]
+    chip_mask = img_mask[y1:y2, x1:x2]
+    chip_mask = clean_mask(chip_mask)
+    chip_mask = np.array(chip_mask, np.float) / 255.0
+    # Mask the value of HSV
+    chip_hsv = cv2.cvtColor(chip, cv2.COLOR_RGB2HSV)
+    chip_hsv = np.array(chip_hsv, dtype=np.float) / 255.0
+    chip_hsv[:,:,2] *= chip_mask
+    chip_hsv = np.array(np.round(chip_hsv * 255.0), dtype=np.uint8)
+    seg_chip = cv2.cvtColor(chip_hsv, cv2.COLOR_HSV2RGB)
+    return seg_chip, img_mask
 
-    # Make the segmented chip
-    # Normalize mask
-    mask = np.array(mask, np.float64)
-    mask[mask == cv2.GC_BGD] = 0#.1
-    mask[mask == cv2.GC_PR_BGD] = 0#.25
-    mask[mask == cv2.GC_PR_FGD] = 1#.75
-    mask[mask == cv2.GC_FGD] = 1
+
+def test2(chip, chip_mask):
+
+    im(chip, 1)
+    im(chip_mask, 2)
+
+    chip_hsv = cv2.cvtColor(chip, cv2.COLOR_RGB2HSV)
+    chip_H = chip_hsv[:,:,0]
+    chip_S = chip_hsv[:,:,1]
+    chip_V = chip_hsv[:,:,2]
+
+    im(chip_H, 3)
+    im(chip_S, 4)
+    im(chip_V, 5)
+
+    #chip_H *= chip_mask
+    #chip_S *= chip_mask
+    chip_V *= chip_mask
+
+    im(chip_V, 6)
+
+    chip_hsv[:,:,0] = chip_H
+    chip_hsv[:,:,1] = chip_S
+    chip_hsv[:,:,2] = chip_V
+
+    seg_chip = cv2.cvtColor(chip_hsv, cv2.COLOR_HSV2RGB)
+
+    im(seg_chip, 8)
+    df2.present()
+    
 
 
-    # Clean the mask
-    element = cv2.getStructuringElement(cv2.MORPH_CROSS,(10,10))
-    tmp_ = mask
-    tmp_ = cv2.erode(tmp_, element)
-    tmp_ = cv2.dilate(tmp_, element)
-    tmp_ = cv2.dilate(tmp_, element)
-    tmp_ = cv2.dilate(tmp_, element)
-    df2.imshow(tmp_); df2.update()
-    mask = tmp_
+if __name__ == '__main__':
+    print('segmentation> __main__')
+    df2.reset()
+    if len(sys.argv) > 1: 
+        cx = int(sys.argv[1])
+    else:
+        cx = 0
+    test(cx)
 
-    # Reshape chip_mask to NxMx3
-    color_mask = np.tile(chip_mask.reshape(tuple(list(chip_mask.shape)+[1])), (1, 1, 3))
-
-    seg_chip = np.array(chip, dtype=np.float) * color_mask
-    seg_chip = np.array(np.round(seg_chip), dtype=np.uint8)  
-    return seg_chip
-
-
+    exec(df2.present())

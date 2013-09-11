@@ -614,7 +614,7 @@ def show_gt_matches(hs, res, SV=True, fignum=3):
     for ox, cx in enumerate(others):
         plotnumcx = plotnum + ox
         #print 'plot_to: plotnum='+str(plotnumcx)
-        show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx)
+        show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx, all_kpts=True)
     set_figtitle(figtitle)
 
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
@@ -641,23 +641,21 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
     match_img[0:h1, 0:w1, :] = rchip1
     match_img[hoff:(hoff+h2), woff:(woff+w2), :] = rchip2
     # get matching keypoints + offset
+    imshow(match_img,fignum=fignum,plotnum=plotnum,title=title, **kwargs)
+    if all_kpts:
+        # Draw all keypoints as simple points
+        draw_kpts2(kpts1, ell=False, pts=True, pts_color='g', pts_size=2, ell_alpha=ell_alpha)
+        draw_kpts2(kpts2, offset=(woff,hoff), ell=False, pts=True,
+                    pts_color='g', pts_size=2, ell_alpha=ell_alpha)
     if len(fm) == 0:
         printDBG('There are no feature matches to plot!')
-        imshow(match_img,fignum=fignum,plotnum=plotnum,title=title, **kwargs)
-    else: 
-        # matplotlib stuff
-        imshow(match_img,fignum=fignum,plotnum=plotnum,title=title, **kwargs)
-        # Draw all keypoints as simple points
-        if all_kpts:
-            draw_kpts2(kpts1, ell=False, pts=True, pts_color='g', pts_size=2, ell_alpha=ell_alpha)
-            draw_kpts2(kpts2, offset=(woff,hoff), ell=False, pts=True,
-                       pts_color='g', pts_size=2, ell_alpha=ell_alpha)
+    else:
         # Draw matching ellipses
         orange=np.array((255, 127, 0, 255))/255.0
         draw_kpts2(kpts1[fm[:,0]],
-                   pts=True, pts_color=orange, pts_size=4, ell_alpha=ell_alpha)
+                    pts=True, pts_color=orange, pts_size=4, ell_alpha=ell_alpha)
         draw_kpts2(kpts2[fm[:,1]], offset=(woff,hoff),
-                   pts=True, pts_color=orange, pts_size=4, ell_alpha=ell_alpha)
+                    pts=True, pts_color=orange, pts_size=4, ell_alpha=ell_alpha)
         # Draw matching lines
         if draw_lines:
             draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
@@ -710,33 +708,36 @@ def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
 
 
 def show_chip(hs, cx, **kwargs):
-    pass
+    cx2_nx = hs.tables.cx2_nx
+    nx  = cx2_nx[cx]
+    cx2_kpts = hs.feats.cx2_kpts
+    cx2_rchip_path = hs.cpaths.cx2_rchip_path
+    rchip1 = cv2.imread(cx2_rchip_path[cx])
+    kpts1  = cx2_kpts[cx]
+    cx_str = '(cx=%r)' % (cx)
+    imshow(rchip1, title=cx_str, **kwargs)
+    draw_kpts2(kpts1, offset=(0,0), ell=True, pts=False, pts_color='r', pts_size=2, ell_alpha=None)
 
 def show_img(hs, cx, **kwargs):
-    cx2_roi = hs.tables.cx2_roi
-    cx2_gx = hs.tables.cx2_gx
+    # Grab data from tables
+    cx2_roi   = hs.tables.cx2_roi
+    cx2_gx    = hs.tables.cx2_gx
     gx2_gname = hs.tables.gx2_gname
-
+    # Get the chip roi
     roi = cx2_roi[cx]
+    (rx,ry,rw,rh) = roi
+    rxy = (rx,ry)
+    # Get the image
     gx  = cx2_gx[cx]
     img_fname = gx2_gname[gx]
     img_fpath = os.path.join(hs.dirs.img_dir, img_fname)
-
     img = cv2.imread(img_fpath)
+    # Draw image
     imshow(img, **kwargs)
-
-    [rx,ry,rw,rh] = roi
-    rxy = (rx,ry)
-    bbox = matplotlib.patches.Rectangle(rxy,rw,rh) 
-
+    # Draw ROI
     ax = plt.gca()
-
+    bbox = matplotlib.patches.Rectangle(rxy,rw,rh) 
     bbox_color = [1, 0, 0]
-
     bbox.set_fill(False)
     bbox.set_edgecolor(bbox_color)
     ax.add_patch(bbox)
-
-
-
-

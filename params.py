@@ -119,6 +119,7 @@ NUM_PROCS = 8 # Number of processessors
 # Double __ means It is an algorithm varaible
 #---  CHIP COMPUTE ---
 __CHIP_SQRT_AREA__ = 750
+__GRABCUT__        = True
 __HISTEQ__         = False
 __REGION_NORM__    = False
 __RANK_EQ__        = False
@@ -163,6 +164,7 @@ def param_string():
 def get_chip_uid():
     isorig = (__CHIP_SQRT_AREA__ is None or __CHIP_SQRT_AREA__ <= 0)
     histeq = ['','_histeq'][__HISTEQ__]
+    histeq = ['','_grabcut'][__GRABCUT__]
     myeq = ['','_regnorm'][__REGION_NORM__]
     rankeq = ['','_rankeq'][__RANK_EQ__]
     localeq = ['','_localeq'][__LOCAL_EQ__]

@@ -204,4 +204,7 @@ if __name__ == '__main__':
         allres = expt_locals['allres']
         print(allres)
 
+    if 'vrd' in sys.argv:
+        hs.vrd()
+
     exec(df2.present())

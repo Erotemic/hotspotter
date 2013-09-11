@@ -932,7 +932,9 @@ class Timer(object):
     def __enter__(self):
         #if not self.msg is None:
             #sys.stdout.write('---tic---'+self.msg+'  \n')
-        self.tic()
+        #self.tic()
+        pass
+
     def __exit__(self, type, value, trace):
         self.toc()
 

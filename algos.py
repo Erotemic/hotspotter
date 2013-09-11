@@ -428,7 +428,7 @@ def precompute_flann(data, cache_dir=None, uid='', flann_params=None):
             print('[algos] precompute_flann(): ...caught ex=\n%r' % (ex,))
     if not load_success:
         # Rebuild the index otherwise
-        with helpers.Timer(msg='build FLANN'):
+        with helpers.Timer(msg='build FLANN', newline=False):
             flann.build_index(data, **flann_params)
         print('[algos] precompute_flann(): save_index(%r)' % flann_fname)
         flann.save_index(flann_fpath)

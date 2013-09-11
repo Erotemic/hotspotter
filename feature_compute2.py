@@ -85,7 +85,7 @@ def load_chip_feat_type(feat_dir,
                         cache_dir, 
                         load_kpts=True, 
                         load_desc=True):
-    print('Loading '+feat_type+' features: UID='+str(feat_uid))
+    print('[fc2] Loading '+feat_type+' features: UID='+str(feat_uid))
     # args for smart load/save
     dpath = cache_dir
     uid   = feat_uid
@@ -95,21 +95,21 @@ def load_chip_feat_type(feat_dir,
     if load_kpts:
         cx2_kpts = io.smart_load(dpath, 'cx2_kpts', uid, ext, can_fail=True)
     else: 
-        raise NotImplemented('that hack is for desc only')
+        raise NotImplemented('[fc2] that hack is for desc only')
     if load_desc: 
         cx2_desc = io.smart_load(dpath, 'cx2_desc', uid, ext, can_fail=True)
     else: #HACK
-        print(' ! Not loading descriptors')
+        print('[fc2] ! Not loading descriptors')
         cx2_desc = np.array([np.array([])] * len(cx2_kpts))
 
     if (not cx2_kpts is None and not cx2_desc is None):
         # This is pretty dumb. Gotta have a more intelligent save/load
         cx2_desc_ = cx2_desc.tolist()
         cx2_kpts  = cx2_kpts.tolist()
-        print(' * Loaded cx2_kpts and cx2_desc from cache')
+        print('[fc2]  Loaded cx2_kpts and cx2_desc from cache')
         #print all([np.all(desc == desc_) for desc, desc_ in zip(cx2_desc, cx2_desc_)])
     else:
-        print(' * Loading individual '+feat_uid+' features')
+        print('[fc2]  Loading individual '+feat_uid+' features')
         cx2_feat_path = [ feat_dir+'/CID_%d_%s.npz' % (cid, feat_uid) for cid in cx2_cid]
 
         # Compute features, saving them to disk 
@@ -132,30 +132,30 @@ def load_chip_feat_type(feat_dir,
                 cx2_kpts.append(kpts)
                 cx2_desc.append(desc)
                 helpers.print_(fmt_str % cx)
-            print('Finished load of individual kpts and desc')
+            print('[fc2] Finished load of individual kpts and desc')
             cx2_desc = np.array(cx2_desc)
         except MemoryError as ex:
             print('\n------------')
-            print('Out of memory')
-            print('Trying to read: %r' % feat_path)
-            print('len(cx2_kpts) = %d' % len(cx2_kpts))
-            print('len(cx2_desc) = %d' % len(cx2_desc))
+            print('[fc2] Out of memory')
+            print('[fc2] Trying to read: %r' % feat_path)
+            print('[fc2] len(cx2_kpts) = %d' % len(cx2_kpts))
+            print('[fc2] len(cx2_desc) = %d' % len(cx2_desc))
             raise
         if params.WHITEN_FEATS:
-            print(' * Whitening features')
+            print('[fc2] * Whitening features')
             ax2_desc = np.vstack(cx2_desc)
             ax2_desc_white = algos.scale_to_byte(algos.whiten(ax2_desc))
             index = 0
             offset = 0
             for cx in xrange(len(cx2_desc)):
                 old_desc = cx2_desc[cx]
-                print (' * '+helpers.info(old_desc, 'old_desc'))
+                print ('[fc2] * '+helpers.info(old_desc, 'old_desc'))
                 offset = len(old_desc)
                 new_desc = ax2_desc_white[index:(index+offset)]
                 cx2_desc[cx] = new_desc
                 index += offset
         # Cache all the features
-        print('Caching cx2_desc and cx2_kpts')
+        print('[fc2] Caching cx2_desc and cx2_kpts')
         io.smart_save(cx2_desc, dpath, 'cx2_desc', uid, ext)
         io.smart_save(cx2_kpts, dpath, 'cx2_kpts', uid, ext)
     return cx2_kpts, cx2_desc
@@ -163,7 +163,7 @@ def load_chip_feat_type(feat_dir,
 def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
                        load_desc=True):
     print('=============================')
-    print('fc2> Computing and loading features')
+    print('[fc2] Computing and loading features')
     print('=============================')
     # --- GET INPUT --- #
     hs_feats = HotspotterChipFeatures()
@@ -193,7 +193,7 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
-    print('IN: feature_compute2.py: __name__ == \'__main__\'')
+    print('[fc2] __main__ = feature_compute2.py')
 
     __DEV_MODE__ = True
     if __DEV_MODE__ or 'test' in sys.argv:

@@ -294,7 +294,7 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
 def configure_matplotlib():
     import matplotlib
     if matplotlib.get_backend() != 'Qt4Agg':
-        print('helpers> Configuring matplotlib for Qt4')
+        print('[helpers] Configuring matplotlib for Qt4')
         matplotlib.use('Qt4Agg', warn=True, force=True)
         matplotlib.rcParams['toolbar'] = 'None'
     
@@ -340,7 +340,7 @@ def win_shortcut(source, link_name):
     flags = 1 if isdir(source) else 0
     retval = csl(link_name, source, flags)
     if retval == 0:
-        warn_msg = 'helpers> Unable to create symbolic link on windows.'
+        warn_msg = '[helpers] Unable to create symbolic link on windows.'
         print(warn_msg)
         warnings.warn(warn_msg, category=UserWarning)
         if checkpath(link_name):
@@ -348,7 +348,7 @@ def win_shortcut(source, link_name):
         raise ctypes.WinError()
 
 def symlink(source, link_name, noraise=False):
-    print('helpers> Creating symlink: source=%r link_name=%r' % (source, link_name))
+    print('[helpers] Creating symlink: source=%r link_name=%r' % (source, link_name))
     try: 
         import os
         os_symlink = getattr(os, "symlink", None)
@@ -443,8 +443,8 @@ def get_parent_locals():
 # --- Convinience ----
 
 def vd(dname=None):
-    'View directory'
-    print('View Directory: '+dname)
+    'view directory'
+    print('[helpers] view_dir(%r) ' % dname)
     dname = os.getcwd() if dname is None else dname
     open_prog = {'win32' :'explorer.exe',
                  'linux2':'nautilus',
@@ -494,7 +494,7 @@ def dircheck(dpath,makedir=True):
 def remove_file(fpath, verbose=True):
     try:
         if verbose:
-            print('helpers> Removing '+fpath)
+            print('[helpers] Removing '+fpath)
         os.remove(fpath)
     except OSError as e:
         printWARN('OSError: %s,\n Could not delete %s' % (str(e), fpath))
@@ -502,7 +502,7 @@ def remove_file(fpath, verbose=True):
     return True
 
 def remove_files_in_dir(dpath, fname_pattern='*', recursive=False):
-    print('helpers> Removing files:')
+    print('[helpers] Removing files:')
     print('  * in dpath = %r ' % dpath) 
     print('  * matching pattern = %r' % fname_pattern) 
     print('  * recursive = %r' % recursive) 
@@ -515,7 +515,7 @@ def remove_files_in_dir(dpath, fname_pattern='*', recursive=False):
             num_removed += remove_file(join(root, fname))
         if not recursive:
             break
-    print('helpers> ... Removed %d/%d files' % (num_removed, num_matched))
+    print('[helpers] ... Removed %d/%d files' % (num_removed, num_matched))
     return True
 
 def longest_existing_path(_path):
@@ -556,7 +556,7 @@ def checkpath(path_, verbose=PRINT_CHECKS):
         print = print_
         pretty_path = path_ndir_split(path_, 2)
         caller_name = get_caller_name()
-        print('%s>checkpath(%r)' % (caller_name, pretty_path))
+        print('[%s] checkpath(%r)' % (caller_name, pretty_path))
         if exists(path_):
             path_type = ''
             if isfile(path_):  path_type += 'file'
@@ -568,9 +568,9 @@ def checkpath(path_, verbose=PRINT_CHECKS):
         else:
             print('... does not exist\n')
             if __CHECKPATH_VERBOSE__:
-                print('helpers> \n  ! Does not exist\n')
+                print('[helpers] \n  ! Does not exist\n')
                 _longest_path = longest_existing_path(path_)
-                print('helpers> ... The longest existing path is: %r\n' % _longest_path)
+                print('[helpers] ... The longest existing path is: %r\n' % _longest_path)
             return False
         return True
     else:
@@ -580,7 +580,7 @@ def check_path(path_):
 
 def ensurepath(path_):
     if not checkpath(path_):
-        print('helpers>mkdir(%r)' % path_)
+        print('[helpers] mkdir(%r)' % path_)
         os.makedirs(path_)
     return True
 def ensuredir(path_):
@@ -612,41 +612,41 @@ def copy_task(cp_list, test=False, nooverwrite=False, print_tasks=True):
     num_overwrite = 0
     _cp_tasks = [] # Build this list with the actual tasks
     if nooverwrite:
-        print('helpers> Removed: copy task ')
+        print('[helpers] Removed: copy task ')
     else:
-        print('helpers> Begining copy+overwrite task.')
+        print('[helpers] Begining copy+overwrite task.')
     for (src, dst) in iter(cp_list):
         if exists(dst):
             num_overwrite += 1
             if print_tasks:
-                print('helpers> !!! Overwriting ')
+                print('[helpers] !!! Overwriting ')
             if not nooverwrite:
                 _cp_tasks.append((src, dst))
         else:
             if print_tasks:
-                print('helpers> ... Copying ')
+                print('[helpers] ... Copying ')
                 _cp_tasks.append((src, dst))
         if print_tasks:
-            print('helpers>    '+src+' -> \n    '+dst)
-    print('helpers> About to copy %d files' % len(cp_list))
+            print('[helpers]    '+src+' -> \n    '+dst)
+    print('[helpers] About to copy %d files' % len(cp_list))
     if nooverwrite:
-        print('helpers> Skipping %d tasks which would have overwriten files' % num_overwrite)
+        print('[helpers] Skipping %d tasks which would have overwriten files' % num_overwrite)
     else:
-        print('helpers> There will be %d overwrites' % num_overwrite)
+        print('[helpers] There will be %d overwrites' % num_overwrite)
     if not test: 
-        print('helpers>... Copying')
+        print('[helpers]... Copying')
         for (src, dst) in iter(_cp_tasks):
             shutil.copy(src, dst)
-        print('helpers>... Finished copying')
+        print('[helpers]... Finished copying')
     else:
-        print('helpers>... In test mode. Nothing was copied.')
+        print('[helpers]... In test mode. Nothing was copied.')
 
 def copy(src, dst):
     if exists(dst):
-        print('helpers> !!! Overwriting ')
+        print('[helpers] !!! Overwriting ')
     else:
-        print('helpers> ... Copying ')
-    print('helpers>    '+src+' -> \n    '+dst)
+        print('[helpers] ... Copying ')
+    print('[helpers]    '+src+' -> \n    '+dst)
     shutil.copy(src, dst)
 
 def copy_all(src_dir, dest_dir, glob_str_list):
@@ -703,32 +703,32 @@ def sanatize_fname(fname):
 
 def eval_from(fpath, err_onread=True):
     'evaluate a line from a test file'
-    print('helpers> Evaling: fpath=%r' % fpath)
+    print('[helpers] Evaling: fpath=%r' % fpath)
     text = read_from(fpath)
     if text is None:
         if err_onread:
             raise Exception('Error reading: fpath=%r' % fpath)
-        print('helpers> * could not eval: %r ' % fpath)
+        print('[helpers] * could not eval: %r ' % fpath)
         return None
     return eval(text)
 
 def read_from(fpath):
     if not checkpath(fpath):
-        println('helpers> * FILE DOES NOT EXIST!')
+        println('[helpers] * FILE DOES NOT EXIST!')
         return None
-    print('helpers> * Reading text file: %r ' % split(fpath)[1])
+    print('[helpers] * Reading text file: %r ' % split(fpath)[1])
     try: 
         text = open(fpath,'r').read()
     except Exception as ex:
-        print('helpers> * Error reading fpath=%r' % fpath)
+        print('[helpers] * Error reading fpath=%r' % fpath)
         raise
     if VERY_VERBOSE:
-        print('helpers> * Read %d characters' % len(text))
+        print('[helpers] * Read %d characters' % len(text))
     return text
 
 def write_to(fpath, to_write):
     if __PRINT_WRITES__:
-        println('helpers> * Writing to text file: %r ' % fpath)
+        println('[helpers] * Writing to text file: %r ' % fpath)
     with open(fpath, 'w') as file:
         file.write(to_write)
 
@@ -747,8 +747,8 @@ def save_npz(fpath, *args, **kwargs):
     print('... success')
 
 def load_npz(fpath):
-    print('helpers> load_npz: %r ' % split(fpath)[1])
-    print('helpers> filesize is: '+ file_megabytes_str(fpath))
+    print('[helpers] load_npz: %r ' % split(fpath)[1])
+    print('[helpers] filesize is: '+ file_megabytes_str(fpath))
     npz = np.load(fpath, mmap_mode='r+')
     data = tuple(npz[key] for key in sorted(npz.keys()))
     #print(' * npz.keys() = %r '+str(npz.keys()))
@@ -835,7 +835,7 @@ def load_cache_npz(input_data, uid='', cache_dir='.', is_sparse=False):
 
 def save_cache_npz(input_data, data, uid='', cache_dir='.', is_sparse=False):
     data_fpath = __cache_data_fpath(input_data, uid, cache_dir)
-    print('helpers> caching data: %r' % split(data_fpath)[1])
+    print('[helpers] caching data: %r' % split(data_fpath)[1])
     flush()
     if is_sparse:
         with open(data_fpath, 'wb') as outfile:
@@ -906,26 +906,25 @@ import sys
 class Timer(object):
     ''' Used to time statments with a with statment
     e.g with Timer() as t: some_function()'''
-    def __init__(self, msg='', outlist=[]):
-        # outlist is a list to append output to
-        self.outlist = outlist
+    def __init__(self, msg='', verbose=True):
         self.msg = msg
+        self.verbose = verbose
         self.tstart = -1
         self.tic()
 
     def tic(self):
-        sys.stdout.flush()
-        sys.stdout.write('tic('+repr(self.msg)+')')
+        if self.verbose:
+            sys.stdout.flush()
+            sys.stdout.write('\ntic(%r)' % self.msg)
         self.tstart = time.time()
 
     def toc(self):
         ellapsed = (time.time() - self.tstart)
-        if not self.msg is None and len(self.msg) <= 0:
-            self.outlist.append(ellapsed)
-        #sys.stdout.write('___toc___'+self.msg+' = %.4fs \n\n' % ellapsed)
-        #sys.stdout.write('___toc___'+self.msg+' = %.4fs \n\n' % ellapsed)
-        sys.stdout.write('...toc(%.4fs, ' % ellapsed + repr(self.msg) + ')\n')
-        sys.stdout.flush()
+        if self.verbose:
+            sys.stdout.write('...toc(%r)=%.4fs\n' % (self.msg, ellapsed))
+            sys.stdout.flush()
+        return ellapsed 
+
     def __enter__(self):
         #if not self.msg is None:
             #sys.stdout.write('---tic---'+self.msg+'  \n')
@@ -1064,11 +1063,11 @@ def unit_test(test_func):
 def profile(cmd, globals_=globals(), locals_=locals()):
     # Meliae # from meliae import loader # om = loader.load('filename.json') # s = om.summarize();
     import cProfile, sys, os
-    print('helpers> Profiling Command: '+cmd)
+    print('[helpers] Profiling Command: '+cmd)
     cProfOut_fpath = 'OpenGLContext.profile'
     cProfile.runctx( cmd, globals_, locals_, filename=cProfOut_fpath )
     # RUN SNAKE
-    print('helpers> Profiled Output: '+cProfOut_fpath)
+    print('[helpers] Profiled Output: '+cProfOut_fpath)
     if sys.platform == 'win32':
         rsr_fpath = 'C:/Python27/Scripts/runsnake.exe'
     else:
@@ -1171,7 +1170,7 @@ def printWARN(warn_msg, category=UserWarning):
 #---------------
 
 if __name__ == '__main__':
-    print('helpers> You ran helpers as main!')
+    print('[helpers] You ran helpers as main!')
     import algos
     import sklearn
     module = sys.modules[__name__]
@@ -1187,5 +1186,5 @@ if __name__ == '__main__':
                          'scipy.sparse'])
     seen = set(list(python_basic) + list(science_basic) + list(tpl_basic))
     seen = set([])
-    print('helpers> seen=%r' % seen)
+    print('[helpers] seen=%r' % seen)
     explore_module(module, maxdepth=0, seen=seen, nonmodules=False)

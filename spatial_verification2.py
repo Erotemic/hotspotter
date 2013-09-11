@@ -39,7 +39,7 @@ def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
     try:
         (U, S, Vct) = linalg.svd(Mbynine)
     except MemoryError as ex:
-        printWARN('Caught MemErr %r during full SVD. Trying sparse SVD.' % (ex))
+        printWARN('[sv2] Caught MemErr %r during full SVD. Trying sparse SVD.' % (ex))
         MbynineSparse = sparse.lil_matrix(Mbynine)
         (U, S, Vct) = sparse_linalg.svds(MbynineSparse)
     except linalg.LinAlgError as ex2:
@@ -125,7 +125,7 @@ def homography_inliers(kpts1, kpts2, fm,
         # Computes ax = b # x = linalg.solve(a, b)
         H = linalg.solve(T2, H_prime).dot(T1) # Unnormalize
     except linalg.LinAlgError as ex:
-        printWARN('Warning 285 '+repr(ex), )
+        printWARN('[sv2] Warning 285 '+repr(ex), )
         return np.eye(3), aff_inliers
 
     ((H11, H12, H13),
@@ -408,5 +408,5 @@ def compare():
 if __name__ == '__main__':
     import multiprocessing as mp
     mp.freeze_support()
-    print('__main__ = spatial_verification2.py')
+    print('[sc2] __main__ = spatial_verification2.py')
     test()

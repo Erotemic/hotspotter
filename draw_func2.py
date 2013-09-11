@@ -2,7 +2,7 @@
 from __future__ import division
 import matplotlib
 if matplotlib.get_backend() != 'Qt4Agg':
-    print('df2>matplotlib.use(Qt4Agg)')
+    print('[df2] matplotlib.use(Qt4Agg)')
     matplotlib.use('Qt4Agg', warn=True, force=True)
     matplotlib.rcParams['toolbar'] = 'None'
 from matplotlib import gridspec
@@ -66,7 +66,7 @@ POINT_SIZE = 2
 def reload_module():
     import imp
     import sys
-    print 'reloading '+__name__
+    print('[df2] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()
@@ -97,7 +97,7 @@ def save(fig, fpath=None):
         fpath = 'Figure'+str(fig.number)+'.png'
     # Sanatize the filename
     fpath_clean = sanatize_img_fpath(fpath)
-    print('Saving figure to: '+repr(fpath_clean))
+    print('[df2] Saving figure to: '+repr(fpath_clean))
     fig.savefig(fpath_clean, dpi=DPI)
 
 def save_figure(fignum=None, fpath=None, usetitle=False):
@@ -115,7 +115,7 @@ def save_figure(fignum=None, fpath=None, usetitle=False):
         fpath = os.path.join(fpath, title)
     # Sanatize the filename
     fpath_clean = sanatize_img_fpath(fpath)
-    print('df2.save_figure> '+repr(os.path.split(fpath_clean)[1]))
+    print('[df2] save_figure() '+repr(os.path.split(fpath_clean)[1]))
     fig.savefig(fpath_clean, dpi=DPI)
 
 def update_figure_size(fignum, width, height):
@@ -229,7 +229,7 @@ def update():
 
 def present(*args, **kwargs):
     'execing present should cause IPython magic'
-    print('Presenting figures...')
+    print('[df2] Presenting figures...')
     all_figures_tile(*args, **kwargs)
     all_figures_show()
     all_figures_bring_to_front()
@@ -240,9 +240,9 @@ def present(*args, **kwargs):
     embedded = False
     if not helpers.inIPython():
         if '--cmd' in sys.argv:
-            print('df2: Requested IPython shell with --cmd argument.')
+            print('[df2] Requested IPython shell with --cmd argument.')
             if helpers.haveIPython():
-                print('df2: Found IPython')
+                print('[df2] Found IPython')
                 try: 
                     import IPython
                     print('df2: Presenting in new ipython shell.')
@@ -252,10 +252,10 @@ def present(*args, **kwargs):
                     helpers.printWARN(repr(ex)+'\n!!!!!!!!')
                     embedded = False
             else:
-                print('df2: IPython is not installed')
+                print('[df2] IPython is not installed')
         if not embedded: 
-            print('df2: Presenting in normal shell.')
-            print('df2: ... plt.show()')
+            print('[df2] Presenting in normal shell.')
+            print('[df2] ... plt.show()')
             plt.show()
     else: 
         print('Presenting in current ipython shell.')
@@ -325,9 +325,9 @@ def figure(fignum=None,
             #fig.clf()
         ax = plt.subplot(plotnum)
         ax.cla()
-        printDBG('*** NEW FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
+        printDBG('[df2] *** NEW FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
     else: 
-        printDBG('*** OLD FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
+        printDBG('[df2] *** OLD FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
         ax = plt.subplot(plotnum)
         #ax  = axes_list[0]
     if not title is None:
@@ -425,18 +425,18 @@ def draw_kpts2(kpts, offset=(0,0), ell=True,
     kptsT = kpts.T
     x = kptsT[0,:] + offset[0]
     y = kptsT[1,:] + offset[1]
-    printDBG('draw_kpts>----------')
-    printDBG('draw_kpts> ell=%r pts=%r' % (ell, pts))
-    printDBG('draw_kpts> drawing kpts.shape=%r' % (kpts.shape,))
+    printDBG('[df2] draw_kpts()----------')
+    printDBG('[df2] draw_kpts() ell=%r pts=%r' % (ell, pts))
+    printDBG('[df2] draw_kpts() drawing kpts.shape=%r' % (kpts.shape,))
     if pts:
-        printDBG('draw_kpts> drawing pts x.shape=%r y.shape=%r' % (x.shape, y.shape))
+        printDBG('[df2] draw_kpts() drawing pts x.shape=%r y.shape=%r' % (x.shape, y.shape))
         ax.plot(x, y, linestyle='None', 
                 marker='o',
                 markerfacecolor=pts_color,
                 markersize=pts_size, 
                 markeredgewidth=0)
     if ell:
-        printDBG('draw_kpts> drawing ell kptsT.shape=%r' % (kptsT.shape,))
+        printDBG('[df2] draw_kpts() drawing ell kptsT.shape=%r' % (kptsT.shape,))
         a = kptsT[2]
         c = kptsT[3]
         d = kptsT[4]
@@ -559,8 +559,8 @@ def show_signature(sig, **kwargs):
 
 def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111,
            interpolation='nearest', **kwargs):
-    printDBG('*** imshow in fig=%r title=%r *** ' % (fignum, title))
-    printDBG('   * fignum = %r, plotnum = %r ' % (fignum, plotnum))
+    printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
+    printDBG('[df2] *** fignum = %r, plotnum = %r ' % (fignum, plotnum))
     fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
     plt.imshow(img, interpolation=interpolation)
     plt.set_cmap('gray')
@@ -571,7 +571,7 @@ def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111,
         if plotnum == 111:
             fig.tight_layout()
     except Exception as ex:
-        print('!! Exception durring fig.tight_layout: '+repr(ex))
+        print('[df2] !! Exception durring fig.tight_layout: '+repr(ex))
         raise
     return fig
 
@@ -584,14 +584,14 @@ def show_top5_matches(hs, res, SV=True, fignum=4):
     num_others = len(others)
     plotnum= 100 + num_others*10 + 1 
     if num_others == 0:
-        print('no known matches to qcx=%r' % qcx)
+        print('[df2] no known matches to qcx=%r' % qcx)
         return
     figtitle='qcx=%r -- TOP 5' % qcx
     figure(fignum=fignum, plotnum=plotnum)
-    #print 'figure(plotnum)='+str(plotnum)
+    printDBG('[df2] figure(plotnum)='+str(plotnum))
     for ox, cx in enumerate(others):
         plotnumcx = plotnum + ox
-        #print 'plot_to: plotnum='+str(plotnumcx)
+        #print('[df2] plot_to: plotnum='+str(plotnumcx))
         show_matches3(res, hs, cx, fignum=fignum, plotnum=plotnumcx, all_kpts=False, ell_alpha=.5)
     set_figtitle(figtitle)
 
@@ -606,7 +606,7 @@ def show_gt_matches(hs, res, SV=True, fignum=3):
     num_others = len(others)
     plotnum= 100 + num_others*10 + 1 
     if num_others == 0:
-        print('no known ma`tches to qcx=%r' % qcx)
+        print('[df2] no known matches to qcx=%r' % qcx)
         return
     figtitle='qcx=%r -- GroundTruth' % qcx
     figure(fignum=fignum, plotnum=plotnum)
@@ -648,7 +648,7 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
         draw_kpts2(kpts2, offset=(woff,hoff), ell=False, pts=True,
                     pts_color='g', pts_size=2, ell_alpha=ell_alpha)
     if len(fm) == 0:
-        printDBG('There are no feature matches to plot!')
+        printDBG('[df2] There are no feature matches to plot!')
     else:
         # Draw matching ellipses
         orange=np.array((255, 127, 0, 255))/255.0
@@ -670,7 +670,7 @@ def show_matches3(res, hs, cx, SV=True, fignum=3, plotnum=111, title_aug=None, *
                          plotnum, title_aug, title_suff, **kwargs)
 def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111,
                   title_pref=None, title_suff=None, **kwargs):
-    printDBG('Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))
+    printDBG('[df2] Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))
     if np.isnan(cx):
         nan_img = np.zeros((100,100), dtype=np.uint8)
         title='(qx%r v NAN)' % (qcx)

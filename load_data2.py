@@ -68,6 +68,10 @@ class HotSpotter(DynStruct):
         hs.tables  = hs_tables
         hs.dirs    = hs_dirs
         hs.num_cx = len(hs.tables.cx2_cid)
+        if 'vrd' in sys.argv:
+            hs.vrd()
+        if 'vcd' in sys.argv:
+            hs.vcd()
 
     def load_chips(hs):
         import chip_compute2 as cc2
@@ -124,13 +128,13 @@ class HotSpotter(DynStruct):
         print('[hs] set_samples():')
         valid_cxs = hs.get_valid_cxs()
         if test_samp is None:
-            print(' * using all chips in testing')
+            print('[hs] * using all chips in testing')
             test_samp = valid_cxs
         if train_samp is None:
-            print(' * using all chips in training')
+            print('[hs] * using all chips in training')
             train_samp = valid_cxs
         if db_samp is None:
-            print(' * using training set as database set')
+            print('[hs] * using training set as database set')
             db_samp = train_samp
 
 
@@ -138,13 +142,13 @@ class HotSpotter(DynStruct):
         test_train_isect = np.intersect1d(test_samp, train_samp)
         db_train_isect = np.intersect1d(db_samp, train_samp)
         db_test_isect = np.intersect1d(db_samp, test_samp)
-        print('   ---')
-        print(' * | isect(test, train) |  = %d' % len(test_train_isect))
-        print(' * | isect(db, train)   |  = %d' % len(db_train_isect))
-        print(' * | isect(db, test)    |  = %d' % len(db_test_isect))
-        print(' * num_valid_cxs = %d' % len(valid_cxs))
+        print('[hs]   ---')
+        print('[hs] * | isect(test, train) |  = %d' % len(test_train_isect))
+        print('[hs] * | isect(db, train)   |  = %d' % len(db_train_isect))
+        print('[hs] * | isect(db, test)    |  = %d' % len(db_test_isect))
+        print('[hs] * num_valid_cxs = %d' % len(valid_cxs))
         lentup = (len(test_samp), len(train_samp), len(db_samp))
-        print(' * num_test=%d, num_train=%d, num_db=%d' % lentup)
+        print('[hs] * num_test=%d, num_train=%d, num_db=%d' % lentup)
 
         hs.database_sample_cx = db_samp
         hs.train_sample_cx    = train_samp
@@ -161,17 +165,17 @@ class HotSpotter(DynStruct):
     #---------------
     def vdd(hs):
         db_dir = os.path.normpath(hs.dirs.db_dir)
-        print('opening db_dir: %r ' % db_dir)
+        print('[hs] opening db_dir: %r ' % db_dir)
         helpers.vd(db_dir)
     #---------------
     def vcd(hs):
         computed_dir = os.path.normpath(hs.dirs.computed_dir)
-        print('opening computed_dir: %r ' % computed_dir)
+        print('[hs] opening computed_dir: %r ' % computed_dir)
         helpers.vd(computed_dir)
     #--------------
     def vrd(hs):
         result_dir = os.path.normpath(hs.dirs.result_dir)
-        print('opening result_dir: %r ' % result_dir)
+        print('[hs] opening result_dir: %r ' % result_dir)
         helpers.vd(result_dir)
     #--------------
     def get_nx2_cxs(hs):
@@ -214,18 +218,18 @@ class HotSpotter(DynStruct):
         return fm, fs, score
     #--------------
     def free_some_memory(hs):
-        print('Releasing matcher memory')
+        print('[hs] Releasing matcher memory')
         import gc
         helpers.memory_profile()
-        print("HotSpotter Referrers: "+str(gc.get_referrers(hs)))
-        print("Matcher Referrers: "+str(gc.get_referrers(hs.matcher)))
-        print("Desc Referrers: "+str(gc.get_referrers(hs.feats.cx2_desc)))
+        print("[hs] HotSpotter Referrers: "+str(gc.get_referrers(hs)))
+        print("[hs] Matcher Referrers: "+str(gc.get_referrers(hs.matcher)))
+        print("[hs] Desc Referrers: "+str(gc.get_referrers(hs.feats.cx2_desc)))
         #reffers = gc.get_referrers(hs.feats.cx2_desc) #del reffers
         del hs.feats.cx2_desc
         del hs.matcher
         gc.collect()
         helpers.memory_profile()
-        ans = raw_input('good?')
+        ans = raw_input('[hs] good?')
 
 # Testing helper functions
 def get_sv_test_data(qcx=0, cx=None):
@@ -314,7 +318,7 @@ def load_csv_tables(db_dir):
     Returns HotspotterDirs and HotspotterTables
     '''
     print('\n=============================')
-    print('ld2> Loading hotspotter csv tables: '+str(db_dir))
+    print('[ld2] Loading hotspotter csv tables: '+str(db_dir))
     print('=============================')
     hs_dirs = HotspotterDirs(db_dir)
     #exec(hs_dirs.execstr('hs_dirs'))
@@ -346,7 +350,7 @@ def load_csv_tables(db_dir):
         print(errmsg)
         raise Exception(errmsg)
     print('-------------------------')
-    print('Loading database tables: ')
+    print('[ld2] Loading database tables: ')
     cid_lines  = [] 
     line_num   = 0
     csv_line   = ''
@@ -355,7 +359,7 @@ def load_csv_tables(db_dir):
         # ------------------
         # --- READ NAMES --- 
         # ------------------
-        print('... Loading name table: '+name_table)
+        print('[ld2] Loading name table: '+name_table)
         nx2_name = ['____', '____']
         nid2_nx  = { 0:0, 1:1}
         name_lines = open(name_table,'r')
@@ -369,18 +373,18 @@ def load_csv_tables(db_dir):
             nid2_nx[nid] = len(nx2_name)
             nx2_name.append(name)
         if params.VERBOSE_LOAD_DATA:
-            print('      * Loaded '+str(len(nx2_name)-2)+' names (excluding unknown names)')
-            print('      * Done loading name table')
+            print('[ld2] * Loaded '+str(len(nx2_name)-2)+' names (excluding unknown names)')
+            print('[ld2] * Done loading name table')
 
         # -------------------
         # --- READ IMAGES --- 
         # -------------------
         gx2_gname = []
-        print('... Loading images')
+        print('[ld2] Loading images')
         # Load Image Table 
         # <LEGACY CODE>
         if params.VERBOSE_LOAD_DATA:
-            print('    ... Loading image table: '+image_table)
+            print('[ld2] Loading image table: '+image_table)
         gid2_gx = {}
         gid_lines = open(image_table,'r').readlines()
         for line_num, csv_line in enumerate(gid_lines):
@@ -398,10 +402,10 @@ def load_csv_tables(db_dir):
         nTableImgs = len(gx2_gname)
         fromTableNames = set(gx2_gname)
         if params.VERBOSE_LOAD_DATA:
-            print('          * table specified '+str(nTableImgs)+' images')
+            print('[ld2] table specified '+str(nTableImgs)+' images')
             # </LEGACY CODE>
             # Load Image Directory
-            print('    ... Loading image directory: '+img_dir)
+            print('[ld2] Loading image directory: '+img_dir)
         nDirImgs = 0
         nDirImgsAlready = 0
         for fname in os.listdir(img_dir):
@@ -412,15 +416,15 @@ def load_csv_tables(db_dir):
                 gx2_gname.append(fname)
                 nDirImgs += 1
         if params.VERBOSE_LOAD_DATA:
-            print('          * dir specified '+str(nDirImgs)+' images')
-            print('          * '+str(nDirImgsAlready)+' were already specified in the table')
-            print('  * Loaded '+str(len(gx2_gname))+' images')
-            print('  * Done loading images')
+            print('[ld2] dir specified '+str(nDirImgs)+' images')
+            print('[ld2] '+str(nDirImgsAlready)+' were already specified in the table')
+            print('[ld2] Loaded '+str(len(gx2_gname))+' images')
+            print('[ld2] Done loading images')
 
         # ------------------
         # --- READ CHIPS --- 
         # ------------------
-        print('... Loading chip table: '+chip_table)
+        print('[ld2] Loading chip table: '+chip_table)
         # Load Chip Table Header
         cid_lines = open(chip_table,'r').readlines()
         # Header Markers
@@ -442,8 +446,8 @@ def load_csv_tables(db_dir):
             if csv_line.find(header_numdata) == 0:
                 num_data = int(csv_line.replace(header_numdata,''))
         if params.VERBOSE_LOAD_DATA:
-            print('  * num_chips: '+str(num_data))
-            print('  * chip_csv_format: '+str(chip_csv_format))
+            print('[ld2] num_chips: '+str(num_data))
+            print('[ld2] chip_csv_format: '+str(chip_csv_format))
         cid_x   = tryindex(chip_csv_format, 'ChipID')
         gid_x   = tryindex(chip_csv_format, 'ImgID')
         nid_x   = tryindex(chip_csv_format, 'NameID')
@@ -467,7 +471,7 @@ def load_csv_tables(db_dir):
         for prop in iter(px2_prop_key):
             prop_dict[prop] = []
         if params.VERBOSE_LOAD_DATA:
-            print('  * num_user_properties: '+str(len(prop_dict.keys())))
+            print('[ld2] num_user_properties: '+str(len(prop_dict.keys())))
         # Parse Chip Table
         for line_num, csv_line in enumerate(cid_lines):
             csv_line = csv_line.strip('\n\r\t ')
@@ -509,21 +513,21 @@ def load_csv_tables(db_dir):
                 prop_val = csv_fields[x]
                 prop_dict[prop].append(prop_val)
     except Exception as ex:
-        print('Failed parsing: '+str(''.join(cid_lines)))
-        print('Failed on line number:  '+str(line_num))
-        print('Failed on line:         '+repr(csv_line))
-        print('Failed on fields:       '+repr(csv_fields))
+        print('[ld2] Failed parsing: '+str(''.join(cid_lines)))
+        print('[ld2] Failed on line number:  '+str(line_num))
+        print('[ld2] Failed on line:         '+repr(csv_line))
+        print('[ld2] Failed on fields:       '+repr(csv_fields))
         raise
 
     if params.VERBOSE_LOAD_DATA:
-        print('  * Loaded: '+str(len(cx2_cid))+' chips')
-        print('  * Done loading chip table')
+        print('[ld2] Loaded: '+str(len(cx2_cid))+' chips')
+        print('[ld2] Done loading chip table')
     # Return all information from load_tables
     #hs_tables.gid2_gx = gid2_gx
     #hs_tables.nid2_nx  = nid2_nx
     hs_tables =  HotspotterTables(gx2_gname, nx2_name, cx2_cid, cx2_nx,
                                   cx2_gx, cx2_roi, cx2_theta, prop_dict)
-    print('Done Loading hotspotter csv tables: '+str(db_dir))
+    print('[ld2] Done Loading hotspotter csv tables: '+str(db_dir))
 
     if 'vdd' in sys.argv:
         helpers.vd(hs_dirs.db_dir)
@@ -591,15 +595,15 @@ def print_chiptable(hs_tables):
 
 def make_csv_table(column_labels=None, column_list=[], header='', column_type=None):
     if len(column_list) == 0: 
-        print('No columns')
+        print('[ld2] No columns')
         return header
     column_len  = [len(col) for col in column_list]
     num_data =  column_len[0] 
     if num_data == 0:
-        print('No data')
+        print('[ld2] No data')
         return header
     if any([num_data != clen for clen in column_len]):
-        print('inconsistent column length')
+        print('[ld2] inconsistent column length')
         return header
 
     if column_type is None:
@@ -621,9 +625,9 @@ def make_csv_table(column_labels=None, column_list=[], header='', column_type=No
                 return 'nan'
         except TypeError as ex:
             print('------')
-            print('_toint(c) failed')
-            print('c = %r ' % c)
-            print('type(c) = %r ' % type(c))
+            print('[ld2] _toint(c) failed')
+            print('[ld2] c = %r ' % c)
+            print('[ld2] type(c) = %r ' % type(c))
             print('------')
             raise
         return ('%d') % int(c)
@@ -652,7 +656,6 @@ def make_csv_table(column_labels=None, column_list=[], header='', column_type=No
 
     csv_text = '\n'.join(csv_rows)
     return csv_text
-
 
 # Common databases I use
 FROGS     = params.WORK_DIR+'/Frogs'

@@ -50,13 +50,13 @@ def print_top_res_scores(hs, res, view_top=10, SV=True):
     top_nx     = cx2_nx[top_cx]
     view_top   = min(len(top_scores), np.uint32(view_top))
     print('---------------------------------------')
-    print('Inspecting matches of qcx=%d name=%s' % (qcx, nx2_name[qnx]))
-    print(' * Matched against %d other chips' % len(cx2_score))
-    print(' * Ground truth chip indexes:\n   other_cx=%r' % other_cx)
-    print('The ground truth scores '+lbl+' are: ')
+    print('[viz]Inspecting matches of qcx=%d name=%s' % (qcx, nx2_name[qnx]))
+    print('[viz] * Matched against %d other chips' % len(cx2_score))
+    print('[viz] * Ground truth chip indexes:\n   other_cx=%r' % other_cx)
+    print('[viz]The ground truth scores '+lbl+' are: ')
     for cx in iter(other_cx):
         score = cx2_score[cx]
-        print('--> cx=%4d, score=%6.2f' % (cx, score))
+        print('[viz]--> cx=%4d, score=%6.2f' % (cx, score))
     print('---------------------------------------')
     print(('The top %d chips and scores '+lbl+' are: ') % view_top)
     for topx in xrange(view_top):
@@ -65,7 +65,7 @@ def print_top_res_scores(hs, res, view_top=10, SV=True):
         if tcx == qcx: continue
         tnx    = cx2_nx[tcx]
         _mark = '-->' if tnx == qnx else '  -'
-        print(_mark+' cx=%4d, score=%6.2f' % (tcx, tscore))
+        print('[viz]'+_mark+' cx=%4d, score=%6.2f' % (tcx, tscore))
     print('---------------------------------------')
     print('---------------------------------------')
 
@@ -78,7 +78,7 @@ def plot_cx(allres, cx, style='kpts', subdir=None):
         rchip = hs.get_chip(cx)
         kpts  = hs.feats.cx2_kpts[cx]
         title = 'cx: %d\n%s' % (cx, allres.title_suffix)
-        print('Plotting'+title)
+        print('[viz] Plotting'+title)
         fig = df2.imshow(rchip, fignum=FIGNUM, title=title, doclf=True)
         df2.draw_kpts2(kpts)
     if 'gt_matches'  == style: 
@@ -161,10 +161,10 @@ def __dump_or_browse(allres, subdir=None):
     fig = df2.plt.gcf()
     fig.tight_layout()
     if BROWSE:
-        print('report_results> Browsing Image')
+        print('[viz] Browsing Image')
         df2.show()
     if DUMP:
-        print('report_results> Dumping Image')
+        print('[viz] Dumping Image')
         fpath = allres.hs.dirs.result_dir
         if not subdir is None: 
             fpath = join(fpath, subdir)

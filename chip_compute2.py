@@ -58,7 +58,7 @@ def make_compute_chip_func(preproc_func_list):
     def custom_compute_chip(img_path, chip_path, roi, new_size):
         chip = __compute_chip(img_path, chip_path, roi, new_size)
         for preproc_func in iter(preproc_func_list):
-            print preproc_func.__name__
+            print('[cc2] '+preproc_func.__name__)
             chip = preproc_func(chip)
         chip.save(chip_path, 'PNG')
         return True
@@ -240,7 +240,7 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
     gx2_gname    = hs_tables.gx2_gname
 
     print('=============================')
-    print('cc2> Precomputing chips and loading chip paths')
+    print('[cc2] Precomputing chips and loading chip paths')
     print('=============================')
 
     # Get parameters
@@ -255,15 +255,15 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
     chip_params = dict(sqrt_area=sqrt_area, histeq=histeq)
     chip_uid = params.get_chip_uid()
 
-    print(' * chip_uid    = %r' % chip_uid)
+    print('[cc2]  chip_uid    = %r' % chip_uid)
 
-    print(' * sqrt(target_area) = %r' % sqrt_area)
-    print(' * localeq     = %r' % localeq)
-    print(' * maxcontr    = %r' % maxcontr)
-    print(' * histeq      = %r' % histeq)
-    print(' * grabcut     = %r' % grabcut)
-    print(' * rankeq      = %r' % rankeq)
-    print(' * region_norm = %r' % region_norm)
+    print('[cc2] sqrt(target_area) = %r' % sqrt_area)
+    print('[cc2] localeq     = %r' % localeq)
+    print('[cc2] maxcontr    = %r' % maxcontr)
+    print('[cc2] histeq      = %r' % histeq)
+    print('[cc2] grabcut     = %r' % grabcut)
+    print('[cc2] rankeq      = %r' % rankeq)
+    print('[cc2] region_norm = %r' % region_norm)
 
     # Full image path
     cx2_img_path = [img_dir+'/'+gx2_gname[gx] for gx in cx2_gx]
@@ -300,7 +300,7 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
 
     if grabcut:
         parallel_compute(compute_grabcut_chip, **pcc_kwargs)
-    if region_norm and histeq: 
+    elif region_norm and histeq: 
         parallel_compute(compute_reg_norm_and_histeq_chip, **pcc_kwargs)
     elif region_norm: 
         parallel_compute(compute_reg_norm_chip, **pcc_kwargs)
@@ -323,7 +323,7 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
 
     # --- RETURN CHIP PATHS --- #
 
-    print('Done Precomputing chips and loading chip paths')
+    print('[cc2] Done Precomputing chips and loading chip paths')
 
     # Build hotspotter path object
     hs_cpaths = HotspotterChipPaths()

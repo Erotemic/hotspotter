@@ -31,7 +31,7 @@ if sys.platform == 'linux2':
     WORK_DIR = '/media/Store/data/work'
 
 # Common databases I use
-FROGS     = WORK_DIR+'/FROG_tufts'
+FROGS     = WORK_DIR+'/Frogs'
 JAGUARS   = WORK_DIR+'/JAG_Jaguar_Data'
 NAUTS     = WORK_DIR+'/NAUT_Dan'
 GZ_ALL    = WORK_DIR+'/GZ_ALL'
@@ -164,13 +164,13 @@ def param_string():
 def get_chip_uid():
     isorig = (__CHIP_SQRT_AREA__ is None or __CHIP_SQRT_AREA__ <= 0)
     histeq = ['','_histeq'][__HISTEQ__]
-    histeq = ['','_grabcut'][__GRABCUT__]
+    grabcut = ['','_grabcut'][__GRABCUT__]
     myeq = ['','_regnorm'][__REGION_NORM__]
     rankeq = ['','_rankeq'][__RANK_EQ__]
     localeq = ['','_localeq'][__LOCAL_EQ__]
     maxcontrast = ['','_maxcont'][__MAXCONTRAST__]
     resize = ['_szorig', ('_sz%r' % __CHIP_SQRT_AREA__)][not isorig] 
-    chip_uid = resize + histeq + myeq + rankeq + localeq + maxcontrast
+    chip_uid = resize + grabcut + histeq + myeq + rankeq + localeq + maxcontrast
     return chip_uid
 
 def get_feat_uid():
@@ -190,7 +190,7 @@ def get_matcher_uid():
         matcher_uid += '_k%d' % __VSMANY_K__
     if __MATCH_TYPE__ == 'vsone':
         matcher_uid += '_rat'+str(__RATIO_THRESH__)
-    matcher_uid += '_'+TRAIN_SAMPLE_ID
+    matcher_uid += '_sID('+TRAIN_SAMPLE_ID+')'
     # depends on feat
     matcher_uid += get_feat_uid()
     return matcher_uid
@@ -252,8 +252,11 @@ def mothers_problem_pairs():
 
 
 if '--histeq' in sys.argv:
-    print(' * with histogram equalization')
+    print('[params] with histogram equalization')
     __HISTEQ__ = True
+if '--grabcut' in sys.argv:
+    __GRABCUT__ = True
+    print('[params] with grabcut')
 if '--regnorm' in sys.argv:
     __REGION_NORM__ = True
 if '--rankeq' in sys.argv:
@@ -267,7 +270,7 @@ if '--maxcont' in sys.argv:
 
 
 if '--whiten' in sys.argv or '--white' in sys.argv:
-    print(' * with whitening')
+    print('[params] with whitening')
     WHITEN_FEATS = True
 
 if '--vsone' in sys.argv:
@@ -298,11 +301,11 @@ if '--serial' in sys.argv:
 for argv in iter(sys.argv):
     argv_u =  argv.upper()
     if argv_u in dev_databases.keys():
-        print('\n'.join([' * Default Database set to:'+argv.upper(),
-                         ' * Previously: '+str(DEFAULT)]))
+        print('\n'.join(['[params] Default Database set to:'+argv.upper(),
+                         '[params] Previously: '+str(DEFAULT)]))
         DEFAULT = dev_databases[argv_u]
         if argv_u == 'OXFORD':
-            print('Overloading OXFORD parameters')
+            print('[params] Overloading OXFORD parameters')
             # dont resize oxford photos
             __CHIP_SQRT_AREA__ = None
             __BOW_NUM_WORDS__  = long(1e6)
@@ -356,6 +359,6 @@ def make_pref_object():
 
 
 if __name__ == '__main__':
-    print ('Entering param __main__')
-    print ('Param string: ')
-    print helpers.indent(param_string())
+    print('[params] __main__ = params.py')
+    print('[params] Param string: ')
+    print(helpers.indent(param_string()))

@@ -74,7 +74,7 @@ ext2_save_func = {
 
 def debug_smart_load(dpath='', fname='*', uid='*', ext='*'):
     pattern = fname+uid+ext
-    print('debug_smart_load> In directory: '+dpath)
+    print('[io] debug_smart_load(): dpath=%r' % (dpath))
     for fname_ in os.listdir(dpath):
         if fnmatch.fnmatch(fname_, pattern):
             fpath = join(dpath, fname_)
@@ -82,25 +82,37 @@ def debug_smart_load(dpath='', fname='*', uid='*', ext='*'):
 
 # --- Smart Load/Save ---
 #----
+def __args2_fpath(dpath, fname, uid, ext):
+    if len(ext) > 0 and ext[0] != '.':
+        raise Exception('Fatal Error: Please be explicit and use a dot in ext')
+    fpath = normpath(join(dpath, fname+uid+ext))
+    return fpath
+    
 def smart_save(data, dpath='', fname='', uid='', ext='',
                verbose=True):
     ''' Saves data to the direcotry speficied '''
-    fpath = normpath(join(dpath, fname+uid+ext))
+    fpath = __args2_fpath(dpath, fname, uid, ext)
     if verbose:
-        print('>')
-        print(('smart_save(dpath=%r,\n'+' '*11+'fname=%r, uid=%r, ext=%r)')\
+        print('[io]')
+        print(('[io] smart_save(dpath=%r,\n'+' '*11+'fname=%r, uid=%r, ext=%r)')\
               % (dpath, fname, uid, ext))
-    return __smart_save(data, fpath, verbose)
+    ret = __smart_save(data, fpath, verbose)
+    if verbose:
+        print('[io]')
+    return ret
 #----
 def smart_load(dpath='', fname='', uid='', ext='',
                verbose=True, **kwargs):
     ''' Loads data to the direcotry speficied '''
-    fpath = normpath(join(dpath, fname+uid+ext))
+    fpath = __args2_fpath(dpath, fname, uid, ext)
     if verbose:
-        print('>')
-        print(('smart_load(dpath=%r,\n'+' '*11+'fname=%r, uid=%r, ext=%r)')\
+        print('[io]')
+        print(('[io] smart_load(dpath=%r,\n'+' '*11+'fname=%r, uid=%r, ext=%r)')\
               % (dpath, fname, uid, ext))
-    return __smart_load(fpath, verbose, **kwargs)
+    data = __smart_load(fpath, verbose, **kwargs)
+    if verbose:
+        print('[io]')
+    return data
 #----
 #----
 def __smart_save(data, fpath, verbose):
@@ -109,14 +121,14 @@ def __smart_save(data, fpath, verbose):
     fname_noext, ext_ = os.path.splitext(fname)
     save_func = ext2_save_func[ext_]
     if verbose:
-        print(' * saving: %r' % (type(data),))
+        print('[io] saving: %r' % (type(data),))
     try: 
         save_func(fpath, data)
         if verbose:
-            print(' * saved %s ' % (filesize_str(fpath),))
+            print('[io] saved %s ' % (filesize_str(fpath),))
     except Exception as ex: 
-        print(' ! Exception will saving %r' % fpath)
-        print(repr(ex))
+        print('[io] ! Exception will saving %r' % fpath)
+        print(helpers.indent(repr(ex),'[io]    '))
         raise
 #----
 def __smart_load(fpath, verbose, allow_alternative=True, can_fail=False, **kwargs):
@@ -126,8 +138,9 @@ def __smart_load(fpath, verbose, allow_alternative=True, can_fail=False, **kwarg
     fname_noext, ext_ = os.path.splitext(fname)
     # If exact path doesnt exist
     if not exists(fpath):
-        print(' * fname=%r does not exist' % fname)
+        print('[io] fname=%r does not exist' % fname)
         if allow_alternative:
+            # allows alternative extension
             convert_alternative(fpath, verbose, can_fail=can_fail, **kwargs)
     # Ensure a valid extension
     if ext_ == '':
@@ -137,26 +150,26 @@ def __smart_load(fpath, verbose, allow_alternative=True, can_fail=False, **kwarg
         # Do actual data loading
         try: 
             if verbose:
-                print(' * loading '+filesize_str(fpath))
+                print('[io] loading '+filesize_str(fpath))
             data = load_func(fpath)
         except Exception as ex: 
-            print(' ! Exception will loading %r' % fpath)
-            print(repr(ex))
+            print('[io] ! Exception will loading %r' % fpath)
+            print('[io] caught ex=%r' % (ex,))
             data = None
             if not can_fail:
                 raise
-        print('... loaded data')
+        print('[io]... loaded data')
     if data is None:
-        print('... load failure %r' % fpath)
+        print('[io]... load failure %r' % fpath)
     return data
 #----
 
 # --- Util ---
 def convert_alternative(fpath, verbose, can_fail):
-    # check for an alternative (maybe old style) file
+    # check for an alternative (maybe old style or ext) file
     alternatives = find_alternatives(fpath, verbose)
     if len(alternatives) == 0:
-        fail_msg = '...no alternatives to %r' % fpath
+        fail_msg = '[io] ...no alternatives to %r' % fpath
         if verbose: print(fail_msg)
         if can_fail: return None
         else: raise IOError(fail_msg)
@@ -164,7 +177,7 @@ def convert_alternative(fpath, verbose, can_fail):
         #load and convert alternative
         alt_fpath = alternatives[0]
         if verbose:
-            print(' * ...converting %r' % alt_fpath)
+            print('[io] ...converting %r' % alt_fpath)
         data = __smart_load(alt_fpath, verbose, allow_alternative=False)
         __smart_save(data, fpath, verbose)
         return data
@@ -182,12 +195,12 @@ def find_alternatives(fpath, verbose):
             alternatives.append(alt_fpath)
     if verbose:
         # Print num alternatives / filesizes
-        print(' * Found %d alternate(s)' % len(alternatives))
+        print('[io] Found %d alternate(s)' % len(alternatives))
         for alt_fpath in iter(alternatives):
-            print(' * '+filesize_str(alt_fpath))
+            print('[io] '+filesize_str(alt_fpath))
     return alternatives
 
-def sanatize_fpath(fpath, ext=None):
+def sanatize_fpath(fpath, ext=None): #UNUSED!
     'Ensures a filepath has correct the extension'
     dpath, fname = os.path.split(fpath)
     fname_noext, ext_ = os.path.splitext(fname)
@@ -223,7 +236,7 @@ if __name__ == '__main__':
     data2 = np.random.rand(10000,10000).astype(np.float64)
     data3 = (255 * np.random.rand(10000,10000)).astype(np.int32)
 
-    print('Created arrays')
+    print('[io] Created arrays')
     save_npy.ext = '.npy'
     save_npz.ext = '.npz'
     save_cPkl.ext = '.cPkl'
@@ -244,8 +257,8 @@ if __name__ == '__main__':
 
     # Test Save
     for save_func in save_func_list:
-        print('Testing: '+save_func.__name__)
-        print(' withext: '+save_func.ext)
+        print('[io] Testing: '+save_func.__name__)
+        print('[io]  withext: '+save_func.ext)
         tt_total = helpers.tic(save_func.__name__)
 
         for fpath, data, in zip(fpath_list, data_list):

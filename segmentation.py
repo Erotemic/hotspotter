@@ -7,15 +7,22 @@ import algos
 import draw_func2 as df2
 import sys
 
+DEBUG_SEGM = False
+
+def printDBG(msg):
+    if DEBUG_SEGM:
+        print(msg)
+    pass
+
 def im(img, fignum=0):
     df2.imshow(img, fignum=fignum)
     df2.update()
 
 def resize_img_and_roi(img_fpath, roi_, new_size=None, sqrt_area=400.0):
-    printDBG('segmentation> imread(%r) ' % img_fpath)
+    printDBG('[segm] imread(%r) ' % img_fpath)
     full_img = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
     (full_h, full_w) = full_img.shape[:2]                 # Image Shape
-    printDBG('segmentation> full_img.shape=%r' % (full_img.shape,))
+    printDBG('[segm] full_img.shape=%r' % (full_img.shape,))
     (rw_, rh_) = roi_[2:]
     # Ensure that we know the new chip size
     if new_size is None:
@@ -30,9 +37,9 @@ def resize_img_and_roi(img_fpath, roi_, new_size=None, sqrt_area=400.0):
     # Get Scale Factors
     fx = new_size_[0] / rw_
     fy = new_size_[1] / rh_
-    print('segemntation> fx=%r fy=%r' % (fx, fy))
+    printDBG('[segm] fx=%r fy=%r' % (fx, fy))
     dsize = (int(round(fx*full_w)), int(round(fy*full_h)))
-    print('segemntation> dsize=%r' % (dsize,))
+    printDBG('[segm] dsize=%r' % (dsize,))
     # Resize the image
     img_resz = cv2.resize(full_img, dsize, interpolation=cv2.INTER_LANCZOS4)
     # Get new ROI in resized image
@@ -113,14 +120,10 @@ def test_clean_mask():
 # grabcut_mode = cv2.GC_INIT_WITH_RECT
 # cv2.GC_BGD, cv2.GC_PR_BGD, cv2.GC_PR_FGD, cv2.GC_FGD
 
-def printDBG(msg):
-    print(msg)
-    pass
-
 
 def segment(img_fpath, roi_, new_size=None):
     'Runs grabcut'
-    printDBG('segment(img_fpath=%r, roi=%r)>' % (img_fpath, roi_))
+    printDBG('[segm] segment(img_fpath=%r, roi=%r)>' % (img_fpath, roi_))
     num_iters = 5
     bgd_model = np.zeros((1,13*5),np.float64)
     fgd_model = np.zeros((1,13*5),np.float64)
@@ -142,7 +145,7 @@ def segment(img_fpath, roi_, new_size=None):
     _mask = np.zeros((img_h,img_w), dtype=np.uint8) # Initialize: mask
     _mask[y1:y2, x1:x2] = cv2.GC_PR_FGD             # Set ROI to cv2.GC_PR_FGD 
     # Grab Cut
-    tt = helpers.Timer(' * cv2.grabCut(img_resz)')
+    tt = helpers.Timer(' * cv2.grabCut()', verbose=DEBUG_SEGM)
     cv2.grabCut(img_resz, _mask, rect, bgd_model, fgd_model, num_iters, mode=mode) 
     tt.toc()
     img_mask = np.where((_mask==cv2.GC_FGD) + (_mask==cv2.GC_PR_FGD),255,0).astype('uint8')
@@ -192,7 +195,7 @@ def test2(chip, chip_mask):
 
 
 if __name__ == '__main__':
-    print('segmentation> __main__')
+    print('[segm] __main__')
     df2.reset()
     if len(sys.argv) > 1: 
         cx = int(sys.argv[1])

@@ -389,7 +389,7 @@ def build_rankres_str(allres):
 def __dump_text_report(allres, report_type):
     if not 'report_type' in vars():
         report_type = 'rankres_str'
-    print('report_results> Dumping textfile: '+report_type)
+    print('[rr2] Dumping textfile: '+report_type)
     report_str = allres.__dict__[report_type]
     # Get directories
     result_dir    = allres.hs.dirs.result_dir
@@ -424,14 +424,14 @@ def dump_orgres_matches(allres, orgres_type):
 
 def __dump_or_browse(allres, subdir=None):
     if __DUMP__:
-        print('report_results> Dumping Image')
+        print('[rr2] Dumping Image')
         fpath = allres.hs.dirs.result_dir
         if not subdir is None: 
             fpath = join(fpath, subdir)
             helpers.ensurepath(fpath)
         df2.save_figure(fpath=fpath, usetitle=True)
     else: # __BROWSE__
-        print('report_results> Browsing Image')
+        print('[rr2] Browsing Image')
         df2.show()
     df2.reset()
 
@@ -481,7 +481,7 @@ def dump_all(allres,
              oxford=False):
 
     print('\n======================')
-    print('rr2> DUMP ALL')
+    print('[rr2] DUMP ALL')
     print('======================')
     viz.BROWSE = False
     viz.DUMP = True
@@ -757,7 +757,7 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     # Params
-    print('__main__ = report_results2.py')
+    print('[rr2] __main__ = report_results2.py')
 
     if '--list' in sys.argv:
         print_result_summaries_list()
@@ -779,9 +779,6 @@ if __name__ == '__main__':
     oxford = ld2.DEFAULT == ld2.OXFORD
     allres = init_allres(hs, qcx2_res, SV, oxford=oxford, matrix=REPORT_MATRIX)
     greater5_cxs = allres.greater5_cxs
-
-    if 'vrd' in sys.argv:
-        hs.vrd()
 
     #Helper drawing functions
     gt_matches = lambda cx: viz.plot_cx(allres, cx, 'gt_matches')

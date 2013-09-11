@@ -17,7 +17,7 @@ def _calculate(func, args):
     #arg_names = func.func_code.co_varnames[:func.func_code.co_argcount]
     #arg_list  = [n+'='+str(v) for n,v in iter(zip(arg_names, args))]
     #arg_str = '\n    *** '+str('\n    *** '.join(arg_list))
-    #print('  * %s finished:\n    ** %s%s' % \
+    #print('[parallel]  * %s finished:\n    ** %s%s' % \
             #(mp.current_process().name,
              #func.__name__,
              #arg_str))
@@ -38,13 +38,13 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True):
     else:
         task_list = make_task_list(func, *arg_list)
     if len(task_list) == 0:
-        print('... No '+func.func_name+' tasks left to compute!')
+        print('[parallel] ... No '+func.func_name+' tasks left to compute!')
         return None
     if num_procs > 1:
-        msg = 'Distributing %d %s tasks to %d parallel processes' % \
+        msg = '[parallel] Distributing %d %s tasks to %d parallel processes' % \
                 (len(task_list), func.func_name, num_procs)
     else: 
-        msg = 'Executing %d %s tasks in serial' % \
+        msg = '[parallel] Executing %d %s tasks in serial' % \
                 (len(task_list), func.func_name)
     return parallelize_tasks(task_list, num_procs, msg=msg)
 
@@ -59,7 +59,7 @@ def make_task_list_lazy(func, *args):
             lazy_skips += 1
         else:
             task_list.append((func, _args))
-    print('Already computed '+str(lazy_skips)+' '+func.func_name+' tasks')
+    print('[parallel] Already computed '+str(lazy_skips)+' '+func.func_name+' tasks')
     return task_list
 def make_task_list(func, *args):
     arg_iterator = iter(zip(*args))
@@ -74,17 +74,17 @@ def parallelize_tasks(task_list, num_procs, msg=''):
     with Timer(msg=msg) as t:
         if num_procs > 1:
             if False:
-                print('  * Computing in parallel process')
+                print('[parallel] Computing in parallel process')
             return _parallelize_tasks(task_list, num_procs, False)
         else:
             result_list = []
             if False: 
-                print('Computing in serial process')
+                print('[parallel] Computing in serial process')
             total = len(task_list)
             sys.stdout.write('    ')
             for count, (fn, args) in enumerate(task_list):
                 if False:
-                    print('  * computing %d / %d ' % (count, total))
+                    print('[parallel] computing %d / %d ' % (count, total))
                 else: 
                     sys.stdout.write('.')
                     if (count+1) % 80 == 0:
@@ -102,7 +102,7 @@ def _parallelize_tasks(task_list, num_procs, verbose):
     task_queue = mp.Queue()
     done_queue = mp.Queue()
     if verbose: 
-        print('  * Submiting '+str(len(task_list))+' tasks:')
+        print('[parallel] Submiting '+str(len(task_list))+' tasks:')
     # queue tasks
     for task in iter(task_list):
         task_queue.put(task)
@@ -111,7 +111,7 @@ def _parallelize_tasks(task_list, num_procs, verbose):
         mp.Process(target=_worker, args=(task_queue, done_queue)).start()
     # Get and print results
     if verbose:
-        print('  * Unordered results:')
+        print('[parallel] Unordered results:')
         for i in xrange(len(task_list)):
             print(done_queue.get())
     else:
@@ -123,7 +123,7 @@ def _parallelize_tasks(task_list, num_procs, verbose):
             if (i+1) % num_procs == 0: sys.stdout.write(' ')
             if (i+1) % newln_len == 0: sys.stdout.write('\n    ')
             sys.stdout.flush()
-        print('\n  ... done')
+        print('\n[parallel]  ... done')
     # Tell child processes to stop
     for i in xrange(num_procs):
         task_queue.put('STOP')

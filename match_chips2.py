@@ -89,9 +89,9 @@ class QueryResult(DynStruct):
         # Forget non spatial scores
         fpath = self.get_fpath(hs)
         if params.VERBOSE_CACHE:
-            print('caching result: '+repr(fpath))
+            print('[mc2] caching result: '+repr(fpath))
         else:
-            print('caching result: '+repr(os.path.split(fpath)[1]))
+            print('[mc2] caching result: '+repr(os.path.split(fpath)[1]))
         return self.save_result(fpath)
 
     def has_cache(self, hs):
@@ -143,7 +143,7 @@ class QueryResult(DynStruct):
         top5_cxs = top_cxs[0:num_top]
         return top5_cxs
     #def __del__(self):
-        #print("Deleting Query Result")
+        #print('[mc2] Deleting Query Result')
 
 
 #========================================
@@ -158,10 +158,10 @@ def load_cached_matches(hs):
     # Read cached queries
     #--------------------
     total_queries = len(test_sample_cx)
-    print('mc2> Total queries: %d' % total_queries)
+    print('[mc2] Total queries: %d' % total_queries)
     dirty_test_sample_cx = []
     clean_test_sample_cx = []
-    fmt_str_filter = helpers.make_progress_fmt_str(total_queries, lbl='mc2> check cache: ')
+    fmt_str_filter = helpers.make_progress_fmt_str(total_queries, lbl='[mc2] check cache: ')
     
     # Filter queries into dirty and clean sets
     for count, qcx in enumerate(test_sample_cx):
@@ -171,16 +171,16 @@ def load_cached_matches(hs):
         else:
             dirty_test_sample_cx.append(qcx)
     print('')
-    print('mc2> Num clean queries: %d ' % len(clean_test_sample_cx))
-    print('mc2> Num dirty queries: %d ' % len(dirty_test_sample_cx))
+    print('[mc2] Num clean queries: %d ' % len(clean_test_sample_cx))
+    print('[mc2] Num dirty queries: %d ' % len(dirty_test_sample_cx))
     # Check how much data we are going to load
     num_bytes = 0
     for qcx in iter(clean_test_sample_cx):
         num_bytes += qcx2_res[qcx].cache_bytes(hs)
-    print('mc2> Loading %dMB cached results' % (num_bytes / (2.0 ** 20)))
+    print('[mc2] Loading %dMB cached results' % (num_bytes / (2.0 ** 20)))
     # Load clean queries from the cache
     fmt_str_load = helpers.make_progress_fmt_str(len(clean_test_sample_cx),
-                                                 lbl='mc2> load cache: ')
+                                                 lbl='[mc2] load cache: ')
     for count, qcx in enumerate(clean_test_sample_cx):
         print_(fmt_str_load % (count+1))
         qcx2_res[qcx].load(hs)
@@ -192,7 +192,7 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None):
     '''Runs the full matching pipeline using the abstracted classes'''
     print(textwrap.dedent('''
     =============================
-    mc2> Running Matching
+    [mc2] Running Matching
     ============================='''))
     # Parameters
     #reverify_query       = params.REVERIFY_QUERY
@@ -202,7 +202,7 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None):
     if qcx2_res is None:
         qcx2_res, dirty_test_sample_cx = load_cached_matches(hs)
     if len(dirty_test_sample_cx) == 0:
-        print('No dirty queries')
+        print('[mc2] No dirty queries')
         return qcx2_res
     #--------------------
     # Execute dirty queries
@@ -211,28 +211,28 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None):
     cx2_desc = hs.feats.cx2_desc
     cx2_kpts = hs.feats.cx2_kpts 
     total_dirty = len(dirty_test_sample_cx)
-    print('mc2>Executing %d queries' % total_dirty)
+    print('[mc2] Executing %d queries' % total_dirty)
     for query_num, qcx in enumerate(dirty_test_sample_cx):
         res = qcx2_res[qcx]
         #
         # Assign matches with the chosen function (vsone) or (vsmany)
         num_qdesc = len(cx2_desc[qcx])
-        print('query %d/%d>---------------' % (qcx, total_dirty))
-        print('query %d/%d> assign %d desc' % (qcx, total_dirty, num_qdesc))
-        tt1 = tic()
+        print('[mc2] query(%d/%d)---------------' % (qcx, total_dirty))
+        print('[mc2] query(%d/%d) assign %d desc' % (qcx, total_dirty, num_qdesc))
+        tt1 = helpers.Timer(verbose=False)
         assign_output = assign_matches(qcx, cx2_desc)
         (cx2_fm, cx2_fs, cx2_score) = assign_output
-        assign_time = toc(tt1)
+        assign_time = tt1.toc()
         #
         # Spatially verify the assigned matches
         num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
-        print('query %d/%d> verify %d assigned matches' % (qcx, total_dirty, num_assigned))
-        tt2 = tic()
+        print('[mc2] query(%d/%d) verify %d assigned matches' % (qcx, total_dirty, num_assigned))
+        tt2 = helpers.Timer(verbose=False)
         sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
         (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
         num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
-        print('query %d/%d> verified %d matches' % (qcx, total_dirty, num_verified))
-        verify_time = toc(tt2)
+        print('[mc2] query(%d/%d) verified %d matches' % (qcx, total_dirty, num_verified))
+        verify_time = tt2.toc()
         print('...assigned: %.2f seconds' % (assign_time))
         print('...verified: %.2f seconds' % (verify_time))
         #
@@ -259,7 +259,7 @@ class BagOfWordsIndex(DynStruct):
         self.wx2_cxs     = wx2_cxs
         self.wx2_fxs     = wx2_fxs
     def __del__(self):
-        print("Deleting BagOfWordsIndex")
+        print('[mc2] Deleting BagOfWordsIndex')
         self.words_flann.delete_index()
 
 # precompute the bag of words model
@@ -268,7 +268,7 @@ def precompute_bag_of_words(hs):
     Creates an indexed database with database_sample_cx'''
     print(textwrap.dedent('''
     =============================
-    mc2> Precompute Bag-of-Words
+    [mc2] Precompute Bag-of-Words
     ============================='''))
     # Unwrap parameters
     cache_dir  = hs.dirs.cache_dir
@@ -281,14 +281,14 @@ def precompute_bag_of_words(hs):
     # Compute vocabulary
     print(textwrap.dedent('''
     -----------------------------
-    precompute_bow 1/2: Build visual vocabulary with %d words
+    [mc2] precompute_bow(1/2): Build visual vocabulary with %d words
     -----------------------------''' % (vocab_size)))
     _comp_vocab_args   = (cx2_desc, train_cxs, vocab_size, cache_dir)
     words, words_flann = __compute_vocabulary(*_comp_vocab_args)
     # Assign visual vectors to the database
     print(textwrap.dedent('''
     -----------------------------
-    precompute_bow 2/2: Index database with visual vocabulary
+    [mc2] precompute_bow(2/2): Index database with visual vocabulary
     -----------------------------'''))
     _index_vocab_args = (cx2_desc, words, words_flann, db_cxs, cache_dir)
     _index_vocab_ret  = __index_database_to_vocabulary(*_index_vocab_args)
@@ -310,17 +310,18 @@ def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
     train_desc = np.vstack(tx2_desc)
     num_train_desc = train_desc.shape[0]
     if vocab_size > num_train_desc:
-        msg = 'vocab_size(%r) > #train_desc(%r)' % (vocab_size, num_train_desc)
+        msg = '[mc2] vocab_size(%r) > #train_desc(%r)' % (vocab_size, num_train_desc)
         helpers.printWARN(msg)
         vocab_size = num_train_desc / 2
     # Cluster descriptors into a visual vocabulary
     matcher_uid = params.get_matcher_uid()
+    words_uid   = 'words_'+matcher_uid
     _, words = algos.precompute_akmeans(train_desc, vocab_size, max_iters,
                                         akm_flann_params, cache_dir,
                                         force_recomp=False, same_data=False,
-                                        uid='words_'+matcher_uid)
+                                        uid=words_uid)
     # Index the vocabulary for fast nearest neighbor search
-    words_flann = algos.precompute_flann(words, cache_dir, uid='words_'+matcher_uid,
+    words_flann = algos.precompute_flann(words, cache_dir, uid=words_uid,
                                          flann_params=words_flann_params)
     return words, words_flann
 
@@ -329,38 +330,46 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, db_cxs, cache_d
     '''Assigns each database chip a visual-vector and returns 
        data for the inverted file'''
     # TODO: Save precomputations here
-    print(' * Assigning each database chip a bag-of-words vector')
+    print('[mc2] Assigning each database chip a bag-of-words vector')
     num_database = len(db_cxs)
     ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, db_cxs)
-    matcher_uid = params.get_matcher_uid()
+    # Build UID
+    matcher_uid  = params.get_matcher_uid()
+    data_uid = helpers.hashstr(ax2_desc)
+    uid = data_uid + '_' + matcher_uid
     try: 
-        cx2_vvec = helpers.load_cache_npz(ax2_desc, 'cx2_vvec'+matcher_uid, cache_dir, is_sparse=True)
-        wx2_cxs  = helpers.load_cache_npz(ax2_desc, 'wx2_cxs'+matcher_uid, cache_dir)
-        wx2_fxs  = helpers.load_cache_npz(ax2_desc, 'wx2_fxs'+matcher_uid, cache_dir)
-        wx2_idf  = helpers.load_cache_npz(ax2_desc, 'wx2_idf'+matcher_uid, cache_dir)
-        print(' * successful cache load: vocabulary indexed databased.')
+        #cx2_vvec = helpers.load_cache_npz(ax2_desc, 'cx2_vvec'+matcher_uid, cache_dir, is_sparse=True)
+        #wx2_cxs  = helpers.load_cache_npz(ax2_desc, 'wx2_cxs'+matcher_uid, cache_dir)
+        #wx2_fxs  = helpers.load_cache_npz(ax2_desc, 'wx2_fxs'+matcher_uid, cache_dir)
+        #wx2_idf  = helpers.load_cache_npz(ax2_desc, 'wx2_idf'+matcher_uid, cache_dir)
+        cx2_vvec = io.smart_load(cache_dir, 'cx2_vvec', uid, '.cPkl') #sparse
+        wx2_cxs  = io.smart_load(cache_dir, 'wx2_cxs',  uid, '.npy')
+        wx2_fxs  = io.smart_load(cache_dir, 'wx2_fxs',  uid, '.npy')
+        wx2_idf  = io.smart_load(cache_dir, 'wx2_idf',  uid, '.npy')
+        print('[mc2] successful cache load: vocabulary indexed databased.')
         return cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf
-    except helpers.CacheException as ex:
+    #helpers.CacheException as ex:
+    except IOError as ex:
         print(repr(ex))
 
-    print(' * quantizing each descriptor to a word')
+    print('[mc2] quantizing each descriptor to a word')
     # Assign each descriptor to its nearest visual word
-    print('...this may take awhile with no indication of progress')
-    tic1 = helpers.tic('quantizing each descriptor to a word')
+    print('[mc2] ...this may take awhile with no indication of progress')
+    tt1 = helpers.Timer('quantizing each descriptor to a word')
     ax2_wx, _ = words_flann.nn_index(ax2_desc, 1, checks=128)
-    helpers.toc(tic1)
+    tt1.toc()
     # Build inverse word to ax
-    tic2 = helpers.tic('finsh database indexing')
-    print(' * building inverse word to ax map')
+    tt2 = helpers.Timer('database_indexing')
+    print('[mc2] building inverse word to ax map')
     wx2_axs = [[] for _ in xrange(len(words))]
     for ax, wx in enumerate(ax2_wx):
         wx2_axs[wx].append(ax)
     # Compute inverted file: words -> database
-    print(' * building inverted file word -> database')
+    print('[mc2] building inverted file word -> database')
     wx2_cxs = np.array([[ax2_cx[ax] for ax in ax_list] for ax_list in wx2_axs])
     wx2_fxs = np.array([[ax2_fx[ax] for ax in ax_list] for ax_list in wx2_axs])
     # Build sparse visual vectors with term frequency weights 
-    print(' * building sparse visual words')
+    print('[mc2] building sparse visual words')
     coo_cols = ax2_wx  
     coo_rows = ax2_cx
     coo_values = np.ones(len(ax2_cx), dtype=BOW_DTYPE)
@@ -368,28 +377,32 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, db_cxs, cache_d
     coo_cx2_vvec = spsparse.coo_matrix(coo_format, dtype=np.float, copy=True)
     cx2_tf_vvec  = spsparse.csr_matrix(coo_cx2_vvec, copy=False)
     # Compute idf_w = log(Number of documents / Number of docs containing word_j)
-    print(' * computing tf-idf')
+    print('[mc2] computing tf-idf')
     wx2_df  = np.array([len(set(cxs))+1 for cxs in wx2_cxs], dtype=np.float)
     wx2_idf = np.array(np.log2(np.float(num_database) / wx2_df))
     # Compute tf-idf
-    print(' * preweighting with tf-idf')
+    print('[mc2] preweighting with tf-idf')
     cx2_tfidf_vvec = algos.sparse_multiply_rows(cx2_tf_vvec, wx2_idf)
     # Normalize
-    print(' * normalizing')
+    print('[mc2] normalizing')
     cx2_tfidf_vvec = algos.sparse_multiply_rows(cx2_tf_vvec, wx2_idf)
     cx2_vvec = algos.sparse_normalize_rows(cx2_tfidf_vvec)
-    helpers.toc(tic2)
+    tt2.toc()
     # Save to cache
-    print(' * saving to cache')
+    print('[mc2] saving to cache')
     r'''
     input_data = ax2_desc
     data = cx2_vvec
     uid='cx2_vvec'+matcher_uid
     '''
-    helpers.save_cache_npz(ax2_desc, cx2_vvec, 'cx2_vvec'+matcher_uid, cache_dir, is_sparse=True)
-    helpers.save_cache_npz(ax2_desc, wx2_cxs, 'wx2_cxs'+matcher_uid, cache_dir)
-    helpers.save_cache_npz(ax2_desc, wx2_fxs, 'wx2_fxs'+matcher_uid, cache_dir)
-    helpers.save_cache_npz(ax2_desc, wx2_idf, 'wx2_idf'+matcher_uid, cache_dir)
+    io.smart_save(cx2_vvec, cache_dir, 'cx2_vvec', uid, '.cPkl') #sparse
+    io.smart_save(wx2_cxs,  cache_dir, 'wx2_cxs',  uid, '.npy')
+    io.smart_save(wx2_fxs,  cache_dir, 'wx2_fxs',  uid, '.npy')
+    io.smart_save(wx2_idf,  cache_dir, 'wx2_idf',  uid, '.npy')
+    #helpers.save_cache_npz(ax2_desc, cx2_vvec, 'cx2_vvec'+matcher_uid, cache_dir, is_sparse=True)
+    #helpers.save_cache_npz(ax2_desc, wx2_cxs, 'wx2_cxs'+matcher_uid, cache_dir)
+    #helpers.save_cache_npz(ax2_desc, wx2_fxs, 'wx2_fxs'+matcher_uid, cache_dir)
+    #helpers.save_cache_npz(ax2_desc, wx2_idf, 'wx2_idf'+matcher_uid, cache_dir)
     return cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf
 
 def __quantize_desc_to_tfidf_vvec(desc, wx2_idf, words, words_flann):
@@ -458,7 +471,7 @@ class VsManyIndex(DynStruct): # TODO: rename this
         self.ax2_cx = ax2_cx
         self.ax2_fx = ax2_fx
     def __del__(self):
-        print("Deleting VsManyIndex")
+        print('[mc2] Deleting VsManyIndex')
 
 def __aggregate_descriptors(cx2_desc, db_cxs):
     '''Aggregates a sample set of descriptors. 
@@ -478,7 +491,7 @@ def __aggregate_descriptors(cx2_desc, db_cxs):
 
 def aggregate_descriptors_vsmany(hs):
     '''aggregates all descriptors for vsmany search'''
-    print('Aggregating descriptors for one-vs-many')
+    print('[mc2] Aggregating descriptors for one-vs-many')
     cx2_desc  = hs.feats.cx2_desc
     db_cxs    = hs.database_sample_cx
     db_cxs    = range(hs.num_cx) if db_cxs is None else db_cxs
@@ -488,7 +501,7 @@ def aggregate_descriptors_vsmany(hs):
 def precompute_index_vsmany(hs):
     print(textwrap.dedent('''
     =============================
-    Building one-vs-many index
+    [mc2] Building one-vs-many index
     ============================='''))
     # Build (or reload) one vs many flann index
     cache_dir  = hs.dirs.cache_dir
@@ -567,7 +580,7 @@ def assign_matches_vsmany_BINARY(qcx, cx2_desc):
 # One-vs-One 
 #========================================
 def assign_matches_vsone(qcx, cx2_desc):
-    #print('Assigning vsone feature matches from cx=%d to %d chips'\ % (qcx, len(cx2_desc)))
+    #print('[mc2] Assigning vsone feature matches from cx=%d to %d chips'\ % (qcx, len(cx2_desc)))
     desc1 = cx2_desc[qcx]
     vsone_flann = pyflann.FLANN()
     vsone_flann_params =  params.VSONE_FLANN_PARAMS
@@ -679,7 +692,7 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
         if len(fm_V) == 0 and __OVERRIDE__:
             bad_consecutive_reranks += 1
             if bad_consecutive_reranks > max_bad_consecutive_reranks:
-                print(' * Too many bad consecutive spatial verifications')
+                print('[mc2] Too many bad consecutive spatial verifications')
                 break
         else: 
             bad_consecutive_reranks = 0
@@ -694,7 +707,7 @@ class Matcher(DynStruct):
        matching and feature prefs'''
     def __init__(self, hs, match_type):
         super(Matcher, self).__init__()
-        print('Creating matcher: '+str(match_type))
+        print('[mc2] Creating matcher: '+str(match_type))
         self.feat_type  = hs.feats.feat_type
         self.match_type = match_type
         # Possible indexing structures
@@ -703,11 +716,11 @@ class Matcher(DynStruct):
         # Curry the correct functions
         self.__assign_matches = None
         if match_type == 'bagofwords':
-            print(' precomputing bag of words')
+            print('[mc2] precomputing bag of words')
             self.__bow_index   = precompute_bag_of_words(hs)
             self.__assign_matches = self.__assign_matches_bagofwords
         elif match_type == 'vsmany':
-            print(' precomputing one vs many')
+            print('[mc2] precomputing one vs many')
             self.__vsmany_index = precompute_index_vsmany(hs)
             self.__assign_matches = self.__assign_matches_vsmany
         elif match_type == 'vsone':
@@ -716,7 +729,7 @@ class Matcher(DynStruct):
             raise Exception('Unknown match_type: '+repr(match_type))
 
     def __del__(self):
-        print("Deleting Matcher")
+        print('[mc2] Deleting Matcher')
 
     def assign_matches(self, qcx, cx2_desc):
         'Function which calls the correct matcher'
@@ -733,7 +746,7 @@ class Matcher(DynStruct):
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
-    print('IN: match_chips2.py: __name__ == '+__name__)
+    print('[mc2] __main__ = match_chips2.py')
 
     db_dir = load_data2.DEFAULT
     hs = load_data2.HotSpotter(db_dir)
@@ -746,7 +759,7 @@ if __name__ == '__main__':
         cx2_kpts = hs.feats.cx2_kpts
         cx2_desc = hs.feats.cx2_desc
         qcx = 1
-        print('DEVMODE IS ON: match_chips2')
+        print('[mc2] DEVMODE IS ON')
         # Convinent but bad # 
         #exec(hs_cpaths.execstr('hs_cpaths'))
         #exec(hs_feats.execstr('hs_feats'))

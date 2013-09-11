@@ -206,8 +206,8 @@ def __akmeans_iterate(data,
     num_data = data.shape[0]
     num_clusters = clusters.shape[0]
     xx2_unchanged = np.zeros(ave_unchanged_window, dtype=np.int32) + len(data)
-    print('algos> Starting iterations:')
-    print('algos> Printing akmeans info in format: time (iterx, mean(#switched), #unchanged)')
+    print('[algos] Starting iterations:')
+    print('[algos] Printing akmeans info in format: time (iterx, mean(#switched), #unchanged)')
     for xx in xrange(0, max_iters): 
         # 1) Find each datapoints nearest cluster center
         tt = helpers.tic()
@@ -250,15 +250,12 @@ def __akmeans_iterate(data,
             datax2_clusterx_old = datax2_clusterx
             if xx % 5 == 0: 
                 sys.stdout.flush()
-    print('algos>  * AKMEANS: converged in %d/%d iters' % (xx+1, max_iters))
+    print('[algos]  * AKMEANS: converged in %d/%d iters' % (xx+1, max_iters))
     sys.stdout.flush()
     return (datax2_clusterx, clusters)
 
 #@profile
-def akmeans(data,
-            num_clusters, 
-            max_iters=100,
-            flann_params=None,
+def akmeans(data, num_clusters, max_iters=100, flann_params=None,
             ave_unchanged_thresh=30,
             ave_unchanged_window=None):
     '''Approximiate K-Means (using FLANN)
@@ -270,9 +267,9 @@ def akmeans(data,
     Repeat until convergence.'''
     if ave_unchanged_window is None:
         ave_unchanged_window = int(len(data) / 500)
-    print('algos> Running akmeans: data.shape=%r ; num_clusters=%r' % (data.shape, num_clusters))
+    print('[algos] Running akmeans: data.shape=%r ; num_clusters=%r' % (data.shape, num_clusters))
     #print('  * dtype = %r ' % params.__BOW_DTYPE__)
-    print('algos> * will converge when average #cluster switches < %r over a window of %r iterations' % \
+    print('[algos] * will converge when average #cluster switches < %r over a window of %r iterations' % \
           (ave_unchanged_thresh, ave_unchanged_window))
     # Setup iterations
     #data   = np.array(data, params.__BOW_DTYPE__) 
@@ -306,12 +303,12 @@ def scale_to_byte(data):
 
 def plot_clusters(data, datax2_clusterx, clusters):
     # http://www.janeriksolem.net/2012/03/isomap-with-scikit-learn.html
-    print('algos> Doing PCA')
+    print('[algos] Doing PCA')
     num_pca_dims = min(3, data.shape[1])
     pca = sklearn.decomposition.PCA(copy=True, n_components=num_pca_dims, whiten=False).fit(data)
     pca_data = pca.transform(data)
     pca_clusters = pca.transform(clusters)
-    print('algos> ...Finished PCA')
+    print('[algos] ...Finished PCA')
 
     fig = plt.figure(1)
     fig.clf()
@@ -369,65 +366,70 @@ def force_quit_akmeans(signal, frame):
         print(repr(ex))
         exec(helpers.IPYTHON_EMBED_STR)
 
-def precompute_akmeans(data, num_clusters, max_iters=100, flann_params=None,
-                       cache_dir=None, force_recomp=False,
-                       same_data=True, uid=''):
+def precompute_akmeans(data, num_clusters, max_iters=100,
+                       flann_params=None,  cache_dir=None,
+                       force_recomp=False, same_data=True, uid=''):
     'precompute aproximate kmeans'
-    hashstr = str(data.shape).replace(' ','')+helpers.hashstr(data)
+    print('[algos] precompute_akmeans(): enter')
     if same_data:
-        fname = 'precomp_akmeans_'+uid+'_k%d_%s.npz' % (num_clusters, hashstr)
-    else:
-        fname = 'precomp_akmeans_'+uid+'_k%d.npz' % num_clusters
-    fpath = realpath(fname) if cache_dir is None else join(cache_dir, fname)
-    if force_recomp:
-        helpers.remove_file(fpath)
-    helpers.checkpath(fpath)
-    try: 
-        (datax2_clusterx, clusters) = helpers.load_npz(fpath)
-        print('algos> ... load success.')
+        data_hash = helpers.hashstr(data,)
+        data_shape = str(data.shape).replace(' ','')
+        data_uid = 'dID('+data_shape+data_hash+')'
+        uid += data_uid
+    clusters_fname = 'akmeans_clusters'
+    datax2cl_fname = 'akmeans_datax2cl'
+    try:
+        clusters        = io.smart_load(cache_dir, clusters_fname, uid, '.npy')
+        datax2_clusterx = io.smart_load(cache_dir, datax2cl_fname, uid, '.npy')
+        print('[algos] precompute_akmeans(): ... loaded akmeans.')
     except Exception as ex:
-        print('algos> %r ' % (ex,))
-        print('algos> fpath=%r' % (fpath,))
-        print('contents: %s' % ('\n  '.join(os.listdir(os.path.dirname(fpath))),))
-
-        print('algos> ... load failed. Running akmeans with manual stopping')
-        print('algos> Press Ctrl+C to stop k-means early (and save)')
-        # set ctrl+c behavior to early stop clustering
-        #signal.signal(signal.SIGINT, force_quit_akmeans)
+        print('[algos] precompute_akmeans(): ... could not load akmeans.')
+        errstr = helpers.indent(repr(ex), '[algos]    ')
+        print('[algos] precompute_akmeans(): ... caught ex:\n %s ' % errstr)
+        print('[algos] precompute_akmeans(): printing debug_smart_load')
+        io.debug_smart_load(cache_dir, clusters_fname)
+        io.debug_smart_load(cache_dir, datax2cl_fname)
+        print('[algos] Press Ctrl+C to stop k-means early (and save)')
+        signal.signal(signal.SIGINT, force_quit_akmeans) # set ctrl+c behavior
+        print('[algos] precompute_akmeans(): calling akmeans')
         (datax2_clusterx, clusters) = akmeans(data, num_clusters, max_iters, flann_params)
-        print('algos> Removing Ctrl+C signal handler')
-        helpers.save_npz(fpath, datax2_clusterx, clusters)
-        #signal.signal(signal.SIGINT, signal.SIG_DFL) # reset ctrl+c behavior
+        print('[algos] precompute_akmeans(): finished running akmeans')
+        io.smart_save(clusters,        cache_dir, clusters_fname, uid, '.npy')
+        io.smart_save(datax2_clusterx, cache_dir, datax2cl_fname, uid, '.npy')
+        print('[algos] Removing Ctrl+C signal handler')
+        signal.signal(signal.SIGINT, signal.SIG_DFL) # reset ctrl+c behavior
+    print('[algos] precompute_akmeans(): return')
     return (datax2_clusterx, clusters)
 
 def precompute_flann(data, cache_dir=None, uid='', flann_params=None):
     ''' Tries to load a cached flann index before doing anything'''
-    print('algos> Precomputing flann index: '+uid)
+    print('[algos] precompute_flann(%r): ' % uid)
     cache_dir = '.' if cache_dir is None else cache_dir
     # Generate a unique filename for data and flann parameters
     fparams_uid = helpers.remove_chars(str(flann_params.values()), ', \'[]')
-    hashstr     = helpers.hashstr(data)
-    shape_uid   = helpers.remove_chars(str(data.shape), ' ')
-    flann_suffix = '_' + fparams_uid + '_' + hashstr + shape_uid + '.flann'
+    data_hash    = helpers.hashstr(data) # flann is dependent on the data
+    data_shape   = helpers.remove_chars(str(data.shape), ' ')
+    flann_suffix = '_' + fparams_uid + '_dID(' + data_shape + data_hash + ').flann'
     # Append any user labels
-    flann_fname = 'flann_index' + uid + flann_suffix
+    flann_fname = 'flann_index' + flann_suffix + uid 
     flann_fpath = os.path.normpath(join(cache_dir, flann_fname))
     # Load the index if it exists
     flann = pyflann.FLANN()
     load_success = False
     if helpers.checkpath(flann_fpath):
         try:
-            print('algos> Trying to load FLANN index: '+os.path.split(flann_fpath)[1])
+            print('[algos] precompute_flann(): trying to load: %r ' % flann_fname)
             flann.load_index(flann_fpath, data)
-            print('...success')
+            print('[algos]...success')
             load_success = True
         except Exception as ex:
-            print('algos> ...cannot load FLANN index'+repr(ex))
+            print('[algos] precompute_flann(): ...cannot load index')
+            print('[algos] precompute_flann(): ...caught ex=\n%r' % (ex,))
     if not load_success:
         # Rebuild the index otherwise
-        with helpers.Timer(msg='rebuilding FLANN index'):
+        with helpers.Timer(msg='build FLANN'):
             flann.build_index(data, **flann_params)
-        print('algos> Saving FLANN index to: '+os.path.split(flann_fpath)[1])
+        print('[algos] precompute_flann(): save_index(%r)' % flann_fname)
         flann.save_index(flann_fpath)
     return flann
 

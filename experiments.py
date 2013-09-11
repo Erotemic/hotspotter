@@ -93,13 +93,13 @@ def oxford_philbin07(hs=None):
     if len(dirty_test_sample_cx) > 0:
         if hs.matcher is None:
             # Well, if we can't use the cache
-            print('expt> LAZY LOADING FEATURES AND MATCHER')
-            print(' There are %d dirty queries' % len(dirty_test_sample_cx))
+            print('[expt] LAZY LOADING FEATURES AND MATCHER')
+            print('[expt] There are %d dirty queries' % len(dirty_test_sample_cx))
             hs.load_chips()
             hs.load_features()
             hs.split_test_train_at(55)
             hs.load_matcher()
-            #print('expts> Database shape: '+str(np.vstack(hs.feats.cx2_desc[db_sample_cx]).shape))
+            #print('[expt] Database shape: '+str(np.vstack(hs.feats.cx2_desc[db_sample_cx]).shape))
         qcx2_res = mc2.run_matching(hs, qcx2_res, dirty_test_sample_cx)
     allres = rr2.report_all(hs, qcx2_res, oxford=True)
     return locals()
@@ -153,7 +153,7 @@ def tweak_params(expt_func=None):
         print('**********************************************************')
         print('**********************************************************')
         print('========================')
-        print('expt.tweak_params(%d/%d)> param tweak %r ' % (count, total_tests, tup,))
+        print('[expt] tweak_params(%d/%d)> param tweak %r ' % (count, total_tests, tup,))
         print('========================')
         rss = helpers.RedirectStdout()
         rss.start()
@@ -181,8 +181,8 @@ def run_experiment(hs=None):
         db_dir = ld2.DEFAULT
         hs = ld2.HotSpotter(db_dir)
     print('======================')
-    print('expts> Running Experiment on hs:\n'+str(hs))
-    print('Params: '+ helpers.indent(params.param_string()))
+    print('[expt] Running Experiment on hs:\n'+str(hs))
+    print('[expt] Params: \n'+ helpers.indent(params.param_string()))
     print('======================')
     qcx2_res = mc2.run_matching(hs)
     allres   = rr2.report_all(hs, qcx2_res)
@@ -191,8 +191,8 @@ def run_experiment(hs=None):
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
-    print('\n\n\n__main__ = experiments.py')
-    print('sys.argv = %r' % sys.argv)
+    print('\n\n\n[expt] __main__ = experiments.py')
+    print('[expt] sys.argv = %r' % sys.argv)
 
     # Default to run_experiment
     expt_func = run_experiment
@@ -207,14 +207,14 @@ if __name__ == '__main__':
         'tweak'          : tweak_params,
         'tweak-philbin'  : tweak_params_philbin}
 
-    print ('expts> Valid arguments are:\n    '+ '\n    '.join(arg_map.keys()))
+    print ('[expt] Valid experiments are:\n    '+ '\n    '.join(arg_map.keys()))
     argv = sys.argv
 
     # Change based on user input
     has_arg = False
     for arg in argv:
         if arg in arg_map.keys():
-            print('expts> Running '+str(arg))
+            print('[expt] Running '+str(arg))
             expt_func = arg_map[arg]
 
     # Do the experiment
@@ -224,8 +224,5 @@ if __name__ == '__main__':
         qcx2_res = expt_locals['qcx2_res']
         allres = expt_locals['allres']
         print(allres)
-
-    if 'vrd' in sys.argv:
-        hs.vrd()
 
     exec(df2.present())

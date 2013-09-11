@@ -58,20 +58,7 @@ def test(cx=0):
     img_fpath = os.path.join(hs.dirs.img_dir, img_fname)
     #---
     seg_chip, img_mask = segment(img_fpath, roi_, new_size=None)
-    #print('Showing Input')
-    ## Original Image
-    #df2.imshow(mask_input, fignum=1, plotnum=122)
-    #df2.present()
 
-    # IMAGE AND MASK
-    #df2.imshow(img,      plotnum=121, fignum=2, doclf=True)
-    #df2.imshow(mask,     plotnum=122, fignum=2)
-
-    # MASKED CHIP
-    #df2.figure(fignum=3, doclf=True)
-    #df2.imshow(chip,       plotnum=131, fignum=3, doclf=True)
-    #df2.imshow(color_mask, plotnum=132, fignum=3)
-    #df2.imshow(seg_chip,   plotnum=133, fignum=3)
     df2.show_img(hs, cx, fignum=1, plotnum=131, title='original', doclf=True)
     df2.imshow(img_mask, fignum=1, plotnum=132, title='mask')
     df2.imshow(seg_chip, fignum=1, plotnum=133, title='segmented')

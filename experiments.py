@@ -7,7 +7,7 @@ import numpy as np
 import os
 import params
 import report_results2 as rr2
-import sys 
+import sys
 import draw_func2 as df2
 import itertools
 
@@ -19,24 +19,46 @@ def reload_module():
 def param_config1():
     params.__RANK_EQ__ = True
 
+
 def leave_N_names_out(N):
-    nx2_nid = hs.tables.nx2_nid
+    nx2_name = hs.tables.nx2_name
     cx2_nx  = hs.tables.cx2_nx
-    nx2_cxs = lambda _:_
-
-    all_nxs   = hs.tables.nx2_nid > 1
-    uniden_nx = hs.tables.nx2_nid <= 1
+    nx2_cxs = np.array(hs.get_nx2_cxs())
+    nx2_nChips = np.array(map(len, nx2_cxs))
+    nx2_nChips[0:3] = 0 # remove uniden names
+    all_nxs,  = np.where((nx2_nChips > 0))
     M = len(all_nxs)
-    nxs1, nxs2 = subset_split(all_nxs, N)
-
-    subset0 = nx2_cxs[uniden_nx]
-
-    subset1 = nx2_cxs[nxs1]
-    subset2 = nx2_cxs[nxs2]
-
-    hs.set_db_set(subset1)
-    hs.set_train_set(subset1)
-    hs.set_test_set(subset2)
+    N = 10
+    K = 3
+    def subset_split(full_set, N, K):
+        np.random.seed(0) # repeatibility
+        seen = set([])
+        split_list = []
+        for kx in xrange(K):
+            np.random.shuffle(full_set)
+            failsafe = 0
+            while True: 
+                np.random.shuffle(full_set)
+                subset = tuple(full_set[0:N])
+                if not subset in seen: 
+                    seen.add(subset)
+                    compliment = tuple(np.setdiff1d(full_set, subset))
+                    split_list.append((compliment, subset))
+                    break
+                failsafe += 1
+                if failsafe > 100:
+                    break
+        return split_list
+    split_list_nxs = subset_split(all_nxs, N, K)
+    split_list_cxs = []
+    (nxs1, nxs2) = split_list_nxs[0]
+    #for (nxs1, nxs2) in split_list_nxs:
+    test_sample_cx = np.hstack(nx2_cxs[np.array(nxs1)])
+    train_sample_cx = np.hstack(nx2_cxs[np.array(nxs2)])
+    hs.set_test_train(test_sample_cx, train_sample_cx)
+    hs.load_matcher()
+    qcx2_res = mc2.run_matching(hs)
+    
 
     #do with TF-IDF on the zebra data set. 
     #Let M be the total number of *animals* (not images and not chips) in an experimental data set. 

@@ -25,7 +25,7 @@ import shutil
 import warnings
 import fnmatch
 import textwrap
-from os.path import join, relpath, normpath, join, split, isdir, isfile, exists
+from os.path import join, relpath, normpath, join, split, isdir, isfile, exists, islink, ismount
 import fnmatch
 #print('LOAD_MODULE: helpers.py')
 
@@ -331,24 +331,33 @@ def norm_zero_one(array, dim=0):
 def find_std_inliers(data, m=2):
     return abs(data - np.mean(data)) < m * np.std(data)
 
+def win_shortcut(source, link_name):
+    import ctypes
+    csl = ctypes.windll.kernel32.CreateSymbolicLinkW
+    csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
+    csl.restype = ctypes.c_ubyte
+    flags = 1 if isdir(source) else 0
+    retval = csl(link_name, source, flags)
+    if retval == 0:
+        warn_msg = 'helpers> Unable to create symbolic link on windows.'
+        print(warn_msg)
+        warnings.warn(warn_msg, category=UserWarning)
+        if checkpath(link_name):
+            return True
+        raise ctypes.WinError()
+
 def symlink(source, link_name, noraise=False):
-    print('Creating symlink: source=%r link_name=%r' % (source, link_name))
+    print('helpers> Creating symlink: source=%r link_name=%r' % (source, link_name))
     try: 
         import os
         os_symlink = getattr(os, "symlink", None)
         if callable(os_symlink):
             os_symlink(source, link_name)
         else:
-            import ctypes
-            csl = ctypes.windll.kernel32.CreateSymbolicLinkW
-            csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
-            csl.restype = ctypes.c_ubyte
-            flags = 1 if isdir(source) else 0
-            if csl(link_name, source, flags) == 0:
-                warnings.warn(warn_msg, category=UserWarning)
-                print('helpers> Unable to create symbolic liwk on windows.')
-                raise ctypes.WinError()
+            win_shortcut(source, link_name)
     except Exception as ex:
+        checkpath(link_name, True)
+        checkpath(source, True)
         if not noraise:
             raise
 
@@ -548,6 +557,11 @@ def checkpath(path_, verbose=PRINT_CHECKS):
         caller_name = get_caller_name()
         print('%s>checkpath(%r)' % (caller_name, pretty_path))
         if exists(path_):
+            path_type = ''
+            if isfile(path_):  path_type += 'file'
+            if isdir(path_):   path_type += 'directory'
+            if islink(path_):  path_type += 'link'
+            if ismount(path_): path_type += 'mount'
             path_type = 'file' if isfile(path_) else 'directory'
             println('...(%s) exists' % (path_type,))
         else:

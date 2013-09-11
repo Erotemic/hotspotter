@@ -668,7 +668,6 @@ def show_matches3(res, hs, cx, SV=True, fignum=3, plotnum=111, title_aug=None, *
     title_suff = '(+V)' if SV else None
     return show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum,
                          plotnum, title_aug, title_suff, **kwargs)
-
 def show_matches4(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=0, plotnum=111,
                   title_pref=None, title_suff=None, **kwargs):
     printDBG('Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))
@@ -712,7 +711,8 @@ def show_chip(hs, cx, **kwargs):
     nx  = cx2_nx[cx]
     cx2_kpts = hs.feats.cx2_kpts
     cx2_rchip_path = hs.cpaths.cx2_rchip_path
-    rchip1 = cv2.imread(cx2_rchip_path[cx])
+    img_fpath = cx2_rchip_path[cx]
+    rchip1 = cv2.imread(img_fpath)
     kpts1  = cx2_kpts[cx]
     cx_str = '(cx=%r)' % (cx)
     imshow(rchip1, title=cx_str, **kwargs)
@@ -731,7 +731,7 @@ def show_img(hs, cx, **kwargs):
     gx  = cx2_gx[cx]
     img_fname = gx2_gname[gx]
     img_fpath = os.path.join(hs.dirs.img_dir, img_fname)
-    img = cv2.imread(img_fpath)
+    img = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
     # Draw image
     imshow(img, **kwargs)
     # Draw ROI

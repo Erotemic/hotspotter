@@ -113,6 +113,14 @@ class HotSpotter(DynStruct):
         hs.test_sample_cx     = range(len(hs.tables.cx2_cid))
         hs.train_sample_cx    = range(len(hs.tables.cx2_cid))
 
+    def set_test_train(hs, test_sample_cx, train_sample_cx):
+        hs.database_sample_cx = train_sample_cx
+        hs.train_sample_cx    = train_sample_cx
+        hs.test_sample_cx     = test_sample_cx
+        sample_hash = repr((tuple(test_sample_cx),tuple(train_sample_cx)))
+        sample_id = helpers.hashstr_md5(sample_hash)
+        params.SAMPLE_ID = sample_id
+
     def load_file_samples(hs,
                           db_sample_fname='database_sample.txt',
                           test_sample_fname='test_sample.txt',
@@ -157,6 +165,15 @@ class HotSpotter(DynStruct):
         print('opening result_dir: %r ' % result_dir)
         helpers.vd(result_dir)
     #--------------
+    def get_nx2_cxs(hs):
+        cx2_nx = hs.tables.cx2_nx
+        max_nx = cx2_nx.max()
+        nx2_cxs = [[] for _ in xrange(max_nx+1)]
+        for cx, nx in enumerate(cx2_nx):
+            if nx > 0:
+                nx2_cxs[nx].append(cx)
+        return nx2_cxs
+
     def get_other_cxs(hs, cx):
         cx2_nx   = hs.tables.cx2_nx
         nx = cx2_nx[cx]

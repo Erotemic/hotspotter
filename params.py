@@ -119,7 +119,7 @@ NUM_PROCS = 8 # Number of processessors
 # Double __ means It is an algorithm varaible
 #---  CHIP COMPUTE ---
 __CHIP_SQRT_AREA__ = 750
-__GRABCUT__        = True
+__GRABCUT__        = False
 __HISTEQ__         = False
 __REGION_NORM__    = False
 __RANK_EQ__        = False
@@ -192,12 +192,15 @@ def get_matcher_uid():
     matcher_uid += get_feat_uid()
     return matcher_uid
 
+SAMPLE_ID = ''
+
 def get_query_uid():
     query_uid = ''
     query_uid += '_sv(' + str(__NUM_RERANK__)
     query_uid += ','   + str(__XY_THRESH__)
     query_uid += ','   + str(__SCALE_THRESH_HIGH__)
     query_uid += ','   + str(__SCALE_THRESH_LOW__)+')'
+    query_uid += SAMPLE_ID
     query_uid += get_matcher_uid()
     return query_uid
 

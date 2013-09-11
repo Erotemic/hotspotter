@@ -180,6 +180,8 @@ def get_feat_uid():
     feat_uid = feat_type + whiten + get_chip_uid()
     return feat_uid
 
+TRAIN_SAMPLE_ID = ''
+
 def get_matcher_uid():
     matcher_uid = '_'+__MATCH_TYPE__
     if __MATCH_TYPE__ == 'bagofwords':
@@ -187,12 +189,11 @@ def get_matcher_uid():
     if __MATCH_TYPE__ == 'vsmany':
         matcher_uid += '_k%d' % __VSMANY_K__
     if __MATCH_TYPE__ == 'vsone':
-        query_uid += 'rat'+str(__RATIO_THRESH__)
+        matcher_uid += '_rat'+str(__RATIO_THRESH__)
+    matcher_uid += '_'+TRAIN_SAMPLE_ID
     # depends on feat
     matcher_uid += get_feat_uid()
     return matcher_uid
-
-SAMPLE_ID = ''
 
 def get_query_uid():
     query_uid = ''
@@ -200,7 +201,6 @@ def get_query_uid():
     query_uid += ','   + str(__XY_THRESH__)
     query_uid += ','   + str(__SCALE_THRESH_HIGH__)
     query_uid += ','   + str(__SCALE_THRESH_LOW__)+')'
-    query_uid += SAMPLE_ID
     query_uid += get_matcher_uid()
     return query_uid
 

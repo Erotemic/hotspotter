@@ -117,7 +117,7 @@ def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
         if OXSTY_VERBOSE:
             print(repr(ex))
         if repr(ex) == "OSError(12, 'Cannot allocate memory')":
-            args_hash = helpers.hashstr_md5(args)
+            args_hash = helpers.hashstr(args)
             proc_err_fname = 'proc_err'+args_hash
             proc_err_cmd = proc_err_fname+'.cmd'
             proc_err_out = proc_err_fname+'.out'

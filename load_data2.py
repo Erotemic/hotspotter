@@ -87,64 +87,73 @@ class HotSpotter(DynStruct):
     def load_database(hs, db_dir,
                       load_matcher=True,
                       load_features=True,
-                      samples_from_file=False):
+                      samples_subset=(None, None)):
         # Load data
         hs.load_tables(db_dir)
         hs.load_chips()
+        # Load sample sets
+        hs.set_sample_subset(*samples_subset)
         if load_features:
             hs.load_features()
         else: 
-            print('Not Loading Features!!')
-        # Load sample sets
-        if samples_from_file:
-            hs.load_file_samples()
-        else:
-            hs.load_default_samples()
+            print('[hs] Not Loading Features!!')
         # Load Matcher
         if load_matcher: 
             hs.load_matcher()
     #---------------
-    def load_default_samples(hs):
-        print(textwrap.dedent('''
-        =============================
-        hs> Using all data as sample set
-        ============================='''))
-        hs.database_sample_cx = range(len(hs.tables.cx2_cid))
-        hs.test_sample_cx     = range(len(hs.tables.cx2_cid))
-        hs.train_sample_cx    = range(len(hs.tables.cx2_cid))
+    def get_valid_cxs(hs):
+        valid_cxs, = np.where(np.array(hs.tables.cx2_cid) > 0)
+        return valid_cxs
 
-    def set_test_train(hs, test_sample_cx, train_sample_cx):
-        hs.database_sample_cx = train_sample_cx
-        hs.train_sample_cx    = train_sample_cx
-        hs.test_sample_cx     = test_sample_cx
-        sample_hash = repr((tuple(test_sample_cx),tuple(train_sample_cx)))
-        sample_id = helpers.hashstr_md5(sample_hash)
-        params.SAMPLE_ID = sample_id
+    def split_test_train_at(hs, pos):
+        valid_cxs = hs.get_valid_cxs()
+        test_samp  = valid_cxs[:pos]
+        train_samp = valid_cxs[pos+1:]
+        hs.set_samples(test_samp, train_samp)
 
-    def load_file_samples(hs,
-                          db_sample_fname='database_sample.txt',
-                          test_sample_fname='test_sample.txt',
-                          train_sample_fname='train_sample.txt',):
-        'tries to load test / train / database sample from internal dir'
-        print(textwrap.dedent('''
-        =============================
-        hs> Loading sample sets from disk relative to internal_dir
-        ============================='''))
-        internal_dir = hs.dirs.internal_dir
-        db_sample_fpath    = join(internal_dir, db_sample_fname)
-        test_sample_fpath  = join(internal_dir, test_sample_fname)
-        train_sample_fpath = join(internal_dir, train_sample_fname)
+    def set_sample_subset(hs, pos1, pos2):
+        valid_cxs = hs.get_valid_cxs()
+        test_samp  = valid_cxs[pos1:pos2]
+        train_samp = test_samp
+        hs.set_samples(test_samp, train_samp)
 
-        hs.database_sample_cx = np.array(helpers.eval_from(db_sample_fpath, False))
-        hs.test_sample_cx     = np.array(helpers.eval_from(test_sample_fpath, False))
-        hs.train_sample_cx    = np.array(helpers.eval_from(train_sample_fpath, False))
-        if hs.database_sample_cx is None and\
-           hs.test_sample_cx is None and\
-           hs.train_sample_cx is None: 
-            hs.load_default_samples()
-        #hs.test_sample_cx = np.array([0,2,3])
-        #db_sample_cx = range(len(cx2_desc)) if hs.database_sample_cx is None \
-                               #else hs.database_sample_cx
+    def set_samples(hs, test_samp=None,
+                        train_samp=None,
+                        db_samp=None):
+        ''' This is the correct function to use when setting samples '''
+        print('[hs] set_samples():')
+        valid_cxs = hs.get_valid_cxs()
+        if test_samp is None:
+            print(' * using all chips in testing')
+            test_samp = valid_cxs
+        if train_samp is None:
+            print(' * using all chips in training')
+            train_samp = valid_cxs
+        if db_samp is None:
+            print(' * using training set as database set')
+            db_samp = train_samp
+
+
+        # Debugging and Info
+        test_train_isect = np.intersect1d(test_samp, train_samp)
+        db_train_isect = np.intersect1d(db_samp, train_samp)
+        db_test_isect = np.intersect1d(db_samp, test_samp)
+        print('   ---')
+        print(' * | isect(test, train) |  = %d' % len(test_train_isect))
+        print(' * | isect(db, train)   |  = %d' % len(db_train_isect))
+        print(' * | isect(db, test)    |  = %d' % len(db_test_isect))
+        print(' * num_valid_cxs = %d' % len(valid_cxs))
+        lentup = (len(test_samp), len(train_samp), len(db_samp))
+        print(' * num_test=%d, num_train=%d, num_db=%d' % lentup)
+
+        hs.database_sample_cx = db_samp
+        hs.train_sample_cx    = train_samp
+        hs.test_sample_cx     = test_samp
+
+        train_hash = repr(tuple(train_samp))
+        train_id = helpers.hashstr(train_hash)
+        print('[hs] set_samples(): train_id=%r' % train_id)
+        params.TRAIN_SAMPLE_ID = train_id
     #---------------
     def delete_computed_dir(hs):
         computed_dir = hs.dirs.computed_dir

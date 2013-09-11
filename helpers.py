@@ -25,6 +25,7 @@ import shutil
 import warnings
 import fnmatch
 import textwrap
+import hashlib
 from os.path import join, relpath, normpath, join, split, isdir, isfile, exists, islink, ismount
 import fnmatch
 #print('LOAD_MODULE: helpers.py')
@@ -754,12 +755,60 @@ def load_npz(fpath):
     npz.close()
     return data
 
-def hashstr_md5(data):
-    import hashlib
-    return hashlib.md5(data).hexdigest()
+def hashstr(data, trunc_pos=8):
+    # Get a 128 character hex string
+    hashstr = hashlib.sha512(data).hexdigest()
+    # Convert to base 57
+    hashstr2 = hex2_base57(hashstr)
+    # Truncate
+    hashstr = hashstr2[:trunc_pos]
+    return hashstr
 
-def load_cache_npz(input_data, lbl='', cache_dir='.', is_sparse=False):
-    data_fpath = __cache_data_fpath(input_data, lbl, cache_dir)
+#def valid_filename_ascii_chars():
+    ## Find invalid chars
+    #ntfs_inval = '< > : " / \ | ? *'.split(' ')
+    #other_inval = [' ', '\'', '.']
+    ##case_inval = map(chr, xrange(97, 123))
+    #case_inval = map(chr, xrange(65, 91))
+    #invalid_chars = set(ntfs_inval+other_inval+case_inval)
+    ## Find valid chars
+    #valid_chars = []
+    #for index in xrange(32, 127):
+        #char = chr(index)
+        #if not char in invalid_chars:
+            #print index, chr(index)
+            #valid_chars.append(chr(index))
+    #return valid_chars
+#valid_filename_ascii_chars()
+ALPHABET = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',  'a', 'b', 'c',
+            'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
+            'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ';', '=', '@',
+            '[', ']', '^', '_', '`', '{', '}', '~', '!', '#', '$', '%', '&',
+            '(', ')', '+', ',', '-']
+BIGBASE = len(ALPHABET)
+
+def hex2_base57(hexstr):
+    x = int(hexstr, 16)
+    if x==0: return '0'
+    sign = 1 if x > 0 else -1
+    x *= sign
+    digits = []
+    while x:
+        digits.append(ALPHABET[x % BIGBASE])
+        x //= BIGBASE
+    if sign < 0:
+        digits.append('-')
+        digits.reverse()
+    newbase_str = ''.join(digits)
+    return newbase_str
+
+def hashstr_md5(data):
+    hashstr = hashlib.md5(data).hexdigest()
+    bin(int(my_hexdata, scale))
+    return hashstr
+
+def load_cache_npz(input_data, uid='', cache_dir='.', is_sparse=False):
+    data_fpath = __cache_data_fpath(input_data, uid, cache_dir)
     cachefile_exists = checkpath(data_fpath)
     if cachefile_exists:
         try:
@@ -784,8 +833,8 @@ def load_cache_npz(input_data, lbl='', cache_dir='.', is_sparse=False):
         raise CacheException('nonexistant file: %r' % data_fpath)
     raise CacheException('other failure')
 
-def save_cache_npz(input_data, data, lbl='', cache_dir='.', is_sparse=False):
-    data_fpath = __cache_data_fpath(input_data, lbl, cache_dir)
+def save_cache_npz(input_data, data, uid='', cache_dir='.', is_sparse=False):
+    data_fpath = __cache_data_fpath(input_data, uid, cache_dir)
     print('helpers> caching data: %r' % split(data_fpath)[1])
     flush()
     if is_sparse:
@@ -802,10 +851,10 @@ def cache_npz_decorator(npz_func):
 class CacheException(Exception):
     pass
 
-def __cache_data_fpath(input_data, lbl, cache_dir):
-    md5_lbl    = hashstr_md5(input_data)
+def __cache_data_fpath(input_data, uid, cache_dir):
+    hashstr    = hashstr(input_data)
     shape_lbl  = str(input_data.shape).replace(' ','')
-    data_fname = lbl+'_'+shape_lbl+'_'+md5_lbl+'.npz'
+    data_fname = uid+'_'+shape_lbl+'_'+hashstr+'.npz'
     data_fpath = join(cache_dir, data_fname)
     return data_fpath
 

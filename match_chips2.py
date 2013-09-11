@@ -41,7 +41,6 @@ BOW_DTYPE = np.uint8
 FM_DTYPE  = np.uint32
 FS_DTYPE  = np.float32
 
-
 def fix_res_types(res):
     for cx in xrange(len(res.cx2_fm_V)):
         res.cx2_fm_V[cx] = np.array(res.cx2_fm_V[cx], dtype=FM_DTYPE)
@@ -315,12 +314,13 @@ def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
         helpers.printWARN(msg)
         vocab_size = num_train_desc / 2
     # Cluster descriptors into a visual vocabulary
+    matcher_uid = params.get_matcher_uid()
     _, words = algos.precompute_akmeans(train_desc, vocab_size, max_iters,
                                         akm_flann_params, cache_dir,
-                                        force_recomp=False, 
-                                        same_data=False)
+                                        force_recomp=False, same_data=False,
+                                        uid='words_'+matcher_uid)
     # Index the vocabulary for fast nearest neighbor search
-    words_flann = algos.precompute_flann(words, cache_dir, lbl='words',
+    words_flann = algos.precompute_flann(words, cache_dir, uid='words_'+matcher_uid,
                                          flann_params=words_flann_params)
     return words, words_flann
 
@@ -384,8 +384,7 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, db_cxs, cache_d
     r'''
     input_data = ax2_desc
     data = cx2_vvec
-    lbl='cx2_vvec'+matcher_uid
-
+    uid='cx2_vvec'+matcher_uid
     '''
     helpers.save_cache_npz(ax2_desc, cx2_vvec, 'cx2_vvec'+matcher_uid, cache_dir, is_sparse=True)
     helpers.save_cache_npz(ax2_desc, wx2_cxs, 'wx2_cxs'+matcher_uid, cache_dir)
@@ -499,7 +498,7 @@ def precompute_index_vsmany(hs):
     vsmany_flann_params = params.VSMANY_FLANN_PARAMS
     vsmany_flann = algos.precompute_flann(ax2_desc, 
                                           cache_dir=cache_dir,
-                                          lbl=matcher_uid,
+                                          uid=matcher_uid,
                                           flann_params=vsmany_flann_params)
     # Return a one-vs-many structure
     vsmany_index = VsManyIndex(vsmany_flann, ax2_desc, ax2_cx, ax2_fx)

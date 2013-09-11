@@ -371,13 +371,13 @@ def force_quit_akmeans(signal, frame):
 
 def precompute_akmeans(data, num_clusters, max_iters=100, flann_params=None,
                        cache_dir=None, force_recomp=False,
-                       same_data=True):
+                       same_data=True, uid=''):
     'precompute aproximate kmeans'
-    data_md5 = str(data.shape).replace(' ','')+helpers.hashstr_md5(data)
+    hashstr = str(data.shape).replace(' ','')+helpers.hashstr(data)
     if same_data:
-        fname = 'precomp_akmeans_k%d_%s.npz' % (num_clusters, data_md5)
+        fname = 'precomp_akmeans_'+uid+'_k%d_%s.npz' % (num_clusters, hashstr)
     else:
-        fname = 'precomp_akmeans_k%d.npz' % num_clusters
+        fname = 'precomp_akmeans_'+uid+'_k%d.npz' % num_clusters
     fpath = realpath(fname) if cache_dir is None else join(cache_dir, fname)
     if force_recomp:
         helpers.remove_file(fpath)
@@ -400,17 +400,17 @@ def precompute_akmeans(data, num_clusters, max_iters=100, flann_params=None,
         #signal.signal(signal.SIGINT, signal.SIG_DFL) # reset ctrl+c behavior
     return (datax2_clusterx, clusters)
 
-def precompute_flann(data, cache_dir=None, lbl='', flann_params=None):
+def precompute_flann(data, cache_dir=None, uid='', flann_params=None):
     ''' Tries to load a cached flann index before doing anything'''
-    print('algos> Precomputing flann index: '+lbl)
+    print('algos> Precomputing flann index: '+uid)
     cache_dir = '.' if cache_dir is None else cache_dir
     # Generate a unique filename for data and flann parameters
     fparams_uid = helpers.remove_chars(str(flann_params.values()), ', \'[]')
-    md5_uid     = helpers.hashstr_md5(data)
+    hashstr     = helpers.hashstr(data)
     shape_uid   = helpers.remove_chars(str(data.shape), ' ')
-    flann_suffix = '_' + fparams_uid + '_' + md5_uid + shape_uid + '.flann'
+    flann_suffix = '_' + fparams_uid + '_' + hashstr + shape_uid + '.flann'
     # Append any user labels
-    flann_fname = 'flann_index' + lbl + flann_suffix
+    flann_fname = 'flann_index' + uid + flann_suffix
     flann_fpath = os.path.normpath(join(cache_dir, flann_fname))
     # Load the index if it exists
     flann = pyflann.FLANN()

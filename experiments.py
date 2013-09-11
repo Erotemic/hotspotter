@@ -69,15 +69,15 @@ def leave_N_names_out(N):
     #Test how well TF-IDF recognition does with these N animals. 
     #Repeat for different subsets of N animals.
 
-def oxford_philbin07():
+def oxford_philbin07(hs=None):
     params.__MATCH_TYPE__        = 'bagofwords'
     params.__BOW_NUM_WORDS__     = [1e4, 2e4, 5e4, 1e6, 1.25e6][3]
     params.__NUM_RERANK__        = [100, 200, 400, 800, 1000][4]
     params.__CHIP_SQRT_AREA__    = None
 
-    #params.__XY_THRESH__         = 0.01
-    #params.__SCALE_THRESH_HIGH__ = 8
-    #params.__SCALE_THRESH_LOW__  = 0.5
+    params.__XY_THRESH__         = 0.01
+    params.__SCALE_THRESH_HIGH__ = 8
+    params.__SCALE_THRESH_LOW__  = 0.5
     params.BOW_AKMEANS_FLANN_PARAMS = dict(algorithm='kdtree',
                                                trees=8, checks=64)
     # I'm not sure if checks parameter is set correctly
@@ -86,7 +86,7 @@ def oxford_philbin07():
         hs = ld2.HotSpotter()
         hs.load_tables(db_dir)
         # Use the 55 cannonical test cases 
-        hs.load_file_samples(test_sample_fname='test_sample55.txt')
+        hs.split_test_train_at(55)
     # Try and just use the cache if possible
     # TODO: Make all tests run like this by default (lazy loading)
     qcx2_res, dirty_test_sample_cx = mc2.load_cached_matches(hs)
@@ -97,7 +97,7 @@ def oxford_philbin07():
             print(' There are %d dirty queries' % len(dirty_test_sample_cx))
             hs.load_chips()
             hs.load_features()
-            hs.load_file_samples(test_sample_fname='test_sample55.txt')
+            hs.split_test_train_at(55)
             hs.load_matcher()
             #print('expts> Database shape: '+str(np.vstack(hs.feats.cx2_desc[db_sample_cx]).shape))
         qcx2_res = mc2.run_matching(hs, qcx2_res, dirty_test_sample_cx)
@@ -113,9 +113,8 @@ def oxford_bow():
     hs.load_tables(db_dir)
     hs.load_chips()
     hs.load_features(load_desc=False)
-    hs.load_file_samples()
-    assert min(hs.test_sample_cx) == 55
-    assert max(hs.test_sample_cx) == 5117
+    hs.set_sample_subset(55, None)
+    assert min(hs.test_sample_cx) == 55 and max(hs.test_sample_cx) == 5117
     qcx2_res = mc2.run_matching(hs)
     hs.free_some_memory()
     allres = rr2.report_all(hs, qcx2_res, oxford=False, stem=False, matrix=False)
@@ -125,7 +124,7 @@ def oxford_vsmany():
     params.__MATCH_TYPE__     = 'vsmany'
     params.__CHIP_SQRT_AREA__ = None
     db_dir = ld2.OXFORD
-    hs = ld2.HotSpotter(db_dir, samples_from_file=True)
+    hs = ld2.HotSpotter(db_dir, samples_subset=(55,None))
     qcx2_res = mc2.run_matching(hs)
     allres = rr2.report_all(hs, qcx2_res, oxford=False, stem=False, matrix=False)
     return locals()

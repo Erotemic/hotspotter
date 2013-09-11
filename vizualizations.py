@@ -33,8 +33,8 @@ def cx_info(allres, cx, SV=True):
     res = allres.qcx2_res[cx]
     print_top_res_scores(hs, res, view_top=10)
     gt_cxs = hs.get_other_cxs(cx)
-    print('Ground truth cxs: '+repr(gt_cxs))
-    print('num groundtruth = '+str(len(gt_cxs)))
+    print('[viz] Ground truth cxs: '+repr(gt_cxs))
+    print('[viz] num groundtruth = '+str(len(gt_cxs)))
     print_top_res_scores(hs, res, view_top=10, SV=True)
 
 def print_top_res_scores(hs, res, view_top=10, SV=True):
@@ -93,7 +93,7 @@ def plot_cx(allres, cx, style='kpts', subdir=None):
     __dump_or_browse(allres, subdir)
 
 def plot_rank_stem(allres, orgres_type='true'):
-    print(' * plotting rank stem')
+    print('[viz] plotting rank stem')
     # Visualize rankings with the stem plot
     hs = allres.hs
     df2.reload_module()
@@ -111,7 +111,7 @@ def plot_rank_stem(allres, orgres_type='true'):
     __dump_or_browse(allres, 'rankviz')
 
 def plot_rank_histogram(allres, orgres_type): 
-    print(' * plotting rank histogram')
+    print('[viz] plotting rank histogram')
     ranks = allres.__dict__[orgres_type].ranks
     label = 'P(rank | '+orgres_type+' match)'
     title = orgres_type+' match rankings histogram\n'+allres.title_suffix
@@ -123,7 +123,7 @@ def plot_rank_histogram(allres, orgres_type):
     __dump_or_browse(allres, 'rankviz')
     
 def plot_score_pdf(allres, orgres_type, colorx=0.0, variation_truncate=False): 
-    print(' * plotting score pdf')
+    print('[viz] plotting score pdf')
     title  = orgres_type+' match score frequencies\n'+allres.title_suffix
     scores = allres.__dict__[orgres_type].scores
     label  = 'P(score | '+orgres_type+')'
@@ -138,7 +138,7 @@ def plot_score_pdf(allres, orgres_type, colorx=0.0, variation_truncate=False):
     __dump_or_browse(allres, 'scoreviz')
 
 def plot_score_matrix(allres):
-    print(' * plotting score matrix')
+    print('[viz] plotting score matrix')
     score_matrix = allres.score_matrix
     title = 'Score Matrix\n'+allres.title_suffix
     # Find inliers

@@ -46,7 +46,7 @@ def oxsty_mAP_results(allres):
     print('')
     # Calculate the scalar mAP score for the experiemnt
     scalar_mAP = np.mean(np.array(query_mAP_list))
-    scalar_mAP_str = '# scalar mAP score = %r\n' % scalar_mAP
+    scalar_mAP_str = '# mAP score = %r\n' % scalar_mAP
     # build a CSV file with the results
     header  = '# Oxford Style Map Scores: title_suffix=%r\n' % allres.title_suffix
     header += scalar_mAP_str

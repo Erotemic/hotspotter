@@ -360,6 +360,7 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, db_cxs, cache_d
     tt1.toc()
     # Build inverse word to ax
     tt2 = helpers.Timer('database_indexing')
+    print('')
     print('[mc2] building inverse word to ax map')
     wx2_axs = [[] for _ in xrange(len(words))]
     for ax, wx in enumerate(ax2_wx):

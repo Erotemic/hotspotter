@@ -197,10 +197,10 @@ def test2(chip, chip_mask):
 if __name__ == '__main__':
     print('[segm] __main__')
     df2.reset()
-    if len(sys.argv) > 1: 
+    try:
         cx = int(sys.argv[1])
-    else:
-        cx = 0
-    test(cx)
-
+        test(cx)
+    except Exception as ex:
+        print('usage: segmentation.py [cx] ARGS')
+        pass
     exec(df2.present())

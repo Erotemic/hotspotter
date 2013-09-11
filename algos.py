@@ -202,12 +202,13 @@ def __akmeans_iterate(data,
                       max_iters,
                       flann_params,
                       ave_unchanged_thresh,
-                      ave_unchanged_window):
+                      ave_unchanged_iterwin):
     num_data = data.shape[0]
     num_clusters = clusters.shape[0]
-    xx2_unchanged = np.zeros(ave_unchanged_window, dtype=np.int32) + len(data)
+    # Keep track of how many points have changed in each iteration
+    xx2_unchanged = np.zeros(ave_unchanged_iterwin, dtype=np.int32) + len(data)
     print('[algos] Starting iterations:')
-    print('[algos] Printing akmeans info in format: time (iterx, mean(#switched), #unchanged)')
+    print('[algos] Printing akmeans info in format: time (iterx, ave(#changed), #unchanged)')
     for xx in xrange(0, max_iters): 
         # 1) Find each datapoints nearest cluster center
         tt = helpers.tic()
@@ -215,7 +216,7 @@ def __akmeans_iterate(data,
         helpers.flush()
         (datax2_clusterx, _dist) = ann_flann_once(clusters, data, 1, flann_params)
         ellapsed = helpers.toc(tt)
-        helpers.print_('...toc(%.4fs)' % ellapsed)
+        helpers.print_('...toc(%.2fs)' % ellapsed)
         helpers.flush()
         # 2) Find new cluster datapoints
         datax_sort    = datax2_clusterx.argsort()
@@ -240,9 +241,10 @@ def __akmeans_iterate(data,
         helpers.print_('+')
         helpers.flush()
         num_changed = (datax2_clusterx_old != datax2_clusterx).sum()
-        xx2_unchanged[xx % ave_unchanged_window] = num_changed
+        xx2_unchanged[xx % ave_unchanged_iterwin] = num_changed
         ave_unchanged = xx2_unchanged.mean()
-        helpers.print_('  ('+str(xx)+', '+str(num_changed)+', '+str(ave_unchanged)+'), \n')
+        #(iterx, ave(#changed), #unchanged)
+        helpers.print_('  (%d, %.2f, %d)\n' % (xx, ave_unchanged, num_changed))
         helpers.flush()
         if ave_unchanged < ave_unchanged_thresh:
             break
@@ -256,8 +258,8 @@ def __akmeans_iterate(data,
 
 #@profile
 def akmeans(data, num_clusters, max_iters=100, flann_params=None,
-            ave_unchanged_thresh=30,
-            ave_unchanged_window=None):
+            ave_unchanged_thresh=0,
+            ave_unchanged_iterwin=10):
     '''Approximiate K-Means (using FLANN)
     Input: data - np.array with rows of data.
     Description: Quickly partitions data into K=num_clusters clusters.
@@ -265,12 +267,11 @@ def akmeans(data, num_clusters, max_iters=100, flann_params=None,
     Each datapoint is assigned to its approximate nearest cluster center. 
     The cluster centers are recomputed. 
     Repeat until convergence.'''
-    if ave_unchanged_window is None:
-        ave_unchanged_window = int(len(data) / 500)
     print('[algos] Running akmeans: data.shape=%r ; num_clusters=%r' % (data.shape, num_clusters))
+    print('[algos] * max_iters = %r ' % max_iters)
     #print('  * dtype = %r ' % params.__BOW_DTYPE__)
-    print('[algos] * will converge when average #cluster switches < %r over a window of %r iterations' % \
-          (ave_unchanged_thresh, ave_unchanged_window))
+    print('[algos] * ave_unchanged_iterwin=%r ; ave_unchanged_thresh=%r' % \
+          (ave_unchanged_thresh, ave_unchanged_iterwin))
     # Setup iterations
     #data   = np.array(data, params.__BOW_DTYPE__) 
     num_data = data.shape[0]
@@ -287,7 +288,7 @@ def akmeans(data, num_clusters, max_iters=100, flann_params=None,
                                                     max_iters,
                                                     flann_params,
                                                     ave_unchanged_thresh,
-                                                    ave_unchanged_window)
+                                                    ave_unchanged_iterwin)
     return (datax2_clusterx, clusters)
 
 def whiten(data):

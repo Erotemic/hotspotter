@@ -48,7 +48,7 @@ class AllResults(DynStruct):
         self.SV = SV
         self.rankres_str         = None
         self.title_suffix        = None
-        self.scalar_mAP_str      = ' # map = nan'
+        self.scalar_mAP_str      = '# mAP score = NA\n'
         self.scalar_summary      = None
         self.problem_false_pairs = None
         self.problem_true_pairs  = None
@@ -334,8 +334,8 @@ def build_rankres_str(allres):
     scalar_summary  = '# Num Query Chips: %d \n' % num_chips
     scalar_summary += '# Num Query Chips with at least one match: %d \n' % num_with_gtruth
     scalar_summary += '# Num NonQuery Chips: %d \n' % num_nonquery
-    scalar_summary += '# Ranks <= 5: %d / %d = %.1f%% (missed %d)\n' % (fmt5_tup)
-    scalar_summary += '# Ranks <= 1: %d / %d = %.1f%% (missed %d)\n\n' % (fmt1_tup)
+    scalar_summary += '# Ranks <= 5: %d/%d = %.1f%% (missed %d)\n' % (fmt5_tup)
+    scalar_summary += '# Ranks <= 1: %d/%d = %.1f%% (missed %d)\n\n' % (fmt1_tup)
     header += scalar_summary
     # Experiment parameters
     header += '# Full Parameters: \n' + helpers.indent(params.param_string(),'#') + '\n\n'

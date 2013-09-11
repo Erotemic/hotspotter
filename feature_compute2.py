@@ -231,7 +231,11 @@ if __name__ == '__main__':
         cx2_kpts = hs.feats.cx2_kpts
 
     if len(sys.argv) > 1:
-        cx = int(sys.argv[1])
-        df2.show_chip(hs, cx)
+        try:
+            cx = int(sys.argv[1])
+            df2.show_chip(hs, cx)
+        except Exception as ex:
+            print('usage: feature_compute.py [cx]')
+            pass
 
     exec(df2.present())

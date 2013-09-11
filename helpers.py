@@ -906,9 +906,10 @@ import sys
 class Timer(object):
     ''' Used to time statments with a with statment
     e.g with Timer() as t: some_function()'''
-    def __init__(self, msg='', verbose=True):
+    def __init__(self, msg='', verbose=True, newline=True):
         self.msg = msg
         self.verbose = verbose
+        self.newline = newline
         self.tstart = -1
         self.tic()
 
@@ -916,6 +917,9 @@ class Timer(object):
         if self.verbose:
             sys.stdout.flush()
             sys.stdout.write('\ntic(%r)' % self.msg)
+            if self.newline:
+                sys.stdout.write('\n')
+            sys.stdout.flush()
         self.tstart = time.time()
 
     def toc(self):

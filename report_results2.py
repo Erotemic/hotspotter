@@ -245,8 +245,10 @@ def init_score_matrix(allres):
     allres.col_label_cx = col_label_cx
     allres.row_label_cx = row_label_cx
 
-def init_allres(hs, qcx2_res, SV=True, matrix=(REPORT_MATRIX or
-                                               REPORT_MATRIX_VIZ), oxford=False):
+def init_allres(hs, qcx2_res, SV=True,
+                matrix=(REPORT_MATRIX or REPORT_MATRIX_VIZ),
+                oxford=False,
+                **kwargs):
     'Organizes results into a visualizable data structure'
     # Make AllResults data containter
     allres = AllResults(hs, qcx2_res, SV)
@@ -445,7 +447,8 @@ def dump_all(allres,
              ttbttf=False,
              problems=False,
              gtmatches=False,
-             oxford=False):
+             oxford=False,
+             no_viz=False):
 
     print('\n======================')
     print('[rr2] DUMP ALL')
@@ -459,6 +462,9 @@ def dump_all(allres,
         dump_matrix_str_results(allres)
     if oxford:
         dump_oxsty_mAP_results(allres)
+    if no_viz:
+        print('\n --- (NO VIZ) END DUMP ALL ---\n')
+        return
     #
     if stem:
         dump_rank_stems(allres)
@@ -528,7 +534,7 @@ def dump_missed_top5(allres):
     'Displays the top5 matches for all queries'
     qcx2_res = allres.qcx2_res
     greater5_cxs = allres.greater5_cxs
-    qcx = greater5_cxs[0]
+    #qcx = greater5_cxs[0]
     for qcx in greater5_cxs:
         viz.plot_cx(allres, qcx, 'top5', 'missed_top5')
         viz.plot_cx(allres, qcx, 'gt_matches', 'missed_top5')

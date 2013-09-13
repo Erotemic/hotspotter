@@ -154,7 +154,7 @@ def far_appart_splits(input_set, M, K):
         split_list.append((test,train))
     return split_list
 
-def leave_out(M=None, L=None, expt_func=None):
+def leave_out(expt_func=None, **kwargs):
     '''
     do with TF-IDF on the zebra data set. 
     Let M be the total number of *animals* (not images and not chips) in an experimental data set. 
@@ -200,7 +200,7 @@ def leave_out(M=None, L=None, expt_func=None):
     nsplit_size = (num_names//num_nsplits)
 
     # How to generate samples/splits for chips
-    csplit_size = 1
+    csplit_size = 1 # number of indexed chips per Jth experiment
 
     # Generate name splits
     kx2_name_split = far_appart_splits(multiton_nxs, nsplit_size, num_nsplits)
@@ -256,9 +256,10 @@ def leave_out(M=None, L=None, expt_func=None):
             # Run experiment
             print('Running expt:')
             #rss = helpers.RedirectStdout('[expt %d/%d]' % (kx, K)); rss.start()
-            expt_locals = expt_func(hs)
+            expt_locals = expt_func(hs, **kwargs)
             result_map[kx] = expt_locals['allres']
             #rss.stop(); rss.dump()
+    return locals()
     
 def tweak_params(expt_func=None):
     if not 'expt_func' in vars() or expt_func is None:
@@ -323,8 +324,17 @@ if __name__ == '__main__':
             print('[expt] Running '+str(arg))
             expt_func = arg_map[arg]
 
+    #kwargs = dict(missed_top5=False, rankres=False, stem=False, 
+                  #matrix=False, matrix_viz=False, pdf=False, 
+                  #hist=False, ttbttf=False, problems=False,
+                  #gtmatches=False, oxford=False, no_viz=False):
+
+    kwargs = {}
+    if '--noviz' in sys.argv:
+        kwargs['no_viz'] = True
+
     # Do the experiment
-    expt_locals = expt_func()
+    expt_locals = expt_func(**kwargs)
     hs = expt_locals['hs']
     if 'allres' in expt_locals.keys():
         qcx2_res = expt_locals['qcx2_res']

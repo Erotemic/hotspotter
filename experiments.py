@@ -16,11 +16,48 @@ def reload_module():
     import sys
     imp.reload(sys.modules[__name__])
 
-def param_config1():
-    params.__RANK_EQ__ = True
+def gen_subset_split(full_set, N, K):
+    np.random.seed(0) # repeatibility
+    seen = set([])
+    split_list = []
+    for kx in xrange(K):
+        np.random.shuffle(full_set)
+        failsafe = 0
+        while True: 
+            np.random.shuffle(full_set)
+            subset = tuple(full_set[0:N])
+            if not subset in seen: 
+                seen.add(subset)
+                compliment = tuple(np.setdiff1d(full_set, subset))
+                yield (compliment, subset)
+                break
+            failsafe += 1
+            if failsafe > 100:
+                break
 
-
+def run_experiment2(hs, test_sample_cx, train_sample_cx):
+    if not hs in vars() or hs is None:
+        hs = ld2.HotSpotter()
+        hs.load_tables(ld2.DEFAULT)
+    # Try and just use the cache if possible
+    hs.set_test_train(test_sample_cx, train_sample_cx)
+    qcx2_res, dirty_samp = mc2.load_cached_matches(hs)
+    if len(dirty_samp) > 0:
+        if hs.matcher is None:
+            # Well, if we can't use the cache
+            print('[expt] LAZY LOADING FEATURES AND MATCHER')
+            print('[expt] There are %d dirty queries' % len(dirty_samp))
+            hs.load_chips()
+            hs.load_features()
+            hs.load_matcher()
+        qcx2_res = mc2.run_matching(hs, qcx2_res, dirty_samp)
+    allres = rr2.report_all(hs, qcx2_res)
+    
 def leave_N_names_out(N):
+    hs = ld2.HotSpotter()
+    hs.load_tables(ld2.DEFAULT)
+    hs.load_chips()
+    hs.load_features()
     nx2_name = hs.tables.nx2_name
     cx2_nx  = hs.tables.cx2_nx
     nx2_cxs = np.array(hs.get_nx2_cxs())
@@ -28,38 +65,22 @@ def leave_N_names_out(N):
     nx2_nChips[0:3] = 0 # remove uniden names
     all_nxs,  = np.where((nx2_nChips > 0))
     M = len(all_nxs)
-    N = 10
+    N = M//2 
     K = 3
-    def subset_split(full_set, N, K):
-        np.random.seed(0) # repeatibility
-        seen = set([])
-        split_list = []
-        for kx in xrange(K):
-            np.random.shuffle(full_set)
-            failsafe = 0
-            while True: 
-                np.random.shuffle(full_set)
-                subset = tuple(full_set[0:N])
-                if not subset in seen: 
-                    seen.add(subset)
-                    compliment = tuple(np.setdiff1d(full_set, subset))
-                    split_list.append((compliment, subset))
-                    break
-                failsafe += 1
-                if failsafe > 100:
-                    break
-        return split_list
-    split_list_nxs = subset_split(all_nxs, N, K)
-    split_list_cxs = []
-    (nxs1, nxs2) = split_list_nxs[0]
-    #for (nxs1, nxs2) in split_list_nxs:
-    test_sample_cx = np.hstack(nx2_cxs[np.array(nxs1)])
-    train_sample_cx = np.hstack(nx2_cxs[np.array(nxs2)])
-    hs.set_test_train(test_sample_cx, train_sample_cx)
-    hs.load_matcher()
-    qcx2_res = mc2.run_matching(hs)
+    subset_gen = gen_subset_split(all_nxs, N, K)
+    mylist = []
+    for kx in xrange(K):
+        print('***************')
+        print('[expt] Leave N out iteration: %d/%d' % (kx, K))
+        print('***************')
+        (nxs1, nxs2) = subset_gen.next()
+        test_sample_cx = np.hstack(nx2_cxs[np.array(nxs1)])
+        train_sample_cx = np.hstack(nx2_cxs[np.array(nxs2)])
+        hs.set_samples(test_sample_cx, train_sample_cx)
+        hs.load_matcher()
+        qcx2_res = mc2.run_matching(hs)
+        mylist.append(qcx2_res)
     
-
     #do with TF-IDF on the zebra data set. 
     #Let M be the total number of *animals* (not images and not chips) in an experimental data set. 
     #Do a series of leave-N-out (N >= 1) experiments on the TF-IDF scoring,
@@ -89,18 +110,18 @@ def oxford_philbin07(hs=None):
         hs.split_test_train_at(55)
     # Try and just use the cache if possible
     # TODO: Make all tests run like this by default (lazy loading)
-    qcx2_res, dirty_test_sample_cx = mc2.load_cached_matches(hs)
-    if len(dirty_test_sample_cx) > 0:
+    qcx2_res, dirty_samp = mc2.load_cached_matches(hs)
+    if len(dirty_samp) > 0:
         if hs.matcher is None:
             # Well, if we can't use the cache
             print('[expt] LAZY LOADING FEATURES AND MATCHER')
-            print('[expt] There are %d dirty queries' % len(dirty_test_sample_cx))
+            print('[expt] There are %d dirty queries' % len(dirty_samp))
             hs.load_chips()
             hs.load_features()
             hs.split_test_train_at(55)
             hs.load_matcher()
             #print('[expt] Database shape: '+str(np.vstack(hs.feats.cx2_desc[db_sample_cx]).shape))
-        qcx2_res = mc2.run_matching(hs, qcx2_res, dirty_test_sample_cx)
+        qcx2_res = mc2.run_matching(hs, qcx2_res, dirty_samp)
     allres = rr2.report_all(hs, qcx2_res, oxford=True)
     return locals()
 

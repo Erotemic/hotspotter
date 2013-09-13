@@ -212,13 +212,13 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None):
     cx2_kpts = hs.feats.cx2_kpts 
     total_dirty = len(dirty_test_sample_cx)
     print('[mc2] Executing %d queries' % total_dirty)
-    for query_num, qcx in enumerate(dirty_test_sample_cx):
+    for qnum, qcx in enumerate(dirty_test_sample_cx):
         res = qcx2_res[qcx]
         #
         # Assign matches with the chosen function (vsone) or (vsmany)
         num_qdesc = len(cx2_desc[qcx])
-        print('[mc2] query(%d/%d)---------------' % (qcx, total_dirty))
-        print('[mc2] query(%d/%d) assign %d desc' % (qcx, total_dirty, num_qdesc))
+        print('[mc2] query(%d/%d)---------------' % (qnum+1, total_dirty))
+        print('[mc2] query(%d/%d) assign %d desc' % (qnum+1, total_dirty, num_qdesc))
         tt1 = helpers.Timer(verbose=False)
         assign_output = assign_matches(qcx, cx2_desc)
         (cx2_fm, cx2_fs, cx2_score) = assign_output
@@ -226,12 +226,12 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None):
         #
         # Spatially verify the assigned matches
         num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
-        print('[mc2] query(%d/%d) verify %d assigned matches' % (qcx, total_dirty, num_assigned))
+        print('[mc2] query(%d/%d) verify %d assigned matches' % (qnum+1, total_dirty, num_assigned))
         tt2 = helpers.Timer(verbose=False)
         sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
         (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
         num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
-        print('[mc2] query(%d/%d) verified %d matches' % (qcx, total_dirty, num_verified))
+        print('[mc2] query(%d/%d) verified %d matches' % (qnum+1, total_dirty, num_verified))
         verify_time = tt2.toc()
         print('...assigned: %.2f seconds' % (assign_time))
         print('...verified: %.2f seconds' % (verify_time))

@@ -240,9 +240,9 @@ def convert_from_oxford_style(db_dir):
 
     # Make test / train / database samples
     test_sample55_cx = range(0, len(query_chips))
-    db_sample_cx     = range(len(query_chips), len(cx2_cid))
-    test_sample_cx   = db_sample_cx
-    train_sample_cx  = db_sample_cx
+    indexed_sample_cx  = range(len(query_chips), len(cx2_cid))
+    test_sample_cx   = indexed_sample_cx
+    train_sample_cx  = indexed_sample_cx
 
     # Build filenames
     internal_dir = join(db_dir, '.hs_internals')
@@ -254,7 +254,7 @@ def convert_from_oxford_style(db_dir):
     test_sample55_fpath  = join(internal_dir, 'test_sample55.txt')
     test_sample_fpath  = join(internal_dir, 'test_sample.txt')
     train_sample_fpath = join(internal_dir, 'train_sample.txt')
-    db_sample_fpath    = join(internal_dir, 'database_sample.txt')
+    indexed_sample_fpath    = join(internal_dir, 'indexed_sample.txt')
 
     # Write converted format to disk
     old_print_writes = helpers.__PRINT_WRITES__
@@ -266,7 +266,7 @@ def convert_from_oxford_style(db_dir):
     helpers.write_to(test_sample_fpath,  repr(test_sample_cx))
     helpers.write_to(test_sample55_fpath,  repr(test_sample55_cx))
     helpers.write_to(train_sample_fpath, repr(train_sample_cx))
-    helpers.write_to(db_sample_fpath,    repr(db_sample_cx))
+    helpers.write_to(indexed_sample_fpath,   repr(indexed_sample_cx))
     helpers.__PRINT_WRITES__ = old_print_writes
 
 # Converts the name_num.jpg image format into a database

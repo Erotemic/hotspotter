@@ -8,7 +8,8 @@ def reload_module():
     import imp
     import sys
     imp.reload(sys.modules[__name__])
-
+def rrr():
+    reload_module()
 
 class AbstractPrintable(object):
     'A base class that prints its attributes instead of the memory address'
@@ -194,5 +195,8 @@ def npArrInfo(arr):
     elif info.dtypestr[0] == '|':
         info.minmaxstr = 'NA'
     else:
-        info.minmaxstr = '(%s,%s)' % ( str( arr.min() if len(arr) > 0 else None ), str( arr.max() if len(arr) > 0 else None ) )
+        if arr.size > 0: 
+            info.minmaxstr = '(%r,%r)' % (arr.min(), arr.max())
+        else: 
+            info.minmaxstr = '(None)'
     return info

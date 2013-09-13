@@ -117,3 +117,21 @@ if __PRINT_THRESH_INFO__:
     print('---------------------------------------')
 
 
+def gen_subset_split(full_set, M, K):
+    np.random.seed(0) # repeatibility
+    seen = set([])
+    split_list = []
+    for kx in xrange(K):
+        np.random.shuffle(full_set)
+        failsafe = 0
+        while True: 
+            np.random.shuffle(full_set)
+            subset = tuple(full_set[0:M])
+            if not subset in seen: 
+                seen.add(subset)
+                compliment = tuple(np.setdiff1d(full_set, subset))
+                yield (compliment, subset)
+                break
+            failsafe += 1
+            if failsafe > 100:
+                break

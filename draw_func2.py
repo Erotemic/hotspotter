@@ -475,12 +475,16 @@ def draw_histpdf(data, label=None):
     draw_pdf(data, draw_support=False, scale_to=freq.max(), label=label)
 
 def draw_stems(x_data, y_data):
-    x_data = np.array(x_data)
-    y_data = np.array(y_data)
-    x_data = x_data[y_data.argsort()[::-1]]
-    y_data = y_data[y_data.argsort()[::-1]]
+    if len(x_data) != len(y_data):
+        print('[df2] WARNING draw_stems(): len(x_data)!=len(y_data)')
+    if len(x_data) == 0: 
+        print('[df2] WARNING draw_stems(): len(x_data)=len(y_data)=0')
+    x_data_ = np.array(x_data)
+    y_data_ = np.array(y_data)
+    x_data_sort = x_data_[y_data_.argsort()[::-1]]
+    y_data_sort = y_data_[y_data_.argsort()[::-1]]
 
-    markerline, stemlines, baseline = pylab.stem(x_data, y_data, linefmt='-')
+    markerline, stemlines, baseline = pylab.stem(x_data_sort, y_data_sort, linefmt='-')
     pylab.setp(markerline, 'markerfacecolor', 'b')
     pylab.setp(baseline, 'linewidth', 0)
     ax = plt.gca()
@@ -602,7 +606,8 @@ def show_gt_matches(hs, res, SV=True, fignum=3):
     SV = True
     qcx = res.qcx
     title_aug=None
-    others = hs.get_other_cxs(qcx)
+    #others = hs.get_other_cxs(qcx)
+    others = hs.get_other_indexed_cxs(qcx)
     num_others = len(others)
     plotnum= 100 + num_others*10 + 1 
     if num_others == 0:

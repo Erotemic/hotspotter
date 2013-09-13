@@ -28,10 +28,13 @@ print(' * sys.prefix = %r' % sys.prefix)
 
 WORK_DIR = 'D:/data/work'
 if sys.platform == 'linux2':
-    WORK_DIR = '/media/Store/data/work'
+    WORK_DIR = '/media/SSD_Extra/work'
+    #WORK_DIR = '/media/Store/data/work'
 
 # Common databases I use
 FROGS     = WORK_DIR+'/Frogs'
+WILDDOGS  = WORK_DIR+'/WD_Siva'
+LIONFISH  = WORK_DIR+'/LF_all'
 JAGUARS   = WORK_DIR+'/JAG_Jaguar_Data'
 NAUTS     = WORK_DIR+'/NAUT_Dan'
 GZ_ALL    = WORK_DIR+'/GZ_ALL'
@@ -180,7 +183,7 @@ def get_feat_uid():
     feat_uid = feat_type + whiten + get_chip_uid()
     return feat_uid
 
-TRAIN_SAMPLE_ID = ''
+TRAIN_INDX_SAMPLE_ID = ''
 
 def get_matcher_uid():
     matcher_uid = '_'+__MATCH_TYPE__
@@ -190,7 +193,7 @@ def get_matcher_uid():
         matcher_uid += '_k%d' % __VSMANY_K__
     if __MATCH_TYPE__ == 'vsone':
         matcher_uid += '_rat'+str(__RATIO_THRESH__)
-    matcher_uid += '_sID('+TRAIN_SAMPLE_ID+')'
+    matcher_uid += '_sID('+TRAIN_INDX_SAMPLE_ID+')'
     # depends on feat
     matcher_uid += get_feat_uid()
     return matcher_uid
@@ -307,8 +310,15 @@ for argv in iter(sys.argv):
         if argv_u == 'OXFORD':
             print('[params] Overloading OXFORD parameters')
             # dont resize oxford photos
-            __CHIP_SQRT_AREA__ = None
-            __BOW_NUM_WORDS__  = long(1e6)
+
+def oxford_defaults():
+    # best scale params
+    import params 
+    params.__XY_THRESH__         = 0.01
+    params.__SCALE_THRESH_HIGH__ = 8
+    params.__SCALE_THRESH_LOW__  = 0.5
+    params.__CHIP_SQRT_AREA__ = None
+    params.__BOW_NUM_WORDS__  = long(1e6)
 
 def make_pref_object():
     'Not finished yet, but its a start'

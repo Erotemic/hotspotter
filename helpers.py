@@ -882,11 +882,11 @@ def toc(tt):
 
 # from http://stackoverflow.com/questions/6796492/python-temporarily-redirect-stdout-stderr
 class RedirectStdout(object):
-    def __init__(self, msg=None):
+    def __init__(self, lbl=None):
         self._stdout_old = sys.stdout
         self.stream = cStringIO.StringIO()
         self.record = '<no record>'
-        self.msg = msg
+        self.lbl = lbl
     def start(self):
         sys.stdout.flush()
         sys.stdout = self.stream
@@ -896,12 +896,19 @@ class RedirectStdout(object):
         self.stream.seek(0)
         self.record = self.stream.read()
         return self.record
+    def dump(self):
+        print(indent(self.record, self.lbl))
     def __enter__(self):
         self.start()
     def __exit__(self, exc_type, exc_value, traceback):
         self.stop()
-        if not self.msg is None:
-            print(indent(self.record, self.msg))
+        if not self.lbl is None:
+            self.dump()
+
+def choose(n,k):
+    import scipy.misc
+    return scipy.misc.comb(n,k,True)
+
 import sys
 class Timer(object):
     ''' Used to time statments with a with statment

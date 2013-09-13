@@ -32,7 +32,8 @@ def cx_info(allres, cx, SV=True):
     hs = allres.hs
     res = allres.qcx2_res[cx]
     print_top_res_scores(hs, res, view_top=10)
-    gt_cxs = hs.get_other_cxs(cx)
+    #gt_cxs = hs.get_other_cxs(cx)
+    gt_cxs = hs.get_other_indexed_cxs(cx)
     print('[viz] Ground truth cxs: '+repr(gt_cxs))
     print('[viz] num groundtruth = '+str(len(gt_cxs)))
     print_top_res_scores(hs, res, view_top=10, SV=True)
@@ -44,7 +45,8 @@ def print_top_res_scores(hs, res, view_top=10, SV=True):
     cx2_nx     = hs.tables.cx2_nx
     nx2_name   = hs.tables.nx2_name
     qnx        = cx2_nx[qcx]
-    other_cx   = hs.get_other_cxs(qcx)
+    #other_cx   = hs.get_other_cxs(qcx)
+    other_cx   = hs.get_other_indexed_cxs(qcx)
     top_cx     = cx2_score.argsort()[::-1]
     top_scores = cx2_score[top_cx] 
     top_nx     = cx2_nx[top_cx]
@@ -96,7 +98,6 @@ def plot_rank_stem(allres, orgres_type='true'):
     print('[viz] plotting rank stem')
     # Visualize rankings with the stem plot
     hs = allres.hs
-    df2.reload_module()
     title = orgres_type+'rankings stem plot\n'+allres.title_suffix
     orgres = allres.__dict__[orgres_type]
     fig = df2.figure(fignum=FIGNUM, doclf=True, title=title)
@@ -164,7 +165,7 @@ def __dump_or_browse(allres, subdir=None):
         print('[viz] Browsing Image')
         df2.show()
     if DUMP:
-        print('[viz] Dumping Image')
+        #print('[viz] Dumping Image')
         fpath = allres.hs.dirs.result_dir
         if not subdir is None: 
             fpath = join(fpath, subdir)
@@ -172,29 +173,34 @@ def __dump_or_browse(allres, subdir=None):
         df2.save_figure(fpath=fpath, usetitle=True)
         df2.reset()
 
-def dump_score_matrixes(allres):
-    plot_score_matrix(allres)
+def plot_tt_bt_tf_matches(allres, qcx):
+    #print('Visualizing result: ')
+    #res.printme()
+    res = allres.qcx2_res[qcx]
 
-def dump_text_results(allres):
-    __dump_text_report(allres, 'rankres_str')
-    __dump_text_report(allres, 'matrix_str')
-    
-def dump_problem_matches(allres):
-    dump_orgres_matches(allres, 'problem_false')
-    dump_orgres_matches(allres, 'problem_true')
+    ranks = (allres.top_true_qcx_arrays[0][qcx],
+             allres.bot_true_qcx_arrays[0][qcx],
+             allres.top_false_qcx_arrays[0][qcx])
 
-def dump_rank_stems(allres):
-    plot_rank_stem(allres, 'true')
+    scores = (allres.top_true_qcx_arrays[1][qcx],
+             allres.bot_true_qcx_arrays[1][qcx],
+             allres.top_false_qcx_arrays[1][qcx])
 
-def dump_rank_hists(allres):
-    plot_rank_histogram(allres, 'true')
+    cxs = (allres.top_true_qcx_arrays[2][qcx],
+           allres.bot_true_qcx_arrays[2][qcx],
+           allres.top_false_qcx_arrays[2][qcx])
 
-def dump_score_pdfs(allres):
-    plot_score_pdf(allres, 'true', colorx=0.0, variation_truncate=True)
-    plot_score_pdf(allres, 'false', colorx=.2)
-    plot_score_pdf(allres, 'top_true', colorx=.4, variation_truncate=True)
-    plot_score_pdf(allres, 'bot_true', colorx=.6)
-    plot_score_pdf(allres, 'top_false', colorx=.9)
+    titles = ('best True rank='+str(ranks[0])+' ',
+              'worst True rank='+str(ranks[1])+' ',
+              'best False rank='+str(ranks[2])+' ')
+
+    df2.figure(fignum=1, plotnum=231)
+    df2.show_matches3(res, hs, cxs[0], False, fignum=1, plotnum=131, title_aug=titles[0])
+    df2.show_matches3(res, hs, cxs[1], False, fignum=1, plotnum=132, title_aug=titles[1])
+    df2.show_matches3(res, hs, cxs[2], False, fignum=1, plotnum=133, title_aug=titles[2])
+    fig_title = 'fig qcx='+str(qcx)+' TT BT TF -- ' + allres.title_suffix
+    df2.set_figtitle(fig_title)
+    #df2.set_figsize(_fn, 1200,675)
 
 def dump_gt_matches(allres):
     hs = allres.hs

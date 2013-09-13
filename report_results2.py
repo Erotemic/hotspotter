@@ -17,6 +17,7 @@ import subprocess
 import sys
 import textwrap
 import fnmatch
+import warnings
 from itertools import izip
 from os.path import realpath, join, normpath
 import re
@@ -28,7 +29,7 @@ REPORT_MATRIX  = False
 REPORT_STEM    = True
 REPORT_RANKRES = True
 
-REPORT_MATRIX_VIZ = False
+REPORT_MATRIX_VIZ = True
 
 def reload_module():
     import imp, sys
@@ -55,6 +56,10 @@ class AllResults(DynStruct):
         self.greater1_cxs = None
         self.greater5_cxs = None
         self.matrix_str          = None
+
+    def verbose():
+        toret = ''
+
 
     def __str__(allres):
         #print = tores.append
@@ -85,6 +90,15 @@ class OrganizedResult(DynStruct):
         self.cxs.append(cx)
         self.scores.append(score)
         self.ranks.append(rank)
+    def __len__(self):
+        num_qcxs   = len(self.qcxs)
+        num_cxs    = len(self.cxs)
+        num_scores = len(self.scores)
+        num_ranks  = len(self.ranks)
+        assert num_qcxs == num_cxs
+        assert num_cxs == num_scores
+        assert num_scores == num_ranks
+        return num_qcxs
     def iter(self):
         'useful for plotting'
         result_iter = izip(self.qcxs, self.cxs, self.scores, self.ranks)
@@ -113,12 +127,12 @@ def res2_true_and_false(hs, res, SV):
         SV = True
     if not 'res' in vars():
         res = qcx2_res[qcx]
-    db_sample_cx = hs.database_sample_cx
+    indx_sample_cx = hs.indexed_sample_cx
     qcx = res.qcx
     cx2_score = res.cx2_score_V if SV else res.cx2_score
     unfilt_top_cx = np.argsort(cx2_score)[::-1]
     # Get top chip indexes and scores
-    top_cx    = np.array(helpers.intersect_ordered(unfilt_top_cx, db_sample_cx))
+    top_cx    = np.array(helpers.intersect_ordered(unfilt_top_cx, indx_sample_cx))
     top_score = cx2_score[top_cx]
     # Get the true and false ground truth ranks
     qnx         = hs.tables.cx2_nx[qcx]
@@ -137,7 +151,7 @@ def res2_true_and_false(hs, res, SV):
     return true_tup, false_tup
 
 def init_organized_results(allres):
-    print(' * init organized results')
+    print('[rr2] Initialize organized results')
     hs = allres.hs
     SV = allres.SV
     qcx2_res = allres.qcx2_res
@@ -178,6 +192,13 @@ def init_organized_results(allres):
             if topx == 0:
                 allres.top_false.append(qcx, cx, rank, score)
             topx += 1
+    print('[rr2] len(allres.true)          = %r' % len(allres.true))
+    print('[rr2] len(allres.false)         = %r' % len(allres.false))
+    print('[rr2] len(allres.top_true)      = %r' % len(allres.top_true))
+    print('[rr2] len(allres.top_false)     = %r' % len(allres.top_false))
+    print('[rr2] len(allres.bot_true)      = %r' % len(allres.bot_true))
+    print('[rr2] len(allres.problem_true)  = %r' % len(allres.problem_true))
+    print('[rr2] len(allres.problem_false) = %r' % len(allres.problem_false))
     # qcx arrays for ttbttf
     allres.top_true_qcx_arrays  = allres.top_true.qcx_arrays(hs)
     allres.bot_true_qcx_arrays  = allres.bot_true.qcx_arrays(hs)
@@ -224,7 +245,8 @@ def init_score_matrix(allres):
     allres.col_label_cx = col_label_cx
     allres.row_label_cx = row_label_cx
 
-def init_allres(hs, qcx2_res, SV=True, matrix=REPORT_MATRIX, oxford=False):
+def init_allres(hs, qcx2_res, SV=True, matrix=(REPORT_MATRIX or
+                                               REPORT_MATRIX_VIZ), oxford=False):
     'Organizes results into a visualizable data structure'
     # Make AllResults data containter
     allres = AllResults(hs, qcx2_res, SV)
@@ -271,7 +293,7 @@ def build_matrix_str(allres):
          '# Generated on: '+timestamp,
          '# Format: rows separated by newlines, cols separated by commas',
          '# num_queries  / rows = '+repr(len(row_label_gname)),
-         '# num_database / cols = '+repr(len(col_label_gname)),
+         '# num_indexed  / cols = '+repr(len(col_label_gname)),
          '# row_labels = '+repr(row_label_gname),
          '# col_labels = '+repr(col_label_gname)])
     row_strings = []
@@ -289,7 +311,7 @@ def build_rankres_str(allres):
     qcx2_res = allres.qcx2_res
     cx2_cid  = hs.tables.cx2_cid
     test_sample_cx = hs.test_sample_cx
-    db_sample_cx = hs.database_sample_cx
+    indx_sample_cx = hs.indexed_sample_cx
     # Get organized data for csv file
     (qcx2_top_true_rank,
     qcx2_top_true_score,
@@ -305,14 +327,18 @@ def build_rankres_str(allres):
     # Number of groundtruth per query 
     qcx2_numgt = np.zeros(len(cx2_cid)) - 2
     for qcx in test_sample_cx:
-        qcx2_numgt[qcx] = len(hs.get_other_cxs(qcx))
+        qcx2_numgt[qcx] = len(hs.get_other_indexed_cxs(qcx))
     # Easy to digest results
     num_chips = len(test_sample_cx)
-    num_nonquery = len(np.setdiff1d(db_sample_cx, test_sample_cx))
+    num_nonquery = len(np.setdiff1d(indx_sample_cx, test_sample_cx))
 
     test_sample_cx_with_gt = np.array(test_sample_cx)[qcx2_numgt[test_sample_cx] > 0]
     num_with_gtruth = len(test_sample_cx_with_gt)
+    if num_with_gtruth == 0:
+        warnings.warn('[rr2] there were no queries with ground truth')
     def ranks_less_than_(thresh):
+        if num_with_gtruth == 0:
+            return [], ('NoGT','NoGT', -1, 'NoGT')
         testcx2_ttr = qcx2_top_true_rank[test_sample_cx_with_gt]
         greater_cxs = test_sample_cx_with_gt[np.where(testcx2_ttr > thresh)[0]]
         num_greater = len(greater_cxs)
@@ -334,8 +360,8 @@ def build_rankres_str(allres):
     scalar_summary  = '# Num Query Chips: %d \n' % num_chips
     scalar_summary += '# Num Query Chips with at least one match: %d \n' % num_with_gtruth
     scalar_summary += '# Num NonQuery Chips: %d \n' % num_nonquery
-    scalar_summary += '# Ranks <= 5: %d/%d = %.1f%% (missed %d)\n' % (fmt5_tup)
-    scalar_summary += '# Ranks <= 1: %d/%d = %.1f%% (missed %d)\n\n' % (fmt1_tup)
+    scalar_summary += '# Ranks <= 5: %r/%r = %.1f%% (missed %r)\n' % (fmt5_tup)
+    scalar_summary += '# Ranks <= 1: %r/%r = %.1f%% (missed %r)\n\n' % (fmt1_tup)
     header += scalar_summary
     # Experiment parameters
     header += '# Full Parameters: \n' + helpers.indent(params.param_string(),'#') + '\n\n'
@@ -405,65 +431,6 @@ def __dump_text_report(allres, report_type):
     helpers.write_to(csv_fpath, report_str)
     helpers.write_to(csv_timestamp_fpath, report_str)
 
-def dump_orgres_matches(allres, orgres_type):
-    orgres = allres.__dict__[orgres_type]
-    hs = allres.hs
-    qcx2_res = allres.qcx2_res
-    # loop over each query / result of interest
-    for qcx, cx, score, rank in orgres.iter():
-        query_gname, _  = os.path.splitext(hs.tables.gx2_gname[hs.tables.cx2_gx[qcx]])
-        result_gname, _ = os.path.splitext(hs.tables.gx2_gname[hs.tables.cx2_gx[cx]])
-        res = qcx2_res[qcx]
-        df2.figure(fignum=1, plotnum=121)
-        df2.show_matches3(res, hs, cx, SV=False, fignum=1, plotnum=121)
-        df2.show_matches3(res, hs, cx, SV=True,  fignum=1, plotnum=122)
-        big_title = 'score=%.2f_rank=%d_q=%s_r=%s' % \
-                (score, rank, query_gname, result_gname)
-        df2.set_figtitle(big_title)
-        __dump_or_browse(allres, orgres_type+'_matches'+allres.title_suffix)
-
-def __dump_or_browse(allres, subdir=None):
-    if __DUMP__:
-        print('[rr2] Dumping Image')
-        fpath = allres.hs.dirs.result_dir
-        if not subdir is None: 
-            fpath = join(fpath, subdir)
-            helpers.ensurepath(fpath)
-        df2.save_figure(fpath=fpath, usetitle=True)
-    else: # __BROWSE__
-        print('[rr2] Browsing Image')
-        df2.show()
-    df2.reset()
-
-def plot_tt_bt_tf_matches(allres, qcx):
-    #print('Visualizing result: ')
-    #res.printme()
-    res = allres.qcx2_res[qcx]
-
-    ranks = (allres.top_true_qcx_arrays[0][qcx],
-             allres.bot_true_qcx_arrays[0][qcx],
-             allres.top_false_qcx_arrays[0][qcx])
-
-    scores = (allres.top_true_qcx_arrays[1][qcx],
-             allres.bot_true_qcx_arrays[1][qcx],
-             allres.top_false_qcx_arrays[1][qcx])
-
-    cxs = (allres.top_true_qcx_arrays[2][qcx],
-           allres.bot_true_qcx_arrays[2][qcx],
-           allres.top_false_qcx_arrays[2][qcx])
-
-    titles = ('best True rank='+str(ranks[0])+' ',
-              'worst True rank='+str(ranks[1])+' ',
-              'best False rank='+str(ranks[2])+' ')
-
-    df2.figure(fignum=1, plotnum=231)
-    df2.show_matches3(res, hs, cxs[0], False, fignum=1, plotnum=131, title_aug=titles[0])
-    df2.show_matches3(res, hs, cxs[1], False, fignum=1, plotnum=132, title_aug=titles[1])
-    df2.show_matches3(res, hs, cxs[2], False, fignum=1, plotnum=133, title_aug=titles[2])
-    fig_title = 'fig qcx='+str(qcx)+' TT BT TF -- ' + allres.title_suffix
-    df2.set_figtitle(fig_title)
-    #df2.set_figsize(_fn, 1200,675)
-
 # ===========================
 # Driver functions
 # ===========================
@@ -510,13 +477,7 @@ def dump_all(allres,
         dump_gt_matches(allres)
     if missed_top5:
         dump_missed_top5(allres)
-
     print('\n --- END DUMP ALL ---\n')
-
-def dump_score_matrixes(allres):
-    #print('\n---DUMPING SCORE MATRIX---')
-    plot_score_matrix(allres)
-
 
 def dump_oxsty_mAP_results(allres):
     #print('\n---DUMPING OXSTYLE RESULTS---')
@@ -535,21 +496,25 @@ def dump_problem_matches(allres):
     dump_orgres_matches(allres, 'problem_false')
     dump_orgres_matches(allres, 'problem_true')
 
+def dump_score_matrixes(allres):
+    #print('\n---DUMPING SCORE MATRIX---')
+    viz.plot_score_matrix(allres)
+
 def dump_rank_stems(allres):
     #print('\n---DUMPING RANK STEMS---')
-    plot_rank_stem(allres, 'true')
+    viz.plot_rank_stem(allres, 'true')
 
 def dump_rank_hists(allres):
     #print('\n---DUMPING RANK HISTS---')
-    plot_rank_histogram(allres, 'true')
+    viz.plot_rank_histogram(allres, 'true')
 
 def dump_score_pdfs(allres):
     #print('\n---DUMPING SCORE PDF ---')
-    plot_score_pdf(allres, 'true',      colorx=0.0, variation_truncate=True)
-    plot_score_pdf(allres, 'false',     colorx=0.2)
-    plot_score_pdf(allres, 'top_true',  colorx=0.4, variation_truncate=True)
-    plot_score_pdf(allres, 'bot_true',  colorx=0.6)
-    plot_score_pdf(allres, 'top_false', colorx=0.9)
+    viz.plot_score_pdf(allres, 'true',      colorx=0.0, variation_truncate=True)
+    viz.plot_score_pdf(allres, 'false',     colorx=0.2)
+    viz.plot_score_pdf(allres, 'top_true',  colorx=0.4, variation_truncate=True)
+    viz.plot_score_pdf(allres, 'bot_true',  colorx=0.6)
+    viz.plot_score_pdf(allres, 'top_false', colorx=0.9)
 
 def dump_gt_matches(allres):
     #print('\n---DUMPING GT MATCHES ---')
@@ -568,75 +533,22 @@ def dump_missed_top5(allres):
         viz.plot_cx(allres, qcx, 'top5', 'missed_top5')
         viz.plot_cx(allres, qcx, 'gt_matches', 'missed_top5')
 
-
-# ===========================
-# Result Plotting
-# ===========================
-
-def plot_rank_stem(allres, orgres_type):
-    print(' * plotting rank stem')
-    # Visualize rankings with the stem plot
-    hs = allres.hs
-    df2.reload_module()
-    title = orgres_type+'rankings stem plot\n'+allres.title_suffix
+def dump_orgres_matches(allres, orgres_type):
     orgres = allres.__dict__[orgres_type]
-    fig = df2.figure(fignum=1, doclf=True, title=title)
-    x_data = orgres.qcxs
-    y_data = orgres.ranks
-    df2.draw_stems(x_data, y_data)
-    slice_num = int(np.ceil(np.log10(len(orgres.qcxs))))
-    df2.set_xticks(hs.test_sample_cx[::slice_num])
-    df2.set_xlabel('query chip indeX (qcx)')
-    df2.set_ylabel('groundtruth chip ranks')
-    #df2.set_yticks(list(seen_ranks))
-    __dump_or_browse(allres, 'rankviz')
-
-def plot_rank_histogram(allres, orgres_type): 
-    print(' * plotting rank histogram')
-    ranks = allres.__dict__[orgres_type].ranks
-    label = 'P(rank | '+orgres_type+' match)'
-    title = orgres_type+' match rankings histogram\n'+allres.title_suffix
-    df2.figure(fignum=1, doclf=True, title=title)
-    df2.draw_histpdf(ranks, label=label) # FIXME
-    df2.set_xlabel('ground truth ranks')
-    df2.set_ylabel('frequency')
-    df2.legend()
-    __dump_or_browse(allres, 'rankviz')
-    
-def plot_score_pdf(allres, orgres_type, colorx=0.0, variation_truncate=False): 
-    print(' * plotting score pdf')
-    title  = orgres_type+' match score frequencies\n'+allres.title_suffix
-    scores = allres.__dict__[orgres_type].scores
-    label  = 'P(score | '+orgres_type+')'
-    df2.figure(fignum=1, doclf=True, title=title)
-    df2.draw_pdf(scores, label=label, colorx=colorx)
-    if variation_truncate:
-        df2.variation_trunctate(scores)
-    #df2.variation_trunctate(false.scores)
-    df2.set_xlabel('score')
-    df2.set_ylabel('frequency')
-    df2.legend()
-    __dump_or_browse(allres, 'scoreviz')
-
-def plot_score_matrix(allres):
-    print(' * plotting score matrix')
-    score_matrix = allres.score_matrix
-    title = 'Score Matrix\n'+allres.title_suffix
-    # Find inliers
-    #inliers = helpers.find_std_inliers(score_matrix)
-    #max_inlier = score_matrix[inliers].max()
-    # Trunate above 255
-    score_img = np.copy(score_matrix)
-    score_img[score_img < 0] = 0
-    score_img[score_img > 255] = 255
-    dim = 0
-    #score_img = helpers.norm_zero_one(score_img, dim=dim)
-    df2.figure(fignum=1, doclf=True, title=title)
-    df2.imshow(score_img, fignum=1)
-    df2.set_xlabel('database')
-    df2.set_ylabel('queries')
-    __dump_or_browse(allres, 'scoreviz')
-
+    hs = allres.hs
+    qcx2_res = allres.qcx2_res
+    # loop over each query / result of interest
+    for qcx, cx, score, rank in orgres.iter():
+        query_gname, _  = os.path.splitext(hs.tables.gx2_gname[hs.tables.cx2_gx[qcx]])
+        result_gname, _ = os.path.splitext(hs.tables.gx2_gname[hs.tables.cx2_gx[cx]])
+        res = qcx2_res[qcx]
+        df2.figure(fignum=1, plotnum=121)
+        df2.show_matches3(res, hs, cx, SV=False, fignum=1, plotnum=121)
+        df2.show_matches3(res, hs, cx, SV=True,  fignum=1, plotnum=122)
+        big_title = 'score=%.2f_rank=%d_q=%s_r=%s' % \
+                (score, rank, query_gname, result_gname)
+        df2.set_figtitle(big_title)
+        viz.__dump_or_browse(allres, orgres_type+'_matches'+allres.title_suffix)
 
 #===============================
 # MAIN SCRIPT
@@ -658,15 +570,9 @@ def dinspect(qcx, cx=None, SV=True, reset=True):
 def report_all(hs, qcx2_res, SV=True, **kwargs):
     allres = init_allres(hs, qcx2_res, SV=SV, **kwargs)
     if not 'kwargs' in vars():
-        kwargs = dict(rankres=True,
-             stem=False, 
-             matrix=False,
-             pdf=False, 
-             hist=False,
-             oxford=False, 
-             ttbttf=False,
-             problems=False,
-             gtmatches=False)
+        kwargs = dict(rankres=True, stem=False, matrix=False, pdf=False,
+                      hist=False, oxford=False, ttbttf=False, problems=False,
+                      gtmatches=False)
     try: 
         dump_all(allres, **kwargs)
     except Exception as ex:
@@ -777,7 +683,7 @@ if __name__ == '__main__':
     SV = True
     # Initialize Results
     oxford = ld2.DEFAULT == ld2.OXFORD
-    allres = init_allres(hs, qcx2_res, SV, oxford=oxford, matrix=REPORT_MATRIX)
+    allres = init_allres(hs, qcx2_res, SV, oxford=oxford)
     greater5_cxs = allres.greater5_cxs
 
     #Helper drawing functions

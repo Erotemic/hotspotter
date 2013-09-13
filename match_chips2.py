@@ -265,7 +265,7 @@ class BagOfWordsIndex(DynStruct):
 # precompute the bag of words model
 def precompute_bag_of_words(hs):
     '''Builds a vocabulary with train_sample_cx
-    Creates an indexed database with database_sample_cx'''
+    Creates an indexed database with indexed_sample_cx'''
     print(textwrap.dedent('''
     =============================
     [mc2] Precompute Bag-of-Words
@@ -275,8 +275,8 @@ def precompute_bag_of_words(hs):
     cx2_desc   = hs.feats.cx2_desc
     train_cxs  = hs.train_sample_cx
     train_cxs = range(hs.num_cx) if train_cxs is None else train_cxs
-    db_cxs     = hs.database_sample_cx
-    db_cxs    = range(hs.num_cx) if db_cxs    is None else db_cxs
+    indexed_cxs = hs.indexed_sample_cx
+    indexed_cxs = range(hs.num_cx) if indexed_cxs is None else indexed_cxs
     vocab_size = params.__BOW_NUM_WORDS__
     # Compute vocabulary
     print(textwrap.dedent('''
@@ -290,7 +290,7 @@ def precompute_bag_of_words(hs):
     -----------------------------
     [mc2] precompute_bow(2/2): Index database with visual vocabulary
     -----------------------------'''))
-    _index_vocab_args = (cx2_desc, words, words_flann, db_cxs, cache_dir)
+    _index_vocab_args = (cx2_desc, words, words_flann, indexed_cxs, cache_dir)
     _index_vocab_ret  = __index_database_to_vocabulary(*_index_vocab_args)
     cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf = _index_vocab_ret
     # return as a BagOfWordsIndex object
@@ -326,13 +326,13 @@ def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
     return words, words_flann
 
 # step 2
-def __index_database_to_vocabulary(cx2_desc, words, words_flann, db_cxs, cache_dir):
+def __index_database_to_vocabulary(cx2_desc, words, words_flann, indexed_cxs, cache_dir):
     '''Assigns each database chip a visual-vector and returns 
        data for the inverted file'''
     # TODO: Save precomputations here
     print('[mc2] Assigning each database chip a bag-of-words vector')
-    num_database = len(db_cxs)
-    ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, db_cxs)
+    num_indexed = len(indexed_cxs)
+    ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, indexed_cxs)
     # Build UID
     matcher_uid  = params.get_matcher_uid()
     data_uid = helpers.hashstr(ax2_desc)
@@ -380,7 +380,7 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, db_cxs, cache_d
     # Compute idf_w = log(Number of documents / Number of docs containing word_j)
     print('[mc2] computing tf-idf')
     wx2_df  = np.array([len(set(cxs))+1 for cxs in wx2_cxs], dtype=np.float)
-    wx2_idf = np.array(np.log2(np.float(num_database) / wx2_df))
+    wx2_idf = np.array(np.log2(np.float(num_indexed) / wx2_df))
     # Compute tf-idf
     print('[mc2] preweighting with tf-idf')
     cx2_tfidf_vvec = algos.sparse_multiply_rows(cx2_tf_vvec, wx2_idf)
@@ -474,11 +474,11 @@ class VsManyIndex(DynStruct): # TODO: rename this
     def __del__(self):
         print('[mc2] Deleting VsManyIndex')
 
-def __aggregate_descriptors(cx2_desc, db_cxs):
+def __aggregate_descriptors(cx2_desc, indexed_cxs):
     '''Aggregates a sample set of descriptors. 
     Returns descriptors, chipxs, and featxs indexed by ax'''
     # sample the descriptors you wish to aggregate
-    sx2_cx   = db_cxs
+    sx2_cx   = indexed_cxs
     sx2_desc = cx2_desc[sx2_cx]
     sx2_numfeat = [len(k) for k in iter(cx2_desc[sx2_cx])]
     cx_numfeat_iter = iter(zip(sx2_cx, sx2_numfeat))
@@ -494,9 +494,9 @@ def aggregate_descriptors_vsmany(hs):
     '''aggregates all descriptors for vsmany search'''
     print('[mc2] Aggregating descriptors for one-vs-many')
     cx2_desc  = hs.feats.cx2_desc
-    db_cxs    = hs.database_sample_cx
-    db_cxs    = range(hs.num_cx) if db_cxs is None else db_cxs
-    return __aggregate_descriptors(cx2_desc, db_cxs)
+    indexed_cxs = hs.indexed_sample_cx
+    indexed_cxs = range(hs.num_cx) if indexed_cxs is None else indexed_cxs
+    return __aggregate_descriptors(cx2_desc, indexed_cxs)
 
 #@profile
 def precompute_index_vsmany(hs):

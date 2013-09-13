@@ -59,7 +59,7 @@ class HotSpotter(DynStruct):
         hs.matcher = None
         hs.train_sample_cx    = None
         hs.test_sample_cx     = None
-        hs.database_sample_cx = None
+        hs.indexed_sample_cx = None
         if not db_dir is None:
             hs.load_database(db_dir, **kwargs)
     #---------------
@@ -89,33 +89,28 @@ class HotSpotter(DynStruct):
     #---------------
 
     def load_database(hs, db_dir,
-                      load_matcher=True,
-                      load_features=True,
-                      samples_subset=(None, None)):
-        # Load data
+                      matcher=True,
+                      features=True,
+                      samples_range=(None, None)):
         hs.load_tables(db_dir)
         hs.load_chips()
-        # Load sample sets
         hs.set_sample_subset(*samples_subset)
-        if load_features:
+        if features:
             hs.load_features()
-        else: 
-            print('[hs] Not Loading Features!!')
-        # Load Matcher
-        if load_matcher: 
+        if matcher: 
             hs.load_matcher()
     #---------------
     def get_valid_cxs(hs):
         valid_cxs, = np.where(np.array(hs.tables.cx2_cid) > 0)
         return valid_cxs
 
-    def split_test_train_at(hs, pos):
+    def set_sample_split_pos(hs, pos):
         valid_cxs = hs.get_valid_cxs()
         test_samp  = valid_cxs[:pos]
         train_samp = valid_cxs[pos+1:]
         hs.set_samples(test_samp, train_samp)
 
-    def set_sample_subset(hs, pos1, pos2):
+    def set_sample_range(hs, pos1, pos2):
         valid_cxs = hs.get_valid_cxs()
         test_samp  = valid_cxs[pos1:pos2]
         train_samp = test_samp
@@ -123,7 +118,7 @@ class HotSpotter(DynStruct):
 
     def set_samples(hs, test_samp=None,
                         train_samp=None,
-                        db_samp=None):
+                        indx_samp=None):
         ''' This is the correct function to use when setting samples '''
         print('[hs] set_samples():')
         valid_cxs = hs.get_valid_cxs()
@@ -133,31 +128,41 @@ class HotSpotter(DynStruct):
         if train_samp is None:
             print('[hs] * using all chips in training')
             train_samp = valid_cxs
-        if db_samp is None:
+        if indx_samp is None:
             print('[hs] * using training set as database set')
-            db_samp = train_samp
+            indx_samp = train_samp
 
+        # Ensure samples are sorted
+        test_samp = sorted(test_samp)
+        train_samp = sorted(train_samp)
+        indx_samp = sorted(indx_samp)
 
         # Debugging and Info
         test_train_isect = np.intersect1d(test_samp, train_samp)
-        db_train_isect = np.intersect1d(db_samp, train_samp)
-        db_test_isect = np.intersect1d(db_samp, test_samp)
+        indx_train_isect   = np.intersect1d(indx_samp, train_samp)
+        indx_test_isect    = np.intersect1d(indx_samp, test_samp)
+        lentup = (len(test_samp), len(train_samp), len(indx_samp))
         print('[hs]   ---')
-        print('[hs] * | isect(test, train) |  = %d' % len(test_train_isect))
-        print('[hs] * | isect(db, train)   |  = %d' % len(db_train_isect))
-        print('[hs] * | isect(db, test)    |  = %d' % len(db_test_isect))
         print('[hs] * num_valid_cxs = %d' % len(valid_cxs))
-        lentup = (len(test_samp), len(train_samp), len(db_samp))
-        print('[hs] * num_test=%d, num_train=%d, num_db=%d' % lentup)
+        print('[hs] * num_test=%d, num_train=%d, num_indx=%d' % lentup)
+        print('[hs] * | isect(test, train) |  = %d' % len(test_train_isect))
+        print('[hs] * | isect(indx, train) |  = %d' % len(indx_train_isect))
+        print('[hs] * | isect(indx, test)  |  = %d' % len(indx_test_isect))
+        
+        # Unload matcher if database changed
+        if hs.train_sample_cx != train_samp or hs.indexed_sample_cx != indx_samp:
+            hs.matcher = None
 
-        hs.database_sample_cx = db_samp
+        # Set the sample
+        hs.indexed_sample_cx  = indx_samp
         hs.train_sample_cx    = train_samp
         hs.test_sample_cx     = test_samp
 
-        train_hash = repr(tuple(train_samp))
-        train_id = helpers.hashstr(train_hash)
-        print('[hs] set_samples(): train_id=%r' % train_id)
-        params.TRAIN_SAMPLE_ID = train_id
+        # Set the training id
+        train_indx_hash = repr((tuple(train_samp), tuple(indx_samp)))
+        train_indx_id = helpers.hashstr(train_indx_hash)
+        print('[hs] set_samples(): train_indx_id=%r' % train_indx_id)
+        params.TRAIN_INDX_SAMPLE_ID = train_indx_id
     #---------------
     def delete_computed_dir(hs):
         computed_dir = hs.dirs.computed_dir
@@ -186,6 +191,11 @@ class HotSpotter(DynStruct):
             if nx > 0:
                 nx2_cxs[nx].append(cx)
         return nx2_cxs
+
+    def get_other_indexed_cxs(hs, cx):
+        other_cx = hs.get_other_cxs(cx)
+        other_indexed_cx = np.intersect1d(other_cx, hs.indexed_sample_cx)
+        return other_indexed_cx
 
     def get_other_cxs(hs, cx):
         cx2_nx   = hs.tables.cx2_nx

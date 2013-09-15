@@ -81,7 +81,7 @@ def plot_cx(allres, cx, style='kpts', subdir=None):
         kpts  = hs.feats.cx2_kpts[cx]
         title = 'cx: %d\n%s' % (cx, allres.title_suffix)
         print('[viz] Plotting'+title)
-        fig = df2.imshow(rchip, fignum=FIGNUM, title=title, doclf=True)
+        df2.imshow(rchip, fignum=FIGNUM, title=title, doclf=True)
         df2.draw_kpts2(kpts)
     if 'gt_matches'  == style: 
         subdir = 'gt_matches' if subdir is None else subdir
@@ -90,7 +90,11 @@ def plot_cx(allres, cx, style='kpts', subdir=None):
     if 'top5' == style:
         subdir = 'top5' if subdir is None else subdir
         res = qcx2_res[cx]
-        df2.show_top5_matches(hs, res, fignum=FIGNUM)
+        df2.show_topN_matches(hs, res, 5, fignum=FIGNUM)
+    if 'analysis' == style:
+        res = qcx2_res[cx]
+        df2.show_topN_matches(hs, res, 5, fignum=FIGNUM)
+
     subdir += allres.title_suffix
     __dump_or_browse(allres, subdir)
 
@@ -100,7 +104,7 @@ def plot_rank_stem(allres, orgres_type='true'):
     hs = allres.hs
     title = orgres_type+'rankings stem plot\n'+allres.title_suffix
     orgres = allres.__dict__[orgres_type]
-    fig = df2.figure(fignum=FIGNUM, doclf=True, title=title)
+    df2.figure(fignum=FIGNUM, doclf=True, title=title)
     x_data = orgres.qcxs
     y_data = orgres.ranks
     df2.draw_stems(x_data, y_data)
@@ -208,7 +212,7 @@ def dump_gt_matches(allres):
     'Displays the matches to ground truth for all queries'
     for qcx in xrange(0, len(qcx2_res)):
         res = qcx2_res[qcx]
-        df2.show_all_matches(hs, res, fignum=FIGNUM)
+        df2.show_gt_matches(hs, res, fignum=FIGNUM)
         __dump_or_browse(allres, 'gt_matches'+allres.title_suffix)
 
 def dump_orgres_matches(allres, orgres_type):

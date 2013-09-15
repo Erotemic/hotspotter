@@ -137,11 +137,14 @@ class QueryResult(DynStruct):
             return False
 
     def top5_cxs(self):
+        return self.topN_cxs(5)
+
+    def topN_cxs(self, N):
         cx2_score = self.cx2_score_V
         top_cxs = cx2_score.argsort()[::-1]
-        num_top = min(5, len(top_cxs))
-        top5_cxs = top_cxs[0:num_top]
-        return top5_cxs
+        num_top = min(N, len(top_cxs))
+        topN_cxs = top_cxs[0:num_top]
+        return topN_cxs
     #def __del__(self):
         #print('[mc2] Deleting Query Result')
 

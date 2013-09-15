@@ -29,7 +29,7 @@ REPORT_MATRIX  = False
 REPORT_STEM    = True
 REPORT_RANKRES = True
 
-REPORT_MATRIX_VIZ = True
+REPORT_MATRIX_VIZ = False
 
 def reload_module():
     import imp, sys
@@ -64,9 +64,10 @@ class AllResults(DynStruct):
     def __str__(allres):
         #print = tores.append
         toret=('+======================\n')
+        scalar_summary = str(allres.scalar_summary).strip()
         toret+=('| All Results \n')
         toret+=('| title_suffix=%s\n' % str(allres.title_suffix))
-        toret+=('| scalar_summary=\n%s\n' % helpers.indent(str(allres.scalar_summary).strip(), '|   '))
+        toret+=('| scalar_summary=\n%s\n' % helpers.indent(scalar_summary, '|   '))
         toret+=('| '+str(allres.scalar_mAP_str))
         toret+=('|---\n')
         toret+=('| greater5_cxs = %r \n' % (allres.greater5_cxs,))
@@ -532,7 +533,7 @@ def dump_gt_matches(allres):
 def dump_missed_top5(allres):
     #print('\n---DUMPING MISSED TOP 5---')
     'Displays the top5 matches for all queries'
-    qcx2_res = allres.qcx2_res
+    qcx2_res     = allres.qcx2_res
     greater5_cxs = allres.greater5_cxs
     #qcx = greater5_cxs[0]
     for qcx in greater5_cxs:
@@ -556,6 +557,25 @@ def dump_orgres_matches(allres, orgres_type):
         df2.set_figtitle(big_title)
         viz.__dump_or_browse(allres, orgres_type+'_matches'+allres.title_suffix)
 
+
+def analysis(allres):
+    # Measure score consistency over a spatial area.
+    # Measure entropy of matching vs nonmatching descriptors
+    # Measure scale of m vs nm desc
+    def get_sort_and_x(scores):
+        scores = np.array(scores)
+        scores_sortx = scores.argsort()[::-1]
+        scores_sort  = scores[scores_sortx]
+        return scores_sort, scores_sortx
+    tt_sort, tt_sortx = get_sort_and_x(allres.top_true.scores)
+    tf_sort, tf_sortx = get_sort_and_x(allres.top_false.scores)
+
+    df2.rrr(); viz.rrr(); clf(); df2.show_chip(hs, 14, allres=allres)
+    #viz.plot_cx(allres, 14, 'top5')
+    #viz.plot_cx(allres, 14, 'gt_matches')
+    df2.show_chip(hs, 1, allres=allres)
+
+
 #===============================
 # MAIN SCRIPT
 #===============================
@@ -568,7 +588,7 @@ def dinspect(qcx, cx=None, SV=True, reset=True):
         print('reseting')
         df2.reset()
     if cx is None:
-        df2.show_all_matches(hs, res, fignum)
+        df2.show_gt_matches(hs, res, fignum)
     else: 
         df2.show_matches3(res, hs, cx, fignum, SV=SV)
     df2.present(wh=(900,600))

@@ -94,7 +94,7 @@ class HotSpotter(DynStruct):
                       samples_range=(None, None)):
         hs.load_tables(db_dir)
         hs.load_chips()
-        hs.set_sample_subset(*samples_subset)
+        hs.set_sample_range(*samples_range)
         if features:
             hs.load_features()
         if matcher: 

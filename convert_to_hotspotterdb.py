@@ -185,6 +185,7 @@ def convert_from_oxford_style(db_dir):
     def add_to_hs_tables(gname, name, roi, quality, num=''):
         cid = len(cx2_cid) + 1
         nx = nx2_name.index(name)
+        if nx == 0: nx = 1
         gx = gx2_gname.index(gname)
         cx2_cid.append(cid)
         cx2_roi.append(roi)

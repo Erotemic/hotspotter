@@ -311,16 +311,6 @@ if '--print-checks' in sys.argv:
 if '--serial' in sys.argv:
     NUM_PROCS = 1
 
-for argv in iter(sys.argv):
-    argv_u =  argv.upper()
-    if argv_u in dev_databases.keys():
-        print('\n'.join(['[params] Default Database set to:'+argv.upper(),
-                         '[params] Previously: '+str(DEFAULT)]))
-        DEFAULT = dev_databases[argv_u]
-        if argv_u == 'OXFORD':
-            print('[params] Overloading OXFORD parameters')
-            # dont resize oxford photos
-
 def oxford_defaults():
     # best scale params
     import params 
@@ -329,6 +319,17 @@ def oxford_defaults():
     params.__SCALE_THRESH_LOW__  = 0.5
     params.__CHIP_SQRT_AREA__ = None
     params.__BOW_NUM_WORDS__  = long(1e6)
+
+for argv in iter(sys.argv):
+    argv_u =  argv.upper()
+    if argv_u in dev_databases.keys():
+        print('\n'.join(['[params] Default Database set to:'+argv.upper(),
+                         '[params] Previously: '+str(DEFAULT)]))
+        DEFAULT = dev_databases[argv_u]
+        if argv_u == 'OXFORD' or arg_u == 'PHILBIN':
+            print('[params] Overloading OXFORD parameters')
+            # dont resize oxford photos
+            oxford_defaults()
 
 def make_pref_object():
     'Not finished yet, but its a start'

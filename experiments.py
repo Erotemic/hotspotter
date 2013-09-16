@@ -117,6 +117,7 @@ def oxford_philbin07(hs=None):
     params.__BOW_NUM_WORDS__     = [1e4, 2e4, 5e4, 1e6, 1.25e6][3]
     params.__NUM_RERANK__        = [100, 200, 400, 800, 1000][4]
     params.__CHIP_SQRT_AREA__    = None
+    params.__XY_THRESH__         = 0.01
     #unsure about checks
     params.BOW_AKMEANS_FLANN_PARAMS = dict(algorithm='kdtree',
                                            trees=8, checks=64) 
@@ -179,6 +180,14 @@ def leave_out(expt_func=None, **kwargs):
     import experiments as expt
     from experiments import *
     '''
+    # ---
+    # Testing should have animals I have seen and animals I haven't seen. 
+    # Make sure num descriptors -per- word is about the same as Oxford 
+    # ---
+    # Notes from Monday: 
+    # 1) Larger training set (see how animals in training do vs animals out of training)
+    # 2) More detailed analysis of failures
+    # 3) Aggregate scores across different pictures of the same animal
     if not 'expt_func' in vars() or expt_func is None:
         expt_func = run_experiment
     # Load tables

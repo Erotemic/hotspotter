@@ -453,7 +453,7 @@ def dump_all(allres,
              no_viz=False,
              rankres=True,
              stem=True, 
-             missed_top5=False, 
+             missed_top5=True, 
              analysis=True,
              pair_analysis=True):
     print('\n======================')
@@ -745,6 +745,13 @@ def dump_feature_pair_analysis(allres):
     #viz.plot_cx(allres, 14, 'gt_matches')
     #df2.show_chip(hs, 1, allres=allres)
 
+
+def possible_problems():
+    # Perhaps overlapping keypoints are causing more harm than good. 
+    # Maybe there is a way of grouping them or averaging them into a 
+    # better descriptor.
+    pass
+
 #===============================
 # MAIN SCRIPT
 #===============================
@@ -796,7 +803,7 @@ def read_until(file, target):
             return curent_line
         curent_line = file.readline()
 
-def print_result_summaries_list():
+def print_result_summaries_list(topnum=5):
     print('\n<(^_^<)\n')
     # Print out some summary of all results you have
     hs = ld2.HotSpotter()
@@ -832,7 +839,10 @@ def print_result_summaries_list():
                 toprint += ('tt_scores = %r; ' % tt_score_sum)
                 toprint += ('bt_scores = %r; ' % bt_score_sum)
                 toprint += ('tf_scores = %r; ' % tf_score_sum)
-                sorted_rankres.append(top5line+metaline)
+                if topnum == 5:
+                    sorted_rankres.append(top5line+metaline)
+                else:
+                    sorted_rankres.append(top1line+metaline)
                 print(toprint+'\n')
 
     print('\n(>^_^)>\n')
@@ -861,6 +871,8 @@ if __name__ == '__main__':
     print('[rr2] __main__ = report_results2.py')
 
     if '--list' in sys.argv:
+        #listpos = sys.argv.index('--list')
+        #if listpos < len(sys.argv) - 1:
         print_result_summaries_list()
         sys.exit(1)
 

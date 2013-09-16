@@ -79,9 +79,10 @@ def reload_module():
 def rrr():
     reload_module()
 
+DEBUG = False
 def printDBG(msg):
-    #print(msg)
-    pass
+    if DEBUG:
+        print(msg)
 
 # ---- GENERAL FIGURE COMMANDS ----
 def sanatize_img_fpath(fpath):
@@ -621,8 +622,13 @@ def show_signature(sig, **kwargs):
     plt.plot(sig)
     fig.show()
 
-def imshow(img, fignum=None, title=None, figtitle=None, plotnum=None,
-           interpolation='nearest', **kwargs):
+def imshow(img, 
+           fignum=None,
+           title=None, 
+           figtitle=None, 
+           plotnum=None,
+           interpolation='nearest', 
+           **kwargs):
     printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
     printDBG('[df2] *** fignum = %r, plotnum = %r ' % (fignum, plotnum))
     fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
@@ -721,6 +727,7 @@ def show_matches4(hs, qcx, cx2_score,
         imshow(nan_img,fignum=fignum,plotnum=plotnum,title=title)
         return 
     cx2_nx = hs.tables.cx2_nx
+    nx2_name = hs.tables.nx2_name
     qnx = cx2_nx[qcx]
     nx  = cx2_nx[cx]
     cx2_rchip_path = hs.cpaths.cx2_rchip_path
@@ -770,6 +777,14 @@ def show_matches4(hs, qcx, cx2_score,
         _draw_border(ax, GREEN, 6)
     else:
         _draw_border(ax, RED, 4)
+    cx2_gx = hs.tables.cx2_gx
+    gx2_gname = hs.tables.gx2_gname
+    qgx = cx2_gx[qcx]
+    gx = cx2_gx[cx]
+    qgname = gx2_gname[qgx]
+    gname = gx2_gname[gx]
+    gname_str = gname
+    ax.set_xlabel(gname_str)
     return ax
 
 def _axis_xy_width_height(ax):
@@ -839,7 +854,12 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, **kwargs):
         _kpts_helper(kpts_noise,   RED, .1, 'Unverified')
         _kpts_helper(kpts_match,  BLUE, .4, 'Verified')
         _kpts_helper(kpts_true,  GREEN, .6, 'True Matches')
-        plt.legend(*zip(*legend_tups), framealpha=.2)
+        cx2_gx = hs.tables.cx2_gx
+        gx2_gname = hs.tables.gx2_gname
+        gx = cx2_gx[cx]
+        gname = gx2_gname[gx]
+        ax.set_xlabel(gname)
+        #plt.legend(*zip(*legend_tups), framealpha=.2)
     # Just draw boring keypoints
     else:
         draw_kpts2(kpts1, ell_alpha=.5, **kpts_args)
@@ -881,7 +901,7 @@ def show_topN_matches(hs, res, N=5, SV=True, fignum=4):
 def show_gt_matches(hs, res, SV=True, fignum=3): 
     figtitle='qcx=%r -- GroundTruth' % res.qcx
     gt_cxs = hs.get_other_indexed_cxs(res.qcx)
-    max_cols = max(5,N)
+    max_cols = max(5,len(gt_cxs))
     _show_chip_matches(hs, res,
                        gt_cxs=gt_cxs,
                        figtitle=figtitle, 
@@ -922,18 +942,21 @@ def _show_chip_matches(hs,
     printDBG('[df2] * show_query=%r' % (show_query,))
     fig = figure(fignum=fignum)
     fig.clf()
-    baker_street_geom=(-1600, 22, 1599, 877)
-    DBG_NEWFIG_GEOM = baker_street_geom
-    if not DBG_NEWFIG_GEOM is None:
-        set_geometry(fignum, *DBG_NEWFIG_GEOM)
+    #baker_street_geom=(-1600, 22, 1599, 877)
+    #DBG_NEWFIG_GEOM = baker_street_geom
+    #if not DBG_NEWFIG_GEOM is None:
+        #set_geometry(fignum, *DBG_NEWFIG_GEOM)
     ranked_cxs = res.cx2_score_V.argsort()[::-1]
     # Get subplots ready
-    num_top_subplts = len(topN_cxs)
-    num_query_subplts = 2
+    num_top_subplts = 0
+    if not topN_cxs is None:
+        num_top_subplts = len(topN_cxs)
+    num_query_subplts = 1
     topN_rows = int(np.ceil(num_top_subplts / max_cols))
     num_cols = min(max_cols, num_top_subplts)
     gt_rows = 0
     gt_ncells = 0
+
     if not show_query:
         num_query_subplts = 0
     if show_query or not gt_cxs is None:
@@ -952,18 +975,21 @@ def _show_chip_matches(hs,
     printDBG('[df2] + gt_ncells=%r' % gt_ncells)
 
     printDBG('[df2] + num_cols=%r' % num_cols)
+    printDBG('[df2] + num_rows=%r' % num_rows)
 
     # Plot Query
     plt.subplot(num_rows, num_cols, 1)
     if show_query: 
+        printDBG('Plotting Query:')
         num_query_cols = num_query_subplts
-        plotnum=(num_rows, num_query_cols, 1)
+        plotnum=(num_rows, num_cols, 1)
         show_chip(hs, res=res, plotnum=plotnum)
 
     # Plot Ground Truth
     if not gt_cxs is None:
         plotx_shift = num_query_subplts + 1
         for ox, cx in enumerate(gt_cxs):
+            printDBG('Plotting GT %r:' % ox)
             plotx = ox + plotx_shift
             plotnum=(num_rows, num_cols, plotx)
             orank = np.where(ranked_cxs == cx)[0][0] + 1
@@ -973,24 +999,26 @@ def _show_chip_matches(hs,
                         ell_alpha=.5, plotnum=plotnum)
 
     # Plot Top N
-    plotx_shift = 1 + gt_ncells#num_cells - num_subplots + 1
-    for ox, cx in enumerate(topN_cxs):
-        plotx = ox + plotx_shift
-        plotnum=(num_rows, num_cols, plotx)
-        orank = np.where(ranked_cxs == cx)[0][0] + 1
-        title_aug = 'rank=%r ' % orank
-        show_matches3(res, hs, cx,
-                      title_aug=title_aug,
-                      plotnum=plotnum,
-                      ell_alpha=.5,
-                      all_kpts=all_kpts)
+    if not topN_cxs is None:
+        plotx_shift = 1 + gt_ncells#num_cells - num_subplots + 1
+        for ox, cx in enumerate(topN_cxs):
+            printDBG('Plotting TOPN %r:' % ox)
+            plotx = ox + plotx_shift
+            plotnum=(num_rows, num_cols, plotx)
+            orank = np.where(ranked_cxs == cx)[0][0] + 1
+            title_aug = 'rank=%r ' % orank
+            show_matches3(res, hs, cx,
+                        title_aug=title_aug,
+                        plotnum=plotnum,
+                        ell_alpha=.5,
+                        all_kpts=all_kpts)
     set_figtitle(figtitle)
 
 
 if __name__ == '__main__':
     print('[df2] __main__ = draw_func2.py')
     from __init__ import *
-    qcx = 26
+    qcx = 14
     hs = ld2.HotSpotter()
     hs.load_tables(ld2.DEFAULT)
     hs.load_chips()
@@ -1013,5 +1041,5 @@ if __name__ == '__main__':
     show_query = True
     all_kpts = False
     #get_geometry(1)
-
     df2.show_match_analysis(hs, res, N)
+    df2.update()

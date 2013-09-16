@@ -46,7 +46,17 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True):
     else: 
         msg = 'Executing %d %s tasks in serial' % \
                 (len(task_list), func.func_name)
-    return parallelize_tasks(task_list, num_procs, msg=msg)
+    try:
+        ret = parallelize_tasks(task_list, num_procs, msg=msg)
+    except Exception as ex:
+        print('Problem while parallelizing task: ')
+        print('task_list: ')
+        for task in task_list:
+            print('  %r' % (task,))
+        print('num_procs = %r ' % (num_procs,))
+        print('msg = %r ' % (msg,))
+        raise
+    return ret
 
 def make_task_list_lazy(func, *args):
     # The input should alawyas be argument 1

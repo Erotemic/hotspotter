@@ -77,6 +77,39 @@ def sqrtm_eq():
     or if rank(A) = rank(A.conjT.dot(A))
     '''
 
+def find_ellipse_major_minor():
+    import sympy
+    import sympy.galgebra.GA as GA
+    import sympy.galgebra.latex_ex as tex
+    import sympy.printing as symprint
+    import sympy.abc
+    import sympy.mpmath
+    Eq = sympy.Eq
+    solve = sympy.solve
+    
+    sin = sympy.functions.elementary.trigonometric.sin
+    cos = sympy.functions.elementary.trigonometric.cos
+
+    a, b, c, d = sympy.symbols('a b c d')
+    theta = sympy.abc.theta
+    # R * E
+    a2 = cos(theta)*a - sin(theta)*c 
+    b2 = cos(theta)*b - sin(theta)*d
+    c2 = sin(theta)*a + cos(theta)*c
+    d2 = sin(theta)*b + cos(theta)*d
+
+    # Set b2 and c2 to 0
+    b2_eq_0 = Eq(b2,0)
+    #
+    c2_eq_0 = Eq(c2,0)
+
+    theta_b = solve(b2_eq_0, theta)
+    theta_c = solve(c2_eq_0, theta)
+
+
+
+
+
 
 def sympy_test():
     # https://sympy.googlecode.com/files/sympy-0.7.2.win32.exe

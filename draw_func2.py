@@ -300,6 +300,21 @@ def set_ylabel(lbl):
 def plot(*args, **kwargs):
     return plt.plot(*args, **kwargs)
 
+def plot2(x_data, 
+          y_data, 
+          marker,
+          x_label,
+          y_label,
+          title_pref,
+          *args,
+          **kwargs):
+    ax = plt.gca()
+    ax.plot(x_data, y_data, marker, *args, **kwargs)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_title(title_pref + ' ' + x_label+' vs '+y_label)
+
+
 def set_figtitle(figtitle):
     fig = plt.gcf()
     fig.canvas.set_window_title(figtitle)
@@ -319,12 +334,18 @@ def figure(fignum=None,
     if doclf or len(axes_list) == 0:
         #if plotnum==111:
             #fig.clf()
-        ax = plt.subplot(plotnum)
+        if type(plotnum) == types.TupleType:
+            ax = plt.subplot(*plotnum)
+        else:
+            ax = plt.subplot(plotnum)
         ax.cla()
         printDBG('[df2] *** NEW FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
     else: 
         printDBG('[df2] *** OLD FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
-        ax = plt.subplot(plotnum)
+        if type(plotnum) == types.TupleType:
+            ax = plt.subplot(*plotnum)
+        else:
+            ax = plt.subplot(plotnum)
         #ax  = axes_list[0]
     if not title is None:
         ax.set_title(title)
@@ -498,6 +519,10 @@ def draw_hist(data, bins=None):
 def variation_trunctate(data):
     ax = plt.gca()
     data = np.array(data)
+    if len(data) == 0: 
+        warnstr = '[df2] ! Warning: len(data) = 0. Cannot variation_truncate'
+        warnings.warn(warnstr)
+        return
     trunc_max = data.mean() + data.std() * 2
     trunc_min = np.floor(data.min())
     ax.set_xlim(trunc_min,trunc_max)
@@ -509,17 +534,43 @@ def variation_trunctate(data):
     #ax.set_yticks(no_zero_yticks)
     
 import scipy.stats
+def estimate_pdf(data, bw_factor):
+    try:
+        data_pdf = scipy.stats.gaussian_kde(data, bw_factor)
+        data_pdf.covariance_factor = bw_factor
+    except Exception as ex:
+        print('[df2] ! Exception while estimating kernel density')
+        print('[df2] data=%r' % (data,))
+        print('[df2] ex=%r' % (ex,))
+        raise
+    return data_pdf
+
+def draw_text(text_str, rgb_textFG=(0,0,0), rgb_textBG=(1,1,1)):
+    ax = plt.gca()
+    xy, width, height = _axis_xy_width_height(ax)
+    text_x = xy[0] + (width / 2)
+    text_y = xy[1] + (height / 2)
+    ax.text(text_x, text_y, text_str,
+            horizontalalignment ='center',
+            verticalalignment   ='center',
+            color               =rgb_textFG,
+            backgroundcolor     =rgb_textBG)
+
 def draw_pdf(data, draw_support=True, scale_to=None, label=None, colorx=0):
-    data = np.array(data)
     fig = plt.gcf()
     ax = plt.gca()
+    data = np.array(data)
+    if len(data) == 0:
+        warnstr = '[df2] ! Warning: len(data) = 0. Cannot visualize pdf'
+        warnings.warn(warnstr)
+        draw_text(warnstr)
+        return
     bw_factor = .05
     line_color = plt.get_cmap('gist_rainbow')(colorx)
     # Estimate a pdf
-    data_pdf = scipy.stats.gaussian_kde(data, bw_factor)
-    data_pdf.covariance_factor = bw_factor
+    data_pdf = estimate_pdf(data, bw_factor)
     # Get probability of seen data
-    probability = data_pdf(data)
+    prob_x = data_pdf(data)
     # Get probability of unseen data data
     x_data = np.linspace(0, data.max(), 500)
     y_data = data_pdf(x_data)
@@ -527,10 +578,10 @@ def draw_pdf(data, draw_support=True, scale_to=None, label=None, colorx=0):
     if not scale_to is None:
         scale_factor = scale_to / y_data.max()
         y_data *= scale_factor
-        probability *= scale_factor
+        prob_x *= scale_factor
     #Plot the actual datas on near the bottom perterbed in Y
     if draw_support:
-        pdfrange = probability.max() - probability.min() 
+        pdfrange = prob_x.max() - prob_x.min() 
         perb   = (np.random.randn(len(data))) * pdfrange/30.
         preb_y_data = np.abs([pdfrange/50. for _ in data]+perb)
         ax.plot(data, preb_y_data, 'o', color=line_color, figure=fig, alpha=.1)
@@ -572,28 +623,57 @@ def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111,
     return fig, ax
 
 def show_topN_matches(hs, res, N=5, SV=True, fignum=4): 
-    other_cxs = res.topN_cxs(N)
     figtitle='qcx=%r -- TOP 5' % res.qcx
-    __show_chip_matches(hs, res, other_cxs, figtitle, fignum)
+    other_cxs = res.topN_cxs(N)
+    _show_chip_matches(hs, res, other_cxs, figtitle, fignum, all_kpts=False)
 
 def show_gt_matches(hs, res, SV=True, fignum=3): 
-    other_cxs = hs.get_other_indexed_cxs(res.qcx)
     figtitle='qcx=%r -- GroundTruth' % res.qcx
-    __show_chip_matches(hs, res, other_cxs, figtitle, fignum)
+    other_cxs = hs.get_other_indexed_cxs(res.qcx)
+    _show_chip_matches(hs, res, other_cxs, figtitle, fignum, all_kpts=True)
 
-def show_match_analysis(hs, res):
+def show_match_analysis(hs, res, N=5, fignum=3):
+    import draw_func2 as df2
+    #df2.rrr()
+    figtitle='qcx=%r -- Analysis' % res.qcx
+    topN_cxs = res.topN_cxs(N)
+    gt_cxs = hs.get_other_indexed_cxs(res.qcx)
+    missed_gt_cxs = np.setdiff1d(gt_cxs, topN_cxs)
+    other_cxs = np.hstack([missed_gt_cxs, topN_cxs]) 
+    df2._show_chip_matches(hs, res, other_cxs, figtitle, show_query=True, fignum=fignum)
 
+def _show_chip_matches(hs, res,
+                        other_cxs, 
+                        figtitle, 
+                        max_cols=5,
+                        show_query=False,
+                        all_kpts=False,
+                        fignum=3):
+    import draw_func2 as df2
+    num_subplots = len(other_cxs)
+    if show_query:
+        num_subplots += 1
+    ranked_cxs = res.cx2_score_V.argsort()[::-1]
 
-def __show_chip_matches(hs, res, other_cxs, figtitle, fignum=3):
-    num_others = len(other_cxs)
-    plotnum= 100 + num_others*10 + 1 
-    figure(fignum=fignum, plotnum=plotnum, doclf=True)
+    num_rows = int(np.ceil(num_subplots / max_cols))
+    num_cols = min(max_cols, num_subplots)
+    num_cells = num_rows * num_cols
+    plotnum  = (num_rows, num_cols, 1)
+    fig = df2.figure(fignum=fignum, plotnum=plotnum, doclf=True)
+    if show_query: 
+        df2.show_chip(hs, res=res, fignum=fignum, plotnum=plotnum)
     for ox, cx in enumerate(other_cxs):
-        plotnumcx = plotnum + ox
-        show_matches3(res, hs, cx,
-                      fignum=fignum, plotnum=plotnumcx,
-                      all_kpts=True, ell_alpha=.5)
-    set_figtitle(figtitle)
+        plotx = 1 + ox + num_cells - num_subplots + int(show_query)
+        plotnum  = (num_rows, num_cols, plotx)
+        orank = np.where(ranked_cxs == cx)[0][0] + 1
+        title_aug = 'rank=%r ' % orank
+        df2.show_matches3(res, hs, cx,
+                          fignum=fignum,
+                          plotnum=plotnum,
+                          all_kpts=all_kpts, 
+                          title_aug=title_aug,
+                          ell_alpha=.5)
+    df2.set_figtitle(figtitle)
 
 
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
@@ -690,7 +770,7 @@ def show_matches4(hs, qcx, cx2_score,
     cx_str = '(qx%r v cx%r)' % (qcx, cx)
     score_str = ' #match=%r score=%.2f' % (len(fm), score)
     is_true_match = nx == qnx and qnx > 1
-    isgt_str = '*TRUE match*' if is_true_match else ''
+    isgt_str = '\n*TRUE match*' if is_true_match else '\n*FALSE match*'
     title= cx_str + isgt_str + '\n' + score_str
     if not title_pref is None:
         title = title_pref + title
@@ -700,17 +780,22 @@ def show_matches4(hs, qcx, cx2_score,
                                 fignum=fignum, plotnum=plotnum,
                                 title=title, **kwargs)
     if is_true_match:
-        __draw_border(ax, 'g')
+        _draw_border(ax, 'g')
     else:
-        __draw_border(ax, 'r')
+        _draw_border(ax, 'r')
     return ax
 
-def __draw_border(ax, color='g'):
-    'draws rectangle border around a subplot'
+def _axis_xy_width_height(ax):
+    'gets geometry of a subplot'
     autoAxis = ax.axis()
     xy     = (autoAxis[0]-0.7,autoAxis[2]-0.2)
     width  = (autoAxis[1]-autoAxis[0])+1
     height = (autoAxis[3]-autoAxis[2])+0.4
+    return xy, width, height
+    
+def _draw_border(ax, color='g'):
+    'draws rectangle border around a subplot'
+    xy, width, height = _axis_xy_width_height(ax)
     rect = Rectangle(xy, width, height, lw=4)
     rect = ax.add_patch(rect)
     rect.set_clip_on(False)
@@ -721,7 +806,12 @@ def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     imshow(rchip,fignum=fignum,title=title,**kwargs)
     draw_kpts2(kpts)
 
-def show_chip(hs, cx, allres=None, **kwargs):
+def show_chip(hs, cx=None, allres=None, res=None, info=True, **kwargs):
+    import draw_func2 as df2
+    if not res is None:
+        cx = res.qcx
+    if not allres is None:
+        res = allres.qcx2_res[cx]
     cx2_nx = hs.tables.cx2_nx
     nx  = cx2_nx[cx]
     cx2_kpts = hs.feats.cx2_kpts
@@ -729,12 +819,15 @@ def show_chip(hs, cx, allres=None, **kwargs):
     img_fpath = cx2_rchip_path[cx]
     rchip1 = cv2.imread(img_fpath)
     kpts1  = cx2_kpts[cx]
-    cx_str = '(cx=%r)' % (cx)
-    imshow(rchip1, title=cx_str, **kwargs)
+    title_str = 'cx=%r' % (cx)
+    # Add info to title
+    if info: 
+        num_gt = len(hs.get_other_indexed_cxs(cx))
+        title_str += ' #gt=%r' % num_gt
+    fig, ax = df2.imshow(rchip1, title=title_str, **kwargs)
     kpts_args = dict(offset=(0,0), ell_linewidth=2, ell=True, pts=False)
-    if not allres is None:
-        # Draw keypoints with groundtruth information
-        res = allres.qcx2_res[cx]
+    # Draw keypoints with groundtruth information
+    if not res is None:
         gt_cxs = hs.get_other_indexed_cxs(cx)
         # Get keypoint indexes
         def stack_unique(fx_list):
@@ -751,16 +844,18 @@ def show_chip(hs, cx, allres=None, **kwargs):
         kpts_match = kpts1[matched_fx, :]
         kpts_noise = kpts1[noise_fx, :]
         # Draw keypoints
-        draw_kpts2(kpts_noise, ell_color='r', ell_alpha=.1, **kpts_args)
-        draw_kpts2(kpts_match, ell_color='b', ell_alpha=.4, **kpts_args)
-        draw_kpts2(kpts_true,  ell_color='g', ell_alpha=.5, **kpts_args)
-        n_ = Circle((0, 0), 1, fc="r")
-        m_ = Circle((0, 0), 1, fc="b")
-        t_ = Circle((0, 0), 1, fc="g")
-        plt.legend([n_, m_, t_], ['Unverified', 'Verified', 'True Matches'], 
-                  framealpha=.2)
+        legend_tups = []
+        # helper function taking into acount phantom labels
+        def _kpts_helper(kpts_, color, alpha, label):
+            df2.draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha, **kpts_args)
+            phant_ = Circle((0, 0), 1, fc=color)
+            legend_tups.append((phant_, label))
+        _kpts_helper(kpts_noise, 'r', .1, 'Unverified')
+        _kpts_helper(kpts_match, 'b', .4, 'Verified')
+        _kpts_helper(kpts_true,  'g', .5, 'True Matches')
+        plt.legend(*zip(*legend_tups), framealpha=.2)
+    # Just draw boring keypoints
     else:
-        # Just draw boring keypoints
         draw_kpts2(kpts1, ell_alpha=.5, **kpts_args)
 
 def show_img(hs, cx, **kwargs):

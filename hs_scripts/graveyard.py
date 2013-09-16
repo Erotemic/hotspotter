@@ -135,3 +135,72 @@ def gen_subset_split(full_set, M, K):
             failsafe += 1
             if failsafe > 100:
                 break
+
+
+
+def test_entropy_internals(desc):
+    fig = df2.figure(1, doclf=True)
+    max_bw = 5
+    for ix in range(max_bw):
+        bw_factor = (ix + 1)**2
+        print('bw=%d' % bw_factor)
+        prob_x1 = _hist_prob_x(desc, bw_factor)
+        prob_x2 = _gkde_prob_x(desc, bw_factor)
+        entropy1 = [-(px * np.log2(px)).sum() for px in prob_x1]
+        entropy2 = [-(px * np.log2(px)).sum() for px in prob_x2]
+        x = sorted(entropy1)
+        y = sorted(entropy2)
+        fig = df2.figure(1, plotnum=(max_bw, 2, ix*2+1), title='sorted bw=%d' % bw_factor)
+        plt.plot(x, y)
+        fig = df2.figure(1, plotnum=(max_bw, 2, ix*2+2), title='scatter bw=%d' % bw_factor)
+        plt.plot(entropy1, entropy2, 'go')
+    fig.tight_layout()
+    df2.update()
+
+
+
+
+    # Renormalize descriptor to have an l2 norm of 1
+    desc1 = np.array(desc1, dtype=float) 
+    l2norm1 = np.sqrt((desc1**2).sum(1))
+    desc1 /= l2norm1[:, np.newaxis]
+    desc2 = np.array(desc2, dtype=float)
+    l2norm2 = np.sqrt((desc2**2).sum(1))
+    desc2 /= l2norm2[:, np.newaxis]
+    desc_hist = np.histogram(desc1[0], bins=32, density=True)[0]
+    def check(desc):
+        norm = np.sqrt((desc**2).sum(1))
+        print('norm: %r ' % norm)
+        print('shape: %r ' % norm.shape)
+        print('mean: %r ' % np.mean(norm))
+        print('std: %r ' % np.std(norm))
+    check(desc1)
+    check(desc2)
+    print('DESC1: %r ' % np.sqrt((desc1**2).sum(1)))
+    print('DESC2: %r ' % np.sqrt((desc2**2).sum(1)))
+    print('DESC1: %r ' % np.sqrt((desc1**2).sum(0)))
+    print('DESC2: %r ' % np.sqrt((desc2**2).sum(0)))
+
+    print rank
+orgres.qcxs
+orgres.cxs
+
+
+
+    def get_sort_and_x(scores):
+        scores = np.array(scores)
+        scores_sortx = scores.argsort()[::-1]
+        scores_sort  = scores[scores_sortx]
+        return scores_sort, scores_sortx
+    tt_sort, tt_sortx = get_sort_and_x(allres.top_true.scores)
+    tf_sort, tf_sortx = get_sort_and_x(allres.top_false.scores)
+
+
+
+    #orgres = allres.top_true
+    #qcx, cx, score, rank = orgres.iter().next()
+    #res = qcx2_res[qcx]
+    #fm = res.cx2_fm_V[cx]
+    ## Get matching descriptors
+    #desc1 = cx2_desc[qcx][fm[:,0]]
+    #desc2 = cx2_desc[cx ][fm[:,1]]

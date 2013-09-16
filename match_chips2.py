@@ -240,11 +240,11 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None):
         print('...verified: %.2f seconds' % (verify_time))
         #
         # Assign output to the query result 
-        res.cx2_fm      = cx2_fm
-        res.cx2_fs      = cx2_fs
+        res.cx2_fm      = np.array(cx2_fm)
+        res.cx2_fs      = np.array(cx2_fs)
         res.cx2_score   = cx2_score
-        res.cx2_fm_V    = cx2_fm_V
-        res.cx2_fs_V    = cx2_fs_V
+        res.cx2_fm_V    = np.array(cx2_fm_V)
+        res.cx2_fs_V    = np.array(cx2_fs_V)
         res.cx2_score_V = cx2_score_V
         res.save(hs)
     return qcx2_res
@@ -522,10 +522,15 @@ def precompute_index_vsmany(hs):
     return vsmany_index
 
 # Feature scoring functions
-def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+1E-8)+1) 
-def RATIO_fn(vdist, ndist): return np.divide(ndist, vdist+1E-8)
+eps = 1E-8
+def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+eps)+1) 
+def RATIO_fn(vdist, ndist): return np.divide(ndist, vdist+eps)
 def LNBNN_fn(vdist, ndist): return ndist - vdist 
-score_fn = RATIO_fn
+
+scoring_func_map = {
+    'LNRAT' : LNRAT_fn,
+    'RATIO' : RATIO_fn,
+    'LNBNN' : LNBNN_fn }
 
 #@profile
 def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
@@ -543,6 +548,7 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
     vsmany_flann = vsmany_index.vsmany_flann
     ax2_cx    = vsmany_index.ax2_cx
     ax2_fx    = vsmany_index.ax2_fx
+    score_fn  = scoring_func_map[params.__VSMANY_SCORE_FN__]
     isQueryIndexed = True
     desc1 = cx2_desc[qcx]
     k_vsmany = params.__VSMANY_K__+1 if isQueryIndexed else params.__VSMANY_K__
@@ -715,7 +721,7 @@ class Matcher(DynStruct):
         self.feat_type  = hs.feats.feat_type
         self.match_type = match_type
         # Possible indexing structures
-        self.__vsmany_index    = None
+        self.__vsmany_index = None
         self.__bow_index    = None
         # Curry the correct functions
         self.__assign_matches = None

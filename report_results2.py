@@ -24,11 +24,7 @@ import re
 
 __DUMP__ = True # or __BROWSE__
 
-REPORT_TOP5    = True
 REPORT_MATRIX  = False
-REPORT_STEM    = True
-REPORT_RANKRES = True
-
 REPORT_MATRIX_VIZ = False
 
 def reload_module():
@@ -36,6 +32,9 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()
+
+def printDBG(msg):
+    pass
 
 # ========================================================
 # Report result initialization 
@@ -255,8 +254,7 @@ def init_allres(hs, qcx2_res, SV=True,
     allres = AllResults(hs, qcx2_res, SV)
     SV_aug = ['_SVOFF','_SVon'][allres.SV]
     allres.title_suffix = params.get_query_uid() + SV_aug
-    allres.summary_dir = join(hs.dirs.result_dir, 'summary_plots')
-    helpers.ensurepath(allres.summary_dir)
+    #helpers.ensurepath(allres.summary_dir)
     print('\n======================')
     print(' * Initializing all results')
     print(' * Title suffix: '+allres.title_suffix)
@@ -438,25 +436,27 @@ def __dump_text_report(allres, report_type):
 # Driver functions
 # ===========================
 def dump_all(allres,
-             missed_top5=REPORT_TOP5, 
-             rankres=REPORT_RANKRES,
-             stem=REPORT_STEM, 
              matrix=REPORT_MATRIX,#
              matrix_viz=REPORT_MATRIX_VIZ,#
-             pdf=False, 
-             hist=False,
+             score_pdf=True, 
+             rank_hist=True,
              ttbttf=False,
              problems=False,
              gtmatches=False,
              oxford=False,
-             no_viz=False):
+             no_viz=False,
+             rankres=True,
+             stem=True, 
+             missed_top5=False, 
+             analysis=True,
+             pair_analysis=True):
 
     print('\n======================')
     print('[rr2] DUMP ALL')
     print('======================')
     viz.BROWSE = False
     viz.DUMP = True
-        
+    # Text Reports
     if rankres:
         dump_rankres_str_results(allres)
     if matrix:
@@ -466,14 +466,14 @@ def dump_all(allres,
     if no_viz:
         print('\n --- (NO VIZ) END DUMP ALL ---\n')
         return
-    #
+    # Viz Reports
     if stem:
         dump_rank_stems(allres)
     if matrix_viz:
         dump_score_matrixes(allres)
-    if hist:
+    if rank_hist:
         dump_rank_hists(allres)
-    if pdf:
+    if score_pdf:
         dump_score_pdfs(allres)
     #
     if ttbttf: 
@@ -484,6 +484,10 @@ def dump_all(allres,
         dump_gt_matches(allres)
     if missed_top5:
         dump_missed_top5(allres)
+    if analysis:
+        dump_analysis(allres)
+    if pair_analysis:
+        dump_feature_pair_analysis(allres)
     print('\n --- END DUMP ALL ---\n')
 
 def dump_oxsty_mAP_results(allres):
@@ -540,6 +544,14 @@ def dump_missed_top5(allres):
         viz.plot_cx(allres, qcx, 'top5', 'missed_top5')
         viz.plot_cx(allres, qcx, 'gt_matches', 'missed_top5')
 
+def dump_analysis(allres):
+    qcx2_res     = allres.qcx2_res
+    greater1_cxs = allres.greater1_cxs
+    #qcx = greater5_cxs[0]
+    for qcx in greater1_cxs:
+        viz.plot_cx(allres, qcx, 'analysis', 'analysis')
+
+
 def dump_orgres_matches(allres, orgres_type):
     orgres = allres.__dict__[orgres_type]
     hs = allres.hs
@@ -557,24 +569,176 @@ def dump_orgres_matches(allres, orgres_type):
         df2.set_figtitle(big_title)
         viz.__dump_or_browse(allres, orgres_type+'_matches'+allres.title_suffix)
 
+def dump_feature_pair_analysis(allres):
+    print('[rr2] Doing: feature pair analysis')
+    # TODO: Measure score consistency over a spatial area.
+    # Measures entropy of matching vs nonmatching descriptors
+    # Measures scale of m vs nm desc
+    hs = allres.hs
+    qcx2_res = allres.qcx2_res
+    import scipy
+    def _hist_prob_x(desc, bw_factor):
+        # Choose number of bins based on the bandwidth
+        bin_range = (0, 256) # assuming input is uint8
+        bins = bin_range[1] // bw_factor
+        bw_factor = bin_range[1] / bins
+        # Compute the probabilty mass function, each w.r.t a single descriptor
+        hist_params = dict(bins=bins, range=bin_range, density=True)
+        hist_func = np.histogram
+        desc_pmf = [hist_func(d, **hist_params)[0] for d in desc]
+        # Compute the probability that you saw what you saw
+        # TODO: could use linear interpolation for a bit more robustness here
+        bin_vals = [np.array(np.floor(d / bw_factor), dtype=np.uint8) for d in desc]
+        hist_prob_x = [pmf[vals] for pmf, vals in zip(desc_pmf, bin_vals)]
+        return hist_prob_x
+    def _gkde_prob_x(desc, bw_factor):
+        # Estimate the probabilty density function, each w.r.t a single descriptor
+        gkde_func = scipy.stats.gaussian_kde
+        desc_pdf = [gkde_func(d, bw_factor) for d in desc]
+        gkde_prob_x = [pdf(d) for pdf, d in zip(desc_pdf, desc)]
+        return gkde_prob_x
+    def descriptor_entropy(desc, bw_factor=4):
+        'computes the shannon entropy of each descriptor in desc'
+        # Compute shannon entropy = -sum(p(x)*log(p(x)))
+        prob_x = _hist_prob_x(desc, bw_factor)
+        entropy = [-(px * np.log2(px)).sum() for px in prob_x]
+        return entropy
+    import spatial_verification2 as sv2
+    def keypoint_scale(kpts):
+        acd_m = kpts[:,2:5].T
+        det_m = sv2.det_acd(acd_m)
+        scale_m = np.sqrt(1/det_m)
+        return scale_m
+    def keypoint_axes(kpts):
+        num_kpts = len(kpts)
+        (a,c,d) = kpts[:,2:5].T
+        # sqrtm(inv(A))
+        aIS = 1/np.sqrt(a) 
+        bIS = -c/(np.sqrt(a)*d + a*np.sqrt(d))
+        cIS = np.zeros(num_kpts)
+        dIS = 1/np.sqrt(d)
+        # Build lower triangular matries that maps unit circles to ellipses
+        abcdIS = np.vstack([aIS, bIS, cIS, dIS]).T.reshape(num_kpts, 2, 2)
+        # Get major and minor axies of ellipes. 
+        eVals, eVecs = zip(*[np.linalg.eig(cir2ell) for cir2ell in abcdIS])
+    def keypoint_radius(kpts):
+        scale_m = keypoint_scale(kpts)
+        radius_m = 3*np.sqrt(3*scale_m)
+        # I'm not sure which one is right. 
+        #radius_m = 3*np.sqrt(3)*scale_m
+        return radius_m
+    # Load features if we need to
+    if hs.feats.cx2_desc.size == 0:
+        print(' * forcing load of descriptors')
+        hs.load_features()
+    cx2_desc = hs.feats.cx2_desc
+    cx2_kpts = hs.feats.cx2_kpts
+    def measure_feat_pairs(allres, orgtype='top_true'):
+        print('Measure '+orgtype+' pairs')
+        orgres = allres.__dict__[orgtype]
+        entropy_list = []
+        scale_list = []
+        score_list = []
+        lbl = 'Measuring '+orgtype+' pair '
+        fmt_str = helpers.make_progress_fmt_str(len(orgres), lbl)
+        rank_skips = []
+        gt_skips = []
+        for ix, (qcx, cx, score, rank) in enumerate(orgres.iter()):
+            helpers.print_(fmt_str % (ix+1,))
+            # Skip low ranks
+            if rank > 5: 
+                rank_skips.append(qcx)
+                continue
+            other_cxs = hs.get_other_indexed_cxs(qcx)
+            # Skip no groundtruth
+            if len(other_cxs) == 0:
+                gt_skips.append(qcx)
+                continue
+            res = qcx2_res[qcx]
+            # Get matching feature indexes
+            fm = res.cx2_fm_V[cx]
+            # Get their scores
+            fs = res.cx2_fs_V[cx]
+            # Get matching descriptors
+            printDBG('\nfm.shape=%r' % (fm.shape,))
+            desc1 = cx2_desc[qcx][fm[:,0]]
+            desc2 = cx2_desc[cx ][fm[:,1]]
+            # Get matching keypoints
+            kpts1 = cx2_kpts[qcx][fm[:,0]]
+            kpts2 = cx2_kpts[cx ][fm[:,1]]
+            # Get their scale 
+            scale1_m = keypoint_scale(kpts1)
+            scale2_m = keypoint_scale(kpts2)
+            # Get their entropy
+            entropy1 = descriptor_entropy(desc1, bw_factor=1)
+            entropy2 = descriptor_entropy(desc2, bw_factor=1)
+            # Append to results
+            entropy_list.append(zip(entropy1, entropy2))
+            scale_list.append(zip(scale1_m, scale2_m))
+            score_list.append(fs)
+        entropy_pairs = np.vstack(entropy_list)
+        scale_pairs   = np.vstack(scale_list)
+        scores = np.hstack(score_list)
+        print('Skipped %d total.' % (len(rank_skips)+len(gt_skips),))
+        print('Skipped %d for rank > 5, %d for no gt' % (len(rank_skips), len(gt_skips),))
+        print('\n * Measured %d pairs' % len(entropy_pairs))
+        return entropy_pairs, scale_pairs, scores
 
-def analysis(allres):
-    # Measure score consistency over a spatial area.
-    # Measure entropy of matching vs nonmatching descriptors
-    # Measure scale of m vs nm desc
-    def get_sort_and_x(scores):
-        scores = np.array(scores)
-        scores_sortx = scores.argsort()[::-1]
-        scores_sort  = scores[scores_sortx]
-        return scores_sort, scores_sortx
-    tt_sort, tt_sortx = get_sort_and_x(allres.top_true.scores)
-    tf_sort, tf_sortx = get_sort_and_x(allres.top_false.scores)
+    tt_entropy, tt_scale, tt_scores = measure_feat_pairs(allres, 'top_true')
+    tf_entropy, tf_scale, tf_scores = measure_feat_pairs(allres, 'top_false')
+    # Measure ratios
+    tt_entropy_ratio = tt_entropy[:,0] / tt_entropy[:,1]
+    tt_scale_ratio   = tt_scale[:,0]   / tt_scale[:,1]
+    tf_entropy_ratio = tf_entropy[:,0] / tf_entropy[:,1]
+    tf_scale_ratio   = tf_scale[:,0]   / tf_scale[:,1]
 
-    df2.rrr(); viz.rrr(); clf(); df2.show_chip(hs, 14, allres=allres)
+    title_suffix = allres.title_suffix 
+
+    # Entropy vs Score
+    df2.figure(fignum=1, doclf=True)
+    df2.figure(fignum=1, plotnum=(2,2,1))
+    df2.plot2(tt_entropy[:,0], tt_scores, 'gx', 'entropy1', 'score', 'Top True')
+    df2.figure(fignum=1, plotnum=(2,2,2))
+    df2.plot2(tf_entropy[:,0], tf_scores, 'rx', 'entropy1', 'score', 'Top False')
+    df2.figure(fignum=1, plotnum=(2,2,3))
+    df2.plot2(tt_entropy[:,1], tt_scores, 'gx', 'entropy2', 'score', 'Top True')
+    df2.figure(fignum=1, plotnum=(2,2,4))
+    df2.plot2(tf_entropy[:,1], tf_scores, 'rx', 'entropy2', 'score', 'Top False')
+    df2.set_figtitle('Entropy vs Score -- '+title_suffix)
+    viz.__dump_or_browse(allres, 'pair_analysis')
+
+    # Scale vs Score
+    df2.figure(fignum=2, plotnum=(2,2,1), doclf=True)
+    df2.plot2(tt_scale[:,0], tt_scores, 'gx', 'scale1', 'score', 'Top True')
+    df2.figure(fignum=2, plotnum=(2,2,2))
+    df2.plot2(tf_scale[:,0], tf_scores, 'rx', 'scale1', 'score', 'Top False')
+    df2.figure(fignum=2, plotnum=(2,2,3))
+    df2.plot2(tt_scale[:,1], tt_scores, 'gx', 'scale2', 'score', 'Top True')
+    df2.figure(fignum=2, plotnum=(2,2,4))
+    df2.plot2(tf_scale[:,1], tf_scores, 'rx', 'scale2', 'score', 'Top False')
+    df2.set_figtitle('Scale vs Score -- '+title_suffix)
+    viz.__dump_or_browse(allres, 'pair_analysis')
+
+    # Entropy Ratio vs Score
+    df2.figure(fignum=3, plotnum=(1,2,1), doclf=True)
+    df2.plot2(tt_entropy_ratio, tt_scores, 'gx', 'entropy-ratio', 'score', 'Top True')
+    df2.figure(fignum=3, plotnum=(1,2,2))
+    df2.plot2(tf_entropy_ratio, tf_scores, 'rx', 'entropy-ratio', 'score', 'Top False')
+    df2.set_figtitle('Entropy Ratio vs Score -- '+title_suffix)
+    viz.__dump_or_browse(allres, 'pair_analysis')
+
+    # Scale Ratio vs Score
+    df2.figure(fignum=4, plotnum=(1,2,1), doclf=True)
+    df2.plot2(tt_scale_ratio, tt_scores, 'gx', 'scale-ratio', 'score', 'Top True')
+    df2.figure(fignum=4, plotnum=(1,2,2))
+    df2.plot2(tf_scale_ratio, tf_scores, 'rx', 'scale-ratio', 'score', 'Top False')
+    df2.set_figtitle('Entropy Ratio vs Score -- '+title_suffix)
+    viz.__dump_or_browse(allres, 'pair_analysis')
+
+    #df2.rrr(); viz.rrr(); clf(); df2.show_chip(hs, 14, allres=allres)
     #viz.plot_cx(allres, 14, 'top5')
     #viz.plot_cx(allres, 14, 'gt_matches')
-    df2.show_chip(hs, 1, allres=allres)
-
+    #df2.show_chip(hs, 1, allres=allres)
 
 #===============================
 # MAIN SCRIPT

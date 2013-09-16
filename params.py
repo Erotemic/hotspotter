@@ -133,6 +133,7 @@ __FEAT_TYPE__    = 'HESAFF'    # Feature type to use
 #--- MATCH CHIPS ---
 __MATCH_TYPE__         = 'vsmany'  # Matching type
 __VSMANY_K__           = 5         # Number of matches for one-vs-many
+__VSMANY_SCORE_FN__    = 'LNBNN' # LNRAT, LNBNN, RATIO
 __BOW_NUM_WORDS__      = long(5e4) # Vocab size for bag of words
 __VSONE_RATIO_THRESH__ = 1.5       # Thresholds for one-vs-one
 #---------------------
@@ -204,6 +205,8 @@ def get_query_uid():
     query_uid += ','   + str(__XY_THRESH__)
     query_uid += ','   + str(__SCALE_THRESH_HIGH__)
     query_uid += ','   + str(__SCALE_THRESH_LOW__)+')'
+    if __MATCH_TYPE__ == 'vsmany':
+        query_uid += '_%s' % __VSMANY_SCORE_FN__
     query_uid += get_matcher_uid()
     return query_uid
 
@@ -282,6 +285,13 @@ if '--vsmany' in sys.argv:
     __MATCH_TYPE__ = 'vsmany'
 if '--bagofwords' in sys.argv:
     __MATCH_TYPE__ = 'bagofwords'
+
+if '--lnbnn' in sys.argv:
+    __VSMANY_SCORE_FN__ = 'LNBNN'
+if '--ratio' in sys.argv:
+    __VSMANY_SCORE_FN__ = 'RATIO'
+if '--lnrat' in sys.argv:
+    __VSMANY_SCORE_FN__ = 'LNRAT'
 
 if '--cache-query' in sys.argv:
     CACHE_QUERY = True

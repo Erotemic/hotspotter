@@ -211,7 +211,6 @@ def leave_out(expt_func=None, **kwargs):
         print('***************')
         print('[expt] Leave M=%r out iteration: %r/%r' % (nsplit_size, kx+1, num_nsplits))
         print('***************')
-
         # Get name splits
         (test_nxs, train_nxs) = kx2_name_split[kx]
         # Lock in training set
@@ -254,9 +253,17 @@ def leave_out(expt_func=None, **kwargs):
             indx_samp = np.hstack(jx2_index_cxs[jx]+[train_samp])
             hs.set_samples(test_samp, train_samp, indx_samp)
             # Run experiment
-            print('Running expt:')
+            print('[expt] <<<<<<<<')
+            print('[expt] Run expt_func()')
+            print('[expt] M=%r, J=%r' % (nsplit_size,csplit_size))
+            print('[expt] mth iteration: %r/%r' % (kx+1, num_nsplits))
+            print('[expt] jth iteration: %r/%r' % (jx+1, max_num_csplits))
             #rss = helpers.RedirectStdout('[expt %d/%d]' % (kx, K)); rss.start()
             expt_locals = expt_func(hs, **kwargs)
+            print('[expt] Finished expt_func()')
+            print('[expt] mth iteration: %r/%r' % (kx+1, num_nsplits))
+            print('[expt] jth iteration: %r/%r' % (jx+1, max_num_csplits))
+            print('[expt] >>>>>>>>')
             result_map[kx] = expt_locals['allres']
             #rss.stop(); rss.dump()
     return locals()

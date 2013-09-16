@@ -74,6 +74,7 @@ def print_top_res_scores(hs, res, view_top=10, SV=True):
 def plot_cx(allres, cx, style='kpts', subdir=None):
     hs    = allres.hs
     qcx2_res = allres.qcx2_res
+    res = qcx2_res[cx]
     #cx_info(allres, cx)
     if 'kpts' == style:
         subdir = 'plot_cx' if subdir is None else subdir
@@ -85,16 +86,13 @@ def plot_cx(allres, cx, style='kpts', subdir=None):
         df2.draw_kpts2(kpts)
     if 'gt_matches'  == style: 
         subdir = 'gt_matches' if subdir is None else subdir
-        res = qcx2_res[cx]
         df2.show_gt_matches(hs, res, fignum=FIGNUM)
     if 'top5' == style:
         subdir = 'top5' if subdir is None else subdir
-        res = qcx2_res[cx]
-        df2.show_topN_matches(hs, res, 5, fignum=FIGNUM)
+        df2.show_topN_matches(hs, res, N=5, fignum=FIGNUM)
     if 'analysis' == style:
-        res = qcx2_res[cx]
-        df2.show_topN_matches(hs, res, 5, fignum=FIGNUM)
-
+        subdir = 'analysis' if subdir is None else subdir
+        df2.show_match_analysis(hs, res, N=5, fignum=FIGNUM)
     subdir += allres.title_suffix
     __dump_or_browse(allres, subdir)
 
@@ -116,7 +114,7 @@ def plot_rank_stem(allres, orgres_type='true'):
     __dump_or_browse(allres, 'rankviz')
 
 def plot_rank_histogram(allres, orgres_type): 
-    print('[viz] plotting rank histogram')
+    print('[viz] plotting '+orgres_type+' rank histogram')
     ranks = allres.__dict__[orgres_type].ranks
     label = 'P(rank | '+orgres_type+' match)'
     title = orgres_type+' match rankings histogram\n'+allres.title_suffix
@@ -128,9 +126,10 @@ def plot_rank_histogram(allres, orgres_type):
     __dump_or_browse(allres, 'rankviz')
     
 def plot_score_pdf(allres, orgres_type, colorx=0.0, variation_truncate=False): 
-    print('[viz] plotting score pdf')
+    print('[viz] plotting '+orgres_type+' score pdf')
     title  = orgres_type+' match score frequencies\n'+allres.title_suffix
     scores = allres.__dict__[orgres_type].scores
+    print('[viz] len(scores) = %r ' % (len(scores),)) 
     label  = 'P(score | '+orgres_type+')'
     df2.figure(fignum=FIGNUM, doclf=True, title=title)
     df2.draw_pdf(scores, label=label, colorx=colorx)
@@ -231,3 +230,4 @@ def dump_orgres_matches(allres, orgres_type):
                 (score, rank, query_gname, result_gname)
         df2.set_figtitle(big_title)
         __dump_or_browse(allres, orgres_type+'_matches'+allres.title_suffix)
+

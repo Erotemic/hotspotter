@@ -131,17 +131,12 @@ def update_figure_size(fignum, width, height):
     set_geometry(fig, 40, 40, width, height)
     fig.canvas.draw()
 
-def get_fig(fignum=None):
-    if fignum is None: fig = plt.gcf()
-    else: fig = plt.figure(fignum)
-    return fig
-
 def set_geometry(fignum, x, y, w, h):
     fig = get_fig(fignum)
     qtwin = fig.canvas.manager.window
     qtwin.setGeometry(x, y, w, h)
 
-def get_geometry():
+def get_geometry(fignum):
     fig = get_fig(fignum)
     qtwin = fig.canvas.manager.window
     (x1, y1, x2, y2) = qtwin.geometry().getCoords()
@@ -322,38 +317,57 @@ def set_figtitle(figtitle):
     fig = plt.gcf()
     fig.canvas.set_window_title(figtitle)
 
-def figure(fignum=None,
-           doclf=False,
-           title=None,
-           plotnum=111,
-           figtitle=None,
-           **kwargs):
-    fig = plt.figure(num=fignum, figsize=FIGSIZE, dpi=DPI)
-    axes_list = fig.get_axes()
+def customize_figure(fig, doclf):
     if not 'user_stat_list' in fig.__dict__.keys() or doclf:
         fig.user_stat_list = []
         fig.user_notes = []
     fig.df2_closed = False
+
+
+def get_fig(fignum=None):
+    fig_kwargs = dict(figsize=FIGSIZE, dpi=DPI)
+    if fignum is None:
+        try: 
+            fig = plt.gcf()
+        except Exception as ex:
+            printDBG('[df2] get_fig(): ex=%r' % ex)
+            fig = plt.figure(**fig_kwargs)
+        fignum = fig.number
+    else:
+        fig = plt.figure(num=fignum, **fig_kwargs)
+    return fig
+
+def figure(fignum=None,
+           doclf=False,
+           title=None,
+           plotnum=(1,1,1),
+           figtitle=None,
+           **kwargs):
+    fig = get_fig(fignum)
+    axes_list = fig.get_axes()
+    # Ensure my customized settings
+    customize_figure(fig, doclf)
+    # Convert plotnum to tuple format
+    if type(plotnum) == types.IntType:
+        nr = plotnum // 100
+        nc = plotnum // 10 - (nr * 10)
+        px = plotnum - (nr * 100) - (nc * 10)
+        plotnum = (nr, nc, px)
+    # Get the subplot
     if doclf or len(axes_list) == 0:
-        #if plotnum==111:
-            #fig.clf()
-        if type(plotnum) == types.TupleType:
-            ax = plt.subplot(*plotnum)
-        else:
-            ax = plt.subplot(plotnum)
-        ax.cla()
         printDBG('[df2] *** NEW FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
+        ax = plt.subplot(*plotnum)
+        ax.cla()
     else: 
         printDBG('[df2] *** OLD FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
-        if type(plotnum) == types.TupleType:
-            ax = plt.subplot(*plotnum)
-        else:
-            ax = plt.subplot(plotnum)
+        ax = plt.subplot(*plotnum)
         #ax  = axes_list[0]
+    # Set the title
     if not title is None:
+        ax = plt.gca()
         ax.set_title(title)
         # Add title to figure
-        if figtitle is None and plotnum == 111:
+        if figtitle is None and plotnum == (1,1,1):
             figtitle = title
         if not figtitle is None:
             fig.canvas.set_window_title('fig '+repr(fignum)+' '+figtitle)
@@ -607,80 +621,28 @@ def show_signature(sig, **kwargs):
     plt.plot(sig)
     fig.show()
 
-def imshow(img, fignum=0, title=None, figtitle=None, plotnum=111,
+def imshow(img, fignum=None, title=None, figtitle=None, plotnum=None,
            interpolation='nearest', **kwargs):
     printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
     printDBG('[df2] *** fignum = %r, plotnum = %r ' % (fignum, plotnum))
     fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
+    ax = plt.gca()
     plt.imshow(img, interpolation=interpolation)
     plt.set_cmap('gray')
     ax = fig.gca()
     ax.set_xticks([])
     ax.set_yticks([])
-    try:
-        if plotnum == 111:
-            fig.tight_layout()
-    except Exception as ex:
-        print('[df2] !! Exception durring fig.tight_layout: '+repr(ex))
-        raise
+    #try:
+        #if plotnum == 111:
+            #fig.tight_layout()
+    #except Exception as ex:
+        #print('[df2] !! Exception durring fig.tight_layout: '+repr(ex))
+        #raise
     return fig, ax
-
-def show_topN_matches(hs, res, N=5, SV=True, fignum=4): 
-    figtitle='qcx=%r -- TOP 5' % res.qcx
-    other_cxs = res.topN_cxs(N)
-    _show_chip_matches(hs, res, other_cxs, figtitle, fignum, all_kpts=False)
-
-def show_gt_matches(hs, res, SV=True, fignum=3): 
-    figtitle='qcx=%r -- GroundTruth' % res.qcx
-    other_cxs = hs.get_other_indexed_cxs(res.qcx)
-    _show_chip_matches(hs, res, other_cxs, figtitle, fignum, all_kpts=True)
-
-def show_match_analysis(hs, res, N=5, fignum=3):
-    import draw_func2 as df2
-    #df2.rrr()
-    figtitle='qcx=%r -- Analysis' % res.qcx
-    topN_cxs = res.topN_cxs(N)
-    gt_cxs = hs.get_other_indexed_cxs(res.qcx)
-    missed_gt_cxs = np.setdiff1d(gt_cxs, topN_cxs)
-    other_cxs = np.hstack([missed_gt_cxs, topN_cxs]) 
-    df2._show_chip_matches(hs, res, other_cxs, figtitle, show_query=True, fignum=fignum)
-
-def _show_chip_matches(hs, res,
-                        other_cxs, 
-                        figtitle, 
-                        max_cols=5,
-                        show_query=False,
-                        all_kpts=False,
-                        fignum=3):
-    import draw_func2 as df2
-    num_subplots = len(other_cxs)
-    if show_query:
-        num_subplots += 1
-    ranked_cxs = res.cx2_score_V.argsort()[::-1]
-
-    num_rows = int(np.ceil(num_subplots / max_cols))
-    num_cols = min(max_cols, num_subplots)
-    num_cells = num_rows * num_cols
-    plotnum  = (num_rows, num_cols, 1)
-    fig = df2.figure(fignum=fignum, plotnum=plotnum, doclf=True)
-    if show_query: 
-        df2.show_chip(hs, res=res, fignum=fignum, plotnum=plotnum)
-    for ox, cx in enumerate(other_cxs):
-        plotx = 1 + ox + num_cells - num_subplots + int(show_query)
-        plotnum  = (num_rows, num_cols, plotx)
-        orank = np.where(ranked_cxs == cx)[0][0] + 1
-        title_aug = 'rank=%r ' % orank
-        df2.show_matches3(res, hs, cx,
-                          fignum=fignum,
-                          plotnum=plotnum,
-                          all_kpts=all_kpts, 
-                          title_aug=title_aug,
-                          ell_alpha=.5)
-    df2.set_figtitle(figtitle)
 
 
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
-                  fm=None, fs=None, fignum=0, plotnum=111,
+                  fm=None, fs=None, fignum=None, plotnum=None,
                   title=None, vert=True, all_kpts=True, 
                   draw_lines=True, ell_alpha=None, **kwargs):
     '''Draws feature matches 
@@ -725,8 +687,8 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
 
 def show_matches3(res, hs, cx,
                   SV=True, 
-                  fignum=3, 
-                  plotnum=111,
+                  fignum=None, 
+                  plotnum=None,
                   title_aug=None, 
                   **kwargs):
     '''
@@ -745,7 +707,7 @@ def show_matches3(res, hs, cx,
 
 def show_matches4(hs, qcx, cx2_score, 
                   cx2_fm, cx2_fs, cx,
-                  fignum=0, plotnum=111, 
+                  fignum=None, plotnum=None, 
                   title_pref=None, 
                   title_suff=None,
                   **kwargs):
@@ -790,8 +752,6 @@ def show_matches4(hs, qcx, cx2_score,
                         np.typeDict['float16'])
         flag = type(num) in valid_float_types
         return flag
-
-
     if is_float(score):
         score_str = ' #fmatch=%r score=%.2f' % (len(fm), score)
     if is_int(score): 
@@ -907,3 +867,151 @@ def show_img(hs, cx, **kwargs):
     bbox.set_fill(False)
     bbox.set_edgecolor(bbox_color)
     ax.add_patch(bbox)
+
+def show_topN_matches(hs, res, N=5, SV=True, fignum=4): 
+    figtitle='qcx=%r -- TOP 5' % res.qcx
+    topN_cxs = res.topN_cxs(N)
+    max_cols = max(5,N)
+    _show_chip_matches(hs, res,
+                       topN_cxs=topN_cxs, 
+                       figtitle=figtitle, 
+                       fignum=fignum,
+                       all_kpts=False)
+
+def show_gt_matches(hs, res, SV=True, fignum=3): 
+    figtitle='qcx=%r -- GroundTruth' % res.qcx
+    gt_cxs = hs.get_other_indexed_cxs(res.qcx)
+    max_cols = max(5,N)
+    _show_chip_matches(hs, res,
+                       gt_cxs=gt_cxs,
+                       figtitle=figtitle, 
+                       fignum=fignum, 
+                       all_kpts=True)
+
+def show_match_analysis(hs, res, N=5, fignum=3):
+    import draw_func2 as df2
+    #df2.rrr()
+    figtitle='qcx=%r -- Analysis' % res.qcx
+    topN_cxs = res.topN_cxs(N)
+    all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
+    missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
+    max_cols = max(5,N)
+    df2._show_chip_matches(hs,
+                           res,
+                           gt_cxs=missed_gt_cxs, 
+                           topN_cxs=topN_cxs,
+                           figtitle=figtitle,
+                           max_cols=max_cols,
+                           show_query=True,
+                           fignum=fignum)
+
+def _show_chip_matches(hs,
+                       res,
+                       figtitle='',
+                       max_cols=5,
+                       topN_cxs=None, 
+                       gt_cxs=None,
+                       show_query=True,
+                       all_kpts=False,
+                       fignum=3):
+    ''' Displays query chip, groundtruth matches, and top 5 matches'''
+    printDBG('[df2] Show chip matches:')
+    printDBG('[df2] * topN_cxs=%r' % (topN_cxs,))
+    printDBG('[df2] * gt_cxs=%r' % (gt_cxs,))
+    printDBG('[df2] * max_cols=%r' % (max_cols,))
+    printDBG('[df2] * show_query=%r' % (show_query,))
+    fig = figure(fignum=fignum)
+    fig.clf()
+    baker_street_geom=(-1600, 22, 1599, 877)
+    DBG_NEWFIG_GEOM = baker_street_geom
+    if not DBG_NEWFIG_GEOM is None:
+        set_geometry(fignum, *DBG_NEWFIG_GEOM)
+    ranked_cxs = res.cx2_score_V.argsort()[::-1]
+    # Get subplots ready
+    num_top_subplts = len(topN_cxs)
+    num_query_subplts = 2
+    topN_rows = int(np.ceil(num_top_subplts / max_cols))
+    num_cols = min(max_cols, num_top_subplts)
+    gt_rows = 0
+    gt_ncells = 0
+    if not show_query:
+        num_query_subplts = 0
+    if show_query or not gt_cxs is None:
+        num_gt_subplots = num_query_subplts
+        if not gt_cxs is None:
+            num_gt_subplots += len(gt_cxs)
+        gt_rows   = int(np.ceil(num_gt_subplots / max_cols))
+        gt_cols   = min(max_cols, num_gt_subplots)
+        num_cols  = max(num_cols, gt_cols)
+        gt_ncells = gt_rows * num_cols
+    num_rows = topN_rows+gt_rows
+    printDBG('[df2] + topN_rows=%r' % topN_rows)
+
+    printDBG('[df2] + gt_rows=%r' % gt_rows)
+    printDBG('[df2] + gt_cols=%r' % gt_cols)
+    printDBG('[df2] + gt_ncells=%r' % gt_ncells)
+
+    printDBG('[df2] + num_cols=%r' % num_cols)
+
+    # Plot Query
+    plt.subplot(num_rows, num_cols, 1)
+    if show_query: 
+        num_query_cols = num_query_subplts
+        plotnum=(num_rows, num_query_cols, 1)
+        show_chip(hs, res=res, plotnum=plotnum)
+
+    # Plot Ground Truth
+    if not gt_cxs is None:
+        plotx_shift = num_query_subplts + 1
+        for ox, cx in enumerate(gt_cxs):
+            plotx = ox + plotx_shift
+            plotnum=(num_rows, num_cols, plotx)
+            orank = np.where(ranked_cxs == cx)[0][0] + 1
+            title_aug = 'rank=%r ' % orank
+            show_matches3(res, hs, cx, all_kpts=all_kpts, 
+                        title_aug=title_aug,
+                        ell_alpha=.5, plotnum=plotnum)
+
+    # Plot Top N
+    plotx_shift = 1 + gt_ncells#num_cells - num_subplots + 1
+    for ox, cx in enumerate(topN_cxs):
+        plotx = ox + plotx_shift
+        plotnum=(num_rows, num_cols, plotx)
+        orank = np.where(ranked_cxs == cx)[0][0] + 1
+        title_aug = 'rank=%r ' % orank
+        show_matches3(res, hs, cx,
+                      title_aug=title_aug,
+                      plotnum=plotnum,
+                      ell_alpha=.5,
+                      all_kpts=all_kpts)
+    set_figtitle(figtitle)
+
+
+if __name__ == '__main__':
+    print('[df2] __main__ = draw_func2.py')
+    from __init__ import *
+    qcx = 26
+    hs = ld2.HotSpotter()
+    hs.load_tables(ld2.DEFAULT)
+    hs.load_chips()
+    hs.load_features()
+    hs.set_samples()
+    res = mc2.QueryResult(qcx)
+    res.load(hs)
+    print('')
+    print('''
+    exec(open("draw_func2.py").read())
+    ''')
+    N=5
+    df2.rrr()
+    figtitle='qcx=%r -- Analysis' % res.qcx
+    topN_cxs = res.topN_cxs(N)
+    all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
+    gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
+    max_cols = max(5,N)
+    fignum=3
+    show_query = True
+    all_kpts = False
+    #get_geometry(1)
+
+    df2.show_match_analysis(hs, res, N)

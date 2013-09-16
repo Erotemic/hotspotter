@@ -435,11 +435,17 @@ def __dump_text_report(allres, report_type):
 # ===========================
 # Driver functions
 # ===========================
+TMP = False
+SCORE_PDF = False
+RANK_HIST = False
+#if TMP:
+
+
 def dump_all(allres,
              matrix=REPORT_MATRIX,#
              matrix_viz=REPORT_MATRIX_VIZ,#
-             score_pdf=True, 
-             rank_hist=True,
+             score_pdf=SCORE_PDF, 
+             rank_hist=RANK_HIST,
              ttbttf=False,
              problems=False,
              gtmatches=False,

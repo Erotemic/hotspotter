@@ -2,6 +2,7 @@
 Module match_chips: 
     Runs vsone, vsmany, and bagofwords matching
 '''
+from __future__ import division, print_function
 #========================================
 # IMPORTS
 #========================================
@@ -30,7 +31,7 @@ import pyflann
 import scipy as sp
 import scipy.sparse as spsparse
 import sklearn.preprocessing 
-#print ('LOAD_MODULE: match_chips2.py')
+#print('LOAD_MODULE: match_chips2.py')
 
 def reload_module():
     import imp
@@ -191,7 +192,7 @@ def load_cached_matches(hs):
     return qcx2_res, dirty_test_sample_cx
 
 
-def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None):
+def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=True):
     '''Runs the full matching pipeline using the abstracted classes'''
     print(textwrap.dedent('''
     =============================
@@ -436,12 +437,12 @@ def assign_matches_bagofwords(qcx, cx2_desc, bow_index):
     # Assign the query descriptors a visual vector
     vvec, qfx2_wx = __quantize_desc_to_tfidf_vvec(cx2_desc[qcx], wx2_idf, words, words_flann)
     # Compute distance to every database vector
-    #print '---DBG'
-    #print type(vvec)
-    #print vvec.dtype
-    #print type(cx2_vvec)
-    #print cx2_vvec.dtype
-    #print cx2_vvec
+    #print('---DBG')
+    #print(type(vvec))
+    #print(vvec.dtype)
+    #print(type(cx2_vvec))
+    #print(cx2_vvec.dtype0
+    #print(cx2_vvec)
     #import draw_func2 as df2
     #exec(df2.present())
     cx2_score = (cx2_vvec.dot(vvec.T)).toarray().flatten()

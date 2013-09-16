@@ -1,15 +1,18 @@
+from __future__ import division, print_function
 from os.path import join
+import os
+import sys
 import helpers
 import textwrap
 import load_data2 as ld2
 import match_chips2 as mc2
-import numpy as np
-import os
-import params
 import report_results2 as rr2
-import sys
 import draw_func2 as df2
+import vizualizations as viz
+import params
 import itertools
+import numpy as np
+
 
 def reload_module():
     import imp
@@ -65,12 +68,21 @@ def gen_test_train(input_set, M):
             train = tuple(sorted(input_set_ - set(test)))
             yield (test, train)
     
-def run_experiment(hs=None, free_mem=False, **kwargs):
+def run_experiment(hs=None, free_mem=False, pprefix='[run_expt]', **kwargs):
     'Runs experiment and dumps results. Returns locals={qcx2_res, hs}'
     '''
     import experiments as expt
     from experiments import *
     '''
+    print('** Changing print function with pprefix=%r' % (pprefix,))
+    def prefix_print(msg):
+        helpers.println(helpers.indent(str(msg), pprefix))
+    ld2.print = prefix_print
+    df2.print = prefix_print
+    mc2.print = prefix_print
+    rr2.print = prefix_print
+    viz.print = prefix_print
+
     # Load a HotSpotter object with just tables
     if not 'hs' in vars() or hs is None:
         hs = ld2.HotSpotter()
@@ -114,7 +126,7 @@ def oxford_philbin07(hs=None):
         hs.load_chips()
         hs.load_features(load_desc=False)
         hs.set_sample_split_pos(55) # Use the 55 cannonical test cases 
-    expt_locals = run_experiment(hs, oxford=True)
+    expt_locals = run_experiment(hs, pprefix='[philbin]', oxford=True)
     return expt_locals
 
 def oxford_bow():
@@ -129,7 +141,7 @@ def oxford_bow():
         hs.load_features(load_desc=False)
         hs.set_sample_range(55, None) # Use only database images
     assert min(hs.test_sample_cx) == 55 and max(hs.test_sample_cx) == 5117
-    expt_locals = run_experiment(hs, free_mem=True, oxford=False, stem=False, matrix=False)
+    expt_locals = run_experiment(hs, pprefix='[ox-bow]', free_mem=True, oxford=False, stem=False, matrix=False)
     return expt_locals
 
 def oxford_vsmany():
@@ -143,7 +155,7 @@ def oxford_vsmany():
         hs.load_features(load_desc=False)
         hs.set_sample_range(55, None) # Use only database images
     hs = ld2.HotSpotter(db_dir, samples_range=(55,None))
-    expt_locals = run_experiment(hs, free_mem=True, oxford=False, stem=False, matrix=False)
+    expt_locals = run_experiment(hs, pprefix='[ox-vsmany]', free_mem=True, oxford=False, stem=False, matrix=False)
     return locals()
 
 def far_appart_splits(input_set, M, K):
@@ -256,10 +268,10 @@ def leave_out(expt_func=None, **kwargs):
             print('[expt] <<<<<<<<')
             print('[expt] Run expt_func()')
             print('[expt] M=%r, J=%r' % (nsplit_size,csplit_size))
-            print('[expt] mth iteration: %r/%r' % (kx+1, num_nsplits))
-            print('[expt] jth iteration: %r/%r' % (jx+1, max_num_csplits))
+            mj_label = '[LNO:%r,%r/%r,%r]' % (kx+1, jx+1, num_nsplits, max_num_csplits)
+            print(mj_label)
             #rss = helpers.RedirectStdout('[expt %d/%d]' % (kx, K)); rss.start()
-            expt_locals = expt_func(hs, **kwargs)
+            expt_locals = expt_func(hs, pprefix=mj_label, **kwargs)
             print('[expt] Finished expt_func()')
             print('[expt] mth iteration: %r/%r' % (kx+1, num_nsplits))
             print('[expt] jth iteration: %r/%r' % (jx+1, max_num_csplits))

@@ -1,5 +1,5 @@
 ''' Lots of functions for drawing and plotting visiony things '''
-from __future__ import division
+from __future__ import division, print_function
 import matplotlib
 if matplotlib.get_backend() != 'Qt4Agg':
     print('[df2] matplotlib.use(Qt4Agg)')
@@ -27,7 +27,10 @@ def execstr_global():
     execstr = ['global' +key for key in globals().keys()]
     return execstr
 
-ORANGE = np.array((255, 127, 0, 255))/255.0
+ORANGE = np.array((255, 127,   0, 255))/255.0
+RED    = np.array((255,   0,   0, 255))/255.0
+GREEN  = np.array((  0, 255,   0, 255))/255.0
+BLUE   = np.array((  0,   0, 255, 255))/255.0
 
 def my_prefs():
     global LINE_COLOR
@@ -54,12 +57,12 @@ FIGSIZE_BIG = (24,12)
 
 FIGSIZE = FIGSIZE_BIG 
 
-LINE_ALPHA = .4
-ELL_ALPHA  = .3
-ELL_LINEWIDTH = 1
-ELL_COLOR  = (0, 0, 1)
+ELL_LINEWIDTH = 1.5
+ELL_ALPHA  = .4
+ELL_COLOR  = BLUE
 
-LINE_COLOR = (1, 0, 0)
+LINE_ALPHA = .4
+LINE_COLOR = RED
 LINE_CMAP  = 'hot'
 LINE_WIDTH = 1.4
 
@@ -424,7 +427,7 @@ def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
 def draw_kpts2(kpts, offset=(0,0),
                ell=SHOW_ELLS, 
                pts=False, 
-               pts_color='r', 
+               pts_color=ORANGE, 
                pts_size=POINT_SIZE, 
                ell_alpha=ELL_ALPHA,
                ell_linewidth=ELL_LINEWIDTH,
@@ -705,7 +708,7 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
                 **kwargs)
     if all_kpts:
         # Draw all keypoints as simple points
-        all_args = dict(ell=False, pts=True, pts_color='g', pts_size=2, ell_alpha=ell_alpha)
+        all_args = dict(ell=False, pts=True, pts_color=GREEN, pts_size=2, ell_alpha=ell_alpha)
         draw_kpts2(kpts1, **all_args)
         draw_kpts2(kpts2, offset=(woff,hoff), **all_args) 
     if len(fm) == 0:
@@ -768,7 +771,31 @@ def show_matches4(hs, qcx, cx2_score,
     fm    = cx2_fm[cx]
     fs    = cx2_fs[cx]
     cx_str = '(qx%r v cx%r)' % (qcx, cx)
-    score_str = ' #match=%r score=%.2f' % (len(fm), score)
+    def is_int(num):
+        valid_int_types = (np.int64,  np.int32,  np.int16,  np.int8,
+                             np.uint64, np.uint32, np.uint16, np.uint8)
+        valid_int_types = (np.typeDict['int64'],
+                             np.typeDict['int32'],
+                             np.typeDict['uint8'],
+                             types.LongType,
+                             types.IntType)
+        flag = type(num) in valid_int_types
+        return flag
+
+    def is_float(num):
+        valid_float_types = (float, np.float64, np.float32, np.float16)
+        valid_float_types = (types.FloatType,
+                        np.typeDict['float64'],
+                        np.typeDict['float32'],
+                        np.typeDict['float16'])
+        flag = type(num) in valid_float_types
+        return flag
+
+
+    if is_float(score):
+        score_str = ' #fmatch=%r score=%.2f' % (len(fm), score)
+    if is_int(score): 
+        score_str = ' #fmatch=%r score=%d' % (len(fm), score)
     is_true_match = nx == qnx and qnx > 1
     isgt_str = '\n*TRUE match*' if is_true_match else '\n*FALSE match*'
     title= cx_str + isgt_str + '\n' + score_str
@@ -780,9 +807,9 @@ def show_matches4(hs, qcx, cx2_score,
                                 fignum=fignum, plotnum=plotnum,
                                 title=title, **kwargs)
     if is_true_match:
-        _draw_border(ax, 'g')
+        _draw_border(ax, GREEN, 6)
     else:
-        _draw_border(ax, 'r')
+        _draw_border(ax, RED, 4)
     return ax
 
 def _axis_xy_width_height(ax):
@@ -793,10 +820,10 @@ def _axis_xy_width_height(ax):
     height = (autoAxis[3]-autoAxis[2])+0.4
     return xy, width, height
     
-def _draw_border(ax, color='g'):
+def _draw_border(ax, color=GREEN, lw=4):
     'draws rectangle border around a subplot'
     xy, width, height = _axis_xy_width_height(ax)
-    rect = Rectangle(xy, width, height, lw=4)
+    rect = Rectangle(xy, width, height, lw=lw)
     rect = ax.add_patch(rect)
     rect.set_clip_on(False)
     rect.set_fill(False)
@@ -807,7 +834,6 @@ def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     draw_kpts2(kpts)
 
 def show_chip(hs, cx=None, allres=None, res=None, info=True, **kwargs):
-    import draw_func2 as df2
     if not res is None:
         cx = res.qcx
     if not allres is None:
@@ -824,8 +850,8 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, **kwargs):
     if info: 
         num_gt = len(hs.get_other_indexed_cxs(cx))
         title_str += ' #gt=%r' % num_gt
-    fig, ax = df2.imshow(rchip1, title=title_str, **kwargs)
-    kpts_args = dict(offset=(0,0), ell_linewidth=2, ell=True, pts=False)
+    fig, ax = imshow(rchip1, title=title_str, **kwargs)
+    kpts_args = dict(offset=(0,0), ell_linewidth=1.5, ell=True, pts=False)
     # Draw keypoints with groundtruth information
     if not res is None:
         gt_cxs = hs.get_other_indexed_cxs(cx)
@@ -847,12 +873,12 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, **kwargs):
         legend_tups = []
         # helper function taking into acount phantom labels
         def _kpts_helper(kpts_, color, alpha, label):
-            df2.draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha, **kpts_args)
+            draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha, **kpts_args)
             phant_ = Circle((0, 0), 1, fc=color)
             legend_tups.append((phant_, label))
-        _kpts_helper(kpts_noise, 'r', .1, 'Unverified')
-        _kpts_helper(kpts_match, 'b', .4, 'Verified')
-        _kpts_helper(kpts_true,  'g', .5, 'True Matches')
+        _kpts_helper(kpts_noise,   RED, .1, 'Unverified')
+        _kpts_helper(kpts_match,  BLUE, .4, 'Verified')
+        _kpts_helper(kpts_true,  GREEN, .6, 'True Matches')
         plt.legend(*zip(*legend_tups), framealpha=.2)
     # Just draw boring keypoints
     else:

@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 # Hotspotter imports
 import draw_func2 as df2
 import helpers
@@ -450,7 +450,6 @@ def dump_all(allres,
              missed_top5=False, 
              analysis=True,
              pair_analysis=True):
-
     print('\n======================')
     print('[rr2] DUMP ALL')
     print('======================')
@@ -773,9 +772,9 @@ def report_all(hs, qcx2_res, SV=True, **kwargs):
         print('Caught Error in rr2.dump_all')
         print(repr(ex))
         exc_type, exc_value, exc_traceback = sys.exc_info()
-        print "*** print_tb:"
+        print("*** print_tb:")
         traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
-        print "*** print_exception:"
+        print("*** print_exception:")
         traceback.print_exception(exc_type, exc_value, exc_traceback,
                                   limit=2, file=sys.stdout)
         print('Caught Error in rr2.dump_all')
@@ -801,7 +800,7 @@ def print_result_summaries_list():
     sorted_rankres = []
     for result_fname in iter(result_file_list):  
         if fnmatch.fnmatch(result_fname, 'rankres_str*.csv'):
-            print result_fname
+            print(result_fname)
             with open(join(hs.dirs.result_dir, result_fname), 'r') as file:
 
                 metaline = file.readline()
@@ -828,14 +827,14 @@ def print_result_summaries_list():
                 toprint += ('bt_scores = %r; ' % bt_score_sum)
                 toprint += ('tf_scores = %r; ' % tf_score_sum)
                 sorted_rankres.append(top5line+metaline)
-                print toprint+'\n'
+                print(toprint+'\n')
 
     print('\n(>^_^)>\n')
 
     sorted_mapscore = []
     for result_fname in iter(result_file_list):  
         if fnmatch.fnmatch(result_fname, 'oxsty_map_csv*.csv'):
-            print result_fname
+            print(result_fname)
             with open(join(hs.dirs.result_dir, result_fname), 'r') as file:
                 metaline = file.readline()
                 scoreline = file.readline()

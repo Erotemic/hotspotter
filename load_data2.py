@@ -3,6 +3,7 @@ Module: load_data
     Loads the paths and table information from which all other data is computed.
     This is the first script run in the loading pipeline. 
 '''
+from __future__ import division, print_function
 # Standard
 from os.path import join
 import cv2
@@ -160,7 +161,8 @@ class HotSpotter(DynStruct):
 
         # Set the training id
         train_indx_hash = repr((tuple(train_samp), tuple(indx_samp)))
-        train_indx_id = helpers.hashstr(train_indx_hash)
+        train_indx_size = len(indx_samp)
+        train_indx_id = str(train_indx_size)+','+helpers.hashstr(train_indx_hash)
         print('[hs] set_samples(): train_indx_id=%r' % train_indx_id)
         params.TRAIN_INDX_SAMPLE_ID = train_indx_id
     #---------------

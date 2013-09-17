@@ -160,7 +160,7 @@ def __smart_load(fpath, verbose, allow_alternative=True, can_fail=False, **kwarg
                 raise
         print('[io]... loaded data')
     if data is None:
-        print('[io]... load failure %r' % fpath)
+        print('[io]... did not load %r' % fpath)
     return data
 #----
 

@@ -32,12 +32,13 @@ if sys.platform == 'linux2':
     #WORK_DIR = '/media/Store/data/work'
 
 # Common databases I use
+GZ        = WORK_DIR+'/GZ_ALL'
+PZ        = WORK_DIR+'/PZ_FlankHack'
 FROGS     = WORK_DIR+'/Frogs'
 WILDDOGS  = WORK_DIR+'/WD_Siva'
 LIONFISH  = WORK_DIR+'/LF_all'
 JAGUARS   = WORK_DIR+'/JAG_Jaguar_Data'
 NAUTS     = WORK_DIR+'/NAUT_Dan'
-GZ_ALL    = WORK_DIR+'/GZ_ALL'
 WS_HARD   = WORK_DIR+'/WS_hard'
 MOTHERS   = WORK_DIR+'/HSDB_zebra_with_mothers'
 OXFORD    = WORK_DIR+'/Oxford_Buildings'
@@ -49,7 +50,8 @@ dev_databases = {
     'JAG'       : JAGUARS,
     'FROGS'     : FROGS,
     'NAUTS'     : NAUTS,
-    'GZ_ALL'    : GZ_ALL,
+    'GZ'        : GZ,
+    'PZ'        : PZ,
     'WS_HARD'   : WS_HARD,
     'MOTHERS'   : MOTHERS,
     'OXFORD'    : OXFORD,
@@ -57,7 +59,6 @@ dev_databases = {
 
 #DEFAULT = NAUTS
 DEFAULT = MOTHERS
-DATABASE = NAUTS 
 
 #=====================================================
 # Flann Configurations
@@ -311,7 +312,7 @@ if '--print-checks' in sys.argv:
 if '--serial' in sys.argv:
     NUM_PROCS = 1
 
-def oxford_defaults():
+def OXFORD_defaults():
     # best scale params
     import params 
     params.__XY_THRESH__         = 0.01
@@ -320,16 +321,35 @@ def oxford_defaults():
     params.__CHIP_SQRT_AREA__ = None
     params.__BOW_NUM_WORDS__  = long(1e6)
 
+def GZ_defaults():
+    import params 
+    params.__BOW_NUM_WORDS__  = 87638
+
+def PZ_defaults():
+    import params 
+    params.__BOW_NUM_WORDS__  = 139454
+
+def MOTHERS_defaults():
+    import params 
+    params.__BOW_NUM_WORDS__  = 16225
+
 for argv in iter(sys.argv):
     argv_u =  argv.upper()
     if argv_u in dev_databases.keys():
         print('\n'.join(['[params] Default Database set to:'+argv.upper(),
                          '[params] Previously: '+str(DEFAULT)]))
         DEFAULT = dev_databases[argv_u]
-        if argv_u == 'OXFORD' or arg_u == 'PHILBIN':
+        if argv_u == 'OXFORD' or argv_u == 'PHILBIN':
             print('[params] Overloading OXFORD parameters')
             # dont resize oxford photos
-            oxford_defaults()
+            OXFORD_defaults()
+        if argv_u == 'GZ':
+            GZ_defaults()
+        if argv_u == 'PZ':
+            PZ_defaults()
+        if argv_u == 'MOTHERS':
+            MOTHERS_defaults()
+
 
 def make_pref_object():
     'Not finished yet, but its a start'

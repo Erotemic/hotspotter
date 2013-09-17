@@ -42,6 +42,32 @@ BOW_DTYPE = np.uint8
 FM_DTYPE  = np.uint32
 FS_DTYPE  = np.float32
 
+def debug_cx2_fm_shape(cx2_fm):
+    print('-------------------')
+    print('Debugging cx2_fm shape')
+    print('len(cx2_fm)=%r' % len(cx2_fm))
+    last_repr = ''
+    for cx in xrange(len(cx2_fm)):
+        if type(cx2_fm[cx]) == np.ndarray:
+            this_repr = repr(cx2_fm[cx].shape)+repr(type(cx2_fm[cx]))
+        else:
+            this_repr = repr(len(cx2_fm[cx]))+repr(type(cx2_fm[cx]))
+        if last_repr != this_repr:
+            last_repr = this_repr
+            print(last_repr)
+    print('-------------------')
+
+def fix_cx2_fm_shape(cx2_fm):
+    for cx in xrange(len(cx2_fm)):
+        fm = cx2_fm[cx]
+        if type(fm) != np.ndarray() or fm.dtype != FM_DTYPE:
+            fm = np.array(fm, dtype=FM_DTYPE)
+        if len(fm.shape) != 2 or fm.shape[1] != 2:
+            fm = fm.reshape(len(fm), 2)
+        cx2_fm[cx] = fm
+    cx2_fm = np.array(cx2_fm)
+    return cx2_fm
+
 def fix_res_types(res):
     for cx in xrange(len(res.cx2_fm_V)):
         res.cx2_fm_V[cx] = np.array(res.cx2_fm_V[cx], dtype=FM_DTYPE)
@@ -459,8 +485,14 @@ def assign_matches_bagofwords(qcx, cx2_desc, bow_index):
             cx2_fm[cx].append(fm)
             cx2_fs[cx].append(fs)
     # Convert to numpy
-    for cx in xrange(len(cx2_desc)): cx2_fm[cx] = np.array(cx2_fm[cx], dtype=FM_DTYPE)
-    for cx in xrange(len(cx2_desc)): cx2_fs[cx] = np.array(cx2_fs[cx], dtype=FS_DTYPE)
+    for cx in xrange(len(cx2_desc)):
+        fm = np.array(cx2_fm[cx], dtype=FM_DTYPE)
+        fm = fm.reshape(len(fm), 2)
+        cx2_fm[cx] = fm
+    for cx in xrange(len(cx2_desc)): 
+        cx2_fs[cx] = np.array(cx2_fs[cx], dtype=FS_DTYPE)
+    cx2_fm = np.array(cx2_fm)
+    cx2_fs = np.array(cx2_fs)
     return cx2_fm, cx2_fs, cx2_score
 
 #========================================
@@ -577,10 +609,14 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
         cx2_fm[cx].append((qfx, fx))
         cx2_fs[cx].append(score)
     # Convert to numpy
-    for cx in xrange(len(cx2_desc)): 
-        cx2_fm[cx] = np.array(cx2_fm[cx], dtype=FM_DTYPE)
+    for cx in xrange(len(cx2_desc)):
+        fm = np.array(cx2_fm[cx], dtype=FM_DTYPE)
+        fm = fm.reshape(len(fm), 2)
+        cx2_fm[cx] = fm
     for cx in xrange(len(cx2_desc)): 
         cx2_fs[cx] = np.array(cx2_fs[cx], dtype=FS_DTYPE)
+    cx2_fm = np.array(cx2_fm)
+    cx2_fs = np.array(cx2_fs)
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     return cx2_fm, cx2_fs, cx2_score
 
@@ -609,6 +645,8 @@ def assign_matches_vsone(qcx, cx2_desc):
         cx2_fs[cx] = fs
     sys.stdout.write('DONE')
     vsone_flann.delete_index()
+    cx2_fm = np.array(cx2_fm)
+    cx2_fs = np.array(cx2_fs)
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     return cx2_fm, cx2_fs, cx2_score
 
@@ -652,6 +690,7 @@ def match_vsone(desc2, vsone_flann, checks, ratio_thresh=1.2, burst_thresh=None)
     # RETURN vsone matches and scores
     qfx = fx2_qfx[fx, 0]
     fm  = np.array(zip(qfx, fx), dtype=FM_DTYPE)
+    fm  = fm.reshape(len(fm), 2)
     fs  = np.array(fx2_ratio[fx], dtype=FS_DTYPE)
     return (fm, fs)
 
@@ -707,6 +746,14 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
                 break
         else: 
             bad_consecutive_reranks = 0
+    for cx in xrange(len(cx2_fm_V)):
+        fm = np.array(cx2_fm_V[cx], dtype=FM_DTYPE)
+        fm = fm.reshape(len(fm), 2)
+        cx2_fm_V[cx] = fm
+    for cx in xrange(len(cx2_fs_V)): 
+        cx2_fs_V[cx] = np.array(cx2_fs_V[cx], dtype=FS_DTYPE)
+    cx2_fm_V = np.array(cx2_fm_V)
+    cx2_fs_V = np.array(cx2_fs_V)
     cx2_score_V = np.array([np.sum(fs) for fs in cx2_fs_V])
     return cx2_fm_V, cx2_fs_V, cx2_score_V
 

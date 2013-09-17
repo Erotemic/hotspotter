@@ -211,6 +211,7 @@ if __name__ == '__main__':
         hs = load_data2.HotSpotter()
         hs.load_tables(db_dir)
         hs.load_chips()
+        hs.set_samples()
         cx2_cid  = hs.tables.cx2_cid
         cx2_nx   = hs.tables.cx2_nx
         nx2_name = hs.tables.nx2_name
@@ -233,8 +234,11 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         try:
             cx = int(sys.argv[1])
+            print('cx=%r' % cx)
             df2.show_chip(hs, cx)
         except Exception as ex:
+            print('exception %r' % ex)
+            raise
             print('usage: feature_compute.py [cx]')
             pass
 

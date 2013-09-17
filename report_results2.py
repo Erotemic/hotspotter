@@ -436,10 +436,14 @@ def __dump_text_report(allres, report_type):
 # Driver functions
 # ===========================
 TMP = False
-SCORE_PDF = False
-RANK_HIST = False
+SCORE_PDF  = TMP
+RANK_HIST  = TMP
+PARI_ANALY = TMP
+STEM       = TMP
+TOP5       = TMP
 #if TMP:
-
+ALLQUERIES = True
+ANALYSIS = True
 
 def dump_all(allres,
              matrix=REPORT_MATRIX,#
@@ -452,10 +456,11 @@ def dump_all(allres,
              oxford=False,
              no_viz=False,
              rankres=True,
-             stem=True, 
-             missed_top5=True, 
-             analysis=True,
-             pair_analysis=True):
+             stem=STEM, 
+             missed_top5=TOP5, 
+             analysis=ANALYSIS,
+             pair_analysis=PARI_ANALY,
+             allqueries=ALLQUERIES):
     print('\n======================')
     print('[rr2] DUMP ALL')
     print('======================')
@@ -493,6 +498,8 @@ def dump_all(allres,
         dump_analysis(allres)
     if pair_analysis:
         dump_feature_pair_analysis(allres)
+    if allqueries:
+        dump_all_queries(allres)
     print('\n --- END DUMP ALL ---\n')
 
 def dump_oxsty_mAP_results(allres):
@@ -542,7 +549,6 @@ def dump_gt_matches(allres):
 def dump_missed_top5(allres):
     #print('\n---DUMPING MISSED TOP 5---')
     'Displays the top5 matches for all queries'
-    qcx2_res     = allres.qcx2_res
     greater5_cxs = allres.greater5_cxs
     #qcx = greater5_cxs[0]
     for qcx in greater5_cxs:
@@ -550,11 +556,17 @@ def dump_missed_top5(allres):
         viz.plot_cx(allres, qcx, 'gt_matches', 'missed_top5')
 
 def dump_analysis(allres):
-    qcx2_res     = allres.qcx2_res
+    print('[rr2] dump analysis')
     greater1_cxs = allres.greater1_cxs
     #qcx = greater5_cxs[0]
     for qcx in greater1_cxs:
         viz.plot_cx(allres, qcx, 'analysis', 'analysis')
+
+def dump_all_queries(allres):
+    test_cxs = allres.hs.test_sample_cx
+    print('[rr2] dumping all %r queries' % len(test_cxs))
+    for qcx in test_cxs:
+        viz.plot_cx(allres, qcx, 'analysis', 'allqueries')
 
 
 def dump_orgres_matches(allres, orgres_type):
@@ -678,24 +690,35 @@ def dump_feature_pair_analysis(allres):
             entropy1 = descriptor_entropy(desc1, bw_factor=1)
             entropy2 = descriptor_entropy(desc2, bw_factor=1)
             # Append to results
-            entropy_list.append(zip(entropy1, entropy2))
-            scale_list.append(zip(scale1_m, scale2_m))
+            entropy_tup = np.array(zip(entropy1, entropy2))
+            scale_tup   = np.array(zip(scale1_m, scale2_m))
+            entropy_tup = entropy_tup.reshape(len(entropy_tup), 2)
+            scale_tup   = scale_tup.reshape(len(scale_tup), 2)
+            entropy_list.append(entropy_tup)
+            scale_list.append(scale_tup)
             score_list.append(fs)
-        entropy_pairs = np.vstack(entropy_list)
-        scale_pairs   = np.vstack(scale_list)
-        scores = np.hstack(score_list)
         print('Skipped %d total.' % (len(rank_skips)+len(gt_skips),))
         print('Skipped %d for rank > 5, %d for no gt' % (len(rank_skips), len(gt_skips),))
+        print(np.unique(map(len, entropy_list)))
+        def evstack(tup):
+            return np.vstack(tup) if len(tup) > 0 else np.empty((0,2))
+        def ehstack(tup):
+            return np.hstack(tup) if len(tup) > 0 else np.empty((0,2))
+        entropy_pairs = evstack(entropy_list)
+        scale_pairs   = evstack(scale_list)
+        scores        = ehstack(score_list)
         print('\n * Measured %d pairs' % len(entropy_pairs))
         return entropy_pairs, scale_pairs, scores
 
     tt_entropy, tt_scale, tt_scores = measure_feat_pairs(allres, 'top_true')
     tf_entropy, tf_scale, tf_scores = measure_feat_pairs(allres, 'top_false')
     # Measure ratios
-    tt_entropy_ratio = tt_entropy[:,0] / tt_entropy[:,1]
-    tt_scale_ratio   = tt_scale[:,0]   / tt_scale[:,1]
-    tf_entropy_ratio = tf_entropy[:,0] / tf_entropy[:,1]
-    tf_scale_ratio   = tf_scale[:,0]   / tf_scale[:,1]
+    def measure_ratio(arr):
+        return arr[:,0] / arr[:,1] if len(arr) > 0 else np.array([])
+    tt_entropy_ratio = measure_ratio(tt_entropy)
+    tf_entropy_ratio = measure_ratio(tf_entropy)
+    tt_scale_ratio   = measure_ratio(tt_scale)
+    tf_scale_ratio   = measure_ratio(tf_scale)
 
     title_suffix = allres.title_suffix 
 

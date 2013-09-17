@@ -67,6 +67,7 @@ def gen_test_train(input_set, M):
             failsafe = 0
             train = tuple(sorted(input_set_ - set(test)))
             yield (test, train)
+
     
 def run_experiment(hs=None, free_mem=False, pprefix='[run_expt]', **kwargs):
     'Runs experiment and dumps results. Returns locals={qcx2_res, hs}'
@@ -105,9 +106,9 @@ def run_experiment(hs=None, free_mem=False, pprefix='[run_expt]', **kwargs):
             hs.load_features(load_desc=True)
             hs.load_matcher()
         qcx2_res = mc2.run_matching(hs, qcx2_res, dirty_samp)
-    if free_mem: 
+    #if free_mem: 
         # Try to free memory before reporting results
-        hs.free_some_memory()
+        #hs.free_some_memory()
     allres = rr2.report_all(hs, qcx2_res, **kwargs)
     return locals()
 
@@ -166,6 +167,7 @@ def far_appart_splits(input_set, M, K):
         (test, train) = gen.next()
         split_list.append((test,train))
     return split_list
+
 
 def leave_out(expt_func=None, **kwargs):
     '''

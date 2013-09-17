@@ -307,8 +307,20 @@ def plot2(x_data,
           title_pref,
           *args,
           **kwargs):
+    do_plot = True
     ax = plt.gca()
-    ax.plot(x_data, y_data, marker, *args, **kwargs)
+    if len(x_data) != len(y_data):
+        warnstr = '[df2] ! Warning:  len(x_data) != len(y_data). Cannot plot2'
+        warnings.warn(warnstr)
+        draw_text(warnstr)
+        do_plot = False
+    if len(x_data) == 0:
+        warnstr = '[df2] ! Warning:  len(x_data) == 0. Cannot plot2'
+        warnings.warn(warnstr)
+        draw_text(warnstr)
+        do_plot = False
+    if do_plot:
+        ax.plot(x_data, y_data, marker, *args, **kwargs)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     ax.set_title(title_pref + ' ' + x_label+' vs '+y_label)
@@ -357,11 +369,17 @@ def figure(fignum=None,
     # Get the subplot
     if doclf or len(axes_list) == 0:
         printDBG('[df2] *** NEW FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
-        ax = plt.subplot(*plotnum)
-        ax.cla()
+        if not plotnum is None:
+            ax = plt.subplot(*plotnum)
+            ax.cla()
+        else:
+            ax = plt.gca()
     else: 
         printDBG('[df2] *** OLD FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
-        ax = plt.subplot(*plotnum)
+        if not plotnum is None:
+            ax = plt.subplot(*plotnum)
+        else:
+            ax = plt.gca()
         #ax  = axes_list[0]
     # Set the title
     if not title is None:
@@ -832,10 +850,35 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, **kwargs):
         gt_cxs = hs.get_other_indexed_cxs(cx)
         # Get keypoint indexes
         def stack_unique(fx_list):
-            return np.unique(np.array(np.hstack(fx_list), dtype=int))
+            try:
+                if len(fx_list) == 0:
+                    return np.array([], dtype=int)
+                stack_list = np.hstack(fx_list)
+                stack_ints = np.array(stack_list, dtype=int)
+                unique_ints = np.unique(stack_ints)
+                return unique_ints
+            except Exception as ex:
+                 # debug in case of exception (seem to be happening)
+                 print('==============')
+                 print('Ex: %r' %ex)
+                 print('----')
+                 print('fx_list = %r ' % fx_list)
+                 print('----')
+                 print('stack_insts = %r' % stack_ints)
+                 print('----')
+                 print('unique_ints = %r' % unique_ints)
+                 print('==============')
+                 print(unique_ints)
+                 raise
         all_fx = np.arange(len(kpts1))
-        matched_fx = stack_unique([fm[:,0] for fm in res.cx2_fm_V])
-        true_matched_fx = stack_unique([fm[:,0] for fm in res.cx2_fm_V[gt_cxs]])
+        import match_chips2 as mc2
+        #mc2.debug_cx2_fm_shape(res.cx2_fm_V)
+        #res.cx2_fm_V = mc2.fix_cx2_fm_shape(res.cx2_fm_V)
+        #mc2.debug_cx2_fm_shape(res.cx2_fm_V)
+        fx_list1 = [fm[:,0] for fm in res.cx2_fm_V]
+        fx_list2 = [fm[:,0] for fm in res.cx2_fm_V[gt_cxs]]
+        matched_fx = stack_unique(fx_list1)
+        true_matched_fx = stack_unique(fx_list2)
         noise_fx = np.setdiff1d(all_fx, matched_fx)
         # Print info
         print('[df2] cx=%r has %d keypoints. %d true-matching. %d matching. %d noisy.' %
@@ -935,11 +978,11 @@ def _show_chip_matches(hs,
                        all_kpts=False,
                        fignum=3):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
-    printDBG('[df2] Show chip matches:')
-    printDBG('[df2] * topN_cxs=%r' % (topN_cxs,))
-    printDBG('[df2] * gt_cxs=%r' % (gt_cxs,))
-    printDBG('[df2] * max_cols=%r' % (max_cols,))
-    printDBG('[df2] * show_query=%r' % (show_query,))
+    print('[df2] Show chip matches:')
+    print('[df2] * len(topN_cxs)=%r' % (len(topN_cxs),))
+    print('[df2] * len([missed]gt_cxs)=%r' % (len(gt_cxs),))
+    #printDBG('[df2] * max_cols=%r' % (max_cols,))
+    #printDBG('[df2] * show_query=%r' % (show_query,))
     fig = figure(fignum=fignum)
     fig.clf()
     #baker_street_geom=(-1600, 22, 1599, 877)

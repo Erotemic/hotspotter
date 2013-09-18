@@ -98,9 +98,11 @@ def load_chip_feat_type(feat_dir,
         raise NotImplemented('[fc2] that hack is for desc only')
     if load_desc: 
         cx2_desc = io.smart_load(dpath, 'cx2_desc', uid, ext, can_fail=True)
-    else: #HACK
+    elif not cx2_kpts is None: #HACK
         print('[fc2] ! Not loading descriptors')
         cx2_desc = np.array([np.array([])] * len(cx2_kpts))
+    else:
+        cx2_desc = None
 
     if (not cx2_kpts is None and not cx2_desc is None):
         # This is pretty dumb. Gotta have a more intelligent save/load

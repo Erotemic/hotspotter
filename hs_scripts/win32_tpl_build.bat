@@ -1,3 +1,5 @@
+set HS_SCRIPTS=%code%\hotspotter\hs_scripts
+
 set CODE=%USERPROFILE%\code
 set HESAFF_SRC=%CODE%\hesaff
 set OPENCV_SRC=%CODE%\opencv
@@ -26,3 +28,5 @@ make install
 cd %OPENCV_SRC%
 make install
 
+color
+cd %HS_SCRIPTS%

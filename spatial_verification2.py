@@ -1,3 +1,4 @@
+
 from helpers import printWARN, printINFO
 import warnings
 import cv2
@@ -19,10 +20,23 @@ def rrr():
 
 SV_DTYPE = np.float64
 
+#USE_AUTOJIT = True
+#AUTOJIT_CALLS = 0
+#if USE_AUTOJIT:
+    #from numba import autojit
+    #def try_autojit(fn, *args, **kwargs):
+        #global AUTOJIT_CALLS
+        #AUTOJIT_CALLS += 1 
+        #return autojit(fn, *args, **kwargs)
+#else:
+    #def try_autojit(fn):
+        #global AUTOJIT_CALLS
+        #AUTOJIT_CALLS -= 1 
+        #return fn
+
 # Generate 6 degrees of freedom homography transformation
 def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
     'Computes homography from normalized (0 to 1) point correspondences'
-#with helpers.Timer('computehomog'):
     num_pts = len(x1_mn)
     Mbynine = np.zeros((2*num_pts,9), dtype=SV_DTYPE)
     for ix in xrange(num_pts): # Loop over inliers
@@ -48,19 +62,7 @@ def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
     h = Vct[-1] # (transposed in matlab)
     H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]  ) )
     return H
-'''
-if not 'xy_thresh' in vars():
-    xy_thresh = .002
-if not 'scale_thresh' in vars():
-    scale_thresh = 2
-if not 'min_num_inliers' in vars():
-    min_num_inliers = 4
-'''
 
-'''
-from hotspotter.spatial_verification2 import split_kpts
-x_m, y_m = x2_m, y2_m
-'''
 def calc_diaglen_sqrd(x_m, y_m):
     x_extent_sqrd = (x_m.max() - x_m.min()) ** 2
     y_extent_sqrd = (y_m.max() - y_m.min()) ** 2
@@ -227,8 +229,8 @@ def __affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
     fx are the original feature indexes (used for making sure 1 keypoint isn't assigned to 2)
     '''
 #with helpers.Timer('enume all'):
-    fx1_uq, fx1_ui = np.unique(fx1_m, return_inverse=True)
-    fx2_uq, fx2_ui = np.unique(fx2_m, return_inverse=True)
+    #fx1_uq, fx1_ui = np.unique(fx1_m, return_inverse=True)
+    #fx2_uq, fx2_ui = np.unique(fx2_m, return_inverse=True)
     best_inliers = []
     num_best_inliers = 0
     best_mx  = None
@@ -315,7 +317,8 @@ def test():
          rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data(qcx, cx)
     args_ = [rchip1, rchip2, kpts1, kpts2]
 
-    H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm, 
+    with helpers.Timer('Computing inliers: '):
+        H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm, 
                                                           xy_thresh,
                                                           scale_thresh_high,
                                                           scale_thresh_low,
@@ -332,7 +335,24 @@ def test():
                       all_kpts=False, draw_lines=True, doclf=True,
                       title='Homography inliers', fignum=3)
 
-    exec(df2.present())
+def test2(qcx, cx):
+    import load_data2 as ld2
+    xy_thresh         = params.__XY_THRESH__
+    scale_thresh_high = params.__SCALE_THRESH_HIGH__
+    scale_thresh_low  = params.__SCALE_THRESH_LOW__
+    qcx = 27
+    cx  = 113
+    with helpers.RedirectStdout():
+        if not 'hs' in vars():
+            (hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data(qcx, cx)
+    args_ = [rchip1, rchip2, kpts1, kpts2]
+
+    with helpers.Timer('Computing inliers: '+str(qcx)+' '+str(cx)):
+        H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm, 
+                                                          xy_thresh,
+                                                          scale_thresh_high,
+                                                          scale_thresh_low,
+                                                          min_num_inliers=4)
 
 def compare1():
     from __init__ import *
@@ -406,7 +426,18 @@ def compare():
     df2.present(num_rc=(2,2), wh=(800,500))
 
 if __name__ == '__main__':
+    from __init__ import *
     import multiprocessing as mp
+    import draw_func2 as df2
     mp.freeze_support()
     print('[sc2] __main__ = spatial_verification2.py')
-    test()
+    test2(0, 1)
+    test2(0, 2)
+    test2(0, 3)
+    test2(0, 4)
+    test2(0, 5)
+    test2(0, 6)
+    test2(0, 6)
+    if 'AUTOJIT_CALLS' in vars():
+        print('autojit calls: '+str(AUTOJIT_CALLS))
+    #exec(df2.present())

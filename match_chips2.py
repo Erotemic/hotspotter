@@ -2,6 +2,7 @@
 Module match_chips: 
     Runs vsone, vsmany, and bagofwords matching
 '''
+#from numba import autojit
 from __future__ import division, print_function
 #========================================
 # IMPORTS

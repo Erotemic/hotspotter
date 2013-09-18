@@ -336,39 +336,42 @@ def build_rankres_str(allres):
     num_nonquery = len(np.setdiff1d(indx_samp, test_samp))
     # Find the test samples WITH ground truth
     test_samp_with_gt = np.array(test_samp)[qcx2_numgt[test_samp] > 0]
-    num_with_gtruth = len(test_samp_with_gt)
-    if num_with_gtruth == 0:
+    if len(test_samp_with_gt) == 0:
         warnings.warn('[rr2] there were no queries with ground truth')
     train_nxs_set = set(cx2_nx[train_samp])
     flag_cxs_fn = hs.flag_cxs_with_name_in_sample
+
     def ranks_less_than_(thresh, intrain=None):
         #Find the number of ranks scoring more than thresh
-        if num_with_gtruth == 0:
-            return [], ('NoGT','NoGT', -1, 'NoGT')
         # Get statistics with respect to the training set
-        if intrain is None:
+        if intrain is None: # report all
             test_cxs_ =  test_samp_with_gt
-        else:
+        else: # report either or
             in_train_flag = flag_cxs_fn(test_samp_with_gt, train_samp)
-            if intrain == False:
-                in_train_flag = True - in_train_flag
+            if intrain == False: in_train_flag = True - in_train_flag
             test_cxs_ =  test_samp_with_gt[in_train_flag]
+        # number of test samples with ground truth
+        num_with_gt = len(test_cxs_)
+        if num_with_gt == 0:
+            return [], ('NoGT','NoGT', -1, 'NoGT')
+        # find tests with ranks greater and less than thresh
         testcx2_ttr = qcx2_top_true_rank[test_cxs_]
         greater_cxs = test_cxs_[np.where(testcx2_ttr > thresh)[0]]
         num_greater = len(greater_cxs)
-        num_less    = num_with_gtruth - num_greater
-        num_greater = num_with_gtruth - num_less
-        frac_less   = 100.0 * num_less / num_with_gtruth
-        fmt_tup     = (num_less, num_with_gtruth, frac_less, num_greater)
+        num_less    = num_with_gt - num_greater
+        num_greater = num_with_gt - num_less
+        frac_less   = 100.0 * num_less / num_with_gt
+        fmt_tup     = (num_less, num_with_gt, frac_less, num_greater)
         return greater_cxs, fmt_tup
+
     greater5_cxs, fmt5_tup = ranks_less_than_(5)
     greater1_cxs, fmt1_tup = ranks_less_than_(1)
     #
-    gt5_intrain_cxs, fmt5_tup = ranks_less_than_(5, intrain=True)
-    greater1_cxs, fmt1_tup = ranks_less_than_(1, intrain=True)
+    gt5_intrain_cxs, fmt5_in_tup = ranks_less_than_(5, intrain=True)
+    gt1_intrain_cxs, fmt1_in_tup = ranks_less_than_(1, intrain=True)
     #
-    greater5_cxs, fmt5_tup = ranks_less_than_(5, intrain=False)
-    greater1_cxs, fmt1_tup = ranks_less_than_(1, intrain=False)
+    gt5_outtrain_cxs, fmt5_out_tup = ranks_less_than_(5, intrain=False)
+    gt1_outtrain_cxs, fmt1_out_tup = ranks_less_than_(1, intrain=False)
     #
     allres.greater1_cxs = greater1_cxs
     allres.greater5_cxs = greater5_cxs
@@ -379,10 +382,16 @@ def build_rankres_str(allres):
     header +=  helpers.get_timestamp(format='comment')+'\n'
     # Scalar summary
     scalar_summary  = '# Num Query Chips: %d \n' % num_chips
-    scalar_summary += '# Num Query Chips with at least one match: %d \n' % num_with_gtruth
+    scalar_summary += '# Num Query Chips with at least one match: %d \n' % len(test_samp_with_gt)
     scalar_summary += '# Num NonQuery Chips: %d \n' % num_nonquery
     scalar_summary += '# Ranks <= 5: %r/%r = %.1f%% (missed %r)\n' % (fmt5_tup)
     scalar_summary += '# Ranks <= 1: %r/%r = %.1f%% (missed %r)\n\n' % (fmt1_tup)
+
+    scalar_summary += '# InTrain Ranks <= 5: %r/%r = %.1f%% (missed %r)\n' % (fmt5_in_tup)
+    scalar_summary += '# InTrain Ranks <= 1: %r/%r = %.1f%% (missed %r)\n\n' % (fmt1_in_tup)
+
+    scalar_summary += '# OutTrain Ranks <= 5: %r/%r = %.1f%% (missed %r)\n' % (fmt5_out_tup)
+    scalar_summary += '# OutTrain Ranks <= 1: %r/%r = %.1f%% (missed %r)\n\n' % (fmt1_out_tup)
     header += scalar_summary
     # Experiment parameters
     header += '# Full Parameters: \n' + helpers.indent(params.param_string(),'#') + '\n\n'

@@ -169,7 +169,7 @@ def far_appart_splits(input_set, M, K):
     return split_list
 
 
-def leave_out(expt_func=None, **kwargs):
+def leave_out(expt_func=None, split_test=False, **kwargs):
     '''
     do with TF-IDF on the zebra data set. 
     Let M be the total number of *animals* (not images and not chips) in an experimental data set. 
@@ -229,7 +229,7 @@ def leave_out(expt_func=None, **kwargs):
     result_map = {}
     kx = 0
     # run K experiments
-    all_cxs = nx2_cxs[list(all_nxs)]
+    all_cxs = np.hstack(nx2_cxs[list(all_nxs)])
     for kx in xrange(num_nsplits):
         print('***************')
         print('[expt] Leave M=%r names out iteration: %r/%r' % (nsplit_size, kx+1, num_nsplits))
@@ -244,48 +244,58 @@ def leave_out(expt_func=None, **kwargs):
         test_nChip = map(len, test_cxs_list)
         print('[expt] testnames #cxs stats: %r' % helpers.printable_mystats(test_nChip))
         test_cx_splits  = []
-        for ix in xrange(len(test_cxs_list)):
-            cxs = test_cxs_list[ix]
-            num_csplits = len(cxs)//csplit_size
-            cxs_splits = far_appart_splits(cxs, csplit_size, num_csplits)
-            test_cx_splits.append(cxs_splits)
-        max_num_csplits = max(map(len, test_cx_splits))
-        # Put them into experiment sets
-        jx2_test_cxs = [[] for _ in xrange(max_num_csplits)]
-        jx2_index_cxs = [[] for _ in xrange(max_num_csplits)]
-        for ix in xrange(len(test_cx_splits)):
-            cxs_splits = test_cx_splits[ix]
-            for jx in xrange(max_num_csplits):
-                if jx >= len(cxs_splits): 
-                    break
-                #ix_test_cxs, ix_index_cxs = cxs_splits[jx]
-                ix_index_cxs, ix_test_cxs = cxs_splits[jx]
-                jx2_test_cxs[jx].append(ix_test_cxs)
-                jx2_index_cxs[jx].append(ix_index_cxs)
-        jx = 0
-        for jx in xrange(max_num_csplits): # run K*J experiments
-            # Lock in TEST and INDEX set
-            # INDEX the TRAIN set and a subset of the NOT-TRAIN set
-            print(hs.tables)
-            indx_samp = np.hstack(jx2_index_cxs[jx]+[train_samp])
-            # TEST chips which have a groundtruth in the INDEX set
-            test_samp = hs.get_valid_cxs_with_name_in_samp(indx_samp)
-            # Set samples
+        if not split_test:
+            # Chucks version of the test (much simplier and better)
+            indx_samp = all_cxs
+            train_samp = train_samp
+            test_samp = all_cxs
             hs.set_samples(test_samp, train_samp, indx_samp)
-            mj_label = '[LNO:%r/%r;%r/%r]' % (kx+1, num_nsplits, jx+1, max_num_csplits)
-            # Run experiment
-            print('[expt] <<<<<<<<')
-            print('[expt] Run expt_func()')
-            print('[expt] M=%r, J=%r' % (nsplit_size,csplit_size))
-            print(mj_label)
-            #rss = helpers.RedirectStdout('[expt %d/%d]' % (kx, K)); rss.start()
+            mj_label = '[LNO: %r/%r]' % (kx+1, num_nsplits)
             expt_locals = expt_func(hs, pprefix=mj_label, **kwargs)
-            print('[expt] Finished expt_func()')
-            print('[expt] mth iteration: %r/%r' % (kx+1, num_nsplits))
-            print('[expt] jth iteration: %r/%r' % (jx+1, max_num_csplits))
-            print('[expt] >>>>>>>>')
             result_map[kx] = expt_locals['allres']
-            #rss.stop(); rss.dump()
+        elif split_test:
+            for ix in xrange(len(test_cxs_list)):
+                cxs = test_cxs_list[ix]
+                num_csplits = len(cxs)//csplit_size
+                cxs_splits = far_appart_splits(cxs, csplit_size, num_csplits)
+                test_cx_splits.append(cxs_splits)
+            max_num_csplits = max(map(len, test_cx_splits))
+            # Put them into experiment sets
+            jx2_test_cxs = [[] for _ in xrange(max_num_csplits)]
+            jx2_index_cxs = [[] for _ in xrange(max_num_csplits)]
+            for ix in xrange(len(test_cx_splits)):
+                cxs_splits = test_cx_splits[ix]
+                for jx in xrange(max_num_csplits):
+                    if jx >= len(cxs_splits): 
+                        break
+                    #ix_test_cxs, ix_index_cxs = cxs_splits[jx]
+                    ix_index_cxs, ix_test_cxs = cxs_splits[jx]
+                    jx2_test_cxs[jx].append(ix_test_cxs)
+                    jx2_index_cxs[jx].append(ix_index_cxs)
+            jx = 0
+            for jx in xrange(max_num_csplits): # run K*J experiments
+                # Lock in TEST and INDEX set
+                # INDEX the TRAIN set and a subset of the NOT-TRAIN set
+                print(hs.tables)
+                indx_samp = np.hstack(jx2_index_cxs[jx]+[train_samp])
+                # TEST chips which have a groundtruth in the INDEX set
+                test_samp = hs.get_valid_cxs_with_name_in_samp(indx_samp)
+                # Set samples
+                hs.set_samples(test_samp, train_samp, indx_samp)
+                mj_label = '[LNO:%r/%r;%r/%r]' % (kx+1, num_nsplits, jx+1, max_num_csplits)
+                # Run experiment
+                print('[expt] <<<<<<<<')
+                print('[expt] Run expt_func()')
+                print('[expt] M=%r, J=%r' % (nsplit_size,csplit_size))
+                print(mj_label)
+                #rss = helpers.RedirectStdout('[expt %d/%d]' % (kx, K)); rss.start()
+                expt_locals = expt_func(hs, pprefix=mj_label, **kwargs)
+                print('[expt] Finished expt_func()')
+                print('[expt] mth iteration: %r/%r' % (kx+1, num_nsplits))
+                print('[expt] jth iteration: %r/%r' % (jx+1, max_num_csplits))
+                print('[expt] >>>>>>>>')
+                result_map[kx] = expt_locals['allres']
+                #rss.stop(); rss.dump()
     return locals()
     
 def tweak_params(expt_func=None):

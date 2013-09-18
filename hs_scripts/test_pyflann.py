@@ -1,24 +1,25 @@
 print('==============================')
 print('____ Running test pyflann ____')
-def __ADD_HOTSPOTTOR_ROOT_TO_PYTHON_PATH__():
-    import os, sys
-    # Find the hotspotter root
-    root_dir = os.path.realpath(os.path.dirname(__file__))
-    while True: 
-        test_path = os.path.join(root_dir, '__HOTSPOTTER_ROOT__')
-        if os.path.exists(test_path):
-            break
-        _new_root = os.path.dirname(root_dir)
-        if _new_root == root_dir:
-            raise Exception('Cannot find hotspotter root')
-        root_dir = _new_root
-    hotspotter_root = root_dir
-    # Append it to the python path so you can import it
-    sys.path.append(hotspotter_root)
+#def __ADD_HOTSPOTTOR_ROOT_TO_PYTHON_PATH__():
+    #import os, sys
+    ## Find the hotspotter root
+    #root_dir = os.path.realpath(os.path.dirname(__file__))
+    #while True: 
+        #test_path = os.path.join(root_dir, '__HOTSPOTTER_ROOT__')
+        #if os.path.exists(test_path):
+            #break
+        #_new_root = os.path.dirname(root_dir)
+        #if _new_root == root_dir:
+            #raise Exception('Cannot find hotspotter root')
+        #root_dir = _new_root
+    #hotspotter_root = root_dir
+    ## Append it to the python path so you can import it
+    #sys.path.append(hotspotter_root)
 
-__ADD_HOTSPOTTOR_ROOT_TO_PYTHON_PATH__()
+#__ADD_HOTSPOTTOR_ROOT_TO_PYTHON_PATH__()
 
-import hotspotter.tpl.pyflann as pyflann
+#import hotspotter.tpl.pyflann as pyflann
+import pyflann
 import cPickle
 import numpy as np
 

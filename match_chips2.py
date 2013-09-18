@@ -222,7 +222,7 @@ def load_cached_matches(hs):
 def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VERBOSE_MATCHING):
     '''Runs the full matching pipeline using the abstracted classes'''
     print(textwrap.dedent('''
-    =============================
+    \n=============================
     [mc2] Running Matching
     ============================='''))
     # Parameters
@@ -302,7 +302,7 @@ def precompute_bag_of_words(hs):
     '''Builds a vocabulary with train_sample_cx
     Creates an indexed database with indexed_sample_cx'''
     print(textwrap.dedent('''
-    =============================
+    \n=============================
     [mc2] Precompute Bag-of-Words
     ============================='''))
     # Unwrap parameters
@@ -550,7 +550,7 @@ def aggregate_descriptors_vsmany(hs):
 #@profile
 def precompute_index_vsmany(hs):
     print(textwrap.dedent('''
-    =============================
+    \n=============================
     [mc2] Building one-vs-many index
     ============================='''))
     # Build (or reload) one vs many flann index

@@ -164,7 +164,7 @@ def load_chip_feat_type(feat_dir,
     
 def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
                        load_desc=True):
-    print('=============================')
+    print('\n=============================')
     print('[fc2] Computing and loading features')
     print('=============================')
     # --- GET INPUT --- #

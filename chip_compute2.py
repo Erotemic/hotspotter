@@ -239,7 +239,7 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
     cx2_roi      = hs_tables.cx2_roi
     gx2_gname    = hs_tables.gx2_gname
 
-    print('=============================')
+    print('\n=============================')
     print('[cc2] Precomputing chips and loading chip paths')
     print('=============================')
 

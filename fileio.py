@@ -1,5 +1,4 @@
 from os.path import normpath, exists, realpath, join
-
 import os
 import os.path
 import fnmatch
@@ -10,6 +9,7 @@ import datetime
 import timeit
 
 import helpers
+import params
 import numpy as np
 
 def reload_module():
@@ -88,30 +88,26 @@ def __args2_fpath(dpath, fname, uid, ext):
     fpath = normpath(join(dpath, fname+uid+ext))
     return fpath
     
-def smart_save(data, dpath='', fname='', uid='', ext='',
-               verbose=True):
+def smart_save(data, dpath='', fname='', uid='', ext='', verbose=params.VERBOSE_IO):
     ''' Saves data to the direcotry speficied '''
     fpath = __args2_fpath(dpath, fname, uid, ext)
     if verbose:
-        print('[io]')
+        if verbose > 1: print('[io]')
         print(('[io] smart_save(dpath=%r,\n'+' '*11+'fname=%r, uid=%r, ext=%r)')\
               % (dpath, fname, uid, ext))
     ret = __smart_save(data, fpath, verbose)
-    if verbose:
-        print('[io]')
+    if verbose > 1: print('[io]')
     return ret
 #----
-def smart_load(dpath='', fname='', uid='', ext='',
-               verbose=True, **kwargs):
+def smart_load(dpath='', fname='', uid='', ext='', verbose=params.VERBOSE_IO, **kwargs):
     ''' Loads data to the direcotry speficied '''
     fpath = __args2_fpath(dpath, fname, uid, ext)
     if verbose:
-        print('[io]')
+        if verbose > 1: print('[io]')
         print(('[io] smart_load(dpath=%r,\n'+' '*11+'fname=%r, uid=%r, ext=%r)')\
               % (dpath, fname, uid, ext))
     data = __smart_load(fpath, verbose, **kwargs)
-    if verbose:
-        print('[io]')
+    if verbose > 1: print('[io]')
     return data
 #----
 #----
@@ -120,11 +116,11 @@ def __smart_save(data, fpath, verbose):
     dpath, fname = os.path.split(fpath)
     fname_noext, ext_ = os.path.splitext(fname)
     save_func = ext2_save_func[ext_]
-    if verbose:
+    if verbose > 1:
         print('[io] saving: %r' % (type(data),))
     try: 
         save_func(fpath, data)
-        if verbose:
+        if verbose > 1:
             print('[io] saved %s ' % (filesize_str(fpath),))
     except Exception as ex: 
         print('[io] ! Exception will saving %r' % fpath)
@@ -149,7 +145,7 @@ def __smart_load(fpath, verbose, allow_alternative=True, can_fail=False, **kwarg
         load_func = ext2_load_func[ext_]
         # Do actual data loading
         try: 
-            if verbose:
+            if verbose > 1:
                 print('[io] loading '+filesize_str(fpath))
             data = load_func(fpath)
         except Exception as ex: 
@@ -176,7 +172,7 @@ def convert_alternative(fpath, verbose, can_fail):
     else:
         #load and convert alternative
         alt_fpath = alternatives[0]
-        if verbose:
+        if verbose > 1:
             print('[io] ...converting %r' % alt_fpath)
         data = __smart_load(alt_fpath, verbose, allow_alternative=False)
         __smart_save(data, fpath, verbose)
@@ -193,7 +189,7 @@ def find_alternatives(fpath, verbose):
         alt_fpath = fpath_noext + alt_ext
         if exists(alt_fpath):
             alternatives.append(alt_fpath)
-    if verbose:
+    if verbose > 1:
         # Print num alternatives / filesizes
         print('[io] Found %d alternate(s)' % len(alternatives))
         for alt_fpath in iter(alternatives):

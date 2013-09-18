@@ -219,7 +219,7 @@ def load_cached_matches(hs):
     return qcx2_res, dirty_test_sample_cx
 
 
-def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=True):
+def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VERBOSE_MATCHING):
     '''Runs the full matching pipeline using the abstracted classes'''
     print(textwrap.dedent('''
     =============================
@@ -228,7 +228,7 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=True):
     # Parameters
     #reverify_query       = params.REVERIFY_QUERY
     #resave_query         = params.RESAVE_QUERY
-    verbose_matching      = params.VERBOSE_MATCHING
+    print_ = helpers.print_
     # Return if no dirty queries
     if qcx2_res is None:
         qcx2_res, dirty_test_sample_cx = load_cached_matches(hs)
@@ -248,24 +248,28 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=True):
         #
         # Assign matches with the chosen function (vsone) or (vsmany)
         num_qdesc = len(cx2_desc[qcx])
-        print('[mc2] query(%d/%d)---------------' % (qnum+1, total_dirty))
-        print('[mc2] query(%d/%d) assign %d desc' % (qnum+1, total_dirty, num_qdesc))
+        if verbose:
+            print('[mc2] query(%d/%d)---------------' % (qnum+1, total_dirty))
+            print('[mc2] query(%d/%d) assign %d desc' % (qnum+1, total_dirty, num_qdesc))
         tt1 = helpers.Timer(verbose=False)
         assign_output = assign_matches(qcx, cx2_desc)
         (cx2_fm, cx2_fs, cx2_score) = assign_output
         assign_time = tt1.toc()
         #
         # Spatially verify the assigned matches
-        num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
-        print('[mc2] query(%d/%d) verify %d assigned matches' % (qnum+1, total_dirty, num_assigned))
+        if verbose:
+            num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
+            print('[mc2] query(%d/%d) verify %d assigned matches' % (qnum+1, total_dirty, num_assigned))
         tt2 = helpers.Timer(verbose=False)
         sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
         (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
         num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
-        print('[mc2] query(%d/%d) verified %d matches' % (qnum+1, total_dirty, num_verified))
+        if verbose:
+            print('[mc2] query(%d/%d) verified %d matches' % (qnum+1, total_dirty, num_verified))
         verify_time = tt2.toc()
-        print('...assigned: %.2f seconds' % (assign_time))
-        print('...verified: %.2f seconds' % (verify_time))
+        print_('...assigned: %.2f seconds' % (assign_time))
+        if verbose: print_('\n')
+        print_('...verified: %.2f seconds\n' % (verify_time))
         #
         # Assign output to the query result 
         res.cx2_fm      = np.array(cx2_fm)

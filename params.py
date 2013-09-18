@@ -103,7 +103,7 @@ BOW_WORDS_FLANN_PARAMS   = hs1_params
 VSMANY_FLANN_PARAMS      = hs1_params
 VSONE_FLANN_PARAMS       = hs1_params
 
-AKMEANS_MAX_ITERS = 100
+AKMEANS_MAX_ITERS = 3
 
 VERBOSE_CACHE = False
 VERBOSE_LOAD_DATA = False
@@ -136,6 +136,7 @@ __MATCH_TYPE__         = 'vsmany'  # Matching type
 __VSMANY_K__           = 5         # Number of matches for one-vs-many
 __VSMANY_SCORE_FN__    = 'LNBNN' # LNRAT, LNBNN, RATIO
 __BOW_NUM_WORDS__      = long(5e4) # Vocab size for bag of words
+__BOW_NDESC_PER_WORD__ = 14
 __VSONE_RATIO_THRESH__ = 1.5       # Thresholds for one-vs-one
 #---------------------
 # SPATIAL VERIFICATION
@@ -186,8 +187,11 @@ def get_feat_uid():
     return feat_uid
 
 TRAIN_INDX_SAMPLE_ID = ''
+TRAIN_SAMPLE_ID = ''
+INDX_SAMPLE_ID = ''
+TEST_SAMPLE_ID = ''
 
-def get_matcher_uid():
+def get_matcher_uid(with_train=True, with_indx=True):
     matcher_uid = '_'+__MATCH_TYPE__
     if __MATCH_TYPE__ == 'bagofwords':
         matcher_uid += '_W%d' % __BOW_NUM_WORDS__
@@ -195,7 +199,10 @@ def get_matcher_uid():
         matcher_uid += '_k%d' % __VSMANY_K__
     if __MATCH_TYPE__ == 'vsone':
         matcher_uid += '_rat'+str(__RATIO_THRESH__)
-    matcher_uid += '_sID('+TRAIN_INDX_SAMPLE_ID+')'
+    if with_train:
+        matcher_uid += '_trainID('+TRAIN_SAMPLE_ID+')'
+    if with_indx:
+        matcher_uid += '_indxID('+INDX_SAMPLE_ID+')'
     # depends on feat
     matcher_uid += get_feat_uid()
     return matcher_uid

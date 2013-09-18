@@ -309,6 +309,14 @@ def precompute_bag_of_words(hs):
     indexed_cxs = hs.indexed_sample_cx
     indexed_cxs = range(hs.num_cx) if indexed_cxs is None else indexed_cxs
     vocab_size = params.__BOW_NUM_WORDS__
+    ndesc_per_word = params.__BOW_NDESC_PER_WORD__
+    if not ndesc_per_word is None:
+        num_train_desc = sum(map(len, cx2_desc[train_cxs]))
+        print('[mc2] there are %d training descriptors: ' % num_train_desc)
+        print('[mc2] training vocab with ~%r descriptor per word' % ndesc_per_word)
+        vocab_size = int(num_train_desc // ndesc_per_word)
+        # oh this is bad, no more globals
+        params.__BOW_NUM_WORDS__ = vocab_size
     # Compute vocabulary
     print(textwrap.dedent('''
     -----------------------------
@@ -345,7 +353,7 @@ def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
         helpers.printWARN(msg)
         vocab_size = num_train_desc / 2
     # Cluster descriptors into a visual vocabulary
-    matcher_uid = params.get_matcher_uid()
+    matcher_uid = params.get_matcher_uid(with_train=True, with_indx=False)
     words_uid   = 'words_'+matcher_uid
     _, words = algos.precompute_akmeans(train_desc, vocab_size, max_iters,
                                         akm_flann_params, cache_dir,

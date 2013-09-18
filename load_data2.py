@@ -193,12 +193,28 @@ class HotSpotter(DynStruct):
         hs.train_sample_cx    = train_samp
         hs.test_sample_cx     = test_samp
 
-        # Set the training id
+        # Hash the samples into sample ids
+        train_hash = repr(tuple(train_samp))
+        indx_hash  = repr(tuple(indx_samp))
+        test_hash  = repr(tuple(test_samp))
         train_indx_hash = repr((tuple(train_samp), tuple(indx_samp)))
-        train_indx_size = len(indx_samp)
-        train_indx_id = str(train_indx_size)+','+helpers.hashstr(train_indx_hash)
+
+        train_indx_id = str(len(indx_samp))+','+helpers.hashstr(train_indx_hash)
+        train_id = str(len(train_samp))+','+helpers.hashstr(train_hash)
+        indx_id  = str(len(indx_samp))+','+helpers.hashstr(indx_hash)
+        test_id  = str(len(test_samp))+','+helpers.hashstr(test_hash) 
+ 
         print('[hs] set_samples(): train_indx_id=%r' % train_indx_id)
+        print('[hs] set_samples(): train_id=%r' % train_id)
+        print('[hs] set_samples(): test_id=%r'  % test_id)
+        print('[hs] set_samples(): indx_id=%r'  % indx_id)
+
+
         params.TRAIN_INDX_SAMPLE_ID = train_indx_id
+        params.TRAIN_SAMPLE_ID      = train_id
+        params.INDX_SAMPLE_ID       = indx_id
+        params.TEST_SAMPLE_ID       = test_id
+
     #---------------
     def delete_computed_dir(hs):
         computed_dir = hs.dirs.computed_dir

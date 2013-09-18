@@ -257,7 +257,7 @@ def __akmeans_iterate(data,
     return (datax2_clusterx, clusters)
 
 #@profile
-def akmeans(data, num_clusters, max_iters=100, flann_params=None,
+def akmeans(data, num_clusters, max_iters=5, flann_params=None,
             ave_unchanged_thresh=0,
             ave_unchanged_iterwin=10):
     '''Approximiate K-Means (using FLANN)
@@ -390,15 +390,18 @@ def precompute_akmeans(data, num_clusters, max_iters=100,
         print('[algos] precompute_akmeans(): printing debug_smart_load')
         io.debug_smart_load(cache_dir, clusters_fname)
         io.debug_smart_load(cache_dir, datax2cl_fname)
-        print('[algos] Press Ctrl+C to stop k-means early (and save)')
-        signal.signal(signal.SIGINT, force_quit_akmeans) # set ctrl+c behavior
+        #print('[algos] Press Ctrl+C to stop k-means early (and save)')
+        #signal.signal(signal.SIGINT, force_quit_akmeans) # set ctrl+c behavior
+        print('[algos] computing:')
+        print('[algos] '+'_'.join([clusters_fname, uid])+'.npy')
+        print('[algos] '+'_'.join([datax2cl_fname, uid])+'.npy')
         print('[algos] precompute_akmeans(): calling akmeans')
         (datax2_clusterx, clusters) = akmeans(data, num_clusters, max_iters, flann_params)
         print('[algos] precompute_akmeans(): finished running akmeans')
         io.smart_save(clusters,        cache_dir, clusters_fname, uid, '.npy')
         io.smart_save(datax2_clusterx, cache_dir, datax2cl_fname, uid, '.npy')
-        print('[algos] Removing Ctrl+C signal handler')
-        signal.signal(signal.SIGINT, signal.SIG_DFL) # reset ctrl+c behavior
+        #print('[algos] Removing Ctrl+C signal handler')
+        #signal.signal(signal.SIGINT, signal.SIG_DFL) # reset ctrl+c behavior
     print('[algos] precompute_akmeans(): return')
     return (datax2_clusterx, clusters)
 

@@ -1188,6 +1188,24 @@ def printWARN(warn_msg, category=UserWarning):
     return warn_msg
 
 #---------------
+def try_cast(var, type_):
+    if type_ is None:
+        return var
+    try:
+        return type_(var)
+    except Exception as ex:
+        return None
+
+def get_arg_after(arg, type_=None):
+    arg_after = None
+    try:
+        arg_index = sys.argv.index('--refine')
+        if arg_index < len(sys.argv):
+            arg_after = try_cast(sys.argv[arg_index+1], type_)
+    except Exception as ex:
+        pass
+    return arg_after
+
 
 if __name__ == '__main__':
     print('[helpers] You ran helpers as main!')

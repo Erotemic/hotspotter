@@ -93,8 +93,8 @@ def run_experiment(hs=None, free_mem=False, pprefix='[run_expt]', **kwargs):
         hs.load_features(load_desc=False)
         hs.set_samples() # default samples
     print('======================')
-    print('[expt] Running Experiment on hs:\n'+str(hs))
-    print('[expt] Params: \n'+ helpers.indent(params.param_string()))
+    print('[expt] Running Experiment on hs:\n'+str(hs.db_name()))
+    #print('[expt] Params: \n'+ helpers.indent(params.param_string()))
     print('======================')
     # First load cached results
     qcx2_res, dirty_samp = mc2.load_cached_matches(hs)
@@ -193,15 +193,13 @@ def leave_out(expt_func=None, **kwargs):
     if not 'expt_func' in vars() or expt_func is None:
         expt_func = run_experiment
     # Load tables
-    hs = ld2.HotSpotter()
-    hs.load_tables(ld2.DEFAULT)
-    hs.load_chips()
-    hs.load_features(load_desc=False)
+    hs = ld2.HotSpotter(ld2.DEFAULT, load_basic=True)
     # Grab names
-    nx2_name = hs.tables.nx2_name
-    cx2_nx  = hs.tables.cx2_nx
-    nx2_cxs = np.array(hs.get_nx2_cxs())
+    nx2_name   = hs.tables.nx2_name
+    cx2_nx     = hs.tables.cx2_nx
+    nx2_cxs    = np.array(hs.get_nx2_cxs())
     nx2_nChips = np.array(map(len, nx2_cxs))
+    num_uniden = nx2_nChips[0] + nx2_nChips[1] 
     nx2_nChips[0:3] = 0 # remove uniden names
     # Seperate singleton / multitons
     multiton_nxs, = np.where(nx2_nChips > 1)
@@ -210,11 +208,12 @@ def leave_out(expt_func=None, **kwargs):
     print('[expt] There are %d names' % len(all_nxs))
     print('[expt] There are %d multiton names' % len(multiton_nxs))
     print('[expt] There are %d singleton names' % len(singleton_nxs))
+    print('[expt] There are %d unidentified animals' % num_uniden)
     # 
     multiton_cxs = nx2_cxs[multiton_nxs]
     singleton_cxs = nx2_cxs[singleton_nxs]
     multiton_nChips = map(len, multiton_cxs)
-    print('[expt] multion #cxs stats: %r' % helpers.mystats(multiton_nChips))
+    print('[expt] multion #cxs stats: %r' % helpers.printable_mystats(multiton_nChips))
     # Find test/train splits
     num_names = len(multiton_cxs)
 
@@ -230,26 +229,20 @@ def leave_out(expt_func=None, **kwargs):
     result_map = {}
     kx = 0
     # run K experiments
+    all_cxs = nx2_cxs[list(all_nxs)]
     for kx in xrange(num_nsplits):
         print('***************')
-        print('[expt] Leave M=%r out iteration: %r/%r' % (nsplit_size, kx+1, num_nsplits))
+        print('[expt] Leave M=%r names out iteration: %r/%r' % (nsplit_size, kx+1, num_nsplits))
         print('***************')
         # Get name splits
         (test_nxs, train_nxs) = kx2_name_split[kx]
-        # Lock in training set
-        # Run all the goddamn queries
-        # train_nxs
-        train_cxs_list = nx2_cxs[list(all_nxs)]
+        # Lock in TRAIN sample
+        train_cxs_list = nx2_cxs[list(train_nxs)]
         train_samp = np.hstack(train_cxs_list)
-        # 
-        # Choose test / index smarter
-        #test_samp = np.hstack(test_cxs_list)    # Test on half
-        #indx_samp = np.hstack([test_samp, train_samp]) # Search on all
-        #
         # Generate chip splits
         test_cxs_list = nx2_cxs[list(test_nxs)]
         test_nChip = map(len, test_cxs_list)
-        print('[expt] testnames #cxs stats: %r' % helpers.mystats(test_nChip))
+        print('[expt] testnames #cxs stats: %r' % helpers.printable_mystats(test_nChip))
         test_cx_splits  = []
         for ix in xrange(len(test_cxs_list)):
             cxs = test_cxs_list[ix]
@@ -270,19 +263,20 @@ def leave_out(expt_func=None, **kwargs):
                 jx2_test_cxs[jx].append(ix_test_cxs)
                 jx2_index_cxs[jx].append(ix_index_cxs)
         jx = 0
-        # run K*J experiments
-        for jx in xrange(max_num_csplits):
-            # Lock in test set
-            test_samp  = np.hstack(jx2_test_cxs[jx])
-            # Lock in index set
+        for jx in xrange(max_num_csplits): # run K*J experiments
+            # Lock in TEST and INDEX set
+            # INDEX the TRAIN set and a subset of the NOT-TRAIN set
+            print(hs.tables)
             indx_samp = np.hstack(jx2_index_cxs[jx]+[train_samp])
-            #hs.set_samples(test_samp, train_samp, indx_samp)
+            # TEST chips which have a groundtruth in the INDEX set
+            test_samp = hs.get_valid_cxs_with_name_in_samp(indx_samp)
+            # Set samples
             hs.set_samples(test_samp, train_samp, indx_samp)
+            mj_label = '[LNO:%r/%r;%r/%r]' % (kx+1, num_nsplits, jx+1, max_num_csplits)
             # Run experiment
             print('[expt] <<<<<<<<')
             print('[expt] Run expt_func()')
             print('[expt] M=%r, J=%r' % (nsplit_size,csplit_size))
-            mj_label = '[LNO:%r,%r/%r,%r]' % (kx+1, jx+1, num_nsplits, max_num_csplits)
             print(mj_label)
             #rss = helpers.RedirectStdout('[expt %d/%d]' % (kx, K)); rss.start()
             expt_locals = expt_func(hs, pprefix=mj_label, **kwargs)

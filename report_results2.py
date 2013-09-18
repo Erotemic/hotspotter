@@ -127,12 +127,12 @@ def res2_true_and_false(hs, res, SV):
         SV = True
     if not 'res' in vars():
         res = qcx2_res[qcx]
-    indx_sample_cx = hs.indexed_sample_cx
+    indx_samp = hs.indexed_sample_cx
     qcx = res.qcx
     cx2_score = res.cx2_score_V if SV else res.cx2_score
     unfilt_top_cx = np.argsort(cx2_score)[::-1]
     # Get top chip indexes and scores
-    top_cx    = np.array(helpers.intersect_ordered(unfilt_top_cx, indx_sample_cx))
+    top_cx    = np.array(helpers.intersect_ordered(unfilt_top_cx, indx_samp))
     top_score = cx2_score[top_cx]
     # Get the true and false ground truth ranks
     qnx         = hs.tables.cx2_nx[qcx]
@@ -311,8 +311,10 @@ def build_rankres_str(allres):
     SV = allres.SV
     qcx2_res = allres.qcx2_res
     cx2_cid  = hs.tables.cx2_cid
-    test_sample_cx = hs.test_sample_cx
-    indx_sample_cx = hs.indexed_sample_cx
+    cx2_nx = hs.tables.cx2_nx
+    test_samp = hs.test_sample_cx
+    train_samp = hs.train_sample_cx
+    indx_samp = hs.indexed_sample_cx
     # Get organized data for csv file
     (qcx2_top_true_rank,
     qcx2_top_true_score,
@@ -327,29 +329,47 @@ def build_rankres_str(allres):
     qcx2_top_false_cx) = allres.top_false_qcx_arrays
     # Number of groundtruth per query 
     qcx2_numgt = np.zeros(len(cx2_cid)) - 2
-    for qcx in test_sample_cx:
+    for qcx in test_samp:
         qcx2_numgt[qcx] = len(hs.get_other_indexed_cxs(qcx))
     # Easy to digest results
-    num_chips = len(test_sample_cx)
-    num_nonquery = len(np.setdiff1d(indx_sample_cx, test_sample_cx))
-
-    test_sample_cx_with_gt = np.array(test_sample_cx)[qcx2_numgt[test_sample_cx] > 0]
-    num_with_gtruth = len(test_sample_cx_with_gt)
+    num_chips = len(test_samp)
+    num_nonquery = len(np.setdiff1d(indx_samp, test_samp))
+    # Find the test samples WITH ground truth
+    test_samp_with_gt = np.array(test_samp)[qcx2_numgt[test_samp] > 0]
+    num_with_gtruth = len(test_samp_with_gt)
     if num_with_gtruth == 0:
         warnings.warn('[rr2] there were no queries with ground truth')
-    def ranks_less_than_(thresh):
+    train_nxs_set = set(cx2_nx[train_samp])
+    flag_cxs_fn = hs.flag_cxs_with_name_in_sample
+    def ranks_less_than_(thresh, intrain=None):
+        #Find the number of ranks scoring more than thresh
         if num_with_gtruth == 0:
             return [], ('NoGT','NoGT', -1, 'NoGT')
-        testcx2_ttr = qcx2_top_true_rank[test_sample_cx_with_gt]
-        greater_cxs = test_sample_cx_with_gt[np.where(testcx2_ttr > thresh)[0]]
+        # Get statistics with respect to the training set
+        if intrain is None:
+            test_cxs_ =  test_samp_with_gt
+        else:
+            in_train_flag = flag_cxs_fn(test_samp_with_gt, train_samp)
+            if intrain == False:
+                in_train_flag = True - in_train_flag
+            test_cxs_ =  test_samp_with_gt[in_train_flag]
+        testcx2_ttr = qcx2_top_true_rank[test_cxs_]
+        greater_cxs = test_cxs_[np.where(testcx2_ttr > thresh)[0]]
         num_greater = len(greater_cxs)
-        num_less = num_with_gtruth - num_greater
+        num_less    = num_with_gtruth - num_greater
         num_greater = num_with_gtruth - num_less
-        frac_less = 100.0 * num_less / num_with_gtruth
-        fmt_tup = (num_less, num_with_gtruth, frac_less, num_greater)
+        frac_less   = 100.0 * num_less / num_with_gtruth
+        fmt_tup     = (num_less, num_with_gtruth, frac_less, num_greater)
         return greater_cxs, fmt_tup
     greater5_cxs, fmt5_tup = ranks_less_than_(5)
     greater1_cxs, fmt1_tup = ranks_less_than_(1)
+    #
+    gt5_intrain_cxs, fmt5_tup = ranks_less_than_(5, intrain=True)
+    greater1_cxs, fmt1_tup = ranks_less_than_(1, intrain=True)
+    #
+    greater5_cxs, fmt5_tup = ranks_less_than_(5, intrain=False)
+    greater1_cxs, fmt1_tup = ranks_less_than_(1, intrain=False)
+    #
     allres.greater1_cxs = greater1_cxs
     allres.greater5_cxs = greater5_cxs
     #print('greater5_cxs = %r ' % (allres.greater5_cxs,))
@@ -376,7 +396,7 @@ def build_rankres_str(allres):
     #    BT  = bottom true
     #    TF  = top false''').strip()
     # Build the CSV table
-    test_sample_gx = hs.tables.cx2_gx[test_sample_cx]
+    test_sample_gx = hs.tables.cx2_gx[test_samp]
     test_sample_gname = hs.tables.gx2_gname[test_sample_gx]
     test_sample_gname = [g.replace('.jpg','') for g in test_sample_gname]
     column_labels = ['QCX', 'NUM GT',
@@ -385,12 +405,12 @@ def build_rankres_str(allres):
                      'TT RANK', 'BT RANK', 'TF RANK',
                      'QGNAME', ]
     column_list = [
-        test_sample_cx, qcx2_numgt[test_sample_cx],
-        qcx2_top_true_cx[test_sample_cx], qcx2_bot_true_cx[test_sample_cx],
-        qcx2_top_false_cx[test_sample_cx], qcx2_top_true_score[test_sample_cx],
-        qcx2_bot_true_score[test_sample_cx], qcx2_top_false_score[test_sample_cx],
-        qcx2_top_true_rank[test_sample_cx], qcx2_bot_true_rank[test_sample_cx],
-        qcx2_top_false_rank[test_sample_cx], test_sample_gname, ]
+        test_samp, qcx2_numgt[test_samp],
+        qcx2_top_true_cx[test_samp], qcx2_bot_true_cx[test_samp],
+        qcx2_top_false_cx[test_samp], qcx2_top_true_score[test_samp],
+        qcx2_bot_true_score[test_samp], qcx2_top_false_score[test_samp],
+        qcx2_top_true_rank[test_samp], qcx2_bot_true_rank[test_samp],
+        qcx2_top_false_rank[test_samp], test_sample_gname, ]
     column_type = [int, int, int, int, int, 
                    float, float, float, int, int, int, str,]
     rankres_str = ld2.make_csv_table(column_labels, column_list, header, column_type)
@@ -442,7 +462,7 @@ PARI_ANALY = TMP
 STEM       = TMP
 TOP5       = TMP
 #if TMP:
-ALLQUERIES = True
+ALLQUERIES = False
 ANALYSIS = True
 
 def dump_all(allres,

@@ -50,7 +50,7 @@ RDIR_QRES     = '/.hs_internals/computed/query_results'
 # ___CLASS HOTSPOTTER____
 class HotSpotter(DynStruct):
     '''The HotSpotter main class is a root handle to all relevant data'''
-    def __init__(hs, db_dir=None, **kwargs):
+    def __init__(hs, db_dir=None, load_basic=False, **kwargs):
         super(HotSpotter, hs).__init__()
         hs.num_cx = None
         hs.tables = None
@@ -61,7 +61,9 @@ class HotSpotter(DynStruct):
         hs.train_sample_cx    = None
         hs.test_sample_cx     = None
         hs.indexed_sample_cx = None
-        if not db_dir is None:
+        if load_basic:
+            hs.load_basic(db_dir)
+        elif not db_dir is None:
             hs.load_database(db_dir, **kwargs)
     #---------------
     def load_tables(hs, db_dir):
@@ -73,6 +75,15 @@ class HotSpotter(DynStruct):
             hs.vrd()
         if 'vcd' in sys.argv:
             hs.vcd()
+
+    def load_basic(hs, db_dir):
+        hs.load_tables(db_dir)
+        hs.load_chips()
+        hs.load_features(load_desc=False)
+
+    def db_name(hs):
+        db_name = os.path.split(hs.dirs.db_dir)[1]
+        return db_name
 
     def load_chips(hs):
         import chip_compute2 as cc2
@@ -105,6 +116,23 @@ class HotSpotter(DynStruct):
         valid_cxs, = np.where(np.array(hs.tables.cx2_cid) > 0)
         return valid_cxs
 
+    def get_valid_cxs_with_indexed_groundtruth(hs):
+        return hs.get_valid_cxs_with_name_in_samp(hs.indexed_sample_cx)
+
+    def flag_cxs_with_name_in_sample(hs, cxs, sample_cxs):
+        cx2_nx = hs.tables.cx2_nx
+        samp_nxs_set = set(cx2_nx[sample_cxs])
+        in_sample_flag = np.array([cx2_nx[cx] in samp_nxs_set for cx in cxs])
+        return in_sample_flag
+
+    def get_valid_cxs_with_name_in_samp(hs, sample_cxs):
+        'returns the valid_cxs which have a correct match in sample_cxs'
+        cx2_nx = hs.tables.cx2_nx
+        valid_cxs = hs.get_valid_cxs()
+        in_sample_flag = hs.flag_cxs_with_name_in_sample(valid_cxs, sample_cxs)
+        cxs_in_sample = valid_cxs[in_sample_flag]
+        return cxs_in_sample
+
     def set_sample_split_pos(hs, pos):
         valid_cxs = hs.get_valid_cxs()
         test_samp  = valid_cxs[:pos]
@@ -124,14 +152,20 @@ class HotSpotter(DynStruct):
         print('[hs] set_samples():')
         valid_cxs = hs.get_valid_cxs()
         if test_samp is None:
-            print('[hs] * using all chips in testing')
+            print('[hs] * default: all chips in testing')
             test_samp = valid_cxs
+        else:
+            print('[hs] * given: testing chips')
         if train_samp is None:
-            print('[hs] * using all chips in training')
+            print('[hs] * default: all chips in training')
             train_samp = valid_cxs
+        else:
+            print('[hs] * given: training chips')
         if indx_samp is None:
-            print('[hs] * using training set as database set')
+            print('[hs] * default: training set as database set')
             indx_samp = train_samp
+        else:
+            print('[hs] * given: indexed chips')
 
         # Ensure samples are sorted
         test_samp = sorted(test_samp)
@@ -193,12 +227,12 @@ class HotSpotter(DynStruct):
             if nx > 0:
                 nx2_cxs[nx].append(cx)
         return nx2_cxs
-
+    #--------------
     def get_other_indexed_cxs(hs, cx):
         other_cx = hs.get_other_cxs(cx)
         other_indexed_cx = np.intersect1d(other_cx, hs.indexed_sample_cx)
         return other_indexed_cx
-
+    #--------------
     def get_other_cxs(hs, cx):
         cx2_nx   = hs.tables.cx2_nx
         nx = cx2_nx[cx]
@@ -245,11 +279,11 @@ class HotSpotter(DynStruct):
 
 # Testing helper functions
 def get_sv_test_data(qcx=0, cx=None):
-    import load_data2
+    import load_data2 as ld2
     hs = helpers.search_stack_for_localvar('hs')
     if hs is None:
-        db_dir = load_data2.DEFAULT
-        hs = load_data2.HotSpotter(db_dir)
+        db_dir = ld2.DEFAULT
+        hs = ld2.HotSpotter(db_dir)
     if cx is None:
         cx = hs.get_other_cxs(qcx)[0]
     fm, fs, score = hs.get_assigned_matches_to(qcx, cx)

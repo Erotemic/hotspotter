@@ -137,6 +137,13 @@ def intersect_ordered(list1, list2):
 
 # --- Info Strings ---
 
+def printable_mystats(_list):
+    stat_dict = mystats(_list)
+    ret = '{'
+    ret += ', '.join(['%r:%.2f' % (key, val) for key, val in stat_dict.iteritems()])
+    ret += '}'
+    return ret
+
 def mystats(_list):
     nparr = np.array(_list)
     return {'min'   : nparr.min(),

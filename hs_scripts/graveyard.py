@@ -231,3 +231,128 @@ def dev_correct_num_words(db_target, db_dir):
     print('GZ num words: %r ' % round(gz_nwords) )
     print('PZ num words: %r ' % round(pz_ndesc) )
     print('MO num words: %r ' % round(mothers_nwords) )
+
+
+def leave_out(expt_func=None, **kwargs):
+    '''
+    do with TF-IDF on the zebra data set. 
+    Let M be the total number of *animals* (not images and not chips) in an experimental data set. 
+    Do a series of leave-M-out (M >= 1) experiments on the TF-IDF scoring,
+    where the "left out" M are M different zebras, 
+    so that there are no images of these zebras in the images used to form the vocabulary.
+    The vocabulary is formed from the remaining N-M animals.
+    Test how well TF-IDF recognition does with these M animals. 
+    Repeat for different subsets of M animals.
+    import experiments as expt
+    from experiments import *
+    '''
+    # ---
+    # Testing should have animals I have seen and animals I haven't seen. 
+    # Make sure num descriptors -per- word is about the same as Oxford 
+    # ---
+    # Notes from Monday: 
+    # 1) Larger training set (see how animals in training do vs animals out of training)
+    # 2) More detailed analysis of failures
+    # 3) Aggregate scores across different pictures of the same animal
+    if not 'expt_func' in vars() or expt_func is None:
+        expt_func = run_experiment
+    # Load tables
+    hs = ld2.HotSpotter(ld2.DEFAULT, load_basic=True)
+    # Grab names
+    nx2_name   = hs.tables.nx2_name
+    cx2_nx     = hs.tables.cx2_nx
+    nx2_cxs    = np.array(hs.get_nx2_cxs())
+    nx2_nChips = np.array(map(len, nx2_cxs))
+    num_uniden = nx2_nChips[0] + nx2_nChips[1] 
+    nx2_nChips[0:3] = 0 # remove uniden names
+    # Seperate singleton / multitons
+    multiton_nxs, = np.where(nx2_nChips > 1)
+    singleton_nxs, = np.where(nx2_nChips == 1)
+    all_nxs = np.hstack([multiton_nxs, singleton_nxs]) 
+    print('[expt] There are %d names' % len(all_nxs))
+    print('[expt] There are %d multiton names' % len(multiton_nxs))
+    print('[expt] There are %d singleton names' % len(singleton_nxs))
+    print('[expt] There are %d unidentified animals' % num_uniden)
+    # 
+    multiton_cxs = nx2_cxs[multiton_nxs]
+    singleton_cxs = nx2_cxs[singleton_nxs]
+    multiton_nChips = map(len, multiton_cxs)
+    print('[expt] multion #cxs stats: %r' % helpers.printable_mystats(multiton_nChips))
+    # Find test/train splits
+    num_names = len(multiton_cxs)
+
+    # How to generate samples/splits for names
+    num_nsplits = 3
+    nsplit_size = (num_names//num_nsplits)
+
+    # How to generate samples/splits for chips
+    csplit_size = 1 # number of indexed chips per Jth experiment
+
+    # Generate name splits
+    kx2_name_split = far_appart_splits(multiton_nxs, nsplit_size, num_nsplits)
+    result_map = {}
+    kx = 0
+    # run K experiments
+    all_cxs = nx2_cxs[list(all_nxs)]
+    for kx in xrange(num_nsplits):
+        print('***************')
+        print('[expt] Leave M=%r names out iteration: %r/%r' % (nsplit_size, kx+1, num_nsplits))
+        print('***************')
+        # Get name splits
+        (test_nxs, train_nxs) = kx2_name_split[kx]
+        # Lock in training set
+        # train_nxs
+        train_cxs_list = nx2_cxs[list(train_nxs)]
+        train_samp = np.hstack(train_cxs_list)
+        # 
+        # Choose test / index smarter
+        #test_samp = np.hstack(test_cxs_list)    # Test on half
+        #indx_samp = np.hstack([test_samp, train_samp]) # Search on all
+        #
+        # Generate chip splits
+        test_cxs_list = nx2_cxs[list(test_nxs)]
+        test_nChip = map(len, test_cxs_list)
+        print('[expt] testnames #cxs stats: %r' % helpers.printable_mystats(test_nChip))
+        test_cx_splits  = []
+        for ix in xrange(len(test_cxs_list)):
+            cxs = test_cxs_list[ix]
+            num_csplits = len(cxs)//csplit_size
+            cxs_splits = far_appart_splits(cxs, csplit_size, num_csplits)
+            test_cx_splits.append(cxs_splits)
+        max_num_csplits = max(map(len, test_cx_splits))
+        # Put them into experiment sets
+        jx2_test_cxs = [[] for _ in xrange(max_num_csplits)]
+        jx2_index_cxs = [[] for _ in xrange(max_num_csplits)]
+        for ix in xrange(len(test_cx_splits)):
+            cxs_splits = test_cx_splits[ix]
+            for jx in xrange(max_num_csplits):
+                if jx >= len(cxs_splits): 
+                    break
+                #ix_test_cxs, ix_index_cxs = cxs_splits[jx]
+                ix_index_cxs, ix_test_cxs = cxs_splits[jx]
+                jx2_test_cxs[jx].append(ix_test_cxs)
+                jx2_index_cxs[jx].append(ix_index_cxs)
+        jx = 0
+        for jx in xrange(max_num_csplits): # run K*J experiments
+            # Lock in test and index set
+            #all_cxs # np.hstack(jx2_test_cxs[jx])
+            indx_samp = np.hstack(jx2_index_cxs[jx]+[train_samp])
+            # Run all the goddamn queries (which have indexed ground truth)
+            test_samp = hs.get_cxs_in_sample(indx_samp)
+            # Set samples
+            hs.set_samples(test_samp, train_samp, indx_samp)
+            mj_label = '[LNO:%r/%r;%r/%r]' % (kx+1, num_nsplits, jx+1, max_num_csplits)
+            # Run experiment
+            print('[expt] <<<<<<<<')
+            print('[expt] Run expt_func()')
+            print('[expt] M=%r, J=%r' % (nsplit_size,csplit_size))
+            print(mj_label)
+            #rss = helpers.RedirectStdout('[expt %d/%d]' % (kx, K)); rss.start()
+            expt_locals = expt_func(hs, pprefix=mj_label, **kwargs)
+            print('[expt] Finished expt_func()')
+            print('[expt] mth iteration: %r/%r' % (kx+1, num_nsplits))
+            print('[expt] jth iteration: %r/%r' % (jx+1, max_num_csplits))
+            print('[expt] >>>>>>>>')
+            result_map[kx] = expt_locals['allres']
+            #rss.stop(); rss.dump()
+    return locals()

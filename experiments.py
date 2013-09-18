@@ -237,7 +237,9 @@ def leave_out(expt_func=None, **kwargs):
         # Get name splits
         (test_nxs, train_nxs) = kx2_name_split[kx]
         # Lock in training set
-        train_cxs_list = nx2_cxs[list(train_nxs)]
+        # Run all the goddamn queries
+        # train_nxs
+        train_cxs_list = nx2_cxs[list(all_nxs)]
         train_samp = np.hstack(train_cxs_list)
         # 
         # Choose test / index smarter
@@ -274,6 +276,7 @@ def leave_out(expt_func=None, **kwargs):
             test_samp  = np.hstack(jx2_test_cxs[jx])
             # Lock in index set
             indx_samp = np.hstack(jx2_index_cxs[jx]+[train_samp])
+            #hs.set_samples(test_samp, train_samp, indx_samp)
             hs.set_samples(test_samp, train_samp, indx_samp)
             # Run experiment
             print('[expt] <<<<<<<<')
@@ -324,7 +327,6 @@ def tweak_params(expt_func=None):
 
 def tweak_params_philbin():
     return tweak_params(oxford_philbin07)
-
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support

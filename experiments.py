@@ -218,7 +218,7 @@ def leave_out(expt_func=None, split_test=False, **kwargs):
     num_names = len(multiton_cxs)
 
     # How to generate samples/splits for names
-    num_nsplits = 3
+    num_nsplits = 5
     nsplit_size = (num_names//num_nsplits)
 
     # How to generate samples/splits for chips

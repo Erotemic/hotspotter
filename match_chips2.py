@@ -93,6 +93,9 @@ class QueryResult(DynStruct):
     def __init__(self, qcx):
         super(QueryResult, self).__init__()
         self.qcx    = qcx
+        # Times
+        self.assign_time = None
+        self.verify_time = None
         # Assigned features matches
         self.cx2_fm = np.array([], dtype=FM_DTYPE)
         self.cx2_fs = np.array([], dtype=FS_DTYPE)
@@ -263,15 +266,18 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VE
         tt2 = helpers.Timer(verbose=False)
         sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
         (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
-        num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
-        if verbose:
-            print('[mc2] query(%d/%d) verified %d matches' % (qnum+1, total_dirty, num_verified))
         verify_time = tt2.toc()
-        print_('...assigned: %.2f seconds' % (assign_time))
-        if verbose: print_('\n')
-        print_('...verified: %.2f seconds\n' % (verify_time))
+        if verbose:
+            num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
+            print('[mc2] query(%d/%d) verified %d matches' % (qnum+1, total_dirty, num_verified))
+            print('...assigned: %.2f seconds' % (assign_time))
+            print('...verified: %.2f seconds\n' % (verify_time))
+        else:
+            print('...query: %.2f seconds\n' % (verify_time + assign_time))
         #
         # Assign output to the query result 
+        res.assign_time = assign_time
+        res.verify_time = verify_time
         res.cx2_fm      = np.array(cx2_fm)
         res.cx2_fs      = np.array(cx2_fs)
         res.cx2_score   = cx2_score

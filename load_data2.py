@@ -308,6 +308,7 @@ def get_sv_test_data(qcx=0, cx=None):
     # Get keypoints
     kpts1 = hs.get_kpts(qcx)
     kpts2 = hs.get_kpts(cx)
+    print('(hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2)')
     return (hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2)
 
 # ______________________________

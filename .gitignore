@@ -22,3 +22,6 @@ OpenGLContext.profile
 *.a.*
 *.so.*
 .hotspotter
+
+*.exe
+*.dll

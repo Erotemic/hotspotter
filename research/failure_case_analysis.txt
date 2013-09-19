@@ -1,0 +1,32 @@
+qcx=GZ_305
+first 4 are false matches
+Reasons for failure:
+* small (nondistinctive) keypoints match. 
+Places where this occurs:
+face - 
+ridge of back
+front chevron,
+
+
+
+These descriptors tend to have one black bar running through the middle 
+_____________
+|    |||    |
+|    |||    |
+|    |||    |
+|    |||    |
+-----|||-----
+
+
+
+changes: 
+* dump images of individual matching keypoints. 
+* the ones that scored really high. 
+
+Contribution: 
+* an open source system for instance recognition
+* comparison to tf-idf bag-of-words
+* comparison of descriptor types
+* I am going to talk about these issues and how to solve them. 
+
+

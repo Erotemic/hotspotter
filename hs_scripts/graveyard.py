@@ -327,3 +327,37 @@ def leave_out(expt_func=None, **kwargs):
             result_map[kx] = expt_locals['allres']
             #rss.stop(); rss.dump()
     return locals()
+'''
+this is interesting
+0 - 1 = -1 
+0 - 0 - 1 = -1? idk, why?
+   (x - y) =    (z)
+-1*(x - y) = -1*(z)
+  -(x + y) =   -(z)
+    -x + y = -z
+
+let x=0
+let y=1
+let z=-1
+   (0 - 1) =    (-1)
+-1*(0 - 1) = -1*(-1)
+  -(0 + 1) =   -(-1)
+    -0 + 1 =    --1
+    -0 + 1 = 1
+         1 = 1 + 0
+         1 = 1
+
+let x=0
+let a=0
+let y=1
+let z=-1
+   (a - x - y) =    (z)
+-1*(a - x - y) = -1*(z)
+  -(a - x + y) =   -(z)
+    -a - x + y = -z
+
+   (0 - 0 - 1) =    (-1)
+-1*(0 - 0 - 1) = -1*(-1)
+  -(0 - 0 + 1) =   -(-1)
+    -0 - 0 + 1 = --1
+'''

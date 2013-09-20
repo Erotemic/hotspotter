@@ -94,8 +94,8 @@ class QueryResult(DynStruct):
         super(QueryResult, self).__init__()
         self.qcx    = qcx
         # Times
-        self.assign_time = None
-        self.verify_time = None
+        self.assign_time = -1
+        self.verify_time = -1
         # Assigned features matches
         self.cx2_fm = np.array([], dtype=FM_DTYPE)
         self.cx2_fs = np.array([], dtype=FS_DTYPE)
@@ -163,8 +163,10 @@ class QueryResult(DynStruct):
             return True
         except Exception as ex:
             os.remove(fpath)
-            printWARN('Load Result Exception : ' + repr(ex) + 
+            warnmsg = ('Load Result Exception : ' + repr(ex) + 
                     '\nResult was corrupted for qcx=%d' % self.qcx)
+            print(warnmsg)
+            warnings.warn(warnmsg)
             return False
 
     def top5_cxs(self):
@@ -234,7 +236,10 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VE
     print_ = helpers.print_
     # Return if no dirty queries
     if qcx2_res is None:
+        print('[mc2] qcx2_res was not specified... loading cache')
         qcx2_res, dirty_test_sample_cx = load_cached_matches(hs)
+    else:
+        print('[mc2] qcx2_res was specified... not loading cache')
     if len(dirty_test_sample_cx) == 0:
         print('[mc2] No dirty queries')
         return qcx2_res
@@ -245,7 +250,7 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VE
     cx2_desc = hs.feats.cx2_desc
     cx2_kpts = hs.feats.cx2_kpts 
     total_dirty = len(dirty_test_sample_cx)
-    print('[mc2] Executing %d queries' % total_dirty)
+    print('[mc2] Executing %d dirty queries' % total_dirty)
     for qnum, qcx in enumerate(dirty_test_sample_cx):
         res = qcx2_res[qcx]
         #

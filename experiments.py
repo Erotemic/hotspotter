@@ -105,6 +105,10 @@ def run_experiment(hs=None, free_mem=False, pprefix='[run_expt]', **kwargs):
             hs.load_chips()
             hs.load_features(load_desc=True)
             hs.load_matcher()
+        # HACK: I need to do this because matcher changes the match_uid
+        # This is really bad and needs to be fixed. No changing the damn
+        # match_uid!!!
+        qcx2_res, dirty_samp = mc2.load_cached_matches(hs)
         qcx2_res = mc2.run_matching(hs, qcx2_res, dirty_samp)
     #if free_mem: 
         # Try to free memory before reporting results

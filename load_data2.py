@@ -81,6 +81,13 @@ class HotSpotter(DynStruct):
         hs.load_chips()
         hs.load_features(load_desc=False)
 
+    def load_all(hs, db_dir):
+        hs.load_tables(db_dir)
+        hs.load_chips()
+        hs.load_features()
+        hs.set_samples()
+        hs.load_matcher()
+
     def db_name(hs):
         db_name = os.path.split(hs.dirs.db_dir)[1]
         return db_name

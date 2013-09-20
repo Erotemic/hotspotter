@@ -44,6 +44,8 @@ MOTHERS   = WORK_DIR+'/HSDB_zebra_with_mothers'
 OXFORD    = WORK_DIR+'/Oxford_Buildings'
 PARIS     = WORK_DIR+'/Paris_Buildings'
 SONOGRAMS = WORK_DIR+'/sonograms'
+PZ2 = WORK_DIR+'/PZ-Sweatwater'
+
 
 dev_databases = {
     'SONOGRAMS' : SONOGRAMS,
@@ -52,6 +54,7 @@ dev_databases = {
     'NAUTS'     : NAUTS,
     'GZ'        : GZ,
     'PZ'        : PZ,
+    'PZ2'       : PZ2,
     'WS_HARD'   : WS_HARD,
     'MOTHERS'   : MOTHERS,
     'OXFORD'    : OXFORD,

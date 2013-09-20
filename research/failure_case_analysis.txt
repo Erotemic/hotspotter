@@ -48,3 +48,63 @@ a, c, d - Lower triangular matrix A = [(a, 0),
 
 
 
+
+1) You have animls you haven't seen before
+2) Occlusions and viewpoint variations -> therefore you need multiple images
+per animsl. 
+
+
+Problem: Online recognition
+Thousands of animals per day
+Animals you haven't seen before 
+Too many for manual verfication of everything 
+
+Challenges / Contributions
+1) Pose and viewpoint variations
+2) Occlusions 
+3) Similar appearances 
+4) Incomplete views
+5) Imperfect segmentation 
+
+
+Proposed Contribution: 
+1) Basic scoring mechanism (LNBNN vs TfIDF)
+2) Decision involving multiple images per animal
+- Driving appart true and false positives 
+3) Dynamic database construction 
+4) Construction of represntation of each animal including what to keep. 
+(but not limited to)
+
+We are in good shape on Scoring mechanism
+
+we have some evidence that multi-iomage is correct but no mechanism. 
+We have unclear results from our last paper
+but the mechanism still needs to be investigated 
+
+We have ideas on representation 
+
+
+We dont understand the causes of failures
+
+
+We dont have appropriate datasets
+( * We want close to 1000 animals
+  * 20 per animal at least (more is possible)
+) 
+
+
+Tasks:
+Do my experiment  (ranked scores)
+Organize datasets (with a script)
+
+(mon and tues) Inventory and Aquisition 
+
+(rest of the week) Detailed idea generation for all of our contributions
+and evaluation. 
+
+
+
+1) Online database where images are coming in sequentially 
+ + we have a dynamic data structure 
+
+

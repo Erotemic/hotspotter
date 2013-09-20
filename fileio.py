@@ -78,7 +78,7 @@ def debug_smart_load(dpath='', fname='*', uid='*', ext='*'):
     for fname_ in os.listdir(dpath):
         if fnmatch.fnmatch(fname_, pattern):
             fpath = join(dpath, fname_)
-            print fname_
+            print(fname_)
 
 # --- Smart Load/Save ---
 #----

@@ -827,32 +827,43 @@ class Matcher(DynStruct):
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
+    import load_data2
+    import chip_compute2
+    import params
     freeze_support()
     print('[mc2] __main__ = match_chips2.py')
 
-    db_dir = load_data2.DEFAULT
-    hs = load_data2.HotSpotter(db_dir)
-    qcx2_res = run_matching(hs)
-    pass
+    # --- CHOOSE DATABASE --- #
+    db_dir = params.GZ
+    hs = load_data2.HotSpotter()
+    hs.load_tables(db_dir)
+    hs.load_chips()
+    hs.set_samples()
+    hs.load_features()
+    hs.load_matcher()
 
-    ## DEV ONLY CODE ##
-    __DEV_MODE__ = False
-    if __DEV_MODE__: 
-        cx2_kpts = hs.feats.cx2_kpts
-        cx2_desc = hs.feats.cx2_desc
-        qcx = 1
-        print('[mc2] DEVMODE IS ON')
-        # Convinent but bad # 
-        #exec(hs_cpaths.execstr('hs_cpaths'))
-        #exec(hs_feats.execstr('hs_feats'))
-        #exec(hs_tables.execstr('hs_tables'))
-        #exec(hs_dirs.execstr('hs_dirs'))
-        #cx  = 1
-        # All of these functions operate on one qcx (except precompute I guess)
-        #exec(helpers.get_exec_src(precompute_index_vsmany))
-        #exec(helpers.get_exec_src(assign_matches_vsmany))
-        #exec(helpers.get_exec_src(spatially_verify_matches))
-        #exec(helpers.get_exec_src(precompute_bag_of_words))
-        #exec(helpers.get_exec_src(precompute_bag_of_words))
+    qcx = 111
+    cx = 305
+    fm, fs, score = hs.get_assigned_matches_to(qcx, cx)
+    rchip1 = hs.get_chip(qcx)
+    rchip2 = hs.get_chip(cx)
+    # Get keypoints
+    kpts1 = hs.get_kpts(qcx)
+    kpts2 = hs.get_kpts(cx)
+
+    res = QueryResult(qcx)
+    res.load(hs)
+    #df2.show_matches3(rchip1, rchip2, kpts1, kpts2, fm, fs)
+    df2.show_matches3(res, hs, cx, pts=False)
+
+    if len(sys.argv) > 1:
+        try:
+            cx = int(sys.argv[1])
+            print('cx=%r' % cx)
+        except Exception as ex:
+            print('exception %r' % ex)
+            raise
+            print('usage: feature_compute.py [cx]')
+            pass
 
     exec(df2.present())

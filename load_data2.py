@@ -294,11 +294,12 @@ class HotSpotter(DynStruct):
         ans = raw_input('[hs] good?')
 
 # Testing helper functions
-def get_sv_test_data(qcx=0, cx=None):
+def get_test_data(qcx=0, cx=None, db_dir=None):
     import load_data2 as ld2
     hs = helpers.search_stack_for_localvar('hs')
-    if hs is None:
+    if db_dir is None:
         db_dir = ld2.DEFAULT
+    if hs is None:
         hs = ld2.HotSpotter(db_dir)
     if cx is None:
         cx = hs.get_other_cxs(qcx)[0]
@@ -310,6 +311,10 @@ def get_sv_test_data(qcx=0, cx=None):
     kpts2 = hs.get_kpts(cx)
     print('(hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2)')
     return (hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2)
+
+@helpers.__DEPRICATED__
+def get_sv_test_data(qcx=0, cx=None):
+    return get_test_data(qcx, cx)
 
 # ______________________________
 

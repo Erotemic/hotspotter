@@ -4,7 +4,7 @@ import matplotlib
 if matplotlib.get_backend() != 'Qt4Agg':
     print('[df2] matplotlib.use(Qt4Agg)')
     matplotlib.use('Qt4Agg', warn=True, force=True)
-    matplotlib.rcParams['toolbar'] = 'None'
+    #matplotlib.rcParams['toolbar'] = 'None'
 from matplotlib import gridspec
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle, Circle

@@ -5,107 +5,51 @@ import load_data2 as ld2
 import draw_func2 as df2
 import cv2
 import spatial_verification2 as sv2
+import params
 
-df2.reset()
-
-if not 'hs' in vars():
-    (hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data()
-
-def __warp_kwargs():
-    # Set cv2 flags
+def __cv2_warp_kwargs():
     flags = (cv2.INTER_LINEAR, cv2.INTER_NEAREST)[0]
     borderMode = cv2.BORDER_CONSTANT
     warp_kwargs = dict(flags=flags, borderMode=borderMode)
     return warp_kwargs
 
-def warp_border(img, M):
-    #print('------------')
-    #print('M = \n%r ' % (M,))
-    #print('img.shape=%r ' % (img.shape,))
-    #print('img.max()=%r, img.min()=%r ' % (img.max(), img.min()))
-    #print('img.dtype=%r ' % (img.dtype,))
-    coord_list   = np.array(border_coordinates(img))
-    coord_homog  = homogonize(coord_list)
-    Mcoord_homog = M.dot(coord_homog)
-    Mcoord_list = np.vstack((Mcoord_homog[0] / Mcoord_homog[-1],
-                             Mcoord_homog[1] / Mcoord_homog[-1])).T
-    #print('coord_list: ')
-    #print(coord_list.T)
-    #print('Mcoord_list: ')
-    #print(Mcoord_list.T)
-    Mxywh = border2_xywh(Mcoord_list)
-    #print('Mxywh')
-    #print(Mxywh)
-    #print('------------')
 
-#print('Rchip warp test')
-#print('subchip warp test')
-#warp_border(subchip, A)
-#print target_scale_factor(rchip1, H)
-#print target_scale_factor(subchip, A)
-
-fx2_kp     = kpts1
-fx2_desc   = hs.feats.cx2_desc[cx]
-fx2_scale  = sv2.keypoint_scale(fx2_kp)
-fx2_radius = np.sqrt(3*fx2_scale)
-
-SEL = 2000
-
-rchip = rchip1
-(x,y,a,c,d) = fx2_kp[SEL]
-desc = fx2_desc[SEL]
-scale = fx2_scale[SEL]
-radius = fx2_radius[SEL]
-(chip_h, chip_w) = rchip.shape[0:2]
-
-def minmax(z1, z2, low, high):
+def quantize_to_pixel_with_offset(z, radius, low, high):
+    ''' Quantizes a small area into an indexable pixel location 
+    Returns: pixel_range=(iz1, iz2), subpxl_offset
+    Pixels:
+    +   ___+___+___          +
+    ^        ^ ^             ^
+    z1       z iz           z2              
+            _______________ < radius
+                _____________ < quantized radius '''      
+    (z1, z2) = (z-radius, z+radius)
     iz1 = max(np.floor(z1), low)
     iz2 = min(np.ceil(z2), high)
-    return (iz1, iz2)
+    z_radius1 = np.ceil(z - iz1)
+    z_radius2 = np.ceil(iz2 - z)
+    z_radius = min(z_radius1, z_radius2)
+    (iz1, iz2) = (z-z_radius, z+z_radius)
+    z_radius = np.ceil(z - iz1)
+    return iz1, iz2, z_radius
 
-def int_window_and_midpoint(z, radius, low, high):
-    (z1, z2) = (z-radius, z+radius)
-    print(z1)
-    print(z2)
-    print(high)
-    (iz1, iz2) = minmax(z1, z2, low, high)
-    radius_z1 = z - iz1
-    zm = radius_z1
-    return iz1, iz2, zm
+def get_subchip(rchip, kp, radius):
+    x, y, a, c, d = kp[0]
+    (chip_h, chip_w) = rchip.shape[0:2]
+    ix1, ix2, xm = quantize_to_pixel_with_offset(x, radius, 0, chip_w)
+    iy1, iy2, ym = quantize_to_pixel_with_offset(y, radius, 0, chip_h)
+    subchip = rchip[iy1:iy2, ix1:ix2]
+    kp    = fx2_kp[fx:fx+1]
+    subkp = np.array([(xm, ym, a, c, d)])
+    return subchip, subkp
 
-print('-----')
-print('rchip.shape = %r' % (rchip.shape,))
-print('(y,x)  = (%.2f, %.2f)' % (y,x))
-print('scale  = %.4f' % scale)
-print('radius = %.4f' % radius)
-
-ix1, ix2, xm = int_window_and_midpoint(x, radius, 0, chip_w)
-iy1, iy2, ym = int_window_and_midpoint(y, radius, 0, chip_h)
-subchip = rchip[iy1:iy2,ix1:ix2]
-
-print('-----')
-print('subchip = rchip[%d:%d, %d:%d]' % (iy1, iy2, ix1, ix2))
-print('subchip.shape = %r' % (map(int,subchip.shape),))
-print('-----')
-
-subkp = np.array([(xm, ym, a, c, d)])
-
-# Transformation from ellipse to a unit circle
-A = np.array([(a, 0, 0),
-              (c, d, 0),
-              (0, 0, 1)])
-# Scale up so we can see the keypoint
-sf = 100
-S = np.array([(sf**2,  0, 0), 
-              ( 0, sf**2, 0),
-              ( 0,  0, 1)])
-print('A')
-print A
-A = A.dot(S)
-print A
+def show_feature(rchip, kp, subkp, **kwargs):
+    df2.imshow(rchip, plotnum=(1,2,1), **kwargs)
+    df2.draw_kpts2(kp, ell_color=(1,0,0), pts=True)
+    df2.imshow(subchip, plotnum=(2,2,2), **kwargs)
+    df2.draw_kpts2(subkp, ell_color=(1,0,0), pts=True)
 
 # Get the center in the new coordinates
-
 def border_coordinates(img):
     'specified in (x,y) coordinates'
     (img_h, img_w) = img.shape[0:2]
@@ -113,55 +57,48 @@ def border_coordinates(img):
     tr = (img_w-1, 0)
     bl = (0, img_h-1)
     br = (img_w-1, img_w-1)
-    return (tl, tr, bl, br)
-
-def border2_xywh(coord_list):
-    (tl, tr, bl, br) = coord_list
-    (x,y) = tl
-    (w,h) = np.array(br) - np.array(tl)
-    xywh = (x,y,w,h)
-    return xywh
-
+    return np.array((tl, tr, bl, br)).T
 def homogonize(coord_list):
     'input: list of (x,y) coordinates'
-    coord_homog = np.hstack([np.array(coord_list), np.ones((len(coord_list),1))]).T
+    ones_vector = np.ones((1, coord_list.shape[1]))
+    coord_homog = np.vstack([np.array(coord_list), ones_vector])
     return coord_homog 
+def transform_coord_list(coord_list, M):
+    coord_homog  = homogonize(coord_list)
+    Mcoord_homog = M.dot(coord_homog)
+    Mcoord_list  = np.vstack((Mcoord_homog[0] / Mcoord_homog[2],
+                              Mcoord_homog[1] / Mcoord_homog[2]))
+    return Mcoord_list
+
+def minmax_coord_list(coord_list):
+    minx, miny = coord_list.min(1)
+    maxx, maxy = coord_list.max(1)
+    return (minx, maxx, miny, maxy)
 
 def target_dsize(img, M):
-    # Given an image. Transformation M will warp it
+    # Find size (and offset translation) to put new image in
+    # when transforming img with M
     (img_h, img_w) = img.shape[0:2]
-    coord_list   = np.array(border_coordinates(img))
-    coord_homog  = homogonize(coord_list)
-    print coord_homog
-    Mcoord_homog = M.dot(coord_homog)
-    # The borders will be in this position
-    Mcoord_list = np.vstack((Mcoord_homog[0] / Mcoord_homog[-1],
-                             Mcoord_homog[1] / Mcoord_homog[-1])).T
-    print Mcoord_homog
-    # so the range of the transformation would yeild:
-    Mxywh = border2_xywh(Mcoord_list)
-
-    minx = Mcoord_homog[0].min()
-    maxx = Mcoord_homog[0].max()
-    miny = Mcoord_homog[1].min()
-    maxy = Mcoord_homog[1].max()
-    # but lets fit this in better coordinates
+    coord_list   = border_coordinates(img)
+    Mcoord_list = transform_coord_list(coord_list, M)
+    (minx, maxx, miny, maxy) = minmax_coord_list(Mcoord_list)
     Mw, Mh = (maxx-minx, maxy-miny)
-    tx = -min(0,minx)
-    ty = -min(0,miny)
-    print('target size: w=%d, h=%d' % (Mw, Mh))
-    print('target tx=%r, ty=%r' % (tx, ty))
+    # translate if the transformation forced any border below 0
+    tx = -min(0, minx)
+    ty = -min(0, miny)
     dsize = tuple(map(int, np.ceil((Mw, Mh))))
     return dsize, tx, ty
 
 def warp_image(img, M):
     img_size = img.shape[0:2]
+    # Find the target warped img extent, add any tranlations
     dsize, tx, ty = target_dsize(img, M)
     M = M.copy()
     M[0,2] += tx
     M[1,2] += ty
     print('warp %r -> %r' % (img_size, dsize))
-    warp_img = cv2.warpAffine(img, M[0:2], dsize, **__warp_kwargs())
+    #warp_img = cv2.warpAffine(img, M[0:2], dsize, **__cv2_warp_kwargs())
+    warp_img = cv2.warpPerspective(img, M, dsize, **__cv2_warp_kwargs())
     return warp_img, tx, ty, M
 
 def sqrt_inv(kpts):
@@ -175,10 +112,56 @@ def sqrt_inv(kpts):
                         ( 0 , 0 , 1)])
               for (x_,y_,a_,b_,d_) in kpts_iter ]
     return kptsIS
-    
+
+df2.reset()
+
+if not 'hs' in vars():
+    hs = ld2.HotSpotter(params.GZ)
+    cx = 111
+    rchip      = hs.get_chip(cx)
+    fx2_kp     = hs.feats.cx2_kpts[cx]
+    fx2_desc   = hs.feats.cx2_desc[cx]
+    fx2_scale  = sv2.keypoint_scale(fx2_kp)
+
+def fx2_feature(fx):
+    kp    = fx2_kp[fx:fx+1]
+    desc  = fx2_desc[fx]
+    scale = fx2_scale[fx]
+    radius = 3*np.sqrt(3*scale)
+    return kp, scale, radius, desc
+
+def show_feature_fx(fx):
+    rchip = rchip1
+    kp, scale, radius, desc = fx2_feature(fx)
+    subchip, subkp = get_subchip(rchip, kp, radius)
+    show_feature(rchip, kp, subkp, fignum=fx)
+    df2.update()
+
+
+fx = 2294
+kp, scale, radius, desc = fx2_feature(fx)
+subchip, subkp = get_subchip(rchip, kp, radius)
+
+show_feature(rchip, kp, subkp, fignum=fx)
+
+(x, y, a, c, d) = kp[0]
+# Transformation from ellipse to a unit circle
+A = np.array([(a, 0, 0),
+              (c, d, 0),
+              (0, 0, 1)])
+# Scale up so we can see the keypoint
+sf = 1000
+S = np.array([(sf*3,  0, 0), 
+              ( 0, sf*3, 0),
+              ( 0,  0, 1)])
+
+print('A')
+print A
+A = A.dot(S)
+print A
 
 fx2_kpIS = sqrt_inv(fx2_kp)
-kpIS = fx2_kpIS[SEL]
+kpIS = fx2_kpIS[fx]
 print('warp subchip')
 #subchip2 = np.swapaxes(subchip, 0, 1)
 warp_subchip, tx, ty, M = warp_image(subchip, A)
@@ -186,6 +169,8 @@ warp_subchip, tx, ty, M = warp_image(subchip, A)
 
 print('warp_subchip.shape = %r ' % (warp_subchip.shape,))
 #circle_a = 3/(np.sqrt(3*sf))
+xm = subkp[0,0]
+ym = subkp[0,1]
 [Axm, Aym,_]  = M.dot(np.array([[xm],[ym],[1]])).flatten()
 
 circle_a = 1/sf
@@ -194,33 +179,20 @@ unit_circle = np.array([(Axm, Aym, circle_a, 0., circle_a)])
 
 # Plot full, cropped, warp
 
-df2.imshow(rchip, plotnum=(3,1,1), fignum=SEL)
-df2.draw_kpts2(fx2_kp[SEL:SEL+1], ell_color=(1,0,0), pts=True)
 
-df2.imshow(subchip, plotnum=(3,1,2), fignum=SEL)
-df2.draw_kpts2(subkp, ell_color=(1,0,0), pts=True)
-
-df2.imshow(warp_subchip, plotnum=(3,1,3), fignum=SEL)
+df2.imshow(warp_subchip, plotnum=(2,2,4), fignum=fx)
 df2.draw_kpts2(unit_circle, ell_color=(1,0,0), pts=True)
 
-df2.present(num_rc=(2,1),wh=(800,1000))
-
-
 #----
-def draw_sift(desc):
-    NORIENTS = 8
-    NX = 4
-    NY = 4
-    NBINS = NX * NY
+def draw_sift(desc, fignum=None):
     tau = np.float64(np.pi * 2)
+    NORIENTS = 8; NX = 4; NY = 4; NBINS = NX * NY
+    THETA_SHIFT = tau/4
     def cirlce_rad2xy(radians, mag):
         return np.cos(radians)*mag, np.sin(radians)*mag
-
-    THETA_SHIFT = tau/4
     discrete_theta = (np.arange(0,NORIENTS)*(tau/NORIENTS) + THETA_SHIFT)[::-1]
-
-
-    dim_mag   = desc / 256.0
+    # Build list of plot positions
+    dim_mag   = desc / 255.0
     dim_theta = np.tile(discrete_theta, (NBINS, 1)).flatten()
     dim_xy = np.array(zip(*cirlce_rad2xy(dim_theta, dim_mag))) 
     def xyt_gen(): 
@@ -231,17 +203,15 @@ def draw_sift(desc):
     def xy_gen():
         for x in xrange(NX):
             for y in xrange(NY):
-                    yield x,y
-    
-    fig = df2.figure(fignum=40)
+                yield x,y
+    if not fignum is None:
+        fig = df2.figure(fignum=fignum)
     ax = df2.plt.gca()
     ax.set_xlim(-6,36)
     ax.set_ylim(-6,36)
     ax.set_aspect('equal')
-
     DSCALE = 5
     XYSCALE = 10
-
     # Draw Arms
     for x,y,t in xyt_gen():
         index = x*(NY*NORIENTS)+y*(NORIENTS) + t
@@ -256,7 +226,8 @@ def draw_sift(desc):
         circ_artist.set_facecolor('none')
         ax.add_artist(circ_artist)
 
-draw_sift(desc)
-df2.present()
+draw_sift(desc, fignum=10)
+import sys
+exec(df2.present())
 #import sys
 #sys.exit(1)

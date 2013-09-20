@@ -403,3 +403,41 @@ warp2 = warp_image(subchip, H2)
 
 M = H1
 img = subchip
+
+
+def warp_border(img, M):
+    #print('------------')
+    #print('M = \n%r ' % (M,))
+    #print('img.shape=%r ' % (img.shape,))
+    #print('img.max()=%r, img.min()=%r ' % (img.max(), img.min()))
+    #print('img.dtype=%r ' % (img.dtype,))
+    coord_list   = np.array(border_coordinates(img))
+    coord_homog  = homogonize(coord_list)
+    Mcoord_homog = M.dot(coord_homog)
+    Mcoord_list = np.vstack((Mcoord_homog[0] / Mcoord_homog[-1],
+                             Mcoord_homog[1] / Mcoord_homog[-1])).T
+    #print('coord_list: ')
+    #print(coord_list.T)
+    #print('Mcoord_list: ')
+    #print(Mcoord_list.T)
+    Mxywh = border2_xywh(Mcoord_list)
+    #print('Mxywh')
+    #print(Mxywh)
+    #print('------------')
+
+#print('Rchip warp test')
+#print('subchip warp test')
+#warp_border(subchip, A)
+#print target_scale_factor(rchip1, H)
+#print target_scale_factor(subchip, A)
+
+print('-----')
+print('rchip.shape = %r' % (rchip.shape,))
+print('(y,x)  = (%.2f, %.2f)' % (y,x))
+print('scale  = %.4f' % scale)
+print('radius = %.4f' % radius)
+
+print('-----')
+print('subchip = rchip[%d:%d, %d:%d]' % (iy1, iy2, ix1, ix2))
+print('subchip.shape = %r' % (map(int,subchip.shape),))
+print('-----')

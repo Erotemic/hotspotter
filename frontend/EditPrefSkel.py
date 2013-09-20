@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/frontend/EditPrefSkel.ui'
 #
-# Created: Mon Aug 26 11:33:19 2013
+# Created: Fri Sep 20 16:48:01 2013
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!

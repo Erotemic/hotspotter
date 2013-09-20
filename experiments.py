@@ -188,14 +188,16 @@ def get_db_names_info(hs):
     singleton_cxs = nx2_cxs[singleton_nxs]
     multiton_nx2_nchips = map(len, multiton_cxs)
     # print
-    print('----------------')
-    print('[hs] Name Info: '+hs.db_name())
-    print(' * len(uniden_cxs)    = %d' % len(uniden_cxs))
-    print(' * len(valid_nxs)     = %d' % len(valid_nxs))
-    print(' * len(multiton_nxs)  = %d' % len(multiton_nxs))
-    print(' * len(singleton_nxs) = %d' % len(singleton_nxs))
-    print(' * multion_nxs #cxs stats: %r' % helpers.printable_mystats(multiton_nx2_nchips))
-    print('----------------')
+    info_str = '\n'.join([
+    ('----------------'),
+    ('[hs] Name Info: '+hs.db_name()),
+    (' * len(uniden_cxs)    = %d' % len(uniden_cxs)),
+    (' * len(valid_nxs)     = %d' % len(valid_nxs)),
+    (' * len(multiton_nxs)  = %d' % len(multiton_nxs)),
+    (' * len(singleton_nxs) = %d' % len(singleton_nxs)),
+    (' * multion_nxs #cxs stats: %r' % helpers.printable_mystats(multiton_nx2_nchips)),
+    ('----------------')])
+    print(info_str)
     return locals()
 
 def split_nx2_cxs(test_cxs_list, csplit_size):

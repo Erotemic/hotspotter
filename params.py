@@ -27,9 +27,11 @@ print(' * sys.prefix = %r' % sys.prefix)
 #=====================================================
 
 WORK_DIR = 'D:/data/work'
+WORK_DIR2 = 'D:/data/work'
+
 if sys.platform == 'linux2':
-    WORK_DIR = '/media/SSD_Extra/work'
-    #WORK_DIR = '/media/Store/data/work'
+    WORK_DIR  = '/media/SSD_Extra/work'
+    WORK_DIR2 = '/media/Store/data/work'
 
 # Common databases I use
 GZ        = WORK_DIR+'/GZ_ALL'

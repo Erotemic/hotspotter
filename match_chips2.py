@@ -191,6 +191,7 @@ def load_cached_matches(hs):
     print_ = helpers.print_
     test_sample_cx = hs.test_sample_cx
     # Create result containers
+    print('[mc2] hs.num_cx = %r ' % hs.num_cx)
     qcx2_res = [QueryResult(qcx) for qcx in xrange(hs.num_cx)]
     #--------------------
     # Read cached queries
@@ -794,18 +795,25 @@ def spatially_verify(kpts1, kpts2, rchip_size, fm, fs, qcx, cx):
     '''1) compute a robust transform from img2 -> img1
        2) keep feature matches which are inliers 
        returns fm_V, fs_V, H '''
+    min_num_inliers   = 4
     xy_thresh         = params.__XY_THRESH__
     scale_thresh_high = params.__SCALE_THRESH_HIGH__
     scale_thresh_low  = params.__SCALE_THRESH_LOW__
-    if params.__USE_CHIP_EXTENT__:
-        diaglen_sqrd = rchip_size[0]**2 + rchip_size[1]**2
+    if len(fm) < min_num_inliers:
+        sv_tup = None
     else:
-        diaglen_sqrd = sv2.calc_diaglen_sqrd(kpts2[:,0], kpts2[:,1])
-    sv_tup = sv2.homography_inliers(kpts1, kpts2, fm,
-                                    xy_thresh, 
-                                    scale_thresh_high,
-                                    scale_thresh_low,
-                                    diaglen_sqrd)
+        if params.__USE_CHIP_EXTENT__:
+            diaglen_sqrd = rchip_size[0]**2 + rchip_size[1]**2
+        else:
+            x_m = kpts2[fm[:,1],0].T
+            y_m = kpts2[fm[:,1],1].T
+            diaglen_sqrd = sv2.calc_diaglen_sqrd(x_m, y_m)
+            sv_tup = sv2.homography_inliers(kpts1, kpts2, fm,
+                                            xy_thresh, 
+                                            scale_thresh_high,
+                                            scale_thresh_low,
+                                            diaglen_sqrd,
+                                            min_num_inliers)
     if not sv_tup is None:
         H, inliers, Aff, aff_inliers = sv_tup
         fm_V = fm[inliers, :]

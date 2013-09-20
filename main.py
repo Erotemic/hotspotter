@@ -1,4 +1,6 @@
 from __init__ import *
+
+import sys
 import gui
 import fileio as io
 import convert_to_hotspotterdb as convert_hsdb
@@ -19,14 +21,9 @@ def signal_reset():
 def signal_set():
     signal.signal(signal.SIGINT, catch_ctrl_c)
 
-if __name__ == '__main__':
-    from multiprocessing import freeze_support
-    freeze_support()
-    print('__main__ = main.py')
 
-    app, is_root = gui.init_qtapp()
-    signal_set()
-
+def tmp_get_database_dir():
+    db_dir = None
     if not '-nc' in sys.argv and not '--nocache' in sys.argv: 
         db_dir = io.global_cache_read('db_dir')
         if db_dir == '.': 
@@ -42,17 +39,25 @@ if __name__ == '__main__':
         if not exists(img_dpath):
             img_dpath = gui.select_directory('Select directory with images in it')
         convert_hsdb.convert_named_chips(db_dir, img_dpath)
+    return db_dir
 
-    hs = load_data2.HotSpotter(db_dir)
 
-    if '--vrd' in sys.argv:
-        helpers.vd(hs.dirs.result_dir)
-        sys.exit(1)
+if __name__ == '__main__':
+    from multiprocessing import freeze_support
+    freeze_support()
+    print('__main__ = main.py')
 
+    app, is_root = gui.init_qtapp()
+    signal_set()
+
+    #gui.show_open_db_dlg()
+
+    db_dir = tmp_get_database_dir()
+    hs = ld2.HotSpotter()
+    hs.load_all(db_dir)
     qcx2_res = mc2.run_matching(hs)
-    allres = rr2.init_allres(hs, qcx2_res, SV=True)
-    rr2.dump_all(allres)
-
+    hs.vrd()
+    allres = rr2.report_all(hs, qcx2_res, SV=True, matrix=True, allqueries=True)
     print('Exiting HotSpotter')
     sys.exit(0)
 
@@ -61,4 +66,4 @@ if __name__ == '__main__':
     #mainwin.show()
     #print('Running the application event loop')
     #helpers.flush()
-    #sys.exit(app.exec_())
+    run_qtapp.run_qtapp()

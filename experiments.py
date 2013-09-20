@@ -280,7 +280,9 @@ def leave_out(expt_func=None, split_test=False, **kwargs):
             hs.set_samples(test_samp, train_samp, indx_samp)
             m_label = '[LNO: %r/%r]' % (kx+1, num_nsplits)
             expt_locals = expt_func(hs, pprefix=m_label, **kwargs)
-            result_map[kx] = expt_locals['allres']
+            #result_map[kx] = expt_locals['allres']
+    return locals()
+'''
         elif split_test:
             jx = 0
             jx2_test_cxs, jx2_index_cxs = split_nx2_cxs(test_cxs_list, csplit_size)
@@ -295,8 +297,8 @@ def leave_out(expt_func=None, split_test=False, **kwargs):
                 print('[expt] =================')
                 print('[expt] M=%r, J=%r' % (nsplit_size,csplit_size))
                 expt_locals = expt_func(hs, pprefix=mj_label, **kwargs)
-                result_map[kx] = expt_locals['allres']
-    return locals()
+                #result_map[kx] = expt_locals['allres']
+                '''
     
 def tweak_params(expt_func=None):
     if not 'expt_func' in vars() or expt_func is None:

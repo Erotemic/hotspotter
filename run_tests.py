@@ -19,14 +19,20 @@ for dataset in dataset_list:
     execute(expt_cmd+[dataset, 'leave-out', '--bagofwords'])
 # run vsmany tests
 for dataset in dataset_list:
-    execute(expt_cmd+[dataset, '--noviz', '--vsmany'])
+    execute(expt_cmd+[dataset, '--vsmany'])
+# run vsmany tests
+for dataset in dataset_list:
+    execute(expt_cmd+[dataset, '--vsmany', '--lnratio'])
+# run vsmany tests
+for dataset in dataset_list:
+    execute(expt_cmd+[dataset, '--vsmany', '--ratio'])
 # dump results
 for dataset in dataset_list:
     execute(expt_cmd+[dataset])
     execute(expt_cmd+[dataset, 'leave-out', '--bagofwords'])
 # try this too
-for dataset in dataset_list:
-    execute(expt_cmd+[dataset, 'leave-out', '--vsmany'])
+#for dataset in dataset_list:
+    #execute(expt_cmd+[dataset, 'leave-out', '--vsmany'])
 
 # dare I? 
 #execute(expt_cmd+['philbin'])

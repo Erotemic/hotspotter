@@ -21,6 +21,7 @@ import os
 import sys
 import pylab
 import types
+import itertools
 #print('LOAD_MODULE: draw_func2.py')
 
 def execstr_global():
@@ -1056,6 +1057,49 @@ def _show_chip_matches(hs,
                         ell_alpha=.5,
                         all_kpts=all_kpts)
     set_figtitle(figtitle)
+
+
+    #----
+def draw_sift(desc):
+    '''
+    desc = np.random.rand(128)
+    desc = desc / np.sqrt((desc**2).sum())
+    desc = np.round(desc * 255)
+    '''
+    ax = plt.gca()
+    tau = np.float64(np.pi * 2)
+    DSCALE = .25
+    XYSCALE = .5
+    XYSHIFT = -.75
+    THETA_SHIFT = tau/4
+    # SIFT CONSTANTS
+    NORIENTS = 8; NX = 4; NY = 4; NBINS = NX * NY
+    def cirlce_rad2xy(radians, mag):
+        return np.cos(radians)*mag, np.sin(radians)*mag
+    discrete_theta = (np.arange(0,NORIENTS)*(tau/NORIENTS) + THETA_SHIFT)[::-1]
+    # Build list of plot positions
+    dim_mag   = desc / 255.0
+    dim_theta = np.tile(discrete_theta, (NBINS, 1)).flatten()
+    dim_xy = np.array(zip(*cirlce_rad2xy(dim_theta, dim_mag))) 
+    xyt_gen = itertools.product(xrange(NX),xrange(NY),xrange(NORIENTS))
+    xy_gen  = itertools.product(xrange(NX),xrange(NY))
+    # Draw Arms
+    for x,y,t in xyt_gen:
+        print((x, y, t))
+        index = x*(NY*NORIENTS) + y*(NORIENTS) + t
+        print(index)
+        (dx, dy) = dim_xy[index]
+        x_data = [(x*XYSCALE)+XYSHIFT, (x*XYSCALE) + (dx*DSCALE) + XYSHIFT]
+        y_data = [(y*XYSCALE)+XYSHIFT, (y*XYSCALE) + (dy*DSCALE) + XYSHIFT]
+        dim_artist = plt.Line2D(x_data, y_data, color=(0,0,1))
+        ax.add_artist(dim_artist)
+    # Draw Circles
+    for x,y in xy_gen:
+        circ_xy = ((x*XYSCALE)+XYSHIFT, (y*XYSCALE)+XYSHIFT)
+        circ_radius = DSCALE
+        circ_artist = plt.Circle(circ_xy, circ_radius, color=(1,0,0))
+        circ_artist.set_facecolor('none')
+        ax.add_artist(circ_artist)
 
 
 if __name__ == '__main__':

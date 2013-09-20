@@ -273,6 +273,23 @@ class HotSpotter(DynStruct):
     def get_kpts(hs, cx):
         return hs.feats.cx2_kpts[cx]
     #--------------
+    def get_features(hs, cx):
+        import spatial_verification2 as sv2
+        fx2_kp     = hs.feats.cx2_kpts[cx]
+        fx2_desc   = hs.feats.cx2_desc[cx]
+        fx2_scale  = sv2.keypoint_scale(fx2_kp)
+        return (fx2_kp, fx2_desc, fx2_scale)
+
+    def get_feature_fn(hs, cx):
+        (fx2_kp, fx2_desc, fx2_scale) = hs.get_features(cx)
+        def fx2_feature(fx):
+            kp    = fx2_kp[fx:fx+1]
+            desc  = fx2_desc[fx]
+            scale = fx2_scale[fx]
+            radius = 3*np.sqrt(3*scale)
+            return (kp, scale, radius, desc)
+        return fx2_feature
+    #--------------
     def get_assigned_matches(hs, qcx):
         cx2_desc = hs.feats.cx2_desc
         assign_matches = hs.matcher.assign_matches
@@ -374,12 +391,12 @@ class HotspotterDirs(DynStruct):
 
         # Shortcut to internals
         internal_sym = db_dir + '/Shortcut-to-hs_internals'
-        if not os.path.islink(internal_sym):
-            helpers.symlink(self.internal_dir, internal_sym, noraise=False)
+        computed_sym = db_dir + '/Shortcut-to-computed'
+        results_sym  = db_dir + '/Shortcut-to-results'
 
-        results_sym = db_dir + '/Shortcut-to-results'
-        if not os.path.islink(results_sym):
-            helpers.symlink(self.result_dir, results_sym, noraise=False)
+        helpers.symlink(self.internal_dir, internal_sym, noraise=False)
+        helpers.symlink(self.computed_dir, computed_sym, noraise=False)
+        helpers.symlink(self.result_dir, results_sym, noraise=False)
 
 def tryindex(list, val):
     try: 

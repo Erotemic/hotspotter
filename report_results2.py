@@ -7,6 +7,7 @@ import match_chips2 as mc2
 import oxsty_results
 import params
 import vizualizations as viz
+import spatial_verification2 as sv2
 from Printable import DynStruct
 # Scientific imports
 import numpy as np
@@ -649,30 +650,6 @@ def dump_feature_pair_analysis(allres):
         prob_x = _hist_prob_x(desc, bw_factor)
         entropy = [-(px * np.log2(px)).sum() for px in prob_x]
         return entropy
-    import spatial_verification2 as sv2
-    def keypoint_scale(kpts):
-        acd_m = kpts[:,2:5].T
-        det_m = sv2.det_acd(acd_m)
-        scale_m = np.sqrt(1/det_m)
-        return scale_m
-    def keypoint_axes(kpts):
-        num_kpts = len(kpts)
-        (a,c,d) = kpts[:,2:5].T
-        # sqrtm(inv(A))
-        aIS = 1/np.sqrt(a) 
-        bIS = -c/(np.sqrt(a)*d + a*np.sqrt(d))
-        cIS = np.zeros(num_kpts)
-        dIS = 1/np.sqrt(d)
-        # Build lower triangular matries that maps unit circles to ellipses
-        abcdIS = np.vstack([aIS, bIS, cIS, dIS]).T.reshape(num_kpts, 2, 2)
-        # Get major and minor axies of ellipes. 
-        eVals, eVecs = zip(*[np.linalg.eig(cir2ell) for cir2ell in abcdIS])
-    def keypoint_radius(kpts):
-        scale_m = keypoint_scale(kpts)
-        radius_m = 3*np.sqrt(3*scale_m)
-        # I'm not sure which one is right. 
-        #radius_m = 3*np.sqrt(3)*scale_m
-        return radius_m
     # Load features if we need to
     if hs.feats.cx2_desc.size == 0:
         print(' * forcing load of descriptors')
@@ -713,8 +690,8 @@ def dump_feature_pair_analysis(allres):
             kpts1 = cx2_kpts[qcx][fm[:,0]]
             kpts2 = cx2_kpts[cx ][fm[:,1]]
             # Get their scale 
-            scale1_m = keypoint_scale(kpts1)
-            scale2_m = keypoint_scale(kpts2)
+            scale1_m = sv2.keypoint_scale(kpts1)
+            scale2_m = sv2.keypoint_scale(kpts2)
             # Get their entropy
             entropy1 = descriptor_entropy(desc1, bw_factor=1)
             entropy2 = descriptor_entropy(desc2, bw_factor=1)

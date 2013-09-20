@@ -34,3 +34,17 @@ Contribution:
 
 
 PICK APPART GZ_111 vs GZ_305
+
+
+Questions: 
+
+I'm not sure that I'm plotting the keypoints correctly.
+
+From the perdoch detector I get this: 
+
+x, y - keypoint location
+a, c, d - Lower triangular matrix A = [(a, 0),
+                                       (c, d)]
+
+
+

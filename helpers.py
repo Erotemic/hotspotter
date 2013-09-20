@@ -145,6 +145,8 @@ def printable_mystats(_list):
     return ret
 
 def mystats(_list):
+    if len(_list) == 0:
+        return {'empty_list':True}
     nparr = np.array(_list)
     return {'min'   : nparr.min(),
             'mean'  : nparr.mean(),
@@ -355,9 +357,11 @@ def win_shortcut(source, link_name):
         raise ctypes.WinError()
 
 def symlink(source, link_name, noraise=False):
+    if os.path.islink(link_name):
+        print('[helpers] symlink %r exists' % (link_name))
+        return
     print('[helpers] Creating symlink: source=%r link_name=%r' % (source, link_name))
     try: 
-        import os
         os_symlink = getattr(os, "symlink", None)
         if callable(os_symlink):
             os_symlink(source, link_name)

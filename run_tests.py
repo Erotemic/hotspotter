@@ -1,17 +1,32 @@
 #!/usr/bin/python2.7
 import os
+import sys
+import helpers
 
 dataset_list = []
 dataset_list += [' GZ']
-dataset_list += [' PZ']
+#dataset_list += [' PZ']
 expt_cmd = ['python', 'experiments.py']
 
+QUIET = False
+if '--quiet' in sys.argv:
+    QUIET = True
+
+vizcmd = ['--viz']
+if '--noviz' in sys.argv:
+    vizcmd = ['--noviz']
+
+expt_cmd += vizcmd
 
 def execute(args):
     print('\n==== Execute Command ====')
     cmd = ' '.join(args)
     print(cmd)
+    if QUIET:
+        rss = helpers.RedirectStdout(); rss.start()
     os.system(cmd)
+    if QUIET: 
+        rss.stop()
     print('===========================\n')
 
 # run bag of words tests

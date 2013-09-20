@@ -146,7 +146,51 @@ def homography_inliers(kpts1, kpts2, fm,
     return H, inliers, Aff, aff_inliers
 
 # --------------------------------
-# Linear algebra functions on lower triangular matrices
+# Warping / Transformation stuff
+def border_coordinates(img):
+    'specified in (x,y) coordinates'
+    (img_h, img_w) = img.shape[0:2]
+    tl = (0, 0)
+    tr = (img_w-1, 0)
+    bl = (0, img_h-1)
+    br = (img_w-1, img_w-1)
+    return np.array((tl, tr, bl, br)).T
+def homogonize(coord_list):
+    'input: list of (x,y) coordinates'
+    ones_vector = np.ones((1, coord_list.shape[1]))
+    coord_homog = np.vstack([np.array(coord_list), ones_vector])
+    return coord_homog 
+def transform_coord_list(coord_list, M):
+    coord_homog  = homogonize(coord_list)
+    Mcoord_homog = M.dot(coord_homog)
+    Mcoord_list  = np.vstack((Mcoord_homog[0] / Mcoord_homog[2],
+                              Mcoord_homog[1] / Mcoord_homog[2]))
+    return Mcoord_list
+def minmax_coord_list(coord_list):
+    minx, miny = coord_list.min(1)
+    maxx, maxy = coord_list.max(1)
+    return (minx, maxx, miny, maxy)
+
+def transformed_bounds(img, M):
+    coord_list  = border_coordinates(img)
+    Mcoord_list = transform_coord_list(coord_list, M)
+    (minx, maxx, miny, maxy) = minmax_coord_list(Mcoord_list)
+    return (minx, maxx, miny, maxy) 
+#---
+# 
+def sqrt_inv(fx2_kp):
+    # numba approved
+    x, y, a, c, d = fx2_kp.T
+    aIS = 1/np.sqrt(a) 
+    bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
+    dIS = 1/np.sqrt(d)
+    kpts_iter = iter(zip(x,y,aIS,bIS,dIS))
+    kptsIS = [np.array([( a_, b_, x_),
+                        ( 0 , d_, y_),
+                        ( 0 , 0 , 1)])
+              for (x_,y_,a_,b_,d_) in kpts_iter ]
+    return kptsIS
+
 def keypoint_scale(fx2_kp):
     'the scale of a keypoint is sqrt(1/det(A))'
     fx2_acd = fx2_kp[:,2:5].T
@@ -154,6 +198,29 @@ def keypoint_scale(fx2_kp):
     fx2_scale = np.sqrt(1.0/fx2_det)
     return fx2_scale
 
+def keypoint_radius(fx2_kp):
+    scale_m = keypoint_scale(fx2_kp)
+    radius_m = 3*np.sqrt(3*scale_m)
+    # I'm not sure which one is right. 
+    #radius_m = 3*np.sqrt(3)*scale_m
+    return radius_m
+
+def keypoint_axes(fx2_kp):
+    raise NotImplemented('this doesnt work')
+    num_kpts = len(fx2_kp)
+    (a,c,d) = fx2_kp[:,2:5].T
+    # sqrtm(inv(A))
+    aIS = 1/np.sqrt(a) 
+    bIS = -c/(np.sqrt(a)*d + a*np.sqrt(d))
+    cIS = np.zeros(num_kpts)
+    dIS = 1/np.sqrt(d)
+    # Build lower triangular matries that maps unit circles to ellipses
+    abcdIS = np.vstack([aIS, bIS, cIS, dIS]).T.reshape(num_kpts, 2, 2)
+    # Get major and minor axies of ellipes. 
+    eVals, eVecs = zip(*[np.linalg.eig(cir2ell) for cir2ell in abcdIS])
+
+# --------------------------------
+# Linear algebra functions on lower triangular matrices
 def det_acd(acd):
     'Lower triangular determinant'
     return acd[0] * acd[2]

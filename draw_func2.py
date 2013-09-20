@@ -965,14 +965,14 @@ def show_gt_matches(hs, res, SV=True, fignum=3):
                        fignum=fignum, 
                        all_kpts=True)
 
-def show_match_analysis(hs, res, N=5, fignum=3, figtitle=''):
+def show_match_analysis(hs, res, N=5, fignum=3, figtitle='', show_query=True):
     import draw_func2 as df2
     #df2.rrr()
     figtitle= ('qcx=%r -- Analysis' % res.qcx) + figtitle
     topN_cxs = res.topN_cxs(N)
     all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
-    max_cols = max(5,N)
+    max_cols = min(5,N)
     return df2._show_chip_matches(hs,
                            res,
                            gt_cxs=missed_gt_cxs, 

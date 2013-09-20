@@ -78,6 +78,7 @@ def warp_image(img, M):
 if not 'hs' in vars():
     hs = ld2.HotSpotter()
     hs.load_all(params.GZ, matcher=False)
+    hs.set_samples()
     qcx = 111
     cx = 305
     # Database descriptor + keypoints
@@ -99,11 +100,6 @@ if not 'hs' in vars():
     #c2.precompute_index_vsmany(hs)
     #qcx2_res = mc2.run_matching(hs)
 
-    #params.__MATCH_TYPE__ = 'bagofwords'
-    #hs.load_matcher()
-    #resBOW = mc2.build_result_qcx(hs, qcx)
-    #df2.show_match_analysis(hs, resBOW, N=5, fignum=1)
-    
     params.__MATCH_TYPE__ = 'vsmany'
     hs.load_matcher()
     vsmany_index = hs.matcher._Matcher__vsmany_index
@@ -122,9 +118,39 @@ if not 'hs' in vars():
 
     params.__VSMANY_SCORE_FN__ = 'RATIO'
     
+    params.__MATCH_TYPE__ = 'bagofwords'
+    hs.load_matcher()
+    resBOW = mc2.build_result_qcx(hs, qcx)
+    fig4 = df2.show_match_analysis(hs, resBOW, N=5, fignum=4, figtitle='bagofwords')
+    
     params.__MATCH_TYPE__ = 'vsone'
     hs.load_matcher()
     res_vsone = mc2.build_result_qcx(hs, qcx, use_cache=True)
-    fig4 = df2.show_match_analysis(hs, res_vsone, N=5, fignum=4, figtitle='vsone')
+    fig5 = df2.show_match_analysis(hs, res_vsone, N=5, fignum=5, figtitle='vsone')
+
+
+    fig6 = df2.show_match_analysis(hs, resLNBNN, N=20, fignum=6,
+                                   figtitle='LNBNN', show_query=False)
 
     df2.update()
+
+    
+
+    res = resLNBNN
+
+
+def top_matching_features(res, axnum=None, match_type=''):
+    cx2_fs = res.cx2_fs_V
+    cx_fx_fs_list = []
+    for cx in xrange(len(cx2_fs)):
+        fx2_fs = cx2_fs[cx]
+        for fx in xrange(len(fx2_fs)):
+            fs = fx2_fs[fx]
+            cx_fx_fs_list.append((cx, fx, fs))
+
+    cx_fx_fs_sorted = np.array(sorted(cx_fx_fs_list, key=lambda x: x[2])[::-1])
+
+    sorted_score = cx_fx_fs_sorted[:,2]
+    fig = df2.figure(0)
+    df2.plot(sorted_score)
+

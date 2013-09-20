@@ -75,11 +75,16 @@ def warp_image(img, M):
 df2.reset()
 
 if not 'hs' in vars():
-    hs = ld2.HotSpotter(params.GZ)
-    cx = 111
-    rchip = hs.get_chip(cx)
-    (fx2_kp, fx2_desc, fx2_scale) = hs.get_features(cx)
+    hs = ld2.HotSpotter()
+    hs.load_all(params.GZ)
+    qcx = 111
+    cx = 305
+    rchip1 = hs.get_chip(qcx)
+    rchip2 = hs.get_chip(cx)
+    fm, fs, score = hs.get_assigned_matches_to(qcx, cx)
+    (fx2_kp, fx2_desc, fx2_scale) = hs.get_features(qcx)
     fx2_feature = hs.get_feature_fn(cx)
+    df2.show_matches(rchip1, rchip2, kpts1, kpts2, fm)
 
 def show_feature_fx(fx):
     rchip = rchip1
@@ -88,6 +93,7 @@ def show_feature_fx(fx):
     show_feature(rchip, kp, subkp, fignum=fx)
     df2.update()
 
+df2.show_matches(
 
 fx = 2294
 (kp, scale, radius, desc) = fx2_feature(fx)

@@ -159,8 +159,15 @@ def get_all_figures():
 
 def all_figures_show():
     for fig in iter(get_all_figures()):
+        time.sleep(.1)
         fig.show()
         fig.canvas.draw()
+
+import time
+def all_figures_tight_layout():
+    for fig in iter(get_all_figures()):
+        fig.tight_layout()
+        time.sleep(.1)
 
 def all_figures_tile(num_rc=(4,4),
                      wh=(350,250),
@@ -339,6 +346,7 @@ def customize_figure(fig, doclf):
 
 
 def get_fig(fignum=None):
+    print('[df2] get_fig(fignum=%r)' % fignum)
     fig_kwargs = dict(figsize=FIGSIZE, dpi=DPI)
     if fignum is None:
         try: 
@@ -348,7 +356,12 @@ def get_fig(fignum=None):
             fig = plt.figure(**fig_kwargs)
         fignum = fig.number
     else:
-        fig = plt.figure(num=fignum, **fig_kwargs)
+        try:
+            fig = plt.figure(fignum)
+        except Exception as ex:
+            print(repr(ex))
+            warnings.warn(repr(ex))
+            fig = plt.gcf()
     return fig
 
 def figure(fignum=None,
@@ -648,8 +661,8 @@ def imshow(img,
            plotnum=None,
            interpolation='nearest', 
            **kwargs):
-    printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
-    printDBG('[df2] *** fignum = %r, plotnum = %r ' % (fignum, plotnum))
+    print('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
+    print('[df2] *** fignum = %r, plotnum = %r ' % (fignum, plotnum))
     fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
     ax = plt.gca()
     plt.imshow(img, interpolation=interpolation)
@@ -952,15 +965,15 @@ def show_gt_matches(hs, res, SV=True, fignum=3):
                        fignum=fignum, 
                        all_kpts=True)
 
-def show_match_analysis(hs, res, N=5, fignum=3):
+def show_match_analysis(hs, res, N=5, fignum=3, figtitle=''):
     import draw_func2 as df2
     #df2.rrr()
-    figtitle='qcx=%r -- Analysis' % res.qcx
+    figtitle= ('qcx=%r -- Analysis' % res.qcx) + figtitle
     topN_cxs = res.topN_cxs(N)
     all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
     max_cols = max(5,N)
-    df2._show_chip_matches(hs,
+    return df2._show_chip_matches(hs,
                            res,
                            gt_cxs=missed_gt_cxs, 
                            topN_cxs=topN_cxs,
@@ -1057,6 +1070,7 @@ def _show_chip_matches(hs,
                         ell_alpha=.5,
                         all_kpts=all_kpts)
     set_figtitle(figtitle)
+    return fig
 
 
     #----

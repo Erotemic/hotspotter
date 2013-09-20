@@ -4,8 +4,8 @@ import sys
 import helpers
 
 dataset_list = []
-dataset_list += [' GZ']
-#dataset_list += [' PZ']
+#dataset_list += [' GZ']
+dataset_list += [' PZ']
 expt_cmd = ['python', 'experiments.py']
 
 QUIET = False

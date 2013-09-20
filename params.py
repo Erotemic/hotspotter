@@ -147,6 +147,7 @@ __VSONE_RATIO_THRESH__ = 1.5       # Thresholds for one-vs-one
 # SPATIAL VERIFICATION
 __NUM_RERANK__   = 1000 # Number of top matches to spatially re-rank
 __XY_THRESH__    = .002 # % diaglen of keypoint extent
+__USE_CHIP_EXTENT__ = False # use roi as threshold instead of kpts extent
 __SCALE_THRESH_HIGH__ = 2.0
 __SCALE_THRESH_LOW__  = 0.5
 #=====================================================
@@ -203,7 +204,7 @@ def get_matcher_uid(with_train=True, with_indx=True):
     if __MATCH_TYPE__ == 'vsmany':
         matcher_uid += '_k%d' % __VSMANY_K__
     if __MATCH_TYPE__ == 'vsone':
-        matcher_uid += '_rat'+str(__RATIO_THRESH__)
+        matcher_uid += '_rat'+str(__VSONE_RATIO_THRESH__)
     if with_train:
         matcher_uid += '_trainID('+TRAIN_SAMPLE_ID+')'
     if with_indx:
@@ -214,10 +215,14 @@ def get_matcher_uid(with_train=True, with_indx=True):
 
 def get_query_uid():
     query_uid = ''
-    query_uid += '_sv(' + str(__NUM_RERANK__)
-    query_uid += ','   + str(__XY_THRESH__)
-    query_uid += ','   + str(__SCALE_THRESH_HIGH__)
-    query_uid += ','   + str(__SCALE_THRESH_LOW__)+')'
+    query_uid += '_sv(' 
+    query_uid += str(__NUM_RERANK__)
+    query_uid += ',' + str(__XY_THRESH__)
+    query_uid += ',' + str(__SCALE_THRESH_HIGH__)
+    query_uid += ',' + str(__SCALE_THRESH_LOW__)
+    if __USE_CHIP_EXTENT__:
+        query_uid += ',cdl'  # chip diag len
+    query_uid += ')'
     if __MATCH_TYPE__ == 'vsmany':
         query_uid += '_%s' % __VSMANY_SCORE_FN__
     query_uid += get_matcher_uid()

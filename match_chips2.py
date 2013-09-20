@@ -38,6 +38,8 @@ def reload_module():
     import imp
     import sys
     imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
 BOW_DTYPE = np.uint8
 FM_DTYPE  = np.uint32
@@ -248,11 +250,15 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VE
     #--------------------
     assign_matches  = hs.matcher.assign_matches
     cx2_desc = hs.feats.cx2_desc
-    cx2_kpts = hs.feats.cx2_kpts 
+    cx2_kpts = hs.feats.cx2_kpts
+    cx2_rchip_size = hs.get_cx2_rchip_size()
     total_dirty = len(dirty_test_sample_cx)
     print('[mc2] Executing %d dirty queries' % total_dirty)
     for qnum, qcx in enumerate(dirty_test_sample_cx):
         res = qcx2_res[qcx]
+        build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size,
+                     assign_matches, qnum, total_dirty, verbose)
+        '''
         #
         # Assign matches with the chosen function (vsone) or (vsmany)
         num_qdesc = len(cx2_desc[qcx])
@@ -269,7 +275,7 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VE
             num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
             print('[mc2] query(%d/%d) verify %d assigned matches' % (qnum+1, total_dirty, num_assigned))
         tt2 = helpers.Timer(verbose=False)
-        sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs)
+        sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs)
         (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
         verify_time = tt2.toc()
         if verbose:
@@ -290,7 +296,60 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VE
         res.cx2_fs_V    = np.array(cx2_fs_V)
         res.cx2_score_V = cx2_score_V
         res.save(hs)
+        '''
     return qcx2_res
+
+def build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches,
+                 qnum=0, total_dirty=1, verbose=True):
+    qcx = res.qcx 
+    #
+    # Assign matches with the chosen function (vsone) or (vsmany)
+    num_qdesc = len(cx2_desc[qcx])
+    if verbose:
+        print('[mc2] query(%d/%d)---------------' % (qnum+1, total_dirty))
+        print('[mc2] query(%d/%d) assign %d desc' % (qnum+1, total_dirty, num_qdesc))
+    tt1 = helpers.Timer(verbose=False)
+    assign_output = assign_matches(qcx, cx2_desc)
+    (cx2_fm, cx2_fs, cx2_score) = assign_output
+    assign_time = tt1.toc()
+    # Spatially verify the assigned matches
+    if verbose:
+        num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
+        print('[mc2] query(%d/%d) verify %d assigned matches' % (qnum+1, total_dirty, num_assigned))
+    tt2 = helpers.Timer(verbose=False)
+    sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs)
+    (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
+    verify_time = tt2.toc()
+    if verbose:
+        num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
+        print('[mc2] query(%d/%d) verified %d matches' % (qnum+1, total_dirty, num_verified))
+        print('...assigned: %.2f seconds' % (assign_time))
+        print('...verified: %.2f seconds\n' % (verify_time))
+    else:
+        print('...query: %.2f seconds\n' % (verify_time + assign_time))
+    # Assign output to the query result 
+    res.assign_time = assign_time
+    res.verify_time = verify_time
+    res.cx2_fm      = np.array(cx2_fm)
+    res.cx2_fs      = np.array(cx2_fs)
+    res.cx2_score   = cx2_score
+    res.cx2_fm_V    = np.array(cx2_fm_V)
+    res.cx2_fs_V    = np.array(cx2_fs_V)
+    res.cx2_score_V = cx2_score_V
+    res.save(hs)
+
+def build_result_qcx(hs, qcx, use_cache=True):
+    res = QueryResult(qcx)
+    if use_cache and res.has_cache(hs):
+        res.load(hs)
+    else:
+        assign_matches = hs.matcher.assign_matches
+        cx2_desc = hs.feats.cx2_desc
+        cx2_kpts = hs.feats.cx2_kpts
+        cx2_rchip_size = hs.get_cx2_rchip_size()
+        build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches)
+    return res
+
 
 #========================================
 # Bag-of-Words
@@ -650,6 +709,14 @@ def assign_matches_vsmany_BINARY(qcx, cx2_desc):
 #========================================
 # One-vs-One 
 #========================================
+def get_vsone_flann(desc1):
+    vsone_flann = pyflann.FLANN()
+    vsone_flann_params =  params.VSONE_FLANN_PARAMS
+    ratio_thresh = params.__VSONE_RATIO_THRESH__
+    checks = vsone_flann_params['checks']
+    vsone_flann.build_index(desc1, **vsone_flann_params)
+    return vsone_flann, checks
+
 def assign_matches_vsone(qcx, cx2_desc):
     #print('[mc2] Assigning vsone feature matches from cx=%d to %d chips'\ % (qcx, len(cx2_desc)))
     desc1 = cx2_desc[qcx]
@@ -685,7 +752,7 @@ def match_vsone(desc2, vsone_flann, checks, ratio_thresh=1.2, burst_thresh=None)
     '''Matches desc2 vs desc1 using Lowe's ratio test
     Input:
         desc2         - other descriptors (N2xD)
-        vsone_flann     - FLANN index of desc1 (query descriptors (N1xD)) 
+        vsone_flann   - FLANN index of desc1 (query descriptors (N1xD)) 
     Thresholds: 
         ratio_thresh = 1.2 - keep if dist(2)/dist(1) > ratio_thresh
         burst_thresh = 1   - keep if 0 < matching_freq(desc1) <= burst_thresh
@@ -723,15 +790,22 @@ def match_vsone(desc2, vsone_flann, checks, ratio_thresh=1.2, burst_thresh=None)
 #========================================
 # Debug data
 #@profile
-def spatially_verify(kpts1, kpts2, fm, fs, qcx, cx):
+def spatially_verify(kpts1, kpts2, rchip_size, fm, fs, qcx, cx):
     '''1) compute a robust transform from img2 -> img1
        2) keep feature matches which are inliers 
        returns fm_V, fs_V, H '''
     xy_thresh         = params.__XY_THRESH__
     scale_thresh_high = params.__SCALE_THRESH_HIGH__
     scale_thresh_low  = params.__SCALE_THRESH_LOW__
-    sv_tup = sv2.homography_inliers(kpts1, kpts2, fm, xy_thresh, 
-                                    scale_thresh_high, scale_thresh_low)
+    if params.__USE_CHIP_EXTENT__:
+        diaglen_sqrd = rchip_size[0]**2 + rchip_size[1]**2
+    else:
+        diaglen_sqrd = sv2.calc_diaglen_sqrd(kpts2[:,0], kpts2[:,1])
+    sv_tup = sv2.homography_inliers(kpts1, kpts2, fm,
+                                    xy_thresh, 
+                                    scale_thresh_high,
+                                    scale_thresh_low,
+                                    diaglen_sqrd)
     if not sv_tup is None:
         H, inliers, Aff, aff_inliers = sv_tup
         fm_V = fm[inliers, :]
@@ -743,7 +817,7 @@ def spatially_verify(kpts1, kpts2, fm, fs, qcx, cx):
     return fm_V, fs_V, H
 
 #@profile
-def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
+def spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs):
     kpts1     = cx2_kpts[qcx]
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     top_cx     = cx2_score.argsort()[::-1]
@@ -760,7 +834,8 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_fm, cx2_fs):
         kpts2 = cx2_kpts[cx]
         fm    = cx2_fm[cx]
         fs    = cx2_fs[cx]
-        fm_V, fs_V, H = spatially_verify(kpts1, kpts2, fm, fs, qcx, cx)
+        rchip_size = cx2_rchip_size[cx]
+        fm_V, fs_V, H = spatially_verify(kpts1, kpts2, rchip_size, fm, fs, qcx, cx)
         cx2_fm_V[cx] = fm_V
         cx2_fs_V[cx] = fs_V
         if len(fm_V) == 0 and __OVERRIDE__:

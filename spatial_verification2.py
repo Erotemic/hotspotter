@@ -95,6 +95,7 @@ def homography_inliers(kpts1, kpts2, fm,
                        xy_thresh,
                        scale_thresh_high,
                        scale_thresh_low,
+                       diaglen_sqrd=None,
                        min_num_inliers=4):
     if len(fm) < min_num_inliers:
         return None
@@ -104,7 +105,8 @@ def homography_inliers(kpts1, kpts2, fm,
     x1_m, y1_m, acd1_m = split_kpts(kpts1[fx1_m, :].T)
     x2_m, y2_m, acd2_m = split_kpts(kpts2[fx2_m, :].T)
     # Get diagonal length
-    diaglen_sqrd = calc_diaglen_sqrd(x2_m, y2_m)
+    if diaglen_sqrd is None:
+        diaglen_sqrd = calc_diaglen_sqrd(x2_m, y2_m)
     xy_thresh_sqrd = diaglen_sqrd * xy_thresh
     Aff, aff_inliers = __affine_inliers(x1_m, y1_m, acd1_m, fm[:, 0],
                                         x2_m, y2_m, acd2_m, fm[:, 1],

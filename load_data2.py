@@ -81,12 +81,13 @@ class HotSpotter(DynStruct):
         hs.load_chips()
         hs.load_features(load_desc=False)
 
-    def load_all(hs, db_dir):
+    def load_all(hs, db_dir, matcher=True):
         hs.load_tables(db_dir)
         hs.load_chips()
         hs.load_features()
         hs.set_samples()
-        hs.load_matcher()
+        if matcher: 
+            hs.load_matcher()
 
     def db_name(hs):
         db_name = os.path.split(hs.dirs.db_dir)[1]
@@ -272,6 +273,11 @@ class HotSpotter(DynStruct):
     #--------------
     def get_kpts(hs, cx):
         return hs.feats.cx2_kpts[cx]
+    #--------------
+    def get_cx2_rchip_size(hs):
+        cx2_rchip_size = [Image.open(rchip_path).size
+         for rchip_path in hs.cpaths.cx2_rchip_path]
+        return cx2_rchip_size
     #--------------
     def get_features(hs, cx):
         import spatial_verification2 as sv2

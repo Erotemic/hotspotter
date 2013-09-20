@@ -497,7 +497,7 @@ def draw_kpts2(kpts, offset=(0,0),
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             aIS = 1/np.sqrt(a) 
-            bIS = -c/(np.sqrt(a)*d + a*np.sqrt(d))
+            bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
             dIS = 1/np.sqrt(d)
             #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
         kpts_iter = iter(zip(x,y,aIS,bIS,dIS))

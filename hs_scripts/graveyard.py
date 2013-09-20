@@ -1,4 +1,5 @@
 
+    print('warping img.shape=%r to a new shape=%r' % (img.shape, dsize))
 
 # 1vM Agg info graveyard
 #cx2_max_ax = np.cumsum(cx2_nFeats)
@@ -361,3 +362,44 @@ let z=-1
   -(0 - 0 + 1) =   -(-1)
     -0 - 0 + 1 = --1
 '''
+
+
+#print('lets think about z')
+#print('z = %r' % z)
+#print('radius = %r' % radius)
+#print('ideal z1:z2 = %r:%r' % (z1, z2))
+#print('truncated iz1:iz2 = %r:%r' % (iz1, iz2))
+
+print('x=%r, y=%r' % (x,y))
+print('radius = %r' % radius)
+print('rchip.shape = %r' % (rchip.shape,))
+print('ix_range = [%3d:%3d], x_radius = %r' % (ix1, ix2, xm))
+print('iy_range = [%3d:%3d], y_radius = %r' % (iy1, iy2, ym))
+print('------')
+df2.imshow(warp1, plotnum=(2,4,1), fignum=2)
+df2.imshow(warp2, plotnum=(2,4,2), fignum=2)
+#df2.imshow(warp3, plotnum=(2,4,3), fignum=2)
+#df2.imshow(warp4, plotnum=(2,4,4), fignum=2)
+#df2.imshow(warp5, plotnum=(2,4,5), fignum=2)
+#df2.imshow(warp6, plotnum=(2,4,6), fignum=2)
+#df2.imshow(warp6, plotnum=(2,4,7), fignum=2)
+#df2.imshow(warp6, plotnum=(2,4,8), fignum=2)
+
+warp1 = warp_image(subchip, H)
+warp2 = warp_image(subchip, H2)
+#warp3 = warp_image(subchip, H3)
+#warp4 = warp_image(subchip, H, True)
+#warp5 = warp_image(subchip, H2, True)
+#warp6 = warp_image(subchip, H3, True)
+
+
+#H = np.eye(3)
+
+#print('rchip.shape = %r', (rchip.shape,))
+#print('subchip.shape = %r', (subchip.shape,))
+#print('warp_subchip.shape = %r', (warp_subchip.shape,))
+
+# WARP
+
+M = H1
+img = subchip

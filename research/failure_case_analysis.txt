@@ -17,6 +17,7 @@ _____________
 |    |||    |
 -----|||-----
 
+dynamic scoring
 
 
 changes: 
@@ -30,3 +31,5 @@ Contribution:
 * I am going to talk about these issues and how to solve them. 
 
 
+
+PICK APPART GZ_111 vs GZ_305

@@ -2,7 +2,7 @@ import matplotlib
 if matplotlib.get_backend() != 'Qt4Agg':
     matplotlib.use('Qt4Agg', warn=True, force=True)
     matplotlib.rcParams['toolbar'] = 'None'
-import hotspotter.df2 as df2
+import hotspotter.draw_func2 as df2
 import hotspotter.helpers as helpers
 import matplotlib.pyplot as plt
 
@@ -20,7 +20,7 @@ def numpy_test():
     sin = np.sin
     cos = np.cos
     # Variables
-    N = 2**3
+    N = 2**5
     theta = np.linspace(0, tau, N)
     a, b, c, d = (1, 0, .5, .8)
 
@@ -52,7 +52,7 @@ def numpy_test():
     fig = df2.figure(1, plotnum=122, title='xe = inv(A).dot(xc)')
     plotell(xe)
     # End Plot
-    df2.set_geometry(fig, 1000, 75, 500, 500)
+    df2.set_geometry(fig.number, 1000, 75, 500, 500)
     df2.update()
 
 # E = ellipse
@@ -106,12 +106,10 @@ def find_ellipse_major_minor():
     theta_b = solve(b2_eq_0, theta)
     theta_c = solve(c2_eq_0, theta)
 
-
-
-
-
-
-def sympy_test():
+def sympy_manual_sqrtm_inv():
+    '''
+    Manual calculation of inv(sqrtm) for a lower triangular matrix
+    '''
     # https://sympy.googlecode.com/files/sympy-0.7.2.win32.exe
     import sympy
     import sympy.galgebra.GA as GA
@@ -126,7 +124,7 @@ def sympy_test():
     cos = sympy.functions.elementary.trigonometric.cos
     sqrtm = sympy.mpmath.sqrtm
 
-    xc = (sin(theta), cos(theta))
+    xc = sympy.Matrix([sin(theta), cos(theta)])
     A = sympy.Matrix([(a, b), (c, d)])
     A = sympy.Matrix([(a, 0), (c, d)])
     Ainv = A.inv()
@@ -169,19 +167,19 @@ def sympy_test():
     R_itoA = simplify_mat(sympy.Matrix([(w1, x2), (0, z1)]))
     Rinv_itoA = simplify_mat(R_itoA.inv())
 
-    print('Inverse of lower triangular [(a, 0), (c, d)]')
+    print('Given the lower traingular matrix: A=[(a, 0), (c, d)]')
+
+    print('Its inverse is: inv(A)')
     print(Ainv) # sub to lower triangular
     print('--')
 
-    print('R = sqrtm(A); in terms of A')
+    print('Its square root is: R = sqrtm(A)')
     print(R_itoA)
     print('--')
 
-    print('method1')
-    print('inv(sqrtm(A))')
+    print('Method 1: Its inverse square root is: M1 = inv(sqrtm(A))')
     print(Rinv_itoA)
     print('--')
-
 
     # Solve in terms of A (but from inv)
     a_, b_, c_, d_ = Ainv
@@ -196,25 +194,28 @@ def sympy_test():
 
     Rinv_itoA_2 = simplify_mat(sympy.Matrix([(w1_, x2_), (0, z1_)]))
 
-    print('method2')
-    print('sqrtm(inv(A))')
+    print('Method 1: Its square root inverse is: M2 = sqrtm(inv(A))')
     print(Rinv_itoA_2)
     print('----')
 
-    print('Checking that A = inv(MM)')
-    print('method1')
+    print('Perform checks to make sure the calculation was correct')
+    print('Checking that A == inv(M1 M1)')
     print simplify_mat(symdot(Rinv_itoA,Rinv_itoA).inv())
     print('----')
-    print('method2')
+    print('Checking that A == inv(M2 M2)')
     print simplify_mat(symdot(Rinv_itoA_2,Rinv_itoA_2).inv())
 
+    print('....')
+    print('....')
     # hmmm, why not equal? ah, they are equiv
-    sqrt = np.sqrt
+    sqrt = sympy.sqrt
     ans1 = c/(-sqrt(a)*d - a*sqrt(d))
     ans2 = -c/(a*d*(sqrt(1/a) + sqrt(1/d)))
-    print ans1, ans2
+    print('There are two equivilent ways of specifying the b component of sqrt(inv(A))')
+    print ans1
+    print ans2
      #------------------------------
-    A2 = simplify_mat(R_intermsof_A.dot(R_intermsof_A))
+    A2 = simplify_mat(R_itoA.dot(R_itoA))
 
     E_ = A.T.dot(A)
     E = sympy.Matrix([E_[0:2], E_[2:4]])
@@ -225,13 +226,24 @@ def sympy_test():
     E_evals = E.eigenvals()
 
     e1, e2 = E_evects
-    print('Eigenvect1: ')
-    e1[0].subs(b,0)
-    print('Eigenvect2: ')
-    e1[0].subs(b,0)
-
-
-    xe = Ainv.dot(xc)
+    print('\n---Eigenvect1---')
+    print('\ne1[0]=')
+    print e1[0]
+    print('\ne1[1]=')
+    print e1[1]
+    print('\ne1[2]=')
+    print e1[2]
+    print('\n---Eigenvect2---')
+    print('\ne2[0]=')
+    print e2[0]
+    print('\ne2[1]=')
+    print e2[1]
+    print('\ne2[2]=')
+    print e2[2]
+    print('\n---(inv(sqrtm(A))) dot circle points---')
+    print('Given a transformation A and an angle theta, the point on that ellipse is: ')
+    xe = Rinv_itoA.dot(xc)
+    print xe
 
 
 #A2 = sqrtm(inv(A)).real
@@ -241,8 +253,9 @@ def sympy_test():
 #fig = df2.figure(1, plotnum=224, title='')
 #plotell(e3)
 
-df2.reset()
-real_data()
+#df2.reset()
+#real_data()
+sympy_manual_sqrtm_inv()
 
 r'''
 str1 = '\n'.join(helpers.execstr_func(sympy_data).split('\n')[0:-2])

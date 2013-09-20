@@ -1,4 +1,4 @@
-
+from __future__ import division
 from helpers import printWARN, printINFO
 import warnings
 import cv2
@@ -147,6 +147,13 @@ def homography_inliers(kpts1, kpts2, fm,
 
 # --------------------------------
 # Linear algebra functions on lower triangular matrices
+def keypoint_scale(fx2_kp):
+    'the scale of a keypoint is sqrt(1/det(A))'
+    fx2_acd = fx2_kp[:,2:5].T
+    fx2_det = det_acd(fx2_acd)
+    fx2_scale = np.sqrt(1.0/fx2_det)
+    return fx2_scale
+
 def det_acd(acd):
     'Lower triangular determinant'
     return acd[0] * acd[2]

@@ -346,7 +346,7 @@ def customize_figure(fig, doclf):
 
 
 def get_fig(fignum=None):
-    print('[df2] get_fig(fignum=%r)' % fignum)
+    printDBG('[df2] get_fig(fignum=%r)' % fignum)
     fig_kwargs = dict(figsize=FIGSIZE, dpi=DPI)
     if fignum is None:
         try: 
@@ -661,8 +661,8 @@ def imshow(img,
            plotnum=None,
            interpolation='nearest', 
            **kwargs):
-    print('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
-    print('[df2] *** fignum = %r, plotnum = %r ' % (fignum, plotnum))
+    printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
+    printDBG('[df2] *** fignum = %r, plotnum = %r ' % (fignum, plotnum))
     fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
     ax = plt.gca()
     plt.imshow(img, interpolation=interpolation)
@@ -979,7 +979,7 @@ def show_match_analysis(hs, res, N=5, fignum=3, figtitle='', show_query=True):
                            topN_cxs=topN_cxs,
                            figtitle=figtitle,
                            max_cols=max_cols,
-                           show_query=True,
+                           show_query=show_query,
                            fignum=fignum)
 
 def _show_chip_matches(hs,

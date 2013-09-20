@@ -105,32 +105,32 @@ if not 'hs' in vars():
     vsmany_index = hs.matcher._Matcher__vsmany_index
     params.__VSMANY_SCORE_FN__ = 'LNRAT'
     resLNRAT = mc2.build_result_qcx(hs, qcx)
-    fig1 = df2.show_match_analysis(hs, resLNRAT, N=5, fignum=1, figtitle='LNRAT')
+    fig1 = df2.show_match_analysis(hs, resLNRAT, N=5, fignum=1, figtitle=' LNRAT')
     #fig.tight_layout()
 
     params.__VSMANY_SCORE_FN__ = 'LNBNN'
     resLNBNN = mc2.build_result_qcx(hs, qcx)
-    fig2 = df2.show_match_analysis(hs, resLNBNN, N=5, fignum=2, figtitle='LNBNN')
+    fig2 = df2.show_match_analysis(hs, resLNBNN, N=5, fignum=2, figtitle=' LNBNN')
 
     params.__VSMANY_SCORE_FN__ = 'RATIO'
     resRATIO = mc2.build_result_qcx(hs, qcx)
-    fig3 = df2.show_match_analysis(hs, resRATIO, N=5, fignum=3, figtitle='RATIO')
+    fig3 = df2.show_match_analysis(hs, resRATIO, N=5, fignum=3, figtitle=' RATIO')
 
     params.__VSMANY_SCORE_FN__ = 'RATIO'
     
     params.__MATCH_TYPE__ = 'bagofwords'
     hs.load_matcher()
     resBOW = mc2.build_result_qcx(hs, qcx)
-    fig4 = df2.show_match_analysis(hs, resBOW, N=5, fignum=4, figtitle='bagofwords')
+    fig4 = df2.show_match_analysis(hs, resBOW, N=5, fignum=4, figtitle=' bagofwords')
     
     params.__MATCH_TYPE__ = 'vsone'
     hs.load_matcher()
     res_vsone = mc2.build_result_qcx(hs, qcx, use_cache=True)
-    fig5 = df2.show_match_analysis(hs, res_vsone, N=5, fignum=5, figtitle='vsone')
+    fig5 = df2.show_match_analysis(hs, res_vsone, N=5, fignum=5, figtitle=' vsone')
 
 
     fig6 = df2.show_match_analysis(hs, resLNBNN, N=20, fignum=6,
-                                   figtitle='LNBNN', show_query=False)
+                                   figtitle=' LNBNN More', show_query=False)
 
     df2.update()
 

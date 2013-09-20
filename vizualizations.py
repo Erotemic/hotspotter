@@ -164,7 +164,7 @@ def plot_score_matrix(allres):
 # Dump logic
 def __dump_or_browse(allres, subdir=None):
     fig = df2.plt.gcf()
-    fig.tight_layout()
+    #fig.tight_layout()
     if BROWSE:
         print('[viz] Browsing Image')
         df2.show()

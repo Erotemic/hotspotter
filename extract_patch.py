@@ -43,7 +43,7 @@ def kp2_sf(kp):
 def get_patch(rchip, kp):
     'Returns cropped unwarped patch around a keypoint'
     (x, y, a, c, d) = kp
-    sf = kp2_sf(kp)
+    sf = np.sqrt(kp2_sf(kp))
     (chip_h, chip_w) = rchip.shape[0:2]
     ix1, ix2, xm = quantize_to_pixel_with_offset(x, sf, 0, chip_w)
     iy1, iy2, ym = quantize_to_pixel_with_offset(y, sf, 0, chip_h)
@@ -117,9 +117,10 @@ def get_top_scoring_patches(hs, res, N):
     rchip1 = hs.get_chip(qcx)
     def get_patches(hs, cx, rchip, fx):
         kp = hs.feats.cx2_kpts[cx][fx]
+        desc = hs.feats.cx2_desc[cx][fx]
         patch, subkp = get_patch(rchip, kp)
         wpatch, wkp = get_warped_patch(rchip, kp)
-        return (kp, subkp, wkp, patch, wpatch)
+        return (kp, subkp, wkp, patch, wpatch, desc)
     top_patches_list = []
     print('Top Scoring Features: cx, mx, feat_score')
     for cx, mx, feat_score in top_scoring_feats[0:N]:
@@ -132,25 +133,46 @@ def get_top_scoring_patches(hs, res, N):
         print('cx=%r, mx=%r, feat_score=%r' %(cx, mx, feat_score))
     return top_patches_list
 
-def viz_top_features(hs, res, N=10):
+def viz_top_features(hs, res, N=10, fignum=0):
+    from collections import defaultdict
     qcx = res.qcx
     top_patches_list = get_top_scoring_patches(hs, res, N)
-    fig = df2.figure(9001, plotnum=(N,4,1))
+    fig = df2.figure(fignum, plotnum=(N,4,1))
+    cx2_rchip = defaultdict(int)
+    cx2_kplist = defaultdict(list)
     def draw_one_kp(patch, kp, index):
         df2.imshow(patch, plotnum=(N,4,index))
         df2.draw_kpts2([kp], ell_color=(1,0,0), pts=True)
-
     for tx, (patches1, patches2, cx, feat_score) in enumerate(top_patches_list):
-        (kp1, subkp1, wkp1, patch1, wpatch1) = patches1
-        (kp2, subkp2, wkp2, patch2, wpatch2) = patches2
-        #
+        (kp1, subkp1, wkp1, patch1, wpatch1, desc1) = patches1
+        (kp2, subkp2, wkp2, patch2, wpatch2, desc2) = patches2
+        # draw on table
         draw_one_kp(patch1, subkp1, (tx*4)+1)
         draw_one_kp(wpatch1, wkp1, (tx*4)+2)
         draw_one_kp(patch2, subkp2, (tx*4)+3)
         draw_one_kp(wpatch2, wkp2, (tx*4)+4)
         df2.plt.gca().set_xlabel('cx=%r, score=%r' % (cx, feat_score))
-        #
+        # Get other info
+        cx2_rchip[cx] = hs.get_chip(cx)
+        cx2_kplist[qcx].append(kp1)
+        cx2_kplist[cx].append(kp2)
     df2.set_figtitle('chosen keypoint')
+    cx2_rchip[qcx] = hs.get_chip(qcx)
+    #
+    # Draw on full images
+    cx_keys  = cx2_kplist.keys()
+    cx_vals = map(len, cx2_kplist.values())
+    cx_list = [x for (y,x) in sorted(zip(cx_vals, cx_keys))][::-1]
+    num_chips = len(cx_list)
+    pltnum_fn = lambda ix: (int(np.ceil(num_chips/2)), 2, ix)
+    plotnum = pltnum_fn(1)
+    fig2 = df2.figure(fignum+1, plotnum=plotnum)
+    for ix, cx in enumerate(cx_list):
+        plotnum = pltnum_fn(ix+1)
+        fig2 = df2.figure(fignum+1, plotnum=plotnum)
+        rchip = cx2_rchip[cx]
+        df2.imshow(rchip)
+        df2.draw_kpts2(cx2_kplist[cx])
     #df2.draw()
 
 def test(hs, qcx, fx):
@@ -171,7 +193,7 @@ def test(hs, qcx, fx):
     #
     df2.set_figtitle('chosen keypoint')
 
-def test2(hs, qcx):
+def test2(hs, qcx, N=10):
     res = mc2.build_result_qcx(hs, qcx)
     viz_top_features(hs, res)
 
@@ -180,9 +202,10 @@ if __name__ == '__main__':
     if not 'hs' in vars():
         hs = ld2.HotSpotter()
         hs.load_all(params.GZ)
+    qcx = 111
     fx2_scale = sv2.keypoint_scale(hs.feats.cx2_kpts[qcx])
     fx = fx2_scale.argsort()[::-1][40]
-    qcx = 111
     #fx = 300
-    test(hs, qcx, fx)
+    #test(hs, qcx, fx)
+    test2(hs, qcx, N=10)
     exec(df2.present())

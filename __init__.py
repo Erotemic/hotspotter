@@ -51,6 +51,7 @@ import time
 import traceback
 import types
 import warnings
+from collections import defaultdict
 
 #------------------------------------------------------------------------------
 # Scientific Imports

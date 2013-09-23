@@ -12,7 +12,7 @@ import vizualizations as viz
 import params
 import itertools
 import numpy as np
-
+import db_stats
 
 def reload_module():
     import imp
@@ -172,33 +172,6 @@ def far_appart_splits(input_set, M, K):
         split_list.append((test,train))
     return split_list
 
-def get_db_names_info(hs):
-    nx2_cxs    = np.array(hs.get_nx2_cxs())
-    nx2_nChips = np.array(map(len, nx2_cxs))
-    uniden_cxs = np.hstack(nx2_cxs[[0, 1]])
-    num_uniden = nx2_nChips[0] + nx2_nChips[1] 
-    nx2_nChips[0:2] = 0 # remove uniden names
-    # Seperate singleton / multitons
-    multiton_nxs,  = np.where(nx2_nChips > 1)
-    singleton_nxs, = np.where(nx2_nChips == 1)
-    valid_nxs      = np.hstack([multiton_nxs, singleton_nxs]) 
-    num_names_with_gt = len(multiton_nxs)
-    # some cx information
-    multiton_cxs = nx2_cxs[multiton_nxs]
-    singleton_cxs = nx2_cxs[singleton_nxs]
-    multiton_nx2_nchips = map(len, multiton_cxs)
-    # print
-    info_str = '\n'.join([
-    ('----------------'),
-    ('[hs] Name Info: '+hs.db_name()),
-    (' * len(uniden_cxs)    = %d' % len(uniden_cxs)),
-    (' * len(valid_nxs)     = %d' % len(valid_nxs)),
-    (' * len(multiton_nxs)  = %d' % len(multiton_nxs)),
-    (' * len(singleton_nxs) = %d' % len(singleton_nxs)),
-    (' * multion_nxs #cxs stats: %r' % helpers.printable_mystats(multiton_nx2_nchips)),
-    ('----------------')])
-    print(info_str)
-    return locals()
 
 def split_nx2_cxs(test_cxs_list, csplit_size):
     for ix in xrange(len(test_cxs_list)):
@@ -221,7 +194,6 @@ def split_nx2_cxs(test_cxs_list, csplit_size):
             jx2_index_cxs[jx].append(ix_index_cxs)
     return jx2_test_cxs, jx2_index_cxs
     
-
 
 def leave_out(expt_func=None, split_test=False, **kwargs):
     '''
@@ -249,7 +221,7 @@ def leave_out(expt_func=None, split_test=False, **kwargs):
     # Load tables
     hs = ld2.HotSpotter(ld2.DEFAULT, load_basic=True)
     # Grab names
-    db_names_info = get_db_names_info(hs)
+    db_names_info = db_stats.get_db_names_info(hs)
     nx2_cxs = db_names_info['nx2_cxs']
     valid_nxs = db_names_info['valid_nxs']
     multiton_nxs = db_names_info['multiton_nxs']

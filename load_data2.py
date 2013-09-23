@@ -274,6 +274,8 @@ class HotSpotter(DynStruct):
     def get_kpts(hs, cx):
         return hs.feats.cx2_kpts[cx]
     #--------------
+    def cx2_rchip_size(hs, cx):
+        return Image.open(hs.cpaths.cx2_rchip_path[cx]).size
     def get_cx2_rchip_size(hs):
         cx2_rchip_size = [Image.open(rchip_path).size
          for rchip_path in hs.cpaths.cx2_rchip_path]

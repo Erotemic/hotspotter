@@ -486,6 +486,7 @@ def draw_kpts2(kpts, offset=(0,0),
     ell_actors = []
     eps = 1E-9
     # data
+    kpts = np.array(kpts)   
     kptsT = kpts.T
     x = kptsT[0,:] + offset[0]
     y = kptsT[1,:] + offset[1]

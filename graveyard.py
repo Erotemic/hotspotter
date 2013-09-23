@@ -111,3 +111,23 @@ if not 'hs' in vars():
     df2.update()
     fx2_feature = hs.get_feature_fn(qcx)
 
+def target_dsize(img, M):
+    # Get img bounds under transformation
+    (minx, maxx, miny, maxy) = sv2.transformed_bounds(rchip, M)
+    Mw, Mh = (maxx-minx, maxy-miny)
+    # If any border forced below, return a translation to append to M
+    tx = -min(0, minx)
+    ty = -min(0, miny)
+    # Round to integer size
+    dsize = tuple(map(int, np.ceil((Mw, Mh))))
+    return dsize, tx, ty
+
+    def get_features(cx):
+        rchip = hs.get_chip(cx)
+        rchip_size = cx2_rchip_size[cx]
+        fx2_kp   = hs.feats.cx2_kpts[cx]
+        fx2_scale = sv2.keypoint_scale(fx2_kp)
+        fx2_desc = hs.feats.cx2_desc[cx]
+        return rchip, rchip_size, fx2_kp, fx2_scale, fx2_desc
+    rchip1, rchip_size1, fx2_kp1, fx2_scale1, fx2_desc1 = get_features(qcx)
+    rchip2, rchip_size2, fx2_kp2, fx2_scale2, fx2_desc2 = get_features(cx)

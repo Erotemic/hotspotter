@@ -6,7 +6,7 @@ import params
 import load_data2 as ld2
 import helpers
 import numpy as np
-
+from PIL import Image
 
 def dir_size(path):
     if sys.platform == 'win32':
@@ -137,7 +137,7 @@ class DirectoryStats(object):
                 db_stats.print_name_info()
             elif 'images' in db_stats.version:
                 print(db_stats.db_dir)
-                print('num images: %d' % num_images(db_stats.db_dir))
+                print('num images: %d' % helpers.num_images_in_dir(db_stats.db_dir))
         pass
 
 #--------------------
@@ -148,14 +148,6 @@ def has_internal_tables(path):
         internal_dir+'/name_table.csv',
         internal_dir+'/image_table.csv']
     return all([exists(path) for path in tables])
-
-def num_images(path):
-    num_imgs = 0
-    for root, dirs, files in os.walk(path):
-        for fname in files:
-            if helpers.matches_image(fname):
-                num_imgs += 1
-    return num_imgs
 
 def is_imgdir(path):
     if not isdir(path):
@@ -247,6 +239,10 @@ def is_not_leaf(path):
     return False
 
 def get_db_names_info(hs):
+    return db_info(hs)
+
+def db_info(hs):
+    # Name Info
     nx2_cxs    = np.array(hs.get_nx2_cxs())
     nx2_nChips = np.array(map(len, nx2_cxs))
     uniden_cxs = np.hstack(nx2_cxs[[0, 1]])
@@ -257,21 +253,60 @@ def get_db_names_info(hs):
     singleton_nxs, = np.where(nx2_nChips == 1)
     valid_nxs      = np.hstack([multiton_nxs, singleton_nxs]) 
     num_names_with_gt = len(multiton_nxs)
-    # some cx information
+    # Chip Info
+    cx2_roi = hs.tables.cx2_roi
     multiton_cxs = nx2_cxs[multiton_nxs]
     singleton_cxs = nx2_cxs[singleton_nxs]
     multiton_nx2_nchips = map(len, multiton_cxs)
+    valid_cxs = hs.get_valid_cxs()
+    num_chips = len(valid_cxs)
+    # Image info
+    gx2_gname  = hs.tables.gx2_gname
+    cx2_gx     = hs.tables.cx2_gx
+    num_images = len(gx2_gname)
+    img_list = helpers.list_images(hs.dirs.img_dir, fullpath=True)
+    def wh_print_stats(wh_list):
+        from collections import OrderedDict
+        if len(wh_list) == 0:
+            return '{empty}'
+        stat_dict = OrderedDict(
+            [( 'max', wh_list.max(0)),
+             ( 'min', wh_list.min(0)),
+             ('mean', wh_list.mean(0)),
+             ( 'std', wh_list.std(0))])
+        arr2str = lambda var: '['+(', '.join(map(lambda x: '%.1f' % x, var)))+']'
+        ret = (',\n    '.join(['%r:%s' % (key, arr2str(val)) for key, val in stat_dict.items()]))
+        return '{\n    ' + ret +'}'
+    def get_img_size_list(img_list):
+        ret = []
+        for img_fpath in img_list:
+            try:
+                size = Image.open(img_fpath).size
+                ret.append(size)
+            except Exception as ex:
+                pass
+        return ret
 
-    num_chips = np.array(nx2_nChips).sum()
+    print('reading image sizes')
+    chip_size_list = cx2_roi[:,2:4]
+    img_size_list  = np.array(get_img_size_list(img_list))
+    img_size_stats  = wh_print_stats(img_size_list)
+    chip_size_stats = wh_print_stats(chip_size_list)
+    multiton_stats  = helpers.printable_mystats(multiton_nx2_nchips)
+
     # print
     info_str = '\n'.join([
-    (' Name Info: '+hs.db_name()),
-    (' * len(uniden_cxs)    = %d' % len(uniden_cxs)),
-    (' * len(all_cxs)       = %d' % num_chips),
-    (' * len(valid_nxs)     = %d' % len(valid_nxs)),
-    (' * len(multiton_nxs)  = %d' % len(multiton_nxs)),
-    (' * len(singleton_nxs) = %d' % len(singleton_nxs)),
-    (' * multion_nxs #cxs stats: %r' % helpers.printable_mystats(multiton_nx2_nchips)) ])
+    (' DB Info: '+hs.db_name()),
+    (' * #Img   = %d' % num_images),
+    (' * #Chips = %d' % num_chips),
+    (' * #Names = %d' % len(valid_nxs)),
+    (' * #Unidentified Chips = %d' % len(uniden_cxs)),
+    (' * #Singleton Names    = %d' % len(singleton_nxs)),
+    (' * #Multiton Names     = %d' % len(multiton_nxs)),
+    (' * Chips per Multiton Names = %s' % (multiton_stats,)), 
+    (' * #Img in dir = %d' % len(img_list)),
+    (' * Image Size Stats = %s' % (img_size_stats,)),
+    (' * Chip Size Stats = %s' % (chip_size_stats,)),])
     print(info_str)
     return locals()
 

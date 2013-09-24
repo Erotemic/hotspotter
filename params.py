@@ -35,6 +35,7 @@ if sys.platform == 'linux2':
 
 # Common databases I use
 GZ        = WORK_DIR+'/GZ_ALL'
+GZ        = WORK_DIR+'/GZ_ALL'
 PZ        = WORK_DIR+'/PZ_FlankHack'
 FROGS     = WORK_DIR+'/Frogs'
 WILDDOGS  = WORK_DIR+'/WD_Siva'
@@ -47,6 +48,12 @@ OXFORD    = WORK_DIR+'/Oxford_Buildings'
 PARIS     = WORK_DIR+'/Paris_Buildings'
 SONOGRAMS = WORK_DIR+'/sonograms'
 PZ2 = WORK_DIR+'/PZ-Sweatwater'
+PZ_DanExt_Test = WORK_DIR + '/PZ_DanExt_Test'
+PZ_DanExt_All = WORK_DIR2 + '/PZ_DanExt_All'
+PZ_Marianne = WORK_DIR + '/PZ_Marianne'
+Wildebeast_ONLY_MATCHES = WORK_DIR + '/Wildebeast_ONLY_MATCHES'
+Wildebeast = WORK_DIR2 + '/Wildebeast'
+JAG_Kieryn = WORK_DIR2 + '/JAG_Kieryn'
 
 
 dev_databases = {
@@ -60,7 +67,14 @@ dev_databases = {
     'WS_HARD'   : WS_HARD,
     'MOTHERS'   : MOTHERS,
     'OXFORD'    : OXFORD,
-    'PARIS'     : PARIS}
+    'PARIS'     : PARIS,
+    'PZ_Marianne' : PZ_Marianne,
+    'PZ_DanExt_Test': PZ_DanExt_Test,
+    'PZ_DanExt_All': PZ_DanExt_All,
+    'Wildebeast_ONLY_MATCHES' : Wildebeast_ONLY_MATCHES,
+    'Wildebeast' : Wildebeast,
+    'JAG_Kieryn' : JAG_Kieryn,
+}
 
 #DEFAULT = NAUTS
 DEFAULT = MOTHERS

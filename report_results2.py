@@ -23,8 +23,6 @@ from itertools import izip
 from os.path import realpath, join, normpath
 import re
 
-__DUMP__ = True # or __BROWSE__
-
 REPORT_MATRIX  = False
 REPORT_MATRIX_VIZ = False
 
@@ -137,6 +135,7 @@ def res2_true_and_false(hs, res, SV):
     top_score = cx2_score[top_cx]
     # Get the true and false ground truth ranks
     qnx         = hs.tables.cx2_nx[qcx]
+    if qnx <= 1: qnx = -1 # disallow uniden animals from being marked as true
     top_nx      = hs.tables.cx2_nx[top_cx]
     true_ranks  = np.where(np.logical_and(top_nx == qnx, top_cx != qcx))[0]
     false_ranks = np.where(np.logical_and(top_nx != qnx, top_cx != qcx))[0]
@@ -345,7 +344,9 @@ def build_rankres_str(allres):
     def ranks_less_than_(thresh, intrain=None):
         #Find the number of ranks scoring more than thresh
         # Get statistics with respect to the training set
-        if intrain is None: # report all
+        if len(test_samp_with_gt) == 0:
+            test_cxs_ = np.array([])
+        elif intrain is None: # report all
             test_cxs_ =  test_samp_with_gt
         else: # report either or
             in_train_flag = flag_cxs_fn(test_samp_with_gt, train_samp)
@@ -596,7 +597,9 @@ def dump_all_queries(allres):
     test_cxs = allres.hs.test_sample_cx
     print('[rr2] dumping all %r queries' % len(test_cxs))
     for qcx in test_cxs:
-        viz.plot_cx(allres, qcx, 'analysis', 'allqueries')
+        viz.plot_cx(allres, qcx, 'analysis', subdir='allqueries',
+                    annotations=False, title_aug=' noanote')
+        viz.plot_cx(allres, qcx, 'analysis', subdir='allqueries')
 
 
 def dump_orgres_matches(allres, orgres_type):

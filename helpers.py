@@ -62,11 +62,20 @@ def __DEPRICATED__(func):
 
 # --- Images ----
 
+def num_images_in_dir(path):
+    'returns the number of images in a directory'
+    num_imgs = 0
+    for root, dirs, files in os.walk(path):
+        for fname in files:
+            if matches_image(fname):
+                num_imgs += 1
+    return num_imgs
+
 def matches_image(fname):
     fname_ = fname.lower()
     return any([fnmatch.fnmatch(fname_, pat) for pat in ['*.jpg', '*.png']])
 
-def list_images(img_dpath, ignore_list=[], recursive=True):
+def list_images(img_dpath, ignore_list=[], recursive=True, fullpath=False):
     ignore_set = set(ignore_list)
     gname_list_ = []
     assert_path(img_dpath)
@@ -74,13 +83,17 @@ def list_images(img_dpath, ignore_list=[], recursive=True):
     for root, dlist, flist in os.walk(img_dpath):
         for fname in iter(flist):
             gname = join(relpath(root, img_dpath), fname).replace('\\','/').replace('./','')
-            gname_list_.append(gname)
+            if fullpath:
+                gname_list_.append(join(root, gname))
+            else:
+                gname_list_.append(gname)
         if not recursive:
             break
     # Filter out non images or ignorables
     gname_list = [gname for gname in iter(gname_list_) 
                   if not gname in ignore_set and matches_image(gname)]
     return gname_list
+
 
 # --- Strings ----
 
@@ -140,18 +153,20 @@ def intersect_ordered(list1, list2):
 def printable_mystats(_list):
     stat_dict = mystats(_list)
     ret = '{'
-    ret += ', '.join(['%r:%.2f' % (key, val) for key, val in stat_dict.iteritems()])
+    ret += ', '.join(['%r:%.1f' % (key, val) for key, val in stat_dict.items()])
     ret += '}'
     return ret
 
 def mystats(_list):
+    from collections import OrderedDict
     if len(_list) == 0:
         return {'empty_list':True}
     nparr = np.array(_list)
-    return {'min'   : nparr.min(),
-            'mean'  : nparr.mean(),
-            'stddev': np.sqrt(nparr.var()),
-            'max'   : nparr.max()}
+    return OrderedDict([
+        ('max',nparr.max()),
+        ('min',nparr.min()),
+        ('mean',nparr.mean()),
+        ('std',nparr.std())])
 
 def myprint(input=None, prefix='', indent='', lbl=''):
     if len(lbl) > len(prefix): 

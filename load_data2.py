@@ -260,6 +260,8 @@ class HotSpotter(DynStruct):
     def get_other_cxs(hs, cx):
         cx2_nx   = hs.tables.cx2_nx
         nx = cx2_nx[cx]
+        if nx <= 1:
+            return np.array([])
         other_cx_, = np.where(cx2_nx == nx)
         other_cx  = other_cx_[other_cx_ != cx]
         return other_cx

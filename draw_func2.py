@@ -357,7 +357,7 @@ def get_fig(fignum=None):
         fignum = fig.number
     else:
         try:
-            fig = plt.figure(fignum)
+            fig = plt.figure(fignum, **fig_kwargs)
         except Exception as ex:
             print(repr(ex))
             warnings.warn(repr(ex))
@@ -683,7 +683,10 @@ def imshow(img,
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
                   fm=None, fs=None, fignum=None, plotnum=None,
                   title=None, vert=True, all_kpts=True, 
-                  draw_lines=True, ell_alpha=None, **kwargs):
+                  draw_lines=True,
+                  draw_ell=True, 
+                  draw_pts=True,
+                  ell_alpha=None, **kwargs):
     '''Draws feature matches 
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''
@@ -709,14 +712,14 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
                 **kwargs)
     if all_kpts:
         # Draw all keypoints as simple points
-        all_args = dict(ell=False, pts=True, pts_color=GREEN, pts_size=2, ell_alpha=ell_alpha)
+        all_args = dict(ell=False, pts=draw_pts, pts_color=GREEN, pts_size=2, ell_alpha=ell_alpha)
         draw_kpts2(kpts1, **all_args)
         draw_kpts2(kpts2, offset=(woff,hoff), **all_args) 
     if len(fm) == 0:
         printDBG('[df2] There are no feature matches to plot!')
     else:
         # Draw matching ellipses
-        ell_args = dict(pts=True, pts_color=ORANGE, pts_size=4, ell_alpha=ell_alpha)
+        ell_args = dict(ell=draw_ell, pts=draw_pts, pts_color=ORANGE, pts_size=4, ell_alpha=ell_alpha)
         draw_kpts2(kpts1[fm[:,0]], **ell_args)
         draw_kpts2(kpts2[fm[:,1]], offset=(woff,hoff), **ell_args)
         # Draw matching lines
@@ -803,9 +806,11 @@ def show_matches4(hs, qcx, cx2_score,
         title = title_pref + title
     if not title_suff is None:
         title = title + title_suff
-        fig, ax = show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, 
-                                fignum=fignum, plotnum=plotnum,
-                                title=title, **kwargs)
+    # SHOW MATCHES 2:
+    fig, ax = show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, 
+                            fignum=fignum, plotnum=plotnum,
+                            title=title, **kwargs)
+    # Finish annotations
     if is_true_match:
         _draw_border(ax, GREEN, 6)
     else:
@@ -841,7 +846,7 @@ def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     imshow(rchip,fignum=fignum,title=title,**kwargs)
     draw_kpts2(kpts)
 
-def show_chip(hs, cx=None, allres=None, res=None, info=True, **kwargs):
+def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True, **kwargs):
     if not res is None:
         cx = res.qcx
     if not allres is None:
@@ -859,6 +864,14 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, **kwargs):
         num_gt = len(hs.get_other_indexed_cxs(cx))
         title_str += ' #gt=%r' % num_gt
     fig, ax = imshow(rchip1, title=title_str, **kwargs)
+    if not res is None: 
+        cx2_gx = hs.tables.cx2_gx
+        gx2_gname = hs.tables.gx2_gname
+        gx = cx2_gx[cx]
+        gname = gx2_gname[gx]
+        ax.set_xlabel(gname)
+    if not draw_kpts:
+        return
     kpts_args = dict(offset=(0,0), ell_linewidth=1.5, ell=True, pts=False)
     # Draw keypoints with groundtruth information
     if not res is None:
@@ -891,7 +904,7 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, **kwargs):
         #res.cx2_fm_V = mc2.fix_cx2_fm_shape(res.cx2_fm_V)
         #mc2.debug_cx2_fm_shape(res.cx2_fm_V)
         fx_list1 = [fm[:,0] for fm in res.cx2_fm_V]
-        fx_list2 = [fm[:,0] for fm in res.cx2_fm_V[gt_cxs]]
+        fx_list2 = [fm[:,0] for fm in res.cx2_fm_V[gt_cxs]] if len(gt_cxs) > 0 else np.array([])
         matched_fx = stack_unique(fx_list1)
         true_matched_fx = stack_unique(fx_list2)
         noise_fx = np.setdiff1d(all_fx, matched_fx)
@@ -912,11 +925,6 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, **kwargs):
         _kpts_helper(kpts_noise,   RED, .1, 'Unverified')
         _kpts_helper(kpts_match,  BLUE, .4, 'Verified')
         _kpts_helper(kpts_true,  GREEN, .6, 'True Matches')
-        cx2_gx = hs.tables.cx2_gx
-        gx2_gname = hs.tables.gx2_gname
-        gx = cx2_gx[cx]
-        gname = gx2_gname[gx]
-        ax.set_xlabel(gname)
         #plt.legend(*zip(*legend_tups), framealpha=.2)
     # Just draw boring keypoints
     else:
@@ -966,22 +974,24 @@ def show_gt_matches(hs, res, SV=True, fignum=3):
                        fignum=fignum, 
                        all_kpts=True)
 
-def show_match_analysis(hs, res, N=5, fignum=3, figtitle='', show_query=True):
-    import draw_func2 as df2
-    #df2.rrr()
-    figtitle= ('qcx=%r -- Analysis' % res.qcx) + figtitle
+def show_match_analysis(hs, res, N=5, fignum=3, figtitle='',
+                        show_query=True,
+                        annotations=True):
     topN_cxs = res.topN_cxs(N)
+    topscore = res.cx2_score_V[topN_cxs][0]
+    figtitle= ('topscore=%r -- qcx=%r' % (topscore, res.qcx)) + figtitle
     all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
     max_cols = min(5,N)
-    return df2._show_chip_matches(hs,
-                           res,
-                           gt_cxs=missed_gt_cxs, 
-                           topN_cxs=topN_cxs,
-                           figtitle=figtitle,
-                           max_cols=max_cols,
-                           show_query=show_query,
-                           fignum=fignum)
+    return _show_chip_matches(hs,
+                              res,
+                              gt_cxs=missed_gt_cxs, 
+                              topN_cxs=topN_cxs,
+                              figtitle=figtitle,
+                              max_cols=max_cols,
+                              show_query=show_query,
+                              fignum=fignum,
+                              annotations=annotations)
 
 def _show_chip_matches(hs,
                        res,
@@ -991,7 +1001,8 @@ def _show_chip_matches(hs,
                        gt_cxs=None,
                        show_query=True,
                        all_kpts=False,
-                       fignum=3):
+                       fignum=3,
+                       annotations=True):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
     print('[df2] Show chip matches:')
     print('[df2] * len(topN_cxs)=%r' % (len(topN_cxs),))
@@ -1041,7 +1052,7 @@ def _show_chip_matches(hs,
         printDBG('Plotting Query:')
         num_query_cols = num_query_subplts
         plotnum=(num_rows, num_cols, 1)
-        show_chip(hs, res=res, plotnum=plotnum)
+        show_chip(hs, res=res, plotnum=plotnum, draw_kpts=annotations)
 
     # Plot Ground Truth
     if not gt_cxs is None:
@@ -1054,7 +1065,8 @@ def _show_chip_matches(hs,
             title_aug = 'rank=%r ' % orank
             show_matches3(res, hs, cx, all_kpts=all_kpts, 
                         title_aug=title_aug,
-                        ell_alpha=.5, plotnum=plotnum)
+                        ell_alpha=.5, plotnum=plotnum, draw_lines=annotations,
+                          draw_ell=annotations, draw_pts=annotations)
 
     # Plot Top N
     if not topN_cxs is None:
@@ -1066,10 +1078,11 @@ def _show_chip_matches(hs,
             orank = np.where(ranked_cxs == cx)[0][0] + 1
             title_aug = 'rank=%r ' % orank
             show_matches3(res, hs, cx,
-                        title_aug=title_aug,
-                        plotnum=plotnum,
-                        ell_alpha=.5,
-                        all_kpts=all_kpts)
+                          title_aug=title_aug,
+                          plotnum=plotnum,
+                          ell_alpha=.5,
+                          all_kpts=all_kpts, draw_lines=annotations,
+                          draw_ell=annotations, draw_pts=annotations)
     set_figtitle(figtitle)
     return fig
 

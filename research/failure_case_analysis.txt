@@ -108,3 +108,32 @@ and evaluation.
  + we have a dynamic data structure 
 
 
+
+-----------
+
+In the external: 
+
+3 Folders
+
++ OPC zebra Pic: (think this is the same as pdb)
+|    Contains 5,341 images of plains zebras. (some grevy's)
+|    some are corrupted. 
+|    The naming scheme does not indicate any ground truth. 
+|    There is a RESOURCE.FRK folder in here with what looks like  498 corrupted tif
+|    images. Maybe its just metadata though. 
++ Sweetwaters pdb
+L_+ Sweetwaters(8_03).fdb (54.2 MB)
+|    (unsure what is in this)
+L_+ Sweetwaters Portfolio Pics folder with 5,343 images
+| L__ Also hae RESOURCE.FRK
+|  
++ Zebra pics for testing
+|  (123 Images. Mostly Plains + Some Grevy's. No ROI. 
+    No GT, Mostly Centered. Good variation.)
+
+
+
+Wildebeast: 
+Lots of images. (over 1000) maybe we have ground truth. I haven't parsed it
+yet. 
+

@@ -72,7 +72,8 @@ def print_top_res_scores(hs, res, view_top=10, SV=True):
     print('---------------------------------------')
     print('---------------------------------------')
 
-def plot_cx(allres, cx, style='kpts', subdir=None):
+def plot_cx(allres, cx, style='kpts', subdir=None, annotations=True,
+            title_aug=''):
     hs    = allres.hs
     qcx2_res = allres.qcx2_res
     res = qcx2_res[cx]
@@ -93,7 +94,8 @@ def plot_cx(allres, cx, style='kpts', subdir=None):
         df2.show_topN_matches(hs, res, N=5, fignum=FIGNUM)
     if 'analysis' == style:
         subdir = 'analysis' if subdir is None else subdir
-        df2.show_match_analysis(hs, res, N=5, fignum=FIGNUM)
+        df2.show_match_analysis(hs, res, N=5, fignum=FIGNUM,
+                                annotations=annotations, figtitle=title_aug)
     subdir += allres.title_suffix
     __dump_or_browse(allres, subdir)
 

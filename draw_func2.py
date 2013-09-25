@@ -7,7 +7,7 @@ if matplotlib.get_backend() != 'Qt4Agg':
     #matplotlib.rcParams['toolbar'] = 'None'
 from matplotlib import gridspec
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle, Circle
+from matplotlib.patches import Rectangle, Circle, FancyArrow
 from matplotlib.transforms import Affine2D
 from PyQt4.QtCore import Qt
 import cv2
@@ -32,6 +32,8 @@ ORANGE = np.array((255, 127,   0, 255))/255.0
 RED    = np.array((255,   0,   0, 255))/255.0
 GREEN  = np.array((  0, 255,   0, 255))/255.0
 BLUE   = np.array((  0,   0, 255, 255))/255.0
+BLACK   = np.array((  0,   0,  0, 255))/255.0
+WHITE   = np.array((255,   255, 255, 255))/255.0
 
 def my_prefs():
     global LINE_COLOR
@@ -125,7 +127,8 @@ def save_figure(fignum=None, fpath=None, usetitle=False):
         fpath = os.path.join(fpath, title)
     # Sanatize the filename
     fpath_clean = sanatize_img_fpath(fpath)
-    print('[df2] save_figure() '+repr(os.path.split(fpath_clean)[1]))
+    fname_clean = os.path.split(fpath_clean)[1]
+    print('[df2] save_figure() %r' % (fpath_clean,))
     fig.savefig(fpath_clean, dpi=DPI)
 
 def update_figure_size(fignum, width, height):
@@ -173,7 +176,10 @@ def all_figures_tile(num_rc=(4,4),
                      wh=(350,250),
                      xy_off=(0,0),
                      wh_off=(0,10),
-                     row_first=True):
+                     row_first=True,
+                     no_tile=False):
+    if no_tile:
+        return
     num_rows,num_cols = num_rc
     w,h = wh
     x_off, y_off = xy_off
@@ -363,6 +369,11 @@ def get_fig(fignum=None):
             warnings.warn(repr(ex))
             fig = plt.gcf()
     return fig
+
+def get_ax(fignum=None, plotnum=None):
+    figure(fignum=fignum, plotnum=plotnum)
+    ax = plt.gca()
+    return ax
 
 def figure(fignum=None,
            doclf=False,
@@ -833,7 +844,7 @@ def _axis_xy_width_height(ax):
     height = (autoAxis[3]-autoAxis[2])+0.4
     return xy, width, height
     
-def _draw_border(ax, color=GREEN, lw=4):
+def _draw_border(ax, color=GREEN, lw=2):
     'draws rectangle border around a subplot'
     xy, width, height = _axis_xy_width_height(ax)
     rect = Rectangle(xy, width, height, lw=lw)
@@ -1088,7 +1099,7 @@ def _show_chip_matches(hs,
 
 
     #----
-def draw_sift(desc):
+def draw_sift(desc, kp=None):
     '''
     desc = np.random.rand(128)
     desc = desc / np.sqrt((desc**2).sum())
@@ -1099,7 +1110,7 @@ def draw_sift(desc):
     DSCALE = .25
     XYSCALE = .5
     XYSHIFT = -.75
-    THETA_SHIFT = tau/4
+    THETA_SHIFT = 1/8 * tau
     # SIFT CONSTANTS
     NORIENTS = 8; NX = 4; NY = 4; NBINS = NX * NY
     def cirlce_rad2xy(radians, mag):
@@ -1109,26 +1120,80 @@ def draw_sift(desc):
     dim_mag   = desc / 255.0
     dim_theta = np.tile(discrete_theta, (NBINS, 1)).flatten()
     dim_xy = np.array(zip(*cirlce_rad2xy(dim_theta, dim_mag))) 
-    xyt_gen = itertools.product(xrange(NX),xrange(NY),xrange(NORIENTS))
-    xy_gen  = itertools.product(xrange(NX),xrange(NY))
+    yxt_gen = itertools.product(xrange(NY),xrange(NX),xrange(NORIENTS))
+    yx_gen  = itertools.product(xrange(NY),xrange(NX))
+
+    # Transforms
+    axTrans = ax.transData
+    kpTrans = None
+    if kp is None:
+        kp = [0, 0, 1, 0, 1]
+    kp = np.array(kp)   
+    kpT = kp.T
+    x, y, a, c, d = kpT[:,0]
+    a_ = 1/np.sqrt(a) 
+    b_ = c/(-np.sqrt(a)*d - a*np.sqrt(d))
+    d_ = 1/np.sqrt(d)
+    transMat = [( a_, b_, x),
+                ( 0,  d_, y),
+                ( 0,  0, 1)]
+    kpTrans = Affine2D(transMat)
+    axTrans = ax.transData
+    #print('\ntranform=%r ' % transform)
     # Draw Arms
-    for x,y,t in xyt_gen:
-        print((x, y, t))
-        index = x*(NY*NORIENTS) + y*(NORIENTS) + t
-        print(index)
+    arrow_patches = []
+    arrow_patches2 = []
+    for y,x,t in yxt_gen:
+        #print((x, y, t))
+        #index = 127 - ((NY - 1 - y)*(NX*NORIENTS) + (NX - 1 - x)*(NORIENTS) + (NORIENTS - 1 - t))
+        #index = ((y)*(NX*NORIENTS) + (x)*(NORIENTS) + (t))
+        index = ((NY - 1 - y)*(NX*NORIENTS) + (NX - 1 - x)*(NORIENTS) + (t))
+        #print(index)
         (dx, dy) = dim_xy[index]
-        x_data = [(x*XYSCALE)+XYSHIFT, (x*XYSCALE) + (dx*DSCALE) + XYSHIFT]
-        y_data = [(y*XYSCALE)+XYSHIFT, (y*XYSCALE) + (dy*DSCALE) + XYSHIFT]
-        dim_artist = plt.Line2D(x_data, y_data, color=(0,0,1))
-        ax.add_artist(dim_artist)
+        arw_x  = ( x*XYSCALE) + XYSHIFT
+        arw_y  = ( y*XYSCALE) + XYSHIFT
+        arw_dy = (dy*DSCALE) * 1.5 # scale for viz Hack
+        arw_dx = (dx*DSCALE) * 1.5
+        posA = (arw_x, arw_y)
+        posB = (arw_x+arw_dx, arw_y+arw_dy)
+        arw_patch = FancyArrow(arw_x, arw_y, arw_dx, arw_dy, head_width=.0001,
+                               transform=kpTrans, length_includes_head=False)
+        arw_patch2 = FancyArrow(arw_x, arw_y, arw_dx, arw_dy, head_width=.0001,
+                                transform=kpTrans, length_includes_head=False)
+        arrow_patches.append(arw_patch)
+        arrow_patches2.append(arw_patch2)
     # Draw Circles
-    for x,y in xy_gen:
+    circle_patches = []
+    for y,x in yx_gen:
         circ_xy = ((x*XYSCALE)+XYSHIFT, (y*XYSCALE)+XYSHIFT)
         circ_radius = DSCALE
-        circ_artist = plt.Circle(circ_xy, circ_radius, color=(1,0,0))
-        circ_artist.set_facecolor('none')
-        ax.add_artist(circ_artist)
+        circ_patch = Circle(circ_xy, circ_radius,
+                               transform=kpTrans)
+        circle_patches.append(circ_patch)
+        
+    circ_collection = matplotlib.collections.PatchCollection(circle_patches)
+    circ_collection.set_facecolor('none')
+    circ_collection.set_transform(axTrans)
+    circ_collection.set_edgecolor(BLACK)
+    circ_collection.set_alpha(.5)
 
+    # Body of arrows
+    arw_collection = matplotlib.collections.PatchCollection(arrow_patches)
+    arw_collection.set_transform(axTrans)
+    arw_collection.set_linewidth(.5)
+    arw_collection.set_color(RED)
+    arw_collection.set_alpha(1)
+
+    #Border of arrows
+    arw_collection2 = matplotlib.collections.PatchCollection(arrow_patches2)
+    arw_collection2.set_transform(axTrans)
+    arw_collection2.set_linewidth(1)
+    arw_collection2.set_color(BLACK)
+    arw_collection2.set_alpha(1)
+
+    ax.add_collection(circ_collection)
+    ax.add_collection(arw_collection2)
+    ax.add_collection(arw_collection)
 
 if __name__ == '__main__':
     print('[df2] __main__ = draw_func2.py')

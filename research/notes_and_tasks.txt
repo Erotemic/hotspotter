@@ -137,3 +137,29 @@ Wildebeast:
 Lots of images. (over 1000) maybe we have ground truth. I haven't parsed it
 yet. 
 
+-----------------------------
+Contribution Idea: 
+
+Problem: When is a keypoint match actually a the same keypoint? 
+
+Proposed solution: 
+1) Find a keypoint's best $k$ matches. 
+2) Increase / Decrease the scale of the keypoint in the warped affine frame. 
+For both the query keypoints and its results. 
+
+Observation: Sift is a histogram. Histogram intersection distance is probably 
+more appropriate when the resources are available. 
+
+The distance between scales at matching keypoints should be CONSISTENT. 
+-----------------------------
+
+Observation: small keypoints are can cause disproportinatelly high scores. 
+(Example: cx=126 (02.135.jpg) PZ_DanExt_All
+python extract_patch.py PZ_DanExt_All --qcx 126
+(Lol, these are just numbers)
+
+Observation: Big keypoints lose too many details and are not reliable: 
+(Example: cx=1293 (09_321.jpg) PZ_DanExt_All
+python extract_patch.py PZ_DanExt_All --qcx 1293
+
+

@@ -2,6 +2,7 @@ from __future__ import division,print_function
 import draw_func2 as df2
 import helpers
 import load_data2 as ld2
+import report_results2 as rr2
 import match_chips2 as mc2
 import oxsty_results
 import params
@@ -72,17 +73,21 @@ def print_top_res_scores(hs, res, view_top=10, SV=True):
     print('---------------------------------------')
     print('---------------------------------------')
 
-def plot_cx(allres, cx, style='kpts', subdir=None, annotations=True,
-            title_aug=''):
+def plot_cx(allres, cx, style='kpts', subdir=None, annotations=True, title_aug=''):
     hs    = allres.hs
     qcx2_res = allres.qcx2_res
     res = qcx2_res[cx]
+    plot_cx2(hs, res, cx, style=style, subdir=subdir, annotations=annotations, title_aug=title_aug)
+
+def plot_cx2(hs, res, style='kpts', subdir=None, annotations=True, title_aug=''):
     #cx_info(allres, cx)
+    cx = res.qcx
+    title_suffix = rr2.get_title_suffix()
     if 'kpts' == style:
         subdir = 'plot_cx' if subdir is None else subdir
         rchip = hs.get_chip(cx)
         kpts  = hs.feats.cx2_kpts[cx]
-        title = 'cx: %d\n%s' % (cx, allres.title_suffix)
+        title = 'cx: %d\n%s' % (cx, title_suffix)
         print('[viz] Plotting'+title)
         df2.imshow(rchip, fignum=FIGNUM, title=title, doclf=True)
         df2.draw_kpts2(kpts)
@@ -96,8 +101,8 @@ def plot_cx(allres, cx, style='kpts', subdir=None, annotations=True,
         subdir = 'analysis' if subdir is None else subdir
         df2.show_match_analysis(hs, res, N=5, fignum=FIGNUM,
                                 annotations=annotations, figtitle=title_aug)
-    subdir += allres.title_suffix
-    __dump_or_browse(allres, subdir)
+    subdir += title_suffix
+    __dump_or_browse(hs, subdir)
 
 def plot_rank_stem(allres, orgres_type='true'):
     print('[viz] plotting rank stem')
@@ -114,7 +119,7 @@ def plot_rank_stem(allres, orgres_type='true'):
     df2.set_xlabel('query chip indeX (qcx)')
     df2.set_ylabel('groundtruth chip ranks')
     #df2.set_yticks(list(seen_ranks))
-    __dump_or_browse(allres, 'rankviz')
+    __dump_or_browse(allres.hs, 'rankviz')
 
 def plot_rank_histogram(allres, orgres_type): 
     print('[viz] plotting '+orgres_type+' rank histogram')
@@ -126,7 +131,7 @@ def plot_rank_histogram(allres, orgres_type):
     df2.set_xlabel('ground truth ranks')
     df2.set_ylabel('frequency')
     df2.legend()
-    __dump_or_browse(allres, 'rankviz')
+    __dump_or_browse(allres.hs, 'rankviz')
     
 def plot_score_pdf(allres, orgres_type, colorx=0.0, variation_truncate=False): 
     print('[viz] plotting '+orgres_type+' score pdf')
@@ -142,7 +147,7 @@ def plot_score_pdf(allres, orgres_type, colorx=0.0, variation_truncate=False):
     df2.set_xlabel('score')
     df2.set_ylabel('frequency')
     df2.legend()
-    __dump_or_browse(allres, 'scoreviz')
+    __dump_or_browse(allres.hs, 'scoreviz')
 
 def plot_score_matrix(allres):
     print('[viz] plotting score matrix')
@@ -161,10 +166,10 @@ def plot_score_matrix(allres):
     df2.imshow(score_img, fignum=FIGNUM)
     df2.set_xlabel('database')
     df2.set_ylabel('queries')
-    __dump_or_browse(allres, 'scoreviz')
+    __dump_or_browse(allres.hs, 'scoreviz')
 
 # Dump logic
-def __dump_or_browse(allres, subdir=None):
+def __dump_or_browse(hs, subdir=None):
     fig = df2.plt.gcf()
     #fig.tight_layout()
     if BROWSE:
@@ -172,7 +177,7 @@ def __dump_or_browse(allres, subdir=None):
         df2.show()
     if DUMP:
         #print('[viz] Dumping Image')
-        fpath = allres.hs.dirs.result_dir
+        fpath = hs.dirs.result_dir
         if not subdir is None: 
             fpath = join(fpath, subdir)
             helpers.ensurepath(fpath)
@@ -215,7 +220,7 @@ def dump_gt_matches(allres):
     for qcx in xrange(0, len(qcx2_res)):
         res = qcx2_res[qcx]
         df2.show_gt_matches(hs, res, fignum=FIGNUM)
-        __dump_or_browse(allres, 'gt_matches'+allres.title_suffix)
+        __dump_or_browse(allres.hs, 'gt_matches'+allres.title_suffix)
 
 def dump_orgres_matches(allres, orgres_type):
     orgres = allres.__dict__[orgres_type]
@@ -232,5 +237,5 @@ def dump_orgres_matches(allres, orgres_type):
         big_title = 'score=%.2f_rank=%d_q=%s_r=%s' % \
                 (score, rank, query_gname, result_gname)
         df2.set_figtitle(big_title)
-        __dump_or_browse(allres, orgres_type+'_matches'+allres.title_suffix)
+        __dump_or_browse(allres.hs, orgres_type+'_matches'+allres.title_suffix)
 

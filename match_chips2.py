@@ -91,6 +91,18 @@ def fix_qcx2_res_types(qcx2_res):
 #=========================
 # Query Result Class
 #=========================
+
+def query_result_fpath(hs, qcx):
+    query_uid = params.get_query_uid()
+    qres_dir = hs.dirs.qres_dir 
+    fname = 'result_'+query_uid+'_qcx=%d.npz' % qcx
+    fpath = os.path.join(qres_dir, fname)
+    return fpath
+
+def query_result_exists(hs, qcx):
+    fpath = query_result_fpath(hs, qcx)
+    return os.path.exists(fpath)
+
 class QueryResult(DynStruct):
     def __init__(self, qcx):
         super(QueryResult, self).__init__()
@@ -108,11 +120,7 @@ class QueryResult(DynStruct):
         self.cx2_score_V = np.array([])
 
     def get_fpath(self, hs):
-        query_uid = params.get_query_uid()
-        qres_dir = hs.dirs.qres_dir 
-        fname = 'result_'+query_uid+'_qcx=%d.npz' % self.qcx
-        fpath = os.path.join(qres_dir, fname)
-        return fpath
+        return query_result_fpath(hs, self.qcx)
     
     def save(self, hs):
         # HACK
@@ -128,8 +136,7 @@ class QueryResult(DynStruct):
         return self.save_result(fpath)
 
     def has_cache(self, hs):
-        fpath = self.get_fpath(hs)
-        return os.path.exists(fpath)
+        return query_result_exists(hs, self.qcx)
 
     def cache_bytes(self, hs):
         fpath = self.get_fpath(hs)
@@ -187,23 +194,53 @@ class QueryResult(DynStruct):
 #========================================
 # Work Functions
 #========================================
+
+
+def get_dirty_test_cxs(hs):
+    test_samp = hs.test_sample_cx
+    print('[mc2] checking dirty queries')
+    dirty_samp = [qcx for qcx in iter(test_samp) if not query_result_exists(hs, qcx)]
+    return dirty_samp
+
+def run_matching2(hs, verbose=params.VERBOSE_MATCHING):
+    print(textwrap.dedent('''
+    \n=============================
+    [mc2] Running Matching 2
+    ============================='''))
+    dirty_samp = get_dirty_test_cxs(hs)
+    total_dirty = len(dirty_samp)
+    print('[mc2] There are %d dirty queries' % total_dirty)
+    if len(dirty_samp) == 0:
+        return
+    print_ = helpers.print_
+    if hs.matcher is None:
+        hs.load_matcher()
+    assign_matches  = hs.matcher.assign_matches
+    cx2_desc = hs.feats.cx2_desc
+    cx2_kpts = hs.feats.cx2_kpts
+    cx2_rchip_size = hs.get_cx2_rchip_size()
+    for qnum, qcx in enumerate(dirty_samp):
+        res = QueryResult(qcx)
+        build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size,
+                     assign_matches, qnum, total_dirty, verbose)
+
 def load_cached_matches(hs):
     print_ = helpers.print_
-    test_sample_cx = hs.test_sample_cx
+    test_samp = hs.test_sample_cx
     # Create result containers
     print('[mc2] hs.num_cx = %r ' % hs.num_cx)
     qcx2_res = [QueryResult(qcx) for qcx in xrange(hs.num_cx)]
     #--------------------
     # Read cached queries
     #--------------------
-    total_queries = len(test_sample_cx)
+    total_queries = len(test_samp)
     print('[mc2] Total queries: %d' % total_queries)
     dirty_test_sample_cx = []
     clean_test_sample_cx = []
     fmt_str_filter = helpers.make_progress_fmt_str(total_queries, lbl='[mc2] check cache: ')
     
     # Filter queries into dirty and clean sets
-    for count, qcx in enumerate(test_sample_cx):
+    for count, qcx in enumerate(test_samp):
         print_(fmt_str_filter % (count+1))
         if params.CACHE_QUERY and qcx2_res[qcx].has_cache(hs):
             clean_test_sample_cx.append(qcx)
@@ -225,7 +262,6 @@ def load_cached_matches(hs):
         qcx2_res[qcx].load(hs)
     print('')
     return qcx2_res, dirty_test_sample_cx
-
 
 def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VERBOSE_MATCHING):
     '''Runs the full matching pipeline using the abstracted classes'''
@@ -649,6 +685,19 @@ scoring_func_map = {
     'RATIO' : RATIO_fn,
     'LNBNN' : LNBNN_fn }
 
+def desc_nearest_neighbors(desc, vsmany_index):
+    vsmany_flann = vsmany_index.vsmany_flann
+    ax2_cx       = vsmany_index.ax2_cx
+    ax2_fx       = vsmany_index.ax2_fx
+    isQueryIndexed = True
+    k_vsmany = params.__VSMANY_K__+1 if isQueryIndexed else params.__VSMANY_K__
+    checks   = params.VSMANY_FLANN_PARAMS['checks']
+    # Find each query descriptor's k+1 nearest neighbors
+    (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc, k_vsmany+1, checks=checks)
+    qfx2_cx = ax2_cx[qfx2_ax]
+    qfx2_fx = ax2_fx[qfx2_ax]
+    return (qfx2_cx, qfx2_fx, qfx2_dists) 
+
 #@profile
 def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
     '''Matches desc1 vs all database descriptors using 
@@ -663,14 +712,14 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
     # vsmany_index = hs.matcher._Matcher__vsmany_index
     #helpers.println('Assigning vsmany feature matches from qcx=%d to %d chips'\ % (qcx, len(cx2_desc)))
     vsmany_flann = vsmany_index.vsmany_flann
-    ax2_cx    = vsmany_index.ax2_cx
-    ax2_fx    = vsmany_index.ax2_fx
-    score_fn  = scoring_func_map[params.__VSMANY_SCORE_FN__]
+    ax2_cx       = vsmany_index.ax2_cx
+    ax2_fx       = vsmany_index.ax2_fx
+    score_fn = scoring_func_map[params.__VSMANY_SCORE_FN__]
     isQueryIndexed = True
     desc1 = cx2_desc[qcx]
     k_vsmany = params.__VSMANY_K__+1 if isQueryIndexed else params.__VSMANY_K__
-    # Find each query descriptor's k+1 nearest neighbors
     checks = params.VSMANY_FLANN_PARAMS['checks']
+    # Find each query descriptor's k+1 nearest neighbors
     (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, k_vsmany+1, checks=checks)
     vote_dists = qfx2_dists[:, 0:k_vsmany]
     norm_dists = qfx2_dists[:, k_vsmany] # k+1th descriptor for normalization

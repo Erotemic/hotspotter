@@ -20,7 +20,7 @@ import textwrap
 import fnmatch
 import warnings
 from itertools import izip
-from os.path import realpath, join, normpath
+from os.path import realpath, join, normpath, exists
 import re
 
 REPORT_MATRIX  = False
@@ -245,6 +245,11 @@ def init_score_matrix(allres):
     allres.col_label_cx = col_label_cx
     allres.row_label_cx = row_label_cx
 
+def get_title_suffix(SV=True):
+    SV_aug = ['_SVOFF','_SVon'][SV]
+    title_suffix = params.get_query_uid() + SV_aug
+    return title_suffix
+
 def init_allres(hs, qcx2_res, SV=True,
                 matrix=(REPORT_MATRIX or REPORT_MATRIX_VIZ),
                 oxford=False,
@@ -253,7 +258,7 @@ def init_allres(hs, qcx2_res, SV=True,
     # Make AllResults data containter
     allres = AllResults(hs, qcx2_res, SV)
     SV_aug = ['_SVOFF','_SVon'][allres.SV]
-    allres.title_suffix = params.get_query_uid() + SV_aug
+    allres.title_suffix = get_title_suffix(SV)
     #helpers.ensurepath(allres.summary_dir)
     print('\n======================')
     print(' * Initializing all results')
@@ -592,6 +597,39 @@ def dump_analysis(allres):
     #qcx = greater5_cxs[0]
     for qcx in greater1_cxs:
         viz.plot_cx(allres, qcx, 'analysis', 'analysis')
+
+def dump_all_queries2(hs):
+    import match_chips2 as mc2
+    test_cxs = hs.test_sample_cx
+    title_suffix = get_title_suffix()
+    print('[rr2] dumping all %r queries' % len(test_cxs))
+    for qcx in test_cxs:
+        res = mc2.QueryResult(qcx)
+        res.load(hs)
+        # SUPER HACK (I don't know the figurename a priori, I have to contstruct
+        # it to not duplciate dumping a figure)
+        title_aug=' noanote'
+        fpath = hs.dirs.result_dir
+        subdir='allqueries'
+        N = 5
+        topN_cxs = res.topN_cxs(N)
+        topscore = res.cx2_score_V[topN_cxs][0]
+
+        dump_dir = join(fpath, subdir+title_suffix)
+
+        fpath     = join(dump_dir, ('topscore=%r -- qcx=%r' % (topscore, res.qcx)))
+        fpath_aug = join(dump_dir, ('topscore=%r -- qcx=%r' % (topscore, res.qcx))) + title_aug
+
+        fpath_clean = df2.sanatize_img_fpath(fpath)
+        fpath_aug_clean = df2.sanatize_img_fpath(fpath_aug)
+        print('----')
+        print(fpath_clean)
+        print(fpath_clean)
+        if not exists(fpath_aug_clean):
+            viz.plot_cx2(hs, res, 'analysis', subdir=subdir, annotations=False, title_aug=title_aug)
+        if not exists(fpath_clean):
+            viz.plot_cx2(hs, res, 'analysis', subdir=subdir)
+        print('----')
 
 def dump_all_queries(allres):
     test_cxs = allres.hs.test_sample_cx

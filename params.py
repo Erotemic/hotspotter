@@ -68,12 +68,12 @@ dev_databases = {
     'MOTHERS'   : MOTHERS,
     'OXFORD'    : OXFORD,
     'PARIS'     : PARIS,
-    'PZ_Marianne' : PZ_Marianne,
-    'PZ_DanExt_Test': PZ_DanExt_Test,
-    'PZ_DanExt_All': PZ_DanExt_All,
-    'Wildebeast_ONLY_MATCHES' : Wildebeast_ONLY_MATCHES,
-    'Wildebeast' : Wildebeast,
-    'JAG_Kieryn' : JAG_Kieryn,
+    'PZ_MARIANNE' : PZ_Marianne,
+    'PZ_DANEXT_TEST': PZ_DanExt_Test,
+    'PZ_DANEXT_ALL': PZ_DanExt_All,
+    'WILDEBEAST_ONLY_MATCHES' : Wildebeast_ONLY_MATCHES,
+    'WILDEBEAST' : Wildebeast,
+    'JAG_KIERYN' : JAG_Kieryn,
 }
 
 #DEFAULT = NAUTS
@@ -368,6 +368,7 @@ def MOTHERS_defaults():
 
 for argv in iter(sys.argv):
     argv_u =  argv.upper()
+    print(argv_u)
     if argv_u in dev_databases.keys():
         print('\n'.join(['[params] Default Database set to:'+argv.upper(),
                          '[params] Previously: '+str(DEFAULT)]))

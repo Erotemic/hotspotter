@@ -1218,7 +1218,7 @@ def try_cast(var, type_):
 def get_arg_after(arg, type_=None):
     arg_after = None
     try:
-        arg_index = sys.argv.index('--refine')
+        arg_index = sys.argv.index(arg)
         if arg_index < len(sys.argv):
             arg_after = try_cast(sys.argv[arg_index+1], type_)
     except Exception as ex:

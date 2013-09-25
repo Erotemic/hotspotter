@@ -242,6 +242,10 @@ class HotSpotter(DynStruct):
         result_dir = os.path.normpath(hs.dirs.result_dir)
         print('[hs] opening result_dir: %r ' % result_dir)
         helpers.vd(result_dir)
+    def cx2_gname(hs, cx):
+        gx =  hs.tables.cx2_gx[cx]
+        gname = hs.tables.gx2_gname[gx]
+        return gname
     #--------------
     def get_nx2_cxs(hs):
         cx2_nx = hs.tables.cx2_nx

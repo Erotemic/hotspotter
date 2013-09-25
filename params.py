@@ -38,7 +38,7 @@ GZ        = WORK_DIR+'/GZ_ALL'
 GZ        = WORK_DIR+'/GZ_ALL'
 PZ        = WORK_DIR+'/PZ_FlankHack'
 FROGS     = WORK_DIR+'/Frogs'
-WILDDOGS  = WORK_DIR+'/WD_Siva'
+WD_SIVA   = WORK_DIR+'/WD_Siva'
 LIONFISH  = WORK_DIR+'/LF_all'
 JAGUARS   = WORK_DIR+'/JAG_Jaguar_Data'
 NAUTS     = WORK_DIR+'/NAUT_Dan'
@@ -54,6 +54,7 @@ PZ_Marianne = WORK_DIR + '/PZ_Marianne'
 Wildebeast_ONLY_MATCHES = WORK_DIR + '/Wildebeast_ONLY_MATCHES'
 Wildebeast = WORK_DIR2 + '/Wildebeast'
 JAG_Kieryn = WORK_DIR2 + '/JAG_Kieryn'
+LF_ALL = WORK_DIR + '/LF_all'
 
 
 dev_databases = {
@@ -74,6 +75,8 @@ dev_databases = {
     'WILDEBEAST_ONLY_MATCHES' : Wildebeast_ONLY_MATCHES,
     'WILDEBEAST' : Wildebeast,
     'JAG_KIERYN' : JAG_Kieryn,
+    'LF_ALL' : LF_ALL,
+    'WD_SIVA' : WD_SIVA,
 }
 
 #DEFAULT = NAUTS

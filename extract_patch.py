@@ -275,8 +275,8 @@ def test2(hs, qcx, N):
     viz.BROWSE = False
     viz.DUMP = False
     viz.FIGNUM = 232
-    #viz.plot_cx2(hs, res, 'analysis')
-    viz_top_features(hs, res, N=N, draw_chips=False)
+    viz.plot_cx2(hs, res, 'analysis')
+    viz_top_features(hs, res, N=N, draw_chips=True)
 
 def test3():
     desc = np.random.rand(128)

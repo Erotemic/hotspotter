@@ -163,3 +163,60 @@ Observation: Big keypoints lose too many details and are not reliable:
 python extract_patch.py PZ_DanExt_All --qcx 1293
 
 
+
+----
+
+What if I don't hit the CVPR deadline. 
+
+I feel like I'm shooting in the dark, and every time I think I hit something I
+get discouraging feedback. 
+
+I end up just rehashing the same old things over and over. 
+
+The plus side is that a lot of those things were misses, and I gained a better
+understanding of things through the rehashing. 
+
+I don't want to feel under presure. 
+
+I want to feel like I'm moving forward towards something good. 
+
+I don't want to publish or do work for the sake of publishing or doing work. 
+
+I'd like to find a difficult challenge and really work on it and continuously
+make headway. 
+
+I have a nice framework in which to run experiments. I'm very happy with this
+version of HotSpotter. 
+
+Looking at image level matches is no the correct approach. The features are
+the fundamental unit which are doing the work. Those are what we should be
+paying attention to. We should understand and improve upon their behavior.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+------
+
+Looking at: 
+
+python extract_patch.py --qcx 182 LF_ALL --low 3 --high 13
+
+The Finns match, but they don't get a decent normalizer. 
+
+This is because the lines are consistent, but the placement of the dots can
+vary so wildly. 
+
+The lines make the fin keypoint sit close in descriptor space, but because the 
+placement of the circles seems to vary, there will be significant distance
+between the kth match and the normalizer. 

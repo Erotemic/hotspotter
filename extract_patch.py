@@ -71,7 +71,7 @@ def get_warped_patch(rchip, kp):
                   [0, 0,  1]])
     X = np.array([[1, 0, s/2],
                   [0, 1, s/2],
-                  [0, 0, 1]])
+                  [0, 0,   1]])
     rchip_h, rchip_w = rchip.shape[0:2]
     dsize = np.array(np.ceil(np.array([s, s])), dtype=int)
     def mat_mult(*args):
@@ -80,9 +80,8 @@ def get_warped_patch(rchip, kp):
         for Z in args:
             M = Z.dot(M)
         return M
-    I = np.eye(3)
-    Z = I.copy()
-    M = mat_mult(T, A, S, X)
+    # Do I need to scale before A and then after A?  I think so. 
+    M = mat_mult(T, S, A, X)
     #print('-------')
     #print('Warping')
     #print('kp = %r ' % (kp,))
@@ -120,15 +119,17 @@ def get_normalizer_cx_rchip_cx(hs, desc):
     cxN = qfx2_cx[:,-1][0]
     fxN = qfx2_fx[:,-1][0]
     rchipN = hs.get_chip(cxN)
-    printDBG('---')
-    printDBG('qfx2_fx = %r' % (qfx2_fx,))
-    printDBG('qfx2_cx = %r' % (qfx2_cx,))
-    printDBG('qfx2_dists = %r' % (qfx2_dists,))
-    printDBG('cx Normalizer: %r' % cxN)
-    printDBG('fx Normalizer: %r' % fxN)
+    print('---')
+    print('qfx2_fx = %r' % (qfx2_fx,))
+    print('qfx2_cx = %r' % (qfx2_cx,))
+    print('qfx2_nx = %r' % (hs.tables.cx2_nx[qfx2_cx],))
+    print('qfx2_dists = %r' % (qfx2_dists,))
+    print('cx Normalizer: %r' % cxN)
+    print('fx Normalizer: %r' % fxN)
+    print('---')
     return cxN, fxN, rchipN
     
-def get_top_scoring_patches(hs, res, N):
+def get_top_scoring_patches(hs, res, low, high):
     qcx = res.qcx
     cx2_fs = res.cx2_fs_V
     cx2_fm = res.cx2_fm_V
@@ -142,7 +143,7 @@ def get_top_scoring_patches(hs, res, N):
         return (kp, subkp, wkp, patch, wpatch, cx, desc)
     top_patches_list = []
     #print('Top Scoring Features: cx, mx, feat_score')
-    for cx, mx, feat_score in top_scoring_feats[0:N]:
+    for cx, mx, feat_score in top_scoring_feats[low:high]:
         rchip2 = hs.get_chip(cx)
         fx1, fx2 = cx2_fm[cx][mx]
         # Get query patches
@@ -160,12 +161,12 @@ def get_top_scoring_patches(hs, res, N):
         #print('cx=%r, mx=%r, feat_score=%r' %(cx, mx, feat_score))
     return top_patches_list
 
-def viz_top_features(hs, res, N, fignum=0, draw_chips=True):
+def viz_top_features(hs, res, low, high, fignum=0, draw_chips=True):
     from collections import defaultdict
     qcx = res.qcx
     cx2_nx = hs.tables.cx2_nx
-    top_patches_list = get_top_scoring_patches(hs, res, N)
-    num_rows = N
+    top_patches_list = get_top_scoring_patches(hs, res, low, high)
+    num_rows = high-low
     num_cols = 4
     if params.__MATCH_TYPE__ == 'vsmany':
         num_cols = 6
@@ -219,7 +220,7 @@ def viz_top_features(hs, res, N, fignum=0, draw_chips=True):
         df2.figure(plotnum=(num_rows, num_cols,5), title='Normalizer Patch')
         df2.figure(plotnum=(num_rows, num_cols,6), title='Normalizer Warped')
 
-    df2.set_figtitle('chosen keypoint')
+    df2.set_figtitle('Top '+str(low)+' to '+str(high)+' scoring matches')
     if not draw_chips:
         return
     #
@@ -268,15 +269,15 @@ def test(hs, qcx):
     df2.imshow(wpatch, plotnum=(1,3,3))
     df2.draw_kpts2([wkp], ell_color=(1,0,0), pts=True)
     #
-    df2.set_figtitle('chosen keypoint')
+    df2.set_figtitle('warp test')
 
-def test2(hs, qcx, N):
+def test2(hs, qcx, low, high):
     res = mc2.build_result_qcx(hs, qcx)
     viz.BROWSE = False
     viz.DUMP = False
     viz.FIGNUM = 232
     viz.plot_cx2(hs, res, 'analysis')
-    viz_top_features(hs, res, N=N, draw_chips=True)
+    viz_top_features(hs, res, low=low, high=high, draw_chips=True)
 
 def test3():
     desc = np.random.rand(128)
@@ -296,17 +297,25 @@ if __name__ == '__main__':
         if len(sys.argv) == 1:
             db_dir = params.GZ
             qcx = 111
+            low = 0
+            high=6
         else:
             db_dir = params.DEFAULT
             qcx = helpers.get_arg_after('--qcx', type_=int)
+            low = helpers.get_arg_after('--low', type_=int)
+            high = helpers.get_arg_after('--high', type_=int)
             if qcx is None:
                 raise Exception('fds')
                 qcx = 1
+            if low is None:
+                low = 0
+            if high is None:
+                high = 6
 
         hs = ld2.HotSpotter()
         hs.load_all(db_dir)
     #test(hs, qcx)
     #test3()
-    test2(hs, qcx, N=3)
+    test2(hs, qcx, low=low, high=high)
     df2.all_figures_tight_layout()
     exec(df2.present(no_tile=True))

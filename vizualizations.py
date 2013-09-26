@@ -77,7 +77,7 @@ def plot_cx(allres, cx, style='kpts', subdir=None, annotations=True, title_aug='
     hs    = allres.hs
     qcx2_res = allres.qcx2_res
     res = qcx2_res[cx]
-    plot_cx2(hs, res, cx, style=style, subdir=subdir, annotations=annotations, title_aug=title_aug)
+    plot_cx2(hs, res, style=style, subdir=subdir, annotations=annotations, title_aug=title_aug)
 
 def plot_cx2(hs, res, style='kpts', subdir=None, annotations=True, title_aug=''):
     #cx_info(allres, cx)

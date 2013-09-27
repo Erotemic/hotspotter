@@ -80,7 +80,7 @@ dev_databases = {
 }
 
 #DEFAULT = NAUTS
-DEFAULT = MOTHERS
+DEFAULT = LF_ALL
 
 #=====================================================
 # Flann Configurations

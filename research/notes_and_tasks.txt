@@ -238,10 +238,21 @@ python extract_patch.py --qcx 169 LF_ALL --low 0 --high 10
 
 python extract_patch.py --qcx 641 LF_ALL --low 0 --high 10
 
-python extract_patch.py --qcx 48 LF_ALL --low 0 --high  10
+python extract_patch.py --qcx 48 LF_ALL --low 0 --high  10 --nodesc
 
-python extract_patch.py --qcx 250 LF_ALL --low 0 --high 10
+python extract_patch.py --qcx 250 LF_ALL --low 0 --high 10 --nodesc
 
+Failure Cases: 
+Non rigid matches (lionfish fins) (deformable / independently moving parts) 
+Viewpoint 
+Occlusion 
+Image Quality 
+Background matches / partial background matches. 
+Partial background matches / random configuration of animals. 
+-
+Compounded by textured regions with lots of matches
+(there is a disproportionate scoring for regions which generate more
+keypoints)
 
 
 

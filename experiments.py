@@ -12,7 +12,7 @@ import vizualizations as viz
 import params
 import itertools
 import numpy as np
-import db_stats
+import db_info
 
 def reload_module():
     import imp
@@ -221,7 +221,7 @@ def leave_out(expt_func=None, split_test=False, **kwargs):
     # Load tables
     hs = ld2.HotSpotter(ld2.DEFAULT, load_basic=True)
     # Grab names
-    db_names_info = db_stats.get_db_names_info(hs)
+    db_names_info = db_info.get_db_names_info(hs)
     nx2_cxs = db_names_info['nx2_cxs']
     valid_nxs = db_names_info['valid_nxs']
     multiton_nxs = db_names_info['multiton_nxs']

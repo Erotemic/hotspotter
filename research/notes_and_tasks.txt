@@ -232,18 +232,12 @@ python extract_patch.py --qcx 207 LF_ALL --low 0 --high 10
 
 python extract_patch.py --qcx 700 LF_ALL --low 0 --high 10
 
-python extract_patch.py --qcx 619 LF_ALL --low 0 --high 10
+python extract_patch.py --qcx 619 LF_ALL --low 0 --high 10 --nodesc
 
-python extract_patch.py --qcx 169 LF_ALL --low 0 --high 10
+python extract_patch.py --qcx 169 LF_ALL --low 0 --high 10 --nodesc
 
-python extract_patch.py --qcx 641 LF_ALL --low 0 --high 10
+python extract_patch.py --qcx 641 LF_ALL --low 0 --high 10 --nodesc
 
-python extract_patch.py --qcx 48 LF_ALL --low 0 --high  10
+python extract_patch.py --qcx 48 LF_ALL --low 0 --high  10 --nodesc
 
-python extract_patch.py --qcx 250 LF_ALL --low 0 --high 10
-
-
-
-
-
-
+python extract_patch.py --qcx 250 LF_ALL --low 0 --high 10 --nodesc

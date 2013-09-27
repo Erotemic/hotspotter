@@ -177,7 +177,7 @@ def viz_top_features(hs, res, low, high, fignum=0, draw_chips=True):
     def draw_one_kp(patch, kp, plotx, color, desc=None):
         fig, ax = df2.imshow(patch, plotnum=(num_rows, num_cols, plotx))
         df2.draw_kpts2([kp], ell_color=color, pts=True)
-        if not desc is None:
+        if not desc is None and not '--nodesc' in sys.argv:
             df2.draw_sift(desc, [kp])
         df2._draw_border(ax, color, 1)
 

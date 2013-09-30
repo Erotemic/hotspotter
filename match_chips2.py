@@ -678,7 +678,7 @@ def precompute_index_vsmany(hs):
 eps = 1E-8
 def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+eps)+1) 
 def RATIO_fn(vdist, ndist): return np.divide(ndist, vdist+eps)
-def LNBNN_fn(vdist, ndist): return ndist - vdist 
+def LNBNN_fn(vdist, ndist): return (ndist - vdist) / 1000.0
 
 scoring_func_map = {
     'LNRAT' : LNRAT_fn,

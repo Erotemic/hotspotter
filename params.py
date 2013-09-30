@@ -55,7 +55,7 @@ Wildebeast_ONLY_MATCHES = WORK_DIR +'/Wildebeast_ONLY_MATCHES'
 WILDEBEAST              = WORK_DIR2+'/Wildebeast'
 JAG_Kieryn              = WORK_DIR2+'/JAG_Kieryn'
 LF_ALL                  = WORK_DIR +'/LF_all'
-WY_TOADS = WORK_DIR + '/WY_Toads'
+WY_TOADS = WORK_DIR2 + '/WY_Toads'
 
 dev_databases = {
     'SONOGRAMS'      : SONOGRAMS,

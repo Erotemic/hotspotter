@@ -1,3 +1,4 @@
+#!/usr/bin/python2.7
 from __init__ import *
 
 import sys

@@ -1,5 +1,5 @@
 from PIL import Image
-from os.path import join, relpath, normpath
+from os.path import join, relpath, normpath, exists
 import collections
 import fnmatch
 import helpers
@@ -327,9 +327,35 @@ def init_database_from_images(db_dir, img_dpath=None, gt_format=None):
     write_name_table(internal_dir, nx2_nid, nx2_name)
     write_image_table(internal_dir, gx2_gid, gx2_gname)
 
-def xlsx_to_tables(db_dir):
-    'finds any xlsx files in db_dir and transforms them into an image table'
+def load_xlsx_file(xlsx_fpath):
     import openpyxl
+    wb = openpyxl.load_workbook(filename=xlsx_fpath)
+    active_sheet  = wb.get_active_sheet()
+    header_cells  = active_sheet.rows[0]
+    column_cells  = active_sheet.columns
+    column_labels = [cell.value for cell in header_cells]
+    column_list   = [[cell.value for cell in column[1:]] for column in column_cells]
+    return column_labels, column_list
+
+#csv_fpath = '/media/Store/data/work/WY_Toads/WY_TOAD_MATCHES.csv'
+def read_csv_file(csv_fpath):
+    def parse_csv_line(csv_line):
+        csv_line_ = csv_line.strip('\n\r\t ')
+        csv_fields = [_.strip(' ') for _ in csv_line_.strip('\n\r ').split(',')]
+        return csv_fields
+    csv_file = open(csv_fpath, 'r')
+    csv_lines = csv_file.readlines()
+    csv_file.close()
+    csv_iter = iter(csv_lines)
+    # Read first line (header)
+    csv_line = csv_iter.next()
+    column_labels = parse_csv_line(csv_line)
+    csv_rows = [parse_csv_line(csv_line) for csv_line in csv_iter]
+    column_list = zip(*csv_rows)
+    return column_labels, column_list
+
+def wildid_xlsx_to_tables(db_dir):
+    'finds any xlsx files in db_dir and transforms them into an image table'
     import glob
     db_dir = normpath(db_dir)
     if not 'img_dpath' in vars() or img_dpath is None:
@@ -342,12 +368,26 @@ def xlsx_to_tables(db_dir):
     print('[convert] Converting db_dir  = %r' % db_dir)
     print('[convert] with img_dpath     = %r' % img_dpath)
     print('[convert] Reading xlsx_fpath = %r' % (xlsx_fpath,))
-    wb = openpyxl.load_workbook(filename=xlsx_fpath)
-    active_sheet  = wb.get_active_sheet()
-    header_cells  = active_sheet.rows[0]
-    column_cells  = active_sheet.columns
-    column_labels = [cell.value for cell in header_cells]
-    column_list   = [[cell.value for cell in column[1:]] for column in column_cells]
+    column_labels, column_list = read_xlsx_file(xlsx_fpath)
+    return wildid_to_tables(db_dir, img_dpath, column_labels, column_list)
+
+#db_dir = params.WY_TOADS
+def wildid_csv_to_tables(db_dir):
+    import glob
+    db_dir = normpath(db_dir)
+    if not 'img_dpath' in vars() or img_dpath is None:
+        img_dpath = normpath(join(db_dir, 'images'))
+    csv_files = glob.glob(join(db_dir,'*.csv'))
+    if len(csv_files) != 1:
+        raise Exception('non-unique csv files = %r' % csv_files)
+    csv_fpath = normpath(csv_files[0])
+    print('[convert] Converting db_dir  = %r' % db_dir)
+    print('[convert] with img_dpath     = %r' % img_dpath)
+    print('[convert] Reading csv_fpath = %r' % (csv_fpath,))
+    column_labels, column_list = read_csv_file(csv_fpath)
+    return wildid_to_tables(db_dir, img_dpath, column_labels, column_list)
+
+def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
     row_lengths = [len(col) for col in column_list]
     num_rows = row_lengths[0]
     assert all([num_rows == rowlen for rowlen in row_lengths]), \
@@ -364,7 +404,7 @@ def xlsx_to_tables(db_dir):
             index = helpers.listfind(column_labels, lbl) 
             if index != None: return index
         raise Exception('There is no valid label')
-    name_colx = get_lbl_pos(column_labels, ['ANIMAL_ID'])
+    name_colx = get_lbl_pos(column_labels, ['ANIMAL_ID', 'AnimalID'])
     name_set = set(column_list[name_colx])
     nx2_name, nx2_nid = nametables_from_nameset(name_set)
     # Get chip set
@@ -378,59 +418,108 @@ def xlsx_to_tables(db_dir):
             colx = get_lbl_pos(column_labels, [lbl])
             colx_list.append(colx)
         return colx_list
-    image_colx_list = get_multiprop_colx_list('IMAGE_')
-    date_colx_list  = get_multiprop_colx_list('DATE_NO')
+    prop2_colx_list = {}
+    try:
+        image_colx_list = get_multiprop_colx_list('IMAGE_')
+    except Exception as ex:
+        image_colx_list = get_multiprop_colx_list('Image')
+
+    try_multiprops = ['DATE_NO']
+    multiprop2_colx = {}
+    for key in try_multiprops:
+        try:
+            multiprop2_colx[key]  = get_multiprop_colx_list(key)
+        except Exception as ex:
+            pass
+    #date_colx_list  = get_multiprop_colx_list('DATE_NO')
     # Other useful properties
-    sex_colx = get_lbl_pos(column_labels, ['SEX'])
-    # build dict of (img, roi) tuples maping to names
+    try_props = ['SEX', 'matches', 'WildID_score']
+    prop2_colx = {}
+    for key in try_props:
+        try: 
+            other_colx = get_lbl_pos(column_labels, [key])
+            prop2_colx[key] = other_colx
+        except Exception as ex:
+            pass
+    #sex_colx = get_lbl_pos(column_labels, ['SEX'])
     cx2_cid     = []
     cx2_theta   = []
     cx2_roi     = []
     cx2_nx      = []
     cx2_gx      = []
-    prop_dict   = {'sex':[], 'date':[]}
+    # Initialize other props
+    prop_dict = {}
+    for key in prop2_colx.keys():
+        prop_dict[key] = []
+    for key in multiprop2_colx.keys():
+        prop_dict[key] = []
+    #prop_dict   = {'sex':[], 'date':[]}
     cid = 1
-    def add_to_hs_tables(cid, gname, name, roi, sex, date, theta=0):
+    def add_to_hs_tables(cid, gname, name, roi, theta=0, **kwargs):
         nx = nx2_name.index(name)
         gx = gx2_gname.index(gname)
         cx2_cid.append(cid)
         cx2_roi.append(roi)
         cx2_nx.append(nx)
         cx2_gx.append(gx)
-        prop_dict['sex'].append(sex)
-        prop_dict['date'].append(date)
+        for key, val in kwargs.iteritems():
+            prop_dict[key].append(val)
         cx2_theta.append(0)
-    imgandroi2_name = {}
+
+    bad_rows = 0
+
     for rowx in xrange(num_rows):
         for num in xrange(chips_per_name):
+            #date_colx = date_colx_list[num]
+            #date     = column_list[date_colx][rowx]
+            #sex      = column_list[sex_colx][rowx]
             # Get multicolindexes
             img_colx = image_colx_list[num]
-            date_cols = date_colx_list[num]
             # Get properties
             img_name = column_list[img_colx][rowx]
             name     = column_list[name_colx][rowx]
-            date     = column_list[name_colx][rowx]
-            sex      = column_list[sex_colx][rowx]
-            roi      = roi_from_imgsize(join(img_dpath, img_name))
+            # Get other properties
+            tbl_kwargs1 = {key:column_list[val[num]][rowx] for key, val in multiprop2_colx.iteritems()}
+            tbl_kwargs2 = {key:column_list[val][rowx] for key, val in prop2_colx.iteritems()}
+            tbl_kwargs = dict(tbl_kwargs1.items() + tbl_kwargs2.items())
+            roi      = roi_from_imgsize(join(img_dpath, img_name), silent=True))
             if roi is None:
-                raise Exception('corrupted image: '+str(img_name))
-            add_to_hs_tables(cid, img_name, name, roi, sex, date)
-            cid += 1
+                img_fpath = join(img_dpath, img_name)
+                bad_rows += 1
+                if not exists(img_fpath):
+                    print('nonexistant image: '+str(img_name))
+                    pass
+                else:
+                    print('corrupted image: '+str(img_name))
+                    pass
+            else:
+                add_to_hs_tables(cid, img_name, name, roi, **tbl_kwargs)
+                cid += 1
+
+    print('bad_rows = %r ' % bad_rows)
+    print('num_rows = %r ' % num_rows)
+    print('chips_per_name = %r ' % chips_per_name)
+    print('cid = %r ' % cid)
+
     num_known_chips = len(cx2_cid)
     print('[convert] Added %r known chips.' % num_known_chips)
     # Add the rest of the nongroundtruthed chips
     print('[convert] Adding unknown images to table')
-    assert np.unique(np.array(cx2_gx)).size == len(cx2_gx)
+    assert np.unique(np.array(cx2_gx)).size == len(cx2_gx), 
+        'There are images specified twice'
     known_gx_set = set(cx2_gx)
     for gx, gname in enumerate(gx2_gname):
         if gx in known_gx_set: continue 
         img_name = gname
         name     = '____'
-        date     = 'NA'
-        sex      = 'NA'
-        roi      = roi_from_imgsize(join(img_dpath, img_name))
+        #date     = 'NA'
+        #sex      = 'NA'
+        roi      = roi_from_imgsize(join(img_dpath, img_name), silent=False)
+        tbl_kwargs1 = {key:'NA' for key, val in multiprop2_colx.iteritems()}
+        tbl_kwargs2 = {key:'NA' for key, val in prop2_colx.iteritems()}
+        tbl_kwargs = dict(tbl_kwargs1.items() + tbl_kwargs2.items())
         if not roi is None:
-            add_to_hs_tables(cid, img_name, name, roi, sex, date)
+            add_to_hs_tables(cid, img_name, name, roi, **tbl_kwargs)
             cid += 1
     num_unknown_chips = len(cx2_cid) - num_known_chips
     print('[convert] Added %r more unknown chips.' % num_unknown_chips)
@@ -449,15 +538,16 @@ def xlsx_to_tables(db_dir):
 #------------------------
 # New modular function below 
 
-def roi_from_imgsize(img_fpath):
+def roi_from_imgsize(img_fpath, silent=False):
     try: 
         (w,h) = Image.open(img_fpath).size
         roi = [1, 1, w, h]
         return roi
     except Exception as ex:
-        print('Exception ex=%r' % ex)
-        print('Not adding img_fpath=%r' % img_fpath)
-        print('----')
+        if not silent:
+            print('Exception ex=%r' % ex)
+            print('Not adding img_fpath=%r' % img_fpath)
+            print('----')
         return None
 
 def imagetables_from_img_dpath(img_dpath=None):
@@ -534,4 +624,7 @@ if __name__ == '__main__':
     if 'oxford' in sys.argv: 
         convert_from_oxford_style(params.OXFORD)
     if 'wildebeast' in sys.argv:
-        xlsx_to_tables(params.WILDEBEAST)
+        wildid_xlsx_to_tables(params.WILDEBEAST)
+    if 'wy_toads' in sys.argv:
+        wildid_csv_to_tables(params.WY_TOADS)
+

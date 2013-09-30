@@ -1,17 +1,20 @@
-from __init__ import *
+import hotspotter.params as params
+import hotspotter.load_data2 as ld2
+import hotspotter.match_chips2 as mc2
+import hotspotter.draw_func2 as df2
 
 
 # Database descriptor + keypoints
-def get_features(cx):
+def get_features(hs, cx):
     rchip    = hs.get_chip(cx)
     fx2_kp   = hs.feats.cx2_kpts[cx]
     fx2_desc = hs.feats.cx2_desc[cx]
-    return rchip, fx2_kp, fx2_desc
+    return cx, rchip, fx2_kp, fx2_desc
 
 def get_vsone_data(query_feats, result_feats):
     ' Assigned matches (vsone)'
-    rchip1, fx2_kp1, fx2_desc1 = query_feats
-    rchip2, fx2_kp2, fx2_desc2 = result_feats
+    qcx, rchip1, fx2_kp1, fx2_desc1 = query_feats
+    cx, rchip2, fx2_kp2, fx2_desc2 = result_feats
     rchip_size2 = rchip2.size
     vsone_flann, checks = mc2.get_vsone_flann(fx2_desc1)
     fm, fs              = mc2.match_vsone(fx2_desc2, vsone_flann, checks)
@@ -24,8 +27,8 @@ def get_vsone_data(query_feats, result_feats):
 def show_vsone_data(query_feats, result_feats, vsone_data, fignum=0, figtitle=''):
     vsone_cx_assign, vsone_cx_svout = vsone_data
     # Show vsone
-    rchip1, fx2_kp1, fx2_desc1 = query_feats
-    rchip2, fx2_kp2, fx2_desc2 = result_feats
+    qcx, rchip1, fx2_kp1, fx2_desc1 = query_feats
+    cx, rchip2, fx2_kp2, fx2_desc2 = result_feats
     fm, fs, score       = vsone_cx_assign
     fm_V, fs_V, score_V = vsone_cx_svout
     plot_kwargs = dict(all_kpts=False, fignum=fignum)
@@ -37,12 +40,12 @@ def show_vsone_data(query_feats, result_feats, vsone_data, fignum=0, figtitle=''
 
 # ------------------
 
-def show_vsone_demo(qcx, cx, fignum=0):
+def show_vsone_demo(hs, qcx, cx, fignum=0):
     print('[demo] vsone')
     print('qcx=%r, cx=%r' % (qcx, cx))
     # Query and Result features
-    query_feats = get_features(qcx)
-    result_feats = get_features(cx)
+    query_feats = get_features(hs, qcx)
+    result_feats = get_features(hs, cx)
     query_uid = params.get_query_uid()
     vsone_data = get_vsone_data(query_feats, result_feats)
     figtitle = '%r v %r -- vsone' % (qcx, cx)

@@ -249,6 +249,8 @@ class HotSpotter(DynStruct):
     #--------------
     def get_nx2_cxs(hs):
         cx2_nx = hs.tables.cx2_nx
+        if len(cx2_nx) == 0:
+            return [[],[]]
         max_nx = cx2_nx.max()
         nx2_cxs = [[] for _ in xrange(max_nx+1)]
         for cx, nx in enumerate(cx2_nx):
@@ -362,7 +364,7 @@ def get_sv_test_data(qcx=0, cx=None):
 class HotspotterTables(DynStruct):
     def __init__(self, 
                  gx2_gname = [],
-                 nx2_name  = [],
+                 nx2_name  = ['____','____'],
                  cx2_cid   = [],
                  cx2_nx    = [],
                  cx2_gx    = [],
@@ -480,6 +482,7 @@ def load_csv_tables(db_dir):
             name = csv_fields[1]
             nid2_nx[nid] = len(nx2_name)
             nx2_name.append(name)
+        name_lines.close()
         if params.VERBOSE_LOAD_DATA:
             print('[ld2] * Loaded '+str(len(nx2_name)-2)+' names (excluding unknown names)')
             print('[ld2] * Done loading name table')

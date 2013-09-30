@@ -75,7 +75,7 @@ class DirectoryStats(object):
 
 
     def build_self(self, root_dir):
-        print(root_dir)
+        print('root_dir=%r' % root_dir)
         # Do not build a data or db_dir
         if os.path.split(root_dir)[1] in KNOWN_DATA_DIRS:
             return
@@ -106,6 +106,8 @@ class DirectoryStats(object):
         elif isfile(path):
             self.file_list += [path]
         else:
+            print('path=%r' % path)
+            print('path is not addable')
             assert False
 
     def num_files_stats(self):
@@ -288,7 +290,10 @@ def db_info(hs):
         return ret
 
     print('reading image sizes')
-    chip_size_list = cx2_roi[:,2:4]
+    if len(cx2_roi) == 0:
+        chip_size_list = []
+    else:
+        chip_size_list = cx2_roi[:,2:4]
     img_size_list  = np.array(get_img_size_list(img_list))
     img_size_stats  = wh_print_stats(img_size_list)
     chip_size_stats = wh_print_stats(chip_size_list)

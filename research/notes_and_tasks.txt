@@ -222,25 +222,17 @@ placement of the circles seems to vary, there will be significant distance
 between the kth match and the normalizer. 
 
 
+python extract_patch.py --qcx 169 LF_ALL --low 0 --high 10 --nodesc
 python extract_patch.py --qcx 182 LF_ALL --low 3 --high 13
-
 python extract_patch.py --qcx 197 LF_ALL --low 0 --high 10
-
-python extract_patch.py --qcx 369 LF_ALL --low 0 --high 10
-
 python extract_patch.py --qcx 207 LF_ALL --low 0 --high 10
-
+python extract_patch.py --qcx 250 LF_ALL --low 0 --high 10 --nodesc
+python extract_patch.py --qcx 369 LF_ALL --low 0 --high 10
+python extract_patch.py --qcx 48 LF_ALL --low 0 --high  10 --nodesc
+python extract_patch.py --qcx 619 LF_ALL --low 0 --high 10 --nodesc
+python extract_patch.py --qcx 641 LF_ALL --low 0 --high 10 --nodesc
 python extract_patch.py --qcx 700 LF_ALL --low 0 --high 10
 
-python extract_patch.py --qcx 619 LF_ALL --low 0 --high 10
-
-python extract_patch.py --qcx 169 LF_ALL --low 0 --high 10
-
-python extract_patch.py --qcx 641 LF_ALL --low 0 --high 10
-
-python extract_patch.py --qcx 48 LF_ALL --low 0 --high  10 --nodesc
-
-python extract_patch.py --qcx 250 LF_ALL --low 0 --high 10 --nodesc
 
 Failure Cases: 
 Non rigid matches (lionfish fins) (deformable / independently moving parts) 
@@ -253,10 +245,8 @@ Partial background matches / random configuration of animals.
 Compounded by textured regions with lots of matches
 (there is a disproportionate scoring for regions which generate more
 keypoints)
-
-
-
-
+=======
 * Run With GTed wildebeast
 * Upload nonmatching photos for ASIFT comparison
 * Enumerate what other people have done in hotspotter2.tex
+python extract_patch.py --qcx 250 LF_ALL --low 0 --high 10 --nodesc

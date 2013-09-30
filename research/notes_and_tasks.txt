@@ -257,4 +257,6 @@ keypoints)
 
 
 
-
+* Run With GTed wildebeast
+* Upload nonmatching photos for ASIFT comparison
+* Enumerate what other people have done in hotspotter2.tex

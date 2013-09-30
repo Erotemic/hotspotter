@@ -195,7 +195,7 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
-    print('[fc2] __main__ = feature_compute2.py')
+    print('[fV2] __main__ = feature_compute2.py')
 
     __DEV_MODE__ = True
     if __DEV_MODE__ or 'test' in sys.argv:

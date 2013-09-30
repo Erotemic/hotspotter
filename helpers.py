@@ -1225,8 +1225,16 @@ def get_arg_after(arg, type_=None):
         pass
     return arg_after
 
+def listfind(list_, tofind):
+    try: 
+        return list_.index(tofind)
+    except ValueError:
+        return None
+
 
 if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
     print('[helpers] You ran helpers as main!')
     import algos
     import sklearn

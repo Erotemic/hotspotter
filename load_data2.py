@@ -281,10 +281,12 @@ class HotSpotter(DynStruct):
         return hs.feats.cx2_kpts[cx]
     #--------------
     def cx2_rchip_size(hs, cx):
-        return Image.open(hs.cpaths.cx2_rchip_path[cx]).size
+        rchip_path = hs.cpaths.cx2_rchip_path[cx]
+        return Image.open(rchip_path).size
+
     def get_cx2_rchip_size(hs):
-        cx2_rchip_size = [Image.open(rchip_path).size
-         for rchip_path in hs.cpaths.cx2_rchip_path]
+        cx2_rchip_path = hs.cpaths.cx2_rchip_path
+        cx2_rchip_size = [Image.open(path).size for path in cx2_rchip_path]
         return cx2_rchip_size
     #--------------
     def get_features(hs, cx):
@@ -792,6 +794,8 @@ def test_load_csv():
 
 # Test load csv tables
 if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
     import draw_func2 as df2
     if '--test' in sys.argv:
         helpers.PRINT_CHECKS = True #might as well

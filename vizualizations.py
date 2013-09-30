@@ -239,3 +239,6 @@ def dump_orgres_matches(allres, orgres_type):
         df2.set_figtitle(big_title)
         __dump_or_browse(allres.hs, orgres_type+'_matches'+allres.title_suffix)
 
+if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()

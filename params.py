@@ -47,36 +47,36 @@ MOTHERS   = WORK_DIR+'/HSDB_zebra_with_mothers'
 OXFORD    = WORK_DIR+'/Oxford_Buildings'
 PARIS     = WORK_DIR+'/Paris_Buildings'
 SONOGRAMS = WORK_DIR+'/sonograms'
-PZ2 = WORK_DIR+'/PZ-Sweatwater'
-PZ_DanExt_Test = WORK_DIR + '/PZ_DanExt_Test'
-PZ_DanExt_All = WORK_DIR2 + '/PZ_DanExt_All'
-PZ_Marianne = WORK_DIR + '/PZ_Marianne'
-Wildebeast_ONLY_MATCHES = WORK_DIR + '/Wildebeast_ONLY_MATCHES'
-Wildebeast = WORK_DIR2 + '/Wildebeast'
-JAG_Kieryn = WORK_DIR2 + '/JAG_Kieryn'
-LF_ALL = WORK_DIR + '/LF_all'
-
+PZ2                     = WORK_DIR +'/PZ-Sweatwater'
+PZ_DanExt_Test          = WORK_DIR +'/PZ_DanExt_Test'
+PZ_DanExt_All           = WORK_DIR2+'/PZ_DanExt_All'
+PZ_Marianne             = WORK_DIR +'/PZ_Marianne'
+Wildebeast_ONLY_MATCHES = WORK_DIR +'/Wildebeast_ONLY_MATCHES'
+WILDEBEAST              = WORK_DIR2+'/Wildebeast'
+JAG_Kieryn              = WORK_DIR2+'/JAG_Kieryn'
+LF_ALL                  = WORK_DIR +'/LF_all'
+WY_TOADS = WORK_DIR + '/WY_Toads'
 
 dev_databases = {
-    'SONOGRAMS' : SONOGRAMS,
-    'JAG'       : JAGUARS,
-    'FROGS'     : FROGS,
-    'NAUTS'     : NAUTS,
-    'GZ'        : GZ,
-    'PZ'        : PZ,
-    'PZ2'       : PZ2,
-    'WS_HARD'   : WS_HARD,
-    'MOTHERS'   : MOTHERS,
-    'OXFORD'    : OXFORD,
-    'PARIS'     : PARIS,
-    'PZ_MARIANNE' : PZ_Marianne,
-    'PZ_DANEXT_TEST': PZ_DanExt_Test,
-    'PZ_DANEXT_ALL': PZ_DanExt_All,
-    'WILDEBEAST_ONLY_MATCHES' : Wildebeast_ONLY_MATCHES,
-    'WILDEBEAST' : Wildebeast,
-    'JAG_KIERYN' : JAG_Kieryn,
-    'LF_ALL' : LF_ALL,
-    'WD_SIVA' : WD_SIVA,
+    'SONOGRAMS'      : SONOGRAMS,
+    'JAG'            : JAGUARS,
+    'FROGS'          : FROGS,
+    'NAUTS'          : NAUTS,
+    'GZ'             : GZ,
+    'PZ'             : PZ,
+    'PZ2'            : PZ2,
+    'WS_HARD'        : WS_HARD,
+    'MOTHERS'        : MOTHERS,
+    'OXFORD'         : OXFORD,
+    'PARIS'          : PARIS,
+    'PZ_MARIANNE'    : PZ_Marianne,
+    'PZ_DANEXT_TEST' : PZ_DanExt_Test,
+    'PZ_DANEXT_ALL'  : PZ_DanExt_All,
+    'WILDEBEAST'     : WILDEBEAST,
+    'JAG_KIERYN'     : JAG_Kieryn,
+    'LF_ALL'         : LF_ALL,
+    'WD_SIVA'        : WD_SIVA,
+    'WY_TOADS'       : WY_TOADS
 }
 
 #DEFAULT = NAUTS

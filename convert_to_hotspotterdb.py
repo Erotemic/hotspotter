@@ -1,13 +1,14 @@
-import sys
-import fnmatch
-from os.path import join, relpath
+from PIL import Image
+from os.path import join, relpath, normpath
 import collections
+import fnmatch
 import helpers
-import load_data2
+import params
+import load_data2 as ld2
 import numpy as np
 import os
 import parse
-from PIL import Image
+import sys
 
 def reload_module():
     import imp
@@ -81,12 +82,8 @@ def __read_oxsty_gtfile(gt_fpath, name, quality, img_dpath, corrupted_gname_set)
             oxsty_chip_info_list.append(oxsty_chip_info)
     return oxsty_chip_info_list
 
-def matches_image(fname):
-    fname_ = fname.lower()
-    return any([fnmatch.fnmatch(fname_, pat) for pat in ['*.jpg', '*.png']])
-
-#db_dir = load_data2.PARIS
-db_dir = load_data2.OXFORD
+#db_dir = ld2.PARIS
+db_dir = ld2.OXFORD
 def convert_from_oxford_style(db_dir):
     # Get directories for the oxford groundtruth
     oxford_gt_dpath      = join(db_dir, 'oxford_style_gt')
@@ -107,7 +104,7 @@ def convert_from_oxford_style(db_dir):
                     for (root,dlist,flist) in os.walk(img_dpath)
                     for fname in iter(flist)]
     gname_list = [gname for gname in iter(gname_list_) 
-                  if not gname in corrupted_gname_set and matches_image(gname)]
+                  if not gname in corrupted_gname_set and helpers.matches_image(gname)]
     print(' * num_images = %d ' % len(gname_list))
 
     # Read the Oxford Style Groundtruth files
@@ -180,7 +177,7 @@ def convert_from_oxford_style(db_dir):
     cx2_roi     = []
     cx2_nx      = []
     cx2_gx      = []
-    cx2_oxnum   = []
+    prop_dict   = {'oxnum':[]}
   
     def add_to_hs_tables(gname, name, roi, quality, num=''):
         cid = len(cx2_cid) + 1
@@ -193,7 +190,7 @@ def convert_from_oxford_style(db_dir):
         cx2_nx.append(nx)
         cx2_gx.append(gx)
         cx2_theta.append(0)
-        cx2_oxnum.append(num)
+        prop_dict['oxnum'].append(num)
         sys.stdout.write(('\b'*10)+'cid = %4d' % cid)
         
     for gname, roi, name, num in query_chips:
@@ -221,69 +218,16 @@ def convert_from_oxford_style(db_dir):
 
     cx2_nid = np.array(nx2_nid)[cx2_nx]
     cx2_gid = np.array(gx2_gid)[cx2_gx]
-
-    # Make chip_table.csv
-    header = '# chip table'
-    column_labels = ['ChipID', 'ImgID', 'NameID', 'roi[tl_x  tl_y  w  h]', 'theta', 'oxnum']
-    column_type   = [int, int, int, list, int, str]
-    column_list   = [cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta, cx2_oxnum]
-    chip_table = load_data2.make_csv_table(column_labels, column_list, header, column_type)
-
-    # Make name_table.csv
-    column_labels = ['nid', 'name']
-    column_list   = [nx2_nid[2:], nx2_name[2:]] # dont write ____ for backcomp
-    column_type   = [int, str]
-    header = '# name table'
-    name_table = load_data2.make_csv_table(column_labels, column_list, header, column_type)
-
-    # Make image_table.csv 
-    column_labels = ['gid', 'gname', 'aif'] # do aif for backwards compatibility
-    gx2_aif = np.ones(len(gx2_gid), dtype=np.uint32)
-    column_list   = [gx2_gid, gx2_gname, gx2_aif]
-    column_type   = [int, str, int]
-    header = '# image table'
-    image_table = load_data2.make_csv_table(column_labels, column_list, header, column_type)
-
-    # Make test / train / database samples
-    test_sample55_cx = range(0, len(query_chips))
-    indexed_sample_cx  = range(len(query_chips), len(cx2_cid))
-    test_sample_cx   = indexed_sample_cx
-    train_sample_cx  = indexed_sample_cx
-
-    # Build filenames
-    internal_dir = join(db_dir, '.hs_internals')
+    #
+    # Write tables
+    internal_dir      = join(db_dir, '.hs_internals')
     helpers.ensurepath(internal_dir)
-    chip_table_fname  = join(internal_dir,  'chip_table.csv')
-    name_table_fname  = join(internal_dir,  'name_table.csv')
-    image_table_fname = join(internal_dir, 'image_table.csv')
-    
-    test_sample55_fpath  = join(internal_dir, 'test_sample55.txt')
-    test_sample_fpath  = join(internal_dir, 'test_sample.txt')
-    train_sample_fpath = join(internal_dir, 'train_sample.txt')
-    indexed_sample_fpath    = join(internal_dir, 'indexed_sample.txt')
-
-    # Write converted format to disk
-    old_print_writes = helpers.__PRINT_WRITES__
-    helpers.__PRINT_WRITES__ = True
-    helpers.write_to(chip_table_fname, chip_table)
-    helpers.write_to(name_table_fname, name_table)
-    helpers.write_to(image_table_fname, image_table)
-
-    helpers.write_to(test_sample_fpath,  repr(test_sample_cx))
-    helpers.write_to(test_sample55_fpath,  repr(test_sample55_cx))
-    helpers.write_to(train_sample_fpath, repr(train_sample_cx))
-    helpers.write_to(indexed_sample_fpath,   repr(indexed_sample_cx))
-    helpers.__PRINT_WRITES__ = old_print_writes
+    write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta, prop_dict)
+    write_name_table(internal_dir, nx2_nid, nx2_name)
+    write_image_table(internal_dir, gx2_gid, gx2_gname)
 
 # Converts the name_num.jpg image format into a database
 def convert_named_chips(db_dir, img_dpath=None):
-    from PIL import Image
-    from os.path import join
-    import helpers
-    import load_data2
-    import numpy as np
-    import os
-    import parse
     # --- Initialize ---
     gt_format = '{}_{:d}.jpg'
     if img_dpath is None:
@@ -330,65 +274,22 @@ def convert_named_chips(db_dir, img_dpath=None):
     cx2_gid = np.array(gx2_gid)[cx2_gx]
     print('There are %d chips' % (cid-1))
 
-    # Make chip_table.csv
-    header = '# chip table'
-    column_labels = ['ChipID', 'ImgID', 'NameID', 'roi[tl_x  tl_y  w  h]', 'theta']
-    column_list   = [cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta]
-    chip_table = load_data2.make_csv_table(column_labels, column_list, header)
-
-    # Make name_table.csv
-    column_labels = ['nid', 'name']
-    column_list   = [nx2_nid[2:], nx2_name[2:]] # dont write ____ for backcomp
-    header = '# name table'
-    name_table = load_data2.make_csv_table(column_labels, column_list, header)
-
-    # Make image_table.csv 
-    column_labels = ['gid', 'gname', 'aif'] # do aif for backwards compatibility
-    gx2_aif = np.ones(len(gx2_gid), dtype=np.uint32)
-    column_list   = [gx2_gid, gx2_gname, gx2_aif]
-    header = '# image table'
-    image_table = load_data2.make_csv_table(column_labels, column_list, header)
-
     # Write tables
-    internal_dir      = join(db_dir, '.hs_internals')
+    internal_dir = join(db_dir, '.hs_internals')
     helpers.ensurepath(internal_dir)
-    chip_table_fname  = join(internal_dir,  'chip_table.csv')
-    name_table_fname  = join(internal_dir,  'name_table.csv')
-    image_table_fname = join(internal_dir, 'image_table.csv')
-    
-    helpers.write_to(chip_table_fname, chip_table)
-    helpers.write_to(name_table_fname, name_table)
-    helpers.write_to(image_table_fname, image_table)
+    write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta)
+    write_name_table(internal_dir, nx2_nid, nx2_name)
+    write_image_table(internal_dir, gx2_gid, gx2_gname)
+   
 
 def init_database_from_images(db_dir, img_dpath=None, gt_format=None):
-    from PIL import Image
-    from os.path import join
-    import helpers
-    import load_data2
-    import numpy as np
-    import os
-    import parse
     # --- Initialize ---
     if img_dpath is None:
         img_dpath = db_dir + '/images'
     print('Converting db_dir=%r and img_dpath=%r' % (db_dir, img_dpath)) 
-    # --- Build Image Table ---
-    helpers.print_('Building name table: ')
-    gx2_gname = helpers.list_images(img_dpath)
-    gx2_gid   = range(1,len(gx2_gname)+1)
-    print('There are %d images' % len(gx2_gname))
-    # ---- Build Name Table ---
-    name_set = set([])
-    if not gt_format is None:
-        helpers.print_('Building name table: ')
-        for gx, gname in enumerate(gx2_gname):
-            name, num = parse.parse(gt_format, gname)
-            name_set.add(name)
-    else: 
-        print('There is no image ground truth')
-    nx2_name  = ['____', '____'] + list(name_set)
-    nx2_nid   = [1, 1]+range(2,len(name_set)+2)
-    print('There are %d names' % (len(nx2_name)-2))
+    gx2_gid, gx2_gname = imagetables_from_img_dpath(img_dpath)
+    name_set = groundtruth_from_imagenames(gx2_gname, gt_format)
+    nx2_name, nx2_nid = nametables_from_nameset(name_set)
     # ---- Build Chip Table ---
     helpers.print_('Building chip table: ')
     cx2_cid     = []
@@ -411,57 +312,226 @@ def init_database_from_images(db_dir, img_dpath=None, gt_format=None):
         else:
             name, num = parse.parse(gt_format, gname)
         img_fpath = join(img_dpath, gname)
-        try: 
-            (w,h) = Image.open(img_fpath).size
-            roi = [1, 1, w, h]
+        roi = roi_from_imgsize(img_fpath)
+        if not roi is None:
             add_to_hs_tables(cid, gname, name, roi)
             cid += 1
-        except Exception as ex: 
-            print('Exception ex=%r' % ex)
-            print('Not adding img_fpath=%r' % img_fpath)
-            print('----')
     cx2_nid = np.array(nx2_nid)[cx2_nx]
     cx2_gid = np.array(gx2_gid)[cx2_gx]
     print('There are %d chips' % (cid-1))
 
+    # Write tables
+    internal_dir      = join(db_dir, '.hs_internals')
+    helpers.ensurepath(internal_dir)
+    write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta)
+    write_name_table(internal_dir, nx2_nid, nx2_name)
+    write_image_table(internal_dir, gx2_gid, gx2_gname)
+
+def xlsx_to_tables(db_dir):
+    'finds any xlsx files in db_dir and transforms them into an image table'
+    import openpyxl
+    import glob
+    db_dir = normpath(db_dir)
+    if not 'img_dpath' in vars() or img_dpath is None:
+        img_dpath = normpath(join(db_dir, 'images'))
+    xlsx_files = glob.glob(join(db_dir,'*.xlsx'))
+    if len(xlsx_files) != 1:
+        raise Exception('non-unique xlsx files')
+    xlsx_fpath = normpath(xlsx_files[0])
+    #'research/testdata/WILDEBEEST_MORRISON_B.xlsx'
+    print('[convert] Converting db_dir  = %r' % db_dir)
+    print('[convert] with img_dpath     = %r' % img_dpath)
+    print('[convert] Reading xlsx_fpath = %r' % (xlsx_fpath,))
+    wb = openpyxl.load_workbook(filename=xlsx_fpath)
+    active_sheet  = wb.get_active_sheet()
+    header_cells  = active_sheet.rows[0]
+    column_cells  = active_sheet.columns
+    column_labels = [cell.value for cell in header_cells]
+    column_list   = [[cell.value for cell in column[1:]] for column in column_cells]
+    row_lengths = [len(col) for col in column_list]
+    num_rows = row_lengths[0]
+    assert all([num_rows == rowlen for rowlen in row_lengths]), \
+            'number of rows in xlsx file must be consistent'
+    #header = 'Converted from: '+repr(xlsx_fpath)
+    #csv_string = ld2.make_csv_table(column_labels, column_list, header)
+    # Get Image set
+    print('[convert] Building image table')
+    gx2_gid, gx2_gname = imagetables_from_img_dpath(img_dpath)
+    # Get name set
+    print('[convert] Building name table')
+    def get_lbl_pos(column_labels, valid_labels):
+        for lbl in valid_labels:
+            index = helpers.listfind(column_labels, lbl) 
+            if index != None: return index
+        raise Exception('There is no valid label')
+    name_colx = get_lbl_pos(column_labels, ['ANIMAL_ID'])
+    name_set = set(column_list[name_colx])
+    nx2_name, nx2_nid = nametables_from_nameset(name_set)
+    # Get chip set
+    print('[convert] build chip table')
+    # This format has multiple images per row
+    chips_per_name = 2
+    def get_multiprop_colx_list(prefix):
+        colx_list = []
+        for num in xrange(chips_per_name):
+            lbl = prefix+str(num+1)
+            colx = get_lbl_pos(column_labels, [lbl])
+            colx_list.append(colx)
+        return colx_list
+    image_colx_list = get_multiprop_colx_list('IMAGE_')
+    date_colx_list  = get_multiprop_colx_list('DATE_NO')
+    # Other useful properties
+    sex_colx = get_lbl_pos(column_labels, ['SEX'])
+    # build dict of (img, roi) tuples maping to names
+    cx2_cid     = []
+    cx2_theta   = []
+    cx2_roi     = []
+    cx2_nx      = []
+    cx2_gx      = []
+    prop_dict   = {'sex':[], 'date':[]}
+    cid = 1
+    def add_to_hs_tables(cid, gname, name, roi, sex, date, theta=0):
+        nx = nx2_name.index(name)
+        gx = gx2_gname.index(gname)
+        cx2_cid.append(cid)
+        cx2_roi.append(roi)
+        cx2_nx.append(nx)
+        cx2_gx.append(gx)
+        prop_dict['sex'].append(sex)
+        prop_dict['date'].append(date)
+        cx2_theta.append(0)
+    imgandroi2_name = {}
+    for rowx in xrange(num_rows):
+        for num in xrange(chips_per_name):
+            # Get multicolindexes
+            img_colx = image_colx_list[num]
+            date_cols = date_colx_list[num]
+            # Get properties
+            img_name = column_list[img_colx][rowx]
+            name     = column_list[name_colx][rowx]
+            date     = column_list[name_colx][rowx]
+            sex      = column_list[sex_colx][rowx]
+            roi      = roi_from_imgsize(join(img_dpath, img_name))
+            if roi is None:
+                raise Exception('corrupted image: '+str(img_name))
+            add_to_hs_tables(cid, img_name, name, roi, sex, date)
+            cid += 1
+    num_known_chips = len(cx2_cid)
+    print('[convert] Added %r known chips.' % num_known_chips)
+    # Add the rest of the nongroundtruthed chips
+    print('[convert] Adding unknown images to table')
+    assert np.unique(np.array(cx2_gx)).size == len(cx2_gx)
+    known_gx_set = set(cx2_gx)
+    for gx, gname in enumerate(gx2_gname):
+        if gx in known_gx_set: continue 
+        img_name = gname
+        name     = '____'
+        date     = 'NA'
+        sex      = 'NA'
+        roi      = roi_from_imgsize(join(img_dpath, img_name))
+        if not roi is None:
+            add_to_hs_tables(cid, img_name, name, roi, sex, date)
+            cid += 1
+    num_unknown_chips = len(cx2_cid) - num_known_chips
+    print('[convert] Added %r more unknown chips.' % num_unknown_chips)
+    cx2_nid = np.array(nx2_nid)[cx2_nx]
+    cx2_gid = np.array(gx2_gid)[cx2_gx]
+    print('[convert] There are %d chips' % (cid-1))
+    #
+    # Write tables
+    internal_dir      = join(db_dir, '.hs_internals')
+    helpers.ensurepath(internal_dir)
+    write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta, prop_dict)
+    write_name_table(internal_dir, nx2_nid, nx2_name)
+    write_image_table(internal_dir, gx2_gid, gx2_gname)
+    print('[convert] finished conversion')
+
+#------------------------
+# New modular function below 
+
+def roi_from_imgsize(img_fpath):
+    try: 
+        (w,h) = Image.open(img_fpath).size
+        roi = [1, 1, w, h]
+        return roi
+    except Exception as ex:
+        print('Exception ex=%r' % ex)
+        print('Not adding img_fpath=%r' % img_fpath)
+        print('----')
+        return None
+
+def imagetables_from_img_dpath(img_dpath=None):
+    gx2_gname = helpers.list_images(img_dpath)
+    gx2_gid   = range(1, len(gx2_gname)+1)
+    print('There are %d images' % len(gx2_gname))
+    return gx2_gid, gx2_gname
+
+def groundtruth_from_imagenames(gx2_gname, gt_format):
+    if gt_format is None:
+        print('There is no image ground truth')
+        return set([])
+    print('Parsing image names for groundtruth. gt_format=%r' % gt_format)
+    name_set = set([])
+    for gx, gname in enumerate(gx2_gname):
+        name, num = parse.parse(gt_format, gname)
+        name_set.add(name)
+    return name_set
+
+def nametables_from_nameset(name_set):
+    nx2_name  = ['____', '____'] + list(name_set)
+    nx2_nid   = [1, 1]+range(2,len(name_set)+2)
+    print('There are %d names' % (len(nx2_name)-2))
+    return nx2_name, nx2_nid
+
+def write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid,
+                     cx2_roi, cx2_theta, prop_dict=None):
+    helpers.__PRINT_WRITES__ = True
+    print('Writing Chip Table')
     # Make chip_table.csv
     header = '# chip table'
     column_labels = ['ChipID', 'ImgID', 'NameID', 'roi[tl_x  tl_y  w  h]', 'theta']
     column_list   = [cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta]
-    chip_table = load_data2.make_csv_table(column_labels, column_list, header)
+    column_type   = [int, int, int, list, float]
+    if not prop_dict is None:
+        for key, val in prop_dict.iteritems():
+            column_labels.append(key)
+            column_list.append(val)
+            column_type.append(str)
 
+    chip_table = ld2.make_csv_table(column_labels, column_list, header, column_type)
+    chip_table_fname  = join(internal_dir,  'chip_table.csv')
+    helpers.write_to(chip_table_fname, chip_table)
+
+def write_name_table(internal_dir, nx2_nid, nx2_name):
+    helpers.__PRINT_WRITES__ = True
     # Make name_table.csv
     column_labels = ['nid', 'name']
     column_list   = [nx2_nid[2:], nx2_name[2:]] # dont write ____ for backcomp
     header = '# name table'
-    name_table = load_data2.make_csv_table(column_labels, column_list, header)
+    name_table = ld2.make_csv_table(column_labels, column_list, header)
+    name_table_fname  = join(internal_dir,  'name_table.csv')
+    helpers.write_to(name_table_fname, name_table)
 
+def write_image_table(internal_dir, gx2_gid, gx2_gname):
+    helpers.__PRINT_WRITES__ = True
     # Make image_table.csv 
     column_labels = ['gid', 'gname', 'aif'] # do aif for backwards compatibility
     gx2_aif = np.ones(len(gx2_gid), dtype=np.uint32)
     column_list   = [gx2_gid, gx2_gname, gx2_aif]
     header = '# image table'
-    image_table = load_data2.make_csv_table(column_labels, column_list, header)
-
-    # Write tables
-    internal_dir      = join(db_dir, '.hs_internals')
-    helpers.ensurepath(internal_dir)
-    chip_table_fname  = join(internal_dir,  'chip_table.csv')
-    name_table_fname  = join(internal_dir,  'name_table.csv')
+    image_table = ld2.make_csv_table(column_labels, column_list, header)
     image_table_fname = join(internal_dir, 'image_table.csv')
-    
-    helpers.write_to(chip_table_fname, chip_table)
-    helpers.write_to(name_table_fname, name_table)
     helpers.write_to(image_table_fname, image_table)
 
+#----- Specific Databases ----
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     helpers.PRINT_CHECKS = True
-    oxsty_convert_list = [load_data2.OXFORD, load_data2.PARIS]
-    for db_dir in oxsty_convert_list:
-        print('\n-- Begin Convert --\n{')
-        if helpers.checkpath(db_dir):
-            convert_from_oxford_style(db_dir)
-        print('}\n')
+    if 'paris' in sys.argv: 
+        convert_from_oxford_style(params.PARIS)
+    if 'oxford' in sys.argv: 
+        convert_from_oxford_style(params.OXFORD)
+    if 'wildebeast' in sys.argv:
+        xlsx_to_tables(params.WILDEBEAST)

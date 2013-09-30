@@ -1,10 +1,21 @@
 ''' Lots of functions for drawing and plotting visiony things '''
 from __future__ import division, print_function
 import matplotlib
-if matplotlib.get_backend() != 'Qt4Agg':
-    print('[df2] matplotlib.use(Qt4Agg)')
+import multiprocessing
+MPL_BACKEND = matplotlib.get_backend()
+matplotlib.rcParams['toolbar'] = 'toolbar2'
+if MPL_BACKEND != 'Qt4Agg':
+    if current_process().name == 'MainProcess':
+        print('[df2] current backend is: %r' % MPL_BACKEND)
+        print('[df2] matplotlib.use(Qt4Agg)')
     matplotlib.use('Qt4Agg', warn=True, force=True)
+    MPL_BACKEND = matplotlib.get_backend()
+    if current_process().name == 'MainProcess':
+        print('[df2] current backend is: %r' % MPL_BACKEND)
     #matplotlib.rcParams['toolbar'] = 'None'
+    #matplotlib.rcParams['interactive'] = True
+
+
 from matplotlib import gridspec
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle, Circle, FancyArrow
@@ -14,8 +25,10 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import types
+import time
 import warnings
 import helpers
+import scipy.stats
 import textwrap
 import os
 import sys
@@ -166,7 +179,6 @@ def all_figures_show():
         fig.show()
         fig.canvas.draw()
 
-import time
 def all_figures_tight_layout():
     for fig in iter(get_all_figures()):
         fig.tight_layout()
@@ -595,7 +607,6 @@ def variation_trunctate(data):
     #ax.set_xticks(trunc_xticks)
     #ax.set_yticks(no_zero_yticks)
     
-import scipy.stats
 def estimate_pdf(data, bw_factor):
     try:
         data_pdf = scipy.stats.gaussian_kde(data, bw_factor)
@@ -1196,6 +1207,8 @@ def draw_sift(desc, kp=None):
     ax.add_collection(arw_collection)
 
 if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
     print('[df2] __main__ = draw_func2.py')
     from __init__ import *
     qcx = 14

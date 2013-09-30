@@ -228,6 +228,8 @@ def global_cache_write(cache_id, newdir):
 # --- Main Test --- 
 
 if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
     data1 = (255 * np.random.rand(10000,10000)).astype(np.uint8)
     data2 = np.random.rand(10000,10000).astype(np.float64)
     data3 = (255 * np.random.rand(10000,10000)).astype(np.int32)

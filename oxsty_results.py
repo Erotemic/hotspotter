@@ -190,3 +190,8 @@ def debug_compute_ap_exe(compute_ap_exe,
     print('Noargs check:')
     (out, err, return_code) = execute(compute_ap_exe)
     (out, err, return_code) = popen_communicate(cmdstr)
+
+
+if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()

@@ -502,6 +502,8 @@ def compare():
     df2.present(num_rc=(2,2), wh=(800,500))
 
 if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
     from __init__ import *
     import multiprocessing as mp
     import draw_func2 as df2

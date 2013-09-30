@@ -195,7 +195,9 @@ def test2(chip, chip_mask):
 
 
 if __name__ == '__main__':
-    print('[segm] __main__')
+    from multiprocessing import freeze_support
+    freeze_support()
+    print('[segm] __main__ = segmentation.py')
     df2.reset()
     try:
         cx = int(sys.argv[1])

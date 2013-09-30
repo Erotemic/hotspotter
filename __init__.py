@@ -24,7 +24,7 @@ try:
 except NameError as ex:
     source_dir = os.getcwd()
     pass
-print(' * import hotspotter from: '+source_dir)
+print(' * import hotspotter from: %r' % source_dir)
 if os.environ['PYTHONPATH'].find(source_dir) == -1:
     toappend = source_dir + os.pathsep
     os.environ['PYTHONPATH'] = toappend + os.environ['PYTHONPATH']

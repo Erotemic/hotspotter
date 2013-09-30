@@ -457,6 +457,8 @@ def precompute_flann(data, cache_dir=None, uid='', flann_params=None):
     return flann
 
 if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
 
     np.random.seed(seed=0) # RANDOM SEED (for reproducibility)
     num_clusters = 10

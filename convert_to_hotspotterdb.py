@@ -648,6 +648,6 @@ if __name__ == '__main__':
         convert_from_oxford_style(params.OXFORD)
     if 'wildebeast' in sys.argv:
         wildid_xlsx_to_tables(params.WILDEBEAST)
-    if 'wy_toads' in sys.argv:
-        wildid_csv_to_tables(params.WY_TOADS)
+    if 'toads' in sys.argv:
+        wildid_csv_to_tables(params.TOADS)
 

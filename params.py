@@ -54,7 +54,7 @@ dev_databases = {
     'JAG_KIERYN'     : WORK_DIR2+'/JAG_Kieryn',
     'LF_ALL'         : WORK_DIR+'/LF_all',
     'WDOGS'          : WORK_DIR+'/WD_Siva',
-    'WY_TOADS'       : WORK_DIR2+'/WY_Toads'
+    'TOADS'          : WORK_DIR2+'/WY_Toads'
 }
 # Add values from the database dict as global vars
 for key, val in dev_databases.iteritems():

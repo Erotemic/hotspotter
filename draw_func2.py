@@ -5,17 +5,15 @@ import multiprocessing
 MPL_BACKEND = matplotlib.get_backend()
 matplotlib.rcParams['toolbar'] = 'toolbar2'
 if MPL_BACKEND != 'Qt4Agg':
-    if current_process().name == 'MainProcess':
+    if multiprocessing.current_process().name == 'MainProcess':
         print('[df2] current backend is: %r' % MPL_BACKEND)
         print('[df2] matplotlib.use(Qt4Agg)')
     matplotlib.use('Qt4Agg', warn=True, force=True)
     MPL_BACKEND = matplotlib.get_backend()
-    if current_process().name == 'MainProcess':
+    if multiprocessing.current_process().name == 'MainProcess':
         print('[df2] current backend is: %r' % MPL_BACKEND)
     #matplotlib.rcParams['toolbar'] = 'None'
     #matplotlib.rcParams['interactive'] = True
-
-
 from matplotlib import gridspec
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle, Circle, FancyArrow
@@ -24,18 +22,18 @@ from PyQt4.QtCore import Qt
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import types
-import time
-import warnings
-import helpers
-import scipy.stats
-import textwrap
 import os
-import sys
 import pylab
+import scipy.stats
+import sys
+import textwrap
+import time
 import types
+import warnings
 import itertools
 #print('LOAD_MODULE: draw_func2.py')
+
+import helpers
 
 def execstr_global():
     execstr = ['global' +key for key in globals().keys()]

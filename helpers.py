@@ -9,25 +9,23 @@ into a global set of helper functions.
 Wow, pylint is nice for cleaning.
 '''
 from __future__ import division, print_function
-import draw_func2 as df2
 from Printable import printableVal
+from os.path import join, relpath, normpath, join, split, isdir, isfile, exists, islink, ismount
 import cPickle
 import cStringIO
 import code
+import datetime
+import fnmatch
+import hashlib
+import inspect
 import numpy as np
 import os, os.path, sys
+import shutil
 import sys
-import inspect
+import textwrap
 import time
 import types
-import datetime
-import shutil
 import warnings
-import fnmatch
-import textwrap
-import hashlib
-from os.path import join, relpath, normpath, join, split, isdir, isfile, exists, islink, ismount
-import fnmatch
 #print('LOAD_MODULE: helpers.py')
 
 # reloads this module when I mess with it
@@ -935,7 +933,6 @@ def choose(n,k):
     import scipy.misc
     return scipy.misc.comb(n,k,True)
 
-import sys
 class Timer(object):
     ''' Used to time statments with a with statment
     e.g with Timer() as t: some_function()'''

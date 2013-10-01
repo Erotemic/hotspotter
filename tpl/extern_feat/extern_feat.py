@@ -3,6 +3,7 @@ import numpy as np
 import os, sys
 from os.path import dirname, realpath, join
 from PIL import Image
+from numpy import uint8, float32
 #import threading
 #__hesaff_lock = threading.Lock()
 
@@ -88,22 +89,20 @@ def __compute_hesaff(rchip_fpath):
 # Helper function to read external file formats
 def __read_text_chiprep_file(outname):
     'Reads output from external keypoint detectors like hesaff'
-    with open(outname, 'r') as file:
-        # Read header
-        ndims = int(file.readline())
-        nkpts = int(file.readline())
-        # Preallocate output
-        kpts = np.zeros((nkpts, 5), dtype=np.float32)
-        desc = np.zeros((nkpts, ndims), dtype=np.uint8)
-        # iterate over lines
-        lines = file.readlines()
-        for kx, line in enumerate(lines):
-            data = line.split(' ')
-            kpts[kx,:] = np.array([np.float32(_)\
-                                   for _ in data[0:5]], dtype=np.float32)
-            desc[kx,:] = np.array([np.uint8(_)\
-                                   for _ in data[5: ]], dtype=np.uint8)
-        return (kpts, desc)
+    file = open(outname, 'r')
+    # Read header
+    ndims = int(file.readline())
+    nkpts = int(file.readline())
+    lines = file.readlines()
+    file.close()
+    # Preallocate output
+    kpts = np.zeros((nkpts, 5), dtype=float32)
+    desc = np.zeros((nkpts, ndims), dtype=uint8)
+    for kx, line in enumerate(lines):
+        data = line.split(' ')
+        kpts[kx,:] = np.array([float32(_) for _ in data[0:5]], dtype=float32)
+        desc[kx,:] = np.array([uint8(_) for _ in data[5: ]], dtype=uint8)
+    return (kpts, desc)
 
 # Helper function to call commands
 def __execute_extern(cmd):

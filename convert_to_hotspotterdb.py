@@ -337,7 +337,8 @@ def load_xlsx_file(xlsx_fpath):
     column_list   = [[cell.value for cell in column[1:]] for column in column_cells]
     return column_labels, column_list
 
-#csv_fpath = '/media/Store/data/work/WY_Toads/WY_TOAD_MATCHES.csv'
+#csv_fpath = params.WY_TOADS+'/WY_TOAD_MATCHES.csv'
+
 def read_csv_file(csv_fpath):
     def parse_csv_line(csv_line):
         csv_line_ = csv_line.strip('\n\r\t ')
@@ -433,7 +434,7 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
             pass
     #date_colx_list  = get_multiprop_colx_list('DATE_NO')
     # Other useful properties
-    try_props = ['SEX', 'matches', 'WildID_score']
+    try_props = ['SEX']
     prop2_colx = {}
     for key in try_props:
         try: 
@@ -441,6 +442,16 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
             prop2_colx[key] = other_colx
         except Exception as ex:
             pass
+    # Properties for pairwise matches
+    try_match_props = ['matches', 'WildID_score']
+    pairprop2_colx = {}
+    for key in try_match_props:
+        try: 
+            other_colx = get_lbl_pos(column_labels, [key])
+            pairprop2_colx[key] = other_colx
+        except Exception as ex:
+            pass
+
     #sex_colx = get_lbl_pos(column_labels, ['SEX'])
     cx2_cid     = []
     cx2_theta   = []
@@ -449,6 +460,8 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
     cx2_gx      = []
     # Initialize other props
     prop_dict = {}
+    pairwise_dict = {}
+    gnameroi_to_cid = {}
     for key in prop2_colx.keys():
         prop_dict[key] = []
     for key in multiprop2_colx.keys():
@@ -467,59 +480,69 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
         cx2_theta.append(0)
 
     bad_rows = 0
-
     for rowx in xrange(num_rows):
-        for num in xrange(chips_per_name):
-            #date_colx = date_colx_list[num]
-            #date     = column_list[date_colx][rowx]
-            #sex      = column_list[sex_colx][rowx]
+        name     = column_list[name_colx][rowx]
+        tbl_kwargs2 = {key:column_list[val][rowx] for key, val in prop2_colx.iteritems()}
+        pairwise_vals = [column_list[colx][rowx] for colx in pairprop2_colx.values()]
+        cid_tup = []
+        for num in xrange(chips_per_name): #TODO: This is always just pairwise
             # Get multicolindexes
             img_colx = image_colx_list[num]
             # Get properties
-            img_name = column_list[img_colx][rowx]
-            name     = column_list[name_colx][rowx]
+            gname = column_list[img_colx][rowx]
             # Get other properties
             tbl_kwargs1 = {key:column_list[val[num]][rowx] for key, val in multiprop2_colx.iteritems()}
-            tbl_kwargs2 = {key:column_list[val][rowx] for key, val in prop2_colx.iteritems()}
             tbl_kwargs = dict(tbl_kwargs1.items() + tbl_kwargs2.items())
-            roi      = roi_from_imgsize(join(img_dpath, img_name), silent=True))
+            roi      = roi_from_imgsize(join(img_dpath, gname), silent=True)
             if roi is None:
-                img_fpath = join(img_dpath, img_name)
+                img_fpath = join(img_dpath, gname)
                 bad_rows += 1
                 if not exists(img_fpath):
-                    print('nonexistant image: '+str(img_name))
-                    pass
+                    print('nonexistant image: %r' % gname)
                 else:
-                    print('corrupted image: '+str(img_name))
-                    pass
-            else:
-                add_to_hs_tables(cid, img_name, name, roi, **tbl_kwargs)
-                cid += 1
+                    print('corrupted image: %r' % gname)
+                continue
+            gnameroi = (gname, tuple(roi))
+            if gnameroi in gnameroi_to_cid.keys():
+                cid = gnameroi_to_cid[gnameroi]
+                cid_tup.append(cid)
+                continue
+            gnameroi_to_cid[gnameroi] = cid
+            cid_tup.append(cid)
+            add_to_hs_tables(cid, gname, name, roi, **tbl_kwargs)
+            cid += 1
+        pairwise_dict[tuple(cid_tup)] = pairwise_vals
 
     print('bad_rows = %r ' % bad_rows)
     print('num_rows = %r ' % num_rows)
     print('chips_per_name = %r ' % chips_per_name)
     print('cid = %r ' % cid)
 
+    print('num pairwise properties: %r' % len(pairwise_dict))
+    print('implementation of pairwise properties does not yet exist')
+
     num_known_chips = len(cx2_cid)
     print('[convert] Added %r known chips.' % num_known_chips)
     # Add the rest of the nongroundtruthed chips
     print('[convert] Adding unknown images to table')
-    assert np.unique(np.array(cx2_gx)).size == len(cx2_gx), 
+    num_unique_gx = np.unique(np.array(cx2_gx)).size
+    num_gx = len(cx2_gx)
+    print('len(cx2_gx)=%r' % num_gx)
+    print('num_unique_gx=%r' % num_unique_gx)
+    assert num_unique_gx == num_gx, \
         'There are images specified twice'
     known_gx_set = set(cx2_gx)
     for gx, gname in enumerate(gx2_gname):
         if gx in known_gx_set: continue 
-        img_name = gname
         name     = '____'
         #date     = 'NA'
         #sex      = 'NA'
-        roi      = roi_from_imgsize(join(img_dpath, img_name), silent=False)
+        roi      = roi_from_imgsize(join(img_dpath, gname), silent=False)
         tbl_kwargs1 = {key:'NA' for key, val in multiprop2_colx.iteritems()}
         tbl_kwargs2 = {key:'NA' for key, val in prop2_colx.iteritems()}
         tbl_kwargs = dict(tbl_kwargs1.items() + tbl_kwargs2.items())
         if not roi is None:
-            add_to_hs_tables(cid, img_name, name, roi, **tbl_kwargs)
+            add_to_hs_tables(cid, gname, name, roi, **tbl_kwargs)
             cid += 1
     num_unknown_chips = len(cx2_cid) - num_known_chips
     print('[convert] Added %r more unknown chips.' % num_unknown_chips)

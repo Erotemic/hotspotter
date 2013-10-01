@@ -5,6 +5,7 @@ import sys
 import os.path
 import numpy as np
 import helpers
+import multiprocessing
 
 def reload_module():
     import imp
@@ -371,13 +372,16 @@ def MOTHERS_defaults():
 
 for argv in iter(sys.argv):
     argv_u =  argv.upper()
-    print(argv_u)
+    if multiprocessing.current_process().name == 'MainProcess':
+        print('[params] argv: %r' % argv_u)
     if argv_u in dev_databases.keys():
-        print('\n'.join(['[params] Default Database set to:'+argv.upper(),
-                         '[params] Previously: '+str(DEFAULT)]))
+        if multiprocessing.current_process().name == 'MainProcess':
+            print('\n'.join(['[params] Default Database set to:'+argv.upper(),
+                            '[params] Previously: '+str(DEFAULT)]))
         DEFAULT = dev_databases[argv_u]
         if argv_u == 'OXFORD' or argv_u == 'PHILBIN':
-            print('[params] Overloading OXFORD parameters')
+            if multiprocessing.current_process().name == 'MainProcess':
+                print('[params] Overloading OXFORD parameters')
             # dont resize oxford photos
             OXFORD_defaults()
         if argv_u == 'GZ':

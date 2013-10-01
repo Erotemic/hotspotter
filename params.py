@@ -35,50 +35,31 @@ if sys.platform == 'linux2':
     WORK_DIR2 = '/media/Store/data/work'
 
 # Common databases I use
-GZ        = WORK_DIR+'/GZ_ALL'
-GZ        = WORK_DIR+'/GZ_ALL'
-PZ        = WORK_DIR+'/PZ_FlankHack'
-FROGS     = WORK_DIR+'/Frogs'
-WD_SIVA   = WORK_DIR+'/WD_Siva'
-LIONFISH  = WORK_DIR+'/LF_all'
-JAGUARS   = WORK_DIR+'/JAG_Jaguar_Data'
-NAUTS     = WORK_DIR+'/NAUT_Dan'
-WS_HARD   = WORK_DIR+'/WS_hard'
-MOTHERS   = WORK_DIR+'/HSDB_zebra_with_mothers'
-OXFORD    = WORK_DIR+'/Oxford_Buildings'
-PARIS     = WORK_DIR+'/Paris_Buildings'
-SONOGRAMS = WORK_DIR+'/sonograms'
-PZ2                     = WORK_DIR +'/PZ-Sweatwater'
-PZ_DanExt_Test          = WORK_DIR +'/PZ_DanExt_Test'
-PZ_DanExt_All           = WORK_DIR2+'/PZ_DanExt_All'
-PZ_Marianne             = WORK_DIR +'/PZ_Marianne'
-Wildebeast_ONLY_MATCHES = WORK_DIR +'/Wildebeast_ONLY_MATCHES'
-WILDEBEAST              = WORK_DIR2+'/Wildebeast'
-JAG_Kieryn              = WORK_DIR2+'/JAG_Kieryn'
-LF_ALL                  = WORK_DIR +'/LF_all'
-WY_TOADS = WORK_DIR2 + '/WY_Toads'
-
 dev_databases = {
-    'SONOGRAMS'      : SONOGRAMS,
-    'JAG'            : JAGUARS,
-    'FROGS'          : FROGS,
-    'NAUTS'          : NAUTS,
-    'GZ'             : GZ,
-    'PZ'             : PZ,
-    'PZ2'            : PZ2,
-    'WS_HARD'        : WS_HARD,
-    'MOTHERS'        : MOTHERS,
-    'OXFORD'         : OXFORD,
-    'PARIS'          : PARIS,
-    'PZ_MARIANNE'    : PZ_Marianne,
-    'PZ_DANEXT_TEST' : PZ_DanExt_Test,
-    'PZ_DANEXT_ALL'  : PZ_DanExt_All,
-    'WILDEBEAST'     : WILDEBEAST,
-    'JAG_KIERYN'     : JAG_Kieryn,
-    'LF_ALL'         : LF_ALL,
-    'WD_SIVA'        : WD_SIVA,
-    'WY_TOADS'       : WY_TOADS
+    'SONOGRAMS'      : WORK_DIR+'/sonograms',
+    'JAG'            : WORK_DIR+'/JAG_Jaguar_Data',
+    'FROGS'          : WORK_DIR+'/Frogs',
+    'NAUTS'          : WORK_DIR+'/NAUT_Dan',
+    'GZ'             : WORK_DIR+'/GZ_ALL',
+    'PZ'             : WORK_DIR+'/PZ_FlankHack',
+    'PZ2'            : WORK_DIR +'/PZ-Sweatwater',
+    'WS_HARD'        : WORK_DIR+'/WS_hard',
+    'MOTHERS'        : WORK_DIR+'/HSDB_zebra_with_mothers',
+    'OXFORD'         : WORK_DIR+'/Oxford_Buildings',
+    'PARIS'          : WORK_DIR+'/Paris_Buildings',
+    'PZ_MARIANNE'    : WORK_DIR +'/PZ_Marianne',
+    'PZ_DANEXT_TEST' : WORK_DIR +'/PZ_DanExt_Test',
+    'PZ_DANEXT_ALL'  : WORK_DIR2+'/PZ_DanExt_All',
+    'WILDEBEAST'     : WORK_DIR +'/Wildebeast',
+    'JAG_KIERYN'     : WORK_DIR2+'/JAG_Kieryn',
+    'LF_ALL'         : WORK_DIR+'/LF_all',
+    'WDOGS'          : WORK_DIR+'/WD_Siva',
+    'WY_TOADS'       : WORK_DIR2+'/WY_Toads'
 }
+# Add values from the database dict as global vars
+for key, val in dev_databases.iteritems():
+    exec('%s = %r' % (key, val))
+
 
 #DEFAULT = NAUTS
 DEFAULT = LF_ALL

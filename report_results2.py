@@ -597,6 +597,7 @@ def dump_analysis(allres):
     #qcx = greater5_cxs[0]
     for qcx in greater1_cxs:
         viz.plot_cx(allres, qcx, 'analysis', 'analysis')
+        viz.plot_cx(allres, qcx, 'analysis', 'analysis', annotations=False, title_aug=' noanote')
 
 def dump_all_queries2(hs):
     import match_chips2 as mc2

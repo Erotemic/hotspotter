@@ -50,7 +50,7 @@ dev_databases = {
     'PZ_MARIANNE'    : WORK_DIR +'/PZ_Marianne',
     'PZ_DANEXT_TEST' : WORK_DIR +'/PZ_DanExt_Test',
     'PZ_DANEXT_ALL'  : WORK_DIR2+'/PZ_DanExt_All',
-    'WILDEBEAST'     : WORK_DIR +'/Wildebeast',
+    'WILDEBEAST'     : WORK_DIR2+'/Wildebeast',
     'JAG_KIERYN'     : WORK_DIR2+'/JAG_Kieryn',
     'LF_ALL'         : WORK_DIR+'/LF_all',
     'WDOGS'          : WORK_DIR+'/WD_Siva',

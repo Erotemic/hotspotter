@@ -820,7 +820,10 @@ def show_matches4(hs, qcx, cx2_score,
     if is_int(score): 
         score_str = ' #fmatch=%r score=%d' % (len(fm), score)
     is_true_match = nx == qnx and qnx > 1
+    is_unknown = nx <= 1
     isgt_str = '\n*TRUE match*' if is_true_match else '\n*FALSE match*'
+    if is_unknown:
+        isgt_str = '\n*UNKNOWN*'
     title= cx_str + isgt_str + '\n' + score_str
     if not title_pref is None:
         title = title_pref + title
@@ -832,7 +835,9 @@ def show_matches4(hs, qcx, cx2_score,
                             title=title, **kwargs)
     # Finish annotations
     if is_true_match:
-        _draw_border(ax, GREEN, 6)
+        _draw_border(ax, GREEN, 4)
+    elif is_unknown:
+        _draw_border(ax, WHITE, 4)
     else:
         _draw_border(ax, RED, 4)
     cx2_gx = hs.tables.cx2_gx

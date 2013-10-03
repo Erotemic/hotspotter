@@ -36,25 +36,31 @@ if sys.platform == 'linux2':
 
 # Common databases I use
 dev_databases = {
-    'SONOGRAMS'      : WORK_DIR+'/sonograms',
-    'JAG'            : WORK_DIR+'/JAG_Jaguar_Data',
-    'FROGS'          : WORK_DIR+'/Frogs',
-    'NAUTS'          : WORK_DIR+'/NAUT_Dan',
-    'GZ'             : WORK_DIR+'/GZ_ALL',
-    'PZ'             : WORK_DIR+'/PZ_FlankHack',
-    'PZ2'            : WORK_DIR +'/PZ-Sweatwater',
-    'WS_HARD'        : WORK_DIR+'/WS_hard',
-    'MOTHERS'        : WORK_DIR+'/HSDB_zebra_with_mothers',
-    'OXFORD'         : WORK_DIR+'/Oxford_Buildings',
-    'PARIS'          : WORK_DIR+'/Paris_Buildings',
-    'PZ_MARIANNE'    : WORK_DIR +'/PZ_Marianne',
-    'PZ_DANEXT_TEST' : WORK_DIR +'/PZ_DanExt_Test',
-    'PZ_DANEXT_ALL'  : WORK_DIR2+'/PZ_DanExt_All',
-    'WILDEBEAST'     : WORK_DIR2+'/Wildebeast',
-    'JAG_KIERYN'     : WORK_DIR2+'/JAG_Kieryn',
-    'LF_ALL'         : WORK_DIR+'/LF_all',
-    'WDOGS'          : WORK_DIR+'/WD_Siva',
-    'TOADS'          : WORK_DIR2+'/WY_Toads'
+    'SONOGRAMS'      : WORK_DIR  + '/sonograms',
+    'NAUTS'          : WORK_DIR  + '/NAUT_Dan',
+
+    'OXFORD'         : WORK_DIR  + '/Oxford_Buildings',
+    'PARIS'          : WORK_DIR  + '/Paris_Buildings',
+
+    'JAG_KELLY'      : WORK_DIR  + '/JAG_Kelly',
+    'JAG_KIERYN'     : WORK_DIR2 + '/JAG_Kieryn',
+    'WILDEBEAST'     : WORK_DIR2 + '/Wildebeast',
+    'WDOGS'          : WORK_DIR  + '/WD_Siva',
+
+    'GZ'             : WORK_DIR  + '/GZ_ALL',
+    'MOTHERS'        : WORK_DIR  + '/HSDB_zebra_with_mothers',
+
+    'PZ'             : WORK_DIR  + '/PZ_FlankHack',
+    'PZ2'            : WORK_DIR  + '/PZ-Sweatwater',
+    'PZ_MARIANNE'    : WORK_DIR  + '/PZ_Marianne',
+    'PZ_DANEXT_TEST' : WORK_DIR  + '/PZ_DanExt_Test',
+    'PZ_DANEXT_ALL'  : WORK_DIR2 + '/PZ_DanExt_All',
+
+    'LF_ALL'         : WORK_DIR  + '/LF_all',
+    'WS_HARD'        : WORK_DIR  + '/WS_hard',
+
+    'FROGS'          : WORK_DIR  + '/Frogs',
+    'TOADS'          : WORK_DIR2 + '/WY_Toads'
 }
 # Add values from the database dict as global vars
 for key, val in dev_databases.iteritems():

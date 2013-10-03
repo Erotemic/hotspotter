@@ -272,7 +272,6 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VE
     # Parameters
     #reverify_query       = params.REVERIFY_QUERY
     #resave_query         = params.RESAVE_QUERY
-    print_ = helpers.print_
     # Return if no dirty queries
     if qcx2_res is None:
         print('[mc2] qcx2_res was not specified... loading cache')
@@ -295,66 +294,27 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VE
         res = qcx2_res[qcx]
         build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size,
                      assign_matches, qnum, total_dirty, verbose)
-        '''
-        #
-        # Assign matches with the chosen function (vsone) or (vsmany)
-        num_qdesc = len(cx2_desc[qcx])
-        if verbose:
-            print('[mc2] query(%d/%d)---------------' % (qnum+1, total_dirty))
-            print('[mc2] query(%d/%d) assign %d desc' % (qnum+1, total_dirty, num_qdesc))
-        tt1 = helpers.Timer(verbose=False)
-        assign_output = assign_matches(qcx, cx2_desc)
-        (cx2_fm, cx2_fs, cx2_score) = assign_output
-        assign_time = tt1.toc()
-        #
-        # Spatially verify the assigned matches
-        if verbose:
-            num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
-            print('[mc2] query(%d/%d) verify %d assigned matches' % (qnum+1, total_dirty, num_assigned))
-        tt2 = helpers.Timer(verbose=False)
-        sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs)
-        (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
-        verify_time = tt2.toc()
-        if verbose:
-            num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
-            print('[mc2] query(%d/%d) verified %d matches' % (qnum+1, total_dirty, num_verified))
-            print('...assigned: %.2f seconds' % (assign_time))
-            print('...verified: %.2f seconds\n' % (verify_time))
-        else:
-            print('...query: %.2f seconds\n' % (verify_time + assign_time))
-        #
-        # Assign output to the query result 
-        res.assign_time = assign_time
-        res.verify_time = verify_time
-        res.cx2_fm      = np.array(cx2_fm)
-        res.cx2_fs      = np.array(cx2_fs)
-        res.cx2_score   = cx2_score
-        res.cx2_fm_V    = np.array(cx2_fm_V)
-        res.cx2_fs_V    = np.array(cx2_fs_V)
-        res.cx2_score_V = cx2_score_V
-        res.save(hs)
-        '''
     return qcx2_res
 
 def build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches,
                  qnum=0, total_dirty=1, verbose=True):
+    'Calls the actual query calculations and builds the result class'
     qcx = res.qcx 
-    #
-    # Assign matches with the chosen function (vsone) or (vsmany)
-    num_qdesc = len(cx2_desc[qcx])
     if verbose:
+        num_qdesc = len(cx2_desc[qcx])
         print('[mc2] query(%d/%d)---------------' % (qnum+1, total_dirty))
         print('[mc2] query(%d/%d) assign %d desc' % (qnum+1, total_dirty, num_qdesc))
+    # 1) Assign matches with the chosen function (vsone) or (vsmany)
     tt1 = helpers.Timer(verbose=False)
     assign_output = assign_matches(qcx, cx2_desc)
     (cx2_fm, cx2_fs, cx2_score) = assign_output
     assign_time = tt1.toc()
-    # Spatially verify the assigned matches
     if verbose:
         num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
         print('[mc2] query(%d/%d) verify %d assigned matches' % (qnum+1, total_dirty, num_assigned))
+    # 2) Spatially verify the assigned matches
     tt2 = helpers.Timer(verbose=False)
-    sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs)
+    sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs, cx2_score)
     (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
     verify_time = tt2.toc()
     if verbose:
@@ -838,54 +798,61 @@ def match_vsone(desc2, vsone_flann, checks, ratio_thresh=1.2, burst_thresh=None)
 #========================================
 # Spatial verifiaction 
 #========================================
-# Debug data
+def __default_sv_return():
+    'default values returned by bad spatial verification'
+    H = np.eye(3)
+    fm_V = np.empty((0, 2))
+    fs_V = np.array((0, 1))
+    return (fm_V, fs_V, H)
 #@profile
 def spatially_verify(kpts1, kpts2, rchip_size, fm, fs, qcx, cx):
     '''1) compute a robust transform from img2 -> img1
        2) keep feature matches which are inliers 
        returns fm_V, fs_V, H '''
+    # Return if pathological
     min_num_inliers   = 4
+    if len(fm) < min_num_inliers:
+        return __default_sv_return()
+    # Get homography parameters
     xy_thresh         = params.__XY_THRESH__
     scale_thresh_high = params.__SCALE_THRESH_HIGH__
     scale_thresh_low  = params.__SCALE_THRESH_LOW__
-    if len(fm) < min_num_inliers:
-        sv_tup = None
+    if params.__USE_CHIP_EXTENT__:
+        diaglen_sqrd = rchip_size[0]**2 + rchip_size[1]**2
     else:
-        if params.__USE_CHIP_EXTENT__:
-            diaglen_sqrd = rchip_size[0]**2 + rchip_size[1]**2
-        else:
-            x_m = kpts2[fm[:,1],0].T
-            y_m = kpts2[fm[:,1],1].T
-            diaglen_sqrd = sv2.calc_diaglen_sqrd(x_m, y_m)
-            sv_tup = sv2.homography_inliers(kpts1, kpts2, fm,
-                                            xy_thresh, 
-                                            scale_thresh_high,
-                                            scale_thresh_low,
-                                            diaglen_sqrd,
-                                            min_num_inliers)
-    if not sv_tup is None:
-        H, inliers, Aff, aff_inliers = sv_tup
-        fm_V = fm[inliers, :]
-        fs_V = fs[inliers, :]
-    else:
-        H = np.eye(3)
-        fm_V = np.empty((0, 2))
-        fs_V = np.array((0, 1))
+        x_m = kpts2[fm[:,1],0].T
+        y_m = kpts2[fm[:,1],1].T
+        diaglen_sqrd = sv2.calc_diaglen_sqrd(x_m, y_m)
+    # Try and find a homography
+    sv_tup = sv2.homography_inliers(kpts1, kpts2, fm,
+                                    xy_thresh, 
+                                    scale_thresh_high,
+                                    scale_thresh_low,
+                                    diaglen_sqrd,
+                                    min_num_inliers)
+    if sv_tup is None:
+        return __default_sv_return()
+    # Return the inliers to the homography
+    (H, inliers, Aff, aff_inliers) = sv_tup
+    fm_V = fm[inliers, :]
+    fs_V = fs[inliers, :]
     return fm_V, fs_V, H
 
 #@profile
-def spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs):
+def spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs, cx2_score):
     kpts1     = cx2_kpts[qcx]
-    cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+    #cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     top_cx     = cx2_score.argsort()[::-1]
     num_rerank = min(len(top_cx), params.__NUM_RERANK__)
     # Precompute output container
     cx2_fm_V = [[] for _ in xrange(len(cx2_fm))]
     cx2_fs_V = [[] for _ in xrange(len(cx2_fs))]
-    # spatially verify the top __NUM_RERANK__ results
+    '''
     bad_consecutive_reranks = 0
     max_bad_consecutive_reranks = 20 # stop if more than 20 bad reranks
     __OVERRIDE__ = False
+    '''
+    # spatially verify the top __NUM_RERANK__ results
     for topx in xrange(num_rerank):
         cx    = top_cx[topx]
         kpts2 = cx2_kpts[cx]
@@ -895,13 +862,16 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs):
         fm_V, fs_V, H = spatially_verify(kpts1, kpts2, rchip_size, fm, fs, qcx, cx)
         cx2_fm_V[cx] = fm_V
         cx2_fs_V[cx] = fs_V
-        if len(fm_V) == 0 and __OVERRIDE__:
+        '''
+        if __OVERRIDE__ and len(fm_V) == 0:
             bad_consecutive_reranks += 1
             if bad_consecutive_reranks > max_bad_consecutive_reranks:
                 print('[mc2] Too many bad consecutive spatial verifications')
                 break
         else: 
             bad_consecutive_reranks = 0
+        '''
+    # Rebuild the feature match / score arrays to be consistent
     for cx in xrange(len(cx2_fm_V)):
         fm = np.array(cx2_fm_V[cx], dtype=FM_DTYPE)
         fm = fm.reshape(len(fm), 2)
@@ -910,6 +880,7 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs):
         cx2_fs_V[cx] = np.array(cx2_fs_V[cx], dtype=FS_DTYPE)
     cx2_fm_V = np.array(cx2_fm_V)
     cx2_fs_V = np.array(cx2_fs_V)
+    # Rebuild the cx2_score arrays
     cx2_score_V = np.array([np.sum(fs) for fs in cx2_fs_V])
     return cx2_fm_V, cx2_fs_V, cx2_score_V
 

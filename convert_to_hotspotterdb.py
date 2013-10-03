@@ -192,6 +192,7 @@ def convert_from_oxford_style(db_dir):
         cx2_theta.append(0)
         prop_dict['oxnum'].append(num)
         sys.stdout.write(('\b'*10)+'cid = %4d' % cid)
+        return cid
         
     for gname, roi, name, num in query_chips:
         add_to_hs_tables(gname, name, roi, 'query', num)
@@ -255,21 +256,22 @@ def convert_named_chips(db_dir, img_dpath=None):
     cx2_nx      = []
     cx2_gx      = []
     cid = 1
-    def add_to_hs_tables(cid, gname, name, roi, theta=0):
+    def add_to_hs_tables(gname, name, roi, theta=0):
+        cid = len(cx2_cid) + 1
         nx = nx2_name.index(name)
         gx = gx2_gname.index(gname)
         cx2_cid.append(cid)
         cx2_roi.append(roi)
         cx2_nx.append(nx)
         cx2_gx.append(gx)
-        cx2_theta.append(0)
+        cx2_theta.append(theta)
+        return cid
     for gx, gname in enumerate(gx2_gname):
         name, num = parse.parse(gt_format, gname)
         img_fpath = join(img_dpath, gname)
         (w,h) = Image.open(img_fpath).size
         roi = [1, 1, w, h]
-        add_to_hs_tables(cid, gname, name, roi)
-        cid += 1
+        cid = add_to_hs_tables(gname, name, roi)
     cx2_nid = np.array(nx2_nid)[cx2_nx]
     cx2_gid = np.array(gx2_gid)[cx2_gx]
     print('There are %d chips' % (cid-1))
@@ -298,14 +300,16 @@ def init_database_from_images(db_dir, img_dpath=None, gt_format=None):
     cx2_nx      = []
     cx2_gx      = []
     cid = 1
-    def add_to_hs_tables(cid, gname, name, roi, theta=0):
+    def add_to_hs_tables(gname, name, roi, theta=0):
+        cid = len(cx2_cid) + 1
         nx = nx2_name.index(name)
         gx = gx2_gname.index(gname)
         cx2_cid.append(cid)
         cx2_roi.append(roi)
         cx2_nx.append(nx)
         cx2_gx.append(gx)
-        cx2_theta.append(0)
+        cx2_theta.append(theta)
+        return cid
     for gx, gname in enumerate(gx2_gname):
         if gt_format is None:
             name = '____'
@@ -314,8 +318,7 @@ def init_database_from_images(db_dir, img_dpath=None, gt_format=None):
         img_fpath = join(img_dpath, gname)
         roi = roi_from_imgsize(img_fpath)
         if not roi is None:
-            add_to_hs_tables(cid, gname, name, roi)
-            cid += 1
+            cid = add_to_hs_tables(gname, name, roi)
     cx2_nid = np.array(nx2_nid)[cx2_nx]
     cx2_gid = np.array(gx2_gid)[cx2_gx]
     print('There are %d chips' % (cid-1))
@@ -327,7 +330,7 @@ def init_database_from_images(db_dir, img_dpath=None, gt_format=None):
     write_name_table(internal_dir, nx2_nid, nx2_name)
     write_image_table(internal_dir, gx2_gid, gx2_gname)
 
-def load_xlsx_file(xlsx_fpath):
+def read_xlsx_file(xlsx_fpath):
     import openpyxl
     wb = openpyxl.load_workbook(filename=xlsx_fpath)
     active_sheet  = wb.get_active_sheet()
@@ -340,6 +343,8 @@ def load_xlsx_file(xlsx_fpath):
 #csv_fpath = params.WY_TOADS+'/WY_TOAD_MATCHES.csv'
 
 def read_csv_file(csv_fpath):
+    '''reads a csv file into column_labels containing header info and
+       column_list containing data'''
     def parse_csv_line(csv_line):
         csv_line_ = csv_line.strip('\n\r\t ')
         csv_fields = [_.strip(' ') for _ in csv_line_.strip('\n\r ').split(',')]
@@ -372,7 +377,7 @@ def wildid_xlsx_to_tables(db_dir):
     column_labels, column_list = read_xlsx_file(xlsx_fpath)
     return wildid_to_tables(db_dir, img_dpath, column_labels, column_list)
 
-#db_dir = params.WY_TOADS
+#db_dir = params.TOADS
 def wildid_csv_to_tables(db_dir):
     import glob
     db_dir = normpath(db_dir)
@@ -410,8 +415,9 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
     nx2_name, nx2_nid = nametables_from_nameset(name_set)
     # Get chip set
     print('[convert] build chip table')
+    # ---------
     # This format has multiple images per row
-    chips_per_name = 2
+    chips_per_name = 2 #this is apparently always 2
     def get_multiprop_colx_list(prefix):
         colx_list = []
         for num in xrange(chips_per_name):
@@ -419,12 +425,15 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
             colx = get_lbl_pos(column_labels, [lbl])
             colx_list.append(colx)
         return colx_list
+    # ---------
+    # Essential properties 
     prop2_colx_list = {}
     try:
         image_colx_list = get_multiprop_colx_list('IMAGE_')
     except Exception as ex:
         image_colx_list = get_multiprop_colx_list('Image')
-
+    # ---------
+    # Nonessential multi-properties 
     try_multiprops = ['DATE_NO']
     multiprop2_colx = {}
     for key in try_multiprops:
@@ -432,8 +441,8 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
             multiprop2_colx[key]  = get_multiprop_colx_list(key)
         except Exception as ex:
             pass
-    #date_colx_list  = get_multiprop_colx_list('DATE_NO')
-    # Other useful properties
+    # ---------
+    # Nonessential single-properties
     try_props = ['SEX']
     prop2_colx = {}
     for key in try_props:
@@ -442,7 +451,8 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
             prop2_colx[key] = other_colx
         except Exception as ex:
             pass
-    # Properties for pairwise matches
+    # ---------
+    # Nonessential pairwise-properties
     try_match_props = ['matches', 'WildID_score']
     pairprop2_colx = {}
     for key in try_match_props:
@@ -451,24 +461,21 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
             pairprop2_colx[key] = other_colx
         except Exception as ex:
             pass
-
-    #sex_colx = get_lbl_pos(column_labels, ['SEX'])
+    # ---------
+    # Build tables
     cx2_cid     = []
     cx2_theta   = []
     cx2_roi     = []
     cx2_nx      = []
     cx2_gx      = []
-    # Initialize other props
-    prop_dict = {}
-    pairwise_dict = {}
+    prop_dict       = {}
+    pairwise_dict   = {}
     gnameroi_to_cid = {}
-    for key in prop2_colx.keys():
-        prop_dict[key] = []
-    for key in multiprop2_colx.keys():
-        prop_dict[key] = []
-    #prop_dict   = {'sex':[], 'date':[]}
+    for key in prop2_colx.keys(): prop_dict[key] = []
+    for key in multiprop2_colx.keys(): prop_dict[key] = []
     cid = 1
-    def add_to_hs_tables(cid, gname, name, roi, theta=0, **kwargs):
+    def wildid_add_to_hs_tables(gname, name, roi, theta=0, **kwargs):
+        cid = len(cx2_cid) + 1
         nx = nx2_name.index(name)
         gx = gx2_gname.index(gname)
         cx2_cid.append(cid)
@@ -477,20 +484,20 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
         cx2_gx.append(gx)
         for key, val in kwargs.iteritems():
             prop_dict[key].append(val)
-        cx2_theta.append(0)
-
+        cx2_theta.append(theta)
+        sys.stdout.write(('\b'*10)+'cid = %4d' % cid)
+        return cid
+    # ---------
+    # Wildid parsing
     bad_rows = 0
     for rowx in xrange(num_rows):
-        name     = column_list[name_colx][rowx]
+        name        = column_list[name_colx][rowx]
         tbl_kwargs2 = {key:column_list[val][rowx] for key, val in prop2_colx.iteritems()}
         pairwise_vals = [column_list[colx][rowx] for colx in pairprop2_colx.values()]
         cid_tup = []
         for num in xrange(chips_per_name): #TODO: This is always just pairwise
-            # Get multicolindexes
             img_colx = image_colx_list[num]
-            # Get properties
             gname = column_list[img_colx][rowx]
-            # Get other properties
             tbl_kwargs1 = {key:column_list[val[num]][rowx] for key, val in multiprop2_colx.iteritems()}
             tbl_kwargs = dict(tbl_kwargs1.items() + tbl_kwargs2.items())
             roi      = roi_from_imgsize(join(img_dpath, gname), silent=True)
@@ -507,10 +514,9 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
                 cid = gnameroi_to_cid[gnameroi]
                 cid_tup.append(cid)
                 continue
+            cid = wildid_add_to_hs_tables(gname, name, roi, **tbl_kwargs)
             gnameroi_to_cid[gnameroi] = cid
             cid_tup.append(cid)
-            add_to_hs_tables(cid, gname, name, roi, **tbl_kwargs)
-            cid += 1
         pairwise_dict[tuple(cid_tup)] = pairwise_vals
 
     print('bad_rows = %r ' % bad_rows)
@@ -525,25 +531,34 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
     print('[convert] Added %r known chips.' % num_known_chips)
     # Add the rest of the nongroundtruthed chips
     print('[convert] Adding unknown images to table')
-    num_unique_gx = np.unique(np.array(cx2_gx)).size
-    num_gx = len(cx2_gx)
-    print('len(cx2_gx)=%r' % num_gx)
-    print('num_unique_gx=%r' % num_unique_gx)
-    assert num_unique_gx == num_gx, \
+
+    # Check that images were unique
+    unique_gx = np.unique(np.array(cx2_gx))
+    print('len(cx2_gx)=%r'    % len(cx2_gx))
+    print('len(unique_gx)=%r' % len(unique_gx))
+    assert len(cx2_gx) == len(unique_gx), \
         'There are images specified twice'
+
+    # Check that cids were unique
+    cx2_cid_arr = np.array(cx2_cid)
+    valid_cids  = cx2_cid_arr[np.where(cx2_cid_arr > 0)[0]]
+    unique_cids = np.unique(valid_cids)
+    print('len(cx2_cid)     = %r' % len(cx2_cid))
+    print('len(valid_cids)  = %r' % len(valid_cids))
+    print('len(unique_cids) = %r' % len(unique_cids))
+    assert len(valid_cids) == len(unique_cids), \
+        'There are chipids specified twice'
+
     known_gx_set = set(cx2_gx)
     for gx, gname in enumerate(gx2_gname):
         if gx in known_gx_set: continue 
         name     = '____'
-        #date     = 'NA'
-        #sex      = 'NA'
         roi      = roi_from_imgsize(join(img_dpath, gname), silent=False)
         tbl_kwargs1 = {key:'NA' for key, val in multiprop2_colx.iteritems()}
         tbl_kwargs2 = {key:'NA' for key, val in prop2_colx.iteritems()}
         tbl_kwargs = dict(tbl_kwargs1.items() + tbl_kwargs2.items())
         if not roi is None:
-            add_to_hs_tables(cid, gname, name, roi, **tbl_kwargs)
-            cid += 1
+            cid = wildid_add_to_hs_tables(gname, name, roi, **tbl_kwargs)
     num_unknown_chips = len(cx2_cid) - num_known_chips
     print('[convert] Added %r more unknown chips.' % num_unknown_chips)
     cx2_nid = np.array(nx2_nid)[cx2_nx]
@@ -596,6 +611,44 @@ def nametables_from_nameset(name_set):
     print('There are %d names' % (len(nx2_name)-2))
     return nx2_name, nx2_nid
 
+DIFF_CHECK = True
+def diff_strings(str1, str2):
+    'kinda hacky and specific to wildebeast'
+    s1 = str1.splitlines(1)
+    s2 = str2.splitlines(1)
+    print('len(str1) == len(str2) | %r == %r' % (len(str1), len(str2)))
+    print('len(s1)   == len(s2)   | %r == %r' % (len(s1), len(s2)))
+    if len(s1) == len(s2):
+        for linex, (line1, line2) in enumerate(zip(s1, s2)):
+            line1 = line1.replace(' ','')
+            line1 = line1.replace('test_','')
+            line1 = line1.replace('testA_','')
+            line2 = line2.replace(' ','')
+            if line1 != line2: 
+                print('--- Line: %r ---' % linex)
+                sys.stdout.write(line1)
+                sys.stdout.write(line2)
+    print('')
+def write_to_wrapper(csv_fpath, csv_string):
+    if exists(csv_fpath) and DIFF_CHECK:
+        print('table already exists: %r' % csv_fpath)
+        with open(csv_fpath) as file: 
+            csv_string2 = file.read()
+            if csv_string2 == csv_string:
+                print('No difference!')
+            else:
+                print('difference!')
+                #print('--------')
+                #print(csv_string2)
+                #print('--------')
+                #print(csv_string)
+                #print('--------')
+                diff_str = diff_strings(csv_string2, csv_string)
+                #print(diff_str)
+                #print('--------')
+    else:
+        helpers.write_to(csv_fpath, csv_string)
+
 def write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid,
                      cx2_roi, cx2_theta, prop_dict=None):
     helpers.__PRINT_WRITES__ = True
@@ -613,7 +666,7 @@ def write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid,
 
     chip_table = ld2.make_csv_table(column_labels, column_list, header, column_type)
     chip_table_fname  = join(internal_dir,  'chip_table.csv')
-    helpers.write_to(chip_table_fname, chip_table)
+    write_to_wrapper(chip_table_fname, chip_table)
 
 def write_name_table(internal_dir, nx2_nid, nx2_name):
     helpers.__PRINT_WRITES__ = True
@@ -623,7 +676,7 @@ def write_name_table(internal_dir, nx2_nid, nx2_name):
     header = '# name table'
     name_table = ld2.make_csv_table(column_labels, column_list, header)
     name_table_fname  = join(internal_dir,  'name_table.csv')
-    helpers.write_to(name_table_fname, name_table)
+    write_to_wrapper(name_table_fname, name_table)
 
 def write_image_table(internal_dir, gx2_gid, gx2_gname):
     helpers.__PRINT_WRITES__ = True
@@ -634,7 +687,7 @@ def write_image_table(internal_dir, gx2_gid, gx2_gname):
     header = '# image table'
     image_table = ld2.make_csv_table(column_labels, column_list, header)
     image_table_fname = join(internal_dir, 'image_table.csv')
-    helpers.write_to(image_table_fname, image_table)
+    write_to_wrapper(image_table_fname, image_table)
 
 #----- Specific Databases ----
 

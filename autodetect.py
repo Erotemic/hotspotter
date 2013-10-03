@@ -24,7 +24,7 @@ if __name__ == '__main__':
     #info_locals = db_info.db_info(hs)
     #print info_locals['info_str']
     #
-    mc2.run_matching2(hs)
+    #mc2.run_matching2(hs)
     viz.DUMP = True
     viz.BROWSE = False
     print('Dumping all queries')

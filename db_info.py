@@ -134,13 +134,17 @@ class DirectoryStats(object):
 
     def print_db_stats(self):
         for db_stats in self.db_stats_list:
-            print('----')
-            if db_stats.version == '(HEAD)':
-                db_stats.print_name_info()
-            elif 'images' in db_stats.version:
-                print(db_stats.db_dir)
-                print('num images: %d' % helpers.num_images_in_dir(db_stats.db_dir))
+            print_database_stats(db_stats)
         pass
+
+def print_database_stats(db_stats):
+    'Prints a single dbstats object'
+    print('----')
+    if db_stats.version == '(HEAD)':
+        db_stats.print_name_info()
+    elif 'images' in db_stats.version:
+        print(db_stats.db_dir)
+        print('num images: %d' % helpers.num_images_in_dir(db_stats.db_dir))
 
 #--------------------
 def has_internal_tables(path):
@@ -319,6 +323,18 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
 
+    if sys.argv > 1: 
+        import params
+        import sys
+        path = params.DEFAULT
+        db_version = get_database_version(path)
+        print('db_version=%r' % db_version)
+        if not db_version is None: 
+            db_stats = DatabaseStats(path, db_version, params.WORK_DIR)
+            print_database_stats(db_stats)
+        sys.exit(0)
+
+
     # Build list of directories with database in them
     root_dir_list = [
         params.WORK_DIR,
@@ -336,23 +352,23 @@ if __name__ == '__main__':
 
     # Print Name Stats
     print('\n\n === Num File Stats === ')
-    for db_stats in dir_stats_list:
+    for dir_stats in dir_stats_list:
         print('--')
-        print(db_stats.print_db_stats())
+        print(dir_stats.print_db_stats())
 
     # Print File Stats
     print('\n\n === All Info === ')
-    for db_stats in dir_stats_list:
-        print('--'+db_stats.name())
-        db_stats.print_databases(' * ')
+    for dir_stats in dir_stats_list:
+        print('--'+dir_stats.name())
+        dir_stats.print_databases(' * ')
 
     print('\n\n === NonDB Dirs === ')
-    for db_stats in dir_stats_list:
-        print('--'+db_stats.name())
-        db_stats.print_nondbdirs()
+    for dir_stats in dir_stats_list:
+        print('--'+dir_stats.name())
+        dir_stats.print_nondbdirs()
 
     # Print File Stats
     print('\n\n === Num File Stats === ')
-    for db_stats in dir_stats_list:
+    for dir_stats in dir_stats_list:
         print('--')
-        print(db_stats.num_files_stats())
+        print(dir_stats.num_files_stats())

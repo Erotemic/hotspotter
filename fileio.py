@@ -164,8 +164,9 @@ def __smart_load(fpath, verbose, allow_alternative=True, can_fail=False, **kwarg
 def convert_alternative(fpath, verbose, can_fail):
     # check for an alternative (maybe old style or ext) file
     alternatives = find_alternatives(fpath, verbose)
+    dpath, fname = os.path.split(fpath)
     if len(alternatives) == 0:
-        fail_msg = '[io] ...no alternatives to %r' % fpath
+        fail_msg = '[io] ...no alternatives to %r' % fname
         if verbose: print(fail_msg)
         if can_fail: return None
         else: raise IOError(fail_msg)

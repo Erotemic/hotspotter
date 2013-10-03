@@ -8,3 +8,9 @@ pip install openpyxl --updgrade
 #git clone https://github.com/chronossc/openpyxl.git
 #cd openpyxl
 #python setup.py install
+
+
+sudo apt-get install graphviz-dev
+sudo apt-get install graphviz
+sudo pip install pygraphviz
+

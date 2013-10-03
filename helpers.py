@@ -1228,6 +1228,34 @@ def listfind(list_, tofind):
     except ValueError:
         return None
 
+# Tests for data types
+def is_int(num):
+    valid_int_types = (np.int64,  np.int32,  np.int16,  np.int8,
+                            np.uint64, np.uint32, np.uint16, np.uint8)
+    valid_int_types = (np.typeDict['int64'],
+                            np.typeDict['int32'],
+                            np.typeDict['uint8'],
+                            types.LongType,
+                            types.IntType)
+    flag = type(num) in valid_int_types
+    return flag
+
+def is_float(num):
+    valid_float_types = (float, np.float64, np.float32, np.float16)
+    valid_float_types = (types.FloatType,
+                    np.typeDict['float64'],
+                    np.typeDict['float32'],
+                    np.typeDict['float16'])
+    flag = type(num) in valid_float_types
+    return flag
+
+def num_fmt(num, max_digits=2):
+    if is_float(num):
+        return '%.'+str(max_digits)+'f'
+    elif is_int(num):
+        return '%d'
+    else:
+        return '%r'
 
 if __name__ == '__main__':
     import multiprocessing

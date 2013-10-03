@@ -39,6 +39,8 @@ def execstr_global():
     execstr = ['global' +key for key in globals().keys()]
     return execstr
 
+TOP_SUBPLOT_ADJUST=0.9
+
 ORANGE = np.array((255, 127,   0, 255))/255.0
 RED    = np.array((255,   0,   0, 255))/255.0
 GREEN  = np.array((  0, 255,   0, 255))/255.0
@@ -112,6 +114,7 @@ def sanatize_img_fpath(fpath):
     fpath_clean = os.path.normpath(fpath_clean)
     return fpath_clean
 
+'''
 def save(fig, fpath=None):
     if fpath is None:
         # Find the title
@@ -121,7 +124,9 @@ def save(fig, fpath=None):
     # Sanatize the filename
     fpath_clean = sanatize_img_fpath(fpath)
     print('[df2] Saving figure to: '+repr(fpath_clean))
-    fig.savefig(fpath_clean, dpi=DPI)
+    #fig.savefig(fpath_clean, dpi=DPI)
+    fig.savefig(fpath_clean, dpi=DPI, bbox_inches='tight')
+'''
 
 def save_figure(fignum=None, fpath=None, usetitle=False):
     # Find the figure
@@ -140,6 +145,7 @@ def save_figure(fignum=None, fpath=None, usetitle=False):
     fpath_clean = sanatize_img_fpath(fpath)
     fname_clean = os.path.split(fpath_clean)[1]
     print('[df2] save_figure() %r' % (fpath_clean,))
+    plt.subplots_adjust(top=TOP_SUBPLOT_ADJUST)
     fig.savefig(fpath_clean, dpi=DPI)
 
 def update_figure_size(fignum, width, height):
@@ -180,6 +186,7 @@ def all_figures_show():
 def all_figures_tight_layout():
     for fig in iter(get_all_figures()):
         fig.tight_layout()
+        plt.subplots_adjust(top=0.85)
         time.sleep(.1)
 
 def all_figures_tile(num_rc=(4,4),
@@ -352,7 +359,9 @@ def plot2(x_data,
 
 def set_figtitle(figtitle):
     fig = plt.gcf()
+    fig.suptitle(figtitle , fontsize=14, fontweight='bold')
     fig.canvas.set_window_title(figtitle)
+    plt.subplots_adjust(top=TOP_SUBPLOT_ADJUST)
 
 def customize_figure(fig, doclf):
     if not 'user_stat_list' in fig.__dict__.keys() or doclf:
@@ -702,7 +711,7 @@ def imshow(img,
 
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
                   fm=None, fs=None, fignum=None, plotnum=None,
-                  title=None, vert=True, all_kpts=True, 
+                  title=None, vert=None, all_kpts=True, 
                   draw_lines=True,
                   draw_ell=True, 
                   draw_pts=True,
@@ -717,6 +726,8 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
     (h1,w1) = rchip1.shape[0:2]
     (h2,w2) = rchip2.shape[0:2]
     woff = 0; hoff = 0 
+    if vert is None: # Let us make the decision
+        vert = False if h1 > w1 and h2 > w2 else True
     if vert: wB=max(w1,w2); hB=h1+h2; hoff=h1
     else:    hB=max(h1,h2); wB=w1+w2; woff=w1
     #vert = True
@@ -747,107 +758,72 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
             draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
     return fig, ax
 
-def show_matches3(res, hs, cx,
+def show_matches_annote_res(res, hs, cx,
                   SV=True, 
                   fignum=None, 
                   plotnum=None,
                   title_aug=None, 
                   **kwargs):
     '''
-    Wrapper for show_matches4
+    Wrapper for show_matches_annote
     '''
     qcx = res.qcx
     cx2_score = res.cx2_score_V if SV else res.cx2_score
     cx2_fm    = res.cx2_fm_V if SV else res.cx2_fm
     cx2_fs    = res.cx2_fs_V if SV else res.cx2_fs
     title_suff = '(+V)' if SV else None
-    return show_matches4(hs, qcx, cx2_score,
+    return show_matches_annote(hs, qcx, cx2_score,
                          cx2_fm, cx2_fs, cx,
                          fignum, plotnum,
                          title_aug, title_suff,
                          **kwargs)
 
-def show_matches4(hs, qcx, cx2_score, 
+# TODO: This should go in viz
+def show_matches_annote(hs, qcx, cx2_score, 
                   cx2_fm, cx2_fs, cx,
                   fignum=None, plotnum=None, 
                   title_pref=None, 
                   title_suff=None,
                   **kwargs):
-    '''
-    Shows matches with annotations
-    '''
+    ' Shows matches with annotations '
     printDBG('[df2] Showing matches from '+str(qcx)+' to '+str(cx)+' in fignum'+repr(fignum))
     if np.isnan(cx):
         nan_img = np.zeros((100,100), dtype=np.uint8)
         title='(qx%r v NAN)' % (qcx)
         imshow(nan_img,fignum=fignum,plotnum=plotnum,title=title)
         return 
-    cx2_nx = hs.tables.cx2_nx
+    # Read query and result info (chips, names, ...)
+    cx2_nx  = hs.tables.cx2_nx
+    cx2_cid = hs.tables.cx2_cid
+    cid = hs.tables.cx2_cid[cx]
     nx2_name = hs.tables.nx2_name
-    qnx = cx2_nx[qcx]
-    nx  = cx2_nx[cx]
+    qnx = cx2_nx[qcx]; nx  = cx2_nx[cx]
     cx2_rchip_path = hs.cpaths.cx2_rchip_path
     cx2_kpts = hs.feats.cx2_kpts
     rchip1 = cv2.imread(cx2_rchip_path[qcx])
     rchip2 = cv2.imread(cx2_rchip_path[cx])
-    kpts1  = cx2_kpts[qcx]
-    kpts2  = cx2_kpts[cx]
+    kpts1 = cx2_kpts[qcx]; kpts2  = cx2_kpts[cx]
     score = cx2_score[cx]
-    fm    = cx2_fm[cx]
-    fs    = cx2_fs[cx]
-    cx_str = '(qx%r v cx%r)' % (qcx, cx)
-    def is_int(num):
-        valid_int_types = (np.int64,  np.int32,  np.int16,  np.int8,
-                             np.uint64, np.uint32, np.uint16, np.uint8)
-        valid_int_types = (np.typeDict['int64'],
-                             np.typeDict['int32'],
-                             np.typeDict['uint8'],
-                             types.LongType,
-                             types.IntType)
-        flag = type(num) in valid_int_types
-        return flag
-
-    def is_float(num):
-        valid_float_types = (float, np.float64, np.float32, np.float16)
-        valid_float_types = (types.FloatType,
-                        np.typeDict['float64'],
-                        np.typeDict['float32'],
-                        np.typeDict['float16'])
-        flag = type(num) in valid_float_types
-        return flag
-    if is_float(score):
-        score_str = ' #fmatch=%r score=%.2f' % (len(fm), score)
-    if is_int(score): 
-        score_str = ' #fmatch=%r score=%d' % (len(fm), score)
-    is_true_match = nx == qnx and qnx > 1
+    fm = cx2_fm[cx]; fs = cx2_fs[cx]
+    # Build the title string
     is_unknown = nx <= 1
-    isgt_str = '\n*TRUE match*' if is_true_match else '\n*FALSE match*'
-    if is_unknown:
-        isgt_str = '\n*UNKNOWN*'
-    title= cx_str + isgt_str + '\n' + score_str
-    if not title_pref is None:
-        title = title_pref + title
-    if not title_suff is None:
-        title = title + title_suff
-    # SHOW MATCHES 2:
+    is_true = nx == qnx
+    cx_str = '(qx%r v cx%r cid%r)' % (qcx, cx, cid)
+    score_str = (' #fmatch=%r score='+helpers.num_fmt(score)) % (len(fm), score)
+    _ = ('TRUE' if is_true else ('???' if is_unknown else 'FALSE'))
+    isgt_str  = '\n*' + _ + '*'
+    title     = cx_str + isgt_str + '\n' + score_str
+    if not title_pref is None: title = title_pref + title
+    if not title_suff is None: title = title + title_suff
+    # Draw the matches
     fig, ax = show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, 
                             fignum=fignum, plotnum=plotnum,
                             title=title, **kwargs)
     # Finish annotations
-    if is_true_match:
-        _draw_border(ax, GREEN, 4)
-    elif is_unknown:
-        _draw_border(ax, WHITE, 4)
-    else:
-        _draw_border(ax, RED, 4)
-    cx2_gx = hs.tables.cx2_gx
-    gx2_gname = hs.tables.gx2_gname
-    qgx = cx2_gx[qcx]
-    gx = cx2_gx[cx]
-    qgname = gx2_gname[qgx]
-    gname = gx2_gname[gx]
-    gname_str = gname
-    ax.set_xlabel(gname_str)
+    if is_unknown: draw_border(ax, WHITE, 4)
+    elif is_true:  draw_border(ax, GREEN, 4)
+    else:          draw_border(ax, RED, 4)
+    ax.set_xlabel(hs.cx2_gname(cx))
     return ax
 
 def _axis_xy_width_height(ax):
@@ -858,7 +834,7 @@ def _axis_xy_width_height(ax):
     height = (autoAxis[3]-autoAxis[2])+0.4
     return xy, width, height
     
-def _draw_border(ax, color=GREEN, lw=2):
+def draw_border(ax, color=GREEN, lw=2):
     'draws rectangle border around a subplot'
     xy, width, height = _axis_xy_width_height(ax)
     rect = Rectangle(xy, width, height, lw=lw)
@@ -877,13 +853,15 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True, **k
     if not allres is None:
         res = allres.qcx2_res[cx]
     cx2_nx = hs.tables.cx2_nx
+    cx2_cid = hs.tables.cx2_cid
     nx  = cx2_nx[cx]
+    cid = cx2_cid[cx]
     cx2_kpts = hs.feats.cx2_kpts
     cx2_rchip_path = hs.cpaths.cx2_rchip_path
     img_fpath = cx2_rchip_path[cx]
     rchip1 = cv2.imread(img_fpath)
     kpts1  = cx2_kpts[cx]
-    title_str = 'cx=%r' % (cx)
+    title_str = 'cx=%r, cid=%r,' % (cx, cid)
     # Add info to title
     if info: 
         num_gt = len(hs.get_other_indexed_cxs(cx))
@@ -1008,8 +986,7 @@ def show_match_analysis(hs, res, N=5, fignum=3, figtitle='',
     all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
     max_cols = min(5,N)
-    return _show_chip_matches(hs,
-                              res,
+    return _show_chip_matches(hs, res,
                               gt_cxs=missed_gt_cxs, 
                               topN_cxs=topN_cxs,
                               figtitle=figtitle,
@@ -1088,7 +1065,7 @@ def _show_chip_matches(hs,
             plotnum=(num_rows, num_cols, plotx)
             orank = np.where(ranked_cxs == cx)[0][0] + 1
             title_aug = 'rank=%r ' % orank
-            show_matches3(res, hs, cx, all_kpts=all_kpts, 
+            show_matches_annote_res(res, hs, cx, all_kpts=all_kpts, 
                         title_aug=title_aug,
                         ell_alpha=.5, plotnum=plotnum, draw_lines=annotations,
                           draw_ell=annotations, draw_pts=annotations)
@@ -1102,7 +1079,7 @@ def _show_chip_matches(hs,
             plotnum=(num_rows, num_cols, plotx)
             orank = np.where(ranked_cxs == cx)[0][0] + 1
             title_aug = 'rank=%r ' % orank
-            show_matches3(res, hs, cx,
+            show_matches_annote_res(res, hs, cx,
                           title_aug=title_aug,
                           plotnum=plotnum,
                           ell_alpha=.5,

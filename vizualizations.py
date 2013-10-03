@@ -30,6 +30,11 @@ def reload_module():
 def rrr():
     reload_module()
 
+
+def plot_name(hs, nx):
+    pass
+
+
 def cx_info(allres, cx, SV=True):
     hs = allres.hs
     res = allres.qcx2_res[cx]
@@ -169,20 +174,27 @@ def plot_score_matrix(allres):
     __dump_or_browse(allres.hs, 'scoreviz')
 
 # Dump logic
+
+def __browse():
+    print('[viz] Browsing Image')
+    df2.show()
+
+def __dump(hs, subdir):
+    #print('[viz] Dumping Image')
+    fpath = hs.dirs.result_dir
+    if not subdir is None: 
+        fpath = join(fpath, subdir)
+        helpers.ensurepath(fpath)
+    df2.save_figure(fpath=fpath, usetitle=True)
+    df2.reset()
+
 def __dump_or_browse(hs, subdir=None):
-    fig = df2.plt.gcf()
+    #fig = df2.plt.gcf()
     #fig.tight_layout()
     if BROWSE:
-        print('[viz] Browsing Image')
-        df2.show()
+        __browse()
     if DUMP:
-        #print('[viz] Dumping Image')
-        fpath = hs.dirs.result_dir
-        if not subdir is None: 
-            fpath = join(fpath, subdir)
-            helpers.ensurepath(fpath)
-        df2.save_figure(fpath=fpath, usetitle=True)
-        df2.reset()
+        __dump(hs, subdir)
 
 def plot_tt_bt_tf_matches(allres, qcx):
     #print('Visualizing result: ')

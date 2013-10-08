@@ -2,9 +2,10 @@ from __future__ import division
 from PIL import Image
 from Parallelize import parallel_compute
 from Printable import DynStruct
-from helpers import ensure_path, mystats, myprint
+import helpers
 import algos
-import load_data2
+import draw_func2 as df2
+import load_data2 as ld2
 import numpy as np
 import os, sys
 import params
@@ -228,28 +229,27 @@ class HotspotterChipPaths(DynStruct):
         self.cx2_chip_path  = []
         self.cx2_rchip_path = []
 
-def load_chip_paths(hs_dirs, hs_tables, hs=None):
-    img_dir      = hs_dirs.img_dir
-    rchip_dir    = hs_dirs.rchip_dir
-    chip_dir     = hs_dirs.chip_dir
-
-    cx2_gx       = hs_tables.cx2_gx
-    cx2_cid      = hs_tables.cx2_cid
-    cx2_theta    = hs_tables.cx2_theta
-    cx2_roi      = hs_tables.cx2_roi
-    gx2_gname    = hs_tables.gx2_gname
-
+def load_chip_paths(hs):
     print('\n=============================')
     print('[cc2] Precomputing chips and loading chip paths')
     print('=============================')
+    img_dir      = hs.dirs.img_dir
+    rchip_dir    = hs.dirs.rchip_dir
+    chip_dir     = hs.dirs.chip_dir
+
+    cx2_gx       = hs.tables.cx2_gx
+    cx2_cid      = hs.tables.cx2_cid
+    cx2_theta    = hs.tables.cx2_theta
+    cx2_roi      = hs.tables.cx2_roi
+    gx2_gname    = hs.tables.gx2_gname
 
     # Get parameters
     sqrt_area   = params.__CHIP_SQRT_AREA__
     grabcut     = params.__GRABCUT__
     histeq      = params.__HISTEQ__
     region_norm = params.__REGION_NORM__
-    rankeq     = params.__RANK_EQ__
-    localeq    = params.__LOCAL_EQ__
+    rankeq      = params.__RANK_EQ__
+    localeq     = params.__LOCAL_EQ__
     maxcontr    = params.__MAXCONTRAST__
 
     chip_params = dict(sqrt_area=sqrt_area, histeq=histeq)
@@ -268,11 +268,9 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
     # Full image path
     cx2_img_path = [img_dir+'/'+gx2_gname[gx] for gx in cx2_gx]
     # Paths to chip, rotated chip
-    chip_format  =  chip_dir+'/CID_%d'+chip_uid+'.png'
-    rchip_format = rchip_dir+'/CID_%d'+chip_uid+'.rot.png'
+    chip_format     =  chip_dir+'/CID_%d'+chip_uid+'.png'
     cx2_chip_path   = [chip_format  % cid for cid in cx2_cid]
-    cx2_rchip_path  = [rchip_format % cid for cid in cx2_cid]
-    # Normalized chip size
+    # Compute normalized chip sizes
     cx2_imgchip_sz = [(float(w), float(h)) for (x,y,w,h) in cx2_roi]
     if not (sqrt_area is None or sqrt_area <= 0):
         target_area = sqrt_area ** 2
@@ -318,6 +316,10 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
         parallel_compute(compute_bare_chip, **pcc_kwargs)
 
     # --- ROTATE CHIPS --- # 
+    #cx2_rchip_path  = [rchip_format % cid for cid in cx2_cid]
+    rchip_format = rchip_dir + '/CID_%d' + chip_uid + '.rot.png'
+    cx2_rchip_path = [rchip_format % cid if cx2_theta[cx] != 0 else cx2_chip_path[cx]
+                      for (cx, cid) in enumerate(cx2_cid)]
     pcc_kwargs['arg_list'] = [cx2_chip_path, cx2_rchip_path, cx2_theta] 
     parallel_compute(rotate_chip, **pcc_kwargs)
 
@@ -326,24 +328,24 @@ def load_chip_paths(hs_dirs, hs_tables, hs=None):
     print('[cc2] Done Precomputing chips and loading chip paths')
 
     # Build hotspotter path object
-    hs_cpaths = HotspotterChipPaths()
-    hs_cpaths.cx2_chip_path  = cx2_chip_path
-    hs_cpaths.cx2_rchip_path = cx2_rchip_path
+    hs.cpaths = HotspotterChipPaths()
+    hs.cpaths.cx2_chip_path  = cx2_chip_path
+    hs.cpaths.cx2_rchip_path = cx2_rchip_path
     
-    if not hs is None:
-        hs.cpaths = hs_cpaths
-
-    return hs_cpaths
-
 if __name__ == '__main__':
     from multiprocessing import freeze_support
-    import load_data2
     freeze_support()
     # --- LOAD DATA --- #
-    db_dir = load_data2.DEFAULT
-    hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
-    hs = load_data2.HotSpotter(None)
-    hs.tables = hs_tables
-    hs.dirs   = hs_dirs
+    db_dir = ld2.DEFAULT
+    db_dir = ld2.WS_HARD
+    hs = ld2.HotSpotter()
+    hs.load_tables(db_dir)
+    hs.set_samples()
     # --- LOAD CHIPS --- #
-    hs_cpaths = load_chip_paths(hs_dirs, hs_tables)
+    load_chip_paths(hs)
+    cx = helpers.get_arg_after('--cx', type_=int)
+    if not cx is None:
+        df2.show_chip(hs, cx, draw_kpts=False)
+    else:
+        print('usage: feature_compute.py --cx [cx]')
+    exec(df2.present())

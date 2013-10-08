@@ -14,3 +14,10 @@ sudo apt-get install graphviz-dev
 sudo apt-get install graphviz
 sudo pip install pygraphviz
 
+
+cd ~/code
+git clone https://github.com/regisb/onbnn
+
+
+# Boost
+sudo apt-get install libboost-all-dev

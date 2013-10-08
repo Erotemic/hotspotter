@@ -95,8 +95,7 @@ class HotSpotter(DynStruct):
 
     def load_chips(hs):
         import chip_compute2 as cc2
-        hs_cpaths = cc2.load_chip_paths(hs.dirs, hs.tables)
-        hs.cpaths  = hs_cpaths
+        cc2.load_chip_paths(hs)
 
     def load_features(hs, load_kpts=True, load_desc=True):
         import feature_compute2 as fc2

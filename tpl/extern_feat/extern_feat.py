@@ -153,6 +153,9 @@ def test_inria_feats():
         cmd = inria_cmd(rchip_fpath, detect_type, extract_type)
         __execute_extern(cmd+' -DP')
 
+if __name__ == '__main__':
+    pass
+
 
 '''
 Interest points:

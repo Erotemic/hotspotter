@@ -856,11 +856,9 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True, **k
     cx2_cid = hs.tables.cx2_cid
     nx  = cx2_nx[cx]
     cid = cx2_cid[cx]
-    cx2_kpts = hs.feats.cx2_kpts
     cx2_rchip_path = hs.cpaths.cx2_rchip_path
     img_fpath = cx2_rchip_path[cx]
     rchip1 = cv2.imread(img_fpath)
-    kpts1  = cx2_kpts[cx]
     title_str = 'cx=%r, cid=%r,' % (cx, cid)
     # Add info to title
     if info: 
@@ -875,6 +873,8 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True, **k
         ax.set_xlabel(gname)
     if not draw_kpts:
         return
+    cx2_kpts = hs.feats.cx2_kpts
+    kpts1  = cx2_kpts[cx]
     kpts_args = dict(offset=(0,0), ell_linewidth=1.5, ell=True, pts=False)
     # Draw keypoints with groundtruth information
     if not res is None:

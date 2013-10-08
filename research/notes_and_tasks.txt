@@ -250,3 +250,5 @@ keypoints)
 * Upload nonmatching photos for ASIFT comparison
 * Enumerate what other people have done in hotspotter2.tex
 python extract_patch.py --qcx 250 LF_ALL --low 0 --high 10 --nodesc
+
+Learning Class-to-Image Distance via Large Margin and L1-Norm Regularization (ECCV 2012)

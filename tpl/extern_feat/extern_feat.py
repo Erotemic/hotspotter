@@ -32,10 +32,17 @@ def __precompute(rchip_fpath, chiprep_fpath, compute_fn):
     np.savez(chiprep_fpath, kpts, desc)
     return kpts, desc
 
-def precompute_hesaff(rchip_fpath, chiprep_fpath):
-    return __precompute(rchip_fpath, chiprep_fpath, __compute_hesaff)
+# TODO Dynamiclly add descriptor types
+valid_extractors = ['sift', 'gloh']
+valid_detectors = ['mser', 'hessaff']
 
 def precompute_harris(rchip_fpath, chiprep_fpath):
+    return __precompute(rchip_fpath, chiprep_fpath, __compute_harris)
+
+def precompute_mser(rchip_fpath, chiprep_fpath):
+    return __precompute(rchip_fpath, chiprep_fpath, __compute_mser)
+
+def precompute_hesaff(rchip_fpath, chiprep_fpath):
     return __precompute(rchip_fpath, chiprep_fpath, __compute_hesaff)
 
 #---------------------------------------
@@ -61,10 +68,8 @@ def inria_cmd(rchip_fpath, detect_type, extract_type):
     extract_arg = '-'+extract_type
     input_arg   = '-i "' + rchip_fpath + '"'
     other_args  = '-noangle'
-    args = INRIA_EXE + ' ' + ' '.join([input_arg,
-                                       detect_arg,
-                                       extract_arg,
-                                        other_args])
+    args = INRIA_EXE + ' ' + ' '.join([input_arg, detect_arg,
+                                       extract_arg, other_args])
     return args
 
 def __compute_descriptors(rchip_fpath, detect_type, extract_type):
@@ -74,6 +79,12 @@ def __compute_descriptors(rchip_fpath, detect_type, extract_type):
     __execute_extern(cmd)
     kpts, desc = __read_text_chiprep_file(outname)
     return kpts, desc
+
+def __compute_mser(rchip_fpath):
+    __compute_descriptors(rchip_fath, 'mser', 'sift')
+
+def __compute_harris(rchip_fpath):
+    __compute_descriptors(rchip_fath, 'harris', 'sift')
 
 def __compute_hesaff(rchip_fpath):
     'Runs external keypoint detetectors like hesaff'

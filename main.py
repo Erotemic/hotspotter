@@ -4,7 +4,7 @@ from __init__ import *
 import sys
 import gui
 import fileio as io
-import convert_to_hotspotterdb as convert_hsdb
+import convert_db as convert_db
 
 def config_matplotlib():
     # configure matplotlib 
@@ -39,7 +39,7 @@ def tmp_get_database_dir():
         img_dpath = join(db_dir,'images')
         if not exists(img_dpath):
             img_dpath = gui.select_directory('Select directory with images in it')
-        convert_hsdb.convert_named_chips(db_dir, img_dpath)
+        convert_db.convert_named_chips(db_dir, img_dpath)
     return db_dir
 
 

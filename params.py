@@ -10,6 +10,7 @@ import multiprocessing
 def reload_module():
     import imp
     import sys
+    print('[params] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()

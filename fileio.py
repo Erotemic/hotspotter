@@ -13,8 +13,8 @@ import params
 import numpy as np
 
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
+    print('[io] Reloading: '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()

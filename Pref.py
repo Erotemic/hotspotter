@@ -15,10 +15,10 @@ except ImportError as ex:
     HAVE_PYQT = False
 
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
     imp.reload(sys.modules[__name__])
 def rrr():
+    print('[pref] Reloading: '+__name__)
     reload_module()
 
 class Pref(DynStruct):

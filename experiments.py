@@ -17,6 +17,7 @@ import db_info
 def reload_module():
     import imp
     import sys
+    print('[exp] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()
@@ -147,7 +148,8 @@ def oxford_bow():
         hs.load_features(load_desc=False)
         hs.set_sample_range(55, None) # Use only database images
     assert min(hs.test_sample_cx) == 55 and max(hs.test_sample_cx) == 5117
-    expt_locals = run_experiment(hs, pprefix='[ox-bow]', free_mem=True, oxford=False, stem=False, matrix=False)
+    expt_locals = run_experiment(hs, pprefix='[ox-bow]', free_mem=True,
+                                 oxford=False, stem=False, matrix=False)
     return expt_locals
 
 def oxford_vsmany():
@@ -161,7 +163,8 @@ def oxford_vsmany():
         hs.load_features(load_desc=False)
         hs.set_sample_range(55, None) # Use only database images
     hs = ld2.HotSpotter(db_dir, samples_range=(55,None))
-    expt_locals = run_experiment(hs, pprefix='[ox-vsmany]', free_mem=True, oxford=False, stem=False, matrix=False)
+    expt_locals = run_experiment(hs, pprefix='[ox-vsmany]', free_mem=True,
+                                 oxford=False, stem=False, matrix=False)
     return locals()
 
 def far_appart_splits(input_set, M, K):

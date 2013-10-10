@@ -10,10 +10,13 @@ import scipy.sparse.linalg as sparse_linalg
 http://stackoverflow.com/questions/11462781/
 fast-2d-rigid-body-transformations-in-numpy-scipy
 skimage.transform.fast_homography(im, H)'''
+
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
+    print('[sv1] Reloading: '+__name__)
     imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
 # Generate 6 degrees of freedom homography transformation
 def compute_homog(xyz_norm1, xyz_norm2):
@@ -264,6 +267,39 @@ def __H_homog_from(kpts1_m, kpts2_m, xy_thresh_sqrd, func_aff_inlier):
     sqrd_dist_error = np.sum( (xy1_mHt - xy2_m)**2, axis=0) # Final Inlier Errors
     inliers = sqrd_dist_error < xy_thresh_sqrd
     return H, inliers, Aff, aff_inliers
+
+def compare():
+    sv1.reload_module()
+    sv2.reload_module()
+    kpts1_m = kpts1[fm[:, 0], :].T
+    kpts2_m = kpts2[fm[:, 1], :].T
+    with helpers.Timer('sv1') as t: 
+        hinlier_tup1 = sv1.H_homog_from_DELSAC(kpts1_m, kpts2_m,
+                                               xy_thresh, 
+                                               scale_thresh_high,
+                                               scale_thresh_low)
+    with helpers.Timer('sv2') as t: 
+        hinlier_tup2 = sv2.homography_inliers(kpts1, kpts2, fm,
+                                              xy_thresh, 
+                                              scale_thresh_high,
+                                              scale_thresh_low)
+    
+    H1, inliers1, Aff1, aff_inliers1 = hinlier_tup1
+    H2, inliers2, Aff2, aff_inliers2 = hinlier_tup2
+    print('Aff1=\n%r' % Aff1)
+    print('Aff2=\n%r' % Aff2)
+    print('num aff_inliers sv1: %r ' % len(aff_inliers1))
+    print('num aff_inliers sv2: %r ' % len(aff_inliers2))
+    print('num inliers sv1: %r ' % inliers1.sum())
+    print('num inliers sv2: %r ' % len(inliers2))
+    print('H1=\n%r' % H1)
+    print('H2=\n%r' % H2)
+    args_ = [rchip1, rchip2, kpts1, kpts2]
+    df2.show_matches2(*args_+[fm[aff_inliers1]], fignum=1, title='sv1 affine')
+    df2.show_matches2(*args_+[fm[inliers1]],     fignum=2, title='sv1 homog')
+    df2.show_matches2(*args_+[fm[aff_inliers2]], fignum=3, title='sv2 affine')
+    df2.show_matches2(*args_+[fm[inliers2]],     fignum=4, title='sv2 homog')
+    df2.present(num_rc=(2,2), wh=(800,500))
 
 if __name__ == '__main__':
     print 'Testing spatial_verification.py'

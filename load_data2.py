@@ -23,8 +23,8 @@ import params
 
 # reloads this module when I mess with it
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
+    print('[ld2] Reloading: '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()
@@ -99,7 +99,8 @@ class HotSpotter(DynStruct):
 
     def load_features(hs, load_kpts=True, load_desc=True):
         import feature_compute2 as fc2
-        hs_feats  = fc2.load_chip_features(hs.dirs, hs.tables, hs.cpaths, load_kpts, load_desc)
+        #hs_feats  = fc2.load_chip_features(hs.dirs, hs.tables, hs.cpaths, load_kpts, load_desc)
+        hs_feats  = fc2.load_chip_features2(hs, load_kpts, load_desc)
         hs.feats  = hs_feats
 
     def load_matcher(hs):

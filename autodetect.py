@@ -16,7 +16,7 @@ if __name__ == '__main__':
     db_dir = params.DEFAULT
     if not db_info.has_internal_tables(db_dir):
         print('initial load shows no tables. Creating them')
-        from convert_to_hotspotterdb import init_database_from_images
+        from convert_db import init_database_from_images
         init_database_from_images(db_dir)
     hs = ld2.HotSpotter()
     hs.load_all(db_dir, matcher=False)

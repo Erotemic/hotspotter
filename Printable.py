@@ -5,8 +5,8 @@ import numpy as np
 import os.path
 
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
+    print('[printable] Reloading: '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()

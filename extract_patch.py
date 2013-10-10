@@ -11,6 +11,13 @@ import cv2
 import spatial_verification2 as sv2
 import sys
 
+def reload_module():
+    import imp, sys
+    print('[extract] Reloading: '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
+
 def __cv2_warp_kwargs():
     flags = (cv2.INTER_LINEAR, cv2.INTER_NEAREST)[0]
     borderMode = cv2.BORDER_CONSTANT

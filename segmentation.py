@@ -9,6 +9,13 @@ import sys
 
 DEBUG_SEGM = False
 
+def reload_module():
+    import imp, sys
+    print('[seg] Reloading: '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
+
 def printDBG(msg):
     if DEBUG_SEGM:
         print(msg)

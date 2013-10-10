@@ -8,6 +8,13 @@ import helpers
 import numpy as np
 from PIL import Image
 
+def reload_module():
+    import imp, sys
+    print('[dbinfo] Reloading: '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
+
 def dir_size(path):
     if sys.platform == 'win32':
         pass

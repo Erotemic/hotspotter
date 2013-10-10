@@ -35,8 +35,8 @@ import sklearn.preprocessing
 #print('LOAD_MODULE: match_chips2.py')
 
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
+    print('[mc2] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()

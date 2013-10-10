@@ -78,24 +78,25 @@ import sklearn.preprocessing
 from PIL import Image
 
 #------------------------------------------------------------------------------
+from hotspotter.Parallelize import parallel_compute
+from hotspotter.Printable import DynStruct
 # Hotspotter Imports
 import hotspotter.draw_func2 as df2
 import hotspotter.Pref as Pref
 import hotspotter.algos as algos
-import hotspotter.chip_compute2 as cc2
-import hotspotter.helpers as helpers
-import hotspotter.load_data2 as ld2
 import hotspotter.fileio as io
 import hotspotter.gui as gui
-import hotspotter.match_chips2 as mc2
+import hotspotter.tpl.extern_feat as extern_feat
 import hotspotter.params as params
-import hotspotter.report_results2 as report_results2
-import hotspotter.report_results2 as rr2
+import hotspotter.helpers as helpers
+# Main Pipeline
+import hotspotter.load_data2 as ld2
+import hotspotter.chip_compute2 as cc2
+import hotspotter.feature_compute2 as fc2
+import hotspotter.match_chips2 as mc2
 import hotspotter.spatial_verification2 as sv2
 import hotspotter.spatial_verification as sv1
-import hotspotter.tpl.extern_feat as extern_feat
-from hotspotter.Parallelize import parallel_compute
-from hotspotter.Printable import DynStruct
+import hotspotter.report_results2 as rr2
 
 #------------------------------------------------------------------------------
 # Helper functions

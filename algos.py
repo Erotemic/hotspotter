@@ -22,8 +22,8 @@ import scipy.sparse as spsparse
 
 # reloads this module when I mess with it
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
+    print('[algos] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()

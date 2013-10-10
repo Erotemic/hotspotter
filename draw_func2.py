@@ -31,9 +31,16 @@ import time
 import types
 import warnings
 import itertools
+import helpers
 #print('LOAD_MODULE: draw_func2.py')
 
-import helpers
+def reload_module():
+    import imp
+    import sys
+    print('[df2] reloading '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
 def execstr_global():
     execstr = ['global' +key for key in globals().keys()]
@@ -87,13 +94,6 @@ SHOW_ELLS  = True
 
 POINT_SIZE = 2
 
-def reload_module():
-    import imp
-    import sys
-    print('[df2] reloading '+__name__)
-    imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
 
 DEBUG = False
 def printDBG(msg):

@@ -1,3 +1,10 @@
+def reload_module():
+    import imp, sys
+    print('[misc] Reloading: '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
+
 def dev_correct_num_words(db_target, db_dir):
     # function to get correct num words per descriptor based on oxford
     from __init__ import *

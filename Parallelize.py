@@ -7,9 +7,11 @@ import os.path
 import params
 
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
+    print('[parallel] reloading '+__name__)
     imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
 
 def _calculate(func, args):

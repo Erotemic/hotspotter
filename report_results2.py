@@ -23,11 +23,12 @@ from itertools import izip
 from os.path import realpath, join, normpath, exists
 import re
 
-REPORT_MATRIX  = False
-REPORT_MATRIX_VIZ = False
+REPORT_MATRIX  = True
+REPORT_MATRIX_VIZ = True
 
 def reload_module():
     import imp, sys
+    print('[rr2] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()
@@ -842,10 +843,10 @@ def dinspect(qcx, cx=None, SV=True, reset=True):
 
 def report_all(hs, qcx2_res, SV=True, **kwargs):
     allres = init_allres(hs, qcx2_res, SV=SV, **kwargs)
-    if not 'kwargs' in vars():
-        kwargs = dict(rankres=True, stem=False, matrix=False, pdf=False,
-                      hist=False, oxford=False, ttbttf=False, problems=False,
-                      gtmatches=False)
+    #if not 'kwargs' in vars():
+        #kwargs = dict(rankres=True, stem=False, matrix=False, pdf=False,
+                      #hist=False, oxford=False, ttbttf=False, problems=False,
+                      #gtmatches=False)
     try: 
         dump_all(allres, **kwargs)
     except Exception as ex:

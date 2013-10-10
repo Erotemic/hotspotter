@@ -26,7 +26,10 @@ import segmentation
 def reload_module():
     import imp
     import sys
+    print('[cc2] reloading '+__name__)
     imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
 # =======================================
 # Parallelizable Work Functions          
@@ -231,7 +234,7 @@ class HotspotterChipPaths(DynStruct):
 
 def load_chip_paths(hs):
     print('\n=============================')
-    print('[cc2] Precomputing chips and loading chip paths')
+    print('[cc2] Precomputing chips and loading chip paths: %r' % hs.db_name())
     print('=============================')
     img_dir      = hs.dirs.img_dir
     rchip_dir    = hs.dirs.rchip_dir

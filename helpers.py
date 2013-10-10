@@ -32,6 +32,7 @@ import warnings
 def reload_module():
     import imp
     import sys
+    print('[helpers] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 
 def rrr():

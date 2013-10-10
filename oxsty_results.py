@@ -17,6 +17,13 @@ from os.path import realpath, join, normpath
 
 OXSTY_VERBOSE = False
 
+def reload_module():
+    import imp, sys
+    print('[oxy] Reloading: '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
+
 # OXFORD STUFF
 def oxsty_mAP_results(allres):
     print('oxsty_results> Building oxsty results')

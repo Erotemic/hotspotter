@@ -16,9 +16,10 @@ from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
         QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal, \
         QStandardItem, QStandardItemModel, QString, QObject
 
+
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
+    print('[gui] Reloading: '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()

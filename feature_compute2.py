@@ -20,8 +20,8 @@ import os
 from os.path import exists, join
 
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
+    print('[fc2] Reloading: '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()
@@ -33,42 +33,15 @@ def root_sift(desc):
     desc_ = array([round(255.0 * d) for d in algos.norm_zero_one(desc_)], dtype=uint8)
     return desc_
 
-def __compute(rchip, detector, extractor):
-    'returns keypoints and descriptors'
-    _cvkpts = detector.detect(rchip)  
-    for cvkp in iter(_cvkpts): cvkp.angle = 0 # gravity vector
-    cvkpts, cvdesc = extractor.compute(rchip, _cvkpts)
-    kpts = cvkpts2_kpts(cvkpts)
-    desc = array(cvdesc, dtype=uint8)
-    return (kpts, desc)
-
-def __precompute(rchip_path, feats_path, compute_func):
-    'saves keypoints and descriptors to disk'
-    rchip = cv2.imread(rchip_path)
-    (kpts, desc) = compute_func(rchip)
-    np.savez(feats_path, kpts, desc)
-    return (kpts, desc)
-
-# =======================================
-# Global cv2 detectors and extractors      
-# =======================================
-def compute_hesaff(rchip):
-    return extern_feat.compute_hesaff(rchip)
-
 # =======================================
 # Parallelizable Work Functions          
 # =======================================
 
-def precompute_hesaff(rchip_path, feats_path):
-    return extern_feat.precompute_hesaff(rchip_path, feats_path)
-
-def precompute_hesaff(rchip_path, feats_path):
-    return extern_feat.precompute_mser(rchip_path, feats_path)
-
 feat_type2_precompute = {
-    'hesaff' : precompute_hesaff
-    'mser'   : precompute_mser
+    'hesaff' : extern_feat.precompute_hesaff,
+    'mser'   : extern_feat.precompute_mser
 }
+
 # =======================================
 # Main Script 
 # =======================================
@@ -96,7 +69,7 @@ class HotspotterChipFeatures(DynStruct):
  ax2_features = hs.feats['mser']
 '''
 
- def index_features(hs):
+def index_features(hs):
     mser_feats = hs.feats['mser']
     sift_feats = hs.feats['sift']
 
@@ -113,10 +86,9 @@ class HotspotterChipFeatures(DynStruct):
 
     hs.feats.cx2_axs = cx2_axs
 
-    ax_in_grid[0,0] = [...]
-    ax_in_part[0]   = [...]
-    valid_ax        = [...]
- 
+    #ax_in_grid[0,0] = [...]
+    #ax_in_part[0]   = [...]
+    #valid_ax        = [...]
 
 def load_features(hs, cx_list, feature_types):
     feat_dir       = hs.dirs.feat_dir
@@ -136,7 +108,7 @@ def load_features(hs, cx_list, feature_types):
         # Run Parallel Jobs: 
         parallel_compute(precompute_fn, [cx2_rchip_path, cx2_feat_path])
 
-    for feat_type feature_types:
+    for feat_type in feature_types:
         load_feature_type(hs, feat_type, cx_list)
 
 def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid,
@@ -219,11 +191,14 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid,
         io.smart_save(cx2_kpts, dpath, 'cx2_kpts', uid, ext)
     return cx2_kpts, cx2_desc
     
+def load_chip_features2(hs, load_kpts=True, load_desc=True):
+    print('\n=============================')
+    print('[fc2] Computing and loading features for %r' % hs.db_name())
+    print('=============================')
+    return load_chip_features(hs.dirs, hs.tables, hs.cpaths, load_kpts, load_desc)
+
 def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
                        load_desc=True):
-    print('\n=============================')
-    print('[fc2] Computing and loading features')
-    print('=============================')
     # --- GET INPUT --- #
     hs_feats = HotspotterChipFeatures()
     # Paths to features
@@ -243,8 +218,8 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
                                              load_kpts,
                                              load_desc)
     hs_feats.feat_type = params.__FEAT_TYPE__
-    hs_feats.cx2_kpts = cx2_kpts
-    hs_feats.cx2_desc = cx2_desc
+    hs_feats.cx2_kpts  = cx2_kpts
+    hs_feats.cx2_desc  = cx2_desc
     #hs_feats.cx2_feats_sift   = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'SIFT')
     #hs_feats.cx2_feats_freak  = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'FREAK')
     return hs_feats
@@ -252,36 +227,24 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
-    print('[fV2] __main__ = feature_compute2.py')
+    print('[fc2] __main__ = feature_compute2.py')
 
     __DEV_MODE__ = True
     if __DEV_MODE__ or 'test' in sys.argv:
-        import load_data2
+        import load_data2 as ld2
         import match_chips2 as mc2
         import chip_compute2
         import params
         # --- CHOOSE DATABASE --- #
-        if False:
-            params.__CHIP_SQRT_AREA__ = None
-            db_dir = load_data2.OXFORD
-        else:
-            db_dir = load_data2.DEFAULT
-
-        hs = load_data2.HotSpotter()
+        db_dir = ld2.DEFAULT 
+        hs = ld2.HotSpotter()
         hs.load_tables(db_dir)
         hs.load_chips()
         hs.set_samples()
-        cx2_cid  = hs.tables.cx2_cid
-        cx2_nx   = hs.tables.cx2_nx
-        nx2_name = hs.tables.nx2_name
-        hs_dirs = hs.dirs
-        hs_tables = hs.tables
-        hs_cpaths = hs.cpaths
-
-        feat_dir       = hs_dirs.feat_dir
-        cache_dir      = hs_dirs.cache_dir
-        cx2_rchip_path = hs_cpaths.cx2_rchip_path
-        cx2_cid        = hs_tables.cx2_cid
+        exec(hs.execstr('hs'))
+        exec(hs.tables.execstr('hs.tables'))
+        exec(hs.dirs.execstr('hs.tables'))
+        exec(hs.cpaths.execstr('hs.tables'))
         # Load all the types of features
         feat_uid = params.get_feat_uid()
         feat_type = params.__FEAT_TYPE__

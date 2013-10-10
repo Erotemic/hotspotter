@@ -25,15 +25,13 @@ FIGNUM = 1
 
 def reload_module():
     import imp, sys
+    print('[viz] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-
 def rrr():
     reload_module()
 
-
 def plot_name(hs, nx):
     pass
-
 
 def cx_info(allres, cx, SV=True):
     hs = allres.hs

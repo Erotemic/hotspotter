@@ -241,6 +241,11 @@ Occlusion
 Image Quality 
 Background matches / partial background matches. 
 Partial background matches / random configuration of animals. 
+
++Random Configurations 
++Non-distinct regions (no toehold)
+
+
 -
 Compounded by textured regions with lots of matches
 (there is a disproportionate scoring for regions which generate more
@@ -252,3 +257,6 @@ keypoints)
 python extract_patch.py --qcx 250 LF_ALL --low 0 --high 10 --nodesc
 
 Learning Class-to-Image Distance via Large Margin and L1-Norm Regularization (ECCV 2012)
+=======
+
+How spread out matches are in the database. 

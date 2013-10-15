@@ -38,8 +38,8 @@ def root_sift(desc):
 # =======================================
 
 feat_type2_precompute = {
-    'hesaff' : extern_feat.precompute_hesaff,
-    'mser'   : extern_feat.precompute_mser
+    ('hesaff','sift') : extern_feat.precompute_hesaff,
+    ('mser','sift')   : extern_feat.precompute_mser
 }
 
 # =======================================
@@ -90,26 +90,40 @@ def index_features(hs):
     #ax_in_part[0]   = [...]
     #valid_ax        = [...]
 
-def load_features(hs, cx_list, feature_types):
-    feat_dir       = hs.dirs.feat_dir
-    cx2_rchip_path = hs.dirs.rchip_path
-    cx2_cid = hs.tables.cx2_cid
-    valid_cxs = hs.tables.get_valid_cxs()
+def test2(hs):
+    cx_list = hs.get_valid_cxs()
+    #feature_types = params.FEAT_TYPE
+    feature_types = [('hesaff','sift'), ('mser','sift')]
+    feat_type = 'mser'
+    load_features(hs, cx_list, feature_types)
 
-    def load_feature_type(hs, feat_type, cx_list):
-        if not feat_type in hs.feats.keys():
-            hs.feats[feat_type] = Features(feat_type)
-        feat = hs.feats[feat_type]
-        # Build Parallel Jobs: 
+class Features(object):
+    def __init__(self, feat_type):
+        self.feat_type = feat_type
+
+
+def load_features(hs, cx_list, feature_types, regions=None):
+    feat_dict = {}
+
+    feat_dir       = hs.dirs.feat_dir
+    cx2_rchip_path = hs.cpaths.cx2_rchip_path
+    cx2_cid        = hs.tables.cx2_cid
+    valid_cxs = hs.get_valid_cxs()
+
+    def precompute_feat_type(hs, feat_type, cx_list):
+        if not feat_type in feat_dict.keys():
+            feat_dict[feat_type] = Features(feat_type)
+        feat = feat_dict[feat_type]
+        # Build Parallel Jobs, Compute features, saving them to disk.
+        # Then Run Parallel Jobs 
         cid_iter = (cx2_cid[cx] for cx in cx_list)
-        cx2_feat_path = (feat_dir+'/CID_%d_%s.npz' % (cid, feat_type) for cid in cid_iter)
-        # Compute features, saving them to disk 
+        feat_type_str = repr(feat_type).replace(' ','').replace('(','').replace(')','').replace('\'','')
+        cx2_feat_path = [feat_dir+'/CID_%d_%s.npz' % (cid, feat_type_str) for cid in cid_iter]
         precompute_fn = feat_type2_precompute[feat_type]
-        # Run Parallel Jobs: 
         parallel_compute(precompute_fn, [cx2_rchip_path, cx2_feat_path])
 
     for feat_type in feature_types:
-        load_feature_type(hs, feat_type, cx_list)
+        precompute_feat_type(hs, feat_type, cx_list)
 
 def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid,
                         feat_type, feat_uid, cache_dir, 
@@ -241,22 +255,23 @@ if __name__ == '__main__':
         hs.load_tables(db_dir)
         hs.load_chips()
         hs.set_samples()
-        exec(hs.execstr('hs'))
-        exec(hs.tables.execstr('hs.tables'))
-        exec(hs.dirs.execstr('hs.tables'))
-        exec(hs.cpaths.execstr('hs.tables'))
-        # Load all the types of features
-        feat_uid = params.get_feat_uid()
-        feat_type = params.__FEAT_TYPE__
+        test2(hs)
+        #exec(hs.execstr('hs'))
+        #exec(hs.tables.execstr('hs.tables'))
+        #exec(hs.dirs.execstr('hs.tables'))
+        #exec(hs.cpaths.execstr('hs.tables'))
+        ## Load all the types of features
+        #feat_uid = params.get_feat_uid()
+        #feat_type = params.__FEAT_TYPE__
 
-        hs.load_features()
-        cx2_desc = hs.feats.cx2_desc
-        cx2_kpts = hs.feats.cx2_kpts
+        #hs.load_features()
+        #cx2_desc = hs.feats.cx2_desc
+        #cx2_kpts = hs.feats.cx2_kpts
 
-        cx = helpers.get_arg_after('--cx', type_=int)
-        if not cx is None:
-            df2.show_chip(hs, cx)
-        else:
-            print('usage: feature_compute.py --cx [cx]')
+        #cx = helpers.get_arg_after('--cx', type_=int)
+        #if not cx is None:
+            #df2.show_chip(hs, cx)
+        #else:
+            #print('usage: feature_compute.py --cx [cx]')
 
     exec(df2.present())

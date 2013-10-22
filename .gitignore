@@ -15,6 +15,7 @@ OpenGLContext.profile
 *.pkl
 *.png
 *.sift
+*.gloh
 .hidden
 *.exe
 *.dll

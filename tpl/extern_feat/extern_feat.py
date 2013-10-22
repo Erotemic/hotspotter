@@ -75,22 +75,23 @@ def inria_cmd(rchip_fpath, detect_type, extract_type):
 def __compute_descriptors(rchip_fpath, detect_type, extract_type):
     'Runs external keypoint detetectors like hesaff'
     outname = rchip_fpath + '.'+detect_type+'.'+extract_type
-    cmd = inria_args(rchip_fpath, detect_type, extract_type)
+    cmd = inria_cmd(rchip_fpath, detect_type, extract_type)
     __execute_extern(cmd)
     kpts, desc = __read_text_chiprep_file(outname)
     return kpts, desc
 
 def __compute_mser(rchip_fpath):
-    __compute_descriptors(rchip_fath, 'mser', 'sift')
+    __compute_descriptors(rchip_fpath, 'mser', 'sift')
 
 def __compute_harris(rchip_fpath):
-    __compute_descriptors(rchip_fath, 'harris', 'sift')
+    __compute_descriptors(rchip_fpath, 'harris', 'sift')
 
 def __compute_hesaff(rchip_fpath):
     'Runs external keypoint detetectors like hesaff'
     outname = rchip_fpath + '.hesaff.sift'
     args = '"' + rchip_fpath + '"'
     cmd  = HESAFF_EXE + ' ' + args
+    print(cmd)
     __execute_extern(cmd)
     kpts, desc = __read_text_chiprep_file(outname)
     return kpts, desc
@@ -130,19 +131,10 @@ def __execute_extern(cmd):
 
 def test_inria_feats():
     detect_type_list = [_.strip() for _ in '''
-    harris
-    hessian
-    harmulti
-    hesmulti
-    harhesmulti
-    harlap
-    heslap
-    dog
-    mser
-    haraff
-    hesaff
-    dense 6 6
-    '''.strip().split('\n')]
+    harris, hessian, harmulti, hesmulti,
+    harhesmulti, harlap, heslap, dog, 
+    mser, haraff, hesaff, dense 6 6
+    '''.strip(' \n').split(',')]
 
     extract_type_list = ['sift','gloh']
     extract_type = 'sift'
@@ -150,12 +142,15 @@ def test_inria_feats():
     rchip_fpath = os.path.realpath('lena.png')
 
     for detect_type in detect_type_list:
-        cmd = inria_cmd(rchip_fpath, detect_type, extract_type)
-        __execute_extern(cmd+' -DP')
+        for extract_type in extract_type_list:
+            cmd = inria_cmd(rchip_fpath, detect_type, extract_type)
+            print('Execute: '+cmd)
+            __execute_extern(cmd+' -DP')
 
 if __name__ == '__main__':
-    pass
-
+    import cv2
+    test_inria_feats()
+    #rchip_fpath = os.path.realpath('lena.png')
 
 '''
 Interest points:

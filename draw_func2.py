@@ -847,7 +847,8 @@ def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     imshow(rchip,fignum=fignum,title=title,**kwargs)
     draw_kpts2(kpts)
 
-def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True, **kwargs):
+def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
+              nRandKpts=None, **kwargs):
     if not res is None:
         cx = res.qcx
     if not allres is None:
@@ -931,7 +932,19 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True, **k
         #plt.legend(*zip(*legend_tups), framealpha=.2)
     # Just draw boring keypoints
     else:
-        draw_kpts2(kpts1, ell_alpha=.5, **kpts_args)
+        if not nRandKpts is None: 
+            nkpts1 = len(kpts1)
+            fxs1 = np.arange(nkpts1)
+            size = nRandKpts
+            replace = False
+            p = np.ones(nkpts1)
+            p = p / p.sum()
+            fxs_randsamp = np.random.choice(fxs1, size, replace, p)
+            kpts1 = kpts1[fxs_randsamp]
+            ax = plt.gca()
+            ax.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1))
+            # show a random sample of kpts
+        draw_kpts2(kpts1, ell_alpha=.7, ell_color=(.9,.1,.1), **kpts_args)
 
 def show_img(hs, cx, **kwargs):
     # Grab data from tables

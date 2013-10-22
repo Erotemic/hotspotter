@@ -243,8 +243,8 @@ if __name__ == '__main__':
         hs.set_samples()
         exec(hs.execstr('hs'))
         exec(hs.tables.execstr('hs.tables'))
-        exec(hs.dirs.execstr('hs.tables'))
-        exec(hs.cpaths.execstr('hs.tables'))
+        exec(hs.dirs.execstr('hs.dirs'))
+        exec(hs.cpaths.execstr('hs.cpaths'))
         # Load all the types of features
         feat_uid = params.get_feat_uid()
         feat_type = params.__FEAT_TYPE__
@@ -254,9 +254,11 @@ if __name__ == '__main__':
         cx2_kpts = hs.feats.cx2_kpts
 
         cx = helpers.get_arg_after('--cx', type_=int)
+        nRandKpts = helpers.get_arg_after('--nRandKpts', type_=int)
+
         if not cx is None:
-            df2.show_chip(hs, cx)
+            df2.show_chip(hs, cx, nRandKpts=nRandKptsa)
         else:
-            print('usage: feature_compute.py --cx [cx]')
+            print('usage: feature_compute.py --cx [cx] --nRandKpts [num]')
 
     exec(df2.present())

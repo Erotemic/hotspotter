@@ -186,7 +186,7 @@ def viz_top_features(hs, res, low, high, fignum=0, draw_chips=True):
         df2.draw_kpts2([kp], ell_color=color, pts=True)
         if not desc is None and not '--nodesc' in sys.argv:
             df2.draw_sift(desc, [kp])
-        df2._draw_border(ax, color, 1)
+        df2.draw_border(ax, color, 1)
 
     for tx, (patches1, patches2, patchesN, cx, feat_score) in enumerate(top_patches_list):
         (kp1, subkp1, wkp1, patch1, wpatch1, cx1, desc1) = patches1
@@ -251,7 +251,7 @@ def viz_top_features(hs, res, low, high, fignum=0, draw_chips=True):
             title_pref = 'q'
             color = df2.GREEN
         df2.draw_kpts2(cx2_kplist[cx], ell_color=color, ell_alpha=1)
-        df2._draw_border(ax, color, 2)
+        df2.draw_border(ax, color, 2)
         nx = cx2_nx[cx]
         ax.set_title(title_pref+'cx = %r; nx=%r' % (cx, nx))
         gname = hs.cx2_gname(cx)

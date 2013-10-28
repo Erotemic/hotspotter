@@ -645,15 +645,15 @@ scoring_func_map = {
     'RATIO' : RATIO_fn,
     'LNBNN' : LNBNN_fn }
 
-def desc_nearest_neighbors(desc, vsmany_index):
+def desc_nearest_neighbors(desc, vsmany_index, K=None):
     vsmany_flann = vsmany_index.vsmany_flann
     ax2_cx       = vsmany_index.ax2_cx
     ax2_fx       = vsmany_index.ax2_fx
     isQueryIndexed = True
-    k_vsmany = params.__VSMANY_K__+1 if isQueryIndexed else params.__VSMANY_K__
+    K = params.__VSMANY_K__ if K is None else K
     checks   = params.VSMANY_FLANN_PARAMS['checks']
     # Find each query descriptor's k+1 nearest neighbors
-    (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc, k_vsmany+1, checks=checks)
+    (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc, K, checks=checks)
     qfx2_cx = ax2_cx[qfx2_ax]
     qfx2_fx = ax2_fx[qfx2_ax]
     return (qfx2_cx, qfx2_fx, qfx2_dists) 

@@ -18,7 +18,7 @@ def get_vsone_data(query_feats, result_feats):
     rchip_size2 = rchip2.size
     vsone_flann, checks = mc2.get_vsone_flann(fx2_desc1)
     fm, fs              = mc2.match_vsone(fx2_desc2, vsone_flann, checks)
-    fm_V, fs_V, H       = mc2.spatially_verify(fx2_kp1, fx2_kp2, rchip_size2, fm, fs, qcx, cx)
+    fm_V, fs_V          = mc2.spatially_verify(fx2_kp1, fx2_kp2, rchip_size2, fm, fs)
     score = fs.sum(); score_V = fs_V.sum()
     vsone_cx_assign = fm, fs, score
     vsone_cx_svout = fm_V, fs_V, score_V

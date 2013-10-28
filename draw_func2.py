@@ -488,6 +488,7 @@ def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
         colors    = [ LINE_COLOR for fx in xrange(len(fm)) ] 
         linewidth = [ LINE_WIDTH for fx in xrange(len(fm)) ] 
     else: # Draw with colors proportional to score difference
+        assert len(fs.shape) == 1, 'score must be 1d'
         cmap = plt.get_cmap(LINE_CMAP)
         mins = fs.min()
         maxs = fs.max()

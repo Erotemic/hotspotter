@@ -789,3 +789,38 @@ def printDEBUG(msg):
     print msg
 
 
+
+def idontknowwhatiwasdoingwheniwrotethis():
+    # Database descriptor + keypoints
+    cx2_desc = hs.feats.cx2_desc
+    cx2_kpts = hs.feats.cx2_kpts
+    cx2_rchip_size = hs.get_cx2_rchip_size()
+    def get_features(cx):
+        rchip = hs.get_chip(cx)
+        rchip_size = cx2_rchip_size[cx]
+        fx2_kp     = cx2_kpts[cx]
+        fx2_scale  = sv2.keypoint_scale(fx2_kp)
+        fx2_desc   = cx2_desc[cx]
+        return rchip, rchip_size, fx2_kp, fx2_scale, fx2_desc
+    cx = ocxs[0]
+    # Grab features
+    rchip1, rchip_size1, fx2_kp1, fx2_scale1, fx2_desc1 = get_features(qcx)
+    rchip2, rchip_size2, fx2_kp2, fx2_scale2, fx2_desc2 = get_features(cx)
+    # Vsmany index
+    #c2.precompute_index_vsmany(hs)
+    #qcx2_res = mc2.run_matching(hs)
+
+    '''
+    bad_consecutive_reranks = 0
+    max_bad_consecutive_reranks = 20 # stop if more than 20 bad reranks
+    __OVERRIDE__ = False
+    '''
+        '''
+        if __OVERRIDE__ and len(fm_V) == 0:
+            bad_consecutive_reranks += 1
+            if bad_consecutive_reranks > max_bad_consecutive_reranks:
+                print('[mc2] Too many bad consecutive spatial verifications')
+                break
+        else: 
+            bad_consecutive_reranks = 0
+        '''

@@ -147,6 +147,28 @@ def intersect_ordered(list1, list2):
             #new_list.append(item)
     return new_list
 
+def intersect2d_numpy(A, B): 
+    #http://stackoverflow.com/questions/8317022/
+    #get-intersecting-rows-across-two-2d-numpy-arrays/8317155#8317155
+    nrows, ncols = A.shape
+    # HACK to get consistent dtypes
+    assert A.dtype is B.dtype, 'A and B must have the same dtypes'
+    dtype = np.dtype([('f%d' % i, A.dtype) for i in range(ncols)])
+    try: 
+        C = np.intersect1d(A.view(dtype), B.view(dtype))
+    except ValueError as ex:
+        C = np.intersect1d(A.copy().view(dtype), B.copy().view(dtype))
+    # This last bit is optional if you're okay with "C" being a structured array...
+    C = C.view(A.dtype).reshape(-1, ncols)
+    return C
+
+def intersect2d(A, B):
+    Cset  =  set(tuple(x) for x in A).intersection(set(tuple(x) for x in B))
+    Ax = np.array([x for x, item in enumerate(A) if tuple(item) in Cset], dtype=np.int)
+    Bx = np.array([x for x, item in enumerate(B) if tuple(item) in Cset], dtype=np.int)
+    C = np.array(tuple(Cset))
+    return C, Ax, Bx
+
 # --- Info Strings ---
 
 def printable_mystats(_list):
@@ -1257,6 +1279,40 @@ def num_fmt(num, max_digits=2):
         return '%d'
     else:
         return '%r'
+
+def int_comma_str(num):
+    import decimal
+    int_str = ''
+    reversed_digits = decimal.Decimal(num).as_tuple()[1][::-1]
+    for i, digit in enumerate(reversed_digits):
+        if (i) % 3 == 0 and i != 0: 
+            int_str += ','
+        int_str += str(digit)
+    return int_str[::-1]
+
+def fewest_digits_float_str(num, n=8):
+    import decimal
+    int_part = int(num)
+    dec_part = num - int_part
+    x = decimal.Decimal(dec_part, decimal.Context(prec=8))
+    decimal_list = x.as_tuple()[1]
+    nonzero_pos = 0
+    for i in range(0,min(len(decimal_list), n)):
+        if decimal_list[i] != 0:
+            nonzero_pos = i
+    sig_dec = int(dec_part * 10**(nonzero_pos+1))
+    float_str = int_comma_str(int_part)+'.'+str(sig_dec)
+    return float_str
+    #x.as_tuple()[n]
+
+
+def commas(num, n=8):
+    if is_float(num):
+        return '%.3f' % num
+        #return fewest_digits_float_str(num, n)
+    return '%d' % num
+    #return int_comma_str(num)
+
 
 if __name__ == '__main__':
     import multiprocessing

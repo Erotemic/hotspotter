@@ -60,16 +60,43 @@ def debug_cx2_fm_shape(cx2_fm):
             print(last_repr)
     print('-------------------')
 
+
+def ensure_array_dtype(arr, dtype):
+    if not type(arr) is np.ndarray or arr.dtype != dtype:
+        arr = np.array(arr, dtype=dtype)
+    return arr
+
+def ensure_2darray_nCols(arr, nCols):
+    if len(arr.shape) != 2 or arr.shape[1] != nCols:
+        arr = arr.reshape(len(arr), nCols)
+    return arr
+
+def fix_fm(fm):
+    fm = ensure_array_dtype(fm, FM_DTYPE)
+    fm = ensure_2darray_nCols(fm, 2)
+    return fm
+
+def fix_fs(fs):
+    fs = ensure_array_dtype(fs, FS_DTYPE)
+    fs = fs.flatten()
+    return fs
+
 def fix_cx2_fm_shape(cx2_fm):
     for cx in xrange(len(cx2_fm)):
-        fm = cx2_fm[cx]
-        if type(fm) != np.ndarray() or fm.dtype != FM_DTYPE:
-            fm = np.array(fm, dtype=FM_DTYPE)
-        if len(fm.shape) != 2 or fm.shape[1] != 2:
-            fm = fm.reshape(len(fm), 2)
-        cx2_fm[cx] = fm
+        cx2_fm[cx] = fix_fm(cx2_fm[cx])
     cx2_fm = np.array(cx2_fm)
     return cx2_fm
+
+#def fix_cx2_fm_shape(cx2_fm):
+    #for cx in xrange(len(cx2_fm)):
+        #fm = cx2_fm[cx]
+        #if type(fm) != np.ndarray() or fm.dtype != FM_DTYPE:
+            #fm = np.array(fm, dtype=FM_DTYPE)
+        #if len(fm.shape) != 2 or fm.shape[1] != 2:
+            #fm = fm.reshape(len(fm), 2)
+        #cx2_fm[cx] = fm
+    #cx2_fm = np.array(cx2_fm)
+    #return cx2_fm
 
 def fix_res_types(res):
     for cx in xrange(len(res.cx2_fm_V)):
@@ -719,6 +746,7 @@ def assign_matches_vsmany_BINARY(qcx, cx2_desc):
 #========================================
 # One-vs-One 
 #========================================
+
 def get_vsone_flann(desc1):
     vsone_flann = pyflann.FLANN()
     vsone_flann_params =  params.VSONE_FLANN_PARAMS
@@ -800,12 +828,12 @@ def match_vsone(desc2, vsone_flann, checks, ratio_thresh=1.2, burst_thresh=None)
 #========================================
 def __default_sv_return():
     'default values returned by bad spatial verification'
-    H = np.eye(3)
+    #H = np.eye(3)
     fm_V = np.empty((0, 2))
     fs_V = np.array((0, 1))
-    return (fm_V, fs_V, H)
+    return (fm_V, fs_V)
 #@profile
-def spatially_verify(kpts1, kpts2, rchip_size, fm, fs, qcx, cx):
+def spatially_verify(kpts1, kpts2, rchip_size2, fm, fs):
     '''1) compute a robust transform from img2 -> img1
        2) keep feature matches which are inliers 
        returns fm_V, fs_V, H '''
@@ -818,7 +846,7 @@ def spatially_verify(kpts1, kpts2, rchip_size, fm, fs, qcx, cx):
     scale_thresh_high = params.__SCALE_THRESH_HIGH__
     scale_thresh_low  = params.__SCALE_THRESH_LOW__
     if params.__USE_CHIP_EXTENT__:
-        diaglen_sqrd = rchip_size[0]**2 + rchip_size[1]**2
+        diaglen_sqrd = rchip_size2[0]**2 + rchip_size2[1]**2
     else:
         x_m = kpts2[fm[:,1],0].T
         y_m = kpts2[fm[:,1],1].T
@@ -836,7 +864,60 @@ def spatially_verify(kpts1, kpts2, rchip_size, fm, fs, qcx, cx):
     (H, inliers, Aff, aff_inliers) = sv_tup
     fm_V = fm[inliers, :]
     fs_V = fs[inliers, :]
+    return fm_V, fs_V
+
+def spatially_verify_check_args(xy_thresh=None,
+                                scale_min=None,
+                                scale_max=None,
+                                rchip_size2=None, 
+                                min_num_inliers=None):
+    ''' Performs argument checks for spatially_verify'''
+    if min_num_inliers is None: 
+        min_num_inliers = 4
+    if xy_thresh is None:
+        xy_thresh = params.__XY_THRESH__
+    if scale_min is None:
+        scale_min = params.__SCALE_THRESH_LOW__
+    if scale_max is None:
+        scale_max = params.__SCALE_THRESH_HIGH__
+    if rchip_size2 is None:
+        x_m = kpts2[fm[:,1],0].T
+        y_m = kpts2[fm[:,1],1].T
+        x_extent_sqrd = (x_m.max() - x_m.min()) ** 2
+        y_extent_sqrd = (y_m.max() - y_m.min()) ** 2
+        diaglen_sqrd = x_extent_sqrd + y_extent_sqrd
+    else:
+        diaglen_sqrd = rchip_size2[0]**2 + rchip_size2[1]**2
+    return min_num_inliers, xy_thresh, scale_max, scale_min, diaglen_sqrd
+
+def __spatially_verify(kpts1, kpts2, fm, fs, min_num_inliers, xy_thresh,
+                       scale_thresh_high, scale_thresh_low, diaglen_sqrd):
+    '''Work function for spatial verification'''
+    sv_tup = sv2.homography_inliers(kpts1, kpts2, fm,
+                                    xy_thresh, 
+                                    scale_thresh_high,
+                                    scale_thresh_low,
+                                    diaglen_sqrd,
+                                    min_num_inliers)
+    if not sv_tup is None:
+        # Return the inliers to the homography
+        (H, inliers, Aff, aff_inliers) = sv_tup
+        fm_V = fm[inliers, :]
+        fs_V = fs[inliers, :]
+    else:
+        fm_V = np.empty((0, 2))
+        fs_V = np.array((0, 1))
+        H = np.eye(3)
     return fm_V, fs_V, H
+
+
+def spatially_verify2(kpts1, kpts2, fm, fs, **kwargs):
+    '''Wrapper function for spatial verification with argument checks'''
+    min_num_inliers, xy_thresh, scale_min, scale_max, diaglen_sqrd = spatially_verify_check_args(**kwargs)
+    fm_V, fs_V, H = __spatially_verify(kpts1, kpts2, fm, fs, min_num_inliers,
+                                       xy_thresh, scale_min, scale_max, diaglen_sqrd)
+    return fm_V, fs_V
+
 
 #@profile
 def spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs, cx2_score):
@@ -847,30 +928,16 @@ def spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs, cx2_
     # Precompute output container
     cx2_fm_V = [[] for _ in xrange(len(cx2_fm))]
     cx2_fs_V = [[] for _ in xrange(len(cx2_fs))]
-    '''
-    bad_consecutive_reranks = 0
-    max_bad_consecutive_reranks = 20 # stop if more than 20 bad reranks
-    __OVERRIDE__ = False
-    '''
     # spatially verify the top __NUM_RERANK__ results
     for topx in xrange(num_rerank):
         cx    = top_cx[topx]
         kpts2 = cx2_kpts[cx]
         fm    = cx2_fm[cx]
         fs    = cx2_fs[cx]
-        rchip_size = cx2_rchip_size[cx]
-        fm_V, fs_V, H = spatially_verify(kpts1, kpts2, rchip_size, fm, fs, qcx, cx)
+        rchip_size2 = cx2_rchip_size[cx]
+        fm_V, fs_V = spatially_verify(kpts1, kpts2, rchip_size2, fm, fs)
         cx2_fm_V[cx] = fm_V
         cx2_fs_V[cx] = fs_V
-        '''
-        if __OVERRIDE__ and len(fm_V) == 0:
-            bad_consecutive_reranks += 1
-            if bad_consecutive_reranks > max_bad_consecutive_reranks:
-                print('[mc2] Too many bad consecutive spatial verifications')
-                break
-        else: 
-            bad_consecutive_reranks = 0
-        '''
     # Rebuild the feature match / score arrays to be consistent
     for cx in xrange(len(cx2_fm_V)):
         fm = np.array(cx2_fm_V[cx], dtype=FM_DTYPE)

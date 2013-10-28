@@ -1308,10 +1308,63 @@ def fewest_digits_float_str(num, n=8):
 
 def commas(num, n=8):
     if is_float(num):
-        return '%.3f' % num
+        #ret = sigfig_str(num, n=2)
+        ret = '%.3f' % num 
+        return ret
         #return fewest_digits_float_str(num, n)
     return '%d' % num
     #return int_comma_str(num)
+
+import decimal
+
+def float_to_decimal(f):
+    # http://docs.python.org/library/decimal.html#decimal-faq
+    "Convert a floating point number to a Decimal with no loss of information"
+    n, d = f.as_integer_ratio()
+    numerator, denominator = decimal.Decimal(n), decimal.Decimal(d)
+    ctx = decimal.Context(prec=60)
+    result = ctx.divide(numerator, denominator)
+    while ctx.flags[decimal.Inexact]:
+        ctx.flags[decimal.Inexact] = False
+        ctx.prec *= 2
+        result = ctx.divide(numerator, denominator)
+    return result 
+
+#http://stackoverflow.com/questions/2663612/nicely-representing-a-floating-point-number-in-python
+def sigfig_str(number, sigfig):
+    # http://stackoverflow.com/questions/2663612/nicely-representing-a-floating-point-number-in-python/2663623#2663623
+    assert(sigfig>0)
+    try:
+        d=decimal.Decimal(number)
+    except TypeError:
+        d=float_to_decimal(float(number))
+    sign,digits,exponent=d.as_tuple()
+    if len(digits) < sigfig:
+        digits = list(digits)
+        digits.extend([0] * (sigfig - len(digits)))    
+    shift=d.adjusted()
+    result=int(''.join(map(str,digits[:sigfig])))
+    # Round the result
+    if len(digits)>sigfig and digits[sigfig]>=5: result+=1
+    result=list(str(result))
+    # Rounding can change the length of result
+    # If so, adjust shift
+    shift+=len(result)-sigfig
+    # reset len of result to sigfig
+    result=result[:sigfig]
+    if shift >= sigfig-1:
+        # Tack more zeros on the end
+        result+=['0']*(shift-sigfig+1)
+    elif 0<=shift:
+        # Place the decimal point in between digits
+        result.insert(shift+1,'.')
+    else:
+        # Tack zeros on the front
+        assert(shift<0)
+        result=['0.']+['0']*(-shift-1)+result
+    if sign:
+        result.insert(0,'-')
+    return ''.join(result)
 
 
 if __name__ == '__main__':

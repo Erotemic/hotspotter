@@ -264,6 +264,10 @@ class HotSpotter(DynStruct):
         other_indexed_cx = np.intersect1d(other_cx, hs.indexed_sample_cx)
         return other_indexed_cx
     #--------------
+    def get_groundtruth_cxs(hs, qcx):
+        gt_cxs = hs.get_other_cxs(qcx)
+        return gt_cxs
+
     def get_other_cxs(hs, cx):
         cx2_nx   = hs.tables.cx2_nx
         nx = cx2_nx[cx]

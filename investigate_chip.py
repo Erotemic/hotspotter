@@ -21,16 +21,20 @@ HISTORY = [
     history_entry('TOADS', 32),
     history_entry('GZ', 111, [305]),
     history_entry('GZ', 1046, notes='viewpoint'),
+    history_entry('GZ', 111, [305]),
+    history_entry('MOTHERS',   1),
 ]
 
 
 def quick_assign_vsmany(hs, qcx, cx, K): 
+    #if hs.isindexed(qcx)
+    K += 1
     desc1 = hs.feats.cx2_desc[qcx]
     vsmany_index = hs.matcher._Matcher__vsmany_index
     vsmany_flann = vsmany_index.vsmany_flann
     ax2_cx       = vsmany_index.ax2_cx
     ax2_fx       = vsmany_index.ax2_fx
-    print('Quick vsmany over %s indexed descriptors. K=%r' %
+    print('[invest] Quick vsmany over %s indexed descriptors. K=%r' %
           (helpers.commas(len(ax2_cx)), K))
     checks       = params.VSMANY_FLANN_PARAMS['checks']
     (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, K+1, checks=checks)
@@ -57,7 +61,7 @@ def quick_assign_vsmany(hs, qcx, cx, K):
     return fm, fs
 
 def quick_assign_vsone(hs, qcx, cx, ratio_thresh=1.2, burst_thresh=None):
-    print('Performing quick vsone')
+    print('[invest] Performing quick vsone')
     desc1 = hs.feats.cx2_desc[qcx]
     desc2 = hs.feats.cx2_desc[cx]
     vsone_flann, checks = mc2.get_vsone_flann(desc1)
@@ -80,28 +84,34 @@ def top_matching_features(res, axnum=None, match_type=''):
     df2.plot(sorted_score)
 
 
-def vary_gt_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
-                   assign_fn='vsone', nParam1=3, nParam2=3, fnum=1):
+def vary_query_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
+                      assign_alg='vsone', nParam1=3, nParam2=3, fnum=1,
+                      cx_list='gt'):
     possible_variations = {
-        'K'            : (5,    5E2, 'int', 'log'),
-        'ratio_thresh' : (1.0  , 1.8), 
-        'xy_thresh'    : (0.001, 0.05), 
-        'scale_min'    : (0.5  , 1.0),
-        'scale_max'    : (1.0  , 4.0)
+                        # mean , #sigma  #props
+        'K'            : (1, 5, 'int', 'pos'),
+        'ratio_thresh' : (1.6,   .001,  'pos'),  
+        'xy_thresh'    : (0.001, 0.1, 'pos'), 
+        'scale_min'    : (0.5,   0.25, 'pos'),
+        'scale_max'    : (2.0,   0.5,  'neg')
     }
     param_ranges = {
         'param1'    : [param1]+[list(possible_variations[param1])],
         'param2'    : [param2]+[list(possible_variations[param2])]
     }
     # Ground truth matches
-    gt_cxs = hs.get_other_cxs(qcx)
-    for cx in gt_cxs:
-        fnum = vary_two_params(hs, qcx, cx, param_ranges, assign_fn, nParam1,
-                               nParam2, fnum)
+    if cx_list == 'gt':
+        cx_list = hs.get_groundtruth_cxs(qcx)
+    if cx_list == 'gt1':
+        gt_list = hs.get_groundtruth_cxs(qcx)
+        cx_list = gt_list[0:1]
+    for cx in cx_list:
+        fnum = vary_two_params(hs, qcx, cx, param_ranges, assign_alg,
+                               nParam1, nParam2, fnum)
     return fnum
 
 
-def vary_two_params(hs, qcx, cx, param_ranges, assign_fn, nParam1=3, nParam2=3, fnum=1):
+def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3, fnum=1):
     # Query Features
     cx2_rchip_size = hs.get_cx2_rchip_size()
     get_features = quick_get_features_factory(hs)
@@ -117,17 +127,26 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_fn, nParam1=3, nParam2=3, 
         return 2 ** np.linspace(np.log2(start), np.log2(stop), num)
     possible_space_fns = {'lin' : np.linspace,
                           'log' : linear_logspace}
-    quick_assign_fn = possible_assign_fns[assign_fn]
+    quick_assign_fn = possible_assign_fns[assign_alg]
 
     # Varied Parameters
     def get_param(key, nParam):
         param = param_ranges[key][0]
         param_info = param_ranges[key][1]
         param_type = 'float' if len(param_info) <= 2 else param_info[2]
-        space_fn = possible_space_fns['lin' if len(param_info) <= 3 else
-                                      param_info[3]]
-        param_range = list(param_info[0:2]) + [nParam]
-        param_steps = space_fn(*param_range)
+        #space_fn = possible_space_fns['lin' if len(param_info) <= 3 else param_info[3]]
+        #param_range = list(param_info[0:2]) + [nParam]
+        npnormal = np.random.normal
+        mean = param_info[0]
+        std  = param_info[0]
+        if 'pos' in param_info:
+            random_steps = list(mean + np.abs(npnormal(0, std, nParam-1))) 
+        elif 'neg' in param_info:
+            random_steps = list(mean - np.abs(npnormal(0, std, nParam-1))) 
+        else:
+            random_steps = list(mean + npnormal(0, std, nParam-1))
+        # Sample the mean and a gaussian neighborhood around the mean
+        param_steps = [mean] + random_steps
         if param_type == 'int':
             param_steps = map(int, map(round, param_steps))
         return param, param_steps, nParam
@@ -136,9 +155,9 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_fn, nParam1=3, nParam2=3, 
     nRows = nParam1
     nCols = nParam2+1
 
-    print('Varying parameters %r (%r, %r): nRows=%r, nCols=%r' % (assign_fn, param1, param2, nRows, nCols))
-    print('%r = %r ' % (param1, param1_steps))
-    print('%r = %r ' % (param2, param2_steps))
+    print('[invest] Varying parameters %r: nRows=%r, nCols=%r' % (assign_alg, nRows, nCols))
+    print('[invest] %r = %r ' % (param1, param1_steps))
+    print('[invest] %r = %r ' % (param2, param2_steps))
     # Assigned Features with param1
     for rowx, param1_value in enumerate(param1_steps):
         assign_args = {param1:param1_value}
@@ -149,14 +168,36 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_fn, nParam1=3, nParam2=3, 
             df2.show_matches2(rchip1, rchip2, fx2_kp1, fx2_kp2, fm, fs, fignum=fnum,
                             plotnum=plotnum, title=title, draw_pts=False)
         # Plot the original assigned matches
-        _show_matches_helper(fm, fs, rowx, 1, param1+'=%s' % helpers.commas(param1_value))
+        title = param1+'=%.3e' % param1_value
+        _show_matches_helper(fm, fs, rowx, 1, '')
+        ax = df2.plt.gca()
+        ylabel_args = dict(rotation='horizontal',
+                           verticalalignment='bottom',
+                           horizontalalignment='right')
+        ax.set_ylabel(title, **ylabel_args)
+        #if rowx == nRows - 1:
+        def _set_xlabel(label):
+            #if False or rowx == 0:
+                #ax = df2.plt.gca()
+                #ax.set_title(label)
+            if rowx == nRows - 1:
+                ax = df2.plt.gca()
+                ax.set_xlabel(label)
+
+        df2.plt.subplots_adjust(left=0.125, right=1.0,
+                                bottom=0.1, top=0.85,
+                                wspace=0.01, hspace=0.01)
+        _set_xlabel(assign_alg)
         # Spatially verify with params2
         for colx, param2_value in enumerate(param2_steps):
             sv_args = {'rchip_size2':rchip_size2, param2:param2_value}
             fm_V, fs_V = mc2.spatially_verify2(fx2_kp1, fx2_kp2, fm, fs, **sv_args)
             # Plot the spatially verified matches
-            _show_matches_helper(fm_V, fs_V, rowx, colx+2, param2+'=%s' % helpers.commas(param2_value, 3))
-    df2.set_figtitle('vary '+param1+' and '+param2+', '+assign_fn+'\n qcid=%r, cid=%r' % (cid1, cid2))
+            title = param2 + '=%.3e' % param2_value #helpers.commas(param2_value, 3)
+            _show_matches_helper(fm_V, fs_V, rowx, colx+2, '')
+            _set_xlabel(title)
+
+    df2.set_figtitle(assign_alg+' vary '+param1+' and '+param2+' \n qcid=%r, cid=%r' % (cid1, cid2))
     fnum += 1
     return fnum
 
@@ -197,14 +238,14 @@ def where_did_vsone_matches_go(hs, qcx, fnum=1, K=100):
     vsmany_index = hs.matcher._Matcher__vsmany_index
     (qfx2_cx, qfx2_fx, qfx2_dists) = mc2.desc_nearest_neighbors(qfx2_desc1, vsmany_index, K)
     # Find where the matches to the correct images are
-    print('Finding where the vsone matches went for qcx=%r, qcid=%r' % (qcx, qcid))
+    print('[invest]  Finding where the vsone matches went for qcx=%r, qcid=%r' % (qcx, qcid))
     k_inds  = np.arange(0, K)
     qf_inds = np.arange(0, len(qfx2_cx))
     kxs, qfxs = np.meshgrid(k_inds, qf_inds)
     for gtx, ocx in enumerate(gt_cxs):
         rchip2, fx2_kp2, fx2_desc2, ocid = get_features(ocx)
         rchip_size2 = cx2_rchip_size[ocx]
-        print('Checking matches to ground truth %r / %r cx=%r, cid=%r' % 
+        print('[invest] Checking matches to ground truth %r / %r cx=%r, cid=%r' % 
               (gtx+1, len(gt_cxs), ocx, ocid))
         # Get vsone indexes
         vsone_fm_V = gt2_fm_V[gtx]
@@ -230,17 +271,17 @@ def where_did_vsone_matches_go(hs, qcx, fnum=1, K=100):
         # Intersect vsmany_V with vsone_V
         fm_V_intersect, vsoneV_ix, vsmanyV_ix = helpers.intersect2d(vsone_fm_V, vsmany_fm_V)
         isecting_vsmany_fm_V = vsmany_fm[vsmanyV_ix]
-        print('  VSONE had %r verified matches to this image ' % (len(vsone_fm_V)))
-        print('  In the top K=%r in this image...' % (K))
-        print('  VSMANY had %r assignments to this image.' % (len(vsmany_qfxs)))
-        print('  VSMANY had %r unique assignments to this image' % (len(np.unique(qfxs))))
-        print('  VSMANY had %r verified assignments to this image' % (len(vsmany_fm_V)))
-        print('  There were %r / %r intersecting matches in VSONE_V and VSMANY' % 
+        print('[invest]   VSONE had %r verified matches to this image ' % (len(vsone_fm_V)))
+        print('[invest]   In the top K=%r in this image...' % (K))
+        print('[invest]   VSMANY had %r assignments to this image.' % (len(vsmany_qfxs)))
+        print('[invest]   VSMANY had %r unique assignments to this image' % (len(np.unique(qfxs))))
+        print('[invest]   VSMANY had %r verified assignments to this image' % (len(vsmany_fm_V)))
+        print('[invest]   There were %r / %r intersecting matches in VSONE_V and VSMANY' % 
               (len(fm_intersect), len(vsone_fm_V)))
-        print('  There were %r / %r intersecting verified matches in VSONE_V and VSMANY_V' % 
+        print('[invest]   There were %r / %r intersecting verified matches in VSONE_V and VSMANY_V' % 
               (len(fm_V_intersect), len(vsone_fm_V)))
-        print('  Distribution of kxs: '+helpers.printable_mystats(kxs))
-        print('  Distribution of intersecting kxs: '+helpers.printable_mystats(isecting_kxs))
+        print('[invest]   Distribution of kxs: '+helpers.printable_mystats(kxs))
+        print('[invest]   Distribution of intersecting kxs: '+helpers.printable_mystats(isecting_kxs))
         # Visualize the intersecting matches 
         def _show_matches_helper(fm, fs, plotnum, title):
             df2.show_matches2(rchip1, rchip2, qfx2_kp1, fx2_kp2, fm, fs,
@@ -252,22 +293,27 @@ def where_did_vsone_matches_go(hs, qcx, fnum=1, K=100):
                              'intersecting vsmany K=%r matches' % (K,))
         df2.set_figtitle('vsmany K=%r qid%r vs cid%r'  % (K, qcid, ocid))
         # Hot colorscheme is black->red->yellow->white
-        print('black->red->yellow->white')
+        print('[invest] black->red->yellow->white')
         fnum+=1
     return fnum
 
 def set_matcher_type(hs, match_type):
-    print('Setting matcher type to: '+str(match_type))
+    print('[invest] Setting matcher type to: '+str(match_type))
     params.__MATCH_TYPE__ = match_type
     hs.load_matcher()
 
+def ensure_matcher_type(hs, match_type):
+    if hs.matcher is None or hs.matcher.type != match_type:
+        return set_matcher_type(hs, match_type)
+
+
 def plot_name(hs, qcx, fnum=1):
-    print('Plotting name')
+    print('[invest] Plotting name')
     dump_groundtruth.plot_name_cx(hs, qcx, fignum=fnum)
     return fnum+1
 
 def compare_matching_methods(hs, qcx, fnum=1):
-    print('Comparing match methods')
+    print('[invest] Comparing match methods')
     # VSMANY matcher
     set_matcher_type(hs, 'vsmany')
     vsmany_score_options = ['LNRAT', 'LNBNN', 'RATIO']
@@ -310,9 +356,9 @@ if __name__ == '__main__':
 
     #fnum = plot_name(hs, qcx, fnum)
     #fnum = compare_matching_methods(hs, qcx, fnum)
-    #fnum = vary_gt_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', fnum)
+    #fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 2, 2, fnum, cx_list='gt1')
     set_matcher_type(hs, 'vsmany')
-    fnum = vary_gt_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 5, 4, fnum)
+    fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 3, 4, fnum, cx_list='gt1')
     #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
     #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=1000)
 

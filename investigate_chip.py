@@ -1,4 +1,5 @@
 #exec(open('__init__.py').read())
+#exec(open('_research/investigate_chip.py').read())
 from __future__ import division
 import numpy as np
 import load_data2 as ld2
@@ -309,11 +310,11 @@ if __name__ == '__main__':
 
     #fnum = plot_name(hs, qcx, fnum)
     #fnum = compare_matching_methods(hs, qcx, fnum)
-    fnum = vary_gt_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', fnum)
+    #fnum = vary_gt_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', fnum)
     set_matcher_type(hs, 'vsmany')
     fnum = vary_gt_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 5, 4, fnum)
-    fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
-    fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=1000)
+    #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
+    #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=1000)
 
     df2.update()
 

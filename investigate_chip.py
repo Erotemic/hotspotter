@@ -6,206 +6,33 @@ import load_data2 as ld2
 import draw_func2 as df2
 import match_chips2 as mc2
 import cv2
-import helpers
 import spatial_verification2 as sv2
+import helpers
 import sys
 import params
-
 from _research import dump_groundtruth
+import voting_rules2 as vr2
+
+def reload_module():
+    import imp, sys
+    print('[reload] reloading '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
 def history_entry(database='', cx=-1, ocxs=[], cid=None, notes=''):
     return (database, cx, ocxs, cid, notes)
 
 # A list of poster child examples. (curious query cases)
 HISTORY = [
+    history_entry('MOTHERS',   2),
     history_entry('TOADS', 32),
     history_entry('GZ', 111, [305]),
-    history_entry('GZ', 1046, notes='viewpoint'),
     history_entry('GZ', 111, [305]),
-    history_entry('MOTHERS',   1),
+    history_entry('GZ', 1046, notes='viewpoint'),
 ]
 
-def temporary_names(cx_list, nx_list, zeroed_cx_list=[], zeroed_nx_list=[]):
-    '''
-    Test Input: 
-        nx_list = np.array([(1, 5, 6), (2, 4, 0), (1, 1,  1), (5, 5, 5)])
-        cx_list = np.array([(2, 3, 4), (5, 6, 7), (8, 9, 10), (4, 5, 5)])
-        zeroed_nx_list = []
-        zeroed_cx_list = [3]
-    Test Output:
-    '''
-    zeroed_cx_list = set(zeroed_cx_list)
-    tmp_nx_list = []
-    for ix, (cx, nx) in enumerate(zip(cx_list.flat, nx_list.flat)):
-        if cx in zeroed_cx_list:
-            tmp_nx_list.append(0)
-        elif nx in zeroed_nx_list:
-            tmp_nx_list.append(0)
-        elif nx >= 2:
-            tmp_nx_list.append(nx)
-        else:
-            tmp_nx_list.append(-cx)
-    tmp_nx_list = np.array(tmp_nx_list)
-    tmp_nx_list = tmp_nx_list.reshape(cx_list.shape)
-    return tmp_nx_list
 
-
-def positional_scoring_rule(qfx2_candx, score_vec):
-    cand_score = np.zeros(num_cands)
-    for qfx in xrange(len(qfx2_candx)):
-        partial_order = qfx2_candx[qfx]
-        partial_order = partial_order[partial_order != -1]
-        for ix, candx in enumerate(partial_order):
-            cand_score[candx] += score_vec[ix]
-    print('score_vec = %r' % (score_vec,))
-    print('cand_score = %r' % (cand_score,))
-    print('ranked list = %r' % (cand_score.argsort()[::-1]))
-    print('----')
-    return cand_score
-
-def voting_rule_borda(qfx2_candx):
-    borda_vector = np.arange(0,K)[::-1]
-    cand_score = positional_scoring_rule(qfx2_candx, borda_vector)
-    return cand_score.argsort()[::-1]
-
-def voting_rule_plurality(qfx2_candx):
-    plurality_vector = np.zeros(K)
-    plurality_vector[0] = 1
-    cand_score = positional_scoring_rule(qfx2_candx, plurality_vector)
-    return
-
-def voting_rule_topk(qfx2_candx):
-    top_k_vector = np.ones(K)
-    cand_score = positional_scoring_rule(qfx2_candx, top_k_vector)
-    return cand_score.argsort()[::-1]
-
-def pairwise_voting(candidate_ids, qfx2_candx):
-    ''' e.g.
-    candidate_ids = [0,1,2]
-    qfx2_candx = np.array([(0, 1, 2), (1, 2, 0)])
-    '''
-    num_cands = len(candidate_ids)
-    def generate_pairwise_votes(partial_order, compliment_order):
-        pairwise_winners = [partial_order[rank:rank+1] 
-                           for rank in xrange(0, len(partial_order))]
-        pairwise_losers  = [np.hstack((compliment_order, partial_order[rank+1:]))
-                           for rank in xrange(0, len(partial_order))]
-        pairwise_vote_list = [helpers.cartesian((pwinners, plosers)) for pwinners, plosers
-                                    in zip(pairwise_winners, pairwise_losers)]
-        pairwise_votes = np.vstack(pairwise_vote_list)
-        return pairwise_votes
-
-    def make_PL_matrix():
-        pairiwse_wins = np.zeros((num_cands, num_cands))
-        num_voters = 0
-        for qfx in xrange(len(qfx2_candx)):
-            partial_order = qfx2_candx[qfx]
-            partial_order = partial_order[partial_order != -1]
-            if len(partial_order) == 0: continue
-            num_voters += 1
-            compliment_order = np.setdiff1d(candidate_ids, partial_order)
-            pairwise_votes = generate_pairwise_votes(partial_order, compliment_order)
-            def sum_win(i,j): pairiwse_wins[i, j] += 1 # pairiwse wins on off-diagonal
-            def sum_loss(i,j): pairiwse_wins[i, j] -= 1 # pairiwse wins on off-diagonal
-            [ sum_win(i, j) for i, j in iter(pairwise_votes)]
-            [sum_loss(j, j) for i, j in iter(pairwise_votes)]
-        # Divide num voters
-        PLmatrix = pairiwse_wins / num_voters # = P(D) = Placket Luce GMoM function
-        return PLmatrix
-
-    PLmatrix = make_PL_matrix()
-    #viz_PL_matrix(PLmatrix)
-    return PLmatrix
-
-def viz_PL_matrix(PLmatrix):
-    # Show the matrix
-    PLmatrix2 = PLmatrix.copy()
-    #np.fill_diagonal(PLmatrix2, 0)
-    fig = df2.plt.gcf()
-    fig.clf()
-    ax = fig.add_subplot(111)
-    cax = ax.imshow(PLmatrix2, interpolation='nearest', cmap='jet')
-    ax.set_xticks(candidate_ids[::3])
-    ax.set_yticks(candidate_ids[::3])
-    correct_candx = nx2_candx[cx2_nx[qcx]]
-    ax.set_xlabel('candiate ids')
-    ax.set_ylabel('candiate ids.')
-    ax.set_title('Correct ID=%r' % (correct_candx))
-    #plt.set_cmap('jet', plt.cm.jet,norm = LogNorm())
-    fig.colorbar(cax, orientation='horizontal')
-
-import scipy.optimize
-from numpy import linalg
-import numpy as np
-def optimize():
-    '''
-    candidate_ids = [0,1,2]
-    qfx2_candx = np.array([(0,1,2), (1,0,2)])
-    M = pairwise_voting(candidate_ids, qfx2_candx)
-    M = array([[-0.5,  0.5,  1. ],
-               [ 0.5, -0.5,  1. ],
-               [ 0. ,  0. , -2. ]])
-    viz_PL_matrix(M)
-    '''
-    m = M.shape[0]
-    x0 = np.ones(m)/np.sqrt(m)
-    f   = lambda x, M: linalg.norm(M.dot(x))
-    con = lambda x: linalg.norm(x) - 1
-    cons = {'type':'eq', 'fun': con}
-    res = scipy.optimize.minimize(f, x0, args=(M,), constraints=cons)
-    x = res['x']
-    xnorm = linalg.norm(x)
-    gamma = np.abs(x / xnorm)
-    print('x = %r' % (x,))
-    print('xnorm = %r' % (xnorm,))
-    print('gamma = %r' % (gamma,))
-    return gamma
-
-def PlacketLuce(vote, gamma):
-    ''' e.g. 
-    gamma = optimize()
-    vote = np.arange(len(gamma))
-    np.random.shuffle(vote)
-    pr = PlacketLuce(vote, gamma)
-    print(vote)
-    print(pr)
-    print('----')
-    '''
-    m = len(vote)-1
-    pl_term = lambda x: gamma[vote[x]] / gamma[vote[x:]].sum()
-    prob = np.prod([pl_term(x) for x in xrange(m)])
-    return prob
-
-def optimize2():
-    from numpy import linalg
-    x = linalg.solve(M, np.zeros(M.shape[0]))
-    x /= linalg.norm(x)
-    
-
-def build_pairwise_comparisons(hs, qcx, qfx2_ax, vsmany_index):
-    import itertools
-    cx2_nx = hs.tables.cx2_nx
-    ax2_cx   = vsmany_index.ax2_cx
-    ax2_fx   = vsmany_index.ax2_fx
-    qfx2_cx  = ax2_cx[qfx2_ax[:, 0:K]]
-    qfx2_nx  = temporary_names(qfx2_cx, cx2_nx[qfx2_cx], zeroed_cx_list=[qcx])
-    alts_cxs = np.unique(qfx2_cx.flatten())
-    alts_nxs = np.setdiff1d(np.unique(qfx2_nx.flatten()), [0])
-
-    # Apply temporary candidate labels
-    nx2_candx = {nx:candx for candx, nx in enumerate(alts_nxs)}
-    nx2_candx[0] = -1
-    qfx2_candx = np.copy(qfx2_nx)
-    old_shape = qfx2_candx.shape 
-    qfx2_candx.shape = (qfx2_candx.size,)
-    for i in xrange(len(qfx2_candx)):
-        qfx2_candx[i] = nx2_candx[qfx2_candx[i]]
-    qfx2_candx.shape = old_shape
-    candidate_ids = np.arange(0, len(alts_nxs))
-    PL_matrix = pairiwse_voting(candidate_ids, qfx2_candx)
-
-
-K = 1
 def quick_assign_vsmany(hs, qcx, cx, K): 
     #if hs.isindexed(qcx)
     K += 1
@@ -264,6 +91,40 @@ def top_matching_features(res, axnum=None, match_type=''):
     df2.plot(sorted_score)
 
 
+def build_voters_profile(hs, qcx, K):
+    cx2_nx = hs.tables.cx2_nx
+    ensure_matcher_type(hs, 'vsmany')
+    K += 1
+    desc1 = hs.feats.cx2_desc[qcx]
+    vsmany_index = hs.matcher._Matcher__vsmany_index
+    vsmany_flann = vsmany_index.vsmany_flann
+    ax2_cx       = vsmany_index.ax2_cx
+    ax2_fx       = vsmany_index.ax2_fx
+    print('[invest] Building voter preferences over %s indexed descriptors. K=%r' %
+          (helpers.commas(len(ax2_cx)), K))
+    checks       = params.VSMANY_FLANN_PARAMS['checks']
+    (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, K+1, checks=checks)
+    vote_dists = qfx2_dists[:, 0:K]
+    norm_dists = qfx2_dists[:, K] # k+1th descriptor for normalization
+    # Score the feature matches
+    qfx2_score = np.array([mc2.LNBNN_fn(_vdist.T, norm_dists)
+                           for _vdist in vote_dists.T]).T
+    # Vote using the inverted file 
+    qfx2_cx = ax2_cx[qfx2_ax[:, 0:K]]
+    qfx2_fx = ax2_fx[qfx2_ax[:, 0:K]]
+    qfx2_nx  = vr2.temporary_names(qfx2_cx, cx2_nx[qfx2_cx], zeroed_cx_list=[qcx])
+    voters_profile = (qfx2_nx, qfx2_cx, qfx2_fx, qfx2_score)
+    return voters_profile
+
+def investigate_scoring_rules(hs, qcx, fnum=1):
+    K = 4
+    vr2.rrr()
+    voters_profile = build_voters_profile(hs, qcx, K)
+    vr2.apply_voting_rules(hs, qcx, voters_profile, fnum)
+    fnum += 1
+    return fnum
+
+
 param1 = 'K'
 param2 = 'xy_thresh'
 assign_alg = 'vsmany'
@@ -276,7 +137,7 @@ def vary_query_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
                       cx_list='gt'):
     possible_variations = {
                         # mean , #sigma  #props
-        'K'            : (1, 5, 'int', 'pos'),
+        'K'            : (50, 5, 'int', 'pos'),
         'ratio_thresh' : (1.6,   .001,  'pos'),  
         'xy_thresh'    : (0.001, 0.1, 'pos'), 
         'scale_min'    : (0.5,   0.25, 'pos'),
@@ -491,9 +352,8 @@ def set_matcher_type(hs, match_type):
     hs.load_matcher()
 
 def ensure_matcher_type(hs, match_type):
-    if hs.matcher is None or hs.matcher.type != match_type:
+    if hs.matcher is None or hs.matcher.match_type != match_type:
         return set_matcher_type(hs, match_type)
-
 
 def plot_name(hs, qcx, fnum=1):
     print('[invest] Plotting name')
@@ -542,14 +402,16 @@ if __name__ == '__main__':
 
     fnum = 1
 
-    #fnum = plot_name(hs, qcx, fnum)
+    fnum = plot_name(hs, qcx, fnum)
     #fnum = compare_matching_methods(hs, qcx, fnum)
-    #fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 2, 2, fnum, cx_list='gt1')
+    fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 2, 2, fnum, cx_list='gt1')
     set_matcher_type(hs, 'vsmany')
     fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 1, 1, fnum, cx_list='gt1')
-    #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
-    #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=1000)
-
+    fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=10)
+    fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=20)
+    fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
+    fnum = investigate_scoring_rules(hs, qcx, fnum)
     df2.update()
 
-exec(df2.present(**df2.OooScreen2()))
+#**df2.OooScreen2()
+exec(df2.present())

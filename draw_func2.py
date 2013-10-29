@@ -73,6 +73,22 @@ try:
 except KeyError:
     TILE_WITHIN = (0, 30, 969, 1041)
 
+def OooScreen2():
+    nRows = 1
+    nCols = 1
+    x_off = 30*4
+    y_off = 30*4
+    x_0 = -1920
+    y_0 = 30
+    return dict(num_rc=(1,1),
+            wh=((1912-x_off)/nRows, (1080-y_off)/nCols),
+            xy_off=(x_0, y_0),
+            wh_off=(0,10),
+            row_first=True,
+            no_tile=False)
+
+
+
 DPI = 80
 #FIGSIZE = (24) # default windows fullscreen
 FIGSIZE_MED = (20,10) 

@@ -25,7 +25,188 @@ HISTORY = [
     history_entry('MOTHERS',   1),
 ]
 
+def temporary_names(cx_list, nx_list, zeroed_cx_list=[], zeroed_nx_list=[]):
+    '''
+    Test Input: 
+        nx_list = np.array([(1, 5, 6), (2, 4, 0), (1, 1,  1), (5, 5, 5)])
+        cx_list = np.array([(2, 3, 4), (5, 6, 7), (8, 9, 10), (4, 5, 5)])
+        zeroed_nx_list = []
+        zeroed_cx_list = [3]
+    Test Output:
+    '''
+    zeroed_cx_list = set(zeroed_cx_list)
+    tmp_nx_list = []
+    for ix, (cx, nx) in enumerate(zip(cx_list.flat, nx_list.flat)):
+        if cx in zeroed_cx_list:
+            tmp_nx_list.append(0)
+        elif nx in zeroed_nx_list:
+            tmp_nx_list.append(0)
+        elif nx >= 2:
+            tmp_nx_list.append(nx)
+        else:
+            tmp_nx_list.append(-cx)
+    tmp_nx_list = np.array(tmp_nx_list)
+    tmp_nx_list = tmp_nx_list.reshape(cx_list.shape)
+    return tmp_nx_list
 
+def cartesian(arrays, out=None):
+    """
+    Generate a cartesian product of input arrays.
+
+    Parameters
+    ----------
+    arrays : list of array-like
+        1-D arrays to form the cartesian product of.
+    out : ndarray
+        Array to place the cartesian product in.
+    Returns
+    -------
+    out : ndarray
+        2-D array of shape (M, len(arrays)) containing cartesian products
+        formed of input arrays.
+    Examples
+    --------
+    >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
+    array([[1, 4, 6],
+           [1, 4, 7],
+           [1, 5, 6],
+           [1, 5, 7],
+           [2, 4, 6],
+           [2, 4, 7],
+           [2, 5, 6],
+           [2, 5, 7],
+           [3, 4, 6],
+           [3, 4, 7],
+           [3, 5, 6],
+           [3, 5, 7]])
+
+    """
+    arrays = [np.asarray(x) for x in arrays]
+    dtype = arrays[0].dtype
+
+    n = np.prod([x.size for x in arrays])
+    if out is None:
+        out = np.zeros([n, len(arrays)], dtype=dtype)
+
+    m = n / arrays[0].size
+    out[:,0] = np.repeat(arrays[0], m)
+    if arrays[1:]:
+        cartesian(arrays[1:], out=out[0:m,1:])
+        for j in xrange(1, arrays[0].size):
+            out[j*m:(j+1)*m,1:] = out[0:m,1:]
+    return out
+
+def build_pairwise_comparisons(hs, qcx, qfx2_ax, vsmany_index):
+    import itertools
+    cx2_nx = hs.tables.cx2_nx
+    ax2_cx   = vsmany_index.ax2_cx
+    ax2_fx   = vsmany_index.ax2_fx
+    qfx2_cx  = ax2_cx[qfx2_ax[:, 0:K]]
+    qfx2_nx  = temporary_names(qfx2_cx, cx2_nx[qfx2_cx], zeroed_cx_list=[qcx])
+    alts_cxs = np.unique(qfx2_cx.flatten())
+    alts_nxs = np.setdiff1d(np.unique(qfx2_nx.flatten()), [0])
+
+    # Apply temporary candidate labels
+    candidate_ids = np.arange(0, len(alts_nxs))
+    nx2_candx = {nx:candx for candx, nx in enumerate(alts_nxs)}
+    nx2_candx[0] = -1
+    qfx2_candx = np.copy(qfx2_nx)
+    old_shape = qfx2_candx.shape 
+    qfx2_candx.shape = (qfx2_candx.size,)
+    for i in xrange(len(qfx2_candx)):
+        qfx2_candx[i] = nx2_candx[qfx2_candx[i]]
+    qfx2_candx.shape = old_shape
+
+    k_breaking = K
+
+    '''
+    e.g.
+    candidate_ids = [0,1,2]
+    qfx2_candx = np.array([(0, 1, 2), (1, 2, 0)])
+    '''
+
+    def generate_pairwise_votes(partial_order, compliment_order):
+        pairwise_winners = [partial_order[rank:rank+1] 
+                           for rank in xrange(0, len(partial_order))]
+        pairwise_losers  = [np.hstack((compliment_order, partial_order[rank+1:]))
+                           for rank in xrange(0, len(partial_order))]
+        pairwise_vote_list = [cartesian((pwinners, plosers)) for pwinners, plosers
+                                    in zip(pairwise_winners, pairwise_losers)]
+        pairwise_votes = np.vstack(pairwise_vote_list)
+        return pairwise_votes
+
+    num_cands = len(candidate_ids)
+    pairiwse_wins = np.zeros((num_cands, num_cands))
+    num_votes  = 0
+    num_voters = 0
+    for qfx in xrange(len(qfx2_candx)):
+        partial_order = qfx2_candx[qfx]
+        partial_order = partial_order[partial_order != -1]
+        if len(partial_order) == 0: continue
+        num_voters += 1
+        compliment_order = np.setdiff1d(candidate_ids, partial_order)
+        pairwise_votes = generate_pairwise_votes(partial_order, compliment_order)
+        for (i, j) in pairwise_votes:
+            pairiwse_wins[i, j] += 1 # pairiwse wins on off-diagonal
+            pairiwse_wins[j, j] -= 1 # pairwise losses on diagonal
+            num_votes += 1
+    # Divide num voters
+    PLmatrix = pairiwse_wins / num_voters # = P(D) = Placket Luce GMoM function
+
+    def viz_PL_matrix(PLmatrix):
+        # Show the matrix
+        PLmatrix2 = PLmatrix.copy()
+        #np.fill_diagonal(PLmatrix2, 0)
+        fig = df2.plt.gcf()
+        fig.clf()
+        ax = fig.add_subplot(111)
+        cax = ax.imshow(PLmatrix2, interpolation='nearest', cmap='jet')
+        ax.set_xticks(candidate_ids[::3])
+        ax.set_yticks(candidate_ids[::3])
+        qnx = cx2_nx[qcx]
+        correct_candx = nx2_candx[qnx]
+        ax.set_xlabel('candiate ids')
+        ax.set_ylabel('candiate ids.')
+        ax.set_title('Correct ID=%r' % (correct_candx))
+        #plt.set_cmap('jet', plt.cm.jet,norm = LogNorm())
+        fig.colorbar(cax, orientation='horizontal')
+
+    viz_PL_matrix(PLmatrix)
+
+
+    import scipy.optimize
+    infintum = np.zeros(num_cands)
+    out = np.linalg.lstsq(PLmatrix, infintum)
+    I = np.eye(num_cands)
+    M = PLmatrix
+    def gPL(gamma):
+        g = M.dot(gamma)
+        return g.T.dot(I).dot(g)
+    prior =  np.ones(num_cands)/np.sqrt(num_cands)
+    scipy.optimize.minimize(gPL, 
+    x, f, d = scipy.optimize.fmin_l_bfgs_b(gPL, prior)
+    gamma, rnorm = scipy.optimize.nnls(PLmatrix, -prior)
+    x, residuals, rank, s = scipy.linalg.lstsq(PLmatrix, prior)
+    print('gamma=%r' % gamma)
+    print('rnorm=%r' % rnorm)
+
+    from sklearn.linear_model import Ridge
+    clf = Ridge(alpha=1.0)
+    clf.fit(PLmatrix, np.ones(num_cands))
+    
+    
+
+
+
+
+
+    # L2-normalize rows
+    #for rowx in xrange(len(PLmatrix)):
+        #PLmatrix[rowx] /= (PLmatrix[rowx]**2).sum()**(.5)
+
+    gamma = np.linalg.solve(PLmatrix, infintum)
+
+K = 1
 def quick_assign_vsmany(hs, qcx, cx, K): 
     #if hs.isindexed(qcx)
     K += 1
@@ -84,6 +265,13 @@ def top_matching_features(res, axnum=None, match_type=''):
     df2.plot(sorted_score)
 
 
+param1 = 'K'
+param2 = 'xy_thresh'
+assign_alg = 'vsmany'
+nParam1=1 
+fnum = 1
+nParam2=1
+cx_list='gt1'
 def vary_query_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
                       assign_alg='vsone', nParam1=3, nParam2=3, fnum=1,
                       cx_list='gt'):
@@ -105,11 +293,15 @@ def vary_query_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
     if cx_list == 'gt1':
         gt_list = hs.get_groundtruth_cxs(qcx)
         cx_list = gt_list[0:1]
+    #cx = cx_list[0]
     for cx in cx_list:
         fnum = vary_two_params(hs, qcx, cx, param_ranges, assign_alg,
                                nParam1, nParam2, fnum)
     return fnum
 
+
+def linear_logspace(start, stop, num, base=2):
+    return 2 ** np.linspace(np.log2(start), np.log2(stop), num)
 
 def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3, fnum=1):
     # Query Features
@@ -122,11 +314,8 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3,
 
     possible_assign_fns = {'vsone'   : quick_assign_vsone, 
                            'vsmany'  : quick_assign_vsmany, }
-
-    def linear_logspace(start, stop, num, base=2):
-        return 2 ** np.linspace(np.log2(start), np.log2(stop), num)
-    possible_space_fns = {'lin' : np.linspace,
-                          'log' : linear_logspace}
+    #possible_space_fns = {'lin' : np.linspace,
+                          #'log' : linear_logspace}
     quick_assign_fn = possible_assign_fns[assign_alg]
 
     # Varied Parameters
@@ -184,7 +373,7 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3,
                 ax = df2.plt.gca()
                 ax.set_xlabel(label)
 
-        df2.plt.subplots_adjust(left=0.125, right=1.0,
+        df2.plt.subplots_adjust(left=0.05, right=1.0,
                                 bottom=0.1, top=0.85,
                                 wspace=0.01, hspace=0.01)
         _set_xlabel(assign_alg)
@@ -358,10 +547,10 @@ if __name__ == '__main__':
     #fnum = compare_matching_methods(hs, qcx, fnum)
     #fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 2, 2, fnum, cx_list='gt1')
     set_matcher_type(hs, 'vsmany')
-    fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 3, 4, fnum, cx_list='gt1')
+    fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 1, 1, fnum, cx_list='gt1')
     #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
     #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=1000)
 
     df2.update()
 
-exec(df2.present())
+exec(df2.present(**df2.OooScreen2()))

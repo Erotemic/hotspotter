@@ -49,52 +49,138 @@ def temporary_names(cx_list, nx_list, zeroed_cx_list=[], zeroed_nx_list=[]):
     tmp_nx_list = tmp_nx_list.reshape(cx_list.shape)
     return tmp_nx_list
 
-def cartesian(arrays, out=None):
-    """
-    Generate a cartesian product of input arrays.
 
-    Parameters
-    ----------
-    arrays : list of array-like
-        1-D arrays to form the cartesian product of.
-    out : ndarray
-        Array to place the cartesian product in.
-    Returns
-    -------
-    out : ndarray
-        2-D array of shape (M, len(arrays)) containing cartesian products
-        formed of input arrays.
-    Examples
-    --------
-    >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
-    array([[1, 4, 6],
-           [1, 4, 7],
-           [1, 5, 6],
-           [1, 5, 7],
-           [2, 4, 6],
-           [2, 4, 7],
-           [2, 5, 6],
-           [2, 5, 7],
-           [3, 4, 6],
-           [3, 4, 7],
-           [3, 5, 6],
-           [3, 5, 7]])
+def positional_scoring_rule(qfx2_candx, score_vec):
+    cand_score = np.zeros(num_cands)
+    for qfx in xrange(len(qfx2_candx)):
+        partial_order = qfx2_candx[qfx]
+        partial_order = partial_order[partial_order != -1]
+        for ix, candx in enumerate(partial_order):
+            cand_score[candx] += score_vec[ix]
+    print('score_vec = %r' % (score_vec,))
+    print('cand_score = %r' % (cand_score,))
+    print('ranked list = %r' % (cand_score.argsort()[::-1]))
+    print('----')
+    return cand_score
 
-    """
-    arrays = [np.asarray(x) for x in arrays]
-    dtype = arrays[0].dtype
+def voting_rule_borda(qfx2_candx):
+    borda_vector = np.arange(0,K)[::-1]
+    cand_score = positional_scoring_rule(qfx2_candx, borda_vector)
+    return cand_score.argsort()[::-1]
 
-    n = np.prod([x.size for x in arrays])
-    if out is None:
-        out = np.zeros([n, len(arrays)], dtype=dtype)
+def voting_rule_plurality(qfx2_candx):
+    plurality_vector = np.zeros(K)
+    plurality_vector[0] = 1
+    cand_score = positional_scoring_rule(qfx2_candx, plurality_vector)
+    return
 
-    m = n / arrays[0].size
-    out[:,0] = np.repeat(arrays[0], m)
-    if arrays[1:]:
-        cartesian(arrays[1:], out=out[0:m,1:])
-        for j in xrange(1, arrays[0].size):
-            out[j*m:(j+1)*m,1:] = out[0:m,1:]
-    return out
+def voting_rule_topk(qfx2_candx):
+    top_k_vector = np.ones(K)
+    cand_score = positional_scoring_rule(qfx2_candx, top_k_vector)
+    return cand_score.argsort()[::-1]
+
+def pairwise_voting(candidate_ids, qfx2_candx):
+    ''' e.g.
+    candidate_ids = [0,1,2]
+    qfx2_candx = np.array([(0, 1, 2), (1, 2, 0)])
+    '''
+    num_cands = len(candidate_ids)
+    def generate_pairwise_votes(partial_order, compliment_order):
+        pairwise_winners = [partial_order[rank:rank+1] 
+                           for rank in xrange(0, len(partial_order))]
+        pairwise_losers  = [np.hstack((compliment_order, partial_order[rank+1:]))
+                           for rank in xrange(0, len(partial_order))]
+        pairwise_vote_list = [helpers.cartesian((pwinners, plosers)) for pwinners, plosers
+                                    in zip(pairwise_winners, pairwise_losers)]
+        pairwise_votes = np.vstack(pairwise_vote_list)
+        return pairwise_votes
+
+    def make_PL_matrix():
+        pairiwse_wins = np.zeros((num_cands, num_cands))
+        num_voters = 0
+        for qfx in xrange(len(qfx2_candx)):
+            partial_order = qfx2_candx[qfx]
+            partial_order = partial_order[partial_order != -1]
+            if len(partial_order) == 0: continue
+            num_voters += 1
+            compliment_order = np.setdiff1d(candidate_ids, partial_order)
+            pairwise_votes = generate_pairwise_votes(partial_order, compliment_order)
+            def sum_win(i,j): pairiwse_wins[i, j] += 1 # pairiwse wins on off-diagonal
+            def sum_loss(i,j): pairiwse_wins[i, j] -= 1 # pairiwse wins on off-diagonal
+            [ sum_win(i, j) for i, j in iter(pairwise_votes)]
+            [sum_loss(j, j) for i, j in iter(pairwise_votes)]
+        # Divide num voters
+        PLmatrix = pairiwse_wins / num_voters # = P(D) = Placket Luce GMoM function
+        return PLmatrix
+
+    PLmatrix = make_PL_matrix()
+    #viz_PL_matrix(PLmatrix)
+    return PLmatrix
+
+def viz_PL_matrix(PLmatrix):
+    # Show the matrix
+    PLmatrix2 = PLmatrix.copy()
+    #np.fill_diagonal(PLmatrix2, 0)
+    fig = df2.plt.gcf()
+    fig.clf()
+    ax = fig.add_subplot(111)
+    cax = ax.imshow(PLmatrix2, interpolation='nearest', cmap='jet')
+    ax.set_xticks(candidate_ids[::3])
+    ax.set_yticks(candidate_ids[::3])
+    correct_candx = nx2_candx[cx2_nx[qcx]]
+    ax.set_xlabel('candiate ids')
+    ax.set_ylabel('candiate ids.')
+    ax.set_title('Correct ID=%r' % (correct_candx))
+    #plt.set_cmap('jet', plt.cm.jet,norm = LogNorm())
+    fig.colorbar(cax, orientation='horizontal')
+
+import scipy.optimize
+from numpy import linalg
+import numpy as np
+def optimize():
+    '''
+    candidate_ids = [0,1,2]
+    qfx2_candx = np.array([(0,1,2), (1,0,2)])
+    M = pairwise_voting(candidate_ids, qfx2_candx)
+    M = array([[-0.5,  0.5,  1. ],
+               [ 0.5, -0.5,  1. ],
+               [ 0. ,  0. , -2. ]])
+    viz_PL_matrix(M)
+    '''
+    m = M.shape[0]
+    x0 = np.ones(m)/np.sqrt(m)
+    f   = lambda x, M: linalg.norm(M.dot(x))
+    con = lambda x: linalg.norm(x) - 1
+    cons = {'type':'eq', 'fun': con}
+    res = scipy.optimize.minimize(f, x0, args=(M,), constraints=cons)
+    x = res['x']
+    xnorm = linalg.norm(x)
+    gamma = np.abs(x / xnorm)
+    print('x = %r' % (x,))
+    print('xnorm = %r' % (xnorm,))
+    print('gamma = %r' % (gamma,))
+    return gamma
+
+def PlacketLuce(vote, gamma):
+    ''' e.g. 
+    gamma = optimize()
+    vote = np.arange(len(gamma))
+    np.random.shuffle(vote)
+    pr = PlacketLuce(vote, gamma)
+    print(vote)
+    print(pr)
+    print('----')
+    '''
+    m = len(vote)-1
+    pl_term = lambda x: gamma[vote[x]] / gamma[vote[x:]].sum()
+    prob = np.prod([pl_term(x) for x in xrange(m)])
+    return prob
+
+def optimize2():
+    from numpy import linalg
+    x = linalg.solve(M, np.zeros(M.shape[0]))
+    x /= linalg.norm(x)
+    
 
 def build_pairwise_comparisons(hs, qcx, qfx2_ax, vsmany_index):
     import itertools
@@ -107,7 +193,6 @@ def build_pairwise_comparisons(hs, qcx, qfx2_ax, vsmany_index):
     alts_nxs = np.setdiff1d(np.unique(qfx2_nx.flatten()), [0])
 
     # Apply temporary candidate labels
-    candidate_ids = np.arange(0, len(alts_nxs))
     nx2_candx = {nx:candx for candx, nx in enumerate(alts_nxs)}
     nx2_candx[0] = -1
     qfx2_candx = np.copy(qfx2_nx)
@@ -116,128 +201,9 @@ def build_pairwise_comparisons(hs, qcx, qfx2_ax, vsmany_index):
     for i in xrange(len(qfx2_candx)):
         qfx2_candx[i] = nx2_candx[qfx2_candx[i]]
     qfx2_candx.shape = old_shape
+    candidate_ids = np.arange(0, len(alts_nxs))
+    PL_matrix = pairiwse_voting(candidate_ids, qfx2_candx)
 
-    '''
-    e.g.
-    candidate_ids = [0,1,2]
-    qfx2_candx = np.array([(0, 1, 2), (1, 2, 0)])
-    '''
-
-    def generate_pairwise_votes(partial_order, compliment_order):
-        pairwise_winners = [partial_order[rank:rank+1] 
-                           for rank in xrange(0, len(partial_order))]
-        pairwise_losers  = [np.hstack((compliment_order, partial_order[rank+1:]))
-                           for rank in xrange(0, len(partial_order))]
-        pairwise_vote_list = [cartesian((pwinners, plosers)) for pwinners, plosers
-                                    in zip(pairwise_winners, pairwise_losers)]
-        pairwise_votes = np.vstack(pairwise_vote_list)
-        return pairwise_votes
-
-
-    num_cands = len(candidate_ids)
-
-    def positional_scoring_rule(qfx2_candx, score_vec):
-        cand_score = np.zeros(num_cands)
-        for qfx in xrange(len(qfx2_candx)):
-            partial_order = qfx2_candx[qfx]
-            partial_order = partial_order[partial_order != -1]
-            for ix, candx in enumerate(partial_order):
-                cand_score[candx] += score_vec[ix]
-        print('score_vec = %r' % (score_vec,))
-        print('cand_score = %r' % (cand_score,))
-        print('ranked list = %r' % (cand_score.argsort()[::-1]))
-        print('----')
-        return cand_score
-
-    def voting_rule_borda(qfx2_candx):
-        borda_vector = np.arange(0,K)[::-1]
-        cand_score = positional_scoring_rule(qfx2_candx, borda_vector)
-        return cand_score.argsort()[::-1]
-    def voting_rule_plurality(qfx2_candx):
-        plurality_vector = np.zeros(K)
-        plurality_vector[0] = 1
-        cand_score = positional_scoring_rule(qfx2_candx, plurality_vector)
-        return
-    def voting_rule_topk(qfx2_candx):
-        top_k_vector = np.ones(K)
-        cand_score = positional_scoring_rule(qfx2_candx, top_k_vector)
-        return cand_score.argsort()[::-1]
-
-    print(voting_rule_borda(qfx2_candx))
-    print(voting_rule_plurality(qfx2_candx))
-    print(voting_rule_topk(qfx2_candx))
-
-                
-
-    pairiwse_wins = np.zeros((num_cands, num_cands))
-    num_votes  = 0
-    num_voters = 0
-    for qfx in xrange(len(qfx2_candx)):
-        partial_order = qfx2_candx[qfx]
-        partial_order = partial_order[partial_order != -1]
-        if len(partial_order) == 0: continue
-        num_voters += 1
-        compliment_order = np.setdiff1d(candidate_ids, partial_order)
-        pairwise_votes = generate_pairwise_votes(partial_order, compliment_order)
-        for (i, j) in pairwise_votes:
-            pairiwse_wins[i, j] += 1 # pairiwse wins on off-diagonal
-            pairiwse_wins[j, j] -= 1 # pairwise losses on diagonal
-            num_votes += 1
-    # Divide num voters
-    PLmatrix = pairiwse_wins / num_voters # = P(D) = Placket Luce GMoM function
-
-    def viz_PL_matrix(PLmatrix):
-        # Show the matrix
-        PLmatrix2 = PLmatrix.copy()
-        #np.fill_diagonal(PLmatrix2, 0)
-        fig = df2.plt.gcf()
-        fig.clf()
-        ax = fig.add_subplot(111)
-        cax = ax.imshow(PLmatrix2, interpolation='nearest', cmap='jet')
-        ax.set_xticks(candidate_ids[::3])
-        ax.set_yticks(candidate_ids[::3])
-        correct_candx = nx2_candx[cx2_nx[qcx]]
-        ax.set_xlabel('candiate ids')
-        ax.set_ylabel('candiate ids.')
-        ax.set_title('Correct ID=%r' % (correct_candx))
-        #plt.set_cmap('jet', plt.cm.jet,norm = LogNorm())
-        fig.colorbar(cax, orientation='horizontal')
-
-    viz_PL_matrix(PLmatrix)
-
-
-    import scipy.optimize
-    infintum = np.zeros(num_cands)
-    out = np.linalg.lstsq(PLmatrix, infintum)
-    I = np.eye(num_cands)
-    M = PLmatrix
-    def gPL(gamma):
-        g = M.dot(gamma)
-        return g.T.dot(I).dot(g)
-    prior =  np.ones(num_cands)/np.sqrt(num_cands)
-    #http://stackoverflow.com/questions/19648408/im-having-difficulty-understanding-the-syntax-of-scipy-optimize?noredirect=1#comment29175764_19648408
-    scipy.optimize.minimize(gPL, 
-    x, f, d = scipy.optimize.fmin_l_bfgs_b(gPL, prior)
-    gamma, rnorm = scipy.optimize.nnls(PLmatrix, -prior)
-    x, residuals, rank, s = scipy.linalg.lstsq(PLmatrix, prior)
-    print('gamma=%r' % gamma)
-    print('rnorm=%r' % rnorm)
-
-    from sklearn.linear_model import Ridge
-    clf = Ridge(alpha=1.0)
-    clf.fit(PLmatrix, np.ones(num_cands))
-    
-    
-
-
-
-
-
-    # L2-normalize rows
-    #for rowx in xrange(len(PLmatrix)):
-        #PLmatrix[rowx] /= (PLmatrix[rowx]**2).sum()**(.5)
-
-    gamma = np.linalg.solve(PLmatrix, infintum)
 
 K = 1
 def quick_assign_vsmany(hs, qcx, cx, K): 

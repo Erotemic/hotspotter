@@ -824,3 +824,57 @@ def idontknowwhatiwasdoingwheniwrotethis():
         else: 
             bad_consecutive_reranks = 0
         '''
+
+def bad_optimization
+    import scipy.optimize
+    infintum = np.zeros(num_cands)
+    out = np.linalg.lstsq(PLmatrix, infintum)
+    I = np.eye(num_cands)
+    M = PLmatrix
+    def gPL(gamma):
+        g = M.dot(gamma)
+        return g.T.dot(I).dot(g)
+    prior =  np.ones(num_cands)/np.sqrt(num_cands)
+    #http://stackoverflow.com/questions/19648408/im-having-difficulty-understanding-the-syntax-of-scipy-optimize?noredirect=1#comment29175764_19648408
+    scipy.optimize.minimize(gPL, 
+    x, f, d = scipy.optimize.fmin_l_bfgs_b(gPL, prior)
+    #gamma, rnorm = scipy.optimize.nnls(PLmatrix, -prior)
+    x, residuals, rank, s = scipy.linalg.lstsq(PLmatrix, prior)
+    print('gamma=%r' % gamma)
+    print('rnorm=%r' % rnorm)
+
+    from sklearn.linear_model import Ridge
+    clf = Ridge(alpha=1.0)
+    clf.fit(PLmatrix, np.ones(num_cands))
+    # L2-normalize rows
+    #for rowx in xrange(len(PLmatrix)):
+        #PLmatrix[rowx] /= (PLmatrix[rowx]**2).sum()**(.5)
+
+    gamma = np.linalg.solve(PLmatrix, infintum)
+
+def bad_optimization
+    import scipy.optimize
+    infintum = np.zeros(num_cands)
+    out = np.linalg.lstsq(PLmatrix, infintum)
+    I = np.eye(num_cands)
+    M = PLmatrix
+    def gPL(gamma):
+        g = M.dot(gamma)
+        return g.T.dot(I).dot(g)
+    prior =  np.ones(num_cands)/np.sqrt(num_cands)
+    #http://stackoverflow.com/questions/19648408/im-having-difficulty-understanding-the-syntax-of-scipy-optimize?noredirect=1#comment29175764_19648408
+    scipy.optimize.minimize(gPL, 
+    x, f, d = scipy.optimize.fmin_l_bfgs_b(gPL, prior)
+    #gamma, rnorm = scipy.optimize.nnls(PLmatrix, -prior)
+    x, residuals, rank, s = scipy.linalg.lstsq(PLmatrix, prior)
+    print('gamma=%r' % gamma)
+    print('rnorm=%r' % rnorm)
+
+    from sklearn.linear_model import Ridge
+    clf = Ridge(alpha=1.0)
+    clf.fit(PLmatrix, np.ones(num_cands))
+    # L2-normalize rows
+    #for rowx in xrange(len(PLmatrix)):
+        #PLmatrix[rowx] /= (PLmatrix[rowx]**2).sum()**(.5)
+
+    gamma = np.linalg.solve(PLmatrix, infintum)

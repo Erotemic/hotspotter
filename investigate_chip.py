@@ -25,11 +25,11 @@ def history_entry(database='', cx=-1, ocxs=[], cid=None, notes=''):
 
 # A list of poster child examples. (curious query cases)
 HISTORY = [
-    history_entry('MOTHERS',   2),
     history_entry('TOADS', 32),
     history_entry('GZ', 111, [305]),
     history_entry('GZ', 111, [305]),
     history_entry('GZ', 1046, notes='viewpoint'),
+    history_entry('MOTHERS',   2),
 ]
 
 
@@ -137,8 +137,8 @@ def vary_query_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
                       cx_list='gt'):
     possible_variations = {
                         # mean , #sigma  #props
-        'K'            : (50, 5, 'int', 'pos'),
-        'ratio_thresh' : (1.6,   .001,  'pos'),  
+        'K'            : (10, 10, 'int', 'pos'),
+        'ratio_thresh' : (1.6,   .01,  'pos'),  
         'xy_thresh'    : (0.001, 0.1, 'pos'), 
         'scale_min'    : (0.5,   0.25, 'pos'),
         'scale_max'    : (2.0,   0.5,  'neg')
@@ -195,7 +195,11 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3,
         else:
             random_steps = list(mean + npnormal(0, std, nParam-1))
         # Sample the mean and a gaussian neighborhood around the mean
-        param_steps = [mean] + random_steps
+        #param_steps = [mean] + random_steps
+        # Less Random Sampling
+        param_steps = [mean]
+        for ix in xrange(nParam-1):
+            param_steps.append(random_steps[-1]+std)
         if param_type == 'int':
             param_steps = map(int, map(round, param_steps))
         return param, param_steps, nParam
@@ -404,9 +408,9 @@ if __name__ == '__main__':
 
     fnum = plot_name(hs, qcx, fnum)
     #fnum = compare_matching_methods(hs, qcx, fnum)
-    fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 2, 2, fnum, cx_list='gt1')
+    fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 4, 4, fnum, cx_list='gt1')
     set_matcher_type(hs, 'vsmany')
-    fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 1, 1, fnum, cx_list='gt1')
+    fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 4, 4, fnum, cx_list='gt1')
     fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=10)
     fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=20)
     fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)

@@ -117,8 +117,6 @@ def build_pairwise_comparisons(hs, qcx, qfx2_ax, vsmany_index):
         qfx2_candx[i] = nx2_candx[qfx2_candx[i]]
     qfx2_candx.shape = old_shape
 
-    k_breaking = K
-
     '''
     e.g.
     candidate_ids = [0,1,2]
@@ -135,7 +133,42 @@ def build_pairwise_comparisons(hs, qcx, qfx2_ax, vsmany_index):
         pairwise_votes = np.vstack(pairwise_vote_list)
         return pairwise_votes
 
+
     num_cands = len(candidate_ids)
+
+    def positional_scoring_rule(qfx2_candx, score_vec):
+        cand_score = np.zeros(num_cands)
+        for qfx in xrange(len(qfx2_candx)):
+            partial_order = qfx2_candx[qfx]
+            partial_order = partial_order[partial_order != -1]
+            for ix, candx in enumerate(partial_order):
+                cand_score[candx] += score_vec[ix]
+        print('score_vec = %r' % (score_vec,))
+        print('cand_score = %r' % (cand_score,))
+        print('ranked list = %r' % (cand_score.argsort()[::-1]))
+        print('----')
+        return cand_score
+
+    def voting_rule_borda(qfx2_candx):
+        borda_vector = np.arange(0,K)[::-1]
+        cand_score = positional_scoring_rule(qfx2_candx, borda_vector)
+        return cand_score.argsort()[::-1]
+    def voting_rule_plurality(qfx2_candx):
+        plurality_vector = np.zeros(K)
+        plurality_vector[0] = 1
+        cand_score = positional_scoring_rule(qfx2_candx, plurality_vector)
+        return
+    def voting_rule_topk(qfx2_candx):
+        top_k_vector = np.ones(K)
+        cand_score = positional_scoring_rule(qfx2_candx, top_k_vector)
+        return cand_score.argsort()[::-1]
+
+    print(voting_rule_borda(qfx2_candx))
+    print(voting_rule_plurality(qfx2_candx))
+    print(voting_rule_topk(qfx2_candx))
+
+                
+
     pairiwse_wins = np.zeros((num_cands, num_cands))
     num_votes  = 0
     num_voters = 0
@@ -163,8 +196,7 @@ def build_pairwise_comparisons(hs, qcx, qfx2_ax, vsmany_index):
         cax = ax.imshow(PLmatrix2, interpolation='nearest', cmap='jet')
         ax.set_xticks(candidate_ids[::3])
         ax.set_yticks(candidate_ids[::3])
-        qnx = cx2_nx[qcx]
-        correct_candx = nx2_candx[qnx]
+        correct_candx = nx2_candx[cx2_nx[qcx]]
         ax.set_xlabel('candiate ids')
         ax.set_ylabel('candiate ids.')
         ax.set_title('Correct ID=%r' % (correct_candx))
@@ -183,6 +215,7 @@ def build_pairwise_comparisons(hs, qcx, qfx2_ax, vsmany_index):
         g = M.dot(gamma)
         return g.T.dot(I).dot(g)
     prior =  np.ones(num_cands)/np.sqrt(num_cands)
+    #http://stackoverflow.com/questions/19648408/im-having-difficulty-understanding-the-syntax-of-scipy-optimize?noredirect=1#comment29175764_19648408
     scipy.optimize.minimize(gPL, 
     x, f, d = scipy.optimize.fmin_l_bfgs_b(gPL, prior)
     gamma, rnorm = scipy.optimize.nnls(PLmatrix, -prior)

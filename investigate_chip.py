@@ -238,7 +238,7 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3,
             df2.show_matches2(rchip1, rchip2, fx2_kp1, fx2_kp2, fm, fs, fignum=fnum,
                             plotnum=plotnum, title=title, draw_pts=False)
         # Plot the original assigned matches
-        title = param1+'=%.3E' % param1_value
+        title = param1+'='+helpers.format(param1_value, 3)
         _show_matches_helper(fm, fs, rowx, 1, '')
         ax = df2.plt.gca()
         ylabel_args = dict(rotation='horizontal',
@@ -254,20 +254,19 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3,
                 ax = df2.plt.gca()
                 ax.set_xlabel(label)
 
-        df2.adjust_subplots(left=0.05, right=1.0,
-                            bottom=0.1, top=0.85,
-                            wspace=0.01, hspace=0.01)
         _set_xlabel(assign_alg)
         # Spatially verify with params2
         for colx, param2_value in enumerate(param2_steps):
             sv_args = {'rchip_size2':rchip_size2, param2:param2_value}
             fm_V, fs_V = mc2.spatially_verify2(fx2_kp1, fx2_kp2, fm, fs, **sv_args)
             # Plot the spatially verified matches
-            title = param2 + '=%.3e' % param2_value #helpers.commas(param2_value, 3)
+            title = param2 + '='+helpers.format(param2_value, 3)  #helpers.commas(param2_value, 3)
             _show_matches_helper(fm_V, fs_V, rowx, colx+2, '')
             _set_xlabel(title)
-
     df2.set_figtitle(assign_alg+' vary '+param1+' and '+param2+' \n qcid=%r, cid=%r' % (cid1, cid2))
+    df2.adjust_subplots(left=0.03, right=1.0,
+                        bottom=0.1, top=0.85,
+                        wspace=0.01, hspace=0.01)
     fnum += 1
     return fnum
 
@@ -450,8 +449,8 @@ def parse_arguments():
     add_int('--histid', None, 'history id (hard cases)')
     add_str('--db', 'MOTHERS', 'database to load')
     test_bool('--show-names')
-    test_bool('--vary-vsmany-k-xythresh')
-    test_bool('--vary-vsone-ratio-xythresh')
+    test_bool('--test1')
+    test_bool('--test2')
     args, unknown = parser.parse_known_args()
     print('[invest] args    = %r' % (args,))
     print('[invest] unknown = %r' % (unknown,))
@@ -466,7 +465,7 @@ def run_investigations(qcx, args):
     if args.show_names:
         fnum = plot_name(hs, qcx, fnum)
     #fnum = compare_matching_methods(hs, qcx, fnum)
-    if args.vary_vsone_ratio_xythresh:
+    if args.test1:
         fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 4, 4, fnum, cx_list='gt1')
     #hs.ensure_matcher_type('vsmany')
     #fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 4, 4, fnum, cx_list='gt1') #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=10)

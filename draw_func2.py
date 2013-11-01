@@ -148,7 +148,7 @@ def save_figure(fignum=None, fpath=None, usetitle=False):
     fpath_clean = sanatize_img_fpath(fpath)
     fname_clean = os.path.split(fpath_clean)[1]
     print('[df2] save_figure() %r' % (fpath_clean,))
-    adjust_subplots()
+    #adjust_subplots()
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore",category=DeprecationWarning)
         fig.savefig(fpath_clean, dpi=DPI)
@@ -191,7 +191,7 @@ def all_figures_show():
 def all_figures_tight_layout():
     for fig in iter(get_all_figures()):
         fig.tight_layout()
-        adjust_subplots()
+        #adjust_subplots()
         time.sleep(.1)
 
 def all_figures_tile(num_rc=(4,4),
@@ -378,6 +378,7 @@ def adjust_subplots(left=0.02,  bottom=0.02,
     wspace = 0.2   # the amount of width reserved for blank space between subplots
     hspace = 0.2
     '''
+    print('[df2] adjust_subplots(%r)' % locals())
     plt.subplots_adjust(left,   bottom, 
                         right,  top,
                         wspace, hspace)
@@ -767,6 +768,16 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
     fig, ax = imshow(match_img, fignum=fignum,
                 plotnum=plotnum, title=title,
                 **kwargs)
+    def upperleft_text(txt):
+        txtargs = dict(horizontalalignment='left',
+                       verticalalignment='top',
+                       fontsize='smaller',
+                       fontweight='ultralight', 
+                        backgroundcolor=(0,0,0,.5))
+        x,y = (.01*match_img.shape[0], .01*match_img.shape[1])
+        ax.text(x, y, txt, color='k', **txtargs)
+        ax.text(x, y, txt, color=(.9, .1, .1), **txtargs)
+    upperleft_text('#match=%d' % len(fm))
     if all_kpts:
         # Draw all keypoints as simple points
         all_args = dict(ell=False, pts=draw_pts, pts_color=GREEN, pts_size=2, ell_alpha=ell_alpha)

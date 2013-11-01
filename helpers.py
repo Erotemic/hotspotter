@@ -1318,14 +1318,24 @@ def commas(num, n=8):
     #return int_comma_str(num)
 
 def format(num, n=8):
+    '''makes numbers pretty e.g.
+    '''
     if is_float(num):
-        ret = '%.3E' % num
-        exp_pos = ret.find('E')
-        exp_part = ret[exp_pos:]
-        ret = ret.replace('E+00','')
-        ret = ret.strip('0')
+        ret = ('%.'+str(n)+'E') % num
+        exp_pos  = ret.find('E')
+        exp_part = ret[(exp_pos+1):]
+        exp_part = exp_part.replace('+','')
+        if exp_part.find('-') == 0:
+            exp_part = '-'+exp_part[1:].strip('0')
+        exp_part = exp_part.strip('0')
+        if len(exp_part) > 0:
+            exp_part = 'E'+exp_part
+        flt_part = ret[:exp_pos].strip('0').strip('.')
+        ret = flt_part + exp_part
         return ret
     return '%d' % num
+nums = [9001, 9.053]
+print([format(num) for num in nums])
     
 
 def cartesian(arrays, out=None):

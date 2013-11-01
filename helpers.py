@@ -9,6 +9,7 @@ into a global set of helper functions.
 Wow, pylint is nice for cleaning.
 '''
 from __future__ import division, print_function
+import warnings
 from Printable import printableVal
 from os.path import join, relpath, normpath, join, split, isdir, isfile, exists, islink, ismount
 import cPickle
@@ -25,7 +26,6 @@ import sys
 import textwrap
 import time
 import types
-import warnings
 #print('LOAD_MODULE: helpers.py')
 
 # reloads this module when I mess with it
@@ -146,6 +146,9 @@ def intersect_ordered(list1, list2):
         #if item in set2:
             #new_list.append(item)
     return new_list
+
+def array_index(array, item):
+    return np.where(array==item)[0][0]
 
 def intersect2d_numpy(A, B): 
     #http://stackoverflow.com/questions/8317022/
@@ -1252,25 +1255,24 @@ def listfind(list_, tofind):
         return None
 
 # Tests for data types
+VALID_INT_TYPES = (np.typeDict['int64'],
+                   np.typeDict['int32'],
+                   np.typeDict['uint8'],
+                   types.LongType,
+                   types.IntType)
+VALID_FLOAT_TYPES = (types.FloatType,
+                     np.typeDict['float64'],
+                     np.typeDict['float32'],
+                     np.typeDict['float16'])
+#valid_int_types = (np.int64,  np.int32,  np.int16,  np.int8,
+                        #np.uint64, np.uint32, np.uint16, np.uint8)
+#valid_float_types = (float, np.float64, np.float32, np.float16)
 def is_int(num):
-    valid_int_types = (np.int64,  np.int32,  np.int16,  np.int8,
-                            np.uint64, np.uint32, np.uint16, np.uint8)
-    valid_int_types = (np.typeDict['int64'],
-                            np.typeDict['int32'],
-                            np.typeDict['uint8'],
-                            types.LongType,
-                            types.IntType)
-    flag = type(num) in valid_int_types
-    return flag
-
+    return type(num) in VALID_INT_TYPES
 def is_float(num):
-    valid_float_types = (float, np.float64, np.float32, np.float16)
-    valid_float_types = (types.FloatType,
-                    np.typeDict['float64'],
-                    np.typeDict['float32'],
-                    np.typeDict['float16'])
-    flag = type(num) in valid_float_types
-    return flag
+    return type(num) in VALID_FLOAT_TYPES
+def is_iterable(var):
+    return np.iterable(var)
 
 def num_fmt(num, max_digits=2):
     if is_float(num):

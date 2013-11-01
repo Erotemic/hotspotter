@@ -284,11 +284,11 @@ def mothers_problem_pairs():
 
 
 if '--histeq' in sys.argv:
-    print('[params] with histogram equalization')
+    #print('[params] with histogram equalization')
     __HISTEQ__ = True
 if '--grabcut' in sys.argv:
     __GRABCUT__ = True
-    print('[params] with grabcut')
+    #print('[params] with grabcut')
 if '--regnorm' in sys.argv:
     __REGION_NORM__ = True
 if '--rankeq' in sys.argv:
@@ -302,7 +302,7 @@ if '--maxcont' in sys.argv:
 
 
 if '--whiten' in sys.argv or '--white' in sys.argv:
-    print('[params] with whitening')
+    #print('[params] with whitening')
     WHITEN_FEATS = True
 
 if '--vsone' in sys.argv:
@@ -360,16 +360,22 @@ def MOTHERS_defaults():
 
 for argv in iter(sys.argv):
     argv_u =  argv.upper()
+    """
     if multiprocessing.current_process().name == 'MainProcess':
         print('[params] argv: %r' % argv_u)
+    """
     if argv_u in dev_databases.keys():
+        """
         if multiprocessing.current_process().name == 'MainProcess':
             print('\n'.join(['[params] Default Database set to:'+argv.upper(),
                             '[params] Previously: '+str(DEFAULT)]))
+        """
         DEFAULT = dev_databases[argv_u]
         if argv_u == 'OXFORD' or argv_u == 'PHILBIN':
+            """
             if multiprocessing.current_process().name == 'MainProcess':
                 print('[params] Overloading OXFORD parameters')
+            """
             # dont resize oxford photos
             OXFORD_defaults()
         if argv_u == 'GZ':

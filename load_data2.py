@@ -243,10 +243,40 @@ class HotSpotter(DynStruct):
         result_dir = os.path.normpath(hs.dirs.result_dir)
         print('[hs] opening result_dir: %r ' % result_dir)
         helpers.vd(result_dir)
-    def cx2_gname(hs, cx):
+    #--------------
+    def get_roi(hs, cx):
+        roi = hs.tables.cx2_roi[cx]
+        return roi
+    #--------------
+    def set_matcher_type(hs, match_type):
+        print('[hs] Setting matcher type to: '+str(match_type))
+        params.__MATCH_TYPE__ = match_type
+        hs.load_matcher()
+    def ensure_matcher_type(hs, match_type):
+        if hs.matcher is None or hs.matcher.match_type != match_type:
+            return hs.set_matcher_type(match_type)
+    #--------------
+    def cx2_name(hs, cx):
+        cx2_nx = hs.tables.cx2_nx
+        nx2_name =hs.tables.nx2_name
+        return nx2_name[cx2_nx[cx]]
+    #--------------
+    def cx2_gname(hs, cx, full=False):
+        return hs.get_gname(cx, full)
+    def get_gname(hs, cx, full=False):
         gx =  hs.tables.cx2_gx[cx]
         gname = hs.tables.gx2_gname[gx]
+        if full:
+            gname = join(hs.dirs.img_dir, gname)
         return gname
+    #--------------
+    def get_image(hs, gx=None, cx=None):
+        if not cx is None: 
+            return hs.cx2_image(cx)
+    def cx2_image(hs, cx):
+        img_fpath = hs.get_gname(cx, full=True)
+        img = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+        return img
     #--------------
     def get_nx2_cxs(hs):
         cx2_nx = hs.tables.cx2_nx
@@ -267,7 +297,66 @@ class HotSpotter(DynStruct):
     def get_groundtruth_cxs(hs, qcx):
         gt_cxs = hs.get_other_cxs(qcx)
         return gt_cxs
-
+    #--------------
+    def is_true_match(hs, qcx, cx):
+        cx2_nx  = hs.tables.cx2_nx
+        qnx = cx2_nx[qcx]
+        nx  = cx2_nx[cx]
+        is_true = nx == qnx
+        is_unknown = nx <= 1
+        return is_true, is_unknown
+    #--------------
+    UNKNOWN_STR = '???'
+    TRUE_STR    = 'TRUE'
+    FALSE_STR   = 'FALSE'
+    def is_true_match_str(hs, qcx, cx):
+        is_true, is_unknown = hs.is_true_match(qcx, cx)
+        if is_unknown:
+            return hs.UNKNOWN_STR
+        elif is_true:
+            return hs.TRUE_STR
+        else:
+            return hs.FALSE_STR
+    #--------------
+    def vs_str(hs, qcx, cx):
+        if False:
+            return '(qcx=%r v cx=%r)' % (qcx, cx)
+        else: 
+            cx2_cid = hs.tables.cx2_cid
+            return '(qcid=%r v cid=%r)' % (cx2_cid[qcx], cx2_cid[cx])
+    #--------------
+    def num_indexed_gt_str(hs, cx):
+        num_gt = len(hs.get_other_indexed_cxs(cx))
+        return '#gt=%r' % num_gt
+    #--------------
+    def cxstr(hs, cx, digits=None):
+        #return 'cx=%r' % cx
+        if not np.iterable(cx):
+            if not digits is None:
+                return ('cid=%'+str(digits)+'d') % hs.tables.cx2_cid[cx]
+            return 'cid=%d' % hs.tables.cx2_cid[cx]
+        else: 
+            return hs.cx_liststr(cx)
+    #--------------
+    def cx_liststr(hs, cx_list):
+        #return 'cx=%r' % cx
+        return 'cid_list=%r' % hs.tables.cx2_cid[cx_list].tolist()
+    #--------------
+    def cid2_cx(hs, cid):
+        try: 
+            array_index = helpers.array_index
+            cx2_cid = hs.tables.cx2_cid
+            if type(cid) is types.IntType:
+                return array_index(cx2_cid, cid)
+            else:
+                return np.array([array_index(cx2_cid, cid_) for cid_ in cid])
+        except Exception as ex:
+            print('---------')
+            print(cid)
+            print(cx2_cid)
+            print('---------')
+            raise
+    #--------------
     def get_other_cxs(hs, cx):
         cx2_nx   = hs.tables.cx2_nx
         nx = cx2_nx[cx]
@@ -278,14 +367,23 @@ class HotSpotter(DynStruct):
         return other_cx
     #--------------
     def get_chip(hs, cx):
-        return cv2.imread(hs.cpaths.cx2_rchip_path[cx])
+        imread = cv2.imread
+        cx2_rchip_path = hs.cpaths.cx2_rchip_path
+        if not np.iterable(cx):
+            return imread(cx2_rchip_path[cx])
+        else:
+            return [imread(cx2_rchip_path[cx_]) for cx_ in cx]
     #--------------
     def get_chip_pil(hs, cx):
         chip = Image.open(hs.cpaths.cx2_rchip_path[cx])
         return chip
     #--------------
     def get_kpts(hs, cx):
-        return hs.feats.cx2_kpts[cx]
+        cx2_kpts = hs.feats.cx2_kpts
+        if not np.iterable(cx):
+            return cx2_kpts[cx]
+        else:
+            return [cx2_kpts[cx_] for cx_ in cx]
     #--------------
     def cx2_rchip_size(hs, cx):
         rchip_path = hs.cpaths.cx2_rchip_path[cx]

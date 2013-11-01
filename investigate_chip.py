@@ -10,7 +10,7 @@ import spatial_verification2 as sv2
 import helpers
 import sys
 import params
-from _research import dump_groundtruth
+import vizualizations as viz
 import voting_rules2 as vr2
 
 def reload_module():
@@ -20,16 +20,41 @@ def reload_module():
 def rrr():
     reload_module()
 
-def history_entry(database='', cx=-1, ocxs=[], cid=None, notes=''):
-    return (database, cx, ocxs, cid, notes)
+def history_entry(database='', cid=-1, ocids=[], notes='', cx=-1):
+    return (database, cid, ocids, notes)
 
 # A list of poster child examples. (curious query cases)
+GZ_greater1_cid_list = [140, 297, 306, 311, 425, 441, 443, 444, 445, 450, 451,
+                        453, 454, 456, 460, 463, 465, 501, 534, 550, 662, 786,
+                        802, 838, 941, 981, 1043, 1046, 1047]
 HISTORY = [
-    history_entry('TOADS', 32),
-    history_entry('GZ', 111, [305]),
-    history_entry('GZ', 111, [305]),
-    history_entry('GZ', 1046, notes='viewpoint'),
-    history_entry('MOTHERS',   2),
+    history_entry('GZ', 1047,    [],               notes='extreme viewpoint #gt=4'),
+    history_entry('GZ', 1046,    [],               notes='extreme viewpoint #gt=2'),
+    history_entry('GZ', 786,     [787],            notes='foal #gt=11'),
+    history_entry('GZ', 501,     [140],            notes='dark lighting'),
+    history_entry('GZ', 941,     [900],            notes='viewpoint / quality'),
+    history_entry('GZ', 981,     [802],            notes='foal extreme viewpoint'),
+    history_entry('GZ', 838,     [801, 980],       notes='viewpoint / quality'),
+    history_entry('GZ', 662,     [262],            notes='viewpoint / shadow (circle)'),
+    history_entry('GZ', 311,     [289],            notes='quality'),
+    history_entry('GZ', 297,     [301],            notes='quality'),
+    history_entry('GZ', 306,     [112],            notes='occlusion'),
+    history_entry('GZ', 534,     [411, 727],       notes='LNBNN failure'),
+    history_entry('GZ', 463,     [173],            notes='LNBNN failure'),
+    history_entry('GZ', 460,     [613, 460],       notes='background match'),
+    history_entry('GZ', 465,     [589, 460],       notes='background match'),
+    history_entry('GZ', 454,     [198, 447],       notes='forground match'),
+    history_entry('GZ', 445,     [702, 435],       notes='forground match'),
+    history_entry('GZ', 453,     [682, 453],       notes='forground match'),
+    history_entry('GZ', 550,     [551, 452],       notes='forground match'),
+    history_entry('GZ', 450,     [614],            notes='other zebra match'),
+    history_entry('TOADS', cx=32),
+    history_entry('MOTHERS', 69, [68],             notes='textured foal (lots of bad matches)'),
+    history_entry('MOTHERS', 28, [27],             notes='viewpoint foal'),
+    history_entry('MOTHERS', 53, [54],             notes='image quality'),
+    history_entry('MOTHERS', 51, [50],             notes='dark lighting'),
+    history_entry('MOTHERS', 44, [43, 45],         notes='viewpoint'),
+    history_entry('MOTHERS', 66, [63, 62, 64, 65], notes='occluded foal'),
 ]
 
 
@@ -93,7 +118,7 @@ def top_matching_features(res, axnum=None, match_type=''):
 
 def build_voters_profile(hs, qcx, K):
     cx2_nx = hs.tables.cx2_nx
-    ensure_matcher_type(hs, 'vsmany')
+    hs.ensure_matcher_type('vsmany')
     K += 1
     desc1 = hs.feats.cx2_desc[qcx]
     vsmany_index = hs.matcher._Matcher__vsmany_index
@@ -137,9 +162,9 @@ def vary_query_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
                       cx_list='gt'):
     possible_variations = {
                         # mean , #sigma  #props
-        'K'            : (10, 10, 'int', 'pos'),
-        'ratio_thresh' : (1.6,   .01,  'pos'),  
-        'xy_thresh'    : (0.001, 0.1, 'pos'), 
+        'K'            : (10,    20, 'int', 'pos'),
+        'ratio_thresh' : (1.6,   0.1,  'pos'),  
+        'xy_thresh'    : (0.001, 0.01, 'pos'), 
         'scale_min'    : (0.5,   0.25, 'pos'),
         'scale_max'    : (2.0,   0.5,  'neg')
     }
@@ -187,19 +212,21 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3,
         #param_range = list(param_info[0:2]) + [nParam]
         npnormal = np.random.normal
         mean = param_info[0]
-        std  = param_info[0]
+        std  = param_info[1]
+        '''
         if 'pos' in param_info:
             random_steps = list(mean + np.abs(npnormal(0, std, nParam-1))) 
         elif 'neg' in param_info:
             random_steps = list(mean - np.abs(npnormal(0, std, nParam-1))) 
         else:
             random_steps = list(mean + npnormal(0, std, nParam-1))
-        # Sample the mean and a gaussian neighborhood around the mean
-        #param_steps = [mean] + random_steps
+        #Sample the mean and a gaussian neighborhood around the mean
+        param_steps = [mean] + random_steps
+        '''
         # Less Random Sampling
         param_steps = [mean]
         for ix in xrange(nParam-1):
-            param_steps.append(random_steps[-1]+std)
+            param_steps.append(param_steps[-1]+std)
         if param_type == 'int':
             param_steps = map(int, map(round, param_steps))
         return param, param_steps, nParam
@@ -237,9 +264,9 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3,
                 ax = df2.plt.gca()
                 ax.set_xlabel(label)
 
-        df2.plt.subplots_adjust(left=0.05, right=1.0,
-                                bottom=0.1, top=0.85,
-                                wspace=0.01, hspace=0.01)
+        df2.adjust_subplots(left=0.05, right=1.0,
+                            bottom=0.1, top=0.85,
+                            wspace=0.01, hspace=0.01)
         _set_xlabel(assign_alg)
         # Spatially verify with params2
         for colx, param2_value in enumerate(param2_steps):
@@ -268,7 +295,7 @@ def quick_get_features_factory(hs):
     return get_features
 
 def show_vsone_matches(hs, qcx, fnum=1):
-    set_matcher_type(hs, 'vsone')
+    hs.ensure_matcher_type('vsone')
     res_vsone = mc2.build_result_qcx(hs, qcx, use_cache=True)
     df2.show_match_analysis(hs, res_vsone, N=5, fignum=fnum, figtitle=' vsone')
     fnum+=1
@@ -287,19 +314,19 @@ def where_did_vsone_matches_go(hs, qcx, fnum=1, K=100):
     res_vsone, fnum = show_vsone_matches(hs, qcx, fnum)
     gt2_fm_V = res_vsone.cx2_fm_V[gt_cxs]
     # Get vsmany assigned matches (no spatial verification)
-    set_matcher_type(hs, 'vsmany')
+    hs.ensure_matcher_type('vsmany')
     vsmany_index = hs.matcher._Matcher__vsmany_index
     (qfx2_cx, qfx2_fx, qfx2_dists) = mc2.desc_nearest_neighbors(qfx2_desc1, vsmany_index, K)
     # Find where the matches to the correct images are
-    print('[invest]  Finding where the vsone matches went for qcx=%r, qcid=%r' % (qcx, qcid))
+    print('[invest]  Finding where the vsone matches went for %s' % hs.vs_str(qcx, qcid))
     k_inds  = np.arange(0, K)
     qf_inds = np.arange(0, len(qfx2_cx))
     kxs, qfxs = np.meshgrid(k_inds, qf_inds)
     for gtx, ocx in enumerate(gt_cxs):
         rchip2, fx2_kp2, fx2_desc2, ocid = get_features(ocx)
         rchip_size2 = cx2_rchip_size[ocx]
-        print('[invest] Checking matches to ground truth %r / %r cx=%r, cid=%r' % 
-              (gtx+1, len(gt_cxs), ocx, ocid))
+        print('[invest] Checking matches to ground truth %r / %r %s' % 
+              (gtx+1, len(gt_cxs), hs.vs_str(ocx, ocid)))
         # Get vsone indexes
         vsone_fm_V = gt2_fm_V[gtx]
         # Find correct feature and rank indexes: fx and kx
@@ -350,24 +377,15 @@ def where_did_vsone_matches_go(hs, qcx, fnum=1, K=100):
         fnum+=1
     return fnum
 
-def set_matcher_type(hs, match_type):
-    print('[invest] Setting matcher type to: '+str(match_type))
-    params.__MATCH_TYPE__ = match_type
-    hs.load_matcher()
-
-def ensure_matcher_type(hs, match_type):
-    if hs.matcher is None or hs.matcher.match_type != match_type:
-        return set_matcher_type(hs, match_type)
-
 def plot_name(hs, qcx, fnum=1):
     print('[invest] Plotting name')
-    dump_groundtruth.plot_name_cx(hs, qcx, fignum=fnum)
+    viz.plot_name_of_cx(hs, qcx, fignum=fnum)
     return fnum+1
 
 def compare_matching_methods(hs, qcx, fnum=1):
     print('[invest] Comparing match methods')
     # VSMANY matcher
-    set_matcher_type(hs, 'vsmany')
+    hs.ensure_matcher_type('vsmany')
     vsmany_score_options = ['LNRAT', 'LNBNN', 'RATIO']
     vsmany_index = hs.matcher._Matcher__vsmany_index
     vsmany_results = {}
@@ -378,12 +396,12 @@ def compare_matching_methods(hs, qcx, fnum=1):
         vsmany_results[score_type] = res_vsmany
         fnum+=1
     # BAGOFWORDS matcher
-    set_matcher_type(hs, 'bagofwords')
+    hs.ensure_matcher_type('bagofwords')
     resBOW = mc2.build_result_qcx(hs, qcx)
     df2.show_match_analysis(hs, resBOW, N=5, fignum=fnum, figtitle=' bagofwords')
     fnum+=1
     # VSONE matcher
-    set_matcher_type(hs, 'vsone')
+    hs.ensure_matcher_type('vsone')
     res_vsone = mc2.build_result_qcx(hs, qcx, use_cache=True)
     df2.show_match_analysis(hs, res_vsone, N=5, fignum=fnum, figtitle=' vsone')
     fnum+=1
@@ -393,29 +411,104 @@ def compare_matching_methods(hs, qcx, fnum=1):
     fnum+=1
     return fnum
 
-if __name__ == '__main__':
-    if not 'hs' in vars():
-        # Grab an example
-        current = len(HISTORY) - 1
-        (db, qcx, ocxs, cid, notes) = HISTORY[current]
-        db_dir = eval('params.'+db)
-        # Load hotspotter
-        hs = ld2.HotSpotter()
-        hs.load_all(db_dir, matcher=False)
-        hs.set_samples()
+def view_all_history_names_in_db(hs, db):
+    qcid_list =[]
+    for (db_, qcid, ocids, notes) in HISTORY:
+        if db == db_:
+            qcid_list += [qcid]
+    print('qcid_list = %r ' % qcid_list)
+    qcx_list = hs.cid2_cx(qcid_list)
+    print('qcx_list = %r ' % qcid_list)
+    nx_list = hs.tables.cx2_nx[qcx_list]
+    unique_nxs = np.unique(nx_list)
+    print('unique_nxs = %r' % unique_nxs)
+    names = hs.tables.nx2_name[unique_nxs]
+    print('names = %r' % names)
+    helpers.ensuredir('hard_names')
+    for nx in unique_nxs:
+        viz.plot_name(hs, nx, fignum=nx)
+        df2.save_figure(fpath='hard_names', usetitle=True)
+    helpers.vd('hard_names')
 
+def parse_arguments():
+    '''
+    Defines the arguments for investigate_chip.py
+    '''
+    print('==================')
+    print('[invest] ---------')
+    print('[invest] ARGPARSE')
+    import argparse
+    parser = argparse.ArgumentParser(description='HotSpotter - Investigate Chip', prefix_chars='+-')
+    def_on  = {'action':'store_false', 'default':True}
+    def_off = {'action':'store_true', 'default':False}
+    addarg = parser.add_argument
+    def add_meta(switch, type, default, help, nargs=1):
+        dest = switch.strip('-').replace('-','_')
+        addarg(switch, metavar=dest, type=type, default=default, help=help, nargs=nargs)
+    def add_int(switch, default, help, **kwargs):
+        add_meta(switch, int, default, help, **kwargs)
+    def add_str(switch, default, help):
+        add_meta(switch, str, default, help)
+    def add_bool(switch, default, help):
+        action = 'store_false' if default else 'store_true' 
+        dest = switch.strip('-').replace('-','_')
+        addarg(switch, dest=dest, action=action, default=default, help=help)
+    def test_bool(switch):
+        add_bool(switch, False, 'runs this test')
+    add_int('--qcid',  1, 'query chip-id to investigate', nargs='*')
+    add_int('--ocid',  [], 'query chip-id to investigate', nargs='*')
+    add_int('--histid', None, 'history id (hard cases)')
+    add_str('--db', 'MOTHERS', 'database to load')
+    test_bool('--show-names')
+    test_bool('--vary-vsmany-k-xythresh')
+    test_bool('--vary-vsone-ratio-xythresh')
+    args, unknown = parser.parse_known_args()
+    print('[invest] args    = %r' % (args,))
+    print('[invest] unknown = %r' % (unknown,))
+    print('[invest] ---------')
+    print('==================')
+    return args
+
+def run_investigations(qcx, args):
+    print('[invest] Running Investigation: '+hs.cxstr(qcx))
     fnum = 1
-
-    fnum = plot_name(hs, qcx, fnum)
+    #view_all_history_names_in_db(hs, 'MOTHERS')
+    if args.show_names:
+        fnum = plot_name(hs, qcx, fnum)
     #fnum = compare_matching_methods(hs, qcx, fnum)
-    fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 4, 4, fnum, cx_list='gt1')
-    set_matcher_type(hs, 'vsmany')
-    fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 4, 4, fnum, cx_list='gt1')
-    fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=10)
-    fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=20)
-    fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
-    fnum = investigate_scoring_rules(hs, qcx, fnum)
-    df2.update()
+    if args.vary_vsone_ratio_xythresh:
+        fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 4, 4, fnum, cx_list='gt1')
+    #hs.ensure_matcher_type('vsmany')
+    #fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 4, 4, fnum, cx_list='gt1') #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=10)
+    #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=20)
+    #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
+    #fnum = investigate_scoring_rules(hs, qcx, fnum)
 
-#**df2.OooScreen2()
-exec(df2.present())
+def hs_from_db(db):
+    # Load hotspotter
+    db_dir = eval('params.'+db)
+    hs = ld2.HotSpotter()
+    hs.load_all(db_dir, matcher=False)
+    hs.set_samples()
+    return hs
+
+if __name__ == '__main__':
+    #exec(open('investigate_chip.py').read())
+    if not 'hs' in vars():
+        args = parse_arguments()
+        if not args.histid is None: # Grab an example
+            (args.db, args.qcid, args.ocid, notes) = HISTORY[args.histid]
+        hs = hs_from_db(args.db)
+        qcxs = hs.cid2_cx(args.qcid)
+        ocxs = hs.cid2_cx(args.ocid)
+        if not np.iterable(qcxs):
+            qcxs = [qcxs]
+    print('[invest] running ')
+    fmtstr = helpers.make_progress_fmt_str(len(qcxs), '[invest] investigation ')
+    print('====================')
+    for count, qcx in enumerate(qcxs):
+        print(fmtstr % (count+1))
+        run_investigations(qcx, args)
+    print('====================')
+    #df2.update()
+exec(df2.present()) #**df2.OooScreen2()

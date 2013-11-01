@@ -1,4 +1,4 @@
-from __future__ import division,print_function
+from __future__ import division, print_function
 import draw_func2 as df2
 import helpers
 import load_data2 as ld2
@@ -7,6 +7,7 @@ import match_chips2 as mc2
 import oxsty_results
 import params
 from Printable import DynStruct
+import matplotlib.gridspec as gridspec
 # Scientific imports
 import numpy as np
 # Standard library imports
@@ -30,8 +31,45 @@ def reload_module():
 def rrr():
     reload_module()
 
-def plot_name(hs, nx):
-    pass
+def plot_name_of_cx(hs, cx, **kwargs):
+    nx = hs.tables.cx2_nx[cx]
+    plot_name(hs, nx, **kwargs)
+
+def plot_name(hs, nx, nx2_cxs=None, fignum=0, **kwargs):
+    print('[viz] plot_name nx=%r' % nx)
+    nx2_name = hs.tables.nx2_name
+    cx2_nx   = hs.tables.cx2_nx
+    name = nx2_name[nx]
+    if not nx2_cxs is None:
+        cxs = nx2_cxs[nx]
+    else: 
+        cxs = np.where(cx2_nx == nx)[0]
+    print('[viz] plot_name %r' % hs.cxstr(cxs))
+    ncxs  = len(cxs)
+    nCols = int(min(np.ceil(np.sqrt(ncxs)), 5))
+    nRows = int(np.ceil(ncxs / nCols))
+    print('[viz*] r=%r, c=%r' % (nRows, nCols))
+    gs2 = gridspec.GridSpec(nRows, nCols)
+    fig = df2.figure(fignum=fignum, **kwargs)
+    fig.clf()
+    for ss, cx in zip(gs2, cxs):
+        ax = fig.add_subplot(ss)
+        plot_cx3(hs, cx)
+    title = 'nx=%r -- name=%r' % (nx, name)
+    #gs2.tight_layout(fig)
+    #gs2.update(top=df2.TOP_SUBPLOT_ADJUST)
+    df2.set_figtitle(title)
+
+def plot_cx3(hs, cx):
+    ax = df2.plt.gca()
+    rchip = hs.get_chip(cx)
+    ax.imshow(rchip, interpolation='nearest')
+    df2.plt.set_cmap('gray')
+    df2.set_ticks([],[])
+    gname = hs.cx2_gname(cx)
+    cid = hs.tables.cx2_cid[cx]
+    ax.set_xlabel(gname)
+    ax.set_title(hs.cxstr(cx))
 
 def cx_info(allres, cx, SV=True):
     hs = allres.hs
@@ -39,7 +77,7 @@ def cx_info(allres, cx, SV=True):
     print_top_res_scores(hs, res, view_top=10)
     #gt_cxs = hs.get_other_cxs(cx)
     gt_cxs = hs.get_other_indexed_cxs(cx)
-    print('[viz] Ground truth cxs: '+repr(gt_cxs))
+    print('[viz] Ground truth '+hs.cx_liststr(gt_cxs))
     print('[viz] num groundtruth = '+str(len(gt_cxs)))
     print_top_res_scores(hs, res, view_top=10, SV=True)
 
@@ -57,13 +95,13 @@ def print_top_res_scores(hs, res, view_top=10, SV=True):
     top_nx     = cx2_nx[top_cx]
     view_top   = min(len(top_scores), np.uint32(view_top))
     print('---------------------------------------')
-    print('[viz]Inspecting matches of qcx=%d name=%s' % (qcx, nx2_name[qnx]))
+    print('[viz]Inspecting matches of q%s name=%s' % (hs.cxstr(qcx), hs.cx2_name(qcx)))
     print('[viz] * Matched against %d other chips' % len(cx2_score))
-    print('[viz] * Ground truth chip indexes:\n   other_cx=%r' % other_cx)
+    print('[viz] * Ground truth chip indexes:\n   gt_%s' % hs.cx_liststr(other_cx))
     print('[viz]The ground truth scores '+lbl+' are: ')
     for cx in iter(other_cx):
         score = cx2_score[cx]
-        print('[viz]--> cx=%4d, score=%6.2f' % (cx, score))
+        print('[viz]--> %s, score=%6.2f' % (hs.cxstr(cx, 4), score))
     print('---------------------------------------')
     print(('The top %d chips and scores '+lbl+' are: ') % view_top)
     for topx in xrange(view_top):
@@ -72,7 +110,7 @@ def print_top_res_scores(hs, res, view_top=10, SV=True):
         if tcx == qcx: continue
         tnx    = cx2_nx[tcx]
         _mark = '-->' if tnx == qnx else '  -'
-        print('[viz]'+_mark+' cx=%4d, score=%6.2f' % (tcx, tscore))
+        print('[viz]'+_mark+' %s, score=%6.2f' % (hs.cxstr(cx), tscore))
     print('---------------------------------------')
     print('---------------------------------------')
 
@@ -90,11 +128,11 @@ def plot_cx2(hs, res, style='kpts', subdir=None, annotations=True, title_aug='')
         subdir = 'plot_cx' if subdir is None else subdir
         rchip = hs.get_chip(cx)
         kpts  = hs.feats.cx2_kpts[cx]
-        title = 'cx: %d\n%s' % (cx, title_suffix)
+        title = '%s\n%s' % (hs.cxstr(cx), title_suffix)
         print('[viz] Plotting'+title)
         df2.imshow(rchip, fignum=FIGNUM, title=title, doclf=True)
         df2.draw_kpts2(kpts)
-    if 'gt_matches'  == style: 
+    if 'gt_matches' == style: 
         subdir = 'gt_matches' if subdir is None else subdir
         df2.show_gt_matches(hs, res, fignum=FIGNUM)
     if 'top5' == style:
@@ -219,7 +257,7 @@ def plot_tt_bt_tf_matches(allres, qcx):
     df2.show_matches3(res, hs, cxs[0], False, fignum=1, plotnum=131, title_aug=titles[0])
     df2.show_matches3(res, hs, cxs[1], False, fignum=1, plotnum=132, title_aug=titles[1])
     df2.show_matches3(res, hs, cxs[2], False, fignum=1, plotnum=133, title_aug=titles[2])
-    fig_title = 'fig qcx='+str(qcx)+' TT BT TF -- ' + allres.title_suffix
+    fig_title = 'fig q'+hs.cxstr(qcx)+' TT BT TF -- ' + allres.title_suffix
     df2.set_figtitle(fig_title)
     #df2.set_figsize(_fn, 1200,675)
 

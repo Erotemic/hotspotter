@@ -878,3 +878,18 @@ def bad_optimization
         #PLmatrix[rowx] /= (PLmatrix[rowx]**2).sum()**(.5)
 
     gamma = np.linalg.solve(PLmatrix, infintum)
+
+# From DF2
+'''
+def save(fig, fpath=None):
+    if fpath is None:
+        # Find the title
+        fpath = fig.canvas.get_window_title()
+    if fpath is None: 
+        fpath = 'Figure'+str(fig.number)+'.png'
+    # Sanatize the filename
+    fpath_clean = sanatize_img_fpath(fpath)
+    print('[df2] Saving figure to: '+repr(fpath_clean))
+    #fig.savefig(fpath_clean, dpi=DPI)
+    fig.savefig(fpath_clean, dpi=DPI, bbox_inches='tight')
+'''

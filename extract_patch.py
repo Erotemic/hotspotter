@@ -254,7 +254,7 @@ def viz_top_features(hs, res, low, high, fignum=0, draw_chips=True):
         df2.draw_border(ax, color, 2)
         nx = cx2_nx[cx]
         ax.set_title(title_pref+'cx = %r; nx=%r' % (cx, nx))
-        gname = hs.cx2_gname(cx)
+        gname = hs.get_gname(cx)
         ax.set_xlabel(gname)
     #df2.draw()
 

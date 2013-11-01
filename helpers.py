@@ -1317,6 +1317,17 @@ def commas(num, n=8):
     return '%d' % num
     #return int_comma_str(num)
 
+def format(num, n=8):
+    if is_float(num):
+        ret = '%.3E' % num
+        exp_pos = ret.find('E')
+        exp_part = 
+        ret = ret.replace('E+00','')
+        ret = ret.strip('0')
+        return ret
+    return '%d' % num
+    
+
 def cartesian(arrays, out=None):
     '''
     Generate a cartesian product of input arrays.

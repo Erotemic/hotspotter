@@ -238,7 +238,7 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3,
             df2.show_matches2(rchip1, rchip2, fx2_kp1, fx2_kp2, fm, fs, fignum=fnum,
                             plotnum=plotnum, title=title, draw_pts=False)
         # Plot the original assigned matches
-        title = param1+'=%.3e' % param1_value
+        title = param1+'=%.3E' % param1_value
         _show_matches_helper(fm, fs, rowx, 1, '')
         ax = df2.plt.gca()
         ylabel_args = dict(rotation='horizontal',

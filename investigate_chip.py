@@ -161,12 +161,12 @@ def vary_query_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
                       assign_alg='vsone', nParam1=3, nParam2=3, fnum=1,
                       cx_list='gt'):
     possible_variations = {
-                        # mean , #sigma  #props
-        'K'            : (10,    20, 'int', 'pos'),
-        'ratio_thresh' : (1.6,   0.1,  'pos'),  
-        'xy_thresh'    : (0.001, 0.01, 'pos'), 
-        'scale_min'    : (0.5,   0.25, 'pos'),
-        'scale_max'    : (2.0,   0.5,  'neg')
+                        # start, #step  #props
+        'K'            : (10,      20, 'int'),
+        'ratio_thresh' : (1.6,   0.10),  
+        'xy_thresh'    : (0.001, 0.01), 
+        'scale_min'    : (0.5,   0.01),
+        'scale_max'    : (2.0,  -0.01)
     }
     param_ranges = {
         'param1'    : [param1]+[list(possible_variations[param1])],
@@ -211,22 +211,12 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3,
         #space_fn = possible_space_fns['lin' if len(param_info) <= 3 else param_info[3]]
         #param_range = list(param_info[0:2]) + [nParam]
         npnormal = np.random.normal
-        mean = param_info[0]
-        std  = param_info[1]
-        '''
-        if 'pos' in param_info:
-            random_steps = list(mean + np.abs(npnormal(0, std, nParam-1))) 
-        elif 'neg' in param_info:
-            random_steps = list(mean - np.abs(npnormal(0, std, nParam-1))) 
-        else:
-            random_steps = list(mean + npnormal(0, std, nParam-1))
-        #Sample the mean and a gaussian neighborhood around the mean
-        param_steps = [mean] + random_steps
-        '''
-        # Less Random Sampling
-        param_steps = [mean]
+        start = param_info[0]
+        step  = param_info[1]
+        # 
+        param_steps = [start]
         for ix in xrange(nParam-1):
-            param_steps.append(param_steps[-1]+std)
+            param_steps.append(param_steps[-1] + step)
         if param_type == 'int':
             param_steps = map(int, map(round, param_steps))
         return param, param_steps, nParam

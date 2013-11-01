@@ -1321,7 +1321,7 @@ def format(num, n=8):
     if is_float(num):
         ret = '%.3E' % num
         exp_pos = ret.find('E')
-        exp_part = 
+        exp_part = ret[exp_pos:]
         ret = ret.replace('E+00','')
         ret = ret.strip('0')
         return ret

@@ -131,6 +131,21 @@ def query_result_exists(hs, qcx):
     fpath = query_result_fpath(hs, qcx)
     return os.path.exists(fpath)
 
+def save_npz_from_dict(dict_, fpath):
+    if params.VERBOSE_CACHE:
+        print('[mc2] caching result: '+repr(fpath))
+    else:
+        print('[mc2] caching result: '+repr(os.path.split(fpath)[1]))
+    with open(fpath, 'wb') as file_:
+        np.savez(file_, **dict_.copy())
+
+def load_npz_into_dict(dict_, fpath, scalar_keys=set(['qcx'])):
+    with open(fpath, 'rb') as file_:
+        npz = np.load(file_)
+        for _key in npz.files:
+            dict_[_key] = npz[_key].tolist() if _key in scalar_keys else npz[_key]
+        npz.close()
+
 class QueryResult(DynStruct):
     def __init__(self, qcx):
         super(QueryResult, self).__init__()
@@ -147,52 +162,32 @@ class QueryResult(DynStruct):
         self.cx2_fs_V = np.array([], dtype=FS_DTYPE)
         self.cx2_score_V = np.array([])
 
-    def get_fpath(self, hs):
-        return query_result_fpath(hs, self.qcx)
-    
-    def save(self, hs, remove_initial_assignments=True):
-        if remove_initial_assignments:
-            self.cx2_fm = np.array([], dtype=FM_DTYPE)
-            self.cx2_fs = np.array([], dtype=FS_DTYPE)
-            self.cx2_score = np.array([])
-        # Forget non spatial scores
-        fpath = self.get_fpath(hs)
-        if params.VERBOSE_CACHE:
-            print('[mc2] caching result: '+repr(fpath))
-        else:
-            print('[mc2] caching result: '+repr(os.path.split(fpath)[1]))
-        to_save  = self.__dict__.copy()
-        np.savez(fpath, **to_save)
-        return True
+    def remove_init_assigned(self):
+        self.cx2_fm = np.array([], dtype=FM_DTYPE)
+        self.cx2_fs = np.array([], dtype=FS_DTYPE)
+        self.cx2_score = np.array([])
 
     def has_cache(self, hs):
         return query_result_exists(hs, self.qcx)
 
-    def cache_bytes(self, hs):
+    def has_init_assign(self):
+        return not (len(self.cx2_fm) == 0 and len(self.cx2_fm_V) != 0)
+
+    def get_fpath(self, hs):
+        return query_result_fpath(hs, self.qcx)
+    
+    def save(self, hs, remove_init=True):
+        if remove_init: self.remove_init_assigned()
         fpath = self.get_fpath(hs)
-        return helpers.file_bytes(fpath)
+        save_npz_from_dict(self.__dict__, fpath)
+        return True
 
-    def load(self, hs, remove_initial_assignments=True):
-        fpath = os.path.normpath(self.get_fpath(hs))
-        return self.load_result(fpath, remove_initial_assignments)
-
-    def load_result(self, fpath, remove_initial_assignments=True):
+    def load(self, hs, remove_init=True):
         'Loads the result from the given database'
+        fpath = os.path.normpath(self.get_fpath(hs))
         try:
-            with open(fpath, 'rb') as file_:
-                npz = np.load(file_)
-                for _key in npz.files:
-                    if _key in ['qcx']: # hack
-                        # Numpy saving is werid. gotta cast
-                        self.__dict__[_key] = npz[_key].tolist()
-                    else: 
-                        self.__dict__[_key] = npz[_key]
-                npz.close()
-            if remove_initial_assignments:
-                # Forget non spatial scores
-                self.cx2_fm = np.array([])
-                self.cx2_fs = np.array([])
-                self.cx2_score = np.array([])
+            load_npz_into_dict(self.__dict__, fpath, scalar_keys=set(['qcx']))
+            if remove_init: self.remove_init_assigned()
             return True
         except Exception as ex:
             #os.remove(fpath)
@@ -203,6 +198,10 @@ class QueryResult(DynStruct):
             raise
             #return False
 
+    def cache_bytes(self, hs):
+        fpath = self.get_fpath(hs)
+        return helpers.file_bytes(fpath)
+
     def top5_cxs(self):
         return self.topN_cxs(5)
 
@@ -212,8 +211,8 @@ class QueryResult(DynStruct):
         num_top = min(N, len(top_cxs))
         topN_cxs = top_cxs[0:num_top]
         return topN_cxs
-    #def __del__(self):
-        #print('[mc2] Deleting Query Result')
+
+
 
 
 #========================================
@@ -325,7 +324,7 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VE
 def __build_result_assign_step(hs, res, cx2_kpts, cx2_desc, assign_matches, verbose):
     '1) Assign matches with the chosen function (vsone) or (vsmany)'
     if verbose:
-        num_qdesc = len(cx2_desc[qcx])
+        num_qdesc = len(cx2_desc[res.qcx])
         print('[mc2] assign %d desc' % (num_qdesc))
     tt1 = helpers.Timer(verbose=False)
     assign_output = assign_matches(res.qcx, cx2_desc)
@@ -345,7 +344,7 @@ def __build_result_verify_step(hs, res, cx2_kpts, cx2_rchip_size, verbose):
         num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
         print('[mc2] verify %d assigned matches' % (num_assigned))
     tt2 = helpers.Timer(verbose=False)
-    sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs, cx2_score)
+    sv_output = spatially_verify_matches(res.qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs, cx2_score)
     (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
     # Record verified assignments 
     res.verify_time = tt2.toc()
@@ -357,9 +356,8 @@ def __build_result_verify_step(hs, res, cx2_kpts, cx2_rchip_size, verbose):
         print('[mc2] verified %d matches' % (num_verified))
 
 def build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches,
-                 verbose=True, remove_initial_assignments=True):
+                 verbose=True, remove_init=True):
     'Calls the actual query calculations and builds the result class'
-    qcx = res.qcx 
     __build_result_assign_step(hs, res, cx2_kpts, cx2_desc, assign_matches, verbose)
     __build_result_verify_step(hs, res, cx2_kpts, cx2_rchip_size, verbose)
     if verbose:
@@ -367,19 +365,24 @@ def build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches,
         print('...verified: %.2f seconds\n' % (res.verify_time))
     else:
         print('...query: %.2f seconds\n' % (res.verify_time + res.assign_time))
-    res.save(hs)
+    res.save(hs, remove_init=remove_init)
 
-def build_result_qcx(hs, qcx, use_cache=True, remove_initial_assignments=True):
+def build_result_qcx(hs, qcx, use_cache=True, remove_init=True):
+    'this should be the on-the-fly / Im going to check things function'
     res = QueryResult(qcx)
     if use_cache and res.has_cache(hs):
-        res.load(hs)
-    else:
-        assign_matches = hs.matcher.assign_matches
-        cx2_desc = hs.feats.cx2_desc
-        cx2_kpts = hs.feats.cx2_kpts
-        cx2_rchip_size = hs.get_cx2_rchip_size()
-        build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches,
-                     remove_initial_assignments=remove_initial_assignments)
+        res.load(hs, remove_init)
+        if not remove_init and res.has_init_assign():
+            return res
+    verbose = True
+    assign_matches = hs.matcher.assign_matches
+    cx2_desc = hs.feats.cx2_desc
+    cx2_kpts = hs.feats.cx2_kpts
+    cx2_rchip_size = hs.get_cx2_rchip_size()
+    __build_result_assign_step(hs, res, cx2_kpts, cx2_desc, assign_matches, verbose)
+    __build_result_verify_step(hs, res, cx2_kpts, cx2_rchip_size, verbose)
+    if use_cache:
+        res.save(hs, remove_init=remove_init)
     return res
 
 
@@ -660,6 +663,7 @@ def precompute_index_vsmany(hs):
     ax2_cx, ax2_fx, ax2_desc = aggregate_descriptors_vsmany(hs)
     # Precompute flann index
     matcher_uid = params.get_matcher_uid()
+    #checks = params.VSMANY_FLANN_PARAMS['checks']
     vsmany_flann_params = params.VSMANY_FLANN_PARAMS
     vsmany_flann = algos.precompute_flann(ax2_desc, 
                                           cache_dir=cache_dir,
@@ -693,6 +697,38 @@ def desc_nearest_neighbors(desc, vsmany_index, K=None):
     qfx2_fx = ax2_fx[qfx2_ax]
     return (qfx2_cx, qfx2_fx, qfx2_dists) 
 
+# TODO: Nearest Neighbor Huristrics 
+# K-recripricol nearest neighbors
+# ROI spatial matching
+# Frequency Reranking
+
+
+def quick_flann_index(data):
+    data_flann = pyflann.FLANN()
+    flann_params =  params.VSMANY_FLANN_PARAMS
+    checks = flann_params['checks']
+    data_flann.build_index(data, **flann_params)
+    return data_flann
+
+def nearest_neighbors(query, data_flann, K, checks=128):
+    (qfx2_dx, qfx2_dists) = data_flann.nn_index(query, K, checks=checks)
+
+def reciprocal_nearest_neighbors(query, data, data_flann, checks):
+    nQuery, dim = query.shape
+    # Assign query features to K nearest database features
+    (qfx2_dx, qfx2_dists) = data_flann.nn_index(query, K, checks=checks)
+    # Assign those nearest neighbors to K nearest database features
+    qx2_nn = data[qfx2_dx]
+    qx2_nn.shape = (nQuery*K, dim)
+    (_nn2_dx, nn2_dists) = data_flann.nn_index(qx2_nn, K, checks=checks)
+    # Get the maximum distance of the reciprocal neighbors
+    nn2_dists.shape = (nQuery, K, K)
+    qfx2_maxdist = nn2_dists.max(2)
+    # Test if nearest neighbor distance is less than reciprocal distance
+    isReciprocal = qfx2_dists < qfx2_maxdist
+    return qfx2_dx, qfx2_dists, isReciprocal 
+
+
 #@profile
 def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
     '''Matches desc1 vs all database descriptors using 
@@ -707,13 +743,11 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
     # vsmany_index = hs.matcher._Matcher__vsmany_index
     #helpers.println('Assigning vsmany feature matches from qcx=%d to %d chips'\ % (qcx, len(cx2_desc)))
     vsmany_flann = vsmany_index.vsmany_flann
-    ax2_cx       = vsmany_index.ax2_cx
-    ax2_fx       = vsmany_index.ax2_fx
     score_fn = scoring_func_map[params.__VSMANY_SCORE_FN__]
     isQueryIndexed = True
     desc1 = cx2_desc[qcx]
     k_vsmany = params.__VSMANY_K__+1 if isQueryIndexed else params.__VSMANY_K__
-    checks = params.VSMANY_FLANN_PARAMS['checks']
+    checks   = params.VSMANY_FLANN_PARAMS['checks']
     # Find each query descriptor's k+1 nearest neighbors
     (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, k_vsmany+1, checks=checks)
     vote_dists = qfx2_dists[:, 0:k_vsmany]
@@ -722,6 +756,8 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
     qfx2_score = np.array([score_fn(_vdist.T, norm_dists)
                            for _vdist in vote_dists.T]).T
     # Vote using the inverted file 
+    ax2_cx       = vsmany_index.ax2_cx
+    ax2_fx       = vsmany_index.ax2_fx
     qfx2_cx = ax2_cx[qfx2_ax[:, 0:k_vsmany]]
     qfx2_fx = ax2_fx[qfx2_ax[:, 0:k_vsmany]]
     # Build feature matches
@@ -1031,9 +1067,9 @@ if __name__ == '__main__':
     kpts1 = hs.get_kpts(qcx)
     kpts2 = hs.get_kpts(cx)
 
-    res = build_result_qcx(hs, qcx)
-    df2.show_matches_annote_res(res, hs, cx, draw_pts=False, subplot=(1,2,2))
-    df2.show_matches_annote_res(res, hs, cx, draw_pts=False, subplot=(1,2,2), SV=False)
+    res = build_result_qcx(hs, qcx, remove_init=False)
+    df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(1,2,1))
+    df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(1,2,2), SV=False)
 
     if len(sys.argv) > 1:
         try:

@@ -387,10 +387,13 @@ def adjust_subplots(left=0.02,  bottom=0.02,
                         right,  top,
                         wspace, hspace)
 
-def set_figtitle(figtitle):
+def set_figtitle(figtitle, oneaxis=False):
     fig = plt.gcf()
     fig.suptitle(figtitle , fontsize=14, fontweight='bold')
     fig.canvas.set_window_title(figtitle)
+    #if oneaxis:
+        #ax = plt.gca()
+        #ax.set_title(figtitle)
     adjust_subplots()
 
 def customize_figure(fig, doclf):
@@ -813,11 +816,8 @@ def show_matches_annote_res(res, hs, cx,
     cx2_fm    = res.cx2_fm_V if SV else res.cx2_fm
     cx2_fs    = res.cx2_fs_V if SV else res.cx2_fs
     title_suff = '(+V)' if SV else None
-    return show_matches_annote(hs, qcx, cx2_score,
-                         cx2_fm, cx2_fs, cx,
-                         fignum, plotnum,
-                         title_aug, title_suff,
-                         **kwargs)
+    return show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx,
+                         fignum, plotnum, title_aug, title_suff, **kwargs)
 
 
 # TODO: This should go in viz

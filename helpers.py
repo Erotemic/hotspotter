@@ -509,6 +509,9 @@ def str2(obj):
     else:
         return str(obj)
 
+def tiled_range(range, cols):
+    return np.tile(np.arange(range), (cols, 1)).T
+
 def random_indexes(max_index, subset_size):
     subst_ = np.arange(0, max_index)
     np.random.shuffle(subst_)

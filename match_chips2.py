@@ -11,6 +11,7 @@ from __future__ import division, print_function
 import itertools
 import sys
 import os
+import warnings
 import textwrap
 # Hotspotter Frontend Imports
 import draw_func2 as df2
@@ -149,18 +150,20 @@ class QueryResult(DynStruct):
     def get_fpath(self, hs):
         return query_result_fpath(hs, self.qcx)
     
-    def save(self, hs):
-        # HACK
-        self.cx2_fm = np.array([])
-        self.cx2_fs = np.array([])
-        self.cx2_score = np.array([])
+    def save(self, hs, remove_initial_assignments=True):
+        if remove_initial_assignments:
+            self.cx2_fm = np.array([], dtype=FM_DTYPE)
+            self.cx2_fs = np.array([], dtype=FS_DTYPE)
+            self.cx2_score = np.array([])
         # Forget non spatial scores
         fpath = self.get_fpath(hs)
         if params.VERBOSE_CACHE:
             print('[mc2] caching result: '+repr(fpath))
         else:
             print('[mc2] caching result: '+repr(os.path.split(fpath)[1]))
-        return self.save_result(fpath)
+        to_save  = self.__dict__.copy()
+        np.savez(fpath, **to_save)
+        return True
 
     def has_cache(self, hs):
         return query_result_exists(hs, self.qcx)
@@ -169,17 +172,11 @@ class QueryResult(DynStruct):
         fpath = self.get_fpath(hs)
         return helpers.file_bytes(fpath)
 
-    def load(self, hs):
-        fpath = self.get_fpath(hs)
-        return self.load_result(fpath)
+    def load(self, hs, remove_initial_assignments=True):
+        fpath = os.path.normpath(self.get_fpath(hs))
+        return self.load_result(fpath, remove_initial_assignments)
 
-    def save_result(self, fpath):
-        'Saves the result to the given database'
-        to_save  = self.__dict__.copy()
-        np.savez(fpath, **to_save)
-        return True
-
-    def load_result(self, fpath):
+    def load_result(self, fpath, remove_initial_assignments=True):
         'Loads the result from the given database'
         try:
             with open(fpath, 'rb') as file_:
@@ -191,19 +188,20 @@ class QueryResult(DynStruct):
                     else: 
                         self.__dict__[_key] = npz[_key]
                 npz.close()
-            # HACK
-            self.cx2_fm = np.array([])
-            self.cx2_fs = np.array([])
-            self.cx2_score = np.array([])
-            # Forget non spatial scores
+            if remove_initial_assignments:
+                # Forget non spatial scores
+                self.cx2_fm = np.array([])
+                self.cx2_fs = np.array([])
+                self.cx2_score = np.array([])
             return True
         except Exception as ex:
-            os.remove(fpath)
+            #os.remove(fpath)
             warnmsg = ('Load Result Exception : ' + repr(ex) + 
                     '\nResult was corrupted for qcx=%d' % self.qcx)
             print(warnmsg)
             warnings.warn(warnmsg)
-            return False
+            raise
+            #return False
 
     def top5_cxs(self):
         return self.topN_cxs(5)
@@ -221,7 +219,6 @@ class QueryResult(DynStruct):
 #========================================
 # Work Functions
 #========================================
-
 
 def get_dirty_test_cxs(hs):
     test_samp = hs.test_sample_cx
@@ -318,51 +315,61 @@ def run_matching(hs, qcx2_res=None, dirty_test_sample_cx=None, verbose=params.VE
     total_dirty = len(dirty_test_sample_cx)
     print('[mc2] Executing %d dirty queries' % total_dirty)
     for qnum, qcx in enumerate(dirty_test_sample_cx):
+        if verbose:
+            print('[mc2] query(%d/%d)---------------' % (qnum+1, total_dirty))
         res = qcx2_res[qcx]
         build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size,
-                     assign_matches, qnum, total_dirty, verbose)
+                     assign_matches, verbose)
     return qcx2_res
 
-def build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches,
-                 qnum=0, total_dirty=1, verbose=True):
-    'Calls the actual query calculations and builds the result class'
-    qcx = res.qcx 
+def __build_result_assign_step(hs, res, cx2_kpts, cx2_desc, assign_matches, verbose):
+    '1) Assign matches with the chosen function (vsone) or (vsmany)'
     if verbose:
         num_qdesc = len(cx2_desc[qcx])
-        print('[mc2] query(%d/%d)---------------' % (qnum+1, total_dirty))
-        print('[mc2] query(%d/%d) assign %d desc' % (qnum+1, total_dirty, num_qdesc))
-    # 1) Assign matches with the chosen function (vsone) or (vsmany)
+        print('[mc2] assign %d desc' % (num_qdesc))
     tt1 = helpers.Timer(verbose=False)
-    assign_output = assign_matches(qcx, cx2_desc)
+    assign_output = assign_matches(res.qcx, cx2_desc)
     (cx2_fm, cx2_fs, cx2_score) = assign_output
-    assign_time = tt1.toc()
-    if verbose:
-        num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
-        print('[mc2] query(%d/%d) verify %d assigned matches' % (qnum+1, total_dirty, num_assigned))
-    # 2) Spatially verify the assigned matches
-    tt2 = helpers.Timer(verbose=False)
-    sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs, cx2_score)
-    (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
-    verify_time = tt2.toc()
-    if verbose:
-        num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
-        print('[mc2] query(%d/%d) verified %d matches' % (qnum+1, total_dirty, num_verified))
-        print('...assigned: %.2f seconds' % (assign_time))
-        print('...verified: %.2f seconds\n' % (verify_time))
-    else:
-        print('...query: %.2f seconds\n' % (verify_time + assign_time))
-    # Assign output to the query result 
-    res.assign_time = assign_time
-    res.verify_time = verify_time
+    # Record initial assignments 
+    res.assign_time = tt1.toc()
     res.cx2_fm      = np.array(cx2_fm)
     res.cx2_fs      = np.array(cx2_fs)
     res.cx2_score   = cx2_score
+
+def __build_result_verify_step(hs, res, cx2_kpts, cx2_rchip_size, verbose):
+    ' 2) Spatially verify the assigned matches'
+    cx2_fm    = res.cx2_fm
+    cx2_fs    = res.cx2_fs
+    cx2_score = res.cx2_score
+    if verbose:
+        num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
+        print('[mc2] verify %d assigned matches' % (num_assigned))
+    tt2 = helpers.Timer(verbose=False)
+    sv_output = spatially_verify_matches(qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs, cx2_score)
+    (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
+    # Record verified assignments 
+    res.verify_time = tt2.toc()
     res.cx2_fm_V    = np.array(cx2_fm_V)
     res.cx2_fs_V    = np.array(cx2_fs_V)
     res.cx2_score_V = cx2_score_V
+    if verbose:
+        num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
+        print('[mc2] verified %d matches' % (num_verified))
+
+def build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches,
+                 verbose=True, remove_initial_assignments=True):
+    'Calls the actual query calculations and builds the result class'
+    qcx = res.qcx 
+    __build_result_assign_step(hs, res, cx2_kpts, cx2_desc, assign_matches, verbose)
+    __build_result_verify_step(hs, res, cx2_kpts, cx2_rchip_size, verbose)
+    if verbose:
+        print('...assigned: %.2f seconds' % (res.assign_time))
+        print('...verified: %.2f seconds\n' % (res.verify_time))
+    else:
+        print('...query: %.2f seconds\n' % (res.verify_time + res.assign_time))
     res.save(hs)
 
-def build_result_qcx(hs, qcx, use_cache=True):
+def build_result_qcx(hs, qcx, use_cache=True, remove_initial_assignments=True):
     res = QueryResult(qcx)
     if use_cache and res.has_cache(hs):
         res.load(hs)
@@ -371,7 +378,8 @@ def build_result_qcx(hs, qcx, use_cache=True):
         cx2_desc = hs.feats.cx2_desc
         cx2_kpts = hs.feats.cx2_kpts
         cx2_rchip_size = hs.get_cx2_rchip_size()
-        build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches)
+        build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches,
+                     remove_initial_assignments=remove_initial_assignments)
     return res
 
 
@@ -1004,7 +1012,7 @@ if __name__ == '__main__':
     print('[mc2] __main__ = match_chips2.py')
 
     # --- CHOOSE DATABASE --- #
-    db_dir = params.GZ
+    db_dir = params.DEFAULT
     hs = load_data2.HotSpotter()
     hs.load_tables(db_dir)
     hs.load_chips()
@@ -1012,8 +1020,10 @@ if __name__ == '__main__':
     hs.load_features()
     hs.load_matcher()
 
-    qcx = 111
-    cx = 305
+    #qcx = 111
+    #cx = 305
+    qcx = 0
+    cx = hs.get_other_indexed_cxs(qcx)[0]
     fm, fs, score = hs.get_assigned_matches_to(qcx, cx)
     rchip1 = hs.get_chip(qcx)
     rchip2 = hs.get_chip(cx)
@@ -1021,10 +1031,9 @@ if __name__ == '__main__':
     kpts1 = hs.get_kpts(qcx)
     kpts2 = hs.get_kpts(cx)
 
-    res = QueryResult(qcx)
-    res.load(hs)
-    #df2.show_matches3(rchip1, rchip2, kpts1, kpts2, fm, fs)
-    df2.show_matches3(res, hs, cx, pts=False)
+    res = build_result_qcx(hs, qcx)
+    df2.show_matches_annote_res(res, hs, cx, draw_pts=False, subplot=(1,2,2))
+    df2.show_matches_annote_res(res, hs, cx, draw_pts=False, subplot=(1,2,2), SV=False)
 
     if len(sys.argv) > 1:
         try:

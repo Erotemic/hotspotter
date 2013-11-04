@@ -1,17 +1,22 @@
 ''' Lots of functions for drawing and plotting visiony things '''
 from __future__ import division, print_function
+DEBUG = False
+def printDBG(msg):
+    if DEBUG:
+        print(msg)
 import matplotlib
 import multiprocessing
 MPL_BACKEND = matplotlib.get_backend()
 matplotlib.rcParams['toolbar'] = 'toolbar2'
 if MPL_BACKEND != 'Qt4Agg':
     if multiprocessing.current_process().name == 'MainProcess':
-        print('[df2] current backend is: %r' % MPL_BACKEND)
-        print('[df2] matplotlib.use(Qt4Agg)')
+        printDBG('[df2] current backend is: %r' % MPL_BACKEND)
+        printDBG('[df2] matplotlib.use(Qt4Agg)')
     matplotlib.use('Qt4Agg', warn=True, force=True)
     MPL_BACKEND = matplotlib.get_backend()
     if multiprocessing.current_process().name == 'MainProcess':
-        print('[df2] current backend is: %r' % MPL_BACKEND)
+        printDBG('[df2] current backend is: %r' % MPL_BACKEND)
+    #matplotlib.rc('text', usetex=True)
     #matplotlib.rcParams['toolbar'] = 'None'
     #matplotlib.rcParams['interactive'] = True
 from matplotlib import gridspec
@@ -110,10 +115,6 @@ SHOW_ELLS  = True
 POINT_SIZE = 2
 
 
-DEBUG = False
-def printDBG(msg):
-    if DEBUG:
-        print(msg)
 
 # ---- GENERAL FIGURE COMMANDS ----
 def sanatize_img_fpath(fpath):
@@ -367,6 +368,9 @@ def plot2(x_data,
     ax.set_title(title_pref + ' ' + x_label+' vs '+y_label)
 
 
+def adjust_subplots_xylabels():
+    adjust_subplots(left=.03, right=1, bottom=.1, top=.9, hspace=.01)
+    
 def adjust_subplots(left=0.02,  bottom=0.02,
                    right=0.98,     top=0.90, 
                    wspace=0.1,   hspace=0.15):
@@ -775,7 +779,7 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
                        fontweight='ultralight', 
                         backgroundcolor=(0,0,0,.5))
         x,y = (.01*match_img.shape[0], .01*match_img.shape[1])
-        ax.text(x, y, txt, color='k', **txtargs)
+        #ax.text(x, y, txt, color='k', **txtargs)
         ax.text(x, y, txt, color=(.9, .1, .1), **txtargs)
     upperleft_text('#match=%d' % len(fm))
     if all_kpts:

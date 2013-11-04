@@ -652,8 +652,8 @@ def dump_orgres_matches(allres, orgres_type):
         result_gname, _ = os.path.splitext(hs.tables.gx2_gname[hs.tables.cx2_gx[cx]])
         res = qcx2_res[qcx]
         df2.figure(fignum=1, plotnum=121)
-        df2.show_matches3(res, hs, cx, SV=False, fignum=1, plotnum=121)
-        df2.show_matches3(res, hs, cx, SV=True,  fignum=1, plotnum=122)
+        df2.show_matches_annote_res(res, hs, cx, SV=False, fignum=1, plotnum=121)
+        df2.show_matches_annote_res(res, hs, cx, SV=True,  fignum=1, plotnum=122)
         big_title = 'score=%.2f_rank=%d_q=%s_r=%s' % \
                 (score, rank, query_gname, result_gname)
         df2.set_figtitle(big_title)
@@ -838,7 +838,7 @@ def dinspect(qcx, cx=None, SV=True, reset=True):
     if cx is None:
         df2.show_gt_matches(hs, res, fignum)
     else: 
-        df2.show_matches3(res, hs, cx, fignum, SV=SV)
+        df2.show_matches_annote_res(res, hs, cx, fignum, SV=SV)
     df2.present(wh=(900,600))
 
 def report_all(hs, qcx2_res, SV=True, **kwargs):

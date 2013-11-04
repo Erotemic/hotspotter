@@ -1,10 +1,16 @@
+import matplotlib
+import textwrap
 import draw_func2 as df2
+import sys
+import vizualizations as viz
 import matplotlib
 import numpy as np
 from numpy import linalg
 import helpers
 import scipy.optimize
 import scipy
+import params
+import match_chips2 as mc2
 
 def reload_module():
     import imp, sys
@@ -12,6 +18,31 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()
+
+def build_voters_profile(hs, qcx, K):
+    cx2_nx = hs.tables.cx2_nx
+    hs.ensure_matcher_type('vsmany')
+    K += 1
+    desc1 = hs.feats.cx2_desc[qcx]
+    vsmany_index = hs.matcher._Matcher__vsmany_index
+    vsmany_flann = vsmany_index.vsmany_flann
+    ax2_cx       = vsmany_index.ax2_cx
+    ax2_fx       = vsmany_index.ax2_fx
+    print('[invest] Building voter preferences over %s indexed descriptors. K=%r' %
+          (helpers.commas(len(ax2_cx)), K))
+    checks       = params.VSMANY_FLANN_PARAMS['checks']
+    (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, K+1, checks=checks)
+    vote_dists = qfx2_dists[:, 0:K]
+    norm_dists = qfx2_dists[:, K] # k+1th descriptor for normalization
+    # Score the feature matches
+    qfx2_score = np.array([mc2.LNBNN_fn(_vdist.T, norm_dists)
+                           for _vdist in vote_dists.T]).T
+    # Vote using the inverted file 
+    qfx2_cx = ax2_cx[qfx2_ax[:, 0:K]]
+    qfx2_fx = ax2_fx[qfx2_ax[:, 0:K]]
+    qfx2_nx  = temporary_names(qfx2_cx, cx2_nx[qfx2_cx], zeroed_cx_list=[qcx])
+    voters_profile = (qfx2_nx, qfx2_cx, qfx2_fx, qfx2_score)
+    return voters_profile
 
 def temporary_names(cx_list, nx_list, zeroed_cx_list=[], zeroed_nx_list=[]):
     '''
@@ -142,23 +173,62 @@ def viz_votingrule_table(ranked_candiates, ranked_scores, correct_candx, title, 
     df2.figure(fignum=fnum, doclf=True, subplot=(1,1,1))
     ax=plt.gca()
     #plt.plot([10,10,14,14,10],[2,4,4,2,2],'r')
-    col_labels=map(str, np.arange(num_top)+1)
-    row_labels=['cand ids', 'cand scores','correct ranking', 'correct score']
-    table_vals=[map(str, top_cands),
-                map(str, top_scores),
-                [str(correct_rank)]  + [''] * (num_top-1), 
-                [str(correct_score)] + [''] * (num_top-1)]
+    col_labels=map(lambda x: '%8d' % x, np.arange(num_top)+1)
+    row_labels=['cand ids        ',
+                'cand scores     ',
+                'correct ranking ',
+                'correct score   ']
+    table_vals=[map(lambda x: '%8d' % x, top_cands),
+                map(lambda x: '%8.2f' % x, top_scores),
+                ['%8d' % (correct_rank)]  + ['        '] * (num_top-1), 
+                ['%8.2f' % correct_score] + ['        '] * (num_top-1)]
 
-    print col_labels
-    print row_labels
-    print table_vals
     #matplotlib.table.Table
     # the rectangle is where I want to place the table
-    the_table = plt.table(cellText=table_vals,
-                    rowLabels=row_labels,
-                    colLabels=col_labels,
-                    colWidths = [0.1]*num_top,
-                    loc='center')
+    #the_table = plt.table(cellText=table_vals,
+                    #rowLabels=row_labels,
+                    #colLabels=col_labels,
+                    #colWidths = [0.1]*num_top,
+                    #loc='center')
+    def latex_table(row_labels, col_labels, table_vals):
+        #matplotlib.rc('text', usetex=True)
+        #print('col_labels=%r' % col_labels)
+        #print('row_labels=%r' % row_labels)
+        #print('table_vals=%r' % table_vals)
+        nRows = len(row_labels)
+        nCols = len(col_labels)
+        def tableline(list_, rowlbl): 
+            return rowlbl + ' & '+(' & '.join(list_))+'\\\\'
+        collbl = tableline(col_labels, ' '*16)
+        col_strs = [collbl, '\hline'] + [tableline(rowvals, rowlbl) for rowlbl, rowvals in zip(row_labels, table_vals)]
+        col_split = '\n'
+        body = col_split.join(col_strs)
+        col_placement = ' c || '+(' | '.join((['c']*nCols)))
+        latex_str = textwrap.dedent(r'''
+        \begin{tabular}{%s}
+        %s
+        \end{tabular}
+        ''') % (col_placement, helpers.indent(body))
+        print(latex_str)
+        plt.text(0, 0, latex_str, fontsize=14, 
+                 horizontalalignment='left',
+                 verticalalignment='bottom',
+                 fontname='Courier New')
+                 #family='monospaced')
+        #print(matplotlib.font_manager.findSystemFonts(fontpaths=None, fontext='ttf'))
+        #print(matplotlib.font_manager.findfont('Courier'))
+        #fontname
+        r'''
+        \begin{tabular}{ c || c | c | c | c | c} 
+                        & 1      & 2      & 3      & 4      &      5\\
+        \hline
+        cand ids        & 3      & 38     & 32     & 40     &      5\\
+        cand scores     & 4512.0 & 4279.0 & 4219.0 & 4100.0 & 3960.0\\
+        correct ranking & 25     &        &        &        &       \\
+        correct score   & 1042.0 &        &        &        &       \\
+        \end{tabular}
+        '''
+    latex_table(row_labels, col_labels, table_vals)
     df2.set_figtitle(title)
 
 

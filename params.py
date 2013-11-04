@@ -68,8 +68,8 @@ for key, val in dev_databases.iteritems():
     exec('%s = %r' % (key, val))
 
 
-#DEFAULT = NAUTS
-DEFAULT = LF_ALL
+DEFAULT = NAUTS
+#DEFAULT = LF_ALL
 
 #=====================================================
 # Flann Configurations

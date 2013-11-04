@@ -1,6 +1,57 @@
 #exec(open('__init__.py').read())
 #exec(open('_research/investigate_chip.py').read())
 from __future__ import division
+import argparse
+
+# Moved this up for faster help responce time
+def parse_arguments():
+    '''
+    Defines the arguments for investigate_chip.py
+    '''
+    print('==================')
+    print('[invest] ---------')
+    print('[invest] ARGPARSE')
+    parser = argparse.ArgumentParser(description='HotSpotter - Investigate Chip', prefix_chars='+-')
+    def_on  = {'action':'store_false', 'default':True}
+    def_off = {'action':'store_true', 'default':False}
+    addarg = parser.add_argument
+    def add_meta(switch, type, default, help, step=None, **kwargs):
+        dest = switch.strip('-').replace('-','_')
+        addarg(switch, metavar=dest, type=type, default=default, help=help, **kwargs)
+        if not step is None:
+            add_meta(switch+'-step', type, step, help='', **kwargs)
+    def add_bool(switch, default=True, help=''):
+        action = 'store_false' if default else 'store_true' 
+        dest = switch.strip('-').replace('-','_')
+        addarg(switch, dest=dest, action=action, default=default, help=help)
+    def add_int(switch, default, help, **kwargs):
+        add_meta(switch, int, default, help, **kwargs)
+    def add_float(switch, default, help, **kwargs):
+        add_meta(switch, float, default, help, **kwargs)
+    def add_str(switch, default, help, **kwargs):
+        add_meta(switch, str, default, help, **kwargs)
+    def test_bool(switch):
+        add_bool(switch, False, '')
+    add_int('--qcid',  None, 'query chip-id to investigate', nargs='*')
+    add_int('--ocid',  [], 'query chip-id to investigate', nargs='*')
+    add_int('--histid', 0, 'history id (hard cases)')
+    add_int('--nRows', 1, 'number of rows')
+    add_int('--nCols', 1, 'number of cols')
+    add_float('--xy-thresh', .001, '', step=.005)
+    add_float('--ratio-thresh', 1.2, '', step=.1)
+    add_int('--K', 10, 'for K-nearest-neighbors', step=20)
+    add_str('--db', 'MOTHERS', 'database to load')
+    test_bool('--show-names')
+    add_bool('--noprinthist', default=True)
+    add_str('--tests', [], 'integer or test name', nargs='*')
+    args, unknown = parser.parse_known_args()
+    print('[invest] args    = %r' % (args,))
+    print('[invest] unknown = %r' % (unknown,))
+    print('[invest] ---------')
+    print('==================')
+    return args
+args = parse_arguments()
+
 import numpy as np
 import load_data2 as ld2
 import draw_func2 as df2
@@ -116,35 +167,11 @@ def top_matching_features(res, axnum=None, match_type=''):
     df2.plot(sorted_score)
 
 
-def build_voters_profile(hs, qcx, K):
-    cx2_nx = hs.tables.cx2_nx
-    hs.ensure_matcher_type('vsmany')
-    K += 1
-    desc1 = hs.feats.cx2_desc[qcx]
-    vsmany_index = hs.matcher._Matcher__vsmany_index
-    vsmany_flann = vsmany_index.vsmany_flann
-    ax2_cx       = vsmany_index.ax2_cx
-    ax2_fx       = vsmany_index.ax2_fx
-    print('[invest] Building voter preferences over %s indexed descriptors. K=%r' %
-          (helpers.commas(len(ax2_cx)), K))
-    checks       = params.VSMANY_FLANN_PARAMS['checks']
-    (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, K+1, checks=checks)
-    vote_dists = qfx2_dists[:, 0:K]
-    norm_dists = qfx2_dists[:, K] # k+1th descriptor for normalization
-    # Score the feature matches
-    qfx2_score = np.array([mc2.LNBNN_fn(_vdist.T, norm_dists)
-                           for _vdist in vote_dists.T]).T
-    # Vote using the inverted file 
-    qfx2_cx = ax2_cx[qfx2_ax[:, 0:K]]
-    qfx2_fx = ax2_fx[qfx2_ax[:, 0:K]]
-    qfx2_nx  = vr2.temporary_names(qfx2_cx, cx2_nx[qfx2_cx], zeroed_cx_list=[qcx])
-    voters_profile = (qfx2_nx, qfx2_cx, qfx2_fx, qfx2_score)
-    return voters_profile
 
 def investigate_scoring_rules(hs, qcx, fnum=1):
-    K = 4
-    vr2.rrr()
-    voters_profile = build_voters_profile(hs, qcx, K)
+    args = hs.args
+    K = 4 if args.K is None else args.K
+    voters_profile = vr2.build_voters_profile(hs, qcx, K)
     vr2.apply_voting_rules(hs, qcx, voters_profile, fnum)
     fnum += 1
     return fnum
@@ -160,11 +187,12 @@ cx_list='gt1'
 def vary_query_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
                       assign_alg='vsone', nParam1=3, nParam2=3, fnum=1,
                       cx_list='gt'):
+    args = hs.args
     possible_variations = {
                         # start, #step  #props
-        'K'            : (10,      20, 'int'),
-        'ratio_thresh' : (1.6,   0.10),  
-        'xy_thresh'    : (0.001, 0.01), 
+        'K'            : (args.K,      args.K_step, 'int'),
+        'ratio_thresh' : (args.ratio_thresh, args.ratio_thresh_step),  
+        'xy_thresh'    : (args.xy_thresh, args.xy_thresh_step), 
         'scale_min'    : (0.5,   0.01),
         'scale_max'    : (2.0,  -0.01)
     }
@@ -181,7 +209,7 @@ def vary_query_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
     #cx = cx_list[0]
     for cx in cx_list:
         fnum = vary_two_params(hs, qcx, cx, param_ranges, assign_alg,
-                               nParam1, nParam2, fnum)
+                               args.nRows, args.nCols, fnum)
     return fnum
 
 
@@ -264,9 +292,7 @@ def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3,
             _show_matches_helper(fm_V, fs_V, rowx, colx+2, '')
             _set_xlabel(title)
     df2.set_figtitle(assign_alg+' vary '+param1+' and '+param2+' \n qcid=%r, cid=%r' % (cid1, cid2))
-    df2.adjust_subplots(left=0.03, right=1.0,
-                        bottom=0.1, top=0.85,
-                        wspace=0.01, hspace=0.01)
+    df2.adjust_subplots_xylabels()
     fnum += 1
     return fnum
 
@@ -400,14 +426,46 @@ def compare_matching_methods(hs, qcx, fnum=1):
     fnum+=1
     return fnum
 
-def view_all_history_names_in_db(hs, db):
+# ^^^^^^^^^^^^^^^^^
+# Tests
+
+_stdoutlock = None
+def start_stdout():
+    global _stdoutlock
+    _stdoutlock = helpers.RedirectStdout(autostart=True)
+def stop_stdout():
+    global _stdoutlock
+    _stdoutlock.stop()
+#rss = helpers.RedirectStdout(autostart=True)
+#rss.stop()
+    
+def hs_from_db(db):
+    # Load hotspotter
+    db_dir = eval('params.'+db)
+    print('loading hotspotter database')
+    with helpers.RedirectStdout(show_on_exit=False) as rss:
+        try:
+            hs = ld2.HotSpotter()
+            hs.load_all(db_dir, matcher=False)
+            hs.set_samples()
+        except Exception as ex:
+            rss.dump()
+            raise
+    print('loaded hotspotter database')
+    return hs
+
+def get_all_history(db):
     qcid_list =[]
     for (db_, qcid, ocids, notes) in HISTORY:
         if db == db_:
             qcid_list += [qcid]
-    print('qcid_list = %r ' % qcid_list)
     qcx_list = hs.cid2_cx(qcid_list)
-    print('qcx_list = %r ' % qcid_list)
+    #print('qcid_list = %r ' % qcid_list)
+    #print('qcx_list = %r ' % qcid_list)
+    return qcx_list
+
+def view_all_history_names_in_db(hs, db):
+    qcx_list = get_all_history(db)
     nx_list = hs.tables.cx2_nx[qcx_list]
     unique_nxs = np.unique(nx_list)
     print('unique_nxs = %r' % unique_nxs)
@@ -419,44 +477,6 @@ def view_all_history_names_in_db(hs, db):
         df2.save_figure(fpath='hard_names', usetitle=True)
     helpers.vd('hard_names')
 
-def parse_arguments():
-    '''
-    Defines the arguments for investigate_chip.py
-    '''
-    print('==================')
-    print('[invest] ---------')
-    print('[invest] ARGPARSE')
-    import argparse
-    parser = argparse.ArgumentParser(description='HotSpotter - Investigate Chip', prefix_chars='+-')
-    def_on  = {'action':'store_false', 'default':True}
-    def_off = {'action':'store_true', 'default':False}
-    addarg = parser.add_argument
-    def add_meta(switch, type, default, help, nargs=1):
-        dest = switch.strip('-').replace('-','_')
-        addarg(switch, metavar=dest, type=type, default=default, help=help, nargs=nargs)
-    def add_int(switch, default, help, **kwargs):
-        add_meta(switch, int, default, help, **kwargs)
-    def add_str(switch, default, help):
-        add_meta(switch, str, default, help)
-    def add_bool(switch, default, help):
-        action = 'store_false' if default else 'store_true' 
-        dest = switch.strip('-').replace('-','_')
-        addarg(switch, dest=dest, action=action, default=default, help=help)
-    def test_bool(switch):
-        add_bool(switch, False, 'runs this test')
-    add_int('--qcid',  1, 'query chip-id to investigate', nargs='*')
-    add_int('--ocid',  [], 'query chip-id to investigate', nargs='*')
-    add_int('--histid', None, 'history id (hard cases)')
-    add_str('--db', 'MOTHERS', 'database to load')
-    test_bool('--show-names')
-    test_bool('--test1')
-    test_bool('--test2')
-    args, unknown = parser.parse_known_args()
-    print('[invest] args    = %r' % (args,))
-    print('[invest] unknown = %r' % (unknown,))
-    print('[invest] ---------')
-    print('==================')
-    return args
 
 def run_investigations(qcx, args):
     print('[invest] Running Investigation: '+hs.cxstr(qcx))
@@ -465,33 +485,48 @@ def run_investigations(qcx, args):
     if args.show_names:
         fnum = plot_name(hs, qcx, fnum)
     #fnum = compare_matching_methods(hs, qcx, fnum)
-    if args.test1:
+    if '1' in args.tests:
+        hs.ensure_matcher_type('vsone')
         fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 4, 4, fnum, cx_list='gt1')
-    #hs.ensure_matcher_type('vsmany')
-    #fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 4, 4, fnum, cx_list='gt1') #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=10)
-    #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=20)
-    #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
-    #fnum = investigate_scoring_rules(hs, qcx, fnum)
+    if '2' in args.tests:
+        hs.ensure_matcher_type('vsmany')
+        fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 4, 4, fnum, cx_list='gt1') 
+    if '3' in args.tests:
+        fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=args.K)
+    if '4' in args.tests:
+        fnum = investigate_scoring_rules(hs, qcx, fnum)
 
-def hs_from_db(db):
-    # Load hotspotter
-    db_dir = eval('params.'+db)
-    hs = ld2.HotSpotter()
-    hs.load_all(db_dir, matcher=False)
-    hs.set_samples()
-    return hs
+def ensure_iterable(obj):
+    if np.iterable(obj):
+        return obj
+    else:
+        return [obj]
 
+#fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=20)
+#fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
+#===========
+# Main Script
+# exec(open('investigate_chip.py').read())
 if __name__ == '__main__':
-    #exec(open('investigate_chip.py').read())
     if not 'hs' in vars():
-        args = parse_arguments()
-        if not args.histid is None: # Grab an example
-            (args.db, args.qcid, args.ocid, notes) = HISTORY[args.histid]
-        hs = hs_from_db(args.db)
-        qcxs = hs.cid2_cx(args.qcid)
-        ocxs = hs.cid2_cx(args.ocid)
-        if not np.iterable(qcxs):
-            qcxs = [qcxs]
+        # Load Hotspotter
+        print('[invest] Loading DB=%r' % args.db)
+        if args.noprinthist:
+            print('[invest] History table:')
+            count = 0
+            for hist in HISTORY:
+                if args.db == hist[0]:
+                    print(str(count)+': '+repr((hist)))
+                    count += 1
+        hs   = hs_from_db(args.db)
+        hs.args = args # TODO Integrate this elsewhere
+        # Get query ids
+        if not args.qcid is None:
+            qcxs = hs.cid2_cx(args.qcid)
+        else:
+            print('[invest] Chosen histid=%r' % args.histid)
+            qcxs = get_all_history(args.db)[args.histid]
+        qcxs = ensure_iterable(qcxs)
     print('[invest] running ')
     fmtstr = helpers.make_progress_fmt_str(len(qcxs), '[invest] investigation ')
     print('====================')

@@ -932,11 +932,14 @@ def toc(tt):
 
 # from http://stackoverflow.com/questions/6796492/python-temporarily-redirect-stdout-stderr
 class RedirectStdout(object):
-    def __init__(self, lbl=None):
+    def __init__(self, lbl=None, autostart=False, show_on_exit=True):
         self._stdout_old = sys.stdout
         self.stream = cStringIO.StringIO()
         self.record = '<no record>'
         self.lbl = lbl
+        self.show_on_exit = show_on_exit
+        if autostart:
+            self.start()
     def start(self):
         sys.stdout.flush()
         sys.stdout = self.stream
@@ -953,7 +956,8 @@ class RedirectStdout(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self.stop()
         if not self.lbl is None:
-            self.dump()
+            if self.show_on_exit:
+                self.dump()
 
 def choose(n,k):
     import scipy.misc
@@ -1319,6 +1323,8 @@ def commas(num, n=8):
 
 def format(num, n=8):
     '''makes numbers pretty e.g.
+    nums = [9001, 9.053]
+    print([format(num) for num in nums])
     '''
     if is_float(num):
         ret = ('%.'+str(n)+'E') % num
@@ -1334,8 +1340,6 @@ def format(num, n=8):
         ret = flt_part + exp_part
         return ret
     return '%d' % num
-nums = [9001, 9.053]
-print([format(num) for num in nums])
     
 
 def cartesian(arrays, out=None):

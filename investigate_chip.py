@@ -495,6 +495,8 @@ def run_investigations(qcx, args):
         fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=args.K)
     if '4' in args.tests:
         fnum = investigate_scoring_rules(hs, qcx, fnum)
+    if '5' in args.tests:
+        fnum = mc2.matcher_test(hs, qcx, fnum)
 
 def ensure_iterable(obj):
     if np.iterable(obj):

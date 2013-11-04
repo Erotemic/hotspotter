@@ -511,6 +511,7 @@ def str2(obj):
 
 def tiled_range(range, cols):
     return np.tile(np.arange(range), (cols, 1)).T
+    #np.tile(np.arange(num_qf).reshape(num_qf, 1), (1, k_vsmany)) 
 
 def random_indexes(max_index, subset_size):
     subst_ = np.arange(0, max_index)

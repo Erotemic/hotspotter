@@ -367,7 +367,7 @@ def build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches,
         print('...query: %.2f seconds\n' % (res.verify_time + res.assign_time))
     res.save(hs, remove_init=remove_init)
 
-def build_result_qcx(hs, qcx, use_cache=True, remove_init=True):
+def build_result_qcx(hs, qcx, use_cache=True, remove_init=True, krnn=False):
     'this should be the on-the-fly / Im going to check things function'
     res = QueryResult(qcx)
     if use_cache and res.has_cache(hs):
@@ -375,6 +375,9 @@ def build_result_qcx(hs, qcx, use_cache=True, remove_init=True):
         if not remove_init and res.has_init_assign():
             return res
     verbose = True
+    #print('krnn=%r' % krnn)
+    #print(hs.matcher)
+    hs.matcher._Matcher__vsmany_index.use_krnn = krnn
     assign_matches = hs.matcher.assign_matches
     cx2_desc = hs.feats.cx2_desc
     cx2_kpts = hs.feats.cx2_kpts
@@ -625,6 +628,8 @@ class VsManyIndex(DynStruct): # TODO: rename this
         self.ax2_desc  = ax2_desc # not used, but needs to maintain scope
         self.ax2_cx = ax2_cx
         self.ax2_fx = ax2_fx
+        self.checks = 128
+        self.use_krnn = False
     def __del__(self):
         print('[mc2] Deleting VsManyIndex')
 
@@ -713,7 +718,7 @@ def quick_flann_index(data):
 def nearest_neighbors(query, data_flann, K, checks=128):
     (qfx2_dx, qfx2_dists) = data_flann.nn_index(query, K, checks=checks)
 
-def reciprocal_nearest_neighbors(query, data, data_flann, checks):
+def reciprocal_nearest_neighbors(query, data, data_flann, K, checks):
     nQuery, dim = query.shape
     # Assign query features to K nearest database features
     (qfx2_dx, qfx2_dists) = data_flann.nn_index(query, K, checks=checks)
@@ -742,31 +747,41 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
 
     # vsmany_index = hs.matcher._Matcher__vsmany_index
     #helpers.println('Assigning vsmany feature matches from qcx=%d to %d chips'\ % (qcx, len(cx2_desc)))
-    vsmany_flann = vsmany_index.vsmany_flann
-    score_fn = scoring_func_map[params.__VSMANY_SCORE_FN__]
     isQueryIndexed = True
-    desc1 = cx2_desc[qcx]
     k_vsmany = params.__VSMANY_K__+1 if isQueryIndexed else params.__VSMANY_K__
     checks   = params.VSMANY_FLANN_PARAMS['checks']
+    vsmany_flann = vsmany_index.vsmany_flann
+    ax2_cx       = vsmany_index.ax2_cx
+    ax2_fx       = vsmany_index.ax2_fx
+    ax2_desc     = vsmany_index.ax2_desc
+    score_fn = scoring_func_map[params.__VSMANY_SCORE_FN__]
+    desc1 = cx2_desc[qcx]
     # Find each query descriptor's k+1 nearest neighbors
-    (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, k_vsmany+1, checks=checks)
+    if vsmany_index.use_krnn:
+        print('Using Recriprocal')
+        (qfx2_ax, qfx2_dists, isReciprocal) = reciprocal_nearest_neighbors(desc1, ax2_desc, vsmany_flann, k_vsmany+1, checks)
+    else:
+        (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, k_vsmany+1, checks=checks)
+        isReciprocal = np.ones(qfx2_ax.shape, dtype=np.bool)
+    isReciprocal = isReciprocal[:,0:k_vsmany]
     vote_dists = qfx2_dists[:, 0:k_vsmany]
     norm_dists = qfx2_dists[:, k_vsmany] # k+1th descriptor for normalization
     # Score the feature matches
     qfx2_score = np.array([score_fn(_vdist.T, norm_dists)
                            for _vdist in vote_dists.T]).T
     # Vote using the inverted file 
-    ax2_cx       = vsmany_index.ax2_cx
-    ax2_fx       = vsmany_index.ax2_fx
     qfx2_cx = ax2_cx[qfx2_ax[:, 0:k_vsmany]]
     qfx2_fx = ax2_fx[qfx2_ax[:, 0:k_vsmany]]
     # Build feature matches
     cx2_fm = [[] for _ in xrange(len(cx2_desc))]
     cx2_fs = [[] for _ in xrange(len(cx2_desc))]
     num_qf = len(desc1)
-    qfx2_qfx = np.tile(np.arange(num_qf).reshape(num_qf, 1), (1, k_vsmany)) 
-    iter_matches = iter(zip(qfx2_qfx.flat, qfx2_cx.flat,
-                            qfx2_fx.flat, qfx2_score.flat))
+    qfx2_qfx = helpers.tiled_range(num_qf, k_vsmany)
+    #iter_matches = iter(zip(qfx2_qfx.flat, qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat))
+    iter_matches = iter(zip(qfx2_qfx[isReciprocal],
+                            qfx2_cx[isReciprocal],
+                            qfx2_fx[isReciprocal],
+                            qfx2_score[isReciprocal]))
     for qfx, cx, fx, score in iter_matches:
         if qcx == cx: 
             continue # dont vote for yourself
@@ -1039,6 +1054,22 @@ class Matcher(DynStruct):
         return assign_matches_bagofwords(qcx, cx2_desc, self.__bow_index)
 
 
+
+def matcher_test(hs, qcx, fnum=1):
+    hs.ensure_matcher_type('vsmany')
+    for cx in hs.get_other_indexed_cxs(qcx):
+        df2.figure(fignum=fnum)
+        res = build_result_qcx(hs, qcx, use_cache=False, remove_init=False, krnn=False)
+        res2 = build_result_qcx(hs, qcx, use_cache=False, remove_init=False, krnn=True)
+
+        df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(2,2,1), SV=False)
+        df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(2,2,2), SV=True)
+
+        df2.show_matches_annote_res(res2, hs, cx, draw_pts=False, plotnum=(2,2,3), SV=False)
+        df2.show_matches_annote_res(res2, hs, cx, draw_pts=False, plotnum=(2,2,4), SV=True)
+        fnum += 1
+    return fnum
+
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     import load_data2
@@ -1058,27 +1089,8 @@ if __name__ == '__main__':
 
     #qcx = 111
     #cx = 305
-    qcx = 0
-    cx = hs.get_other_indexed_cxs(qcx)[0]
-    fm, fs, score = hs.get_assigned_matches_to(qcx, cx)
-    rchip1 = hs.get_chip(qcx)
-    rchip2 = hs.get_chip(cx)
-    # Get keypoints
-    kpts1 = hs.get_kpts(qcx)
-    kpts2 = hs.get_kpts(cx)
-
-    res = build_result_qcx(hs, qcx, remove_init=False)
-    df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(1,2,1))
-    df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(1,2,2), SV=False)
-
-    if len(sys.argv) > 1:
-        try:
-            cx = int(sys.argv[1])
-            print('cx=%r' % cx)
-        except Exception as ex:
-            print('exception %r' % ex)
-            raise
-            print('usage: feature_compute.py [cx]')
-            pass
+    qcx = helpers.get_arg_after('--qcx', type_=int)
+    if qcx is None: qcx = 0
+    matcher_test(hs, qcx)
 
     exec(df2.present())

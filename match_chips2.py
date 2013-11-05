@@ -33,6 +33,7 @@ import pyflann
 import scipy as sp
 import scipy.sparse as spsparse
 import sklearn.preprocessing 
+from itertools import izip
 #print('LOAD_MODULE: match_chips2.py')
 
 def reload_module():
@@ -115,6 +116,9 @@ def fix_qcx2_res_types(qcx2_res):
         helpers.print_(fmt_str % (qcx))
         res = qcx2_res[qcx]
         fix_res_types(res)
+#==========================
+# FLANN Parts
+#==========================
 
 #=========================
 # Query Result Class
@@ -211,9 +215,6 @@ class QueryResult(DynStruct):
         num_top = min(N, len(top_cxs))
         topN_cxs = top_cxs[0:num_top]
         return topN_cxs
-
-
-
 
 #========================================
 # Work Functions
@@ -655,7 +656,7 @@ def __aggregate_descriptors(cx2_desc, indexed_cxs):
     sx2_cx   = indexed_cxs
     sx2_desc = cx2_desc[sx2_cx]
     sx2_numfeat = [len(k) for k in iter(cx2_desc[sx2_cx])]
-    cx_numfeat_iter = iter(zip(sx2_cx, sx2_numfeat))
+    cx_numfeat_iter = izip(sx2_cx, sx2_numfeat)
     # create indexes from agg desc back to chipx and featx
     _ax2_cx = [[cx]*num_feats for (cx, num_feats) in cx_numfeat_iter]
     _ax2_fx = [range(num_feats) for num_feats in iter(sx2_numfeat)]
@@ -723,25 +724,107 @@ def desc_nearest_neighbors(desc, vsmany_index, K=None):
 # Frequency Reranking
 
 
-def quick_flann_index(data):
-    data_flann = pyflann.FLANN()
-    flann_params =  params.VSMANY_FLANN_PARAMS
-    checks = flann_params['checks']
-    data_flann.build_index(data, **flann_params)
-    return data_flann
-
-def nearest_neighbors(query, data_flann, K, checks):
-    (qfx2_dx, qfx2_dists) = data_flann.nn_index(query, K, checks=checks)
-    # all are valid
+def nearest_neighbors(qfx2_desc, data_flann, K, checks):
+    'Plain Nearest Neighbors'
+    (qfx2_dx, qfx2_dists) = data_flann.nn_index(qfx2_desc, K, checks=checks)
+    # All neighbors are valid
     qfx2_valid = np.ones(qfx2_dx.shape, dtype=np.bool)
     return qfx2_dx, qfx2_dists, qfx2_valid
 
-def reciprocal_nearest_neighbors(query, data, data_flann, K, checks):
-    nQuery, dim = query.shape
+# TODO: For Spatial Nearest Neighbors
+# 1) Change kpts to be in the range 0 to 1
+# 2) Make a quick lookup table for chip size
+'''
+K = 3
+qfx2_xy1 = np.array([(.1, .1), (.2, .2), (.3, .3)])
+qfx2_xy2 = np.array([((.1, .1), (.2, .2), (.3, .3)), 
+                     ((.1, .1), (.2, .2), (.3, .3)), 
+                     ((.1, .1), (.2, .2), (.3, .3)), 
+                     ((.1, .1), (.2, .2), (.3, .3)) ])
+arr = qfx2_xy2
+'''
+
+def tile_before_axis(arr, axis, num):
+    repl = tuple([num] + ([1]*len(arr.shape)))
+    rollax = np.rollaxis
+    tile  = np.tile
+    return rollax(rollax(tile(rollax(arr, axis, 0), repl), 0, axis+2), 0, axis+2)
+    #roll1 = np.rollaxis(arr, axis, 0)
+    #tarr = np.tile(roll1, repl)
+    #tarr2 = np.rollaxis(tarr, 0, axis+2)
+    #tarr3 = np.rollaxis(tarr2, 0, axis+2)
+    #print(arr.shape)
+    #print(roll1.shape)
+    #print(tarr.shape)
+    #print(tarr2.shape)
+    #print(tarr3.shape)
+
+def snn_testdata(hs):
+    hs.ensure_matcher_type('vsmany')
+    vsmany_index = hs.matcher._Matcher__vsmany_index
+    cx2_desc = hs.feats.cx2_desc
+    cx2_kpts = hs.feats.cx2_kpts
+    qcx = 0
+    qfx2_desc = cx2_desc[qcx]
+    qfx2_kpts = cx2_kpts[qcx]
+    cx2_rchip_size = hs.get_cx2_rchip_size()
+    qchipdiag = np.sqrt((np.array(cx2_rchip_size[qcx])**2).sum())
+    data_flann = vsmany_index.vsmany_flann
+    dx2_desc = vsmany_index.ax2_desc
+    dx2_cx = vsmany_index.ax2_cx
+    dx2_fx = vsmany_index.ax2_fx
+    K = 3
+    checks = 128
+
+def spatial_nearest_neighbors(qfx2_desc, qfx2_kpts, qchipdiag, dx2_desc, dx2_kpts, dx2_cx, data_flann, K, checks):
+    'K Spatial Nearest Neighbors'
+    nQuery, dim = qfx2_desc.shape
+    # Get nearest neighbors #.2690s 
+    (qfx2_dx, qfx2_dists) = data_flann.nn_index(qfx2_desc, K, checks=checks)
+    # Get matched chip sizes #.0300s
+    qfx2_cx = dx2_cx[qfx2_dx]
+    qfx2_fx = dx2_fx[qfx2_dx]
+    qfx2_chipsize2 = np.array([cx2_rchip_size[cx] for cx in qfx2_cx.flat])
+    qfx2_chipsize2.shape = (nQuery, K, 2)
+    qfx2_chipdiag2 = np.sqrt((qfx2_chipsize2**2).sum(2))
+    # Get query relative xy keypoints #.0160s / #.0180s (+cast)
+    qfx2_xy1 = np.array(qfx2_kpts[:, 0:2], np.float)
+    qfx2_xy1[:,0] /= qchipdiag
+    qfx2_xy1[:,1] /= qchipdiag
+    # Get database relative xy keypoints
+    qfx2_xy2 = np.array([cx2_kpts[cx][fx, 0:2] for (cx, fx) in
+                         izip(qfx2_cx.flat, qfx2_fx.flat)], np.float)
+    qfx2_xy2.shape = (nQuery, K, 2)
+    qfx2_xy2[:,:,0] /= qfx2_chipdiag2
+    qfx2_xy2[:,:,1] /= qfx2_chipdiag2
+    # Get the relative distance # .0010s
+    qfx2_K_xy1 = np.rollaxis(np.tile(qfx2_xy1, (K, 1, 1)), 1)
+    qfx2_xydist = ((qfx2_K_xy1 - qfx2_xy2)**2).sum(2)
+    qfx2_dist_valid = qfx2_xydist < .5
+
+    # Do scale for funzies
+    qfx2_det1 = np.array(qfx2_kpts[:, [2,4]], np.float).prod(1)
+    qfx2_det1 = np.sqrt(1.0/qfx2_det1)
+    qfx2_K_det1 = np.rollaxis(np.tile(qfx2_det1, (K, 1)), 1)
+    qfx2_det2 = np.array([cx2_kpts[cx][fx, [2,4]] for (cx, fx) in
+                          izip(qfx2_cx.flat, qfx2_fx.flat)], np.float).prod(1)
+    qfx2_det2.shape = (nQuery, K)
+    qfx2_det2 = np.sqrt(1.0/qfx2_det2)
+    qfx2_scaledist = qfx2_det2 / qfx2_K_det1
+
+    qfx2_scale_valid = np.bitwise_and(qfx2_scaledist > .5, qfx2_scaledist < 2)
+    
+    # All neighbors are valid
+    qfx2_valid = np.bitwise_and(qfx2_dist_valid, scale_valid)
+    return qfx2_dx, qfx2_dists, qfx2_valid
+
+def reciprocal_nearest_neighbors(qfx2_desc, dx2_desc, data_flann, K, checks):
+    'K Reciprocal Nearest Neighbors'
+    nQuery, dim = qfx2_desc.shape
     # Assign query features to K nearest database features
-    (qfx2_dx, qfx2_dists) = data_flann.nn_index(query, K, checks=checks)
+    (qfx2_dx, qfx2_dists) = data_flann.nn_index(qfx2_desc, K, checks=checks)
     # Assign those nearest neighbors to K nearest database features
-    qx2_nn = data[qfx2_dx]
+    qx2_nn = dx2_desc[qfx2_dx]
     qx2_nn.shape = (nQuery*K, dim)
     (_nn2_dx, nn2_dists) = data_flann.nn_index(qx2_nn, K, checks=checks)
     # Get the maximum distance of the reciprocal neighbors
@@ -790,11 +873,11 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
     cx2_fs = [[] for _ in xrange(len(cx2_desc))]
     nQuery = len(qdesc)
     qfx2_qfx = helpers.tiled_range(nQuery, k_vsmany)
-    #iter_matches = iter(zip(qfx2_qfx.flat, qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat))
-    iter_matches = iter(zip(qfx2_qfx[qfx2_valid],
-                            qfx2_cx[qfx2_valid],
-                            qfx2_fx[qfx2_valid],
-                            qfx2_score[qfx2_valid]))
+    #iter_matches = izip(qfx2_qfx.flat, qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat)
+    iter_matches = izip(qfx2_qfx[qfx2_valid],
+                        qfx2_cx[qfx2_valid],
+                        qfx2_fx[qfx2_valid],
+                        qfx2_score[qfx2_valid])
     for qfx, cx, fx, score in iter_matches:
         if qcx == cx: 
             continue # dont vote for yourself
@@ -818,31 +901,37 @@ def assign_matches_vsmany_BINARY(qcx, cx2_desc):
 #========================================
 # One-vs-One 
 #========================================
+class VsOneArgs(DynStruct):
+    ''' Thresholds: 
+        ratio_thresh = 1.2 - keep if dist(2)/dist(1) > ratio_thresh
+        burst_thresh = 1   - keep if 0 < matching_freq(desc1) <= burst_thresh '''
+    def __init__(self, **kwargs):
+        self.cxs          = None
+        self.knn_fn       = None
+        self.burst_thresh = None
+        self.ratio_thresh = params.__VSONE_RATIO_THRESH__
+        self.flann_params = params.VSONE_FLANN_PARAMS
+        self.checks       = self.flann_params['checks']
+        self.__dict__.update(kwargs)
 
-def get_vsone_flann(desc1):
-    vsone_flann = pyflann.FLANN()
-    vsone_flann_params =  params.VSONE_FLANN_PARAMS
-    ratio_thresh = params.__VSONE_RATIO_THRESH__
-    checks = vsone_flann_params['checks']
-    vsone_flann.build_index(desc1, **vsone_flann_params)
-    return vsone_flann, checks
-
-def assign_matches_vsone(qcx, cx2_desc):
+def assign_matches_vsone(qcx, cx2_desc, vsone_args):
+    ''' assigns matches from qcx to all cxs unless cxs is specifid'''
     #print('[mc2] Assigning vsone feature matches from cx=%d to %d chips'\ % (qcx, len(cx2_desc)))
+    if vsone_args is None:
+        vsone_args = VsOneArgs()
+    cxs = xrange(len(cx2_desc)) if vsone_args.cxs is None else vsone_args.cxs
     desc1 = cx2_desc[qcx]
     vsone_flann = pyflann.FLANN()
-    vsone_flann_params =  params.VSONE_FLANN_PARAMS
-    ratio_thresh = params.__VSONE_RATIO_THRESH__
-    checks = vsone_flann_params['checks']
-    vsone_flann.build_index(desc1, **vsone_flann_params)
+    vsone_flann.build_index(desc1, **vsone_args.flann_params)
     cx2_fm = [[] for _ in xrange(len(cx2_desc))]
     cx2_fs = [[] for _ in xrange(len(cx2_desc))]
     sys.stdout.write('assign_matches_vsone')
-    for cx, desc2 in enumerate(cx2_desc):
+    for cx in iter(cxs):
+        desc2 = cx2_desc[cx]
         sys.stdout.write('.')
         #sys.stdout.flush()
         if cx == qcx: continue
-        (fm, fs) = match_vsone(desc2, vsone_flann, checks)
+        (fm, fs) = match_vsone(desc2, vsone_flann, vsone_args)
         cx2_fm[cx] = fm
         cx2_fs[cx] = fs
     sys.stdout.write('DONE')
@@ -852,49 +941,52 @@ def assign_matches_vsone(qcx, cx2_desc):
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     return cx2_fm, cx2_fs, cx2_score
 
+#@profile
+def match_vsone(desc2, vsone_flann, vsone_args):
+    '''Matches desc2 vs desc1 using Lowe's ratio test
+    Input:
+        desc2         - other descriptors (N2xD)
+        vsone_flann   - FLANN index of desc1 (query descriptors (N1xD)) 
+    Output: 
+        fm - Mx2 array of matching feature indexes
+        fs - Mx1 array of matching feature scores '''
+    # features to their matching query features
+    checks = vsone_args.checks
+    (fx2_qfx, fx2_dist) = vsone_flann.nn_index(desc2, 2, checks=checks)
+    # RATIO TEST
+    fx2_ratio  = np.divide(fx2_dist[:, 1], fx2_dist[:, 0]+1E-8)
+    fx_passratio, = np.where(fx2_ratio > vsone_args.ratio_thresh)
+    fx = fx_passratio
+    # BURSTINESS TEST
+    if not vsone_args.burst_thresh is None:
+        fx = filter_bursty_matches(fx2_qfx, fx, vsone_args.burst_thresh)
+    # RETURN vsone matches and scores
+    qfx = fx2_qfx[fx, 0]
+    fm  = np.array(zip(qfx, fx), dtype=FM_DTYPE)
+    #fm  = fm.reshape(len(fm), 2)
+    fm.shape = (len(fm), 2)
+    fs  = np.array(fx2_ratio[fx], dtype=FS_DTYPE)
+    return (fm, fs)
+
+def filter_bursty_matches(fx2_qfx, fx, burst_thresh):
+    ''' Find frequency of descriptor matches. Convert qfx to fx
+    Select the query features which only matched < burst_thresh'''
+    qfx2_frequency = np.bincount(fx2_qfx[:, 0])
+    qfx_nonzero    = qfx2_frequency > 0
+    qfx_nonbursty  = qfx2_frequency <= burst_thresh
+    qfx_nonbursty_unique, = np.where(
+        np.bitwise_and(qfx_nonzero, qfx_nonbursty))
+    _qfx_set      = set(qfx_nonbursty_unique.tolist())
+    fx2_nonbursty = [_qfx in _qfx_set for _qfx in iter(fx2_qfx[:, 0])]
+    fx_nonbursty, = np.where(fx2_nonbursty)
+    fx  = np.intersect1d(fx, fx_nonbursty, assume_unique=True)
+    return fx
+
 def cv2_match(desc1, desc2):
     K = 1
     cv2_matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
     raw_matches = cv2_matcher.knnMatch(desc1, desc2, K)
     matches = [(m1.trainIdx, m1.queryIdx) for m1 in raw_matches]
-
-#@profile
-def match_vsone(desc2, vsone_flann, checks, ratio_thresh=1.2, burst_thresh=None):
-    '''Matches desc2 vs desc1 using Lowe's ratio test
-    Input:
-        desc2         - other descriptors (N2xD)
-        vsone_flann   - FLANN index of desc1 (query descriptors (N1xD)) 
-    Thresholds: 
-        ratio_thresh = 1.2 - keep if dist(2)/dist(1) > ratio_thresh
-        burst_thresh = 1   - keep if 0 < matching_freq(desc1) <= burst_thresh
-    Output: 
-        fm - Mx2 array of matching feature indexes
-        fs - Mx1 array of matching feature scores '''
-    # features to their matching query features
-    (fx2_qfx, fx2_dist) = vsone_flann.nn_index(desc2, 2, checks=checks)
-    # RATIO TEST
-    fx2_ratio  = np.divide(fx2_dist[:, 1], fx2_dist[:, 0]+1E-8)
-    fx_passratio, = np.where(fx2_ratio > ratio_thresh)
-    fx = fx_passratio
-    # BURSTINESS TEST
-    # Find frequency of descriptor matches. Convert qfx to fx
-    # Select the query features which only matched < burst_thresh
-    if not burst_thresh is None:
-        qfx2_frequency = np.bincount(fx2_qfx[:, 0])
-        qfx_occuring   = qfx2_frequency > 0
-        qfx_nonbursty  = qfx2_frequency <= burst_thresh
-        qfx_nonbursty_unique, = np.where(
-            np.bitwise_and(qfx_occuring, qfx_nonbursty))
-        _qfx_set      = set(qfx_nonbursty_unique.tolist())
-        fx2_nonbursty = [_qfx in _qfx_set for _qfx in iter(fx2_qfx[:, 0])]
-        fx_nonbursty, = np.where(fx2_nonbursty)
-        fx  = np.intersect1d(fx, fx_nonbursty, assume_unique=True)
-    # RETURN vsone matches and scores
-    qfx = fx2_qfx[fx, 0]
-    fm  = np.array(zip(qfx, fx), dtype=FM_DTYPE)
-    fm  = fm.reshape(len(fm), 2)
-    fs  = np.array(fx2_ratio[fx], dtype=FS_DTYPE)
-    return (fm, fs)
 
 #========================================
 # Spatial verifiaction 
@@ -1037,6 +1129,7 @@ class Matcher(DynStruct):
         self.match_type = match_type
         # Possible indexing structures
         self.__vsmany_index = None
+        self.__vsone_args   = None
         self.__bow_index    = None
         # Curry the correct functions
         self.__assign_matches = None
@@ -1049,7 +1142,8 @@ class Matcher(DynStruct):
             self.__vsmany_index = precompute_index_vsmany(hs)
             self.__assign_matches = self.__assign_matches_vsmany
         elif match_type == 'vsone':
-            self.__assign_matches = assign_matches_vsone
+            self.__vsone_args = VsOneArgs()
+            self.__assign_matches = self.__assign_matches_vsone
         else:
             raise Exception('Unknown match_type: '+repr(match_type))
     def assign_matches(self, qcx, cx2_desc):
@@ -1059,6 +1153,8 @@ class Matcher(DynStruct):
         if not self.__vsmany_index is None:
             self.__vsmany_index.set_knn_fn(use_reciprocal)
     # query helpers
+    def __assign_matches_vsone(self, qcx, cx2_desc):
+        return assign_matches_vsone(qcx, cx2_desc, self.__vsone_args)
     def __assign_matches_vsmany(self, qcx, cx2_desc):
         return assign_matches_vsmany(qcx, cx2_desc, self.__vsmany_index)
     def __assign_matches_bagofwords(self, qcx, cx2_desc):
@@ -1079,7 +1175,7 @@ def matcher_test(hs, qcx, fnum=1):
         #df2.show_matches_annote_res(res2, hs, cx, draw_pts=False, plotnum=(2,2,4), SV=True)
         #fnum += 1
     N = 5
-    df2.show_match_analysis(hs, res, N, fnum, '-recip')
+    df2.show_match_analysis(hs, res, N, fnum, '+recip')
     fnum += 1
     df2.show_match_analysis(hs, res2, N, fnum, '+recip')
     fnum += 1

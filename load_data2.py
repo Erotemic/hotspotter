@@ -61,6 +61,7 @@ class HotSpotter(DynStruct):
         hs.train_sample_cx    = None
         hs.test_sample_cx     = None
         hs.indexed_sample_cx = None
+        hs.cx2_rchip_size = None
         if load_basic:
             hs.load_basic(db_dir)
         elif not db_dir is None:
@@ -385,14 +386,19 @@ class HotSpotter(DynStruct):
         else:
             return [cx2_kpts[cx_] for cx_ in cx]
     #--------------
-    def cx2_rchip_size(hs, cx):
+    def _cx2_rchip_size(hs, cx):
         rchip_path = hs.cpaths.cx2_rchip_path[cx]
         return Image.open(rchip_path).size
 
-    def get_cx2_rchip_size(hs):
+    def load_cx2_rchip_size(hs):
         cx2_rchip_path = hs.cpaths.cx2_rchip_path
         cx2_rchip_size = [Image.open(path).size for path in cx2_rchip_path]
-        return cx2_rchip_size
+        hs.cx2_rchip_size = cx2_rchip_size
+
+    def get_cx2_rchip_size(hs):
+        if hs.cx2_rchip_size is None:
+            hs.load_cx2_rchip_size()
+        return hs.cx2_rchip_size
     #--------------
     def get_features(hs, cx):
         import spatial_verification2 as sv2
@@ -413,8 +419,7 @@ class HotSpotter(DynStruct):
     #--------------
     def get_assigned_matches(hs, qcx):
         cx2_desc = hs.feats.cx2_desc
-        assign_matches = hs.matcher.assign_matches
-        cx2_fm, cx2_fs, cx2_score = assign_matches(qcx, cx2_desc)
+        cx2_fm, cx2_fs, cx2_score = hs.matcher.assign_matches(qcx, cx2_desc)
         return cx2_fm, cx2_fs, cx2_score
     #--------------
     def get_assigned_matches_to(hs, qcx, cx):

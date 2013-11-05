@@ -786,7 +786,7 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
                         backgroundcolor=(0,0,0,.5))
         x,y = (.01*match_img.shape[0], .01*match_img.shape[1])
         #ax.text(x, y, txt, color='k', **txtargs)
-        ax.text(x, y, txt, color=(.9, .1, .1), **txtargs)
+        ax.text(x, y, txt, color=ORANGE, **txtargs)
     upperleft_text('#match=%d' % len(fm))
     if all_kpts:
         # Draw all keypoints as simple points

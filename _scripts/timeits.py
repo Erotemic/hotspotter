@@ -234,3 +234,72 @@ def imread_timeittesst():
     print('PLT: '+str(timeit.timeit(test3, setup=setup, number=100)))
     print('CV: '+str(timeit.timeit(test1, setup=setup, number=100)))
     # It looks like OpenCV actually has a slight edge
+
+
+'''
+
+
+
+#--------------------------
+#Some array calculations. Corresponcds to mc2.spatial_nearest_neighbors
+#
+# Conclusion: sum() > ().sum() > np.sum()
+import timeit
+setup_small = '''
+from itertools import izip
+import numpy as np
+nQuery = 3
+K = 3
+qfx2_xy1 = np.array([(.1, .1), (.2, .2), (.3, .3)])
+qfx2_xy2 = np.array([((.1, .1), (.2, .2), (.3, .3)), 
+                     ((.1, .1), (.2, .2), (.3, .3)), 
+                     ((.1, .1), (.2, .2), (.3, .3))])
+                     '''
+setup_big = '''
+nQuery = 1000
+K = 10
+qfx2_xy1 = np.random.rand(nQuery, 2)
+qfx2_xy2 = np.random.rand(nQuery, K, 2)
+'''
+setup = setup_small
+
+qfx2_xydist = np.array([
+[sum((xy1 - xy2)**2) for xy2 in nn_xys]
+for (xy1, nn_xys) in izip(qfx2_xy1, qfx2_xy2)])
+
+test1 = '''qfx2_xydist = np.array([
+[((xy1 - xy2)**2).sum() for xy2 in nn_xys]
+for (xy1, nn_xys) in izip(qfx2_xy1, qfx2_xy2)])'''
+
+test2 = '''qfx2_xydist = np.array([
+[sum((xy1 - xy2)**2) for xy2 in nn_xys]
+for (xy1, nn_xys) in izip(qfx2_xy1, qfx2_xy2)])'''
+
+test3 = '''qfx2_xydist = np.array([
+[np.sum((xy1 - xy2)**2) for xy2 in nn_xys]
+for (xy1, nn_xys) in izip(qfx2_xy1, qfx2_xy2)])'''
+
+test11 = '''qfx2_xydist = [[sum((xy1 - xy2)**2) for xy2 in nn_xys]
+                            for (xy1, nn_xys) in izip(qfx2_xy1, qfx2_xy2)]'''
+
+test111 = '''qfx2_xydist = [[sum((xy1 - xy2)**2) for xy2 in nn_xys]
+                             for (xy1, nn_xys) in zip(qfx2_xy1, qfx2_xy2)]'''
+
+kwargs = dict(number=100000, setup=setup)
+
+#print('test1(().sum()) = %r' % timeit.timeit(test1, **kwargs))
+print('test2(sum())    = %r' % timeit.timeit(test2, **kwargs)) # better
+#print('test3(np.sum()) = %r' % timeit.timeit(test3, **kwargs))
+
+print('test11(noarray) = %r' % timeit.timeit(test11, **kwargs)) # better
+print('test111(noizip) = %r' % timeit.timeit(test11, **kwargs)) # worse 
+
+
+test_tile = '''
+qfx2_K_xy1 = np.rollaxis(np.tile(qfx2_xy1, (K, 1, 1)), 1)
+qfx2_xydist = ((qfx2_K_xy1 - qfx2_xy2)**2).sum(2)
+'''
+
+
+print('test_tile(noizip) = %r' % timeit.timeit(test_tile, **kwargs)) # way way better 
+

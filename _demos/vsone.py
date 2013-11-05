@@ -1,8 +1,19 @@
+import sys
 import hotspotter.params as params
 import hotspotter.load_data2 as ld2
 import hotspotter.match_chips2 as mc2
 import hotspotter.draw_func2 as df2
+import hotspotter.params
+import hotspotter.helpers as helpers
+import pyflann
 
+def get_vsone_flann(data):
+    vsone_flann = pyflann.FLANN()
+    vsone_flann_params =  params.VSONE_FLANN_PARAMS
+    ratio_thresh = params.__VSONE_RATIO_THRESH__
+    checks = vsone_flann_params['checks']
+    vsone_flann.build_index(data, **vsone_flann_params)
+    return vsone_flann, checks
 
 # Database descriptor + keypoints
 def get_features(hs, cx):
@@ -16,7 +27,7 @@ def get_vsone_data(query_feats, result_feats):
     qcx, rchip1, fx2_kp1, fx2_desc1 = query_feats
     cx, rchip2, fx2_kp2, fx2_desc2 = result_feats
     rchip_size2 = rchip2.size
-    vsone_flann, checks = mc2.get_vsone_flann(fx2_desc1)
+    vsone_flann, checks = get_vsone_flann(fx2_desc1)
     fm, fs              = mc2.match_vsone(fx2_desc2, vsone_flann, checks)
     fm_V, fs_V          = mc2.spatially_verify(fx2_kp1, fx2_kp2, rchip_size2, fm, fs)
     score = fs.sum(); score_V = fs_V.sum()
@@ -59,14 +70,12 @@ def show_vsone_demo(hs, qcx, cx, fignum=0):
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
-    db_dir = params.GZ if sys.argv == 1 else params.DEFAULT
+    db_dir = params.DEFAULT
     if not 'hs' in vars():
         hs = ld2.HotSpotter()
         hs.load_all(db_dir, matcher=False)
-        qcx = helpers.get_arg_after('--qcx', type_=int)
+        qcx = helpers.get_arg_after('--qcx', type_=int, default=0)
         cx = helpers.get_arg_after('--cx', type_=int)
-        if qcx is None:
-            qcx = 1046
         if cx is None:
             cx_list = hs.get_other_cxs(qcx)
         else:
@@ -74,7 +83,7 @@ if __name__ == '__main__':
         
     print('cx_list = %r ' % cx_list)
     for fignum, cx in enumerate(cx_list):
-        show_vsone_demo(qcx, cx, fignum=fignum)
+        show_vsone_demo(hs, qcx, cx, fignum=fignum)
     exec(df2.present())
 '''
 python vsone.py GZ --qcx 1046

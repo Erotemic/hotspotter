@@ -110,45 +110,21 @@ HISTORY = [
 
 
 def quick_assign_vsmany(hs, qcx, cx, K): 
-    #if hs.isindexed(qcx)
-    K += 1
-    desc1 = hs.feats.cx2_desc[qcx]
+    print('[invest] Performing quick vsmany')
+    cx2_desc = hs.feats.cx2_desc
     vsmany_index = hs.matcher._Matcher__vsmany_index
-    vsmany_flann = vsmany_index.vsmany_flann
-    ax2_cx       = vsmany_index.ax2_cx
-    ax2_fx       = vsmany_index.ax2_fx
-    print('[invest] Quick vsmany over %s indexed descriptors. K=%r' %
-          (helpers.commas(len(ax2_cx)), K))
-    checks       = params.VSMANY_FLANN_PARAMS['checks']
-    (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, K+1, checks=checks)
-    vote_dists = qfx2_dists[:, 0:K]
-    norm_dists = qfx2_dists[:, K] # k+1th descriptor for normalization
-    # Score the feature matches
-    qfx2_score = np.array([mc2.LNBNN_fn(_vdist.T, norm_dists)
-                           for _vdist in vote_dists.T]).T
-    # Vote using the inverted file 
-    qfx2_cx = ax2_cx[qfx2_ax[:, 0:K]]
-    qfx2_fx = ax2_fx[qfx2_ax[:, 0:K]]
-    # Build feature matches
-    num_qf = len(desc1)
-    qfx2_qfx = np.tile(np.arange(num_qf).reshape(num_qf, 1), (1, K)) 
-    iter_matches = iter(zip(qfx2_qfx.flat, qfx2_cx.flat,
-                            qfx2_fx.flat, qfx2_score.flat))
-    fm, fs = ([], [])
-    for qfx, cx_, fx, score in iter_matches:
-        if cx != cx_: continue
-        fm.append((qfx, fx))
-        fs.append(score)
-    fm = mc2.fix_fm(fm)
-    fs = mc2.fix_fs(fs)
+    cx2_fm, cx2_fs, cx2_score = mc2.assign_matches_vsmany(qcx, cx2_desc, vsmany_index)
+    fm = cx2_fm[cx]
+    fs = cx2_fs[cx]
     return fm, fs
 
-def quick_assign_vsone(hs, qcx, cx, ratio_thresh=1.2, burst_thresh=None):
+def quick_assign_vsone(hs, qcx, cx, **kwargs):
     print('[invest] Performing quick vsone')
-    desc1 = hs.feats.cx2_desc[qcx]
-    desc2 = hs.feats.cx2_desc[cx]
-    vsone_flann, checks = mc2.get_vsone_flann(desc1)
-    fm, fs = mc2.match_vsone(desc2, vsone_flann, checks, ratio_thresh, burst_thresh)
+    cx2_desc       = hs.feats.cx2_desc
+    vsone_args     = mc2.VsOneArgs(cxs=[cx], **kwargs)
+    vsone_assigned = mc2.assign_matches_vsone(qcx, cx2_desc, vsone_args)
+    (cx2_fm, cx2_fs, cx2_score) = vsone_assigned
+    fm = cx2_fm[cx] ; fs = cx2_fs[cx]
     return fm, fs
 
 def top_matching_features(res, axnum=None, match_type=''):

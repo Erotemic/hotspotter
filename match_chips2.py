@@ -374,10 +374,13 @@ def build_result_qcx(hs, qcx, use_cache=True, remove_init=True, krnn=False):
         res.load(hs, remove_init)
         if not remove_init and res.has_init_assign():
             return res
+    else:
+        print('[mc2] Building Result: No Cache')
     verbose = True
     #print('krnn=%r' % krnn)
     #print(hs.matcher)
-    hs.matcher._Matcher__vsmany_index.use_krnn = krnn
+    hs.matcher._Matcher__vsmany_index
+    hs.matcher.set_knn_fn(krnn)
     assign_matches = hs.matcher.assign_matches
     cx2_desc = hs.feats.cx2_desc
     cx2_kpts = hs.feats.cx2_kpts
@@ -629,7 +632,19 @@ class VsManyIndex(DynStruct): # TODO: rename this
         self.ax2_cx = ax2_cx
         self.ax2_fx = ax2_fx
         self.checks = 128
-        self.use_krnn = False
+        self.K      = params.__VSMANY_K__
+        self.checks = params.VSMANY_FLANN_PARAMS['checks']
+        self.set_knn_fn(params.__USE_KRNN__)
+    def set_knn_fn(self, use_reciprocal=False):
+        if use_reciprocal:
+            self.knn_fn  = self.reciprocal_nearest_neighbors
+        else:
+            self.knn_fn  = self.nearest_neighbors
+    def reciprocal_nearest_neighbors(self, query, K):
+        return reciprocal_nearest_neighbors(query, self.ax2_desc,
+                                            self.vsmany_flann, K, self.checks)
+    def nearest_neighbors(self, query, K):
+        return nearest_neighbors(query, self.vsmany_flann, K, self.checks)
     def __del__(self):
         print('[mc2] Deleting VsManyIndex')
 
@@ -715,8 +730,11 @@ def quick_flann_index(data):
     data_flann.build_index(data, **flann_params)
     return data_flann
 
-def nearest_neighbors(query, data_flann, K, checks=128):
+def nearest_neighbors(query, data_flann, K, checks):
     (qfx2_dx, qfx2_dists) = data_flann.nn_index(query, K, checks=checks)
+    # all are valid
+    qfx2_valid = np.ones(qfx2_dx.shape, dtype=np.bool)
+    return qfx2_dx, qfx2_dists, qfx2_valid
 
 def reciprocal_nearest_neighbors(query, data, data_flann, K, checks):
     nQuery, dim = query.shape
@@ -730,13 +748,13 @@ def reciprocal_nearest_neighbors(query, data, data_flann, K, checks):
     nn2_dists.shape = (nQuery, K, K)
     qfx2_maxdist = nn2_dists.max(2)
     # Test if nearest neighbor distance is less than reciprocal distance
-    isReciprocal = qfx2_dists < qfx2_maxdist
-    return qfx2_dx, qfx2_dists, isReciprocal 
+    qfx2_valid = qfx2_dists < qfx2_maxdist
+    return qfx2_dx, qfx2_dists, qfx2_valid 
 
 
 #@profile
 def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
-    '''Matches desc1 vs all database descriptors using 
+    '''Matches qdesc vs all database descriptors using 
     Input:
         qcx        - query chip index
         cx2_desc    - chip descriptor lookup table
@@ -748,22 +766,17 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
     # vsmany_index = hs.matcher._Matcher__vsmany_index
     #helpers.println('Assigning vsmany feature matches from qcx=%d to %d chips'\ % (qcx, len(cx2_desc)))
     isQueryIndexed = True
-    k_vsmany = params.__VSMANY_K__+1 if isQueryIndexed else params.__VSMANY_K__
-    checks   = params.VSMANY_FLANN_PARAMS['checks']
+    k_vsmany     = vsmany_index.K + isQueryIndexed
+    checks       = vsmany_index.checks
     vsmany_flann = vsmany_index.vsmany_flann
     ax2_cx       = vsmany_index.ax2_cx
     ax2_fx       = vsmany_index.ax2_fx
     ax2_desc     = vsmany_index.ax2_desc
     score_fn = scoring_func_map[params.__VSMANY_SCORE_FN__]
-    desc1 = cx2_desc[qcx]
+    qdesc = cx2_desc[qcx]
     # Find each query descriptor's k+1 nearest neighbors
-    if vsmany_index.use_krnn:
-        print('Using Recriprocal')
-        (qfx2_ax, qfx2_dists, isReciprocal) = reciprocal_nearest_neighbors(desc1, ax2_desc, vsmany_flann, k_vsmany+1, checks)
-    else:
-        (qfx2_ax, qfx2_dists) = vsmany_flann.nn_index(desc1, k_vsmany+1, checks=checks)
-        isReciprocal = np.ones(qfx2_ax.shape, dtype=np.bool)
-    isReciprocal = isReciprocal[:,0:k_vsmany]
+    (qfx2_ax, qfx2_dists, qfx2_valid) = vsmany_index.knn_fn(qdesc, k_vsmany+1)
+    qfx2_valid = qfx2_valid[:, 0:k_vsmany]
     vote_dists = qfx2_dists[:, 0:k_vsmany]
     norm_dists = qfx2_dists[:, k_vsmany] # k+1th descriptor for normalization
     # Score the feature matches
@@ -775,13 +788,13 @@ def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
     # Build feature matches
     cx2_fm = [[] for _ in xrange(len(cx2_desc))]
     cx2_fs = [[] for _ in xrange(len(cx2_desc))]
-    num_qf = len(desc1)
-    qfx2_qfx = helpers.tiled_range(num_qf, k_vsmany)
+    nQuery = len(qdesc)
+    qfx2_qfx = helpers.tiled_range(nQuery, k_vsmany)
     #iter_matches = iter(zip(qfx2_qfx.flat, qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat))
-    iter_matches = iter(zip(qfx2_qfx[isReciprocal],
-                            qfx2_cx[isReciprocal],
-                            qfx2_fx[isReciprocal],
-                            qfx2_score[isReciprocal]))
+    iter_matches = iter(zip(qfx2_qfx[qfx2_valid],
+                            qfx2_cx[qfx2_valid],
+                            qfx2_fx[qfx2_valid],
+                            qfx2_score[qfx2_valid]))
     for qfx, cx, fx, score in iter_matches:
         if qcx == cx: 
             continue # dont vote for yourself
@@ -824,9 +837,10 @@ def assign_matches_vsone(qcx, cx2_desc):
     vsone_flann.build_index(desc1, **vsone_flann_params)
     cx2_fm = [[] for _ in xrange(len(cx2_desc))]
     cx2_fs = [[] for _ in xrange(len(cx2_desc))]
+    sys.stdout.write('assign_matches_vsone')
     for cx, desc2 in enumerate(cx2_desc):
         sys.stdout.write('.')
-        sys.stdout.flush()
+        #sys.stdout.flush()
         if cx == qcx: continue
         (fm, fs) = match_vsone(desc2, vsone_flann, checks)
         cx2_fm[cx] = fm
@@ -1038,36 +1052,37 @@ class Matcher(DynStruct):
             self.__assign_matches = assign_matches_vsone
         else:
             raise Exception('Unknown match_type: '+repr(match_type))
-
-    def __del__(self):
-        print('[mc2] Deleting Matcher')
-
     def assign_matches(self, qcx, cx2_desc):
         'Function which calls the correct matcher'
         return self.__assign_matches(qcx, cx2_desc)
-
+    def set_knn_fn(self, use_reciprocal):
+        if not self.__vsmany_index is None:
+            self.__vsmany_index.set_knn_fn(use_reciprocal)
     # query helpers
     def __assign_matches_vsmany(self, qcx, cx2_desc):
         return assign_matches_vsmany(qcx, cx2_desc, self.__vsmany_index)
-
     def __assign_matches_bagofwords(self, qcx, cx2_desc):
         return assign_matches_bagofwords(qcx, cx2_desc, self.__bow_index)
-
+    def __del__(self):
+        print('[mc2] Deleting Matcher')
 
 
 def matcher_test(hs, qcx, fnum=1):
     hs.ensure_matcher_type('vsmany')
-    for cx in hs.get_other_indexed_cxs(qcx):
-        df2.figure(fignum=fnum)
-        res = build_result_qcx(hs, qcx, use_cache=False, remove_init=False, krnn=False)
-        res2 = build_result_qcx(hs, qcx, use_cache=False, remove_init=False, krnn=True)
-
-        df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(2,2,1), SV=False)
-        df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(2,2,2), SV=True)
-
-        df2.show_matches_annote_res(res2, hs, cx, draw_pts=False, plotnum=(2,2,3), SV=False)
-        df2.show_matches_annote_res(res2, hs, cx, draw_pts=False, plotnum=(2,2,4), SV=True)
-        fnum += 1
+    res  = build_result_qcx(hs, qcx, use_cache=False, remove_init=False, krnn=False)
+    res2 = build_result_qcx(hs, qcx, use_cache=False, remove_init=False, krnn=True)
+    #for cx in hs.get_other_indexed_cxs(qcx):
+        #df2.figure(fignum=fnum)
+        #df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(2,2,1), SV=False)
+        #df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(2,2,2), SV=True)
+        #df2.show_matches_annote_res(res2, hs, cx, draw_pts=False, plotnum=(2,2,3), SV=False)
+        #df2.show_matches_annote_res(res2, hs, cx, draw_pts=False, plotnum=(2,2,4), SV=True)
+        #fnum += 1
+    N = 5
+    df2.show_match_analysis(hs, res, N, fnum, '-recip')
+    fnum += 1
+    df2.show_match_analysis(hs, res2, N, fnum, '+recip')
+    fnum += 1
     return fnum
 
 if __name__ == '__main__':

@@ -147,7 +147,8 @@ __FEAT_TYPE__    = 'HESAFF'    # Feature type to use
 #--- MATCH CHIPS ---
 __MATCH_TYPE__         = 'vsmany'  # Matching type
 __VSMANY_K__           = 5         # Number of matches for one-vs-many
-__VSMANY_SCORE_FN__    = 'LNBNN' # LNRAT, LNBNN, RATIO
+__USE_KRNN__           = True      # Number of matches for one-vs-many
+__VSMANY_SCORE_FN__    = 'LNBNN' # LNRAT, LNBNN, RATIO, PL, BORDA
 __BOW_NUM_WORDS__      = long(5e4) # Vocab size for bag of words
 __BOW_NDESC_PER_WORD__ = 14
 __VSONE_RATIO_THRESH__ = 1.5       # Thresholds for one-vs-one
@@ -228,11 +229,11 @@ def get_query_uid():
     query_uid += ',' + str(__XY_THRESH__)
     query_uid += ',' + str(__SCALE_THRESH_HIGH__)
     query_uid += ',' + str(__SCALE_THRESH_LOW__)
-    if __USE_CHIP_EXTENT__:
-        query_uid += ',cdl'  # chip diag len
+    query_uid += ',cdl' * __USE_CHIP_EXTENT__ # chip diag len
     query_uid += ')'
     if __MATCH_TYPE__ == 'vsmany':
         query_uid += '_%s' % __VSMANY_SCORE_FN__
+    query_uid += '_recip' * __USE_KRNN__
     query_uid += get_matcher_uid()
     return query_uid
 

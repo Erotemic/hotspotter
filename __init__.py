@@ -95,7 +95,6 @@ import hotspotter.chip_compute2 as cc2
 import hotspotter.feature_compute2 as fc2
 import hotspotter.match_chips2 as mc2
 import hotspotter.spatial_verification2 as sv2
-import hotspotter.spatial_verification as sv1
 import hotspotter.report_results2 as rr2
 
 #------------------------------------------------------------------------------

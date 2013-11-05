@@ -419,6 +419,7 @@ class HotSpotter(DynStruct):
     #--------------
     def get_assigned_matches_to(hs, qcx, cx):
         cx2_fm, cx2_fs, cx2_score = hs.get_assigned_matches(qcx)
+        print(cx2_score.argsort()[::-1])
         fm = cx2_fm[cx]
         fs = cx2_fs[cx]
         score = cx2_score[cx]

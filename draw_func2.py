@@ -37,6 +37,7 @@ import types
 import warnings
 import itertools
 import helpers
+import params
 #print('LOAD_MODULE: draw_func2.py')
 
 def reload_module():
@@ -387,9 +388,11 @@ def adjust_subplots(left=0.02,  bottom=0.02,
                         right,  top,
                         wspace, hspace)
 
-def set_figtitle(figtitle, oneaxis=False):
+def set_figtitle(figtitle, subtitle=''):
     fig = plt.gcf()
-    fig.suptitle(figtitle , fontsize=14, fontweight='bold')
+    if subtitle != '':
+        subtitle = '\n'+subtitle
+    fig.suptitle(figtitle+subtitle, fontsize=14, fontweight='bold')
     fig.canvas.set_window_title(figtitle)
     #if oneaxis:
         #ax = plt.gca()
@@ -1112,7 +1115,7 @@ def _show_chip_matches(hs,
                           ell_alpha=.5,
                           all_kpts=all_kpts, draw_lines=annotations,
                           draw_ell=annotations, draw_pts=annotations)
-    set_figtitle(figtitle)
+    set_figtitle(figtitle, params.get_query_uid())
     return fig
 
 

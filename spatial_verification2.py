@@ -383,36 +383,50 @@ def show_inliers(hs, qcx, cx, inliers, title='inliers', **kwargs):
 def test():
     from __init__ import *
     import load_data2 as ld2
+    import investigate_chip as ic2
     xy_thresh         = params.__XY_THRESH__
     scale_thresh_high = params.__SCALE_THRESH_HIGH__
     scale_thresh_low  = params.__SCALE_THRESH_LOW__
-    qcx = 27
-    cx  = 113
+    qcx = helpers.get_arg_after('--qcx', type_=int, default=0)
+    cx  = helpers.get_arg_after('--cx', type_=int)
+    #cx  = 113
     if not 'hs' in vars():
         (hs, qcx, cx, fm, fs, 
          rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data(qcx, cx)
     args_ = [rchip1, rchip2, kpts1, kpts2]
+    diaglen_srd= rchip2.shape[0]**2 + rchip2.shape[1]**2
+    #with helpers.Timer('Computing inliers: '):
+    print(kpts1.shape)
+    print(kpts2.shape)
+    print(rchip1.shape)
+    print(rchip2.shape)
+    print(fm.shape)
+    print(xy_thresh)
+    print(scale_thresh_high)
+    print(scale_thresh_low)
+    print(diaglen_srd)
 
-    with helpers.Timer('Computing inliers: '):
-        H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm, 
+    H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm,
                                                           xy_thresh,
                                                           scale_thresh_high,
                                                           scale_thresh_low,
+                                                          diaglen_sqrd=diaglen_srd,
                                                           min_num_inliers=4)
     df2.show_matches2(*args_+[fm], fs=None,
                       all_kpts=False, draw_lines=True,
-                      doclf=True, title='Assigned matches', fignum=1)
+                      doclf=True, title='Assigned matches', plotnum=(1,3,1))
 
     df2.show_matches2(*args_+[fm[aff_inliers]], fs=None,
                       all_kpts=False, draw_lines=True, doclf=True,
-                      title='Affine inliers', fignum=2)
+                      title='Affine inliers', plotnum=(1,3,2))
 
     df2.show_matches2(*args_+[fm[aff_inliers]], fs=None,
                       all_kpts=False, draw_lines=True, doclf=True,
-                      title='Homography inliers', fignum=3)
+                      title='Homography inliers', plotnum=(1,3,3))
 
 def test2(qcx, cx):
     import load_data2 as ld2
+    import spatial_verification2 as sv2
     xy_thresh         = params.__XY_THRESH__
     scale_thresh_high = params.__SCALE_THRESH_HIGH__
     scale_thresh_low  = params.__SCALE_THRESH_LOW__
@@ -425,10 +439,10 @@ def test2(qcx, cx):
 
     with helpers.Timer('Computing inliers: '+str(qcx)+' '+str(cx)):
         H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm, 
-                                                          xy_thresh,
-                                                          scale_thresh_high,
-                                                          scale_thresh_low,
-                                                          min_num_inliers=4)
+                                                              xy_thresh,
+                                                              scale_thresh_high,
+                                                              scale_thresh_low,
+                                                              min_num_inliers=4)
 
 def compare1():
     reload()
@@ -470,19 +484,22 @@ def compare1():
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
-    from __init__ import *
-    from spatial_verification2 import *
+    #from spatial_verification2 import *
     import multiprocessing as mp
     import draw_func2 as df2
+    import params
+    import helpers
+    import sys
     mp.freeze_support()
     print('[sc2] __main__ = spatial_verification2.py')
-    test2(0, 1)
-    test2(0, 2)
-    test2(0, 3)
-    test2(0, 4)
-    test2(0, 5)
-    test2(0, 6)
-    test2(0, 6)
+    test()
+    #test2(0, 1)
+    #test2(0, 2)
+    #test2(0, 3)
+    #test2(0, 4)
+    #test2(0, 5)
+    #test2(0, 6)
+    #test2(0, 6)
     if 'AUTOJIT_CALLS' in vars():
         print('autojit calls: '+str(AUTOJIT_CALLS))
-    #exec(df2.present())
+    exec(df2.present())

@@ -1246,8 +1246,8 @@ def try_cast(var, type_):
     except Exception as ex:
         return None
 
-def get_arg_after(arg, type_=None):
-    arg_after = None
+def get_arg_after(arg, type_=None, default=None):
+    arg_after = default
     try:
         arg_index = sys.argv.index(arg)
         if arg_index < len(sys.argv):

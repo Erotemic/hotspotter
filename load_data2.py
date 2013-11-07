@@ -122,6 +122,9 @@ class HotSpotter(DynStruct):
         if matcher: 
             hs.load_matcher()
     #---------------
+    def get_query_uid(hs):
+        return hs.query_uid
+
     def update_query_uid(hs):
         hs.query_uid = params.get_query_uid()
     #---------------

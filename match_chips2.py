@@ -123,29 +123,14 @@ def fix_qcx2_res_types(qcx2_res):
 
 def query_result_fpath(hs, qcx):
     query_uid = hs.get_query_uid()
-    qres_dir = hs.dirs.qres_dir 
-    fname = 'result_'+query_uid+'_qcx=%d.npz' % qcx
+    qres_dir  = hs.dirs.qres_dir 
+    fname = 'result_%s_qcx=%d.npz' % (query_uid, qcx)
     fpath = os.path.join(qres_dir, fname)
     return fpath
 
 def query_result_exists(hs, qcx):
     fpath = query_result_fpath(hs, qcx)
     return os.path.exists(fpath)
-
-def save_npz_from_dict(dict_, fpath):
-    if params.VERBOSE_CACHE:
-        print('[mc2] caching result: '+repr(fpath))
-    else:
-        print('[mc2] caching result: '+repr(os.path.split(fpath)[1]))
-    with open(fpath, 'wb') as file_:
-        np.savez(file_, **dict_.copy())
-
-def load_npz_into_dict(dict_, fpath, scalar_keys=set(['qcx'])):
-    with open(fpath, 'rb') as file_:
-        npz = np.load(file_)
-        for _key in npz.files:
-            dict_[_key] = npz[_key].tolist() if _key in scalar_keys else npz[_key]
-        npz.close()
 
 class QueryResult(DynStruct):
     def __init__(self, qcx):
@@ -181,14 +166,25 @@ class QueryResult(DynStruct):
     def save(self, hs, remove_init=True):
         if remove_init: self.remove_init_assigned()
         fpath = self.get_fpath(hs)
-        save_npz_from_dict(self.__dict__, fpath)
+        if params.VERBOSE_CACHE:
+            print('[mc2] caching result: %r' % (fpath,))
+        else:
+            print('[mc2] caching result: %r' % (os.path.split(fpath)[1],))
+        with open(fpath, 'wb') as file_:
+            np.savez(file_, **self.__dict__.copy())
         return True
 
     def load(self, hs, remove_init=True):
         'Loads the result from the given database'
         fpath = os.path.normpath(self.get_fpath(hs))
+        scalar_keys=set(['qcx'])
         try:
-            load_npz_into_dict(self.__dict__, fpath, scalar_keys=set(['qcx']))
+            with open(fpath, 'rb') as file_:
+                npz = np.load(file_)
+                for _key in npz.files:
+                    self.__dict__[_key] = npz[_key].tolist() \
+                            if _key in scalar_keys else npz[_key]
+                npz.close()
             if remove_init: self.remove_init_assigned()
             return True
         except Exception as ex:
@@ -806,7 +802,7 @@ def spatial_nearest_neighbors(qfx2_desc, qfx2_kpts, qchipdiag, dx2_desc, dx2_kpt
     qfx2_scale_valid = np.bitwise_and(qfx2_scaledist > .5, qfx2_scaledist < 2)
     
     # All neighbors are valid
-    qfx2_valid = np.bitwise_and(qfx2_dist_valid, scale_valid)
+    qfx2_valid = np.bitwise_and(qfx2_dist_valid, qfx2_scale_valid)
     return qfx2_dx, qfx2_dists, qfx2_valid
 
 def reciprocal_nearest_neighbors(qfx2_desc, dx2_desc, data_flann, K, checks):

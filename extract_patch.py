@@ -122,7 +122,7 @@ def printDBG(msg):
 
 def get_normalizer_cx_rchip_cx(hs, desc):
     printDBG('query desc.shape = %r ' % (desc.shape,))
-    (qfx2_cx, qfx2_fx, qfx2_dists) = mc2.desc_nearest_neighbors(desc, hs.matcher._Matcher__vsmany_index)
+    (qfx2_cx, qfx2_fx, qfx2_dists) = mc2.desc_nearest_neighbors(desc, hs.matcher.vsmany_args)
     cxN = qfx2_cx[:,-1][0]
     fxN = qfx2_fx[:,-1][0]
     rchipN = hs.get_chip(cxN)

@@ -112,8 +112,8 @@ HISTORY = [
 def quick_assign_vsmany(hs, qcx, cx, K): 
     print('[invest] Performing quick vsmany')
     cx2_desc = hs.feats.cx2_desc
-    vsmany_index = hs.matcher._Matcher__vsmany_index
-    cx2_fm, cx2_fs, cx2_score = mc2.assign_matches_vsmany(qcx, cx2_desc, vsmany_index)
+    vsmany_args = hs.matcher.vsmany_args
+    cx2_fm, cx2_fs, cx2_score = mc2.assign_matches_vsmany(qcx, cx2_desc, vsmany_args)
     fm = cx2_fm[cx]
     fs = cx2_fs[cx]
     return fm, fs
@@ -306,8 +306,8 @@ def where_did_vsone_matches_go(hs, qcx, fnum=1, K=100):
     gt2_fm_V = res_vsone.cx2_fm_V[gt_cxs]
     # Get vsmany assigned matches (no spatial verification)
     hs.ensure_matcher_type('vsmany')
-    vsmany_index = hs.matcher._Matcher__vsmany_index
-    (qfx2_cx, qfx2_fx, qfx2_dists) = mc2.desc_nearest_neighbors(qfx2_desc1, vsmany_index, K)
+    vsmany_args = hs.matcher.vsmany_args
+    (qfx2_cx, qfx2_fx, qfx2_dists) = mc2.desc_nearest_neighbors(qfx2_desc1, vsmany_args, K)
     # Find where the matches to the correct images are
     print('[invest]  Finding where the vsone matches went for %s' % hs.vs_str(qcx, qcid))
     k_inds  = np.arange(0, K)
@@ -378,7 +378,7 @@ def compare_matching_methods(hs, qcx, fnum=1):
     # VSMANY matcher
     hs.ensure_matcher_type('vsmany')
     vsmany_score_options = ['LNRAT', 'LNBNN', 'RATIO']
-    vsmany_index = hs.matcher._Matcher__vsmany_index
+    vsmany_args = hs.matcher.vsmany_args
     vsmany_results = {}
     for score_type in vsmany_score_options:
         params.__VSMANY_SCORE_FN__ = score_type

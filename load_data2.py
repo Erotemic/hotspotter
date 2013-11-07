@@ -62,6 +62,7 @@ class HotSpotter(DynStruct):
         hs.test_sample_cx     = None
         hs.indexed_sample_cx = None
         hs.cx2_rchip_size = None
+        hs.query_uid = None
         if load_basic:
             hs.load_basic(db_dir)
         elif not db_dir is None:
@@ -104,12 +105,11 @@ class HotSpotter(DynStruct):
         print('The new way is not yet finished and is commented out')
         #hs_feats  = fc2.load_chip_features2(hs, load_kpts, load_desc)
         hs.feats  = hs_feats
-
+    #---------------
     def load_matcher(hs):
         import match_chips2 as mc2
         hs.matcher = mc2.Matcher(hs, params.__MATCH_TYPE__)
     #---------------
-
     def load_database(hs, db_dir,
                       matcher=True,
                       features=True,
@@ -121,6 +121,9 @@ class HotSpotter(DynStruct):
             hs.load_features()
         if matcher: 
             hs.load_matcher()
+    #---------------
+    def update_query_uid(hs):
+        hs.query_uid = params.get_query_uid()
     #---------------
     def get_valid_cxs(hs):
         valid_cxs, = np.where(np.array(hs.tables.cx2_cid) > 0)
@@ -251,6 +254,7 @@ class HotSpotter(DynStruct):
     #--------------
     def set_matcher_type(hs, match_type):
         print('[hs] Setting matcher type to: '+str(match_type))
+        hs.update_query_uid()
         params.__MATCH_TYPE__ = match_type
         hs.load_matcher()
     def ensure_matcher_type(hs, match_type):
@@ -264,6 +268,7 @@ class HotSpotter(DynStruct):
     #--------------
     def cx2_gname(hs, cx, full=False):
         return hs.get_gname(cx, full)
+    #--------------
     def get_gname(hs, cx, full=False):
         gx =  hs.tables.cx2_gx[cx]
         gname = hs.tables.gx2_gname[gx]
@@ -274,6 +279,7 @@ class HotSpotter(DynStruct):
     def get_image(hs, gx=None, cx=None):
         if not cx is None: 
             return hs.cx2_image(cx)
+    #--------------
     def cx2_image(hs, cx):
         img_fpath = hs.get_gname(cx, full=True)
         img = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)

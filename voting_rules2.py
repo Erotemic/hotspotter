@@ -24,10 +24,10 @@ def build_voters_profile(hs, qcx, K):
     hs.ensure_matcher_type('vsmany')
     K += 1
     desc1 = hs.feats.cx2_desc[qcx]
-    vsmany_index = hs.matcher._Matcher__vsmany_index
-    vsmany_flann = vsmany_index.vsmany_flann
-    ax2_cx       = vsmany_index.ax2_cx
-    ax2_fx       = vsmany_index.ax2_fx
+    vsmany_args = hs.matcher.vsmany_args
+    vsmany_flann = vsmany_args.vsmany_flann
+    ax2_cx       = vsmany_args.ax2_cx
+    ax2_fx       = vsmany_args.ax2_fx
     print('[invest] Building voter preferences over %s indexed descriptors. K=%r' %
           (helpers.commas(len(ax2_cx)), K))
     checks       = params.VSMANY_FLANN_PARAMS['checks']

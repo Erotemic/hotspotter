@@ -116,16 +116,13 @@ def fix_qcx2_res_types(qcx2_res):
         helpers.print_(fmt_str % (qcx))
         res = qcx2_res[qcx]
         fix_res_types(res)
-#==========================
-# FLANN Parts
-#==========================
 
 #=========================
 # Query Result Class
 #=========================
 
 def query_result_fpath(hs, qcx):
-    query_uid = params.get_query_uid()
+    query_uid = hs.get_query_uid()
     qres_dir = hs.dirs.qres_dir 
     fname = 'result_'+query_uid+'_qcx=%d.npz' % qcx
     fpath = os.path.join(qres_dir, fname)
@@ -153,7 +150,8 @@ def load_npz_into_dict(dict_, fpath, scalar_keys=set(['qcx'])):
 class QueryResult(DynStruct):
     def __init__(self, qcx):
         super(QueryResult, self).__init__()
-        self.qcx    = qcx
+        self.qcx       = qcx
+        self.query_uid = None
         # Times
         self.assign_time = -1
         self.verify_time = -1
@@ -380,7 +378,7 @@ def build_result_qcx(hs, qcx, use_cache=True, remove_init=True, krnn=False):
     verbose = True
     #print('krnn=%r' % krnn)
     #print(hs.matcher)
-    hs.matcher._Matcher__vsmany_index
+    hs.matcher.vsmany_args
     hs.matcher.set_knn_fn(krnn)
     assign_matches = hs.matcher.assign_matches
     cx2_desc = hs.feats.cx2_desc
@@ -396,9 +394,9 @@ def build_result_qcx(hs, qcx, use_cache=True, remove_init=True, krnn=False):
 #========================================
 # Bag-of-Words
 #========================================
-class BagOfWordsIndex(DynStruct):
+class BagOfWordsArgs(DynStruct):
     def __init__(self, words, words_flann, cx2_vvec, wx2_idf, wx2_cxs, wx2_fxs):
-        super(BagOfWordsIndex, self).__init__()
+        super(BagOfWordsArgs, self).__init__()
         self.words       = words
         self.words_flann = words_flann
         self.cx2_vvec    = cx2_vvec
@@ -406,7 +404,7 @@ class BagOfWordsIndex(DynStruct):
         self.wx2_cxs     = wx2_cxs
         self.wx2_fxs     = wx2_fxs
     def __del__(self):
-        print('[mc2] Deleting BagOfWordsIndex')
+        print('[mc2] Deleting BagOfWordsArgs')
         self.words_flann.delete_index()
 
 # precompute the bag of words model
@@ -448,10 +446,10 @@ def precompute_bag_of_words(hs):
     _index_vocab_args = (cx2_desc, words, words_flann, indexed_cxs, cache_dir)
     _index_vocab_ret  = __index_database_to_vocabulary(*_index_vocab_args)
     cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf = _index_vocab_ret
-    # return as a BagOfWordsIndex object
+    # return as a BagOfWordsArgs object
     _bow_args = (words, words_flann, cx2_vvec, wx2_idf, wx2_cxs, wx2_fxs)
-    bow_index = BagOfWordsIndex(*_bow_args)
-    return bow_index
+    bow_args = BagOfWordsArgs(*_bow_args)
+    return bow_args
 
 # step 1
 def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
@@ -493,10 +491,6 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, indexed_cxs, ca
     data_uid = helpers.hashstr(ax2_desc)
     uid = data_uid + '_' + matcher_uid
     try: 
-        #cx2_vvec = helpers.load_cache_npz(ax2_desc, 'cx2_vvec'+matcher_uid, cache_dir, is_sparse=True)
-        #wx2_cxs  = helpers.load_cache_npz(ax2_desc, 'wx2_cxs'+matcher_uid, cache_dir)
-        #wx2_fxs  = helpers.load_cache_npz(ax2_desc, 'wx2_fxs'+matcher_uid, cache_dir)
-        #wx2_idf  = helpers.load_cache_npz(ax2_desc, 'wx2_idf'+matcher_uid, cache_dir)
         cx2_vvec = io.smart_load(cache_dir, 'cx2_vvec', uid, '.cPkl') #sparse
         wx2_cxs  = io.smart_load(cache_dir, 'wx2_cxs',  uid, '.npy')
         wx2_fxs  = io.smart_load(cache_dir, 'wx2_fxs',  uid, '.npy')
@@ -555,10 +549,6 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, indexed_cxs, ca
     io.smart_save(wx2_cxs,  cache_dir, 'wx2_cxs',  uid, '.npy')
     io.smart_save(wx2_fxs,  cache_dir, 'wx2_fxs',  uid, '.npy')
     io.smart_save(wx2_idf,  cache_dir, 'wx2_idf',  uid, '.npy')
-    #helpers.save_cache_npz(ax2_desc, cx2_vvec, 'cx2_vvec'+matcher_uid, cache_dir, is_sparse=True)
-    #helpers.save_cache_npz(ax2_desc, wx2_cxs, 'wx2_cxs'+matcher_uid, cache_dir)
-    #helpers.save_cache_npz(ax2_desc, wx2_fxs, 'wx2_fxs'+matcher_uid, cache_dir)
-    #helpers.save_cache_npz(ax2_desc, wx2_idf, 'wx2_idf'+matcher_uid, cache_dir)
     return cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf
 
 def __quantize_desc_to_tfidf_vvec(desc, wx2_idf, words, words_flann):
@@ -578,13 +568,13 @@ def __quantize_desc_to_tfidf_vvec(desc, wx2_idf, words, words_flann):
     return vvec, fx2_wx
 
 # Used by Matcher class to assign matches to a bag-of-words database
-def assign_matches_bagofwords(qcx, cx2_desc, bow_index):
-    cx2_vvec    = bow_index.cx2_vvec
-    wx2_cxs     = bow_index.wx2_cxs
-    wx2_fxs     = bow_index.wx2_fxs
-    wx2_idf     = bow_index.wx2_idf
-    words       = bow_index.words
-    words_flann = bow_index.words_flann
+def assign_matches_bagofwords(qcx, cx2_desc, bow_args):
+    cx2_vvec    = bow_args.cx2_vvec
+    wx2_cxs     = bow_args.wx2_cxs
+    wx2_fxs     = bow_args.wx2_fxs
+    wx2_idf     = bow_args.wx2_idf
+    words       = bow_args.words
+    words_flann = bow_args.words_flann
     # Assign the query descriptors a visual vector
     vvec, qfx2_wx = __quantize_desc_to_tfidf_vvec(cx2_desc[qcx], wx2_idf, words, words_flann)
     # Compute distance to every database vector
@@ -612,7 +602,8 @@ def assign_matches_bagofwords(qcx, cx2_desc, bow_index):
     # Convert to numpy
     for cx in xrange(len(cx2_desc)):
         fm = np.array(cx2_fm[cx], dtype=FM_DTYPE)
-        fm = fm.reshape(len(fm), 2)
+        fm.shape = (len(fm), 2)
+        #fm = fm.reshape(len(fm), 2)
         cx2_fm[cx] = fm
     for cx in xrange(len(cx2_desc)): 
         cx2_fs[cx] = np.array(cx2_fs[cx], dtype=FS_DTYPE)
@@ -623,11 +614,11 @@ def assign_matches_bagofwords(qcx, cx2_desc, bow_index):
 #========================================
 # One-vs-Many 
 #========================================
-class VsManyIndex(DynStruct): # TODO: rename this
+class VsManyArgs(DynStruct): # TODO: rename this
     '''Contains a one-vs-many index and the 
        inverted information needed for voting'''
     def __init__(self, vsmany_flann, ax2_desc, ax2_cx, ax2_fx):
-        super(VsManyIndex, self).__init__()
+        super(VsManyArgs, self).__init__()
         self.vsmany_flann = vsmany_flann
         self.ax2_desc  = ax2_desc # not used, but needs to maintain scope
         self.ax2_cx = ax2_cx
@@ -647,7 +638,7 @@ class VsManyIndex(DynStruct): # TODO: rename this
     def nearest_neighbors(self, query, K):
         return nearest_neighbors(query, self.vsmany_flann, K, self.checks)
     def __del__(self):
-        print('[mc2] Deleting VsManyIndex')
+        print('[mc2] Deleting VsManyArgs')
 
 def __aggregate_descriptors(cx2_desc, indexed_cxs):
     '''Aggregates a sample set of descriptors. 
@@ -691,8 +682,8 @@ def precompute_index_vsmany(hs):
                                           uid=matcher_uid,
                                           flann_params=vsmany_flann_params)
     # Return a one-vs-many structure
-    vsmany_index = VsManyIndex(vsmany_flann, ax2_desc, ax2_cx, ax2_fx)
-    return vsmany_index
+    vsmany_args = VsManyArgs(vsmany_flann, ax2_desc, ax2_cx, ax2_fx)
+    return vsmany_args
 
 # Feature scoring functions
 eps = 1E-8
@@ -705,10 +696,10 @@ scoring_func_map = {
     'RATIO' : RATIO_fn,
     'LNBNN' : LNBNN_fn }
 
-def desc_nearest_neighbors(desc, vsmany_index, K=None):
-    vsmany_flann = vsmany_index.vsmany_flann
-    ax2_cx       = vsmany_index.ax2_cx
-    ax2_fx       = vsmany_index.ax2_fx
+def desc_nearest_neighbors(desc, vsmany_args, K=None):
+    vsmany_flann = vsmany_args.vsmany_flann
+    ax2_cx       = vsmany_args.ax2_cx
+    ax2_fx       = vsmany_args.ax2_fx
     isQueryIndexed = True
     K = params.__VSMANY_K__ if K is None else K
     checks   = params.VSMANY_FLANN_PARAMS['checks']
@@ -761,7 +752,7 @@ def tile_before_axis(arr, axis, num):
 
 def snn_testdata(hs):
     hs.ensure_matcher_type('vsmany')
-    vsmany_index = hs.matcher._Matcher__vsmany_index
+    vsmany_args = hs.matcher.vsmany_args
     cx2_desc = hs.feats.cx2_desc
     cx2_kpts = hs.feats.cx2_kpts
     qcx = 0
@@ -769,10 +760,10 @@ def snn_testdata(hs):
     qfx2_kpts = cx2_kpts[qcx]
     cx2_rchip_size = hs.get_cx2_rchip_size()
     qchipdiag = np.sqrt((np.array(cx2_rchip_size[qcx])**2).sum())
-    data_flann = vsmany_index.vsmany_flann
-    dx2_desc = vsmany_index.ax2_desc
-    dx2_cx = vsmany_index.ax2_cx
-    dx2_fx = vsmany_index.ax2_fx
+    data_flann = vsmany_args.vsmany_flann
+    dx2_desc = vsmany_args.ax2_desc
+    dx2_cx = vsmany_args.ax2_cx
+    dx2_fx = vsmany_args.ax2_fx
     K = 3
     checks = 128
 
@@ -836,29 +827,29 @@ def reciprocal_nearest_neighbors(qfx2_desc, dx2_desc, data_flann, K, checks):
 
 
 #@profile
-def assign_matches_vsmany(qcx, cx2_desc, vsmany_index):
+def assign_matches_vsmany(qcx, cx2_desc, vsmany_args):
     '''Matches qdesc vs all database descriptors using 
     Input:
         qcx        - query chip index
         cx2_desc    - chip descriptor lookup table
-        vsmany_index - class with FLANN index of database descriptors
+        vsmany_args - class with FLANN index of database descriptors
     Output: 
         cx2_fm - C x Mx2 array of matching feature indexes
         cx2_fs - C x Mx1 array of matching feature scores'''
 
-    # vsmany_index = hs.matcher._Matcher__vsmany_index
+    # vsmany_args = hs.matcher.vsmany_args
     #helpers.println('Assigning vsmany feature matches from qcx=%d to %d chips'\ % (qcx, len(cx2_desc)))
     isQueryIndexed = True
-    k_vsmany     = vsmany_index.K + isQueryIndexed
-    checks       = vsmany_index.checks
-    vsmany_flann = vsmany_index.vsmany_flann
-    ax2_cx       = vsmany_index.ax2_cx
-    ax2_fx       = vsmany_index.ax2_fx
-    ax2_desc     = vsmany_index.ax2_desc
+    k_vsmany     = vsmany_args.K + isQueryIndexed
+    checks       = vsmany_args.checks
+    vsmany_flann = vsmany_args.vsmany_flann
+    ax2_cx       = vsmany_args.ax2_cx
+    ax2_fx       = vsmany_args.ax2_fx
+    ax2_desc     = vsmany_args.ax2_desc
     score_fn = scoring_func_map[params.__VSMANY_SCORE_FN__]
     qdesc = cx2_desc[qcx]
     # Find each query descriptor's k+1 nearest neighbors
-    (qfx2_ax, qfx2_dists, qfx2_valid) = vsmany_index.knn_fn(qdesc, k_vsmany+1)
+    (qfx2_ax, qfx2_dists, qfx2_valid) = vsmany_args.knn_fn(qdesc, k_vsmany+1)
     qfx2_valid = qfx2_valid[:, 0:k_vsmany]
     vote_dists = qfx2_dists[:, 0:k_vsmany]
     norm_dists = qfx2_dists[:, k_vsmany] # k+1th descriptor for normalization
@@ -1128,21 +1119,21 @@ class Matcher(DynStruct):
         self.feat_type  = hs.feats.feat_type
         self.match_type = match_type
         # Possible indexing structures
-        self.__vsmany_index = None
-        self.__vsone_args   = None
-        self.__bow_index    = None
+        self.vsmany_args = None
+        self.vsone_args   = None
+        self.bow_args    = None
         # Curry the correct functions
         self.__assign_matches = None
         if match_type == 'bagofwords':
             print('[mc2] precomputing bag of words')
-            self.__bow_index   = precompute_bag_of_words(hs)
+            self.bow_args   = precompute_bag_of_words(hs)
             self.__assign_matches = self.__assign_matches_bagofwords
         elif match_type == 'vsmany':
             print('[mc2] precomputing one vs many')
-            self.__vsmany_index = precompute_index_vsmany(hs)
+            self.vsmany_args = precompute_index_vsmany(hs)
             self.__assign_matches = self.__assign_matches_vsmany
         elif match_type == 'vsone':
-            self.__vsone_args = VsOneArgs()
+            self.vsone_args = VsOneArgs()
             self.__assign_matches = self.__assign_matches_vsone
         else:
             raise Exception('Unknown match_type: '+repr(match_type))
@@ -1150,15 +1141,15 @@ class Matcher(DynStruct):
         'Function which calls the correct matcher'
         return self.__assign_matches(qcx, cx2_desc)
     def set_knn_fn(self, use_reciprocal):
-        if not self.__vsmany_index is None:
-            self.__vsmany_index.set_knn_fn(use_reciprocal)
+        if not self.vsmany_args is None:
+            self.vsmany_args.set_knn_fn(use_reciprocal)
     # query helpers
     def __assign_matches_vsone(self, qcx, cx2_desc):
-        return assign_matches_vsone(qcx, cx2_desc, self.__vsone_args)
+        return assign_matches_vsone(qcx, cx2_desc, self.vsone_args)
     def __assign_matches_vsmany(self, qcx, cx2_desc):
-        return assign_matches_vsmany(qcx, cx2_desc, self.__vsmany_index)
+        return assign_matches_vsmany(qcx, cx2_desc, self.vsmany_args)
     def __assign_matches_bagofwords(self, qcx, cx2_desc):
-        return assign_matches_bagofwords(qcx, cx2_desc, self.__bow_index)
+        return assign_matches_bagofwords(qcx, cx2_desc, self.bow_args)
     def __del__(self):
         print('[mc2] Deleting Matcher')
 

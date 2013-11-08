@@ -108,6 +108,47 @@ HISTORY = [
     history_entry('MOTHERS', 66, [63, 62, 64, 65], notes='occluded foal'),
 ]
 
+def mothers_problem_pairs():
+    '''MOTHERS Dataset: difficult (qcx, cx) query/result pairs'''
+    #-
+    viewpoint \
+            = [
+        ( 16,  17),
+        ( 19,  20),
+        ( 73,  71),
+        ( 75,  78),
+        (108, 112), # query is very dark
+        (110, 108),
+                ]
+    #-
+    quality   \
+            = [
+        (27, 26),   #minor viewpoint
+        (52, 53),
+        (67, 68),   #stupid hard case (query from 68 to 67 direction is better (start with foal)
+        (73, 71),
+    ]
+    #-
+    lighting  \
+            = [
+        (105, 104),
+        ( 49,  50), #brush occlusion on legs
+        ( 93,  94),
+    ]
+    #-
+    confused  \
+            = [
+    ]
+    #-
+    occluded  \
+            = [
+        (64,65),
+    ]
+    #-
+    return locals()
+
+
+
 
 def quick_assign_vsmany(hs, qcx, cx, K): 
     print('[invest] Performing quick vsmany')

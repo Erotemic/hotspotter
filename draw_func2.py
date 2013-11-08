@@ -845,7 +845,7 @@ def show_matches_annote(hs, qcx, cx2_score,
     score = cx2_score[cx]
     fm = cx2_fm[cx]; fs = cx2_fs[cx]
     # Build the title string
-    score_str = (' #fmatch=%r score='+helpers.num_fmt(score)) % (len(fm), score)
+    score_str = (' score='+helpers.num_fmt(score)) % (score)
     isgt_str  = hs.is_true_match_str(qcx, cx) 
     title     = '*' + isgt_str + '*' + '\n' + hs.vs_str(qcx, cx) + '\n' + score_str
     if not title_pref is None: title = title_pref + title

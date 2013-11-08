@@ -409,19 +409,24 @@ def make_pref_object():
     vsone.ratio_thresh   = 1.5       # Thresholds for one-vs-one
     # -- vsmany --
     vsmany = Pref.Pref()
-    vsmany.k             = 5         # Number of matches for one-vs-many
+    vsmany.K             = 5         # Number of matches for one-vs-many
+    vsmany.score_type    = 'LNBNN'
     # -- bow --
     bow = Pref.Pref()
-    bow.bow_num_words    = long(5e4) # Vocab size for bag of words
+    bow.num_words    = long(5e4) # Vocab size for bag of words
+    bow.nDesc_per_word = 14 # Vocab size for bag of words
     # --- match chips ---
     match = Pref.Pref()
-    match.__MATCH_TYPE__ = 'vsmany'  # Matching type
+    match.match_type = 'vsmany'  # Matching type
+    match.use_krnn = False
+    match.use_snn  = False
     #-----------------------
     # --- spatial verification ---
     verify  = Pref.Pref()
-    verify.num_rerank    = 1000      # Number of top matches to spatially re-rank
-    verify.xy_thresh     = .1        # % diaglen of keypoint extent
-    verify.scale_thresh  = .5
+    verify.num_rerank        = 1000      # Number of top matches to spatially re-rank
+    verify.xy_thresh         = .1        # % diaglen of keypoint extent
+    verify.scale_thresh_low  = .5
+    verify.scale_thresh_high = 2
     #-----------------------
     # --- all preferences ---
     prefs = Pref.Pref()
@@ -433,7 +438,6 @@ def make_pref_object():
     prefs.verify = verify
     #-----------------------
     epw = prefs.createQWidget()
-
 
 if __name__ == '__main__':
     print('[params] __main__ = params.py')

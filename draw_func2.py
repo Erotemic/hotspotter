@@ -759,17 +759,13 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
     if fm is None:
         assert kpts1.shape == kpts2.shape
         fm = np.tile(np.arange(0, len(kpts1)), (2,1)).T
-    # get chip dimensions 
-    (h1,w1) = rchip1.shape[0:2]
-    (h2,w2) = rchip2.shape[0:2]
+    (h1, w1) = rchip1.shape[0:2] # get chip dimensions 
+    (h2, w2) = rchip2.shape[0:2]
     woff = 0; hoff = 0 
-    if vert is None: # Let us make the decision
+    if vert is None: # Display match up/down or side/side
         vert = False if h1 > w1 and h2 > w2 else True
     if vert: wB=max(w1,w2); hB=h1+h2; hoff=h1
     else:    hB=max(h1,h2); wB=w1+w2; woff=w1
-    #vert = True
-    #if vert: wB=max(w1,w2); hB=h1+h2; hoff=h1
-    #else:    hB=max(h1,h2); wB=w1+w2; woff=w1
     # concatentate images
     match_img = np.zeros((hB, wB, 3), np.uint8)
     match_img[0:h1, 0:w1, :] = rchip1
@@ -1025,8 +1021,7 @@ def show_match_analysis(hs, res, N=5, fignum=3, figtitle='',
                               fignum=fignum,
                               annotations=annotations)
 
-def _show_chip_matches(hs,
-                       res,
+def _show_chip_matches(hs, res,
                        figtitle='',
                        max_cols=5,
                        topN_cxs=None, 
@@ -1115,7 +1110,7 @@ def _show_chip_matches(hs,
                           ell_alpha=.5,
                           all_kpts=all_kpts, draw_lines=annotations,
                           draw_ell=annotations, draw_pts=annotations)
-    set_figtitle(figtitle, params.get_query_uid())
+    set_figtitle(figtitle, res.query_uid)
     return fig
 
 

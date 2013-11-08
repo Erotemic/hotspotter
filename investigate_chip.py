@@ -460,15 +460,20 @@ def hs_from_db(db):
     # Load hotspotter
     db_dir = eval('params.'+db)
     print('loading hotspotter database')
-    with helpers.RedirectStdout(show_on_exit=False) as rss:
-        try:
+    if True:
             hs = ld2.HotSpotter()
             hs.load_all(db_dir, matcher=False)
             hs.set_samples()
-        except Exception as ex:
-            rss.dump()
-            raise
-    print('loaded hotspotter database')
+    else:
+        with helpers.RedirectStdout(show_on_exit=False) as rss:
+            try:
+                hs = ld2.HotSpotter()
+                hs.load_all(db_dir, matcher=False)
+                hs.set_samples()
+            except Exception as ex:
+                rss.dump()
+                raise
+        print('loaded hotspotter database')
     return hs
 
 def get_all_history(db):

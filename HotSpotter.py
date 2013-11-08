@@ -85,14 +85,24 @@ class HotSpotter(DynStruct):
         #hs_feats  = fc2.load_chip_features2(hs, load_kpts, load_desc)
         hs.feats  = hs_feats
     #---------------
-    def load_matcher(hs, match_type=None):
-        import match_chips2 as mc2
+    def ensure_matcher_loaded(hs):
         if hs.matcher is None: 
-            hs.matcher = mc2.Matcher(hs, match_type)
-        else: 
-            if match_type is None: 
-                match_type = params.__MATCH_TYPE__
-            hs.matcher.ensure_match_type(hs, match_type)
+            import match_chips2 as mc2
+            hs.matcher = mc2.Matcher(hs)
+
+    def load_matcher(hs, match_type=None):
+        hs.ensure_matcher_loaded()
+        if match_type is None: 
+            match_type = params.__MATCH_TYPE__
+
+    def ensure_match_type(match_type):
+        if hs.matcher.match_type != match_type:
+            hs.matcher.set_match_type(hs, match_type)
+
+    def ensure_matcher(hs, match_type=None, use_reciprocal=None, use_spatial=None):
+        hs.ensure_matcher_loaded()
+        hs.matcher.ensure_match_type(hs, match_type)
+        hs.matcher.set_nn_type(use_reciprocal, use_spatial)
     #---------------
     def load_database(hs, db_dir,
                       matcher=True,
@@ -238,14 +248,6 @@ class HotSpotter(DynStruct):
     def get_roi(hs, cx):
         roi = hs.tables.cx2_roi[cx]
         return roi
-    #--------------
-    def set_matcher_type(hs, match_type):
-        print('[hs] Setting matcher type to: %r' % (match_type,))
-        hs.matcher.set_match_type(hs, match_type)
-    #--------------
-    def ensure_matcher_type(hs, match_type):
-        hs.load_matcher(match_type)
-        #hs.matcher.ensure_match_type(hs, match_type)
     #--------------
     def cx2_name(hs, cx):
         cx2_nx = hs.tables.cx2_nx

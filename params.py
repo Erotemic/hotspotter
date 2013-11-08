@@ -147,7 +147,8 @@ __FEAT_TYPE__    = 'HESAFF'    # Feature type to use
 #--- MATCH CHIPS ---
 __MATCH_TYPE__         = 'vsmany'  # Matching type
 __VSMANY_K__           = 5         # Number of matches for one-vs-many
-__USE_KRNN__           = True      # Number of matches for one-vs-many
+__USE_RECIPROCAL_NN__  = True      # Number of matches for one-vs-many
+__USE_SPATIAL_NN__     = True      # Number of matches for one-vs-many
 __VSMANY_SCORE_FN__    = 'LNBNN' # LNRAT, LNBNN, RATIO, PL, BORDA
 __BOW_NUM_WORDS__      = long(5e4) # Vocab size for bag of words
 __BOW_NDESC_PER_WORD__ = 14
@@ -208,6 +209,8 @@ TEST_SAMPLE_ID = ''
 
 def get_matcher_uid(with_train=True, with_indx=True):
     matcher_uid = '_'+__MATCH_TYPE__
+    matcher_uid += '_rnn' * __USE_RECIPROCAL_NN__
+    matcher_uid += '_snn' * __USE_SPATIAL_NN__
     if __MATCH_TYPE__ == 'bagofwords':
         matcher_uid += '_W%d' % __BOW_NUM_WORDS__
     if __MATCH_TYPE__ == 'vsmany':
@@ -233,7 +236,6 @@ def get_query_uid():
     query_uid += ')'
     if __MATCH_TYPE__ == 'vsmany':
         query_uid += '_%s' % __VSMANY_SCORE_FN__
-    query_uid += '_recip' * __USE_KRNN__
     query_uid += get_matcher_uid()
     return query_uid
 

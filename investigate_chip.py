@@ -327,7 +327,7 @@ def quick_get_features_factory(hs):
     return get_features
 
 def show_vsone_matches(hs, qcx, fnum=1):
-    hs.ensure_matcher_type('vsone')
+    hs.ensure_matcher(match_type='vsone')
     res_vsone = mc2.build_result_qcx(hs, qcx, use_cache=True)
     df2.show_match_analysis(hs, res_vsone, N=5, fignum=fnum, figtitle=' vsone')
     fnum+=1
@@ -346,7 +346,7 @@ def where_did_vsone_matches_go(hs, qcx, fnum=1, K=100):
     res_vsone, fnum = show_vsone_matches(hs, qcx, fnum)
     gt2_fm_V = res_vsone.cx2_fm_V[gt_cxs]
     # Get vsmany assigned matches (no spatial verification)
-    hs.ensure_matcher_type('vsmany')
+    hs.ensure_matcher(match_type='vsmany')
     vsmany_args = hs.matcher.vsmany_args
     (qfx2_cx, qfx2_fx, qfx2_dists) = mc2.desc_nearest_neighbors(qfx2_desc1, vsmany_args, K)
     # Find where the matches to the correct images are
@@ -417,7 +417,7 @@ def plot_name(hs, qcx, fnum=1):
 def compare_matching_methods(hs, qcx, fnum=1):
     print('[invest] Comparing match methods')
     # VSMANY matcher
-    hs.ensure_matcher_type('vsmany')
+    hs.ensure_matcher(match_type='vsmany')
     vsmany_score_options = ['LNRAT', 'LNBNN', 'RATIO']
     vsmany_args = hs.matcher.vsmany_args
     vsmany_results = {}
@@ -428,12 +428,12 @@ def compare_matching_methods(hs, qcx, fnum=1):
         vsmany_results[score_type] = res_vsmany
         fnum+=1
     # BAGOFWORDS matcher
-    hs.ensure_matcher_type('bagofwords')
+    hs.ensure_matcher(match_type='bagofwords')
     resBOW = mc2.build_result_qcx(hs, qcx)
     df2.show_match_analysis(hs, resBOW, N=5, fignum=fnum, figtitle=' bagofwords')
     fnum+=1
     # VSONE matcher
-    hs.ensure_matcher_type('vsone')
+    hs.ensure_matcher(match_type='vsone')
     res_vsone = mc2.build_result_qcx(hs, qcx, use_cache=True)
     df2.show_match_analysis(hs, res_vsone, N=5, fignum=fnum, figtitle=' vsone')
     fnum+=1
@@ -508,10 +508,10 @@ def run_investigations(qcx, args):
         fnum = plot_name(hs, qcx, fnum)
     #fnum = compare_matching_methods(hs, qcx, fnum)
     if '1' in args.tests:
-        hs.ensure_matcher_type('vsone')
+        hs.ensure_matcher(match_type='vsone')
         fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 4, 4, fnum, cx_list='gt1')
     if '2' in args.tests:
-        hs.ensure_matcher_type('vsmany')
+        hs.ensure_matcher(match_type='vsmany')
         fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 4, 4, fnum, cx_list='gt1') 
     if '3' in args.tests:
         fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=args.K)

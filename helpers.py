@@ -1325,6 +1325,13 @@ def commas(num, n=8):
     return '%d' % num
     #return int_comma_str(num)
 
+def printshape(arr_name, locals_):
+    arr = locals_[arr_name]
+    if type(arr) is np.ndarray:
+        print(arr_name+'.shape = '+str(arr.shape))
+    else:
+        print('len(%s) = %r' % (arr_name, len(arr)))
+
 def format(num, n=8):
     '''makes numbers pretty e.g.
     nums = [9001, 9.053]

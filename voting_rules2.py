@@ -21,7 +21,7 @@ def rrr():
 
 def build_voters_profile(hs, qcx, K):
     cx2_nx = hs.tables.cx2_nx
-    hs.ensure_matcher_type('vsmany')
+    hs.ensure_matcher(match_type='vsmany')
     K += 1
     desc1 = hs.feats.cx2_desc[qcx]
     vsmany_args = hs.matcher.vsmany_args

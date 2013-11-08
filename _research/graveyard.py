@@ -893,3 +893,45 @@ def save(fig, fpath=None):
     #fig.savefig(fpath_clean, dpi=DPI)
     fig.savefig(fpath_clean, dpi=DPI, bbox_inches='tight')
 '''
+
+
+# adapted from:
+# http://jayrambhia.com/blog/sift-keypoint-matching-using-python-opencv/
+def draw_matches(rchip1, rchip2, kpts1, kpts2, fm12, vert=False):
+    global LINE_COLOR
+    h1, w1 = rchip1.shape[0:2]
+    h2, w2 = rchip2.shape[0:2]
+    woff = 0; hoff = 0 # offsets 
+    if vert:
+        wB = max(w1, w2); hB = h1+h2; hoff = h1
+    else: 
+        hB = max(h1, h2); wB = w1+w2; woff = w1
+    # Concat images
+    match_img = np.zeros((hB, wB, 3), np.uint8)
+    match_img[0:h1, 0:w1, :] = rchip1
+    match_img[hoff:(hoff+h2), woff:(woff+w2), :] = rchip2
+    # Draw lines
+    for kx1, kx2 in iter(fm12):
+        pt1 = (int(kpts1[kx1,0]),      int(kpts1[kx1,1]))
+        pt2 = (int(kpts2[kx2,0])+woff, int(kpts2[kx2,1])+hoff)
+        match_img = cv2.line(match_img, pt1, pt2, LINE_COLOR*255)
+    return match_img
+
+#def fix_cx2_fm_shape(cx2_fm):
+    #for cx in xrange(len(cx2_fm)):
+        #fm = cx2_fm[cx]
+        #if type(fm) != np.ndarray() or fm.dtype != FM_DTYPE:
+            #fm = np.array(fm, dtype=FM_DTYPE)
+        #if len(fm.shape) != 2 or fm.shape[1] != 2:
+            #fm = fm.reshape(len(fm), 2)
+        #cx2_fm[cx] = fm
+    #cx2_fm = np.array(cx2_fm)
+    #return cx2_fm
+
+def cv2_match(desc1, desc2):
+    K = 1
+    cv2_matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming')
+    raw_matches = cv2_matcher.knnMatch(desc1, desc2, K)
+    matches = [(m1.trainIdx, m1.queryIdx) for m1 in raw_matches]
+
+

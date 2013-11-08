@@ -218,7 +218,7 @@ def __quantize_desc_to_tfidf_vvec(desc, wx2_idf, words, words_flann):
     return vvec, fx2_wx
 
 # Used by Matcher class to assign matches to a bag-of-words database
-def assign_matches_bagofwords(qcx, cx2_desc, bow_args):
+def assign_matches_bagofwords(bow_args, qcx, cx2_kpts, cx2_desc, cx2_rchip_size):
     cx2_vvec    = bow_args.cx2_vvec
     wx2_cxs     = bow_args.wx2_cxs
     wx2_fxs     = bow_args.wx2_fxs

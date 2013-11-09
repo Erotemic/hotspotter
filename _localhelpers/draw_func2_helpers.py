@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 from PyQt4.QtCore import Qt
 import numpy as np
 import sys
+import os
 import time
 import types
 import textwrap

@@ -1,4 +1,5 @@
 import sys
+import os
 import pyflann
 import params
 import numpy as np
@@ -8,10 +9,14 @@ np.random.seed(5)
 # Parameters
 tdim   =   2; # Target viewing dimensions
 dim    =   2; # Calculation dimension
+if len(sys.argv) == 2:
+    tdim = int(sys.argv[1])
+    dim  = int(sys.argv[1])
 K      =   4;
 checks = 128;
 nQuery =   8;
 nData  = 1024; 
+
 
 # Script
 def quick_flann_index(data):
@@ -67,6 +72,7 @@ if dim != tdim:
     pca.fit(data)
     query_  = pca.transform(query)
     data_   = pca.transform(data)
+    nn2_data_ = pca.transform(nn2_data)
     qx2_nn_ = pca.transform(qx2_nn)
     krx2_query_ = pca.transform(krx2_query)
     krx2_nn_ = pca.transform(krx2_nn)
@@ -114,13 +120,13 @@ plot_lines(point_pairs, (1, 0, 0, .8))
 # Plot NN's KNN
 qx2_nn_.shape = (nQuery*K, tdim)
 nRes = len(qx2_nn_)
-point_pairs3 = [np.vstack((qx2_nn_[nnx], nn2_data[nnx,k])) for nnx in xrange(nRes) for k in xrange(K)]
-plot_lines(point_pairs3, (1, .8, .8, .4))
+point_pairs3 = [np.vstack((qx2_nn_[nnx], nn2_data_[nnx,k])) for nnx in xrange(nRes) for k in xrange(K)]
+plot_lines(point_pairs3, (1, .8, .8, .5))
 
 # Plot KRNN
 point_pairs2 = map(np.vstack, zip(krx2_query_, krx2_nn_))
 plot_lines(point_pairs2, (0, 1, 0, .9))
 df2.update()
 # Show
-df2.set_figtitle('KRNN=(Green), NN=(Red), NNR=(Pink), dims=%r, K=%r' % (dim, K), True)
+df2.set_figtitle('KRNN=(Green), NN=(Red), NNR=(Pink), dims=%r, K=%r' % (dim, K))
 exec(df2.present())

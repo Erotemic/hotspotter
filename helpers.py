@@ -1332,6 +1332,22 @@ def printshape(arr_name, locals_):
     else:
         print('len(%s) = %r' % (arr_name, len(arr)))
 
+def printvar(locals_, varname):
+    dotpos = varname.find('.')
+    if dotpos == -1:
+        var = locals_[varname]
+    else:
+        varname_ = varname[:dotpos]
+        dotname_ = varname[dotpos:]
+        var_ = locals_[varname_]
+        var = eval('var_'+dotname_)
+    if type(var) is np.ndarray:
+        print('[printvar] '+varname+'.shape = '+str(var.shape))
+    elif type(var) is types.ListType:
+        print('[printvar] len(%s) = %r' % (varname, len(var)))
+    else:
+        print('[printvar] %s = %r' % (varname, var))
+
 def format(num, n=8):
     '''makes numbers pretty e.g.
     nums = [9001, 9.053]

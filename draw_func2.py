@@ -423,7 +423,11 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
         cx2_fm = res.get_cx2_fm(SV)
         #mc2.debug_cx2_fm_shape(cx2_fm)
         #cx2_fm = mc2.fix_cx2_fm_shape(cx2_fm)
-        #mc2.debug_cx2_fm_shape(cx2_fm)
+        mc2.debug_cx2_fm_shape(cx2_fm)
+        print('>>>>')
+        print('In show_chip')
+        helpers.printvar(locals(), 'cx2_fm')
+        print('<<<')
         fx_list1 = [fm[:,0] for fm in cx2_fm]
         fx_list2 = [fm[:,0] for fm in cx2_fm[gt_cxs]] if len(gt_cxs) > 0 else np.array([])
         matched_fx = stack_unique(fx_list1)
@@ -593,9 +597,11 @@ def _show_chip_matches(hs, res,
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
+    print('=================================')
     print('[df2] __main__ = draw_func2.py')
+    print('=================================')
     from __init__ import *
-    qcx = 14
+    qcx = 0
     hs = ld2.HotSpotter()
     hs.load_tables(ld2.DEFAULT)
     hs.load_chips()
@@ -619,3 +625,4 @@ if __name__ == '__main__':
     #get_geometry(1)
     df2.show_match_analysis(hs, res, N)
     df2.update()
+    exec(df2.present())

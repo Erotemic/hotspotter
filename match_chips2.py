@@ -126,8 +126,8 @@ def filter_nn_ratio_test(qfx2_dist, ratio_thresh, qfx2_valid):
     # Only valid for vsone
     qfx2_ratio       = np.divide(qfx2_dist[:, 1], qfx2_dist[:, 0]+1E-8)
     qfx2_valid_ratio = qfx2_ratio > ratio_thresh
-    qfx2_valid       = np.bitwise_and(qfx2_valid_ratio, qfx2_valid)
-    return fx2_valid
+    qfx2_valid[:,0]  = np.bitwise_and(qfx2_valid_ratio, qfx2_valid[:,0])
+    return qfx2_valid
 
 def filter_nn_burstiness(qfx2_fx, qfx2_valid, burst_thresh):
     'Filters matches to a feature which is matched > burst_thresh #times'
@@ -165,16 +165,20 @@ def filter_nn_spatial(qdiag, qfx2_kpts, dx2_fx, dx2_cx, cx2_kpts, cx2_rchip_size
     nQuery, K = qfx2_dx.shape
     qfx2_cx = dx2_cx[qfx2_dx]
     qfx2_fx = dx2_fx[qfx2_dx]
+    #print('\n---')
+    #helpers.printvar(locals(), 'cx2_rchip_size')
+    #helpers.printvar(locals(), 'qfx2_cx')
+    #print('qfx2_cx = %r ' % (qfx2_cx,))
     qfx2_chipsize2 = np.array([cx2_rchip_size[cx] for cx in qfx2_cx.flat])
-    print('------------')
-    helpers.printshape('qfx2_kpts', locals())
-    helpers.printshape('dx2_fx', locals())
-    helpers.printshape('dx2_cx', locals())
-    helpers.printshape('cx2_kpts', locals())
-    helpers.printshape('cx2_rchip_size', locals())
-    helpers.printshape('qfx2_dx', locals())
-    helpers.printshape('qfx2_valid', locals())
-    print('------------')
+    #print('------------')
+    #helpers.printvar(locals(), 'qfx2_kpts')
+    #helpers.printvar(locals(), 'dx2_fx')
+    #helpers.printvar(locals(), 'dx2_cx')
+    #helpers.printvar(locals(), 'cx2_kpts')
+    #helpers.printvar(locals(), 'cx2_rchip_size')
+    #helpers.printvar(locals(), 'qfx2_dx')
+    #helpers.printvar(locals(), 'qfx2_valid')
+    #print('------------')
     qfx2_chipsize2.shape = (nQuery, K, 2)
     qfx2_chipdiag2 = np.sqrt((qfx2_chipsize2**2).sum(2))
     # Get query relative xy keypoints #.0160s / #.0180s (+cast)
@@ -263,13 +267,13 @@ class VsOneArgs(DynStruct):
         self.qdiag        = None
         self.__dict__.update(kwargs)
 
-    def set_current_query(self, qcx, cx2_kpts, cx2_desc):
+    def set_current_query(self, qcx, cx2_kpts, cx2_desc, cx2_rchip_size):
         self.qcx   = qcx
         self.desc1 = cx2_desc[qcx]
         self.kpts1 = cx2_kpts[qcx]
         self.vsone_flann = pyflann.FLANN()
-        self.vsone_flann.build_index(desc1, **self.flann_params)
-        self.cxs = xrange(len(cx2_desc)) if vsone_args.cxs is None else vsone_args.cxs
+        self.vsone_flann.build_index(self.desc1, **self.flann_params)
+        self.cxs = range(len(cx2_desc)) if self.cxs is None else self.cxs
 
     def reset_query(self):
         self.vsone_flann.delete_index()
@@ -286,7 +290,7 @@ def vsone_nearest_neighbors(vsone_args, cx, cx2_kpts, cx2_desc, cx2_rchip_size):
     vsone_flann = vsone_args.vsone_flann
     fx2_qfx, fx2_dist, fx2_valid = nearest_neighbors(desc2, vsone_flann, 2, checks)
     if vsone_args.ratio_thresh != -1:
-        fx2_valid = filter_nn_ratio_test(fx2_dist, vsone_args.ratio_thresh)
+        fx2_valid = filter_nn_ratio_test(fx2_dist, vsone_args.ratio_thresh, fx2_valid)
     if not vsone_args.burst_thresh is None:
         fx2_valid = filter_nn_burstiness(fx2_qfx, fx2_valid, vsone_args.burst_thresh)
     if vsone_args.use_reciprocal:
@@ -294,11 +298,12 @@ def vsone_nearest_neighbors(vsone_args, cx, cx2_kpts, cx2_desc, cx2_rchip_size):
         fx2_valid = filter_nn_reciprocal(desc1, vsone_flann, 2, 2, checks, fx2_qfx, fx2_dist, fx2_valid)
     if vsone_args.use_spatial:
         diag = (np.array(cx2_rchip_size[cx])**2).sum()
-        kpts2 = cx2_kpts[cx]
+        fx2_kpts2 = cx2_kpts[cx]
         kpts1 = vsone_args.kpts1
-        fx2_fx = np.arange(len(kpts2))
-        qfx2_qcx = np.zeros(len(kpts1)) + vsone_args.qcx
-        fx2_valid = filter_nn_spatial(diag, kpts2, qfx2_qcx, fx2_fx, cx2_kpts, cx2_rchip_size, fx2_qfx, fx2_valid)
+        qfx2_qfx = np.arange(len(kpts1), dtype=int)
+        qfx2_qcx = np.zeros(len(kpts1), dtype=int) + vsone_args.qcx
+                                    #qdiag, qfx2_kpts, dx2_fx, dx2_cx, cx2_kpts, cx2_rchip_size, qfx2_dx, qfx2_valid
+        fx2_valid = filter_nn_spatial(diag, fx2_kpts2, qfx2_qfx, qfx2_qcx, cx2_kpts, cx2_rchip_size, fx2_qfx, fx2_valid)
     return fx2_qfx, fx2_dist, fx2_valid
 
 
@@ -322,7 +327,8 @@ def assign_matches_vsone(vsone_args, qcx, cx2_kpts, cx2_desc, cx2_rchip_size):
         (fm, fs) = match_vsone(cx, cx2_kpts, cx2_desc, cx2_rchip_size, vsone_args)
         cx2_fm[cx] = fm
         cx2_fs[cx] = fs
-    sys.stdout.write('DONE')
+    fix_cx2_fm_shape(cx2_fm)
+    sys.stdout.write('DONE\n')
     vsone_args.reset_query()
     cx2_fm = np.array(cx2_fm)
     cx2_fs = np.array(cx2_fs)
@@ -343,11 +349,19 @@ def match_vsone(cx, cx2_kpts, cx2_desc, cx2_rchip_size, vsone_args):
     (fx2_qfx, fx2_dist, fx2_valid) = vsone_nearest_neighbors(vsone_args, cx, cx2_kpts, cx2_desc, cx2_rchip_size)
     fx2_ratio  = np.divide(fx2_dist[:, 1], fx2_dist[:, 0]+1E-8)
     # RETURN vsone matches and scores
+    fx, = np.where(fx2_valid[:,0])
     qfx = fx2_qfx[fx, 0]
     fm  = np.array(zip(qfx, fx), dtype=FM_DTYPE)
     #fm  = fm.reshape(len(fm), 2)
     fm.shape = (len(fm), 2)
     fs  = np.array(fx2_ratio[fx], dtype=FS_DTYPE)
+    #print('>>>')
+    #print(' In match_vsone()')
+    #helpers.printvar(locals(), 'fx')
+    #helpers.printvar(locals(), 'qfx')
+    #helpers.printvar(locals(), 'fm')
+    #helpers.printvar(locals(), 'fs')
+    #print('<<<')
     return (fm, fs)
 
 #========================================
@@ -884,6 +898,8 @@ def build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches, ve
 def __build_result_assign_step(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches, verbose):
     '1) Assign matches with the chosen function (vsone) or (vsmany)'
     if verbose:
+        #helpers.printvar(locals(), 'cx2_desc')
+        #helpers.printvar(locals(), 'res.qcx')
         num_qdesc = len(cx2_desc[res.qcx])
         print('[mc2] assign %d desc' % (num_qdesc))
     tt1 = helpers.Timer(verbose=False)
@@ -942,28 +958,26 @@ def build_result_qcx(hs, qcx,
     else:
         print('[build_result_qcx] use_cache=%r, ... Building Result' % (use_cache,))
     verbose = True
-    try:
-        assign_matches = hs.matcher.assign_matches
-        cx2_desc = hs.feats.cx2_desc
-        cx2_kpts = hs.feats.cx2_kpts
-        cx2_rchip_size = hs.get_cx2_rchip_size()
-        __build_result_assign_step(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches, verbose)
-        __build_result_verify_step(hs, res, cx2_kpts, cx2_rchip_size, verbose)
-        if use_cache or save_changes:
-            print('[build_result_qcx] saving changes')
-            res.save(hs, remove_init=remove_init)
-        print('--------------')
-        return res
-    except Exception as ex:
-        print('============================')
-        print('[ERR!] ex = %r' % (ex,))
-        print('============================')
-        raise
+    assign_matches = hs.matcher.assign_matches
+    cx2_desc = hs.feats.cx2_desc
+    cx2_kpts = hs.feats.cx2_kpts
+    cx2_rchip_size = hs.get_cx2_rchip_size()
+    __build_result_assign_step(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches, verbose)
+    __build_result_verify_step(hs, res, cx2_kpts, cx2_rchip_size, verbose)
+    if use_cache or save_changes:
+        print('[build_result_qcx] saving changes')
+        res.save(hs, remove_init=remove_init)
+    print('--------------')
+    return res
 
 def matcher_test(hs, qcx, fnum=1, **kwargs):
+    print('=================================')
+    print('[mc2] MATCHER TEST qcx=%r' % qcx)
+    print('=================================')
     use_cache = kwargs.get('use_cache', False)
+    match_type = 'vsone'
     kwargs2 = dict(use_cache=use_cache, remove_init=False,
-                   save_changes=True, match_type='vsmany')
+                   save_changes=True, match_type=match_type)
     res1 = build_result_qcx(hs, qcx, recip=False, spatial=False, **kwargs2)
     res2 = build_result_qcx(hs, qcx, recip=True,  spatial=False, **kwargs2)
     res3 = build_result_qcx(hs, qcx, recip=False, spatial=True,  **kwargs2)

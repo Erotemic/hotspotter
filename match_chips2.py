@@ -931,19 +931,13 @@ def __build_result_verify_step(hs, res, cx2_kpts, cx2_rchip_size, verbose):
         num_verified = np.array([len(fm) for fm in cx2_fm_V]).sum()
         print('[mc2] verified %d matches' % (num_verified))
 
-def build_result_qcx(hs, qcx,
-                     use_cache=True,
-                     remove_init=True,
-                     recip=False,
-                     spatial=False,
-                     save_changes=False,
-                     match_type='vsmany'):
+def build_result_qcx(hs, qcx, use_cache=True, remove_init=True, recip=False,
+                     spatial=False, save_changes=False, match_type='vsmany'):
     'this should be the on-the-fly / Im going to check things function'
     print(textwrap.dedent('''
     ===================================
     [mc2] Building QueryResult(%r, hs)
     ===================================''') % qcx)
-
     hs.ensure_matcher(match_type, recip, spatial)
     res = QueryResult(qcx, hs)
     if use_cache and res.has_cache(hs):
@@ -978,19 +972,21 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
     match_type = 'vsmany'
     kwbuild = dict(use_cache=use_cache, remove_init=False,
                    save_changes=True, match_type=match_type)
-    res1 = build_result_qcx(hs, qcx, recip=False, spatial=False, **kwbuild)
-    #res2 = build_result_qcx(hs, qcx, recip=True,  spatial=False, **kwbuild)
-    #res3 = build_result_qcx(hs, qcx, recip=False, spatial=True,  **kwbuild)
-    #res4 = build_result_qcx(hs, qcx, recip=True,  spatial=True,  **kwbuild)
-    N = 5
-    kwshow = dict(SV=True, show_query=True, compare_SV=True, vert=True)
+    kwshow = dict(SV=1, show_query=1, compare_SV=1, vert=1)
+    N = 3
+    def build_res_(recip, spatial):
+        return build_result_qcx(hs, qcx, recip=recip, spatial=spatial, **kwbuild)
     def show_(res, fnum, figtitle=''):
         df2.show_match_analysis(hs, res, N, fnum, figtitle, **kwshow) 
         return fnum + 1
-    fnum = show_(res1, fnum, ' KNN')
-    #fnum = show_(res2, fnum, ' KRNN')
-    #fnum = show_(res3, fnum, ' KSNN')
-    #fnum = show_(res4, fnum, ' KRSNN')
+    res_list = [
+        #(build_res_(False, False), 'knn'),
+        #(build_res_(True,  False), 'kRnn'),
+        (build_res_(False, True),  'kSnn'),
+        #(build_res_(True,  True),  'kRSnn'),
+    ]
+    for (res, taug) in res_list:
+        fnum = show_(res, fnum, taug)
     #for cx in hs.get_other_indexed_cxs(qcx):
         #df2.figure(fignum=fnum)
         #df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(2,2,1), SV=False)

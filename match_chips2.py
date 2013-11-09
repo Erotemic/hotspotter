@@ -975,18 +975,22 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
     print('[mc2] MATCHER TEST qcx=%r' % qcx)
     print('=================================')
     use_cache = kwargs.get('use_cache', False)
-    match_type = 'vsone'
-    kwargs2 = dict(use_cache=use_cache, remove_init=False,
+    match_type = 'vsmany'
+    kwbuild = dict(use_cache=use_cache, remove_init=False,
                    save_changes=True, match_type=match_type)
-    res1 = build_result_qcx(hs, qcx, recip=False, spatial=False, **kwargs2)
-    res2 = build_result_qcx(hs, qcx, recip=True,  spatial=False, **kwargs2)
-    res3 = build_result_qcx(hs, qcx, recip=False, spatial=True,  **kwargs2)
-    res4 = build_result_qcx(hs, qcx, recip=True,  spatial=True,  **kwargs2)
+    res1 = build_result_qcx(hs, qcx, recip=False, spatial=False, **kwbuild)
+    #res2 = build_result_qcx(hs, qcx, recip=True,  spatial=False, **kwbuild)
+    #res3 = build_result_qcx(hs, qcx, recip=False, spatial=True,  **kwbuild)
+    #res4 = build_result_qcx(hs, qcx, recip=True,  spatial=True,  **kwbuild)
     N = 5
-    df2.show_match_analysis(hs, res1, N, fnum, SV=False); fnum += 1
-    df2.show_match_analysis(hs, res2, N, fnum, SV=False); fnum += 1
-    df2.show_match_analysis(hs, res3, N, fnum, SV=False); fnum += 1
-    df2.show_match_analysis(hs, res4, N, fnum, SV=False); fnum += 1
+    kwshow = dict(SV=True, show_query=True, compare_SV=True, vert=True)
+    def show_(res, fnum, figtitle=''):
+        df2.show_match_analysis(hs, res, N, fnum, figtitle, **kwshow) 
+        return fnum + 1
+    fnum = show_(res1, fnum, ' KNN')
+    #fnum = show_(res2, fnum, ' KRNN')
+    #fnum = show_(res3, fnum, ' KSNN')
+    #fnum = show_(res4, fnum, ' KRSNN')
     #for cx in hs.get_other_indexed_cxs(qcx):
         #df2.figure(fignum=fnum)
         #df2.show_matches_annote_res(res, hs, cx, draw_pts=False, plotnum=(2,2,1), SV=False)

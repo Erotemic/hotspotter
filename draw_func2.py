@@ -471,127 +471,110 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
 def show_topN_matches(hs, res, N=5, SV=True, fignum=4): 
     figtitle = ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))
     topN_cxs = res.topN_cxs(N)
-    max_cols = max(5,N)
+    max_nCols = max(5,N)
     _show_chip_matches(hs, res, topN_cxs=topN_cxs, figtitle=figtitle, 
                        fignum=fignum, all_kpts=False)
 
 def show_gt_matches(hs, res, SV=True, fignum=3): 
     figtitle = ('q%s -- GroundTruth' % (hs.cxstr(res.qcx)))
     gt_cxs = hs.get_other_indexed_cxs(res.qcx)
-    max_cols = max(5,len(gt_cxs))
+    max_nCols = max(5,len(gt_cxs))
     _show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle, 
                        fignum=fignum, all_kpts=True)
 
 def show_match_analysis(hs, res, N=5, fignum=3, figtitle='',
-                        show_query=True, annotations=True, SV=True):
+                        show_query=True, annotations=True, SV=True,
+                        compare_SV=False, **kwargs):
     topN_cxs = res.topN_cxs(N, SV)
     topscore = res.get_cx2_score(SV)[topN_cxs][0]
-    figtitle= ('topscore=%r -- q%s' % (topscore, hs.cxstr(res.qcx))) + figtitle
+    figtitle = ('topscore=%r -- q%s' % (topscore, hs.cxstr(res.qcx))) + figtitle
     all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
-    max_cols = min(5,N)
+    max_nCols = min(5,N)
     return _show_chip_matches(hs, res,
                               gt_cxs=missed_gt_cxs, 
                               topN_cxs=topN_cxs,
                               figtitle=figtitle,
-                              max_cols=max_cols,
+                              max_nCols=max_nCols,
                               show_query=show_query,
                               fignum=fignum,
                               annotations=annotations,
-                              SV=SV)
+                              compare_SV=compare_SV,
+                              SV=SV, **kwargs)
 
-def _show_chip_matches(hs, res,
-                       figtitle='',
-                       max_cols=5,
-                       topN_cxs=None, 
-                       gt_cxs=None,
-                       show_query=True,
-                       all_kpts=False,
-                       fignum=3,
-                       annotations=True, 
-                       SV=True):
+def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
+                       topN_cxs=None, gt_cxs=None, show_query=True,
+                       all_kpts=False, fignum=3, annotations=True, 
+                       SV=True, compare_SV=False, **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
     print('========================')
     print('[df2] Show chip matches:')
     print('[df2] #top=%r #missed_gts=%r' % (len(topN_cxs),len(gt_cxs)))
-    printD = printDBG
-    printD('[df2] * max_cols=%r' % (max_cols,))
-    printD('[df2] * show_query=%r' % (show_query,))
-    fig = figure(fignum=fignum)
-    fig.clf()
-    #baker_street_geom=(-1600, 22, 1599, 877)
-    #DBG_NEWFIG_GEOM = baker_street_geom
-    #if not DBG_NEWFIG_GEOM is None:
-        #set_geometry(fignum, *DBG_NEWFIG_GEOM)
+    printDBG('[df2] * max_nCols=%r' % (max_nCols,))
+    printDBG('[df2] * show_query=%r' % (show_query,))
+    fig = figure(fignum=fignum); fig.clf()
     ranked_cxs = res.get_cx2_score(SV).argsort()[::-1]
-    # Get subplots ready
-    num_top_subplts = 0
-    if not topN_cxs is None:
-        num_top_subplts = len(topN_cxs)
-    num_query_subplts = 1
-    topN_rows = int(np.ceil(num_top_subplts / max_cols))
-    num_cols = min(max_cols, num_top_subplts)
-    gt_rows = 0
-    gt_ncells = 0
+    annote = annotations
+    # Build a subplot grid
+    # * Get top N informatino
+    nQuerySubplts = 1 if show_query else 0
+    nGtSubplts = nQuerySubplts + (0 if gt_cxs is None else len(gt_cxs))
+    nTopNSubplts  = 0 if topN_cxs is None else len(topN_cxs)
+    nCols     = min(max_nCols, max(nGtSubplts, nTopNSubplts))
+    nGtRows   = int(np.ceil(nGtSubplts / nCols))
+    nTopNRows = int(np.ceil(nTopNSubplts / nCols))
+    nGtCells = nGtRows * nCols
+    nTopNCells = nTopNRows * nCols
+    nRows = nTopNRows+nGtRows
+    if compare_SV:
+        nRows += nTopNRows
 
-    if not show_query:
-        num_query_subplts = 0
-    if show_query or not gt_cxs is None:
-        num_gt_subplots = num_query_subplts
-        if not gt_cxs is None:
-            num_gt_subplots += len(gt_cxs)
-        gt_rows   = int(np.ceil(num_gt_subplots / max_cols))
-        gt_cols   = min(max_cols, num_gt_subplots)
-        num_cols  = max(num_cols, gt_cols)
-        gt_ncells = gt_rows * num_cols
-    num_rows = topN_rows+gt_rows
-    printD('[df2] + topN_rows=%r' % topN_rows)
-
-    printD('[df2] + gt_rows=%r' % gt_rows)
-    printD('[df2] + gt_cols=%r' % gt_cols)
-    printD('[df2] + gt_ncells=%r' % gt_ncells)
-
-    printD('[df2] + num_cols=%r' % num_cols)
-    printD('[df2] + num_rows=%r' % num_rows)
+    # Helper function for drawing matches to one cx
+    def show_matches_(cx, orank, plotx, SV):
+        title_aug = 'rank=%r ' % orank
+        plotnum=(nRows, nCols, plotx)
+        kwshow  = dict(draw_ell=annote, draw_pts=annote, draw_lines=annote,
+                       ell_alpha=.5, all_kpts=all_kpts, SV=SV, **kwargs)
+        show_matches_annote_res(res, hs, cx, title_aug=title_aug,
+                                plotnum=plotnum, **kwshow)
+    # Helper to draw many cxs
+    def plot_matches_cxs(cx_list, plotx_shift, SV):
+        if gt_cxs is None:
+            return
+        for ox, cx in enumerate(cx_list):
+            plotx = ox + plotx_shift + 1
+            orank = np.where(ranked_cxs == cx)[0][0] + 1
+            show_matches_(cx, orank, plotx, SV)
 
     # Plot Query
-    plt.subplot(num_rows, num_cols, 1)
+    plt.subplot(nRows, nCols, 1)
     if show_query: 
-        printD('Plotting Query:')
-        num_query_cols = num_query_subplts
-        plotnum=(num_rows, num_cols, 1)
-        show_chip(hs, res=res, plotnum=plotnum, draw_kpts=annotations, SV=SV)
-
+        printDBG('Plotting Query:')
+        plotnum=(nRows, nCols, 1)
+        show_chip(hs, res=res, plotnum=plotnum, draw_kpts=annote, SV=SV)
     # Plot Ground Truth
-    if not gt_cxs is None:
-        plotx_shift = num_query_subplts + 1
-        for ox, cx in enumerate(gt_cxs):
-            printD('Plotting GT %r:' % hs.cxstr(ox))
-            plotx = ox + plotx_shift
-            plotnum=(num_rows, num_cols, plotx)
-            orank = np.where(ranked_cxs == cx)[0][0] + 1
-            title_aug = 'rank=%r ' % orank
-            show_matches_annote_res(res, hs, cx, all_kpts=all_kpts, 
-                                    title_aug=title_aug, ell_alpha=.5, 
-                                    plotnum=plotnum, draw_lines=annotations,
-                                    draw_ell=annotations, draw_pts=annotations,
-                                    SV=SV)
-
+    plot_matches_cxs(gt_cxs, nQuerySubplts, SV) 
     # Plot Top N
-    if not topN_cxs is None:
-        plotx_shift = 1 + gt_ncells#num_cells - num_subplots + 1
-        for ox, cx in enumerate(topN_cxs):
-            printDBG('Plotting TOPN %r:' % ox)
-            plotx = ox + plotx_shift
-            plotnum=(num_rows, num_cols, plotx)
-            orank = np.where(ranked_cxs == cx)[0][0] + 1
-            title_aug = 'rank=%r ' % orank
-            show_matches_annote_res(res, hs, cx, title_aug=title_aug,
-                                    plotnum=plotnum, ell_alpha=.5,
-                                    all_kpts=all_kpts, draw_lines=annotations,
-                                    draw_ell=annotations, draw_pts=annotations, 
-                                    SV=SV)
+    plot_matches_cxs(topN_cxs, nGtCells, SV)    
+    if compare_SV:
+        offset = nGtCells + nTopNCells
+        # Plot Ground Truth
+        # plot_matches_cxs(gt_cxs, offset + nQuerySubplts, not SV) 
+        # Plot Top N
+        plot_matches_cxs(topN_cxs, offset, not SV)    
+        #plotx_shift = 1 + nGtCells#num_cells - num_subplots + 1
+        #for ox, cx in enumerate(topN_cxs):
+            #plotx = ox + plotx_shift
+            #orank = np.where(ranked_cxs == cx)[0][0] + 1
+            #show_matches_(cx, orank, plotx, SV)
+
+
     set_figtitle(figtitle, res.query_uid)
+    printDBG('[df2] + nTopNRows=%r' % nTopNRows)
+    printDBG('[df2] + nGtRows=%r' % nGtRows)
+    printDBG('[df2] + nGtCells=%r' % nGtCells)
+    printDBG('[df2] + nCols=%r' % nCols)
+    printDBG('[df2] + nRows=%r' % nRows)
     print('-----------------')
     return fig
 
@@ -619,7 +602,7 @@ if __name__ == '__main__':
     topN_cxs = res.topN_cxs(N)
     all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
-    max_cols = max(5,N)
+    max_nCols = max(5,N)
     fignum=3
     show_query = True
     all_kpts = False

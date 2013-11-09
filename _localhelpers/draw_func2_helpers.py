@@ -119,30 +119,6 @@ def draw_border(ax, color=GREEN, lw=2):
     rect.set_fill(False)
     rect.set_edgecolor(color)
 
-def upperleft_text(txt):
-    ax = plt.gca()
-    txtargs = dict(horizontalalignment='left',
-                    verticalalignment='top',
-                    fontsize='smaller',
-                    fontweight='ultralight', 
-                    backgroundcolor=(0,0,0,.5))
-    (x, y), width, height = _axis_xy_width_height(ax)
-    x,y = (x+.01*width, (y+height)-.01*height)
-    #ax.text(x, y, txt, color='k', **txtargs)
-    ax.text(x, y, txt, color=ORANGE, **txtargs)
-
-def upperright_text(txt):
-    ax = plt.gca()
-    txtargs = dict(horizontalalignment='right',
-                    verticalalignment='top',
-                    fontsize='smaller',
-                    fontweight='ultralight', 
-                    backgroundcolor=(0,0,0,.5))
-    (x, y), width, height = _axis_xy_width_height(ax)
-    x,y = ((x+width)-.01*width, (y+height)-.01*height)
-    #ax.text(x, y, txt, color='k', **txtargs)
-    ax.text(x, y, txt, color=ORANGE, **txtargs)
-
 # ---- GENERAL FIGURE COMMANDS ----
 def sanatize_img_fpath(fpath):
     [dpath, fname_clean] = os.path.split(fpath)
@@ -393,11 +369,45 @@ def adjust_subplots(left=0.02,  bottom=0.02,
     printDBG('[df2] adjust_subplots(%r)' % locals())
     plt.subplots_adjust(left,   bottom, right,  top, wspace, hspace)
 
+def upperleft_text(txt):
+    txtargs = dict(horizontalalignment='left',
+                   verticalalignment='top',
+                   fontsize='smaller',
+                   fontweight='ultralight', 
+                   backgroundcolor=(0,0,0,.5),
+                   color=ORANGE)
+    ax_relative_text(.02, .02, txt, **txtargs)
+
+def upperright_text(txt):
+    txtargs = dict(horizontalalignment='right',
+                   verticalalignment='top',
+                   fontsize='smaller',
+                   fontweight='ultralight', 
+                   backgroundcolor=(0,0,0,.5),
+                   color=ORANGE)
+    ax_relative_text(.98, .02, txt, **txtargs)
+
+def ax_relative_text(x, y, txt, **kwargs):
+    ax = plt.gca()
+    xy, width, height = _axis_xy_width_height(ax)
+    x_, y_ = ((xy[0])+x*width, (xy[1]+height)-y*height)
+    ax.text(x_, y_, txt, **kwargs)
+
+def fig_relative_text(x, y, txt, **kwargs):
+    kwargs['horizontalalignment'] = 'center'
+    kwargs['verticalalignment'] = 'center'
+    fig = plt.gcf()
+    #xy, width, height = _axis_xy_width_height(ax)
+    #x_, y_ = ((xy[0]+width)+x*width, (xy[1]+height)-y*height)
+    fig.text(x, y, txt, **kwargs)
+
 def set_figtitle(figtitle, subtitle=''):
     fig = plt.gcf()
     if subtitle != '':
         subtitle = '\n'+subtitle
-    fig.suptitle(figtitle+subtitle, fontsize=14, fontweight='bold')
+    #fig.suptitle(figtitle+subtitle, fontsize=14, fontweight='bold')
+    fig.suptitle(figtitle, x=.5, y=.98, fontsize=14, fontweight='bold')
+    fig_relative_text(.5, .95, subtitle, fontsize=12)
     fig.canvas.set_window_title(figtitle)
     adjust_subplots()
 

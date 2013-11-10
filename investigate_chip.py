@@ -40,7 +40,7 @@ def parse_arguments():
     add_float('--xy-thresh', .001, '', step=.005)
     add_float('--ratio-thresh', 1.2, '', step=.1)
     add_int('--K', 10, 'for K-nearest-neighbors', step=20)
-    add_str('--db', 'MOTHERS', 'database to load')
+    add_str('--db', 'NAUTS', 'database to load')
     test_bool('--show-names')
     add_bool('--noprinthist', default=True)
     add_str('--tests', [], 'integer or test name', nargs='*')
@@ -50,6 +50,7 @@ def parse_arguments():
     print('[invest] ---------')
     print('==================')
     return args
+
 args = parse_arguments()
 
 import numpy as np
@@ -79,6 +80,7 @@ GZ_greater1_cid_list = [140, 297, 306, 311, 425, 441, 443, 444, 445, 450, 451,
                         453, 454, 456, 460, 463, 465, 501, 534, 550, 662, 786,
                         802, 838, 941, 981, 1043, 1046, 1047]
 HISTORY = [
+    history_entry('NAUTS', 1,    [],               notes='simple eg'),
     history_entry('GZ', 1047,    [],               notes='extreme viewpoint #gt=4'),
     history_entry('GZ', 1046,    [],               notes='extreme viewpoint #gt=2'),
     history_entry('GZ', 786,     [787],            notes='foal #gt=11'),
@@ -425,24 +427,24 @@ def stop_stdout():
 def hs_from_db(db):
     # Load hotspotter
     db_dir = eval('params.'+db)
-    print('loading hotspotter database')
+    print('[invest] loading hotspotter database')
+    def _hotspotter_load():
+        hs = ld2.HotSpotter()
+        hs.load_all(db_dir, matcher=False)
+        hs.set_samples()
+        return hs
     if True:
-            hs = ld2.HotSpotter()
-            hs.load_all(db_dir, matcher=False)
-            hs.set_samples()
+        hs = _hotspotter_load()
+        return hs
     else:
-        with helpers.RedirectStdout(show_on_exit=False) as rss:
-            try:
-                hs = ld2.HotSpotter()
-                hs.load_all(db_dir, matcher=False)
-                hs.set_samples()
-            except Exception as ex:
-                rss.dump()
-                raise
+        rss = helpers.RedirectStdout(autostart=True)
+        hs = _hotspotter_load()
+        rss.stop()
+        rss.dump()
         print('loaded hotspotter database')
-    return hs
+        return hs
 
-def get_all_history(db):
+def get_all_history(db, hs):
     qcid_list = []
     ocid_list = []
     note_list = []
@@ -457,7 +459,7 @@ def get_all_history(db):
     return qcx_list, ocid_list, note_list
 
 def view_all_history_names_in_db(hs, db):
-    qcx_list = zip(*get_all_history(db))[0]
+    qcx_list = zip(*get_all_history(db, hs))[0]
     nx_list = hs.tables.cx2_nx[qcx_list]
     unique_nxs = np.unique(nx_list)
     print('unique_nxs = %r' % unique_nxs)
@@ -501,29 +503,41 @@ def ensure_iterable(obj):
 #===========
 # Main Script
 # exec(open('investigate_chip.py').read())
+
+def print_history_table():
+    print('[invest] Printing history table:')
+    count = 0
+    for histentry in HISTORY:
+        if args.db == histentry[0]:
+            print('%d: %r' % (count, histentry))
+            count += 1
+
+def main():
+    if 'hs' in vars():
+        return
+    # Load Hotspotter
+    print('[invest] Loading DB=%r' % args.db)
+    if not args.noprinthist:
+        print_history_table()
+    hs = hs_from_db(args.db)
+    hs.args = args # TODO Integrate this elsewhere
+    # Get query ids
+    if not args.qcid is None:
+        qcxs = hs.cid2_cx(args.qcid)
+    else:
+        print('========================')
+        print('[invest] Loaded DB=%r' % args.db)
+        print('[invest] Chosen histid=%r' % args.histid)
+        qcxs, ocids, notes = zip(*get_all_history(args.db, hs))[args.histid]
+        print('[invest] notes=%r' % notes)
+    qcxs = ensure_iterable(qcxs)
+    return locals()
+
 if __name__ == '__main__':
-    if not 'hs' in vars():
-        # Load Hotspotter
-        print('[invest] Loading DB=%r' % args.db)
-        if args.noprinthist:
-            print('[invest] History table:')
-            count = 0
-            for hist in HISTORY:
-                if args.db == hist[0]:
-                    print(str(count)+': '+repr((hist)))
-                    count += 1
-        hs   = hs_from_db(args.db)
-        hs.args = args # TODO Integrate this elsewhere
-        # Get query ids
-        if not args.qcid is None:
-            qcxs = hs.cid2_cx(args.qcid)
-        else:
-            print('========================')
-            print('[invest] Chosen histid=%r' % args.histid)
-            qcxs, ocids, notes = zip(*get_all_history(args.db))[args.histid]
-            print('[invest] notes=%r' % notes)
-        qcxs = ensure_iterable(qcxs)
     print('[invest] running ')
+    main_locals = main()
+    execstr = helpers.execstr_dict(main_locals, 'main_locals')
+    exec(execstr)
     fmtstr = helpers.make_progress_fmt_str(len(qcxs), '[invest] investigation ')
     print('====================')
     for count, qcx in enumerate(qcxs):

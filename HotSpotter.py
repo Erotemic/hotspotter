@@ -15,7 +15,6 @@ from PIL import Image
 from Printable import DynStruct
 import helpers
 import params
-from HotSpotter import *
 
 # reloads this module when I mess with it
 def reload_module():
@@ -205,15 +204,11 @@ class HotSpotter(DynStruct):
         hs.test_sample_cx     = test_samp
 
         # Hash the samples into sample ids
-        train_hash = repr(tuple(train_samp))
-        indx_hash  = repr(tuple(indx_samp))
-        test_hash  = repr(tuple(test_samp))
         train_indx_hash = repr((tuple(train_samp), tuple(indx_samp)))
-
         train_indx_id = str(len(indx_samp))+','+helpers.hashstr(train_indx_hash)
-        train_id = str(len(train_samp))+','+helpers.hashstr(train_hash)
-        indx_id  = str(len(indx_samp))+','+helpers.hashstr(indx_hash)
-        test_id  = str(len(test_samp))+','+helpers.hashstr(test_hash) 
+        train_id = helpers.make_sample_id(train_samp)
+        indx_id  = helpers.make_sample_id(indx_samp)
+        test_id  = helpers.make_sample_id(test_samp) 
  
         print('[hs] set_samples(): train_indx_id=%r' % train_indx_id)
         print('[hs] set_samples(): train_id=%r' % train_id)
@@ -221,7 +216,7 @@ class HotSpotter(DynStruct):
         print('[hs] set_samples(): indx_id=%r'  % indx_id)
 
 
-        params.TRAIN_INDX_SAMPLE_ID = train_indx_id
+        params.TRAIN_INDX_SAMPLE_ID = train_indx_id # Depricate
         params.TRAIN_SAMPLE_ID      = train_id
         params.INDX_SAMPLE_ID       = indx_id
         params.TEST_SAMPLE_ID       = test_id

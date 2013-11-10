@@ -113,6 +113,7 @@ BOW_AKMEANS_FLANN_PARAMS = {'algorithm':'kdtree',
 BOW_WORDS_FLANN_PARAMS   = hs1_params 
 VSMANY_FLANN_PARAMS      = hs1_params
 VSONE_FLANN_PARAMS       = hs1_params
+FLANN_PARAMS       = hs1_params
 
 AKMEANS_MAX_ITERS = 100
 
@@ -209,14 +210,8 @@ TEST_SAMPLE_ID = ''
 
 def get_matcher_uid(with_train=True, with_indx=True):
     matcher_uid = '_'+__MATCH_TYPE__
-    matcher_uid += '_rnn' * __USE_RECIPROCAL_NN__
-    matcher_uid += '_snn' * __USE_SPATIAL_NN__
     if __MATCH_TYPE__ == 'bagofwords':
         matcher_uid += '_W%d' % __BOW_NUM_WORDS__
-    if __MATCH_TYPE__ == 'vsmany':
-        matcher_uid += '_k%d' % __VSMANY_K__
-    if __MATCH_TYPE__ == 'vsone':
-        matcher_uid += '_rat'+str(__VSONE_RATIO_THRESH__)
     if with_train:
         matcher_uid += '_trainID('+TRAIN_SAMPLE_ID+')'
     if with_indx:
@@ -234,6 +229,12 @@ def get_query_uid():
     query_uid += ',' + str(__SCALE_THRESH_LOW__)
     query_uid += ',cdl' * __USE_CHIP_EXTENT__ # chip diag len
     query_uid += ')'
+    if __MATCH_TYPE__ == 'vsmany':
+        query_uid += '_k%d' % __VSMANY_K__
+    if __MATCH_TYPE__ == 'vsone':
+        query_uid += '_rat'+str(__VSONE_RATIO_THRESH__)
+    query_uid += '_rnn' * __USE_RECIPROCAL_NN__
+    query_uid += '_snn' * __USE_SPATIAL_NN__
     if __MATCH_TYPE__ == 'vsmany':
         query_uid += '_%s' % __VSMANY_SCORE_FN__
     query_uid += get_matcher_uid()

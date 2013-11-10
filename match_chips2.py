@@ -1,83 +1,4 @@
 # TODO Sunday:
-'''
-PRIORITY 1: 
-* CREATE A SIMPLE TEST DATABASE
-* Need simple testcases showing the validity of each step. Do this with a small
-* database of three images: Query, TrueMatch, FalseMatch
-* Manually remove a selection of keypoints. 
-
-PRIORITY 2: 
-* FIX QUERY CACHING
- QueryResult should save each step of the query. 
- * Initial Nearest Neighbors Result,
- * Filter Reciprocal Result
- * Filter Spatial Result
- * Filter Spatial Verification Result 
- You should have the ability to turn the caching of any part off. 
-
-PRIORITY 3: 
- * Unifty vsone and vsmany
- * Just make a query params object
- they are the same process which accepts the parameters: 
-     invert_query, qcxs, dcxs
-
-class QueryParams():
-    def __init__(self):
-        qcxs = []
-        dcxs = []
-        invert_query = False
-
-class NearestNeighborParams():
-    def __init__(self):
-        # Core
-        self.checks = 128
-        self.K_nearest      = 1
-        # Filters
-        self.K_reciprocal   = 0 # 0 := off
-        self.roidist_thresh = 1 # 1 := off
-        self.ratio_thresh   = 1 # 1 := off
-        self.freq_thresh    = 1 # 1 := off
-
-class SpatialVerifyParams():
-    def __init__(self):
-        self.scale_range_thresh  = (.5, 2)
-        self.xy_thresh = .002
-
-class ScoringParams():
-    self __init__(self):
-        self.vote_weight_fn = LNBNN
-        self.voting_rule_fn = PlacketLuce
-        self.num_shortlist  = 100
-
-
-def query(hs, qcxs, dcxs, query_params)
-     if invert_query:
-         data_index  = precompute_flann(cxs)
-         query_cxs   = dcxs
-         data_cxs    = cxs
-     else:
-         data_index  = precompute_flann(dcxs)
-         query_cxs   = cxs
-         data_cxs    = dcxs
-    cx2_neighbors = {}
-    nnfilter_list = [reciprocal, roidist, frexquency, ratiotest, bursty]
-    scoring_func  = [LNBNN, PlacketLuce, TopK, Borda]
-    for cx in query_cxs:
-        load_precomputed(cx, query_params)
-    for cx in query_cxs:
-        cx2_neighbors[cx] = nearest_neighbors(data_index, query_params, nn_params)
-    for nnfilter in nnfilter_list:
-        nnfilter(cx2_neighbors)
-    scoring_func(cx2_neighbors, scoring_params)
-    shortlist_cx, longlist_cx = get_shortlist(query_cxs, cx2_neighbors)
-    for cx in shortlist_cx:
-        spatial_verify(cx2_neighbors[cx], verify_params)
-    for cx in longlist_cx:
-        remove_matches(cx2_neighbors[cx])
-    scores = scoring_func(cx2_neighbors, scoring_params)
-    cache_neighbors(cx2_neighbors)
-    return scores, cx2_neighbors
-'''
 '''Module match_chips: 
     Runs vsone, vsmany, and bagofwords matching'''
 #from numba import autojit
@@ -445,11 +366,11 @@ def __aggregate_descriptors(cx2_desc, indexed_cxs):
     # sample the descriptors you wish to aggregate
     sx2_cx   = indexed_cxs
     sx2_desc = cx2_desc[sx2_cx]
-    sx2_numfeat = [len(k) for k in iter(cx2_desc[sx2_cx])]
-    cx_numfeat_iter = izip(sx2_cx, sx2_numfeat)
+    sx2_nFeat = [len(k) for k in iter(cx2_desc[sx2_cx])]
+    cx_nFeat_iter = izip(sx2_cx, sx2_nFeat)
     # create indexes from agg desc back to chipx and featx
-    _ax2_cx = [[cx]*num_feats for (cx, num_feats) in cx_numfeat_iter]
-    _ax2_fx = [range(num_feats) for num_feats in iter(sx2_numfeat)]
+    _ax2_cx = [[cx]*nFeat for (cx, nFeat) in cx_nFeat_iter]
+    _ax2_fx = [range(nFeat) for nFeat in iter(sx2_nFeat)]
     ax2_cx  = np.array(list(itertools.chain.from_iterable(_ax2_cx)))
     ax2_fx  = np.array(list(itertools.chain.from_iterable(_ax2_fx)))
     ax2_desc = np.vstack(cx2_desc[sx2_cx])
@@ -752,7 +673,6 @@ class Matcher(DynStruct):
         if not self.bow_args is None:
             self.bow_args.use_reciprocal = use_reciprocal
             self.bow_args.use_spatial = use_spatial
-
 
     def __del__(self):
         print('[matcher] Deleting Matcher')
@@ -1078,7 +998,6 @@ if __name__ == '__main__':
     import params
     freeze_support()
     print('[mc2] __main__ = match_chips2.py')
-
     # --- CHOOSE DATABASE --- #
     db_dir = params.DEFAULT
     hs = load_data2.HotSpotter()
@@ -1087,7 +1006,6 @@ if __name__ == '__main__':
     hs.set_samples()
     hs.load_features()
     hs.load_matcher()
-
     #qcx = 111
     #cx = 305
     qcx = helpers.get_arg_after('--qcx', type_=int)

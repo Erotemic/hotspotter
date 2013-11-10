@@ -818,6 +818,11 @@ def hashstr(data, trunc_pos=8):
     hashstr = hashstr2[:trunc_pos]
     return hashstr
 
+def make_sample_id(sample):
+    'Input: sample - a list of chip indexes, Output: hashstr'
+    hash_input = repr(tuple(sample)) # Full String Representation
+    return str(len(sample))+','+hashstr(hash_input)
+
 #def valid_filename_ascii_chars():
     ## Find invalid chars
     #ntfs_inval = '< > : " / \ | ? *'.split(' ')

@@ -110,45 +110,12 @@ HISTORY = [
 
 def mothers_problem_pairs():
     '''MOTHERS Dataset: difficult (qcx, cx) query/result pairs'''
-    #-
-    viewpoint \
-            = [
-        ( 16,  17),
-        ( 19,  20),
-        ( 73,  71),
-        ( 75,  78),
-        (108, 112), # query is very dark
-        (110, 108),
-                ]
-    #-
-    quality   \
-            = [
-        (27, 26),   #minor viewpoint
-        (52, 53),
-        (67, 68),   #stupid hard case (query from 68 to 67 direction is better (start with foal)
-        (73, 71),
-    ]
-    #-
-    lighting  \
-            = [
-        (105, 104),
-        ( 49,  50), #brush occlusion on legs
-        ( 93,  94),
-    ]
-    #-
-    confused  \
-            = [
-    ]
-    #-
-    occluded  \
-            = [
-        (64,65),
-    ]
-    #-
+    viewpoint = [( 16, 17), (19, 20), (73, 71), (75, 78), (108, 112), (110, 108)]
+    quality = [(27, 26),  (52, 53), (67, 68), (73, 71), ]
+    lighting = [(105, 104), ( 49,  50), ( 93,  94), ]
+    confused = []
+    occluded = [(64,65), ]
     return locals()
-
-
-
 
 def quick_assign_vsmany(hs, qcx, cx, K): 
     print('[invest] Performing quick vsmany')
@@ -188,8 +155,7 @@ def top_matching_features(res, axnum=None, match_type=''):
 def investigate_scoring_rules(hs, qcx, fnum=1):
     args = hs.args
     K = 4 if args.K is None else args.K
-    voters_profile = vr2.build_voters_profile(hs, qcx, K)
-    vr2.apply_voting_rules(hs, qcx, voters_profile, fnum)
+    vr2.test_voting_rules(hs, qcx, K, fnum)
     fnum += 1
     return fnum
 
@@ -477,17 +443,21 @@ def hs_from_db(db):
     return hs
 
 def get_all_history(db):
-    qcid_list =[]
+    qcid_list = []
+    ocid_list = []
+    note_list = []
     for (db_, qcid, ocids, notes) in HISTORY:
         if db == db_:
             qcid_list += [qcid]
+            ocid_list += [ocids]
+            note_list += [notes]
     qcx_list = hs.cid2_cx(qcid_list)
     #print('qcid_list = %r ' % qcid_list)
     #print('qcx_list = %r ' % qcid_list)
-    return qcx_list
+    return qcx_list, ocid_list, note_list
 
 def view_all_history_names_in_db(hs, db):
-    qcx_list = get_all_history(db)
+    qcx_list = zip(*get_all_history(db))[0]
     nx_list = hs.tables.cx2_nx[qcx_list]
     unique_nxs = np.unique(nx_list)
     print('unique_nxs = %r' % unique_nxs)
@@ -548,8 +518,10 @@ if __name__ == '__main__':
         if not args.qcid is None:
             qcxs = hs.cid2_cx(args.qcid)
         else:
+            print('========================')
             print('[invest] Chosen histid=%r' % args.histid)
-            qcxs = get_all_history(args.db)[args.histid]
+            qcxs, ocids, notes = zip(*get_all_history(args.db))[args.histid]
+            print('[invest] notes=%r' % notes)
         qcxs = ensure_iterable(qcxs)
     print('[invest] running ')
     fmtstr = helpers.make_progress_fmt_str(len(qcxs), '[invest] investigation ')

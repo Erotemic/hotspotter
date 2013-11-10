@@ -158,27 +158,13 @@ def filter_nn_reciprocal(dx2_desc, data_flann, K1, K2, checks, qfx2_dx, qfx2_dis
     qfx2_valid = np.bitwise_and(qfx2_valid, qfx2_recip_valid)
     return qfx2_valid
 
-def filter_nn_spatial(qdiag, qfx2_kpts, dx2_fx, dx2_cx, cx2_kpts, cx2_rchip_size, qfx2_dx, qfx2_valid):
-    '''Filters a matches to those within roughly the same spatial arangement
-    '''
+def filter_nn_distance(qdiag, qfx2_kpts, dx2_fx, dx2_cx, cx2_kpts, cx2_rchip_size, qfx2_dx, qfx2_valid):
+    'Filters a matches to those within roughly the same spatial arangement'
     # Get matched chip sizes #.0300s
     nQuery, K = qfx2_dx.shape
     qfx2_cx = dx2_cx[qfx2_dx]
     qfx2_fx = dx2_fx[qfx2_dx]
-    #print('\n---')
-    #helpers.printvar(locals(), 'cx2_rchip_size')
-    #helpers.printvar(locals(), 'qfx2_cx')
-    #print('qfx2_cx = %r ' % (qfx2_cx,))
     qfx2_chipsize2 = np.array([cx2_rchip_size[cx] for cx in qfx2_cx.flat])
-    #print('------------')
-    #helpers.printvar(locals(), 'qfx2_kpts')
-    #helpers.printvar(locals(), 'dx2_fx')
-    #helpers.printvar(locals(), 'dx2_cx')
-    #helpers.printvar(locals(), 'cx2_kpts')
-    #helpers.printvar(locals(), 'cx2_rchip_size')
-    #helpers.printvar(locals(), 'qfx2_dx')
-    #helpers.printvar(locals(), 'qfx2_valid')
-    #print('------------')
     qfx2_chipsize2.shape = (nQuery, K, 2)
     qfx2_chipdiag2 = np.sqrt((qfx2_chipsize2**2).sum(2))
     # Get query relative xy keypoints #.0160s / #.0180s (+cast)
@@ -194,8 +180,16 @@ def filter_nn_spatial(qdiag, qfx2_kpts, dx2_fx, dx2_cx, cx2_kpts, cx2_rchip_size
     # Get the relative distance # .0010s
     qfx2_K_xy1 = np.rollaxis(np.tile(qfx2_xy1, (K, 1, 1)), 1)
     qfx2_xydist = ((qfx2_K_xy1 - qfx2_xy2)**2).sum(2)
-    qfx2_dist_valid = qfx2_xydist < .1
+    qfx2_dist_valid = qfx2_xydist < .5
+    # All neighbors are valid
+    qfx2_valid = np.bitwise_and(qfx2_valid, qfx2_dist_valid)
+    return qfx2_valid
+
+def filter_nn_scale(qfx2_kpts, dx2_fx, dx2_cx, cx2_kpts, qfx2_dx, qfx2_valid):
     # Filter by scale for funzies
+    nQuery, K = qfx2_dx.shape
+    qfx2_cx = dx2_cx[qfx2_dx]
+    qfx2_fx = dx2_fx[qfx2_dx]
     qfx2_det1 = np.array(qfx2_kpts[:, [2,4]], np.float).prod(1)
     qfx2_det1 = np.sqrt(1.0/qfx2_det1)
     qfx2_K_det1 = np.rollaxis(np.tile(qfx2_det1, (K, 1)), 1)
@@ -205,9 +199,7 @@ def filter_nn_spatial(qdiag, qfx2_kpts, dx2_fx, dx2_cx, cx2_kpts, cx2_rchip_size
     qfx2_det2 = np.sqrt(1.0/qfx2_det2)
     qfx2_scaledist = qfx2_det2 / qfx2_K_det1
     qfx2_scale_valid = np.bitwise_and(qfx2_scaledist > .5, qfx2_scaledist < 2)
-    # All neighbors are valid
-    qfx2_spatial_valid = np.bitwise_and(qfx2_dist_valid, qfx2_scale_valid)
-    qfx2_valid = np.bitwise_and(qfx2_valid, qfx2_spatial_valid)
+    qfx2_valid = np.bitwise_and(qfx2_valid, qfx2_scale_valid)
     return qfx2_valid
 
 #========================================
@@ -244,7 +236,7 @@ def vsmany_nearest_neighbors(vsmany_args, qcx, cx2_kpts, cx2_desc, cx2_rchip_siz
         ax2_fx = vsmany_args.ax2_fx
         qdiag = (np.array(cx2_rchip_size[qcx])**2).sum()
         qfx2_kpts = cx2_kpts[qcx]
-        qfx2_valid = filter_nn_spatial(qdiag, qfx2_kpts, ax2_fx, ax2_cx, cx2_kpts, cx2_rchip_size, qfx2_ax, qfx2_valid)
+        qfx2_valid = filter_nn_distance(qdiag, qfx2_kpts, ax2_fx, ax2_cx, cx2_kpts, cx2_rchip_size, qfx2_ax, qfx2_valid)
     return qfx2_ax, qfx2_dist, qfx2_valid
 
 class VsOneArgs(DynStruct):
@@ -303,7 +295,7 @@ def vsone_nearest_neighbors(vsone_args, cx, cx2_kpts, cx2_desc, cx2_rchip_size):
         qfx2_qfx = np.arange(len(kpts1), dtype=int)
         qfx2_qcx = np.zeros(len(kpts1), dtype=int) + vsone_args.qcx
                                     #qdiag, qfx2_kpts, dx2_fx, dx2_cx, cx2_kpts, cx2_rchip_size, qfx2_dx, qfx2_valid
-        fx2_valid = filter_nn_spatial(diag, fx2_kpts2, qfx2_qfx, qfx2_qcx, cx2_kpts, cx2_rchip_size, fx2_qfx, fx2_valid)
+        fx2_valid = filter_nn_distance(diag, fx2_kpts2, qfx2_qfx, qfx2_qcx, cx2_kpts, cx2_rchip_size, fx2_qfx, fx2_valid)
     return fx2_qfx, fx2_dist, fx2_valid
 
 
@@ -438,15 +430,14 @@ def assign_matches_vsmany(args, qcx, cx2_kpts, cx2_desc, cx2_rchip_size):
     #helpers.println('Assigning vsmany feature matches from qcx=%d to %d chips'\ % (qcx, len(cx2_desc)))
     isQueryIndexed = True
     k_vsmany     = args.K + isQueryIndexed
-    checks       = args.checks
-    vsmany_flann = args.vsmany_flann
     ax2_cx       = args.ax2_cx
     ax2_fx       = args.ax2_fx
     ax2_desc     = args.ax2_desc
-    score_fn = scoring_func_map[params.__VSMANY_SCORE_FN__]
     # Find each query descriptor's k+1 nearest neighbors
-    (qfx2_ax, qfx2_dists, qfx2_valid) = vsmany_nearest_neighbors(
-        args, qcx, cx2_kpts, cx2_desc, cx2_rchip_size, k_vsmany+1)
+    nn_args = (args, qcx, cx2_kpts, cx2_desc, cx2_rchip_size, k_vsmany+1)
+    nn_result = vsmany_nearest_neighbors(*nn_args)
+    (qfx2_ax, qfx2_dists, qfx2_valid) = nn_result
+    score_fn = scoring_func_map[params.__VSMANY_SCORE_FN__]
     qfx2_valid = qfx2_valid[:, 0:k_vsmany]
     vote_dists = qfx2_dists[:, 0:k_vsmany]
     norm_dists = qfx2_dists[:, k_vsmany] # k+1th descriptor for normalization
@@ -659,18 +650,22 @@ class Matcher(DynStruct):
             return self.__assign_matches(self.__args, *args)
         self.assign_matches = assign_matches
 
-    def set_nn_type(self, use_reciprocal=None, use_spatial=None):
-        print('[matcher] set_nn_type: %r, %r' % (use_reciprocal, use_spatial))
+    def set_params(self, use_reciprocal=None, use_spatial=None, K=None):
+        print('[matcher] set_params: %r, %r, %r' % (use_reciprocal, use_spatial, K))
         if use_reciprocal is None: 
             use_reciprocal = params.__USE_RECIPROCAL_NN__
         if use_spatial is None: 
             use_spatial = params.__USE_SPATIAL_NN__
+        if K is None:
+            K = params.__VSMANY_K__
         params.__USE_RECIPROCAL_NN__  = use_reciprocal
         params.__USE_SPATIAL_NN__     = use_spatial
+        params.__VSMANY_K__     = K
         self.nn_type = (use_reciprocal, use_spatial)
         if not self.vsmany_args is None:
             self.vsmany_args.use_reciprocal = use_reciprocal
             self.vsmany_args.use_spatial = use_spatial
+            self.vsmany_args.K = K
         if not self.vsone_args is None:
             self.vsone_args.use_reciprocal = use_reciprocal
             self.vsone_args.use_spatial = use_spatial
@@ -973,17 +968,17 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
     kwbuild = dict(use_cache=use_cache, remove_init=False,
                    save_changes=True, match_type=match_type)
     kwshow = dict(SV=1, show_query=1, compare_SV=1, vert=1)
-    N = 3
+    N = 4
     def build_res_(recip, spatial):
         return build_result_qcx(hs, qcx, recip=recip, spatial=spatial, **kwbuild)
     def show_(res, fnum, figtitle=''):
         df2.show_match_analysis(hs, res, N, fnum, figtitle, **kwshow) 
         return fnum + 1
     res_list = [
-        #(build_res_(False, False), 'knn'),
-        #(build_res_(True,  False), 'kRnn'),
+        (build_res_(False, False), 'knn'),
+        (build_res_(True,  False), 'kRnn'),
         (build_res_(False, True),  'kSnn'),
-        #(build_res_(True,  True),  'kRSnn'),
+        (build_res_(True,  True),  'kRSnn'),
     ]
     for (res, taug) in res_list:
         fnum = show_(res, fnum, taug)

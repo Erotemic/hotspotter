@@ -99,10 +99,11 @@ class HotSpotter(DynStruct):
         if hs.matcher.match_type != match_type:
             hs.matcher.set_match_type(hs, match_type)
 
-    def ensure_matcher(hs, match_type=None, use_reciprocal=None, use_spatial=None):
+    def ensure_matcher(hs, match_type=None, use_reciprocal=None,
+                       use_spatial=None, K=None):
         hs.ensure_matcher_loaded()
         hs.matcher.ensure_match_type(hs, match_type)
-        hs.matcher.set_nn_type(use_reciprocal, use_spatial)
+        hs.matcher.set_params(use_reciprocal, use_spatial, K)
     #---------------
     def load_database(hs, db_dir,
                       matcher=True,

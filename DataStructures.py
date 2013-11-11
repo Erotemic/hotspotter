@@ -44,3 +44,50 @@ class NNIndex(object):
         if not self.flann:
             self.flann.delete_index()
 
+class NNParams(DynStruct):
+    def __init__(nn_params, **kwargs):
+        super(NNParams, nn_params).__init__
+        # Core
+        nn_params.K = 2
+        nn_params.Knorm = 1
+        # Filters
+        nn_params.nnfilter_list = ['reciprocal', 'roidist']
+        #['reciprocal', 'roidist', 'frexquency', 'ratiotest', 'bursty']
+        nn_params.K_reciprocal   = 1 # 0 := off
+        nn_params.roidist_thresh = 1 # 1 := off
+        nn_params.ratio_thresh   = 1 # 1 := off
+        nn_params.freq_thresh    = 1 # 1 := off
+        nn_params.checks = 128
+        nn_params.__dict__.update(**kwargs)
+
+class SpatialVerifyParams(DynStruct):
+    def __init__(sv_params, **kwargs):
+        super(SpatialVerifyParams, sv_params).__init__
+        sv_params.scale_thresh  = (.5, 2)
+        sv_params.xy_thresh = .002
+        sv_params.shortlist_len = 100
+        sv_params.__dict__.update(kwargs)
+
+class ScoringParams(DynStruct):
+    def __init__(score_params, **kwargs):
+        super(ScoringParams, score_params).__init__
+        score_params.aggregation_method = 'ChipSum' # ['NameSum', 'NamePlacketLuce']
+        score_params.meta_params = {
+            'roidist'    : (.5),
+            'reciprocal' : (0), 
+            'ratio'      : (1.2), 
+            'scale'      : (.5),
+            'bursty'     : (1),
+            'lnbnn'      : 0, 
+        }
+        score_params.num_shortlist  = 100
+        score_params.__dict__.update(kwargs)
+
+class QueryParams(DynStruct):
+    def __init__(query_params, **kwargs):
+        super(QueryParams, query_params).__init__
+        query_params.nn_params = NNParams(**kwargs)
+        query_params.score_params = ScoringParams(**kwargs)
+        query_params.sv_params = SpatialVerifyParams( *kwargs)
+        query_params.query_type = 'vsmany'
+        query_params.__dict__.update(kwargs)

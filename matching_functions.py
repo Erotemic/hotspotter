@@ -25,6 +25,7 @@ import scipy.sparse as spsparse
 import sklearn.preprocessing 
 from itertools import izip, chain
 import investigate_chip as invest
+import spatial_verification2 as sv2
 
 def reload_module():
     import imp, sys
@@ -32,8 +33,6 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 def rrr():
     reload_module()
-
-
     
 #============================
 # Nearest Neighbors
@@ -59,6 +58,14 @@ def nearest_neighbors(hs, qcxs, data_index, nn_params):
     qcx2_neighbors = {qcx:func(qcx) for qcx in qcxs}
     return qcx2_neighbors
 
+
+#-------
+# Nearest Neighbor weights
+#-------
+eps = 1E-8
+def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+eps)+1) 
+def RATIO_fn(vdist, ndist): return np.divide(ndist, vdist+eps)
+def LNBNN_fn(vdist, ndist): return (ndist - vdist) / 1000.0
 def _nn_normalized_weight(hs, qcx2_neighbors, data_index, normweight_fn):
     # Only valid for vsone
     K = nn_params.K
@@ -71,12 +78,6 @@ def _nn_normalized_weight(hs, qcx2_neighbors, data_index, normweight_fn):
         qfx2_ratio = normweight_fn(qfx2_nndist, qfx2_normdist)
         qcx2_weight[qcx] = qfx2_ratio
     return qcx2_weight
-
-eps = 1E-8
-def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+eps)+1) 
-def RATIO_fn(vdist, ndist): return np.divide(ndist, vdist+eps)
-def LNBNN_fn(vdist, ndist): return (ndist - vdist) / 1000.0
-
 def nn_ratio_weight(hs, qcx2_neighbors, data_index):
     return _nn_normalized_weight(hs, qcx2_neighbors, data_index, RATIO_fn)
 def nn_lnbnn_weight(hs, qcx2_neighbors, data_index):
@@ -192,59 +193,161 @@ def nn_placketluce_score(hs, qcx2_neighbors, data_index, nn_params):
 def nn_positional_score(hs, qcx2_neighbors, data_index, nn_params):
     pass
 
-def score_neighbors(hs, qcx2_neighbors, data_index, nnweights, scoring_params, nn_params):
-    meta_params = score_params.meta_params
+
+def neighbors_to_res(hs, qcx2_neighbors, filter_weights, query_params):
+    print('Converting neighbors to result')
+    score_params = query_params.score_params
+    nn_params    = query_params.nn_params
+    K          = nn_params.K
     agg_method = score_params.aggregation_method
+    key2_tw    = score_params.key2_threshweight
     dx2_cx = data_index.ax2_cx
     dx2_fx = data_index.ax2_fx
-    dcxs = np.arange(len(hs.feats.cx2_desc))
-    K = nn_params.K
+    dcxs   = np.arange(len(hs.feats.cx2_desc))
     qcx2_res = {}
     for qcx in qcx2_neighbors.iterkeys():
+        res = ds.QueryResult(qcx, query_params)
         (qfx2_dx, _) = qcx2_neighbors[qcx]
         nQuery = len(qfx2_dx)
         qfx2_nn = qfx2_dx[:, 0:K]
-        qfx2_score = np.ones(qfx2_nn.shape)
+        qfx2_score = np.ones(qfx2_nn.shape, dtype=ds.FS_DTYPE)
         qfx2_valid = np.ones(qfx2_nn.shape, dtype=np.bool)
-        for key, cx2_weights in nnweights.iteritems():
+        for key, cx2_weights in filter_weights.iteritems():
             qfx2_weights = cx2_weights[qcx]
-            thresh = meta_params[key]
-            print('%r, %r' % (key, thresh))
-            qfx2_valid = np.bitwise_and(qfx2_valid, qfx2_weights <= thresh)
+            thresh, weight   = key2_tw[key]
+            print('Applying %r thresh=%r, weight=%r' % (key, thresh, weight))
+            qfx2_valid   = np.bitwise_and(qfx2_valid, qfx2_weights <= thresh)
+            qfx2_score  += weight * qfx2_weights
             #qfx2_score
+        qfx2_cx = dx2_cx[qfx2_nn]
+        qfx2_fx = dx2_fx[qfx2_nn]
+        # Build feature matches
+        cx2_fm = [[] for _ in xrange(len(dcxs))]
+        cx2_fs = [[] for _ in xrange(len(dcxs))]
+        qfx2_qfx = helpers.tiled_range(nQuery, K)
+        #iter_matches = izip(qfx2_qfx.flat, qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat)
+        iter_matches = izip(qfx2_qfx[qfx2_valid], qfx2_cx[qfx2_valid],
+                            qfx2_fx[qfx2_valid], qfx2_score[qfx2_valid])
+        for qfx, cx, fx, score in iter_matches:
+            if qcx == cx: 
+                continue # dont vote for yourself
+            cx2_fm[cx].append((qfx, fx))
+            cx2_fs[cx].append(score)
+        # Convert to numpy
+        for cx in xrange(len(dcxs)):
+            fm = np.array(cx2_fm[cx], dtype=ds.FM_DTYPE)
+            fm = fm.reshape(len(fm), 2)
+            cx2_fm[cx] = fm
+        for cx in xrange(len(dcxs)): 
+            fs = np.array(cx2_fs[cx], dtype=ds.FS_DTYPE)
+            #fs.shape = (len(fs), 1)
+            cx2_fs[cx] = fs
+        cx2_fm = np.array(cx2_fm)
+        cx2_fs = np.array(cx2_fs)
         if agg_method == 'ChipSum':
-            qfx2_cx = dx2_cx[qfx2_nn]
-            qfx2_fx = dx2_fx[qfx2_nn]
-            # Build feature matches
-            cx2_fm = [[] for _ in xrange(len(dcxs))]
-            cx2_fs = [[] for _ in xrange(len(dcxs))]
-            qfx2_qfx = helpers.tiled_range(nQuery, K)
-            #iter_matches = izip(qfx2_qfx.flat, qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat)
-            iter_matches = izip(qfx2_qfx[qfx2_valid],
-                                qfx2_cx[qfx2_valid],
-                                qfx2_fx[qfx2_valid],
-                                qfx2_score[qfx2_valid])
-            for qfx, cx, fx, score in iter_matches:
-                if qcx == cx: 
-                    continue # dont vote for yourself
-                cx2_fm[cx].append((qfx, fx))
-                cx2_fs[cx].append(score)
-            # Convert to numpy
-            for cx in xrange(len(dcxs)):
-                fm = np.array(cx2_fm[cx], dtype=FM_DTYPE)
-                fm = fm.reshape(len(fm), 2)
-                cx2_fm[cx] = fm
-            for cx in xrange(len(dcxs)): 
-                fs = np.array(cx2_fs[cx], dtype=FS_DTYPE)
-                #fs.shape = (len(fs), 1)
-                cx2_fs[cx] = fs
-            cx2_fm = np.array(cx2_fm)
-            cx2_fs = np.array(cx2_fs)
             cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
-            qcx2_res[qcx] = (cx2_fm, cx2_fs, cx2_score)
+            res.cx2_fm = cx2_fm
+            res.cx2_fs = cx2_fs
+            res.cx2_score = cx2_score
+            qcx2_res[qcx] = res
         return qcx2_res
+'''
+def doit():
+    df2.rrr()
+    df2.reset()
+    res.show_query(hs, SV=False)
+    res.show_topN(hs, SV=False)
+    df2.update()
+    df2.bring_to_front(df2.plt.gcf())
+'''
+#-----
+# Scoring Mechanism
+#-----
+def score_matches(hs, qcx2_neighbors, data_index, filter_weights, query_params):
+    if agg_method == 'ChipSum':
+        cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+        qcx2_res[qcx] = (cx2_fm, cx2_fs, cx2_score)
+    return qcx2_res
     #s2coring_func  = [LNBNN, PlacketLuce, TopK, Borda]
     #load_precomputed(cx, query_params)
+
+#-----
+# Spatial Verification
+#-----
+def spatially_verify_matches(hs, qcxs, qcx2_res, qcx2_neighbors,
+                             key2_cx_qfx2_weights, sv_params):
+    cx2_rchip_size = hs.get_cx2_rchip_size()
+    cx2_kpts  = hs.feats.cx2_kpts
+    cx2_resSV = {}
+    for qcx in qcx2_res.iterkeys():
+        kpts1     = cx2_kpts[qcx]
+        (cx2_fm, cx2_fs, cx2_score) = qcx2_res[qcx]
+        #cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+        top_cx     = cx2_score.argsort()[::-1]
+        num_rerank = min(len(top_cx), sv_params.shortlist_len)
+        # Precompute output container
+        cx2_fm_V = [[] for _ in xrange(len(cx2_fm))]
+        cx2_fs_V = [[] for _ in xrange(len(cx2_fs))]
+        # spatially verify the top __NUM_RERANK__ results
+        for topx in xrange(num_rerank):
+            cx    = top_cx[topx]
+            kpts2 = cx2_kpts[cx]
+            fm    = cx2_fm[cx]
+            fs    = cx2_fs[cx]
+            rchip_size2 = cx2_rchip_size[cx]
+            xy_thresh = sv_params.xy_thresh
+            slow_thresh, shigh_thresh = sv_params.scale_thresh
+            use_chip_extent = sv_params.xy_thresh
+            (fm_V, fs_V) = spatially_verify(kpts1, kpts2, rchip_size2, 
+                                            fm, fs, xy_thresh,
+                                            shigh_thresh, slow_thresh,
+                                            use_chip_extent)
+            cx2_fm_V[cx] = fm_V
+            cx2_fs_V[cx] = fs_V
+        # Rebuild the feature match / score arrays to be consistent
+        for cx in xrange(len(cx2_fm_V)):
+            fm = np.array(cx2_fm_V[cx], dtype=ds.FM_DTYPE)
+            fm = fm.reshape(len(fm), 2)
+            cx2_fm_V[cx] = fm
+        for cx in xrange(len(cx2_fs_V)): 
+            cx2_fs_V[cx] = np.array(cx2_fs_V[cx], dtype=ds.FS_DTYPE)
+        cx2_fm_V = np.array(cx2_fm_V)
+        cx2_fs_V = np.array(cx2_fs_V)
+        # Rebuild the cx2_score arrays
+        cx2_score_V = np.array([np.sum(fs) for fs in cx2_fs_V])
+        resSV = (cx2_fm_V, cx2_fs_V, cx2_score_V)
+        cx2_resSV[qcx] = resSV
+    return cx2_resSV
+
+def spatially_verify(kpts1, kpts2, rchip_size2, fm, fs, xy_thresh,
+                     shigh_thresh, slow_thresh, use_chip_extent):
+    '''1) compute a robust transform from img2 -> img1
+       2) keep feature matches which are inliers 
+       returns fm_V, fs_V, H '''
+    # Return if pathological
+    min_num_inliers   = 4
+    if len(fm) < min_num_inliers:
+        return (np.empty((0, 2)), np.empty((0, 1)))
+    # Get homography parameters
+    if use_chip_extent:
+        diaglen_sqrd = rchip_size2[0]**2 + rchip_size2[1]**2
+    else:
+        x_m = kpts2[fm[:,1],0].T
+        y_m = kpts2[fm[:,1],1].T
+        diaglen_sqrd = sv2.calc_diaglen_sqrd(x_m, y_m)
+    # Try and find a homography
+    sv_tup = sv2.homography_inliers(kpts1, kpts2, fm, xy_thresh, 
+                                    shigh_thresh, slow_thresh,
+                                    diaglen_sqrd, min_num_inliers)
+    if sv_tup is None:
+        return (np.empty((0, 2)), np.empty((0, 1)))
+    # Return the inliers to the homography
+    (H, inliers, Aff, aff_inliers) = sv_tup
+    fm_V = fm[inliers, :]
+    fs_V = fs[inliers]
+    return fm_V, fs_V
+####
+
 '''
 PRIORITY 1: 
 * CREATE A SIMPLE TEST DATABASE
@@ -267,80 +370,3 @@ PRIORITY 3:
  they are the same process which accepts the parameters: 
      invert_query, qcxs, dcxs
 '''
-def score_matches(hs, qcxs, qcx2_res, qcx2_neighbors,
-                             key2_cx_qfx2_weights, sv_params):
-    cx2_rchip_size = hs.get_cx2_rchip_size()
-    cx2_kpts  = hs.feats.cx2_kpts
-    cx2_resSV = {}
-    for qcx in qcx2_res.iterkeys():
-        kpts1     = cx2_kpts[qcx]
-        (cx2_fm, cx2_fs, cx2_score) = qcx2_res[qcx]
-        #cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
-        top_cx     = cx2_score.argsort()[::-1]
-        num_rerank = min(len(top_cx), sv_params.shortlist_len)
-        # Precompute output container
-        cx2_fm_V = [[] for _ in xrange(len(cx2_fm))]
-        cx2_fs_V = [[] for _ in xrange(len(cx2_fs))]
-        # spatially verify the top __NUM_RERANK__ results
-        for topx in xrange(num_rerank):
-            cx    = top_cx[topx]
-            kpts2 = cx2_kpts[cx]
-            fm    = cx2_fm[cx]
-            fs    = cx2_fs[cx]
-            rchip_size2 = cx2_rchip_size[cx]
-            xy_thresh = sv_params.xy_thresh
-            scale_thresh_low, scale_thresh_high = sv_params.scale_thresh
-            (fm_V, fs_V) = spatially_verify(kpts1, kpts2, rchip_size2, fm, fs, xy_thresh,
-                     scale_thresh_high, scale_thresh_low)
-            cx2_fm_V[cx] = fm_V
-            cx2_fs_V[cx] = fs_V
-        # Rebuild the feature match / score arrays to be consistent
-        for cx in xrange(len(cx2_fm_V)):
-            fm = np.array(cx2_fm_V[cx], dtype=FM_DTYPE)
-            fm = fm.reshape(len(fm), 2)
-            cx2_fm_V[cx] = fm
-        for cx in xrange(len(cx2_fs_V)): 
-            cx2_fs_V[cx] = np.array(cx2_fs_V[cx], dtype=FS_DTYPE)
-        cx2_fm_V = np.array(cx2_fm_V)
-        cx2_fs_V = np.array(cx2_fs_V)
-        # Rebuild the cx2_score arrays
-        cx2_score_V = np.array([np.sum(fs) for fs in cx2_fs_V])
-        resSV = (cx2_fm_V, cx2_fs_V, cx2_score_V)
-        cx2_resSV[qcx] = resSV
-    return cx2_resSV
-
-def __default_sv_return():
-    'default values returned by bad spatial verification'
-    #H = np.eye(3)
-    fm_V = np.empty((0, 2))
-    fs_V = np.array((0, 1))
-    return (fm_V, fs_V)
-import params
-import spatial_verification2 as sv2
-def spatially_verify(kpts1, kpts2, rchip_size2, fm, fs, xy_thresh,
-                     scale_thresh_high, scale_thresh_low):
-    '''1) compute a robust transform from img2 -> img1
-       2) keep feature matches which are inliers 
-       returns fm_V, fs_V, H '''
-    # Return if pathological
-    min_num_inliers   = 4
-    if len(fm) < min_num_inliers:
-        return __default_sv_return()
-    # Get homography parameters
-    if params.__USE_CHIP_EXTENT__:
-        diaglen_sqrd = rchip_size2[0]**2 + rchip_size2[1]**2
-    else:
-        x_m = kpts2[fm[:,1],0].T
-        y_m = kpts2[fm[:,1],1].T
-        diaglen_sqrd = sv2.calc_diaglen_sqrd(x_m, y_m)
-    # Try and find a homography
-    sv_tup = sv2.homography_inliers(kpts1, kpts2, fm, xy_thresh, 
-                                    scale_thresh_high, scale_thresh_low,
-                                    diaglen_sqrd, min_num_inliers)
-    if sv_tup is None:
-        return __default_sv_return()
-    # Return the inliers to the homography
-    (H, inliers, Aff, aff_inliers) = sv_tup
-    fm_V = fm[inliers, :]
-    fs_V = fs[inliers]
-    return fm_V, fs_V

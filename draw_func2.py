@@ -129,10 +129,19 @@ def draw_sift(desc, kp=None):
     ax.add_collection(circ_collection)
     ax.add_collection(arw_collection2)
     ax.add_collection(arw_collection)
+
+def feat_scores_to_color(fs):
+    assert len(fs.shape) == 1, 'score must be 1d'
+    cmap = plt.get_cmap(LINE_CMAP)
+    mins = fs.min()
+    rnge = fs.max() - mins
+    score2_01 = lambda score: .1+.9*(score-mins)/(rnge)
+    colors    = [cmap(score2_01(fs[fx])) for fx in xrange(len(fs))]
+    return colors
+
 def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
     global LINE_ALPHA
     global SHOW_LINE
-    global LINE_CMAP
     global LINE_COLOR
     global LINE_WIDTH
     # input data
@@ -152,18 +161,11 @@ def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
                          kpts1_m[1],
                          kpts2_m[1]+hoff))
     if fs is None: # Draw with solid color
-        segments  = [ ((x1, y1), (x2,y2)) for (x1,x2,y1,y2) in xxyy_iter ] 
         colors    = [ LINE_COLOR for fx in xrange(len(fm)) ] 
-        linewidth = [ LINE_WIDTH for fx in xrange(len(fm)) ] 
     else: # Draw with colors proportional to score difference
-        assert len(fs.shape) == 1, 'score must be 1d'
-        cmap = plt.get_cmap(LINE_CMAP)
-        mins = fs.min()
-        rnge = fs.max() - mins
-        segments  = [((x1, y1), (x2,y2)) for (x1,x2,y1,y2) in xxyy_iter] 
-        score2_01 = lambda score: .1+.9*(score-mins)/(rnge)
-        colors    = [cmap(score2_01(fs[fx])) for fx in xrange(len(fm))]
-        linewidth = [LINE_WIDTH for fx in xrange(len(fm)) ] 
+        colors = feat_scores_to_color(fs)
+    segments  = [((x1, y1), (x2,y2)) for (x1,x2,y1,y2) in xxyy_iter] 
+    linewidth = [LINE_WIDTH for fx in xrange(len(fm)) ] 
     line_group = LineCollection(segments, linewidth, colors, alpha=LINE_ALPHA)
     ax.add_collection(line_group)
 
@@ -174,7 +176,8 @@ def draw_kpts2(kpts, offset=(0,0),
                pts_size=POINT_SIZE, 
                ell_alpha=ELL_ALPHA,
                ell_linewidth=ELL_LINEWIDTH,
-               ell_color=ELL_COLOR):
+               ell_color=ELL_COLOR,
+               color_list=None):
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
     # get matplotlib info
     ax = plt.gca()
@@ -191,11 +194,10 @@ def draw_kpts2(kpts, offset=(0,0),
     printDBG('[df2] draw_kpts() drawing kpts.shape=%r' % (kpts.shape,))
     if pts:
         printDBG('[df2] draw_kpts() drawing pts x.shape=%r y.shape=%r' % (x.shape, y.shape))
-        ax.plot(x, y, linestyle='None', 
-                marker='o',
-                markerfacecolor=pts_color,
-                markersize=pts_size, 
-                markeredgewidth=0)
+        #if color_list is None:
+            #color_list = [((_)/len(x),1-((_)/len(x)),0) for _ in xrange(len(x))]
+        #ax.scatter(x, y, c=color_list, s=pts_size, marker='o', edgecolor='none')
+        ax.plot(x, y, linestyle='None', marker='o', markerfacecolor=pts_color, markersize=pts_size, markeredgewidth=0)
     if ell:
         printDBG('[df2] draw_kpts() drawing ell kptsT.shape=%r' % (kptsT.shape,))
         a = kptsT[2]
@@ -470,17 +472,17 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
 
 def show_topN_matches(hs, res, N=5, SV=True, fignum=4): 
     figtitle = ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))
-    topN_cxs = res.topN_cxs(N)
+    topN_cxs = res.topN_cxs(N, SV)
     max_nCols = max(5,N)
     _show_chip_matches(hs, res, topN_cxs=topN_cxs, figtitle=figtitle, 
-                       fignum=fignum, all_kpts=False)
+                       fignum=fignum, all_kpts=False, SV=SV)
 
 def show_gt_matches(hs, res, SV=True, fignum=3): 
     figtitle = ('q%s -- GroundTruth' % (hs.cxstr(res.qcx)))
     gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     max_nCols = max(5,len(gt_cxs))
     _show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle, 
-                       fignum=fignum, all_kpts=True)
+                       fignum=fignum, all_kpts=True, SV=SV)
 
 def show_match_analysis(hs, res, N=5, fignum=3, figtitle='',
                         show_query=True, annotations=True, SV=True,
@@ -503,12 +505,14 @@ def show_match_analysis(hs, res, N=5, fignum=3, figtitle='',
                               SV=SV, **kwargs)
 
 def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
-                       topN_cxs=None, gt_cxs=None, show_query=True,
+                       topN_cxs=None, gt_cxs=None, show_query=False,
                        all_kpts=False, fignum=3, annotations=True, 
                        SV=True, compare_SV=False, **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
     print('========================')
     print('[df2] Show chip matches:')
+    if topN_cxs is None: topN_cxs = []
+    if gt_cxs is None: gt_cxs = []
     print('[df2] #top=%r #missed_gts=%r' % (len(topN_cxs),len(gt_cxs)))
     printDBG('[df2] * max_nCols=%r' % (max_nCols,))
     printDBG('[df2] * show_query=%r' % (show_query,))
@@ -539,8 +543,7 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
                                 plotnum=plotnum, **kwshow)
     # Helper to draw many cxs
     def plot_matches_cxs(cx_list, plotx_shift, SV):
-        if gt_cxs is None:
-            return
+        if cx_list is None: return
         for ox, cx in enumerate(cx_list):
             plotx = ox + plotx_shift + 1
             orank = np.where(ranked_cxs == cx)[0][0] + 1

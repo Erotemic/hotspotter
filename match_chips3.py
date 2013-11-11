@@ -1,3 +1,4 @@
+# Premature optimization is the root of all evil
 import itertools
 import sys
 import os
@@ -25,123 +26,247 @@ import scipy.sparse as spsparse
 import sklearn.preprocessing 
 from itertools import izip, chain
 import investigate_chip as invest
+import DataStructures as ds
+import matching_functions as mf
 
+FM_DTYPE  = np.uint32
+FS_DTYPE  = np.float32
 
-# Premature optimization is the root of all evil
+def reload_module():
+    import imp, sys
+    print('[mc3] reloading '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 
-def main():
-    invest.rrr()
-    main_locals = invest.main()
-    execstr = helpers.execstr_dict(main_locals, 'main_locals')
-    exec(execstr)
-
-    return locals()
-
-class NearestNeighborIndex():
-    def __init__(self, hs, sample_cxs, **kwargs):
-
-class SpatialVerifyParams():
-    def __init__(self):
-        self.scale_range_thresh  = (.5, 2)
-        self.xy_thresh = .002
-
-class ScoringParams():
-    self __init__(self):
-        self.vote_weight_fn = LNBNN
-        self.voting_rule_fn = PlacketLuce
-        self.num_shortlist  = 100
-
-class MatcherParams():
-    def __init__(self):
-        self.query_cxs    = []
-        self.data_cxs     = []
-        self.invert_query = False
-
-    def prepare(self, hs):
-        if not self.invert_query:
-            self.data_index = precompute_database_index()
-
-def precompute_query_index(hs, qcx):
-    sx2_cx = [qcx]
-    query_index = NNIndex(hs, sx2_cx)
-    return query_index
-
-def precompute_database_index(hs):
-    sx2_cx = hs.indexed_sample_cx
-    data_index = NNIndex(hs, sx2_cx)
-    return data_index
-
-class NNIndex(object):
-    def __init__(self, hs, sx2_cx):
-        cx2_desc  = hs.feats.cx2_desc
-        # Make unique id for indexed descriptors
-        feat_uid   = params.get_feat_uid()
-        sample_uid = helpers.make_sample_id(sx2_cx)
-        uid = '_cxs(' + sample_uid + ')' + feat_uid
-        # Number of features per sample chip
-        sx2_nFeat = [len(cx2_desc[sx]) for sx in iter(sx2_cx)]
-        # Inverted index from indexed descriptor to chipx and featx 
-        _ax2_cx = [[cx]*nFeat for (cx, nFeat) in izip(sx2_cx, sx2_nFeat)]
-        _ax2_fx = [range(nFeat) for nFeat in iter(sx2_nFeat)]
-        ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
-        ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
-        # Aggregate indexed descriptors into continuous structure
-        ax2_desc = np.vstack([cx2_desc[cx] for cx in sx2_cx])
-        # Build/Load the flann index
-        flann_params = {'algorithm':'kdtree', 'trees':4}
-        precomp_kwargs = {'cache_dir'    : hs.dirs.cache_dir,
-                          'uid'          : uid,
-                          'flann_params' : flann_params, }
-        flann = algos.precompute_flann(ax2_desc, **precomp_kwargs)
-        #----
+class NNParams(DynStruct):
+    def __init__(nn_params, **kwargs):
+        super(NNParams, nn_params).__init__
         # Core
-        self.K_nearest = 1
+        nn_params.K = 2
+        nn_params.Knorm = 1
         # Filters
-        self.checks = 128
-        self.K_reciprocal   = 0 # 0 := off
-        self.roidist_thresh = 1 # 1 := off
-        self.ratio_thresh   = 1 # 1 := off
-        self.freq_thresh    = 1 # 1 := off
-        # Agg Data
-        self.ax2_cx   = ax2_cx
-        self.ax2_fx   = ax2_fx
-        self.ax2_data = ax2_desc
-        self.flann = flann
+        nn_params.nnfilter_list = ['reciprocal', 'roidist']
+        #['reciprocal', 'roidist', 'frexquency', 'ratiotest', 'bursty']
+        nn_params.K_reciprocal   = 1 # 0 := off
+        nn_params.roidist_thresh = 1 # 1 := off
+        nn_params.ratio_thresh   = 1 # 1 := off
+        nn_params.freq_thresh    = 1 # 1 := off
+        nn_params.checks = 128
+        nn_params.__dict__.update(**kwargs)
 
-def prequery(hs):
-    query_params = QueryParams()
-    if query_params.invert_query:
-        data_index  = precompute_flann(cxs)
-        query_cxs   = dcxs
-        data_cxs    = cxs
-    else:
-        data_index  = precompute_flann(dcxs)
-        query_cxs   = cxs
-        data_cxs    = dcxs
+class SpatialVerifyParams(DynStruct):
+    def __init__(sv_params, **kwargs):
+        super(SpatialVerifyParams, sv_params).__init__
+        sv_params.scale_thresh  = (.5, 2)
+        sv_params.xy_thresh = .002
+        sv_params.shortlist_len = 100
+        sv_params.__dict__.update(kwargs)
+
+class ScoringParams(DynStruct):
+    def __init__(score_params, **kwargs):
+        super(ScoringParams, score_params).__init__
+        score_params.aggregation_method = 'ChipSum' # ['NameSum', 'NamePlacketLuce']
+        score_params.meta_params = {
+            'roidist'    : (.5),
+            'reciprocal' : (0), 
+            'ratio'      : (1.2), 
+            'scale'      : (.5),
+            'bursty'     : (1),
+            'lnbnn'      : 0, 
+        }
+        score_params.num_shortlist  = 100
+        score_params.__dict__.update(kwargs)
+
+def scoring_func(hs, qcx2_neighbors, data_index, nnweights, scoring_params, nn_params):
+    meta_params = score_params.meta_params
+    agg_method = score_params.aggregation_method
+    dx2_cx = data_index.ax2_cx
+    dx2_fx = data_index.ax2_fx
+    dcxs = np.arange(len(hs.feats.cx2_desc))
+    K = nn_params.K
+    qcx2_res = {}
+    for qcx in qcx2_neighbors.iterkeys():
+        (qfx2_dx, _) = qcx2_neighbors[qcx]
+        nQuery = len(qfx2_dx)
+        qfx2_nn = qfx2_dx[:, 0:K]
+        qfx2_score = np.ones(qfx2_nn.shape)
+        qfx2_valid = np.ones(qfx2_nn.shape, dtype=np.bool)
+        for key, cx2_weights in nnweights.iteritems():
+            qfx2_weights = cx2_weights[qcx]
+            thresh = meta_params[key]
+            print('%r, %r' % (key, thresh))
+            qfx2_valid = np.bitwise_and(qfx2_valid, qfx2_weights <= thresh)
+            #qfx2_score
+        if agg_method == 'ChipSum':
+            qfx2_cx = dx2_cx[qfx2_nn]
+            qfx2_fx = dx2_fx[qfx2_nn]
+            # Build feature matches
+            cx2_fm = [[] for _ in xrange(len(dcxs))]
+            cx2_fs = [[] for _ in xrange(len(dcxs))]
+            qfx2_qfx = helpers.tiled_range(nQuery, K)
+            #iter_matches = izip(qfx2_qfx.flat, qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat)
+            iter_matches = izip(qfx2_qfx[qfx2_valid],
+                                qfx2_cx[qfx2_valid],
+                                qfx2_fx[qfx2_valid],
+                                qfx2_score[qfx2_valid])
+            for qfx, cx, fx, score in iter_matches:
+                if qcx == cx: 
+                    continue # dont vote for yourself
+                cx2_fm[cx].append((qfx, fx))
+                cx2_fs[cx].append(score)
+            # Convert to numpy
+            for cx in xrange(len(dcxs)):
+                fm = np.array(cx2_fm[cx], dtype=FM_DTYPE)
+                fm = fm.reshape(len(fm), 2)
+                cx2_fm[cx] = fm
+            for cx in xrange(len(dcxs)): 
+                fs = np.array(cx2_fs[cx], dtype=FS_DTYPE)
+                #fs.shape = (len(fs), 1)
+                cx2_fs[cx] = fs
+            cx2_fm = np.array(cx2_fm)
+            cx2_fs = np.array(cx2_fs)
+            cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+            qcx2_res[qcx] = (cx2_fm, cx2_fs, cx2_score)
+        return qcx2_res
+    #s2coring_func  = [LNBNN, PlacketLuce, TopK, Borda]
+    #load_precomputed(cx, query_params)
+
+class QueryParams(DynStruct):
+    def __init__(query_params, **kwargs):
+        super(QueryParams, query_params).__init__
+        query_params.nn_params = NNParams(**kwargs)
+        query_params.score_params = ScoringParams(**kwargs)
+        query_params.sv_params = SpatialVerifyParams( *kwargs)
+        query_params.query_type = 'vsmany'
+        query_params.__dict__.update(kwargs)
+
+def precompute_data_index(hs, sx2_cx=None, **kwargs):
+    if sx2_cx is None:
+        sx2_cx = hs.indexed_sample_cx
+    data_index = ds.NNIndex(hs, sx2_cx, **kwargs)
+    return data_index
 
 #def execute_query_fast(hs, qcx, query_params):
 # fast should be the current sota execute_query that doesn't perform checks and
 # need to have precomputation done beforehand. 
 # safe should perform all checks and be easilly callable on the fly. 
+def prequery(hs, query_params=None, **kwargs):
+    if query_params is None:
+        query_params = QueryParams(**kwargs)
+    data_index_dict = {
+        'vsmany' : precompute_data_index(hs, **kwargs),
+        'vsone'  : None, }
+    query_params.data_index = data_index_dict[query_params.query_type]
+    return query_params
 
-def execute_query_safe(hs, qcx, query_params):
-    # Can we generalize to have more than one query chip?
-    cx2_neighbors = {}
-    nnfilter_list = [reciprocal, roidist, frexquency, ratiotest, bursty]
-    scoring_func  = [LNBNN, PlacketLuce, TopK, Borda]
-    load_precomputed(cx, query_params)
-    cx2_neighbors[cx] = nearest_neighbors(data_index, query_params, nn_params)
-    for nnfilter in nnfilter_list:
-        nnfilter(cx2_neighbors)
-    scoring_func(cx2_neighbors, scoring_params)
-    shortlist_cx, longlist_cx = get_shortlist(query_cxs, cx2_neighbors)
-    for cx in shortlist_cx:
-        spatial_verify(cx2_neighbors[cx], verify_params)
-    for cx in longlist_cx:
-        remove_matches(cx2_neighbors[cx])
-    scores = scoring_func(cx2_neighbors, scoring_params)
-    cache_neighbors(cx2_neighbors)
-    return scores, cx2_neighbors
+qcxs = [0]
+
+def spatially_verify_matches(hs, qcxs, qcx2_res, qcx2_neighbors,
+                             key2_cx_qfx2_weights, sv_params):
+    cx2_rchip_size = hs.get_cx2_rchip_size()
+    cx2_kpts  = hs.feats.cx2_kpts
+    cx2_resSV = {}
+    for qcx in qcx2_res.iterkeys():
+        kpts1     = cx2_kpts[qcx]
+        (cx2_fm, cx2_fs, cx2_score) = qcx2_res[qcx]
+        #cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+        top_cx     = cx2_score.argsort()[::-1]
+        num_rerank = min(len(top_cx), sv_params.shortlist_len)
+        # Precompute output container
+        cx2_fm_V = [[] for _ in xrange(len(cx2_fm))]
+        cx2_fs_V = [[] for _ in xrange(len(cx2_fs))]
+        # spatially verify the top __NUM_RERANK__ results
+        for topx in xrange(num_rerank):
+            cx    = top_cx[topx]
+            kpts2 = cx2_kpts[cx]
+            fm    = cx2_fm[cx]
+            fs    = cx2_fs[cx]
+            rchip_size2 = cx2_rchip_size[cx]
+            xy_thresh = sv_params.xy_thresh
+            scale_thresh_low, scale_thresh_high = sv_params.scale_thresh
+            (fm_V, fs_V) = spatially_verify(kpts1, kpts2, rchip_size2, fm, fs, xy_thresh,
+                     scale_thresh_high, scale_thresh_low)
+            cx2_fm_V[cx] = fm_V
+            cx2_fs_V[cx] = fs_V
+        # Rebuild the feature match / score arrays to be consistent
+        for cx in xrange(len(cx2_fm_V)):
+            fm = np.array(cx2_fm_V[cx], dtype=FM_DTYPE)
+            fm = fm.reshape(len(fm), 2)
+            cx2_fm_V[cx] = fm
+        for cx in xrange(len(cx2_fs_V)): 
+            cx2_fs_V[cx] = np.array(cx2_fs_V[cx], dtype=FS_DTYPE)
+        cx2_fm_V = np.array(cx2_fm_V)
+        cx2_fs_V = np.array(cx2_fs_V)
+        # Rebuild the cx2_score arrays
+        cx2_score_V = np.array([np.sum(fs) for fs in cx2_fs_V])
+        resSV = (cx2_fm_V, cx2_fs_V, cx2_score_V)
+        cx2_resSV[qcx] = resSV
+    return cx2_resSV
+
+def __default_sv_return():
+    'default values returned by bad spatial verification'
+    #H = np.eye(3)
+    fm_V = np.empty((0, 2))
+    fs_V = np.array((0, 1))
+    return (fm_V, fs_V)
+import params
+import spatial_verification2 as sv2
+def spatially_verify(kpts1, kpts2, rchip_size2, fm, fs, xy_thresh,
+                     scale_thresh_high, scale_thresh_low):
+    '''1) compute a robust transform from img2 -> img1
+       2) keep feature matches which are inliers 
+       returns fm_V, fs_V, H '''
+    # Return if pathological
+    min_num_inliers   = 4
+    if len(fm) < min_num_inliers:
+        return __default_sv_return()
+    # Get homography parameters
+    if params.__USE_CHIP_EXTENT__:
+        diaglen_sqrd = rchip_size2[0]**2 + rchip_size2[1]**2
+    else:
+        x_m = kpts2[fm[:,1],0].T
+        y_m = kpts2[fm[:,1],1].T
+        diaglen_sqrd = sv2.calc_diaglen_sqrd(x_m, y_m)
+    # Try and find a homography
+    sv_tup = sv2.homography_inliers(kpts1, kpts2, fm, xy_thresh, 
+                                    scale_thresh_high, scale_thresh_low,
+                                    diaglen_sqrd, min_num_inliers)
+    if sv_tup is None:
+        return __default_sv_return()
+    # Return the inliers to the homography
+    (H, inliers, Aff, aff_inliers) = sv_tup
+    fm_V = fm[inliers, :]
+    fs_V = fs[inliers]
+    return fm_V, fs_V
+
+def execute_query_safe(hs, qcxs, query_params=None, **kwargs):
+    if not 'query_params' in vars() or query_params is None:
+        kwargs = {}
+        query_params = prequery(hs, **kwargs)
+    if query_params.query_type == 'vsone': # On the fly computation
+        query_params.query_index = precompute_data_index(hs, qcxs, **kwargs)
+        data_index = query_params.query_index
+    elif  query_params.query_type == 'vsmany':
+        data_index = query_params.data_index
+    sv_params = query_params.sv_params
+    nn_params = query_params.nn_params
+    # Assign Nearest Neighors
+    qcx2_neighbors = mf.nearest_neighbors(hs, qcxs, data_index, nn_params)
+    # Apply cheap filters
+    key2_cx_qfx2_weights = {}
+    for nnfilter in nn_params.nnfilter_list:
+        nnfilter_fn = eval('mf.nn_'+nnfilter+'_weight')
+        key2_cx_qfx2_weights[nnfilter] = nnfilter_fn(hs, qcx2_neighbors, data_index, nn_params)
+    # Score each database chip
+    score_params = query_params.score_params
+    qcx2_res = scoring_func(hs, qcx2_neighbors, data_index, key2_cx_qfx2_weights, score_params, nn_params)
+    #cache_results(qcx2_res)
+    # Spatial Verify
+    qcx2_neighborsSV = spatially_verify_matches(hs, qcxs, qcx2_res, qcx2_neighbors,
+                                                key2_cx_qfx2_weights, sv_params)
+    cache_results(qcx2_resSV)
+    return qcx2_res, qcx2_resSV
 
 '''
 PRIORITY 1: 
@@ -164,11 +289,8 @@ PRIORITY 3:
  * Just make a query params object
  they are the same process which accepts the parameters: 
      invert_query, qcxs, dcxs
-
-
 '''
 if __name__ == '__main__':
-    main_locals = main()
-    locals_execstr = helpers.dict_execstr(main_locals, 'main_locals')
-    exec(locals_execstr)
-
+    main_locals = invest.main()
+    execstr = helpers.execstr_dict(main_locals, 'main_locals')
+    exec(execstr)

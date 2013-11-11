@@ -287,7 +287,7 @@ def vsone_nearest_neighbors(vsone_args, cx, cx2_kpts, cx2_desc, cx2_rchip_size):
     if not vsone_args.burst_thresh is None:
         fx2_valid = filter_nn_burstiness(fx2_qfx, fx2_valid, vsone_args.burst_thresh)
     if vsone_args.use_reciprocal:
-        desc1       = vsone_args.desc1
+        desc1     = vsone_args.desc1
         fx2_valid = filter_nn_reciprocal(desc1, vsone_flann, 2, 2, checks, fx2_qfx, fx2_dist, fx2_valid)
     if vsone_args.use_spatial:
         diag = (np.array(cx2_rchip_size[cx])**2).sum()

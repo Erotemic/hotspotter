@@ -54,21 +54,37 @@ def prequery(hs, query_params=None, **kwargs):
 qcxs = [0]
 
 def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
+    print('------------------')
+    print('Execute query safe')
+    print('------------------')
     kwargs = vars().get('kwargs', {})
+    #---------------
+    # Ensure query_params
     query_params = vars().get('query_params', None)
     if query_params is None:
         kwargs = {}
         query_params = prequery(hs, **kwargs)
         print(query_params)
         print(query_params.get_uid())
-
+    query_params.qcxs = qcxs
+    if dcxs is None:
+        query_params.dcxs = hs.indexed_sample_cx
+        dcxs = query_params.dcxs
+    #---------------
+    # Flip if needebe
     if query_params.query_type == 'vsone': # On the fly computation
         qcxs_ = tuple(qcxs)
-        if qcxs_ in query_params.qcxs2_index.keys():
-            query_params.qcxs2_index[qcxs_] = make_nn_index(hs, qcxs, **kwargs)
-        data_index = query_params.qcxs2_index[qcxs_key]
+        if not query_params.qcxs2_index.has_key(qcxs_):
+            query_params.qcxs2_index[qcxs_] = make_nn_index(hs, qcxs)
+        data_index = query_params.qcxs2_index[qcxs_]
+        dcxs = query_params.qcxs
+        qcxs = query_params.dcxs 
     elif  query_params.query_type == 'vsmany':
         data_index = query_params.data_index
+        qcxs = query_params.qcxs
+        dcxs = query_params.dcxs 
+    print('qcxs=%r' % qcxs)
+    print('dcxs=%r' % dcxs)
     # Assign Nearest Neighors
     # Apply cheap filters
     # Convert to the plotable res objects
@@ -78,6 +94,11 @@ def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
     filter_weights = mf.apply_neighbor_weights(hs, qcx2_neighbors, data_index, query_params)
     qcx2_resFILT   = mf.neighbors_to_res(hs, qcx2_neighbors, filter_weights, data_index, query_params)
     qcx2_resSVER   = mf.spatially_verify_matches(hs, qcx2_resFILT, query_params)
+    print(qcx2_resORIG.keys())
+    for qcx in query_params.qcxs:
+        qcx2_resORIG[qcx].title=' +ORIG '+query_params.get_uid(False, False, False, True)
+        qcx2_resFILT[qcx].title=' +FILT '+query_params.get_uid(False, True, False, False)
+        qcx2_resSVER[qcx].title=' +SVER '+query_params.get_uid(True, False, False, False)
     # Score each database chip
     #qcx2_res = mf.score_matches(hs, qcx2_neighbors, data_index, filter_weights, score_params, nn_params)
     #cache_results(qcx2_res)
@@ -128,9 +149,9 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
                                 **kwshow) 
     def show_(resORIG, resFILT, resSVER, fnum, aug=''):
         resCOMP = None if compare_to is None else eval('res'+compare_to)
-        smanal_(resORIG, fnum+0, '+ORIG', resCOMP) 
-        smanal_(resFILT, fnum+1, '+FILT', resCOMP) 
-        smanal_(resSVER, fnum+2, '+SVER', resCOMP) 
+        smanal_(resORIG, fnum+0, resORIG.title, resCOMP) 
+        smanal_(resFILT, fnum+1, resFILT.title, resCOMP) 
+        smanal_(resSVER, fnum+2, resSVER.title, resCOMP) 
         return fnum + 3
     # Show Driver
     for (res1, res2, res3, taug) in res_list:
@@ -152,5 +173,7 @@ if __name__ == '__main__':
     execstr = helpers.execstr_dict(main_locals, 'main_locals')
     exec(execstr)
     qcx = 0
-    matcher_test(hs, qcx, qnum=1, K=5, Krecip=2, roidist_thresh=.2)
+    matcher_test(hs, qcx, qnum=1, K=2, Krecip=4, roidist_thresh=None,
+                 scale_thresh=(2, 10), xy_thresh=.01, use_chip_extent=True,
+                 query_type='vsone', ratio_thresh=None, lnbnn_weight=0, ratio_weight=1)
     exec(df2.present())

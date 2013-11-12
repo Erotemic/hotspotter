@@ -50,8 +50,8 @@ qfx2_valid = np.ones(qfx2_fx.shape, dtype=np.bool)
 
 def nearest_neighbors(hs, qcxs, data_index, query_params):
     'Plain Nearest Neighbors'
-    print('assigning nearest neighbors')
     nn_params = query_params.nn_params
+    print('Step 1) Assign nearest neighbors: '+nn_params.get_uid())
     K = nn_params.K
     Knorm = nn_params.Knorm
     checks = nn_params.checks
@@ -70,9 +70,9 @@ def nearest_neighbors(hs, qcxs, data_index, query_params):
 # Nearest Neighbor weights
 #-------
 def apply_neighbor_weights(hs, qcx2_neighbors, data_index, query_params):
-    print('applying neighbor weights')
-    print(hs)
-    nnfilter_list = query_params.score_params.nnfilter_list
+    score_params = query_params.score_params
+    print('Step 2) Weight neighbors: '+score_params.get_uid())
+    nnfilter_list = score_params.nnfilter_list
     filter_weights = {}
     for nnfilter in nnfilter_list:
         nnfilter_fn = eval('nn_'+nnfilter+'_weight')
@@ -223,71 +223,95 @@ def nn_positional_score(hs, qcx2_neighbors, data_index, query_params):
     pass
 
 
+def fix_fmfs(cx2_fm, cx2_fs):
+    # Convert to numpy
+    for cx in xrange(len(cx2_fm)):
+        fm = np.array(cx2_fm[cx], dtype=ds.FM_DTYPE)
+        fm = fm.reshape(len(fm), 2)
+        cx2_fm[cx] = fm
+    for cx in xrange(len(cx2_fs)): 
+        fs = np.array(cx2_fs[cx], dtype=ds.FS_DTYPE)
+        #fs.shape = (len(fs), 1)
+        cx2_fs[cx] = fs
+    cx2_fm = np.array(cx2_fm)
+    cx2_fs = np.array(cx2_fs)
+    return cx2_fm, cx2_fs
+
+def fmfs2_QueryResult(qcx, cx2_fm, cx2_fs, uid):
+    cx2_fm, cx2_fs = fix_fmfs(cx2_fm, cx2_fs)
+    cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+    res = ds.QueryResult(qcx, uid)
+    res.cx2_fm = cx2_fm
+    res.cx2_fs = cx2_fs
+    res.cx2_score = cx2_score
+    return res
+    
 def neighbors_to_res(hs, qcx2_neighbors, filter_weights, data_index, query_params):
-    print('Converting neighbors to result')
+    print('Step 3) Convert (qfx2_dx, qfx2_dist) to (cx2_fm, sx2_fs)')
     K = query_params.nn_params.K
     agg_method = query_params.score_params.aggregation_method
     filt2_tw = query_params.score_params.filt2_tw
     dx2_cx = data_index.ax2_cx
     dx2_fx = data_index.ax2_fx
-    dcxs   = np.arange(len(hs.feats.cx2_desc))
+    dcxs   = query_params.dcxs 
+    #np.arange(len(hs.feats.cx2_desc))
     qcx2_res = {}
     scored = len(filter_weights.keys()) > 0
+    invert_query = query_params.query_type == 'vsone'
+    uid = query_params.get_uid(SV=False, scored=scored)
+    if invert_query: #vsone
+        assert len(query_params.qcxs) == 1
+        cx2_fm = [[] for _ in xrange(len(query_params.dcxs))]
+        cx2_fs = [[] for _ in xrange(len(query_params.dcxs))]
     for qcx in qcx2_neighbors.iterkeys():
+        print(' * convering q'+hs.cxstr(qcx))
         (qfx2_dx, _) = qcx2_neighbors[qcx]
         nQuery = len(qfx2_dx)
         qfx2_nn = qfx2_dx[:, 0:K]
         qfx2_score = np.ones(qfx2_nn.shape, dtype=ds.FS_DTYPE)
         qfx2_valid = np.ones(qfx2_nn.shape, dtype=np.bool)
         # Apply the filter weightings to determine feature validity and scores
-        #print('--START---------')
-        #printvar2('qfx2_valid')
         for key, cx2_weights in filter_weights.iteritems():
             qfx2_weights = cx2_weights[qcx]
-            (sign, thresh), weight   = filt2_tw[key]
-            print('Applying %r thresh=%r, weight=%r' % (key, thresh, weight))
-            #printvar2('qfx2_weights')
+            (sign, thresh), weight = filt2_tw[key]
             if not thresh is None:
-                qfx2_valid  = np.bitwise_and(qfx2_valid, sign*qfx2_weights <= sign*thresh)
+                qfx2_passed = sign*qfx2_weights <= sign*thresh
+                nValid  = qfx2_valid.sum()
+                qfx2_valid  = np.bitwise_and(qfx2_valid, qfx2_passed)
+                nPassed = (True - qfx2_passed).sum()
+                nAdded = nValid - qfx2_valid.sum()
+                print(sign*qfx2_weights)
+                print(' * filt=%r thresh=%r, weight=%r, nFailed=%r, nFiltered=%r' % (key,
+                                                                                  sign*thresh,
+                                                                                  weight,
+                                                                                  nPassed,
+                                                                                  nAdded))
             if not weight == 0:
                 qfx2_score  += weight * qfx2_weights
-            #helpers.printvar2('qfx2_score')
-        #print('--FINISH---------')
-        #printvar2('qfx2_score')
-        #printvar2('qfx2_valid')
-        print(helpers.printable_mystats(qfx2_score))
         qfx2_cx = dx2_cx[qfx2_nn]
         qfx2_fx = dx2_fx[qfx2_nn]
         # Build feature matches
-        cx2_fm = [[] for _ in xrange(len(dcxs))]
-        cx2_fs = [[] for _ in xrange(len(dcxs))]
+        if not invert_query: #vsmany
+            cx2_fm = [[] for _ in xrange(len(query_params.dcxs))]
+            cx2_fs = [[] for _ in xrange(len(query_params.dcxs))]
         qfx2_qfx = helpers.tiled_range(nQuery, K)
-        #iter_matches = izip(qfx2_qfx.flat, qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat)
-        iter_matches = izip(qfx2_qfx[qfx2_valid], qfx2_cx[qfx2_valid],
-                            qfx2_fx[qfx2_valid], qfx2_score[qfx2_valid])
-        for qfx, cx, fx, score in iter_matches:
-            if qcx == cx: 
-                continue # dont vote for yourself
-            cx2_fm[cx].append((qfx, fx))
-            cx2_fs[cx].append(score)
-        # Convert to numpy
-        for cx in xrange(len(dcxs)):
-            fm = np.array(cx2_fm[cx], dtype=ds.FM_DTYPE)
-            fm = fm.reshape(len(fm), 2)
-            cx2_fm[cx] = fm
-        for cx in xrange(len(dcxs)): 
-            fs = np.array(cx2_fs[cx], dtype=ds.FS_DTYPE)
-            #fs.shape = (len(fs), 1)
-            cx2_fs[cx] = fs
-        cx2_fm = np.array(cx2_fm)
-        cx2_fs = np.array(cx2_fs)
-        if agg_method == 'ChipSum':
-            cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
-            res = ds.QueryResult(qcx, query_params.get_uid(SV=False, scored=scored))
-            res.cx2_fm = cx2_fm
-            res.cx2_fs = cx2_fs
-            res.cx2_score = cx2_score
+        v = qfx2_valid
+        iter_matches = izip(qfx2_qfx[v], qfx2_cx[v], qfx2_fx[v], qfx2_score[v])
+        if not invert_query: # vsmany
+            for qfx, cx, fx, score in iter_matches:
+                if qcx == cx: continue # dont vote for yourself
+                cx2_fm[cx].append((qfx, fx))
+                cx2_fs[cx].append(score)
+            res = fmfs2_QueryResult(qcx, cx2_fm, cx2_fs, uid)
             qcx2_res[qcx] = res
+        else:  # vsone
+            for qfx, cx, fx, score in iter_matches:
+                if qcx == cx: continue # dont vote for yourself
+                cx2_fm[qcx].append((fx, qfx))
+                cx2_fs[qcx].append(score)
+    if agg_method == 'ChipSum':
+        res = fmfs2_QueryResult(qcx, cx2_fm, cx2_fs, uid)
+        qcx2_res[query_params.qcxs[0]] = res
     return qcx2_res
 '''
 def doit():
@@ -314,6 +338,7 @@ def score_matches(hs, qcx2_neighbors, data_index, filter_weights, query_params):
 #-----
 def spatially_verify_matches(hs, qcx2_res, query_params):
     sv_params = query_params.sv_params
+    print('Step 4) Spatial verification: '+sv_params.get_uid())
     xy_thresh = sv_params.xy_thresh
     slow_thresh, shigh_thresh = sv_params.scale_thresh
     use_chip_extent = sv_params.xy_thresh
@@ -321,7 +346,7 @@ def spatially_verify_matches(hs, qcx2_res, query_params):
     cx2_kpts  = hs.feats.cx2_kpts
     cx2_resSV = {}
     for qcx in qcx2_res.iterkeys():
-        kpts1     = cx2_kpts[qcx]
+        kpts1 = cx2_kpts[qcx]
         res = qcx2_res[qcx]
         (cx2_fm, cx2_fs, cx2_score) = (res.cx2_fm, res.cx2_fs, res.cx2_score) 
         #cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
@@ -337,6 +362,7 @@ def spatially_verify_matches(hs, qcx2_res, query_params):
             fm    = cx2_fm[cx]
             fs    = cx2_fs[cx]
             rchip_size2 = cx2_rchip_size[cx]
+            np.set_printoptions(threshold=2)
             (fm_V, fs_V) = spatially_verify(kpts1, kpts2, rchip_size2, 
                                             fm, fs, xy_thresh,
                                             shigh_thresh, slow_thresh,

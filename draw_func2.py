@@ -436,7 +436,7 @@ def show_matches_annote(hs, qcx, cx2_score,
     if   isgt_str == hs.UNKNOWN_STR: draw_border(ax, WHITE, 4)
     elif isgt_str == hs.TRUE_STR:    draw_border(ax, GREEN, 4)
     elif isgt_str == hs.FALSE_STR:   draw_border(ax, RED, 4)
-    ax.set_xlabel(hs.get_gname(cx))
+    ax.set_xlabel(hs.get_gname(cx), fontproperties=FONTS.xlabel)
     return ax
 
 def show_img(hs, cx, **kwargs):
@@ -474,7 +474,7 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
     fig, ax = imshow(rchip1, title=title_str, **kwargs)
     if not res is None: 
         gname = hs.get_gname(cx)
-        ax.set_xlabel(gname)
+        ax.set_xlabel(gname, fontproperties=FONTS.xlabel)
     if not draw_kpts:
         return
     kpts1  = hs.get_kpts(cx)
@@ -549,7 +549,7 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
             fxs_randsamp = np.random.choice(fxs1, size, replace, p)
             kpts1 = kpts1[fxs_randsamp]
             ax = plt.gca()
-            ax.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1))
+            ax.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1), fontproperties=FONTS.xlabel)
             # show a random sample of kpts
         draw_kpts2(kpts1, ell_alpha=.7, ell_color=(.9,.1,.1), **kpts_args)
 
@@ -596,8 +596,8 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
                        all_kpts=False, fignum=3, annotations=True, 
                        SV=True, compare_SV=False, **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
-    print('========================')
-    print('[df2] Show chip matches:')
+    #print('========================')
+    #print('[df2] Show chip matches:')
     if topN_cxs is None: topN_cxs = []
     if gt_cxs is None: gt_cxs = []
     print('[df2] #top=%r #missed_gts=%r' % (len(topN_cxs),len(gt_cxs)))

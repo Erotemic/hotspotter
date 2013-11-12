@@ -18,6 +18,7 @@ if MPL_BACKEND != 'Qt4Agg':
     #matplotlib.rc('text', usetex=True)
     #matplotlib.rcParams['toolbar'] = 'None'
     #matplotlib.rcParams['interactive'] = True
+from matplotlib.font_manager import FontProperties
 import matplotlib.pyplot as plt
 from PyQt4.QtCore import Qt
 import numpy as np
@@ -26,6 +27,35 @@ import os
 import time
 import types
 import textwrap
+from Printable import DynStruct
+
+SMALL_FONTS = True
+if SMALL_FONTS:
+    SMALLER  = 7
+    SMALL    = 7
+    MED      = 8#14
+    LARGE    = 8
+    LARGER   = 18
+else:
+    SMALLER  = 8
+    SMALL    = 12
+    MED      = 12
+    LARGE    = 14
+#fpargs = dict(family=None, style=None, variant=None, stretch=None, fname=None)
+FONTS = DynStruct()
+FONTS.small     = FontProperties(weight='ultralight', size=SMALL)
+FONTS.smaller   = FontProperties(weight='ultralight', size=SMALLER)
+FONTS.med       = FontProperties(weight='ultralight', size=MED)
+FONTS.large     = FontProperties(weight='ultralight', size=LARGE)
+FONTS.largebold = FontProperties(weight='bold', size=LARGE)
+
+FONTS.legend   = FONTS.large
+FONTS.figtitle = FONTS.largebold
+FONTS.axtitle  = FONTS.med
+FONTS.subtitle = FONTS.med
+FONTS.xlabel   = FONTS.small
+FONTS.ylabel   = FONTS.small
+FONTS.relative = FONTS.smaller
 
 ORANGE = np.array((255, 127,   0, 255))/255.0
 RED    = np.array((255,   0,   0, 255))/255.0
@@ -146,8 +176,10 @@ def all_figures_tight_layout():
         #adjust_subplots()
         time.sleep(.1)
 
-def all_figures_tile(num_rc=(4,4),
-                     wh=(350,250),
+golden_wh = lambda x:map(int,map(round,(x*.618 , x*.312)))
+WH = map(lambda(x,y): x+y, zip(golden_wh(1000), (0, 20)))
+def all_figures_tile(num_rc=(3,4),
+                     wh=WH,
                      xy_off=(0,0),
                      wh_off=(0,10),
                      row_first=True,
@@ -162,7 +194,7 @@ def all_figures_tile(num_rc=(4,4),
     if sys.platform == 'win32':
         x_off, yoff = (x_off+40, y_off+40)
         #x_off, yoff = (x_off-2000, y_off-1000)
-        x_pad, y_pad = (0, 40)
+        x_pad, y_pad = (0, 100)
     all_figures = get_all_figures()
     for i, fig in enumerate(all_figures):
         qtwin = fig.canvas.manager.window
@@ -292,11 +324,11 @@ def set_yticks(tick_set):
 
 def set_xlabel(lbl):
     ax = plt.gca()
-    ax.set_xlabel(lbl)
+    ax.set_xlabel(lbl, fontproperties=FONTS.xlabel)
 
 def set_ylabel(lbl):
     ax = plt.gca()
-    ax.set_ylabel(lbl)
+    ax.set_ylabel(lbl, fontproperties=FONTS.xlabel)
 
 def plot(*args, **kwargs):
     return plt.plot(*args, **kwargs)
@@ -323,9 +355,10 @@ def plot2(x_data,
         do_plot = False
     if do_plot:
         ax.plot(x_data, y_data, marker, *args, **kwargs)
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
-    ax.set_title(title_pref + ' ' + x_label+' vs '+y_label)
+    ax.set_xlabel(x_label, fontproperties=FONTS.xlabel)
+    ax.set_ylabel(y_label, fontproperties=FONTS.xlabel)
+    ax.set_title(title_pref + ' ' + x_label+' vs '+y_label,
+                 fontproperties=FONTS.axtitle)
 
 
 def adjust_subplots_xylabels():
@@ -342,14 +375,14 @@ def adjust_subplots(left=0.02,  bottom=0.02,
     wspace = 0.2   # the amount of width reserved for blank space between subplots
     hspace = 0.2
     '''
-    printDBG('[df2] adjust_subplots(%r)' % locals())
+    #print('[df2] adjust_subplots(%r)' % locals())
     plt.subplots_adjust(left,   bottom, right,  top, wspace, hspace)
 
 def upperleft_text(txt):
     txtargs = dict(horizontalalignment='left',
                    verticalalignment='top',
-                   fontsize='smaller',
-                   fontweight='ultralight', 
+                   #fontsize='smaller',
+                   #fontweight='ultralight', 
                    backgroundcolor=(0,0,0,.5),
                    color=ORANGE)
     ax_relative_text(.02, .02, txt, **txtargs)
@@ -357,8 +390,8 @@ def upperleft_text(txt):
 def upperright_text(txt):
     txtargs = dict(horizontalalignment='right',
                    verticalalignment='top',
-                   fontsize='smaller',
-                   fontweight='ultralight', 
+                   #fontsize='smaller',
+                   #fontweight='ultralight', 
                    backgroundcolor=(0,0,0,.5),
                    color=ORANGE)
     ax_relative_text(.98, .02, txt, **txtargs)
@@ -367,6 +400,8 @@ def ax_relative_text(x, y, txt, **kwargs):
     ax = plt.gca()
     xy, width, height = _axis_xy_width_height(ax)
     x_, y_ = ((xy[0])+x*width, (xy[1]+height)-y*height)
+    if not kwargs.has_key( 'fontproperties'):
+        kwargs['fontproperties'] = FONTS.relative
     ax.text(x_, y_, txt, **kwargs)
 
 def fig_relative_text(x, y, txt, **kwargs):
@@ -382,8 +417,8 @@ def set_figtitle(figtitle, subtitle=''):
     if subtitle != '':
         subtitle = '\n'+subtitle
     #fig.suptitle(figtitle+subtitle, fontsize=14, fontweight='bold')
-    fig.suptitle(figtitle, x=.5, y=.98, fontsize=14, fontweight='bold')
-    fig_relative_text(.5, .95, subtitle, fontsize=12)
+    fig.suptitle(figtitle, x=.5, y=.98, fontproperties=FONTS.figtitle)
+    fig_relative_text(.5, .95, subtitle, fontproperties=FONTS.subtitle)
     fig.canvas.set_window_title(figtitle)
     adjust_subplots()
 
@@ -451,7 +486,7 @@ def figure(fignum=None,
     # Set the title
     if not title is None:
         ax = plt.gca()
-        ax.set_title(title)
+        ax.set_title(title, fontproperties=FONTS.axtitle)
         # Add title to figure
         if figtitle is None and plotnum == (1,1,1):
             figtitle = title
@@ -526,7 +561,7 @@ def show_signature(sig, **kwargs):
 
 def legend():
     ax = plt.gca()
-    ax.legend(**{'fontsize':18})
+    ax.legend(fontproperties=FONTS.legend)
 
 def draw_histpdf(data, label=None):
     freq, _ = draw_hist(data)

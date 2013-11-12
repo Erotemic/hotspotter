@@ -182,13 +182,7 @@ def listrm_list(list_, items):
     for item in items: listrm(list_, item)
 
 
-valid_filters = ['recip', 
-                 'roidist',
-                 'frexquency',
-                 'ratio',
-                 'bursty', 
-                 'lnbnn']
-
+#valid_filters = ['recip', 'roidist', 'frexquency', 'ratio', 'bursty', 'lnbnn']
 def any_inlist(list_, search_list):
     set_ = set(list_)
     return any([search in set_ for search in search_list])
@@ -201,23 +195,26 @@ class ScoreMechanismParams(DynStruct):
         smp.aggregation_method = 'ChipSum' # ['NameSum', 'NamePlacketLuce']
         smp.nnfilter_list = ['recip', 'roidist']
         #
-        smp.nnfilter_list = ['recip', 'roidist', 'lnbnn']
-        smp.roidist_thresh = .5
-        smp.ratio_thresh   = 1.2
-        smp.burst_thresh   = 1
-
-        smp.filt2_tw = { 
-            #tuple(ValidSignThresh, ScoreWeight)
-            'roidist'    : ((+1, smp.roidist_thresh), 0),
-            'recip'      : ((+1,    0), 0), 
-            #'scale'      : ((+1, None), 0),
-            'bursty'     : ((+1, smp.burst_thresh), 0),
-            'ratio'      : ((-1, smp.ratio_thresh), 1), 
-            'lnbnn'      : ((-1, None), 1),
-            'lnrat'      : ((-1, None), 1),
-        }
+        smp.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio']
+        valid_filters = []
+        def addfilt(sign, filt, thresh, weight):
+            valid_filters.append((sign, filt))
+            smp.__dict__[filt+'_thresh'] = thresh
+            smp.__dict__[filt+'_weight']  = weight
+        #tuple(Sign, Filt, ValidSignThresh, ScoreWeight)
+        addfilt(+1, 'roidist', .5, 0)
+        addfilt(+1, 'recip',    0, 0)
+        #addfilt(+1, 'scale')
+        addfilt(+1, 'bursty', None, 0)
+        addfilt(-1, 'ratio',  None, 0)
+        addfilt(-1, 'lnbnn',  None, 1)
+        addfilt(-1, 'lnrat',  None, 0)
         smp.Krecip = 1 # 0 := off
         smp.update(**kwargs)
+        smp.filt2_tw = {}
+        for (sign, filt) in valid_filters:
+            stw = ((sign, smp.__dict__[filt+'_thresh']), smp.__dict__[filt+'_weight'])
+            smp.filt2_tw[filt] = stw
 
     def make_feasible(score_params, nn_params):
         nnfilts = score_params.nnfilter_list
@@ -225,13 +222,19 @@ class ScoreMechanismParams(DynStruct):
         smp = score_params
         # Knorm
         norm_depends = ['lnbnn', 'ratio', 'lnrat']
-        if nnp.Knorm == 0 and not any_inlist(nnfilts, norm_depends):
+        if nnp.Knorm <= 0 and not any_inlist(nnfilts, norm_depends):
             listrm_list(nnfilts, norm_depends)
             nnp.Knorm = 0
         # Krecip
-        if smp.Krecip == 0 or 'recip' not in nnfilts:
+        if smp.Krecip <= 0 or 'recip' not in nnfilts:
             listrm(nnfilts, 'recip')
             smp.Krecip = 0
+        if smp.roidist_thresh >= 1 and smp.roidist_weight == 0:
+            listrm(nnfilts, 'roidist')
+        if smp.ratio_thresh   <= 1:
+            listrm(nnfilts, 'ratio')
+        if smp.bursty_thresh   <= 1:
+            listrm(nnfilts, 'bursty')
 
     def get_uid(score_params):
         on_filters = dict_subset(score_params.filt2_tw,
@@ -264,7 +267,7 @@ class SpatialVerifyParams(DynStruct):
         sv_params.use_chip_extent = False
         sv_params.scale_thresh  = (.5, 2)
         sv_params.xy_thresh = .002
-        sv_params.shortlist_len = 100
+        sv_params.shortlist_len = 500
         sv_params.update(**kwargs)
     def get_uid(sv_params):
         uid = '_sv(' 
@@ -282,15 +285,19 @@ class QueryParams(DynStruct):
         query_params.score_params = ScoreMechanismParams(**kwargs)
         query_params.sv_params = SpatialVerifyParams(**kwargs)
         query_params.query_type = 'vsmany'
+        query_params.qcxs = []
+        query_params.dcxs = []
         query_params.use_cache  = False
         # Data
         query_params.data_index = None
         query_params.qcxs2_index = {}
         query_params.update(**kwargs)
         query_params.score_params.make_feasible(query_params.nn_params)
-    def get_uid(query_params, SV=False, scored=True, long_=False):
-        uid = query_params.query_type
-        uid += query_params.nn_params.get_uid()
+    def get_uid(query_params, SV=False, scored=True, long_=False, NN=True):
+        uid = ''
+        if NN is True:
+            uid += query_params.query_type
+            uid += query_params.nn_params.get_uid()
         if SV is True:
             uid += query_params.sv_params.get_uid()
         if scored is True:

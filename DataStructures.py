@@ -143,6 +143,8 @@ class QueryResult(DynStruct):
     def show_query(res, hs, **kwargs):
         df2.show_chip(hs, res=res, **kwargs)
     def show_topN(res, hs, **kwargs):
+        if not 'SV' in kwargs.keys():
+            kwargs['SV'] = res.get_SV()
         df2.show_topN_matches(hs, res, **kwargs)
 
 #=========================
@@ -222,6 +224,10 @@ class ScoreMechanismParams(DynStruct):
         nnp = nn_params
         smp = score_params
         # Knorm
+        if smp.lnbnn_thresh is None and smp.lnbnn_weight == 0:
+            listrm(nnfilts, 'lnbnn')
+        if smp.ratio_thresh   <= 1:
+            listrm(nnfilts, 'ratio')
         norm_depends = ['lnbnn', 'ratio', 'lnrat']
         if nnp.Knorm <= 0 and not any_inlist(nnfilts, norm_depends):
             listrm_list(nnfilts, norm_depends)
@@ -230,12 +236,12 @@ class ScoreMechanismParams(DynStruct):
         if smp.Krecip <= 0 or 'recip' not in nnfilts:
             listrm(nnfilts, 'recip')
             smp.Krecip = 0
-        if smp.roidist_thresh >= 1 and smp.roidist_weight == 0:
+        if (smp.roidist_thresh is None or smp.roidist_thresh >= 1) and\
+               smp.roidist_weight == 0:
             listrm(nnfilts, 'roidist')
-        if smp.ratio_thresh   <= 1:
-            listrm(nnfilts, 'ratio')
         if smp.bursty_thresh   <= 1:
             listrm(nnfilts, 'bursty')
+
 
     def get_uid(score_params):
         on_filters = dict_subset(score_params.filt2_tw,

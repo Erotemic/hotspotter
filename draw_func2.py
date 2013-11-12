@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pylab
-import scipy.stats
 import sys
 import types
 import warnings
@@ -56,6 +55,8 @@ def reload_module():
     import sys
     print('[df2] reloading '+__name__)
     imp.reload(sys.modules[__name__])
+    helpermodule = sys.modules['_localhelpers.draw_func2_helpers']
+    imp.reload(helpermodule)
 def rrr():
     reload_module()
 

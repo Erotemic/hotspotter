@@ -480,6 +480,34 @@ def compare1():
     '''
     df2.update()
 
+def spatially_verify(kpts1, kpts2, rchip_size2, fm, fs, xy_thresh,
+                     shigh_thresh, slow_thresh, use_chip_extent):
+    '''1) compute a robust transform from img2 -> img1
+       2) keep feature matches which are inliers 
+       returns fm_V, fs_V, H '''
+    # Return if pathological
+    min_num_inliers   = 4
+    if len(fm) < min_num_inliers:
+        return (np.empty((0, 2)), np.empty((0, 1)))
+    # Get homography parameters
+    if use_chip_extent:
+        diaglen_sqrd = rchip_size2[0]**2 + rchip_size2[1]**2
+    else:
+        x_m = kpts2[fm[:,1],0].T
+        y_m = kpts2[fm[:,1],1].T
+        diaglen_sqrd = calc_diaglen_sqrd(x_m, y_m)
+    # Try and find a homography
+    sv_tup = homography_inliers(kpts1, kpts2, fm, xy_thresh, 
+                                    shigh_thresh, slow_thresh,
+                                    diaglen_sqrd, min_num_inliers)
+    if sv_tup is None:
+        return (np.empty((0, 2)), np.empty((0, 1)))
+    # Return the inliers to the homography
+    (H, inliers, Aff, aff_inliers) = sv_tup
+    fm_V = fm[inliers, :]
+    fs_V = fs[inliers]
+    return fm_V, fs_V
+####
 
 if __name__ == '__main__':
     import multiprocessing

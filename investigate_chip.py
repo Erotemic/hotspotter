@@ -137,6 +137,8 @@ def quick_assign_vsone(hs, qcx, cx, **kwargs):
     fm = cx2_fm[cx] ; fs = cx2_fs[cx]
     return fm, fs
 
+# Just put in PL
+
 def top_matching_features(res, axnum=None, match_type=''):
     cx2_fs = res.cx2_fs_V
     cx_fx_fs_list = []
@@ -196,7 +198,6 @@ def vary_query_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
         fnum = vary_two_params(hs, qcx, cx, param_ranges, assign_alg,
                                args.nRows, args.nCols, fnum)
     return fnum
-
 
 def linear_logspace(start, stop, num, base=2):
     return 2 ** np.linspace(np.log2(start), np.log2(stop), num)
@@ -300,6 +301,68 @@ def show_vsone_matches(hs, qcx, fnum=1):
     df2.show_match_analysis(hs, res_vsone, N=5, fignum=fnum, figtitle=' vsone')
     fnum+=1
     return res_vsone, fnum
+
+def get_qfx2_gtkrank(hs, qcx, query_params): 
+    '''Finds how deep possibily correct matches are in the ANN structures'''
+    import matching_functions as mf
+    dx2_cx   = query_params.data_index.ax2_cx
+    gt_cxs   = hs.get_other_cxs(qcx)
+    qcx2_nns = mf.nearest_neighbors(hs, [qcx], query_params)
+    filt2_weights = mf.weight_neighbors(hs, qcx2_nns, query_params)
+    K = query_params.nn_params.K
+    (qfx2_dx, _) = qcx2_nns[qcx]
+    qfx2_weights = filt2_weights['lnbnn'][qcx]
+    qfx2_cx = dx2_cx[qfx2_dx[:, 0:K]]
+    qfx2_gt = np.in1d(qfx2_cx.flatten(), gt_cxs)
+    qfx2_gt.shape = qfx2_cx.shape
+    qfx2_gtkrank = np.array([helpers.npfind(isgt) for isgt in qfx2_gt])
+    qfx2_gtkweight = [0 if rank == -1 else weights[rank] 
+                      for weights, rank in zip(qfx2_weights, qfx2_gtkrank)]
+    qfx2_gtkweight = np.array(qfx2_gtkweight)
+    return qfx2_gtkrank, qfx2_gtkweight
+
+def measure_k_rankings(hs):
+    'Reports the k match of correct feature maatches for each problem case'
+    import match_chips3 as mc3
+    query_params = mc3.prequery(hs, K=500, Krecip=0,
+                                roidist_thresh=None, lnbnn_weight=1)
+    id2_qcxs, id2_ocids, id2_notes = get_all_history(hs.args.db, hs)
+    id2_rankweight = [get_qfx2_gtkrank(hs, qcx, query_params) for qcx in id2_qcxs]
+    df2.rrr()
+    df2.reset()
+    for qcx, rankweight, notes in zip(id2_qcxs, id2_rankweight, id2_notes):
+        ranks, weights = rankweight
+        ranks[ranks == -1] = K+1
+        print(title)
+        title = 'q'+hs.cxstr(qcx) + ' - ' + notes
+        df2.figure(fignum=qcx, doclf=True, title=title)
+        #draw_support
+        #label=title
+        df2.draw_hist(ranks, nbins=100, weights=weights) # FIXME
+        df2.legend()
+    print(len(id2_qcxs))
+    df2.present(num_rc=(4,5), wh=(300,250))
+
+def measure_cx_rankings(hs):
+    ' Reports the best chip ranking over each problem case'
+    import match_chips3 as mc3
+    query_params = mc3.prequery(hs, K=500, Krecip=0,
+                                roidist_thresh=None, lnbnn_weight=1)
+    id2_qcxs, id2_ocids, id2_notes = get_all_history(hs.args.db, hs)
+    id2_bestranks = []
+    for id_ in xrange(len(id2_qcxs)):
+        qcx = id2_qcxs[id_]
+        reses = mc3.execute_query_safe(hs, [qcx], query_params)
+        gt_cxs   = hs.get_other_cxs(qcx)
+        res = reses[2][qcx]
+        cx2_score = res.get_cx2_score(hs)
+        top_cxs  = cx2_score.argsort()[::-1]
+        gt_ranks = [helpers.npfind(top_cxs == gtcx) for gtcx in gt_cxs]
+        bestrank = min(gt_ranks)
+        id2_bestranks += [bestrank]
+    print(id2_bestranks)
+
+
 
 def where_did_vsone_matches_go(hs, qcx, fnum=1, K=100):
     '''Finds a set of vsone matches and a set of vsmany matches. 
@@ -471,7 +534,6 @@ def view_all_history_names_in_db(hs, db):
         df2.save_figure(fpath='hard_names', usetitle=True)
     helpers.vd('hard_names')
 
-
 def run_investigations(qcx, args):
     print('[invest] Running Investigation: '+hs.cxstr(qcx))
     fnum = 1
@@ -492,12 +554,6 @@ def run_investigations(qcx, args):
     if '5' in args.tests:
         fnum = mc2.matcher_test(hs, qcx, fnum)
 
-def ensure_iterable(obj):
-    if np.iterable(obj):
-        return obj
-    else:
-        return [obj]
-
 #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=20)
 #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
 #===========
@@ -505,6 +561,7 @@ def ensure_iterable(obj):
 # exec(open('investigate_chip.py').read())
 
 def print_history_table():
+    print('------------')
     print('[invest] Printing history table:')
     count = 0
     for histentry in HISTORY:
@@ -512,15 +569,24 @@ def print_history_table():
             print('%d: %r' % (count, histentry))
             count += 1
 
+def change_db(db):
+    global args
+    global hs
+    args.db = db
+    hs = hs_from_db(args.db)
+    hs.args = args
+
 def main():
     if 'hs' in vars():
         return
     # Load Hotspotter
-    print('[invest] Loading DB=%r' % args.db)
-    if not args.noprinthist:
-        print_history_table()
     hs = hs_from_db(args.db)
     hs.args = args # TODO Integrate this elsewhere
+    print('[invest] Loading DB=%r' % args.db)
+    if not args.noprinthist or True:
+        print('---')
+        print('[invest] print_history_table()')
+        print_history_table()
     # Get query ids
     if not args.qcid is None:
         qcxs = hs.cid2_cx(args.qcid)
@@ -530,7 +596,7 @@ def main():
         print('[invest] Chosen histid=%r' % args.histid)
         qcxs, ocids, notes = zip(*get_all_history(args.db, hs))[args.histid]
         print('[invest] notes=%r' % notes)
-    qcxs = ensure_iterable(qcxs)
+    qcxs = helpers.ensure_iterable(qcxs)
     return locals()
 
 if __name__ == '__main__':

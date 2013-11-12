@@ -25,11 +25,12 @@ import numpy as np
 import sys
 import os
 import time
+import scipy.stats
 import types
 import textwrap
 from Printable import DynStruct
 
-SMALL_FONTS = True
+SMALL_FONTS = False
 if SMALL_FONTS:
     SMALLER  = 7
     SMALL    = 7
@@ -559,14 +560,6 @@ def show_signature(sig, **kwargs):
     plt.plot(sig)
     fig.show()
 
-def legend():
-    ax = plt.gca()
-    ax.legend(fontproperties=FONTS.legend)
-
-def draw_histpdf(data, label=None):
-    freq, _ = draw_hist(data)
-    draw_pdf(data, draw_support=False, scale_to=freq.max(), label=label)
-
 def draw_stems(x_data, y_data):
     if len(x_data) != len(y_data):
         print('[df2] WARNING draw_stems(): len(x_data)!=len(y_data)')
@@ -584,7 +577,15 @@ def draw_stems(x_data, y_data):
     ax.set_xlim(min(x_data)-1, max(x_data)+1)
     ax.set_ylim(min(y_data)-1, max(max(y_data), max(x_data))+1)
 
-def draw_hist(data, bins=None):
+def legend():
+    ax = plt.gca()
+    ax.legend(prop=FONTS.legend)
+
+def draw_histpdf(data, label=None, draw_support=False, nbins=10):
+    freq, _ = draw_hist(data, nbins=nbins)
+    draw_pdf(data, draw_support=draw_support, scale_to=freq.max(), label=label)
+
+def draw_hist(data, bins=None, nbins=10, weights=None):
     if type(data) == types.ListType:
         data = np.array(data)
     if bins is None:
@@ -592,7 +593,7 @@ def draw_hist(data, bins=None):
         dmax = data.max()
         bins = dmax - dmin
     ax  = plt.gca()
-    freq, bins_, patches = ax.hist(data, range=(dmin,dmax))
+    freq, bins_, patches = ax.hist(data, bins=nbins, weights=weights, range=(dmin,dmax))
     return freq, bins_
     
 def variation_trunctate(data):

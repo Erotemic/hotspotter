@@ -52,7 +52,6 @@ def prequery(hs, query_params=None, **kwargs):
     return query_params
 
 qcxs = [0]
-
 def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
     print('------------------')
     print('Execute query safe')
@@ -71,26 +70,27 @@ def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
     #---------------
     # Flip if needebe
     if query_params.query_type == 'vsone': # On the fly computation
-        qcxs_ = tuple(qcxs)
-        if not query_params.qcxs2_index.has_key(qcxs_):
-            query_params.qcxs2_index[qcxs_] = make_nn_index(hs, qcxs)
-        data_index = query_params.qcxs2_index[qcxs_]
         dcxs = query_params.qcxs
         qcxs = query_params.dcxs 
     elif  query_params.query_type == 'vsmany':
-        data_index = query_params.data_index
         qcxs = query_params.qcxs
         dcxs = query_params.dcxs 
+    dcxs_ = tuple(dcxs)
+    if not query_params.qcxs2_index.has_key(dcxs_):
+        query_params.qcxs2_index[dcxs_] = make_nn_index(hs, dcxs)
+    query_params.data_index = query_params.qcxs2_index[dcxs_]
     print('[query] len(qcxs)=%r' % len(qcxs))
     print('[query] len(dcxs)=%r' % len(dcxs))
     # Assign Nearest Neighors
     # Apply cheap filters
     # Convert to the plotable res objects
     # Spatial Verify
-    qcx2_neighbors = mf.nearest_neighbors(hs, qcxs, data_index, query_params)
-    qcx2_resORIG   = mf.neighbors_to_res(hs, qcx2_neighbors, {}, data_index, query_params)
-    filter_weights = mf.apply_neighbor_weights(hs, qcx2_neighbors, data_index, query_params)
-    qcx2_resFILT   = mf.neighbors_to_res(hs, qcx2_neighbors, filter_weights, data_index, query_params)
+    qcx2_nns = mf.nearest_neighbors(hs, qcxs, query_params)
+    filt2_weights  = mf.weight_neighbors(hs, qcx2_nns, query_params)
+    qcx2_nnscoresORIG  = mf.score_neighbors(hs, qcx2_nns, {}, query_params)
+    qcx2_nnscoresFILT  = mf.score_neighbors(hs, qcx2_nns, filt2_weights, query_params)
+    qcx2_resORIG   = mf.neighbors_to_res(hs, qcx2_nns, qcx2_nnscoresORIG, query_params, scored=False)
+    qcx2_resFILT   = mf.neighbors_to_res(hs, qcx2_nns, qcx2_nnscoresFILT, query_params)
     qcx2_resSVER   = mf.spatially_verify_matches(hs, qcx2_resFILT, query_params)
     #print('[query] '+str(qcx2_resORIG.keys()))
     for qcx in query_params.qcxs:
@@ -100,7 +100,7 @@ def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
     #print('[query] qcx2_resSVER = ')
     #qcx2_resSVER[0].printme()
     # Score each database chip
-    #qcx2_res = mf.score_matches(hs, qcx2_neighbors, data_index, filter_weights, score_params, nn_params)
+    #qcx2_res = mf.score_matches(hs, qcx2_nns, data_index, filt2_weights, score_params, nn_params)
     #cache_results(qcx2_res)
     #cache_results(qcx2_resSVER)
     '''
@@ -173,10 +173,10 @@ if __name__ == '__main__':
     exec(execstr)
     qcx = qcxs[0]
     #df2.DARKEN = .5
-    df2.DISTINCT_COLORS = False
+    df2.DISTINCT_COLORS = True
     #matcher_test(hs, qcx, qnum=1, K=2, Krecip=4, roidist_thresh=None,
                  #scale_thresh=(2, 10), xy_thresh=1, use_chip_extent=True,
                  #query_type='vsmany', ratio_thresh=None, lnbnn_weight=0, ratio_weight=1)
-    matcher_test(hs, qcx, qnum=1, Krecip=0, Knorm=1, K=50, ratio_thresh=1,
-                 lnbnn_weight=1, query_type='vsone')
+    matcher_test(hs, qcx, qnum=1, Krecip=0, Knorm=1, K=5, ratio_thresh=None,
+                 lnbnn_weight=0, roidist_thresh=.5, query_type='vsmany')
     exec(df2.present())

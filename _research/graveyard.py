@@ -935,3 +935,36 @@ def cv2_match(desc1, desc2):
     matches = [(m1.trainIdx, m1.queryIdx) for m1 in raw_matches]
 
 
+
+
+'''
+PRIORITY 1: 
+* CREATE A SIMPLE TEST DATABASE
+* Need simple testcases showing the validity of each step. Do this with a small
+* database of three images: Query, TrueMatch, FalseMatch
+* Manually remove a selection of keypoints. 
+
+PRIORITY 2: 
+* FIX QUERY CACHING
+ QueryResult should save each step of the query. 
+ * Initial Nearest Neighbors Result,
+ * Filter Reciprocal Result
+ * Filter Spatial Result
+ * Filter Spatial Verification Result 
+ You should have the ability to turn the caching of any part off. 
+
+PRIORITY 3: 
+ * Unifty vsone and vsmany
+ * Just make a query params object
+ they are the same process which accepts the parameters: 
+     invert_query, qcxs, dcxs
+'''
+'''
+def doit():
+    df2.rrr()
+    df2.reset()
+    res.show_query(hs, SV=False)
+    res.show_topN(hs, SV=False)
+    df2.update()
+    df2.bring_to_front(df2.plt.gcf())
+'''

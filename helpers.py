@@ -1489,6 +1489,16 @@ def sigfig_str(number, sigfig):
         result.insert(0,'-')
     return ''.join(result)
 
+def ensure_iterable(obj):
+    if np.iterable(obj):
+        return obj
+    else:
+        return [obj]
+
+def npfind(arr):
+    found = np.where(arr)[0]
+    pos = -1 if len(found) == 0 else found[0]
+    return pos
 
 if __name__ == '__main__':
     import multiprocessing

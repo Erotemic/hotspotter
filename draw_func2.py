@@ -21,6 +21,35 @@ import params
 import os
 #print('LOAD_MODULE: draw_func2.py')
 
+DISTINCT_COLORS = True #and False
+ELL_LINEWIDTH = 1.5
+if DISTINCT_COLORS: 
+    ELL_ALPHA  = .6
+    LINE_ALPHA = .35
+else:
+    ELL_ALPHA  = .4
+    LINE_ALPHA = .4
+ELL_COLOR  = BLUE
+
+LINE_COLOR = RED
+LINE_WIDTH = 1.4
+
+SHOW_LINES = True #True
+SHOW_ELLS  = True
+
+POINT_SIZE = 2
+
+def my_prefs():
+    global LINE_COLOR
+    global ELL_COLOR
+    global ELL_LINEWIDTH
+    global ELL_ALPHA
+    LINE_COLOR = (1, 0, 0)
+    ELL_COLOR = (0, 0, 1)
+    ELL_LINEWIDTH = 2
+    ELL_ALPHA = .5
+
+
 def reload_module():
     import imp
     import sys
@@ -130,20 +159,19 @@ def draw_sift(desc, kp=None):
     ax.add_collection(arw_collection2)
     ax.add_collection(arw_collection)
 
-def feat_scores_to_color(fs):
+def feat_scores_to_color(fs, cmap_='hot'):
     assert len(fs.shape) == 1, 'score must be 1d'
-    cmap = plt.get_cmap(LINE_CMAP)
+    cmap = plt.get_cmap(cmap_)
     mins = fs.min()
     rnge = fs.max() - mins
     score2_01 = lambda score: .1+.9*(score-mins)/(rnge)
     colors    = [cmap(score2_01(fs[fx])) for fx in xrange(len(fs))]
     return colors
 
-def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
-    global LINE_ALPHA
-    global SHOW_LINE
-    global LINE_COLOR
-    global LINE_WIDTH
+def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0),
+                  color_list=None):
+    if not DISTINCT_COLORS:
+        color_list = None
     # input data
     if not SHOW_LINES:
         return 
@@ -160,13 +188,14 @@ def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0)):
                          kpts2_m[0]+woff,
                          kpts1_m[1],
                          kpts2_m[1]+hoff))
-    if fs is None: # Draw with solid color
-        colors    = [ LINE_COLOR for fx in xrange(len(fm)) ] 
-    else: # Draw with colors proportional to score difference
-        colors = feat_scores_to_color(fs)
+    if color_list is None:
+        if fs is None: # Draw with solid color
+            color_list    = [ LINE_COLOR for fx in xrange(len(fm)) ] 
+        else: # Draw with colors proportional to score difference
+            color_list = feat_scores_to_color(fs)
     segments  = [((x1, y1), (x2,y2)) for (x1,x2,y1,y2) in xxyy_iter] 
     linewidth = [LINE_WIDTH for fx in xrange(len(fm)) ] 
-    line_group = LineCollection(segments, linewidth, colors, alpha=LINE_ALPHA)
+    line_group = LineCollection(segments, linewidth, color_list, alpha=LINE_ALPHA)
     ax.add_collection(line_group)
 
 def draw_kpts2(kpts, offset=(0,0),
@@ -178,6 +207,8 @@ def draw_kpts2(kpts, offset=(0,0),
                ell_linewidth=ELL_LINEWIDTH,
                ell_color=ELL_COLOR,
                color_list=None):
+    if not DISTINCT_COLORS:
+        color_list = None
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
     # get matplotlib info
     ax = plt.gca()
@@ -192,12 +223,6 @@ def draw_kpts2(kpts, offset=(0,0),
     printDBG('[df2] draw_kpts()----------')
     printDBG('[df2] draw_kpts() ell=%r pts=%r' % (ell, pts))
     printDBG('[df2] draw_kpts() drawing kpts.shape=%r' % (kpts.shape,))
-    if pts:
-        printDBG('[df2] draw_kpts() drawing pts x.shape=%r y.shape=%r' % (x.shape, y.shape))
-        #if color_list is None:
-            #color_list = [((_)/len(x),1-((_)/len(x)),0) for _ in xrange(len(x))]
-        #ax.scatter(x, y, c=color_list, s=pts_size, marker='o', edgecolor='none')
-        ax.plot(x, y, linestyle='None', marker='o', markerfacecolor=pts_color, markersize=pts_size, markeredgewidth=0)
     if ell:
         printDBG('[df2] draw_kpts() drawing ell kptsT.shape=%r' % (kptsT.shape,))
         a = kptsT[2]
@@ -215,18 +240,28 @@ def draw_kpts2(kpts, offset=(0,0),
             #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
         kpts_iter = iter(zip(x,y,aIS,bIS,dIS))
         # This has to be the sexiest piece of code I've ever written
-        ell_actors = [ Circle( (0,0), 1, 
+        ell_actors = [Circle( (0,0), 1, 
                             transform=Affine2D([( a_, b_, x_),
                                                 ( 0 , d_, y_),
                                                 ( 0 , 0 , 1)]) )
-                    for (x_,y_,a_,b_,d_) in kpts_iter ]
+                      for (x_,y_,a_,b_,d_) in kpts_iter]
         ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
         ellipse_collection.set_facecolor('none')
         ellipse_collection.set_transform(pltTrans)
         ellipse_collection.set_alpha(ell_alpha)
         ellipse_collection.set_linewidth(ell_linewidth)
+        if not color_list is None: 
+            ell_color = color_list
         ellipse_collection.set_edgecolor(ell_color)
         ax.add_collection(ellipse_collection)
+    if pts:
+        printDBG('[df2] draw_kpts() drawing pts x.shape=%r y.shape=%r' % (x.shape, y.shape))
+        if color_list is None:
+            color_list = [pts_color for _ in xrange(len(x))]
+        ax.autoscale(enable=False)
+        ax.scatter(x, y, c=color_list, s=2*pts_size, marker='o', edgecolor='none')
+        #ax.autoscale(enable=False)
+        #ax.plot(x, y, linestyle='None', marker='o', markerfacecolor=pts_color, markersize=pts_size, markeredgewidth=0)
 
 # ---- CHIP DISPLAY COMMANDS ----
 def imshow(img, 
@@ -235,16 +270,23 @@ def imshow(img,
            figtitle=None, 
            plotnum=None,
            interpolation='nearest', 
+           darken=None,
            **kwargs):
-    printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
-    printDBG('[df2] *** fignum = %r, plotnum = %r ' % (fignum, plotnum))
+    #printDBG('[df2] ----- IMSHOW ------ ')
+    #printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
+    #printDBG('[df2] *** fignum = %r, plotnum = %r ' % (fignum, plotnum))
+    #printDBG('[df2] *** img.shape = %r ' % (img.shape,))
+    #printDBG('[df2] *** img.stats = %r ' % (helpers.printable_mystats(img),))
     fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
     ax = plt.gca()
+    if not darken is None:
+        img *= darken
     plt.imshow(img, interpolation=interpolation)
     plt.set_cmap('gray')
     ax = fig.gca()
     ax.set_xticks([])
     ax.set_yticks([])
+    #ax.set_autoscale(False)
     #try:
         #if plotnum == 111:
             #fig.tight_layout()
@@ -282,23 +324,64 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
     fig, ax = imshow(match_img, fignum=fignum,
                 plotnum=plotnum, title=title,
                 **kwargs)
-    upperleft_text('#match=%d' % len(fm))
+    nMatches = len(fm)
+    upperleft_text('#match=%d' % nMatches)
     if all_kpts:
         # Draw all keypoints as simple points
         all_args = dict(ell=False, pts=draw_pts, pts_color=GREEN, pts_size=2, ell_alpha=ell_alpha)
         draw_kpts2(kpts1, **all_args)
         draw_kpts2(kpts2, offset=(woff,hoff), **all_args) 
-    if len(fm) == 0:
+    if nMatches == 0:
         printDBG('[df2] There are no feature matches to plot!')
     else:
+        #color_list = [((x)/nMatches,1-((x)/nMatches),0) for x in xrange(nMatches)]
+        #cmap = lambda x: (x, 1-x, 0)
+        cmap = plt.get_cmap('prism')
+        #color_list = [cmap(mx/nMatches) for mx in xrange(nMatches)]
+        colors = distinct_colors(nMatches)
+        pt2_args = dict(pts=draw_pts, ell=False, pts_color=BLACK, pts_size=8)
+        pts_args = dict(pts=draw_pts, ell=False, pts_color=ORANGE, pts_size=6,
+                        color_list=add_alpha(colors))
+        ell_args = dict(ell=draw_ell, pts=False, color_list=colors)
         # Draw matching ellipses
-        ell_args = dict(ell=draw_ell, pts=draw_pts, pts_color=ORANGE, pts_size=4, ell_alpha=ell_alpha)
-        draw_kpts2(kpts1[fm[:,0]], **ell_args)
-        draw_kpts2(kpts2[fm[:,1]], offset=(woff,hoff), **ell_args)
+        offset=(woff,hoff)
+        def _drawkpts(**kwargs):
+            draw_kpts2(kpts1[fm[:,0]], **kwargs)
+            draw_kpts2(kpts2[fm[:,1]], offset=offset, **kwargs)
+        def _drawlines(**kwargs):
+            draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=offset, **kwargs)
         # Draw matching lines
+        if draw_ell:
+            _drawkpts(**ell_args)
         if draw_lines:
-            draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=(woff,hoff))
+            _drawlines(color_list=colors)
+        if draw_pts: 
+            #_drawkpts(**pts_args)
+            acolors = add_alpha(colors)
+            pts_args.update(dict(pts_size=6, color_list=acolors))
+            _drawkpts(**pt2_args)
+            _drawkpts(**pts_args)
+
     return fig, ax
+
+def deterministic_shuffle(list_):
+    randS = int(np.random.rand()*np.uint(0-2)/2)
+    np.random.seed(len(list_))
+    np.random.shuffle(list_)
+    np.random.seed(randS)
+
+def distinct_colors(N):
+    # http://blog.jianhuashao.com/2011/09/generate-n-distinct-colors.html
+    import colorsys
+    sat = .878
+    val = .878
+    HSV_tuples = [(x*1.0/N, sat, val) for x in xrange(N)]
+    RGB_tuples = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)
+    deterministic_shuffle(RGB_tuples)
+    return RGB_tuples
+
+def add_alpha(colors):
+    return [list(color)+[1] for color in colors]
 
 def show_matches_annote_res(res, hs, cx,
                   SV=True, 
@@ -486,10 +569,14 @@ def show_gt_matches(hs, res, SV=True, fignum=3):
 
 def show_match_analysis(hs, res, N=5, fignum=3, figtitle='',
                         show_query=True, annotations=True, SV=True,
-                        compare_SV=False, **kwargs):
-    topN_cxs = res.topN_cxs(N, SV)
-    topscore = res.get_cx2_score(SV)[topN_cxs][0]
-    figtitle = ('topscore=%r -- q%s' % (topscore, hs.cxstr(res.qcx))) + figtitle
+                        compare_SV=False, compare_cxs=None, **kwargs):
+    if not compare_cxs is None:
+        topN_cxs = compare_cxs
+        figtitle = 'comparing to '+hs.cxstr(topN_cxs) + figtitle
+    else:
+        topN_cxs = res.topN_cxs(N, SV)
+        topscore = res.get_cx2_score(SV)[topN_cxs][0]
+        figtitle = ('topscore=%r -- q%s' % (topscore, hs.cxstr(res.qcx))) + figtitle
     all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
     max_nCols = min(5,N)

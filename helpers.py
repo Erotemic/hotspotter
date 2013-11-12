@@ -490,6 +490,13 @@ def get_parent_locals():
         return None
     return parent_frame.f_locals
 
+def get_caller_locals():
+    this_frame = inspect.currentframe()
+    call_frame = this_frame.f_back
+    if call_frame is None:
+        return None
+    return call_frame.f_locals
+
 # --- Convinience ----
 
 def vd(dname=None):
@@ -1337,7 +1344,13 @@ def printshape(arr_name, locals_):
     else:
         print('len(%s) = %r' % (arr_name, len(arr)))
 
-def printvar(locals_, varname):
+def printvar2(varstr):
+    locals_ = get_parent_locals()
+    printvar(locals_, varstr, '')
+
+def printvar(locals_, varname, attr='.shape'):
+    npprintopts = np.get_printoptions()
+    np.set_printoptions(threshold=5)
     dotpos = varname.find('.')
     if dotpos == -1:
         var = locals_[varname]
@@ -1347,11 +1360,15 @@ def printvar(locals_, varname):
         var_ = locals_[varname_]
         var = eval('var_'+dotname_)
     if type(var) is np.ndarray:
-        print('[printvar] '+varname+'.shape = '+str(var.shape))
+        varstr = eval('str(var'+attr+')')
+        print('[printvar] %s =\n%s' % (varname+attr, varstr))
     elif type(var) is types.ListType:
-        print('[printvar] len(%s) = %r' % (varname, len(var)))
+        if attr == '.shape': func='len'
+        varstr = eval('str('+func+'(var))')
+        print('[printvar] len(%s) = %s' % (varname, varstr))
     else:
         print('[printvar] %s = %r' % (varname, var))
+    np.set_printoptions(**npprintopts)
 
 def format(num, n=8):
     '''makes numbers pretty e.g.

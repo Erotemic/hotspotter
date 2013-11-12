@@ -311,10 +311,11 @@ class HotSpotter(DynStruct):
     #--------------
     def vs_str(hs, qcx, cx):
         if False:
-            return '(qcx=%r v cx=%r)' % (qcx, cx)
+            #return '(qcx=%r v cx=%r)' % (qcx, cx)
+            return 'cx(%r v %r)' % (qcx, cx)
         else: 
             cx2_cid = hs.tables.cx2_cid
-            return '(qcid=%r v cid=%r)' % (cx2_cid[qcx], cx2_cid[cx])
+            return 'cid(%r v %r)' % (cx2_cid[qcx], cx2_cid[cx])
     #--------------
     def num_indexed_gt_str(hs, cx):
         num_gt = len(hs.get_other_indexed_cxs(cx))

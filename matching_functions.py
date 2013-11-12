@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import itertools
 import sys
 import os
@@ -11,7 +12,6 @@ import helpers
 from helpers import Timer, tic, toc, printWARN
 from Printable import DynStruct
 import algos
-import helpers
 import spatial_verification2 as sv2
 import load_data2
 import params
@@ -26,6 +26,7 @@ import sklearn.preprocessing
 from itertools import izip, chain
 import investigate_chip as invest
 import spatial_verification2 as sv2
+import DataStructures as ds
 
 def reload_module():
     import imp, sys
@@ -47,70 +48,98 @@ qfx2_valid = np.ones(qfx2_fx.shape, dtype=np.bool)
 # All neighbors are valid
 #qfx2_valid = np.ones(qfx2_dx.shape, dtype=np.bool)
 
-def nearest_neighbors(hs, qcxs, data_index, nn_params):
+def nearest_neighbors(hs, qcxs, data_index, query_params):
     'Plain Nearest Neighbors'
+    print('assigning nearest neighbors')
+    nn_params = query_params.nn_params
     K = nn_params.K
     Knorm = nn_params.Knorm
     checks = nn_params.checks
     cx2_desc = hs.feats.cx2_desc
     nn_index = data_index.flann.nn_index
-    func = lambda qcx: nn_index(cx2_desc[qcx], K+Knorm, checks=checks)
-    qcx2_neighbors = {qcx:func(qcx) for qcx in qcxs}
+    nnfunc = lambda qcx: nn_index(cx2_desc[qcx], K+Knorm, checks=checks)
+    #qcx2_neighbors = {qcx:func(qcx) for qcx in qcxs}
+    qcx2_neighbors = {}
+    for qcx in qcxs:
+        (qfx2_dx, qfx2_dist) = nnfunc(qcx)
+        qcx2_neighbors[qcx] = (qfx2_dx, qfx2_dist)
     return qcx2_neighbors
 
 
 #-------
 # Nearest Neighbor weights
 #-------
+def apply_neighbor_weights(hs, qcx2_neighbors, data_index, query_params):
+    print('applying neighbor weights')
+    print(hs)
+    nnfilter_list = query_params.score_params.nnfilter_list
+    filter_weights = {}
+    for nnfilter in nnfilter_list:
+        nnfilter_fn = eval('nn_'+nnfilter+'_weight')
+        filter_weights[nnfilter] = nnfilter_fn(hs, qcx2_neighbors, data_index, query_params)
+    return filter_weights
+
 eps = 1E-8
 def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+eps)+1) 
 def RATIO_fn(vdist, ndist): return np.divide(ndist, vdist+eps)
 def LNBNN_fn(vdist, ndist): return (ndist - vdist) / 1000.0
-def _nn_normalized_weight(hs, qcx2_neighbors, data_index, normweight_fn):
+# normweight_fn = LNBNN_fn
+''''
+ndist = np.array([[0, 1, 2], [3, 4, 5], [3, 4, 5], [3, 4, 5],  [9, 7, 6] ])
+vdist = np.array([[3, 2, 1, 5], [3, 2, 5, 6], [3, 4, 5, 3], [3, 4, 5, 8],  [9, 7, 6, 3] ])
+vdist1 = vdist[:,0:1]
+vdist2 = vdist[:,0:2]
+vdist3 = vdist[:,0:3]
+vdist4 = vdist[:,0:4]
+print(LNBNN_fn(vdist1, ndist)) * 1000
+print(LNBNN_fn(vdist2, ndist)) * 1000
+print(LNBNN_fn(vdist3, ndist)) * 1000
+print(LNBNN_fn(vdist4, ndist)) * 1000
+'''
+def _nn_normalized_weight(normweight_fn, hs, qcx2_neighbors, data_index, query_params):
     # Only valid for vsone
-    K = nn_params.K
-    Knorm = nn_params.Knorm
-    qcx2_weight = {}
+    K = query_params.nn_params.K
+    Knorm = query_params.nn_params.Knorm
+    qcx2_norm_weight = {}
     for qcx in qcx2_neighbors.iterkeys():
         (_, qfx2_dist) = qcx2_neighbors[qcx]
-        qfx2_nndist = qfx2_dist[:, K:]
-        qfx2_normdist = qfx2_dist[:, 0:(K+Knorm)]
-        qfx2_ratio = normweight_fn(qfx2_nndist, qfx2_normdist)
-        qcx2_weight[qcx] = qfx2_ratio
-    return qcx2_weight
-def nn_ratio_weight(hs, qcx2_neighbors, data_index):
-    return _nn_normalized_weight(hs, qcx2_neighbors, data_index, RATIO_fn)
-def nn_lnbnn_weight(hs, qcx2_neighbors, data_index):
-    return _nn_normalized_weight(hs, qcx2_neighbors, data_index, LNBNN_fn)
-def nn_lnrat_weight(hs, qcx2_neighbors, data_index):
-    return _nn_normalized_weight(hs, qcx2_neighbors, data_index, LNRAT_fn)
+        qfx2_nndist = qfx2_dist[:, 0:K]
+        qfx2_normdist = qfx2_dist[:, -2:-1]
+        qfx2_normweight = normweight_fn(qfx2_nndist, qfx2_normdist)
+        qcx2_norm_weight[qcx] = qfx2_normweight
+    return qcx2_norm_weight
+def nn_ratio_weight(*args):
+    return _nn_normalized_weight(RATIO_fn, *args)
+def nn_lnbnn_weight(*args):
+    return _nn_normalized_weight(LNBNN_fn, *args)
+def nn_lnrat_weight(*args):
+    return _nn_normalized_weight(LNRAT_fn, *args)
 
-def nn_bursty_weight(hs, qcx2_neighbors, data_index, nn_params):
+def nn_bursty_weight(hs, qcx2_neighbors, data_index, query_params):
     'Filters matches to a feature which is matched > burst_thresh #times'
     # Half-generalized to vsmany
     # Assume the first nRows-1 rows are the matches (last row is normalizer)
-    K = nn_params.K
-    Knorm = nn_params.Knorm
-    qcx2_weight = {}
+    K = query_params.nn_params.K
+    Knorm = query_params.nn_params.Knorm
+    qcx2_bursty_weight = {}
     for qcx in qcx2_neighbors.iterkeys():
         (qfx2_dx, qfx2_dist) = qcx2_neighbors[qcx]
         qfx2_nn = qfx2_dx[:, 0:K]
         dx2_frequency  = np.bincount(qfx2_nn.flatten())
         qfx2_bursty = dx2_frequency[qfx2_nn]
-        qcx2_weight[qcx] = qfx2_bursty
-    return qcx2_weight
+        qcx2_bursty_weight[qcx] = qfx2_bursty
+    return qcx2_bursty_weight
 
-def nn_reciprocal_weight(hs, qcx2_neighbors, data_index, nn_params):
+def nn_recip_weight(hs, qcx2_neighbors, data_index, query_params):
     'Filters a nearest neighbor to only reciprocals'
-    K = nn_params.K
-
-    Krecip = nn_params.K_reciprocal
-    checks = nn_params.checks
+    K = query_params.nn_params.K
+    Krecip = query_params.score_params.Krecip
+    checks = query_params.nn_params.checks
     dx2_cx = data_index.ax2_cx
     dx2_fx = data_index.ax2_fx
     dx2_data = data_index.ax2_data
     data_flann = data_index.flann
-    qcx2_weight = {}
+    qcx2_recip_weight = {}
     for qcx in qcx2_neighbors.iterkeys():
         (qfx2_dx, qfx2_dist) = qcx2_neighbors[qcx]
         nQuery = len(qfx2_dx)
@@ -120,23 +149,23 @@ def nn_reciprocal_weight(hs, qcx2_neighbors, data_index, nn_params):
         qx2_nndist = qfx2_dist[:, 0:K]
         qx2_nndx.shape = (nQuery*K, dim)
         # TODO: Have the option for this to be both indexes.
-        (_nn2_dx, _nn2_dists) = data_flann.nn_index(qx2_nndx, Krecip, checks=checks)
+        (_nn2_rdx, _nn2_rdists) = data_flann.nn_index(qx2_nndx, Krecip, checks=checks)
         # Get the maximum distance of the Krecip reciprocal neighbors
-        _nn2_dists.shape = (nQuery, K, Krecip)
-        qfx2_recipmaxdist = _nn2_dists.max(2)
+        _nn2_rdists.shape = (nQuery, K, Krecip)
+        qfx2_recipmaxdist = _nn2_rdists.max(2)
         # Test if nearest neighbor distance is less than reciprocal distance
         qfx2_reciprocalness = qfx2_recipmaxdist - qx2_nndist
-        qcx2_weight[qcx] = qfx2_reciprocalness
-    return qcx2_weight
+        qcx2_recip_weight[qcx] = qfx2_reciprocalness
+    return qcx2_recip_weight
 
-def nn_roidist_weight(hs, qcx2_neighbors, data_index, nn_params):
+def nn_roidist_weight(hs, qcx2_neighbors, data_index, query_params):
     'Filters a matches to those within roughly the same spatial arangement'
+    K = query_params.nn_params.K
     cx2_rchip_size = hs.get_cx2_rchip_size()
     cx2_kpts = hs.feats.cx2_kpts
-    K = nn_params.K
     dx2_cx = data_index.ax2_cx
     dx2_fx = data_index.ax2_fx
-    cx2_weight = {}
+    cx2_roidist_weight = {}
     for qcx in qcx2_neighbors.iterkeys():
         (qfx2_dx, qfx2_dist) = qcx2_neighbors[qcx]
         qfx2_nn = qfx2_dx[:,0:K]
@@ -162,13 +191,13 @@ def nn_roidist_weight(hs, qcx2_neighbors, data_index, nn_params):
         # Get the relative distance # .0010s
         qfx2_K_xy1 = np.rollaxis(np.tile(qfx2_xy1, (K, 1, 1)), 1)
         qfx2_xydist = ((qfx2_K_xy1 - qfx2_xy2)**2).sum(2)
-        cx2_weight[qcx] = qfx2_xydist
-    return cx2_weight
+        cx2_roidist_weight[qcx] = qfx2_xydist
+    return cx2_roidist_weight
 
-def nn_scale_weight(hs, qcx2_neighbors, data_index, nn_params):
+def nn_scale_weight(hs, qcx2_neighbors, data_index, query_params):
     # Filter by scale for funzies
-    K = nn_params.K
-    cx2_weight = {}
+    K = query_params.nn_params.K
+    cx2_scale_weight = {}
     for qcx in qcx2_neighbors.iterkeys():
         (qfx2_dx, qfx2_dist) = qcx2_neighbors[qcx]
         qfx2_nn = qfx2_dx[:,0:K]
@@ -183,42 +212,50 @@ def nn_scale_weight(hs, qcx2_neighbors, data_index, nn_params):
         qfx2_det2.shape = (nQuery, K)
         qfx2_det2 = np.sqrt(1.0/qfx2_det2)
         qfx2_scaledist = qfx2_det2 / qfx2_K_det1
-        cx2_weight[qcx] = qfx2_scaledist
-    return cx2_weight
+        cx2_scale_weight[qcx] = qfx2_scaledist
+    return cx2_scale_weight
 
 
-def nn_placketluce_score(hs, qcx2_neighbors, data_index, nn_params):
+def nn_placketluce_score(hs, qcx2_neighbors, data_index, query_params):
     pass
 
-def nn_positional_score(hs, qcx2_neighbors, data_index, nn_params):
+def nn_positional_score(hs, qcx2_neighbors, data_index, query_params):
     pass
 
 
-def neighbors_to_res(hs, qcx2_neighbors, filter_weights, query_params):
+def neighbors_to_res(hs, qcx2_neighbors, filter_weights, data_index, query_params):
     print('Converting neighbors to result')
-    score_params = query_params.score_params
-    nn_params    = query_params.nn_params
-    K          = nn_params.K
-    agg_method = score_params.aggregation_method
-    key2_tw    = score_params.key2_threshweight
+    K = query_params.nn_params.K
+    agg_method = query_params.score_params.aggregation_method
+    filt2_tw = query_params.score_params.filt2_tw
     dx2_cx = data_index.ax2_cx
     dx2_fx = data_index.ax2_fx
     dcxs   = np.arange(len(hs.feats.cx2_desc))
     qcx2_res = {}
+    scored = len(filter_weights.keys()) > 0
     for qcx in qcx2_neighbors.iterkeys():
-        res = ds.QueryResult(qcx, query_params)
         (qfx2_dx, _) = qcx2_neighbors[qcx]
         nQuery = len(qfx2_dx)
         qfx2_nn = qfx2_dx[:, 0:K]
         qfx2_score = np.ones(qfx2_nn.shape, dtype=ds.FS_DTYPE)
         qfx2_valid = np.ones(qfx2_nn.shape, dtype=np.bool)
+        # Apply the filter weightings to determine feature validity and scores
+        #print('--START---------')
+        #printvar2('qfx2_valid')
         for key, cx2_weights in filter_weights.iteritems():
             qfx2_weights = cx2_weights[qcx]
-            thresh, weight   = key2_tw[key]
+            (sign, thresh), weight   = filt2_tw[key]
             print('Applying %r thresh=%r, weight=%r' % (key, thresh, weight))
-            qfx2_valid   = np.bitwise_and(qfx2_valid, qfx2_weights <= thresh)
-            qfx2_score  += weight * qfx2_weights
-            #qfx2_score
+            #printvar2('qfx2_weights')
+            if not thresh is None:
+                qfx2_valid  = np.bitwise_and(qfx2_valid, sign*qfx2_weights <= sign*thresh)
+            if not weight == 0:
+                qfx2_score  += weight * qfx2_weights
+            #helpers.printvar2('qfx2_score')
+        #print('--FINISH---------')
+        #printvar2('qfx2_score')
+        #printvar2('qfx2_valid')
+        print(helpers.printable_mystats(qfx2_score))
         qfx2_cx = dx2_cx[qfx2_nn]
         qfx2_fx = dx2_fx[qfx2_nn]
         # Build feature matches
@@ -246,11 +283,12 @@ def neighbors_to_res(hs, qcx2_neighbors, filter_weights, query_params):
         cx2_fs = np.array(cx2_fs)
         if agg_method == 'ChipSum':
             cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+            res = ds.QueryResult(qcx, query_params.get_uid(SV=False, scored=scored))
             res.cx2_fm = cx2_fm
             res.cx2_fs = cx2_fs
             res.cx2_score = cx2_score
             qcx2_res[qcx] = res
-        return qcx2_res
+    return qcx2_res
 '''
 def doit():
     df2.rrr()
@@ -274,14 +312,18 @@ def score_matches(hs, qcx2_neighbors, data_index, filter_weights, query_params):
 #-----
 # Spatial Verification
 #-----
-def spatially_verify_matches(hs, qcxs, qcx2_res, qcx2_neighbors,
-                             key2_cx_qfx2_weights, sv_params):
+def spatially_verify_matches(hs, qcx2_res, query_params):
+    sv_params = query_params.sv_params
+    xy_thresh = sv_params.xy_thresh
+    slow_thresh, shigh_thresh = sv_params.scale_thresh
+    use_chip_extent = sv_params.xy_thresh
     cx2_rchip_size = hs.get_cx2_rchip_size()
     cx2_kpts  = hs.feats.cx2_kpts
     cx2_resSV = {}
     for qcx in qcx2_res.iterkeys():
         kpts1     = cx2_kpts[qcx]
-        (cx2_fm, cx2_fs, cx2_score) = qcx2_res[qcx]
+        res = qcx2_res[qcx]
+        (cx2_fm, cx2_fs, cx2_score) = (res.cx2_fm, res.cx2_fs, res.cx2_score) 
         #cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
         top_cx     = cx2_score.argsort()[::-1]
         num_rerank = min(len(top_cx), sv_params.shortlist_len)
@@ -295,9 +337,6 @@ def spatially_verify_matches(hs, qcxs, qcx2_res, qcx2_neighbors,
             fm    = cx2_fm[cx]
             fs    = cx2_fs[cx]
             rchip_size2 = cx2_rchip_size[cx]
-            xy_thresh = sv_params.xy_thresh
-            slow_thresh, shigh_thresh = sv_params.scale_thresh
-            use_chip_extent = sv_params.xy_thresh
             (fm_V, fs_V) = spatially_verify(kpts1, kpts2, rchip_size2, 
                                             fm, fs, xy_thresh,
                                             shigh_thresh, slow_thresh,
@@ -315,7 +354,8 @@ def spatially_verify_matches(hs, qcxs, qcx2_res, qcx2_neighbors,
         cx2_fs_V = np.array(cx2_fs_V)
         # Rebuild the cx2_score arrays
         cx2_score_V = np.array([np.sum(fs) for fs in cx2_fs_V])
-        resSV = (cx2_fm_V, cx2_fs_V, cx2_score_V)
+        resSV = ds.QueryResult(qcx, query_params.get_uid(SV=True))
+        (resSV.cx2_fm_V, resSV.cx2_fs_V, resSV.cx2_score_V) = (cx2_fm_V, cx2_fs_V, cx2_score_V)
         cx2_resSV[qcx] = resSV
     return cx2_resSV
 

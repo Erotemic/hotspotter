@@ -153,6 +153,12 @@ class DynStruct(AbstractPrintable):
             val = getattr(self, key)
         return val
 
+    def update(self, **kwargs):
+        self_keys = set(self.__dict__.keys())
+        for key, val in kwargs.iteritems():
+            if key in self_keys:
+                self.__dict__[key] = val
+
     def add_dict(self, dyn_dict):
         'Adds a dictionary to the prefs'
         if type(dyn_dict) != types.DictType:

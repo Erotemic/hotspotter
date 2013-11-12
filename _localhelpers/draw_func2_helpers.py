@@ -41,30 +41,6 @@ FIGSIZE_BIG = (24,12)
 
 FIGSIZE = FIGSIZE_BIG 
 
-ELL_LINEWIDTH = 1.5
-ELL_ALPHA  = .4
-ELL_COLOR  = BLUE
-
-LINE_ALPHA = .4
-LINE_COLOR = RED
-LINE_CMAP  = 'hot'
-LINE_WIDTH = 1.4
-
-SHOW_LINES = True #True
-SHOW_ELLS  = True
-
-POINT_SIZE = 2
-
-def my_prefs():
-    global LINE_COLOR
-    global ELL_COLOR
-    global ELL_LINEWIDTH
-    global ELL_ALPHA
-    LINE_COLOR = (1, 0, 0)
-    ELL_COLOR = (0, 0, 1)
-    ELL_LINEWIDTH = 2
-    ELL_ALPHA = .5
-
 try:
     if sys.platform == 'win32':
         compname = os.environ['COMPUTER_NAME']

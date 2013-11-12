@@ -36,17 +36,17 @@ def reload_module():
 def rrr():
     reload_module()
 
-def make_nn_index(hs, sx2_cx=None, **kwargs):
+def make_nn_index(hs, sx2_cx=None):
     if sx2_cx is None:
         sx2_cx = hs.indexed_sample_cx
-    data_index = ds.NNIndex(hs, sx2_cx, **kwargs)
+    data_index = ds.NNIndex(hs, sx2_cx)
     return data_index
 
 def prequery(hs, query_params=None, **kwargs):
     if query_params is None:
         query_params = ds.QueryParams(**kwargs)
     data_index_dict = {
-        'vsmany' : make_nn_index(hs, **kwargs),
+        'vsmany' : make_nn_index(hs),
         'vsone'  : None, }
     query_params.data_index = data_index_dict[query_params.query_type]
     return query_params
@@ -58,10 +58,10 @@ def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
     query_params = vars().get('query_params', None)
     if query_params is None:
         kwargs = {}
-        ds.rrr()
         query_params = prequery(hs, **kwargs)
         print(query_params)
         print(query_params.get_uid())
+
     if query_params.query_type == 'vsone': # On the fly computation
         qcxs_ = tuple(qcxs)
         if qcxs_ in query_params.qcxs2_index.keys():
@@ -69,50 +69,73 @@ def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
         data_index = query_params.qcxs2_index[qcxs_key]
     elif  query_params.query_type == 'vsmany':
         data_index = query_params.data_index
-    sv_params    = query_params.sv_params
-    score_params = query_params.score_params
-    nn_params    = query_params.nn_params
     # Assign Nearest Neighors
-    qcx2_neighbors = mf.nearest_neighbors(hs, qcxs, data_index, nn_params)
     # Apply cheap filters
-    filter_weights = {}
-    for nnfilter in nn_params.nnfilter_list:
-        nnfilter_fn = eval('mf.nn_'+nnfilter+'_weight')
-        filter_weights[nnfilter] = nnfilter_fn(hs, qcx2_neighbors, data_index, nn_params)
     # Convert to the plotable res objects
-    qcx2_res = mf.neighbors_to_res(hs, qcx2_neighbors, filter_weights, query_params)
-    # Score each database chip
-    qcx2_res = mf.score_matches(hs, qcx2_neighbors, data_index, filter_weights, score_params, nn_params)
-    #cache_results(qcx2_res)
     # Spatial Verify
-    qcx2_neighborsSV = mf.spatially_verify_matches(hs, qcxs, qcx2_res, qcx2_neighbors, filter_weights, sv_params)
-    #cache_results(qcx2_resSV)
-    return qcx2_res, qcx2_resSV
+    qcx2_neighbors = mf.nearest_neighbors(hs, qcxs, data_index, query_params)
+    qcx2_resORIG   = mf.neighbors_to_res(hs, qcx2_neighbors, {}, data_index, query_params)
+    filter_weights = mf.apply_neighbor_weights(hs, qcx2_neighbors, data_index, query_params)
+    qcx2_resFILT   = mf.neighbors_to_res(hs, qcx2_neighbors, filter_weights, data_index, query_params)
+    qcx2_resSVER   = mf.spatially_verify_matches(hs, qcx2_resFILT, query_params)
+    # Score each database chip
+    #qcx2_res = mf.score_matches(hs, qcx2_neighbors, data_index, filter_weights, score_params, nn_params)
+    #cache_results(qcx2_res)
+    #cache_results(qcx2_resSVER)
+    '''
+    df2.reset()
+    res1.show_topN(hs, SV=False, fignum=1)
+    res2.show_topN(hs, SV=True, fignum=2)
+    df2.update()
+
+    '''
+    return qcx2_resORIG, qcx2_resFILT, qcx2_resSVER
 
 def matcher_test(hs, qcx, fnum=1, **kwargs):
     print('=================================')
     print('[mc2] MATCHER TEST qcx=%r' % qcx)
     print('=================================')
+    # Exececute Queries Args
+    qcx    = vars().get('qcx', 0)
+    fnum   = vars().get('fnum', 1)
+    kwargs = vars().get('kwargs', {})
     query_params = prequery(hs, **kwargs)
-    use_cache = kwargs.get('use_cache', False)
     match_type = 'vsmany'
-    kwbuild = dict(use_cache=use_cache, remove_init=False,
-                   save_changes=True, match_type=match_type)
-    kwshow = dict(SV=1, show_query=1, compare_SV=1, vert=1)
+    compare_to = 'SVER'
+    kwshow = dict(show_query=0, vert=1)
     N = 4
-    def build_res_(recip, spatial):
-        return execute_query_safe(hs, [qcx], recip=recip, spatial=spatial, **kwbuild)
-    def show_(res, fnum, figtitle=''):
-        df2.show_match_analysis(hs, res, N, fnum, figtitle, **kwshow) 
-        return fnum + 1
+    # Exececute Queries Helpers
+    def build_res_(taug=''):
+        qcx2_resORIG, qcx2_resFILT, qcx2_resSVER = execute_query_safe(hs, [qcx], query_params)
+        resORIG = qcx2_resORIG[qcx]
+        resFILT = qcx2_resFILT[qcx]
+        resSVER = qcx2_resSVER[qcx]
+        return resORIG, resFILT, resSVER, taug
+    # Exececute Queries Driver
     res_list = [
-        (build_res_(False, False), 'knn'),
-        (build_res_(True,  False), 'kRnn'),
-        (build_res_(False, True),  'kSnn'),
-        (build_res_(True,  True),  'kRSnn'),
+        (build_res_()),
+        #(build_res_(True,  False), 'kRnn'),
+        #(build_res_(False, True),  'kSnn'),
+        #(build_res_(True,  True),  'kRSnn'),
     ]
-    for (res, taug) in res_list:
-        fnum = show_(res, fnum, taug)
+    # Show Helpers
+    def smanal_(res, fnum, aug='', resCOMP=None):
+        SV = res.get_SV()
+        _ = resCOMP is None or res is resCOMP
+        comp_cxs = None if _ else resCOMP.topN_cxs(N)
+        df2.show_match_analysis(hs, res, N, fnum, aug, SV=SV,
+                                compare_cxs=comp_cxs,
+                                **kwshow) 
+    def show_(resORIG, resFILT, resSVER, fnum, aug=''):
+        resCOMP = None if compare_to is None else eval('res'+compare_to)
+        smanal_(resORIG, fnum+0, '+ORIG', resCOMP) 
+        smanal_(resFILT, fnum+1, '+FILT', resCOMP) 
+        smanal_(resSVER, fnum+2, '+SVER', resCOMP) 
+        return fnum + 3
+    # Show Driver
+    for (res1, res2, res3, taug) in res_list:
+        fnum = show_(res1, res2, res3, fnum, taug)
+    df2.update()
     return fnum
 
 #def execute_query_fast(hs, qcx, query_params):
@@ -120,6 +143,14 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
 # need to have precomputation done beforehand. 
 # safe should perform all checks and be easilly callable on the fly. 
 if __name__ == '__main__':
+    #exec(open('match_chips3.py').read())
+    df2.rrr()
+    df2.reset()
+    mf.rrr()
+    ds.rrr()
     main_locals = invest.main()
     execstr = helpers.execstr_dict(main_locals, 'main_locals')
     exec(execstr)
+    qcx = 0
+    matcher_test(hs, qcx, qnum=1, K=5, Krecip=2, roidist_thresh=.2)
+    exec(df2.present())

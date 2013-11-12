@@ -38,6 +38,7 @@ def root_sift(desc):
 # =======================================
 
 feat_type2_precompute = {
+    'HESAFF' : extern_feat.precompute_hesaff,
     ('hesaff','sift') : extern_feat.precompute_hesaff,
     ('mser','sift')   : extern_feat.precompute_mser
 }

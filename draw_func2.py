@@ -22,6 +22,7 @@ import os
 #print('LOAD_MODULE: draw_func2.py')
 
 DISTINCT_COLORS = True #and False
+DARKEN = None
 ELL_LINEWIDTH = 1.5
 if DISTINCT_COLORS: 
     ELL_ALPHA  = .6
@@ -164,7 +165,9 @@ def feat_scores_to_color(fs, cmap_='hot'):
     cmap = plt.get_cmap(cmap_)
     mins = fs.min()
     rnge = fs.max() - mins
-    score2_01 = lambda score: .1+.9*(score-mins)/(rnge)
+    if rnge == 0:
+        return [cmap(.5) for fx in xrange(len(fs))]
+    score2_01 = lambda score: .1+.9*(float(score)-mins)/(rnge)
     colors    = [cmap(score2_01(fs[fx])) for fx in xrange(len(fs))]
     return colors
 
@@ -270,7 +273,6 @@ def imshow(img,
            figtitle=None, 
            plotnum=None,
            interpolation='nearest', 
-           darken=None,
            **kwargs):
     #printDBG('[df2] ----- IMSHOW ------ ')
     #printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
@@ -279,8 +281,10 @@ def imshow(img,
     #printDBG('[df2] *** img.stats = %r ' % (helpers.printable_mystats(img),))
     fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
     ax = plt.gca()
-    if not darken is None:
-        img *= darken
+    if not DARKEN is None:
+        imgdtype = img.dtype
+        img = np.array(img, dtype=float) * DARKEN
+        img = np.array(img, dtype=imgdtype) 
     plt.imshow(img, interpolation=interpolation)
     plt.set_cmap('gray')
     ax = fig.gca()
@@ -575,8 +579,12 @@ def show_match_analysis(hs, res, N=5, fignum=3, figtitle='',
         figtitle = 'comparing to '+hs.cxstr(topN_cxs) + figtitle
     else:
         topN_cxs = res.topN_cxs(N, SV)
-        topscore = res.get_cx2_score(SV)[topN_cxs][0]
-        figtitle = ('topscore=%r -- q%s' % (topscore, hs.cxstr(res.qcx))) + figtitle
+        if len(topN_cxs) == 0: 
+            warnings.warn('len(topN_cxs) == 0')
+            figtitle = 'WARNING: no top scores!' + hs.cxstr(res.qcx)
+        else:
+            topscore = res.get_cx2_score(SV)[topN_cxs][0]
+            figtitle = ('topscore=%r -- q%s' % (topscore, hs.cxstr(res.qcx))) + figtitle
     all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
     max_nCols = min(5,N)
@@ -622,18 +630,21 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
 
     # Helper function for drawing matches to one cx
     def show_matches_(cx, orank, plotx, SV):
-        title_aug = 'rank=%r ' % orank
-        plotnum=(nRows, nCols, plotx)
+        aug = 'rank=%r ' % orank
+        pnum=(nRows, nCols, plotx)
         kwshow  = dict(draw_ell=annote, draw_pts=annote, draw_lines=annote,
                        ell_alpha=.5, all_kpts=all_kpts, SV=SV, **kwargs)
-        show_matches_annote_res(res, hs, cx, title_aug=title_aug,
-                                plotnum=plotnum, **kwshow)
+        show_matches_annote_res(res, hs, cx, title_aug=aug, plotnum=pnum, **kwshow)
     # Helper to draw many cxs
     def plot_matches_cxs(cx_list, plotx_shift, SV):
         if cx_list is None: return
         for ox, cx in enumerate(cx_list):
             plotx = ox + plotx_shift + 1
-            orank = np.where(ranked_cxs == cx)[0][0] + 1
+            oranks = np.where(ranked_cxs == cx)[0]
+            if len(oranks) == 0:
+                orank = -1
+                continue
+            orank = oranks[0] + 1
             show_matches_(cx, orank, plotx, SV)
 
     # Plot Query

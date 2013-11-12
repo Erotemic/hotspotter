@@ -64,8 +64,6 @@ def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
     if query_params is None:
         kwargs = {}
         query_params = prequery(hs, **kwargs)
-        print(query_params)
-        print(query_params.get_uid())
     query_params.qcxs = qcxs
     if dcxs is None:
         query_params.dcxs = hs.indexed_sample_cx
@@ -83,8 +81,8 @@ def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
         data_index = query_params.data_index
         qcxs = query_params.qcxs
         dcxs = query_params.dcxs 
-    print('qcxs=%r' % qcxs)
-    print('dcxs=%r' % dcxs)
+    print('[query] len(qcxs)=%r' % len(qcxs))
+    print('[query] len(dcxs)=%r' % len(dcxs))
     # Assign Nearest Neighors
     # Apply cheap filters
     # Convert to the plotable res objects
@@ -94,11 +92,13 @@ def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
     filter_weights = mf.apply_neighbor_weights(hs, qcx2_neighbors, data_index, query_params)
     qcx2_resFILT   = mf.neighbors_to_res(hs, qcx2_neighbors, filter_weights, data_index, query_params)
     qcx2_resSVER   = mf.spatially_verify_matches(hs, qcx2_resFILT, query_params)
-    print(qcx2_resORIG.keys())
+    #print('[query] '+str(qcx2_resORIG.keys()))
     for qcx in query_params.qcxs:
         qcx2_resORIG[qcx].title=' +ORIG '+query_params.get_uid(False, False, False, True)
         qcx2_resFILT[qcx].title=' +FILT '+query_params.get_uid(False, True, False, False)
         qcx2_resSVER[qcx].title=' +SVER '+query_params.get_uid(True, False, False, False)
+    #print('[query] qcx2_resSVER = ')
+    #qcx2_resSVER[0].printme()
     # Score each database chip
     #qcx2_res = mf.score_matches(hs, qcx2_neighbors, data_index, filter_weights, score_params, nn_params)
     #cache_results(qcx2_res)
@@ -142,11 +142,10 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
     # Show Helpers
     def smanal_(res, fnum, aug='', resCOMP=None):
         SV = res.get_SV()
-        _ = resCOMP is None or res is resCOMP
-        comp_cxs = None if _ else resCOMP.topN_cxs(N)
+        docomp   = (resCOMP is None) or (res is resCOMP)
+        comp_cxs = None if docomp else resCOMP.topN_cxs(N)
         df2.show_match_analysis(hs, res, N, fnum, aug, SV=SV,
-                                compare_cxs=comp_cxs,
-                                **kwshow) 
+                                compare_cxs=comp_cxs, **kwshow) 
     def show_(resORIG, resFILT, resSVER, fnum, aug=''):
         resCOMP = None if compare_to is None else eval('res'+compare_to)
         smanal_(resORIG, fnum+0, resORIG.title, resCOMP) 
@@ -172,8 +171,12 @@ if __name__ == '__main__':
     main_locals = invest.main()
     execstr = helpers.execstr_dict(main_locals, 'main_locals')
     exec(execstr)
-    qcx = 0
-    matcher_test(hs, qcx, qnum=1, K=2, Krecip=4, roidist_thresh=None,
-                 scale_thresh=(2, 10), xy_thresh=.01, use_chip_extent=True,
-                 query_type='vsone', ratio_thresh=None, lnbnn_weight=0, ratio_weight=1)
+    qcx = qcxs[0]
+    #df2.DARKEN = .5
+    df2.DISTINCT_COLORS = False
+    #matcher_test(hs, qcx, qnum=1, K=2, Krecip=4, roidist_thresh=None,
+                 #scale_thresh=(2, 10), xy_thresh=1, use_chip_extent=True,
+                 #query_type='vsmany', ratio_thresh=None, lnbnn_weight=0, ratio_weight=1)
+    matcher_test(hs, qcx, qnum=1, Krecip=0, Knorm=1, K=50, ratio_thresh=1,
+                 lnbnn_weight=1, query_type='vsone')
     exec(df2.present())

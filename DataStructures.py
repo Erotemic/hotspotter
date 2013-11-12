@@ -92,9 +92,9 @@ class QueryResult(DynStruct):
     def save(res, hs):
         fpath = res.get_fpath(hs)
         if params.VERBOSE_CACHE:
-            print('[mc2] caching result: %r' % (fpath,))
+            print('[ds] caching result: %r' % (fpath,))
         else:
-            print('[mc2] caching result: %r' % (os.path.split(fpath)[1],))
+            print('[ds] caching result: %r' % (os.path.split(fpath)[1],))
         with open(fpath, 'wb') as file_:
             np.savez(file_, **res.__dict__.copy())
         return True
@@ -119,7 +119,8 @@ class QueryResult(DynStruct):
             warnings.warn(warnmsg)
             raise
     def get_SV(res):
-        return res.cx2_fm_V.size > 0
+        #return res.cx2_fm_V.size > 0
+        return len(res.cx2_score_V) > 0
     def cache_bytes(res, hs):
         fpath = res.get_fpath(hs)
         return helpers.file_bytes(fpath)
@@ -281,13 +282,13 @@ class SpatialVerifyParams(DynStruct):
 class QueryParams(DynStruct):
     def __init__(query_params, **kwargs):
         super(QueryParams, query_params).__init__()
-        query_params.nn_params = NNParams(**kwargs)
+        query_params.nn_params    = NNParams(**kwargs)
         query_params.score_params = ScoreMechanismParams(**kwargs)
-        query_params.sv_params = SpatialVerifyParams(**kwargs)
+        query_params.sv_params    = SpatialVerifyParams(**kwargs)
         query_params.query_type = 'vsmany'
         query_params.qcxs = []
         query_params.dcxs = []
-        query_params.use_cache  = False
+        query_params.use_cache = False
         # Data
         query_params.data_index = None
         query_params.qcxs2_index = {}

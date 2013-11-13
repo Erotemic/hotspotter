@@ -130,27 +130,28 @@ def score_neighbors(hs, qcx2_nns, filt2_weights, query_params):
 # RAW Spatial verification
 #---
 
-def spatial_verification_raw(hs, qcx2_nns, qcx2_nnscores, query_params):
-    K = query_params.nn_params.K
-    data_index = query_params.data_index
-    dx2_cx = data_index.ax2_cx
-    for qcx in qcx2_nns.iterkeys():
-        (qfx2_dx, _) = qcx2_nns[qcx]
-        (_, qfx2_valid) = qcx2_nnscores[qcx]
-        dx2_cx
+#def spatial_verification_raw(hs, qcx2_nns, qcx2_nnscores, query_params):
+    #K = query_params.nn_params.K
+    #data_index = query_params.data_index
+    #dx2_cx = data_index.ax2_cx
+    #for qcx in qcx2_nns.iterkeys():
+        #(qfx2_dx, _) = qcx2_nns[qcx]
+        #(_, qfx2_valid) = qcx2_nnscores[qcx]
+        #dx2_cx
 
+#-----
+# Scoring Mechanism
+#-----
+    #s2coring_func  = [LNBNN, PlacketLuce, TopK, Borda]
+    #load_precomputed(cx, query_params)
 def score_chipmatch(hs, chipmatch, query_params):
-    agg_method = query_params.score_params.aggregation_method
-    if agg_method == 'ChipSum':
+    score_method = query_params.score_params.score_method
+    if score_method == 'ChipSum':
         (_, cx2_fs, _) = chipmatch
         cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
         return cx2_score
-
-def nn_placketluce_score(hs, qcx2_nns, data_index, query_params):
-    pass
-
-def nn_positional_score(hs, qcx2_nns, data_index, query_params):
-    pass
+    if score_method == 'PlacketLuce':
+        cx2_score, nx2_score vr2.score_chipmatch_PL(hs, chipmatch, query_params)
 
 #============================
 # Conversion qfx2 -> cx2
@@ -237,143 +238,7 @@ def chipmatch2_neighbors(hs, qcx2_chipmatch, query_params):
     return qcx2_nns
 
 
-def score_chipmatch_PL(hs, qcx2_chipmatch, query_params):
-    K = query_params.nn_params.K
-    cx2_nx = hs.tables.cx2_nx
-    nx2_cxs = hs.get_nx2_cxs()
-    for qcx, chipmatch in qcx2_chipmatch.iteritems():
-        # Run Placket Luce Model
-        qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
-        qfx2_utilities = _filter_utilities(qfx2_utilities)
-        PL_matrix, altx2_tnx = _utilities2_pairwise_breaking(qfx2_utilities)
-        M = PL_matrix
-        gamma = _optimize(PLmatrix)
-        altx2_prob = _PL_score(gamma)
-        # Use probabilities as scores
-        nx2_score = np.zeros(len(hs.tables.nx2_name))
-        cx2_score = np.zeros(hs.num_cx)
-        for altx, prob in enumerate(altx2_prob):
-            tnx = altx2_tnx[altx]
-            if tnx < 0: # account for temporary names
-                cx2_score[-tnx] = prob
-                nx2_score[1] += prob
-            else:
-                nx2_prob[tnx] = prob
-                for cx in nx2_cxs[tnx]:
-                    if cx == qcx: continue
-                    cx2_score[cx] = prob
 
-def _optimize(M):
-    print('[vote] running optimization')
-    m = M.shape[0]
-    x0 = np.ones(m)/np.sqrt(m)
-    f   = lambda x, M: linalg.norm(M.dot(x))
-    con = lambda x: linalg.norm(x) - 1
-    cons = {'type':'eq', 'fun': con}
-    optres = scipy.optimize.minimize(f, x0, args=(M,), constraints=cons)
-    x = optres['x']
-    xnorm = linalg.norm(x)
-    gamma = np.abs(x / xnorm)
-    return gamma
-
-def _PL_score(gamma):
-    print('[vote] computing probabilities')
-    nAlts = len(gamma)
-    mask = np.ones(nAlts, dtype=np.bool)
-    altx2_prob = np.zeros(nAlts)
-    for ax in xrange(nAlts):
-        mask[ax] = False
-        altx2_prob[ax] = gamma[ax] / np.sum(gamma[mask])
-        mask[ax] = True
-    altx2_prob = altx2_prob / altx2_prob.sum()
-    return altx2_prob
-
-def _chipmatch2_utilities(hs, qcx, chipmatch, K):
-    print('[vote] computing utilities')
-    cx2_nx = hs.tables.cx2_nx
-    qcx2_voters={}
-    nQFeats = len(hs.feats.cx2_kpts[qcx])
-    # Stack the feature matches
-    (cx2_fm, cx2_fs, cx2_fk) = chipmatch
-    cxs = np.hstack([[cx]*len(cx2_fm[cx]) for cx in xrange(len(cx2_fm))])
-    cxs = np.array(cxs, np.int)
-    fms = np.vstack(cx2_fm)
-    # Get the individual feature match lists
-    qfxs = fms[:,0]
-    fss  = np.hstack(cx2_fs)
-    fks  = np.hstack(cx2_fk)
-    qfx2_utilities = [[] for _ in xrange(nQFeats)]
-    for cx, qfx, fk, fs in izip(cxs, qfxs, fks, fss):
-        nx = cx2_nx[cx]
-        # Apply temporary uniquish name
-        tnx = nx if nx >= 2 else -cx
-        utility = (cx, tnx, fs, fk)
-        qfx2_utilities[qfx].append(utility)
-    for qfx in xrange(len(qfx2_utilities)):
-        utilities = qfx2_utilities[qfx]
-        utilities = sorted(utilities, key=lambda tup:tup[3])
-        qfx2_utilities[qfx] = utilities
-    return qfx2_utilities
-
-def _filter_utilities(qfx2_utilities):
-    print('[vote] filtering utilities')
-    tnxs = [util[1] for utils in qfx2_utilities for util in utils]
-    tnxs = np.array(tnxs)
-    tnxs_min = tnxs.min()
-    tnx2_freq = np.bincount(tnxs - tnxs_min)
-    least_freq_tnxs = tnx2_freq.argsort() + tnxs_min
-    return qfx2_utilities
-
-def _utilities2_pairwise_breaking(qfx2_utilities):
-    print('[vote] building pairwise matrix')
-    arr_   = np.array
-    hstack = np.hstack
-    cartesian = helpers.cartesian
-    tnxs = [util[1] for utils in qfx2_utilities for util in utils]
-    altx2_tnx = pd.unique(tnxs)
-    tnx2_altx = {nx:altx for altx, nx in enumerate(alts_tnxs)}
-    nUtilities = len(qfx2_utilities)
-    nAlts   = len(altx2_tnx)
-    altxs   = np.arange(nAlts)
-    pairwise_mat = np.zeros((nAlts, nAlts))
-    qfx2_porder = [np.array([tnx2_altx[util[1]] for util in utils])
-                   for utils in qfx2_utilities]
-    def sum_win(ij):  # pairiwse wins on off-diagonal
-        pairwise_mat[ij[0], ij[1]] += 1 
-    def sum_loss(ij): # pairiwse wins on off-diagonal
-        pairwise_mat[ij[1], ij[1]] -= 1
-    nVoters = 0
-    for qfx in xrange(nUtilities):
-        sys.stdout.write('.')
-        # partial and compliment order over alternatives
-        porder = pd.unique(qfx2_porder[qfx])
-        nReport = len(porder) 
-        if nReport == 0: continue
-        corder = np.setdiff1d(altxs, porder)
-        # pairwise winners and losers
-        pw_winners = [porder[r:r+1] for r in xrange(nReport)]
-        pw_losers = [hstack((corder, porder[r+1:])) for r in xrange(nReport)]
-        pw_iter = izip(pw_winners, pw_losers)
-        pw_votes_ = [cartesian((winner, losers)) for winner, losers in pw_iter]
-        pw_votes = np.vstack(pw_votes_)
-        #pw_votes = [(w,l) for votes in pw_votes_ for w,l in votes if w != l]
-        map(sum_win,  iter(pw_votes))
-        map(sum_loss, iter(pw_votes))
-        nVoters += 1
-    print('')
-    PLmatrix = pairwise_mat / nVoters     
-    return pairwise_mat, altx2_tnx
-
-#-----
-# Scoring Mechanism
-#-----
-def score_matches(hs, qcx2_nns, filter_weights, query_params):
-    if agg_method == 'ChipSum':
-        cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
-        qcx2_res[qcx] = (cx2_fm, cx2_fs, cx2_score)
-    return qcx2_res
-    #s2coring_func  = [LNBNN, PlacketLuce, TopK, Borda]
-    #load_precomputed(cx, query_params)
 
 #-----
 # Spatial Verification

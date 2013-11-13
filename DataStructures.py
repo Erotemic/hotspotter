@@ -200,7 +200,7 @@ class ScoreMechanismParams(DynStruct):
         super(ScoreMechanismParams, score_params).__init__()
         smp = score_params
         smp.Krecip = 0 # 0 := off
-        smp.aggregation_method = 'ChipSum' # ['NameSum', 'NamePlacketLuce']
+        smp.score_method = 'ChipSum' # ['NameSum', 'NamePlacketLuce']
         smp.nnfilter_list = ['recip', 'roidist']
         #
         smp.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio']

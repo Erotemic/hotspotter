@@ -97,8 +97,8 @@ def homography_inliers(kpts1, kpts2, fm,
                        scale_thresh_low,
                        diaglen_sqrd=None,
                        min_num_inliers=4):
-    if len(fm) < min_num_inliers:
-        return None
+    #if len(fm) < min_num_inliers:
+        #return None
     # Not enough data
     # Estimate affine correspondence convert to SV_DTYPE
     fx1_m, fx2_m = fm[:, 0], fm[:, 1]

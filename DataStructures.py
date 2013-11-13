@@ -20,6 +20,7 @@ def rrr():
 # NN (FLANN) Index Class
 #=========================
 FM_DTYPE  = np.uint32
+FK_DTYPE  = np.int16
 FS_DTYPE  = np.float32
 class NNIndex(object):
     def __init__(nn_index, hs, sx2_cx):
@@ -78,9 +79,12 @@ class QueryResult(DynStruct):
         # Assigned features matches
         res.cx2_fm = np.array([], dtype=FM_DTYPE)
         res.cx2_fs = np.array([], dtype=FS_DTYPE)
+        res.cx2_fk = np.array([], dtype=FM_DTYPE)
         res.cx2_score = np.array([])
+        # TODO: Remove these
         res.cx2_fm_V = np.array([], dtype=FM_DTYPE)
         res.cx2_fs_V = np.array([], dtype=FS_DTYPE)
+        res.cx2_fk_V = np.array([], dtype=FM_DTYPE)
         res.cx2_score_V = np.array([])
 
     def has_cache(res, hs):
@@ -195,6 +199,7 @@ class ScoreMechanismParams(DynStruct):
     def __init__(score_params, **kwargs):
         super(ScoreMechanismParams, score_params).__init__()
         smp = score_params
+        smp.Krecip = 0 # 0 := off
         smp.aggregation_method = 'ChipSum' # ['NameSum', 'NamePlacketLuce']
         smp.nnfilter_list = ['recip', 'roidist']
         #
@@ -205,14 +210,13 @@ class ScoreMechanismParams(DynStruct):
             smp.__dict__[filt+'_thresh'] = thresh
             smp.__dict__[filt+'_weight']  = weight
         #tuple(Sign, Filt, ValidSignThresh, ScoreWeight)
-        addfilt(+1, 'roidist', .5, 0)
-        addfilt(+1, 'recip',    0, 0)
+        addfilt(+1, 'roidist',None, 0)
+        addfilt(+1, 'recip',     0, 0)
         #addfilt(+1, 'scale')
         addfilt(+1, 'bursty', None, 0)
         addfilt(-1, 'ratio',  None, 0)
-        addfilt(-1, 'lnbnn',  None, 1)
-        addfilt(-1, 'lnrat',  None, 0)
-        smp.Krecip = 1 # 0 := off
+        addfilt(-1, 'lnbnn',  None, 0)
+        addfilt(-1, 'lnrat',  None, 1)
         smp.update(**kwargs)
         smp.filt2_tw = {}
         for (sign, filt) in valid_filters:
@@ -275,6 +279,7 @@ class SpatialVerifyParams(DynStruct):
         sv_params.scale_thresh  = (.5, 2)
         sv_params.xy_thresh = .002
         sv_params.shortlist_len = 500
+        sv_params.min_nInliers = 4
         sv_params.update(**kwargs)
     def get_uid(sv_params):
         uid = '_sv(' 
@@ -296,8 +301,8 @@ class QueryParams(DynStruct):
         query_params.dcxs = []
         query_params.use_cache = False
         # Data
-        query_params.data_index = None
-        query_params.qcxs2_index = {}
+        query_params.data_index = None # current index
+        query_params.dcxs2_index = {}  # L1 cached indexes
         query_params.update(**kwargs)
         query_params.score_params.make_feasible(query_params.nn_params)
     def get_uid(query_params, SV=False, scored=True, long_=False, NN=True):

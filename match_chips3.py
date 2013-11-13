@@ -45,28 +45,26 @@ def make_nn_index(hs, sx2_cx=None):
 def prequery(hs, query_params=None, **kwargs):
     if query_params is None:
         query_params = ds.QueryParams(**kwargs)
-    data_index_dict = {
-        'vsmany' : make_nn_index(hs),
-        'vsone'  : None, }
-    query_params.data_index = data_index_dict[query_params.query_type]
+    if query_params.query_type == 'vsmany':
+        dcxs = hs.indexed_sample_cx
+        dcxs_ = tuple(dcxs)
+        query_params.dcxs2_index[dcxs_] = make_nn_index(hs, dcxs)
     return query_params
 
 qcxs = [0]
-def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
+def execute_query_safe(hs, query_params=None, qcxs=None, dcxs=None, **kwargs):
     print('------------------')
     print('Execute query safe')
     print('------------------')
     kwargs = vars().get('kwargs', {})
     #---------------
     # Ensure query_params
-    query_params = vars().get('query_params', None)
-    if query_params is None:
+    if not 'query_params' in vars() or query_params is None:
         kwargs = {}
         query_params = prequery(hs, **kwargs)
+    if dcxs is None: dcxs = hs.indexed_sample_cx
     query_params.qcxs = qcxs
-    if dcxs is None:
-        query_params.dcxs = hs.indexed_sample_cx
-        dcxs = query_params.dcxs
+    query_params.dcxs = dcxs
     #---------------
     # Flip if needebe
     if query_params.query_type == 'vsone': # On the fly computation
@@ -76,22 +74,27 @@ def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
         qcxs = query_params.qcxs
         dcxs = query_params.dcxs 
     dcxs_ = tuple(dcxs)
-    if not query_params.qcxs2_index.has_key(dcxs_):
-        query_params.qcxs2_index[dcxs_] = make_nn_index(hs, dcxs)
-    query_params.data_index = query_params.qcxs2_index[dcxs_]
-    print('[query] len(qcxs)=%r' % len(qcxs))
+    if not query_params.dcxs2_index.has_key(dcxs_):
+        query_params.dcxs2_index[dcxs_] = make_nn_index(hs, dcxs)
+    query_params.data_index = query_params.dcxs2_index[dcxs_]
+    print('[query] qcxs=%r' % qcxs)
     print('[query] len(dcxs)=%r' % len(dcxs))
-    # Assign Nearest Neighors
-    # Apply cheap filters
-    # Convert to the plotable res objects
-    # Spatial Verify
+    # Nearest Neighbors
     qcx2_nns = mf.nearest_neighbors(hs, qcxs, query_params)
+    # Nearest Neighbors Weighting and Scoring
     filt2_weights  = mf.weight_neighbors(hs, qcx2_nns, query_params)
-    qcx2_nnscoresORIG  = mf.score_neighbors(hs, qcx2_nns, {}, query_params)
-    qcx2_nnscoresFILT  = mf.score_neighbors(hs, qcx2_nns, filt2_weights, query_params)
-    qcx2_resORIG   = mf.neighbors_to_res(hs, qcx2_nns, qcx2_nnscoresORIG, query_params, scored=False)
-    qcx2_resFILT   = mf.neighbors_to_res(hs, qcx2_nns, qcx2_nnscoresFILT, query_params)
-    qcx2_resSVER   = mf.spatially_verify_matches(hs, qcx2_resFILT, query_params)
+    qcx2_nnscoresORIG = mf.score_neighbors(hs, qcx2_nns, {}, query_params)
+    qcx2_nnscoresFILT = mf.score_neighbors(hs, qcx2_nns, filt2_weights, query_params)
+    # Chip Matches
+    qcx2_chipmatchORIG = mf.neighbors_to_chipmatch(hs, qcx2_nns, qcx2_nnscoresORIG, query_params)
+    qcx2_chipmatchFILT = mf.neighbors_to_chipmatch(hs, qcx2_nns, qcx2_nnscoresFILT, query_params)
+    qcx2_chipmatchSVER = mf.spatially_verify_matches(hs, qcx2_chipmatchFILT, query_params)
+    qcx2_chipmatch = qcx2_chipmatchSVER
+    # Query Results
+    qcx2_resORIG = mf.chipmatch_to_res(hs, qcx2_chipmatchORIG, query_params)
+    qcx2_resFILT = mf.chipmatch_to_res(hs, qcx2_chipmatchFILT, query_params, scored=True)
+    qcx2_resSVER = mf.chipmatch_to_res(hs, qcx2_chipmatchSVER, query_params, SV=True)
+    
     #print('[query] '+str(qcx2_resORIG.keys()))
     for qcx in query_params.qcxs:
         qcx2_resORIG[qcx].title=' +ORIG '+query_params.get_uid(False, False, False, True)
@@ -108,9 +111,10 @@ def execute_query_safe(hs, qcxs, query_params=None, dcxs=None, **kwargs):
     res1.show_topN(hs, SV=False, fignum=1)
     res2.show_topN(hs, SV=True, fignum=2)
     df2.update()
-
     '''
     return qcx2_resORIG, qcx2_resFILT, qcx2_resSVER
+
+
 
 def matcher_test(hs, qcx, fnum=1, **kwargs):
     print('=================================')
@@ -127,7 +131,7 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
     N = 4
     # Exececute Queries Helpers
     def build_res_(taug=''):
-        qcx2_resORIG, qcx2_resFILT, qcx2_resSVER = execute_query_safe(hs, [qcx], query_params)
+        qcx2_resORIG, qcx2_resFILT, qcx2_resSVER = execute_query_safe(hs, query_params, [qcx])
         resORIG = qcx2_resORIG[qcx]
         resFILT = qcx2_resFILT[qcx]
         resSVER = qcx2_resSVER[qcx]
@@ -135,9 +139,6 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
     # Exececute Queries Driver
     res_list = [
         (build_res_()),
-        #(build_res_(True,  False), 'kRnn'),
-        #(build_res_(False, True),  'kSnn'),
-        #(build_res_(True,  True),  'kRSnn'),
     ]
     # Show Helpers
     def smanal_(res, fnum, aug='', resCOMP=None):

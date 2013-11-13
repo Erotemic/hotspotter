@@ -106,7 +106,7 @@ def build_pairwise_votes(alternative_ids, qfx2_altx):
     alternative_ids = [0,1,2]
     qfx2_altx = np.array([(0, 1, 2), (1, 2, 0)])
     '''
-    num_cands = len(alternative_ids)
+    nAlts = len(alternative_ids)
     def generate_pairwise_votes(partial_order, compliment_order):
         pairwise_winners = [partial_order[rank:rank+1] 
                            for rank in xrange(0, len(partial_order))]
@@ -116,22 +116,22 @@ def build_pairwise_votes(alternative_ids, qfx2_altx):
                                     in zip(pairwise_winners, pairwise_losers)]
         pairwise_votes = np.vstack(pairwise_vote_list)
         return pairwise_votes
-    pairiwse_wins = np.zeros((num_cands, num_cands))
-    num_voters = len(qfx2_altx)
-    progstr = helpers.make_progress_fmt_str(num_voters, lbl='[voting] building P(d)')
-    for ix, qfx in enumerate(xrange(num_voters)):
+    pairwise_mat = np.zeros((nAlts, nAlts))
+    nVoters = len(qfx2_altx)
+    progstr = helpers.make_progress_fmt_str(nVoters, lbl='[voting] building P(d)')
+    for ix, qfx in enumerate(xrange(nVoters)):
         helpers.print_(progstr % (ix+1))
         partial_order = qfx2_altx[qfx]
         partial_order = partial_order[partial_order != -1]
         if len(partial_order) == 0: continue
         compliment_order = np.setdiff1d(alternative_ids, partial_order)
         pairwise_votes = generate_pairwise_votes(partial_order, compliment_order)
-        def sum_win(ij): pairiwse_wins[ij[0], ij[1]] += 1 # pairiwse wins on off-diagonal
-        def sum_loss(ij): pairiwse_wins[ij[1], ij[1]] -= 1 # pairiwse wins on off-diagonal
+        def sum_win(ij): pairwise_mat[ij[0], ij[1]] += 1 # pairiwse wins on off-diagonal
+        def sum_loss(ij): pairwise_mat[ij[1], ij[1]] -= 1 # pairiwse wins on off-diagonal
         map(sum_win,  iter(pairwise_votes))
         map(sum_loss, iter(pairwise_votes))
     # Divide num voters
-    PLmatrix = pairiwse_wins / num_voters # = P(D) = Placket Luce GMoM function
+    PLmatrix = pairwise_mat / nVoters # = P(D) = Placket Luce GMoM function
     return PLmatrix
 
 
@@ -276,16 +276,18 @@ def voting_rule(alternative_ids, qfx2_altx, qfx2_weight=None, rule='borda',
     title = 'Rule=%s Weighted=%r ' % (rule, not qfx2_weight is None)
     print('[vote] ' + title)
     print('[vote] score_vec = %r' % (score_vec,))
-    cand_score = weighted_positional_scoring_rule(alternative_ids, qfx2_altx, score_vec, qfx2_weight)
-    ranked_candiates = cand_score.argsort()[::-1]
-    ranked_scores    = cand_score[ranked_candiates]
+    alt_score = weighted_positional_scoring_rule(alternative_ids, qfx2_altx, score_vec, qfx2_weight)
+    ranked_candiates = alt_score.argsort()[::-1]
+    ranked_scores    = alt_score[ranked_candiates]
     viz_votingrule_table(ranked_candiates, ranked_scores, correct_altx, title, fnum)
     return ranked_candiates, ranked_scores
 
 
-def weighted_positional_scoring_rule(alternative_ids, qfx2_altx, score_vec, qfx2_weight=None):
-    num_cands = len(alternative_ids)
-    cand_score = np.zeros(num_cands)
+def weighted_positional_scoring_rule(alternative_ids, 
+                                     qfx2_altx, score_vec,
+                                     qfx2_weight=None):
+    nAlts = len(alternative_ids)
+    alt_score = np.zeros(nAlts)
     if qfx2_weight is None: 
         qfx2_weight = np.ones(qfx2_altx.shape)
     for qfx in xrange(len(qfx2_altx)):
@@ -295,8 +297,8 @@ def weighted_positional_scoring_rule(alternative_ids, qfx2_altx, score_vec, qfx2
         weights       = weights[partial_order != -1]
         partial_order = partial_order[partial_order != -1]
         for ix, altx in enumerate(partial_order):
-            cand_score[altx] += weights[ix] * score_vec[ix]
-    return cand_score
+            alt_score[altx] += weights[ix] * score_vec[ix]
+    return alt_score
 
 
 def _normalize_voters_profile(hs, qcx, voters_profile):
@@ -325,9 +327,9 @@ def viz_PLmatrix(PLmatrix, qfx2_altx=None, correct_altx=None, alternative_ids=No
     if correct_altx is None: 
         correct_altx = -1
     if qfx2_altx is None:
-        num_voters = -1
+        nVoters = -1
     else:
-        num_voters = len(qfx2_altx)
+        nVoters = len(qfx2_altx)
     # Separate diagonal and off diagonal 
     PLdiagonal = np.diagonal(PLmatrix)
     PLdiagonal.shape = (len(PLdiagonal), 1)
@@ -381,7 +383,7 @@ def test_voting_rules(hs, qcx, K, fnum=1):
     bigo_gmm = helpers.int_comma_str(int(m**2.376))
     bigo_gmm3 = helpers.int_comma_str(int(m**3))
     print('[voting] m = num_alternatives = %r ' % len(alternative_ids))
-    print('[voting] n = num_voters = %r ' % len(qfx2_altx))
+    print('[voting] n = nVoters = %r ' % len(qfx2_altx))
     print('[voting] k = top_k_breaking = %r ' % len(qfx2_altx.T))
     print('[voting] Computing breaking O((m+k)*k*n) = %s' % bigo_breaking)
     print('[voting] Computing GMoM breaking O(m^{2.376}) < O(m^3) = %s < %s' % (bigo_gmm, bigo_gmm3))

@@ -53,6 +53,7 @@ def parse_arguments():
 
 args = parse_arguments()
 
+import match_chips3 as mc3
 import numpy as np
 import load_data2 as ld2
 import draw_func2 as df2
@@ -324,7 +325,8 @@ def get_qfx2_gtkrank(hs, qcx, query_params):
 def measure_k_rankings(hs):
     'Reports the k match of correct feature maatches for each problem case'
     import match_chips3 as mc3
-    query_params = mc3.prequery(hs, K=500, Krecip=0,
+    K = 500
+    query_params = mc3.prequery(hs, K=K, Krecip=0,
                                 roidist_thresh=None, lnbnn_weight=1)
     id2_qcxs, id2_ocids, id2_notes = get_all_history(hs.args.db, hs)
     id2_rankweight = [get_qfx2_gtkrank(hs, qcx, query_params) for qcx in id2_qcxs]
@@ -333,8 +335,8 @@ def measure_k_rankings(hs):
     for qcx, rankweight, notes in zip(id2_qcxs, id2_rankweight, id2_notes):
         ranks, weights = rankweight
         ranks[ranks == -1] = K+1
-        print(title)
         title = 'q'+hs.cxstr(qcx) + ' - ' + notes
+        print(title)
         df2.figure(fignum=qcx, doclf=True, title=title)
         #draw_support
         #label=title
@@ -352,8 +354,8 @@ def measure_cx_rankings(hs):
     id2_bestranks = []
     for id_ in xrange(len(id2_qcxs)):
         qcx = id2_qcxs[id_]
-        reses = mc3.execute_query_safe(hs, [qcx], query_params)
-        gt_cxs   = hs.get_other_cxs(qcx)
+        reses = mc3.execute_query_safe(hs, query_params, [qcx])
+        gt_cxs = hs.get_other_cxs(qcx)
         res = reses[2][qcx]
         cx2_score = res.get_cx2_score(hs)
         top_cxs  = cx2_score.argsort()[::-1]
@@ -361,8 +363,6 @@ def measure_cx_rankings(hs):
         bestrank = min(gt_ranks)
         id2_bestranks += [bestrank]
     print(id2_bestranks)
-
-
 
 def where_did_vsone_matches_go(hs, qcx, fnum=1, K=100):
     '''Finds a set of vsone matches and a set of vsmany matches. 
@@ -553,6 +553,12 @@ def run_investigations(qcx, args):
         fnum = investigate_scoring_rules(hs, qcx, fnum)
     if '5' in args.tests:
         fnum = mc2.matcher_test(hs, qcx, fnum)
+    if '6' in args.tests:
+        measure_k_rankings(hs)
+    if '7' in args.tests:
+        measure_cx_rankings(hs)
+    if '8' in args.tests:
+        mc3.compare_scoring(hs)
 
 #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=20)
 #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)

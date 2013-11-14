@@ -37,17 +37,37 @@ def score_chipmatch_PL(hs, qcx, chipmatch, q_params):
 
 def _optimize(M):
     print('[vote] running optimization')
+    #b = np.zeros(4)
+    #b[-1] = 1
+    #[- + +]
+    #[+ - +]  x = b
+    #[+ + -]      1
+    #[1 0 0]
+    #X = np.vstack([M,[1,0,0]])
+    #print(X)
+    #print(b)
+    #x = linalg.solve(X, b)
+    M = M.T
+    #
     m = M.shape[0]
     x0 = np.ones(m)/np.sqrt(m)
-    f   = lambda x, M: linalg.norm(M.dot(x))
-    con = lambda x: linalg.norm(x) - 1
+    x0[0] = 1
+    f   = lambda x, M:linalg.norm(M.dot(x))
+    con = lambda x: int(True - (x[0] == 1))#True - np.all(x > 0)
     cons = {'type':'eq', 'fun': con}
-    optres = scipy.optimize.minimize(f, x0, args=(M,), constraints=cons)
+    optres = scipy.optimize.minimize(f, x0, args=(M,), constraints=cons,
+                                     method='SLSQP')
     x = optres['x']
-    print('[vote] M = %r' % (M,))
-    print('[vote] x = %r' % (x,))
+    print('')
+    print('[vote] M = \n%r\n' % (M,))
+    print('[vote] x = \n%r\n' % (x,))
     # This should equal 0 by Theorem 1
-    print('[vote] M.dot(x) = %r' % (M.dot(x),))
+    print('[vote] M.dot(x) = \n%r\n' % (M.dot(x),))
+    print('[vote] np.sum(M.dot(x)) = \n%r\n' % (np.sum(M.dot(x)),))
+    print('[vote] success = %r ' % optres['success'])
+    print('[vote] message = %r ' % optres['message'])
+    print(optres)
+    print('')
     #xnorm = linalg.norm(x)
     #gamma = np.abs(x / xnorm)
     return x
@@ -55,12 +75,9 @@ def _optimize(M):
 def _PL_score(gamma):
     print('[vote] computing probabilities')
     nAlts = len(gamma)
-    mask = np.ones(nAlts, dtype=np.bool)
     altx2_prob = np.zeros(nAlts)
     for ax in xrange(nAlts):
-        mask[ax] = False
-        altx2_prob[ax] = gamma[ax] / np.sum(gamma[mask])
-        mask[ax] = True
+        altx2_prob[ax] = gamma[ax] / np.sum(gamma)
     print('[vote] altx2_prob: '+str(altx2_prob))
     print('[vote] sum(prob): '+str(sum(altx2_prob)))
     return altx2_prob

@@ -142,8 +142,8 @@ def score_neighbors(hs, qcx2_nns, filt2_weights, query_params):
 #-----
 # Scoring Mechanism
 #-----
-    #s2coring_func  = [LNBNN, PlacketLuce, TopK, Borda]
-    #load_precomputed(cx, query_params)
+#s2coring_func  = [LNBNN, PlacketLuce, TopK, Borda]
+#load_precomputed(cx, query_params)
 def score_chipmatch(hs, chipmatch, query_params):
     score_method = query_params.score_params.score_method
     if score_method == 'ChipSum':
@@ -152,6 +152,7 @@ def score_chipmatch(hs, chipmatch, query_params):
         return cx2_score
     if score_method == 'PlacketLuce':
         cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, chipmatch, query_params)
+    return cx2_score
 
 #============================
 # Conversion qfx2 -> cx2
@@ -255,8 +256,9 @@ def spatially_verify_matches(hs, qcx2_chipmatch, query_params):
     cx2_kpts  = hs.feats.cx2_kpts
     qcx2_chipmatchSV = {}
     for qcx in qcx2_chipmatch.iterkeys():
-        (cx2_fm, cx2_fs, cx2_fk) = qcx2_chipmatch[qcx]
-        cx2_score = score_chipmatch(hs, (cx2_fm, cx2_fs, cx2_fk), query_params)
+        chipmatch = qcx2_chipmatch[qcx]
+        cx2_score = score_chipmatch(hs, chipmatch, query_params)
+        (cx2_fm, cx2_fs, cx2_fk) = chipmatch
         topx2_cx= cx2_score.argsort()[::-1]
         nRerank = min(len(topx2_cx), nShortlist)
         # Precompute output container
@@ -321,6 +323,7 @@ def _fix_fmfsfk(cx2_fm, cx2_fs, cx2_fk):
         cx2_fm[cx].shape = (len(cx2_fm[cx]), 2)
     cx2_fs = np.array([arr_(fs, fs_dtype_) for fs in iter(cx2_fs)], list)
     cx2_fk = np.array([arr_(fk, fk_dtype_) for fk in iter(cx2_fk)], list)
+    print(cx2_fs)
     chipmatch = (cx2_fm, cx2_fs, cx2_fk)
     return chipmatch
 

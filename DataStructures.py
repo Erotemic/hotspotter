@@ -253,7 +253,7 @@ class ScoreMechanismParams(DynStruct):
         uid = '_smech(' 
         if score_params.Krecip != 0:
             uid += 'Kr='+str(score_params.Krecip)
-        uid += ',' + score_params.aggregation_method
+        uid += ',' + score_params.score_method
         uid += ',' + signthreshweight_str(on_filters)
         uid += ')'
         return uid

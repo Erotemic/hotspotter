@@ -151,7 +151,7 @@ def score_chipmatch(hs, chipmatch, query_params):
         cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
         return cx2_score
     if score_method == 'PlacketLuce':
-        cx2_score, nx2_score vr2.score_chipmatch_PL(hs, chipmatch, query_params)
+        cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, chipmatch, query_params)
 
 #============================
 # Conversion qfx2 -> cx2

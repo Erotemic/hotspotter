@@ -130,7 +130,21 @@ class QueryResult(DynStruct):
         return helpers.file_bytes(fpath)
     def top5_cxs(res):
         return res.topN_cxs(5)
-    def get_cx2_score(res, SV):
+    def get_gt_ranks(res, gt_cxs=None, hs=None):
+        'returns the 0 indexed ranking of each groundtruth chip'
+        # Ensure correct input
+        if gt_cxs is None and hs is None: raise Exception('[res] error')
+        if gt_cxs is None: gt_cxs = hs.get_other_cxs(res.qcx)
+        cx2_score = res.get_cx2_score()
+        top_cxs   = cx2_score.argsort()[::-1]
+        foundpos = [np.where(top_cxs == cx)[0] for cx in gt_cxs]
+        ranks_   = [r if len(r) > 0 else [-1] for r in foundpos]
+        assert all([len(r) == 1 for r in ranks_])
+        gt_ranks = [r[0] for r in ranks_]
+        return gt_ranks
+    def get_cx2_score(res, SV=None):
+        if SV is None:
+            SV = res.get_SV()
         return res.cx2_score_V if SV else res.cx2_score
     def get_cx2_fm(res, SV):
         return res.cx2_fm_V if SV else res.cx2_fm
@@ -194,21 +208,21 @@ def any_inlist(list_, search_list):
     set_ = set(list_)
     return any([search in set_ for search in search_list])
 
-class ScoreMechanismParams(DynStruct):
+class FilterParams(DynStruct):
     # Rename to scoring mechanism
-    def __init__(score_params, **kwargs):
-        super(ScoreMechanismParams, score_params).__init__()
-        smp = score_params
-        smp.Krecip = 0 # 0 := off
-        smp.score_method = 'ChipSum' # ['NameSum', 'NamePlacketLuce']
-        smp.nnfilter_list = ['recip', 'roidist']
+    def __init__(f_params, **kwargs):
+        super(FilterParams, f_params).__init__()
+        fp = f_params
+        fp.Krecip = 0 # 0 := off
+        fp.score_method = 'chipsum' # ['namesum', 'placketluce']
+        fp.nnfilter_list = ['recip', 'roidist']
         #
-        smp.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio']
+        fp.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio']
         valid_filters = []
         def addfilt(sign, filt, thresh, weight):
             valid_filters.append((sign, filt))
-            smp.__dict__[filt+'_thresh'] = thresh
-            smp.__dict__[filt+'_weight']  = weight
+            fp.__dict__[filt+'_thresh'] = thresh
+            fp.__dict__[filt+'_weight']  = weight
         #tuple(Sign, Filt, ValidSignThresh, ScoreWeight)
         addfilt(+1, 'roidist',None, 0)
         addfilt(+1, 'recip',     0, 0)
@@ -217,43 +231,43 @@ class ScoreMechanismParams(DynStruct):
         addfilt(-1, 'ratio',  None, 0)
         addfilt(-1, 'lnbnn',  None, 0)
         addfilt(-1, 'lnrat',  None, 1)
-        smp.update(**kwargs)
-        smp.filt2_tw = {}
+        fp.update(**kwargs)
+        fp.filt2_tw = {}
         for (sign, filt) in valid_filters:
-            stw = ((sign, smp.__dict__[filt+'_thresh']), smp.__dict__[filt+'_weight'])
-            smp.filt2_tw[filt] = stw
+            stw = ((sign, fp.__dict__[filt+'_thresh']), fp.__dict__[filt+'_weight'])
+            fp.filt2_tw[filt] = stw
 
-    def make_feasible(score_params, nn_params):
-        nnfilts = score_params.nnfilter_list
+    def make_feasible(f_params, nn_params):
+        nnfilts = f_params.nnfilter_list
         nnp = nn_params
-        smp = score_params
+        fp = f_params
         # Knorm
-        if smp.lnbnn_thresh is None and smp.lnbnn_weight == 0:
+        if fp.lnbnn_thresh is None and fp.lnbnn_weight == 0:
             listrm(nnfilts, 'lnbnn')
-        if smp.ratio_thresh   <= 1:
+        if fp.ratio_thresh   <= 1:
             listrm(nnfilts, 'ratio')
         norm_depends = ['lnbnn', 'ratio', 'lnrat']
         if nnp.Knorm <= 0 and not any_inlist(nnfilts, norm_depends):
             listrm_list(nnfilts, norm_depends)
             nnp.Knorm = 0
         # Krecip
-        if smp.Krecip <= 0 or 'recip' not in nnfilts:
+        if fp.Krecip <= 0 or 'recip' not in nnfilts:
             listrm(nnfilts, 'recip')
-            smp.Krecip = 0
-        if (smp.roidist_thresh is None or smp.roidist_thresh >= 1) and\
-               smp.roidist_weight == 0:
+            fp.Krecip = 0
+        if (fp.roidist_thresh is None or fp.roidist_thresh >= 1) and\
+               fp.roidist_weight == 0:
             listrm(nnfilts, 'roidist')
-        if smp.bursty_thresh   <= 1:
+        if fp.bursty_thresh   <= 1:
             listrm(nnfilts, 'bursty')
 
 
-    def get_uid(score_params):
-        on_filters = dict_subset(score_params.filt2_tw,
-                                 score_params.nnfilter_list)
+    def get_uid(f_params):
+        on_filters = dict_subset(f_params.filt2_tw,
+                                 f_params.nnfilter_list)
         uid = '_smech(' 
-        if score_params.Krecip != 0:
-            uid += 'Kr='+str(score_params.Krecip)
-        uid += ',' + score_params.score_method
+        if f_params.Krecip != 0:
+            uid += 'Kr='+str(f_params.Krecip)
+        uid += ',' + f_params.score_method
         uid += ',' + signthreshweight_str(on_filters)
         uid += ')'
         return uid
@@ -278,42 +292,45 @@ class SpatialVerifyParams(DynStruct):
         sv_params.use_chip_extent = False
         sv_params.scale_thresh  = (.5, 2)
         sv_params.xy_thresh = .002
-        sv_params.shortlist_len = 500
+        sv_params.nShortlist = 500
+        sv_params.prescore_method = 'chipsum'
         sv_params.min_nInliers = 4
         sv_params.update(**kwargs)
     def get_uid(sv_params):
         uid = '_sv(' 
-        uid += str(sv_params.shortlist_len)
+        uid += str(sv_params.nShortlist)
         uid += ',' + str(sv_params.xy_thresh)
         uid += ',' + str(sv_params.scale_thresh)
         uid += ',cdl' * sv_params.use_chip_extent # chip diag len
+        uid += ','+sv_params.prescore_method
         uid += ')'
         return uid
 
 class QueryParams(DynStruct):
-    def __init__(query_params, **kwargs):
-        super(QueryParams, query_params).__init__()
-        query_params.nn_params    = NNParams(**kwargs)
-        query_params.score_params = ScoreMechanismParams(**kwargs)
-        query_params.sv_params    = SpatialVerifyParams(**kwargs)
-        query_params.query_type = 'vsmany'
-        query_params.qcxs = []
-        query_params.dcxs = []
-        query_params.use_cache = False
+    def __init__(q_params, **kwargs):
+        super(QueryParams, q_params).__init__()
+        q_params.nn_params    = NNParams(**kwargs)
+        q_params.f_params = FilterParams(**kwargs)
+        q_params.sv_params    = SpatialVerifyParams(**kwargs)
+        q_params.query_type   = 'vsmany'
+        q_params.score_method = 'chipsum'
+        q_params.qcxs = []
+        q_params.dcxs = []
+        q_params.use_cache = False
         # Data
-        query_params.data_index = None # current index
-        query_params.dcxs2_index = {}  # L1 cached indexes
-        query_params.update(**kwargs)
-        query_params.score_params.make_feasible(query_params.nn_params)
-    def get_uid(query_params, SV=False, scored=True, long_=False, NN=True):
+        q_params.data_index = None # current index
+        q_params.dcxs2_index = {}  # L1 cached indexes
+        q_params.update(**kwargs)
+        q_params.f_params.make_feasible(q_params.nn_params)
+    def get_uid(q_params, SV=False, filtered=True, long_=False, NN=True):
         uid = ''
         if NN is True:
-            uid += query_params.query_type
-            uid += query_params.nn_params.get_uid()
+            uid += q_params.query_type
+            uid += q_params.nn_params.get_uid()
         if SV is True:
-            uid += query_params.sv_params.get_uid()
-        if scored is True:
-            uid += query_params.score_params.get_uid()
+            uid += q_params.sv_params.get_uid()
+        if filtered is True:
+            uid += q_params.f_params.get_uid()
         if long_:
             uid += params.get_matcher_uid()
         return uid

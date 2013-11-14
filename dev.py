@@ -13,38 +13,51 @@ from matching_functions import *
 # Can also reduce the chips being indexed
 
 
+# What happens when we take all other possible ground truth matches out
+# of the database index? 
+
 
 mc3.rrr(); mf.rrr(); iv.rrr(); ds.rrr(); vr2.rrr()
 
 def prepare_test(hs, **kwargs):
     kwargs = vars().get('kwargs', {})
-    query_params = mc3.prequery(hs, **kwargs)
+    q_params = mc3.prequery(hs, **kwargs)
     id2_qcxs, id2_ocids, id2_notes = iv.get_all_history(hs.args.db, hs)
-    return query_params, zip(id2_qcxs, id2_ocids, id2_notes)
+    return q_params, zip(id2_qcxs, id2_ocids, id2_notes)
 
 def compare_scoring(hs):
-    query_params, id2_qon = prepare_test(hs, K=1, lnbnn_weight=1)
+    q_params, id2_qon = prepare_test(hs, K=5, lnbnn_weight=0)
     id2_bestranks = []
+    algos = []
+    id2_title = []
     for id_ in xrange(len(id2_qon)):
         (qcx, ocids, notes) = id2_qon[id_]
+        gt_cxs = hs.get_other_cxs(qcx)
         title = 'q'+ hs.cxstr(qcx) + ' - ' + notes
         print(title)
-        reses = mc3.execute_query_safe(hs, query_params, [qcx])
-        gt_cxs = hs.get_other_cxs(qcx)
+        print('gt_'+hs.cxstr(gt_cxs))
+        res_list = mc3.execute_query_safe(hs, q_params, [qcx])
         bestranks = []
-        for qcx2_res in reses:
+        for qcx2_res in res_list:
             res = qcx2_res[qcx]
-            print(res)
-            cx2_score = res.get_cx2_score(hs)
-            top_cxs  = cx2_score.argsort()[::-1]
-            gt_ranks = [helpers.npfind(top_cxs == gtcx) for gtcx in gt_cxs]
+            gt_ranks = res.get_gt_ranks(gt_cxs)
             bestranks += [min(gt_ranks)]
+        id2_title += [title]
         id2_bestranks += [bestranks]
-    print(np.array(id2_bestranks))
+    id2_title     = np.array(id2_title)
+    id2_bestranks = np.array(id2_bestranks)
+    id2_title.shape = (len(id2_title), 1)
+    print(id2_title)
+    print(id2_bestranks)
+    print(np.hstack([id2_bestranks, id2_title]))
+
     #execute_query_safe(
 
-main_locals = iv.main()
-execstr = helpers.execstr_dict(main_locals, 'main_locals')
-exec(execstr)
-compare_scoring(hs)
-exec(df2.present())
+if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
+    main_locals = iv.main()
+    execstr = helpers.execstr_dict(main_locals, 'main_locals')
+    exec(execstr)
+    compare_scoring(hs)
+    exec(df2.present())

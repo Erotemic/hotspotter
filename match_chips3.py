@@ -93,8 +93,9 @@ def execute_query_safe(hs, query_params=None, qcxs=None, dcxs=None, **kwargs):
     chipmatch = qcx2_chipmatch[qcxs[0]]
     # Query Results
     qcx2_resORIG = mf.chipmatch_to_res(hs, qcx2_chipmatchORIG, query_params)
-    qcx2_resFILT = mf.chipmatch_to_res(hs, qcx2_chipmatchFILT, query_params, scored=True)
+    qcx2_resFILT = mf.chipmatch_to_res(hs, qcx2_chipmatchFILT, query_params, filtered=True)
     qcx2_resSVER = mf.chipmatch_to_res(hs, qcx2_chipmatchSVER, query_params, SV=True)
+    qcx2_resSVPL = mf.chipmatch_to_res(hs, qcx2_chipmatchSVER, query_params, SV=True)
     
     #print('[query] '+str(qcx2_resORIG.keys()))
     for qcx in query_params.qcxs:

@@ -29,6 +29,7 @@ import spatial_verification2 as sv2
 import DataStructures as ds
 import nn_filters
 import scipy.optimize
+import voting_rules2 as vr2
 import pandas as pd
 
 def reload_module():
@@ -144,14 +145,14 @@ def score_neighbors(hs, qcx2_nns, filt2_weights, q_params):
 #-----
 #s2coring_func  = [LNBNN, PlacketLuce, TopK, Borda]
 #load_precomputed(cx, q_params)
-def score_chipmatch(hs, chipmatch, score_method):
+def score_chipmatch(hs, qcx, chipmatch, score_method, q_params=None):
     print(' * Scoring chipmatch: '+score_method)
     if score_method == 'chipsum':
         (_, cx2_fs, _) = chipmatch
         cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
         return cx2_score
     if score_method == 'placketluce':
-        cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, chipmatch, q_params)
+        cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, qcx, chipmatch, q_params)
     return cx2_score
 
 #============================
@@ -262,7 +263,7 @@ def spatially_verify_matches(hs, qcx2_chipmatch, q_params):
     qcx2_chipmatchSV = {}
     for qcx in qcx2_chipmatch.iterkeys():
         chipmatch = qcx2_chipmatch[qcx]
-        cx2_prescore = score_chipmatch(hs, chipmatch, prescore_method)
+        cx2_prescore = score_chipmatch(hs, qcx, chipmatch, prescore_method, q_params)
         (cx2_fm, cx2_fs, cx2_fk) = chipmatch
         topx2_cx= cx2_prescore.argsort()[::-1]
         nRerank = min(len(topx2_cx), nShortlist)
@@ -343,18 +344,32 @@ def new_fmfsfk(hs):
 
 def _fmfs2_QueryResult(hs, qcx, chipmatch, uid, q_params):
     score_method = q_params.score_method
-    cx2_score = score_chipmatch(hs, chipmatch, score_method)
+    cx2_score = score_chipmatch(hs, qcx, chipmatch, score_method, q_params)
     res = ds.QueryResult(qcx, uid)
     (res.cx2_fm, res.cx2_fs, res.cx2_fk) = chipmatch
     res.cx2_score = cx2_score
     return res
 
-def chipmatch_to_res(hs, qcx2_chipmatch, q_params, SV=False, filtered=False):
-    print('6) chipmatch -> res')
-    uid = q_params.get_uid(SV=SV, filtered=filtered)
+def chipmatch_to_res(hs, qcx2_chipmatch, q_params, aug=''):
+    print('[mf.6] 6) chipmatch -> res')
+    # Keep original score method
+    score_method_ = q_params.score_method
+    # Hacky dev stuff
+    if aug == '+ORIG':
+        uid = q_params.get_uid(SV=False, filtered=False)
+    elif aug == '+FILT':
+        uid = q_params.get_uid(SV=False, filtered=True, NN=False)
+    elif aug == '+SVER':
+        uid = q_params.get_uid(SV=True, filtered=False, NN=False)
+    elif aug == '+SVPL':
+        uid = q_params.get_uid(SV=True, filtered=False, NN=False)
+        q_params.score_method = 'placketluce'
+    # Create the result structures for each query.
     qcx2_res = {}
     for qcx in qcx2_chipmatch.iterkeys():
         chipmatch = qcx2_chipmatch[qcx]
         res = _fmfs2_QueryResult(hs, qcx, chipmatch, uid, q_params)
         qcx2_res[qcx] = res
+    # Retain original score method
+    q_params.score_method = score_method_
     return qcx2_res

@@ -310,7 +310,7 @@ class QueryParams(DynStruct):
     def __init__(q_params, **kwargs):
         super(QueryParams, q_params).__init__()
         q_params.nn_params    = NNParams(**kwargs)
-        q_params.f_params = FilterParams(**kwargs)
+        q_params.f_params     = FilterParams(**kwargs)
         q_params.sv_params    = SpatialVerifyParams(**kwargs)
         q_params.query_type   = 'vsmany'
         q_params.score_method = 'chipsum'

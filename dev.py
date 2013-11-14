@@ -47,9 +47,10 @@ def compare_scoring(hs):
     id2_title     = np.array(id2_title)
     id2_bestranks = np.array(id2_bestranks)
     id2_title.shape = (len(id2_title), 1)
-    print(id2_title)
+    print('\n----------')
     print(id2_bestranks)
-    print(np.hstack([id2_bestranks, id2_title]))
+    print(id2_title)
+    #print(np.hstack([id2_bestranks, id2_title]))
 
     #execute_query_safe(
 

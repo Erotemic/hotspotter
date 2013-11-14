@@ -42,79 +42,70 @@ def make_nn_index(hs, sx2_cx=None):
     data_index = ds.NNIndex(hs, sx2_cx)
     return data_index
 
-def prequery(hs, query_params=None, **kwargs):
-    if query_params is None:
-        query_params = ds.QueryParams(**kwargs)
-    if query_params.query_type == 'vsmany':
+def prequery(hs, q_params=None, **kwargs):
+    if q_params is None:
+        q_params = ds.QueryParams(**kwargs)
+    if q_params.query_type == 'vsmany':
         dcxs = hs.indexed_sample_cx
         dcxs_ = tuple(dcxs)
-        query_params.dcxs2_index[dcxs_] = make_nn_index(hs, dcxs)
-    return query_params
+        q_params.dcxs2_index[dcxs_] = make_nn_index(hs, dcxs)
+    return q_params
 
 qcxs = [0]
-def execute_query_safe(hs, query_params=None, qcxs=None, dcxs=None, **kwargs):
+def execute_query_safe(hs, q_params=None, qcxs=None, dcxs=None, **kwargs):
     print('------------------')
     print('Execute query safe')
     print('------------------')
     kwargs = vars().get('kwargs', {})
     #---------------
-    # Ensure query_params
-    if not 'query_params' in vars() or query_params is None:
+    # Ensure q_params
+    if not 'q_params' in vars() or q_params is None:
         kwargs = {}
-        query_params = prequery(hs, **kwargs)
+        q_params = prequery(hs, **kwargs)
     if dcxs is None: dcxs = hs.indexed_sample_cx
-    query_params.qcxs = qcxs
-    query_params.dcxs = dcxs
+    q_params.qcxs = qcxs
+    q_params.dcxs = dcxs
     #---------------
     # Flip if needebe
-    if query_params.query_type == 'vsone': # On the fly computation
-        dcxs = query_params.qcxs
-        qcxs = query_params.dcxs 
-    elif  query_params.query_type == 'vsmany':
-        qcxs = query_params.qcxs
-        dcxs = query_params.dcxs 
+    if q_params.query_type == 'vsone': # On the fly computation
+        dcxs = q_params.qcxs
+        qcxs = q_params.dcxs 
+    elif  q_params.query_type == 'vsmany':
+        qcxs = q_params.qcxs
+        dcxs = q_params.dcxs 
     dcxs_ = tuple(dcxs)
-    if not query_params.dcxs2_index.has_key(dcxs_):
-        query_params.dcxs2_index[dcxs_] = make_nn_index(hs, dcxs)
-    query_params.data_index = query_params.dcxs2_index[dcxs_]
+    if not q_params.dcxs2_index.has_key(dcxs_):
+        q_params.dcxs2_index[dcxs_] = make_nn_index(hs, dcxs)
+    q_params.data_index = q_params.dcxs2_index[dcxs_]
     print('[query] qcxs=%r' % qcxs)
     print('[query] len(dcxs)=%r' % len(dcxs))
-    # Nearest Neighbors
-    qcx2_nns = mf.nearest_neighbors(hs, qcxs, query_params)
-    # Nearest Neighbors Weighting and Scoring
-    filt2_weights  = mf.weight_neighbors(hs, qcx2_nns, query_params)
-    qcx2_nnscoresORIG = mf.score_neighbors(hs, qcx2_nns, {}, query_params)
-    qcx2_nnscoresFILT = mf.score_neighbors(hs, qcx2_nns, filt2_weights, query_params)
-    # Chip Matches
-    qcx2_chipmatchORIG = mf.neighbors_to_chipmatch(hs, qcx2_nns, qcx2_nnscoresORIG, query_params)
-    qcx2_chipmatchFILT = mf.neighbors_to_chipmatch(hs, qcx2_nns, qcx2_nnscoresFILT, query_params)
-    qcx2_chipmatchSVER = mf.spatially_verify_matches(hs, qcx2_chipmatchFILT, query_params)
-    qcx2_chipmatch = qcx2_chipmatchSVER
-    chipmatch = qcx2_chipmatch[qcxs[0]]
-    # Query Results
-    qcx2_resORIG = mf.chipmatch_to_res(hs, qcx2_chipmatchORIG, query_params)
-    qcx2_resFILT = mf.chipmatch_to_res(hs, qcx2_chipmatchFILT, query_params, filtered=True)
-    qcx2_resSVER = mf.chipmatch_to_res(hs, qcx2_chipmatchSVER, query_params, SV=True)
-    qcx2_resSVPL = mf.chipmatch_to_res(hs, qcx2_chipmatchSVER, query_params, SV=True)
-    
-    #print('[query] '+str(qcx2_resORIG.keys()))
-    for qcx in query_params.qcxs:
-        qcx2_resORIG[qcx].title=' +ORIG '+query_params.get_uid(False, False, False, True)
-        qcx2_resFILT[qcx].title=' +FILT '+query_params.get_uid(False, True, False, False)
-        qcx2_resSVER[qcx].title=' +SVER '+query_params.get_uid(True, False, False, False)
-    #print('[query] qcx2_resSVER = ')
-    #qcx2_resSVER[0].printme()
-    # Score each database chip
-    #qcx2_res = mf.score_matches(hs, qcx2_nns, data_index, filt2_weights, score_params, nn_params)
-    #cache_results(qcx2_res)
-    #cache_results(qcx2_resSVER)
-    '''
-    df2.reset()
-    res1.show_topN(hs, SV=False, fignum=1)
-    res2.show_topN(hs, SV=True, fignum=2)
-    df2.update()
-    '''
-    return qcx2_resORIG, qcx2_resFILT, qcx2_resSVER
+    # Real function names
+    nearest_neighbs = mf.nearest_neighbors
+    weight_neighbs  = mf.weight_neighbors
+    score_neighbs   = mf.score_neighbors
+    to_chipmatches  = mf.neighbors_to_chipmatch
+    sv_matches      = mf.spatially_verify_matches
+    to_res          = mf.chipmatch_to_res
+    # Nearest neighbors
+    neighbs = nearest_neighbs(hs, qcxs, q_params)
+    # Nearest neighbors weighting and scoring
+    weights  = weight_neighbs(hs, neighbs, q_params)
+    # Thresholding and weighting
+    scoresORIG = score_neighbs(hs, neighbs, {}, q_params)
+    scoresFILT = score_neighbs(hs, neighbs, weights, q_params)
+    # Chip matches
+    matchesORIG = to_chipmatches(hs, neighbs, scoresORIG, q_params)
+    matchesFILT = to_chipmatches(hs, neighbs, scoresFILT, q_params)
+    # Spatial verification
+    matchesSVER = sv_matches(hs, matchesFILT, q_params)
+    # Query results
+    result_list = (
+        to_res(hs, matchesORIG, q_params, '+ORIG'),
+        to_res(hs, matchesFILT, q_params, '+FILT'),
+        to_res(hs, matchesSVER, q_params, '+SVER'),
+        to_res(hs, matchesSVER, q_params, '+SVPL')
+    )
+    return result_list
 
 
 
@@ -126,14 +117,14 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
     qcx    = vars().get('qcx', 0)
     fnum   = vars().get('fnum', 1)
     kwargs = vars().get('kwargs', {})
-    query_params = prequery(hs, **kwargs)
+    q_params = prequery(hs, **kwargs)
     match_type = 'vsmany'
     compare_to = 'SVER'
     kwshow = dict(show_query=0, vert=1)
     N = 4
     # Exececute Queries Helpers
     def build_res_(taug=''):
-        qcx2_resORIG, qcx2_resFILT, qcx2_resSVER = execute_query_safe(hs, query_params, [qcx])
+        qcx2_resORIG, qcx2_resFILT, qcx2_resSVER = execute_query_safe(hs, q_params, [qcx])
         resORIG = qcx2_resORIG[qcx]
         resFILT = qcx2_resFILT[qcx]
         resSVER = qcx2_resSVER[qcx]
@@ -161,7 +152,7 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
     df2.update()
     return fnum
 
-#def execute_query_fast(hs, qcx, query_params):
+#def execute_query_fast(hs, qcx, q_params):
 # fast should be the current sota execute_query that doesn't perform checks and
 # need to have precomputation done beforehand. 
 # safe should perform all checks and be easilly callable on the fly. 

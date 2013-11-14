@@ -31,13 +31,16 @@ def compare_scoring(hs):
         print(title)
         reses = mc3.execute_query_safe(hs, query_params, [qcx])
         gt_cxs = hs.get_other_cxs(qcx)
-        res = reses[2][qcx]
-        cx2_score = res.get_cx2_score(hs)
-        top_cxs  = cx2_score.argsort()[::-1]
-        gt_ranks = [helpers.npfind(top_cxs == gtcx) for gtcx in gt_cxs]
-        bestrank = min(gt_ranks)
+        bestrank = []
+        for qcx2_res in reses:
+            res = qcx2_res[qcx]
+            print(res)
+            cx2_score = res.get_cx2_score(hs)
+            top_cxs  = cx2_score.argsort()[::-1]
+            gt_ranks = [helpers.npfind(top_cxs == gtcx) for gtcx in gt_cxs]
+            bestrank += [min(gt_ranks)]
         id2_bestranks += [bestrank]
-    print(id2_bestranks)
+    print(np.array(id2_bestranks))
     #execute_query_safe(
 
 main_locals = iv.main()

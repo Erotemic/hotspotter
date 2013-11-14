@@ -36,41 +36,99 @@ def score_chipmatch_PL(hs, qcx, chipmatch, q_params):
     return cx2_score, nx2_score
 
 def _optimize(M):
+    # http://docs.scipy.org/doc/scipy/reference/tutorial/optimize.html
     print('[vote] running optimization')
-    #b = np.zeros(4)
-    #b[-1] = 1
-    #[- + +]
-    #[+ - +]  x = b
-    #[+ + -]      1
-    #[1 0 0]
-    #X = np.vstack([M,[1,0,0]])
-    #print(X)
-    #print(b)
-    #x = linalg.solve(X, b)
-    M = M.T
-    #
     m = M.shape[0]
     x0 = np.ones(m)/np.sqrt(m)
-    x0[0] = 1
+    x0[1] = 1
     f   = lambda x, M:linalg.norm(M.dot(x))
-    con = lambda x: int(True - (x[0] == 1))#True - np.all(x > 0)
+    con = lambda x: int(True - (x[1] == 1))#True - np.all(x > 0)
     cons = {'type':'eq', 'fun': con}
     optres = scipy.optimize.minimize(f, x0, args=(M,), constraints=cons,
                                      method='SLSQP')
     x = optres['x']
-    print('')
-    print('[vote] M = \n%r\n' % (M,))
-    print('[vote] x = \n%r\n' % (x,))
+    print('[vote] x0 = \n%r\n' % (x0,))
+    #print('[vote] M  = \n%r\n' % (M,))
+    print('[vote]  x = \n%r\n' % (x,))
+    print('[vote] Mx = \n%r\n' % (M.dot(x),))
+    print('[vote] sum(Mx) = \n%r\n' % (np.sum(M.dot(x)),))
+    if not optres['success']:
+        print('[vote] M.sum(0) = %r ' % M.sum(0))
+        print('[vote] M.sum(1) = %r ' % M.sum(1))
+        print(optres)
+        raise Exception(optres['message'])
     # This should equal 0 by Theorem 1
-    print('[vote] M.dot(x) = \n%r\n' % (M.dot(x),))
-    print('[vote] np.sum(M.dot(x)) = \n%r\n' % (np.sum(M.dot(x)),))
-    print('[vote] success = %r ' % optres['success'])
-    print('[vote] message = %r ' % optres['message'])
-    print(optres)
-    print('')
     #xnorm = linalg.norm(x)
     #gamma = np.abs(x / xnorm)
     return x
+
+def _optimize_SequentialLeastSquaresProgramming(M):
+    m = M.shape[0]
+    x0 = np.ones(m)/np.sqrt(m)
+    x0[1] = 1
+    f   = lambda x, M:linalg.norm(M.dot(x))
+    con = lambda x: int(True - (x[1] == 1))#True - np.all(x > 0)
+    cons = {'type':'eq', 'fun': con}
+    optres = scipy.optimize.minimize(f, x0, args=(M,), constraints=cons,
+                                     method='SLSQP')
+    x = optres['x']
+    if not optres['success']:
+        print(optres)
+        raise Exception(optres['message'])
+    return x
+
+def _optimize_Mx_is_zero_x_nonzero(M):
+    '''
+    Test Data:
+    votes = [(3,2,1,4), (4,1,2,3), (4, 2, 3, 1), (1, 2, 3, 4)]
+    qfx2_utilities = [[(nx, nx, k, k) for k, nx in enumerate(vote)] for vote in votes]
+    M, altx2_nx= _utilities2_pairwise_breaking(qfx2_utilities)
+    '''
+    # from numpy.linalg import svd, inv
+    # from numpy import eye, diag, zeros
+    # Because s is sorted, and M is rank deficient, the value s[-1] should be 0
+    # np.set_printoptions(precision=1, suppress=True, linewidth=80)
+    # The svd is: 
+    # u * s * v = M
+    # u.dot(diag(s)).dot(v) = M
+    #
+    # u is unitary: 
+    # inv(u).dot(u) == eye(len(s))
+    # 
+    # diag(s).dot(v) == inv(u).dot(M)
+    #
+    # u.dot(diag(s)) == M.dot(inv(v))
+    # And because s[-1] is 0
+    # u.dot(diag(s))[:,-1:] == zeros((len(s),1))
+    #
+    # Because we want to find Mx = 0
+    #
+    # So flip the left and right sides
+    # M.dot(inv(v)[:,-1:]) == u.dot(diag(s))[:,-1:] 
+    #
+    # And you find
+    # M = M
+    # x = inv(v)[:,-1:]
+    # 0 = u.dot(diag(s))[:,-1:] 
+    # 
+    # So we have the solution to our problem as x = inv(v)[:,-1:]
+    #
+    # Furthermore it is true that 
+    # inv(v)[:,-1:].T == v[-1:,:]
+    # because v is unitary and the last vector in v corresponds to a singular
+    # vector because M is rank m-1
+    # 
+    # ALSO: v.dot(inv(v)) = eye(len(s)) so
+    # v[-1].dot(inv(v)[:,-1:]) == 1
+    # 
+    # this means that v[-1] is non-zero, and v[-1].T == inv(v[:,-1:])
+    #
+    # So all of this can be done as...
+    (u, s, v) = linalg.svd(M)
+    x = v[-1]
+    return x 
+    
+
 
 def _PL_score(gamma):
     print('[vote] computing probabilities')
@@ -126,7 +184,7 @@ def _chipmatch2_utilities(hs, qcx, chipmatch, K):
 
 def _filter_utilities(qfx2_utilities):
     print('[vote] filtering utilities')
-    max_alts = 10
+    max_alts = 30
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
     tnxs = np.array(tnxs)
     tnxs_min = tnxs.min()
@@ -180,6 +238,10 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
         nVoters += 1
     #print('')
     PLmatrix = pairwise_mat / nVoters     
+    # sum(0) gives you the sum over rows, which is summing each column
+    # Basically a column stochastic matrix should have 
+    # M.sum(0) = 0
+    #print('CheckMat = %r ' % all(np.abs(PLmatrix.sum(0)) < 1E-9))
     return PLmatrix, altx2_tnx
 
 

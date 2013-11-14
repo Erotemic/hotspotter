@@ -51,15 +51,15 @@ def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
         Mbynine[ix*2+1] = (j, k, l, 0, 0, 0, p, q, r)
     # Solve for the nullspace of the Mbynine
     try:
-        (U, S, Vct) = linalg.svd(Mbynine)
+        (u, s, v) = linalg.svd(Mbynine)
     except MemoryError as ex:
         printWARN('[sv2] Caught MemErr %r during full SVD. Trying sparse SVD.' % (ex))
         MbynineSparse = sparse.lil_matrix(Mbynine)
-        (U, S, Vct) = sparse_linalg.svds(MbynineSparse)
+        (u, s, v) = sparse_linalg.svds(MbynineSparse)
     except linalg.LinAlgError as ex2:
         return np.eye(3)
     # Rearange the nullspace into a homography
-    h = Vct[-1] # (transposed in matlab)
+    h = v[-1] # v = V.H # (transposed in matlab)
     H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]  ) )
     return H
 

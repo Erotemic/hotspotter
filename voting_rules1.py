@@ -413,4 +413,17 @@ def test_voting_rules(hs, qcx, K, fnum=1):
     df2.update()
 
 
+    #b = np.zeros(4)
+    #b[-1] = 1
+    #[- + +]
+    #[+ - +]  x = b
+    #[+ + -]      1
+    #[1 0 0]
+    #X = np.vstack([M,[1,0,0]])
+    #print(X)
+    #print(b)
+    #x = linalg.solve(X, b)
 
+def test():
+    from numpy import linalg
+    linalg.lstsq

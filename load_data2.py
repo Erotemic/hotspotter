@@ -22,6 +22,28 @@ import helpers
 import params
 from HotSpotter import *
 
+#<PRINT FUNCTIONS>
+import sys
+def print_(*args, **kwargs): pass
+def print(*args, **kwargs): pass
+def noprint(*args, **kwargs): pass
+def realprint(*args, **kwargs):
+    sys.stdout.write(args[0]+'\n')
+def realprint_(*args, **kwargs):
+    sys.stdout.write(*args)
+def print_on():
+    global print
+    global print_
+    print = realprint
+    print_ = realprint_
+def print_off():
+    global print
+    global print_
+    print = noprint
+    print_ = noprint
+print_on()
+#</PRINT FUNCTIONS>
+
 # reloads this module when I mess with it
 def reload_module():
     import imp, sys

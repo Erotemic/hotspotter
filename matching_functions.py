@@ -32,6 +32,28 @@ import scipy.optimize
 import voting_rules2 as vr2
 import pandas as pd
 
+#<PRINT FUNCTIONS>
+import sys
+def print_(*args, **kwargs): pass
+def print(*args, **kwargs): pass
+def noprint(*args, **kwargs): pass
+def realprint(*args, **kwargs):
+    sys.stdout.write(args[0]+'\n')
+def realprint_(*args, **kwargs):
+    sys.stdout.write(*args)
+def print_on():
+    global print
+    global print_
+    print = realprint
+    print_ = realprint_
+def print_off():
+    global print
+    global print_
+    print = noprint
+    print_ = noprint
+print_on()
+#</PRINT FUNCTIONS>
+
 def reload_module():
     import imp, sys
     print('[mc3] reloading '+__name__)
@@ -58,7 +80,7 @@ def nearest_neighbors(hs, qcxs, q_params):
     nFoundNN = 0
     print('')
     for qcx in qcxs:
-        sys.stdout.write('.')
+        print_('.')
         (qfx2_dx, qfx2_dist) = nnfunc(qcx)
         qcx2_nns[qcx] = (qfx2_dx, qfx2_dist)
         nFoundNN += qfx2_dx.size
@@ -293,7 +315,7 @@ def spatially_verify_matches(hs, qcx2_chipmatch, q_params):
             cx = topx2_cx[topx]
             fm = cx2_fm[cx]
             if len(fm) < min_nInliers:
-                sys.stdout.write('x')
+                print_('x')
                 continue
             dlen_sqrd = topx2_dlen_sqrd[topx]
             kpts2 = cx2_kpts[cx]
@@ -302,14 +324,14 @@ def spatially_verify_matches(hs, qcx2_chipmatch, q_params):
             sv_tup = sv2.homography_inliers(kpts1, kpts2, fm, xy_thresh, scale2,
                                             scale1, dlen_sqrd, min_nInliers)
             if sv_tup is None:
-                sys.stdout.write('o')
+                print_('o')
                 continue
             # Return the inliers to the homography
             (H, inliers, Aff, aff_inliers) = sv_tup
             cx2_fm_V[cx] = fm[inliers, :]
             cx2_fs_V[cx] = fs[inliers]
             cx2_fk_V[cx] = fk[inliers]
-            sys.stdout.write('.')
+            print_('.')
             #np.set_printoptions(threshold=2)
         # Rebuild the feature match / score arrays to be consistent
         chipmatchSV = _fix_fmfsfk(cx2_fm_V, cx2_fs_V, cx2_fk_V)
@@ -356,19 +378,22 @@ def chipmatch_to_res(hs, qcx2_chipmatch, q_params, aug=''):
     score_method_ = q_params.score_method
     # Hacky dev stuff
     if aug == '+ORIG':
-        uid = q_params.get_uid(SV=False, filtered=False)
+        uid = q_params.get_uid(SV=False, filtered=False, scored=True)
     elif aug == '+FILT':
-        uid = q_params.get_uid(SV=False, filtered=True, NN=False)
+        uid = q_params.get_uid(SV=False, filtered=True, NN=False, scored=True)
     elif aug == '+SVER':
-        uid = q_params.get_uid(SV=True, filtered=False, NN=False)
+        uid = q_params.get_uid(SV=True, filtered=False, NN=False, scored=True)
     elif aug == '+SVPL':
-        uid = q_params.get_uid(SV=True, filtered=False, NN=False)
         q_params.score_method = 'placketluce'
+        uid = q_params.get_uid(SV=True, NN=False, filtered=False, scored=True)
+    if aug != '':
+        aug = ' '+aug
     # Create the result structures for each query.
     qcx2_res = {}
     for qcx in qcx2_chipmatch.iterkeys():
         chipmatch = qcx2_chipmatch[qcx]
         res = _fmfs2_QueryResult(hs, qcx, chipmatch, uid, q_params)
+        res.title = uid+aug
         qcx2_res[qcx] = res
     # Retain original score method
     q_params.score_method = score_method_

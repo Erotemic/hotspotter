@@ -1,6 +1,6 @@
 ''' Computes feature representations '''
 #from __init__ import *
-from __future__ import division
+from __future__ import division, print_function
 # hotspotter
 import draw_func2 as df2
 import algos
@@ -18,6 +18,18 @@ import cv2
 import sys
 import os
 from os.path import exists, join
+
+def print(*args, **kwargs): pass
+def noprint(*args, **kwargs): pass
+def realprint(*args, **kwargs):
+    sys.stdout.write(args[0]+'\n')
+def print_on():
+    global print
+    print = realprint
+def print_off():
+    global print
+    print = noprint
+print_on()
 
 def reload_module():
     import imp, sys

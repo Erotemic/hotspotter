@@ -36,6 +36,19 @@ from itertools import izip
 #print('LOAD_MODULE: match_chips2.py')
 from _localhelpers.bagofwords import *
 
+def print(*args, **kwargs): pass
+def print(*args, **kwargs): pass
+def noprint(*args, **kwargs): pass
+def realprint(*args, **kwargs):
+    sys.stdout.write(args[0]+'\n')
+def print_on():
+    global print
+    print = realprint
+def print_off():
+    global print
+    print = noprint
+print_on()
+
 def reload_module():
     import imp, sys
     print('[mc2] reloading '+__name__)

@@ -16,6 +16,19 @@ import match_chips2 as mc2
 from itertools import izip
 import pandas as pd
 
+def print(*args, **kwargs): pass
+def print(*args, **kwargs): pass
+def noprint(*args, **kwargs): pass
+def realprint(*args, **kwargs):
+    sys.stdout.write(args[0]+'\n')
+def print_on():
+    global print
+    print = realprint
+def print_off():
+    global print
+    print = noprint
+print_on()
+
 def reload_module():
     import imp, sys
     print('[reload] reloading '+__name__)
@@ -26,10 +39,11 @@ def rrr():
 # chipmatch = qcx2_chipmatch[qcx]
 def score_chipmatch_PL(hs, qcx, chipmatch, q_params):
     K = q_params.nn_params.K
+    max_alts = 200
     # Run Placket Luce Model
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
-    qfx2_utilities = _filter_utilities(qfx2_utilities)
-    PL_matrix, altx2_tnx = _utilities2_weighted_pairwise_breaking(qfx2_utilities)
+    qfx2_utilities = _filter_utilities(qfx2_utilities, max_alts)
+    PL_matrix, altx2_tnx = _utilities2_pairwise_breaking(qfx2_utilities)
     gamma = _optimize(PL_matrix)
     altx2_prob = _PL_score(gamma)
     # Use probabilities as scores
@@ -49,10 +63,8 @@ def _optimize(M):
     tmp1 += [('[vote] x=%r' % x)]
     tmp1 += [('[vote] M.dot(x).sum() = %r' % M.dot(x).sum())]
     tmp1 += [('[vote] M.dot(np.abs(x)).sum() = %r' % M.dot(np.abs(x)).sum())]
-    print(tmp1)
     TMP  += [tmp1]
     return x
-
 
 def _PL_score(gamma):
     print('[vote] computing probabilities')
@@ -106,9 +118,8 @@ def _chipmatch2_utilities(hs, qcx, chipmatch, K):
         qfx2_utilities[qfx] = utilities
     return qfx2_utilities
 
-def _filter_utilities(qfx2_utilities):
+def _filter_utilities(qfx2_utilities, max_alts=200):
     print('[vote] filtering utilities')
-    max_alts = 200
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
     tnxs = np.array(tnxs)
     tnxs_min = tnxs.min()

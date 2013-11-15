@@ -57,7 +57,7 @@ def nn_recip_weight(hs, qcx2_nns, query_params):
     'Filters a nearest neighbor to only reciprocals'
     data_index = query_params.data_index
     K = query_params.nn_params.K
-    Krecip = query_params.score_params.Krecip
+    Krecip = query_params.f_params.Krecip
     checks = query_params.nn_params.checks
     dx2_cx = data_index.ax2_cx
     dx2_fx = data_index.ax2_fx

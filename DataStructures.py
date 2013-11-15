@@ -7,6 +7,19 @@ import algos
 from itertools import izip, chain
 from Printable import DynStruct
 import draw_func2 as df2
+import sys
+
+def print(*arsg, **kwargs): pass
+def noprint(*args, **kwargs): pass
+def realprint(*args, **kwargs):
+    sys.stdout.write(args[0]+'\n')
+def print_on():
+    global print
+    print = realprint
+def print_off():
+    global print
+    print = noprint
+print_on()
 
 def reload_module():
     import imp, sys
@@ -73,6 +86,7 @@ class QueryResult(DynStruct):
         super(QueryResult, res).__init__()
         res.qcx       = qcx
         res.query_uid = uid
+        res.uid = uid
         # Times
         res.assign_time = -1
         res.verify_time = -1
@@ -214,7 +228,7 @@ class FilterParams(DynStruct):
         super(FilterParams, f_params).__init__()
         fp = f_params
         fp.Krecip = 0 # 0 := off
-        fp.score_method = 'chipsum' # ['namesum', 'placketluce']
+        
         fp.nnfilter_list = ['recip', 'roidist']
         #
         fp.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio']
@@ -267,7 +281,6 @@ class FilterParams(DynStruct):
         uid = '_smech(' 
         if f_params.Krecip != 0:
             uid += 'Kr='+str(f_params.Krecip)
-        uid += ',' + f_params.score_method
         uid += ',' + signthreshweight_str(on_filters)
         uid += ')'
         return uid
@@ -313,7 +326,7 @@ class QueryParams(DynStruct):
         q_params.f_params     = FilterParams(**kwargs)
         q_params.sv_params    = SpatialVerifyParams(**kwargs)
         q_params.query_type   = 'vsmany'
-        q_params.score_method = 'chipsum'
+        q_params.score_method = 'chipsum' # namesum, placketluce
         q_params.qcxs = []
         q_params.dcxs = []
         q_params.use_cache = False
@@ -322,7 +335,7 @@ class QueryParams(DynStruct):
         q_params.dcxs2_index = {}  # L1 cached indexes
         q_params.update(**kwargs)
         q_params.f_params.make_feasible(q_params.nn_params)
-    def get_uid(q_params, SV=False, filtered=True, long_=False, NN=True):
+    def get_uid(q_params, SV=False, filtered=True, long_=False, NN=True, scored=False):
         uid = ''
         if NN is True:
             uid += q_params.query_type
@@ -331,6 +344,8 @@ class QueryParams(DynStruct):
             uid += q_params.sv_params.get_uid()
         if filtered is True:
             uid += q_params.f_params.get_uid()
+        if scored:
+            uid += ','+q_params.score_method
         if long_:
             uid += params.get_matcher_uid()
         return uid

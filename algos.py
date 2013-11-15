@@ -1,3 +1,5 @@
+from __future__ import division, print_function
+
 import draw_func2 as df2
 from PIL import Image, ImageOps
 from os.path import realpath, join
@@ -19,6 +21,18 @@ import scipy.sparse as spsparse
 #print('LOAD_MODULE: algos.py')
 #imp.reload(sys.modules['hotspotter.helpers'])
 #imp.reload(sys.modules['params'])
+
+def print(*args, **kwargs): pass
+def noprint(*args, **kwargs): pass
+def realprint(*args, **kwargs):
+    sys.stdout.write(args[0]+'\n')
+def print_on():
+    global print
+    print = realprint
+def print_off():
+    global print
+    print = noprint
+print_on()
 
 # reloads this module when I mess with it
 def reload_module():
@@ -88,7 +102,7 @@ def tune_flann(data, **kwargs):
     for badchar in badchar_list:
         suffix = suffix.replace(badchar, '')
 
-    print flann_atkwargs
+    print(flann_atkwargs)
 
     tuned_params = flann.build_index(data, **flann_atkwargs)
 
@@ -252,7 +266,7 @@ def force_quit_akmeans(signal, frame):
                 print('Traced back to module level. Missed frame: '+target_frame_coname)
                 break
             target_frame = target_frame.f_back
-            print 'Is target frame?: '+target_frame.f_code.co_name
+            print('Is target frame?: '+target_frame.f_code.co_name)
 
         fpath = target_frame.f_back.f_back.f_locals['fpath']
 

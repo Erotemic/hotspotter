@@ -1,7 +1,20 @@
 #exec(open('__init__.py').read())
 #exec(open('_research/investigate_chip.py').read())
-from __future__ import division
+from __future__ import division, print_function
 import argparse
+import sys
+
+def print(*args, **kwargs): pass
+def noprint(*args, **kwargs): pass
+def realprint(*args, **kwargs):
+    sys.stdout.write(args[0]+'\n')
+def print_on():
+    global print
+    print = realprint
+def print_off():
+    global print
+    print = noprint
+print_on()
 
 # Moved this up for faster help responce time
 def parse_arguments():

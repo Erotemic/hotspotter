@@ -1,9 +1,11 @@
+from __future__ import division, print_function
 from os.path import normpath, exists, realpath, join
 import os
 import os.path
 import fnmatch
 import pickle
 import cPickle
+import shelve
 
 import datetime
 import timeit
@@ -11,6 +13,19 @@ import timeit
 import helpers
 import params
 import numpy as np
+import sys
+
+def print(*args, **kwargs): pass
+def noprint(*args, **kwargs): pass
+def realprint(*args, **kwargs):
+    sys.stdout.write(args[0]+'\n')
+def print_on():
+    global print
+    print = realprint
+def print_off():
+    global print
+    print = noprint
+print_on()
 
 def reload_module():
     import imp, sys
@@ -127,7 +142,7 @@ def __smart_save(data, fpath, verbose):
         print(helpers.indent(repr(ex),'[io]    '))
         raise
 #----
-def __smart_load(fpath, verbose, allow_alternative=True, can_fail=False, **kwargs):
+def __smart_load(fpath, verbose, allow_alternative=False, can_fail=True, **kwargs):
     ' helper '
     # Get components of the filesname
     dpath, fname = os.path.split(fpath)
@@ -225,6 +240,15 @@ def global_cache_read(cache_id):
 def global_cache_write(cache_id, newdir):
     cache_fname = join(GLOBAL_CACHE_DIR, 'cached_dir_'+str(cache_id)+'.txt')
     helpers.write_to(cache_fname, newdir)
+
+# --- Shelve Caching ---
+#def read_cache(fpath):
+    #pass
+#def write_cache(fpath): 
+    #with open(fpath, 'wa') as file_
+        #shelf = shelve.open(file_)
+#def cached_keys(fpath):
+    #pass
 
 # --- Main Test --- 
 

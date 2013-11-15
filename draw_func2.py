@@ -20,6 +20,18 @@ import params
 import os
 #print('LOAD_MODULE: draw_func2.py')
 
+def print(*args, **kwargs): pass
+def noprint(*args, **kwargs): pass
+def realprint(*args, **kwargs):
+    sys.stdout.write(args[0]+'\n')
+def print_on():
+    global print
+    print = realprint
+def print_off():
+    global print
+    print = noprint
+print_on()
+
 DISTINCT_COLORS = True #and False
 DARKEN = None
 ELL_LINEWIDTH = 1.5

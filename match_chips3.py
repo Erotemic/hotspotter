@@ -33,11 +33,12 @@ import matching_functions as mf
 
 #<PRINT FUNCTIONS>
 import sys
+import __builtin__
 def print_(*args, **kwargs): pass
 def print(*args, **kwargs): pass
 def noprint(*args, **kwargs): pass
 def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
+    __builtin__.print(*args, **kwargs)
 def realprint_(*args, **kwargs):
     sys.stdout.write(*args)
 def print_on():

@@ -32,7 +32,6 @@ import scipy.optimize
 import voting_rules2 as vr2
 import pandas as pd
 
-<<<<<<< HEAD
 #<PRINT FUNCTIONS>
 import sys
 def print_(*args, **kwargs): pass
@@ -54,10 +53,6 @@ def print_off():
     print_ = noprint
 print_on()
 #</PRINT FUNCTIONS>
-=======
-def print(*args, **kwargs):
-    pass
->>>>>>> fc28e1c36dac6c43801fad7e6b24b88db7fdfab9
 
 def reload_module():
     import imp, sys
@@ -349,15 +344,19 @@ def spatially_verify_matches(hs, qcx2_chipmatch, q_params):
 
 def _fix_fmfsfk(cx2_fm, cx2_fs, cx2_fk):
     # Convert to numpy
-    arr_ = np.array
     fm_dtype_ = ds.FM_DTYPE
     fs_dtype_ = ds.FS_DTYPE
     fk_dtype_ = ds.FK_DTYPE
-    cx2_fm = np.array([arr_(fm, fm_dtype_) for fm in iter(cx2_fm)], list)
+    cx2_fm = [np.array(fm, fm_dtype_) for fm in iter(cx2_fm)]
+    cx2_fs = [np.array(fs, fs_dtype_) for fs in iter(cx2_fs)]
+    cx2_fk = [np.array(fk, fk_dtype_) for fk in iter(cx2_fk)]
+    # Ensure shape
     for cx in xrange(len(cx2_fm)):
-        cx2_fm[cx].shape = (len(cx2_fm[cx]), 2)
-    cx2_fs = np.array([arr_(fs, fs_dtype_) for fs in iter(cx2_fs)], list)
-    cx2_fk = np.array([arr_(fk, fk_dtype_) for fk in iter(cx2_fk)], list)
+        cx2_fm[cx].shape = (cx2_fm[cx].size//2, 2)
+    # Cast lists
+    cx2_fm = np.array(cx2_fm, list)
+    cx2_fs = np.array(cx2_fs, list)
+    cx2_fk = np.array(cx2_fk, list)
     chipmatch = (cx2_fm, cx2_fs, cx2_fk)
     return chipmatch
 

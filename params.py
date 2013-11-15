@@ -220,6 +220,17 @@ def get_matcher_uid(with_train=True, with_indx=True):
     matcher_uid += get_feat_uid()
     return matcher_uid
 
+def get_indexed_uid(with_train=True, with_indx=True):
+    indexed_uid = ''
+    if with_train:
+        indexed_uid += '_trainID('+TRAIN_SAMPLE_ID+')'
+    if with_indx:
+        indexed_uid += '_indxID('+INDX_SAMPLE_ID+')'
+    # depends on feat
+    indexed_uid += get_feat_uid()
+    return indexed_uid
+
+
 def get_query_uid():
     query_uid = ''
     query_uid += '_sv(' 

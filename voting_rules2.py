@@ -1,4 +1,5 @@
 from __future__ import division, print_function
+import __builtin__
 import matplotlib
 import textwrap
 import draw_func2 as df2
@@ -20,7 +21,7 @@ def print(*args, **kwargs): pass
 def print(*args, **kwargs): pass
 def noprint(*args, **kwargs): pass
 def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
+    __builtin__.print(*args, **kwargs)
 def print_on():
     global print
     print = realprint
@@ -54,6 +55,8 @@ TMP = []
 def _optimize(M):
     global TMP
     #print('[vote] optimize')
+    if M.size == 0:
+        return np.array([])
     (u, s, v) = svd(M)
     x = np.abs(v[-1])
     check = np.abs(M.dot(x)) < 1E-9
@@ -121,6 +124,7 @@ def _chipmatch2_utilities(hs, qcx, chipmatch, K):
 def _filter_utilities(qfx2_utilities, max_alts=200):
     print('[vote] filtering utilities')
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
+    if len(tnxs) == 0: return qfx2_utilities
     tnxs = np.array(tnxs)
     tnxs_min = tnxs.min()
     tnx2_freq = np.bincount(tnxs - tnxs_min)

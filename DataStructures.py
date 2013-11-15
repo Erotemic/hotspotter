@@ -278,10 +278,12 @@ class FilterParams(DynStruct):
     def get_uid(f_params):
         on_filters = dict_subset(f_params.filt2_tw,
                                  f_params.nnfilter_list)
-        uid = '_smech(' 
+        uid = '_filts(' 
         if f_params.Krecip != 0:
             uid += 'Kr='+str(f_params.Krecip)
-        uid += ',' + signthreshweight_str(on_filters)
+        twstr = signthreshweight_str(on_filters)
+        if len(twstr) > 0:
+            uid += ',' + twstr
         uid += ')'
         return uid
 
@@ -340,14 +342,13 @@ class QueryParams(DynStruct):
         if scored is True:
             uid += q_params.score_method
         if NN is True:
-            uid += q_params.query_type
             uid += q_params.nn_params.get_uid()
         if SV is True:
             uid += q_params.sv_params.get_uid()
         if filtered is True:
             uid += q_params.f_params.get_uid()
         if scored:
-            uid += ','+q_params.score_method
+            uid += ','+q_params.score_method+','+q_params.query_type
         if long_:
-            uid += params.get_matcher_uid()
+            uid += params.get_indexed_uid()
         return uid

@@ -427,3 +427,98 @@ def test_voting_rules(hs, qcx, K, fnum=1):
 def test():
     from numpy import linalg
     linalg.lstsq
+    '''
+    Test Data:
+    K = 5
+    votes = [(3,2,1,4), (4,1,2,3), (4, 2, 3, 1), (1, 2, 3, 4)]
+    qfx2_utilities = [[(nx, nx, nx**3, k) for k, nx in enumerate(vote)] for vote in votes]
+    M, altx2_nx= _utilities2_pairwise_breaking(qfx2_utilities)
+
+    from numpy.linalg import svd, inv
+    from numpy import eye, diag, zeros
+    #Because s is sorted, and M is rank deficient, the value s[-1] should be 0
+    np.set_printoptions(precision=2, suppress=True, linewidth=80)
+    #The svd is: 
+    #u * s * v = M
+    u.dot(diag(s)).dot(v) = M
+
+    #u is unitary: 
+    inv(u).dot(u) == eye(len(s))
+    
+    diag(s).dot(v) == inv(u).dot(M)
+
+    u.dot(diag(s)) == M.dot(inv(v))
+    And because s[-1] is 0
+    u.dot(diag(s))[:,-1:] == zeros((len(s),1))
+
+    Because we want to find Mx = 0
+
+    So flip the left and right sides
+    M.dot(inv(v)[:,-1:]) == u.dot(diag(s))[:,-1:] 
+
+    And you find
+    M = M
+    x = inv(v)[:,-1:]
+    0 = u.dot(diag(s))[:,-1:] 
+    
+    So we have the solution to our problem as x = inv(v)[:,-1:]
+
+    Furthermore it is true that 
+    inv(v)[:,-1:].T == v[-1:,:]
+    because v is unitary and the last vector in v corresponds to a singular
+    vector because M is rank m-1
+    
+    ALSO: v.dot(inv(v)) = eye(len(s)) so
+    v[-1].dot(inv(v)[:,-1:]) == 1
+    
+    this means that v[-1] is non-zero, and v[-1].T == inv(v[:,-1:])
+
+    So all of this can be done as...
+     '''
+
+    # We could also say
+    def eq(M1, M2):
+        print(str(M1)+'\n = \n'+str(M2))
+    # Compute SVD
+    (u, s_, v) = linalg.svd(M)
+    s = diag(s_)
+    #---
+    print('-------')
+    print('M =\n%s' % (M,))
+    print('-------')
+    print('u =\n%s' % (u,))
+    print('-------')
+    print('s =\n%s' % (s,))
+    print('-------')
+    print('v =\n%s' % (v,))
+    print('-------')
+    print('u s v = M')
+    eq(u.dot(s).dot(v), M)
+    # We want to find Mx = 0
+    print('-------')
+    print('The last value of s is zeros because M is rank m-1 and s is sorted')
+    print('s =\n%s' % (s,))
+    print('-------')
+    print('Therefore the last column of u.dot(s) is zeros')
+    print('v is unitary so v.T = inv(v)')
+    print('u s = M v.T')
+    eq(u.dot(s), M.dot(v.T))
+    print('-------')
+    print('We want to find Mx = 0, and the last column of LHS corresponds to this')
+    print('u s = M v.T')
+    eq(u.dot(s), M.dot(v.T))
+
+    # The right column u.dot(s) is 
+
+    #Ok, so v[-1] can be negative, but that's ok
+    # its unitary, we can just negate it. 
+    # or we can take the absolute value or l2 normalize it
+    # x = v[-1] = inv(v)[:,-1]
+    # so
+    # x.dot(x) == 1
+    # hmmmm
+    # I need to find a way to proove 
+    # components of x are all negative or all 
+    # positive
+    # Verify s is 0
+    x = v[-1]

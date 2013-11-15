@@ -7,6 +7,7 @@ import vizualizations as viz
 import matplotlib
 import numpy as np
 from numpy import linalg
+from numpy.linalg import svd
 import helpers
 import scipy.optimize
 import scipy
@@ -28,106 +29,29 @@ def score_chipmatch_PL(hs, qcx, chipmatch, q_params):
     # Run Placket Luce Model
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
     qfx2_utilities = _filter_utilities(qfx2_utilities)
-    PL_matrix, altx2_tnx = _utilities2_pairwise_breaking(qfx2_utilities)
+    PL_matrix, altx2_tnx = _utilities2_weighted_pairwise_breaking(qfx2_utilities)
     gamma = _optimize(PL_matrix)
     altx2_prob = _PL_score(gamma)
     # Use probabilities as scores
     cx2_score, nx2_score = prob2_cxnx2scores(hs, qcx, altx2_prob, altx2_tnx)
     return cx2_score, nx2_score
 
+TMP = []
 def _optimize(M):
-    # http://docs.scipy.org/doc/scipy/reference/tutorial/optimize.html
-    print('[vote] running optimization')
-    m = M.shape[0]
-    x0 = np.ones(m)/np.sqrt(m)
-    x0[1] = 1
-    f   = lambda x, M:linalg.norm(M.dot(x))
-    con = lambda x: int(True - (x[1] == 1))#True - np.all(x > 0)
-    cons = {'type':'eq', 'fun': con}
-    optres = scipy.optimize.minimize(f, x0, args=(M,), constraints=cons,
-                                     method='SLSQP')
-    x = optres['x']
-    print('[vote] x0 = \n%r\n' % (x0,))
-    #print('[vote] M  = \n%r\n' % (M,))
-    print('[vote]  x = \n%r\n' % (x,))
-    print('[vote] Mx = \n%r\n' % (M.dot(x),))
-    print('[vote] sum(Mx) = \n%r\n' % (np.sum(M.dot(x)),))
-    if not optres['success']:
-        print('[vote] M.sum(0) = %r ' % M.sum(0))
-        print('[vote] M.sum(1) = %r ' % M.sum(1))
-        print(optres)
-        raise Exception(optres['message'])
-    # This should equal 0 by Theorem 1
-    #xnorm = linalg.norm(x)
-    #gamma = np.abs(x / xnorm)
+    global TMP
+    print('[vote] optimize')
+    (u, s, v) = svd(M)
+    x = np.abs(v[-1])
+    check = np.abs(M.dot(x)) < 1E-9
+    if not all(check):
+        raise Exception('SVD method failed miserabley')
+    tmp1 = []
+    tmp1 += [('[vote] x=%r' % x)]
+    tmp1 += [('[vote] M.dot(x).sum() = %r' % M.dot(x).sum())]
+    tmp1 += [('[vote] M.dot(np.abs(x)).sum() = %r' % M.dot(np.abs(x)).sum())]
+    print(tmp1)
+    TMP  += [tmp1]
     return x
-
-def _optimize_SequentialLeastSquaresProgramming(M):
-    m = M.shape[0]
-    x0 = np.ones(m)/np.sqrt(m)
-    x0[1] = 1
-    f   = lambda x, M:linalg.norm(M.dot(x))
-    con = lambda x: int(True - (x[1] == 1))#True - np.all(x > 0)
-    cons = {'type':'eq', 'fun': con}
-    optres = scipy.optimize.minimize(f, x0, args=(M,), constraints=cons,
-                                     method='SLSQP')
-    x = optres['x']
-    if not optres['success']:
-        print(optres)
-        raise Exception(optres['message'])
-    return x
-
-def _optimize_Mx_is_zero_x_nonzero(M):
-    '''
-    Test Data:
-    votes = [(3,2,1,4), (4,1,2,3), (4, 2, 3, 1), (1, 2, 3, 4)]
-    qfx2_utilities = [[(nx, nx, k, k) for k, nx in enumerate(vote)] for vote in votes]
-    M, altx2_nx= _utilities2_pairwise_breaking(qfx2_utilities)
-    '''
-    # from numpy.linalg import svd, inv
-    # from numpy import eye, diag, zeros
-    # Because s is sorted, and M is rank deficient, the value s[-1] should be 0
-    # np.set_printoptions(precision=1, suppress=True, linewidth=80)
-    # The svd is: 
-    # u * s * v = M
-    # u.dot(diag(s)).dot(v) = M
-    #
-    # u is unitary: 
-    # inv(u).dot(u) == eye(len(s))
-    # 
-    # diag(s).dot(v) == inv(u).dot(M)
-    #
-    # u.dot(diag(s)) == M.dot(inv(v))
-    # And because s[-1] is 0
-    # u.dot(diag(s))[:,-1:] == zeros((len(s),1))
-    #
-    # Because we want to find Mx = 0
-    #
-    # So flip the left and right sides
-    # M.dot(inv(v)[:,-1:]) == u.dot(diag(s))[:,-1:] 
-    #
-    # And you find
-    # M = M
-    # x = inv(v)[:,-1:]
-    # 0 = u.dot(diag(s))[:,-1:] 
-    # 
-    # So we have the solution to our problem as x = inv(v)[:,-1:]
-    #
-    # Furthermore it is true that 
-    # inv(v)[:,-1:].T == v[-1:,:]
-    # because v is unitary and the last vector in v corresponds to a singular
-    # vector because M is rank m-1
-    # 
-    # ALSO: v.dot(inv(v)) = eye(len(s)) so
-    # v[-1].dot(inv(v)[:,-1:]) == 1
-    # 
-    # this means that v[-1] is non-zero, and v[-1].T == inv(v[:,-1:])
-    #
-    # So all of this can be done as...
-    (u, s, v) = linalg.svd(M)
-    x = v[-1]
-    return x 
-    
 
 
 def _PL_score(gamma):
@@ -184,7 +108,7 @@ def _chipmatch2_utilities(hs, qcx, chipmatch, K):
 
 def _filter_utilities(qfx2_utilities):
     print('[vote] filtering utilities')
-    max_alts = 30
+    max_alts = 200
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
     tnxs = np.array(tnxs)
     tnxs_min = tnxs.min()
@@ -244,6 +168,61 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
     #print('CheckMat = %r ' % all(np.abs(PLmatrix.sum(0)) < 1E-9))
     return PLmatrix, altx2_tnx
 
+def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
+    print('[vote] building pairwise matrix')
+    arr_   = np.array
+    hstack = np.hstack
+    cartesian = helpers.cartesian
+    # get temp name indexes
+    tnxs = [util[1] for utils in qfx2_utilities for util in utils]
+    altx2_tnx = pd.unique(tnxs)
+    tnx2_altx = {nx:altx for altx, nx in enumerate(altx2_tnx)}
+    nUtilities = len(qfx2_utilities)
+    nAlts   = len(altx2_tnx)
+    altxs   = np.arange(nAlts)
+    pairwise_mat = np.zeros((nAlts, nAlts))
+    qfx2_porder = [np.array([tnx2_altx[util[1]] for util in utils]) for utils in qfx2_utilities]
+    qfx2_worder = [np.array([util[2] for util in utils]) for utils in qfx2_utilities]
+    nVoters = 0
+    for qfx in xrange(nUtilities):
+        # partial and compliment order over alternatives
+        porder = qfx2_porder[qfx]
+        worder = qfx2_worder[qfx]
+        _, idx = np.unique(porder, return_inverse=True)
+        idx = np.sort(idx)
+        porder = porder[idx]
+        worder = worder[idx]
+        nReport = len(porder) 
+        if nReport == 0: continue
+        #sys.stdout.write('.')
+        corder = np.setdiff1d(altxs, porder)
+        nUnreport = len(corder)
+        # pairwise winners and losers
+        for r_win in xrange(0, nReport):
+            i = porder[r_win]
+            wi = worder[r_win]
+            for r_lose in xrange(r_win+1, nReport):
+                j = porder[r_lose]
+                wj = worder[r_lose]
+                w = wi
+                #w = wi - wj
+                pairwise_mat[i,j] += w
+                pairwise_mat[j,j] -= w
+            for r_lose in xrange(nUnreport):
+                j = corder[r_lose]
+                wj = 0
+                w = wi
+                #w = wi - wj
+                pairwise_mat[i,j] += w
+                pairwise_mat[j,j] -= w
+            nVoters += wi
+    #print('')
+    PLmatrix = pairwise_mat / nVoters     
+    # sum(0) gives you the sum over rows, which is summing each column
+    # Basically a column stochastic matrix should have 
+    # M.sum(0) = 0
+    #print('CheckMat = %r ' % all(np.abs(PLmatrix.sum(0)) < 1E-9))
+    return PLmatrix, altx2_tnx
 
 
 if __name__ == '__main__':

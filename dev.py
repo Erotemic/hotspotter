@@ -61,4 +61,9 @@ if __name__ == '__main__':
     execstr = helpers.execstr_dict(main_locals, 'main_locals')
     exec(execstr)
     compare_scoring(hs)
+    for vals in vr2.TMP:
+        print('-----')
+        for val in vals:
+            print(val)
+        print('-----')
     exec(df2.present())

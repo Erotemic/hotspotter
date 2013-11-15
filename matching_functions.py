@@ -32,6 +32,9 @@ import scipy.optimize
 import voting_rules2 as vr2
 import pandas as pd
 
+def print(*args, **kwargs):
+    pass
+
 def reload_module():
     import imp, sys
     print('[mc3] reloading '+__name__)
@@ -151,8 +154,10 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, q_params=None):
         (_, cx2_fs, _) = chipmatch
         cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
         return cx2_score
-    if score_method == 'placketluce':
+    elif score_method == 'placketluce':
         cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, qcx, chipmatch, q_params)
+    else:
+        raise Exception('unknown scoring method:'+score_method)
     return cx2_score
 
 #============================
@@ -362,13 +367,14 @@ def chipmatch_to_res(hs, qcx2_chipmatch, q_params, aug=''):
     elif aug == '+SVER':
         uid = q_params.get_uid(SV=True, filtered=False, NN=False)
     elif aug == '+SVPL':
-        uid = q_params.get_uid(SV=True, filtered=False, NN=False)
         q_params.score_method = 'placketluce'
+        uid = q_params.get_uid(SV=False, filtered=False, NN=False, scored=True)
     # Create the result structures for each query.
     qcx2_res = {}
     for qcx in qcx2_chipmatch.iterkeys():
         chipmatch = qcx2_chipmatch[qcx]
         res = _fmfs2_QueryResult(hs, qcx, chipmatch, uid, q_params)
+        res.title = uid
         qcx2_res[qcx] = res
     # Retain original score method
     q_params.score_method = score_method_

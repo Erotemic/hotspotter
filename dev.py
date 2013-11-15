@@ -1,11 +1,13 @@
+from __future__ import division, print_function
 import match_chips3 as mc3
 import matching_functions as mf
 import DataStructures as ds
 import investigate_chip as iv
 import voting_rules2 as vr2
 import draw_func2 as df2
-from match_chips3 import *
-from matching_functions import *
+import helpers as helpers
+import numpy as np
+import sys
 
 # What are good ways we can divide up FLANN indexes instead of having one
 # monolithic index? Divide up in terms of properties of the database chips
@@ -16,8 +18,12 @@ from matching_functions import *
 # What happens when we take all other possible ground truth matches out
 # of the database index? 
 
-
-mc3.rrr(); mf.rrr(); iv.rrr(); ds.rrr(); vr2.rrr()
+#mc3.rrr(); mf.rrr(); iv.rrr(); ds.rrr(); vr2.rrr()
+def silent(*args):
+    pass
+df2.print = silent
+vr2.print = silent
+ds.print = silent
 
 def prepare_test(hs, **kwargs):
     kwargs = vars().get('kwargs', {})
@@ -40,6 +46,8 @@ def compare_scoring(hs):
         bestranks = []
         for qcx2_res in res_list:
             res = qcx2_res[qcx]
+            print('res.title =: '+res.title)
+            print('res.uid =: '+res.uid)
             gt_ranks = res.get_gt_ranks(gt_cxs)
             bestranks += [min(gt_ranks)]
         id2_title += [title]
@@ -48,9 +56,9 @@ def compare_scoring(hs):
     id2_bestranks = np.array(id2_bestranks)
     id2_title.shape = (len(id2_title), 1)
     print('\n----------')
-    print(id2_bestranks)
-    print(id2_title)
-    #print(np.hstack([id2_bestranks, id2_title]))
+    #print(id2_bestranks)
+    #print(id2_title)
+    print(np.hstack([id2_bestranks, id2_title]))
 
     #execute_query_safe(
 
@@ -61,9 +69,9 @@ if __name__ == '__main__':
     execstr = helpers.execstr_dict(main_locals, 'main_locals')
     exec(execstr)
     compare_scoring(hs)
-    for vals in vr2.TMP:
-        print('-----')
-        for val in vals:
-            print(val)
-        print('-----')
+    #for vals in vr2.TMP:
+        #print('-----')
+        #for val in vals:
+            #print(val)
+        #print('-----')
     exec(df2.present())

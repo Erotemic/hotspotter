@@ -16,6 +16,9 @@ import match_chips2 as mc2
 from itertools import izip
 import pandas as pd
 
+def print(*args, **kwargs):
+    pass
+
 def reload_module():
     import imp, sys
     print('[reload] reloading '+__name__)
@@ -29,7 +32,7 @@ def score_chipmatch_PL(hs, qcx, chipmatch, q_params):
     # Run Placket Luce Model
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
     qfx2_utilities = _filter_utilities(qfx2_utilities)
-    PL_matrix, altx2_tnx = _utilities2_weighted_pairwise_breaking(qfx2_utilities)
+    PL_matrix, altx2_tnx = _utilities2_pairwise_breaking(qfx2_utilities)
     gamma = _optimize(PL_matrix)
     altx2_prob = _PL_score(gamma)
     # Use probabilities as scores
@@ -39,7 +42,7 @@ def score_chipmatch_PL(hs, qcx, chipmatch, q_params):
 TMP = []
 def _optimize(M):
     global TMP
-    print('[vote] optimize')
+    #print('[vote] optimize')
     (u, s, v) = svd(M)
     x = np.abs(v[-1])
     check = np.abs(M.dot(x)) < 1E-9
@@ -49,19 +52,18 @@ def _optimize(M):
     tmp1 += [('[vote] x=%r' % x)]
     tmp1 += [('[vote] M.dot(x).sum() = %r' % M.dot(x).sum())]
     tmp1 += [('[vote] M.dot(np.abs(x)).sum() = %r' % M.dot(np.abs(x)).sum())]
-    print(tmp1)
     TMP  += [tmp1]
     return x
 
 
 def _PL_score(gamma):
-    print('[vote] computing probabilities')
+    #print('[vote] computing probabilities')
     nAlts = len(gamma)
     altx2_prob = np.zeros(nAlts)
     for ax in xrange(nAlts):
         altx2_prob[ax] = gamma[ax] / np.sum(gamma)
-    print('[vote] altx2_prob: '+str(altx2_prob))
-    print('[vote] sum(prob): '+str(sum(altx2_prob)))
+    #print('[vote] altx2_prob: '+str(altx2_prob))
+    #print('[vote] sum(prob): '+str(sum(altx2_prob)))
     return altx2_prob
 
 def prob2_cxnx2scores(hs, qcx, altx2_prob, altx2_tnx):
@@ -81,7 +83,7 @@ def prob2_cxnx2scores(hs, qcx, altx2_prob, altx2_tnx):
     return cx2_score, nx2_score
 
 def _chipmatch2_utilities(hs, qcx, chipmatch, K):
-    print('[vote] computing utilities')
+    #print('[vote] computing utilities')
     cx2_nx = hs.tables.cx2_nx
     nQFeats = len(hs.feats.cx2_kpts[qcx])
     # Stack the feature matches

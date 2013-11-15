@@ -53,7 +53,7 @@ def score_chipmatch_PL(hs, qcx, chipmatch, q_params):
 TMP = []
 def _optimize(M):
     global TMP
-    print('[vote] optimize')
+    #print('[vote] optimize')
     (u, s, v) = svd(M)
     x = np.abs(v[-1])
     check = np.abs(M.dot(x)) < 1E-9
@@ -67,13 +67,13 @@ def _optimize(M):
     return x
 
 def _PL_score(gamma):
-    print('[vote] computing probabilities')
+    #print('[vote] computing probabilities')
     nAlts = len(gamma)
     altx2_prob = np.zeros(nAlts)
     for ax in xrange(nAlts):
         altx2_prob[ax] = gamma[ax] / np.sum(gamma)
-    print('[vote] altx2_prob: '+str(altx2_prob))
-    print('[vote] sum(prob): '+str(sum(altx2_prob)))
+    #print('[vote] altx2_prob: '+str(altx2_prob))
+    #print('[vote] sum(prob): '+str(sum(altx2_prob)))
     return altx2_prob
 
 def prob2_cxnx2scores(hs, qcx, altx2_prob, altx2_tnx):
@@ -93,7 +93,7 @@ def prob2_cxnx2scores(hs, qcx, altx2_prob, altx2_tnx):
     return cx2_score, nx2_score
 
 def _chipmatch2_utilities(hs, qcx, chipmatch, K):
-    print('[vote] computing utilities')
+    #print('[vote] computing utilities')
     cx2_nx = hs.tables.cx2_nx
     nQFeats = len(hs.feats.cx2_kpts[qcx])
     # Stack the feature matches

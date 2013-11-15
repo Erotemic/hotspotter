@@ -195,7 +195,7 @@ class NNParams(DynStruct):
         nn_params.K = 2
         nn_params.Knorm = 1
         # Filters
-        nn_params.checks = 128
+        nn_params.checks = 1024#512#128
         nn_params.update(**kwargs)
     def get_uid(nn_params):
         uid = '_nn(' 
@@ -337,6 +337,8 @@ class QueryParams(DynStruct):
         q_params.f_params.make_feasible(q_params.nn_params)
     def get_uid(q_params, SV=False, filtered=True, long_=False, NN=True, scored=False):
         uid = ''
+        if scored is True:
+            uid += q_params.score_method
         if NN is True:
             uid += q_params.query_type
             uid += q_params.nn_params.get_uid()

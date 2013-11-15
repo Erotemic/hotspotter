@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import match_chips3 as mc3
 import matching_functions as mf
 import DataStructures as ds
@@ -13,7 +14,9 @@ import algos
 import re
 import Parallelize as parallel
 from match_chips3 import *
-from matching_functions import *
+import helpers as helpers
+import numpy as np
+import sys
 
 # What are good ways we can divide up FLANN indexes instead of having one
 # monolithic index? Divide up in terms of properties of the database chips

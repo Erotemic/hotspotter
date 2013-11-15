@@ -32,6 +32,7 @@ import scipy.optimize
 import voting_rules2 as vr2
 import pandas as pd
 
+<<<<<<< HEAD
 #<PRINT FUNCTIONS>
 import sys
 def print_(*args, **kwargs): pass
@@ -53,6 +54,10 @@ def print_off():
     print_ = noprint
 print_on()
 #</PRINT FUNCTIONS>
+=======
+def print(*args, **kwargs):
+    pass
+>>>>>>> fc28e1c36dac6c43801fad7e6b24b88db7fdfab9
 
 def reload_module():
     import imp, sys
@@ -173,8 +178,10 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, q_params=None):
         (_, cx2_fs, _) = chipmatch
         cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
         return cx2_score
-    if score_method == 'placketluce':
+    elif score_method == 'placketluce':
         cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, qcx, chipmatch, q_params)
+    else:
+        raise Exception('unknown scoring method:'+score_method)
     return cx2_score
 
 #============================

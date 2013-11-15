@@ -1,5 +1,6 @@
 from __future__ import division, print_function
 # Premature optimization is the root of all evil
+from __future__ import division
 import itertools
 import sys
 import os
@@ -122,12 +123,12 @@ def execute_query_safe(hs, q_params=None, qcxs=None, dcxs=None, **kwargs):
     # Spatial verification
     matchesSVER = sv_matches(hs, matchesFILT, q_params)
     # Query results
-    result_list = (
+    result_list = [
         to_res(hs, matchesORIG, q_params, '+ORIG'),
         to_res(hs, matchesFILT, q_params, '+FILT'),
         to_res(hs, matchesSVER, q_params, '+SVER'),
         to_res(hs, matchesSVER, q_params, '+SVPL')
-    )
+    ]
     return result_list
 
 

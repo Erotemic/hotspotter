@@ -18,11 +18,11 @@ print(LNBNN_fn(vdist2, ndist)) * 1000
 print(LNBNN_fn(vdist3, ndist)) * 1000
 print(LNBNN_fn(vdist4, ndist)) * 1000
 '''
-def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, query_params):
+def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, q_cfg):
     # Only valid for vsone
-    data_index = query_params.data_index
-    K = query_params.nn_params.K
-    Knorm = query_params.nn_params.Knorm
+    data_index = q_cfg.data_index
+    K = q_cfg.nn_cfg.K
+    Knorm = q_cfg.nn_cfg.Knorm
     qcx2_norm_weight = {}
     for qcx in qcx2_nns.iterkeys():
         (_, qfx2_dist) = qcx2_nns[qcx]
@@ -38,12 +38,12 @@ def nn_lnbnn_weight(*args):
 def nn_lnrat_weight(*args):
     return _nn_normalized_weight(LNRAT_fn, *args)
 
-def nn_bursty_weight(hs, qcx2_nns, query_params):
+def nn_bursty_weight(hs, qcx2_nns, q_cfg):
     'Filters matches to a feature which is matched > burst_thresh #times'
     # Half-generalized to vsmany
     # Assume the first nRows-1 rows are the matches (last row is normalizer)
-    K = query_params.nn_params.K
-    Knorm = query_params.nn_params.Knorm
+    K = q_cfg.nn_cfg.K
+    Knorm = q_cfg.nn_cfg.Knorm
     qcx2_bursty_weight = {}
     for qcx in qcx2_nns.iterkeys():
         (qfx2_dx, qfx2_dist) = qcx2_nns[qcx]
@@ -53,12 +53,12 @@ def nn_bursty_weight(hs, qcx2_nns, query_params):
         qcx2_bursty_weight[qcx] = qfx2_bursty
     return qcx2_bursty_weight
 
-def nn_recip_weight(hs, qcx2_nns, query_params):
+def nn_recip_weight(hs, qcx2_nns, q_cfg):
     'Filters a nearest neighbor to only reciprocals'
-    data_index = query_params.data_index
-    K = query_params.nn_params.K
-    Krecip = query_params.f_params.Krecip
-    checks = query_params.nn_params.checks
+    data_index = q_cfg.data_index
+    K = q_cfg.nn_cfg.K
+    Krecip = q_cfg.f_cfg.Krecip
+    checks = q_cfg.nn_cfg.checks
     dx2_cx = data_index.ax2_cx
     dx2_fx = data_index.ax2_fx
     dx2_data = data_index.ax2_data
@@ -82,10 +82,10 @@ def nn_recip_weight(hs, qcx2_nns, query_params):
         qcx2_recip_weight[qcx] = qfx2_reciprocalness
     return qcx2_recip_weight
 
-def nn_roidist_weight(hs, qcx2_nns, query_params):
+def nn_roidist_weight(hs, qcx2_nns, q_cfg):
     'Filters a matches to those within roughly the same spatial arangement'
-    data_index = query_params.data_index
-    K = query_params.nn_params.K
+    data_index = q_cfg.data_index
+    K = q_cfg.nn_cfg.K
     cx2_rchip_size = hs.get_cx2_rchip_size()
     cx2_kpts = hs.feats.cx2_kpts
     dx2_cx = data_index.ax2_cx
@@ -119,9 +119,9 @@ def nn_roidist_weight(hs, qcx2_nns, query_params):
         cx2_roidist_weight[qcx] = qfx2_xydist
     return cx2_roidist_weight
 
-def nn_scale_weight(hs, qcx2_nns, query_params):
+def nn_scale_weight(hs, qcx2_nns, q_cfg):
     # Filter by scale for funzies
-    K = query_params.nn_params.K
+    K = q_cfg.nn_cfg.K
     cx2_scale_weight = {}
     for qcx in qcx2_nns.iterkeys():
         (qfx2_dx, qfx2_dist) = qcx2_nns[qcx]

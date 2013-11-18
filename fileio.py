@@ -100,11 +100,17 @@ def debug_smart_load(dpath='', fname='*', uid='*', ext='*'):
 def __args2_fpath(dpath, fname, uid, ext):
     if len(ext) > 0 and ext[0] != '.':
         raise Exception('Fatal Error: Please be explicit and use a dot in ext')
-    fpath = normpath(join(dpath, fname+uid+ext))
+    fname_uid = fname+uid+ext
+    if len(fname_uid) > 128:
+        fname_uid = helpers.hashstr(fname_uid)
+    fpath = join(dpath, fname_uid+ext)
+    fpath = realpath(fpath) 
+    fpath = normpath(fpath)
     return fpath
     
 def smart_save(data, dpath='', fname='', uid='', ext='', verbose=params.VERBOSE_IO):
     ''' Saves data to the direcotry speficied '''
+    helpers.ensuredir(dpath)
     fpath = __args2_fpath(dpath, fname, uid, ext)
     if verbose:
         if verbose > 1: print('[io]')

@@ -1,18 +1,22 @@
 from __future__ import division, print_function
+import __builtin__
 import params
 import helpers
 import numpy as np
 import pyflann
 import algos
-from itertools import izip, chain
-from Printable import DynStruct
 import draw_func2 as df2
 import sys
+from itertools import izip, chain
+from Printable import DynStruct
+import warnings
+import os
+from os.path import exists, split, join, normpath
 
 def print(*arsg, **kwargs): pass
 def noprint(*args, **kwargs): pass
 def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
+    __builtin__.print(*args, **kwargs)
 def print_on():
     global print
     print = realprint
@@ -66,27 +70,30 @@ class NNIndex(object):
     def __del__(nn_index):
         if not nn_index.flann:
             nn_index.flann.delete_index()
+            nn_index.flann = None
 #=========================
 # Query Result Class
 #=========================
 def query_result_fpath(hs, qcx, query_uid=None):
     if query_uid is None: query_uid = params.get_query_uid()
-
     qres_dir  = hs.dirs.qres_dir 
     fname = 'result_%s_qcx=%d.npz' % (query_uid, qcx)
-    fpath = os.path.join(qres_dir, fname)
+    fpath = join(qres_dir, fname)
     return fpath
 
 def query_result_exists(hs, qcx, query_uid=None):
     fpath = query_result_fpath(hs, qcx, query_uid)
-    return os.path.exists(fpath)
+    return exists(fpath)
 
 class QueryResult(DynStruct):
-    def __init__(res, qcx, uid):
+    def __init__(res, qcx, uid, q_cfg=None):
         super(QueryResult, res).__init__()
+        if not q_cfg is None:
+            res.true_title = q_cfg.get_uid()
         res.qcx       = qcx
         res.query_uid = uid
-        res.uid = uid
+        res.uid       = uid
+        res.title     = uid
         # Times
         res.assign_time = -1
         res.verify_time = -1
@@ -109,17 +116,16 @@ class QueryResult(DynStruct):
     
     def save(res, hs):
         fpath = res.get_fpath(hs)
-        if params.VERBOSE_CACHE:
-            print('[ds] caching result: %r' % (fpath,))
-        else:
-            print('[ds] caching result: %r' % (os.path.split(fpath)[1],))
+        print('[ds] cache result: %r' % (fpath if params.VERBOSE_CACHE
+                                         else split(fpath)[1],))
         with open(fpath, 'wb') as file_:
             np.savez(file_, **res.__dict__.copy())
         return True
 
     def load(res, hs):
         'Loads the result from the given database'
-        fpath = os.path.normpath(res.get_fpath(hs))
+        fpath = res.get_fpath(hs)
+        #print('[ds] Load res fpath=%r' % (split(fpath)[1],))
         try:
             with open(fpath, 'rb') as file_:
                 npz = np.load(file_)
@@ -130,9 +136,14 @@ class QueryResult(DynStruct):
             res.query_uid = str(res.query_uid)
             return True
         except Exception as ex:
-            #os.remove(fpath)
-            warnmsg = ('Load Result Exception : ' + repr(ex) + 
-                    '\nResult was corrupted for qcx=%d' % res.qcx)
+            if exists(fpath):
+                #os.remove(fpath)
+                warnmsg = ('Load Result Exception : ' + repr(ex) + 
+                        '\nResult was corrupted for qcx=%d' % res.qcx)
+            else:
+                #os.remove(fpath)
+                warnmsg = ('Load Result Exception : ' + repr(ex) + 
+                        '\nResult does not yet exist for qcx=%d' % res.qcx)
             print(warnmsg)
             warnings.warn(warnmsg)
             raise
@@ -188,20 +199,19 @@ class QueryResult(DynStruct):
         #if key in dict1_keys:
             #dict1[key] = val
 
-class NNParams(DynStruct):
-    def __init__(nn_params, **kwargs):
-        super(NNParams, nn_params).__init__()
+class NNConfig(DynStruct):
+    def __init__(nn_cfg, **kwargs):
+        super(NNConfig, nn_cfg).__init__()
         # Core
-        nn_params.K = 2
-        nn_params.Knorm = 1
+        nn_cfg.K = 2
+        nn_cfg.Knorm = 1
         # Filters
-        nn_params.checks = 1024#512#128
-        nn_params.update(**kwargs)
-    def get_uid(nn_params):
-        uid = '_nn(' 
-        uid += 'K='+str(nn_params.K)
-        uid += ',Kn='+str(nn_params.Knorm)
-        uid += ',cks=' + str(nn_params.checks)
+        nn_cfg.checks = 1024#512#128
+        nn_cfg.update(**kwargs)
+    def get_uid(nn_cfg):
+        uid = '_NN(' 
+        uid += 'K'+str(nn_cfg.K)+'+'+str(nn_cfg.Knorm)
+        uid += ',cks' + str(nn_cfg.checks)
         uid += ')'
         return uid
 
@@ -216,19 +226,17 @@ def listrm(list_, item):
 def listrm_list(list_, items):
     for item in items: listrm(list_, item)
 
-
 #valid_filters = ['recip', 'roidist', 'frexquency', 'ratio', 'bursty', 'lnbnn']
 def any_inlist(list_, search_list):
     set_ = set(list_)
     return any([search in set_ for search in search_list])
 
-class FilterParams(DynStruct):
+class FilterConfig(DynStruct):
     # Rename to scoring mechanism
-    def __init__(f_params, **kwargs):
-        super(FilterParams, f_params).__init__()
-        fp = f_params
+    def __init__(f_cfg, **kwargs):
+        super(FilterConfig, f_cfg).__init__()
+        fp = f_cfg
         fp.Krecip = 0 # 0 := off
-        
         fp.nnfilter_list = ['recip', 'roidist']
         #
         fp.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio']
@@ -238,9 +246,9 @@ class FilterParams(DynStruct):
             fp.__dict__[filt+'_thresh'] = thresh
             fp.__dict__[filt+'_weight']  = weight
         #tuple(Sign, Filt, ValidSignThresh, ScoreWeight)
-        addfilt(+1, 'roidist',None, 0)
-        addfilt(+1, 'recip',     0, 0)
-        #addfilt(+1, 'scale')
+        addfilt(+1, 'roidist', None, 0)
+        addfilt(+1, 'recip',      0, 0)
+        #addfilt(+1, 'scale' )
         addfilt(+1, 'bursty', None, 0)
         addfilt(-1, 'ratio',  None, 0)
         addfilt(-1, 'lnbnn',  None, 0)
@@ -251,10 +259,10 @@ class FilterParams(DynStruct):
             stw = ((sign, fp.__dict__[filt+'_thresh']), fp.__dict__[filt+'_weight'])
             fp.filt2_tw[filt] = stw
 
-    def make_feasible(f_params, nn_params):
-        nnfilts = f_params.nnfilter_list
-        nnp = nn_params
-        fp = f_params
+    def make_feasible(f_cfg, nn_cfg):
+        nnfilts = f_cfg.nnfilter_list
+        nnp = nn_cfg
+        fp = f_cfg
         # Knorm
         if fp.lnbnn_thresh is None and fp.lnbnn_weight == 0:
             listrm(nnfilts, 'lnbnn')
@@ -275,80 +283,91 @@ class FilterParams(DynStruct):
             listrm(nnfilts, 'bursty')
 
 
-    def get_uid(f_params):
-        on_filters = dict_subset(f_params.filt2_tw,
-                                 f_params.nnfilter_list)
-        uid = '_filts(' 
-        if f_params.Krecip != 0:
-            uid += 'Kr='+str(f_params.Krecip)
+    def get_uid(f_cfg):
+        on_filters = dict_subset(f_cfg.filt2_tw,
+                                 f_cfg.nnfilter_list)
+        uid = '_FILT(' 
         twstr = signthreshweight_str(on_filters)
+        if f_cfg.Krecip != 0:
+            uid += 'Kr'+str(f_cfg.Krecip)
+            if len(twstr) > 0: uid += ','
         if len(twstr) > 0:
-            uid += ',' + twstr
+            uid += twstr
         uid += ')'
         return uid
 
 def signthreshweight_str(on_filters):
     stw_list = []
     for key, val in on_filters.iteritems():
-        (sign, thresh), weight = val
-        stw_str = '('+key
+        ((sign, thresh), weight) = val
+        stw_str = key
         if not thresh is None:
             sstr = ['<','>'][sign == -1] #actually <=, >=
             stw_str += sstr+str(thresh)
         if weight != 0:
-            stw_str += ','+str(weight)
-        stw_list.append(stw_str+')')
+            stw_str += '_'+str(weight)
+        stw_list.append(stw_str)
     return ','.join(stw_list)
     #return helpers.remove_chars(str(dict_), [' ','\'','}','{',':'])
 
-class SpatialVerifyParams(DynStruct):
-    def __init__(sv_params, **kwargs):
-        super(SpatialVerifyParams, sv_params).__init__()
-        sv_params.use_chip_extent = False
-        sv_params.scale_thresh  = (.5, 2)
-        sv_params.xy_thresh = .002
-        sv_params.nShortlist = 500
-        sv_params.prescore_method = 'chipsum'
-        sv_params.min_nInliers = 4
-        sv_params.update(**kwargs)
-    def get_uid(sv_params):
-        uid = '_sv(' 
-        uid += str(sv_params.nShortlist)
-        uid += ',' + str(sv_params.xy_thresh)
-        uid += ',' + str(sv_params.scale_thresh)
-        uid += ',cdl' * sv_params.use_chip_extent # chip diag len
-        uid += ','+sv_params.prescore_method
+class SpatialVerifyConfig(DynStruct):
+    def __init__(sv_cfg, **kwargs):
+        super(SpatialVerifyConfig, sv_cfg).__init__()
+        sv_cfg.scale_thresh  = (.5, 2)
+        sv_cfg.xy_thresh = .002
+        sv_cfg.nShortlist = 500
+        sv_cfg.prescore_method = 'csum'
+        sv_cfg.use_chip_extent = False
+        sv_cfg.min_nInliers = 4
+        sv_cfg.update(**kwargs)
+    def get_uid(sv_cfg):
+        uid = '_SV(' 
+        uid += str(sv_cfg.nShortlist)
+        uid += ',' + str(sv_cfg.xy_thresh)
+        uid += ',' + str(sv_cfg.scale_thresh).replace(' ','')
+        uid += ',cdl' * sv_cfg.use_chip_extent # chip diag len
+        uid += ','+sv_cfg.prescore_method
         uid += ')'
         return uid
 
-class QueryParams(DynStruct):
-    def __init__(q_params, **kwargs):
-        super(QueryParams, q_params).__init__()
-        q_params.nn_params    = NNParams(**kwargs)
-        q_params.f_params     = FilterParams(**kwargs)
-        q_params.sv_params    = SpatialVerifyParams(**kwargs)
-        q_params.query_type   = 'vsmany'
-        q_params.score_method = 'chipsum' # namesum, placketluce
-        q_params.qcxs = []
-        q_params.dcxs = []
-        q_params.use_cache = False
+class AggregateConfig(DynStruct):
+    def __init__(a_cfg, **kwargs):
+        super(AggregateConfig, a_cfg).__init__()
+        a_cfg.query_type   = 'vsmany'
+        a_cfg.score_method = 'csum' # namesum, placketluce
+        a_cfg.update(**kwargs)
+    def get_uid(a_cfg):
+        uid = '_AGG('
+        uid += a_cfg.query_type
+        uid += ','+a_cfg.score_method
+        uid += ')'
+        return uid
+
+class QueryConfig(DynStruct):
+    def __init__(q_cfg, **kwargs):
+        super(QueryConfig, q_cfg).__init__()
+        q_cfg.nn_cfg = NNConfig(**kwargs)
+        q_cfg.f_cfg  = FilterConfig(**kwargs)
+        q_cfg.sv_cfg = SpatialVerifyConfig(**kwargs)
+        q_cfg.a_cfg  = AggregateConfig(**kwargs)
+        q_cfg.qcxs = []
+        q_cfg.dcxs = []
+        q_cfg.use_cache = False
         # Data
-        q_params.data_index = None # current index
-        q_params.dcxs2_index = {}  # L1 cached indexes
-        q_params.update(**kwargs)
-        q_params.f_params.make_feasible(q_params.nn_params)
-    def get_uid(q_params, SV=False, filtered=True, long_=False, NN=True, scored=False):
+        q_cfg.data_index = None # current index
+        q_cfg.dcxs2_index = {}  # L1 cached indexes
+        q_cfg.update(**kwargs)
+        q_cfg.f_cfg.make_feasible(q_cfg.nn_cfg)
+    def get_uid(q_cfg, *args, **kwargs):
         uid = ''
-        if scored is True:
-            uid += q_params.score_method
-        if NN is True:
-            uid += q_params.nn_params.get_uid()
-        if SV is True:
-            uid += q_params.sv_params.get_uid()
-        if filtered is True:
-            uid += q_params.f_params.get_uid()
-        if scored:
-            uid += ','+q_params.score_method+','+q_params.query_type
-        if long_:
+        if not 'noNN' in args:
+            uid += q_cfg.nn_cfg.get_uid()
+        if not 'noFILT' in args:
+            uid += q_cfg.f_cfg.get_uid()
+        if not 'noSV' in args:
+            uid += q_cfg.sv_cfg.get_uid()
+        if not 'noAGG' in args:
+            uid += q_cfg.a_cfg.get_uid()
+        if not 'noCHIP' in args:
             uid += params.get_indexed_uid()
         return uid

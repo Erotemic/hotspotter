@@ -38,8 +38,8 @@ def rrr():
     reload_module()
 
 # chipmatch = qcx2_chipmatch[qcx]
-def score_chipmatch_PL(hs, qcx, chipmatch, q_params):
-    K = q_params.nn_params.K
+def score_chipmatch_PL(hs, qcx, chipmatch, q_cfg):
+    K = q_cfg.nn_cfg.K
     max_alts = 200
     # Run Placket Luce Model
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)

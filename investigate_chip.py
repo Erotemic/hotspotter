@@ -1,13 +1,14 @@
 #exec(open('__init__.py').read())
 #exec(open('_research/investigate_chip.py').read())
 from __future__ import division, print_function
+import __builtin__
 import argparse
 import sys
 
 def print(*args, **kwargs): pass
 def noprint(*args, **kwargs): pass
 def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
+    __builtin__.print(*args, **kwargs)
 def print_on():
     global print
     print = realprint
@@ -47,7 +48,7 @@ def parse_arguments():
         add_bool(switch, False, '')
     add_int('--qcid',  None, 'query chip-id to investigate', nargs='*')
     add_int('--ocid',  [], 'query chip-id to investigate', nargs='*')
-    add_int('--histid', 0, 'history id (hard cases)')
+    add_int('--histid', None, 'history id (hard cases)')
     add_int('--nRows', 1, 'number of rows')
     add_int('--nCols', 1, 'number of cols')
     add_float('--xy-thresh', .001, '', step=.005)
@@ -57,6 +58,9 @@ def parse_arguments():
     test_bool('--show-names')
     add_bool('--noprinthist', default=True)
     add_str('--tests', [], 'integer or test name', nargs='*')
+
+    add_str('--show-best', [], 'integer or test name', nargs='*')
+    add_str('--show-worst', [], 'integer or test name', nargs='*')
     args, unknown = parser.parse_known_args()
     print('[invest] args    = %r' % (args,))
     print('[invest] unknown = %r' % (unknown,))
@@ -95,6 +99,7 @@ GZ_greater1_cid_list = [140, 297, 306, 311, 425, 441, 443, 444, 445, 450, 451,
                         802, 838, 941, 981, 1043, 1046, 1047]
 HISTORY = [
     history_entry('NAUTS', 1,    [],               notes='simple eg'),
+    history_entry('WDOGS', 1,    [],               notes='simple eg'),
     history_entry('GZ', 1047,    [],               notes='extreme viewpoint #gt=4'),
     history_entry('GZ', 1046,    [],               notes='extreme viewpoint #gt=2'),
     history_entry('GZ', 786,     [787],            notes='foal #gt=11'),
@@ -341,7 +346,7 @@ def measure_k_rankings(hs):
     K = 500
     query_params = mc3.prequery(hs, K=K, Krecip=0,
                                 roidist_thresh=None, lnbnn_weight=1)
-    id2_qcxs, id2_ocids, id2_notes = get_all_history(hs.args.db, hs)
+    id2_qcxs, id2_ocids, id2_notes = get_hard_cases(hs)
     id2_rankweight = [get_qfx2_gtkrank(hs, qcx, query_params) for qcx in id2_qcxs]
     df2.rrr()
     df2.reset()
@@ -363,7 +368,7 @@ def measure_cx_rankings(hs):
     import match_chips3 as mc3
     query_params = mc3.prequery(hs, K=500, Krecip=0,
                                 roidist_thresh=None, lnbnn_weight=1)
-    id2_qcxs, id2_ocids, id2_notes = get_all_history(hs.args.db, hs)
+    id2_qcxs, id2_ocids, id2_notes = get_hard_cases(hs)
     id2_bestranks = []
     for id_ in xrange(len(id2_qcxs)):
         qcx = id2_qcxs[id_]
@@ -520,10 +525,11 @@ def hs_from_db(db):
         print('loaded hotspotter database')
         return hs
 
-def get_all_history(db, hs):
+def get_hard_cases(hs):
     qcid_list = []
     ocid_list = []
     note_list = []
+    db = hs.args.db
     for (db_, qcid, ocids, notes) in HISTORY:
         if db == db_:
             qcid_list += [qcid]
@@ -532,10 +538,32 @@ def get_all_history(db, hs):
     qcx_list = hs.cid2_cx(qcid_list)
     #print('qcid_list = %r ' % qcid_list)
     #print('qcx_list = %r ' % qcid_list)
+    #print('[get_hard_cases]\n %r\n %r\n %r\n' % (qcx_list, ocid_list, note_list))
     return qcx_list, ocid_list, note_list
 
+def get_qon_list(hs):
+    print('[invest] get_qon_list()')
+    # Get query ids
+    qon_list = []
+    if args.qcid is None:
+        qon_hard = zip(*get_hard_cases(hs))
+        if args.histid is None:
+            print('[invest] Chosen all hard histid')
+            qon_list += qon_hard
+        elif not args.histid is None:
+            print('[invest] Chosen histid=%r' % args.histid)
+            qon_hard = [qon_hard[args.histid]]
+            qon_list += qon_hard
+    else:
+        print('[invest] Chosen qcid=%r' % args.qcid)
+        qcx_list =  helpers.ensure_iterable(hs.cid2_cx(args.qcid))
+        ocid_list = [[]*len(qcx_list)]
+        note_list = [['user selected qcid']*len(qcx_list)]
+        qon_list += [zip(qcx_list, ocid_list, note_list)]
+    return qon_list
+
 def view_all_history_names_in_db(hs, db):
-    qcx_list = zip(*get_all_history(db, hs))[0]
+    qcx_list = zip(*get_hard_cases(hs))[0]
     nx_list = hs.tables.cx2_nx[qcx_list]
     unique_nxs = np.unique(nx_list)
     print('unique_nxs = %r' % unique_nxs)
@@ -596,38 +624,36 @@ def change_db(db):
     hs.args = args
 
 def main():
+    print('[iv] main()')
     if 'hs' in vars():
         return
     # Load Hotspotter
     hs = hs_from_db(args.db)
-    hs.args = args # TODO Integrate this elsewhere
+    hs.args = args # TODO Integrate this elsewherehs
+    qon_list = get_qon_list(hs)
     print('[invest] Loading DB=%r' % args.db)
     if not args.noprinthist or True:
         print('---')
         print('[invest] print_history_table()')
         print_history_table()
-    # Get query ids
-    if not args.qcid is None:
-        qcxs = hs.cid2_cx(args.qcid)
-    else:
-        print('========================')
-        print('[invest] Loaded DB=%r' % args.db)
-        print('[invest] Chosen histid=%r' % args.histid)
-        qcxs, ocids, notes = zip(*get_all_history(args.db, hs))[args.histid]
-        print('[invest] notes=%r' % notes)
+    qcxs_list, ocxs_list, notes_list = zip(*qon_list)
+    notes = qcxs_list[0]
+    qcxs  = notes_list[0]
+    print('========================')
+    print('[invest] Loaded DB=%r' % args.db)
+    print('[invest] notes=%r' % notes)
     qcxs = helpers.ensure_iterable(qcxs)
     return locals()
 
 if __name__ == '__main__':
-    print('[invest] running ')
+    print('[invest] __main__ ')
     main_locals = main()
-    execstr = helpers.execstr_dict(main_locals, 'main_locals')
-    exec(execstr)
+    exec(helpers.execstr_dict(main_locals, 'main_locals'))
     fmtstr = helpers.make_progress_fmt_str(len(qcxs), '[invest] investigation ')
-    print('====================')
+    print('[invest]====================')
     for count, qcx in enumerate(qcxs):
         print(fmtstr % (count+1))
         run_investigations(qcx, args)
-    print('====================')
+    print('[invest]====================')
     #df2.update()
     exec(df2.present()) #**df2.OooScreen2()

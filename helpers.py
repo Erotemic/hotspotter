@@ -26,6 +26,7 @@ import sys
 import textwrap
 import time
 import types
+from itertools import product as iprod
 #print('LOAD_MODULE: helpers.py')
 
 def print(*args, **kwargs): pass
@@ -1505,6 +1506,12 @@ def npfind(arr):
     found = np.where(arr)[0]
     pos = -1 if len(found) == 0 else found[0]
     return pos
+
+def all_dict_combinations(varied_dict):
+    viter = varied_dict.iteritems()
+    tups_list = [[(key,val) for val in val_list] for (key, val_list) in viter]
+    dict_list = [{key:val for (key,val) in tups} for tups in iprod(*tups_list)]
+    return dict_list
 
 if __name__ == '__main__':
     import multiprocessing

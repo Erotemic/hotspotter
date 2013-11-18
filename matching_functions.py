@@ -35,24 +35,16 @@ import pandas as pd
 
 #<PRINT FUNCTIONS>
 import sys
-def print_(*args, **kwargs): pass
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    __builtin__.print(*args, **kwargs)
-def realprint_(*args, **kwargs):
-    sys.stdout.write(*args)
+print = __builtin__.print
+print_ = sys.stdout.write
 def print_on():
-    global print
-    global print_
-    print = realprint
-    print_ = realprint_
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
 def print_off():
-    global print
-    global print_
-    print = noprint
-    print_ = noprint
-print_on()
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
 #</PRINT FUNCTIONS>
 
 def reload_module():
@@ -69,23 +61,30 @@ def nearest_neighbors(hs, qcxs, q_cfg):
     'Plain Nearest Neighbors'
     data_index = q_cfg.data_index
     nn_cfg  = q_cfg.nn_cfg
-    print('[mf.1] Step 1) Assign nearest neighbors: '+nn_cfg.get_uid())
+    print('[mf] Step 1) Assign nearest neighbors: '+nn_cfg.get_uid())
     K = nn_cfg.K
     Knorm = nn_cfg.Knorm
     checks = nn_cfg.checks
     cx2_desc = hs.feats.cx2_desc
     nn_index = data_index.flann.nn_index
-    nnfunc = lambda qcx: nn_index(cx2_desc[qcx], K+Knorm, checks=checks)
+    nnfunc = lambda qfx2_desc: nn_index(qfx2_desc, K+Knorm, checks=checks)
     #qcx2_nns = {qcx:func(qcx) for qcx in qcxs}
     qcx2_nns = {}
-    nFoundNN = 0
-    print('')
+    nNN = 0
+    nDesc = 0
+    def mark_progress(): pass
+    if len(qcxs) > 1:
+        def mark_progress(): print_('.')
     for qcx in qcxs:
-        print_('.')
-        (qfx2_dx, qfx2_dist) = nnfunc(qcx)
+        mark_progress()
+        qfx2_desc = cx2_desc[qcx]
+        (qfx2_dx, qfx2_dist) = nnfunc(qfx2_desc)
         qcx2_nns[qcx] = (qfx2_dx, qfx2_dist)
-        nFoundNN += qfx2_dx.size
-    print('\n[mf.1] * found %r nearest neighbors' % nFoundNN)
+        nNN += qfx2_dx.size
+        nDesc += len(qfx2_desc)
+    if len(qcxs) > 1:
+        print('')
+    print('[mf] * assigned %d desc to %r nearest neighbors' % (nDesc, nNN))
     return qcx2_nns
 
 #============================
@@ -93,11 +92,11 @@ def nearest_neighbors(hs, qcxs, q_cfg):
 #============================
 def weight_neighbors(hs, qcx2_nns, q_cfg):
     f_cfg = q_cfg.f_cfg
-    print('[mf.2] Step 2) Weight neighbors: '+f_cfg.get_uid())
+    print('[mf] Step 2) Weight neighbors: '+f_cfg.get_uid())
     nnfilter_list = f_cfg.nnfilter_list
     filt2_weights = {}
     for nnfilter in nnfilter_list:
-        print('[mf.2] * computing %s weights' % nnfilter)
+        print('[mf] * computing %s weights' % nnfilter)
         nnfilter_fn = eval('nn_filters.nn_'+nnfilter+'_weight')
         filt2_weights[nnfilter] = nnfilter_fn(hs, qcx2_nns, q_cfg)
     return filt2_weights
@@ -112,9 +111,9 @@ def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw):
     for filt, cx2_weights in filt2_weights.iteritems():
         qfx2_weights = cx2_weights[qcx]
         (sign, thresh), weight = filt2_tw[filt]
-        print('[mf.3] * filt=%r ' % filt)
+        print('[mf] * filt=%r ' % filt)
         if not thresh is None or not weight == 0:
-            print('[mf.3] * \\ qfx2_weights = '+helpers.printable_mystats(qfx2_weights.flatten()))
+            print('[mf] * \\ qfx2_weights = '+helpers.printable_mystats(qfx2_weights.flatten()))
         if not thresh is None:
             qfx2_passed = sign*qfx2_weights <= sign*thresh
             nValid  = qfx2_valid.sum()
@@ -122,32 +121,38 @@ def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw):
             nPassed = (True - qfx2_passed).sum()
             nAdded = nValid - qfx2_valid.sum()
             #print(sign*qfx2_weights)
-            print('[mf.3] * \\ *thresh=%r, nFailed=%r, nFiltered=%r' % \
+            print('[mf] * \\ *thresh=%r, nFailed=%r, nFiltered=%r' % \
                     (sign*thresh, nPassed, nAdded))
         if not weight == 0:
-            print('[mf.3] * \\ weight=%r' % weight)
+            print('[mf] * \\ weight=%r' % weight)
             qfx2_score  += weight * qfx2_weights
     return qfx2_score, qfx2_valid
 
 def filter_neighbors(hs, qcx2_nns, filt2_weights, q_cfg):
-    print('[mf.3] Step 3) Filter neighbors')
+    print('[mf] Step 3) Filter neighbors')
     qcx2_nnfilter = {}
     data_index = q_cfg.data_index
     K = q_cfg.nn_cfg.K
     dx2_cx = data_index.ax2_cx
     filt2_tw = q_cfg.f_cfg.filt2_tw
+    def mark_progress(): pass
+    if len(qcx2_nns) > 1:
+        def mark_progress(): print_('.')
     for qcx in qcx2_nns.iterkeys():
-        print('[mf.3] * scoring q'+hs.cxstr(qcx))
+        mark_progress()
+        #print('[mf] * scoring q'+hs.cxstr(qcx))
         (qfx2_dx, _) = qcx2_nns[qcx]
         qfx2_nn = qfx2_dx[:, 0:K]
         qfx2_score, qfx2_valid = _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw)
         qfx2_cx = dx2_cx[qfx2_nn]
         # dont vote for yourself
         qfx2_notself_vote = qfx2_cx != qcx
-        print('[mf.3] * Removed %d/%d self-votes' % (qfx2_notself_vote.sum(), qfx2_notself_vote.size))
-        print('[mf.3] * %d/%d valid neighbors ' % (qfx2_valid.sum(), qfx2_valid.size))
+        #print('[mf] * Removed %d/%d self-votes' % (qfx2_notself_vote.sum(), qfx2_notself_vote.size))
+        #print('[mf] * %d/%d valid neighbors ' % (qfx2_valid.sum(), qfx2_valid.size))
         qfx2_valid = np.bitwise_and(qfx2_valid, qfx2_notself_vote) 
         qcx2_nnfilter[qcx] = (qfx2_score, qfx2_valid)
+    if len(qcx2_nns) > 1:
+        print('')
     return qcx2_nnfilter
 
 #-----
@@ -156,7 +161,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, q_cfg):
 #s2coring_func  = [LNBNN, PlacketLuce, TopK, Borda]
 #load_precomputed(cx, q_cfg)
 def score_chipmatch(hs, qcx, chipmatch, score_method, q_cfg=None):
-    print(' * Scoring chipmatch: '+score_method)
+    print('[mf] * Scoring chipmatch: '+score_method)
     if score_method == 'csum':
         (_, cx2_fs, _) = chipmatch
         cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
@@ -164,7 +169,7 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, q_cfg=None):
     elif score_method == 'placketluce':
         cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, qcx, chipmatch, q_cfg)
     else:
-        raise Exception('unknown scoring method:'+score_method)
+        raise Exception('[mf] unknown scoring method:'+score_method)
     return cx2_score
 
 #============================
@@ -174,7 +179,7 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, q_cfg):
     '''vsmany/vsone counts here. also this is where the filter 
     weights and thershold are applied to the matches. Essientally 
     nearest neighbors are converted into weighted assignments'''
-    print('[mf.4] Step 4) Building chipmatches')
+    print('[mf] Step 4) Building chipmatches')
     data_index = q_cfg.data_index
     query_type = q_cfg.a_cfg.query_type
     K = q_cfg.nn_cfg.K
@@ -188,8 +193,12 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, q_cfg):
         assert len(q_cfg.qcxs) == 1
         cx2_fm, cx2_fs, cx2_fk = new_fmfsfk(hs)
     # Iterate over chips with nearest neighbors
+    def mark_progress(): pass
+    if len(qcx2_nns) > 1:
+        def mark_progress(): print_('.')
     for qcx in qcx2_nns.iterkeys():
-        print('[mf.3] * building chipmatch q'+hs.cxstr(qcx))
+        mark_progress()
+        #print('[mf] * scoring q'+hs.cxstr(qcx))
         (qfx2_dx, _) = qcx2_nns[qcx]
         (qfx2_fs, qfx2_valid) = qcx2_nnfilt[qcx]
         nQuery = len(qfx2_dx)
@@ -215,18 +224,21 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, q_cfg):
         for qfx, cx, fx, fs, fk in match_iter:
             cx2_fm[qcx].append((fx, qfx))
             cx2_fs[qcx].append(fs)
-            cx2_fs[qcx].append(fk)
+            cx2_fk[qcx].append(fk)
     #Vsone
     if invert_query:
         chipmatch = _fix_fmfsfk(cx2_fm, cx2_fs, cx2_fk)
         qcx = q_cfg.qcxs[0]
         qcx2_chipmatch[qcx] = chipmatch
+    if len(qcx2_nns.keys()) > 1:
+        print('')
     return qcx2_chipmatch
 
 #============================
 # Conversion to cx2 -> qfx2
 #============================
 def chipmatch2_neighbors(hs, qcx2_chipmatch, q_cfg):
+    raise NotImplemented('almost')
     qcx2_nns={}
     K = q_cfg.nn_cfg.K
     for qcx in qcx2_chipmatch.iterkeys():
@@ -256,15 +268,12 @@ def chipmatch2_neighbors(hs, qcx2_chipmatch, q_cfg):
         qcx2_nns[qcx] = nns
     return qcx2_nns
 
-
-
-
 #-----
 # Spatial Verification
 #-----
 def spatial_verification(hs, qcx2_chipmatch, q_cfg):
     sv_cfg = q_cfg.sv_cfg
-    print('[mf.5] Step 5) Spatial verification: %r' % sv_cfg.get_uid())
+    print('[mf] Step 5) Spatial verification: %r' % sv_cfg.get_uid())
     prescore_method  = sv_cfg.prescore_method
     nShortlist      = sv_cfg.nShortlist
     xy_thresh       = sv_cfg.xy_thresh
@@ -272,9 +281,10 @@ def spatial_verification(hs, qcx2_chipmatch, q_cfg):
     use_chip_extent = sv_cfg.use_chip_extent
     min_nInliers = sv_cfg.min_nInliers
     cx2_rchip_size = hs.get_cx2_rchip_size()
-    cx2_kpts  = hs.feats.cx2_kpts
+    cx2_kpts = hs.feats.cx2_kpts
     qcx2_chipmatchSV = {}
     for qcx in qcx2_chipmatch.iterkeys():
+        print('[mf] verify qcx=%r' % qcx)
         chipmatch = qcx2_chipmatch[qcx]
         cx2_prescore = score_chipmatch(hs, qcx, chipmatch, prescore_method, q_cfg)
         (cx2_fm, cx2_fs, cx2_fk) = chipmatch
@@ -303,6 +313,7 @@ def spatial_verification(hs, qcx2_chipmatch, q_cfg):
         kpts1 = cx2_kpts[qcx]
         # spatially verify the top __NUM_RERANK__ results
         for topx in xrange(nRerank):
+            #print('[mf] vs topcx=%r, score=%r' % (cx, cx2_prescore[cx]))
             cx = topx2_cx[topx]
             fm = cx2_fm[cx]
             if len(fm) < min_nInliers:
@@ -318,6 +329,9 @@ def spatial_verification(hs, qcx2_chipmatch, q_cfg):
                 print_('o')
                 continue
             # Return the inliers to the homography
+            #print('fm=%r' % (fm,))
+            #print('fs=%r' % (fs,))
+            #print('fk=%r' % (fk,))
             (H, inliers, Aff, aff_inliers) = sv_tup
             cx2_fm_V[cx] = fm[inliers, :]
             cx2_fs_V[cx] = fs[inliers]
@@ -327,7 +341,7 @@ def spatial_verification(hs, qcx2_chipmatch, q_cfg):
         # Rebuild the feature match / score arrays to be consistent
         chipmatchSV = _fix_fmfsfk(cx2_fm_V, cx2_fs_V, cx2_fk_V)
         qcx2_chipmatchSV[qcx] = chipmatchSV
-    print('\n[mf.5] Finished sv')
+    print('\n[mf] Finished sv')
     return qcx2_chipmatchSV
 #-----
 
@@ -364,35 +378,35 @@ def _chipmatch2_QueryResult(hs, qcx, chipmatch, uid, q_cfg):
 
 def chipmatch_to_resdict(hs, qcx2_chipmatch, q_cfg, aug=''):
     score_method = q_cfg.a_cfg.score_method
-    print('[mf.6] 6) chipmatch -> res')
+    print('[mf] Step 6) chipmatch -> res')
     # Keep original score method
     # Hacky dev stuff
+    real_uid = q_cfg.get_uid() + aug
     if aug == '+NN':
-        uid = q_cfg.get_uid(  'NN', 'noFILT', 'noSV', 'noAGG', 'noCHIP')
+        title_uid = q_cfg.get_uid(  'NN', 'noFILT', 'noSV', 'noAGG', 'noCHIP')
     elif aug == '+FILT':
-        uid = q_cfg.get_uid('noNN',   'FILT', 'noSV', 'noAGG', 'noCHIP')
+        title_uid = q_cfg.get_uid('noNN',   'FILT', 'noSV', 'noAGG', 'noCHIP')
     elif aug == '+SVER':
-        uid = q_cfg.get_uid('noNN', 'noFILT',   'SV', 'noAGG', 'noCHIP')
-    if aug != '': aug = ' '+aug
-    uid_real = q_cfg.get_uid()
-    uid += aug
+        title_uid = q_cfg.get_uid('noNN', 'noFILT',   'SV', 'noAGG', 'noCHIP')
+    else:
+        title_uid = q_cfg.get_uid()
     # Create the result structures for each query.
     qcx2_res = {}
     for qcx in qcx2_chipmatch.iterkeys():
         chipmatch = qcx2_chipmatch[qcx]
         if chipmatch == 'cache':
-            res = ds.QueryResult(qcx, uid_real, q_cfg)
+            res = ds.QueryResult(qcx, real_uid, q_cfg)
             try: 
                 res.load(hs)
                 qcx2_res[qcx] = res
             except IOError:
                 return None
         else:
-            res = ds.QueryResult(qcx, uid_real, q_cfg)
+            res = ds.QueryResult(qcx, real_uid, q_cfg)
             cx2_score = score_chipmatch(hs, qcx, chipmatch, score_method, q_cfg)
             res.cx2_score = cx2_score
             (res.cx2_fm, res.cx2_fs, res.cx2_fk) = chipmatch
-            res.title = uid
+            res.title = (title_uid + ' ' + aug).strip(' ')
             res.save(hs)
             qcx2_res[qcx] = res
     # Retain original score method

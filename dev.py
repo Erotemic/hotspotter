@@ -41,61 +41,6 @@ HotSpotter.print_off()
 #parallel.print_off()
 #mc3.print_off()
 
-testx2_best_params = None
-testx2_lbl = None
-testx2_best_col = None
-testx2_score = None
-testx2_colpos = None
-
-def print_test_results(test_results):
-    print('[dev] ---')
-    print('[dev] print_test_results()')
-    global testx2_best_params
-    global testx2_best_col
-    global testx2_score
-    global testx2_lbl
-    global testx2_colpos
-    (col_lbls, row_lbls, mat_vals, test_uid) = test_results
-    # Remove extranious characters from test_uid
-    test_uid = re.sub(r'_trainID\([0-9]*,........\)','', test_uid)
-    test_uid = re.sub(r'_indxID\([0-9]*,........\)','', test_uid)
-    test_uid = re.sub(r'HSDB_zebra_with_mothers','', test_uid)
-    test_uid = re.sub(r'GZ_ALL','', test_uid)
-    test_uid = re.sub(r'HESAFF_sz750','', test_uid)
-    if testx2_best_params is None: 
-        testx2_best_params = ['' for _ in xrange(len(row_lbls))]
-        testx2_lbl         = ['' for _ in xrange(len(row_lbls))]
-        testx2_colpos      = ['' for _ in xrange(len(row_lbls))]
-        testx2_best_col    = -np.ones(len(row_lbls))
-        testx2_score       = -np.ones(len(row_lbls))
-    best_vals = mat_vals.min(1)
-    best_mat = np.tile(best_vals, (len(mat_vals.T), 1)).T
-    best_pos = (best_mat == mat_vals)
-    for row, val in enumerate(best_vals):
-        if val == testx2_score[row]:
-            colpos = np.where(best_pos[row])[0].min()
-            testx2_best_params[row] += '*'
-            testx2_best_params[row] += '\n**'+test_uid+'c'+str(colpos)+'*'
-        if val < testx2_score[row]  or testx2_score[row] == -1:
-            testx2_score[row] = val
-            colpos = np.where(best_pos[row])[0].min()
-            testx2_best_params[row] = test_uid+'c'+str(colpos)+'*'
-            testx2_lbl[row] = row_lbls[row]
-            testx2_colpos[row] = colpos
-    print('test_uid=%r' % test_uid)
-    #print('row_lbls=\n%s' % str(row_lbls))
-    #print('col_lbls=\n%s' % str('\n  '.join(col_lbls)))
-    print('mat_vals=\n%s' % str(mat_vals))
-
-def print_best():
-    print('[best] printing best results over %d queries' % (len(testx2_lbl)))
-    for row in xrange(len(testx2_lbl)):
-        print('[best] --- %r/%r ----' % (row+1, len(testx2_lbl)))
-        print('[best] rowlbl(%d): %s' % (row, testx2_lbl[row]))
-        print('[best] best_params = %s' % (testx2_best_params[row],))
-        print('[best] best_score(c%r) = %r' % (testx2_colpos[row], testx2_score[row],))
-    print('[best] Finished printing best results')
-    print('------------------------------------')
 
 def get_test_results(hs, qon_list, q_params, use_cache=True):
     print('[dev] get_test_results(): %r' % q_params.get_uid())
@@ -114,8 +59,8 @@ def get_test_results(hs, qon_list, q_params, use_cache=True):
     for qonx, (qcx, ocids, notes) in enumerate(qon_list):
         gt_cxs = hs.get_other_cxs(qcx)
         title = 'q'+ hs.cxstr(qcx) + ' - ' + notes
-        print('[dev] title=%r' % (title,))
-        print('[dev] gt_'+hs.cxstr(gt_cxs))
+        #print('[dev] title=%r' % (title,))
+        #print('[dev] gt_'+hs.cxstr(gt_cxs))
         res_list = mc3.execute_query_safe(hs, q_params, [qcx], use_cache=use_cache)
         bestranks = []
         algos = []
@@ -123,7 +68,7 @@ def get_test_results(hs, qon_list, q_params, use_cache=True):
             res = qcx2_res[qcx]
             algos += [res.title]
             gt_ranks = res.get_gt_ranks(gt_cxs)
-            print('[dev] cx_ranks(/%4r) = %r' % (nChips, gt_ranks))
+            #print('[dev] cx_ranks(/%4r) = %r' % (nChips, gt_ranks))
             #print('ns_ranks(/%4r) = %r' % (nNames, gt_ranks))
             bestranks += [min(gt_ranks)]
         # record metadata
@@ -147,25 +92,91 @@ def test_scoring(hs):
     print('[dev]test_scoring(hs)')
     varied_params = {
         'lnbnn_weight' : [0, 1],
-        'checks'       : [1024],
+        'checks'       : [128],
         'Krecip'       : [0],
         'K'            : [5],
-        'score_method' : ['csum']
+        'score_method' : ['csum', 'placketluce'],
+        'query_type'   : ['vsmany', 'vsone'],
     }
     dict_list = helpers.all_dict_combinations(varied_params)
     test_list = [ds.QueryConfig(**_dict) for _dict in dict_list]
     #io.print_off()
     # query_cxs, other_cxs, notes
     qon_list = iv.get_qon_list(hs)
+    use_cache = not hs.args.nocache_query
+    # Preallocate test result aggregation structures
+    qonx2_best_params = ['' for _ in xrange(len(qon_list))]
+    qonx2_lbl         = ['' for _ in xrange(len(qon_list))]
+    qonx2_colpos      = ['' for _ in xrange(len(qon_list))]
+    qonx2_best_col    = -np.ones(len(qon_list))
+    qonx2_score       = -np.ones(len(qon_list))
+    qonx2_agg = (qonx2_best_params, qonx2_lbl, qonx2_colpos, qonx2_best_col, qonx2_score)
+    #
     print('\n[dev] Testing %d different parameters' % len(test_list))
+    print('\n[dev]         %d different chips' % len(qon_list))
+    testx2_results = []
     for testnum, test_params in enumerate(test_list):
         print('--------------')
         print('[dev] test_params %d/%d' % (testnum+1, len(test_list)))
-        results = get_test_results(hs, qon_list, test_params, use_cache=True)
-        print_test_results(results)
+        test_results = get_test_results(hs, qon_list, test_params, use_cache)
+        testx2_results.append(test_results)
+        # Keep the best results 
+        update_test_results(qonx2_agg, test_results)
     print('[dev] Finished testing parameters')
     print('---------------------------------')
-    print_best()
+    print('[dev] printing test rank matrices')
+    for test_results in iter(testx2_results):
+        print_test_results(test_results)
+    print_best(qonx2_agg)
+
+def update_test_results(qonx2_agg, test_results):
+    (qonx2_best_params, qonx2_lbl, qonx2_colpos, qonx2_best_col, qonx2_score) = qonx2_agg
+    (col_lbls, row_lbls, mat_vals, test_uid) = test_results
+    test_uid = simplify_test_uid(test_uid)
+    best_vals = mat_vals.min(1)
+    best_mat = np.tile(best_vals, (len(mat_vals.T), 1)).T
+    best_pos = (best_mat == mat_vals)
+    for qonx, val in enumerate(best_vals):
+        if val == qonx2_score[qonx]:
+            colpos = np.where(best_pos[qonx])[0].min()
+            qonx2_best_params[qonx] += '\n'+test_uid+'c'+str(colpos)
+        if val < qonx2_score[qonx]  or qonx2_score[qonx] == -1:
+            qonx2_score[qonx] = val
+            colpos = np.where(best_pos[qonx])[0].min()
+            qonx2_best_params[qonx] = test_uid+'c'+str(colpos)
+            qonx2_lbl[qonx] = row_lbls[qonx]
+            qonx2_colpos[qonx] = colpos
+
+def simplify_test_uid(test_uid):
+    # Remove extranious characters from test_uid
+    test_uid = re.sub(r'_trainID\([0-9]*,........\)','', test_uid)
+    test_uid = re.sub(r'_indxID\([0-9]*,........\)','', test_uid)
+    test_uid = re.sub(r'HSDB_zebra_with_mothers','', test_uid)
+    test_uid = re.sub(r'GZ_ALL','', test_uid)
+    test_uid = re.sub(r'HESAFF_sz750','', test_uid)
+    test_uid = test_uid.strip(' _')
+    return test_uid
+
+def print_test_results(test_results):
+    print('[dev] ---')
+    (col_lbls, row_lbls, mat_vals, test_uid) = test_results
+    test_uid = simplify_test_uid(test_uid)
+    print('[dev] test_uid=%r' % test_uid)
+    #print('[dev] row_lbls=\n%s' % str(row_lbls))
+    #print('[dev] col_lbls=\n%s' % str('\n  '.join(col_lbls)))
+    print('[dev] lowest_gt_ranks(NN,FILT,SV)=\n%s' % str(mat_vals))
+
+def print_best(qonx2_agg):
+    (qonx2_best_params, qonx2_lbl, qonx2_colpos, qonx2_best_col, qonx2_score) = qonx2_agg
+    print('[best] printing best results over %d queries' % (len(qonx2_lbl)))
+    for row in xrange(len(qonx2_lbl)):
+        best_params_str = helpers.indent('\n'+qonx2_best_params[row], '    ')
+        print('[best] --- %r/%r ----' % (row+1, len(qonx2_lbl)))
+        print('[best] rowlbl(%d): %s' % (row, qonx2_lbl[row]))
+        print('[best] best_params = %s' % (best_params_str,))
+        print('[best] best_score(c%r) = %r' % (qonx2_colpos[row], qonx2_score[row],))
+    print('[best] Finished printing best results')
+    print('------------------------------------')
 
 if __name__ == '__main__':
     import multiprocessing

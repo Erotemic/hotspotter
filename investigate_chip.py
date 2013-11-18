@@ -48,7 +48,7 @@ def parse_arguments():
         add_bool(switch, False, '')
     add_int('--qcid',  None, 'query chip-id to investigate', nargs='*')
     add_int('--ocid',  [], 'query chip-id to investigate', nargs='*')
-    add_int('--histid', None, 'history id (hard cases)')
+    add_int('--histid', None, 'history id (hard cases)', nargs='*')
     add_int('--nRows', 1, 'number of rows')
     add_int('--nCols', 1, 'number of cols')
     add_float('--xy-thresh', .001, '', step=.005)
@@ -56,6 +56,8 @@ def parse_arguments():
     add_int('--K', 10, 'for K-nearest-neighbors', step=20)
     add_str('--db', 'NAUTS', 'database to load')
     test_bool('--show-names')
+    add_bool('--show-res', default=False)
+    add_bool('--nocache-query', default=False)
     add_bool('--noprinthist', default=True)
     add_str('--tests', [], 'integer or test name', nargs='*')
 
@@ -545,15 +547,15 @@ def get_qon_list(hs):
     print('[invest] get_qon_list()')
     # Get query ids
     qon_list = []
+    histids = None if args.histid is None else np.array(args.histid)
     if args.qcid is None:
         qon_hard = zip(*get_hard_cases(hs))
-        if args.histid is None:
-            print('[invest] Chosen all hard histid')
+        if histids is None:
+            print('[invest] Chosen all hard histids')
             qon_list += qon_hard
-        elif not args.histid is None:
-            print('[invest] Chosen histid=%r' % args.histid)
-            qon_hard = [qon_hard[args.histid]]
-            qon_list += qon_hard
+        elif not histids is None:
+            print('[invest] Chosen histids=%r' % histids)
+            qon_list += [qon_hard[id_] for id_ in histids]
     else:
         print('[invest] Chosen qcid=%r' % args.qcid)
         qcx_list =  helpers.ensure_iterable(hs.cid2_cx(args.qcid))

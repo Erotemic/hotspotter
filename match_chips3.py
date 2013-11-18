@@ -102,7 +102,6 @@ def execute_query_safe(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **k
     # caching
     if use_cache:
         print_('[query] query result cache')
-        mfprint = mf.print
         mf.print_off()
         cache_='cache'
         matchesCACHE = {qcx:cache_ for qcx in qcxs}
@@ -111,7 +110,7 @@ def execute_query_safe(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **k
             mf.chipmatch_to_resdict(hs, matchesCACHE, q_cfg, '+FILT'),
             mf.chipmatch_to_resdict(hs, matchesCACHE, q_cfg, '+SVER'),
         ]
-        mf.print = mfprint
+        mf.print_on()
         if not any([res is None for res in result_list]):
             print_('... hit\n')
             return result_list
@@ -121,8 +120,8 @@ def execute_query_safe(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **k
     if not q_cfg.dcxs2_index.has_key(dcxs_):
         q_cfg.dcxs2_index[dcxs_] = make_nn_index(hs, dcxs)
     q_cfg.data_index = q_cfg.dcxs2_index[dcxs_]
-    print('[query] qcxs=%r' % qcxs)
-    print('[query] len(dcxs)=%r' % len(dcxs))
+    print('[query] qcxs=%r' % q_cfg.qcxs)
+    print('[query] len(dcxs)=%r' % len(q_cfg.dcxs))
     # Real function names
     nearest_neighbs = mf.nearest_neighbors
     weight_neighbs  = mf.weight_neighbors

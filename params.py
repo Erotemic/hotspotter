@@ -117,7 +117,7 @@ FLANN_PARAMS       = hs1_params
 
 AKMEANS_MAX_ITERS = 100
 
-VERBOSE_CACHE = True
+VERBOSE_CACHE = False
 VERBOSE_LOAD_DATA = True
 VERBOSE_MATCHING = True
 VERBOSE_IO = 2
@@ -455,5 +455,5 @@ def make_pref_object():
 
 if __name__ == '__main__':
     print('[params] __main__ = params.py')
-    print('[params] Param string: ')
+    print('[params] Param string:')
     print(helpers.indent(param_string()))

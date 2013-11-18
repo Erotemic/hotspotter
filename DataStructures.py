@@ -74,22 +74,22 @@ class NNIndex(object):
 #=========================
 # Query Result Class
 #=========================
-def query_result_fpath(hs, qcx, query_uid=None):
-    if query_uid is None: query_uid = params.get_query_uid()
+def query_result_fpath(hs, qcx, query_uid):
     qres_dir  = hs.dirs.qres_dir 
-    fname = 'result_%s_qcx=%d.npz' % (query_uid, qcx)
+    fname = 'result%s_qcx=%d.npz' % (query_uid, qcx)
     fpath = join(qres_dir, fname)
     return fpath
 
-def query_result_exists(hs, qcx, query_uid=None):
+def query_result_exists(hs, qcx, query_uid):
     fpath = query_result_fpath(hs, qcx, query_uid)
     return exists(fpath)
 
 class QueryResult(DynStruct):
+    #__slots__ = ['qcx','query_uid','title','assign_time','verify_time','cx2_fm','cx2_fs','cx2_fk','cx2_score']
     def __init__(res, qcx, uid, q_cfg=None):
         super(QueryResult, res).__init__()
         if not q_cfg is None:
-            res.true_title = q_cfg.get_uid()
+            res.true_uid = q_cfg.get_uid()
         res.qcx       = qcx
         res.query_uid = uid
         res.uid       = uid

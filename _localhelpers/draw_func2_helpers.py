@@ -477,6 +477,7 @@ def figure(fignum=None,
            plotnum=(1,1,1),
            figtitle=None,
            **kwargs):
+    #matplotlib.pyplot.xkcd() 
     fig = get_fig(fignum)
     axes_list = fig.get_axes()
     # Ensure my customized settings

@@ -1,6 +1,7 @@
 ''' Computes feature representations '''
 #from __init__ import *
 from __future__ import division, print_function
+import __builtin__
 # hotspotter
 import draw_func2 as df2
 import algos
@@ -19,24 +20,24 @@ import sys
 import os
 from os.path import exists, join
 
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
 def print_on():
-    global print
-    print = realprint
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
 def print_off():
-    global print
-    print = noprint
-print_on()
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
 
+# Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[fc2] Reloading: '+__name__)
+    print('[fc2] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
+def rrr(): reload_module()
 
 def root_sift(desc):
     ''' Takes the square root of each descriptor and returns the features in the

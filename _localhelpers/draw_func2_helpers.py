@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+import __builtin__
+import sys
+import warnings
 DEBUG = False
 def printDBG(msg):
     if DEBUG:
@@ -7,6 +10,9 @@ import matplotlib
 import multiprocessing
 MPL_BACKEND = matplotlib.get_backend()
 matplotlib.rcParams['toolbar'] = 'toolbar2'
+matplotlib.rc('text', usetex=False)
+#matplotlib.rcParams['text'].usetex = False
+#sys.exit(0)
 if MPL_BACKEND != 'Qt4Agg':
     if multiprocessing.current_process().name == 'MainProcess':
         printDBG('[df2] current backend is: %r' % MPL_BACKEND)
@@ -15,20 +21,30 @@ if MPL_BACKEND != 'Qt4Agg':
     MPL_BACKEND = matplotlib.get_backend()
     if multiprocessing.current_process().name == 'MainProcess':
         printDBG('[df2] current backend is: %r' % MPL_BACKEND)
-    #matplotlib.rc('text', usetex=True)
     #matplotlib.rcParams['toolbar'] = 'None'
     #matplotlib.rcParams['interactive'] = True
 from matplotlib.font_manager import FontProperties
 import matplotlib.pyplot as plt
 from PyQt4.QtCore import Qt
 import numpy as np
-import sys
 import os
 import time
 import scipy.stats
 import types
 import textwrap
 from Printable import DynStruct
+
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
+def print_on():
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
+def print_off():
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
 
 SMALL_FONTS = False
 if SMALL_FONTS:
@@ -44,10 +60,10 @@ else:
     LARGE    = 14
 #fpargs = dict(family=None, style=None, variant=None, stretch=None, fname=None)
 FONTS = DynStruct()
-FONTS.small     = FontProperties(weight='ultralight', size=SMALL)
-FONTS.smaller   = FontProperties(weight='ultralight', size=SMALLER)
-FONTS.med       = FontProperties(weight='ultralight', size=MED)
-FONTS.large     = FontProperties(weight='ultralight', size=LARGE)
+FONTS.small     = FontProperties(weight='light', size=SMALL)
+FONTS.smaller   = FontProperties(weight='light', size=SMALLER)
+FONTS.med       = FontProperties(weight='light', size=MED)
+FONTS.large     = FontProperties(weight='light', size=LARGE)
 FONTS.largebold = FontProperties(weight='bold', size=LARGE)
 
 FONTS.legend   = FONTS.large
@@ -255,9 +271,11 @@ def update():
 def present(*args, **kwargs):
     'execing present should cause IPython magic'
     print('[df2] Presenting figures...')
-    all_figures_tile(*args, **kwargs)
-    all_figures_show()
-    all_figures_bring_to_front()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore",category=DeprecationWarning)
+        all_figures_tile(*args, **kwargs)
+        all_figures_show()
+        all_figures_bring_to_front()
     # Return an exec string
     return textwrap.dedent(r'''
     import helpers
@@ -417,7 +435,7 @@ def set_figtitle(figtitle, subtitle=''):
     fig = plt.gcf()
     if subtitle != '':
         subtitle = '\n'+subtitle
-    #fig.suptitle(figtitle+subtitle, fontsize=14, fontweight='bold')
+    fig.suptitle(figtitle+subtitle, fontsize=14, fontweight='bold')
     fig.suptitle(figtitle, x=.5, y=.98, fontproperties=FONTS.figtitle)
     fig_relative_text(.5, .95, subtitle, fontproperties=FONTS.subtitle)
     fig.canvas.set_window_title(figtitle)

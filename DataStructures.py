@@ -1,37 +1,38 @@
 from __future__ import division, print_function
 import __builtin__
-import params
+import sys
+import os
+import warnings
+from itertools import izip, chain
+from os.path import exists, split, join, normpath
+#
 import helpers
-import numpy as np
-import pyflann
+import params
 import algos
 import draw_func2 as df2
-import sys
-from itertools import izip, chain
+#
+import numpy as np
+import pyflann
 from Printable import DynStruct
-import warnings
-import os
-from os.path import exists, split, join, normpath
 
-def print(*arsg, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    __builtin__.print(*args, **kwargs)
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
 def print_on():
-    global print
-    print = realprint
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
 def print_off():
-    global print
-    print = noprint
-print_on()
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
 
+# Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('reloading '+__name__)
+    print('[ds] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-
-def rrr():
-    reload_module()
+rrr = reload_module
 
 #=========================
 # NN (FLANN) Index Class
@@ -135,18 +136,17 @@ class QueryResult(DynStruct):
             res.qcx = res.qcx.tolist()
             res.query_uid = str(res.query_uid)
             return True
-        except Exception as ex:
-            if exists(fpath):
-                #os.remove(fpath)
-                warnmsg = ('Load Result Exception : ' + repr(ex) + 
-                        '\nResult was corrupted for qcx=%d' % res.qcx)
+        except IOError as ex:
+            if not exists(fpath):
+                print(fpath)
+                print('[ds] QueryResult(qcx=%d) does not exist' % res.qcx)
+                raise
+                #warnings.warn(warnmsg)
             else:
-                #os.remove(fpath)
-                warnmsg = ('Load Result Exception : ' + repr(ex) + 
-                        '\nResult does not yet exist for qcx=%d' % res.qcx)
-            print(warnmsg)
-            warnings.warn(warnmsg)
-            raise
+                msg = ('[ds] QueryResult(qcx=%d) is corrupted' % (res.qcx))
+                msg += ('\n%r' % (ex,))
+                print(msg)
+                raise Exception(msg)
     def get_SV(res):
         #return res.cx2_fm_V.size > 0
         return len(res.cx2_score_V) > 0
@@ -236,6 +236,7 @@ class FilterConfig(DynStruct):
     def __init__(f_cfg, **kwargs):
         super(FilterConfig, f_cfg).__init__()
         fp = f_cfg
+        fp.filt_on = True
         fp.Krecip = 0 # 0 := off
         fp.nnfilter_list = ['recip', 'roidist']
         #
@@ -284,6 +285,8 @@ class FilterConfig(DynStruct):
 
 
     def get_uid(f_cfg):
+        if not f_cfg.filt_on: 
+            return '_FILT()'
         on_filters = dict_subset(f_cfg.filt2_tw,
                                  f_cfg.nnfilter_list)
         uid = '_FILT(' 
@@ -319,8 +322,11 @@ class SpatialVerifyConfig(DynStruct):
         sv_cfg.prescore_method = 'csum'
         sv_cfg.use_chip_extent = False
         sv_cfg.min_nInliers = 4
+        sv_cfg.sv_on = True
         sv_cfg.update(**kwargs)
     def get_uid(sv_cfg):
+        if not sv_cfg.sv_on:
+            return '_SV()'
         uid = '_SV(' 
         uid += str(sv_cfg.nShortlist)
         uid += ',' + str(sv_cfg.xy_thresh)

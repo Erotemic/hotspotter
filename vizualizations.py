@@ -1,4 +1,15 @@
 from __future__ import division, print_function
+import __builtin__
+import sys
+# Standard library imports
+import datetime
+import os
+import subprocess
+import textwrap
+from itertools import izip
+from os.path import realpath, join, normpath
+import re
+# Hotspotter imports
 import draw_func2 as df2
 import helpers
 import load_data2 as ld2
@@ -7,29 +18,32 @@ import match_chips2 as mc2
 import oxsty_results
 import params
 from Printable import DynStruct
-import matplotlib.gridspec as gridspec
 # Scientific imports
 import numpy as np
-# Standard library imports
-import datetime
-import os
-import subprocess
-import sys
-import textwrap
-from itertools import izip
-from os.path import realpath, join, normpath
-import re
+import matplotlib.gridspec as gridspec
 
-BROWSE = True
-DUMP = False
-FIGNUM = 1
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
+def print_on():
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
+def print_off():
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
 
+# Dynamic module reloading
 def reload_module():
     import imp, sys
     print('[viz] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
+rrr = reload_module
+
+BROWSE = True
+DUMP = False
+FIGNUM = 1
 
 def plot_name_of_cx(hs, cx, **kwargs):
     nx = hs.tables.cx2_nx[cx]

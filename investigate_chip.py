@@ -5,17 +5,24 @@ import __builtin__
 import argparse
 import sys
 
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    __builtin__.print(*args, **kwargs)
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
 def print_on():
-    global print
-    print = realprint
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
 def print_off():
-    global print
-    print = noprint
-print_on()
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+
+# Dynamic module reloading
+def reload_module():
+    import imp, sys
+    print('[invest] reloading '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr(): reload_module()
 
 # Moved this up for faster help responce time
 def parse_arguments():
@@ -49,6 +56,8 @@ def parse_arguments():
     add_int('--qcid',  None, 'query chip-id to investigate', nargs='*')
     add_int('--ocid',  [], 'query chip-id to investigate', nargs='*')
     add_int('--histid', None, 'history id (hard cases)', nargs='*')
+    add_int('--r', [], 'view row', nargs='*')
+    add_int('--c', [], 'view col', nargs='*')
     add_int('--nRows', 1, 'number of rows')
     add_int('--nCols', 1, 'number of cols')
     add_float('--xy-thresh', .001, '', step=.005)
@@ -56,6 +65,8 @@ def parse_arguments():
     add_int('--K', 10, 'for K-nearest-neighbors', step=20)
     add_str('--db', 'NAUTS', 'database to load')
     test_bool('--show-names')
+    add_bool('--vrd', default=False)
+    add_bool('--vcd', default=False)
     add_bool('--show-res', default=False)
     add_bool('--nocache-query', default=False)
     add_bool('--noprinthist', default=True)
@@ -85,13 +96,6 @@ import params
 import vizualizations as viz
 import voting_rules2 as vr2
 
-def reload_module():
-    import imp, sys
-    print('[reload] reloading '+__name__)
-    imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
-
 def history_entry(database='', cid=-1, ocids=[], notes='', cx=-1):
     return (database, cid, ocids, notes)
 
@@ -100,19 +104,17 @@ GZ_greater1_cid_list = [140, 297, 306, 311, 425, 441, 443, 444, 445, 450, 451,
                         453, 454, 456, 460, 463, 465, 501, 534, 550, 662, 786,
                         802, 838, 941, 981, 1043, 1046, 1047]
 HISTORY = [
-    history_entry('NAUTS', 1,    [],               notes='simple eg'),
-    history_entry('WDOGS', 1,    [],               notes='simple eg'),
     history_entry('GZ', 1047,    [],               notes='extreme viewpoint #gt=4'),
     history_entry('GZ', 1046,    [],               notes='extreme viewpoint #gt=2'),
-    history_entry('GZ', 786,     [787],            notes='foal #gt=11'),
-    history_entry('GZ', 501,     [140],            notes='dark lighting'),
-    history_entry('GZ', 941,     [900],            notes='viewpoint / quality'),
-    history_entry('GZ', 981,     [802],            notes='foal extreme viewpoint'),
-    history_entry('GZ', 838,     [801, 980],       notes='viewpoint / quality'),
     history_entry('GZ', 662,     [262],            notes='viewpoint / shadow (circle)'),
+    history_entry('GZ', 838,     [801, 980],       notes='viewpoint / quality'),
+    history_entry('GZ', 941,     [900],            notes='viewpoint / quality'),
     history_entry('GZ', 311,     [289],            notes='quality'),
     history_entry('GZ', 297,     [301],            notes='quality'),
+    history_entry('GZ', 501,     [140],            notes='dark lighting'),
+    history_entry('GZ', 981,     [802],            notes='foal extreme viewpoint'),
     history_entry('GZ', 306,     [112],            notes='occlusion'),
+    history_entry('GZ', 786,     [787],            notes='foal #gt=11'),
     history_entry('GZ', 534,     [411, 727],       notes='LNBNN failure'),
     history_entry('GZ', 463,     [173],            notes='LNBNN failure'),
     history_entry('GZ', 460,     [613, 460],       notes='background match'),
@@ -123,6 +125,8 @@ HISTORY = [
     history_entry('GZ', 550,     [551, 452],       notes='forground match'),
     history_entry('GZ', 450,     [614],            notes='other zebra match'),
     history_entry('TOADS', cx=32),
+    history_entry('NAUTS', 1,    [],               notes='simple eg'),
+    history_entry('WDOGS', 1,    [],               notes='simple eg'),
     history_entry('MOTHERS', 69, [68],             notes='textured foal (lots of bad matches)'),
     history_entry('MOTHERS', 28, [27],             notes='viewpoint foal'),
     history_entry('MOTHERS', 53, [54],             notes='image quality'),
@@ -323,14 +327,14 @@ def show_vsone_matches(hs, qcx, fnum=1):
     fnum+=1
     return res_vsone, fnum
 
-def get_qfx2_gtkrank(hs, qcx, query_params): 
+def get_qfx2_gtkrank(hs, qcx, q_cfg): 
     '''Finds how deep possibily correct matches are in the ANN structures'''
     import matching_functions as mf
-    dx2_cx   = query_params.data_index.ax2_cx
+    dx2_cx   = q_cfg.data_index.ax2_cx
     gt_cxs   = hs.get_other_cxs(qcx)
-    qcx2_nns = mf.nearest_neighbors(hs, [qcx], query_params)
-    filt2_weights = mf.weight_neighbors(hs, qcx2_nns, query_params)
-    K = query_params.nn_params.K
+    qcx2_nns = mf.nearest_neighbors(hs, [qcx], q_cfg)
+    filt2_weights = mf.weight_neighbors(hs, qcx2_nns, q_cfg)
+    K = q_cfg.nn_cfg.K
     (qfx2_dx, _) = qcx2_nns[qcx]
     qfx2_weights = filt2_weights['lnbnn'][qcx]
     qfx2_cx = dx2_cx[qfx2_dx[:, 0:K]]
@@ -346,10 +350,10 @@ def measure_k_rankings(hs):
     'Reports the k match of correct feature maatches for each problem case'
     import match_chips3 as mc3
     K = 500
-    query_params = mc3.prequery(hs, K=K, Krecip=0,
+    q_cfg = mc3.QueryConfig(K=K, Krecip=0,
                                 roidist_thresh=None, lnbnn_weight=1)
     id2_qcxs, id2_ocids, id2_notes = get_hard_cases(hs)
-    id2_rankweight = [get_qfx2_gtkrank(hs, qcx, query_params) for qcx in id2_qcxs]
+    id2_rankweight = [get_qfx2_gtkrank(hs, qcx, q_cfg) for qcx in id2_qcxs]
     df2.rrr()
     df2.reset()
     for qcx, rankweight, notes in zip(id2_qcxs, id2_rankweight, id2_notes):
@@ -368,13 +372,13 @@ def measure_k_rankings(hs):
 def measure_cx_rankings(hs):
     ' Reports the best chip ranking over each problem case'
     import match_chips3 as mc3
-    query_params = mc3.prequery(hs, K=500, Krecip=0,
+    q_cfg = ds.QueryConfig(K=500, Krecip=0,
                                 roidist_thresh=None, lnbnn_weight=1)
     id2_qcxs, id2_ocids, id2_notes = get_hard_cases(hs)
     id2_bestranks = []
     for id_ in xrange(len(id2_qcxs)):
         qcx = id2_qcxs[id_]
-        reses = mc3.execute_query_safe(hs, query_params, [qcx])
+        reses = mc3.execute_query_safe(hs, q_cfg, [qcx])
         gt_cxs = hs.get_other_cxs(qcx)
         res = reses[2][qcx]
         cx2_score = res.get_cx2_score(hs)
@@ -632,6 +636,10 @@ def main():
     # Load Hotspotter
     hs = hs_from_db(args.db)
     hs.args = args # TODO Integrate this elsewherehs
+    if args.vrd:
+        hs.vrd()
+    if args.vcd:
+        hs.vcd()
     qon_list = get_qon_list(hs)
     print('[invest] Loading DB=%r' % args.db)
     if not args.noprinthist or True:

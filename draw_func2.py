@@ -1,5 +1,7 @@
 ''' Lots of functions for drawing and plotting visiony things '''
 from __future__ import division, print_function
+import __builtin__
+import sys
 import matplotlib
 from _localhelpers.draw_func2_helpers import *
 from matplotlib import gridspec
@@ -20,17 +22,26 @@ import params
 import os
 #print('LOAD_MODULE: draw_func2.py')
 
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
 def print_on():
-    global print
-    print = realprint
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
 def print_off():
-    global print
-    print = noprint
-print_on()
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+# Dynamic module reloading
+def reload_module():
+    import imp, sys
+    print('[df2] reloading '+__name__)
+    imp.reload(sys.modules[__name__])
+    helpermodule = sys.modules['_localhelpers.draw_func2_helpers']
+    print('[df2] reloading '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr(): reload_module()
 
 DISTINCT_COLORS = True #and False
 DARKEN = None
@@ -61,16 +72,6 @@ def my_prefs():
     ELL_LINEWIDTH = 2
     ELL_ALPHA = .5
 
-
-def reload_module():
-    import imp
-    import sys
-    print('[df2] reloading '+__name__)
-    imp.reload(sys.modules[__name__])
-    helpermodule = sys.modules['_localhelpers.draw_func2_helpers']
-    imp.reload(helpermodule)
-def rrr():
-    reload_module()
 
 def execstr_global():
     execstr = ['global' +key for key in globals().keys()]

@@ -1,4 +1,6 @@
 from __future__ import division, print_function
+import __builtin__
+import sys
 #========================================
 # IMPORTS
 #========================================
@@ -31,12 +33,23 @@ import sklearn.preprocessing
 from itertools import izip
 #print('LOAD_MODULE: match_chips2.py')
 
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
+def print_on():
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
+def print_off():
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+# Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[mc2] reloading '+__name__)
+    print('[bow] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
+rrr = reload_module
 
 BOW_DTYPE = np.uint8
 FM_DTYPE  = np.uint32

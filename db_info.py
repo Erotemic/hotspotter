@@ -1,4 +1,23 @@
-from __future__ import division
+from __future__ import division, print_function
+import __builtin__
+import sys
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
+def print_on():
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
+def print_off():
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+# Dynamic module reloading
+def reload_module():
+    import imp, sys
+    print('[dbinfo] reloading '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr(): reload_module()
 import os
 import sys
 from os.path import isdir, islink, isfile, join, exists
@@ -7,13 +26,6 @@ import load_data2 as ld2
 import helpers
 import numpy as np
 from PIL import Image
-
-def reload_module():
-    import imp, sys
-    print('[dbinfo] Reloading: '+__name__)
-    imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
 
 def dir_size(path):
     if sys.platform == 'win32':

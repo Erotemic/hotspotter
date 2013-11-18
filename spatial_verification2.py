@@ -1,4 +1,6 @@
-from __future__ import division
+from __future__ import division, print_function
+import __builtin__
+import sys
 from helpers import printWARN, printINFO
 import warnings
 import cv2
@@ -11,12 +13,24 @@ import scipy.sparse.linalg as sparse_linalg
 # skimage.transform
 # http://stackoverflow.com/questions/11462781/fast-2d-rigid-body-transformations-in-numpy-scipy
 # skimage.transform.fast_homography(im, H)
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
+def print_on():
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
+def print_off():
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+
+# Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[sv2] Reloading: '+__name__)
+    print('[sv2] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
+rrr = reload_module
 
 SV_DTYPE = np.float64
 

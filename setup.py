@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import division, print_function
 from distutils.core import setup
 from distutils.util import convert_path
 from fnmatch import fnmatchcase

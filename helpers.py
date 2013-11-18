@@ -9,6 +9,7 @@ into a global set of helper functions.
 Wow, pylint is nice for cleaning.
 '''
 from __future__ import division, print_function
+import __builtin__
 import warnings
 from Printable import printableVal
 from os.path import join, relpath, normpath, join, split, isdir, isfile, exists, islink, ismount
@@ -29,27 +30,24 @@ import types
 from itertools import product as iprod
 #print('LOAD_MODULE: helpers.py')
 
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
 def print_on():
-    global print
-    print = realprint
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
 def print_off():
-    global print
-    print = noprint
-print_on()
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
 
-# reloads this module when I mess with it
+# Dynamic module reloading
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
     print('[helpers] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-
-def rrr():
-    reload_module()
+rrr = reload_module
 
 # --- Globals ---
 
@@ -1235,10 +1233,6 @@ def _println(msg):
 def println(msg, *args):
     args = args+tuple('\n',)
     return print_(msg, *args)
-def print_(msg, *args):
-    msg_ = str(msg)+''.join(map(str,args))
-    sys.stdout.write(msg_)
-    return msg_
 def flush():
     sys.stdout.flush()
     return ''

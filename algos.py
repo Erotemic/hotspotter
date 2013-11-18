@@ -1,5 +1,23 @@
 from __future__ import division, print_function
-
+import __builtin__
+import sys
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
+def print_on():
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
+def print_off():
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+# Dynamic module reloading
+def reload_module():
+    import imp
+    print('[algos] reloading '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr(): reload_module()
 import draw_func2 as df2
 from PIL import Image, ImageOps
 from os.path import realpath, join
@@ -13,7 +31,6 @@ import params
 import pyflann
 import sklearn.decomposition
 import sklearn.preprocessing as sklpreproc
-import sys
 import sklearn
 import scipy as sp
 import signal
@@ -21,26 +38,6 @@ import scipy.sparse as spsparse
 #print('LOAD_MODULE: algos.py')
 #imp.reload(sys.modules['hotspotter.helpers'])
 #imp.reload(sys.modules['params'])
-
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
-def print_on():
-    global print
-    print = realprint
-def print_off():
-    global print
-    print = noprint
-print_on()
-
-# reloads this module when I mess with it
-def reload_module():
-    import imp, sys
-    print('[algos] reloading '+__name__)
-    imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
 
 def xywh_to_tlbr(roi, img_wh):
     (img_w, img_h) = img_wh

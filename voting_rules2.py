@@ -17,25 +17,24 @@ import match_chips2 as mc2
 from itertools import izip
 import pandas as pd
 
-def print(*args, **kwargs): pass
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    __builtin__.print(*args, **kwargs)
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
 def print_on():
-    global print
-    print = realprint
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
 def print_off():
-    global print
-    print = noprint
-print_on()
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
 
+# Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[reload] reloading '+__name__)
+    print('[vr2] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
+rrr = reload_module
 
 # chipmatch = qcx2_chipmatch[qcx]
 def score_chipmatch_PL(hs, qcx, chipmatch, q_cfg):

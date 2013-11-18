@@ -1,3 +1,25 @@
+from __future__ import division, print_function
+import __builtin__
+import sys
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
+def print_on():
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
+def print_off():
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+# Dynamic module reloading
+def reload_module():
+    import imp, sys
+    print('[___] reloading '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
+
 from PIL import Image
 from os.path import join, relpath, normpath, exists
 import collections
@@ -9,11 +31,6 @@ import numpy as np
 import os
 import parse
 import sys
-
-def reload_module():
-    import imp
-    import sys
-    imp.reload(sys.modules[__name__])
 
 # Port of Philbin07 code to python
 def compute_ap(groundtruth_query, ranked_list):

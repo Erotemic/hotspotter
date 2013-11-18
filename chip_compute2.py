@@ -1,4 +1,24 @@
 from __future__ import division, print_function
+import __builtin__
+import sys
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
+def print_on():
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
+def print_off():
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+# Dynamic module reloading
+def reload_module():
+    import imp, sys
+    print('[cc2] reloading '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr():
+    reload_module()
 from PIL import Image
 from Parallelize import parallel_compute
 from Printable import DynStruct
@@ -22,26 +42,6 @@ import skimage.exposure
 import skimage.util
 
 import segmentation
-
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
-def print_on():
-    global print
-    print = realprint
-def print_off():
-    global print
-    print = noprint
-print_on()
-
-def reload_module():
-    import imp
-    import sys
-    print('[cc2] reloading '+__name__)
-    imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
 
 # =======================================
 # Parallelizable Work Functions          

@@ -3,12 +3,13 @@
     Runs vsone, vsmany, and bagofwords matching'''
 #from numba import autojit
 from __future__ import division, print_function
+import __builtin__
+import sys
 #========================================
 # IMPORTS
 #========================================
 # Standard library imports
 import itertools
-import sys
 import os
 import warnings
 import textwrap
@@ -36,25 +37,23 @@ from itertools import izip
 #print('LOAD_MODULE: match_chips2.py')
 from _localhelpers.bagofwords import *
 
-def print(*args, **kwargs): pass
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
 def print_on():
-    global print
-    print = realprint
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
 def print_off():
-    global print
-    print = noprint
-print_on()
-
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+# Dynamic module reloading
 def reload_module():
-    import imp, sys
-    print('[mc2] reloading '+__name__)
+    import imp
+    print('[___] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
+def rrr(): reload_module()
 
 def debug_cx2_fm_shape(cx2_fm):
     print('-------------------')

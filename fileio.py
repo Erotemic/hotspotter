@@ -1,11 +1,12 @@
 from __future__ import division, print_function
-from os.path import normpath, exists, realpath, join
+import __builtin__
+import sys
 import os
-import os.path
 import fnmatch
 import pickle
 import cPickle
 import shelve
+from os.path import normpath, exists, realpath, join
 
 import datetime
 import timeit
@@ -13,26 +14,25 @@ import timeit
 import helpers
 import params
 import numpy as np
-import sys
 
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
 def print_on():
-    global print
-    print = realprint
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
 def print_off():
-    global print
-    print = noprint
-print_on()
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
 
+# Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[io] Reloading: '+__name__)
+    print('[io] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
+def rrr(): reload_module()
 
 # --- Saving ---
 def save_npy(fpath, data):

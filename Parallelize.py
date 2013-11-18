@@ -1,30 +1,31 @@
 # http://docs.python.org/2/library/multiprocessing.html
 from __future__ import print_function, division
+import __builtin__
 import multiprocessing as mp
 from helpers import Timer
 import sys
 import os.path
 import params
 import sys
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
-def print_on():
-    global print
-    print = realprint
-def print_off():
-    global print
-    print = noprint
-print_on()
 
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
+def print_on():
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
+def print_off():
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+
+# Dynamic module reloading
 def reload_module():
     import imp, sys
     print('[parallel] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
-
+rrr = reload_module
 
 def _calculate(func, args):
     result = func(*args)

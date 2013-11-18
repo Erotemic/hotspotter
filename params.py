@@ -1,19 +1,33 @@
 '''Parameters module:
     stores a bunch of global variables used by the other modules
     It also reads from sys.argv'''
+from __future__ import division, print_function
+import __builtin__
 import sys
 import os.path
 import numpy as np
 import helpers
 import multiprocessing
 
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
+def print_on():
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
+def print_off():
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+
+# Dynamic module reloading
 def reload_module():
-    import imp
-    import sys
+    import imp, sys
     print('[params] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
+rrr = reload_module
+
 
 '''
 print(' * __name__ = %s' % __name__)

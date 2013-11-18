@@ -4,6 +4,8 @@ Module: load_data
     This is the first script run in the loading pipeline. 
 '''
 from __future__ import division, print_function
+import __builtin__
+import sys
 # Standard
 from os.path import join
 import cv2
@@ -22,35 +24,24 @@ import helpers
 import params
 from HotSpotter import *
 
-#<PRINT FUNCTIONS>
-import sys
-def print_(*args, **kwargs): pass
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
-def realprint_(*args, **kwargs):
-    sys.stdout.write(*args)
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
 def print_on():
-    global print
-    global print_
-    print = realprint
-    print_ = realprint_
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
 def print_off():
-    global print
-    global print_
-    print = noprint
-    print_ = noprint
-print_on()
-#</PRINT FUNCTIONS>
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
 
-# reloads this module when I mess with it
+# Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[ld2] Reloading: '+__name__)
+    print('[ld2] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
+def rrr(): reload_module()
 
 def printDBG(msg, lbl=''):
     print('DBG: '+lbl+str(msg))

@@ -1,4 +1,6 @@
 from __future__ import division, print_function
+import __builtin__
+import sys
 # Standard
 from os.path import join
 import cv2
@@ -16,25 +18,24 @@ from Printable import DynStruct
 import helpers
 import params
 
-def print(*args, **kwargs): pass
-def noprint(*args, **kwargs): pass
-def realprint(*args, **kwargs):
-    sys.stdout.write(args[0]+'\n')
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
 def print_on():
-    global print
-    print = realprint
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
 def print_off():
-    global print
-    print = noprint
-print_on()
-
-# reloads this module when I mess with it
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+# Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[ld2] Reloading: '+__name__)
+    print('[hs] reloading '+__name__)
     imp.reload(sys.modules[__name__])
-def rrr():
-    reload_module()
+def rrr(): reload_module()
+
 # ___CLASS HOTSPOTTER____
 class HotSpotter(DynStruct):
     '''The HotSpotter main class is a root handle to all relevant data'''

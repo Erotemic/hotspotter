@@ -480,7 +480,7 @@ def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     draw_kpts2(kpts)
 
 def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
-              nRandKpts=None, SV=True, **kwargs):
+              nRandKpts=None, SV=True, kpts_alpha=None, **kwargs):
     if not res is None:
         cx = res.qcx
     if not allres is None:
@@ -524,15 +524,7 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
                  print(unique_ints)
                  raise
         all_fx = np.arange(len(kpts1))
-        import match_chips2 as mc2
         cx2_fm = res.get_cx2_fm(SV)
-        #mc2.debug_cx2_fm_shape(cx2_fm)
-        #cx2_fm = mc2.fix_cx2_fm_shape(cx2_fm)
-        #mc2.debug_cx2_fm_shape(cx2_fm)
-        #print('>>>>')
-        #print('In show_chip')
-        #helpers.printvar(locals(), 'cx2_fm')
-        #print('<<<')
         fx_list1 = [fm[:,0] for fm in cx2_fm]
         fx_list2 = [fm[:,0] for fm in cx2_fm[gt_cxs]] if len(gt_cxs) > 0 else np.array([])
         matched_fx = stack_unique(fx_list1)
@@ -558,6 +550,8 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
         #plt.legend(*zip(*legend_tups), framealpha=.2)
     # Just draw boring keypoints
     else:
+        if kpts_alpha is None: 
+            kpts_alpha = .4
         if not nRandKpts is None: 
             nkpts1 = len(kpts1)
             fxs1 = np.arange(nkpts1)
@@ -570,7 +564,7 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
             ax = plt.gca()
             ax.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1), fontproperties=FONTS.xlabel)
             # show a random sample of kpts
-        draw_kpts2(kpts1, ell_alpha=.7, ell_color=(.9,.1,.1), **kpts_args)
+        draw_kpts2(kpts1, ell_alpha=kpts_alpha, ell_color=RED, **kpts_args)
 
 def show_topN_matches(hs, res, N=5, SV=True, fignum=4): 
     figtitle = ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))

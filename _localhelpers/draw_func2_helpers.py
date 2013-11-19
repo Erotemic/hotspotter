@@ -32,7 +32,9 @@ import time
 import scipy.stats
 import types
 import textwrap
+# HotSpotter Imports (Try to minimize these, this should be pure drawing)
 from Printable import DynStruct
+import helpers
 
 # Toggleable printing
 print = __builtin__.print

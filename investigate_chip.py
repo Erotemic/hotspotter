@@ -4,6 +4,7 @@ from __future__ import division, print_function
 import __builtin__
 import argparse
 import sys
+from os.path import join
 
 # Toggleable printing
 print = __builtin__.print
@@ -65,11 +66,18 @@ def parse_arguments():
     add_int('--K', 10, 'for K-nearest-neighbors', step=20)
     add_str('--db', 'NAUTS', 'database to load')
     test_bool('--show-names')
+    add_bool('--save-figures', default=False)
+    add_bool('--noannote', default=False)
     add_bool('--vrd', default=False)
     add_bool('--vcd', default=False)
+    add_bool('--vrdq', default=False)
+    add_bool('--vcdq', default=False)
     add_bool('--show-res', default=False)
     add_bool('--nocache-query', default=False)
     add_bool('--noprinthist', default=True)
+    add_bool('--test-vsmany', default=False)
+    add_bool('--test-vsone', default=False)
+
     add_str('--tests', [], 'integer or test name', nargs='*')
 
     add_str('--show-best', [], 'integer or test name', nargs='*')
@@ -464,10 +472,23 @@ def where_did_vsone_matches_go(hs, qcx, fnum=1, K=100):
         fnum+=1
     return fnum
 
-def plot_name(hs, qcx, fnum=1):
+def plot_name(hs, qcx, fnum=1, **kwargs):
     print('[invest] Plotting name')
-    viz.plot_name_of_cx(hs, qcx, fignum=fnum)
+    viz.plot_name_of_cx(hs, qcx, fignum=fnum, **kwargs)
     return fnum+1
+
+def plot_names(hs, qon_list, fnum=1):
+    '''The most recent plot names function, works with qon_list'''
+    args = hs.args
+    result_dir = hs.dirs.result_dir
+    names_dir = join(result_dir, 'plot_names')
+    helpers.ensuredir(names_dir)
+    for (qcx, ocxs, notes) in qon_list:
+        print('Showing q%s - %r' % (hs.cxstr(qcx), notes))
+        fnum = plot_name(hs, qcx, fnum, subtitle=notes, annote=not args.noannote)
+        if args.save_figures:
+            df2.save_figure(fpath=names_dir, usetitle=True)
+    return fnum
 
 def compare_matching_methods(hs, qcx, fnum=1):
     print('[invest] Comparing match methods')
@@ -511,13 +532,13 @@ def stop_stdout():
 #rss = helpers.RedirectStdout(autostart=True)
 #rss.stop()
     
-def hs_from_db(db):
+def hs_from_db(db, args=None):
     # Load hotspotter
     db_dir = eval('params.'+db)
     print('[invest] loading hotspotter database')
     def _hotspotter_load():
         hs = ld2.HotSpotter()
-        hs.load_all(db_dir, matcher=False)
+        hs.load_all(db_dir, matcher=False, args=args)
         hs.set_samples()
         return hs
     if True:
@@ -581,12 +602,15 @@ def view_all_history_names_in_db(hs, db):
         df2.save_figure(fpath='hard_names', usetitle=True)
     helpers.vd('hard_names')
 
-def run_investigations(qcx, args):
+def run_investigations(hs, qon_list):
+    args = hs.args
+    qcx = qon_list[0][0]
     print('[invest] Running Investigation: '+hs.cxstr(qcx))
     fnum = 1
     #view_all_history_names_in_db(hs, 'MOTHERS')
     if args.show_names:
-        fnum = plot_name(hs, qcx, fnum)
+        plot_names(hs, qon_list)
+
     #fnum = compare_matching_methods(hs, qcx, fnum)
     if '1' in args.tests:
         hs.ensure_matcher(match_type='vsone')
@@ -628,7 +652,7 @@ def change_db(db):
     global args
     global hs
     args.db = db
-    hs = hs_from_db(args.db)
+    hs = hs_from_db(args.db, args)
     hs.args = args
 
 def main():
@@ -636,12 +660,7 @@ def main():
     if 'hs' in vars():
         return
     # Load Hotspotter
-    hs = hs_from_db(args.db)
-    hs.args = args # TODO Integrate this elsewherehs
-    if args.vrd:
-        hs.vrd()
-    if args.vcd:
-        hs.vcd()
+    hs = hs_from_db(args.db, args)
     qon_list = get_qon_list(hs)
     print('[invest] Loading DB=%r' % args.db)
     if not args.noprinthist or True:
@@ -690,7 +709,7 @@ if __name__ == '__main__':
     print('[invest]====================')
     for count, qcx in enumerate(qcxs):
         print(fmtstr % (count+1))
-        run_investigations(qcx, args)
+        run_investigations(hs, qon_list)
     print('[invest]====================')
     #df2.update()
     exec(df2.present()) #**df2.OooScreen2()

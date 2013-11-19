@@ -47,9 +47,10 @@ FIGNUM = 1
 
 def plot_name_of_cx(hs, cx, **kwargs):
     nx = hs.tables.cx2_nx[cx]
-    plot_name(hs, nx, **kwargs)
+    plot_name(hs, nx, hl_cxs=[cx], **kwargs)
 
-def plot_name(hs, nx, nx2_cxs=None, fignum=0, **kwargs):
+def plot_name(hs, nx, nx2_cxs=None, fignum=0, hl_cxs=[], subtitle='',
+              annote=True, **kwargs):
     print('[viz] plot_name nx=%r' % nx)
     nx2_name = hs.tables.nx2_name
     cx2_nx   = hs.tables.cx2_nx
@@ -60,19 +61,26 @@ def plot_name(hs, nx, nx2_cxs=None, fignum=0, **kwargs):
         cxs = np.where(cx2_nx == nx)[0]
     print('[viz] plot_name %r' % hs.cxstr(cxs))
     ncxs  = len(cxs)
-    nCols = int(min(np.ceil(np.sqrt(ncxs)), 5))
+    #nCols = int(min(np.ceil(np.sqrt(ncxs)), 5))
+    nCols = int(min(ncxs, 5))
     nRows = int(np.ceil(ncxs / nCols))
     print('[viz*] r=%r, c=%r' % (nRows, nCols))
-    gs2 = gridspec.GridSpec(nRows, nCols)
-    fig = df2.figure(fignum=fignum, **kwargs)
+    #gs2 = gridspec.GridSpec(nRows, nCols)
+    pnum = lambda px: (nRows, nCols, px+1)
+    fig = df2.figure(fignum=fignum, plotnum=pnum(0), **kwargs)
     fig.clf()
-    for ss, cx in zip(gs2, cxs):
-        ax = fig.add_subplot(ss)
-        plot_cx3(hs, cx)
+    for px, cx in enumerate(cxs):
+        df2.show_chip(hs, cx=cx, plotnum=pnum(px), draw_kpts=annote, kpts_alpha=.2)
+        if cx in hl_cxs:
+            ax = df2.plt.gca()
+            df2.draw_border(ax, df2.GREEN, 4)
+        #plot_cx3(hs, cx)
     title = 'nx=%r -- name=%r' % (nx, name)
+    if not annote:
+        title += ' noannote'
     #gs2.tight_layout(fig)
     #gs2.update(top=df2.TOP_SUBPLOT_ADJUST)
-    df2.set_figtitle(title)
+    df2.set_figtitle(title, subtitle)
 
 def plot_cx3(hs, cx):
     ax = df2.plt.gca()

@@ -42,6 +42,7 @@ class HotSpotter(DynStruct):
     def __init__(hs, db_dir=None, load_basic=False, **kwargs):
         import match_chips2 as mc2
         super(HotSpotter, hs).__init__()
+        hs.args = None
         hs.num_cx = None
         hs.tables = None
         hs.feats  = None
@@ -74,8 +75,16 @@ class HotSpotter(DynStruct):
         hs.load_chips()
         hs.load_features(load_desc=False)
 
-    def load_all(hs, db_dir, matcher=True):
+    def load_all(hs, db_dir, matcher=True, args=None):
         hs.load_tables(db_dir)
+        if not args is None:
+            hs.args = args
+            if args.vrd or args.vrdq:
+                hs.vrd()
+                if args.vrdq: sys.exit(1)
+            if args.vcd or args.vcdq:
+                hs.vcd()
+                if args.vcdq: sys.exit(1)
         hs.load_chips()
         hs.load_features()
         hs.set_samples()

@@ -60,7 +60,10 @@ class QueryResult(DynStruct):
         res.uid       = uid
         res.title     = uid
         # Times
-        res.assign_time = -1
+        res.nn_time     = -1
+        res.weight_time = -1
+        res.filter_time = -1
+        res.build_time  = -1
         res.verify_time = -1
         # Assigned features matches
         res.cx2_fm = np.array([], dtype=FM_DTYPE)

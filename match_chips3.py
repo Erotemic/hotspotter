@@ -186,22 +186,39 @@ def execute_query_safe(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **k
             qcx2_res[qcx].save(hs)
     return result_list
 
+from helpers import tic, toc
 def execute_query_fast(hs, q_cfg, qcxs, dcxs):
     '''Executes a query and assumes q_cfg has all precomputed information'''
     # Nearest neighbors
+    nn_tt = tic()
     neighbs = mf.nearest_neighbors(hs, qcxs, q_cfg)
+    nn_time = toc(nn_tt)
     # Nearest neighbors weighting and scoring
+    weight_tt = tic()
     weights  = mf.weight_neighbors(hs, neighbs, q_cfg)
+    weight_time = toc(weight_tt)
     # Thresholding and weighting
+    filt_tt = tic()
     nnfiltFILT = mf.filter_neighbors(hs, neighbs, weights, q_cfg)
+    filt_time = toc(filt_tt)
     # Nearest neighbors to chip matches
+    build_tt = tic()
     matchesFILT = mf.build_chipmatches(hs, neighbs, nnfiltFILT, q_cfg)
+    build_time = toc(build_tt)
     # Spatial verification
+    verify_tt = tic()
     matchesSVER = mf.spatial_verification(hs, matchesFILT, q_cfg)
+    verify_time = toc(verify_tt)
     # Query results format
     result_list = [
         mf.chipmatch_to_resdict(hs, matchesSVER, q_cfg),
     ]
+    # Add timings to the results
+    for res in result_list[0].itervalues():
+        res.nn_time     = nn_time
+        res.filt_time   = filt_time
+        res.build_time  = build_time
+        res.verify_time = verify_time
     return result_list
 
 #----------------------

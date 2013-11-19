@@ -166,20 +166,16 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, q_cfg):
 #s2coring_func  = [LNBNN, PlacketLuce, TopK, Borda]
 #load_precomputed(cx, q_cfg)
 def score_chipmatch(hs, qcx, chipmatch, score_method, q_cfg=None):
+    (cx2_fm, cx2_fs, cx2_fk) = chipmatch
     print('[mf] * Scoring chipmatch: '+score_method)
     if score_method == 'csum':
         (_, cx2_fs, _) = chipmatch
         cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
-        return cx2_score
-    if score_method == 'nsum':
+    elif score_method == 'nsum':
         nx2_score = np.array([np.sum(fs) for fs in cx2_fs])
-        return cx2_score
-    if score_method == 'nunique':
+    elif score_method == 'nunique':
         cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
-        return cx2_score
     elif score_method == 'pl':
-        cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, qcx, chipmatch, q_cfg)
-    elif score_method == 'plw':
         cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, qcx, chipmatch, q_cfg)
     elif score_method == 'borda':
         cx2_score, nx2_score = vr2.score_chipmatch_Borda(hs, qcx, chipmatch, q_cfg)
@@ -187,6 +183,8 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, q_cfg=None):
         cx2_score, nx2_score = vr2.score_chipmatch_TopK(hs, qcx, chipmatch, q_cfg)
     else:
         raise Exception('[mf] unknown scoring method:'+score_method)
+    cx2_nMatch = np.array(map(len, cx2_fm))
+    cx2_score = (cx2_score * (cx2_nMatch != 0))
     return cx2_score
 
 #============================

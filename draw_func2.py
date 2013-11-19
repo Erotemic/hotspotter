@@ -18,6 +18,7 @@ import types
 import warnings
 import itertools
 import helpers
+import re
 import params
 import os
 #print('LOAD_MODULE: draw_func2.py')
@@ -660,40 +661,25 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
             orank = oranks[0] + 1
             show_matches_(cx, orank, plotnum, SV)
 
-    # Plot Query
+    query_uid = res.query_uid
+    query_uid = re.sub(r'_trainID\([0-9]*,........\)','', query_uid)
+    query_uid = re.sub(r'_indxID\([0-9]*,........\)','', query_uid)
+
+    # Plot Query and Ground Truth
     fig = figure(fignum=fignum); fig.clf()
-    set_figtitle(figtitle, 'groundtruth'+res.query_uid)
     plt.subplot(1, nGtSubplts, 1)
     if show_query: 
         printDBG('Plotting Query:')
         plotnum=(1,nGtSubplts, 1)
         show_chip(hs, res=res, plotnum=plotnum, draw_kpts=annote, SV=SV)
-    # Plot Ground Truth
     plot_matches_cxs(gt_cxs, 1, SV, (1, nGtSubplts)) 
-    # new fig
-    fig = figure(fignum=fignum+10000); fig.clf()
-    set_figtitle(figtitle, res.query_uid)
+    set_figtitle(figtitle+'GT', query_uid)
+
+    # Plot TopN in a new figure
+    fig = figure(fignum=fignum+1000); fig.clf()
     plt.subplot(1, nTopNSubplts, 1)
-    # Plot Top N
-    nGtCells = 0
     plot_matches_cxs(topN_cxs, 0, SV, (1, nTopNSubplts))
-    #if compare_SV:
-        # Plot Ground Truth
-        # plot_matches_cxs(gt_cxs, offset + nQuerySubplts, not SV) 
-        # Plot Top N
-        #plotnum=(1, nTopNSubplts, offset)
-        #plot_matches_cxs(topN_cxs, plotnum, not SV)    
-        #plotx_shift = 1 + nGtCells#num_cells - num_subplots + 1
-        #for ox, cx in enumerate(topN_cxs):
-            #plotx = ox + plotx_shift
-            #orank = np.where(ranked_cxs == cx)[0][0] + 1
-            #show_matches_(cx, orank, plotx, SV)
-    set_figtitle(figtitle, res.query_uid)
-    printDBG('[df2] + nTopNRows=%r' % nTopNRows)
-    printDBG('[df2] + nGtRows=%r' % nGtRows)
-    printDBG('[df2] + nGtCells=%r' % nGtCells)
-    printDBG('[df2] + nCols=%r' % nCols)
-    printDBG('[df2] + nRows=%r' % nRows)
+    set_figtitle(figtitle+'topN', query_uid)
     print('-----------------')
     return fig
 

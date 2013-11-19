@@ -311,7 +311,7 @@ def quick_get_features_factory(hs):
     'builds a factory function'
     cx2_desc = hs.feats.cx2_desc
     cx2_kpts = hs.feats.cx2_kpts
-    cx2_cid = hs.tables.cx2_cid 
+    cx2_cid  = hs.tables.cx2_cid 
     def get_features(cx):
         rchip = hs.get_chip(cx)
         fx2_kp = cx2_kpts[cx]
@@ -606,6 +606,8 @@ def run_investigations(qcx, args):
         measure_cx_rankings(hs)
     if '8' in args.tests:
         mc3.compare_scoring(hs)
+    if '9' in args.tests:
+        plot_keypoint_scales(hs)
 
 #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=20)
 #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
@@ -647,13 +649,38 @@ def main():
         print('[invest] print_history_table()')
         print_history_table()
     qcxs_list, ocxs_list, notes_list = zip(*qon_list)
-    notes = qcxs_list[0]
-    qcxs  = notes_list[0]
+    qcxs  = qcxs_list[0]
+    notes = notes_list[0]
     print('========================')
     print('[invest] Loaded DB=%r' % args.db)
     print('[invest] notes=%r' % notes)
     qcxs = helpers.ensure_iterable(qcxs)
     return locals()
+
+def plot_keypoint_scales(hs, fnum=1):
+    print('[invest] plot_keypoint_scales()')
+    cx2_kpts = hs.feats.cx2_kpts
+    cx2_nFeats = map(len, cx2_kpts)
+    kpts = np.vstack(cx2_kpts)
+    print('[invest] num_keypoints = %r ' % len(kpts))
+    print('[invest] keypoints per image stats = '+helpers.printable_mystats(cx2_nFeats)) 
+    acd = kpts[:,2:5].T
+    det = 1/(acd[0] * acd[2])
+    sdet = np.array(sorted(det))
+    print('scale stats: '+helpers.printable_mystats(sdet))
+    #
+    fig = df2.figure(fignum=fnum, doclf=True)
+    df2.plot(sdet)
+    ax = df2.plt.gca()
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    #
+    fnum += 1
+    fig = df2.figure(fignum=fnum, doclf=True)
+    df2.show_histogram(sdet, bins=20)
+    ax = df2.plt.gca()
+    ax.set_yscale('log')
+    ax.set_xscale('log')
 
 if __name__ == '__main__':
     print('[invest] __main__ ')

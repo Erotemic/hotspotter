@@ -116,7 +116,7 @@ def __read_text_chiprep_file(outname):
         desc[kx,:] = np.array([uint8(_) for _ in data[5: ]], dtype=uint8)
     acd = kpts.T[2:5]
     det = acd[0] * acd[2]
-    is_valid = np.bitwise_and(det.T < 1.5E1, det.T > 1E-8)
+    is_valid = np.bitwise_and(det.T < 1E-3, det.T > 1E-7)
     kpts = kpts[is_valid.flatten()]
     desc = desc[is_valid.flatten()]
     return (kpts, desc)

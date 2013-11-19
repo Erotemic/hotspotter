@@ -16,6 +16,7 @@ import params
 import match_chips2 as mc2
 from itertools import izip
 import pandas as pd
+from numba import autojit
 
 # Toggleable printing
 print = __builtin__.print
@@ -36,30 +37,22 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 rrr = reload_module
 
-def score_chipmatch_PLWeighted(hs, qcx, chipmatch, q_cfg):
-    K = q_cfg.nn_cfg.K
-    max_alts = q_cfg.a_cfg.max_alts
-    # Run Placket Luce Model
-    qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
-    qfx2_utilities = _utilities2_weighted_pairwise_breaking(qfx2_utilities, max_alts)
-    PL_matrix, altx2_tnx = _utilities2_pairwise_breaking(qfx2_utilities)
-    gamma = _optimize(PL_matrix)
-    altx2_prob = _PL_score(gamma)
-    # Use probabilities as scores
-    cx2_score, nx2_score = prob2_cxnx2scores(hs, qcx, altx2_prob, altx2_tnx)
-    return cx2_score, nx2_score
-
 # chipmatch = qcx2_chipmatch[qcx]
 def score_chipmatch_PL(hs, qcx, chipmatch, q_cfg):
     K = q_cfg.nn_cfg.K
     max_alts = q_cfg.a_cfg.max_alts
-    isWeighted = max_alts = q_cfg.a_cfg.isWeighted
+    isWeighted = q_cfg.a_cfg.isWeighted
     # Run Placket Luce Model
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
     qfx2_utilities = _filter_utilities(qfx2_utilities, max_alts)
-    PL_matrix, altx2_tnx = _utilities2_pairwise_breaking(qfx2_utilities)
+    if isWeighted:
+        PL_matrix, altx2_tnx = _utilities2_weighted_pairwise_breaking(qfx2_utilities)
+    else:
+        PL_matrix, altx2_tnx = _utilities2_pairwise_breaking(qfx2_utilities)
     gamma = _optimize(PL_matrix)
     altx2_prob = _PL_score(gamma)
+    #print('[vote] gamma = %r' % gamma)
+    #print('[vote] altx2_prob = %r' % altx2_prob)
     # Use probabilities as scores
     cx2_score, nx2_score = prob2_cxnx2scores(hs, qcx, altx2_prob, altx2_tnx)
     return cx2_score, nx2_score
@@ -75,11 +68,11 @@ def _optimize(M):
     check = np.abs(M.dot(x)) < 1E-9
     if not all(check):
         raise Exception('SVD method failed miserabley')
-    tmp1 = []
-    tmp1 += [('[vote] x=%r' % x)]
-    tmp1 += [('[vote] M.dot(x).sum() = %r' % M.dot(x).sum())]
-    tmp1 += [('[vote] M.dot(np.abs(x)).sum() = %r' % M.dot(np.abs(x)).sum())]
-    TMP  += [tmp1]
+    #tmp1 = []
+    #tmp1 += [('[vote] x=%r' % x)]
+    #tmp1 += [('[vote] M.dot(x).sum() = %r' % M.dot(x).sum())]
+    #tmp1 += [('[vote] M.dot(np.abs(x)).sum() = %r' % M.dot(np.abs(x)).sum())]
+    #TMP  += [tmp1]
     return x
 
 def _PL_score(gamma):

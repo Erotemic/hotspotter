@@ -5,6 +5,7 @@ import os
 import warnings
 from itertools import izip, chain
 from os.path import exists, split, join, normpath
+from zipfile import error as BadZipFile # Screwy naming convention.
 #
 import helpers
 import params
@@ -89,7 +90,7 @@ class QueryResult(DynStruct):
     def load(res, hs):
         'Loads the result from the given database'
         fpath = res.get_fpath(hs)
-        #print('[ds] Load res fpath=%r' % (split(fpath)[1],))
+        print('[ds] Load res fpath=%r' % (split(fpath)[1],))
         try:
             with open(fpath, 'rb') as file_:
                 npz = np.load(file_)
@@ -100,16 +101,31 @@ class QueryResult(DynStruct):
             res.query_uid = str(res.query_uid)
             return True
         except IOError as ex:
+            print('[ds] Caught IOError: %r' % ex)
             if not exists(fpath):
                 print(fpath)
                 print('[ds] QueryResult(qcx=%d) does not exist' % res.qcx)
                 raise
-                #warnings.warn(warnmsg)
             else:
                 msg = ['[ds] QueryResult(qcx=%d) is corrupted' % (res.qcx)]
                 msg += ['\n%r' % (ex,)]
                 print(''.join(msg))
                 raise Exception(msg)
+        except BadZipFile as ex:
+            print('[ds] Caught other BadZipFile: %r' % ex)
+            msg = ['[ds] Attribute Error: QueryResult(qcx=%d) is corrupted' % (res.qcx)]
+            msg += ['\n%r' % (ex,)]
+            print(''.join(msg))
+            if exists(fpath):
+                print('[ds] Removing corrupted file: %r' % fpath)
+                os.remove(fpath)
+                raise IOError(msg)
+            else:
+                raise Exception(msg)
+        except Exception as ex:
+            print('Caught other Exception: %r' % ex)
+            raise
+            
     def get_SV(res):
         #return res.cx2_fm_V.size > 0
         return len(res.cx2_score_V) > 0
@@ -346,27 +362,36 @@ class AggregateConfig(DynStruct):
         a_cfg.isWeighted = False # nsum, pl
         a_cfg.score_method = 'csum' # nsum, pl
         alt_methods = {
-            'topk' : 'topk',
-            'borda' : 'borda',
-            'placketluce': 'pl',
-            'chipsum': 'csum',
-            'namesum': 'nsum',
+            'topk'        : 'topk',
+            'borda'       : 'borda',
+            'placketluce' : 'pl',
+            'chipsum'     : 'csum',
+            'namesum'     : 'nsum',
         }
-        key = a_cfg.score_method.lower()
-        if alt_methods.has_key(key):
-            a_cfg.score_method = alt_methods[key]
         # For Placket-Luce
         a_cfg.max_alts = 200
-        # ----
+        #-----
+        # User update
         a_cfg.update(**kwargs)
+        # ---
+        key = a_cfg.score_method.lower()
+        # Use w as a toggle for weighted mode
+        if key.find('w') == len(key)-1:
+            a_cfg.isWeighted = True
+            key = key[:-1]
+            a_cfg.score_method = key
+        # Sanatize the scoring method
+        if alt_methods.has_key(key):
+            a_cfg.score_method = alt_methods[key]
     def get_uid(a_cfg):
         uid = []
         uid += ['_AGG(']
         uid += [a_cfg.query_type]
         uid += [',',a_cfg.score_method]
+        if a_cfg.isWeighted:
+            uid += ['w']
         if a_cfg.score_method == 'pl':
             uid += [',%d' % (a_cfg.max_alts,)]
-            if a_cfg.isWeighted: uid += ['w']
         uid += [') ']
         return uid
 

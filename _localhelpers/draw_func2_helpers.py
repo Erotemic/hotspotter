@@ -564,9 +564,10 @@ def estimate_pdf(data, bw_factor):
     return data_pdf
     
 def show_histogram(data, bins=None, **kwargs):
+    sys.stdout.write('[df2] show_histogram()\n')
+    dmin = int(np.floor(data.min()))
+    dmax = int(np.ceil(data.max()))
     if bins is None:
-        dmin = data.min()
-        dmax = data.max()
         bins = dmax - dmin
     fig = figure(**kwargs)
     ax  = plt.gca()

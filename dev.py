@@ -43,6 +43,30 @@ HotSpotter.print_off()
 #parallel.print_off()
 #mc3.print_off()
 
+vary_dicts = []
+vary_dicts.append({
+    'query_type'     : ['vsmany'],
+    'checks'         : [1024],#, 8192],
+    'K'              : [5, 10, 30], #5, 10],
+    'Knorm'          : [1, 3], #2, 3],
+    'Krecip'         : [0, 1, 5], #, 5, 10],
+    'roidist_weight' : [0], # 1,]
+    'recip_weight'   : [0], # 1,] 
+    'bursty_weight'  : [0], # 1,]
+    'ratio_weight'   : [0], # 1,]
+    'lnbnn_weight'   : [1], # 1,]
+    'lnrat_weight'   : [0], # 1,]
+    'roidist_thresh' : [None], # .5,] 
+    'recip_thresh'   : [0], # 0
+    'bursty_thresh'  : [None], #
+    'ratio_thresh'   : [None], # 1.2, 1.6
+    'lnbnn_thresh'   : [None], # 
+    'lnrat_thresh'   : [None], #
+    'nShortlist'   : [500],
+    'sv_on'        : [True], #True, False],
+    'score_method' : ['pl', 'plw', 'csum'],#, 'pl'], #, 'nsum', 'borda', 'topk', 'nunique']
+    'max_alts'     : [500],
+})
 
 def get_test_results(hs, qon_list, q_params, use_cache=True, cfgx=0, nCfg=1,
                      force_load=False):
@@ -81,8 +105,8 @@ def get_test_results(hs, qon_list, q_params, use_cache=True, cfgx=0, nCfg=1,
             res = qcx2_res[qcx]
             algos += [res.title]
             gt_ranks = res.get_gt_ranks(gt_cxs)
-            #print('[dev] cx_ranks(/%4r) = %r' % (nChips, gt_ranks))
-            #print('ns_ranks(/%4r) = %r' % (nNames, gt_ranks))
+            print('[dev] cx_ranks(/%4r) = %r' % (nChips, gt_ranks))
+            print('ns_ranks(/%4r) = %r' % (nNames, gt_ranks))
             bestranks += [min(gt_ranks)]
         # record metadata
         id2_algos += [algos]
@@ -164,44 +188,18 @@ def print_best(qonx2_agg, test_list):
     rank_mat = np.hstack(mats_list)
     rank_mat = np.vstack([np.arange(rank_mat.shape[1]), rank_mat])
     rank_mat = np.hstack([np.arange(rank_mat.shape[0]).reshape(rank_mat.shape[0],1)-1, rank_mat])
-    print('[best] all_ranks (rows=chip, cols=cfg) = \n%r' % rank_mat)
+    print('[best] all_ranks (rows=chip, cols=cfg) = \n%s' % str(rank_mat))
     qonx2_score.shape = (len(qonx2_score),1)
-    print('[best] best_ranks =\n%r ' % qonx2_score)
+    print('[best] best_ranks =\n%s ' % str(qonx2_score))
 
     print('[best] Finished printing best results')
     print('------------------------------------')
 
 #------
-
 def test_scoring(hs):
     print('\n*********************\n')
     print('[dev]================')
     print('[dev]test_scoring(hs)')
-    vary_dicts = []
-    vary_dicts.append({
-        'query_type'     : ['vsmany'],
-        'checks'         : [1024],#, 8192],
-        'K'              : [10], #5, 10],
-        'Knorm'          : [1], #2, 3],
-        'Krecip'         : [1], #, 5, 10],
-        'roidist_weight' : [0], # 1,]
-        'recip_weight'   : [0], # 1,] 
-        'bursty_weight'  : [0], # 1,]
-        'ratio_weight'   : [0], # 1,]
-        'lnbnn_weight'   : [1], # 1,]
-        'lnrat_weight'   : [0], # 1,]
-        'roidist_thresh' : [None], # .5,] 
-        'recip_thresh'   : [None], # 0
-        'bursty_thresh'  : [None], #
-        'ratio_thresh'   : [None], # 1.2, 1.6
-        'lnbnn_thresh'   : [None], # 
-        'lnrat_thresh'   : [None], #
-        'nShortlist'   : [500],
-        'sv_on'        : [True], #True, False],
-        'score_method' : ['pl'],#, 'pl'], #, 'nsum', 'borda', 'topk', 'nunique']
-        'isWeighted'   : [True], #, False
-        'max_alts'     : [200],
-    })
     #vary_dicts = vary_dicts[0]
     varied_params_list = [_ for _dict in vary_dicts for _ in helpers.all_dict_combinations(_dict)]
     #for _dict in varied_params_list[0]:
@@ -249,17 +247,24 @@ def test_scoring(hs):
     print('')
     print('---------------------------------')
     print('[dev] printing test rank matrices')
-    for test_results in iter(testx2_results):
-        print_test_results(test_results)
+    # Print Results
+    #for test_results in iter(testx2_results):
+        #print_test_results(test_results)
+    # Print Best Results
     print_best(qonx2_agg, test_list)
+    # Draw results
+    fnum = 0
     for r,c in itertools.product(hs.args.r, hs.args.c):
         print('viewing (r,c)=(%r,%r)' % (r,c))
         res = rowx_cfgx2_res[r,c]
         res.printme()
-        res.show_topN(hs)
+        res.show_topN(hs, fignum=fnum)
+        fnum += 1
+
 
 if __name__ == '__main__':
     import multiprocessing
+    np.set_printoptions(threshold=500, linewidth=200)
     multiprocessing.freeze_support()
     print('[dev]-----------')
     print('[dev] main()')

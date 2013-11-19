@@ -16,7 +16,7 @@ import params
 import match_chips2 as mc2
 from itertools import izip
 import pandas as pd
-from numba import autojit
+#from numba import autojit
 
 # Toggleable printing
 print = __builtin__.print

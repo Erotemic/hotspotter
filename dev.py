@@ -181,7 +181,7 @@ def test_scoring(hs):
     vary_dicts.append({
         'query_type'     : ['vsmany'],
         'checks'         : [1024],#, 8192],
-        'K'              : [2,5], #5, 10],
+        'K'              : [10], #5, 10],
         'Knorm'          : [1], #2, 3],
         'Krecip'         : [1], #, 5, 10],
         'roidist_weight' : [0], # 1,]

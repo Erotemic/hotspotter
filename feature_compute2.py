@@ -169,7 +169,7 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid,
         #print all([np.all(desc == desc_) for desc, desc_ in zip(cx2_desc, cx2_desc_)])
     else:
         print('[fc2]  Loading individual '+feat_uid+' features')
-        cx2_feat_path = [ feat_dir+'/CID_%d_%s.npz' % (cid, feat_uid) for cid in cx2_cid]
+        cx2_feat_path = [feat_dir+'/CID_%d_%s.npz' % (cid, feat_uid) for cid in cx2_cid]
 
         # Compute features, saving them to disk 
         precompute_fn = feat_type2_precompute[feat_type]

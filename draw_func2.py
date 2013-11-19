@@ -625,7 +625,6 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
     print('[df2] #top=%r #missed_gts=%r' % (len(topN_cxs),len(gt_cxs)))
     printDBG('[df2] * max_nCols=%r' % (max_nCols,))
     printDBG('[df2] * show_query=%r' % (show_query,))
-    fig = figure(fignum=fignum); fig.clf()
     ranked_cxs = res.get_cx2_score(SV).argsort()[::-1]
     annote = annotations
     # Build a subplot grid
@@ -641,49 +640,54 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
     nRows = nTopNRows+nGtRows
     if compare_SV:
         nRows += nTopNRows
-
+    fig = figure(fignum=fignum); fig.clf()
     # Helper function for drawing matches to one cx
-    def show_matches_(cx, orank, plotx, SV):
+    def show_matches_(cx, orank, pnum, SV):
         aug = 'rank=%r ' % orank
-        pnum=(nRows, nCols, plotx)
         kwshow  = dict(draw_ell=annote, draw_pts=annote, draw_lines=annote,
                        ell_alpha=.5, all_kpts=all_kpts, SV=SV, **kwargs)
         show_matches_annote_res(res, hs, cx, title_aug=aug, plotnum=pnum, **kwshow)
     # Helper to draw many cxs
-    def plot_matches_cxs(cx_list, plotx_shift, SV):
+    def plot_matches_cxs(cx_list, plotx_shift, SV, rowcols):
         if cx_list is None: return
         for ox, cx in enumerate(cx_list):
             plotx = ox + plotx_shift + 1
+            plotnum = (rowcols[0], rowcols[1], plotx)
             oranks = np.where(ranked_cxs == cx)[0]
             if len(oranks) == 0:
                 orank = -1
                 continue
             orank = oranks[0] + 1
-            show_matches_(cx, orank, plotx, SV)
+            show_matches_(cx, orank, plotnum, SV)
 
     # Plot Query
-    plt.subplot(nRows, nCols, 1)
+    fig = figure(fignum=fignum); fig.clf()
+    set_figtitle(figtitle, 'groundtruth'+res.query_uid)
+    plt.subplot(1, nGtSubplts, 1)
     if show_query: 
         printDBG('Plotting Query:')
-        plotnum=(nRows, nCols, 1)
+        plotnum=(1,nGtSubplts, 1)
         show_chip(hs, res=res, plotnum=plotnum, draw_kpts=annote, SV=SV)
     # Plot Ground Truth
-    plot_matches_cxs(gt_cxs, nQuerySubplts, SV) 
+    plot_matches_cxs(gt_cxs, 1, SV, (1, nGtSubplts)) 
+    # new fig
+    fig = figure(fignum=fignum+10000); fig.clf()
+    set_figtitle(figtitle, res.query_uid)
+    plt.subplot(1, nTopNSubplts, 1)
     # Plot Top N
-    plot_matches_cxs(topN_cxs, nGtCells, SV)    
-    if compare_SV:
-        offset = nGtCells + nTopNCells
+    nGtCells = 0
+    plot_matches_cxs(topN_cxs, 0, SV, (1, nTopNSubplts))
+    #if compare_SV:
         # Plot Ground Truth
         # plot_matches_cxs(gt_cxs, offset + nQuerySubplts, not SV) 
         # Plot Top N
-        plot_matches_cxs(topN_cxs, offset, not SV)    
+        #plotnum=(1, nTopNSubplts, offset)
+        #plot_matches_cxs(topN_cxs, plotnum, not SV)    
         #plotx_shift = 1 + nGtCells#num_cells - num_subplots + 1
         #for ox, cx in enumerate(topN_cxs):
             #plotx = ox + plotx_shift
             #orank = np.where(ranked_cxs == cx)[0][0] + 1
             #show_matches_(cx, orank, plotx, SV)
-
-
     set_figtitle(figtitle, res.query_uid)
     printDBG('[df2] + nTopNRows=%r' % nTopNRows)
     printDBG('[df2] + nGtRows=%r' % nGtRows)

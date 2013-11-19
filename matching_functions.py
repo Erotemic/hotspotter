@@ -60,14 +60,17 @@ rrr = reload_module
 def nearest_neighbors(hs, qcxs, q_cfg):
     'Plain Nearest Neighbors'
     data_index = q_cfg.data_index
+    flann = data_index.flann
     nn_cfg  = q_cfg.nn_cfg
-    print('[mf] Step 1) Assign nearest neighbors: '+nn_cfg.get_uid())
+    print(''.join(['[mf] Step 1) Assign nearest neighbors: ']+nn_cfg.get_uid()))
     K = nn_cfg.K
     Knorm = nn_cfg.Knorm
     checks = nn_cfg.checks
     cx2_desc = hs.feats.cx2_desc
-    nn_index = data_index.flann.nn_index
-    nnfunc = lambda qfx2_desc: nn_index(qfx2_desc, K+Knorm, checks=checks)
+    def nnfunc(qfx2_desc):
+        #print(qfx2_desc.shape)
+        #print(data_index)
+        return flann.nn_index(qfx2_desc, K+Knorm, checks=checks)
     #qcx2_nns = {qcx:func(qcx) for qcx in qcxs}
     qcx2_nns = {}
     nNN = 0
@@ -94,7 +97,7 @@ def weight_neighbors(hs, qcx2_nns, q_cfg):
     f_cfg = q_cfg.f_cfg
     if not f_cfg.filt_on:
         return  {}
-    print('[mf] Step 2) Weight neighbors: '+f_cfg.get_uid())
+    print(''.join(['[mf] Step 2) Weight neighbors: ']+f_cfg.get_uid()))
     nnfilter_list = f_cfg.nnfilter_list
     filt2_weights = {}
     for nnfilter in nnfilter_list:
@@ -168,8 +171,20 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, q_cfg=None):
         (_, cx2_fs, _) = chipmatch
         cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
         return cx2_score
-    elif score_method == 'placketluce':
+    if score_method == 'nsum':
+        nx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+        return cx2_score
+    if score_method == 'nunique':
+        cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+        return cx2_score
+    elif score_method == 'pl':
         cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, qcx, chipmatch, q_cfg)
+    elif score_method == 'plw':
+        cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, qcx, chipmatch, q_cfg)
+    elif score_method == 'borda':
+        cx2_score, nx2_score = vr2.score_chipmatch_Borda(hs, qcx, chipmatch, q_cfg)
+    elif score_method == 'topk':
+        cx2_score, nx2_score = vr2.score_chipmatch_TopK(hs, qcx, chipmatch, q_cfg)
     else:
         raise Exception('[mf] unknown scoring method:'+score_method)
     return cx2_score

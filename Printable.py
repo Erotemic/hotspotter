@@ -171,6 +171,8 @@ class DynStruct(AbstractPrintable):
         self_keys = set(self.__dict__.keys())
         for key, val in kwargs.iteritems():
             if key in self_keys:
+                if type(val) == types.ListType:
+                    val = val[0]
                 self.__dict__[key] = val
 
     def add_dict(self, dyn_dict):

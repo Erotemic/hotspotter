@@ -36,10 +36,24 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 rrr = reload_module
 
+def score_chipmatch_PLWeighted(hs, qcx, chipmatch, q_cfg):
+    K = q_cfg.nn_cfg.K
+    max_alts = q_cfg.a_cfg.max_alts
+    # Run Placket Luce Model
+    qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
+    qfx2_utilities = _utilities2_weighted_pairwise_breaking(qfx2_utilities, max_alts)
+    PL_matrix, altx2_tnx = _utilities2_pairwise_breaking(qfx2_utilities)
+    gamma = _optimize(PL_matrix)
+    altx2_prob = _PL_score(gamma)
+    # Use probabilities as scores
+    cx2_score, nx2_score = prob2_cxnx2scores(hs, qcx, altx2_prob, altx2_tnx)
+    return cx2_score, nx2_score
+
 # chipmatch = qcx2_chipmatch[qcx]
 def score_chipmatch_PL(hs, qcx, chipmatch, q_cfg):
     K = q_cfg.nn_cfg.K
-    max_alts = 200
+    max_alts = q_cfg.a_cfg.max_alts
+    isWeighted = max_alts = q_cfg.a_cfg.isWeighted
     # Run Placket Luce Model
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
     qfx2_utilities = _filter_utilities(qfx2_utilities, max_alts)
@@ -238,6 +252,45 @@ def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
     #print('CheckMat = %r ' % all(np.abs(PLmatrix.sum(0)) < 1E-9))
     return PLmatrix, altx2_tnx
 
+# Positional Scoring Rules
+
+def voting_rule(alternative_ids, qfx2_altx, qfx2_weight=None, rule='borda',
+                correct_altx=None, fnum=1):
+    K = qfx2_altx.shape[1]
+    if rule == 'borda':
+        score_vec = np.arange(0,K)[::-1]
+    if rule == 'plurality':
+        score_vec = np.zeros(K); score_vec[0] = 1
+    if rule == 'topk':
+        score_vec = np.ones(K)
+    score_vec = np.array(score_vec, dtype=np.int)
+    print('----')
+    title = 'Rule=%s Weighted=%r ' % (rule, not qfx2_weight is None)
+    print('[vote] ' + title)
+    print('[vote] score_vec = %r' % (score_vec,))
+    alt_score = weighted_positional_scoring_rule(alternative_ids, qfx2_altx, score_vec, qfx2_weight)
+    ranked_candiates = alt_score.argsort()[::-1]
+    ranked_scores    = alt_score[ranked_candiates]
+    viz_votingrule_table(ranked_candiates, ranked_scores, correct_altx, title, fnum)
+    return ranked_candiates, ranked_scores
+
+
+def weighted_positional_scoring_rule(alternative_ids, 
+                                     qfx2_altx, score_vec,
+                                     qfx2_weight=None):
+    nAlts = len(alternative_ids)
+    alt_score = np.zeros(nAlts)
+    if qfx2_weight is None: 
+        qfx2_weight = np.ones(qfx2_altx.shape)
+    for qfx in xrange(len(qfx2_altx)):
+        partial_order = qfx2_altx[qfx]
+        weights       = qfx2_weight[qfx]
+        # Remove impossible votes
+        weights       = weights[partial_order != -1]
+        partial_order = partial_order[partial_order != -1]
+        for ix, altx in enumerate(partial_order):
+            alt_score[altx] += weights[ix] * score_vec[ix]
+    return alt_score
 
 if __name__ == '__main__':
     pass

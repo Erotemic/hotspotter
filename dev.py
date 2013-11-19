@@ -161,7 +161,10 @@ def print_best(qonx2_agg, test_list):
     print('    '+'\n    '.join(rowlbl_list))
     print('[best] Column Labels: ')
     print('    '+'\n    '.join(collbl_list))
-    print('[best] all_ranks (rows=chip, cols=cfg) = \n%r' % np.hstack(mats_list))
+    rank_mat = np.hstack(mats_list)
+    rank_mat = np.vstack([np.arange(rank_mat.shape[1]), rank_mat])
+    rank_mat = np.hstack([np.arange(rank_mat.shape[0]).reshape(rank_mat.shape[0],1)-1, rank_mat])
+    print('[best] all_ranks (rows=chip, cols=cfg) = \n%r' % rank_mat)
     qonx2_score.shape = (len(qonx2_score),1)
     print('[best] best_ranks =\n%r ' % qonx2_score)
 
@@ -174,29 +177,37 @@ def test_scoring(hs):
     print('\n*********************\n')
     print('[dev]================')
     print('[dev]test_scoring(hs)')
-    varied_params_vsmany = {
-        #'lnbnn_weight' : [0, 1],
-        #'checks'       : [128, 1024, 8192],
-        'K'            : [5, 10],
-        'Krecip'       : [0, 5, 10],
+    vary_dicts = []
+    vary_dicts.append({
+        'query_type'     : ['vsmany'],
+        'checks'         : [1024],#, 8192],
+        'K'              : [2,5], #5, 10],
+        'Knorm'          : [1], #2, 3],
+        'Krecip'         : [1], #, 5, 10],
+        'roidist_weight' : [0], # 1,]
+        'recip_weight'   : [0], # 1,] 
+        'bursty_weight'  : [0], # 1,]
+        'ratio_weight'   : [0], # 1,]
+        'lnbnn_weight'   : [1], # 1,]
+        'lnrat_weight'   : [0], # 1,]
+        'roidist_thresh' : [None], # .5,] 
+        'recip_thresh'   : [None], # 0
+        'bursty_thresh'  : [None], #
+        'ratio_thresh'   : [None], # 1.2, 1.6
+        'lnbnn_thresh'   : [None], # 
+        'lnrat_thresh'   : [None], #
         'nShortlist'   : [500],
-        'sv_on'        : [True, False],
-        #'score_method' : ['csum', 'placketluce'],
-        'query_type'   : ['vsmany'],
-    }
-    varied_params_vsone = {
-        'ratio_thresh' : [1.6],
-        'ratio_weight' : [1],
-        'checks'       : [128, 1024],
-        'Krecip'       : [0],
-        'K'            : [1],
-        'score_method' : ['csum', 'placketluce'],
-        'query_type'   : ['vsone'],
-    }
-    dict_list = []
-    dict_list += helpers.all_dict_combinations(varied_params_vsmany)
-    #dict_list += helpers.all_dict_combinations(varied_params_vsone)
-    test_list = [ds.QueryConfig(**_dict) for _dict in dict_list]
+        'sv_on'        : [True], #True, False],
+        'score_method' : ['pl'],#, 'pl'], #, 'nsum', 'borda', 'topk', 'nunique']
+        'isWeighted'   : [True], #, False
+        'max_alts'     : [200],
+    })
+    #vary_dicts = vary_dicts[0]
+    varied_params_list = [_ for _dict in vary_dicts for _ in helpers.all_dict_combinations(_dict)]
+    #for _dict in varied_params_list[0]:
+        #print(_dict)
+    test_list = [ds.QueryConfig(**_dict) for _dict in varied_params_list]
+    print(test_list)
     #io.print_off()
     # query_cxs, other_cxs, notes
     qon_list = iv.get_qon_list(hs)
@@ -252,6 +263,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     print('[dev]-----------')
     print('[dev] main()')
+    df2.DARKEN = .5
     main_locals = iv.main()
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
     test_scoring(hs)

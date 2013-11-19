@@ -33,51 +33,14 @@ def reload_module():
     print('[ds] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 rrr = reload_module
-
-#=========================
-# NN (FLANN) Index Class
-#=========================
-FM_DTYPE  = np.uint32
-FK_DTYPE  = np.int16
-FS_DTYPE  = np.float32
-class NNIndex(object):
-    def __init__(nn_index, hs, sx2_cx):
-        cx2_desc  = hs.feats.cx2_desc
-        # Make unique id for indexed descriptors
-        feat_uid   = params.get_feat_uid()
-        sample_uid = helpers.make_sample_id(sx2_cx)
-        uid = '_cxs(' + sample_uid + ')' + feat_uid
-        # Number of features per sample chip
-        sx2_nFeat = [len(cx2_desc[sx]) for sx in iter(sx2_cx)]
-        # Inverted index from indexed descriptor to chipx and featx 
-        _ax2_cx = [[cx]*nFeat for (cx, nFeat) in izip(sx2_cx, sx2_nFeat)]
-        _ax2_fx = [range(nFeat) for nFeat in iter(sx2_nFeat)]
-        ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
-        ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
-        # Aggregate indexed descriptors into continuous structure
-        ax2_desc = np.vstack([cx2_desc[cx] for cx in sx2_cx])
-        # Build/Load the flann index
-        flann_params = {'algorithm':'kdtree', 'trees':4}
-        precomp_kwargs = {'cache_dir'    : hs.dirs.cache_dir,
-                          'uid'          : uid,
-                          'flann_params' : flann_params, }
-        flann = algos.precompute_flann(ax2_desc, **precomp_kwargs)
-        #----
-        # Agg Data
-        nn_index.ax2_cx   = ax2_cx
-        nn_index.ax2_fx   = ax2_fx
-        nn_index.ax2_data = ax2_desc
-        nn_index.flann = flann
-    def __del__(nn_index):
-        if not nn_index.flann:
-            nn_index.flann.delete_index()
-            nn_index.flann = None
 #=========================
 # Query Result Class
 #=========================
 def query_result_fpath(hs, qcx, query_uid):
     qres_dir  = hs.dirs.qres_dir 
     fname = 'result%s_qcx=%d.npz' % (query_uid, qcx)
+    if len(fname) > 64:
+        fname = helpers.hashstr(fname)
     fpath = join(qres_dir, fname)
     return fpath
 
@@ -143,9 +106,9 @@ class QueryResult(DynStruct):
                 raise
                 #warnings.warn(warnmsg)
             else:
-                msg = ('[ds] QueryResult(qcx=%d) is corrupted' % (res.qcx))
-                msg += ('\n%r' % (ex,))
-                print(msg)
+                msg = ['[ds] QueryResult(qcx=%d) is corrupted' % (res.qcx)]
+                msg += ['\n%r' % (ex,)]
+                print(''.join(msg))
                 raise Exception(msg)
     def get_SV(res):
         #return res.cx2_fm_V.size > 0
@@ -188,10 +151,49 @@ class QueryResult(DynStruct):
     def show_topN(res, hs, **kwargs):
         if not 'SV' in kwargs.keys():
             kwargs['SV'] = res.get_SV()
-        df2.show_topN_matches(hs, res, **kwargs)
+        df2.show_match_analysis(hs, res, **kwargs)
 
 #=========================
-# Param Classes
+# NN (FLANN) Index Class
+#=========================
+FM_DTYPE  = np.uint32
+FK_DTYPE  = np.int16
+FS_DTYPE  = np.float32
+class NNIndex(object):
+    def __init__(nn_index, hs, sx2_cx):
+        cx2_desc  = hs.feats.cx2_desc
+        # Make unique id for indexed descriptors
+        feat_uid   = params.get_feat_uid()
+        sample_uid = helpers.make_sample_id(sx2_cx)
+        uid = '_cxs(' + sample_uid + ')' + feat_uid
+        # Number of features per sample chip
+        sx2_nFeat = [len(cx2_desc[sx]) for sx in iter(sx2_cx)]
+        # Inverted index from indexed descriptor to chipx and featx 
+        _ax2_cx = [[cx]*nFeat for (cx, nFeat) in izip(sx2_cx, sx2_nFeat)]
+        _ax2_fx = [range(nFeat) for nFeat in iter(sx2_nFeat)]
+        ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
+        ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
+        # Aggregate indexed descriptors into continuous structure
+        ax2_desc = np.vstack([cx2_desc[cx] for cx in sx2_cx])
+        # Build/Load the flann index
+        flann_params = {'algorithm':'kdtree', 'trees':4}
+        precomp_kwargs = {'cache_dir'    : hs.dirs.cache_dir,
+                          'uid'          : uid,
+                          'flann_params' : flann_params, }
+        flann = algos.precompute_flann(ax2_desc, **precomp_kwargs)
+        #----
+        # Agg Data
+        nn_index.ax2_cx   = ax2_cx
+        nn_index.ax2_fx   = ax2_fx
+        nn_index.ax2_data = ax2_desc
+        nn_index.flann = flann
+    def __del__(nn_index):
+        if not nn_index.flann:
+            nn_index.flann.delete_index()
+            nn_index.flann = None
+
+#=========================
+# CONFIG Classes
 #=========================
 #def udpate_dicts(dict1, dict2):
     #dict1_keys = set(dict1.keys())
@@ -209,10 +211,10 @@ class NNConfig(DynStruct):
         nn_cfg.checks = 1024#512#128
         nn_cfg.update(**kwargs)
     def get_uid(nn_cfg):
-        uid = '_NN(' 
-        uid += 'K'+str(nn_cfg.K)+'+'+str(nn_cfg.Knorm)
-        uid += ',cks' + str(nn_cfg.checks)
-        uid += ')'
+        uid  = ['_NN('] 
+        uid += ['K',str(nn_cfg.K),'+',str(nn_cfg.Knorm)]
+        uid += [',cks',str(nn_cfg.checks)]
+        uid += [')']
         return uid
 
 def dict_subset(dict_, keys):
@@ -235,68 +237,68 @@ class FilterConfig(DynStruct):
     # Rename to scoring mechanism
     def __init__(f_cfg, **kwargs):
         super(FilterConfig, f_cfg).__init__()
-        fp = f_cfg
-        fp.filt_on = True
-        fp.Krecip = 0 # 0 := off
-        fp.nnfilter_list = ['recip', 'roidist']
+        f_cfg = f_cfg
+        f_cfg.filt_on = True
+        f_cfg.Krecip = 0 # 0 := off
+        f_cfg.nnfilter_list = ['recip', 'roidist']
         #
-        fp.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio']
+        f_cfg.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio']
         valid_filters = []
         def addfilt(sign, filt, thresh, weight):
             valid_filters.append((sign, filt))
-            fp.__dict__[filt+'_thresh'] = thresh
-            fp.__dict__[filt+'_weight']  = weight
+            f_cfg.__dict__[filt+'_thresh'] = thresh
+            f_cfg.__dict__[filt+'_weight'] = weight
         #tuple(Sign, Filt, ValidSignThresh, ScoreWeight)
         addfilt(+1, 'roidist', None, 0)
         addfilt(+1, 'recip',      0, 0)
         #addfilt(+1, 'scale' )
         addfilt(+1, 'bursty', None, 0)
         addfilt(-1, 'ratio',  None, 0)
-        addfilt(-1, 'lnbnn',  None, 0)
-        addfilt(-1, 'lnrat',  None, 1)
-        fp.update(**kwargs)
-        fp.filt2_tw = {}
+        addfilt(-1, 'lnbnn',  None, 1)
+        addfilt(-1, 'lnrat',  None, 0)
+        f_cfg.filt2_tw = {}
         for (sign, filt) in valid_filters:
-            stw = ((sign, fp.__dict__[filt+'_thresh']), fp.__dict__[filt+'_weight'])
-            fp.filt2_tw[filt] = stw
+            stw = ((sign, f_cfg.__dict__[filt+'_thresh']), f_cfg.__dict__[filt+'_weight'])
+            f_cfg.filt2_tw[filt] = stw
+        f_cfg.update(**kwargs)
 
     def make_feasible(f_cfg, nn_cfg):
         nnfilts = f_cfg.nnfilter_list
         nnp = nn_cfg
-        fp = f_cfg
+        f_cfg = f_cfg
         # Knorm
-        if fp.lnbnn_thresh is None and fp.lnbnn_weight == 0:
+        if f_cfg.lnbnn_thresh is None and f_cfg.lnbnn_weight == 0:
             listrm(nnfilts, 'lnbnn')
-        if fp.ratio_thresh   <= 1:
+        if f_cfg.ratio_thresh   <= 1:
             listrm(nnfilts, 'ratio')
         norm_depends = ['lnbnn', 'ratio', 'lnrat']
         if nnp.Knorm <= 0 and not any_inlist(nnfilts, norm_depends):
             listrm_list(nnfilts, norm_depends)
             nnp.Knorm = 0
         # Krecip
-        if fp.Krecip <= 0 or 'recip' not in nnfilts:
+        if f_cfg.Krecip <= 0 or 'recip' not in nnfilts:
             listrm(nnfilts, 'recip')
-            fp.Krecip = 0
-        if (fp.roidist_thresh is None or fp.roidist_thresh >= 1) and\
-               fp.roidist_weight == 0:
+            f_cfg.Krecip = 0
+        if (f_cfg.roidist_thresh is None or f_cfg.roidist_thresh >= 1) and\
+               f_cfg.roidist_weight == 0:
             listrm(nnfilts, 'roidist')
-        if fp.bursty_thresh   <= 1:
+        if f_cfg.bursty_thresh   <= 1:
             listrm(nnfilts, 'bursty')
 
 
     def get_uid(f_cfg):
         if not f_cfg.filt_on: 
-            return '_FILT()'
+            return ['_FILT()']
         on_filters = dict_subset(f_cfg.filt2_tw,
                                  f_cfg.nnfilter_list)
-        uid = '_FILT(' 
+        uid = ['_FILT(']
         twstr = signthreshweight_str(on_filters)
         if f_cfg.Krecip != 0:
-            uid += 'Kr'+str(f_cfg.Krecip)
-            if len(twstr) > 0: uid += ','
+            uid += ['Kr'+str(f_cfg.Krecip)]
+            if len(twstr) > 0: uid += [',']
         if len(twstr) > 0:
-            uid += twstr
-        uid += ')'
+            uid += [twstr]
+        uid += [')']
         return uid
 
 def signthreshweight_str(on_filters):
@@ -326,27 +328,46 @@ class SpatialVerifyConfig(DynStruct):
         sv_cfg.update(**kwargs)
     def get_uid(sv_cfg):
         if not sv_cfg.sv_on:
-            return '_SV()'
-        uid = '_SV(' 
-        uid += str(sv_cfg.nShortlist)
-        uid += ',' + str(sv_cfg.xy_thresh)
-        uid += ',' + str(sv_cfg.scale_thresh).replace(' ','')
-        uid += ',cdl' * sv_cfg.use_chip_extent # chip diag len
-        uid += ','+sv_cfg.prescore_method
-        uid += ')'
+            return ['_SV()']
+        uid = ['_SV('] 
+        uid += [str(sv_cfg.nShortlist)]
+        uid += [',' + str(sv_cfg.xy_thresh)]
+        uid += [',' + str(sv_cfg.scale_thresh).replace(' ','')]
+        uid += [',cdl' * sv_cfg.use_chip_extent] # chip diag len
+        uid += [','+sv_cfg.prescore_method]
+        uid += [')']
         return uid
 
 class AggregateConfig(DynStruct):
     def __init__(a_cfg, **kwargs):
         super(AggregateConfig, a_cfg).__init__()
         a_cfg.query_type   = 'vsmany'
-        a_cfg.score_method = 'csum' # namesum, placketluce
+        # chipsum, namesum, placketluce
+        a_cfg.isWeighted = False # nsum, pl
+        a_cfg.score_method = 'csum' # nsum, pl
+        alt_methods = {
+            'topk' : 'topk',
+            'borda' : 'borda',
+            'placketluce': 'pl',
+            'chipsum': 'csum',
+            'namesum': 'nsum',
+        }
+        key = a_cfg.score_method.lower()
+        if alt_methods.has_key(key):
+            a_cfg.score_method = alt_methods[key]
+        # For Placket-Luce
+        a_cfg.max_alts = 200
+        # ----
         a_cfg.update(**kwargs)
     def get_uid(a_cfg):
-        uid = '_AGG('
-        uid += a_cfg.query_type
-        uid += ','+a_cfg.score_method
-        uid += ')'
+        uid = []
+        uid += ['_AGG(']
+        uid += [a_cfg.query_type]
+        uid += [',',a_cfg.score_method]
+        if a_cfg.score_method == 'pl':
+            uid += [',%d' % (a_cfg.max_alts,)]
+            if a_cfg.isWeighted: uid += ['w']
+        uid += [') ']
         return uid
 
 class QueryConfig(DynStruct):
@@ -365,7 +386,7 @@ class QueryConfig(DynStruct):
         q_cfg.update(**kwargs)
         q_cfg.f_cfg.make_feasible(q_cfg.nn_cfg)
     def get_uid(q_cfg, *args, **kwargs):
-        uid = ''
+        uid = []
         if not 'noNN' in args:
             uid += q_cfg.nn_cfg.get_uid()
         if not 'noFILT' in args:
@@ -375,5 +396,5 @@ class QueryConfig(DynStruct):
         if not 'noAGG' in args:
             uid += q_cfg.a_cfg.get_uid()
         if not 'noCHIP' in args:
-            uid += params.get_indexed_uid()
-        return uid
+            uid += [params.get_indexed_uid()]
+        return ''.join(uid)

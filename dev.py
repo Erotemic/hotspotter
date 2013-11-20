@@ -120,7 +120,8 @@ def get_test_results(hs, qon_list, q_params, use_cache=True, cfgx=0, nCfg=1,
     nLeX = {1:0, 5:0}
     if use_cache and (not force_load):
         test_results = io.smart_load(**io_kwargs)
-        if len(test_results) != 5: print('recaching test_results')
+        if test_results is None: pass
+        elif len(test_results) != 5: print('recaching test_results')
         elif not test_results is None: return test_results, [[{0:None}]]*nQuery
     for qonx, (qcx, ocids, notes) in enumerate(qon_list):
         print('[dev]----------------')

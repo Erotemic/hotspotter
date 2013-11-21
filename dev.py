@@ -131,7 +131,7 @@ def print_best(qonx2_agg, cfg_list):
 
 #-----------
 # Run configuration for each qon
-def get_test_results(hs, qon_list, q_params, use_cache=True, cfgx=0, nCfg=1,
+def get_test_results(hs, qon_list, q_params, cfgx=0, nCfg=1,
                      force_load=False):
     print('[dev] get_test_results(): %r' % q_params.get_uid())
     query_uid = q_params.get_uid()
@@ -147,7 +147,7 @@ def get_test_results(hs, qon_list, q_params, use_cache=True, cfgx=0, nCfg=1,
     nQuery = len(qon_list) 
     nPrevQ = nQuery*cfgx
     qonx2_reslist = []
-    if use_cache and (not force_load):
+    if  not hs.args.nocache_query and (not force_load):
         test_results = io.smart_load(**io_kwargs)
         if test_results is None: pass
         elif len(test_results) != 1: print('recaching test_results')
@@ -160,7 +160,7 @@ def get_test_results(hs, qon_list, q_params, use_cache=True, cfgx=0, nCfg=1,
         title = 'q'+ hs.cxstr(qcx) + ' - ' + notes
         #print('[dev] title=%r' % (title,))
         #print('[dev] gt_'+hs.cxstr(gt_cxs))
-        res_list = mc3.execute_query_safe(hs, q_params, [qcx], use_cache=use_cache)
+        res_list = mc3.execute_query_safe(hs, q_params, [qcx])
         bestranks = []
         algos = []
         qonx2_reslist += [res_list]
@@ -179,9 +179,8 @@ def get_test_results(hs, qon_list, q_params, use_cache=True, cfgx=0, nCfg=1,
     mat_vals = np.array(qonx2_bestranks)
     test_results = (mat_vals,)
     # High level caching
-    if use_cache: 
-        helpers.ensuredir('results')
-        io.smart_save(test_results, **io_kwargs)
+    helpers.ensuredir('results')
+    io.smart_save(test_results, **io_kwargs)
     return test_results, qonx2_reslist
 
 #-----------
@@ -202,7 +201,6 @@ def test_configurations(hs):
     for q_cfg in cfg_list:
         q_cfg.dcxs2_index = GLOBAL_dcxs2_index
     # __END_HACK__
-    use_cache = not hs.args.nocache_query
     # Preallocate test result aggregation structures
     print('')
     print('[dev] Testing %d different parameters' % len(cfg_list))
@@ -217,8 +215,7 @@ def test_configurations(hs):
         print('[dev]---------------')
         force_load = cfgx in hs.args.c 
         (mat_vals,), qonx2_reslist =\
-                get_test_results(hs, qon_list, test_cfg, use_cache, cfgx, nCfg,
-                                 force_load)
+                get_test_results(hs, qon_list, test_cfg, cfgx, nCfg, force_load)
         mat_list.append(mat_vals)
         for qonx, reslist in enumerate(qonx2_reslist):
             assert len(reslist) == 1

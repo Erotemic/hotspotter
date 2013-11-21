@@ -54,23 +54,19 @@ rrr = reload_module
 # Convinience Functions 
 #----------------------
 
-def vsone_groundtruth(hs, qcx, q_cfg=None, **kwargs):
-    print('[mc3] vsone groundtruth')
-    kwargs['invert_query'] = True
+def query_groundtruth(hs, qcx, q_cfg=None, **kwargs):
+    print('[mc3] query groundtruth')
     gt_cxs = hs.get_other_cxs(qcx)
-    return execute_query_safe(hs, q_cfg, [qcx], gt_cxs, **kwargs)
+    result_list = execute_query_safe(hs, q_cfg, [qcx], gt_cxs, **kwargs)
+    res = result_list[0].values()[0]
+    return res
 
-def vsone_database(hs, qcx, q_cfg=None, **kwargs):
-    print('[mc3] vsone database')
-    kwargs['invert_query'] = True
+def query_database(hs, qcx, q_cfg=None, **kwargs):
+    print('[mc3] query database')
     dcxs = hs.indexed_sample_cx
-    return execute_query_safe(hs, q_cfg, [qcx], dcxs, **kwargs)
-
-def vsmany_database(hs, qcx, q_cfg=None, **kwargs):
-    print('[mc3] vsmany database')
-    kwargs['invert_query'] = False
-    dcxs = hs.indexed_sample_cx
-    return execute_query_safe(hs, q_cfg, [qcx], dcxs, **kwargs)
+    result_list = execute_query_safe(hs, q_cfg, [qcx], gt_cxs, **kwargs)
+    res = result_list[0].values()[0]
+    return res
 
 def make_nn_index(hs, sx2_cx=None):
     if sx2_cx is None:
@@ -111,52 +107,6 @@ def load_cached_query(hs, q_cfg, aug_list=['']):
 #----------------------
 # Main Query Logic
 #----------------------
-def execute_query_safe3(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **kwargs):
-    '''Executes a query, performs all checks, callable on-the-fly'''
-    print('[query]-------')
-    print('[query] Execute query safe: q%s' % hs.cxstr(qcxs))
-    if q_cfg is None: q_cfg = ds.QueryConfig(**kwargs)
-    if dcxs is None: dcxs = hs.indexed_sample_cx
-    q_cfg.qcxs = qcxs
-    q_cfg.dcxs = dcxs
-    #---------------
-    # Flip if needebe
-    query_type = q_cfg.a_cfg.query_type
-    if query_type == 'vsone': 
-        (dcxs, qcxs) = (q_cfg.qcxs, q_cfg.dcxs)
-    elif query_type == 'vsmany':
-        (dcxs, qcxs) = (q_cfg.dcxs, q_cfg.qcxs)
-    # caching
-    if use_cache:
-        result_list = load_cached_query(hs, q_cfg, ['+NN','+FILT','+SVER'])
-        if not result_list is None: 
-            return result_list
-    print('[query] qcxs=%r' % q_cfg.qcxs)
-    print('[query] len(dcxs)=%r' % len(q_cfg.dcxs))
-    ensure_nn_index(hs, q_cfg, dcxs)
-    # Nearest neighbors
-    neighbs = mf.nearest_neighbors(hs, qcxs, q_cfg)
-    # Nearest neighbors weighting and scoring
-    weights  = mf.weight_neighbors(hs, neighbs, q_cfg)
-    # Thresholding and weighting
-    nnfiltORIG = mf.filter_neighbors(hs, neighbs, {}, q_cfg)
-    nnfiltFILT = mf.filter_neighbors(hs, neighbs, weights, q_cfg)
-    # Nearest neighbors to chip matches
-    matchesORIG = mf.build_chipmatches(hs, neighbs, nnfiltORIG, q_cfg)
-    matchesFILT = mf.build_chipmatches(hs, neighbs, nnfiltFILT, q_cfg)
-    # Spatial verification
-    matchesSVER = mf.spatial_verification(hs, matchesFILT, q_cfg)
-    # Query results format
-    result_list = [
-        mf.chipmatch_to_resdict(hs, matchesORIG, q_cfg, '+NN'),
-        mf.chipmatch_to_resdict(hs, matchesFILT, q_cfg, '+FILT'),
-        mf.chipmatch_to_resdict(hs, matchesSVER, q_cfg, '+SVER'),
-    ]
-    for qcx2_res in result_list:
-        for qcx in qcx2_res.iterkeys():
-            qcx2_res[qcx].save(hs)
-    return result_list
-
 def execute_query_safe(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **kwargs):
     '''Executes a query, performs all checks, callable on-the-fly'''
     print('[query]-------')
@@ -173,7 +123,7 @@ def execute_query_safe(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **k
     elif query_type == 'vsmany':
         (dcxs, qcxs) = (q_cfg.dcxs, q_cfg.qcxs)
     # caching
-    if use_cache:
+    if not hs.args.nocache_query:
         result_list = load_cached_query(hs, q_cfg)
         if not result_list is None: 
             return result_list

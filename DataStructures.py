@@ -50,10 +50,10 @@ def query_result_exists(hs, qcx, query_uid):
     return exists(fpath)
 
 class QueryResult(DynStruct):
-    __slots__ = ['true_uid', 'qcx', 'query_uid', 'uid', 'title', 'nn_time',
-                 'weight_time', 'filter_time', 'build_time', 'verify_time',
-                 'cx2_fm', 'cx2_fs', 'cx2_fk', 'cx2_score', 'cx2_fm_V',
-                 'cx2_fs_V', 'cx2_fk_V', 'cx2_score_V']
+    #__slots__ = ['true_uid', 'qcx', 'query_uid', 'uid', 'title', 'nn_time',
+                 #'weight_time', 'filt_time', 'build_time', 'verify_time',
+                 #'cx2_fm', 'cx2_fs', 'cx2_fk', 'cx2_score', 'cx2_fm_V',
+                 #'cx2_fs_V', 'cx2_fk_V', 'cx2_score_V']
     def __init__(res, qcx, uid, q_cfg=None):
         super(QueryResult, res).__init__()
         res.true_uid  = '' if q_cfg is None else q_cfg.get_uid()
@@ -64,7 +64,7 @@ class QueryResult(DynStruct):
         # Times
         res.nn_time     = -1
         res.weight_time = -1
-        res.filter_time = -1
+        res.filt_time = -1
         res.build_time  = -1
         res.verify_time = -1
         # Assigned features matches

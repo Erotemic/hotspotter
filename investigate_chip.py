@@ -570,27 +570,6 @@ def get_hard_cases(hs):
     #print('[get_hard_cases]\n %r\n %r\n %r\n' % (qcx_list, ocid_list, note_list))
     return qcx_list, ocid_list, note_list
 
-def get_qon_list(hs):
-    print('[invest] get_qon_list()')
-    # Get query ids
-    qon_list = []
-    histids = None if args.histid is None else np.array(args.histid)
-    if args.qcid is None:
-        qon_hard = zip(*get_hard_cases(hs))
-        if histids is None:
-            print('[invest] Chosen all hard histids')
-            qon_list += qon_hard
-        elif not histids is None:
-            print('[invest] Chosen histids=%r' % histids)
-            qon_list += [qon_hard[id_] for id_ in histids]
-    else:
-        print('[invest] Chosen qcid=%r' % args.qcid)
-        qcx_list =  helpers.ensure_iterable(hs.cid2_cx(args.qcid))
-        ocid_list = [[]*len(qcx_list)]
-        note_list = [['user selected qcid']*len(qcx_list)]
-        qon_list += [zip(qcx_list, ocid_list, note_list)]
-    return qon_list
-
 def view_all_history_names_in_db(hs, db):
     qcx_list = zip(*get_hard_cases(hs))[0]
     nx_list = hs.tables.cx2_nx[qcx_list]
@@ -634,6 +613,8 @@ def run_investigations(hs, qon_list):
         mc3.compare_scoring(hs)
     if '9' in args.tests:
         plot_keypoint_scales(hs)
+    if '10' in args.tests:
+        fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)
 
 #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=20)
 #fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
@@ -702,6 +683,36 @@ def plot_keypoint_scales(hs, fnum=1):
     ax = df2.plt.gca()
     ax.set_yscale('log')
     ax.set_xscale('log')
+
+def get_qon_list(hs):
+    print('[invest] get_qon_list()')
+    # Get query ids
+    qon_list = []
+    histids = None if args.histid is None else np.array(args.histid)
+    if args.qcid is None:
+        qon_hard = zip(*get_hard_cases(hs))
+        if histids is None:
+            print('[invest] Chosen all hard histids')
+            qon_list += qon_hard
+        elif not histids is None:
+            print('[invest] Chosen histids=%r' % histids)
+            qon_list += [qon_hard[id_] for id_ in histids]
+    else:
+        print('[invest] Chosen qcid=%r' % args.qcid)
+        qcx_list =  helpers.ensure_iterable(hs.cid2_cx(args.qcid))
+        ocid_list = [[]*len(qcx_list)]
+        note_list = [['user selected qcid']*len(qcx_list)]
+        qon_list += [zip(qcx_list, ocid_list, note_list)]
+    return qon_list
+
+def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
+    q_cfg = ds.QueryConfig(invert_query=True)
+    for qcx, ocxs, notes in qon_list:
+        res = mc3.query_groundtruth(hs, qcx, q_cfg)
+        print(res)
+        res.show_query(hs, fignum=fnum)
+        fnum += 1
+    return fnum
 
 if __name__ == '__main__':
     print('[invest] __main__ ')

@@ -403,7 +403,6 @@ def add_alpha(colors):
     return [list(color)+[1] for color in colors]
 
 def show_matches_annote_res(res, hs, cx,
-                  SV=True, 
                   fignum=None, 
                   plotnum=None,
                   title_aug=None, 
@@ -412,10 +411,10 @@ def show_matches_annote_res(res, hs, cx,
     Wrapper for show_matches_annote
     '''
     qcx = res.qcx
-    cx2_score = res.get_cx2_score(SV)
-    cx2_fm    = res.get_cx2_fm(SV)
-    cx2_fs    = res.get_cx2_fs(SV)
-    title_suff = '(+V)' if SV else None
+    cx2_score = res.get_cx2_score()
+    cx2_fm    = res.get_cx2_fm()
+    cx2_fs    = res.get_cx2_fs()
+    title_suff = None
     return show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx,
                          fignum, plotnum, title_aug, title_suff, **kwargs)
 
@@ -480,7 +479,7 @@ def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     draw_kpts2(kpts)
 
 def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
-              nRandKpts=None, SV=True, kpts_alpha=None, **kwargs):
+              nRandKpts=None, kpts_alpha=None, **kwargs):
     if not res is None:
         cx = res.qcx
     if not allres is None:
@@ -524,7 +523,7 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
                  print(unique_ints)
                  raise
         all_fx = np.arange(len(kpts1))
-        cx2_fm = res.get_cx2_fm(SV)
+        cx2_fm = res.get_cx2_fm()
         fx_list1 = [fm[:,0] for fm in cx2_fm]
         fx_list2 = [fm[:,0] for fm in cx2_fm[gt_cxs]] if len(gt_cxs) > 0 else np.array([])
         matched_fx = stack_unique(fx_list1)
@@ -566,33 +565,32 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
             # show a random sample of kpts
         draw_kpts2(kpts1, ell_alpha=kpts_alpha, ell_color=RED, **kpts_args)
 
-def show_topN_matches(hs, res, N=5, SV=True, fignum=4): 
+def show_topN_matches(hs, res, N=5, fignum=4): 
     figtitle = ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))
-    topN_cxs = res.topN_cxs(N, SV)
+    topN_cxs = res.topN_cxs(N)
     max_nCols = max(5,N)
     _show_chip_matches(hs, res, topN_cxs=topN_cxs, figtitle=figtitle, 
-                       fignum=fignum, all_kpts=False, SV=SV)
+                       fignum=fignum, all_kpts=False)
 
-def show_gt_matches(hs, res, SV=True, fignum=3): 
+def show_gt_matches(hs, res, fignum=3): 
     figtitle = ('q%s -- GroundTruth' % (hs.cxstr(res.qcx)))
     gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     max_nCols = max(5,len(gt_cxs))
     _show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle, 
-                       fignum=fignum, all_kpts=True, SV=SV)
+                       fignum=fignum, all_kpts=True)
 
-def show_match_analysis(hs, res, N=5, fignum=3, figtitle='',
-                        show_query=True, annotations=True, SV=True,
-                        compare_SV=False, compare_cxs=None, **kwargs):
+def show_match_analysis(hs, res, N=5, fignum=3, figtitle='', show_query=True,
+                        annotations=True, compare_cxs=None, **kwargs):
     if not compare_cxs is None:
         topN_cxs = compare_cxs
         figtitle = 'comparing to '+hs.cxstr(topN_cxs) + figtitle
     else:
-        topN_cxs = res.topN_cxs(N, SV)
+        topN_cxs = res.topN_cxs(N)
         if len(topN_cxs) == 0: 
             warnings.warn('len(topN_cxs) == 0')
             figtitle = 'WARNING: no top scores!' + hs.cxstr(res.qcx)
         else:
-            topscore = res.get_cx2_score(SV)[topN_cxs][0]
+            topscore = res.get_cx2_score()[topN_cxs][0]
             figtitle = ('topscore=%r -- q%s' % (topscore, hs.cxstr(res.qcx))) + figtitle
     all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
@@ -605,13 +603,12 @@ def show_match_analysis(hs, res, N=5, fignum=3, figtitle='',
                               show_query=show_query,
                               fignum=fignum,
                               annotations=annotations,
-                              compare_SV=compare_SV,
-                              SV=SV, **kwargs)
+                              **kwargs)
 
 def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
                        topN_cxs=None, gt_cxs=None, show_query=False,
                        all_kpts=False, fignum=3, annotations=True, 
-                       SV=True, compare_SV=False, **kwargs):
+                       **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
     #print('========================')
     #print('[df2] Show chip matches:')
@@ -620,7 +617,7 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
     print('[df2] #top=%r #missed_gts=%r' % (len(topN_cxs),len(gt_cxs)))
     printDBG('[df2] * max_nCols=%r' % (max_nCols,))
     printDBG('[df2] * show_query=%r' % (show_query,))
-    ranked_cxs = res.get_cx2_score(SV).argsort()[::-1]
+    ranked_cxs = res.get_cx2_score().argsort()[::-1]
     annote = annotations
     # Build a subplot grid
     # * Get top N informatino
@@ -633,17 +630,15 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
     nGtCells = nGtRows * nCols
     nTopNCells = nTopNRows * nCols
     nRows = nTopNRows+nGtRows
-    if compare_SV:
-        nRows += nTopNRows
     fig = figure(fignum=fignum); fig.clf()
     # Helper function for drawing matches to one cx
-    def show_matches_(cx, orank, pnum, SV):
+    def show_matches_(cx, orank, pnum):
         aug = 'rank=%r ' % orank
         kwshow  = dict(draw_ell=annote, draw_pts=annote, draw_lines=annote,
-                       ell_alpha=.5, all_kpts=all_kpts, SV=SV, **kwargs)
+                       ell_alpha=.5, all_kpts=all_kpts, **kwargs)
         show_matches_annote_res(res, hs, cx, title_aug=aug, plotnum=pnum, **kwshow)
     # Helper to draw many cxs
-    def plot_matches_cxs(cx_list, plotx_shift, SV, rowcols):
+    def plot_matches_cxs(cx_list, plotx_shift, rowcols):
         if cx_list is None: return
         for ox, cx in enumerate(cx_list):
             plotx = ox + plotx_shift + 1
@@ -653,7 +648,7 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
                 orank = -1
                 continue
             orank = oranks[0] + 1
-            show_matches_(cx, orank, plotnum, SV)
+            show_matches_(cx, orank, plotnum)
 
     query_uid = res.query_uid
     query_uid = re.sub(r'_trainID\([0-9]*,........\)','', query_uid)
@@ -665,14 +660,14 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
     if show_query: 
         printDBG('Plotting Query:')
         plotnum=(1,nGtSubplts, 1)
-        show_chip(hs, res=res, plotnum=plotnum, draw_kpts=annote, SV=SV)
-    plot_matches_cxs(gt_cxs, 1, SV, (1, nGtSubplts)) 
+        show_chip(hs, res=res, plotnum=plotnum, draw_kpts=annote)
+    plot_matches_cxs(gt_cxs, 1, (1, nGtSubplts)) 
     set_figtitle(figtitle+'GT', query_uid)
 
     # Plot TopN in a new figure
     fig = figure(fignum=fignum+1000); fig.clf()
     plt.subplot(1, nTopNSubplts, 1)
-    plot_matches_cxs(topN_cxs, 0, SV, (1, nTopNSubplts))
+    plot_matches_cxs(topN_cxs, 0, (1, nTopNSubplts))
     set_figtitle(figtitle+'topN', query_uid)
     print('-----------------')
     return fig

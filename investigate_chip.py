@@ -712,6 +712,8 @@ def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
         print(res)
         res.show_query(hs, fignum=fnum)
         fnum += 1
+        res.show_topN(hs, fignum=fnum)
+        fnum += 1
     return fnum
 
 if __name__ == '__main__':

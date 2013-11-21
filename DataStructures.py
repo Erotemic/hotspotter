@@ -155,9 +155,13 @@ class QueryResult(DynStruct):
         if SV is None:
             SV = res.get_SV()
         return res.cx2_score_V if SV else res.cx2_score
-    def get_cx2_fm(res, SV):
+    def get_cx2_fm(res, SV=None):
+        if SV is None:
+            SV = res.get_SV()
         return res.cx2_fm_V if SV else res.cx2_fm
-    def get_cx2_fs(res, SV):
+    def get_cx2_fs(res, SV=None):
+        if SV is None:
+            SV = res.get_SV()
         return res.cx2_fs_V if SV else res.cx2_fs
     def topN_cxs(res, N, SV=None):
         if SV is None:

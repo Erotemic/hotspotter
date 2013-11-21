@@ -91,6 +91,8 @@ def parse_arguments():
 
 args = parse_arguments()
 
+import DataStructures as ds
+import matching_functions as mf
 import match_chips3 as mc3
 import numpy as np
 import load_data2 as ld2
@@ -711,5 +713,8 @@ if __name__ == '__main__':
         print(fmtstr % (count+1))
         run_investigations(hs, qon_list)
     print('[invest]====================')
+    kwargs = {}
+    dcxs = None
+    q_cfg = None
     #df2.update()
     exec(df2.present()) #**df2.OooScreen2()

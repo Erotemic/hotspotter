@@ -50,11 +50,13 @@ def query_result_exists(hs, qcx, query_uid):
     return exists(fpath)
 
 class QueryResult(DynStruct):
-    #__slots__ = ['qcx','query_uid','title','assign_time','verify_time','cx2_fm','cx2_fs','cx2_fk','cx2_score']
+    __slots__ = ['true_uid', 'qcx', 'query_uid', 'uid', 'title', 'nn_time',
+                 'weight_time', 'filter_time', 'build_time', 'verify_time',
+                 'cx2_fm', 'cx2_fs', 'cx2_fk', 'cx2_score', 'cx2_fm_V',
+                 'cx2_fs_V', 'cx2_fk_V', 'cx2_score_V']
     def __init__(res, qcx, uid, q_cfg=None):
         super(QueryResult, res).__init__()
-        if not q_cfg is None:
-            res.true_uid = q_cfg.get_uid()
+        res.true_uid  = '' if q_cfg is None else q_cfg.get_uid()
         res.qcx       = qcx
         res.query_uid = uid
         res.uid       = uid
@@ -267,14 +269,15 @@ class FilterConfig(DynStruct):
             valid_filters.append((sign, filt))
             f_cfg.__dict__[filt+'_thresh'] = thresh
             f_cfg.__dict__[filt+'_weight'] = weight
-        #tuple(Sign, Filt, ValidSignThresh, ScoreWeight)
-        addfilt(+1, 'roidist', None, 0)
-        addfilt(+1, 'recip',      0, 0)
+        #tuple(Sign, Filt, ValidSignThresh, ScoreMetaWeight)
+        # thresh test is: sign * score <= sign * thresh
+        addfilt(+1, 'roidist', None, 0) # Lower  scores are better
+        addfilt(-1, 'recip',      0, 0) # Higher scores are better
+        addfilt(+1, 'bursty', None, 0)  # Lower  scores are better
+        addfilt(-1, 'ratio',  None, 0)  # Higher scores are better
+        addfilt(-1, 'lnbnn',  None, 1)  # Higher scores are better
+        addfilt(-1, 'lnrat',  None, 0)  # Higher scores are better
         #addfilt(+1, 'scale' )
-        addfilt(+1, 'bursty', None, 0)
-        addfilt(-1, 'ratio',  None, 0)
-        addfilt(-1, 'lnbnn',  None, 1)
-        addfilt(-1, 'lnrat',  None, 0)
         f_cfg.filt2_tw = {}
         for (sign, filt) in valid_filters:
             stw = ((sign, f_cfg.__dict__[filt+'_thresh']), f_cfg.__dict__[filt+'_weight'])

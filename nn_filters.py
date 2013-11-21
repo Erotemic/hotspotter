@@ -53,6 +53,12 @@ def nn_bursty_weight(hs, qcx2_nns, q_cfg):
         qcx2_bursty_weight[qcx] = qfx2_bursty
     return qcx2_bursty_weight
 
+'''
+%run investigate_chip.py
+q_cfg = mc3.prequery(hs)
+qcx2_nns = mf.nearest_neighbors(hs, qcxs, q_cfg)
+'''
+
 def nn_recip_weight(hs, qcx2_nns, q_cfg):
     'Filters a nearest neighbor to only reciprocals'
     data_index = q_cfg.data_index

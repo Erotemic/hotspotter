@@ -43,55 +43,13 @@ HotSpotter.print_off()
 #mc3.print_off()
 
 def get_vary_dicts(args):
+    import _test_configurations as _testcfgs
     vary_dicts = []
     if args.test_vsmany:
-        vary_dicts.append({
-            'query_type'     : ['vsmany'],
-            'checks'         : [128, 1024],#, 8192],
-            'K'              : [5, 10, 30], #5, 10],
-            'Knorm'          : [1, 3, 5], #2, 3],
-            'Krecip'         : [0, 1, 5, 10], #, 5, 10],
-            'roidist_weight' : [0], # 1,]
-            'recip_weight'   : [0], # 1,] 
-            'bursty_weight'  : [0], # 1,]
-            'ratio_weight'   : [0], # 1,]
-            'lnbnn_weight'   : [0,1], # 1,]
-            'lnrat_weight'   : [0,1], # 1,]
-            'roidist_thresh' : [None, .5], # .5,] 
-            'recip_thresh'   : [0], # 0
-            'bursty_thresh'  : [None], #
-            'ratio_thresh'   : [None], # 1.2, 1.6
-            'lnbnn_thresh'   : [None], # 
-            'lnrat_thresh'   : [None], #
-            'nShortlist'   : [500],
-            'sv_on'        : [True], #True, False],
-            'score_method' : ['pl', 'plw', 'csum'],#, 'pl'], #, 'nsum', 'borda', 'topk', 'nunique']
-            'max_alts'     : [200, 600],
-        })
+        #vary_dicts.append(_testcfgs.vsmany_3456)
+        vary_dicts.append(_testcfgs.vsmany_2)
     if args.test_vsone:
-        vary_dicts.append({
-            'query_type'     : ['vsone'],
-            'checks'         : [128],#, 8192],
-            'K'              : [1], #5, 10],
-            'Knorm'          : [1], #2, 3],
-            'Krecip'         : [0], #, 5, 10],
-            'roidist_weight' : [0], # 1,]
-            'recip_weight'   : [0], # 1,] 
-            'bursty_weight'  : [0], # 1,]
-            'ratio_weight'   : [1], # 1,]
-            'lnbnn_weight'   : [0], # 1,]
-            'lnrat_weight'   : [0], # 1,]
-            'roidist_thresh' : [None], # .5,] 
-            'recip_thresh'   : [0], # 0
-            'bursty_thresh'  : [None], #
-            'ratio_thresh'   : [1.5], # 1.2, 1.6
-            'lnbnn_thresh'   : [None], # 
-            'lnrat_thresh'   : [None], #
-            'nShortlist'   : [1000],
-            'sv_on'        : [True], #True, False],
-            'score_method' : ['csum'],#, 'pl'], #, 'nsum', 'borda', 'topk', 'nunique']
-            'max_alts'     : [500],
-        })
+        vary_dicts.append(_testcfgs.vsone)
     if len(vary_dicts) == 0: 
         raise Exception('choose --test-vsmany')
     return vary_dicts
@@ -141,7 +99,7 @@ def print_test_results(test_results):
 
 #---------------
 # Display Test Results
-def print_best(qonx2_agg, test_list):
+def print_best(qonx2_agg, cfg_list):
     (qonx2_best_params, qonx2_lbl, qonx2_colpos, 
      qonx2_best_col, qonx2_score, mats_list) = qonx2_agg
     print('')
@@ -156,7 +114,7 @@ def print_best(qonx2_agg, test_list):
     print('[best_qon] ---- END ----')
     _2str = lambda cfgx, cfg: ('%3d) ' % cfgx)+simplify_test_uid(cfg.get_uid())
     rowlbl_list = [('%3d) ' % qonx)+str(lbl) for qonx, lbl in enumerate(qonx2_lbl)]
-    collbl_list = [_2str(*tup) for tup in enumerate(test_list)]
+    collbl_list = [_2str(*tup) for tup in enumerate(cfg_list)]
     print('[best_all] Row Labels: ')
     print('    '+'\n    '.join(rowlbl_list))
     print('[best_all] Column Labels: ')
@@ -237,23 +195,23 @@ def test_configurations(hs):
     varied_params_list = [_ for _dict in vary_dicts for _ in helpers.all_dict_combinations(_dict)]
     # query_cxs, other_cxs, notes
     qon_list = iv.get_qon_list(hs)
-    test_list = [ds.QueryConfig(**_dict) for _dict in varied_params_list]
+    cfg_list = [ds.QueryConfig(**_dict) for _dict in varied_params_list]
     # __NEW_HACK__
     # Super HACK so all query configs share the same nearest neighbor indexes
-    GLOBAL_dcxs2_index = test_list[0].dcxs2_index
-    for q_cfg in test_list:
+    GLOBAL_dcxs2_index = cfg_list[0].dcxs2_index
+    for q_cfg in cfg_list:
         q_cfg.dcxs2_index = GLOBAL_dcxs2_index
     # __END_HACK__
     use_cache = not hs.args.nocache_query
     # Preallocate test result aggregation structures
     print('')
-    print('[dev] Testing %d different parameters' % len(test_list))
+    print('[dev] Testing %d different parameters' % len(cfg_list))
     print('[dev]         %d different chips' % len(qon_list))
-    nCfg = len(test_list)
+    nCfg = len(cfg_list)
     nQuery = len(qon_list)
     rc2_res = np.empty((nQuery, nCfg), dtype=list)
     mat_list = []
-    for cfgx, test_cfg in enumerate(test_list):
+    for cfgx, test_cfg in enumerate(cfg_list):
         print('[dev]---------------')
         print('[dev] TEST_CFG %d/%d' % (cfgx+1, nCfg))
         print('[dev]---------------')
@@ -284,14 +242,14 @@ def test_configurations(hs):
     qonx2_lbl = []
     for qonx in xrange(nQuery):
         qcx, ocxs, notes = qon_list[qonx]
-        label = 'row %d) q%s -- notes=%s' % (qonx, hs.cxstr(qcx), notes)
+        label = 'qonx %d) q%s -- notes=%s' % (qonx, hs.cxstr(qcx), notes)
         qonx2_lbl.append(label)
     qonx2_lbl = np.array(qonx2_lbl)
     # Build col labels
     cfgx2_lbl = []
     for cfgx in xrange(nCfg):
-        test_uid  = simplify_test_uid(test_list[cfgx].get_uid())
-        cfg_label = 'col %3d) %s' % (cfgx, test_uid)
+        test_uid  = simplify_test_uid(cfg_list[cfgx].get_uid())
+        cfg_label = 'cfgx %3d) %s' % (cfgx, test_uid)
         cfgx2_lbl.append(cfg_label)
     cfgx2_lbl = np.array(cfgx2_lbl)
     #------------
@@ -334,7 +292,8 @@ def test_configurations(hs):
             ranks = rank_mat[:,cfgx]
             nLessX_ = sum(ranks < X)
             cfgx2_nLessX.append(nLessX_)
-            print('[col_score] %3d) %s' % (cfgx, cfgx2_lbl[qonx]) )
+            print(len(cfgx2_lbl))
+            print('[col_score] %3d) %s' % (cfgx, cfgx2_lbl[cfgx]) )
             print('[col_score] #ranks<%d = %d ' % (X, nLessX_))
         nLessX_dict[int(X)] = np.array(cfgx2_nLessX)
     #------------

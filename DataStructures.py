@@ -261,11 +261,12 @@ class FilterConfig(DynStruct):
         f_cfg = f_cfg
         f_cfg.filt_on = True
         f_cfg.Krecip = 0 # 0 := off
-        f_cfg.nnfilter_list = ['recip', 'roidist']
+        f_cfg.nnfilter_list = []
         #
-        f_cfg.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio']
+        #f_cfg.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio', 'lnrat']
         valid_filters = []
         def addfilt(sign, filt, thresh, weight):
+            f_cfg.nnfilter_list.append(filt)
             valid_filters.append((sign, filt))
             f_cfg.__dict__[filt+'_thresh'] = thresh
             f_cfg.__dict__[filt+'_weight'] = weight
@@ -279,34 +280,34 @@ class FilterConfig(DynStruct):
         addfilt(-1, 'lnrat',  None, 0)  # Higher scores are better
         #addfilt(+1, 'scale' )
         f_cfg.filt2_tw = {}
+        f_cfg.update(**kwargs)
         for (sign, filt) in valid_filters:
             stw = ((sign, f_cfg.__dict__[filt+'_thresh']), f_cfg.__dict__[filt+'_weight'])
             f_cfg.filt2_tw[filt] = stw
-        f_cfg.update(**kwargs)
 
     def make_feasible(f_cfg, nn_cfg):
-        nnfilts = f_cfg.nnfilter_list
-        nnp = nn_cfg
-        f_cfg = f_cfg
         # Knorm
         if f_cfg.lnbnn_thresh is None and f_cfg.lnbnn_weight == 0:
-            listrm(nnfilts, 'lnbnn')
-        if f_cfg.ratio_thresh   <= 1:
-            listrm(nnfilts, 'ratio')
+            listrm(f_cfg.nnfilter_list, 'lnbnn')
+        if f_cfg.lnrat_thresh is None and f_cfg.lnrat_weight == 0:
+            listrm(f_cfg.nnfilter_list, 'lnrat')
+        if f_cfg.ratio_thresh <= 1: 
+            f_cfg.ratio_thresh = None
+        if f_cfg.ratio_thresh is None and f_cfg.ratio_weight == 0:
+            listrm(f_cfg.nnfilter_list, 'ratio')
         norm_depends = ['lnbnn', 'ratio', 'lnrat']
-        if nnp.Knorm <= 0 and not any_inlist(nnfilts, norm_depends):
-            listrm_list(nnfilts, norm_depends)
-            nnp.Knorm = 0
+        if nn_cfg.Knorm <= 0 and not any_inlist(f_cfg.nnfilter_list, norm_depends):
+            #listrm_list(f_cfg.nnfilter_list, norm_depends)
+            nn_cfg.Knorm = 0
         # Krecip
-        if f_cfg.Krecip <= 0 or 'recip' not in nnfilts:
-            listrm(nnfilts, 'recip')
+        if f_cfg.Krecip <= 0 or 'recip' not in f_cfg.nnfilter_list:
+            listrm(f_cfg.nnfilter_list, 'recip')
             f_cfg.Krecip = 0
         if (f_cfg.roidist_thresh is None or f_cfg.roidist_thresh >= 1) and\
                f_cfg.roidist_weight == 0:
-            listrm(nnfilts, 'roidist')
+            listrm(f_cfg.nnfilter_list, 'roidist')
         if f_cfg.bursty_thresh   <= 1:
-            listrm(nnfilts, 'bursty')
-
+            listrm(f_cfg.nnfilter_list, 'bursty')
 
     def get_uid(f_cfg):
         if not f_cfg.filt_on: 

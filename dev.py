@@ -47,17 +47,17 @@ def get_vary_dicts(args):
     if args.test_vsmany:
         vary_dicts.append({
             'query_type'     : ['vsmany'],
-            'checks'         : [1024],#, 8192],
-            'K'              : [5, 10], #5, 10],
-            'Knorm'          : [1, 3], #2, 3],
-            'Krecip'         : [0, 1, 5], #, 5, 10],
+            'checks'         : [128, 1024],#, 8192],
+            'K'              : [5, 10, 30], #5, 10],
+            'Knorm'          : [1, 3, 5], #2, 3],
+            'Krecip'         : [0, 1, 5, 10], #, 5, 10],
             'roidist_weight' : [0], # 1,]
             'recip_weight'   : [0], # 1,] 
             'bursty_weight'  : [0], # 1,]
             'ratio_weight'   : [0], # 1,]
-            'lnbnn_weight'   : [1], # 1,]
-            'lnrat_weight'   : [0], # 1,]
-            'roidist_thresh' : [None], # .5,] 
+            'lnbnn_weight'   : [0,1], # 1,]
+            'lnrat_weight'   : [0,1], # 1,]
+            'roidist_thresh' : [None, .5], # .5,] 
             'recip_thresh'   : [0], # 0
             'bursty_thresh'  : [None], #
             'ratio_thresh'   : [None], # 1.2, 1.6
@@ -66,7 +66,7 @@ def get_vary_dicts(args):
             'nShortlist'   : [500],
             'sv_on'        : [True], #True, False],
             'score_method' : ['pl', 'plw', 'csum'],#, 'pl'], #, 'nsum', 'borda', 'topk', 'nunique']
-            'max_alts'     : [500],
+            'max_alts'     : [200, 600],
         })
     if args.test_vsone:
         vary_dicts.append({
@@ -329,23 +329,24 @@ def test_configurations(hs):
     X_list = [5, 1]
     nLessX_dict = {}
     for X in iter(X_list):
-        qfgx2_nLessX = []
+        cfgx2_nLessX = []
         for cfgx in xrange(nCfg):
             ranks = rank_mat[:,cfgx]
             nLessX_ = sum(ranks < X)
-            qfgx2_nLessX.append(nLessX_)
+            cfgx2_nLessX.append(nLessX_)
             print('[col_score] %3d) %s' % (cfgx, cfgx2_lbl[qonx]) )
             print('[col_score] #ranks<%d = %d ' % (X, nLessX_))
-        nLessX_dict[int(X)] = np.array(qfgx2_nLessX)
+        nLessX_dict[int(X)] = np.array(cfgx2_nLessX)
     #------------
     print('')
     print('[dev]---------------')
     print('[dev] Best configurations')
     print('[dev]---------------')
-    for X, qfgx2_nLessX in nLessX_dict.iteritems():
-        min_LessX = qfgx2_nLessX.min()
-        bestCFG_X = np.where(qfgx2_nLessX == min_LessX)
-        print('[best_cfg]%d config(s) scored #ranks<%d = %d' % (len(bestCFG_X), X, min_LessX))
+    for X, cfgx2_nLessX in nLessX_dict.iteritems():
+        min_LessX = cfgx2_nLessX.max()
+        bestCFG_X = np.where(cfgx2_nLessX == min_LessX)
+        print('[best_cfg]%d config(s) scored #ranks<%d = %d/%d' % \
+              (len(bestCFG_X), X, min_LessX, nQuery))
         print(indent('\n'.join(cfgx2_lbl[cfgx_list]), '    '))
     #------------
     print('')

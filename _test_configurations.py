@@ -46,7 +46,7 @@ vsmany_3456 = {
     'max_alts'     : [200, 600],
 }
 
-vsone = {
+vsone_1 = {
     'query_type'     : ['vsone'],
     'checks'         : [128],#, 8192],
     'K'              : [1], #5, 10],
@@ -68,4 +68,15 @@ vsone = {
     'sv_on'        : [True], #True, False],
     'score_method' : ['csum'],#, 'pl'], #, 'nsum', 'borda', 'topk', 'nunique']
     'max_alts'     : [500],
+}
+
+vsone_std = {
+    'query_type'     : 'vsone',
+    'checks'         : 128,
+    'K'              : 1, 
+    'Knorm'          : 1, 
+    'Krecip'         : 0, 
+    'ratio_weight'   : 1, 
+    'lnbnn_weight'   : 0, 
+    'ratio_thresh'   : 1.5, 
 }

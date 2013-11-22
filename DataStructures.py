@@ -137,8 +137,6 @@ class QueryResult(DynStruct):
     def cache_bytes(res, hs):
         fpath = res.get_fpath(hs)
         return helpers.file_bytes(fpath)
-    def top5_cxs(res):
-        return res.topN_cxs(5)
     def get_gt_ranks(res, gt_cxs=None, hs=None):
         'returns the 0 indexed ranking of each groundtruth chip'
         # Ensure correct input
@@ -163,17 +161,22 @@ class QueryResult(DynStruct):
         if SV is None:
             SV = res.get_SV()
         return res.cx2_fs_V if SV else res.cx2_fs
-    def topN_cxs(res, N, SV=None):
-        if SV is None:
-            SV = res.get_SV()
-        cx2_score = res.get_cx2_score(SV)
+    def topN_cxs(res, N, q_cfg=None):
+        cx2_score = res.get_cx2_score()
         top_cxs = cx2_score.argsort()[::-1]
-        num_top = min(N, len(top_cxs))
-        topN_cxs = top_cxs[0:num_top]
+        if not q_cfg is None:
+            top_cxs = np.intersect1d(top_cxs, q_cfg.dcxs)
+        nIndexed = len(top_cxs)
+        if N == 'all':
+            N = nIndexed
+        nTop = min(N, nIndexed)
+        topN_cxs = top_cxs[0:nTop]
         return topN_cxs
     def show_query(res, hs, **kwargs):
+        print('[res] show_query')
         df2.show_chip(hs, res=res, **kwargs)
     def show_topN(res, hs, **kwargs):
+        print('[res] show_topN')
         if not 'SV' in kwargs.keys():
             kwargs['SV'] = res.get_SV()
         df2.show_match_analysis(hs, res, **kwargs)
@@ -277,10 +280,10 @@ class FilterConfig(DynStruct):
         #tuple(Sign, Filt, ValidSignThresh, ScoreMetaWeight)
         # thresh test is: sign * score <= sign * thresh
         addfilt(+1, 'roidist', None, 0) # Lower  scores are better
-        addfilt(-1, 'recip',      0, 0) # Higher scores are better
+        addfilt(-1, 'recip',     0, 0) # Higher scores are better
         addfilt(+1, 'bursty', None, 0)  # Lower  scores are better
         addfilt(-1, 'ratio',  None, 0)  # Higher scores are better
-        addfilt(-1, 'lnbnn',  None, 1)  # Higher scores are better
+        addfilt(-1, 'lnbnn',  None, 0)  # Higher scores are better
         addfilt(-1, 'lnrat',  None, 0)  # Higher scores are better
         #addfilt(+1, 'scale' )
         f_cfg.filt2_tw = {}
@@ -347,7 +350,7 @@ class SpatialVerifyConfig(DynStruct):
         super(SpatialVerifyConfig, sv_cfg).__init__()
         sv_cfg.scale_thresh  = (.5, 2)
         sv_cfg.xy_thresh = .002
-        sv_cfg.nShortlist = 500
+        sv_cfg.nShortlist = 1000
         sv_cfg.prescore_method = 'csum'
         sv_cfg.use_chip_extent = False
         sv_cfg.min_nInliers = 4
@@ -380,7 +383,7 @@ class AggregateConfig(DynStruct):
             'namesum'     : 'nsum',
         }
         # For Placket-Luce
-        a_cfg.max_alts = 200
+        a_cfg.max_alts = 1000
         #-----
         # User update
         a_cfg.update(**kwargs)
@@ -433,4 +436,7 @@ class QueryConfig(DynStruct):
             uid += q_cfg.a_cfg.get_uid()
         if not 'noCHIP' in args:
             uid += [params.get_indexed_uid()]
+        # In case you don't search the entire dataset
+        dcxs_ = repr(tuple(q_cfg.dcxs))
+        uid += ['_dcxs('+helpers.hashstr(dcxs_)+')']
         return ''.join(uid)

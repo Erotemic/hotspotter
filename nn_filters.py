@@ -24,10 +24,20 @@ def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, q_cfg):
     K = q_cfg.nn_cfg.K
     Knorm = q_cfg.nn_cfg.Knorm
     qcx2_norm_weight = {}
+    #print('K = %r' % K)
+    #print('Knorm = %r' % Knorm)
     for qcx in qcx2_nns.iterkeys():
         (_, qfx2_dist) = qcx2_nns[qcx]
+        #print('---------')
+        #print('1---------')
+        #print(qfx2_dist)
+        #print('2---------')
         qfx2_nndist = qfx2_dist[:, 0:K]
-        qfx2_normdist = qfx2_dist[:, -2:-1]
+        qfx2_normdist = qfx2_dist[:,-1:]
+        #print('3---------')
+        #print(qfx2_nndist)
+        #print('4---------')
+        #print(np.hstack((qfx2_normdist, qfx2_nndist)))
         qfx2_normweight = normweight_fn(qfx2_nndist, qfx2_normdist)
         qcx2_norm_weight[qcx] = qfx2_normweight
     return qcx2_norm_weight

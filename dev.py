@@ -49,7 +49,7 @@ def get_vary_dicts(args):
         #vary_dicts.append(_testcfgs.vsmany_3456)
         vary_dicts.append(_testcfgs.vsmany_2)
     if args.test_vsone:
-        vary_dicts.append(_testcfgs.vsone)
+        vary_dicts.append(_testcfgs.vsone_1)
     if len(vary_dicts) == 0: 
         raise Exception('choose --test-vsmany')
     return vary_dicts
@@ -196,10 +196,7 @@ def test_configurations(hs):
     qon_list = iv.get_qon_list(hs)
     cfg_list = [ds.QueryConfig(**_dict) for _dict in varied_params_list]
     # __NEW_HACK__
-    # Super HACK so all query configs share the same nearest neighbor indexes
-    GLOBAL_dcxs2_index = cfg_list[0].dcxs2_index
-    for q_cfg in cfg_list:
-        q_cfg.dcxs2_index = GLOBAL_dcxs2_index
+    mc3.unify_cfgs(cfg_list)
     # __END_HACK__
     # Preallocate test result aggregation structures
     print('')

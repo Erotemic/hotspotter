@@ -54,6 +54,11 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 rrr = reload_module
 
+def printDBG(msg):
+    pass
+    #print('[DBG] ' + msg)
+    pass
+
 #============================
 # Nearest Neighbors
 #============================
@@ -79,6 +84,7 @@ def nearest_neighbors(hs, qcxs, q_cfg):
     if len(qcxs) > MARK_AFTER:
         def mark_progress(): print_('.')
     for qcx in qcxs:
+        printDBG('[mf] Finding nearest neighbors of qcx=%r' % (qcx,))
         mark_progress()
         qfx2_desc = cx2_desc[qcx]
         (qfx2_dx, qfx2_dist) = nnfunc(qfx2_desc)
@@ -87,7 +93,8 @@ def nearest_neighbors(hs, qcxs, q_cfg):
         nDesc += len(qfx2_desc)
     if len(qcxs) > MARK_AFTER:
         print('')
-    print('[mf] * assigned %d desc to %r nearest neighbors' % (nDesc, nNN))
+    print('[mf] * assigned %d desc from %d chips to %r nearest neighbors' %
+          (nDesc, len(qcxs), nNN))
     return qcx2_nns
 
 #============================
@@ -116,19 +123,19 @@ def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw):
     for filt, cx2_weights in filt2_weights.iteritems():
         qfx2_weights = cx2_weights[qcx]
         (sign, thresh), weight = filt2_tw[filt]
-        #print('[mf] * filt=%r ' % filt)
-        #if not thresh is None or not weight == 0:
-            #print('[mf] * \\ qfx2_weights = '+helpers.printable_mystats(qfx2_weights.flatten()))
+        printDBG('[mf] * filt=%r ' % filt)
+        if not thresh is None or not weight == 0:
+            printDBG('[mf] * \\ qfx2_weights = %r' % helpers.printable_mystats(qfx2_weights.flatten()))
         if not thresh is None:
             qfx2_passed = sign*qfx2_weights <= sign*thresh
             nValid  = qfx2_valid.sum()
             qfx2_valid  = np.bitwise_and(qfx2_valid, qfx2_passed)
             nPassed = (True - qfx2_passed).sum()
             nAdded = nValid - qfx2_valid.sum()
-            #print(sign*qfx2_weights)
-            #print('[mf] * \\ *thresh=%r, nFailed=%r, nFiltered=%r' % (sign*thresh, nPassed, nAdded))
+            #print(str(sign*qfx2_weights))
+            printDBG('[mf] * \\ *thresh=%r, nFailed=%r, nFiltered=%r' % (sign*thresh, nPassed, nAdded))
         if not weight == 0:
-            #print('[mf] * \\ weight=%r' % weight)
+            printDBG('[mf] * \\ weight=%r' % weight)
             qfx2_score  += weight * qfx2_weights
     return qfx2_score, qfx2_valid
 
@@ -138,6 +145,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, q_cfg):
     data_index = q_cfg.data_index
     K = q_cfg.nn_cfg.K
     dx2_cx = data_index.ax2_cx
+    printDBG('[mf] unique(dx2_cx) = %r ' % (np.unique(dx2_cx),))
     filt2_tw = f_cfg.filt2_tw
     print('[mf] Step 3) Filter neighbors')
     def mark_progress(): pass
@@ -145,15 +153,18 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, q_cfg):
         def mark_progress(): print_('.')
     for qcx in qcx2_nns.iterkeys():
         mark_progress()
-        #print('[mf] * scoring q'+hs.cxstr(qcx))
+        printDBG('[mf] --------------')
+        printDBG('[mf] * scoring q'+hs.cxstr(qcx))
         (qfx2_dx, _) = qcx2_nns[qcx]
         qfx2_nn = qfx2_dx[:, 0:K]
         qfx2_score, qfx2_valid = _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw)
         qfx2_cx = dx2_cx[qfx2_nn]
         # dont vote for yourself
         qfx2_notself_vote = qfx2_cx != qcx
-        #print('[mf] * Removed %d/%d self-votes' % (qfx2_notself_vote.sum(), qfx2_notself_vote.size))
-        #print('[mf] * %d/%d valid neighbors ' % (qfx2_valid.sum(), qfx2_valid.size))
+        printDBG('[mf] * qcx  = %r ' % (qcx,))
+        printDBG('[mf] * unique(qfx2_cx) = %r ' % (np.unique(qfx2_cx),))
+        printDBG('[mf] * Removed %d/%d self-votes' % ((True - qfx2_notself_vote).sum(), qfx2_notself_vote.size))
+        printDBG('[mf] * %d/%d valid neighbors ' % (qfx2_valid.sum(), qfx2_valid.size))
         qfx2_valid = np.bitwise_and(qfx2_valid, qfx2_notself_vote) 
         qcx2_nnfilter[qcx] = (qfx2_score, qfx2_valid)
     if len(qcx2_nns) > MARK_AFTER:

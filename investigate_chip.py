@@ -398,82 +398,6 @@ def measure_cx_rankings(hs):
         id2_bestranks += [bestrank]
     print(id2_bestranks)
 
-def where_did_vsone_matches_go(hs, qcx, fnum=1, K=100):
-    '''Finds a set of vsone matches and a set of vsmany matches. 
-    displays where the vsone matches are in the vsmany ranked lists'''
-    # Ground truth matches
-    gt_cxs = hs.get_other_cxs(qcx)
-    # Query Features
-    cx2_rchip_size = hs.get_cx2_rchip_size()
-    get_features = quick_get_features_factory(hs)
-    rchip1, qfx2_kp1, qfx2_desc1, qcid = get_features(qcx)
-    # Get/Show vsone matches
-    res_vsone, fnum = show_vsone_matches(hs, qcx, fnum)
-    gt2_fm_V = res_vsone.cx2_fm_V[gt_cxs]
-    # Get vsmany assigned matches (no spatial verification)
-    hs.ensure_matcher(match_type='vsmany')
-    vsmany_args = hs.matcher.vsmany_args
-    (qfx2_cx, qfx2_fx, qfx2_dists) = mc2.desc_nearest_neighbors(qfx2_desc1, vsmany_args, K)
-    # Find where the matches to the correct images are
-    print('[invest]  Finding where the vsone matches went for %s' % hs.vs_str(qcx, qcid))
-    k_inds  = np.arange(0, K)
-    qf_inds = np.arange(0, len(qfx2_cx))
-    kxs, qfxs = np.meshgrid(k_inds, qf_inds)
-    for gtx, ocx in enumerate(gt_cxs):
-        rchip2, fx2_kp2, fx2_desc2, ocid = get_features(ocx)
-        rchip_size2 = cx2_rchip_size[ocx]
-        print('[invest] Checking matches to ground truth %r / %r %s' % 
-              (gtx+1, len(gt_cxs), hs.vs_str(ocx, ocid)))
-        # Get vsone indexes
-        vsone_fm_V = gt2_fm_V[gtx]
-        # Find correct feature and rank indexes: fx and kx
-        vsmany_qfxs, vsmany_kxs = np.where(qfx2_cx == ocx)
-        # Get comparisons to vsone
-        qfx_kx_tup = zip(vsmany_qfxs, vsmany_kxs)
-        vsmany_fxs = np.array([qfx2_fx[qfx, kx] for qfx, kx in qfx_kx_tup])
-        def cast_uint32(arr):
-            return np.array(arr, dtype=np.uint32)
-        vsmany_fm  = cast_uint32(np.vstack(map(cast_uint32,(vsmany_qfxs, vsmany_fxs))).T)
-        vsmany_fs  = vsmany_kxs # use k as score
-        # Intersect vsmany with vsone_V
-        fm_intersect, vsone_ix, vsmany_ix = helpers.intersect2d(vsone_fm_V, vsmany_fm)
-        print(vsmany_ix)
-        isecting_vsmany_fm = vsmany_fm[vsmany_ix]
-        isecting_vsmany_fs = vsmany_kxs[vsmany_ix] # use k as score
-        isecting_kxs = vsmany_kxs[vsmany_ix]
-        # Spatially verify the vsmany matches 
-        vsmany_fm_V, vsmany_fs_V = mc2.spatially_verify2(qfx2_kp1, fx2_kp2,
-                                                         vsmany_fm, vsmany_fs,
-                                                         rchip_size2=rchip_size2)
-        # Intersect vsmany_V with vsone_V
-        fm_V_intersect, vsoneV_ix, vsmanyV_ix = helpers.intersect2d(vsone_fm_V, vsmany_fm_V)
-        isecting_vsmany_fm_V = vsmany_fm[vsmanyV_ix]
-        print('[invest]   VSONE had %r verified matches to this image ' % (len(vsone_fm_V)))
-        print('[invest]   In the top K=%r in this image...' % (K))
-        print('[invest]   VSMANY had %r assignments to this image.' % (len(vsmany_qfxs)))
-        print('[invest]   VSMANY had %r unique assignments to this image' % (len(np.unique(qfxs))))
-        print('[invest]   VSMANY had %r verified assignments to this image' % (len(vsmany_fm_V)))
-        print('[invest]   There were %r / %r intersecting matches in VSONE_V and VSMANY' % 
-              (len(fm_intersect), len(vsone_fm_V)))
-        print('[invest]   There were %r / %r intersecting verified matches in VSONE_V and VSMANY_V' % 
-              (len(fm_V_intersect), len(vsone_fm_V)))
-        print('[invest]   Distribution of kxs: '+helpers.printable_mystats(kxs))
-        print('[invest]   Distribution of intersecting kxs: '+helpers.printable_mystats(isecting_kxs))
-        # Visualize the intersecting matches 
-        def _show_matches_helper(fm, fs, plotnum, title):
-            df2.show_matches2(rchip1, rchip2, qfx2_kp1, fx2_kp2, fm, fs,
-                              fignum=fnum, plotnum=plotnum, title=title, 
-                              draw_pts=False)
-        _show_matches_helper(vsmany_fm, vsmany_fs, (1,2,1), 'vsmany matches')
-        #_show_matches_helper(vsmany_fm_V, vsmany_fs_V, (1,3,2), 'vsmany verified matches')
-        _show_matches_helper(isecting_vsmany_fm, isecting_vsmany_fs, (1,2,2),
-                             'intersecting vsmany K=%r matches' % (K,))
-        df2.set_figtitle('vsmany K=%r qid%r vs cid%r'  % (K, qcid, ocid))
-        # Hot colorscheme is black->red->yellow->white
-        print('[invest] black->red->yellow->white')
-        fnum+=1
-    return fnum
-
 def plot_name(hs, qcx, fnum=1, **kwargs):
     print('[invest] Plotting name')
     viz.plot_name_of_cx(hs, qcx, fignum=fnum, **kwargs)
@@ -523,16 +447,6 @@ def compare_matching_methods(hs, qcx, fnum=1):
 
 # ^^^^^^^^^^^^^^^^^
 # Tests
-
-_stdoutlock = None
-def start_stdout():
-    global _stdoutlock
-    _stdoutlock = helpers.RedirectStdout(autostart=True)
-def stop_stdout():
-    global _stdoutlock
-    _stdoutlock.stop()
-#rss = helpers.RedirectStdout(autostart=True)
-#rss.stop()
     
 def hs_from_db(db, args=None):
     # Load hotspotter
@@ -599,12 +513,8 @@ def run_investigations(hs, qon_list):
     if '2' in args.tests:
         hs.ensure_matcher(match_type='vsmany')
         fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 4, 4, fnum, cx_list='gt1') 
-    if '3' in args.tests:
-        fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=args.K)
     if '4' in args.tests:
         fnum = investigate_scoring_rules(hs, qcx, fnum)
-    if '5' in args.tests:
-        fnum = mc2.matcher_test(hs, qcx, fnum)
     if '6' in args.tests:
         measure_k_rankings(hs)
     if '7' in args.tests:
@@ -612,12 +522,12 @@ def run_investigations(hs, qon_list):
     if '8' in args.tests:
         mc3.compare_scoring(hs)
     if '9' in args.tests:
-        plot_keypoint_scales(hs)
+        fnum = plot_keypoint_scales(hs)
     if '10' in args.tests:
         fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)
+    if '11' in args.tests:
+        fnum = investigate_chip_info(hs, qon_list, fnum)
 
-#fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=20)
-#fnum = where_did_vsone_matches_go(hs, qcx, fnum, K=100)
 #===========
 # Main Script
 # exec(open('investigate_chip.py').read())
@@ -683,6 +593,7 @@ def plot_keypoint_scales(hs, fnum=1):
     ax = df2.plt.gca()
     ax.set_yscale('log')
     ax.set_xscale('log')
+    return fnum
 
 def get_qon_list(hs):
     print('[invest] get_qon_list()')
@@ -706,18 +617,50 @@ def get_qon_list(hs):
     return qon_list
 
 def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
-    q_cfg = ds.QueryConfig(invert_query=True)
+    print('--------------------------------------')
+    print('[invest] investigate_vsone_groundtruth')
+    q_cfg = mc3.get_vsone_cfg(sv_on=True, ratio_thresh=1.5)
     for qcx, ocxs, notes in qon_list:
         res = mc3.query_groundtruth(hs, qcx, q_cfg)
-        print(res)
-        res.show_query(hs, fignum=fnum)
+        #print(q_cfg)
+        #print(res)
+        #res.show_query(hs, fignum=fnum)
         fnum += 1
-        res.show_topN(hs, fignum=fnum)
+        res.show_topN(hs, fignum=fnum, q_cfg=q_cfg)
         fnum += 1
+    return fnum
+
+def chip_info(hs, cx, notes=''):
+    nx = hs.tables.cx2_nx[cx]
+    gx = hs.tables.cx2_gx[cx]
+    name = hs.tables.nx2_name[nx]
+    gname = hs.tables.gx2_gname[gx]
+    indexed_gt_cxs = hs.get_other_indexed_cxs(cx)
+    gt_cxs = hs.get_other_cxs(cx)
+    print('[invest] Chip Info ')
+    infostr_list = [
+        hs.cxstr(cx),
+        'notes=%r' % notes,
+        'cx=%r' % cx,
+        'gx=%r' % gx,
+        'nx=%r' % nx,
+        'name=%r' % name,
+        'gname=%r' % gname,
+        'nGroundTruth = %s ' % str(len(gt_cxs)),
+        'nIndexedGroundTruth = %s ' % str(len(indexed_gt_cxs)),
+        'Ground Truth: %s' % (hs.cx_liststr(gt_cxs),),
+        'IndexedGroundTruth = %s' % (hs.cx_liststr(indexed_gt_cxs),),
+    ]
+    print(helpers.indent('\n'.join(infostr_list), '[invest] '))
+
+def investigate_chip_info(hs, qon_list, fnum=1):
+    for qcx, ocxs, notes in qon_list:
+        chip_info(hs, qcx, notes)
     return fnum
 
 if __name__ == '__main__':
     print('[invest] __main__ ')
+    df2.DARKEN = .5
     main_locals = main()
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
     fmtstr = helpers.make_progress_fmt_str(len(qcxs), '[invest] investigation ')

@@ -53,10 +53,38 @@ rrr = reload_module
 #----------------------
 # Convinience Functions 
 #----------------------
+def __dict_default_func(dict_):
+    # Sets keys only if they dont exist
+    def set_key(key, val):
+        if not dict_.has_key(key):
+            dict_[key] = val
+    return set_key
+
+def get_vsmany_cfg(**kwargs):
+    kwargs['query_type'] = 'vsmany'
+    kwargs_set = __dict_default_func(kwargs)
+    kwargs_set('lnbnn_weight', .001)
+    kwargs_set('K', 2)
+    kwargs_set('Knorm', 1)
+    q_cfg = ds.QueryConfig(**kwargs)
+    return q_cfg
+
+def get_vsone_cfg(**kwargs):
+    kwargs['query_type'] = 'vsone'
+    kwargs_set = __dict_default_func(kwargs)
+    kwargs_set('lnbnn_weight', 0)
+    kwargs_set('checks', 128)
+    kwargs_set('K', 1)
+    kwargs_set('Knorm', 1)
+    kwargs_set('ratio_weight', 1.0)
+    kwargs_set('ratio_thresh', 1.5)
+    q_cfg = ds.QueryConfig(**kwargs)
+    return q_cfg
 
 def query_groundtruth(hs, qcx, q_cfg=None, **kwargs):
     print('[mc3] query groundtruth')
     gt_cxs = hs.get_other_cxs(qcx)
+    print('[mc3] len(gt_cxs) = %r' % (gt_cxs,))
     result_list = execute_query_safe(hs, q_cfg, [qcx], gt_cxs, **kwargs)
     res = result_list[0].values()[0]
     return res
@@ -73,6 +101,12 @@ def make_nn_index(hs, sx2_cx=None):
         sx2_cx = hs.indexed_sample_cx
     data_index = ds.NNIndex(hs, sx2_cx)
     return data_index
+
+def unify_cfgs(cfg_list):
+    # Super HACK so all query configs share the same nearest neighbor indexes
+    GLOBAL_dcxs2_index = cfg_list[0].dcxs2_index
+    for q_cfg in cfg_list:
+        q_cfg.dcxs2_index = GLOBAL_dcxs2_index
 
 #----------------------
 # Helper Functions
@@ -132,8 +166,8 @@ def execute_query_safe(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **k
     ensure_nn_index(hs, q_cfg, dcxs)
     result_list = execute_query_fast(hs, q_cfg, qcxs, dcxs)
     for qcx2_res in result_list:
-        for qcx in qcx2_res.iterkeys():
-            qcx2_res[qcx].save(hs)
+        for qcx, res in qcx2_res.iteritems():
+            res.save(hs)
     return result_list
 
 from helpers import tic, toc

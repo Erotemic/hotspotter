@@ -442,6 +442,7 @@ def hs_from_db(db, args=None):
         return hs
 
 def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
+    cx2_cid = hs.tables.cx2_cid
     qcid_list = []
     ocid_list = []
     note_list = []

@@ -42,16 +42,18 @@ HotSpotter.print_off()
 #parallel.print_off()
 #mc3.print_off()
 
-def get_vary_dicts(args):
+def get_vary_dicts(test_cfg_name_list):
     import _test_configurations as _testcfgs
     vary_dicts = []
-    if args.test_vsmany:
-        #vary_dicts.append(_testcfgs.vsmany_3456)
-        vary_dicts.append(_testcfgs.vsmany_2)
-    if args.test_vsone:
-        vary_dicts.append(_testcfgs.vsone_1)
+    for cfg_name in test_cfg_name_list:
+        evalstr = '_testcfgs.'+cfg_name
+        test_cfg = eval(evalstr)
+        vary_dicts.append(test_cfg)
     if len(vary_dicts) == 0: 
-        raise Exception('choose --test-vsmany')
+        testcfg_keys = vars(_testcfgs).keys()
+        testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
+        valid_cfg_names = helpers.indent('\n'.join(testcfg_locals), '  * ')
+        raise Exception('Choose a valid testcfg:\n'+valid_cfg_names)
     return vary_dicts
 
 #---------
@@ -162,7 +164,10 @@ def get_test_results(hs, qon_list, q_params, cfgx=0, nCfg=1,
             gt_ranks = res.get_gt_ranks(gt_cxs)
             print('[dev] cx_ranks(/%4r) = %r' % (nChips, gt_ranks))
             print('ns_ranks(/%4r) = %r' % (nNames, gt_ranks))
-            _bestrank = min(gt_ranks)
+            if len(gt_ranks) == 0:
+                _bestrank = -1
+            else:
+                _bestrank = min(gt_ranks)
             bestranks += [_bestrank]
         # record metadata
         qonx2_bestranks += [bestranks]
@@ -175,12 +180,12 @@ def get_test_results(hs, qon_list, q_params, cfgx=0, nCfg=1,
 
 #-----------
 # Test Each configuration 
-def test_configurations(hs):
+def test_configurations(hs, qon_list, test_cfg_name_list):
+    vary_dicts = get_vary_dicts(test_cfg_name_list)
     print('\n*********************\n')
     print('[dev]================')
     print('[dev]test_scoring(hs)')
     #vary_dicts = vary_dicts[0]
-    vary_dicts = get_vary_dicts(hs.args)
     varied_params_list = [_ for _dict in vary_dicts for _ in helpers.all_dict_combinations(_dict)]
     # query_cxs, other_cxs, notes
     qon_list = iv.get_qon_list(hs)
@@ -316,5 +321,8 @@ if __name__ == '__main__':
     df2.DARKEN = .5
     main_locals = iv.main()
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
-    test_configurations(hs)
+    test_cfg_name_list = ['vsone_1']
+    test_cfg_name_list = ['vsmany_3456']
+    test_cfg_name_list = ['vsmany_2']
+    test_configurations(hs, qon_list, test_cfg_name_list)
     exec(df2.present())

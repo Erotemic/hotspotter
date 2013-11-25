@@ -513,6 +513,9 @@ def run_investigations(hs, qon_list):
         fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)
     if '11' in args.tests:
         fnum = investigate_chip_info(hs, qon_list, fnum)
+    if '12' in args.tests or 'test-cfg-vsone-1' in args.tests:
+        import dev
+        dev.test_configurations(hs, qon_list, ['vsone_1'])
 
 #===========
 # Main Script

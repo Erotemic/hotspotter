@@ -72,7 +72,7 @@ vsone_1 = {
 
 vsone_std = {
     'query_type'     : 'vsone',
-    'checks'         : 128,
+    'checks'         : 256,
     'K'              : 1, 
     'Knorm'          : 1, 
     'Krecip'         : 0, 

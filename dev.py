@@ -279,7 +279,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list):
         cfgx2_nLessX = []
         for cfgx in xrange(nCfg):
             ranks = rank_mat[:,cfgx]
-            nLessX_ = sum(ranks < X)
+            nLessX_ = sum(np.bitwise_and(ranks < X, ranks >= 0))
             cfgx2_nLessX.append(nLessX_)
             print(len(cfgx2_lbl))
             print('[col_score] %3d) %s' % (cfgx, cfgx2_lbl[cfgx]) )

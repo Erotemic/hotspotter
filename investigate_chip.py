@@ -79,6 +79,8 @@ def parse_arguments():
     add_bool('--noprinthist', default=True)
     add_bool('--test-vsmany', default=False)
     add_bool('--test-vsone', default=False)
+    add_bool('--all-cases', default=False)
+
 
     add_str('--tests', [], 'integer or test name', nargs='*')
 
@@ -454,6 +456,30 @@ def get_hard_cases(hs):
     #print('[get_hard_cases]\n %r\n %r\n %r\n' % (qcx_list, ocid_list, note_list))
     return qcx_list, ocid_list, note_list
 
+def get_all_cases(hs):
+    print('[invest] GET_ALL_CASES')
+    cx2_cid = hs.tables.cx2_cid
+    qcid_list = []
+    ocid_list = []
+    note_list = []
+    db = hs.args.db
+    for (db_, qcid, ocids, notes) in HISTORY:
+        if db == db_:
+            qcid_list += [qcid]
+            ocid_list += [ocids]
+            note_list += [notes]
+    qcx_list = hs.cid2_cx(qcid_list).tolist()
+    for cx, cid in enumerate(cx2_cid):
+        if not cx in qcx_list and cid > 0:
+            qcx_list += [cx]
+            ocid_list += [[]]
+            note_list += ['NA']
+    return qcx_list, ocid_list, note_list
+    #print('qcid_list = %r ' % qcid_list)
+    #print('qcx_list = %r ' % qcid_list)
+    #print('[get_hard_cases]\n %r\n %r\n %r\n' % (qcx_list, ocid_list, note_list))
+
+
 def view_all_history_names_in_db(hs, db):
     qcx_list = zip(*get_hard_cases(hs))[0]
     nx_list = hs.tables.cx2_nx[qcx_list]
@@ -511,7 +537,7 @@ def run_investigations(hs, qon_list):
         fnum = plot_keypoint_scales(hs)
     if '10' in args.tests or 'vsone-gt' in args.tests:
         fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)
-    if '11' in args.tests:
+    if '11' in args.tests or 'chip-info' in args.tests:
         fnum = investigate_chip_info(hs, qon_list, fnum)
     if '12' in args.tests or 'test-cfg-vsone-1' in args.tests:
         import dev
@@ -589,7 +615,9 @@ def get_qon_list(hs):
     # Get query ids
     qon_list = []
     histids = None if args.histid is None else np.array(args.histid)
-    if args.qcid is None:
+    if args.all_cases:
+        qon_list = zip(*get_all_cases(hs))
+    elif args.qcid is None:
         qon_hard = zip(*get_hard_cases(hs))
         if histids is None:
             print('[invest] Chosen all hard histids')
@@ -626,6 +654,7 @@ def chip_info(hs, cx, notes=''):
     gname = hs.tables.gx2_gname[gx]
     indexed_gt_cxs = hs.get_other_indexed_cxs(cx)
     gt_cxs = hs.get_other_cxs(cx)
+    print('------------------')
     print('[invest] Chip Info ')
     infostr_list = [
         hs.cxstr(cx),
@@ -640,7 +669,7 @@ def chip_info(hs, cx, notes=''):
         'Ground Truth: %s' % (hs.cx_liststr(gt_cxs),),
         'IndexedGroundTruth = %s' % (hs.cx_liststr(indexed_gt_cxs),),
     ]
-    print(helpers.indent('\n'.join(infostr_list), '[invest] '))
+    print(helpers.indent('\n'.join(infostr_list), '    '))
 
 def investigate_chip_info(hs, qon_list, fnum=1):
     for qcx, ocxs, notes in qon_list:

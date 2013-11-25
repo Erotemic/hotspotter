@@ -80,6 +80,7 @@ def parse_arguments():
     add_bool('--test-vsmany', default=False)
     add_bool('--test-vsone', default=False)
     add_bool('--all-cases', default=False)
+    add_bool('--all-gt-cases', default=False)
 
 
     add_str('--tests', [], 'integer or test name', nargs='*')
@@ -440,41 +441,39 @@ def hs_from_db(db, args=None):
         print('loaded hotspotter database')
         return hs
 
-def get_hard_cases(hs):
+def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
     qcid_list = []
     ocid_list = []
     note_list = []
+    qcx_list = []
     db = hs.args.db
-    for (db_, qcid, ocids, notes) in HISTORY:
-        if db == db_:
-            qcid_list += [qcid]
-            ocid_list += [ocids]
-            note_list += [notes]
-    qcx_list = hs.cid2_cx(qcid_list)
+    if with_hard:
+        for (db_, qcid, ocids, notes) in HISTORY:
+            if db == db_:
+                qcid_list += [qcid]
+                ocid_list += [ocids]
+                note_list += [notes]
+        qcx_list = hs.cid2_cx(qcid_list).tolist()
+    for cx, cid in enumerate(cx2_cid):
+        if not cx in qcx_list and cid > 0:
+            gt_cxs = hs.get_other_cxs(cx)
+            if with_nogt and len(gt_cxs) == 0: pass
+            elif with_gt and len(gt_cxs) > 0: pass
+            else: continue
+            qcx_list += [cx]
+            ocid_list += [[]]
+            note_list += ['NA']
+    #return qcx_list, ocid_list, note_list
+    #qcx_list = hs.cid2_cx(qcid_list)
     #print('qcid_list = %r ' % qcid_list)
     #print('qcx_list = %r ' % qcid_list)
     #print('[get_hard_cases]\n %r\n %r\n %r\n' % (qcx_list, ocid_list, note_list))
     return qcx_list, ocid_list, note_list
 
-def get_all_cases(hs):
-    print('[invest] GET_ALL_CASES')
-    cx2_cid = hs.tables.cx2_cid
-    qcid_list = []
-    ocid_list = []
-    note_list = []
-    db = hs.args.db
-    for (db_, qcid, ocids, notes) in HISTORY:
-        if db == db_:
-            qcid_list += [qcid]
-            ocid_list += [ocids]
-            note_list += [notes]
-    qcx_list = hs.cid2_cx(qcid_list).tolist()
-    for cx, cid in enumerate(cx2_cid):
-        if not cx in qcx_list and cid > 0:
-            qcx_list += [cx]
-            ocid_list += [[]]
-            note_list += ['NA']
-    return qcx_list, ocid_list, note_list
+@helpers.__DEPRICATED__
+def get_hard_cases(hs):
+    return get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
+
     #print('qcid_list = %r ' % qcid_list)
     #print('qcx_list = %r ' % qcid_list)
     #print('[get_hard_cases]\n %r\n %r\n %r\n' % (qcx_list, ocid_list, note_list))
@@ -616,9 +615,11 @@ def get_qon_list(hs):
     qon_list = []
     histids = None if args.histid is None else np.array(args.histid)
     if args.all_cases:
-        qon_list = zip(*get_all_cases(hs))
+        qon_list = zip(*get_cases(hs, with_gt=True, with_nogt=True))
+    elif args.all_gt_cases:
+        qon_list = zip(*get_cases(hs, with_hard=True, with_gt=True, with_nogt=False))
     elif args.qcid is None:
-        qon_hard = zip(*get_hard_cases(hs))
+        qon_hard = zip(*get_cases(hs, with_hard=True, with_gt=False, with_nogt=False))
         if histids is None:
             print('[invest] Chosen all hard histids')
             qon_list += qon_hard

@@ -246,6 +246,18 @@ def __dump(hs, subdir):
     df2.save_figure(fpath=fpath, usetitle=True)
     df2.reset()
 
+def save_if_requested(hs, subdir):
+    if not hs.args.save_figures:
+        return
+    #print('[viz] Dumping Image')
+    fpath = hs.dirs.result_dir
+    if not subdir is None: 
+        subdir = helpers.sanatize_fname2(subdir)
+        fpath = join(fpath, subdir)
+        helpers.ensurepath(fpath)
+    df2.save_figure(fpath=fpath, usetitle=True)
+    df2.reset()
+
 def __dump_or_browse(hs, subdir=None):
     #fig = df2.plt.gcf()
     #fig.tight_layout()

@@ -299,7 +299,7 @@ def chipmatch2_neighbors(hs, qcx2_chipmatch, q_cfg):
 #-----
 def spatial_verification(hs, qcx2_chipmatch, q_cfg):
     sv_cfg = q_cfg.sv_cfg
-    if not sv_cfg.sv_on:
+    if not sv_cfg.sv_on or sv_cfg.xy_thresh is None:
         return qcx2_chipmatch
     print('[mf] Step 5) Spatial verification: %r' % sv_cfg.get_uid())
     prescore_method  = sv_cfg.prescore_method

@@ -772,6 +772,11 @@ def print_glob(*args, **kwargs):
 #---------------
 # save / load / cache functions
 
+def sanatize_fname2(fname):
+    fname = fname.replace(' ','_')
+    return fname
+
+
 def sanatize_fname(fname):
     ext = '.pkl'
     if fname.rfind(ext) != max(len(fname) - len(ext), 0):
@@ -832,6 +837,12 @@ def load_npz(fpath):
     npz.close()
     return data
 
+def dict_union2(dict1, dict2):
+    return dict(list(dict1.items()) + list(dict2.items()))
+
+def dict_union(*args):
+    return dict([item for dict_ in iter(args) for item in dict_.iteritems()])
+
 def hashstr(data, trunc_pos=8):
     # Get a 128 character hex string
     hashstr = hashlib.sha512(data).hexdigest()
@@ -840,6 +851,31 @@ def hashstr(data, trunc_pos=8):
     # Truncate
     hashstr = hashstr2[:trunc_pos]
     return hashstr
+
+class ModulePrintLock():
+    '''Temporarily turns off printing while still in scope
+    chosen modules must have a print_off function
+    from __future__ import print_function
+    import __builtin__
+    # Toggleable printing
+    print = __builtin__.print
+    print_ = sys.stdout.write
+    def print_on(): global print, print_
+        print =  __builtin__.print
+        print_ = sys.stdout.write
+    def print_off(): global print, print_
+        def print(*args, **kwargs): pass
+        def print_(*args, **kwargs): pass
+    '''
+    def __init__(self, *args):
+        self.module_list = args
+        for module in self.module_list:
+            module.print_off()
+    def __del__(self):
+        for module in self.module_list:
+            module.print_on()
+
+
 
 def make_sample_id(sample):
     'Input: sample - a list of chip indexes, Output: hashstr'
@@ -1387,6 +1423,8 @@ def format(num, n=8):
     nums = [9001, 9.053]
     print([format(num) for num in nums])
     '''
+    if num is None:
+        return 'None'
     if is_float(num):
         ret = ('%.'+str(n)+'E') % num
         exp_pos  = ret.find('E')

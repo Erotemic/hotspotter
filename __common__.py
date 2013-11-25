@@ -5,12 +5,10 @@ import sys
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
-def print_on():
-    global print, print_
+def print_on(): global print, print_
     print =  __builtin__.print
     print_ = sys.stdout.write
-def print_off():
-    global print, print_
+def print_off(): global print, print_
     def print(*args, **kwargs): pass
     def print_(*args, **kwargs): pass
 

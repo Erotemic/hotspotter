@@ -181,6 +181,9 @@ class QueryResult(DynStruct):
             kwargs['SV'] = res.get_SV()
         df2.show_match_analysis(hs, res, **kwargs)
 
+    def plot_matches(res, hs, cx, fnum=1, **kwargs):
+        df2.show_matches_annote_res(res, hs, cx, fignum=fnum, draw_pts=False, **kwargs)
+
 #=========================
 # NN (FLANN) Index Class
 #=========================
@@ -271,10 +274,10 @@ class FilterConfig(DynStruct):
         f_cfg.nnfilter_list = []
         #
         #f_cfg.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio', 'lnrat']
-        valid_filters = []
+        f_cfg._valid_filters = []
         def addfilt(sign, filt, thresh, weight):
             f_cfg.nnfilter_list.append(filt)
-            valid_filters.append((sign, filt))
+            f_cfg._valid_filters.append((sign, filt))
             f_cfg.__dict__[filt+'_thresh'] = thresh
             f_cfg.__dict__[filt+'_weight'] = weight
         #tuple(Sign, Filt, ValidSignThresh, ScoreMetaWeight)
@@ -288,33 +291,50 @@ class FilterConfig(DynStruct):
         #addfilt(+1, 'scale' )
         f_cfg.filt2_tw = {}
         f_cfg.update(**kwargs)
-        for (sign, filt) in valid_filters:
-            stw = ((sign, f_cfg.__dict__[filt+'_thresh']), f_cfg.__dict__[filt+'_weight'])
-            f_cfg.filt2_tw[filt] = stw
 
-    def make_feasible(f_cfg, nn_cfg):
-        # Knorm
-        if f_cfg.lnbnn_thresh is None and f_cfg.lnbnn_weight == 0:
-            listrm(f_cfg.nnfilter_list, 'lnbnn')
-        if f_cfg.lnrat_thresh is None and f_cfg.lnrat_weight == 0:
-            listrm(f_cfg.nnfilter_list, 'lnrat')
+    def make_feasible(f_cfg, q_cfg):
+        '''
+        removes invalid parameter settings over all cfgs (move to QueryConfig)
+        '''
+        sv_cfg = q_cfg.sv_cfg
+        nn_cfg = q_cfg.nn_cfg
+
+        # Ensure the list of on filters is valid given the weight and thresh
         if f_cfg.ratio_thresh <= 1: 
             f_cfg.ratio_thresh = None
-        if f_cfg.ratio_thresh is None and f_cfg.ratio_weight == 0:
-            listrm(f_cfg.nnfilter_list, 'ratio')
+        if f_cfg.roidist_thresh >= 1:
+            f_cfg.roidist_thresh = None
+        if f_cfg.bursty_thresh   <= 1:
+            f_cfg.bursty_thresh = None
+
+        # FIXME: Non-Independent parameters. 
+        # Need to explicitly model correlation somehow
+        if f_cfg.Krecip == 0:
+            f_cfg.recip_thresh = None
+        elif f_cfg.recip_thresh is None:
+            f_cfg.recip_thresh = 0
+
+        def ensure_filter(filt, sign):
+            '''ensure filter in the list if valid else remove 
+            (also ensure the sign/thresh/weight dict)'''
+            thresh = f_cfg.__dict__[filt+'_thresh']
+            weight = f_cfg.__dict__[filt+'_weight']
+            stw = ((sign, thresh), weight)
+            f_cfg.filt2_tw[filt] = stw
+            if thresh is None and weight == 0:
+                listrm(f_cfg.nnfilter_list, filt)
+            elif not filt in f_cfg.nnfilter_list:
+                f_cfg.nnfilter_list += [filt]
+        for (sign, filt) in f_cfg._valid_filters:
+            ensure_filter(filt, sign)
+
+        # Set Knorm to 0 if there is no normalizing filter on. 
         norm_depends = ['lnbnn', 'ratio', 'lnrat']
         if nn_cfg.Knorm <= 0 and not any_inlist(f_cfg.nnfilter_list, norm_depends):
             #listrm_list(f_cfg.nnfilter_list, norm_depends)
+            # FIXME: Knorm is not independent of the other parameters. 
+            # Find a way to make it independent.
             nn_cfg.Knorm = 0
-        # Krecip
-        if f_cfg.Krecip <= 0 or 'recip' not in f_cfg.nnfilter_list:
-            listrm(f_cfg.nnfilter_list, 'recip')
-            f_cfg.Krecip = 0
-        if (f_cfg.roidist_thresh is None or f_cfg.roidist_thresh >= 1) and\
-               f_cfg.roidist_weight == 0:
-            listrm(f_cfg.nnfilter_list, 'roidist')
-        if f_cfg.bursty_thresh   <= 1:
-            listrm(f_cfg.nnfilter_list, 'bursty')
 
     def get_uid(f_cfg):
         if not f_cfg.filt_on: 
@@ -323,7 +343,7 @@ class FilterConfig(DynStruct):
                                  f_cfg.nnfilter_list)
         uid = ['_FILT(']
         twstr = signthreshweight_str(on_filters)
-        if f_cfg.Krecip != 0:
+        if f_cfg.Krecip != 0 and 'recip' in f_cfg.nnfilter_list:
             uid += ['Kr'+str(f_cfg.Krecip)]
             if len(twstr) > 0: uid += [',']
         if len(twstr) > 0:
@@ -336,6 +356,7 @@ def signthreshweight_str(on_filters):
     for key, val in on_filters.iteritems():
         ((sign, thresh), weight) = val
         stw_str = key
+        if thresh is None and weight == 0: continue 
         if not thresh is None:
             sstr = ['<','>'][sign == -1] #actually <=, >=
             stw_str += sstr+str(thresh)
@@ -357,7 +378,7 @@ class SpatialVerifyConfig(DynStruct):
         sv_cfg.sv_on = True
         sv_cfg.update(**kwargs)
     def get_uid(sv_cfg):
-        if not sv_cfg.sv_on:
+        if not sv_cfg.sv_on or sv_cfg.xy_thresh is None:
             return ['_SV()']
         uid = ['_SV('] 
         uid += [str(sv_cfg.nShortlist)]
@@ -423,17 +444,26 @@ class QueryConfig(DynStruct):
         q_cfg.data_index = None # current index
         q_cfg.dcxs2_index = {}  # L1 cached indexes
         q_cfg.update(**kwargs)
-        q_cfg.f_cfg.make_feasible(q_cfg.nn_cfg)
+        q_cfg.f_cfg.make_feasible(q_cfg)
+
+    def update_cfg(q_cfg, **kwargs):
+        q_cfg.nn_cfg.update(**kwargs)
+        q_cfg.f_cfg.update(**kwargs)
+        q_cfg.sv_cfg.update(**kwargs)
+        q_cfg.a_cfg.update(**kwargs)
+        q_cfg.update(**kwargs)
+        q_cfg.f_cfg.make_feasible(q_cfg)
+
     def get_uid(q_cfg, *args, **kwargs):
         uid = []
         if not 'noNN' in args:
-            uid += q_cfg.nn_cfg.get_uid()
+            uid += q_cfg.nn_cfg.get_uid(**kwargs)
         if not 'noFILT' in args:
-            uid += q_cfg.f_cfg.get_uid()
+            uid += q_cfg.f_cfg.get_uid(**kwargs)
         if not 'noSV' in args:
-            uid += q_cfg.sv_cfg.get_uid()
+            uid += q_cfg.sv_cfg.get_uid(**kwargs)
         if not 'noAGG' in args:
-            uid += q_cfg.a_cfg.get_uid()
+            uid += q_cfg.a_cfg.get_uid(**kwargs)
         if not 'noCHIP' in args:
             uid += [params.get_indexed_uid()]
         # In case you don't search the entire dataset

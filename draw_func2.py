@@ -403,10 +403,10 @@ def add_alpha(colors):
     return [list(color)+[1] for color in colors]
 
 def show_matches_annote_res(res, hs, cx,
-                  fignum=None, 
-                  plotnum=None,
-                  title_aug=None, 
-                  **kwargs):
+                            fignum=None, 
+                            plotnum=None,
+                            title_aug=None, 
+                            **kwargs):
     '''
     Wrapper for show_matches_annote
     '''
@@ -426,6 +426,9 @@ def show_matches_annote(hs, qcx, cx2_score,
                         title_suff=None,
                         show_cx=False,
                         show_cid=True,
+                        show_gname=True,
+                        showTF=True,
+                        showScore=True,
                         **kwargs):
     ' Shows matches with annotations '
     printDBG('[df2] Showing matches from %s in fignum=%r' % (hs.vs_str(cx, qcx), fignum))
@@ -440,9 +443,13 @@ def show_matches_annote(hs, qcx, cx2_score,
     score = cx2_score[cx]
     fm = cx2_fm[cx]; fs = cx2_fs[cx]
     # Build the title string
-    score_str = (' score='+helpers.num_fmt(score)) % (score)
-    isgt_str  = hs.is_true_match_str(qcx, cx) 
-    title     = '*' + isgt_str + '*' + score_str
+    isgt_str  = hs.is_true_match_str(qcx, cx)
+    title = ''
+    if showTF:
+        title += '*' + isgt_str  + '*'
+    if showScore:
+        score_str = (' score='+helpers.num_fmt(score)) % (score)
+        title += score_str
     if not title_pref is None: title = title_pref + title
     if not title_suff is None: title = title + title_suff
     # Draw the matches
@@ -454,7 +461,8 @@ def show_matches_annote(hs, qcx, cx2_score,
     if   isgt_str == hs.UNKNOWN_STR: draw_border(ax, WHITE, 4)
     elif isgt_str == hs.TRUE_STR:    draw_border(ax, GREEN, 4)
     elif isgt_str == hs.FALSE_STR:   draw_border(ax, RED, 4)
-    ax.set_xlabel(hs.get_gname(cx), fontproperties=FONTS.xlabel)
+    if show_gname:
+        ax.set_xlabel(hs.get_gname(cx), fontproperties=FONTS.xlabel)
     return ax
 
 def show_img(hs, cx, **kwargs):

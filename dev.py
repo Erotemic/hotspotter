@@ -60,7 +60,7 @@ def update_test_results(qonx2_agg, test_results):
     (qonx2_best_params, qonx2_lbl, qonx2_colpos, 
      qonx2_best_col, qonx2_score, mats_list) = qonx2_agg
     (col_lbls, row_lbls, mat_vals, test_uid, nLeX) = test_results
-    test_uid = simplify_test_uid(test_uid)
+    test_uid = mc3.simplify_test_uid(test_uid)
     best_vals = mat_vals.min(1)
     best_mat = np.tile(best_vals, (len(mat_vals.T), 1)).T
     best_pos = (best_mat == mat_vals)
@@ -76,22 +76,12 @@ def update_test_results(qonx2_agg, test_results):
             qonx2_lbl[qonx] = row_lbls[qonx]
             qonx2_colpos[qonx] = colpos
 
-def simplify_test_uid(test_uid):
-    # Remove extranious characters from test_uid
-    test_uid = re.sub(r'_trainID\([0-9]*,........\)','', test_uid)
-    test_uid = re.sub(r'_indxID\([0-9]*,........\)','', test_uid)
-    test_uid = re.sub(r'HSDB_zebra_with_mothers','', test_uid)
-    test_uid = re.sub(r'GZ_ALL','', test_uid)
-    test_uid = re.sub(r'HESAFF_sz750','', test_uid)
-    test_uid = test_uid.strip(' _')
-    return test_uid
-
 #---------------
 # Display Test Results
 def print_test_results(test_results):
     print('[dev] ---')
     (col_lbls, row_lbls, mat_vals, test_uid, nLeX) = test_results
-    test_uid = simplify_test_uid(test_uid)
+    test_uid = mc3.simplify_test_uid(test_uid)
     print('[dev] test_uid=%r' % test_uid)
     #print('[dev] row_lbls=\n%s' % str(row_lbls))
     #print('[dev] col_lbls=\n%s' % str('\n  '.join(col_lbls)))
@@ -112,7 +102,7 @@ def print_best(qonx2_agg, cfg_list):
         print('[best_qon] best_params = %s' % (best_params_str,))
         print('[best_qon] best_score(c%r) = %r' % (qonx2_colpos[row], qonx2_score[row],))
     print('[best_qon] ---- END ----')
-    _2str = lambda cfgx, cfg: ('%3d) ' % cfgx)+simplify_test_uid(cfg.get_uid())
+    _2str = lambda cfgx, cfg: ('%3d) ' % cfgx)+mc3.simplify_test_uid(cfg.get_uid())
     rowlbl_list = [('%3d) ' % qonx)+str(lbl) for qonx, lbl in enumerate(qonx2_lbl)]
     collbl_list = [_2str(*tup) for tup in enumerate(cfg_list)]
     print('[best_all] Row Labels: ')
@@ -242,7 +232,7 @@ def test_configurations(hs):
     # Build col labels
     cfgx2_lbl = []
     for cfgx in xrange(nCfg):
-        test_uid  = simplify_test_uid(cfg_list[cfgx].get_uid())
+        test_uid  = mc3.simplify_test_uid(cfg_list[cfgx].get_uid())
         cfg_label = 'cfgx %3d) %s' % (cfgx, test_uid)
         cfgx2_lbl.append(cfg_label)
     cfgx2_lbl = np.array(cfgx2_lbl)

@@ -46,6 +46,8 @@ def parse_arguments():
         action = 'store_false' if default else 'store_true' 
         dest = switch.strip('-').replace('-','_')
         addarg(switch, dest=dest, action=action, default=default, help=help)
+    def add_var(switch, default, help, **kwargs):
+        add_meta(switch, None, default, help, **kwargs)
     def add_int(switch, default, help, **kwargs):
         add_meta(switch, int, default, help, **kwargs)
     def add_float(switch, default, help, **kwargs):
@@ -65,7 +67,7 @@ def parse_arguments():
     add_float('--ratio-thresh', 1.2, '', step=.1)
     add_int('--K', 10, 'for K-nearest-neighbors', step=20)
     add_str('--db', 'NAUTS', 'database to load')
-    test_bool('--show-names')
+    add_bool('--nopresent', default=False)
     add_bool('--save-figures', default=False)
     add_bool('--noannote', default=False)
     add_bool('--vrd', default=False)
@@ -189,15 +191,12 @@ def top_matching_features(res, axnum=None, match_type=''):
     fig = df2.figure(0)
     df2.plot(sorted_score)
 
-
-
 def investigate_scoring_rules(hs, qcx, fnum=1):
     args = hs.args
     K = 4 if args.K is None else args.K
     vr2.test_voting_rules(hs, qcx, K, fnum)
     fnum += 1
     return fnum
-
 
 param1 = 'K'
 param2 = 'xy_thresh'
@@ -206,115 +205,86 @@ nParam1=1
 fnum = 1
 nParam2=1
 cx_list='gt1'
-def vary_query_params(hs, qcx, param1='ratio_thresh', param2='xy_thresh',
-                      assign_alg='vsone', nParam1=3, nParam2=3, fnum=1,
-                      cx_list='gt'):
-    args = hs.args
-    possible_variations = {
-                        # start, #step  #props
-        'K'            : (args.K,      args.K_step, 'int'),
-        'ratio_thresh' : (args.ratio_thresh, args.ratio_thresh_step),  
-        'xy_thresh'    : (args.xy_thresh, args.xy_thresh_step), 
-        'scale_min'    : (0.5,   0.01),
-        'scale_max'    : (2.0,  -0.01)
-    }
-    param_ranges = {
-        'param1'    : [param1]+[list(possible_variations[param1])],
-        'param2'    : [param2]+[list(possible_variations[param2])]
-    }
-    # Ground truth matches
-    if cx_list == 'gt':
-        cx_list = hs.get_groundtruth_cxs(qcx)
-    if cx_list == 'gt1':
-        gt_list = hs.get_groundtruth_cxs(qcx)
-        cx_list = gt_list[0:1]
-    #cx = cx_list[0]
-    for cx in cx_list:
-        fnum = vary_two_params(hs, qcx, cx, param_ranges, assign_alg,
-                               args.nRows, args.nCols, fnum)
-    return fnum
+        #fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 4, 4, fnum, cx_list='gt1')
+    #if '2' in args.tests:
+        #hs.ensure_matcher(match_type='vsmany')
+        #fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 4, 4, fnum, cx_list='gt1') 
 
 def linear_logspace(start, stop, num, base=2):
     return 2 ** np.linspace(np.log2(start), np.log2(stop), num)
 
-def vary_two_params(hs, qcx, cx, param_ranges, assign_alg, nParam1=3, nParam2=3, fnum=1):
-    # Query Features
-    cx2_rchip_size = hs.get_cx2_rchip_size()
-    get_features = quick_get_features_factory(hs)
-    rchip1, fx2_kp1, fx2_desc1, cid1 = get_features(qcx)
-    rchip2, fx2_kp2, fx2_desc2, cid2 = get_features(cx)
-    rchip_size1 = cx2_rchip_size[qcx]
-    rchip_size2 = cx2_rchip_size[cx]
 
-    possible_assign_fns = {'vsone'   : quick_assign_vsone, 
-                           'vsmany'  : quick_assign_vsmany, }
-    #possible_space_fns = {'lin' : np.linspace,
-                          #'log' : linear_logspace}
-    quick_assign_fn = possible_assign_fns[assign_alg]
+def vary_query_cfg(hs, qon_list, q_cfg=None, vary_cfg=None, fnum=1):
+    if vary_cfg is None:
+        vary_cfg = {'ratio_thresh' : [1.4, 1.6, 1.8], 
+                       'xy_thresh' : [.001, .002, .01]}
+    if q_cfg is None:
+        q_cfg = mc3.get_vsone_cfg()
+    # Ground truth matches
+    for qcx, ocxs, notes in qon_list:
+        gt_cxs = hs.get_groundtruth_cxs(qcx)
+        for cx in gt_cxs:
+            fnum = vary_two_cfg(hs, qcx, cx, notes, q_cfg, vary_cfg, fnum)
+    return fnum
 
-    # Varied Parameters
-    def get_param(key, nParam):
-        param = param_ranges[key][0]
-        param_info = param_ranges[key][1]
-        param_type = 'float' if len(param_info) <= 2 else param_info[2]
-        #space_fn = possible_space_fns['lin' if len(param_info) <= 3 else param_info[3]]
-        #param_range = list(param_info[0:2]) + [nParam]
-        npnormal = np.random.normal
-        start = param_info[0]
-        step  = param_info[1]
-        # 
-        param_steps = [start]
-        for ix in xrange(nParam-1):
-            param_steps.append(param_steps[-1] + step)
-        if param_type == 'int':
-            param_steps = map(int, map(round, param_steps))
-        return param, param_steps, nParam
-    param1, param1_steps, nParam1 = get_param('param1', nParam1)
-    param2, param2_steps, nParam2 = get_param('param2', nParam2)
-    nRows = nParam1
-    nCols = nParam2+1
+def vary_two_cfg(hs, qcx, cx, notes, q_cfg, vary_cfg, fnum=1):
+    if len(vary_cfg) > 2:
+        raise Exception('can only vary at most two cfgeters')
+    print('[invest] vary_two_cfg: q'+hs.vs_str(qcx, cx))
+    cfg_keys = vary_cfg.keys()
+    cfg_vals = vary_cfg.values()
+    cfg1_name = cfg_keys[0]
+    cfg2_name = cfg_keys[1]
+    cfg1_steps = cfg_vals[0]
+    cfg2_steps = cfg_vals[1]
+    nRows = len(cfg1_steps)
+    nCols = len(cfg2_steps)
 
-    print('[invest] Varying parameters %r: nRows=%r, nCols=%r' % (assign_alg, nRows, nCols))
-    print('[invest] %r = %r ' % (param1, param1_steps))
-    print('[invest] %r = %r ' % (param2, param2_steps))
-    # Assigned Features with param1
-    for rowx, param1_value in enumerate(param1_steps):
-        assign_args = {param1:param1_value}
-        (fm, fs) = quick_assign_fn(hs, qcx, cx, **assign_args)
-        def _show_matches_helper(fm, fs, rowx, colx, title):
-            plotnum = (nRows, nCols, rowx*nCols+colx)
-            #print('rowx=%r, colx=%r, plotnum=%r' % (rowx, colx, plotnum))
-            df2.show_matches2(rchip1, rchip2, fx2_kp1, fx2_kp2, fm, fs, fignum=fnum,
-                            plotnum=plotnum, title=title, draw_pts=False)
-        # Plot the original assigned matches
-        title = param1+'='+helpers.format(param1_value, 3)
-        _show_matches_helper(fm, fs, rowx, 1, '')
-        ax = df2.plt.gca()
-        ylabel_args = dict(rotation='horizontal',
-                           verticalalignment='bottom',
-                           horizontalalignment='right')
-        ax.set_ylabel(title, **ylabel_args)
-        #if rowx == nRows - 1:
-        def _set_xlabel(label):
-            #if False or rowx == 0:
-                #ax = df2.plt.gca()
-                #ax.set_title(label)
-            if rowx == nRows - 1:
-                ax = df2.plt.gca()
-                ax.set_xlabel(label)
-
-        _set_xlabel(assign_alg)
-        # Spatially verify with params2
-        for colx, param2_value in enumerate(param2_steps):
-            sv_args = {'rchip_size2':rchip_size2, param2:param2_value}
-            fm_V, fs_V = mc2.spatially_verify2(fx2_kp1, fx2_kp2, fm, fs, **sv_args)
-            # Plot the spatially verified matches
-            title = param2 + '='+helpers.format(param2_value, 3)  #helpers.commas(param2_value, 3)
-            _show_matches_helper(fm_V, fs_V, rowx, colx+2, '')
-            _set_xlabel(title)
-    df2.set_figtitle(assign_alg+' vary '+param1+' and '+param2+' \n qcid=%r, cid=%r' % (cid1, cid2))
+    print('[invest] Varying configs: nRows=%r, nCols=%r' % (nRows, nCols))
+    print('[invest] %r = %r ' % (cfg1_name, cfg1_steps))
+    print('[invest] %r = %r ' % (cfg2_name, cfg2_steps))
+    ylabel_args = dict(rotation='horizontal',
+                        verticalalignment='bottom',
+                        horizontalalignment='right',
+                        fontproperties=df2.FONTS.medbold)
+    xlabel_args = dict(fontproperties=df2.FONTS.medbold)
+    #ax = df2.plt.gca()
+    # Vary cfg1
+    #df2.plt.gcf().clf()
+    print_lock_ = helpers.ModulePrintLock(mc3, df2)
+    assign_alg = q_cfg.a_cfg.query_type 
+    for rowx, cfg1_value in enumerate(cfg1_steps):
+        q_cfg.update_cfg(**{cfg1_name:cfg1_value})
+        y_title = cfg1_name+'='+helpers.format(cfg1_value, 3)
+        # Vary cfg2 
+        for colx, cfg2_value in enumerate(cfg2_steps):
+            q_cfg.update_cfg(**{cfg2_name:cfg2_value})
+            plotnum = (nRows, nCols, rowx*nCols+colx+1)
+            # HACK
+            #print(plotnum)
+            #print(q_cfg)
+            # query only the chips of interest (groundtruth) when doing vsone
+            if assign_alg == 'vsone':
+                res = mc3.query_groundtruth(hs, qcx, q_cfg)
+            # query the entire database in vsmany (just as fast as vgroundtruth)
+            elif assign_alg == 'vsmany':
+                res = mc3.query_database(hs, qcx, q_cfg)
+            res.plot_matches(hs, cx, fnum=fnum, plotnum=plotnum,
+                             show_gname=False, showTF=False)
+            x_title = cfg2_name + '='+helpers.format(cfg2_value, 3)  #helpers.commas(cfg2_value, 3)
+            ax = df2.plt.gca()
+            if rowx == len(cfg1_steps) - 1:
+                ax.set_xlabel(x_title, **xlabel_args)
+            if colx == 0:
+                ax.set_ylabel(y_title, **ylabel_args)
+    del print_lock_
+    vary_title = '%s vary %s and %s' % (assign_alg, cfg1_name, cfg2_name)
+    figtitle =  '%s %s %s' % (vary_title, hs.vs_str(qcx, cx), notes)
+    subtitle = mc3.simplify_test_uid(q_cfg.get_uid())
+    df2.set_figtitle(figtitle, subtitle)
     df2.adjust_subplots_xylabels()
     fnum += 1
+    viz.save_if_requested(hs, vary_title)
     return fnum
 
 def quick_get_features_factory(hs):
@@ -403,11 +373,11 @@ def plot_name(hs, qcx, fnum=1, **kwargs):
     viz.plot_name_of_cx(hs, qcx, fignum=fnum, **kwargs)
     return fnum+1
 
-def plot_names(hs, qon_list, fnum=1):
+def show_names(hs, qon_list, fnum=1):
     '''The most recent plot names function, works with qon_list'''
     args = hs.args
     result_dir = hs.dirs.result_dir
-    names_dir = join(result_dir, 'plot_names')
+    names_dir = join(result_dir, 'show_names')
     helpers.ensuredir(names_dir)
     for (qcx, ocxs, notes) in qon_list:
         print('Showing q%s - %r' % (hs.cxstr(qcx), notes))
@@ -497,22 +467,38 @@ def view_all_history_names_in_db(hs, db):
         df2.save_figure(fpath='hard_names', usetitle=True)
     helpers.vd('hard_names')
 
+def vary_vsone_cfg(hs, qon_list, fnum, vary_dicts, **kwargs):
+    vary_cfg = helpers.dict_union(*vary_dicts)
+    q_cfg = mc3.get_vsone_cfg(**kwargs)
+    return vary_query_cfg(hs, qon_list, q_cfg, vary_cfg, fnum)
+
+def vary_vsmany_cfg(hs, qon_list, vary_cfg, fnum, **kwargs):
+    vary_cfg = helpers.dict_union(*vary_dicts)
+    q_cfg = mc3.get_vsmany_cfg(**kwargs)
+    return vary_query_cfg(hs, qon_list, q_cfg, vary_cfg, fnum)
+
 def run_investigations(hs, qon_list):
     args = hs.args
     qcx = qon_list[0][0]
     print('[invest] Running Investigation: '+hs.cxstr(qcx))
     fnum = 1
     #view_all_history_names_in_db(hs, 'MOTHERS')
-    if args.show_names:
-        plot_names(hs, qon_list)
-
     #fnum = compare_matching_methods(hs, qcx, fnum)
-    if '1' in args.tests:
-        hs.ensure_matcher(match_type='vsone')
-        fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 4, 4, fnum, cx_list='gt1')
-    if '2' in args.tests:
-        hs.ensure_matcher(match_type='vsmany')
-        fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 4, 4, fnum, cx_list='gt1') 
+    #xy_  = {'xy_thresh'    : [None, .2, .02, .002]}
+    xy_  = {'xy_thresh'    : [None, .02, .002]}
+    #rat_ = {'ratio_thresh' : [None, 1.4, 1.6, 1.8]}
+    rat_ = {'ratio_thresh' : [None, 1.5, 1.7]}
+    K_   = {'K'            : [2, 5, 10]}
+    Kr_  = {'Krecip'       : [0, 2, 5, 10]}
+    if '0' in args.tests or 'show-names' in args.tests:
+        show_names(hs, qon_list)
+    if '1' in args.tests or 'vary-vsone-rat-xy' in args.tests:
+        fnum = vary_vsone_cfg(hs, qon_list, fnum, [rat_, xy_])
+    if '2' in args.tests or 'vary-vsmany-k-xy' in args.tests:
+        fnum = vary_vsmany_cfg(hs, qon_list, fnum, [K_, xy_])
+    if '3' in args.tests:
+        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=True) 
+        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=False) 
     if '4' in args.tests:
         fnum = investigate_scoring_rules(hs, qcx, fnum)
     if '6' in args.tests:
@@ -523,7 +509,7 @@ def run_investigations(hs, qon_list):
         mc3.compare_scoring(hs)
     if '9' in args.tests:
         fnum = plot_keypoint_scales(hs)
-    if '10' in args.tests:
+    if '10' in args.tests or 'vsone-gt' in args.tests:
         fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)
     if '11' in args.tests:
         fnum = investigate_chip_info(hs, qon_list, fnum)
@@ -673,4 +659,7 @@ if __name__ == '__main__':
     dcxs = None
     q_cfg = None
     #df2.update()
+    if hs.args.nopresent:
+        print('...not presenting')
+        sys.exit(0)
     exec(df2.present()) #**df2.OooScreen2()

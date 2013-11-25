@@ -7,6 +7,7 @@ import sys
 import os
 import warnings
 import textwrap
+import re
 # Hotspotter Frontend Imports
 import draw_func2 as df2
 # Hotspotter Imports
@@ -73,7 +74,7 @@ def get_vsone_cfg(**kwargs):
     kwargs['query_type'] = 'vsone'
     kwargs_set = __dict_default_func(kwargs)
     kwargs_set('lnbnn_weight', 0)
-    kwargs_set('checks', 128)
+    kwargs_set('checks', 256)
     kwargs_set('K', 1)
     kwargs_set('Knorm', 1)
     kwargs_set('ratio_weight', 1.0)
@@ -81,20 +82,21 @@ def get_vsone_cfg(**kwargs):
     q_cfg = ds.QueryConfig(**kwargs)
     return q_cfg
 
+def query_dcxs(hs, qcx, dcxs, q_cfg=None, **kwargs):
+    result_list = execute_query_safe(hs, q_cfg, [qcx], dcxs, **kwargs)
+    res = result_list[0].values()[0]
+    return res
+
 def query_groundtruth(hs, qcx, q_cfg=None, **kwargs):
     print('[mc3] query groundtruth')
     gt_cxs = hs.get_other_cxs(qcx)
     print('[mc3] len(gt_cxs) = %r' % (gt_cxs,))
-    result_list = execute_query_safe(hs, q_cfg, [qcx], gt_cxs, **kwargs)
-    res = result_list[0].values()[0]
-    return res
+    return query_dcxs(hs, qcx, gt_cxs, q_cfg, **kwargs)
 
 def query_database(hs, qcx, q_cfg=None, **kwargs):
     print('[mc3] query database')
     dcxs = hs.indexed_sample_cx
-    result_list = execute_query_safe(hs, q_cfg, [qcx], gt_cxs, **kwargs)
-    res = result_list[0].values()[0]
-    return res
+    return query_dcxs(hs, qcx, dcxs, q_cfg, **kwargs)
 
 def make_nn_index(hs, sx2_cx=None):
     if sx2_cx is None:
@@ -107,6 +109,17 @@ def unify_cfgs(cfg_list):
     GLOBAL_dcxs2_index = cfg_list[0].dcxs2_index
     for q_cfg in cfg_list:
         q_cfg.dcxs2_index = GLOBAL_dcxs2_index
+
+def simplify_test_uid(test_uid):
+    # Remove extranious characters from test_uid
+    test_uid = re.sub(r'_trainID\([0-9]*,........\)','', test_uid)
+    test_uid = re.sub(r'_indxID\([0-9]*,........\)','', test_uid)
+    test_uid = re.sub(r'_dcxs\(........\)','', test_uid)
+    test_uid = re.sub(r'HSDB_zebra_with_mothers','', test_uid)
+    test_uid = re.sub(r'GZ_ALL','', test_uid)
+    test_uid = re.sub(r'HESAFF_sz750','', test_uid)
+    test_uid = test_uid.strip(' _')
+    return test_uid
 
 #----------------------
 # Helper Functions

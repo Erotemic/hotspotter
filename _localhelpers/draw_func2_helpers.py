@@ -8,6 +8,8 @@ def printDBG(msg):
         print(msg)
 import matplotlib
 import multiprocessing
+from os.path import join, normpath, splitext, split
+
 MPL_BACKEND = matplotlib.get_backend()
 matplotlib.rcParams['toolbar'] = 'toolbar2'
 matplotlib.rc('text', usetex=False)
@@ -66,6 +68,7 @@ FONTS.small     = FontProperties(weight='light', size=SMALL)
 FONTS.smaller   = FontProperties(weight='light', size=SMALLER)
 FONTS.med       = FontProperties(weight='light', size=MED)
 FONTS.large     = FontProperties(weight='light', size=LARGE)
+FONTS.medbold   = FontProperties(weight='bold', size=MED)
 FONTS.largebold = FontProperties(weight='bold', size=LARGE)
 
 FONTS.legend   = FONTS.large
@@ -145,17 +148,23 @@ def draw_border(ax, color=GREEN, lw=2):
     rect.set_edgecolor(color)
 
 # ---- GENERAL FIGURE COMMANDS ----
-def sanatize_img_fpath(fpath):
-    [dpath, fname_clean] = os.path.split(fpath)
+def sanatize_img_fname(fname):
+    fname_clean = fname
     search_replace_list = [(' ', '_'), ('\n', '--'), ('\\', ''), ('/','')]
     for old, new in search_replace_list:
         fname_clean = fname_clean.replace(old, new)
-    fpath_clean = os.path.join(dpath, fname_clean)
-    root, ext = os.path.splitext(fpath_clean)
+    fname_noext, ext = splitext(fname_clean)
+    fname_clean = fname_noext + ext.lower()
     # Check for correct extensions
     if not ext.lower() in helpers.IMG_EXTENSIONS:
-        fpath_clean += '.png'
-    fpath_clean = os.path.normpath(fpath_clean)
+        fname_clean += '.png'
+    return fname_clean
+
+def sanatize_img_fpath(fpath):
+    [dpath, fname] = split(fpath)
+    fname_clean = sanatize_img_fname(fname)
+    fpath_clean = join(dpath, fname_clean)
+    fpath_clean = normpath(fpath_clean)
     return fpath_clean
 
 
@@ -317,13 +326,13 @@ def save_figure(fignum=None, fpath=None, usetitle=False):
     fignum = fig.number
     if fpath is None:
         # Find the title
-        fpath = fig.canvas.get_window_title()
+        fpath = sanatize_img_fname(fig.canvas.get_window_title())
     if usetitle:
-        title = fig.canvas.get_window_title()
-        fpath = os.path.join(fpath, title)
+        title = sanatize_img_fname(fig.canvas.get_window_title())
+        fpath = join(fpath, title)
     # Sanatize the filename
     fpath_clean = sanatize_img_fpath(fpath)
-    fname_clean = os.path.split(fpath_clean)[1]
+    fname_clean = split(fpath_clean)[1]
     print('[df2] save_figure() %r' % (fpath_clean,))
     #adjust_subplots()
     with warnings.catch_warnings():
@@ -383,7 +392,7 @@ def plot2(x_data,
 
 
 def adjust_subplots_xylabels():
-    adjust_subplots(left=.03, right=1, bottom=.1, top=.9, hspace=.01)
+    adjust_subplots(left=.03, right=1, bottom=.1, top=.9, hspace=.15)
     
 def adjust_subplots(left=0.02,  bottom=0.02,
                    right=0.98,     top=0.90, 

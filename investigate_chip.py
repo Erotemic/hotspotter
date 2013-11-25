@@ -542,6 +542,9 @@ def run_investigations(hs, qon_list):
     if '12' in args.tests or 'test-cfg-vsone-1' in args.tests:
         import dev
         dev.test_configurations(hs, qon_list, ['vsone_1'])
+    if '13' in args.tests or 'test-cfg-vsmany-3' in args.tests:
+        import dev
+        dev.test_configurations(hs, qon_list, ['vsmany_3'])
 
 #===========
 # Main Script

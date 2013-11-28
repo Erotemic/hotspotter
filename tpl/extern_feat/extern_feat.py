@@ -27,23 +27,23 @@ if not os.path.exists(TMP_DIR):
  
 #---------------------------------------
 # Define precompute functions
-def __precompute(rchip_fpath, chiprep_fpath, compute_fn):
+def __precompute(rchip_fpath, feat_fpath, compute_fn):
     kpts, desc = compute_fn(rchip_fpath)
-    np.savez(chiprep_fpath, kpts, desc)
+    np.savez(feat_fpath, kpts, desc)
     return kpts, desc
 
 # TODO Dynamiclly add descriptor types
 valid_extractors = ['sift', 'gloh']
 valid_detectors = ['mser', 'hessaff']
 
-def precompute_harris(rchip_fpath, chiprep_fpath):
-    return __precompute(rchip_fpath, chiprep_fpath, __compute_harris)
+def precompute_harris(rchip_fpath, feat_fpath):
+    return __precompute(rchip_fpath, feat_fpath, __compute_harris)
 
-def precompute_mser(rchip_fpath, chiprep_fpath):
-    return __precompute(rchip_fpath, chiprep_fpath, __compute_mser)
+def precompute_mser(rchip_fpath, feat_fpath):
+    return __precompute(rchip_fpath, feat_fpath, __compute_mser)
 
-def precompute_hesaff(rchip_fpath, chiprep_fpath):
-    return __precompute(rchip_fpath, chiprep_fpath, __compute_hesaff)
+def precompute_hesaff(rchip_fpath, feat_fpath):
+    return __precompute(rchip_fpath, feat_fpath, __compute_hesaff)
 
 #---------------------------------------
 # Defined temp compute functions
@@ -77,7 +77,7 @@ def __compute_descriptors(rchip_fpath, detect_type, extract_type):
     outname = rchip_fpath + '.'+detect_type+'.'+extract_type
     cmd = inria_cmd(rchip_fpath, detect_type, extract_type)
     __execute_extern(cmd)
-    kpts, desc = __read_text_chiprep_file(outname)
+    kpts, desc = __read_text_feat_file(outname)
     return kpts, desc
 
 def __compute_mser(rchip_fpath):
@@ -93,13 +93,148 @@ def __compute_hesaff(rchip_fpath):
     cmd  = HESAFF_EXE + ' ' + args
     print(cmd)
     __execute_extern(cmd)
-    kpts, desc = __read_text_chiprep_file(outname)
+    kpts, desc = __read_text_feat_file(outname)
     return kpts, desc
 
 #---------------------------------------
 
+def rectify_up_is_up(abcd):
+    abcdT = abcd.T
+    (a, b, c, d) = abcdT
+    # Logic taken from Perdoch's code
+    det = np.sqrt(np.abs(a*d - b*c))
+    b2a2 = np.sqrt(b*b + a*a)
+    a11 = b2a2 / det
+    a12 = 0
+    a21 = (d*b + c*a)/(b2a2*det)
+    a22 = det/b2a2
+    acd = np.vstack([a11, a21, a22]).T
+    return acd
+
+DESC_FACTOR = 3.0*np.sqrt(3.0)
+from numpy.linalg import svd, det
+from numpy import diag, sqrt, abs
+
+def expand_invET(invET):
+    # Put the inverse elleq in a list of matrix structure
+    e11 = invET[0]; e12 = invET[1]
+    e21 = invET[1]; e22 = invET[2]
+    invE_list = np.array(((e11, e12), (e21, e22))).T
+    return invE_list
+
+def expand_acd(acd):
+    A_list = [np.array(((a,0),(c,d))) for (a,c,d) in acd]
+    return A_list
+
+def convert_invE_to_abcd(invET):
+    ''' Transforms: 
+        [E_a, E_b]        [A_a,   0]
+        [E_b, E_d]  --->  [A_c, A_d]
+    '''
+    invE_list = expand_invET(invET)
+
+    # Decompose using singular value decomposition
+    USV_list = [svd(invE) for invE in invE_list]
+    U_list, S_list, V_list = zip(*USV_list)
+    # Deintegrate the scale
+    sc_list = [1.0 / (sqrt(sqrt(S[0] * S[1]))) for S in S_list]
+    sigma_list = [sc / DESC_FACTOR for sc in sc_list]
+
+    # Rebuild the ellipse -> circle matrix
+    abcd_list = [(U.dot(diag(S[::-1]*sc)).dot(V)).flatten() for (sc, (U,S,V)) in zip(sc_list, USV_list)]
+    abcd = np.vstack(abcd_list)
+
+    # Enforce a lower triangular matrix
+    acd = rectify_up_is_up(abcd)
+
+
+def test_deintegrate_scale(invET):
+    invE_list = expand_invET(invET)
+    # Decompose using singular value decomposition
+    USV_list = [svd(invE) for invE in invE_list]
+    U_list, S_list, V_list = zip(*USV_list)
+    A_list = expand_acd(acd)
+    invE = invE_list[0]
+    S = S_list[0]
+    Sm = diag(S)
+    sc = (1.0 / (sqrt(sqrt(S[0] * S[1]))))
+    sigma = sc / DESC_FACTOR
+    A_unit = (U.dot(diag(S[::-1]*sc)).dot(V)).flatten().reshape(2,2)
+    U = U_list[0]
+    V = V_list[0]
+    A = A_list[0]
+    import helpers
+    helpers.rrr()
+    hstr = helpers.horiz_string
+    np.set_printoptions(precision=3)
+    print('---- SVD of invE ----')
+    print('invE =\n%s' % invE)
+    print('= U * S * V =')
+    print(hstr([U, ' * ', Sm, ' * ', V]))
+    print('=')
+    print(U.dot(Sm).dot(V))
+    #print('1/det(invE) = %f' % (1/sqrt(sqrt(det(invE)))))
+    print('---------------------\n')
+
+    print('---- Scale Extraction ---')
+    print('sc = 1.0 / (sqrt(sqrt(S[0] * S[1])))')
+    print('sc = 1.0 / (sqrt(sqrt(%f * %f])))' % (S[0], S[1]))
+    print('sc = %.3f' % sc)
+    print('sigma = %.3f / DESC_FACTOR' % sc)
+    print('sigma = %.3f / %.3f' % (sc, DESC_FACTOR))
+    print('sigma = %.3f' % (sigma))
+    print('---------------------\n')
+
+    print('---- Rebuild Unit A ---')
+    print('A = U * S[::-1]*sc * V')
+    print('=')
+    print(hstr([U, ' * ', diag(S[::-1]), '*' , ('%.3f' % sc), ' * ', V]))
+    print('=')
+    print(hstr([U, ' * ', diag(S[::-1]*sc), ' * ', V]))
+    print('=')
+    print(A_unit)
+    print('--')
+    print('sqrt(det(A)) = %.3f' % sqrt(det(A_unit)))
+    import textwrap
+
+    print('---- Recify A up is up ---')
+    (a, b, c, d) = A_unit.flatten()
+    det_ = sqrt(abs(a*d - b*c))
+    b2a2 = sqrt(b*b + a*a)
+    a11 = b2a2 / det_
+    a12 = 0
+    a21 = (d*b + c*a)/(b2a2*det_)
+    a22 = det_/b2a2
+    A_up = np.array(((a11, a12), (a21, a22)))
+    print('det = sqrt(abs(a*d - b*c))')
+    print('det = sqrt(abs(%.3f*%.3f - %.3f*%.3f))' % (a, b, c, d))
+    print('det = %.3f' % det_)
+    print('--')
+    print('b2a2 = sqrt(b*b + a*a)')
+    print('b2a2 = sqrt(%.3f*%.3f + %.3f*%.3f)' % (b, b, a, a))
+    print('b2a2 = %.3f' % b2a2)
+    print('--')
+    print('A =')
+    print(textwrap.dedent('''
+    [[            b2a2 / det, 0       ],
+     [(d*b + c*a)/(b2a2*det), det/b2a2]]'''))
+    print('=')
+    print(A_up)
+    print('--')
+    print('det(A) = %.3f' % det(A_up))
+
+    print('A =\n%s' % (A,))
+    print('Sm =\n%s' % (Sm,))
+    print(Sm.dot(A))
+    print(A.dot(Sm))
+
+    print('---- Check things ---')
+    #AScaleUnit = A_up.dot(
+    
+
+
 # Helper function to read external file formats
-def __read_text_chiprep_file(outname):
+def __read_text_feat_file(outname):
     'Reads output from external keypoint detectors like hesaff'
     file = open(outname, 'r')
     # Read header
@@ -108,12 +243,16 @@ def __read_text_chiprep_file(outname):
     lines = file.readlines()
     file.close()
     # Preallocate output
-    kpts = np.zeros((nkpts, 5), dtype=float32)
+    kpts = np.zeros((nkpts, 5), dtype=float)
     desc = np.zeros((nkpts, ndims), dtype=uint8)
     for kx, line in enumerate(lines):
         data = line.split(' ')
         kpts[kx,:] = np.array([float32(_) for _ in data[0:5]], dtype=float32)
         desc[kx,:] = np.array([uint8(_) for _ in data[5: ]], dtype=uint8)
+    # Hack to put things into acd foramat
+    invET = kpts.T[2:5]
+
+    #
     acd = kpts.T[2:5]
     det = acd[0] * acd[2]
     is_valid = np.bitwise_and(det.T < 1E-3, det.T > 1E-7)

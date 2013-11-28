@@ -421,26 +421,6 @@ def compare_matching_methods(hs, qcx, fnum=1):
 # ^^^^^^^^^^^^^^^^^
 # Tests
     
-def hs_from_db(db, args=None):
-    # Load hotspotter
-    db_dir = eval('params.'+db)
-    print('[invest] loading hotspotter database')
-    def _hotspotter_load():
-        hs = ld2.HotSpotter()
-        hs.load_all(db_dir, matcher=False, args=args)
-        hs.set_samples()
-        return hs
-    if True:
-        hs = _hotspotter_load()
-        return hs
-    else:
-        rss = helpers.RedirectStdout(autostart=True)
-        hs = _hotspotter_load()
-        rss.stop()
-        rss.dump()
-        print('loaded hotspotter database')
-        return hs
-
 def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
     cx2_cid = hs.tables.cx2_cid
     qcid_list = []
@@ -559,6 +539,26 @@ def print_history_table():
             print('%d: %r' % (count, histentry))
             count += 1
 
+def hs_from_db(db, args=None, **kwargs):
+    # Load hotspotter
+    db_dir = eval('params.'+db)
+    print('[invest] loading hotspotter database')
+    def _hotspotter_load():
+        hs = ld2.HotSpotter()
+        hs.load_all(db_dir, matcher=False, args=args, **kwargs)
+        hs.set_samples()
+        return hs
+    if True:
+        hs = _hotspotter_load()
+        return hs
+    else:
+        rss = helpers.RedirectStdout(autostart=True)
+        hs = _hotspotter_load()
+        rss.stop()
+        rss.dump()
+        print('loaded hotspotter database')
+        return hs
+
 def change_db(db):
     global args
     global hs
@@ -566,12 +566,12 @@ def change_db(db):
     hs = hs_from_db(args.db, args)
     hs.args = args
 
-def main():
+def main(**kwargs):
     print('[iv] main()')
     if 'hs' in vars():
         return
     # Load Hotspotter
-    hs = hs_from_db(args.db, args)
+    hs = hs_from_db(args.db, args, **kwargs)
     qon_list = get_qon_list(hs)
     print('[invest] Loading DB=%r' % args.db)
     if not args.noprinthist or True:

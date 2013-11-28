@@ -111,14 +111,47 @@ def test2(hs):
     feat_type = 'mser'
     load_features(hs, cx_list, feature_types)
 
-class Features(object):
-    def __init__(self, feat_type):
-        self.feat_type = feat_type
+class ChipConfig(DynStruct):
+    def __init__(cc_cfg, **kwargs):
+        'cc_cfg = DynStruct()'
+        super(ChipConfig, cc_cfg).__init__()
+        cc_cfg.chip_sqrt_area = 750
+        cc_cfg.grabcut        = False
+        cc_cfg.histeq         = False
+        cc_cfg.region_norm    = False
+        cc_cfg.rank_eq        = False
+        cc_cfg.local_eq       = False
+        cc_cfg.maxcontrast    = False
+        cc_cfg.update(**kwargs)
+    def get_uid(cc_cfg):
+        chip_uid = []
+        chip_uid += ['histeq']  * cc_cfg.histeq
+        chip_uid += ['grabcut'] * cc_cfg.grabcut
+        chip_uid += ['regnorm'] * cc_cfg.region_norm
+        chip_uid += ['rankeq']  * cc_cfg.rank_eq
+        chip_uid += ['localeq'] * cc_cfg.local_eq
+        chip_uid += ['maxcont'] * cc_cfg.maxcontrast
+        isOrig = cc_cfg.chip_sqrt_area is None or cc_cfg.chip_sqrt_area <= 0
+        chip_uid += ['szorig'] if isOrig else ['sz%r' % cc_cfg.chip_sqrt_area]
+        return '_CHIP('+(','.join(chip_uid))+')'
 
+class FeatureConfig(DynStruct):
+    def __init__(fc_cfg, **kwargs):
+        super(FeatureConfig, fc_cfg).__init__()
+        fc_cfg.feat_type = ('hesaff', 'sift')
+        fc_cfg.whiten = False
+        fc_cfg.update(**kwargs)
+    def get_uid(fc_cfg):
+        feat_uids = []
+        feat_uids += ['%s_%s' % fc_cfg.feat_type]
+        feat_uids += ['white'] * fc_cfg.whiten
+        feat_uid = '_FEAT('+(','.join(feat_uids))+')' 
+        return feat_uid + params.get_chip_uid()
 
-def load_features(hs, cx_list, feature_types, regions=None):
+def load_features(hs, cx_list=None, fc_cfg=None, **kwargs):
+    if fc_cfg is None: 
+        fc_cfg = FeatureConfig(**kwargs)
     feat_dict = {}
-
     feat_dir       = hs.dirs.feat_dir
     cx2_rchip_path = hs.cpaths.cx2_rchip_path
     cx2_cid        = hs.tables.cx2_cid
@@ -131,7 +164,7 @@ def load_features(hs, cx_list, feature_types, regions=None):
         # Build Parallel Jobs, Compute features, saving them to disk.
         # Then Run Parallel Jobs 
         cid_iter = (cx2_cid[cx] for cx in cx_list)
-        feat_type_str = repr(feat_type).replace(' ','').replace('(','').replace(')','').replace('\'','')
+        feat_type_str = helpers.remove_chars(repr(feat_type), [' ', '(', ')', '\''])
         cx2_feat_path = [feat_dir+'/CID_%d_%s.npz' % (cid, feat_type_str) for cid in cid_iter]
         precompute_fn = feat_type2_precompute[feat_type]
         parallel_compute(precompute_fn, [cx2_rchip_path, cx2_feat_path])
@@ -148,7 +181,7 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid,
     uid   = feat_uid
     ext   = '.npy'
     #io.debug_smart_load(dpath, fname='*', uid=uid, ext='.*')
-    # Try to read cache
+    # Try to load from the cache first
     if load_kpts:
         cx2_kpts = io.smart_load(dpath, 'cx2_kpts', uid, ext, can_fail=True)
     else: 
@@ -174,50 +207,57 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid,
         # Compute features, saving them to disk 
         precompute_fn = feat_type2_precompute[feat_type]
         parallel_compute(precompute_fn, [cx2_rchip_path, cx2_feat_path])
-
-        # Load precomputed features 
-        cx2_kpts = []
-        cx2_desc = []
-        # Debug loading (seems to use lots of memory)
-        fmt_str = helpers.make_progress_fmt_str(len(cx2_feat_path),
-                                                lbl='Loading feature: ')
-        print('\n')
-        try: 
-            for cx, feat_path in enumerate(cx2_feat_path):
-                npz = np.load(feat_path, mmap_mode=None)
-                kpts = npz['arr_0']
-                desc = npz['arr_1']
-                npz.close()
-                cx2_kpts.append(kpts)
-                cx2_desc.append(desc)
-                helpers.print_(fmt_str % cx)
-            print('[fc2] Finished load of individual kpts and desc')
-            cx2_desc = np.array(cx2_desc)
-        except MemoryError as ex:
-            print('\n------------')
-            print('[fc2] Out of memory')
-            print('[fc2] Trying to read: %r' % feat_path)
-            print('[fc2] len(cx2_kpts) = %d' % len(cx2_kpts))
-            print('[fc2] len(cx2_desc) = %d' % len(cx2_desc))
-            raise
-        if params.WHITEN_FEATS:
-            print('[fc2] * Whitening features')
-            ax2_desc = np.vstack(cx2_desc)
-            ax2_desc_white = algos.scale_to_byte(algos.whiten(ax2_desc))
-            index = 0
-            offset = 0
-            for cx in xrange(len(cx2_desc)):
-                old_desc = cx2_desc[cx]
-                print ('[fc2] * '+helpers.info(old_desc, 'old_desc'))
-                offset = len(old_desc)
-                new_desc = ax2_desc_white[index:(index+offset)]
-                cx2_desc[cx] = new_desc
-                index += offset
+        # rchip_fpath=cx2_rchip_path[0]; feat_fpath=cx2_feat_path[0]
+        # Load precomputed features sequentially
+        cx2_kpts, cx2_desc = sequential_load_features(cx2_feat_path)
         # Cache all the features
         print('[fc2] Caching cx2_desc and cx2_kpts')
         io.smart_save(cx2_desc, dpath, 'cx2_desc', uid, ext)
         io.smart_save(cx2_kpts, dpath, 'cx2_kpts', uid, ext)
     return cx2_kpts, cx2_desc
+
+def sequential_load_features(cx2_feat_path)
+    cx2_kpts = []
+    cx2_desc = []
+    # Debug loading (seems to use lots of memory)
+    print('\n')
+    try: 
+        fmt_str = helpers.make_progress_fmt_str(len(cx2_feat_path),
+                                                lbl='Loading feature: ')
+        for cx, feat_path in enumerate(cx2_feat_path):
+            npz = np.load(feat_path, mmap_mode=None)
+            kpts = npz['arr_0']
+            desc = npz['arr_1']
+            npz.close()
+            cx2_kpts.append(kpts)
+            cx2_desc.append(desc)
+            helpers.print_(fmt_str % cx)
+        print('[fc2] Finished load of individual kpts and desc')
+        cx2_desc = np.array(cx2_desc)
+    except MemoryError as ex:
+        print('\n------------')
+        print('[fc2] Out of memory')
+        print('[fc2] Trying to read: %r' % feat_path)
+        print('[fc2] len(cx2_kpts) = %d' % len(cx2_kpts))
+        print('[fc2] len(cx2_desc) = %d' % len(cx2_desc))
+        raise
+    if params.WHITEN_FEATS:
+        cx2_desc = whiten_features(cx2_desc)
+    return cx2_kpts, cx2_desc
+
+def whiten_features(cx2_desc)
+    print('[fc2] * Whitening features')
+    ax2_desc = np.vstack(cx2_desc)
+    ax2_desc_white = algos.scale_to_byte(algos.whiten(ax2_desc))
+    index = 0
+    offset = 0
+    for cx in xrange(len(cx2_desc)):
+        old_desc = cx2_desc[cx]
+        print ('[fc2] * '+helpers.info(old_desc, 'old_desc'))
+        offset = len(old_desc)
+        new_desc = ax2_desc_white[index:(index+offset)]
+        cx2_desc[cx] = new_desc
+        index += offset
     
 def load_chip_features2(hs, load_kpts=True, load_desc=True):
     print('\n=============================')
@@ -225,8 +265,11 @@ def load_chip_features2(hs, load_kpts=True, load_desc=True):
     print('=============================')
     return load_chip_features(hs.dirs, hs.tables, hs.cpaths, load_kpts, load_desc)
 
-def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
+def load_chip_features(hs, load_kpts=True,
                        load_desc=True):
+    hs_dirs = hs.dirs
+    hs_tables = hs.tables
+    hs_cpaths = hs.cpaths
     # --- GET INPUT --- #
     hs_feats = HotspotterChipFeatures()
     # Paths to features
@@ -235,16 +278,11 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
     cx2_rchip_path = hs_cpaths.cx2_rchip_path
     cx2_cid        = hs_tables.cx2_cid
     # Load all the types of features
-    feat_uid = params.get_feat_uid()
+    feat_uid = get_feat_uid()
     feat_type = params.__FEAT_TYPE__
-    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, 
-                                             cx2_rchip_path, 
-                                             cx2_cid, 
-                                             feat_type, 
-                                             feat_uid, 
-                                             cache_dir,
-                                             load_kpts,
-                                             load_desc)
+    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 
+                                             feat_type, feat_uid, cache_dir,
+                                             load_kpts, load_desc)
     hs_feats.feat_type = params.__FEAT_TYPE__
     hs_feats.cx2_kpts  = cx2_kpts
     hs_feats.cx2_desc  = cx2_desc
@@ -252,39 +290,72 @@ def load_chip_features(hs_dirs, hs_tables, hs_cpaths, load_kpts=True,
     #hs_feats.cx2_feats_freak  = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'FREAK')
     return hs_feats
 
+def get_feat_uid():
+    feat_uid = params.get_feat_uid()
+    return feat_uid
+
+def clear_feature_cache(hs):
+    feat_dir = hs.dirs.feat_dir
+    cache_dir = hs.dirs.cache_dir
+    feat_uid = params.get_feat_uid()
+    print('[fc2] clearing feature cache: %r' % feat_dir)
+    helpers.remove_files_in_dir(feat_dir, '*'+feat_uid+'*', verbose=True, dryrun=False)
+    helpers.remove_files_in_dir(cache_dir, '*'+feat_uid+'*', verbose=True, dryrun=False)
+    pass
+
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     print('[fc2] __main__ = feature_compute2.py')
 
-    __DEV_MODE__ = True
-    if __DEV_MODE__ or 'test' in sys.argv:
-        import load_data2 as ld2
-        import match_chips2 as mc2
-        import chip_compute2
-        import params
-        # --- CHOOSE DATABASE --- #
-        db_dir = ld2.DEFAULT 
-        hs = ld2.HotSpotter()
-        hs.load_tables(db_dir)
-        hs.load_chips()
-        hs.set_samples()
-        exec(hs.execstr('hs'))
-        exec(hs.tables.execstr('hs.tables'))
-        exec(hs.dirs.execstr('hs.dirs'))
-        exec(hs.cpaths.execstr('hs.cpaths'))
-        # Load all the types of features
-        feat_uid = params.get_feat_uid()
-        feat_type = params.__FEAT_TYPE__
+    __LOAD_FEATURES2__ = True
+    if not __LOAD_FEATURES2__:
+        __DEV_MODE__ = True
+        if __DEV_MODE__ or 'test' in sys.argv:
+            import load_data2 as ld2
+            import match_chips2 as mc2
+            import chip_compute2
+            import params
+            # --- CHOOSE DATABASE --- #
+            db_dir = ld2.DEFAULT 
+            hs = ld2.HotSpotter()
+            hs.load_tables(db_dir)
+            hs.load_chips()
+            hs.set_samples()
+            exec(hs.execstr('hs'))
+            exec(hs.tables.execstr('hs.tables'))
+            exec(hs.dirs.execstr('hs.dirs'))
+            exec(hs.cpaths.execstr('hs.cpaths'))
+            # Load all the types of features
+            feat_uid = params.get_feat_uid()
+            feat_type = params.__FEAT_TYPE__
 
-        #test2()
+            #test2()
+            hs.load_features()
+            #cx2_desc = hs.feats.cx2_desc
+            #cx2_kpts = hs.feats.cx2_kpts
 
-        hs.load_features()
-        #cx2_desc = hs.feats.cx2_desc
-        #cx2_kpts = hs.feats.cx2_kpts
+            cx = helpers.get_arg_after('--cx', type_=int)
+            nRandKpts = helpers.get_arg_after('--nRandKpts', type_=int)
+
+            if not cx is None:
+                df2.show_chip(hs, cx, nRandKpts=nRandKpts)
+            else:
+                print('usage: feature_compute.py --cx [cx] --nRandKpts [num]')
+    elif __LOAD_FEATURES2__:
+        import investigate_chip as iv
+        import feature_compute2 as fc2
+        main_locals = iv.main(load_features=False)
+        exec(helpers.execstr_dict(main_locals, 'main_locals'))
 
         cx = helpers.get_arg_after('--cx', type_=int)
+        delete_features = '--delete-features' in sys.argv
         nRandKpts = helpers.get_arg_after('--nRandKpts', type_=int)
+
+        hs.load_features()
+
+        if delete_features:
+            fc2.clear_feature_cache(hs)
 
         if not cx is None:
             df2.show_chip(hs, cx, nRandKpts=nRandKpts)

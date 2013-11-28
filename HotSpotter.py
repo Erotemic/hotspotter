@@ -75,7 +75,8 @@ class HotSpotter(DynStruct):
         hs.load_chips()
         hs.load_features(load_desc=False)
 
-    def load_all(hs, db_dir, matcher=True, args=None):
+    def load_all(hs, db_dir, matcher=True, args=None, load_features=True, **kwargs):
+        load_matcher = matcher # HACK
         hs.load_tables(db_dir)
         if not args is None:
             hs.args = args
@@ -86,10 +87,11 @@ class HotSpotter(DynStruct):
                 hs.vcd()
                 if args.vcdq: sys.exit(1)
         hs.load_chips()
+        if not load_features: return
         hs.load_features()
         hs.set_samples()
-        if matcher: 
-            hs.load_matcher()
+        if not load_matcher: return 
+        hs.load_matcher()
 
     def db_name(hs):
         db_name = os.path.split(hs.dirs.db_dir)[1]
@@ -101,7 +103,7 @@ class HotSpotter(DynStruct):
     #---------------
     def load_features(hs, load_kpts=True, load_desc=True):
         import feature_compute2 as fc2
-        hs_feats  = fc2.load_chip_features(hs.dirs, hs.tables, hs.cpaths, load_kpts, load_desc)
+        hs_feats  = fc2.load_chip_features(hs, load_kpts, load_desc)
         print('The new way is not yet finished and is commented out')
         #hs_feats  = fc2.load_chip_features2(hs, load_kpts, load_desc)
         hs.feats  = hs_feats

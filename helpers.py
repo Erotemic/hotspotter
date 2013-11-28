@@ -70,6 +70,32 @@ def __DEPRICATED__(func):
     __DEP_WRAPPER.__dict__.update(func.__dict__)
     return __DEP_WRAPPER
 
+
+def horiz_string(str_list):
+    '''
+    str_list = ['A = ', str(np.array(((1,2),(3,4)))), ' * ', str(np.array(((1,2),(3,4))))]
+    '''
+    all_lines = []
+    hpos = 0
+    for sx in xrange(len(str_list)):
+        str_ = str(str_list[sx])
+        lines = str_.split('\n')
+        line_diff = len(lines) - len(all_lines) 
+        # Vertical padding
+        if line_diff > 0:
+            all_lines += [' '*hpos]*line_diff
+        # Add strings
+        for lx, line in enumerate(lines):
+            all_lines[lx] += line
+            hpos = max(hpos, len(all_lines[lx]))
+        # Horizontal padding
+        for lx in xrange(len(all_lines)):
+            hpos_diff = hpos - len(all_lines[lx])
+            if hpos_diff > 0:
+                all_lines[lx] += ' '*hpos_diff
+    ret = '\n'.join(all_lines)
+    return ret
+
 # --- Images ----
 
 def num_images_in_dir(path):
@@ -568,17 +594,19 @@ def dircheck(dpath,makedir=True):
         os.makedirs(dpath)
     return True
 
-def remove_file(fpath, verbose=True):
+def remove_file(fpath, verbose=True, dryrun=False):
     try:
-        if verbose:
-            print('[helpers] Removing '+fpath)
-        os.remove(fpath)
+        if dryrun:
+            if verbose: print('[helpers] Dryrem '+fpath)
+        else:
+            if verbose: print('[helpers] Removing '+fpath)
+            os.remove(fpath)
     except OSError as e:
         printWARN('OSError: %s,\n Could not delete %s' % (str(e), fpath))
         return False
     return True
 
-def remove_files_in_dir(dpath, fname_pattern='*', recursive=False):
+def remove_files_in_dir(dpath, fname_pattern='*', recursive=False, **kwargs):
     print('[helpers] Removing files:')
     print('  * in dpath = %r ' % dpath) 
     print('  * matching pattern = %r' % fname_pattern) 
@@ -589,7 +617,7 @@ def remove_files_in_dir(dpath, fname_pattern='*', recursive=False):
     for root, dname_list, fname_list in os.walk(dpath):
         for fname in fnmatch.filter(fname_list, fname_pattern):
             num_matched += 1
-            num_removed += remove_file(join(root, fname))
+            num_removed += remove_file(join(root, fname), **kwargs)
         if not recursive:
             break
     print('[helpers] ... Removed %d/%d files' % (num_removed, num_matched))

@@ -776,6 +776,14 @@ def grep(string, pattern):
         matching_lines.append(line)
     return matching_lines
 
+def correct_zeros(M):
+    from itertools import product as iprod
+    index_gen = iprod(*[xrange(_) for _ in M.shape])
+    for index in index_gen:
+        if M[index] < 1E-18:
+            M[index] = 0
+    return M
+
 def glob(dirname, pattern, recursive=False):
     matching_fnames = []
     for root, dirs, files in os.walk(dirname):

@@ -216,7 +216,7 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid,
         io.smart_save(cx2_kpts, dpath, 'cx2_kpts', uid, ext)
     return cx2_kpts, cx2_desc
 
-def sequential_load_features(cx2_feat_path)
+def sequential_load_features(cx2_feat_path):
     cx2_kpts = []
     cx2_desc = []
     # Debug loading (seems to use lots of memory)
@@ -245,7 +245,7 @@ def sequential_load_features(cx2_feat_path)
         cx2_desc = whiten_features(cx2_desc)
     return cx2_kpts, cx2_desc
 
-def whiten_features(cx2_desc)
+def whiten_features(cx2_desc):
     print('[fc2] * Whitening features')
     ax2_desc = np.vstack(cx2_desc)
     ax2_desc_white = algos.scale_to_byte(algos.whiten(ax2_desc))

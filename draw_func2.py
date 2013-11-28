@@ -224,7 +224,8 @@ def draw_kpts2(kpts, offset=(0,0),
                ell_alpha=ELL_ALPHA,
                ell_linewidth=ELL_LINEWIDTH,
                ell_color=ELL_COLOR,
-               color_list=None):
+               color_list=None,
+               wrong_way=False):
     if not DISTINCT_COLORS:
         color_list = None
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
@@ -250,12 +251,19 @@ def draw_kpts2(kpts, offset=(0,0),
         # inv(sqrtm([(a, 0), (c, d)]) = 
         #  [1/sqrt(a), c/(-sqrt(a)*d - a*sqrt(d))]
         #  [        0,                  1/sqrt(d)]
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            aIS = 1/np.sqrt(a) 
-            bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
-            dIS = 1/np.sqrt(d)
-            #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
+        if wrong_way:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                aIS = 1/np.sqrt(a) 
+                bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
+                dIS = 1/np.sqrt(d)
+                #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
+        else:
+            # Just inverse
+            aIS = 1/a 
+            bIS = -c/(a*d)
+            dIS = 1/d
+
         kpts_iter = iter(zip(x,y,aIS,bIS,dIS))
         # This has to be the sexiest piece of code I've ever written
         ell_actors = [Circle( (0,0), 1, 

@@ -71,6 +71,10 @@ def __DEPRICATED__(func):
     return __DEP_WRAPPER
 
 
+def horiz_print(*args):
+    toprint = horiz_string(args)
+    print(toprint)
+
 def horiz_string(str_list):
     '''
     str_list = ['A = ', str(np.array(((1,2),(3,4)))), ' * ', str(np.array(((1,2),(3,4))))]

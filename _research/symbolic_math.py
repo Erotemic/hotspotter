@@ -12,6 +12,203 @@ import scipy
 import matplotlib
 import matplotlib.pyplot as plt
 
+def hesaff_output():
+    import sympy as sy
+    import collections
+    from sympy.matrices.expressions.factorizations import lu, LofCholesky, qr, svd
+    import sympy
+    import sympy.matrices
+    import sympy.matrices.expressions
+    import sympy.matrices.expressions.factorizations
+    #from sympy.mpmath import sqrtm
+    sqrtm = sympy.mpmath.sqrtm
+
+    a, b, c, a11, a12, a21, a22 = sy.symbols('a b c a11 a12 a21 a22', real=True, commutative=True, nonzero=True, imaginary=False, comparable=True)
+    E = sy.Matrix(((a, b), (b, c)))
+
+    A = sy.Matrix(((a11, 0), (a21, a22)))
+
+    #x = E.solve(A.T * A)
+
+    # A.T * A == E
+    eq1 = sy.Eq(E, A.T * A)
+    a_ = sy.solve(eq1, a, check=False)
+    b_ = sy.solve(eq1, b, check=False)
+    c_ = sy.solve(eq1, c, check=False)
+
+    a11_ = sy.solve(eq1, a11, check=False)
+    a21_ = sy.solve(eq1, a21, check=False)
+    a22_ = sy.solve(eq1, a22, check=False)
+
+    eq2 = eq1.subs(a11, a11_[0][0])
+    a21_ = sy.solve(eq2, a21, check=False)
+
+    eq3 = eq1.subs(a21, a21_[a21])
+    a22_ = sy.solve(eq3, a22, check=False)
+
+    
+
+
+
+    L1, D1 = E.LDLdecomposition()
+    U1 = L1.T
+    E_LDL1 = L1 * D1 * U1
+
+    L3 = E.cholesky()
+    E3 = L3 * L3.T * L3.inv() * L3 
+    E3 = L3 * L3.T * (L3.inv() * L3)  * (L3.T.inv() * L3.T )
+    E3 = L3 * (L3.inv() * L3).T L3.T * (L3.T.inv() * L3.T )  * 
+    L3.inv() * E3 =  L3.T
+
+    A2 = L3.T
+
+    A2.T * A2
+
+
+
+
+    print(E_LDL1)
+    L2, U2, p = E.LUdecomposition()
+    E_LU2 = L2 * U2
+    print(E_LU2)
+    #---------------
+    def asMatrix(list_): 
+        N = int(len(list_) / 2)
+        Z = sympy.Matrix([list_[0:N], list_[N:]])
+        return Z
+
+    def simplify_mat(X):
+        list_ = [_.simplify() for _ in X]
+        Z = asMatrix(list_)
+        return Z
+
+    def symdot(X, Y):
+        Z = asMatrix(X.dot(Y))
+        return Z
+
+    Eq = sy.Eq
+    solve = sy.solve
+
+    R = A
+    M = symdot(A,A)
+
+    _b = sy.solve(b, eq1)
+
+    # Solve in terms of A
+    eq1 = sy.Eq(a, M[0])
+    eq2 = sy.Eq(c, M[2])
+    eq3 = sy.Eq(d, M[3])
+    w1 = sy.solve(eq1, w)[1].subs(y,0)
+    #y1 = sympy.Eq(0, M[1]) # y is 0
+    x1 = sy.solve(eq2, x)[0]
+    z1 = sy.solve(eq3, z)[1].subs(y,0)
+    x2 = x1.subs(w, w1).subs(z, z1)
+
+    R_itoA = simplify_mat(sympy.Matrix([(w1, x2), (0, z1)]))
+    Rinv_itoA = simplify_mat(R_itoA.inv())
+
+    print('Given the lower traingular matrix: A=[(a, 0), (c, d)]')
+
+    print('Its inverse is: inv(A)')
+    print(Ainv) # sub to lower triangular
+    print('--')
+
+    print('Its square root is: R = sqrtm(A)')
+    print(R_itoA)
+    print('--')
+
+    Epinv = E.pinv()
+
+    # Left sinuglar vectors are eigenvectors of M * M.H
+    left_singular_vects = (E * E.T).eigenvects()
+    # Right sinuglar vectors are eigenvectors of M * M.H
+    right_singular_vects = (E.T * E).eigenvects()
+    # Singular values
+    singular_vals = E.singular_values()
+
+    U = sy.Matrix([list(_[2][0]) for _ in left_singular_vects]).T
+    S = sy.Matrix([(sing_vals[0], 0),(0, singular_vals[1])])
+    V = sy.Matrix([list(_[2][0]) for _ in right_singular_vects]).T
+    assert U.shape == S.shape == V.shape == E.shape
+    assert sy.ask(sy.Q.orthogonal(U))
+    assert sy.ask(sy.Q.orthogonal(V))
+    assert sy.ask(sy.Q.diagonal(S))
+    
+
+    u,s,v = svd(E)
+    
+
+    #n = sy.Symbol('n')
+    #X = sy.MatrixSymbol('X', n, n)
+    U, S, V = svd(E)
+    assert U.shape == S.shape == V.shape == E.shape
+    assert sy.ask(sy.Q.orthogonal(U))
+    assert sy.ask(sy.Q.orthogonal(V))
+    assert sy.ask(sy.Q.diagonal(S))
+
+
+    
+
+    # L.H is conjugate transpose
+    # E = L.dot(L.H)
+
+    L, U, p = E.LUdecomposition_Simple()
+
+    Q, R = E.QRdecomposition()
+
+    E.LUdecompositionFF
+
+    def SVD(A):
+        UEM, UEV = (A.T * A).diagonalize(normalize=True, sort=True)
+        VEM, VEV = (A * A.T).diagonalize(normalize=True, sort=True)
+        sigma = UEV ** sy.S(1)/2
+        return UEM, sigma, VEM
+
+    U, S, V = SVD(E)
+
+    help(E.cholesky)
+    help(E.LDLdecomposition)
+    help(E.QRdecomposition)
+    help(E.LUdecomposition_Simple)
+    help(E.LUdecompositionFF)
+    help(E.LUsolve)
+    
+
+    L = E.cholesky()
+    E_2 = L * L.T
+
+
+
+    M = Matrix(((1,0,0,0,2),(0,0,3,0,0),(0,0,0,0,0),(0,4,0,0,0)))
+    M = sy.Matrix(2,3, [1,2,3,4,5,6])
+    N = M.H * (M * M.H) ** -1
+
+    N = M.H * (M * M.H) ** -1
+    U, Sig, V = M.SVD()
+    assert U * Sig * V.T == M
+    assert U*U.T == U.T*U == eye(U.cols)
+    assert V*V.T == V.T*V == eye(V.cols)
+    #assert S.is_diagonal()
+    
+    M = Matrix(((0,1),(1,0),(1,1)))
+    U, Sig, V = M.SVD()
+    assert U * Sig * V.T == M
+    assert U*U.T == U.T*U == eye(U.cols)
+    assert V*V.T == V.T*V == eye(V.cols)
+
+    import sympy
+    import sympy.galgebra.GA as GA
+    import sympy.galgebra.latex_ex as tex
+    import sympy.printing as symprint
+    import sympy.abc
+    import sympy.mpmath
+    a, b, c, d = sympy.symbols('a b c d')
+    theta = sympy.abc.theta
+    sin = sympy.functions.elementary.trigonometric.sin
+    cos = sympy.functions.elementary.trigonometric.cos
+    sqrtm = sympy.mpmath.sqrtm
+    xc = sympy.Matrix([sin(theta), cos(theta)])
+    E = sympy.Matrix([(a, b), (b, c)])
 def numpy_test():
     # Constants
     inv   = scipy.linalg.inv
@@ -106,122 +303,6 @@ def find_ellipse_major_minor():
     theta_b = solve(b2_eq_0, theta)
     theta_c = solve(c2_eq_0, theta)
 
-def hesaff_output():
-    import sympy as sy
-    import collections
-    from sympy.matrices.expressions.factorizations import lu, LofCholesky, qr, svd
-    import sympy
-    import sympy.matrices
-    import sympy.matrices.expressions
-    import sympy.matrices.expressions.factorizations
-    #from sympy.mpmath import sqrtm
-    #sqrtm = sympy.mpmath.sqrtm
-
-    a, b, c, a11, a12, a21, a22 = sy.symbols('a b c a12 a12 a21 a22', real=True, commutative=True, nonzero=True, imaginary=False, comparable=True)
-    E = sy.Matrix(((a, b), (b, c)))
-
-    A = sy.Matrix(((a11, 0), (a21, a22)))
-    eq1 = x = E.solve(A.T * A)
-
-    # A.T * A == E
-    sy.Eq(A.T * A, E)
-
-    Epinv = E.pinv()
-
-    # Left sinuglar vectors are eigenvectors of M * M.H
-    left_singular_vects = (E * E.T).eigenvects()
-    # Right sinuglar vectors are eigenvectors of M * M.H
-    right_singular_vects = (E.T * E).eigenvects()
-    # Singular values
-    singular_vals = E.singular_values()
-
-    U = sy.Matrix([list(_[2][0]) for _ in left_singular_vects]).T
-    S = sy.Matrix([(sing_vals[0], 0),(0, singular_vals[1])])
-    V = sy.Matrix([list(_[2][0]) for _ in right_singular_vects]).T
-    assert U.shape == S.shape == V.shape == E.shape
-    assert sy.ask(sy.Q.orthogonal(U))
-    assert sy.ask(sy.Q.orthogonal(V))
-    assert sy.ask(sy.Q.diagonal(S))
-    
-
-    u,s,v = svd(E)
-    
-
-    #n = sy.Symbol('n')
-    #X = sy.MatrixSymbol('X', n, n)
-    U, S, V = svd(E)
-    assert U.shape == S.shape == V.shape == E.shape
-    assert sy.ask(sy.Q.orthogonal(U))
-    assert sy.ask(sy.Q.orthogonal(V))
-    assert sy.ask(sy.Q.diagonal(S))
-
-
-    
-
-    # L.H is conjugate transpose
-    # E = L.dot(L.H)
-
-    L, D = E.LDLdecomposition()
-    E_LDL = L * D * L
-
-    L, U, p = E.LUdecomposition()
-    L, U, p = E.LUdecomposition_Simple()
-
-    Q, R = E.QRdecomposition()
-
-    E.LUdecompositionFF
-
-    def SVD(A):
-        UEM, UEV = (A.T * A).diagonalize(normalize=True, sort=True)
-        VEM, VEV = (A * A.T).diagonalize(normalize=True, sort=True)
-        sigma = UEV ** sy.S(1)/2
-        return UEM, sigma, VEM
-
-    U, S, V = SVD(E)
-
-    help(E.cholesky)
-    help(E.LDLdecomposition)
-    help(E.QRdecomposition)
-    help(E.LUdecomposition_Simple)
-    help(E.LUdecompositionFF)
-    help(E.LUsolve)
-    
-
-    L = E.cholesky()
-    E_2 = L * L.T
-
-
-
-    M = Matrix(((1,0,0,0,2),(0,0,3,0,0),(0,0,0,0,0),(0,4,0,0,0)))
-    M = sy.Matrix(2,3, [1,2,3,4,5,6])
-    N = M.H * (M * M.H) ** -1
-
-    N = M.H * (M * M.H) ** -1
-    U, Sig, V = M.SVD()
-    assert U * Sig * V.T == M
-    assert U*U.T == U.T*U == eye(U.cols)
-    assert V*V.T == V.T*V == eye(V.cols)
-    #assert S.is_diagonal()
-    
-    M = Matrix(((0,1),(1,0),(1,1)))
-    U, Sig, V = M.SVD()
-    assert U * Sig * V.T == M
-    assert U*U.T == U.T*U == eye(U.cols)
-    assert V*V.T == V.T*V == eye(V.cols)
-
-    import sympy
-    import sympy.galgebra.GA as GA
-    import sympy.galgebra.latex_ex as tex
-    import sympy.printing as symprint
-    import sympy.abc
-    import sympy.mpmath
-    a, b, c, d = sympy.symbols('a b c d')
-    theta = sympy.abc.theta
-    sin = sympy.functions.elementary.trigonometric.sin
-    cos = sympy.functions.elementary.trigonometric.cos
-    sqrtm = sympy.mpmath.sqrtm
-    xc = sympy.Matrix([sin(theta), cos(theta)])
-    E = sympy.Matrix([(a, b), (b, c)])
     
 def sympy_manual_sqrtm_inv():
     '''

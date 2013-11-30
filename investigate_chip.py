@@ -76,6 +76,7 @@ def parse_arguments():
     add_bool('--vcdq', default=False)
     add_bool('--show-res', default=False)
     add_bool('--nocache-query', default=False)
+    add_bool('--nocache-feats', default=False)
     add_bool('--noprinthist', default=True)
     add_bool('--test-vsmany', default=False)
     add_bool('--test-vsone', default=False)
@@ -513,7 +514,7 @@ def run_investigations(hs, qon_list):
         measure_cx_rankings(hs)
     if '8' in args.tests:
         mc3.compare_scoring(hs)
-    if '9' in args.tests:
+    if '9' in args.tests or 'scale' in args.tests:
         fnum = plot_keypoint_scales(hs)
     if '10' in args.tests or 'vsone-gt' in args.tests:
         fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)
@@ -595,22 +596,22 @@ def plot_keypoint_scales(hs, fnum=1):
     print('[invest] num_keypoints = %r ' % len(kpts))
     print('[invest] keypoints per image stats = '+helpers.printable_mystats(cx2_nFeats)) 
     acd = kpts[:,2:5].T
-    det = 1/(acd[0] * acd[2])
-    sdet = np.array(sorted(det))
-    print('scale stats: '+helpers.printable_mystats(sdet))
+    scales = np.sqrt(acd[0] * acd[2])
+    scales = np.array(sorted(scales))
+    print('scale stats: '+helpers.printable_mystats(scales))
     #
-    fig = df2.figure(fignum=fnum, doclf=True)
-    df2.plot(sdet)
+    fig = df2.figure(fignum=fnum, doclf=True, title='sorted scales')
+    df2.plot(scales)
     ax = df2.plt.gca()
-    ax.set_yscale('log')
-    ax.set_xscale('log')
+    #ax.set_yscale('log')
+    #ax.set_xscale('log')
     #
     fnum += 1
-    fig = df2.figure(fignum=fnum, doclf=True)
-    df2.show_histogram(sdet, bins=20)
+    fig = df2.figure(fignum=fnum, doclf=True, title='hist scales')
+    df2.show_histogram(scales, bins=20)
     ax = df2.plt.gca()
-    ax.set_yscale('log')
-    ax.set_xscale('log')
+    #ax.set_yscale('log')
+    #ax.set_xscale('log')
     return fnum
 
 def get_qon_list(hs):

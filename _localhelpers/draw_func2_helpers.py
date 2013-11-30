@@ -35,8 +35,12 @@ import scipy.stats
 import types
 import textwrap
 # HotSpotter Imports (Try to minimize these, this should be pure drawing)
-from Printable import DynStruct
-import helpers
+try:
+    from Printable import DynStruct
+    import helpers
+except ImportError:
+    from hotspotter.Printable import DynStruct
+    import hotspotter.helpers as helpers
 
 # Toggleable printing
 print = __builtin__.print
@@ -83,8 +87,9 @@ ORANGE = np.array((255, 127,   0, 255))/255.0
 RED    = np.array((255,   0,   0, 255))/255.0
 GREEN  = np.array((  0, 255,   0, 255))/255.0
 BLUE   = np.array((  0,   0, 255, 255))/255.0
-BLACK  = np.array((  0,   0,  0, 255))/255.0
-WHITE  = np.array((255,   255, 255, 255))/255.0
+YELLOW = np.array((255, 255,   0, 255))/255.0
+BLACK  = np.array((  0,   0,   0, 255))/255.0
+WHITE  = np.array((255, 255, 255, 255))/255.0
 
 DPI = 80
 #FIGSIZE = (24) # default windows fullscreen
@@ -289,7 +294,7 @@ def present(*args, **kwargs):
         all_figures_bring_to_front()
     # Return an exec string
     return textwrap.dedent(r'''
-    import helpers
+    from hotspotter import helpers
     import matplotlib.pyplot as plt
     embedded = False
     if not helpers.inIPython():

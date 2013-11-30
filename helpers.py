@@ -219,12 +219,10 @@ def unique_keep_order(arr):
     return arr[np.sort(idx)]
 
 # --- Info Strings ---
-
 def printable_mystats(_list):
     stat_dict = mystats(_list)
-    ret = '{'
-    ret += ', '.join(['%r:%.1f' % (key, val) for key, val in stat_dict.items()])
-    ret += '}'
+    stat_strs = ['%r:%s' % (key, str(val)) for key, val in stat_dict.iteritems()]
+    ret = '{' + ', '.join(stat_strs) + '}'
     return ret
 
 def mystats(_list):
@@ -232,11 +230,11 @@ def mystats(_list):
     if len(_list) == 0:
         return {'empty_list':True}
     nparr = np.array(_list)
-    return OrderedDict([
-        ('max',nparr.max()),
-        ('min',nparr.min()),
-        ('mean',nparr.mean()),
-        ('std',nparr.std())])
+    return OrderedDict([('max',   nparr.max()),
+                        ('min',   nparr.min()),
+                        ('mean',  nparr.mean()),
+                        ('std',   nparr.std()),
+                        ('shape', repr(nparr.shape))])
 
 def myprint(input=None, prefix='', indent='', lbl=''):
     if len(lbl) > len(prefix): 

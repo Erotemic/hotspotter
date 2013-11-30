@@ -17,6 +17,7 @@ import sys
 import types
 import warnings
 import itertools
+from itertools import izip
 import helpers
 import re
 import params
@@ -111,12 +112,15 @@ def draw_sift(desc, kp=None):
     kp = np.array(kp)   
     kpT = kp.T
     x, y, a, c, d = kpT[:,0]
-    a_ = 1/np.sqrt(a) 
-    b_ = c/(-np.sqrt(a)*d - a*np.sqrt(d))
-    d_ = 1/np.sqrt(d)
-    transMat = [( a_, b_, x),
-                ( 0,  d_, y),
-                ( 0,  0, 1)]
+    #a_ = 1/a
+    #b_ = (-c)/(a*d)
+    #d_ = 1/d
+    #a_ = 1/np.sqrt(a) 
+    #b_ = c/(-np.sqrt(a)*d - a*np.sqrt(d))
+    #d_ = 1/np.sqrt(d)
+    transMat = [( a, 0, x),
+                ( c, d, y),
+                ( 0, 0, 1)]
     kpTrans = Affine2D(transMat)
     axTrans = ax.transData
     #print('\ntranform=%r ' % transform)
@@ -126,8 +130,8 @@ def draw_sift(desc, kp=None):
     for y,x,t in yxt_gen:
         #print((x, y, t))
         #index = 127 - ((NY - 1 - y)*(NX*NORIENTS) + (NX - 1 - x)*(NORIENTS) + (NORIENTS - 1 - t))
-        #index = ((y)*(NX*NORIENTS) + (x)*(NORIENTS) + (t))
-        index = ((NY - 1 - y)*(NX*NORIENTS) + (NX - 1 - x)*(NORIENTS) + (t))
+        index = ((y)*(NX*NORIENTS) + (x)*(NORIENTS) + (t))
+        #index = ((NY - 1 - y)*(NX*NORIENTS) + (NX - 1 - x)*(NORIENTS) + (t))
         #print(index)
         (dx, dy) = dim_xy[index]
         arw_x  = ( x*XYSCALE) + XYSHIFT
@@ -225,7 +229,8 @@ def draw_kpts2(kpts, offset=(0,0),
                ell_linewidth=ELL_LINEWIDTH,
                ell_color=ELL_COLOR,
                color_list=None,
-               wrong_way=False):
+               wrong_way=False,
+               rect=True):
     if not DISTINCT_COLORS:
         color_list = None
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
@@ -242,9 +247,10 @@ def draw_kpts2(kpts, offset=(0,0),
     printDBG('[df2] draw_kpts()----------')
     printDBG('[df2] draw_kpts() ell=%r pts=%r' % (ell, pts))
     printDBG('[df2] draw_kpts() drawing kpts.shape=%r' % (kpts.shape,))
-    if ell:
+    if ell or rect:
         printDBG('[df2] draw_kpts() drawing ell kptsT.shape=%r' % (kptsT.shape,))
         a = kptsT[2]
+        b = np.zeros(len(a))
         c = kptsT[3]
         d = kptsT[4]
         # Sympy Calculated sqrtm(inv(A) for A in kpts)
@@ -257,21 +263,31 @@ def draw_kpts2(kpts, offset=(0,0),
                 aIS = 1/np.sqrt(a) 
                 bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
                 dIS = 1/np.sqrt(d)
+                cIS = b
                 #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
         else:
+            aIS = a
+            bIS = b
+            cIS = c
+            dIS = d
             # Just inverse
-            aIS = 1/a 
-            bIS = -c/(a*d)
-            dIS = 1/d
+            #aIS = 1/a 
+            #bIS = -c/(a*d)
+            #dIS = 1/d
 
-        kpts_iter = iter(zip(x,y,aIS,bIS,dIS))
-        # This has to be the sexiest piece of code I've ever written
-        ell_actors = [Circle( (0,0), 1, 
-                            transform=Affine2D([( a_, b_, x_),
-                                                ( 0 , d_, y_),
-                                                ( 0 , 0 , 1)]) )
-                      for (x_,y_,a_,b_,d_) in kpts_iter]
-        ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
+        kpts_iter = izip(x,y,aIS,bIS,cIS,dIS)
+        aff_list = [Affine2D([( a_, b_, x_),
+                              ( c_, d_, y_),
+                              ( 0 , 0 , 1)])
+                    for (x_,y_,a_,b_,c_,d_) in kpts_iter]
+        patch_list = []
+        ell_actors = [Circle( (0,0), 1, transform=aff) for aff in aff_list]
+        if ell:
+            patch_list += ell_actors
+        if rect:
+            rect_actors = [Rectangle( (-1,-1), 2, 2, transform=aff) for aff in aff_list]
+            patch_list += rect_actors
+        ellipse_collection = matplotlib.collections.PatchCollection(patch_list)
         ellipse_collection.set_facecolor('none')
         ellipse_collection.set_transform(pltTrans)
         ellipse_collection.set_alpha(ell_alpha)

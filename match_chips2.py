@@ -35,7 +35,7 @@ import scipy.sparse as spsparse
 import sklearn.preprocessing 
 from itertools import izip
 #print('LOAD_MODULE: match_chips2.py')
-from _localhelpers.bagofwords import *
+#from _localhelpers.bagofwords import *
 
 # Toggleable printing
 print = __builtin__.print

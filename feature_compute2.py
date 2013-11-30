@@ -172,14 +172,7 @@ def load_features(hs, cx_list=None, fc_cfg=None, **kwargs):
     for feat_type in feature_types:
         precompute_feat_type(hs, feat_type, cx_list)
 
-def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid,
-                        feat_type, feat_uid, cache_dir, 
-                        load_kpts=True, load_desc=True):
-    print('[fc2] Loading '+feat_type+' features: UID='+str(feat_uid))
-    # args for smart load/save
-    dpath = cache_dir
-    uid   = feat_uid
-    ext   = '.npy'
+def load_cached_feats(dpath, uid, ext, load_kpts, load_desc):
     #io.debug_smart_load(dpath, fname='*', uid=uid, ext='.*')
     # Try to load from the cache first
     if load_kpts:
@@ -193,8 +186,24 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid,
         cx2_desc = np.array([np.array([])] * len(cx2_kpts))
     else:
         cx2_desc = None
+    return cx2_kpts, cx2_desc
 
-    if (not cx2_kpts is None and not cx2_desc is None):
+def load_chip_feat_type(hs, feat_dir, cx2_rchip_path, cx2_cid,
+                        feat_type, feat_uid, cache_dir, 
+                        load_kpts=True, load_desc=True):
+    print('[fc2] Loading '+feat_type+' features: UID='+str(feat_uid))
+    # args for smart load/save
+    dpath = cache_dir
+    uid   = feat_uid
+    ext   = '.npy'
+    use_cache = not hs.args.nocache_feats
+
+    if use_cache:
+        cx2_kpts, cx2_desc = load_cached_feats(dpath, uid, ext, load_kpts, load_desc)
+    else:
+        cx2_kpts, cx2_desc = (None, None)
+
+    if not (cx2_kpts is None or cx2_desc is None):
         # This is pretty dumb. Gotta have a more intelligent save/load
         cx2_desc_ = cx2_desc.tolist()
         cx2_kpts  = cx2_kpts.tolist()
@@ -203,10 +212,9 @@ def load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid,
     else:
         print('[fc2]  Loading individual '+feat_uid+' features')
         cx2_feat_path = [feat_dir+'/CID_%d_%s.npz' % (cid, feat_uid) for cid in cx2_cid]
-
         # Compute features, saving them to disk 
         precompute_fn = feat_type2_precompute[feat_type]
-        parallel_compute(precompute_fn, [cx2_rchip_path, cx2_feat_path])
+        parallel_compute(precompute_fn, [cx2_rchip_path, cx2_feat_path], lazy=use_cache)
         # rchip_fpath=cx2_rchip_path[0]; feat_fpath=cx2_feat_path[0]
         # Load precomputed features sequentially
         cx2_kpts, cx2_desc = sequential_load_features(cx2_feat_path)
@@ -280,7 +288,7 @@ def load_chip_features(hs, load_kpts=True,
     # Load all the types of features
     feat_uid = get_feat_uid()
     feat_type = params.__FEAT_TYPE__
-    cx2_kpts, cx2_desc = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 
+    cx2_kpts, cx2_desc = load_chip_feat_type(hs, feat_dir, cx2_rchip_path, cx2_cid, 
                                              feat_type, feat_uid, cache_dir,
                                              load_kpts, load_desc)
     hs_feats.feat_type = params.__FEAT_TYPE__
@@ -351,15 +359,12 @@ if __name__ == '__main__':
         cx = helpers.get_arg_after('--cx', type_=int)
         delete_features = '--delete-features' in sys.argv
         nRandKpts = helpers.get_arg_after('--nRandKpts', type_=int)
-
         hs.load_features()
-
         if delete_features:
             fc2.clear_feature_cache(hs)
-
         if not cx is None:
             df2.show_chip(hs, cx, nRandKpts=nRandKpts)
         else:
-            print('usage: feature_compute.py --cx [cx] --nRandKpts [num]')
+            print('usage: feature_compute.py --cx [cx] --nRandKpts [num] [--delete-features]')
 
     exec(df2.present())

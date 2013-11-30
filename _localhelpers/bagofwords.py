@@ -11,17 +11,16 @@ import os
 import warnings
 import textwrap
 # Hotspotter Frontend Imports
-import draw_func2 as df2
+import hotspotter.draw_func2 as df2
 # Hotspotter Imports
-import fileio as io
-import helpers
-from helpers import Timer, tic, toc, printWARN
-from Printable import DynStruct
-import algos
-import helpers
-import spatial_verification2 as sv2
-import load_data2
-import params
+import hotspotter.fileio as io
+import hotspotter.helpers as helpers
+from hotspotter.helpers import Timer, tic, toc, printWARN
+from hotspotter.Printable import DynStruct
+import hotspotter.algos as algos
+import hotspotter.spatial_verification2 as sv2
+import hotspotter.load_data2 as load_data2
+import hotspotter.params as params
 # Math and Science Imports
 import cv2
 import matplotlib.pyplot as plt

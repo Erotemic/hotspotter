@@ -82,7 +82,7 @@ def make_task_list(func, arg_list, lazy=True):
         return task_list
     arg_list2 = [_args for _args in izip(*arg_list) if not exists(_args[1])]
     task_list = [(func, _args) for _args in iter(arg_list2)]
-    nSkip = len(arg_list) - len(arg_list2)
+    nSkip = len(zip(*arg_list)) - len(arg_list2)
     print('[parallel] Already computed %d %s tasks' % (nSkip, func.func_name))
     return task_list
 

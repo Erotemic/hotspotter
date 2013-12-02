@@ -101,7 +101,7 @@ vsmany_3 = {
     'lnrat_thresh'   : [None], #
     'nShortlist'   : [1000],
     'sv_on'        : [True], #True, False],
-    'score_method' : ['csum', 'pl', 'plw'],#, 'nsum', 'borda', 'topk', 'nunique']
+    'score_method' : ['csum', 'pl', 'plw', 'borda', 'bordaw', 'topk', 'topkw'],#, 'nsum', 'borda', 'topk', 'nunique']
     'max_alts'     : [1000],
 }
 

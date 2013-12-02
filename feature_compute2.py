@@ -188,6 +188,7 @@ def load_features(hs, feat_cfg=None, **kwargs):
     hs_feats = HotspotterChipFeatures()
     if feat_cfg is None: 
         feat_cfg = FeatureConfig(**kwargs)
+    feat_cfg.update(**kwargs)
     cx2_kpts, cx2_desc = load_feats_from_config(hs, feat_cfg)
     hs_feats.cx2_kpts  = cx2_kpts
     hs_feats.cx2_desc  = cx2_desc

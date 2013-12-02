@@ -103,6 +103,9 @@ class HotSpotter(DynStruct):
     #---------------
     def load_features(hs, **kwargs):
         import feature_compute2 as fc2
+        (kwargs['scale_min'],
+         kwargs['scale_max'] ) = hs.args.sthresh
+        print(kwargs)
         hs_feats = fc2.load_features(hs, **kwargs)
         hs.feats = hs_feats
     #---------------

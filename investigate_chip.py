@@ -18,7 +18,8 @@ def print_off():
     global print, print_
     def print(*args, **kwargs): pass
     def print_(*args, **kwargs): pass
-
+def printDBG(msg, *args):
+    pass
 # Dynamic module reloading
 def reload_module():
     import imp, sys
@@ -31,9 +32,9 @@ def parse_arguments():
     '''
     Defines the arguments for investigate_chip.py
     '''
-    print('==================')
-    print('[invest] ---------')
-    print('[invest] ARGPARSE')
+    printDBG('==================')
+    printDBG('[invest] ---------')
+    printDBG('[invest] ARGPARSE')
     parser = argparse.ArgumentParser(description='HotSpotter - Investigate Chip', prefix_chars='+-')
     def_on  = {'action':'store_false', 'default':True}
     def_off = {'action':'store_true', 'default':False}
@@ -67,10 +68,13 @@ def parse_arguments():
     add_float('--xy-thresh', .001, '', step=.005)
     add_float('--ratio-thresh', 1.2, '', step=.1)
     add_int('--K', 10, 'for K-nearest-neighbors', step=20)
+    add_float('--sthresh', (0,9001), 'scale threshold', nargs='*')
     add_str('--db', 'NAUTS', 'database to load')
     add_bool('--nopresent', default=False)
     add_bool('--save-figures', default=False)
     add_bool('--noannote', default=False)
+    add_bool('--dbM', default=False)
+    add_bool('--dbG', default=False)
     add_bool('--vrd', default=False)
     add_bool('--vcd', default=False)
     add_bool('--vrdq', default=False)
@@ -87,18 +91,14 @@ def parse_arguments():
     add_bool('--nocache-feats', default=False)
     # Plotting Args
     add_bool('--horiz', default=True)
-
-
-
     add_str('--tests', [], 'integer or test name', nargs='*')
-
     add_str('--show-best', [], 'integer or test name', nargs='*')
     add_str('--show-worst', [], 'integer or test name', nargs='*')
     args, unknown = parser.parse_known_args()
-    print('[invest] args    = %r' % (args,))
-    print('[invest] unknown = %r' % (unknown,))
-    print('[invest] ---------')
-    print('==================')
+    printDBG('[invest] args    = %r' % (args,))
+    printDBG('[invest] unknown = %r' % (unknown,))
+    printDBG('[invest] ---------')
+    printDBG('==================')
     return args
 
 if multiprocessing.current_process().name == 'MainProcess':
@@ -185,7 +185,7 @@ def top_matching_features(res, axnum=None, match_type=''):
 
 def investigate_scoring_rules(hs, qcx, fnum=1):
     args = hs.args
-    K = 4 if args.K is None else args.K
+    K = 4 if hs.args.K is None else hs.args.K
     vr2.test_voting_rules(hs, qcx, K, fnum)
     fnum += 1
     return fnum
@@ -272,8 +272,8 @@ def show_names(hs, qon_list, fnum=1):
     helpers.ensuredir(names_dir)
     for (qcx, ocxs, notes) in qon_list:
         print('Showing q%s - %r' % (hs.cxstr(qcx), notes))
-        fnum = plot_name(hs, qcx, fnum, subtitle=notes, annote=not args.noannote)
-        if args.save_figures:
+        fnum = plot_name(hs, qcx, fnum, subtitle=notes, annote=not hs.args.noannote)
+        if hs.args.save_figures:
             df2.save_figure(fpath=names_dir, usetitle=True)
     return fnum
 
@@ -317,12 +317,12 @@ def get_qon_list(hs):
     print('[invest] get_qon_list()')
     # Get query ids
     qon_list = []
-    histids = None if args.histid is None else np.array(args.histid)
-    if args.all_cases:
+    histids = None if hs.args.histid is None else np.array(hs.args.histid)
+    if hs.args.all_cases:
         qon_list = zip(*get_cases(hs, with_gt=True, with_nogt=True))
-    elif args.all_gt_cases:
+    elif hs.args.all_gt_cases:
         qon_list = zip(*get_cases(hs, with_hard=True, with_gt=True, with_nogt=False))
-    elif args.qcid is None:
+    elif hs.args.qcid is None:
         qon_hard = zip(*get_cases(hs, with_hard=True, with_gt=False, with_nogt=False))
         if histids is None:
             print('[invest] Chosen all hard histids')
@@ -331,8 +331,8 @@ def get_qon_list(hs):
             print('[invest] Chosen histids=%r' % histids)
             qon_list += [qon_hard[id_] for id_ in histids]
     else:
-        print('[invest] Chosen qcid=%r' % args.qcid)
-        qcx_list =  helpers.ensure_iterable(hs.cid2_cx(args.qcid))
+        print('[invest] Chosen qcid=%r' % hs.args.qcid)
+        qcx_list =  helpers.ensure_iterable(hs.cid2_cx(hs.args.qcid))
         ocid_list = [[]*len(qcx_list)]
         note_list = [['user selected qcid']*len(qcx_list)]
         qon_list += [zip(qcx_list, ocid_list, note_list)]
@@ -364,6 +364,7 @@ def chip_info(hs, cx, notes=''):
     gname = hs.tables.gx2_gname[gx]
     indexed_gt_cxs = hs.get_other_indexed_cxs(cx)
     gt_cxs = hs.get_other_cxs(cx)
+    kpts = hs.get_kpts(cx)
     print('------------------')
     print('[invest] Chip Info ')
     infostr_list = [
@@ -374,6 +375,7 @@ def chip_info(hs, cx, notes=''):
         'nx=%r' % nx,
         'name=%r' % name,
         'gname=%r' % gname,
+        'len(kpts)=%r' % len(kpts),
         'nGroundTruth = %s ' % str(len(gt_cxs)),
         'nIndexedGroundTruth = %s ' % str(len(indexed_gt_cxs)),
         'Ground Truth: %s' % (hs.cx_liststr(gt_cxs),),
@@ -381,7 +383,15 @@ def chip_info(hs, cx, notes=''):
     ]
     print(helpers.indent('\n'.join(infostr_list), '    '))
 
-
+def intestigate_keypoint_interaction(hs, qon_list, fnum=1, **kwargs):
+    import tpl
+    for qcx, ocxs, notes in qon_list:
+        rchip = hs.get_chip(qcx)
+        kpts  = hs.feats.cx2_kpts[qcx]
+        desc  = hs.feats.cx2_desc[qcx]
+        tpl.extern_feat.keypoint_interaction(rchip, kpts, desc, fnum=fnum, **kwargs)
+        fnum += 1
+    return fnum
 
 # ^^^^^^^^^^^^^^^^^
 # Tests
@@ -390,7 +400,7 @@ def chip_info(hs, cx, notes=''):
 # Main Script
 # exec(open('investigate_chip.py').read())
 
-def print_history_table():
+def print_history_table(args):
     print('------------')
     print('[invest] Printing history table:')
     count = 0
@@ -399,8 +409,14 @@ def print_history_table():
             print('%d: %r' % (count, histentry))
             count += 1
 
-def hs_from_db(db, args=None, **kwargs):
+def hs_from_args(args=None, db=None, **kwargs):
     # Load hotspotter
+    if args.dbM:
+        args.db = 'MOTHERS'
+    if args.dbG:
+        args.db = 'GZ'
+    if db is None:
+        db = args.db
     db_dir = eval('params.'+db)
     print('[invest] loading hotspotter database')
     def _hotspotter_load():
@@ -423,21 +439,26 @@ def change_db(db):
     global args
     global hs
     args.db = db
-    hs = hs_from_db(args.db, args)
+    if args.dbM:
+        args.db = 'MOTHERS'
+    if args.dbG:
+        args.db = 'GZ'
+    hs = hs_from_args(args)
     hs.args = args
+    return hs
 
 def main(**kwargs):
     print('[iv] main()')
     if 'hs' in vars():
         return
     # Load Hotspotter
-    hs = hs_from_db(args.db, args, **kwargs)
+    hs = hs_from_args(args, **kwargs)
     qon_list = get_qon_list(hs)
     print('[invest] Loading DB=%r' % args.db)
     if not args.noprinthist or True:
         print('---')
-        print('[invest] print_history_table()')
-        print_history_table()
+        print('[invest] print_history_table(hs.args)')
+        print_history_table(hs.args)
     qcxs_list, ocxs_list, notes_list = zip(*qon_list)
     qcxs  = qcxs_list[0]
     notes = notes_list[0]
@@ -520,6 +541,8 @@ def run_investigations(hs, qon_list):
     if '14' in args.tests or 'test-cfg-vsmany-1' in args.tests:
         import dev
         dev.test_configurations(hs, qon_list, ['vsmany_1'])
+    if '15' in args.tests or 'kpts-interact' in args.tests:
+        fnum = intestigate_keypoint_interaction(hs, qon_list)
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
@@ -542,3 +565,19 @@ if __name__ == '__main__':
         print('...not presenting')
         sys.exit(0)
     exec(df2.present()) #**df2.OooScreen2()
+
+
+'''
+python investigate_chip.py --db GZ --tests kpts-interact  --histid 0
+python investigate_chip.py --db GZ --tests test-cfg-vsmany-1 --all-cases
+python investigate_chip.py --db GZ --tests test-cfg-vsmany-1 --scalethresh 30 250 --all-cases
+python investigate_chip.py --dbM --tests 15 chip-info --histid 0 --sthresh 30 250
+
+python investigate_chip.py --dbG --tests test-cfg-vsmany-1 --all-cases
+python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-cases
+
+python investigate_chip.py --dbM --tests test-cfg-vsmany-3 --all-cases
+python investigate_chip.py --dbM --tests test-cfg-vsmany-3 --nocache-query
+
+
+'''

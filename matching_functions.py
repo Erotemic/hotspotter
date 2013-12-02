@@ -180,18 +180,17 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, q_cfg=None):
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
     print('[mf] * Scoring chipmatch: '+score_method)
     if score_method == 'csum':
-        (_, cx2_fs, _) = chipmatch
-        cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+        cx2_score = vr2.score_chipmatch_csum(chipmatch)
     elif score_method == 'nsum':
-        nx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+        cx2_score, nx2_score = score_chipmatch_nsum(hs, qcx, chipmatch, q_cfg)
     elif score_method == 'nunique':
-        cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+        cx2_score, nx2_score = score_chipmatch_nunique(hs, qcx, chipmatch, q_cfg)
     elif score_method == 'pl':
         cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, qcx, chipmatch, q_cfg)
     elif score_method == 'borda':
-        cx2_score, nx2_score = vr2.score_chipmatch_Borda(hs, qcx, chipmatch, q_cfg)
+        cx2_score, nx2_score = vr2.score_chipmatch_pos(hs, qcx, chipmatch, q_cfg, 'borda')
     elif score_method == 'topk':
-        cx2_score, nx2_score = vr2.score_chipmatch_TopK(hs, qcx, chipmatch, q_cfg)
+        cx2_score, nx2_score = vr2.score_chipmatch_pos(hs, qcx, chipmatch, q_cfg, 'topk')
     else:
         raise Exception('[mf] unknown scoring method:'+score_method)
     cx2_nMatch = np.array(map(len, cx2_fm))
@@ -427,6 +426,7 @@ def load_resdict(hs, qcxs, q_cfg, aug=''):
         return None
     return qcx2_res
 
+# qcx2_chipmatch = matchesSVER
 def chipmatch_to_resdict(hs, qcx2_chipmatch, q_cfg, aug=''):
     print('[mf] Step 6) chipmatch -> res')
     real_uid, title_uid = special_uids(q_cfg, aug)
@@ -435,8 +435,8 @@ def chipmatch_to_resdict(hs, qcx2_chipmatch, q_cfg, aug=''):
     qcx2_res = {}
     for qcx in qcx2_chipmatch.iterkeys():
         chipmatch = qcx2_chipmatch[qcx]
-        res = ds.QueryResult(qcx, real_uid, q_cfg)
         cx2_score = score_chipmatch(hs, qcx, chipmatch, score_method, q_cfg)
+        res = ds.QueryResult(qcx, real_uid, q_cfg)
         res.cx2_score = cx2_score
         (res.cx2_fm, res.cx2_fs, res.cx2_fk) = chipmatch
         res.title = (title_uid + ' ' + aug).strip(' ')

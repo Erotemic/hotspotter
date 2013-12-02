@@ -37,24 +37,51 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 rrr = reload_module
 
+def score_chipmatch_csum(chipmatch):
+    (_, cx2_fs, _) = chipmatch
+    cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
+    return cx2_score
+
+def score_chipmatch_nsum(hs, qcx, chipmatch, q_cfg):
+    raise NotImplemented('nsum')
+
+def score_chipmatch_nunique(hs, qcx, chipmatch, q_cfg):
+    raise NotImplemented('nunique')
+
+def score_chipmatch_pos(hs, qcx, chipmatch, q_cfg, rule='borda'):
+    (cx2_fm, cx2_fs, cx2_fk) = chipmatch
+    K = q_cfg.nn_cfg.K
+    isWeighted = q_cfg.a_cfg.isWeighted
+    # Create voting vectors of top K utilities
+    qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
+    # Run Positional Scoring Rule
+    altx2_score, altx2_tnx = positional_scoring_rule(qfx2_utilities, rule, isWeighted)
+    # Map alternatives back to chips/names
+    cx2_score, nx2_score = get_scores_from_altx2_score(hs, qcx, altx2_score, altx2_tnx)
+    return cx2_score, nx2_score
+
 # chipmatch = qcx2_chipmatch[qcx]
 def score_chipmatch_PL(hs, qcx, chipmatch, q_cfg):
     K = q_cfg.nn_cfg.K
     max_alts = q_cfg.a_cfg.max_alts
     isWeighted = q_cfg.a_cfg.isWeighted
-    # Run Placket Luce Model
+    # Create voting vectors of top K utilities
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
     qfx2_utilities = _filter_utilities(qfx2_utilities, max_alts)
+    # Run Placket Luce Model
+    # 1) create placket luce matrix pairwise matrix
     if isWeighted:
         PL_matrix, altx2_tnx = _utilities2_weighted_pairwise_breaking(qfx2_utilities)
     else:
         PL_matrix, altx2_tnx = _utilities2_pairwise_breaking(qfx2_utilities)
+    # 2) find the gamma vector which minimizes || Pl * gamma || s.t. gamma > 0
     gamma = _optimize(PL_matrix)
+    # Find the probability each alternative is #1
     altx2_prob = _PL_score(gamma)
     #print('[vote] gamma = %r' % gamma)
     #print('[vote] altx2_prob = %r' % altx2_prob)
     # Use probabilities as scores
-    cx2_score, nx2_score = prob2_cxnx2scores(hs, qcx, altx2_prob, altx2_tnx)
+    cx2_score, nx2_score = get_scores_from_altx2_score(hs, qcx, altx2_prob, altx2_tnx)
     return cx2_score, nx2_score
 
 TMP = []
@@ -85,7 +112,7 @@ def _PL_score(gamma):
     #print('[vote] sum(prob): '+str(sum(altx2_prob)))
     return altx2_prob
 
-def prob2_cxnx2scores(hs, qcx, altx2_prob, altx2_tnx):
+def get_scores_from_altx2_score(hs, qcx, altx2_prob, altx2_tnx):
     nx2_score = np.zeros(len(hs.tables.nx2_name))
     cx2_score = np.zeros(hs.num_cx)
     nx2_cxs = hs.get_nx2_cxs()
@@ -102,6 +129,13 @@ def prob2_cxnx2scores(hs, qcx, altx2_prob, altx2_tnx):
     return cx2_score, nx2_score
 
 def _chipmatch2_utilities(hs, qcx, chipmatch, K):
+    '''
+    returns qfx2_utilities
+    fx1 : [(cx_0, tnx_0, fs_0, fk_0), ..., (cx_m, tnx_m, fs_m, fk_m)]
+    fx2 : [(cx_0, tnx_0, fs_0, fk_0), ..., (cx_m, tnx_m, fs_m, fk_m)]
+                    ...
+    fxN : [(cx_0, tnx_0, fs_0, fk_0), ..., (cx_m, tnx_m, fs_m, fk_m)]
+    '''
     #print('[vote] computing utilities')
     cx2_nx = hs.tables.cx2_nx
     nQFeats = len(hs.feats.cx2_kpts[qcx])
@@ -189,11 +223,7 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
     #print('CheckMat = %r ' % all(np.abs(PLmatrix.sum(0)) < 1E-9))
     return PLmatrix, altx2_tnx
 
-def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
-    print('[vote] building pairwise matrix')
-    arr_   = np.array
-    hstack = np.hstack
-    cartesian = helpers.cartesian
+def _get_alts_from_utilities(qfx2_utilities):
     # get temp name indexes
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
     altx2_tnx = pd.unique(tnxs)
@@ -201,8 +231,18 @@ def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
     nUtilities = len(qfx2_utilities)
     nAlts   = len(altx2_tnx)
     altxs   = np.arange(nAlts)
+    return tnxs, altx2_tnx, tnx2_altx, nUtilities, nAlts, altxs
+
+def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
+    print('[vote] building pairwise matrix')
+    arr_   = np.array
+    hstack = np.hstack
+    cartesian = helpers.cartesian
+    tnxs, altx2_tnx, tnx2_altx, nUtilities, nAlts, altxs = _get_alts_from_utilities(qfx2_utilities)
     pairwise_mat = np.zeros((nAlts, nAlts))
+    # agent to alternative vote vectors 
     qfx2_porder = [np.array([tnx2_altx[util[1]] for util in utils]) for utils in qfx2_utilities]
+    # agent to alternative weight/utility vectors 
     qfx2_worder = [np.array([util[2] for util in utils]) for utils in qfx2_utilities]
     nVoters = 0
     for qfx in xrange(nUtilities):
@@ -246,44 +286,48 @@ def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
     return PLmatrix, altx2_tnx
 
 # Positional Scoring Rules
+     
 
-def voting_rule(alternative_ids, qfx2_altx, qfx2_weight=None, rule='borda',
-                correct_altx=None, fnum=1):
-    K = qfx2_altx.shape[1]
+def positional_scoring_rule(qfx2_utilities, rule, isWeighted):
+    tnxs, altx2_tnx, tnx2_altx, nUtilities, nAlts, altxs = _get_alts_from_utilities(qfx2_utilities)
+    # agent to alternative vote vectors 
+    qfx2_porder = [np.array([tnx2_altx[util[1]] for util in utils]) for utils in qfx2_utilities]
+    # agent to alternative weight/utility vectors 
+    if isWeighted:
+        qfx2_worder = [np.array([util[2] for util in utils]) for utils in qfx2_utilities]
+    else:
+        qfx2_worder = [np.array([    1.0 for util in utils]) for utils in qfx2_utilities]
+    K = max(map(len, qfx2_utilities))
     if rule == 'borda':
-        score_vec = np.arange(0,K)[::-1]
+        score_vec = np.arange(0,K)[::-1] + 1
     if rule == 'plurality':
         score_vec = np.zeros(K); score_vec[0] = 1
     if rule == 'topk':
         score_vec = np.ones(K)
     score_vec = np.array(score_vec, dtype=np.int)
-    print('----')
-    title = 'Rule=%s Weighted=%r ' % (rule, not qfx2_weight is None)
-    print('[vote] ' + title)
-    print('[vote] score_vec = %r' % (score_vec,))
-    alt_score = weighted_positional_scoring_rule(alternative_ids, qfx2_altx, score_vec, qfx2_weight)
-    ranked_candiates = alt_score.argsort()[::-1]
-    ranked_scores    = alt_score[ranked_candiates]
-    viz_votingrule_table(ranked_candiates, ranked_scores, correct_altx, title, fnum)
-    return ranked_candiates, ranked_scores
+    #print('----')
+    #title = 'Rule=%s Weighted=%r ' % (rule, not qfx2_weight is None)
+    #print('[vote] ' + title)
+    #print('[vote] score_vec = %r' % (score_vec,))
+    altx2_score = _positional_score(altxs, score_vec, qfx2_porder, qfx2_worder)
+    #ranked_candiates = alt_score.argsort()[::-1]
+    #ranked_scores    = alt_score[ranked_candiates]
+    #viz_votingrule_table(ranked_candiates, ranked_scores, correct_altx, title, fnum)
+    return altx2_score, altx2_tnx
 
 
-def weighted_positional_scoring_rule(alternative_ids, 
-                                     qfx2_altx, score_vec,
-                                     qfx2_weight=None):
-    nAlts = len(alternative_ids)
-    alt_score = np.zeros(nAlts)
-    if qfx2_weight is None: 
-        qfx2_weight = np.ones(qfx2_altx.shape)
-    for qfx in xrange(len(qfx2_altx)):
-        partial_order = qfx2_altx[qfx]
-        weights       = qfx2_weight[qfx]
-        # Remove impossible votes
-        weights       = weights[partial_order != -1]
-        partial_order = partial_order[partial_order != -1]
+def _positional_score(altxs, score_vec, qfx2_porder, qfx2_worder):
+    nAlts = len(altxs)
+    altx2_score = np.zeros(nAlts)
+    # For each voter
+    for qfx in xrange(len(qfx2_porder)):
+        partial_order = qfx2_porder[qfx]
+        weights       = qfx2_worder[qfx]
+        # Loop over the ranked alternatives applying positional/meta weight
         for ix, altx in enumerate(partial_order):
-            alt_score[altx] += weights[ix] * score_vec[ix]
-    return alt_score
+            #if altx == -1: continue
+            altx2_score[altx] += weights[ix] * score_vec[ix]
+    return altx2_score
 
 if __name__ == '__main__':
     pass

@@ -39,9 +39,10 @@ rrr = reload_module
 #=========================
 def query_result_fpath(hs, qcx, query_uid):
     qres_dir  = hs.dirs.qres_dir 
-    fname = 'result%s_qcx=%d.npz' % (query_uid, qcx)
+    fname = 'res_%s_qcx=%d.npz' % (query_uid, qcx)
     if len(fname) > 64:
-        fname = helpers.hashstr(fname)
+        hash_id = helpers.hashstr(query_uid, 16)
+        fname = 'res_%s_qcx=%d.npz' % (hash_id, qcx)
     fpath = join(qres_dir, fname)
     return fpath
 
@@ -437,16 +438,16 @@ class QueryConfig(DynStruct):
         q_cfg.f_cfg  = FilterConfig(**kwargs)
         q_cfg.sv_cfg = SpatialVerifyConfig(**kwargs)
         q_cfg.a_cfg  = AggregateConfig(**kwargs)
-        q_cfg.qcxs = []
-        q_cfg.dcxs = []
+        q_cfg.feat_cfg = hs.feats.cfg
+        #
         q_cfg.use_cache = False
         # Data
+        q_cfg.qcxs = []
+        q_cfg.dcxs = []
         q_cfg.data_index = None # current index
         q_cfg.dcxs2_index = {}  # L1 cached indexes
         q_cfg.update(**kwargs)
         q_cfg.f_cfg.make_feasible(q_cfg)
-        # This needs to move out
-        q_cfg.hs = hs
 
     def update_cfg(q_cfg, **kwargs):
         q_cfg.nn_cfg.update(**kwargs)
@@ -467,7 +468,7 @@ class QueryConfig(DynStruct):
         if not 'noAGG' in args:
             uid += q_cfg.a_cfg.get_uid(**kwargs)
         if not 'noCHIP' in args:
-            uid += [q_cfg.hs.get_indexed_uid()]
+            uid += [q_cfg.feat_cfg.get_uid()]
         # In case you don't search the entire dataset
         dcxs_ = repr(tuple(q_cfg.dcxs))
         uid += ['_dcxs('+helpers.hashstr(dcxs_)+')']

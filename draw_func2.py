@@ -74,7 +74,6 @@ def my_prefs():
     ELL_LINEWIDTH = 2
     ELL_ALPHA = .5
 
-
 def execstr_global():
     execstr = ['global' +key for key in globals().keys()]
     return execstr
@@ -87,20 +86,22 @@ def draw_sift(desc, kp=None):
     desc = np.round(desc * 255)
     '''
     ax = plt.gca()
-    tau = np.float64(np.pi * 2)
+    tau = 2*np.pi
     DSCALE = .25
     XYSCALE = .5
     XYSHIFT = -.75
-    THETA_SHIFT = 1/8 * tau
+    ORI_SHIFT = 0 # -tau #1/8 * tau
     # SIFT CONSTANTS
     NORIENTS = 8; NX = 4; NY = 4; NBINS = NX * NY
     def cirlce_rad2xy(radians, mag):
         return np.cos(radians)*mag, np.sin(radians)*mag
-    discrete_theta = (np.arange(0,NORIENTS)*(tau/NORIENTS) + THETA_SHIFT)[::-1]
+    discrete_ori = (np.arange(0,NORIENTS)*(tau/NORIENTS) + ORI_SHIFT)
     # Build list of plot positions
-    dim_mag   = desc / 255.0
-    dim_theta = np.tile(discrete_theta, (NBINS, 1)).flatten()
-    dim_xy = np.array(zip(*cirlce_rad2xy(dim_theta, dim_mag))) 
+    # Build an "arm" for each sift measurement
+    arm_mag   = desc / 255.0
+    arm_ori = np.tile(discrete_ori, (NBINS, 1)).flatten()
+    # The offset x,y's for each sift measurment
+    arm_dxy = np.array(zip(*cirlce_rad2xy(arm_ori, arm_mag))) 
     yxt_gen = itertools.product(xrange(NY),xrange(NX),xrange(NORIENTS))
     yx_gen  = itertools.product(xrange(NY),xrange(NX))
 
@@ -127,33 +128,30 @@ def draw_sift(desc, kp=None):
     # Draw Arms
     arrow_patches = []
     arrow_patches2 = []
+    #print(index)
+    #print((x, y, t))
+    #index = 127 - ((NY - 1 - y)*(NX*NORIENTS) + (NX - 1 - x)*(NORIENTS) + (NORIENTS - 1 - t))
+    #index = ((NY - 1 - y)*(NX*NORIENTS) + (NX - 1 - x)*(NORIENTS) + (t))
+    #index = ((x)*(NY*NORIENTS) + (y)*(NORIENTS) + (t))
     for y,x,t in yxt_gen:
-        #print((x, y, t))
-        #index = 127 - ((NY - 1 - y)*(NX*NORIENTS) + (NX - 1 - x)*(NORIENTS) + (NORIENTS - 1 - t))
-        index = ((y)*(NX*NORIENTS) + (x)*(NORIENTS) + (t))
-        #index = ((NY - 1 - y)*(NX*NORIENTS) + (NX - 1 - x)*(NORIENTS) + (t))
-        #print(index)
-        (dx, dy) = dim_xy[index]
-        arw_x  = ( x*XYSCALE) + XYSHIFT
-        arw_y  = ( y*XYSCALE) + XYSHIFT
-        arw_dy = (dy*DSCALE) * 1.5 # scale for viz Hack
-        arw_dx = (dx*DSCALE) * 1.5
+        index = y*NX*NORIENTS + x*NORIENTS + t
+        (dx, dy) = arm_dxy[index]
+        arw_x  = x*XYSCALE + XYSHIFT
+        arw_y  = y*XYSCALE + XYSHIFT
+        arw_dy = dy*DSCALE * 1.5 # scale for viz Hack
+        arw_dx = dx*DSCALE * 1.5
         posA = (arw_x, arw_y)
         posB = (arw_x+arw_dx, arw_y+arw_dy)
-        arw_patch = FancyArrow(arw_x, arw_y, arw_dx, arw_dy, head_width=.0001,
-                               transform=kpTrans, length_includes_head=False)
-        arw_patch2 = FancyArrow(arw_x, arw_y, arw_dx, arw_dy, head_width=.0001,
-                                transform=kpTrans, length_includes_head=False)
-        arrow_patches.append(arw_patch)
-        arrow_patches2.append(arw_patch2)
+        _args = [arw_x, arw_y, arw_dx, arw_dy]
+        _kwargs = dict(head_width=.0001, transform=kpTrans, length_includes_head=False)
+        arrow_patches  += [FancyArrow(*_args, **_kwargs)]
+        arrow_patches2 += [FancyArrow(*_args, **_kwargs)]
     # Draw Circles
     circle_patches = []
     for y,x in yx_gen:
-        circ_xy = ((x*XYSCALE)+XYSHIFT, (y*XYSCALE)+XYSHIFT)
+        circ_xy = (x*XYSCALE + XYSHIFT, y*XYSCALE + XYSHIFT)
         circ_radius = DSCALE
-        circ_patch = Circle(circ_xy, circ_radius,
-                               transform=kpTrans)
-        circle_patches.append(circ_patch)
+        circle_patches += [Circle(circ_xy, circ_radius, transform=kpTrans)]
         
     circ_collection = matplotlib.collections.PatchCollection(circle_patches)
     circ_collection.set_facecolor('none')

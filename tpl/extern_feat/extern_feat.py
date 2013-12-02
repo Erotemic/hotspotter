@@ -302,6 +302,8 @@ def test_extract_hesaff():
 
 def keypoint_interaction(rchip, kpts, desc=None, kpts0=None, fnum=1, **kwargs):
     from hotspotter import helpers
+    from hotspotter import draw_func2 as df2
+    from hotspotter import extract_patch as extract_patch
     import linalg_helpers as lh
     index = 20+37
     index = 0
@@ -401,8 +403,13 @@ def keypoint_interaction(rchip, kpts, desc=None, kpts0=None, fnum=1, **kwargs):
         df2.draw_kpts2(kpts, ell_color=df2.ORANGE, **ell_args)
         df2.draw_kpts2(kpts[index:index+1], ell_color=df2.BLUE, **ell_args)
         ax = df2.plt.gca()
-        ax.set_title(str(index)+' old=b(inv(sqrtm(invE*)) and new=o(A=invA)')
-        #
+        #ax.set_title(str(index)+' old=b(inv(sqrtm(invE*)) and new=o(A=invA)')
+        scale = np.sqrt(kp[0]*kp[1])
+        printops = np.get_printoptions()
+        np.set_printoptions(precision=1)
+        ax.set_title('fx=%r scale=%.1f\ninvA=%r ' % \
+                     (index, scale, str(kp)))
+        np.set_printoptions(**printops)
         extract_patch.draw_keypoint_patch(rchip, kp, sift, plotnum=(2,2,3))
         extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, plotnum=(2,2,4))
         golden_wh = lambda x:map(int,map(round,(x*.618 , x*.312)))
@@ -413,7 +420,7 @@ def keypoint_interaction(rchip, kpts, desc=None, kpts0=None, fnum=1, **kwargs):
         fig1.canvas.draw()
         #df2.show()
 
-    fig = df2.plt.figure(1)
+    fig = df2.plt.figure(fnum)
     xy = kpts.T[0:2].T
     import pyflann
     # Flann doesn't help here at all
@@ -449,9 +456,8 @@ def keypoint_interaction(rchip, kpts, desc=None, kpts0=None, fnum=1, **kwargs):
 if __name__ == '__main__':
     print('[TPL] Test Extern Features')
     import multiprocessing
-    multiprocessing.freeze_support()
     from hotspotter import draw_func2 as df2
-    from hotspotter import extract_patch as extract_patch
+    multiprocessing.freeze_support()
     df2.DARKEN = .5
     test_extract_hesaff()
     df2.show()

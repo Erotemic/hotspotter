@@ -65,8 +65,8 @@ class FeatureConfig(DynStruct):
         super(FeatureConfig, feat_cfg).__init__()
         feat_cfg.feat_type = ('hesaff', 'sift')
         feat_cfg.whiten = False
-        feat_cfg.scale_min = 0    # 30
-        feat_cfg.scale_max = 9001 # 250
+        feat_cfg.scale_min = 30 #0    # 30
+        feat_cfg.scale_max = 80 #9001 # 80
         feat_cfg.update(**kwargs)
     def get_dict_args(feat_cfg):
         dict_args = {

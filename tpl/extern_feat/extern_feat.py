@@ -404,7 +404,7 @@ def keypoint_interaction(rchip, kpts, desc=None, kpts0=None, fnum=1, **kwargs):
         df2.draw_kpts2(kpts[index:index+1], ell_color=df2.BLUE, **ell_args)
         ax = df2.plt.gca()
         #ax.set_title(str(index)+' old=b(inv(sqrtm(invE*)) and new=o(A=invA)')
-        scale = np.sqrt(kp[0]*kp[1])
+        scale = np.sqrt(kp[2]*kp[4])
         printops = np.get_printoptions()
         np.set_printoptions(precision=1)
         ax.set_title('fx=%r scale=%.1f\ninvA=%r ' % \

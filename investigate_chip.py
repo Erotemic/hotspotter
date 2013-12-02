@@ -5,6 +5,7 @@ import __builtin__
 import argparse
 import sys
 from os.path import join
+import multiprocessing
 
 # Toggleable printing
 print = __builtin__.print
@@ -75,13 +76,18 @@ def parse_arguments():
     add_bool('--vrdq', default=False)
     add_bool('--vcdq', default=False)
     add_bool('--show-res', default=False)
-    add_bool('--nocache-query', default=False)
-    add_bool('--nocache-feats', default=False)
     add_bool('--noprinthist', default=True)
     add_bool('--test-vsmany', default=False)
     add_bool('--test-vsone', default=False)
+    # Testing flags
     add_bool('--all-cases', default=False)
     add_bool('--all-gt-cases', default=False)
+    # Cache flags
+    add_bool('--nocache-query', default=False)
+    add_bool('--nocache-feats', default=False)
+    # Plotting Args
+    add_bool('--horiz', default=True)
+
 
 
     add_str('--tests', [], 'integer or test name', nargs='*')
@@ -95,7 +101,8 @@ def parse_arguments():
     print('==================')
     return args
 
-args = parse_arguments()
+if multiprocessing.current_process().name == 'MainProcess':
+    args = parse_arguments()
 
 import DataStructures as ds
 import matching_functions as mf
@@ -160,26 +167,7 @@ def mothers_problem_pairs():
     occluded = [(64,65), ]
     return locals()
 
-def quick_assign_vsmany(hs, qcx, cx, K): 
-    print('[invest] Performing quick vsmany')
-    cx2_desc = hs.feats.cx2_desc
-    vsmany_args = hs.matcher.vsmany_args
-    cx2_fm, cx2_fs, cx2_score = mc2.assign_matches_vsmany(qcx, cx2_desc, vsmany_args)
-    fm = cx2_fm[cx]
-    fs = cx2_fs[cx]
-    return fm, fs
-
-def quick_assign_vsone(hs, qcx, cx, **kwargs):
-    print('[invest] Performing quick vsone')
-    cx2_desc       = hs.feats.cx2_desc
-    vsone_args     = mc2.VsOneArgs(cxs=[cx], **kwargs)
-    vsone_assigned = mc2.assign_matches_vsone(qcx, cx2_desc, vsone_args)
-    (cx2_fm, cx2_fs, cx2_score) = vsone_assigned
-    fm = cx2_fm[cx] ; fs = cx2_fs[cx]
-    return fm, fs
-
 # Just put in PL
-
 def top_matching_features(res, axnum=None, match_type=''):
     cx2_fs = res.cx2_fs_V
     cx_fx_fs_list = []
@@ -202,28 +190,7 @@ def investigate_scoring_rules(hs, qcx, fnum=1):
     fnum += 1
     return fnum
 
-param1 = 'K'
-param2 = 'xy_thresh'
-assign_alg = 'vsmany'
-nParam1=1 
-fnum = 1
-nParam2=1
-cx_list='gt1'
-        #fnum = vary_query_params(hs, qcx, 'ratio_thresh', 'xy_thresh', 'vsone', 4, 4, fnum, cx_list='gt1')
-    #if '2' in args.tests:
-        #hs.ensure_matcher(match_type='vsmany')
-        #fnum = vary_query_params(hs, qcx, 'K', 'xy_thresh', 'vsmany', 4, 4, fnum, cx_list='gt1') 
-
-def linear_logspace(start, stop, num, base=2):
-    return 2 ** np.linspace(np.log2(start), np.log2(stop), num)
-
-
 def vary_query_cfg(hs, qon_list, q_cfg=None, vary_cfg=None, fnum=1):
-    if vary_cfg is None:
-        vary_cfg = {'ratio_thresh' : [1.4, 1.6, 1.8], 
-                       'xy_thresh' : [.001, .002, .01]}
-    if q_cfg is None:
-        q_cfg = mc3.get_vsone_cfg()
     # Ground truth matches
     for qcx, ocxs, notes in qon_list:
         gt_cxs = hs.get_groundtruth_cxs(qcx)
@@ -256,7 +223,9 @@ def vary_two_cfg(hs, qcx, cx, notes, q_cfg, vary_cfg, fnum=1):
     # Vary cfg1
     #df2.plt.gcf().clf()
     print_lock_ = helpers.ModulePrintLock(mc3, df2)
-    assign_alg = q_cfg.a_cfg.query_type 
+    assign_alg = q_cfg.a_cfg.query_type
+    vert = not hs.args.horiz
+    plt_match_args = dict(fnum=fnum, show_gname=False, showTF=False, vert=vert)
     for rowx, cfg1_value in enumerate(cfg1_steps):
         q_cfg.update_cfg(**{cfg1_name:cfg1_value})
         y_title = cfg1_name+'='+helpers.format(cfg1_value, 3)
@@ -273,8 +242,7 @@ def vary_two_cfg(hs, qcx, cx, notes, q_cfg, vary_cfg, fnum=1):
             # query the entire database in vsmany (just as fast as vgroundtruth)
             elif assign_alg == 'vsmany':
                 res = mc3.query_database(hs, qcx, q_cfg)
-            res.plot_matches(hs, cx, fnum=fnum, plotnum=plotnum,
-                             show_gname=False, showTF=False)
+            res.plot_matches(hs, cx, plotnum=plotnum, **plt_match_args)
             x_title = cfg2_name + '='+helpers.format(cfg2_value, 3)  #helpers.commas(cfg2_value, 3)
             ax = df2.plt.gca()
             if rowx == len(cfg1_steps) - 1:
@@ -290,87 +258,6 @@ def vary_two_cfg(hs, qcx, cx, notes, q_cfg, vary_cfg, fnum=1):
     fnum += 1
     viz.save_if_requested(hs, vary_title)
     return fnum
-
-def quick_get_features_factory(hs):
-    'builds a factory function'
-    cx2_desc = hs.feats.cx2_desc
-    cx2_kpts = hs.feats.cx2_kpts
-    cx2_cid  = hs.tables.cx2_cid 
-    def get_features(cx):
-        rchip = hs.get_chip(cx)
-        fx2_kp = cx2_kpts[cx]
-        fx2_desc = cx2_desc[cx]
-        cid = cx2_cid[cx]
-        return rchip, fx2_kp, fx2_desc, cid
-    return get_features
-
-def show_vsone_matches(hs, qcx, fnum=1):
-    hs.ensure_matcher(match_type='vsone')
-    res_vsone = mc2.build_result_qcx(hs, qcx, use_cache=True)
-    df2.show_match_analysis(hs, res_vsone, N=5, fignum=fnum, figtitle=' vsone')
-    fnum+=1
-    return res_vsone, fnum
-
-def get_qfx2_gtkrank(hs, qcx, q_cfg): 
-    '''Finds how deep possibily correct matches are in the ANN structures'''
-    import matching_functions as mf
-    dx2_cx   = q_cfg.data_index.ax2_cx
-    gt_cxs   = hs.get_other_cxs(qcx)
-    qcx2_nns = mf.nearest_neighbors(hs, [qcx], q_cfg)
-    filt2_weights = mf.weight_neighbors(hs, qcx2_nns, q_cfg)
-    K = q_cfg.nn_cfg.K
-    (qfx2_dx, _) = qcx2_nns[qcx]
-    qfx2_weights = filt2_weights['lnbnn'][qcx]
-    qfx2_cx = dx2_cx[qfx2_dx[:, 0:K]]
-    qfx2_gt = np.in1d(qfx2_cx.flatten(), gt_cxs)
-    qfx2_gt.shape = qfx2_cx.shape
-    qfx2_gtkrank = np.array([helpers.npfind(isgt) for isgt in qfx2_gt])
-    qfx2_gtkweight = [0 if rank == -1 else weights[rank] 
-                      for weights, rank in zip(qfx2_weights, qfx2_gtkrank)]
-    qfx2_gtkweight = np.array(qfx2_gtkweight)
-    return qfx2_gtkrank, qfx2_gtkweight
-
-def measure_k_rankings(hs):
-    'Reports the k match of correct feature maatches for each problem case'
-    import match_chips3 as mc3
-    K = 500
-    q_cfg = mc3.QueryConfig(K=K, Krecip=0,
-                                roidist_thresh=None, lnbnn_weight=1)
-    id2_qcxs, id2_ocids, id2_notes = get_hard_cases(hs)
-    id2_rankweight = [get_qfx2_gtkrank(hs, qcx, q_cfg) for qcx in id2_qcxs]
-    df2.rrr()
-    df2.reset()
-    for qcx, rankweight, notes in zip(id2_qcxs, id2_rankweight, id2_notes):
-        ranks, weights = rankweight
-        ranks[ranks == -1] = K+1
-        title = 'q'+hs.cxstr(qcx) + ' - ' + notes
-        print(title)
-        df2.figure(fignum=qcx, doclf=True, title=title)
-        #draw_support
-        #label=title
-        df2.draw_hist(ranks, nbins=100, weights=weights) # FIXME
-        df2.legend()
-    print(len(id2_qcxs))
-    df2.present(num_rc=(4,5), wh=(300,250))
-
-def measure_cx_rankings(hs):
-    ' Reports the best chip ranking over each problem case'
-    import match_chips3 as mc3
-    q_cfg = ds.QueryConfig(K=500, Krecip=0,
-                                roidist_thresh=None, lnbnn_weight=1)
-    id2_qcxs, id2_ocids, id2_notes = get_hard_cases(hs)
-    id2_bestranks = []
-    for id_ in xrange(len(id2_qcxs)):
-        qcx = id2_qcxs[id_]
-        reses = mc3.execute_query_safe(hs, q_cfg, [qcx])
-        gt_cxs = hs.get_other_cxs(qcx)
-        res = reses[2][qcx]
-        cx2_score = res.get_cx2_score(hs)
-        top_cxs  = cx2_score.argsort()[::-1]
-        gt_ranks = [helpers.npfind(top_cxs == gtcx) for gtcx in gt_cxs]
-        bestrank = min(gt_ranks)
-        id2_bestranks += [bestrank]
-    print(id2_bestranks)
 
 def plot_name(hs, qcx, fnum=1, **kwargs):
     print('[invest] Plotting name')
@@ -390,203 +277,15 @@ def show_names(hs, qon_list, fnum=1):
             df2.save_figure(fpath=names_dir, usetitle=True)
     return fnum
 
-def compare_matching_methods(hs, qcx, fnum=1):
-    print('[invest] Comparing match methods')
-    # VSMANY matcher
-    hs.ensure_matcher(match_type='vsmany')
-    vsmany_score_options = ['LNRAT', 'LNBNN', 'RATIO']
-    vsmany_args = hs.matcher.vsmany_args
-    vsmany_results = {}
-    for score_type in vsmany_score_options:
-        params.__VSMANY_SCORE_FN__ = score_type
-        res_vsmany = mc2.build_result_qcx(hs, qcx)
-        df2.show_match_analysis(hs, res_vsmany, N=5, fignum=fnum, figtitle=' LNRAT')
-        vsmany_results[score_type] = res_vsmany
-        fnum+=1
-    # BAGOFWORDS matcher
-    hs.ensure_matcher(match_type='bagofwords')
-    resBOW = mc2.build_result_qcx(hs, qcx)
-    df2.show_match_analysis(hs, resBOW, N=5, fignum=fnum, figtitle=' bagofwords')
-    fnum+=1
-    # VSONE matcher
-    hs.ensure_matcher(match_type='vsone')
-    res_vsone = mc2.build_result_qcx(hs, qcx, use_cache=True)
-    df2.show_match_analysis(hs, res_vsone, N=5, fignum=fnum, figtitle=' vsone')
-    fnum+=1
-    # Extra 
-    df2.show_match_analysis(hs, vsmany_results['LNBNN'], N=20, fignum=fnum,
-                                figtitle=' LNBNN More', show_query=False)
-    fnum+=1
-    return fnum
-
-# ^^^^^^^^^^^^^^^^^
-# Tests
-    
-def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
-    cx2_cid = hs.tables.cx2_cid
-    qcid_list = []
-    ocid_list = []
-    note_list = []
-    qcx_list = []
-    db = hs.args.db
-    if with_hard:
-        for (db_, qcid, ocids, notes) in HISTORY:
-            if db == db_:
-                qcid_list += [qcid]
-                ocid_list += [ocids]
-                note_list += [notes]
-        qcx_list = hs.cid2_cx(qcid_list).tolist()
-    for cx, cid in enumerate(cx2_cid):
-        if not cx in qcx_list and cid > 0:
-            gt_cxs = hs.get_other_cxs(cx)
-            if with_nogt and len(gt_cxs) == 0: pass
-            elif with_gt and len(gt_cxs) > 0: pass
-            else: continue
-            qcx_list += [cx]
-            ocid_list += [[]]
-            note_list += ['NA']
-    #return qcx_list, ocid_list, note_list
-    #qcx_list = hs.cid2_cx(qcid_list)
-    #print('qcid_list = %r ' % qcid_list)
-    #print('qcx_list = %r ' % qcid_list)
-    #print('[get_hard_cases]\n %r\n %r\n %r\n' % (qcx_list, ocid_list, note_list))
-    return qcx_list, ocid_list, note_list
-
-@helpers.__DEPRICATED__
-def get_hard_cases(hs):
-    return get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
-
-    #print('qcid_list = %r ' % qcid_list)
-    #print('qcx_list = %r ' % qcid_list)
-    #print('[get_hard_cases]\n %r\n %r\n %r\n' % (qcx_list, ocid_list, note_list))
-
-
-def view_all_history_names_in_db(hs, db):
-    qcx_list = zip(*get_hard_cases(hs))[0]
-    nx_list = hs.tables.cx2_nx[qcx_list]
-    unique_nxs = np.unique(nx_list)
-    print('unique_nxs = %r' % unique_nxs)
-    names = hs.tables.nx2_name[unique_nxs]
-    print('names = %r' % names)
-    helpers.ensuredir('hard_names')
-    for nx in unique_nxs:
-        viz.plot_name(hs, nx, fignum=nx)
-        df2.save_figure(fpath='hard_names', usetitle=True)
-    helpers.vd('hard_names')
-
 def vary_vsone_cfg(hs, qon_list, fnum, vary_dicts, **kwargs):
     vary_cfg = helpers.dict_union(*vary_dicts)
-    q_cfg = mc3.get_vsone_cfg(**kwargs)
+    q_cfg = mc3.get_vsone_cfg(hs, **kwargs)
     return vary_query_cfg(hs, qon_list, q_cfg, vary_cfg, fnum)
 
 def vary_vsmany_cfg(hs, qon_list, vary_cfg, fnum, **kwargs):
     vary_cfg = helpers.dict_union(*vary_dicts)
-    q_cfg = mc3.get_vsmany_cfg(**kwargs)
+    q_cfg = mc3.get_vsmany_cfg(hs, **kwargs)
     return vary_query_cfg(hs, qon_list, q_cfg, vary_cfg, fnum)
-
-def run_investigations(hs, qon_list):
-    args = hs.args
-    qcx = qon_list[0][0]
-    print('[invest] Running Investigation: '+hs.cxstr(qcx))
-    fnum = 1
-    #view_all_history_names_in_db(hs, 'MOTHERS')
-    #fnum = compare_matching_methods(hs, qcx, fnum)
-    #xy_  = {'xy_thresh'    : [None, .2, .02, .002]}
-    xy_  = {'xy_thresh'    : [None, .02, .002]}
-    #rat_ = {'ratio_thresh' : [None, 1.4, 1.6, 1.8]}
-    rat_ = {'ratio_thresh' : [None, 1.5, 1.7]}
-    K_   = {'K'            : [2, 5, 10]}
-    Kr_  = {'Krecip'       : [0, 2, 5, 10]}
-    if '0' in args.tests or 'show-names' in args.tests:
-        show_names(hs, qon_list)
-    if '1' in args.tests or 'vary-vsone-rat-xy' in args.tests:
-        fnum = vary_vsone_cfg(hs, qon_list, fnum, [rat_, xy_])
-    if '2' in args.tests or 'vary-vsmany-k-xy' in args.tests:
-        fnum = vary_vsmany_cfg(hs, qon_list, fnum, [K_, xy_])
-    if '3' in args.tests:
-        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=True) 
-        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=False) 
-    if '4' in args.tests:
-        fnum = investigate_scoring_rules(hs, qcx, fnum)
-    if '6' in args.tests:
-        measure_k_rankings(hs)
-    if '7' in args.tests:
-        measure_cx_rankings(hs)
-    if '8' in args.tests:
-        mc3.compare_scoring(hs)
-    if '9' in args.tests or 'scale' in args.tests:
-        fnum = plot_keypoint_scales(hs)
-    if '10' in args.tests or 'vsone-gt' in args.tests:
-        fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)
-    if '11' in args.tests or 'chip-info' in args.tests:
-        fnum = investigate_chip_info(hs, qon_list, fnum)
-    if '12' in args.tests or 'test-cfg-vsone-1' in args.tests:
-        import dev
-        dev.test_configurations(hs, qon_list, ['vsone_1'])
-    if '13' in args.tests or 'test-cfg-vsmany-3' in args.tests:
-        import dev
-        dev.test_configurations(hs, qon_list, ['vsmany_3'])
-
-#===========
-# Main Script
-# exec(open('investigate_chip.py').read())
-
-def print_history_table():
-    print('------------')
-    print('[invest] Printing history table:')
-    count = 0
-    for histentry in HISTORY:
-        if args.db == histentry[0]:
-            print('%d: %r' % (count, histentry))
-            count += 1
-
-def hs_from_db(db, args=None, **kwargs):
-    # Load hotspotter
-    db_dir = eval('params.'+db)
-    print('[invest] loading hotspotter database')
-    def _hotspotter_load():
-        hs = ld2.HotSpotter()
-        hs.load_all(db_dir, matcher=False, args=args, **kwargs)
-        hs.set_samples()
-        return hs
-    if True:
-        hs = _hotspotter_load()
-        return hs
-    else:
-        rss = helpers.RedirectStdout(autostart=True)
-        hs = _hotspotter_load()
-        rss.stop()
-        rss.dump()
-        print('loaded hotspotter database')
-        return hs
-
-def change_db(db):
-    global args
-    global hs
-    args.db = db
-    hs = hs_from_db(args.db, args)
-    hs.args = args
-
-def main(**kwargs):
-    print('[iv] main()')
-    if 'hs' in vars():
-        return
-    # Load Hotspotter
-    hs = hs_from_db(args.db, args, **kwargs)
-    qon_list = get_qon_list(hs)
-    print('[invest] Loading DB=%r' % args.db)
-    if not args.noprinthist or True:
-        print('---')
-        print('[invest] print_history_table()')
-        print_history_table()
-    qcxs_list, ocxs_list, notes_list = zip(*qon_list)
-    qcxs  = qcxs_list[0]
-    notes = notes_list[0]
-    print('========================')
-    print('[invest] Loaded DB=%r' % args.db)
-    print('[invest] notes=%r' % notes)
-    qcxs = helpers.ensure_iterable(qcxs)
-    return locals()
 
 def plot_keypoint_scales(hs, fnum=1):
     print('[invest] plot_keypoint_scales()')
@@ -653,6 +352,11 @@ def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
         fnum += 1
     return fnum
 
+def investigate_chip_info(hs, qon_list, fnum=1):
+    for qcx, ocxs, notes in qon_list:
+        chip_info(hs, qcx, notes)
+    return fnum
+
 def chip_info(hs, cx, notes=''):
     nx = hs.tables.cx2_nx[cx]
     gx = hs.tables.cx2_gx[cx]
@@ -677,12 +381,149 @@ def chip_info(hs, cx, notes=''):
     ]
     print(helpers.indent('\n'.join(infostr_list), '    '))
 
-def investigate_chip_info(hs, qon_list, fnum=1):
-    for qcx, ocxs, notes in qon_list:
-        chip_info(hs, qcx, notes)
-    return fnum
+
+
+# ^^^^^^^^^^^^^^^^^
+# Tests
+
+#===========
+# Main Script
+# exec(open('investigate_chip.py').read())
+
+def print_history_table():
+    print('------------')
+    print('[invest] Printing history table:')
+    count = 0
+    for histentry in HISTORY:
+        if args.db == histentry[0]:
+            print('%d: %r' % (count, histentry))
+            count += 1
+
+def hs_from_db(db, args=None, **kwargs):
+    # Load hotspotter
+    db_dir = eval('params.'+db)
+    print('[invest] loading hotspotter database')
+    def _hotspotter_load():
+        hs = ld2.HotSpotter()
+        hs.load_all(db_dir, matcher=False, args=args, **kwargs)
+        hs.set_samples()
+        return hs
+    if True:
+        hs = _hotspotter_load()
+        return hs
+    else:
+        rss = helpers.RedirectStdout(autostart=True)
+        hs = _hotspotter_load()
+        rss.stop()
+        rss.dump()
+        print('loaded hotspotter database')
+        return hs
+
+def change_db(db):
+    global args
+    global hs
+    args.db = db
+    hs = hs_from_db(args.db, args)
+    hs.args = args
+
+def main(**kwargs):
+    print('[iv] main()')
+    if 'hs' in vars():
+        return
+    # Load Hotspotter
+    hs = hs_from_db(args.db, args, **kwargs)
+    qon_list = get_qon_list(hs)
+    print('[invest] Loading DB=%r' % args.db)
+    if not args.noprinthist or True:
+        print('---')
+        print('[invest] print_history_table()')
+        print_history_table()
+    qcxs_list, ocxs_list, notes_list = zip(*qon_list)
+    qcxs  = qcxs_list[0]
+    notes = notes_list[0]
+    print('========================')
+    print('[invest] Loaded DB=%r' % args.db)
+    print('[invest] notes=%r' % notes)
+    qcxs = helpers.ensure_iterable(qcxs)
+    return locals()
+#---end main script
+    
+def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
+    cx2_cid = hs.tables.cx2_cid
+    qcid_list = []
+    ocid_list = []
+    note_list = []
+    qcx_list = []
+    db = hs.args.db
+    if with_hard:
+        for (db_, qcid, ocids, notes) in HISTORY:
+            if db == db_:
+                qcid_list += [qcid]
+                ocid_list += [ocids]
+                note_list += [notes]
+        qcx_list = hs.cid2_cx(qcid_list).tolist()
+    for cx, cid in enumerate(cx2_cid):
+        if not cx in qcx_list and cid > 0:
+            gt_cxs = hs.get_other_cxs(cx)
+            if with_nogt and len(gt_cxs) == 0: pass
+            elif with_gt and len(gt_cxs) > 0: pass
+            else: continue
+            qcx_list += [cx]
+            ocid_list += [[]]
+            note_list += ['NA']
+    return qcx_list, ocid_list, note_list
+
+# Driver Function
+def run_investigations(hs, qon_list):
+    args = hs.args
+    qcx = qon_list[0][0]
+    print('[invest] Running Investigation: '+hs.cxstr(qcx))
+    fnum = 1
+    #view_all_history_names_in_db(hs, 'MOTHERS')
+    #fnum = compare_matching_methods(hs, qcx, fnum)
+    #xy_  = {'xy_thresh'    : [None, .2, .02, .002]}
+    #xy_  = {'xy_thresh'    : [None, .02, .002, .001, .0005]}
+    xy_  = {'xy_thresh'    : [None, .02, .002]}
+    #rat_ = {'ratio_thresh' : [None, 1.4, 1.6, 1.8]}
+    rat_ = {'ratio_thresh' : [None, 1.5, 1.7]}
+    K_   = {'K'            : [2, 5, 10]}
+    Kr_  = {'Krecip'       : [0, 2, 5, 10]}
+    if '0' in args.tests or 'show-names' in args.tests:
+        show_names(hs, qon_list)
+    if '1' in args.tests or 'vary-vsone-rat-xy' in args.tests:
+        fnum = vary_vsone_cfg(hs, qon_list, fnum, [rat_, xy_])
+    if '2' in args.tests or 'vary-vsmany-k-xy' in args.tests:
+        fnum = vary_vsmany_cfg(hs, qon_list, fnum, [K_, xy_])
+    if '3' in args.tests:
+        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=True) 
+        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=False) 
+    if '4' in args.tests:
+        fnum = investigate_scoring_rules(hs, qcx, fnum)
+    if '6' in args.tests:
+        measure_k_rankings(hs)
+    if '7' in args.tests:
+        measure_cx_rankings(hs)
+    if '8' in args.tests:
+        mc3.compare_scoring(hs)
+    if '9' in args.tests or 'scale' in args.tests:
+        fnum = plot_keypoint_scales(hs)
+    if '10' in args.tests or 'vsone-gt' in args.tests:
+        fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)
+    if '11' in args.tests or 'chip-info' in args.tests:
+        fnum = investigate_chip_info(hs, qon_list, fnum)
+    if '12' in args.tests or 'test-cfg-vsone-1' in args.tests:
+        import dev
+        dev.test_configurations(hs, qon_list, ['vsone_1'])
+    if '13' in args.tests or 'test-cfg-vsmany-3' in args.tests:
+        import dev
+        dev.test_configurations(hs, qon_list, ['vsmany_3'])
+    if '14' in args.tests or 'test-cfg-vsmany-1' in args.tests:
+        import dev
+        dev.test_configurations(hs, qon_list, ['vsmany_1'])
 
 if __name__ == '__main__':
+    from multiprocessing import freeze_support
+    freeze_support()
     print('[invest] __main__ ')
     df2.DARKEN = .5
     main_locals = main()

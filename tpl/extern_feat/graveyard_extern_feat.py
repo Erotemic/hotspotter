@@ -31,6 +31,24 @@ TMP_DIR = os.path.join(EXE_PATH, '.tmp_external_features')
 if not os.path.exists(TMP_DIR):
     print('Making directory: '+TMP_DIR)
     os.mkdir(TMP_DIR)
+#---------------------------------------
+# Defined temp compute functions
+# Create directory for temporary files (if needed)
+#TMP_DIR = os.path.join(EXE_PATH, '.tmp_external_features') 
+#if not os.path.exists(TMP_DIR):
+    #print('Making directory: '+TMP_DIR)
+    #os.mkdir(TMP_DIR)
+#def temp_compute(rchip, compute_fn):
+    #tmp_fpath = TMP_DIR + '/tmp.ppm'
+    #rchip_pil = Image.fromarray(rchip)
+    #rchip_pil.save(tmp_fpath, 'PPM')
+    #(kpts, desc) = compute_fn(tmp_fpath)
+    #return (kpts, desc)
+#def compute_perdoch(rchip, dict_args):
+    #return temp_compute(rchip,compute_hesaff)
+#def compute_inria(rchip, detect_type, extract_type):
+    #return temp_compute(rchip, compute_hesaff)
+
  
 #---------------------------------------
 # Define precompute functions

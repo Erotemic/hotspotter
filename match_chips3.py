@@ -61,16 +61,16 @@ def __dict_default_func(dict_):
             dict_[key] = val
     return set_key
 
-def get_vsmany_cfg(**kwargs):
+def get_vsmany_cfg(hs, **kwargs):
     kwargs['query_type'] = 'vsmany'
     kwargs_set = __dict_default_func(kwargs)
     kwargs_set('lnbnn_weight', .001)
     kwargs_set('K', 2)
     kwargs_set('Knorm', 1)
-    q_cfg = ds.QueryConfig(**kwargs)
+    q_cfg = ds.QueryConfig(hs, **kwargs)
     return q_cfg
 
-def get_vsone_cfg(**kwargs):
+def get_vsone_cfg(hs, **kwargs):
     kwargs['query_type'] = 'vsone'
     kwargs_set = __dict_default_func(kwargs)
     kwargs_set('lnbnn_weight', 0)
@@ -79,7 +79,7 @@ def get_vsone_cfg(**kwargs):
     kwargs_set('Knorm', 1)
     kwargs_set('ratio_weight', 1.0)
     kwargs_set('ratio_thresh', 1.5)
-    q_cfg = ds.QueryConfig(**kwargs)
+    q_cfg = ds.QueryConfig(hs, **kwargs)
     return q_cfg
 
 def query_dcxs(hs, qcx, dcxs, q_cfg=None, **kwargs):
@@ -133,7 +133,7 @@ def ensure_nn_index(hs, q_cfg, dcxs):
 
 def prequery(hs, q_cfg=None, **kwargs):
     if q_cfg is None:
-        q_cfg = ds.QueryConfig(**kwargs)
+        q_cfg = ds.QueryConfig(hs, **kwargs)
     if q_cfg.a_cfg.query_type == 'vsmany':
         dcxs = hs.indexed_sample_cx
         ensure_nn_index(hs, q_cfg, dcxs)
@@ -158,7 +158,7 @@ def execute_query_safe(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **k
     '''Executes a query, performs all checks, callable on-the-fly'''
     print('[query]-------')
     print('[query] Execute query safe: q%s' % hs.cxstr(qcxs))
-    if q_cfg is None: q_cfg = ds.QueryConfig(**kwargs)
+    if q_cfg is None: q_cfg = ds.QueryConfig(hs, **kwargs)
     if dcxs is None: dcxs = hs.indexed_sample_cx
     q_cfg.qcxs = qcxs
     q_cfg.dcxs = dcxs
@@ -230,7 +230,7 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
     qcx    = vars().get('qcx', 0)
     fnum   = vars().get('fnum', 1)
     kwargs = vars().get('kwargs', {})
-    q_cfg = ds.QueryConfig(**kwargs)
+    q_cfg = ds.QueryConfig(hs, **kwargs)
     match_type = 'vsmany'
     compare_to = 'SVER'
     kwshow = dict(show_query=0, vert=1)

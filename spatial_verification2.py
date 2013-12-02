@@ -34,20 +34,6 @@ rrr = reload_module
 
 SV_DTYPE = np.float64
 
-#USE_AUTOJIT = True
-#AUTOJIT_CALLS = 0
-#if USE_AUTOJIT:
-    #from numba import autojit
-    #def try_autojit(fn, *args, **kwargs):
-        #global AUTOJIT_CALLS
-        #AUTOJIT_CALLS += 1 
-        #return autojit(fn, *args, **kwargs)
-#else:
-    #def try_autojit(fn):
-        #global AUTOJIT_CALLS
-        #AUTOJIT_CALLS -= 1 
-        #return fn
-
 # Generate 6 degrees of freedom homography transformation
 def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
     'Computes homography from normalized (0 to 1) point correspondences'
@@ -122,13 +108,14 @@ def homography_inliers(kpts1, kpts2, fm,
     if diaglen_sqrd is None:
         diaglen_sqrd = calc_diaglen_sqrd(x2_m, y2_m)
     xy_thresh_sqrd = diaglen_sqrd * xy_thresh
-    Aff, aff_inliers = __affine_inliers(x1_m, y1_m, acd1_m, fm[:, 0],
+    Aff, aff_inliers = affine_inliers(x1_m, y1_m, acd1_m, fm[:, 0],
                                         x2_m, y2_m, acd2_m, fm[:, 1],
                                         xy_thresh_sqrd, 
                                         scale_thresh_high,
                                         scale_thresh_low)
     # Cannot find good affine correspondence
     if len(aff_inliers) < min_num_inliers:
+        #raise Exception('No affine inliers')
         return None
     # Get corresponding points and shapes
     (x1_ma, y1_ma, acd1_m) = (x1_m[aff_inliers], y1_m[aff_inliers],
@@ -144,7 +131,8 @@ def homography_inliers(kpts1, kpts2, fm,
         H = linalg.solve(T2, H_prime).dot(T1) # Unnormalize
     except linalg.LinAlgError as ex:
         printWARN('[sv2] Warning 285 '+repr(ex), )
-        return np.eye(3), aff_inliers
+        #raise
+        return np.eye(3), aff_inliersS
 
     ((H11, H12, H13),
      (H21, H22, H23),
@@ -154,102 +142,13 @@ def homography_inliers(kpts1, kpts2, fm,
     y1_mt = H21*(x1_m) + H22*(y1_m) + H23
     z1_mt = H31*(x1_m) + H32*(y1_m) + H33
     # --- Find (Squared) Error ---
+    #scale_err = np.abs(np.linalg.det(H)) * det2_m / det1_m 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         xy_err = (x1_mt/z1_mt - x2_m)**2 + (y1_mt/z1_mt - y2_m)**2 
     # Estimate final inliers
     inliers, = np.where(xy_err < xy_thresh_sqrd)
     return H, inliers, Aff, aff_inliers
-
-# --------------------------------
-# Warping / Transformation stuff
-def border_coordinates(img):
-    'specified in (x,y) coordinates'
-    (img_h, img_w) = img.shape[0:2]
-    tl = (0, 0)
-    tr = (img_w-1, 0)
-    bl = (0, img_h-1)
-    br = (img_w-1, img_w-1)
-    return np.array((tl, tr, bl, br)).T
-def homogonize(coord_list):
-    'input: list of (x,y) coordinates'
-    ones_vector = np.ones((1, coord_list.shape[1]))
-    coord_homog = np.vstack([np.array(coord_list), ones_vector])
-    return coord_homog 
-def transform_coord_list(coord_list, M):
-    coord_homog  = homogonize(coord_list)
-    Mcoord_homog = M.dot(coord_homog)
-    Mcoord_list  = np.vstack((Mcoord_homog[0] / Mcoord_homog[2],
-                              Mcoord_homog[1] / Mcoord_homog[2]))
-    return Mcoord_list
-def minmax_coord_list(coord_list):
-    minx, miny = coord_list.min(1)
-    maxx, maxy = coord_list.max(1)
-    return (minx, maxx, miny, maxy)
-
-def transformed_bounds(img, M):
-    coord_list  = border_coordinates(img)
-    Mcoord_list = transform_coord_list(coord_list, M)
-    (minx, maxx, miny, maxy) = minmax_coord_list(Mcoord_list)
-    return (minx, maxx, miny, maxy) 
-#---
-# 
-def sqrt_inv(fx2_kp):
-    # numba approved
-    x, y, a, c, d = fx2_kp.T
-    aIS = 1/np.sqrt(a) 
-    bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
-    dIS = 1/np.sqrt(d)
-    kpts_iter = iter(zip(x,y,aIS,bIS,dIS))
-    kptsIS = [np.array([( a_, b_, x_),
-                        ( 0 , d_, y_),
-                        ( 0 , 0 , 1)])
-              for (x_,y_,a_,b_,d_) in kpts_iter ]
-    return kptsIS
-
-def keypoint_scale(fx2_kp):
-    'the scale of a keypoint is sqrt(1/det(A))'
-    fx2_acd = fx2_kp[:,2:5].T
-    fx2_det = det_acd(fx2_acd)
-    fx2_scale = np.sqrt(1.0/fx2_det)
-    return fx2_scale
-
-def keypoint_radius(fx2_kp):
-    scale_m = keypoint_scale(fx2_kp)
-    radius_m = 3*np.sqrt(3*scale_m)
-    # I'm not sure which one is right. 
-    #radius_m = 3*np.sqrt(3)*scale_m
-    return radius_m
-
-def keypoint_axes(fx2_kp):
-    raise NotImplemented('this doesnt work')
-    num_kpts = len(fx2_kp)
-    (a,c,d) = fx2_kp[:,2:5].T
-    # sqrtm(inv(A))
-    aIS = 1/np.sqrt(a) 
-    bIS = -c/(np.sqrt(a)*d + a*np.sqrt(d))
-    cIS = np.zeros(num_kpts)
-    dIS = 1/np.sqrt(d)
-    # Build lower triangular matries that maps unit circles to ellipses
-    abcdIS = np.vstack([aIS, bIS, cIS, dIS]).T.reshape(num_kpts, 2, 2)
-    # Get major and minor axies of ellipes. 
-    eVals, eVecs = zip(*[np.linalg.eig(cir2ell) for cir2ell in abcdIS])
-
-# --------------------------------
-# Linear algebra functions on lower triangular matrices
-def det_acd(acd):
-    'Lower triangular determinant'
-    return acd[0] * acd[2]
-def inv_acd(acd, det):
-    'Lower triangular inverse'
-    return np.array((acd[2], -acd[1], acd[0])) / det
-def dot_acd(acd1, acd2): 
-    'Lower triangular dot product'
-    a = (acd1[0] * acd2[0])
-    c = (acd1[1] * acd2[0] + acd1[2] * acd2[1])
-    d = (acd1[2] * acd2[2])
-    return np.array((a, c, d))
-# --------------------------------
 '''
 fx1_m  = np.array( (1, 2, 3, 4, 5))
 x1_m   = np.array( (1, 2, 1, 4, 5))
@@ -265,60 +164,68 @@ acd2_m = np.array(((1, 1, 1, 1, 1),
                    (0, 0, 0, 0, 0),
                    (1, 1, 1, 1, 1)))
 
+acd1_m = array([[ 105.65855929,   69.88258445,   50.26711542,   47.0972872, 37.77338979,
+                  80.37862456,   65.7670833 ,   52.42491175, 47.73791486,  47.73791486],
+                  [  40.25470409,   33.37290799,  -14.38396778,    5.09841855, 8.36304015,  
+                  9.40799471,   -0.22772558,   21.09104681, 33.6183116 ,   33.6183116 ],
+                  [  85.21461723,   38.1541563 ,   49.27567372,   19.63477339, 24.12673413,  
+                  34.08558994,   35.23499677,   19.37915367, 29.8612585 ,   29.8612585 ]])
+
+acd2_m = array([[ 27.18315876,  40.44774347,  18.83472822,  46.03951988, 25.48597903,
+                42.33150267,  34.53070584,  45.37374314, 42.9485725 ,  53.62149774],
+                [ 11.08605802,  -7.47303884,  -9.39089399,  -6.87968738, 0.61334048,  
+                15.89417442, -38.28506581,   5.9434218 , 25.10330357,  28.30194991],
+                [ 14.73551714,  16.44658993,  33.51034403,  19.36112975, 39.17426044, 
+                31.73842067,  27.55071888,  21.49176377, 21.40969283,  23.89992898]])
+
+ai = acd1_m[0][0]
+ci = acd1_m[1][0]
+di = acd1_m[2][0]
+
+aj = acd2_m[0][0]
+cj = acd2_m[1][0]
+dj = acd2_m[2][0]
+
+Ai = np.array([[ai,0],[ci,di]])
+Aj = np.array([[aj,0],[cj,dj]])
+
+Ah = np.array([(ai, 0, 0),(ci, di, 0), (0,0,1)])
 '''
 #---
 # Ensure that a feature doesn't have multiple assignments
-'''
-fx1_uq, fx1_ux, fx1_ui = np.unique(fx1_m, return_index=True, return_inverse=True)
-fx2_uq, fx2_ux, fx2_ui = np.unique(fx2_m, return_index=True, return_inverse=True)
-
-fx_m = fx2_m
-inliers_flag = hypo_inliers
-error = xy_err
-def dupl_items(list_):
-    seen = set()
-    seen_add = seen.add
-    seen_twice = set( x for x in list_ if x in seen or seen_add(x) )
-    return list( seen_twice )
-'''
-def remove_multiassignments(fx_m, inliers, error):
-    '''
-    I think this works, but I haven't integrated it yet.
-    Also, is probably going to be slow.
-    Try pip install hungarian instead
-    '''
-    # Get the inlier feature indexes
-    ilx_to_fx = fx_m[inliers]
-    ux_to_fx, ilx2_to_ux = np.unique(ilx_to_fx, return_inverse=True)
-    # Find which fx are duplicates
-    dupl_ux = dupl_items(ilx2_to_ux)
-    # This is the list of multi-assigned feature indexes
-    fx_mulass = ux_to_fx[dupl_ux]
-    ilx_mulass = [np.where(fx_m == fx)[0] for fx in fx_mulass]
-    # For each multi-assigned inlier, pick one
-    ilx2_flag = np.ones(len(inliers), dtype=np.bool)
-    for ilx_list in ilx_mulass:
-        ilx2_flag[ilx_list] = False
-        keepx = np.argmin(error[inliers[ilx_list]])
-        ilx2_flag[ilx_list[keepx]] = True
-    return inliers[ilx_to_flag]
-
-def flag_unique(list_):
-    seen = set([])
-    seen_add = seen.add
-    return np.array([False if fx in seen or seen_add(fx) else True 
-                     for fx in list_], dtype=np.bool)
-
-def __affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
-                     x2_m, y2_m, acd2_m, fx2_m,
-                     xy_thresh_sqrd, 
-                     scale_thresh_high, scale_thresh_low):
+# --------------------------------
+# Linear algebra functions on lower triangular matrices
+def det_acd(acd):
+    'Lower triangular determinant'
+    return acd[0] * acd[2]
+def inv_acd(acd, det):
+    'Lower triangular inverse'
+    return np.array((acd[2], -acd[1], acd[0])) / det
+def dot_acd(acd1, acd2): 
+    'Lower triangular dot product'
+    a = (acd1[0] * acd2[0])
+    c = (acd1[1] * acd2[0] + acd1[2] * acd2[1])
+    d = (acd1[2] * acd2[2])
+    return np.array((a, c, d))
+# --------------------------------
+def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
+                   x2_m, y2_m, acd2_m, fx2_m,
+                   xy_thresh_sqrd, 
+                   scale_thresh_high, scale_thresh_low):
     '''Estimates inliers deterministically using elliptical shapes
     1_m = img1_matches; 2_m = img2_matches
     x and y are locations, acd are the elliptical shapes. 
     fx are the original feature indexes (used for making sure 1 keypoint isn't assigned to 2)
+
+    FROM PERDOCH 2009: 
+        Transformations from coordinate frame 2->1
+        H = inv(Aj).dot(Rj.T).dot(Ri).dot(Ai)
+        The input acd's are assumed to be 
+        invA = ([a 0],[c d])
     '''
-#with helpers.Timer('enume all'):
+    #print(repr((acd1_m.T[0:10]).T))
+    #print(repr((acd2_m.T[0:10]).T))
+    #with helpers.Timer('enume all'):
     #fx1_uq, fx1_ui = np.unique(fx1_m, return_inverse=True)
     #fx2_uq, fx2_ui = np.unique(fx2_m, return_inverse=True)
     best_inliers = []
@@ -328,10 +235,14 @@ def __affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
     det1_m = det_acd(acd1_m)
     det2_m = det_acd(acd2_m)
     # Compute all transforms from kpts1 to kpts2 (enumerate all hypothesis)
-    inv2_m = inv_acd(acd2_m, det2_m)
+    # HACK: Because what I thought was A is actually invA,  need to invert calculation
+    #inv2_m = inv_acd(acd2_m, det2_m)
+    inv1_m = inv_acd(acd1_m, det1_m)
     # The transform from kp1 to kp2 is given as:
     # A = inv(A2).dot(A1)
-    Aff_list = dot_acd(inv2_m, acd1_m)
+    # HACK: Because what I thought was A is actually invA,  need to invert calculation
+    #Aff_list = dot_acd(inv2_m, acd1_m)
+    Aff_list = dot_acd(acd2_m, inv1_m)
     # Compute scale change of all transformations 
     detAff_list = det_acd(Aff_list)
     # Test all hypothesis
@@ -389,15 +300,16 @@ def __affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
         best_Aff = np.eye(3)
     return best_Aff, best_inliers
 
-
 def show_inliers(hs, qcx, cx, inliers, title='inliers', **kwargs):
     import load_data2 as ld2
     df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[inliers], title=title, **kwargs_)
 
 def test():
-    from __init__ import *
     import load_data2 as ld2
+    import params
     import investigate_chip as ic2
+    import match_chips3 as mc3
+    import spatial_verification2 as sv2
     xy_thresh         = params.__XY_THRESH__
     scale_thresh_high = params.__SCALE_THRESH_HIGH__
     scale_thresh_low  = params.__SCALE_THRESH_LOW__
@@ -405,21 +317,21 @@ def test():
     cx  = helpers.get_arg_after('--cx', type_=int)
     #cx  = 113
     if not 'hs' in vars():
-        (hs, qcx, cx, fm, fs, 
-         rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data(qcx, cx)
+        main_locals = ic2.main()
+        exec(helpers.execstr_dict(main_locals, 'main_locals'))
+        cx = hs.get_other_cxs(qcx)[0]
+        res = mc3.query_groundtruth(hs, qcx, sv_on=False)
+        fm = res.cx2_fm[cx]
+        fs = res.cx2_fs[cx]
+        score = res.cx2_score[cx]
+        rchip1 = hs.get_chip(qcx)
+        rchip2 = hs.get_chip(cx)
+        # Get keypoints
+        kpts1 = hs.get_kpts(qcx)
+        kpts2 = hs.get_kpts(cx)
     args_ = [rchip1, rchip2, kpts1, kpts2]
     diaglen_srd= rchip2.shape[0]**2 + rchip2.shape[1]**2
     #with helpers.Timer('Computing inliers: '):
-    print(kpts1.shape)
-    print(kpts2.shape)
-    print(rchip1.shape)
-    print(rchip2.shape)
-    print(fm.shape)
-    print(xy_thresh)
-    print(scale_thresh_high)
-    print(scale_thresh_low)
-    print(diaglen_srd)
-
     H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm,
                                                           xy_thresh,
                                                           scale_thresh_high,
@@ -458,76 +370,9 @@ def test2(qcx, cx):
                                                               scale_thresh_low,
                                                               min_num_inliers=4)
 
-def compare1():
-    reload()
-    df2.reset()
-    xy_thresh         = params.__XY_THRESH__
-    scale_thresh_high = params.__SCALE_THRESH_HIGH__
-    scale_thresh_low  = params.__SCALE_THRESH_LOW__
-    # Pick out some data
-    if not 'hs' in vars():
-        (hs, qcx, cx, fm, fs, 
-         rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data()
-    #df2.update()
-    x1_m, y1_m, acd1_m = split_kpts(kpts1[fm[:, 0]].T)
-    x2_m, y2_m, acd2_m = split_kpts(kpts2[fm[:, 1]].T)
-    fx1_m = fm[:, 0]
-    fx2_m = fm[:, 1]
-    x2_extent = x2_m.max() - x2_m.min()
-    y2_extent = y2_m.max() - y2_m.min()
-    img2_extent = np.array([x2_extent, y2_extent])
-    img2_diaglen_sqrd = x2_extent**2 + y2_extent**2
-    xy_thresh_sqrd = img2_diaglen_sqrd * xy_thresh
-    # -----------------------------------------------
-    # Get match threshold 10% of matching keypoint extent diagonal
-    #aff_inliers1, Aff1 = sv2.affine_inliers(kpts1, kpts2, fm, xy_thresh, scale_thresh)
-    '''
-    # Draw assigned matches
-    args_ = [rchip1, rchip2, kpts1, kpts2]
-    df2.show_matches2(*args_+[fm], fs=None,
-                      all_kpts=False, draw_lines=False,
-                      doclf=True, title='Assigned matches')
-    # Draw affine inliers
-    df2.show_matches2(*args_+[fm[aff_inliers1]], fs=None,
-                      all_kpts=False, draw_lines=False, doclf=True,
-                      title='Assigned matches')
-    '''
-    df2.update()
-
-def spatially_verify(kpts1, kpts2, rchip_size2, fm, fs, xy_thresh,
-                     shigh_thresh, slow_thresh, use_chip_extent):
-    '''1) compute a robust transform from img2 -> img1
-       2) keep feature matches which are inliers 
-       returns fm_V, fs_V, H '''
-    # Return if pathological
-    min_num_inliers   = 4
-    if len(fm) < min_num_inliers:
-        return (np.empty((0, 2)), np.empty((0, 1)))
-    # Get homography parameters
-    if use_chip_extent:
-        diaglen_sqrd = rchip_size2[0]**2 + rchip_size2[1]**2
-    else:
-        x_m = kpts2[fm[:,1],0].T
-        y_m = kpts2[fm[:,1],1].T
-        diaglen_sqrd = calc_diaglen_sqrd(x_m, y_m)
-    # Try and find a homography
-    sv_tup = homography_inliers(kpts1, kpts2, fm, xy_thresh, 
-                                    shigh_thresh, slow_thresh,
-                                    diaglen_sqrd, min_num_inliers)
-    if sv_tup is None:
-        return (np.empty((0, 2)), np.empty((0, 1)))
-    # Return the inliers to the homography
-    (H, inliers, Aff, aff_inliers) = sv_tup
-    fm_V = fm[inliers, :]
-    fs_V = fs[inliers]
-    return fm_V, fs_V
-####
-
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
-    #from spatial_verification2 import *
-    import multiprocessing as mp
     import draw_func2 as df2
     import params
     import helpers
@@ -535,13 +380,4 @@ if __name__ == '__main__':
     mp.freeze_support()
     print('[sc2] __main__ = spatial_verification2.py')
     test()
-    #test2(0, 1)
-    #test2(0, 2)
-    #test2(0, 3)
-    #test2(0, 4)
-    #test2(0, 5)
-    #test2(0, 6)
-    #test2(0, 6)
-    if 'AUTOJIT_CALLS' in vars():
-        print('autojit calls: '+str(AUTOJIT_CALLS))
     exec(df2.present())

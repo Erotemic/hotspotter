@@ -244,7 +244,6 @@ def get_indexed_uid(with_train=True, with_indx=True):
     indexed_uid += get_feat_uid()
     return indexed_uid
 
-
 def get_query_uid():
     query_uid = ''
     query_uid += '_sv(' 

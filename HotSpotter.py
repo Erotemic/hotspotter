@@ -101,12 +101,10 @@ class HotSpotter(DynStruct):
         import chip_compute2 as cc2
         cc2.load_chip_paths(hs)
     #---------------
-    def load_features(hs, load_kpts=True, load_desc=True):
+    def load_features(hs, **kwargs):
         import feature_compute2 as fc2
-        hs_feats  = fc2.load_chip_features(hs, load_kpts, load_desc)
-        print('The new way is not yet finished and is commented out')
-        #hs_feats  = fc2.load_chip_features2(hs, load_kpts, load_desc)
-        hs.feats  = hs_feats
+        hs_feats = fc2.load_features(hs, **kwargs)
+        hs.feats = hs_feats
     #---------------
     def ensure_matcher_loaded(hs):
         if hs.matcher is None: 
@@ -238,12 +236,23 @@ class HotSpotter(DynStruct):
         print('[hs] set_samples(): train_id=%r' % train_id)
         print('[hs] set_samples(): test_id=%r'  % test_id)
         print('[hs] set_samples(): indx_id=%r'  % indx_id)
-
-
         params.TRAIN_INDX_SAMPLE_ID = train_indx_id # Depricate
         params.TRAIN_SAMPLE_ID      = train_id
         params.INDX_SAMPLE_ID       = indx_id
         params.TEST_SAMPLE_ID       = test_id
+        # Fix
+        hs.train_id = train_id
+        hs.indx_id  = indx_id
+
+    def get_indexed_uid(hs, with_train=True, with_indx=True):
+        indexed_uid = ''
+        if with_train:
+            indexed_uid += '_trainID('+hs.train_id+')'
+        if with_indx:
+            indexed_uid += '_indxID('+hs.indx_id+')'
+        # depends on feat
+        indexed_uid += hs.feats.cfg.get_uid()
+        return indexed_uid
 
     #---------------
     def delete_computed_dir(hs):

@@ -189,7 +189,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list):
     varied_params_list = [_ for _dict in vary_dicts for _ in helpers.all_dict_combinations(_dict)]
     # query_cxs, other_cxs, notes
     qon_list = iv.get_qon_list(hs)
-    cfg_list = [ds.QueryConfig(**_dict) for _dict in varied_params_list]
+    cfg_list = [ds.QueryConfig(hs, **_dict) for _dict in varied_params_list]
     # __NEW_HACK__
     mc3.unify_cfgs(cfg_list)
     # __END_HACK__

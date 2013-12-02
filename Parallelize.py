@@ -4,9 +4,10 @@ import __builtin__
 import multiprocessing as mp
 from helpers import Timer
 import sys
-import os.path
 import params
 import sys
+from os.path import exists
+from itertools import izip
 
 # Toggleable printing
 print = __builtin__.print
@@ -30,7 +31,7 @@ rrr = reload_module
 def _calculate(func, args):
     result = func(*args)
     #arg_names = func.func_code.co_varnames[:func.func_code.co_argcount]
-    #arg_list  = [n+'='+str(v) for n,v in iter(zip(arg_names, args))]
+    #arg_list  = [n+'='+str(v) for n,v in izip(arg_names, args)]
     #arg_str = '\n    *** '+str('\n    *** '.join(arg_list))
     #print('[parallel]  * %s finished:\n    ** %s%s' % \
             #(mp.current_process().name,
@@ -48,10 +49,7 @@ def cpu_count():
 
 def parallel_compute(func, arg_list, num_procs=None, lazy=True):
     num_procs = params.NUM_PROCS if num_procs is None else num_procs
-    if lazy:
-        task_list = make_task_list_lazy(func, *arg_list)
-    else:
-        task_list = make_task_list(func, *arg_list)
+    task_list = make_task_list(func, arg_list, lazy=lazy)
     if len(task_list) == 0:
         print('[parallel] ... No '+func.func_name+' tasks left to compute!')
         return None
@@ -73,22 +71,19 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True):
         raise
     return ret
 
-def make_task_list_lazy(func, *args):
-    # The input should alawyas be argument 1
-    # The output should always be argument 2
-    task_list = []
-    lazy_skips = 0
-    has_output = len(args) >= 2
-    for _args in iter(zip(*args)):
-        if has_output and os.path.exists(_args[1]):
-            lazy_skips += 1
-        else:
-            task_list.append((func, _args))
-    print('[parallel] Already computed '+str(lazy_skips)+' '+func.func_name+' tasks')
-    return task_list
-def make_task_list(func, *args):
-    arg_iterator = iter(zip(*args))
-    task_list    = [(func, _args) for _args in arg_iterator]
+def make_task_list(func, arg_list, lazy=True):
+    ''' 
+    The input should alawyas be argument 1
+    The output should always be argument 2
+    '''
+    has_output = len(arg_list) >= 2
+    if not (lazy and has_output):
+        task_list = [(func, _args) for _args in izip(*arg_list)]
+        return task_list
+    arg_list2 = [_args for _args in izip(*arg_list) if not exists(_args[1])]
+    task_list = [(func, _args) for _args in iter(arg_list2)]
+    nSkip = len(arg_list) - len(arg_list2)
+    print('[parallel] Already computed %d %s tasks' % (nSkip, func.func_name))
     return task_list
 
 def parallelize_tasks(task_list, num_procs, msg=''):

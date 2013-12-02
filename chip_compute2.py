@@ -238,6 +238,31 @@ def pil2_float_img(chip):
 # Main Script 
 # =======================================
 
+class ChipConfig(DynStruct):
+    def __init__(cc_cfg, **kwargs):
+        'cc_cfg = DynStruct()'
+        super(ChipConfig, cc_cfg).__init__()
+        cc_cfg.chip_sqrt_area = 750
+        cc_cfg.grabcut        = False
+        cc_cfg.histeq         = False
+        cc_cfg.region_norm    = False
+        cc_cfg.rank_eq        = False
+        cc_cfg.local_eq       = False
+        cc_cfg.maxcontrast    = False
+        cc_cfg.update(**kwargs)
+    def get_uid(cc_cfg):
+        chip_uid = []
+        chip_uid += ['histeq']  * cc_cfg.histeq
+        chip_uid += ['grabcut'] * cc_cfg.grabcut
+        chip_uid += ['regnorm'] * cc_cfg.region_norm
+        chip_uid += ['rankeq']  * cc_cfg.rank_eq
+        chip_uid += ['localeq'] * cc_cfg.local_eq
+        chip_uid += ['maxcont'] * cc_cfg.maxcontrast
+        isOrig = cc_cfg.chip_sqrt_area is None or cc_cfg.chip_sqrt_area <= 0
+        chip_uid += ['szorig'] if isOrig else ['sz%r' % cc_cfg.chip_sqrt_area]
+        return '_CHIP('+(','.join(chip_uid))+')'
+
+
 class HotspotterChipPaths(DynStruct):
     def __init__(self):
         super(HotspotterChipPaths, self).__init__()

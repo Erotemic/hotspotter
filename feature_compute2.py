@@ -39,21 +39,14 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 def rrr(): reload_module()
 
-def root_sift(desc):
-    ''' Takes the square root of each descriptor and returns the features in the
-    range 0 to 255 (as uint8) '''
-    desc_ = array([sqrt(d) for d in algos.norm_zero_one(desc)])
-    desc_ = array([round(255.0 * d) for d in algos.norm_zero_one(desc_)], dtype=uint8)
-    return desc_
-
 # =======================================
 # Parallelizable Work Functions          
 # =======================================
 
 feat_type2_precompute = {
-    'HESAFF' : extern_feat.precompute_hesaff,
     ('hesaff','sift') : extern_feat.precompute_hesaff,
-    ('mser','sift')   : extern_feat.precompute_mser
+    ('harris','sift') : extern_feat.precompute_harris,
+    ('mser',  'sift') : extern_feat.precompute_mser,
 }
 
 # =======================================
@@ -63,118 +56,36 @@ feat_type2_precompute = {
 class HotspotterChipFeatures(DynStruct):
     def __init__(self):
         super(HotspotterChipFeatures, self).__init__()
-        self.is_binary = False
         self.cx2_desc = None
         self.cx2_kpts = None
-        self.feat_type = None
-
-# Decorators? 
-#def cache_features():
-#def uncache_features():
-
-# hs is a handle to whatever data is loaded 
-# if you aren't using something
-# del hs.something
-# EG: del hs.feats
-'''
- del.hs.feats['sift']
- ax2_features = hs.feats['sift']
- ax2_features = hs.feats['constructed-sift']
- ax2_features = hs.feats['mser']
-'''
-
-def index_features(hs):
-    mser_feats = hs.feats['mser']
-    sift_feats = hs.feats['sift']
-
-    feats = sift_feats
-    ax2_desc = feats.ax2_desc
-    ax2_kpts = feats.ax2_kpts
-    cx2_nFeats = feats.cx2_nFeats
-    cx2_axStart = np.cumsum(cx2_nFeats)
-    def cx2_axs(cx):
-        nFeats  = cx2_nFeats[cx]
-        axStart = cx2_axStart[cx]
-        fx2_ax = np.arange(nFeats, axStart+nFeats)
-        return fx2_ax
-
-    hs.feats.cx2_axs = cx2_axs
-
-    #ax_in_grid[0,0] = [...]
-    #ax_in_part[0]   = [...]
-    #valid_ax        = [...]
-
-def test2(hs):
-    cx_list = hs.get_valid_cxs()
-    #feature_types = params.FEAT_TYPE
-    feature_types = [('hesaff','sift'), ('mser','sift')]
-    feat_type = 'mser'
-    load_features(hs, cx_list, feature_types)
-
-class ChipConfig(DynStruct):
-    def __init__(cc_cfg, **kwargs):
-        'cc_cfg = DynStruct()'
-        super(ChipConfig, cc_cfg).__init__()
-        cc_cfg.chip_sqrt_area = 750
-        cc_cfg.grabcut        = False
-        cc_cfg.histeq         = False
-        cc_cfg.region_norm    = False
-        cc_cfg.rank_eq        = False
-        cc_cfg.local_eq       = False
-        cc_cfg.maxcontrast    = False
-        cc_cfg.update(**kwargs)
-    def get_uid(cc_cfg):
-        chip_uid = []
-        chip_uid += ['histeq']  * cc_cfg.histeq
-        chip_uid += ['grabcut'] * cc_cfg.grabcut
-        chip_uid += ['regnorm'] * cc_cfg.region_norm
-        chip_uid += ['rankeq']  * cc_cfg.rank_eq
-        chip_uid += ['localeq'] * cc_cfg.local_eq
-        chip_uid += ['maxcont'] * cc_cfg.maxcontrast
-        isOrig = cc_cfg.chip_sqrt_area is None or cc_cfg.chip_sqrt_area <= 0
-        chip_uid += ['szorig'] if isOrig else ['sz%r' % cc_cfg.chip_sqrt_area]
-        return '_CHIP('+(','.join(chip_uid))+')'
+        self.cfg   = None
 
 class FeatureConfig(DynStruct):
-    def __init__(fc_cfg, **kwargs):
-        super(FeatureConfig, fc_cfg).__init__()
-        fc_cfg.feat_type = ('hesaff', 'sift')
-        fc_cfg.whiten = False
-        fc_cfg.update(**kwargs)
-    def get_uid(fc_cfg):
+    def __init__(feat_cfg, **kwargs):
+        super(FeatureConfig, feat_cfg).__init__()
+        feat_cfg.feat_type = ('hesaff', 'sift')
+        feat_cfg.whiten = False
+        feat_cfg.scale_min = 0    # 30
+        feat_cfg.scale_max = 9001 # 250
+        feat_cfg.update(**kwargs)
+    def get_dict_args(feat_cfg):
+        dict_args = {
+            'scale_min' : feat_cfg.scale_min,
+            'scale_max' : feat_cfg.scale_max, }
+        return dict_args
+    def get_uid(feat_cfg):
         feat_uids = []
-        feat_uids += ['%s_%s' % fc_cfg.feat_type]
-        feat_uids += ['white'] * fc_cfg.whiten
+        feat_uids += ['%s_%s' % feat_cfg.feat_type]
+        feat_uids += ['white'] * feat_cfg.whiten
+        feat_uids += ['%r_%r' % (feat_cfg.scale_min, feat_cfg.scale_max)]
         feat_uid = '_FEAT('+(','.join(feat_uids))+')' 
         return feat_uid + params.get_chip_uid()
 
-def load_features(hs, cx_list=None, fc_cfg=None, **kwargs):
-    if fc_cfg is None: 
-        fc_cfg = FeatureConfig(**kwargs)
-    feat_dict = {}
-    feat_dir       = hs.dirs.feat_dir
-    cx2_rchip_path = hs.cpaths.cx2_rchip_path
-    cx2_cid        = hs.tables.cx2_cid
-    valid_cxs = hs.get_valid_cxs()
-
-    def precompute_feat_type(hs, feat_type, cx_list):
-        if not feat_type in feat_dict.keys():
-            feat_dict[feat_type] = Features(feat_type)
-        feat = feat_dict[feat_type]
-        # Build Parallel Jobs, Compute features, saving them to disk.
-        # Then Run Parallel Jobs 
-        cid_iter = (cx2_cid[cx] for cx in cx_list)
-        feat_type_str = helpers.remove_chars(repr(feat_type), [' ', '(', ')', '\''])
-        cx2_feat_path = [feat_dir+'/CID_%d_%s.npz' % (cid, feat_type_str) for cid in cid_iter]
-        precompute_fn = feat_type2_precompute[feat_type]
-        parallel_compute(precompute_fn, [cx2_rchip_path, cx2_feat_path])
-
-    for feat_type in feature_types:
-        precompute_feat_type(hs, feat_type, cx_list)
-
-def load_cached_feats(dpath, uid, ext, load_kpts, load_desc):
-    #io.debug_smart_load(dpath, fname='*', uid=uid, ext='.*')
+def load_cached_feats(dpath, uid, ext, use_cache, load_kpts=True, load_desc=True):
+    if not use_cache:
+        return None, None
     # Try to load from the cache first
+    #io.debug_smart_load(dpath, fname='*', uid=uid, ext='.*')
     if load_kpts:
         cx2_kpts = io.smart_load(dpath, 'cx2_kpts', uid, ext, can_fail=True)
     else: 
@@ -188,21 +99,24 @@ def load_cached_feats(dpath, uid, ext, load_kpts, load_desc):
         cx2_desc = None
     return cx2_kpts, cx2_desc
 
-def load_chip_feat_type(hs, feat_dir, cx2_rchip_path, cx2_cid,
-                        feat_type, feat_uid, cache_dir, 
-                        load_kpts=True, load_desc=True):
-    print('[fc2] Loading '+feat_type+' features: UID='+str(feat_uid))
+def load_feats_from_config(hs, feat_cfg):
+    feat_uid  = feat_cfg.get_uid()
+    print('[fc2] Loading features: UID='+str(feat_uid))
+    hs_dirs = hs.dirs
+    hs_tables = hs.tables
+    hs_cpaths = hs.cpaths
+    # Paths to features
+    feat_dir       = hs_dirs.feat_dir
+    cache_dir      = hs_dirs.cache_dir
+    cx2_rchip_path = hs_cpaths.cx2_rchip_path
+    cx2_cid        = hs_tables.cx2_cid
+    feat_uid = feat_cfg.get_uid()
     # args for smart load/save
     dpath = cache_dir
     uid   = feat_uid
     ext   = '.npy'
     use_cache = not hs.args.nocache_feats
-
-    if use_cache:
-        cx2_kpts, cx2_desc = load_cached_feats(dpath, uid, ext, load_kpts, load_desc)
-    else:
-        cx2_kpts, cx2_desc = (None, None)
-
+    cx2_kpts, cx2_desc = load_cached_feats(dpath, uid, ext, use_cache)
     if not (cx2_kpts is None or cx2_desc is None):
         # This is pretty dumb. Gotta have a more intelligent save/load
         cx2_desc_ = cx2_desc.tolist()
@@ -211,10 +125,12 @@ def load_chip_feat_type(hs, feat_dir, cx2_rchip_path, cx2_cid,
         #print all([np.all(desc == desc_) for desc, desc_ in zip(cx2_desc, cx2_desc_)])
     else:
         print('[fc2]  Loading individual '+feat_uid+' features')
-        cx2_feat_path = [feat_dir+'/CID_%d_%s.npz' % (cid, feat_uid) for cid in cx2_cid]
+        cx2_feat_path = [feat_dir+'/CID_%d%s.npz' % (cid, feat_uid) for cid in cx2_cid]
         # Compute features, saving them to disk 
-        precompute_fn = feat_type2_precompute[feat_type]
-        parallel_compute(precompute_fn, [cx2_rchip_path, cx2_feat_path], lazy=use_cache)
+        precompute_fn = feat_type2_precompute[feat_cfg.feat_type]
+        cx2_dict_args = [feat_cfg.get_dict_args()]*len(cx2_rchip_path)
+        precompute_args = [cx2_rchip_path, cx2_feat_path, cx2_dict_args]
+        parallel_compute(precompute_fn, precompute_args, lazy=use_cache)
         # rchip_fpath=cx2_rchip_path[0]; feat_fpath=cx2_feat_path[0]
         # Load precomputed features sequentially
         cx2_kpts, cx2_desc = sequential_load_features(cx2_feat_path)
@@ -266,46 +182,22 @@ def whiten_features(cx2_desc):
         new_desc = ax2_desc_white[index:(index+offset)]
         cx2_desc[cx] = new_desc
         index += offset
-    
-def load_chip_features2(hs, load_kpts=True, load_desc=True):
-    print('\n=============================')
-    print('[fc2] Computing and loading features for %r' % hs.db_name())
-    print('=============================')
-    return load_chip_features(hs.dirs, hs.tables, hs.cpaths, load_kpts, load_desc)
 
-def load_chip_features(hs, load_kpts=True,
-                       load_desc=True):
-    hs_dirs = hs.dirs
-    hs_tables = hs.tables
-    hs_cpaths = hs.cpaths
+def load_features(hs, feat_cfg=None, **kwargs):
     # --- GET INPUT --- #
     hs_feats = HotspotterChipFeatures()
-    # Paths to features
-    feat_dir       = hs_dirs.feat_dir
-    cache_dir      = hs_dirs.cache_dir
-    cx2_rchip_path = hs_cpaths.cx2_rchip_path
-    cx2_cid        = hs_tables.cx2_cid
-    # Load all the types of features
-    feat_uid = get_feat_uid()
-    feat_type = params.__FEAT_TYPE__
-    cx2_kpts, cx2_desc = load_chip_feat_type(hs, feat_dir, cx2_rchip_path, cx2_cid, 
-                                             feat_type, feat_uid, cache_dir,
-                                             load_kpts, load_desc)
-    hs_feats.feat_type = params.__FEAT_TYPE__
+    if feat_cfg is None: 
+        feat_cfg = FeatureConfig(**kwargs)
+    cx2_kpts, cx2_desc = load_feats_from_config(hs, feat_cfg)
     hs_feats.cx2_kpts  = cx2_kpts
     hs_feats.cx2_desc  = cx2_desc
-    #hs_feats.cx2_feats_sift   = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'SIFT')
-    #hs_feats.cx2_feats_freak  = load_chip_feat_type(feat_dir, cx2_rchip_path, cx2_cid, 'FREAK')
+    hs_feats.cfg = feat_cfg
     return hs_feats
 
-def get_feat_uid():
-    feat_uid = params.get_feat_uid()
-    return feat_uid
-
-def clear_feature_cache(hs):
+def clear_feature_cache(hs, feat_cfg):
     feat_dir = hs.dirs.feat_dir
     cache_dir = hs.dirs.cache_dir
-    feat_uid = params.get_feat_uid()
+    feat_uid = feat_cfg.get_uid()
     print('[fc2] clearing feature cache: %r' % feat_dir)
     helpers.remove_files_in_dir(feat_dir, '*'+feat_uid+'*', verbose=True, dryrun=False)
     helpers.remove_files_in_dir(cache_dir, '*'+feat_uid+'*', verbose=True, dryrun=False)
@@ -335,9 +227,6 @@ if __name__ == '__main__':
             exec(hs.dirs.execstr('hs.dirs'))
             exec(hs.cpaths.execstr('hs.cpaths'))
             # Load all the types of features
-            feat_uid = params.get_feat_uid()
-            feat_type = params.__FEAT_TYPE__
-
             #test2()
             hs.load_features()
             #cx2_desc = hs.feats.cx2_desc

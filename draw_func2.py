@@ -230,7 +230,7 @@ def draw_kpts2(kpts, offset=(0,0),
                ell_color=ELL_COLOR,
                color_list=None,
                wrong_way=False,
-               rect=True):
+               rect=None):
     if not DISTINCT_COLORS:
         color_list = None
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
@@ -247,6 +247,11 @@ def draw_kpts2(kpts, offset=(0,0),
     printDBG('[df2] draw_kpts()----------')
     printDBG('[df2] draw_kpts() ell=%r pts=%r' % (ell, pts))
     printDBG('[df2] draw_kpts() drawing kpts.shape=%r' % (kpts.shape,))
+    if rect is None:
+        rect = ell
+        rect = False
+        if pts is True:
+            rect = False
     if ell or rect:
         printDBG('[df2] draw_kpts() drawing ell kptsT.shape=%r' % (kptsT.shape,))
         a = kptsT[2]

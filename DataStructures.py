@@ -194,7 +194,7 @@ class NNIndex(object):
     def __init__(nn_index, hs, sx2_cx):
         cx2_desc  = hs.feats.cx2_desc
         # Make unique id for indexed descriptors
-        feat_uid   = params.get_feat_uid()
+        feat_uid   = hs.feats.cfg.get_uid()
         sample_uid = helpers.make_sample_id(sx2_cx)
         uid = '_cxs(' + sample_uid + ')' + feat_uid
         # Number of features per sample chip
@@ -431,7 +431,7 @@ class AggregateConfig(DynStruct):
         return uid
 
 class QueryConfig(DynStruct):
-    def __init__(q_cfg, **kwargs):
+    def __init__(q_cfg, hs, **kwargs):
         super(QueryConfig, q_cfg).__init__()
         q_cfg.nn_cfg = NNConfig(**kwargs)
         q_cfg.f_cfg  = FilterConfig(**kwargs)
@@ -445,6 +445,8 @@ class QueryConfig(DynStruct):
         q_cfg.dcxs2_index = {}  # L1 cached indexes
         q_cfg.update(**kwargs)
         q_cfg.f_cfg.make_feasible(q_cfg)
+        # This needs to move out
+        q_cfg.hs = hs
 
     def update_cfg(q_cfg, **kwargs):
         q_cfg.nn_cfg.update(**kwargs)
@@ -465,7 +467,7 @@ class QueryConfig(DynStruct):
         if not 'noAGG' in args:
             uid += q_cfg.a_cfg.get_uid(**kwargs)
         if not 'noCHIP' in args:
-            uid += [params.get_indexed_uid()]
+            uid += [q_cfg.hs.get_indexed_uid()]
         # In case you don't search the entire dataset
         dcxs_ = repr(tuple(q_cfg.dcxs))
         uid += ['_dcxs('+helpers.hashstr(dcxs_)+')']

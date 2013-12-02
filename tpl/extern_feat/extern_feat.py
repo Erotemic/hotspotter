@@ -28,12 +28,6 @@ if not os.path.exists(EXE_PATH):
 HESAFF_EXE = join(EXE_PATH, 'hesaff'+EXE_EXT)
 INRIA_EXE  = join(EXE_PATH, 'compute_descriptors'+EXE_EXT)
 
-# Create directory for temporary files (if needed)
-TMP_DIR = os.path.join(EXE_PATH, '.tmp_external_features') 
-if not os.path.exists(TMP_DIR):
-    print('Making directory: '+TMP_DIR)
-    os.mkdir(TMP_DIR)
- 
 def svd(M):
     #U, S, V = np.linalg.svd(M)
     flags = cv2.SVD_FULL_UV
@@ -43,8 +37,8 @@ def svd(M):
 
 #---------------------------------------
 # Define precompute functions
-def precompute(rchip_fpath, feat_fpath, compute_fn):
-    kpts, desc = compute_fn(rchip_fpath)
+def precompute(rchip_fpath, feat_fpath, dict_args, compute_fn):
+    kpts, desc = compute_fn(rchip_fpath, dict_args)
     np.savez(feat_fpath, kpts, desc)
     return kpts, desc
 
@@ -52,45 +46,27 @@ def precompute(rchip_fpath, feat_fpath, compute_fn):
 valid_extractors = ['sift', 'gloh']
 valid_detectors = ['mser', 'hessaff']
 
-def precompute_harris(rchip_fpath, feat_fpath):
-    return precompute(rchip_fpath, feat_fpath, compute_harris)
+def precompute_harris(rchip_fpath, feat_fpath, dict_args):
+    return precompute(rchip_fpath, feat_fpath, dict_args, compute_harris)
 
-def precompute_mser(rchip_fpath, feat_fpath):
-    return precompute(rchip_fpath, feat_fpath, compute_mser)
+def precompute_mser(rchip_fpath, feat_fpath, dict_args):
+    return precompute(rchip_fpath, feat_fpath, dict_args, compute_mser)
 
-def precompute_hesaff(rchip_fpath, feat_fpath):
-    return precompute(rchip_fpath, feat_fpath, compute_hesaff)
-
-#---------------------------------------
-# Defined temp compute functions
-def temp_compute(rchip, compute_fn):
-    tmp_fpath = TMP_DIR + '/tmp.ppm'
-    rchip_pil = Image.fromarray(rchip)
-    rchip_pil.save(tmp_fpath, 'PPM')
-    (kpts, desc) = compute_fn(tmp_fpath)
-    return (kpts, desc)
-
-def compute_hesaff(rchip):
-    return temp_compute(rchip,compute_hesaff)
-
-def compute_descriptors(rchip, detect_type, extract_type):
-    return temp_compute(rchip, compute_hesaff)
+def precompute_hesaff(rchip_fpath, feat_fpath, dict_args):
+    return precompute(rchip_fpath, feat_fpath, dict_args, compute_hesaff)
 
 #---------------------------------------
 # Work functions which call the external feature detectors
 
 # Helper function to call commands
 def execute_extern(cmd):
-    #print('tpl.execute_extern> '+cmd)
+    'Executes a system call' 
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = proc.communicate()
     if proc.returncode != 0:
         raise Exception('\n'.join(['* External detector returned 0',
-                                   '* Failed calling: '+cmd,
-                                   '* Process output: ',
-                                   '------------------',
-                                   out,
-                                   '------------------']))
+            '* Failed calling: '+cmd, '* Process output: ', 
+            '------------------', out, '------------------']))
 
 def inria_cmd(rchip_fpath, detect_type, extract_type):
     ''' -noangle causes a crash on windows '''
@@ -123,7 +99,7 @@ def compute_perdoch_text_feats(rchip_fpath):
 
 #----
 
-def compute_inria_feats(rchip_fpath, detect_type, extract_type):
+def compute_inria_feats(rchip_fpath, detect_type, extract_type, dict_args):
     '''Runs external inria detector
     detect_type = 'harris'
     extract_type = 'sift'
@@ -131,25 +107,25 @@ def compute_inria_feats(rchip_fpath, detect_type, extract_type):
     outname = compute_inria_text_feats(rchip_fpath, detect_type, extract_type)
     kpts, desc = read_text_feat_file(outname)
     kpts = fix_kpts_hack(kpts)
-    kpts, desc = filter_kpts_scale(kpts, desc)
+    kpts, desc = filter_kpts_scale(kpts, desc, **dict_args)
     return kpts, desc
 
-def compute_perdoch_feats(rchip_fpath):
+def compute_perdoch_feats(rchip_fpath, dict_args):
     'Runs external perdoch detector'
     outname = compute_perdoch_text_feats(rchip_fpath)
     kpts, desc = read_text_feat_file(outname)
     kpts = fix_kpts_hack(kpts)
-    kpts, desc = filter_kpts_scale(kpts, desc)
+    kpts, desc = filter_kpts_scale(kpts, desc, **dict_args)
     return kpts, desc
 
 #----
 
-def compute_mser(rchip_fpath):
-    return compute_inria_feats(rchip_fpath, 'mser', 'sift')
-def compute_harris(rchip_fpath):
-    return compute_inria_feats(rchip_fpath, 'harris', 'sift')
-def compute_hesaff(rchip_fpath):
-    return compute_perdoch_feats(rchip_fpath)
+def compute_mser(rchip_fpath, dict_args):
+    return compute_inria_feats(rchip_fpath, 'mser', 'sift', dict_args)
+def compute_harris(rchip_fpath, dict_args):
+    return compute_inria_feats(rchip_fpath, 'harris', 'sift', dict_args)
+def compute_hesaff(rchip_fpath, dict_args):
+    return compute_perdoch_feats(rchip_fpath, dict_args)
 
 #---------------------------------------
 # Helper function to read external file formats
@@ -172,18 +148,20 @@ def read_text_feat_file(outname, be_clean=True):
         desc[kx,:] = np.array([uint8(_) for _ in data[5: ]], dtype=uint8)
     return (kpts, desc)
 
-from hotspotter import helpers
-def filter_kpts_scale(kpts, desc, max_scale=250, min_scale=100):
+def filter_kpts_scale(kpts, desc, scale_max=None, scale_min=None, **kwargs):
     #max_scale=1E-3, min_scale=1E-7
+    #from hotspotter import helpers
+    if scale_max is None or scale_min is None:
+        return kpts, desc
     acd = kpts.T[2:5]
     det_ = acd[0] * acd[2]
     scale = sqrt(det_)
-    print('scale.stats()=%r' % helpers.printable_mystats(scale))
-    is_valid = np.bitwise_and(min_scale < scale, scale < max_scale).flatten()
+    #print('scale.stats()=%r' % helpers.printable_mystats(scale))
+    is_valid = np.bitwise_and(scale_min < scale, scale < scale_max).flatten()
     scale = scale[is_valid]
     kpts = kpts[is_valid]
     desc = desc[is_valid]
-    print('scale.stats() = %s' % str(helpers.printable_mystats(scale)))
+    #print('scale.stats() = %s' % str(helpers.printable_mystats(scale)))
     return kpts, desc
 
 def fix_kpts_hack(kpts, method=1):
@@ -262,10 +240,12 @@ def A_to_E(A):
     #E3 = Vt.dot(diag(S**2)).dot(Vt.T)
     E = A.dot(A.T)
     return E
+
 def A_to_E2(A):
     U, S, Vt = svd(A)
     E = U.dot(diag(S**2)).dot(U.T)
     return E
+
 def invE_to_E(invE):
     # This is just the pseudo inverse...
     # if m = n and A is full rank then, pinv(A) = inv(A)
@@ -275,6 +255,7 @@ def invE_to_E(invE):
     invX, invW, invYt = svd(invE)
     E = invX.dot(diag(1/invW)).dot(invYt)
     return E
+
 def E_to_invE(E):
     X, W, Yt = svd(E)
     invE = X.dot(diag(1/W)).dot(Yt)
@@ -301,12 +282,13 @@ def test_extract_hesaff():
     from os.path import join, exists
     img_dir = join(params.GZ, 'images')
     
-    rchip_fpath = join(img_dir, 'NewHack_zimg-0000236.jpg')
+    #rchip_fpath = join(img_dir, 'NewHack_zimg-0000236.jpg')
     # ('NewHack_zimg-0000254.jpg')
-    print(rchip_fpath)
     #if not exists(rchip_fpath):
         #rchip_fpath = os.path.realpath('lena.png')
+    rchip_fpath = os.path.realpath('lena.png')
     #rchip_fpath = os.path.realpath('zebra.jpg')
+    print(rchip_fpath)
     rchip = cv2.cvtColor(cv2.imread(rchip_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
     outname = compute_perdoch_text_feats(rchip_fpath)
     #outname = compute_inria_text_feats(rchip_fpath, 'harris', 'sift')
@@ -466,6 +448,8 @@ def keypoint_interaction(rchip, kpts, desc=None, kpts0=None, fnum=1, **kwargs):
 
 if __name__ == '__main__':
     print('[TPL] Test Extern Features')
+    import multiprocessing
+    multiprocessing.freeze_support()
     from hotspotter import draw_func2 as df2
     from hotspotter import extract_patch as extract_patch
     df2.DARKEN = .5

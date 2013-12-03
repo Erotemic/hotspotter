@@ -462,7 +462,7 @@ def show_matches_annote(hs, qcx, cx2_score,
     if np.isnan(cx):
         nan_img = np.zeros((100,100), dtype=np.uint8)
         title='(qx%r v NAN)' % (qcx)
-        imshow(nan_img,fignum=fignum,plotnum=plotnum,title=title)
+        imshow(nan_img, fignum=fignum, plotnum=plotnum, title=title)
         return 
     # Read query and result info (chips, names, ...)
     rchip1, rchip2 = hs.get_chip([qcx, cx])
@@ -675,7 +675,7 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
         nRows = nTopNRows+nGtRows
     # Helper function for drawing matches to one cx
     def show_matches_(cx, orank, plotnum):
-        aug = 'rank=%r ' % orank
+        aug = 'rank=%r\n' % orank
         printDBG('[df2] plotting: %r'  % (plotnum,))
         kwshow  = dict(draw_ell=annote, draw_pts=annote, draw_lines=annote,
                        ell_alpha=.5, all_kpts=all_kpts, **kwargs)

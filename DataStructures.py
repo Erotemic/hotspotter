@@ -195,7 +195,7 @@ class NNIndex(object):
     def __init__(nn_index, hs, sx2_cx):
         cx2_desc  = hs.feats.cx2_desc
         # Make unique id for indexed descriptors
-        feat_uid   = hs.feats.cfg.get_uid()
+        feat_uid   = ''.join(hs.feats.cfg.get_uid())
         sample_uid = helpers.make_sample_id(sx2_cx)
         uid = '_cxs(' + sample_uid + ')' + feat_uid
         # Number of features per sample chip
@@ -384,7 +384,8 @@ class SpatialVerifyConfig(DynStruct):
         uid = ['_SV('] 
         uid += [str(sv_cfg.nShortlist)]
         uid += [',' + str(sv_cfg.xy_thresh)]
-        uid += [',' + str(sv_cfg.scale_thresh).replace(' ','')]
+        scale_str = helpers.remove_chars(str(sv_cfg.scale_thresh), ' ()')
+        uid += [',' + scale_str.replace(',','_')]
         uid += [',cdl' * sv_cfg.use_chip_extent] # chip diag len
         uid += [','+sv_cfg.prescore_method]
         uid += [')']
@@ -468,7 +469,7 @@ class QueryConfig(DynStruct):
         if not 'noAGG' in args:
             uid += q_cfg.a_cfg.get_uid(**kwargs)
         if not 'noCHIP' in args:
-            uid += [q_cfg.feat_cfg.get_uid()]
+            uid += q_cfg.feat_cfg.get_uid()
         # In case you don't search the entire dataset
         dcxs_ = repr(tuple(q_cfg.dcxs))
         uid += ['_dcxs('+helpers.hashstr(dcxs_)+')']

@@ -936,11 +936,17 @@ def make_sample_id(sample):
             #valid_chars.append(chr(index))
     #return valid_chars
 #valid_filename_ascii_chars()
+# I Removed two characters that made awkward filenames
+#ALPHABET = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',  'a', 'b', 'c',
+            #'d', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
+            #'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ';', '=', '@',
+            #'[', ']', '^', '_', '`', '{', '}', '~', '!', '#', '$', '%', '&',
+            #'(', ')', '+', ',', '-']
 ALPHABET = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',  'a', 'b', 'c',
             'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
             'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ';', '=', '@',
             '[', ']', '^', '_', '`', '{', '}', '~', '!', '#', '$', '%', '&',
-            '(', ')', '+', ',', '-']
+            '+', ',']
 BIGBASE = len(ALPHABET)
 
 def hex2_base57(hexstr):

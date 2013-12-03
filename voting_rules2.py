@@ -48,6 +48,22 @@ def score_chipmatch_nsum(hs, qcx, chipmatch, q_cfg):
 def score_chipmatch_nunique(hs, qcx, chipmatch, q_cfg):
     raise NotImplemented('nunique')
 
+def enforce_one_name_per_cscore(hs, cx2_score, chipmatch):
+    'this is a hack to make the same name only show up once in the top ranked list'
+    (_, cx2_fs, _) = chipmatch
+    cx2_csum_score = np.array([np.sum(fs) for fs in cx2_fs])
+    nx2_cxs = hs.get_nx2_cxs()
+    cx2_score = np.array(cx2_score)
+    for nx, cxs in enumerate(nx2_cxs):
+        if len(cxs) < 2 or nx <= 1: continue
+        print(cxs)
+        # zero the cxs with the lowest csum score
+        sortx = cx2_csum_score[cxs].argsort()
+        cxs_to_zero = np.array(cxs)[sortx[0:-1]]
+        print(cxs_to_zero)
+        cx2_score[cxs_to_zero] = 0
+    return cx2_score
+
 def score_chipmatch_pos(hs, qcx, chipmatch, q_cfg, rule='borda'):
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
     K = q_cfg.nn_cfg.K
@@ -58,6 +74,8 @@ def score_chipmatch_pos(hs, qcx, chipmatch, q_cfg, rule='borda'):
     altx2_score, altx2_tnx = positional_scoring_rule(qfx2_utilities, rule, isWeighted)
     # Map alternatives back to chips/names
     cx2_score, nx2_score = get_scores_from_altx2_score(hs, qcx, altx2_score, altx2_tnx)
+    # HACK HACK HACK!!!
+    cx2_score = enforce_one_name_per_cscore(hs, cx2_score, chipmatch)
     return cx2_score, nx2_score
 
 # chipmatch = qcx2_chipmatch[qcx]
@@ -82,6 +100,8 @@ def score_chipmatch_PL(hs, qcx, chipmatch, q_cfg):
     #print('[vote] altx2_prob = %r' % altx2_prob)
     # Use probabilities as scores
     cx2_score, nx2_score = get_scores_from_altx2_score(hs, qcx, altx2_prob, altx2_tnx)
+    # HACK HACK HACK!!!
+    cx2_score = enforce_one_name_per_cscore(hs, cx2_score, chipmatch)
     return cx2_score, nx2_score
 
 TMP = []
@@ -94,7 +114,7 @@ def _optimize(M):
     x = np.abs(v[-1])
     check = np.abs(M.dot(x)) < 1E-9
     if not all(check):
-        raise Exception('SVD method failed miserabley')
+        raise Exception('SVD method failed miserably')
     #tmp1 = []
     #tmp1 += [('[vote] x=%r' % x)]
     #tmp1 += [('[vote] M.dot(x).sum() = %r' % M.dot(x).sum())]

@@ -118,6 +118,7 @@ def simplify_test_uid(test_uid):
     test_uid = re.sub(r'HSDB_zebra_with_mothers','', test_uid)
     test_uid = re.sub(r'GZ_ALL','', test_uid)
     test_uid = re.sub(r'HESAFF_sz750','', test_uid)
+    test_uid = re.sub(r'_FEAT([^(]*)','', test_uid)
     test_uid = test_uid.strip(' _')
     return test_uid
 

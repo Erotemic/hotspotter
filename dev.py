@@ -124,10 +124,10 @@ def print_best(qonx2_agg, cfg_list):
 
 #-----------
 # Run configuration for each qon
-def get_test_results(hs, qon_list, q_params, cfgx=0, nCfg=1,
+def get_test_results(hs, qon_list, q_cfg, cfgx=0, nCfg=1,
                      force_load=False):
-    print('[dev] get_test_results(): %r' % q_params.get_uid())
-    query_uid = q_params.get_uid()
+    print('[dev] get_test_results(): %r' % q_cfg.get_uid())
+    query_uid = q_cfg.get_uid()
     hs_uid    = hs.db_name()
     qon_uid   = helpers.hashstr(repr(tuple(qon_list)))
     test_uid  = hs_uid + query_uid + qon_uid
@@ -154,7 +154,7 @@ def get_test_results(hs, qon_list, q_params, cfgx=0, nCfg=1,
         title = 'q'+ hs.cxstr(qcx) + ' - ' + notes
         #print('[dev] title=%r' % (title,))
         #print('[dev] gt_'+hs.cxstr(gt_cxs))
-        res_list = mc3.execute_query_safe(hs, q_params, [qcx])
+        res_list = mc3.execute_query_safe(hs, q_cfg, [qcx])
         bestranks = []
         algos = []
         qonx2_reslist += [res_list]
@@ -182,7 +182,7 @@ def get_test_results(hs, qon_list, q_params, cfgx=0, nCfg=1,
 
 #-----------
 # Test Each configuration 
-def test_configurations(hs, qon_list, test_cfg_name_list):
+def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     vary_dicts = get_vary_dicts(test_cfg_name_list)
     print('\n*********************\n')
     print('[dev]================')
@@ -254,66 +254,91 @@ def test_configurations(hs, qon_list, test_cfg_name_list):
     print('[dev]-------------')
     print('[dev] configs:\n%s' % '\n'.join(cfgx2_lbl))
     #------------
-    print('')
-    print('[dev]-------------')
-    print('[dev] Scores per query')
-    print('[dev]-------------')
-    qonx2_min_rank = []
-    qonx2_argmin_rank = []
-    indent = helpers.indent
-    for qonx in xrange(nQuery):
-        ranks = rank_mat[qonx]
-        min_rank = ranks.min()
-        cfgx_list = np.where(ranks == min_rank)[0]
-        qonx2_min_rank.append(min_rank)
-        qonx2_argmin_rank.append(cfgx_list)
-        print('[row_score] %3d) %s' % (qonx,qonx2_lbl[qonx]) )
-        print('[row_score] best_rank = %d ' % min_rank)
-        print('[row_score] minimizing_configs = %s ' %
-              indent('\n'.join(cfgx2_lbl[cfgx_list]), '    '))
+    PRINT_ROW_SCORES = True
+    if PRINT_ROW_SCORES:
+        print('')
+        print('[dev]-------------')
+        print('[dev] Scores per query')
+        print('[dev]-------------')
+        qonx2_min_rank = []
+        qonx2_argmin_rank = []
+        indent = helpers.indent
+        new_hard_qonx_list = []
+        for qonx in xrange(nQuery):
+            ranks = rank_mat[qonx]
+            min_rank = ranks.min()
+            bestCFG_X = np.where(ranks == min_rank)[0]
+            qonx2_min_rank.append(min_rank)
+            qonx2_argmin_rank.append(bestCFG_X)
+            print('[row_score] %3d) %s' % (qonx,qonx2_lbl[qonx]) )
+            print('[row_score] best_rank = %d ' % min_rank)
+            print('[row_score] minimizing_configs = %s ' %
+                indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    '))
+            if ranks.max() > 0: 
+                new_hard_qonx_list += [qonx]
+        print('--- new hard qon_list ---')
+        new_hard_qon_list = []
+        for qonx in new_hard_qonx_list:
+            # New list is in cid format instead of cx format
+            # because you should be copying and pasting it
+            qcx, ocxs, notes = qon_list[qonx]
+            notes += ' ranks = '+str(rank_mat[qonx])
+            qcid = hs.tables.cx2_cid[qcx]
+            ocids = hs.tables.cx2_cid[ocxs]
+            new_hard_qon_list += [(qcid, list(ocids), notes)]
+        print('\n'.join(map(repr, new_hard_qon_list)))
     #------------
+    def rankscore_str(thresh, nLess, total):
+        #helper to print rank scores of configs
+        percent = 100* nLess / total
+        return '#ranks < %d = %d/%d = (%.1f%%)' % (thresh, nLess, total, percent)
     print('')
     print('[dev]-------------')
     print('[dev] Scores per config')
     print('[dev]-------------')
-    X_list = [5, 1]
-    nLessX_dict = {}
-    for X in iter(X_list):
-        cfgx2_nLessX = []
-        for cfgx in xrange(nCfg):
-            ranks = rank_mat[:,cfgx]
+    X_list = [1, 5]
+    # Build a dictionary mapping X (as in #ranks < X) to a list of cfg scores
+    nLessX_dict = {int(X):np.zeros(nCfg) for X in iter(X_list)}
+    for cfgx in xrange(nCfg):
+        ranks = rank_mat[:,cfgx]
+        print('[col_score] %d) %s' % (cfgx, cfgx2_lbl[cfgx]) )
+        for X in iter(X_list):
             nLessX_ = sum(np.bitwise_and(ranks < X, ranks >= 0))
-            cfgx2_nLessX.append(nLessX_)
-            print(len(cfgx2_lbl))
-            print('[col_score] %3d) %s' % (cfgx, cfgx2_lbl[cfgx]) )
-            print('[col_score] #ranks<%d = %d ' % (X, nLessX_))
-        nLessX_dict[int(X)] = np.array(cfgx2_nLessX)
+            print('[col_score] '+rankscore_str(X, nLessX_, nQuery))
+            nLessX_dict[int(X)][cfgx] = nLessX_
+    print(nLessX_dict)
     #------------
     print('')
     print('[dev]---------------')
     print('[dev] Best configurations')
     print('[dev]---------------')
+    best_rankscore_summary = []
     for X, cfgx2_nLessX in nLessX_dict.iteritems():
-        min_LessX = cfgx2_nLessX.max()
-        bestCFG_X = np.where(cfgx2_nLessX == min_LessX)
-        print('[best_cfg]%d config(s) scored #ranks<%d = %d/%d' % \
-              (len(bestCFG_X), X, min_LessX, nQuery))
-        print(indent('\n'.join(cfgx2_lbl[cfgx_list]), '    '))
+        max_LessX = cfgx2_nLessX.max()
+        bestCFG_X = np.where(cfgx2_nLessX == max_LessX)[0]
+        best_rankscore = '[best_cfg] %d config(s) scored ' % len(bestCFG_X)
+        best_rankscore += rankscore_str(X, max_LessX, nQuery)
+        best_rankcfg = indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    ')
+        print(best_rankscore)
+        print(best_rankcfg)
+        best_rankscore_summary += [best_rankscore]
     #------------
     print('')
     print('[dev]-------------')
     print('[dev] labled rank matrix: rows=queries, cols=cfgs:\n%s' % lbld_mat)
     print('[dev]-------------')
     #------------
+    print('[col_score] --- summary ---')
+    print('\n'.join(best_rankscore_summary))
     # Draw results
-    fnum = 0
     print(hs.args.r)
     for r,c in itertools.product(hs.args.r, hs.args.c):
-        print('viewing (r,c)=(%r,%r)' % (r,c))
+        #print('viewing (r,c)=(%r,%r)' % (r,c))
         res = rc2_res[r,c]
-        res.printme()
+        #res.printme()
         res.show_topN(hs, fignum=fnum)
         fnum += 1
+    print('--remember you have --r and --c available to you')
 
 if __name__ == '__main__':
     import multiprocessing

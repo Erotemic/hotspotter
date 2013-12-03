@@ -74,12 +74,13 @@ class FeatureConfig(DynStruct):
             'scale_max' : feat_cfg.scale_max, }
         return dict_args
     def get_uid(feat_cfg):
-        feat_uids = []
+        feat_uids = ['_FEAT(']
         feat_uids += ['%s_%s' % feat_cfg.feat_type]
-        feat_uids += ['white'] * feat_cfg.whiten
-        feat_uids += ['%r_%r' % (feat_cfg.scale_min, feat_cfg.scale_max)]
-        feat_uid = '_FEAT('+(','.join(feat_uids))+')' 
-        return feat_uid + params.get_chip_uid()
+        feat_uids += [',white'] * feat_cfg.whiten
+        feat_uids += [',%r_%r' % (feat_cfg.scale_min, feat_cfg.scale_max)]
+        feat_uids += [')']
+        feat_uids + [params.get_chip_uid()]
+        return feat_uids
 
 def load_cached_feats(dpath, uid, ext, use_cache, load_kpts=True, load_desc=True):
     if not use_cache:
@@ -100,7 +101,7 @@ def load_cached_feats(dpath, uid, ext, use_cache, load_kpts=True, load_desc=True
     return cx2_kpts, cx2_desc
 
 def load_feats_from_config(hs, feat_cfg):
-    feat_uid  = feat_cfg.get_uid()
+    feat_uid  = ''.join(feat_cfg.get_uid())
     print('[fc2] Loading features: UID='+str(feat_uid))
     hs_dirs = hs.dirs
     hs_tables = hs.tables
@@ -110,7 +111,6 @@ def load_feats_from_config(hs, feat_cfg):
     cache_dir      = hs_dirs.cache_dir
     cx2_rchip_path = hs_cpaths.cx2_rchip_path
     cx2_cid        = hs_tables.cx2_cid
-    feat_uid = feat_cfg.get_uid()
     # args for smart load/save
     dpath = cache_dir
     uid   = feat_uid
@@ -198,7 +198,7 @@ def load_features(hs, feat_cfg=None, **kwargs):
 def clear_feature_cache(hs, feat_cfg):
     feat_dir = hs.dirs.feat_dir
     cache_dir = hs.dirs.cache_dir
-    feat_uid = feat_cfg.get_uid()
+    feat_uid = ''.join(feat_cfg.get_uid())
     print('[fc2] clearing feature cache: %r' % feat_dir)
     helpers.remove_files_in_dir(feat_dir, '*'+feat_uid+'*', verbose=True, dryrun=False)
     helpers.remove_files_in_dir(cache_dir, '*'+feat_uid+'*', verbose=True, dryrun=False)

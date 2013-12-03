@@ -100,7 +100,7 @@ def debug_smart_load(dpath='', fname='*', uid='*', ext='*'):
 def __args2_fpath(dpath, fname, uid, ext):
     if len(ext) > 0 and ext[0] != '.':
         raise Exception('Fatal Error: Please be explicit and use a dot in ext')
-    fname_uid = fname+uid+ext
+    fname_uid = fname+uid
     if len(fname_uid) > 128:
         fname_uid = helpers.hashstr(fname_uid)
     fpath = join(dpath, fname_uid+ext)

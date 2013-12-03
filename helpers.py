@@ -221,7 +221,7 @@ def unique_keep_order(arr):
 # --- Info Strings ---
 def printable_mystats(_list):
     stat_dict = mystats(_list)
-    stat_strs = ['%r:%s' % (key, str(val)) for key, val in stat_dict.iteritems()]
+    stat_strs = ['%r:%s' % (key, val) for key, val in stat_dict.iteritems()]
     ret = '{' + ', '.join(stat_strs) + '}'
     return ret
 
@@ -230,10 +230,10 @@ def mystats(_list):
     if len(_list) == 0:
         return {'empty_list':True}
     nparr = np.array(_list)
-    return OrderedDict([('max',   nparr.max()),
-                        ('min',   nparr.min()),
-                        ('mean',  nparr.mean()),
-                        ('std',   nparr.std()),
+    return OrderedDict([('max',   np.float32(nparr.max())),
+                        ('min',   np.float32(nparr.min())),
+                        ('mean',  np.float32(nparr.mean())),
+                        ('std',   np.float32(nparr.std())),
                         ('shape', repr(nparr.shape))])
 
 def myprint(input=None, prefix='', indent='', lbl=''):

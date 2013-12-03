@@ -331,6 +331,7 @@ def db_info(hs):
     (' * #Unidentified Chips = %d' % len(uniden_cxs)),
     (' * #Singleton Names    = %d' % len(singleton_nxs)),
     (' * #Multiton Names     = %d' % len(multiton_nxs)),
+    (' * #Multiton Chips     = %d' % len(np.hstack(multiton_cxs))),
     (' * Chips per Multiton Names = %s' % (multiton_stats,)), 
     (' * #Img in dir = %d' % len(img_list)),
     (' * Image Size Stats = %s' % (img_size_stats,)),

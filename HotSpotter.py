@@ -316,6 +316,15 @@ class HotSpotter(DynStruct):
                 nx2_cxs[nx].append(cx)
         return nx2_cxs
     #--------------
+    def get_other_cxs(hs, cx):
+        cx2_nx   = hs.tables.cx2_nx
+        nx = cx2_nx[cx]
+        if nx <= 1:
+            return np.array([])
+        other_cx_, = np.where(cx2_nx == nx)
+        other_cx  = other_cx_[other_cx_ != cx]
+        return other_cx
+    #--------------
     def get_other_indexed_cxs(hs, cx):
         other_cx = hs.get_other_cxs(cx)
         other_indexed_cx = np.intersect1d(other_cx, hs.indexed_sample_cx)
@@ -384,15 +393,6 @@ class HotSpotter(DynStruct):
             print(cx2_cid)
             print('---------')
             raise
-    #--------------
-    def get_other_cxs(hs, cx):
-        cx2_nx   = hs.tables.cx2_nx
-        nx = cx2_nx[cx]
-        if nx <= 1:
-            return np.array([])
-        other_cx_, = np.where(cx2_nx == nx)
-        other_cx  = other_cx_[other_cx_ != cx]
-        return other_cx
     #--------------
     def get_chip(hs, cx):
         imread = cv2.imread

@@ -68,7 +68,7 @@ def parse_arguments():
     add_float('--xy-thresh', .001, '', step=.005)
     add_float('--ratio-thresh', 1.2, '', step=.1)
     add_int('--K', 10, 'for K-nearest-neighbors', step=20)
-    add_float('--sthresh', (0,9001), 'scale threshold', nargs='*')
+    add_int('--sthresh', (0,9001), 'scale threshold', nargs='*')
     add_str('--db', 'NAUTS', 'database to load')
     add_bool('--nopresent', default=False)
     add_bool('--save-figures', default=False)
@@ -90,6 +90,7 @@ def parse_arguments():
     add_bool('--nocache-query', default=False)
     add_bool('--nocache-feats', default=False)
     # Plotting Args
+    add_bool('--printoff', default=False)
     add_bool('--horiz', default=True)
     add_str('--tests', [], 'integer or test name', nargs='*')
     add_str('--show-best', [], 'integer or test name', nargs='*')
@@ -289,15 +290,18 @@ def vary_vsmany_cfg(hs, qon_list, vary_cfg, fnum, **kwargs):
 
 def plot_keypoint_scales(hs, fnum=1):
     print('[invest] plot_keypoint_scales()')
+    _printopts = np.get_printoptions()
+    np.set_printoptions(precision=3)
     cx2_kpts = hs.feats.cx2_kpts
     cx2_nFeats = map(len, cx2_kpts)
     kpts = np.vstack(cx2_kpts)
-    print('[invest] num_keypoints = %r ' % len(kpts))
+    print('[invest] num_keypoints = %s ' % len(kpts))
     print('[invest] keypoints per image stats = '+helpers.printable_mystats(cx2_nFeats)) 
     acd = kpts[:,2:5].T
     scales = np.sqrt(acd[0] * acd[2])
     scales = np.array(sorted(scales))
-    print('scale stats: '+helpers.printable_mystats(scales))
+    print('[invest] keypoint scale stats: '+helpers.printable_mystats(scales))
+    np.set_printoptions(**_printopts)
     #
     fig = df2.figure(fignum=fnum, doclf=True, title='sorted scales')
     df2.plot(scales)
@@ -392,6 +396,10 @@ def intestigate_keypoint_interaction(hs, qon_list, fnum=1, **kwargs):
         tpl.extern_feat.keypoint_interaction(rchip, kpts, desc, fnum=fnum, **kwargs)
         fnum += 1
     return fnum
+
+def database_info(hs):
+    from db_info import db_info
+    dbinfo_locals = db_info(hs)
 
 # ^^^^^^^^^^^^^^^^^
 # Tests
@@ -490,9 +498,29 @@ def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
             elif with_gt and len(gt_cxs) > 0: pass
             else: continue
             qcx_list += [cx]
-            ocid_list += [[]]
+            ocid_list += [[gt_cxs]]
             note_list += ['NA']
     return qcx_list, ocid_list, note_list
+
+'''
+def OMG():
+    # Its ok
+    sum_multi1 = 0
+    sum_multi2 = 0
+    for cx in xrange(len(cx2_cid)):
+        cid = cx2_cid[cx]
+        nx = cx2_nx[cx]
+        gt_cxs1 = hs.get_other_cxs(cx)
+        gt_cxs2 = nx2_cxs[nx]
+        if len(gt_cxs2) > 1:
+            sum_multi2 += 1
+        if len(gt_cxs1) > 0:
+            sum_multi1 += 1
+        print('---------')
+        print('cx=%r, nx=%r, cid=%r' % (cx, nx, cid))
+        print(gt_cxs1.tolist() + [cx])
+        print(gt_cxs2)
+'''
 
 # Driver Function
 def run_investigations(hs, qon_list):
@@ -524,9 +552,11 @@ def run_investigations(hs, qon_list):
         measure_k_rankings(hs)
     if '7' in args.tests:
         measure_cx_rankings(hs)
-    if '8' in args.tests:
-        mc3.compare_scoring(hs)
-    if '9' in args.tests or 'scale' in args.tests:
+    #if '8' in args.tests:
+        #mc3.compare_scoring(hs)
+    if '8' in args.tests or 'db-info' in args.tests:
+        fnum = database_info(hs)
+    if '9' in args.tests or 'kpts-scale' in args.tests:
         fnum = plot_keypoint_scales(hs)
     if '10' in args.tests or 'vsone-gt' in args.tests:
         fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)
@@ -544,6 +574,22 @@ def run_investigations(hs, qon_list):
     if '15' in args.tests or 'kpts-interact' in args.tests:
         fnum = intestigate_keypoint_interaction(hs, qon_list)
 
+def all_printoff():
+    import fileio as io
+    import HotSpotter
+    ds.print_off()
+    mf.print_off()
+    io.print_off()
+    HotSpotter.print_off()
+    mc3.print_off()
+    vr2.print_off()
+    #algos.print_off()
+    #cc2.print_off()
+    #fc2.print_off()
+    #ld2.print_off()
+    #helpers.print_off()
+    #parallel.print_off()
+
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
@@ -553,6 +599,9 @@ if __name__ == '__main__':
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
     fmtstr = helpers.make_progress_fmt_str(len(qcxs), '[invest] investigation ')
     print('[invest]====================')
+    if hs.args.printoff:
+        all_printoff()
+    #df2.update()
     for count, qcx in enumerate(qcxs):
         print(fmtstr % (count+1))
         run_investigations(hs, qon_list)
@@ -560,7 +609,6 @@ if __name__ == '__main__':
     kwargs = {}
     dcxs = None
     q_cfg = None
-    #df2.update()
     if hs.args.nopresent:
         print('...not presenting')
         sys.exit(0)
@@ -569,15 +617,35 @@ if __name__ == '__main__':
 
 '''
 python investigate_chip.py --db GZ --tests kpts-interact  --histid 0
-python investigate_chip.py --db GZ --tests test-cfg-vsmany-1 --all-cases
-python investigate_chip.py --db GZ --tests test-cfg-vsmany-1 --scalethresh 30 250 --all-cases
+python investigate_chip.py --db GZ --tests test-cfg-vsmany-1 --all-gt-cases
+python investigate_chip.py --db GZ --tests test-cfg-vsmany-1 --sthresh 30 250
+--all-gt-cases
 python investigate_chip.py --dbM --tests 15 chip-info --histid 0 --sthresh 30 250
 
-python investigate_chip.py --dbG --tests test-cfg-vsmany-1 --all-cases
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-cases
 
-python investigate_chip.py --dbM --tests test-cfg-vsmany-3 --all-cases
-python investigate_chip.py --dbM --tests test-cfg-vsmany-3 --nocache-query
+python investigate_chip.py --dbM --tests test-cfg-vsmany-3 --all-gt-cases
+python investigate_chip.py --dbM --tests test-cfg-vsmany-3 --sthresh 30 80 
+python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --sthresh 30 80 
 
 
+# Database information
+python investigate_chip.py --dbG  --tests db-info
+
+# Test keypoint statistics
+python investigate_chip.py --dbG  --tests kpts-scale --sthresh 0 9001
+>[invest] keypoints per image stats = {'max':5078.0, 'min':90.0, 'mean':1172.9, 'std':557.573, 'shape':(1047,)}
+>[invest] keypoint scale stats: {'max':292.049, 'min':7.40863, 'mean':21.1424, 'std':12.7617, 'shape':(1228029,)}
+python investigate_chip.py --dbG  --tests kpts-scale --sthresh 30 80
+>[invest] keypoints per image stats = {'max':485.0, 'min':20.0, 'mean':184.383, 'std':54.902, 'shape':(1047,)}
+>[invest] keypoint scale stats: {'max':79.9978, 'min':30.0002, 'mean':40.0454, 'std':9.52455, 'shape':(193049,)}
+python investigate_chip.py --dbG  --tests kpts-scale --sthresh 25 80
+
+
+# crall-social-2013 tests
+python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 30 80  --printoff 
+python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 20 80  --printoff 
+python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 80  --printoff 
+python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 80  --printoff 
+python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 9001   --printoff 
+python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --printoff 
 '''

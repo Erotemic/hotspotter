@@ -1,5 +1,6 @@
 from __future__ import division, print_function
 import itertools
+import textwrap
 import match_chips3 as mc3
 import matching_functions as mf
 import DataStructures as ds
@@ -145,9 +146,10 @@ def get_test_results(hs, qon_list, q_params, cfgx=0, nCfg=1,
         elif len(test_results) != 1: print('recaching test_results')
         elif not test_results is None: return test_results, [[{0:None}]]*nQuery
     for qonx, (qcx, ocids, notes) in enumerate(qon_list):
-        print('[dev]----------------')
-        print('[dev] TEST %d/%d' % (qonx+nPrevQ+1, nQuery*nCfg))
-        print('[dev]----------------')
+        print(textwrap.dedent('''
+        [dev]----------------
+        [dev] TEST %d/%d
+        [dev]----------------''' % (qonx+nPrevQ+1, nQuery*nCfg)))
         gt_cxs = hs.get_other_cxs(qcx)
         title = 'q'+ hs.cxstr(qcx) + ' - ' + notes
         #print('[dev] title=%r' % (title,))
@@ -162,8 +164,8 @@ def get_test_results(hs, qon_list, q_params, cfgx=0, nCfg=1,
             res = qcx2_res[qcx]
             algos += [res.title]
             gt_ranks = res.get_gt_ranks(gt_cxs)
-            print('[dev] cx_ranks(/%4r) = %r' % (nChips, gt_ranks))
-            print('ns_ranks(/%4r) = %r' % (nNames, gt_ranks))
+            #print('[dev] cx_ranks(/%4r) = %r' % (nChips, gt_ranks))
+            #print('ns_ranks(/%4r) = %r' % (nNames, gt_ranks))
             if len(gt_ranks) == 0:
                 _bestrank = -1
             else:
@@ -202,9 +204,10 @@ def test_configurations(hs, qon_list, test_cfg_name_list):
     rc2_res = np.empty((nQuery, nCfg), dtype=list)
     mat_list = []
     for cfgx, test_cfg in enumerate(cfg_list):
-        print('[dev]---------------')
-        print('[dev] TEST_CFG %d/%d' % (cfgx+1, nCfg))
-        print('[dev]---------------')
+        print(textwrap.dedent('''
+        [dev]---------------')
+        [dev] TEST_CFG %d/%d'
+        [dev]---------------'''  % (cfgx+1, nCfg)))
         force_load = cfgx in hs.args.c 
         (mat_vals,), qonx2_reslist =\
                 get_test_results(hs, qon_list, test_cfg, cfgx, nCfg, force_load)

@@ -433,8 +433,8 @@ def win_shortcut(source, link_name):
     retval = csl(link_name, source, flags)
     if retval == 0:
         warn_msg = '[helpers] Unable to create symbolic link on windows.'
-        print(warn_msg)
-        warnings.warn(warn_msg, category=UserWarning)
+        #print(warn_msg)
+        #warnings.warn(warn_msg, category=UserWarning)
         if checkpath(link_name):
             return True
         raise ctypes.WinError()

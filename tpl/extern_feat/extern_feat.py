@@ -35,9 +35,14 @@ def svd(M):
     S = S.flatten()
     return U,S,V
 
+def dict_has(dict_, flag_list):
+    return any([dict_.has(flag) for flag in iter(flag_list)])
+    # ['scale_min', 'scale_max']
 #---------------------------------------
 # Define precompute functions
 def precompute(rchip_fpath, feat_fpath, dict_args, compute_fn):
+    #if dict_has(dict_args, ['scale_min', 'scale_max']):
+        #kpts, desc = compute_fn(rchip_fpath)
     kpts, desc = compute_fn(rchip_fpath, dict_args)
     np.savez(feat_fpath, kpts, desc)
     return kpts, desc

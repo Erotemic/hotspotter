@@ -127,8 +127,8 @@ def load_feats_from_config(hs, feat_cfg):
         print('[fc2]  Loading individual '+feat_uid+' features')
         cx2_feat_path = [feat_dir+'/CID_%d%s.npz' % (cid, feat_uid) for cid in cx2_cid]
         # Compute features, saving them to disk 
-        precompute_fn = feat_type2_precompute[feat_cfg.feat_type]
-        cx2_dict_args = [feat_cfg.get_dict_args()]*len(cx2_rchip_path)
+        precompute_fn   =  feat_type2_precompute[feat_cfg.feat_type]
+        cx2_dict_args   = [feat_cfg.get_dict_args()]*len(cx2_rchip_path)
         precompute_args = [cx2_rchip_path, cx2_feat_path, cx2_dict_args]
         parallel_compute(precompute_fn, precompute_args, lazy=use_cache)
         # rchip_fpath=cx2_rchip_path[0]; feat_fpath=cx2_feat_path[0]

@@ -265,15 +265,18 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
             print('[col_score] '+rankscore_str(X, nLessX_, nQuery))
             nLessX_dict[int(X)][cfgx] = nLessX_
 
-    LATEX_SUM
-    # Create configuration latex table
-    criteria_lbls = ['#ranks < %d' % X for X in X_list]
-    db_name = hs.db_name(True)
-    cfg_score_title = db_name+' rank scores'
-    cfgscores = np.array([nLessX_dict[int(X)] for X in X_list]).T
-    import latex_formater as latex
-    tabular_str = make_scoring_tabular(cfgx2_lbl, criteria_lbls, cfgscores, cfg_score_title)
-
+    LATEX_SUMMARY = True
+    if LATEX_SUMMARY:
+        print('--- LaTeX ---')
+        # Create configuration latex table
+        criteria_lbls = ['#ranks < %d' % X for X in X_list]
+        db_name = hs.db_name(True)
+        cfg_score_title = db_name+' rank scores'
+        cfgscores = np.array([nLessX_dict[int(X)] for X in X_list]).T
+        import latex_formater as latex
+        tabular_str = latex.make_scoring_tabular(cfgx2_lbl, criteria_lbls, cfgscores, cfg_score_title)
+        print(tabular_str)
+        print('--- /LaTeX ---')
     #------------
     print('')
     print('[dev]---------------')

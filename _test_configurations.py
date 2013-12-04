@@ -136,7 +136,7 @@ vsmany_srule.update({
 
 vsmany_nosv = vsmany_best.copy()
 vsmany_srule.update({
-    'no_sv' : [True]
+    'sv_on' : [False]
 })
 
 

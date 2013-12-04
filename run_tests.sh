@@ -9,6 +9,8 @@
 #--nocache-query 
 #--nocache-query 
 #--nocache-query 
+alias icG='python investigate_chip.py --dbG'
+alias icM='python investigate_chip.py --dbM'
 
 icG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 80   --printoff | tail
 icG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 80   --printoff | tail

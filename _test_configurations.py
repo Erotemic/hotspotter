@@ -129,10 +129,16 @@ vsmany_best = {
     'max_alts'     : [1000],
 }
 
-vsmany_3 = vsmany_best.copy()
-vsmany_3.update({
-    'score_method' : ['csum', 'pl', 'plw', 'borda'],
+vsmany_srule = vsmany_best.copy()
+vsmany_srule.update({
+    'score_method' : ['csum', 'pl', 'plw', 'borda', 'bordaw'],
 })
+
+vsmany_nosv = vsmany_best.copy()
+vsmany_srule.update({
+    'no_sv' : [True]
+})
+
 
 vsmany_1 = {
     'query_type'     : ['vsmany'],

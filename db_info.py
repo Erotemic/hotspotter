@@ -352,9 +352,10 @@ def get_keypoint_stats(hs):
     acd = kpts[:,2:5].T
     scales = np.sqrt(acd[0] * acd[2])
     scales = np.array(sorted(scales))
-    tex_scale_stats = helpers.latex_mystats(r'kpt scale', scales)
-    tex_nKpts       = helpers.latex_scalar(r'\# kpts', len(kpts))
-    tex_kpts_stats  = helpers.latex_mystats(r'\# kpts/chip', cx2_nFeats)
+    import latex_formater as pytex
+    tex_scale_stats = pytex.latex_mystats(r'kpt scale', scales)
+    tex_nKpts       = pytex.latex_scalar(r'\# kpts', len(kpts))
+    tex_kpts_stats  = pytex.latex_mystats(r'\# kpts/chip', cx2_nFeats)
     print(tex_nKpts)
     print(tex_kpts_stats)
     print(tex_scale_stats)

@@ -43,6 +43,13 @@ HotSpotter.print_off()
 #parallel.print_off()
 #mc3.print_off()
 
+def get_valid_testcfg_names():
+    import _test_configurations as _testcfgs
+    testcfg_keys = vars(_testcfgs).keys()
+    testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
+    valid_cfg_names = helpers.indent('\n'.join(testcfg_locals), '  * ')
+    return valid_cfg_names
+
 def get_vary_dicts(test_cfg_name_list):
     import _test_configurations as _testcfgs
     vary_dicts = []
@@ -51,9 +58,7 @@ def get_vary_dicts(test_cfg_name_list):
         test_cfg = eval(evalstr)
         vary_dicts.append(test_cfg)
     if len(vary_dicts) == 0: 
-        testcfg_keys = vars(_testcfgs).keys()
-        testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
-        valid_cfg_names = helpers.indent('\n'.join(testcfg_locals), '  * ')
+        valid_cfg_names = get_valid_testcfg_names()
         raise Exception('Choose a valid testcfg:\n'+valid_cfg_names)
     return vary_dicts
 
@@ -207,7 +212,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     print('[dev]-------------')
     print('[dev] configs:\n%s' % '\n'.join(cfgx2_lbl))
     #------------
-    PRINT_ROW_SCORES = True
+    PRINT_ROW_SCORES = True and (not '--noprintrow' in sys.argv)
     if PRINT_ROW_SCORES:
         print('')
         print('[dev]-------------')
@@ -229,7 +234,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
                 indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    '))
             if ranks.max() > 0: 
                 new_hard_qonx_list += [qonx]
-        print('--- new hard qon_list ---')
+        print('--- hard qon_list (w.r.t these configs) ---')
         new_hard_qon_list = []
         for qonx in new_hard_qonx_list:
             # New list is in cid format instead of cx format
@@ -259,7 +264,16 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
             nLessX_ = sum(np.bitwise_and(ranks < X, ranks >= 0))
             print('[col_score] '+rankscore_str(X, nLessX_, nQuery))
             nLessX_dict[int(X)][cfgx] = nLessX_
-    print(nLessX_dict)
+
+    LATEX_SUM
+    # Create configuration latex table
+    criteria_lbls = ['#ranks < %d' % X for X in X_list]
+    db_name = hs.db_name(True)
+    cfg_score_title = db_name+' rank scores'
+    cfgscores = np.array([nLessX_dict[int(X)] for X in X_list]).T
+    import latex_formater as latex
+    tabular_str = make_scoring_tabular(cfgx2_lbl, criteria_lbls, cfgscores, cfg_score_title)
+
     #------------
     print('')
     print('[dev]---------------')
@@ -276,8 +290,8 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
         print(best_rankcfg)
         best_rankscore_summary += [best_rankscore]
     #------------
-    printMAT = False
-    if printMAT:
+    PRINT_MAT = True and (not '--noprintmat' in sys.argv)
+    if PRINT_MAT:
         print('')
         print('[dev]-------------')
         print('[dev] labled rank matrix: rows=queries, cols=cfgs:\n%s' % lbld_mat)
@@ -304,8 +318,8 @@ if __name__ == '__main__':
     df2.DARKEN = .5
     main_locals = iv.main()
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
-    test_cfg_name_list = ['vsone_1']
-    test_cfg_name_list = ['vsmany_3456']
-    test_cfg_name_list = ['vsmany_2']
+    #test_cfg_name_list = ['vsone_1']
+    #test_cfg_name_list = ['vsmany_3456']
+    test_cfg_name_list = ['vsmany_srule']
     test_configurations(hs, qon_list, test_cfg_name_list)
     exec(df2.present())

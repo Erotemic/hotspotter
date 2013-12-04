@@ -1,8 +1,14 @@
-#python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 30 80  --printoff 
-#python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 20 80  --printoff 
-#python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 80  --printoff 
-#python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 80  --printoff 
-#python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 9001   --printoff 
+#python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --sthresh 30 80  --printoff 
+#python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --sthresh 20 80  --printoff 
+#python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --sthresh 10 80  --printoff 
+#python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --sthresh  0 80  --printoff 
+#python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --sthresh  0 9001   --printoff 
+#python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --printoff 
+
+ic --db MOTHERS --tests vsmany_srule --all-gt-cases
+ic --db MOTHERS --tests vsmany_nosv --all-gt-cases
+
+
 #python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --printoff 
 
 #--nocache-query
@@ -16,14 +22,17 @@
 #set icD=python investigate_chip.py --db MOTHERS
 #alias icD=icM
 
-icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0 80
-icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 5   80  --noprint | tail
-icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10  80  --noprint | tail
-icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0  100  --noprint | tail
-icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 5  100  --noprint | tail
-icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 100  --noprint | tail
-icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 5  150  --noprint | tail
-icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0 9001  --noprint | tail
+
+# Scale Tests
+#icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0 80
+#icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 5   80  --noprint | tail
+# This seems to win
+#icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10  80  --noprint | tail
+#icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0  100  --noprint | tail
+#icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 5  100  --noprint | tail
+#icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 100  --noprint | tail
+#icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 5  150  --noprint | tail
+#icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0 9001  --noprint | tail
 
 # Visualize scales
 #icM --tests kpts-scale --sthresh  0 9001 --printoff | tail

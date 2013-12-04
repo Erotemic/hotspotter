@@ -226,26 +226,6 @@ def printable_mystats(_list):
     return ret
 #def mystats2_latex(mystats):
     #statdict_ = eval(mystats)
-def latex_multicolumn(data, ncol=2):
-    return r'\multicolumn{%d}{|c|}{%s}' % (ncol, data)
-def latex_multirow(data, nrow=2):
-    return r'\multirow{%d}{*}{|c|}{%s}' % (nrow, data)
-def latex_mystats(lbl, data):
-    stats_ = mystats(data);
-    min_, max_, mean, std, shape = stats_.values()
-    fmttup1 = (int(min_), int(max_), float(mean), float(std))
-    fmttup = tuple(map(num_fmt, fmttup1))
-    lll = ' '*len(lbl)
-    #fmtstr = r'''
-    #'''+lbl+r''' stats &{ max:%d, min:%d\\
-    #'''+lll+r'''       & mean:%.1f, std:%.1f}\\'''
-    fmtstr = r'''
-    '''+lbl+r''' stats & max ; min = %s ; %s\\
-    '''+lll+r'''       & mean; std = %s ; %s\\'''
-    latex_str = textwrap.dedent(fmtstr % fmttup).strip('\n')+'\n'
-    return latex_str
-def latex_scalar(lbl, data):
-    return (r'%s & %s\\' % (lbl, num_fmt(data)))+'\n'
 
 def mystats(_list):
     from collections import OrderedDict

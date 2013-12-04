@@ -7,6 +7,7 @@ import textwrap
 import sys
 from os.path import join
 import multiprocessing
+import latex_formater as pytex
 
 # Toggleable printing
 print = __builtin__.print
@@ -353,12 +354,12 @@ def plot_keypoint_scales(hs, fnum=1):
     print('[invest] --- LaTeX --- ')
     _printopts = np.get_printoptions()
     np.set_printoptions(precision=3)
-    print(helpers.latex_scalar(r'\# keypoints, ', len(kpts)))
-    print(helpers.latex_mystats(r'\# keypoints per image', cx2_nFeats))
+    print(pytex.latex_scalar(r'\# keypoints, ', len(kpts)))
+    print(pytex.latex_mystats(r'\# keypoints per image', cx2_nFeats))
     acd = kpts[:,2:5].T
     scales = np.sqrt(acd[0] * acd[2])
     scales = np.array(sorted(scales))
-    print(helpers.latex_mystats(r'keypoint scale', scales))
+    print(pytex.latex_mystats(r'keypoint scale', scales))
     np.set_printoptions(**_printopts)
     print('[invest] ---/LaTeX --- ')
     #
@@ -469,15 +470,20 @@ def dbstats(hs):
     num_multichips = len(dbinfo_locals['multiton_cxs'])
     multiton_nx2_nchips = dbinfo_locals['multiton_nx2_nchips']
 
-    #tex_nImage = helpers.latex_scalar(r'\# images', num_images)
-    tex_nChip = helpers.latex_scalar(r'\# chips', num_chips)
-    tex_nName = helpers.latex_scalar(r'\# names', num_names)
-    tex_nSingleName = helpers.latex_scalar(r'\# singlenames', num_singlenames)
-    tex_nMultiName  = helpers.latex_scalar(r'\# multinames', num_multinames)
-    tex_nMultiChip  = helpers.latex_scalar(r'\# multichips', num_multichips)
-    tex_multi_stats = helpers.latex_mystats(r'\# multistats', multiton_nx2_nchips)
+    #tex_nImage = pytex.latex_scalar(r'\# images', num_images)
+    tex_nChip = pytex.latex_scalar(r'\# chips', num_chips)
+    tex_nName = pytex.latex_scalar(r'\# names', num_names)
+    tex_nSingleName = pytex.latex_scalar(r'\# singlenames', num_singlenames)
+    tex_nMultiName  = pytex.latex_scalar(r'\# multinames', num_multinames)
+    tex_nMultiChip  = pytex.latex_scalar(r'\# multichips', num_multichips)
+    tex_multi_stats = pytex.latex_mystats(r'\# multistats', multiton_nx2_nchips)
+
+    tex_kpts_scale_thresh = pytex.latex_multicolumn('Scale Threshold (%d %d)' %
+                                                      (hs.feats.cfg.scale_min,
+                                                       hs.feats.cfg.scale_max))+r'\\'+'\n'
+
     (tex_nKpts, tex_kpts_stats, tex_scale_stats) = db_info.get_keypoint_stats(hs)
-    tex_title = helpers.latex_multicolumn(db_name+' database statistics')+r'\\'+'\n'
+    tex_title = pytex.latex_multicolumn(db_name+' database statistics')+r'\\'+'\n'
     dedent = textwrap.dedent
 
     tabular_head = dedent(r'''
@@ -496,6 +502,7 @@ def dbstats(hs):
         tex_nMultiChip  ,
         tex_multi_stats ,
         '',
+        tex_kpts_scale_thresh,
         tex_nKpts,
         tex_kpts_stats,
         tex_scale_stats,
@@ -667,14 +674,19 @@ def run_investigations(hs, qon_list):
         fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)
     if '11' in args.tests or 'chip-info' in args.tests:
         fnum = investigate_chip_info(hs, qon_list, fnum)
-    if '12' in args.tests or 'test-cfg-vsone-1' in args.tests:
-        fnum = dev.test_configurations(hs, qon_list, ['vsone_1'], fnum)
-    if '13' in args.tests or 'test-cfg-vsmany-3' in args.tests:
-        fnum = dev.test_configurations(hs, qon_list, ['vsmany_3'], fnum)
-    if '14' in args.tests or 'test-cfg-vsmany-1' in args.tests:
-        fnum = dev.test_configurations(hs, qon_list, ['vsmany_1'], fnum)
-    if '15' in args.tests or 'kpts-interact' in args.tests:
+    if '12' in args.tests or 'kpts-interact' in args.tests:
         fnum = intestigate_keypoint_interaction(hs, qon_list)
+    if '13' in args.tests or 'list-test-cfg' in args.tests:
+        print(dev.get_valid_testcfg_names())
+    # Allow any testcfg to be in tests like: 
+    # vsone_1 or vsmany_3
+    import _test_configurations as _testcfgs
+    testcfg_keys = vars(_testcfgs).keys()
+    testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
+    for test_cfg_name in testcfg_locals:
+        if test_cfg_name in args.tests:
+            fnum = dev.test_configurations(hs, qon_list, [test_cfg_name], fnum)
+
 
 def all_printoff():
     import fileio as io

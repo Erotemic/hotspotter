@@ -612,26 +612,6 @@ def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
             note_list += ['NA']
     return qcx_list, ocid_list, note_list
 
-'''
-def OMG():
-    # Its ok
-    sum_multi1 = 0
-    sum_multi2 = 0
-    for cx in xrange(len(cx2_cid)):
-        cid = cx2_cid[cx]
-        nx = cx2_nx[cx]
-        gt_cxs1 = hs.get_other_cxs(cx)
-        gt_cxs2 = nx2_cxs[nx]
-        if len(gt_cxs2) > 1:
-            sum_multi2 += 1
-        if len(gt_cxs1) > 0:
-            sum_multi1 += 1
-        print('---------')
-        print('cx=%r, nx=%r, cid=%r' % (cx, nx, cid))
-        print(gt_cxs1.tolist() + [cx])
-        print(gt_cxs2)
-'''
-
 # Driver Function
 def run_investigations(hs, qon_list):
     import dev
@@ -676,7 +656,7 @@ def run_investigations(hs, qon_list):
         fnum = investigate_chip_info(hs, qon_list, fnum)
     if '12' in args.tests or 'kpts-interact' in args.tests:
         fnum = intestigate_keypoint_interaction(hs, qon_list)
-    if '13' in args.tests or 'list-test-cfg' in args.tests:
+    if '13' in args.tests or 'list-cfg-tests' in args.tests or 'list' in args.tests:
         print(dev.get_valid_testcfg_names())
     # Allow any testcfg to be in tests like: 
     # vsone_1 or vsmany_3
@@ -743,61 +723,5 @@ python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --sthresh 30 80
 
 
 # Database information
-python investigate_chip.py --dbG  --tests db-info
-
-# Test keypoint statistics
-python investigate_chip.py --dbG  --tests kpts-scale --sthresh 0 9001
->[invest] keypoints per image stats = {'max':5078.0, 'min':90.0, 'mean':1172.9, 'std':557.573, 'shape':(1047,)}
->[invest] keypoint scale stats: {'max':292.049, 'min':7.40863, 'mean':21.1424, 'std':12.7617, 'shape':(1228029,)}
-python investigate_chip.py --dbG  --tests kpts-scale --sthresh 30 80
->[invest] keypoints per image stats = {'max':485.0, 'min':20.0, 'mean':184.383, 'std':54.902, 'shape':(1047,)}
->[invest] keypoint scale stats: {'max':79.9978, 'min':30.0002, 'mean':40.0454, 'std':9.52455, 'shape':(193049,)}
-python investigate_chip.py --dbG  --tests kpts-scale --sthresh 25 80
-
-
-# crall-social-2013 tests
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 30 80  --printoff
-[best_cfg]1 config(s) scored #ranks<1 = 513/657
-[best_cfg]1 config(s) scored #ranks<5 = 558/657
-
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 20 80  --printoff 
-[best_cfg]1 config(s) scored #ranks<1 = 619/657
-[best_cfg]1 config(s) scored #ranks<5 = 639/657
-
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 80  --printoff 
-[best_cfg]1 config(s) scored #ranks<1 = 624/657
-[best_cfg]1 config(s) scored #ranks<5 = 644/657
-
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 80  --printoff 
-[best_cfg]1 config(s) scored #ranks<1 = 625/657
-[best_cfg]1 config(s) scored #ranks<5 = 642/657
-
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 9001   --printoff 
-[best_cfg]1 config(s) scored #ranks<1 = 623/657
-[best_cfg]1 config(s) scored #ranks<5 = 642/657
-
-
-
-
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 30 80  --printoff
-[best_cfg]1 config(s) scored #ranks<1 = 513/657
-[best_cfg]1 config(s) scored #ranks<5 = 558/657
-
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 20 80  --printoff 
-[best_cfg]1 config(s) scored #ranks<1 = 619/657
-[best_cfg]1 config(s) scored #ranks<5 = 639/657
-
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 80  --printoff 
-[best_cfg]1 config(s) scored #ranks<1 = 624/657
-[best_cfg]1 config(s) scored #ranks<5 = 644/657
-
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 80  --printoff 
-[best_cfg]1 config(s) scored #ranks<1 = 625/657
-[best_cfg]1 config(s) scored #ranks<5 = 642/657
-
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 9001   --printoff 
-[best_cfg]1 config(s) scored #ranks<1 = 623/657
-[best_cfg]1 config(s) scored #ranks<5 = 642/657
-
-python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --printoff 
+python investigate_chip.py --dbG  --tests dbinfo
 '''

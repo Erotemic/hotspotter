@@ -93,8 +93,13 @@ class HotSpotter(DynStruct):
         if not load_matcher: return 
         hs.load_matcher()
 
-    def db_name(hs):
+    def db_name(hs, devmode=False):
         db_name = os.path.split(hs.dirs.db_dir)[1]
+        if devmode:
+            # Grab the dev name insetad
+            import params
+            dev_dbs = dict((os.path.split(v)[1],k) for k, v in params.dev_databases.iteritems())
+            db_name = dev_dbs[db_name]
         return db_name
     #---------------
     def load_chips(hs):

@@ -3,6 +3,7 @@
 from __future__ import division, print_function
 import __builtin__
 import argparse
+import textwrap
 import sys
 from os.path import join
 import multiprocessing
@@ -459,7 +460,7 @@ def dbstats(hs):
     import db_info 
     # Chip / Name / Image stats
     dbinfo_locals = db_info.db_info(hs)
-    db_name = hs.db_name()
+    db_name = hs.db_name(True)
     num_images = dbinfo_locals['num_images']
     num_chips = dbinfo_locals['num_chips']
     num_names = len(dbinfo_locals['valid_nxs'])
@@ -468,15 +469,40 @@ def dbstats(hs):
     num_multichips = len(dbinfo_locals['multiton_cxs'])
     multiton_nx2_nchips = dbinfo_locals['multiton_nx2_nchips']
 
-    tex_nImage = helpers.latex_scalar(r'\# images', num_images)
-    tex_nName = helpers.latex_scalar(r'\# names', num_names)
+    #tex_nImage = helpers.latex_scalar(r'\# images', num_images)
     tex_nChip = helpers.latex_scalar(r'\# chips', num_chips)
-    tex_nSingleName = helpers.latex_scalar(r'\# num_singlenames', num_singlenames)
-    tex_nMultiName = helpers.latex_scalar(r'\# num_multinames', num_multinames)
-    tex_multistats = helpers.latex_scalar(r'\# multistats', multiton_nx2_nchips)
-
+    tex_nName = helpers.latex_scalar(r'\# names', num_names)
+    tex_nSingleName = helpe/tex_scalar(r'\# singlenames', num_singlenames)
+    tex_nMultiName  = helpers.latex_scalar(r'\# multinames', num_multinames)
+    tex_nMultiChip  = helpers.latex_scalar(r'\# multichips', num_multichips)
+    tex_multi_stats = helpers.latex_mystats(r'\# multistats', multiton_nx2_nchips)
     (tex_nKpts, tex_kpts_stats, tex_scale_stats) = db_info.get_keypoint_stats(hs)
-    
+    tex_title = helpers.latex_multicolumn(db_name+' database statistics')+r'\\'+'\n'
+    dedent = textwrap.dedent
+
+    tabular_head = dedent(r'''
+    \begin{tabular}{|l|l|} 
+    ''')
+    tabular_tail = dedent(r'''
+    \end{tabular}
+    ''')
+    hline = ''.join([r'\hline','\n'])
+    tabular_body_list = [
+        tex_title,
+        tex_nChip,
+        tex_nName,
+        tex_nSingleName ,
+        tex_nMultiName  ,
+        tex_nMultiChip  ,
+        tex_multi_stats ,
+        '',
+        tex_nKpts,
+        tex_kpts_stats,
+        tex_scale_stats,
+    ]
+    tabular_body = hline.join(tabular_body_list)
+    tabular = hline.join([tabular_head, tabular_body, tabular_tail])
+    print(tabular)
 
 # ^^^^^^^^^^^^^^^^^
 # Tests

@@ -52,13 +52,32 @@ def escape_latex(unescaped_latex_str):
     ret = ret.replace('_','\\_')
     return ret
 
+def replace_all(str_, repltups):
+    ret = str_
+    for ser, rep in repltups:
+        ret = re.sub(ser, rep, ret) 
+    return ret
+
+
 def make_score_tabular(row_lbls, col_lbls, scores, title=None,
                        out_of=None, bold_best=True,
-                       replace_rowlbl=None):
+                       replace_rowlbl=None, flip=False):
     'tabular for displaying scores'
+    bigger_is_better = True
+    if flip:
+        bigger_is_better = not bigger_is_better
+        flip_repltups = [('<','>'), ('score', 'error')]
+        col_lbls = [replace_all(lbl, flip_repltups) for lbl in col_lbls]
+        if not title is None:
+            title = replace_all(title, flip_repltups)
+        if not out_of is None:
+            scores = out_of - scores
+
     if not replace_rowlbl is None:
         for ser, rep in replace_rowlbl:
             row_lbls = [re.sub(ser, rep, lbl) for lbl in row_lbls]
+
+
     # Abbreviate based on common substrings
     SHORTEN_ROW_LBLS = True
     common_rowlbl = None
@@ -103,7 +122,6 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
 
     # Bold the best scores
     if bold_best:
-        bigger_is_better = True
         best_col_scores = scores.max(0) if bigger_is_better else scores.min(0)
         rows_to_bold = [ np.where(scores[:,colx] == best_col_scores[colx])[0] 
                 for colx in xrange(len(scores.T)) ]

@@ -277,7 +277,8 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
 
         replace_rowlbl = [(' *cfgx *', ' ')]
         tabular_kwargs = dict(title=cfg_score_title, out_of=nQuery,
-                              bold_best=True, replace_rowlbl=replace_rowlbl)
+                              bold_best=True, replace_rowlbl=replace_rowlbl,
+                              flip=True)
         tabular_str = latex.make_score_tabular(cfgx2_lbl, criteria_lbls,
                                                cfgscores, **tabular_kwargs)
         print(tabular_str)

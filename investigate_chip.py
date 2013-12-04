@@ -346,20 +346,20 @@ def vary_vsmany_cfg(hs, qon_list, vary_cfg, fnum, **kwargs):
 
 def plot_keypoint_scales(hs, fnum=1):
     print('[invest] plot_keypoint_scales()')
-    _printopts = np.get_printoptions()
-    np.set_printoptions(precision=3)
     cx2_kpts = hs.feats.cx2_kpts
     cx2_nFeats = map(len, cx2_kpts)
     kpts = np.vstack(cx2_kpts)
     print('[invest] --- LaTeX --- ')
+    _printopts = np.get_printoptions()
+    np.set_printoptions(precision=3)
     print(helpers.latex_scalar(r'\# keypoints, ', len(kpts)))
     print(helpers.latex_mystats(r'\# keypoints per image', cx2_nFeats))
     acd = kpts[:,2:5].T
     scales = np.sqrt(acd[0] * acd[2])
     scales = np.array(sorted(scales))
     print(helpers.latex_mystats(r'keypoint scale', scales))
-    print('[invest] ---/LaTeX --- ')
     np.set_printoptions(**_printopts)
+    print('[invest] ---/LaTeX --- ')
     #
     fig = df2.figure(fignum=fnum, doclf=True, title='sorted scales')
     df2.plot(scales)
@@ -455,9 +455,28 @@ def intestigate_keypoint_interaction(hs, qon_list, fnum=1, **kwargs):
         fnum += 1
     return fnum
 
-def database_info(hs):
-    from db_info import db_info
-    dbinfo_locals = db_info(hs)
+def dbstats(hs):
+    import db_info 
+    # Chip / Name / Image stats
+    dbinfo_locals = db_info.db_info(hs)
+    db_name = hs.db_name()
+    num_images = dbinfo_locals['num_images']
+    num_chips = dbinfo_locals['num_chips']
+    num_names = len(dbinfo_locals['valid_nxs'])
+    num_singlenames = len(dbinfo_locals['singleton_nxs'])
+    num_multinames = len(dbinfo_locals['multiton_nxs'])
+    num_multichips = len(dbinfo_locals['multiton_cxs'])
+    multiton_nx2_nchips = dbinfo_locals['multiton_nx2_nchips']
+
+    tex_nImage = helpers.latex_scalar(r'\# images', num_images)
+    tex_nName = helpers.latex_scalar(r'\# names', num_names)
+    tex_nChip = helpers.latex_scalar(r'\# chips', num_chips)
+    tex_nSingleName = helpers.latex_scalar(r'\# num_singlenames', num_singlenames)
+    tex_nMultiName = helpers.latex_scalar(r'\# num_multinames', num_multinames)
+    tex_multistats = helpers.latex_scalar(r'\# multistats', multiton_nx2_nchips)
+
+    (tex_nKpts, tex_kpts_stats, tex_scale_stats) = db_info.get_keypoint_stats(hs)
+    
 
 # ^^^^^^^^^^^^^^^^^
 # Tests
@@ -613,8 +632,8 @@ def run_investigations(hs, qon_list):
         measure_cx_rankings(hs)
     #if '8' in args.tests:
         #mc3.compare_scoring(hs)
-    if '8' in args.tests or 'db-info' in args.tests:
-        fnum = database_info(hs)
+    if '8' in args.tests or 'dbstats' in args.tests:
+        fnum = dbstats(hs)
     if '9' in args.tests or 'kpts-scale' in args.tests or \
        'scale' in args.tests:
         fnum = plot_keypoint_scales(hs)

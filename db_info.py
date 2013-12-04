@@ -280,9 +280,10 @@ def db_info(hs):
     num_names_with_gt = len(multiton_nxs)
     # Chip Info
     cx2_roi = hs.tables.cx2_roi
-    multiton_cxs = nx2_cxs[multiton_nxs]
+    multiton_cx_lists = nx2_cxs[multiton_nxs]
+    multiton_cxs = np.hstack(multiton_cx_lists)
     singleton_cxs = nx2_cxs[singleton_nxs]
-    multiton_nx2_nchips = map(len, multiton_cxs)
+    multiton_nx2_nchips = map(len, multiton_cx_lists)
     valid_cxs = hs.get_valid_cxs()
     num_chips = len(valid_cxs)
     # Image info
@@ -322,6 +323,7 @@ def db_info(hs):
     chip_size_stats = wh_print_stats(chip_size_list)
     multiton_stats  = helpers.printable_mystats(multiton_nx2_nchips)
 
+    num_names = len(valid_nxs)
     # print
     info_str = '\n'.join([
     (' DB Info: '+hs.db_name()),
@@ -331,13 +333,35 @@ def db_info(hs):
     (' * #Unidentified Chips = %d' % len(uniden_cxs)),
     (' * #Singleton Names    = %d' % len(singleton_nxs)),
     (' * #Multiton Names     = %d' % len(multiton_nxs)),
-    (' * #Multiton Chips     = %d' % len(np.hstack(multiton_cxs))),
+    (' * #Multiton Chips     = %d' % len(multiton_cxs)),
     (' * Chips per Multiton Names = %s' % (multiton_stats,)), 
     (' * #Img in dir = %d' % len(img_list)),
     (' * Image Size Stats = %s' % (img_size_stats,)),
     (' * Chip Size Stats = %s' % (chip_size_stats,)),])
     print(info_str)
     return locals()
+
+def get_keypoint_stats(hs):
+    # Keypoint stats
+    cx2_kpts = hs.feats.cx2_kpts
+    cx2_nFeats = map(len, cx2_kpts)
+    kpts = np.vstack(cx2_kpts)
+    print('[invest] --- LaTeX --- ')
+    _printopts = np.get_printoptions()
+    np.set_printoptions(precision=3)
+    acd = kpts[:,2:5].T
+    scales = np.sqrt(acd[0] * acd[2])
+    scales = np.array(sorted(scales))
+    tex_scale_stats = helpers.latex_mystats(r'keypoint scale', scales)
+    tex_nKpts = helpers.latex_scalar(r'\# keypoints, ', len(kpts))
+    tex_kpts_stats = helpers.latex_mystats(r'\# keypoints per image', cx2_nFeats)
+    print(tex_nKpts)
+    print(tex_kpts_stats)
+    print(tex_scale_stats)
+    np.set_printoptions(**_printopts)
+    print('[invest] ---/LaTeX --- ')
+    return (tex_nKpts, tex_kpts_stats, tex_scale_stats)
+
 
 if __name__ == '__main__':
     #import multiprocessing

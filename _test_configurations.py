@@ -135,7 +135,7 @@ vsmany_srule.update({
 })
 
 vsmany_nosv = vsmany_best.copy()
-vsmany_srule.update({
+vsmany_nosv.update({
     'sv_on' : [False]
 })
 

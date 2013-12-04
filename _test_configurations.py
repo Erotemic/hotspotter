@@ -81,7 +81,7 @@ vsone_std = {
     'ratio_thresh'   : 1.5, 
 }
 
-vsmany_3 = {
+vsmany_scoremethod = {
     'query_type'     : ['vsmany'],
     'checks'         : [1024],#, 8192],
     'K'              : [5], #5, 10],
@@ -104,6 +104,35 @@ vsmany_3 = {
     'score_method' : ['csum', 'pl', 'plw', 'borda'],# 'bordaw', 'topk', 'topkw'],#, 'nsum', 'borda', 'topk', 'nunique']
     'max_alts'     : [1000],
 }
+
+vsmany_best = {
+    'query_type'     : ['vsmany'],
+    'checks'         : [1024],#, 8192],
+    'K'              : [5], #5, 10],
+    'Knorm'          : [1], #2, 3],
+    'Krecip'         : [0], #, 5, 10],
+    'roidist_weight' : [0], # 1,]
+    'recip_weight'   : [0], # 1,] 
+    'bursty_weight'  : [0], # 1,]
+    'ratio_weight'   : [0], # 1,]
+    'lnbnn_weight'   : [1], # 1,]
+    'lnrat_weight'   : [0], # 1,]
+    'roidist_thresh' : [None], # .5,] 
+    'recip_thresh'   : [0], # 0
+    'bursty_thresh'  : [None], #
+    'ratio_thresh'   : [None], # 1.2, 1.6
+    'lnbnn_thresh'   : [None], # 
+    'lnrat_thresh'   : [None], #
+    'nShortlist'   : [1000],
+    'sv_on'        : [True], #True, False],
+    'score_method' : ['csum'],# 'bordaw', 'topk', 'topkw'],#, 'nsum', 'borda', 'topk', 'nunique']
+    'max_alts'     : [1000],
+}
+
+vsmany_3 = vsmany_best.copy()
+vsmany_3.update({
+    'score_method' : ['csum', 'pl', 'plw', 'borda'],
+})
 
 vsmany_1 = {
     'query_type'     : ['vsmany'],

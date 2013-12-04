@@ -386,6 +386,11 @@ def MOTHERS_defaults():
     import params 
     params.__BOW_NUM_WORDS__  = 16225
 
+if '--dbG' in sys.argv:
+    sys.argv+=['--db GZ']
+if '--dbM' in sys.argv:
+    sys.argv+=['--db MOTHERS']
+
 for argv in iter(sys.argv):
     argv_u =  argv.upper()
     """

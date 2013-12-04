@@ -194,7 +194,10 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, q_cfg=None):
     else:
         raise Exception('[mf] unknown scoring method:'+score_method)
     cx2_nMatch = np.array(map(len, cx2_fm))
+    # Autoremove chips with no score
     cx2_score = (cx2_score * (cx2_nMatch != 0))
+    # Autoremove chips which are not the top scoring in their name
+    cx2_score = vr2.enforce_one_name_per_cscore(hs, cx2_score, chipmatch)
     return cx2_score
 
 #============================

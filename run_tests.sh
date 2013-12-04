@@ -9,17 +9,24 @@
 #--nocache-query 
 #--nocache-query 
 #--nocache-query 
-alias icG='python investigate_chip.py --dbG'
-alias icM='python investigate_chip.py --dbM'
+#alias icG='python investigate_chip.py --db GZ'
+#alias icM='python investigate_chip.py --db MOTHERS'
+#set icM=python investigate_chip.py --db MOTHERS
+#set icG=python investigate_chip.py --db MOTHERS
+#set icD=python investigate_chip.py --db MOTHERS
+#alias icD=icM
 
-icG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 80   --printoff | tail
-icG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 80   --printoff | tail
-icG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 100  --printoff | tail
-icG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 100  --printoff | tail
-icG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 150  --printoff | tail
-icG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 9001 --printoff | tail
+icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0   80  --noprint | tail
+icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 5   80  --noprint | tail
+icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10  80  --noprint | tail
+icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0  100  --noprint | tail
+icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 5  100  --noprint | tail
+icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 100  --noprint | tail
+icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 5  150  --noprint | tail
+icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0 9001  --noprint | tail
 
-icG --tests kpts-scale --sthresh  0 9001 --printoff | tail
+# Visualize scales
+#icM --tests kpts-scale --sthresh  0 9001 --printoff | tail
 
 #python investigate_chip.py --dbG --histid 4 5 7 8 10 11 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46
 

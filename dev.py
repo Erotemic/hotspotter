@@ -138,6 +138,7 @@ def get_test_results(hs, qon_list, q_cfg, cfgx=0, nCfg=1,
     nChips = hs.num_cx
     nNames = len(hs.tables.nx2_name) - 2
     nQuery = len(qon_list) 
+    #NMultiNames = 
     nPrevQ = nQuery*cfgx
     qonx2_reslist = []
     if  not hs.args.nocache_query and (not force_load):
@@ -165,6 +166,7 @@ def get_test_results(hs, qon_list, q_cfg, cfgx=0, nCfg=1,
             algos += [res.title]
             gt_ranks = res.get_gt_ranks(gt_cxs)
             #print('[dev] cx_ranks(/%4r) = %r' % (nChips, gt_ranks))
+            #print('[dev] cx_ranks(/%4r) = %r' % (NMultiNames, gt_ranks))
             #print('ns_ranks(/%4r) = %r' % (nNames, gt_ranks))
             if len(gt_ranks) == 0:
                 _bestrank = -1

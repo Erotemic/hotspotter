@@ -224,6 +224,20 @@ def printable_mystats(_list):
     stat_strs = ['%r:%s' % (key, val) for key, val in stat_dict.iteritems()]
     ret = '{' + ', '.join(stat_strs) + '}'
     return ret
+#def mystats2_latex(mystats):
+    #statdict_ = eval(mystats)
+def latex_mystats(lbl, data):
+    stats_ = mystats(data);
+    min_, max_, mean, std, shape = stats_.values()
+    fmttup = (int(min_), int(max_), float(mean), float(std))
+    lll = ' '*len(lbl)
+    fmtstr = r'''
+    '''+lbl+r''' stats &{ max:%d, min:%d\\
+    '''+lll+r'''       & mean:%.1f, std:%.1f}\\'''
+    latex_str = textwrap.dedent(fmtstr % fmttup)
+    return latex_str
+def latex_scalar(lbl, data):
+    return r'%s & %s\\' % (lbl, data)
 
 def mystats(_list):
     from collections import OrderedDict

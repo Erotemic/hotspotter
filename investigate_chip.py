@@ -351,12 +351,14 @@ def plot_keypoint_scales(hs, fnum=1):
     cx2_kpts = hs.feats.cx2_kpts
     cx2_nFeats = map(len, cx2_kpts)
     kpts = np.vstack(cx2_kpts)
-    print('[invest] num_keypoints = %s ' % len(kpts))
-    print('[invest] keypoints per image stats = '+helpers.printable_mystats(cx2_nFeats)) 
+    print('[invest] --- LaTeX --- ')
+    print(helpers.latex_scalar(r'\# keypoints, ', len(kpts)))
+    print(helpers.latex_mystats(r'\# keypoints per image', cx2_nFeats))
     acd = kpts[:,2:5].T
     scales = np.sqrt(acd[0] * acd[2])
     scales = np.array(sorted(scales))
-    print('[invest] keypoint scale stats: '+helpers.printable_mystats(scales))
+    print(helpers.latex_mystats(r'keypoint scale', scales))
+    print('[invest] ---/LaTeX --- ')
     np.set_printoptions(**_printopts)
     #
     fig = df2.figure(fignum=fnum, doclf=True, title='sorted scales')
@@ -613,7 +615,8 @@ def run_investigations(hs, qon_list):
         #mc3.compare_scoring(hs)
     if '8' in args.tests or 'db-info' in args.tests:
         fnum = database_info(hs)
-    if '9' in args.tests or 'kpts-scale' in args.tests:
+    if '9' in args.tests or 'kpts-scale' in args.tests or \
+       'scale' in args.tests:
         fnum = plot_keypoint_scales(hs)
     if '10' in args.tests or 'vsone-gt' in args.tests:
         fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)

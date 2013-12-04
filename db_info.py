@@ -340,6 +340,14 @@ def db_info(hs):
     return locals()
 
 if __name__ == '__main__':
+    #import multiprocessing
+    #np.set_printoptions(threshold=5000, linewidth=5000)
+    #multiprocessing.freeze_support()
+    #print('[dev]-----------')
+    #print('[dev] main()')
+    #df2.DARKEN = .5
+    #main_locals = iv.main()
+    #exec(helpers.execstr_dict(main_locals, 'main_locals'))
     from multiprocessing import freeze_support
     freeze_support()
 
@@ -392,3 +400,5 @@ if __name__ == '__main__':
     for dir_stats in dir_stats_list:
         print('--')
         print(dir_stats.num_files_stats())
+
+

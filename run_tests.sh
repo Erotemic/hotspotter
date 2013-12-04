@@ -5,10 +5,10 @@
 #python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 9001   --printoff 
 #python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --printoff 
 
---nocache-query
---nocache-query 
---nocache-query 
---nocache-query 
+#--nocache-query
+#--nocache-query 
+#--nocache-query 
+#--nocache-query 
 
 icG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10 80   --printoff | tail
 icG --tests test-cfg-vsmany-3 --all-gt-cases --sthresh  0 80   --printoff | tail

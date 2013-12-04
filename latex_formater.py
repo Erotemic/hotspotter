@@ -1,3 +1,6 @@
+from __future__ import division, print_function
+import re
+import types
 import helpers
 import textwrap
 import numpy as np
@@ -42,13 +45,28 @@ def padvec(shape=(1,1)):
     pad = np.array([[' ' for c in xrange(shape[1])] for r in xrange(shape[0])])
     return pad
 
-def make_scoring_tabular(row_lbls, col_lbls, scores, title=None):
+def escape_latex(unescaped_latex_str):
+    ret = unescaped_latex_str
+    ret = ret.replace('#','\\#')
+    ret = ret.replace('%','\\%')
+    ret = ret.replace('_','\\_')
+    return ret
+
+def make_score_tabular(row_lbls, col_lbls, scores, title=None,
+                       out_of=None, bold_best=True,
+                       replace_rowlbl=None):
     'tabular for displaying scores'
+    if not replace_rowlbl is None:
+        for ser, rep in replace_rowlbl:
+            row_lbls = [re.sub(ser, rep, lbl) for lbl in row_lbls]
     # Abbreviate based on common substrings
     SHORTEN_ROW_LBLS = True
     common_rowlbl = None
     if SHORTEN_ROW_LBLS:
-        row_lbl_list = row_lbls.flatten().tolist()
+        if type(row_lbls) is types.ListType:
+            row_lbl_list = row_lbls
+        else:
+            row_lbl_list = row_lbls.flatten().tolist()
         longest = long_substr(row_lbl_list)
         common_strs = []
         while len(longest) > 10: 
@@ -57,6 +75,9 @@ def make_scoring_tabular(row_lbls, col_lbls, scores, title=None):
             longest = long_substr(row_lbl_list)
         common_rowlbl = '...'.join(common_strs)
         row_lbls = row_lbl_list
+        if len(row_lbl_list) == 1:
+            common_rowlbl = row_lbl_list[0]
+            row_lbls = ['0']
 
     # Stack into a tabular body
     col_lbls = ensure_rowvec(col_lbls)
@@ -64,10 +85,48 @@ def make_scoring_tabular(row_lbls, col_lbls, scores, title=None):
     _0 = np.vstack([padvec(), row_lbls])
     _1 = np.vstack([col_lbls, scores])
     body = np.hstack([_0, _1])
+    body = [[str_ for str_ in row] for row in body]
+    # Fix things in each body cell
+    AUTOFIX_LATEX = True
+    FORCE_INT = True
+    DO_PERCENT = True
+    for r in xrange(len(body)):
+        for c in xrange(len(body[0])):
+            # In data land
+            if r > 0 and c > 0: 
+                # Force integer
+                if FORCE_INT: 
+                    body[r][c] = str(int(float(body[r][c])))
+            # Remove bad formatting;
+            if AUTOFIX_LATEX:
+                body[r][c] = escape_latex(body[r][c])
 
+    # Bold the best scores
+    if bold_best:
+        bigger_is_better = True
+        best_col_scores = scores.max(0) if bigger_is_better else scores.min(0)
+        rows_to_bold = [ np.where(scores[:,colx] == best_col_scores[colx])[0] 
+                for colx in xrange(len(scores.T)) ]
+        for colx, rowx_list in enumerate(rows_to_bold):
+            for rowx in rowx_list:
+                body[rowx+1][colx+1] = '\\txtbf{'+body[rowx+1][colx+1]+'}'
+    
+    # More fixing after the bold is in place
+    for r in xrange(len(body)):
+        for c in xrange(len(body[0])):
+            # In data land
+            if r > 0 and c > 0: 
+                if not out_of is None:
+                    body[r][c] = body[r][c]+'/'+str(out_of)
+                    if DO_PERCENT:
+                        percent = ' = %.1f%%' % float(100*scores[r-1, c-1]/out_of)
+                        print(percent)
+                        body[r][c] += escape_latex(percent)
+
+    # Align columns for pretty printing
+    body = np.array(body)
     ALIGN_BODY = True
     if ALIGN_BODY: 
-        # Equal length columns
         new_body_cols = []
         for col in body.T:
             colstrs = map(str, col.tolist())
@@ -76,13 +135,6 @@ def make_scoring_tabular(row_lbls, col_lbls, scores, title=None):
             newcols = [str_ + (' '*(maxlen-len(str_))) for str_ in colstrs]
             new_body_cols += [newcols]
         body = np.array(new_body_cols).T
-
-
-    AUTOFIX_LATEX = True
-    if AUTOFIX_LATEX:
-        for r in xrange(body.shape[0]):
-            for c in xrange(body.shape[1]):
-                body[r,c] = body[r,c].replace('#','\\#')
 
     # Build Body (and row layout)
     HLINE_SEP = True
@@ -96,7 +148,7 @@ def make_scoring_tabular(row_lbls, col_lbls, scores, title=None):
     rowstr_list = [colsep.join(row)+endl for row in body]
     # Insert title
     if not title is None:
-        tex_title = latex_multicolumn(title, body.shape[1])+endl
+        tex_title = latex_multicolumn(title, len(body[0]))+endl
         rowstr_list = [tex_title] + rowstr_list
         extra_rowsep_pos_list += [2]
     # Apply an extra hline (for label)
@@ -106,7 +158,7 @@ def make_scoring_tabular(row_lbls, col_lbls, scores, title=None):
 
     # Build Column Layout
     col_layout_sep = '|'
-    col_layout_list = ['l']*body.shape[1]
+    col_layout_list = ['l']*len(body[0])
     extra_collayoutsep_pos_list = [1]
     for pos in  sorted(extra_collayoutsep_pos_list)[::-1]:
         col_layout_list.insert(pos, '')
@@ -118,7 +170,7 @@ def make_scoring_tabular(row_lbls, col_lbls, scores, title=None):
     tabular_str = rowsep.join([tabular_head, tabular_body, tabular_tail])
 
     if not common_rowlbl is None: 
-        tabular_str += '\nThe following perameters were held fixed: '+common_rowlbl
+        tabular_str += escape_latex('\nThe following parameters were held fixed:\n'+common_rowlbl)
     return tabular_str
 
 

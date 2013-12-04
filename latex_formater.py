@@ -120,7 +120,6 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
                     body[r][c] = body[r][c]+'/'+str(out_of)
                     if DO_PERCENT:
                         percent = ' = %.1f%%' % float(100*scores[r-1, c-1]/out_of)
-                        print(percent)
                         body[r][c] += escape_latex(percent)
 
     # Align columns for pretty printing

@@ -5,6 +5,18 @@
 #python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --sthresh  0 9001   --printoff 
 #python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --printoff 
 
+ic --db GZ --tests vsmany_big_social --all-gt-cases
+ic --db GZ --tests vsmany_score --all-gt-cases
+ic --db GZ --tests vsmany_sv --all-gt-cases
+ic --db GZ --tests vsmany_k --all-gt-cases
+
+ic --db MOTHERS --tests vsmany_big_social --all-gt-cases
+ic --db MOTHERS --tests vsmany_score --all-gt-cases
+ic --db MOTHERS --tests vsmany_sv --all-gt-cases
+ic --db MOTHERS --tests vsmany_k --all-gt-cases
+
+
+
 ic --db MOTHERS --tests vsmany_srule --all-gt-cases
 ic --db MOTHERS --tests vsmany_nosv --all-gt-cases
 

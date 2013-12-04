@@ -129,14 +129,35 @@ vsmany_best = {
     'max_alts'     : [1000],
 }
 
-vsmany_srule = vsmany_best.copy()
-vsmany_srule.update({
+vsmany_score = vsmany_best.copy()
+vsmany_score.update({
     'score_method' : ['csum', 'pl', 'plw', 'borda', 'bordaw'],
 })
 
 vsmany_nosv = vsmany_best.copy()
 vsmany_nosv.update({
     'sv_on' : [False]
+})
+
+vsmany_sv = vsmany_best.copy()
+vsmany_sv.update({
+    'xy_thresh' : [None, .1, .01, .001, .002]
+})
+
+vsmany_k = vsmany_best.copy()
+vsmany_k.update({
+    'K' : [1, 5, 10, 30]
+})
+
+
+vsmany_big_social = vsmany_best.copy()
+vsmany_big_social.update({
+    'K'              : [5, 10, 30], #5, 10],
+    'Knorm'          : [1, 3], #2, 3],
+    'Krecip'         : [0, 1, 5], #, 5, 10],
+    'lnbnn_weight'   : [0,1], # 1,]
+    'roidist_thresh' : [None, .5], # .5,] 
+    'score_method' : ['pl', 'plw', 'csum'],#, 'pl'], #, 'nsum', 'borda', 'topk', 'nunique']
 })
 
 

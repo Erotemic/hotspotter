@@ -79,8 +79,8 @@ class FeatureConfig(DynStruct):
         feat_uids += [',white'] * feat_cfg.whiten
         feat_uids += [',%r_%r' % (feat_cfg.scale_min, feat_cfg.scale_max)]
         feat_uids += [')']
-        feat_uids + [params.get_chip_uid()]
-        return feat_uids
+        feat_uids += [params.get_chip_uid()]
+        return [''.join(feat_uids)]
 
 def load_cached_feats(dpath, uid, ext, use_cache, load_kpts=True, load_desc=True):
     if not use_cache:

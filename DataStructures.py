@@ -459,18 +459,19 @@ class QueryConfig(DynStruct):
         q_cfg.f_cfg.make_feasible(q_cfg)
 
     def get_uid(q_cfg, *args, **kwargs):
-        uid = []
-        if not 'noNN' in args:
-            uid += q_cfg.nn_cfg.get_uid(**kwargs)
-        if not 'noFILT' in args:
-            uid += q_cfg.f_cfg.get_uid(**kwargs)
-        if not 'noSV' in args:
-            uid += q_cfg.sv_cfg.get_uid(**kwargs)
-        if not 'noAGG' in args:
-            uid += q_cfg.a_cfg.get_uid(**kwargs)
-        if not 'noCHIP' in args:
-            uid += q_cfg.feat_cfg.get_uid()
-        # In case you don't search the entire dataset
         dcxs_ = repr(tuple(q_cfg.dcxs))
-        uid += ['_dcxs('+helpers.hashstr(dcxs_)+')']
-        return ''.join(uid)
+        uids = []
+        if not 'noNN' in args:
+            uids += q_cfg.nn_cfg.get_uid(**kwargs)
+        if not 'noFILT' in args:
+            uids += q_cfg.f_cfg.get_uid(**kwargs)
+        if not 'noSV' in args:
+            uids += q_cfg.sv_cfg.get_uid(**kwargs)
+        if not 'noAGG' in args:
+            uids += q_cfg.a_cfg.get_uid(**kwargs)
+        if not 'noCHIP' in args:
+            uids += q_cfg.feat_cfg.get_uid()
+        # In case you don't search the entire dataset
+        uids += ['_dcxs('+helpers.hashstr(dcxs_)+')']
+        uid = ''.join(uids)
+        return uid

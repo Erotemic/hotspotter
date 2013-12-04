@@ -59,26 +59,6 @@ def get_vary_dicts(test_cfg_name_list):
 
 #---------
 # Helpers
-def update_test_results(qonx2_agg, test_results):
-    (qonx2_best_params, qonx2_lbl, qonx2_colpos, 
-     qonx2_best_col, qonx2_score, mats_list) = qonx2_agg
-    (col_lbls, row_lbls, mat_vals, test_uid, nLeX) = test_results
-    test_uid = mc3.simplify_test_uid(test_uid)
-    best_vals = mat_vals.min(1)
-    best_mat = np.tile(best_vals, (len(mat_vals.T), 1)).T
-    best_pos = (best_mat == mat_vals)
-    mats_list += [mat_vals]
-    for qonx, val in enumerate(best_vals):
-        if val == qonx2_score[qonx]:
-            colpos = np.where(best_pos[qonx])[0].min()
-            qonx2_best_params[qonx] += '\n'+test_uid+'c'+str(colpos)
-        if val < qonx2_score[qonx]  or qonx2_score[qonx] == -1:
-            qonx2_score[qonx] = val
-            colpos = np.where(best_pos[qonx])[0].min()
-            qonx2_best_params[qonx] = test_uid+'c'+str(colpos)
-            qonx2_lbl[qonx] = row_lbls[qonx]
-            qonx2_colpos[qonx] = colpos
-
 #---------------
 # Display Test Results
 def print_test_results(test_results):
@@ -92,36 +72,6 @@ def print_test_results(test_results):
 
 #---------------
 # Display Test Results
-def print_best(qonx2_agg, cfg_list):
-    (qonx2_best_params, qonx2_lbl, qonx2_colpos, 
-     qonx2_best_col, qonx2_score, mats_list) = qonx2_agg
-    print('')
-    print('--------------------------------------------')
-    print('[best_qon] printing best results over %d queries' % (len(qonx2_lbl)))
-    for row in xrange(len(qonx2_lbl)):
-        best_params_str = helpers.indent('\n'+qonx2_best_params[row], '    ')
-        print('[best_qon] --- %r/%r ----' % (row+1, len(qonx2_lbl)))
-        print('[best_qon] rowlbl(%d): %s' % (row, qonx2_lbl[row]))
-        print('[best_qon] best_params = %s' % (best_params_str,))
-        print('[best_qon] best_score(c%r) = %r' % (qonx2_colpos[row], qonx2_score[row],))
-    print('[best_qon] ---- END ----')
-    _2str = lambda cfgx, cfg: ('%3d) ' % cfgx)+mc3.simplify_test_uid(cfg.get_uid())
-    rowlbl_list = [('%3d) ' % qonx)+str(lbl) for qonx, lbl in enumerate(qonx2_lbl)]
-    collbl_list = [_2str(*tup) for tup in enumerate(cfg_list)]
-    print('[best_all] Row Labels: ')
-    print('    '+'\n    '.join(rowlbl_list))
-    print('[best_all] Column Labels: ')
-    print('    '+'\n    '.join(collbl_list))
-    rank_mat = np.hstack(mats_list)
-    rank_mat = np.vstack([np.arange(rank_mat.shape[1]), rank_mat])
-    rank_mat = np.hstack([np.arange(rank_mat.shape[0]).reshape(rank_mat.shape[0],1)-1, rank_mat])
-    print('[best_all] all_ranks (rows=chip, cols=cfg) = \n%s' % str(rank_mat))
-    qonx2_score.shape = (len(qonx2_score),1)
-    #print('[best_all] best_ranks =\n%s ' % str(qonx2_score))
-
-    print('[best_all] Finished printing best results')
-    print('------------------------------------')
-
 #-----------
 # Run configuration for each qon
 def get_test_results(hs, qon_list, q_cfg, cfgx=0, nCfg=1,
@@ -243,6 +193,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     cfgx2_lbl = []
     for cfgx in xrange(nCfg):
         test_uid  = mc3.simplify_test_uid(cfg_list[cfgx].get_uid())
+        test_uid  = mc3.simplify_test_uid(cfg_list[cfgx].get_uid())
         cfg_label = 'cfgx %3d) %s' % (cfgx, test_uid)
         cfgx2_lbl.append(cfg_label)
     cfgx2_lbl = np.array(cfgx2_lbl)
@@ -325,10 +276,12 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
         print(best_rankcfg)
         best_rankscore_summary += [best_rankscore]
     #------------
-    print('')
-    print('[dev]-------------')
-    print('[dev] labled rank matrix: rows=queries, cols=cfgs:\n%s' % lbld_mat)
-    print('[dev]-------------')
+    printMAT = False
+    if printMAT:
+        print('')
+        print('[dev]-------------')
+        print('[dev] labled rank matrix: rows=queries, cols=cfgs:\n%s' % lbld_mat)
+        print('[dev]-------------')
     #------------
     print('[col_score] --- summary ---')
     print('\n'.join(best_rankscore_summary))

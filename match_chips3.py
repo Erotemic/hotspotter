@@ -112,14 +112,14 @@ def unify_cfgs(cfg_list):
 
 def simplify_test_uid(test_uid):
     # Remove extranious characters from test_uid
-    test_uid = re.sub(r'_trainID\([0-9]*,........\)','', test_uid)
-    test_uid = re.sub(r'_indxID\([0-9]*,........\)','', test_uid)
-    test_uid = re.sub(r'_dcxs\(........\)','', test_uid)
-    test_uid = re.sub(r'HSDB_zebra_with_mothers','', test_uid)
-    test_uid = re.sub(r'GZ_ALL','', test_uid)
-    test_uid = re.sub(r'HESAFF_sz750','', test_uid)
-    test_uid = re.sub(r'_FEAT([^(]*)','', test_uid)
-    test_uid = test_uid.strip(' _')
+    #test_uid = re.sub(r'_trainID\([0-9]*,........\)','', test_uid)
+    #test_uid = re.sub(r'_indxID\([0-9]*,........\)','', test_uid)
+    test_uid = re.sub(r'_dcxs([^)]*)','', test_uid)
+    #test_uid = re.sub(r'HSDB_zebra_with_mothers','', test_uid)
+    #test_uid = re.sub(r'GZ_ALL','', test_uid)
+    #test_uid = re.sub(r'_sz750','', test_uid)
+    #test_uid = re.sub(r'_FEAT([^(]*)','', test_uid)
+    #test_uid = test_uid.strip(' _')
     return test_uid
 
 #----------------------

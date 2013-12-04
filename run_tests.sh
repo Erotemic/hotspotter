@@ -16,7 +16,7 @@
 #set icD=python investigate_chip.py --db MOTHERS
 #alias icD=icM
 
-icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0   80  --noprint | tail
+icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0 80
 icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 5   80  --noprint | tail
 icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 10  80  --noprint | tail
 icM --tests test-cfg-vsmany-3 --all-gt-cases --sthresh 0  100  --noprint | tail

@@ -429,10 +429,11 @@ def chip_info(hs, cx, notes=''):
     indexed_gt_cxs = hs.get_other_indexed_cxs(cx)
     gt_cxs = hs.get_other_cxs(cx)
     kpts = hs.get_kpts(cx)
+    cxstr = hs.cxstr(cx)
     print('------------------')
     print('[invest] Chip Info ')
     infostr_list = [
-        hs.cxstr(cx),
+        cxstr,
         'notes=%r' % notes,
         'cx=%r' % cx,
         'gx=%r' % gx,
@@ -446,6 +447,7 @@ def chip_info(hs, cx, notes=''):
         'IndexedGroundTruth = %s' % (hs.cx_liststr(indexed_gt_cxs),),
     ]
     print(helpers.indent('\n'.join(infostr_list), '    '))
+    return locals()
 
 def intestigate_keypoint_interaction(hs, qon_list, fnum=1, **kwargs):
     import tpl
@@ -656,7 +658,10 @@ def run_investigations(hs, qon_list):
         fnum = investigate_chip_info(hs, qon_list, fnum)
     if '12' in args.tests or 'kpts-interact' in args.tests:
         fnum = intestigate_keypoint_interaction(hs, qon_list)
-    if '13' in args.tests or 'list-cfg-tests' in args.tests or 'list' in args.tests:
+    if '13' in args.test or 'interact' in args.tests:
+        import interaction
+        fnum = interact.interact1(hs, qon_list, fnum)
+    if '14' in args.tests or 'list-cfg-tests' in args.tests or 'list' in args.tests:
         print(dev.get_valid_testcfg_names())
     # Allow any testcfg to be in tests like: 
     # vsone_1 or vsmany_3

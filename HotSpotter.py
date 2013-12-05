@@ -411,6 +411,13 @@ class HotSpotter(DynStruct):
         chip = Image.open(hs.cpaths.cx2_rchip_path[cx])
         return chip
     #--------------
+    def get_desc(hs, cx):
+        cx2_desc = hs.feats.cx2_desc
+        if not np.iterable(cx):
+            return cx2_desc[cx]
+        else:
+            return [cx2_desc[cx_] for cx_ in cx]
+    #--------------
     def get_kpts(hs, cx):
         cx2_kpts = hs.feats.cx2_kpts
         if not np.iterable(cx):

@@ -249,7 +249,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     def rankscore_str(thresh, nLess, total):
         #helper to print rank scores of configs
         percent = 100* nLess / total
-        return '#ranks < %d = %d/%d = (%.1f%%)' % (thresh, nLess, total, percent)
+        return '#ranks < %d = %d/%d = (%.1f%%) (err=%d)' % (thresh, nLess, total, percent, (total-nLess))
     print('')
     print('[dev]-------------')
     print('[dev] Scores per config')

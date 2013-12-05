@@ -60,7 +60,6 @@ def enforce_one_name_per_cscore(hs, cx2_score, chipmatch):
         # zero the cxs with the lowest csum score
         sortx = cx2_csum_score[cxs].argsort()
         cxs_to_zero = np.array(cxs)[sortx[0:-1]]
-        print(cxs_to_zero)
         cx2_score[cxs_to_zero] = 0
     return cx2_score
 

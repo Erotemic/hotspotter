@@ -154,9 +154,9 @@ vsmany_big_social = vsmany_best.copy()
 vsmany_big_social.update({
     'K'              : [5, 10, 30], #5, 10],
     'Knorm'          : [1, 3], #2, 3],
-    'Krecip'         : [0, 1, 5], #, 5, 10],
-    'lnbnn_weight'   : [0,1], # 1,]
-    'roidist_thresh' : [None, .5], # .5,] 
+    'Krecip'         : [0, 5], #, 5, 10],
+    'lnbnn_weight'   : [1], # 1,]
+    #'roidist_thresh' : [None, .5], # .5,] 
     'score_method' : ['pl', 'plw', 'csum'],#, 'pl'], #, 'nsum', 'borda', 'topk', 'nunique']
 })
 

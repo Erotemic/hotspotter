@@ -10,6 +10,8 @@ ic --db GZ --tests vsmany_score --all-gt-cases
 ic --db GZ --tests vsmany_sv --all-gt-cases
 ic --db GZ --tests vsmany_k --all-gt-cases
 
+ic --db GZ --tests vsmany_big_social --all-gt-cases && ic --db MOTHERS --tests vsmany_big_social --all-gt-cases && ic --db GZ --tests vsmany_score --all-gt-cases && ic --db MOTHERS --tests vsmany_score --all-gt-cases && ic --db GZ --tests vsmany_k --all-gt-cases && ic --db GZ --tests vsmany_k --all-gt-cases && ic --db MOTHERS --tests vsmany_sv --all-gt-cases && ic --db MOTHERS --tests vsmany_k --all-gt-cases
+
 ic --db MOTHERS --tests vsmany_big_social --all-gt-cases
 ic --db MOTHERS --tests vsmany_score --all-gt-cases
 ic --db MOTHERS --tests vsmany_sv --all-gt-cases

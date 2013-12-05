@@ -658,7 +658,7 @@ def run_investigations(hs, qon_list):
         fnum = investigate_chip_info(hs, qon_list, fnum)
     if '12' in args.tests or 'kpts-interact' in args.tests:
         fnum = intestigate_keypoint_interaction(hs, qon_list)
-    if '13' in args.test or 'interact' in args.tests:
+    if '13' in args.tests or 'interact' in args.tests:
         import interaction
         fnum = interaction.interact1(hs, qon_list, fnum)
     if '14' in args.tests or 'list-cfg-tests' in args.tests or 'list' in args.tests:

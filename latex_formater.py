@@ -82,17 +82,17 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
     SHORTEN_ROW_LBLS = True
     common_rowlbl = None
     if SHORTEN_ROW_LBLS:
-        if type(row_lbls) is types.ListType:
-            row_lbl_list = row_lbls
-        else:
-            row_lbl_list = row_lbls.flatten().tolist()
+        if type(row_lbls) is types.ListType: row_lbl_list = row_lbls
+        else: row_lbl_list = row_lbls.flatten().tolist()
+        # Split the rob labels into the alg components
+        #algcomp_list = [lbl.split(')_') for lbl in row_lbl_list]
         longest = long_substr(row_lbl_list)
         common_strs = []
         while len(longest) > 10: 
             common_strs += [longest]
             row_lbl_list = [row.replace(longest,'...') for row in row_lbl_list] 
             longest = long_substr(row_lbl_list)
-        common_rowlbl = '...'.join(common_strs)
+        common_rowlbl = ('...'.join(common_strs)).replace(')_', ')_\n')
         row_lbls = row_lbl_list
         if len(row_lbl_list) == 1:
             common_rowlbl = row_lbl_list[0]
@@ -187,7 +187,7 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
     tabular_str = rowsep.join([tabular_head, tabular_body, tabular_tail])
 
     if not common_rowlbl is None: 
-        tabular_str += escape_latex('\nThe following parameters were held fixed:\n'+common_rowlbl)
+        tabular_str += escape_latex('\n\nThe following parameters were held fixed:\n'+common_rowlbl)
     return tabular_str
 
 

@@ -299,6 +299,50 @@ def chipmatch2_neighbors(hs, qcx2_chipmatch, q_cfg):
 #-----
 # Spatial Verification
 #-----
+
+def _precompute_topx2_dlen_sqrd(cx2_rchip_size, cx2_kpts, cx2_fm, topx2_cx,
+                                nRerank, use_chip_extent, USE_1_to_2):
+    '''helper for spatial verification, computes the squared diagonal length of
+    matching chips'''
+    if use_chip_extent:
+        def cx2_chip_dlensqrd(cx):
+            (chipw, chiph) = cx2_rchip_size[cx]
+            dlen_sqrd = chipw**2 + chiph**2
+            return dlen_sqrd
+        if USE_1_to_2:
+            topx2_dlen_sqrd = [cx2_chip_dlensqrd(cx) for cx in iter(topx2_cx[:nRerank])]
+        else:
+            topx2_dlen_sqrd = [cx2_chip_dlensqrd(qcx)]*nRerank
+    else:
+        if USE_1_to_2:
+            def cx2_kpts2_dlensqrd(cx):
+                kpts2 = cx2_kpts[cx]
+                fm    = cx2_fm[cx]
+                if len(fm) == 0:
+                    return 1
+                x_m = kpts2[fm[:,1],0].T
+                y_m = kpts2[fm[:,1],1].T
+                return (x_m.max()-x_m.min())**2 + (y_m.max()-y_m.min())**2
+            topx2_dlen_sqrd = [cx2_kpts2_dlensqrd(cx) for cx in iter(topx2_cx[:nRerank])]
+        else:
+            def cx2_kpts1_dlensqrd(cx):
+                kpts2 = cx2_kpts[cx]
+                fm    = cx2_fm[cx]
+                if len(fm) == 0:
+                    return 1
+                x_m = kpts2[fm[:,0],0].T
+                y_m = kpts2[fm[:,0],1].T
+                return (x_m.max()-x_m.min())**2 + (y_m.max()-y_m.min())**2
+            topx2_dlen_sqrd = [cx2_kpts1_dlensqrd(cx) for cx in iter(topx2_cx[:nRerank])]
+    return topx2_dlen_sqrd
+#if USE_2_to_1:
+    #sv_tup = sv2.homography_inliers(kpts2, kpts1, np.hstack(fm[:,1], fm[:,0]), xy_thresh, max_scale,
+                                    #min_scale, dlen_sqrd, min_nInliers,
+                                #just_affine)
+#else
+#if not USE_2_to_1:
+#if not use_chip_extent or USE_1_to_2:
+
 def spatial_verification(hs, qcx2_chipmatch, q_cfg):
     sv_cfg = q_cfg.sv_cfg
     if not sv_cfg.sv_on or sv_cfg.xy_thresh is None:
@@ -314,10 +358,8 @@ def spatial_verification(hs, qcx2_chipmatch, q_cfg):
     cx2_rchip_size = hs.get_cx2_rchip_size()
     cx2_kpts = hs.feats.cx2_kpts
     qcx2_chipmatchSV = {}
-
     USE_1_to_2 = True
     # Find a transform from chip2 to chip1 (the old way was 1 to 2)
-
     for qcx in qcx2_chipmatch.iterkeys():
         print('[mf] verify qcx=%r' % qcx)
         chipmatch = qcx2_chipmatch[qcx]
@@ -330,37 +372,10 @@ def spatial_verification(hs, qcx2_chipmatch, q_cfg):
         # Query Keypoints
         kpts1 = cx2_kpts[qcx]
         # Check the diaglen sizes before doing the homography
-        if not USE_1_to_2:
-            topx2_dlen_sqrd = np.zeros(nRerank)
-            if not use_chip_extent:
-                kpts1 = cx2_kpts[qcx]
-                for topx in xrange(nRerank):
-                    cx = topx2_cx[topx]
-                    fm = cx2_fm[cx]
-                    x_m = kpts1[fm[:,0],0].T
-                    y_m = kpts1[fm[:,0],1].T
-                    dlen_sqrd = sv2.calc_diaglen_sqrd(x_m, y_m)
-                    topx2_dlen_sqrd[topx] = dlen_sqrd
-            else:
-                (chipw, chiph) = cx2_rchip_size[qcx]
-                dlen_sqrd = chipw**2 + chiph**2
-        if USE_1_to_2:
-            topx2_dlen_sqrd = np.zeros(nRerank)
-            for topx in xrange(nRerank):
-                cx = topx2_cx[topx]
-                rchip_size2 = cx2_rchip_size[cx]
-                fm = cx2_fm[cx]
-                if len(fm) == 0:
-                    topx2_dlen_sqrd[topx] = 1
-                    continue
-                if use_chip_extent:
-                    dlen_sqrd = rchip_size2[0]**2 + rchip_size2[1]**2
-                else:
-                    kpts2 = cx2_kpts[cx]
-                    x_m = kpts2[fm[:,1],0].T
-                    y_m = kpts2[fm[:,1],1].T
-                    dlen_sqrd = sv2.calc_diaglen_sqrd(x_m, y_m)
-                topx2_dlen_sqrd[topx] = dlen_sqrd
+        topx2_dlen_sqrd = _precompute_topx2_dlen_sqrd(cx2_rchip_size, cx2_kpts,
+                                                      cx2_fm, topx2_cx, nRerank,
+                                                      use_chip_extent,
+                                                      USE_1_to_2)
         # spatially verify the top __NUM_RERANK__ results
         for topx in xrange(nRerank):
             #print('[mf] vs topcx=%r, score=%r' % (cx, cx2_prescore[cx]))
@@ -369,17 +384,10 @@ def spatial_verification(hs, qcx2_chipmatch, q_cfg):
             if len(fm) < min_nInliers:
                 print_('x')
                 continue
-            #if not USE_2_to_1:
-            #if not use_chip_extent or USE_1_to_2:
             dlen_sqrd = topx2_dlen_sqrd[topx]
             kpts2 = cx2_kpts[cx]
             fs    = cx2_fs[cx]
             fk    = cx2_fk[cx]
-            #if USE_2_to_1:
-                #sv_tup = sv2.homography_inliers(kpts2, kpts1, np.hstack(fm[:,1], fm[:,0]), xy_thresh, max_scale,
-                                                #min_scale, dlen_sqrd, min_nInliers,
-                                            #just_affine)
-            #else
             sv_tup = sv2.homography_inliers(kpts1, kpts2, fm, xy_thresh, max_scale,
                                             min_scale, dlen_sqrd, min_nInliers,
                                         just_affine)

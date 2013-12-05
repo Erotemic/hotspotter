@@ -37,7 +37,14 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 rrr = reload_module
 
-QT_IS_INIT = False
+IS_INIT = False
+
+def make_dummy_main_window():
+    mainwin = PyQt4.Qt.QMainWindow()
+    mainwin.setWindowTitle('Dummy Main Window')
+    mainwin.show()
+    return mainwin
+    
 
 class HotspotterMainWindow(QMainWindow):
     def __init__(hsgui):
@@ -71,7 +78,7 @@ def select_directory(caption='Select Directory', directory=None):
 
 @pyqtSlot(name='create_new_database')
 def create_new_database():
-    db_dir = gui.select_directory('Createa a new directory to be used as the database')
+    db_dir = gui.select_directory('Create a new directory to be used as the database')
     io.global_cache_write('db_dir', db_dir)
     select_database_dir(db_dir)
 
@@ -89,22 +96,24 @@ def open_old_database():
     io.global_cache_write('db_dir', db_dir)
     select_database_dir(db_dir)
 
-def show_open_db_dlg():
-    from frontend.OpenDatabaseDialog import Ui_Dialog
+def show_open_db_dlg(parent=None):
+    from _frontend import OpenDatabaseDialog
     if not '-nc' in sys.argv and not '--nocache' in sys.argv: 
         db_dir = io.global_cache_read('db_dir')
         if db_dir == '.': 
             db_dir = None
     print('[gui] cached db_dir=%r' % db_dir)
-    open_db_dlg = Ui_Dialog()
-    mainwin = PyQt4.Qt.QMainWindow()
-    open_db_dlg.setupUi(mainwin)
-    open_db_dlg.new_db_but.clicked.connect(create_new_database)
-    open_db_dlg.open_db_but.clicked.connect(open_old_database)
-    open_db_dlg.show()
+    if parent is None:
+        parent = PyQt4.QtGui.QDialog()
+    opendb_ui = OpenDatabaseDialog.Ui_Dialog()
+    opendb_ui.setupUi(parent)
+    opendb_ui.new_db_but.clicked.connect(create_new_database)
+    opendb_ui.open_db_but.clicked.connect(open_old_database)
+    parent.show()
+    return opendb_ui, parent
 
 def init_qtapp():
-    global QT_IS_INIT
+    global IS_INIT
     app = QCoreApplication.instance() 
     is_root = app is None
     if is_root: # if not in qtconsole
@@ -112,12 +121,21 @@ def init_qtapp():
         app = QApplication(sys.argv)
     else: 
         print('Parent already initialized QApplication')
-    QT_IS_INIT = True
+    try:
+        __IPYTHON__
+        is_root = False
+    except NameError as ex:
+        # You are not root if you are in IPYTHON
+        pass
+    IS_INIT = True
     return app, is_root
 
-def run_qtapp():
-    sys.exit(app.exec_())
-
+def run_main_loop(app, is_root=True):
+    if is_root:
+        print('[gui] running main loop.')
+        sys.exit(app.exec_())
+    else:
+        print('[gui] using roots main loop')
 
 def msgbox(msg, title='msgbox'):
     'Make a non modal critical QMessageBox.'

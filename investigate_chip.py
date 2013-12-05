@@ -8,105 +8,6 @@ import sys
 from os.path import join
 import multiprocessing
 import latex_formater as pytex
-
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-def print_off():
-    global print, print_
-    def print(*args, **kwargs): pass
-    def print_(*args, **kwargs): pass
-def printDBG(msg, *args):
-    pass
-# Dynamic module reloading
-def reload_module():
-    import imp, sys
-    print('[invest] reloading '+__name__)
-    imp.reload(sys.modules[__name__])
-def rrr(): reload_module()
-
-# Moved this up for faster help responce time
-def parse_arguments():
-    '''
-    Defines the arguments for investigate_chip.py
-    '''
-    printDBG('==================')
-    printDBG('[invest] ---------')
-    printDBG('[invest] ARGPARSE')
-    parser = argparse.ArgumentParser(description='HotSpotter - Investigate Chip', prefix_chars='+-')
-    def_on  = {'action':'store_false', 'default':True}
-    def_off = {'action':'store_true', 'default':False}
-    addarg = parser.add_argument
-    def add_meta(switch, type, default, help, step=None, **kwargs):
-        dest = switch.strip('-').replace('-','_')
-        addarg(switch, metavar=dest, type=type, default=default, help=help, **kwargs)
-        if not step is None:
-            add_meta(switch+'-step', type, step, help='', **kwargs)
-    def add_bool(switch, default=True, help=''):
-        action = 'store_false' if default else 'store_true' 
-        dest = switch.strip('-').replace('-','_')
-        addarg(switch, dest=dest, action=action, default=default, help=help)
-    def add_var(switch, default, help, **kwargs):
-        add_meta(switch, None, default, help, **kwargs)
-    def add_int(switch, default, help, **kwargs):
-        add_meta(switch, int, default, help, **kwargs)
-    def add_float(switch, default, help, **kwargs):
-        add_meta(switch, float, default, help, **kwargs)
-    def add_str(switch, default, help, **kwargs):
-        add_meta(switch, str, default, help, **kwargs)
-    def test_bool(switch):
-        add_bool(switch, False, '')
-    add_int('--qcid',  None, 'query chip-id to investigate', nargs='*')
-    add_int('--ocid',  [], 'query chip-id to investigate', nargs='*')
-    add_int('--histid', None, 'history id (hard cases)', nargs='*')
-    add_int('--r', [], 'view row', nargs='*')
-    add_int('--c', [], 'view col', nargs='*')
-    add_int('--nRows', 1, 'number of rows')
-    add_int('--nCols', 1, 'number of cols')
-    add_float('--xy-thresh', .001, '', step=.005)
-    add_float('--ratio-thresh', 1.2, '', step=.1)
-    add_int('--K', 10, 'for K-nearest-neighbors', step=20)
-    add_int('--sthresh', (10,80), 'scale threshold', nargs='*')
-    add_str('--db', 'NAUTS', 'database to load')
-    add_bool('--nopresent', default=False)
-    add_bool('--save-figures', default=False)
-    add_bool('--noannote', default=False)
-    add_bool('--dbM', default=False)
-    add_bool('--dbG', default=False)
-    add_bool('--vrd', default=False)
-    add_bool('--vcd', default=False)
-    add_bool('--vrdq', default=False)
-    add_bool('--vcdq', default=False)
-    add_bool('--show-res', default=False)
-    add_bool('--noprinthist', default=True)
-    add_bool('--test-vsmany', default=False)
-    add_bool('--test-vsone', default=False)
-    # Testing flags
-    add_bool('--all-cases', default=False)
-    add_bool('--all-gt-cases', default=False)
-    # Cache flags
-    add_bool('--nocache-query', default=False)
-    add_bool('--nocache-feats', default=False)
-    # Plotting Args
-    add_bool('--printoff', default=False)
-    add_bool('--horiz', default=True)
-    add_str('--tests', [], 'integer or test name', nargs='*')
-    add_str('--show-best', [], 'integer or test name', nargs='*')
-    add_str('--show-worst', [], 'integer or test name', nargs='*')
-    args, unknown = parser.parse_known_args()
-    printDBG('[invest] args    = %r' % (args,))
-    printDBG('[invest] unknown = %r' % (unknown,))
-    printDBG('[invest] ---------')
-    printDBG('==================')
-    return args
-
-if multiprocessing.current_process().name == 'MainProcess':
-    args = parse_arguments()
-
 import DataStructures as ds
 import matching_functions as mf
 import match_chips3 as mc3
@@ -121,6 +22,27 @@ import sys
 import params
 import vizualizations as viz
 import voting_rules2 as vr2
+import argparse2
+
+args = argparse2.args
+
+# Toggleable printing
+print = __builtin__.print
+print_ = sys.stdout.write
+def print_on():
+    global print, print_
+    print =  __builtin__.print
+    print_ = sys.stdout.write
+def print_off():
+    global print, print_
+    def print(*args, **kwargs): pass
+    def print_(*args, **kwargs): pass
+# Dynamic module reloading
+def reload_module():
+    import imp, sys
+    print('[invest] reloading '+__name__)
+    imp.reload(sys.modules[__name__])
+def rrr(): reload_module()
 
 def history_entry(database='', cid=-1, ocids=[], notes='', cx=-1):
     return (database, cid, ocids, notes)
@@ -241,13 +163,6 @@ def top_matching_features(res, axnum=None, match_type=''):
     sorted_score = cx_fx_fs_sorted[:,2]
     fig = df2.figure(0)
     df2.plot(sorted_score)
-
-def investigate_scoring_rules(hs, qcx, fnum=1):
-    args = hs.args
-    K = 4 if hs.args.K is None else hs.args.K
-    vr2.test_voting_rules(hs, qcx, K, fnum)
-    fnum += 1
-    return fnum
 
 def vary_query_cfg(hs, qon_list, q_cfg=None, vary_cfg=None, fnum=1):
     # Ground truth matches
@@ -721,11 +636,9 @@ python investigate_chip.py --db GZ --tests test-cfg-vsmany-1 --sthresh 30 250
 --all-gt-cases
 python investigate_chip.py --dbM --tests 15 chip-info --histid 0 --sthresh 30 250
 
-
 python investigate_chip.py --dbM --tests test-cfg-vsmany-3 --all-gt-cases
 python investigate_chip.py --dbM --tests test-cfg-vsmany-3 --sthresh 30 80 
 python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --sthresh 30 80 
-
 
 # Database information
 python investigate_chip.py --dbG  --tests dbinfo

@@ -46,9 +46,15 @@ def rrr(): reload_module()
 def printDBG(msg, lbl=''):
     print('DBG: '+lbl+str(msg))
 
+# TODO: Allow alternative internal directories
+RDIR_INTERNAL_ALTS = ['/hs_internals']
+RDIR_INTERNAL2 = '.hs_internals'
+RDIR_IMG2 = 'images'
+
+
 # paths relative to dbdir
-RDIR_IMG      = '/images'
-RDIR_INTERNAL = '/.hs_internals'
+RDIR_IMG      = '/'+RDIR_IMG2
+RDIR_INTERNAL = '/'+RDIR_INTERNAL2
 RDIR_COMPUTED = '/.hs_internals/computed'
 RDIR_CHIP     = '/.hs_internals/computed/chips'
 RDIR_RCHIP    = '/.hs_internals/computed/temp'

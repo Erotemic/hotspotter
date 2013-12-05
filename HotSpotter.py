@@ -2,7 +2,6 @@ from __future__ import division, print_function
 import __builtin__
 import sys
 # Standard
-from os.path import join
 import cv2
 import fnmatch
 import os
@@ -17,6 +16,7 @@ from PIL import Image
 from Printable import DynStruct
 import helpers
 import params
+from os.path import exists, join, realpath
 
 # Toggleable printing
 print = __builtin__.print
@@ -36,11 +36,57 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 def rrr(): reload_module()
 
+def _on_loaded_tables(hs):
+    'checks relevant arguments after loading tables'
+    args = hs.args
+    if args.vrd or args.vrdq:
+        hs.vrd()
+        if args.vrdq: sys.exit(1)
+    if args.vcd or args.vcdq:
+        hs.vcd()
+        if args.vcdq: sys.exit(1)
+
+def select_database(args, db_dir=None):
+    'Returns the database directory based on args, cache, or gui selection'
+    import params
+    import gui
+    import fileio as io
+    def is_invalid(db_dir): return db_dir is None or not exists(db_dir)
+    if is_invalid(db_dir) and args.db is not None:
+        # The shortname is specified
+        db_dir = params.dev_databases[args.db]
+    if is_invalid(db_dir) and args.dbdir is not None:
+        # The full path is specified
+        db_dir = realpath(args.dbdir)
+    if is_invalid(db_dir) and not args.nocache_db:
+        # Read from cache
+        db_dir = io.global_cache_read('db_dir')
+        if db_dir == '.': db_dir = None
+    if is_invalid(db_dir) and gui.IS_INIT:
+        # All has failed. Ask the user and write to global cache.
+        db_dir = gui.select_directory('Select (or create) a database directory.')
+        io.global_cache_write('db_dir', db_dir)
+    if is_invalid(db_dir):
+        raise ValueError('db_dir=%r is not a valid directory' % db_dir)
+    return db_dir
+
+def convert_if_needed(db_dir):
+    import load_data2 as ld2
+    import convert_db as convert_db
+    import gui
+    internal_dir = os.path.join(db_dir, ld2.RDIR_INTERNAL2) 
+    needs_convert = not exists(internal_dir)
+    if needs_convert:
+        print('[hs] Need to convert database: db_dir=%r' % db_dir)
+        img_dpath = join(db_dir, ld2.RDIR_IMG2)
+        if not exists(img_dpath):
+            img_dpath = gui.select_directory('Select directory with images in it')
+        convert_db.convert_named_chips(db_dir, img_dpath)
+
 # ___CLASS HOTSPOTTER____
 class HotSpotter(DynStruct):
     '''The HotSpotter main class is a root handle to all relevant data'''
     def __init__(hs, db_dir=None, load_basic=False, **kwargs):
-        import match_chips2 as mc2
         super(HotSpotter, hs).__init__()
         hs.args = None
         hs.num_cx = None
@@ -53,29 +99,21 @@ class HotSpotter(DynStruct):
         hs.indexed_sample_cx = None
         hs.cx2_rchip_size = None
         hs.query_uid = None
-        hs.matcher = mc2.Matcher(hs)
         if load_basic:
             hs.load_basic(db_dir)
         elif not db_dir is None:
             hs.load_database(db_dir, **kwargs)
     #---------------
-    def load_tables(hs, db_dir):
-        import load_data2 as ld2
-        hs_dirs, hs_tables = ld2.load_csv_tables(db_dir)
-        hs.tables  = hs_tables
-        hs.dirs    = hs_dirs
-        hs.num_cx = len(hs.tables.cx2_cid)
-        if 'vrd' in sys.argv:
-            hs.vrd()
-        if 'vcd' in sys.argv:
-            hs.vcd()
-
-    def load_basic(hs, db_dir):
+    def load2(hs, db_dir=None, **kwargs):
+        '(current load function) Loads the appropriate database'
+        import argparse2
+        hs.args = argparse2.args
+        db_dir  = select_database(hs.args, db_dir)
+        convert_if_needed(db_dir)
         hs.load_tables(db_dir)
-        hs.load_chips()
-        hs.load_features(load_desc=False)
 
     def load_all(hs, db_dir, matcher=True, args=None, load_features=True, **kwargs):
+        'will be depricated in favor of load2'
         load_matcher = matcher # HACK
         hs.load_tables(db_dir)
         if not args is None:
@@ -92,6 +130,22 @@ class HotSpotter(DynStruct):
         hs.set_samples()
         if not load_matcher: return 
         hs.load_matcher()
+
+    def load_tables(hs, db_dir):
+        import load_data2 as ld2
+        hs_dirs, hs_tables = ld2.load_csv_tables(db_dir)
+        hs.tables  = hs_tables
+        hs.dirs    = hs_dirs
+        hs.num_cx = len(hs.tables.cx2_cid)
+        _on_loaded_tables(hs)
+
+    def load_basic(hs, db_dir):
+        hs.load_tables(db_dir)
+        hs.load_chips()
+        hs.load_features(load_desc=False)
+
+    def get_cids():
+        pass
 
     def db_name(hs, devmode=False):
         db_name = os.path.split(hs.dirs.db_dir)[1]
@@ -114,11 +168,6 @@ class HotSpotter(DynStruct):
         hs_feats = fc2.load_features(hs, **kwargs)
         hs.feats = hs_feats
     #---------------
-    def ensure_matcher_loaded(hs):
-        if hs.matcher is None: 
-            import match_chips2 as mc2
-            hs.matcher = mc2.Matcher(hs)
-
     def load_matcher(hs, match_type=None):
         hs.ensure_matcher_loaded()
         if match_type is None: 

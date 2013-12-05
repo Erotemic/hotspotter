@@ -81,6 +81,8 @@ dev_databases = {
 for key, val in dev_databases.iteritems():
     exec('%s = %r' % (key, val))
 
+def inverse_dev_databases():
+    return {val:key for (key, val) in dev_databases.iteritems()}
 
 DEFAULT = NAUTS
 #DEFAULT = LF_ALL

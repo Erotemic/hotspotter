@@ -22,9 +22,6 @@ import sys
 import params
 import vizualizations as viz
 import voting_rules2 as vr2
-import argparse2
-
-args = argparse2.args
 
 # Toggleable printing
 print = __builtin__.print
@@ -444,50 +441,14 @@ def print_history_table(args):
             print('%d: %r' % (count, histentry))
             count += 1
 
-def hs_from_args(args=None, db=None, **kwargs):
-    # Load hotspotter
-    if args.dbM:
-        args.db = 'MOTHERS'
-    if args.dbG:
-        args.db = 'GZ'
-    if db is None:
-        db = args.db
-    db_dir = eval('params.'+db)
-    print('[invest] loading hotspotter database')
-    def _hotspotter_load():
-        hs = ld2.HotSpotter()
-        hs.load_all(db_dir, matcher=False, args=args, **kwargs)
-        hs.set_samples()
-        return hs
-    if True:
-        hs = _hotspotter_load()
-        return hs
-    else:
-        rss = helpers.RedirectStdout(autostart=True)
-        hs = _hotspotter_load()
-        rss.stop()
-        rss.dump()
-        print('loaded hotspotter database')
-        return hs
-
-def change_db(db):
-    global args
-    global hs
-    args.db = db
-    if args.dbM:
-        args.db = 'MOTHERS'
-    if args.dbG:
-        args.db = 'GZ'
-    hs = hs_from_args(args)
-    hs.args = args
-    return hs
-
 def main(**kwargs):
+    import HotSpotter
     print('[iv] main()')
-    if 'hs' in vars():
-        return
+    if 'hs' in vars(): return
     # Load Hotspotter
-    hs = hs_from_args(args, **kwargs)
+    hs = HotSpotter.HotSpotter()
+    hs.load2(load_all=True)
+    args = hs.args
     qon_list = get_qon_list(hs)
     print('[invest] Loading DB=%r' % args.db)
     if not args.noprinthist or True:

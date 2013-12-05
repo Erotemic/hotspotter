@@ -660,7 +660,7 @@ def run_investigations(hs, qon_list):
         fnum = intestigate_keypoint_interaction(hs, qon_list)
     if '13' in args.test or 'interact' in args.tests:
         import interaction
-        fnum = interact.interact1(hs, qon_list, fnum)
+        fnum = interaction.interact1(hs, qon_list, fnum)
     if '14' in args.tests or 'list-cfg-tests' in args.tests or 'list' in args.tests:
         print(dev.get_valid_testcfg_names())
     # Allow any testcfg to be in tests like: 

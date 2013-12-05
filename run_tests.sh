@@ -16,11 +16,6 @@ ic --db MOTHERS --tests vsmany_sv --all-gt-cases
 ic --db MOTHERS --tests vsmany_k --all-gt-cases
 
 
-
-ic --db MOTHERS --tests vsmany_srule --all-gt-cases
-ic --db MOTHERS --tests vsmany_nosv --all-gt-cases
-
-
 #python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --printoff 
 
 #--nocache-query

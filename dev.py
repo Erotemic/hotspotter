@@ -35,7 +35,7 @@ from collections import OrderedDict
 #mf.print_off()
 #algos.print_off()
 #io.print_off()
-HotSpotter.print_off()
+#HotSpotter.print_off()
 #cc2.print_off()
 #fc2.print_off()
 #ld2.print_off()

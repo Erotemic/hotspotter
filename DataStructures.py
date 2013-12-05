@@ -375,6 +375,7 @@ class SpatialVerifyConfig(DynStruct):
         sv_cfg.nShortlist = 1000
         sv_cfg.prescore_method = 'csum'
         sv_cfg.use_chip_extent = False
+        sv_cfg.just_affine = False
         sv_cfg.min_nInliers = 4
         sv_cfg.sv_on = True
         sv_cfg.update(**kwargs)
@@ -387,6 +388,7 @@ class SpatialVerifyConfig(DynStruct):
         scale_str = helpers.remove_chars(str(sv_cfg.scale_thresh), ' ()')
         uid += [',' + scale_str.replace(',','_')]
         uid += [',cdl' * sv_cfg.use_chip_extent] # chip diag len
+        uid += [',aff' * sv_cfg.just_affine] # chip diag len
         uid += [','+sv_cfg.prescore_method]
         uid += [')']
         return uid

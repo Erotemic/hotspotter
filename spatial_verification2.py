@@ -36,7 +36,8 @@ SV_DTYPE = np.float64
 
 # Generate 6 degrees of freedom homography transformation
 def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
-    'Computes homography from normalized (0 to 1) point correspondences'
+    '''Computes homography from normalized (0 to 1) point correspondences
+    from 2 --> 1 '''
     num_pts = len(x1_mn)
     Mbynine = np.zeros((2*num_pts,9), dtype=SV_DTYPE)
     for ix in xrange(num_pts): # Loop over inliers
@@ -93,10 +94,11 @@ def normalize_xy_points(x_m, y_m):
 
 def homography_inliers(kpts1, kpts2, fm, 
                        xy_thresh,
-                       scale_thresh_high,
-                       scale_thresh_low,
+                       max_scale,
+                       min_scale,
                        diaglen_sqrd=None,
-                       min_num_inliers=4):
+                       min_num_inliers=4,
+                       just_affine=False):
     #if len(fm) < min_num_inliers:
         #return None
     # Not enough data
@@ -109,13 +111,15 @@ def homography_inliers(kpts1, kpts2, fm,
         diaglen_sqrd = calc_diaglen_sqrd(x2_m, y2_m)
     xy_thresh_sqrd = diaglen_sqrd * xy_thresh
     Aff, aff_inliers = affine_inliers(x1_m, y1_m, acd1_m, fm[:, 0],
-                                        x2_m, y2_m, acd2_m, fm[:, 1],
-                                        xy_thresh_sqrd, 
-                                        scale_thresh_high,
-                                        scale_thresh_low)
+                                      x2_m, y2_m, acd2_m, fm[:, 1],
+                                      xy_thresh_sqrd, 
+                                      max_scale,
+                                      min_scale)
     # Cannot find good affine correspondence
-    if len(aff_inliers) < min_num_inliers:
+    if just_affine:
         #raise Exception('No affine inliers')
+        return Aff, aff_inliers
+    if len(aff_inliers) < min_num_inliers:
         return None
     # Get corresponding points and shapes
     (x1_ma, y1_ma, acd1_m) = (x1_m[aff_inliers], y1_m[aff_inliers],
@@ -125,6 +129,7 @@ def homography_inliers(kpts1, kpts2, fm,
     # Normalize affine inliers
     x1_mn, y1_mn, T1 = normalize_xy_points(x1_ma, y1_ma)
     x2_mn, y2_mn, T2 = normalize_xy_points(x2_ma, y2_ma)
+    # Compute homgraphy transform from 1-->2 using affine inliers
     H_prime = compute_homog(x1_mn, y1_mn, x2_mn, y2_mn)
     try: 
         # Computes ax = b # x = linalg.solve(a, b)
@@ -132,23 +137,23 @@ def homography_inliers(kpts1, kpts2, fm,
     except linalg.LinAlgError as ex:
         printWARN('[sv2] Warning 285 '+repr(ex), )
         #raise
-        return np.eye(3), aff_inliersS
+        return None
 
     ((H11, H12, H13),
      (H21, H22, H23),
      (H31, H32, H33)) = H
-    # Transform kpts1 to kpts2
+    # Transform all xy1 matches to xy2 space
     x1_mt = H11*(x1_m) + H12*(y1_m) + H13
     y1_mt = H21*(x1_m) + H22*(y1_m) + H23
     z1_mt = H31*(x1_m) + H32*(y1_m) + H33
-    # --- Find (Squared) Error ---
+    # --- Find (Squared) Distance Error ---
     #scale_err = np.abs(np.linalg.det(H)) * det2_m / det1_m 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         xy_err = (x1_mt/z1_mt - x2_m)**2 + (y1_mt/z1_mt - y2_m)**2 
     # Estimate final inliers
-    inliers, = np.where(xy_err < xy_thresh_sqrd)
-    return H, inliers, Aff, aff_inliers
+    inliers = np.where(xy_err < xy_thresh_sqrd)[0]
+    return H, inliers
 '''
 fx1_m  = np.array( (1, 2, 3, 4, 5))
 x1_m   = np.array( (1, 2, 1, 4, 5))
@@ -204,24 +209,27 @@ def inv_acd(acd, det):
 def dot_acd(acd1, acd2): 
     'Lower triangular dot product'
     a = (acd1[0] * acd2[0])
-    c = (acd1[1] * acd2[0] + acd1[2] * acd2[1])
+    c = (acd1[1] * acd2[0]) + (acd1[2] * acd2[1])
     d = (acd1[2] * acd2[2])
     return np.array((a, c, d))
 # --------------------------------
 def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
                    x2_m, y2_m, acd2_m, fx2_m,
                    xy_thresh_sqrd, 
-                   scale_thresh_high, scale_thresh_low):
+                   max_scale, min_scale):
     '''Estimates inliers deterministically using elliptical shapes
     1_m = img1_matches; 2_m = img2_matches
     x and y are locations, acd are the elliptical shapes. 
     fx are the original feature indexes (used for making sure 1 keypoint isn't assigned to 2)
 
     FROM PERDOCH 2009: 
-        Transformations from coordinate frame 2->1
         H = inv(Aj).dot(Rj.T).dot(Ri).dot(Ai)
+        H = inv(Aj).dot(Ai)
         The input acd's are assumed to be 
         invA = ([a 0],[c d])
+
+    REMEMBER our acd is actually inv(acd)
+    We transform from 1->2
     '''
     #print(repr((acd1_m.T[0:10]).T))
     #print(repr((acd2_m.T[0:10]).T))
@@ -256,16 +264,18 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
         y1_hypo = y1_m[mx]
         x2_hypo = x2_m[mx]
         y2_hypo = y2_m[mx]
-        # --- Transform from kpts1 to kpts2 ---
+        # --- Transform from xy1 to xy2 ---
         x1_mt   = x2_hypo + Aa*(x1_m - x1_hypo)
         y1_mt   = y2_hypo + Ac*(x1_m - x1_hypo) + Ad*(y1_m - y1_hypo)
-        # --- Find (Squared) Error ---
+        # --- Find (Squared) Distance Error ---
         xy_err    = (x1_mt - x2_m)**2 + (y1_mt - y2_m)**2 
-        scale_err = Adet * det2_m / det1_m 
+        # --- Find (Squared) Scale Error ---
+        #scale_err = Adet * det2_m / det1_m 
+        scale_err = Adet * det1_m / det2_m 
         # --- Determine Inliers ---
         xy_inliers_flag = xy_err < xy_thresh_sqrd 
-        scale_inliers_flag = np.logical_and(scale_err > scale_thresh_low,
-                                            scale_err < scale_thresh_high)
+        scale_inliers_flag = np.logical_and(scale_err > min_scale,
+                                            scale_err < max_scale)
         hypo_inliers_flag = np.logical_and(xy_inliers_flag, scale_inliers_flag)
         #---
         #---------------------------------
@@ -282,8 +292,12 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
         hypo_inliers = np.where(hypo_inliers_flag)[0][unique_assigned_flag]
         '''
         hypo_inliers = np.where(hypo_inliers_flag)[0]
+        
         #---
-        num_hypo_inliers = len(hypo_inliers)
+        # Try to not double count inlier matches that are counted twice
+        # probably need something a little bit more robust here.
+        unique_hypo_inliers = np.unique(fx1_m[hypo_inliers])
+        num_hypo_inliers = len(unique_hypo_inliers)
         # --- Update Best Inliers ---
         if num_hypo_inliers > num_best_inliers:
             best_mx = mx 
@@ -311,8 +325,8 @@ def test():
     import match_chips3 as mc3
     import spatial_verification2 as sv2
     xy_thresh         = params.__XY_THRESH__
-    scale_thresh_high = params.__SCALE_THRESH_HIGH__
-    scale_thresh_low  = params.__SCALE_THRESH_LOW__
+    max_scale = params.__SCALE_THRESH_HIGH__
+    min_scale  = params.__SCALE_THRESH_LOW__
     qcx = helpers.get_arg_after('--qcx', type_=int, default=0)
     cx  = helpers.get_arg_after('--cx', type_=int)
     #cx  = 113
@@ -334,10 +348,11 @@ def test():
     #with helpers.Timer('Computing inliers: '):
     H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm,
                                                           xy_thresh,
-                                                          scale_thresh_high,
-                                                          scale_thresh_low,
+                                                          max_scale,
+                                                          min_scale,
                                                           diaglen_sqrd=diaglen_srd,
-                                                          min_num_inliers=4)
+                                                          min_num_inliers=4,
+                                                         just_affine=False)
     df2.show_matches2(*args_+[fm], fs=None,
                       all_kpts=False, draw_lines=True,
                       doclf=True, title='Assigned matches', plotnum=(1,3,1))
@@ -354,8 +369,8 @@ def test2(qcx, cx):
     import load_data2 as ld2
     import spatial_verification2 as sv2
     xy_thresh         = params.__XY_THRESH__
-    scale_thresh_high = params.__SCALE_THRESH_HIGH__
-    scale_thresh_low  = params.__SCALE_THRESH_LOW__
+    max_scale = params.__SCALE_THRESH_HIGH__
+    min_scale  = params.__SCALE_THRESH_LOW__
     qcx = 27
     cx  = 113
     with helpers.RedirectStdout():
@@ -366,8 +381,8 @@ def test2(qcx, cx):
     with helpers.Timer('Computing inliers: '+str(qcx)+' '+str(cx)):
         H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm, 
                                                               xy_thresh,
-                                                              scale_thresh_high,
-                                                              scale_thresh_low,
+                                                              max_scale,
+                                                              min_scale,
                                                               min_num_inliers=4)
 
 if __name__ == '__main__':

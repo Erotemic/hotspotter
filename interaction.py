@@ -55,6 +55,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
             state.scale_min = None
             state.scale_max = None
             state.fnum = 1
+            state.fnum_offset = 1
 
     state = State()
     state.fnum = fnum
@@ -96,7 +97,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         sift = desc[fx]
         np.set_printoptions(precision=5)
         df2.plt.cla()
-        fig1 = df2.figure(fnum, **kwargs)
+        fig1 = df2.figure(state.fnum , **kwargs)
         df2.imshow(rchip, plotnum=(2,1,1))
         #df2.imshow(rchip, plotnum=(1,2,1), title='inv(sqrtm(invE*)')
         #df2.imshow(rchip, plotnum=(1,2,2), title='inv(A)')
@@ -126,7 +127,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         fig1.canvas.draw()
         #df2.show()
 
-    fig = df2.plt.figure(fnum)
+    fig = df2.plt.figure(state.fnum )
     xy = kpts.T[0:2].T
     # Flann doesn't help here at all
     use_flann = False
@@ -162,19 +163,46 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         ans = raw.split(' ')
         if len(ans) == 0: continue
         cmd = ans[0]
-        if cmd == 'q': break;
+        if cmd in ['e', 'exit']: break;
         elif cmd == 'n':
             fx_ptr[0] += 1
             select_ith_keypoint(fx_ptr[0])
-        elif cmd == 'query':
+        elif cmd in ['q', 'query']:
             print(q_cfg)
             print(q_cfg.get_uid())
-            res = mc3.query_database(hs, cx, q_cfg=q_cfg)
+            res = mc3.query_database(hs, cx, q_cfg=q_cfg, use_cache=False)
             state.res = res
-            res.show_topN(hs, fignum=fnum+1)
+            resfnum = state.fnum + state.fnum_offset
+            res.show_topN(hs, fignum=resfnum)
             df2.update()
+            #fig_res = df2.figure(fignum=resfnum)
+            #fig_res.show()
+            #fig_res.canvas.draw()
+        elif cmd == 'K':
+            q_cfg.update_cfg(K=int(ans[1]))
+        elif cmd == 'svoff':
+            q_cfg.update_cfg(sv_on=False)
+        elif cmd == 'svon':
+            q_cfg.update_cfg(sv_on=True)
+        elif cmd == 'test':
+            q_cfg.update_cfg(sv_on=True, K=20, use_chip_extent=True)
+        elif cmd in ['m', 'mytest']:
+            mycmd = open('mytest.py').read();
+            print(mycmd)
+            exec mycmd in locals(), globals()
+            print(q_cfg)
+            res = mc3.query_database(hs, cx, q_cfg=q_cfg, use_cache=False)
+            state.res = res
+            resfnum = state.fnum + state.fnum_offset
+            res.show_topN(hs, fignum=resfnum)
+            df2.update()
+        elif cmd == 'test2':
+            q_cfg.update_cfg(sv_on=True, K=20, use_chip_extent=True, xy_thresh=.1)
+            #q_cfg.update_cfg(sv_on=True, K=20, use_chip_extent=False)
         elif cmd == 'reset':
             update_valid(reset=True)
+        elif cmd in ['fig']:
+            state.fnum_offset += 1
         elif cmd in ['smin', 'scale_min']:
             state.scale_min = int(ans[1])
             update_valid()
@@ -188,7 +216,8 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         print('>>>')
       except Exception as ex:
           print(repr(ex))
-          raise
+          if 'doraise' in vars():
+            raise
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support

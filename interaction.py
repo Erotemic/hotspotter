@@ -96,7 +96,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         kp = kpts[fx]
         sift = desc[fx]
         np.set_printoptions(precision=5)
-        df2.plt.cla()
+        df2.cla()
         fig1 = df2.figure(state.fnum , **kwargs)
         df2.imshow(rchip, plotnum=(2,1,1))
         #df2.imshow(rchip, plotnum=(1,2,1), title='inv(sqrtm(invE*)')
@@ -104,7 +104,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         ell_args = {'ell_alpha':.4, 'ell_linewidth':1.8, 'rect':False}
         df2.draw_kpts2(kpts[is_valid], ell_color=df2.ORANGE, **ell_args)
         df2.draw_kpts2(kpts[fx:fx+1], ell_color=df2.BLUE, **ell_args)
-        ax = df2.plt.gca()
+        ax = df2.gca()
         #ax.set_title(str(fx)+' old=b(inv(sqrtm(invE*)) and new=o(A=invA)')
         scale = np.sqrt(kp[2]*kp[4])
         printops = np.get_printoptions()
@@ -113,10 +113,10 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         ax.set_xlabel(chip_xlabel)
         
         extract_patch.draw_keypoint_patch(rchip, kp, sift, plotnum=(2,2,3))
-        ax = df2.plt.gca()
+        ax = df2.gca()
         ax.set_title('affine feature\nfx=%r scale=%.1f' % (fx, scale))
         extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, plotnum=(2,2,4))
-        ax = df2.plt.gca()
+        ax = df2.gca()
         ax.set_title('warped feature\ninvA=%r ' % str(kp))
         golden_wh = lambda x:map(int,map(round,(x*.618 , x*.312)))
         Ooo_50_50 = {'num_rc':(1,1), 'wh':golden_wh(1400*2)}
@@ -127,7 +127,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         fig1.canvas.draw()
         #df2.show()
 
-    fig = df2.plt.figure(state.fnum )
+    fig = df2.figure(state.fnum )
     xy = kpts.T[0:2].T
     # Flann doesn't help here at all
     use_flann = False

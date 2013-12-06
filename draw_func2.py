@@ -85,7 +85,7 @@ def draw_sift(desc, kp=None):
     desc = desc / np.sqrt((desc**2).sum())
     desc = np.round(desc * 255)
     '''
-    ax = plt.gca()
+    ax = gca()
     tau = 2*np.pi
     DSCALE = .25
     XYSCALE = .5
@@ -199,7 +199,7 @@ def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0,0),
         assert kpts1.shape == kpts2.shape
     if len(fm) == 0: 
         return
-    ax = plt.gca()
+    ax = gca()
     woff, hoff = kpts2_offset
     # Draw line collection
     kpts1_m = kpts1[fm[:,0]].T
@@ -233,7 +233,7 @@ def draw_kpts2(kpts, offset=(0,0),
         color_list = None
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
     # get matplotlib info
-    ax = plt.gca()
+    ax = gca()
     pltTrans = ax.transData
     ell_actors = []
     eps = 1E-9
@@ -322,7 +322,7 @@ def imshow(img,
     #printDBG('[df2] *** img.shape = %r ' % (img.shape,))
     #printDBG('[df2] *** img.stats = %r ' % (helpers.printable_mystats(img),))
     fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
-    ax = plt.gca()
+    ax = gca()
     if not DARKEN is None:
         imgdtype = img.dtype
         img = np.array(img, dtype=float) * DARKEN
@@ -494,15 +494,15 @@ def show_matches_annote(hs, qcx, cx2_score,
 
 def show_img(hs, cx, **kwargs):
     # Get the chip roi
-    roi = hs.get_roi(roi)
+    roi = hs.get_roi(cx)
     (rx,ry,rw,rh) = roi
     rxy = (rx,ry)
     # Get the image
-    img = hs.get_image(gx)
+    img = hs.get_image(cx=cx)
     # Draw image
     imshow(img, **kwargs)
     # Draw ROI
-    ax = plt.gca()
+    ax = gca()
     bbox = matplotlib.patches.Rectangle(rxy,rw,rh) 
     bbox_color = [1, 0, 0]
     bbox.set_fill(False)
@@ -595,7 +595,7 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
             p = p / p.sum()
             fxs_randsamp = np.random.choice(fxs1, size, replace, p)
             kpts1 = kpts1[fxs_randsamp]
-            ax = plt.gca()
+            ax = gca()
             ax.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1), fontproperties=FONTS.xlabel)
             # show a random sample of kpts
         draw_kpts2(kpts1, ell_alpha=kpts_alpha, ell_color=RED, **kpts_args)

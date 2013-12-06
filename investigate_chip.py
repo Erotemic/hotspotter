@@ -190,9 +190,9 @@ def vary_two_cfg(hs, qcx, cx, notes, q_cfg, vary_cfg, fnum=1):
                         horizontalalignment='right',
                         fontproperties=df2.FONTS.medbold)
     xlabel_args = dict(fontproperties=df2.FONTS.medbold)
-    #ax = df2.plt.gca()
+    #ax = df2.gca()
     # Vary cfg1
-    #df2.plt.gcf().clf()
+    #df2..gcf().clf()
     print_lock_ = helpers.ModulePrintLock(mc3, df2)
     assign_alg = q_cfg.a_cfg.query_type
     vert = not hs.args.horiz
@@ -215,7 +215,7 @@ def vary_two_cfg(hs, qcx, cx, notes, q_cfg, vary_cfg, fnum=1):
                 res = mc3.query_database(hs, qcx, q_cfg)
             res.plot_matches(hs, cx, plotnum=plotnum, **plt_match_args)
             x_title = cfg2_name + '='+helpers.format(cfg2_value, 3)  #helpers.commas(cfg2_value, 3)
-            ax = df2.plt.gca()
+            ax = df2.gca()
             if rowx == len(cfg1_steps) - 1:
                 ax.set_xlabel(x_title, **xlabel_args)
             if colx == 0:
@@ -277,14 +277,14 @@ def plot_keypoint_scales(hs, fnum=1):
     #
     fig = df2.figure(fignum=fnum, doclf=True, title='sorted scales')
     df2.plot(scales)
-    ax = df2.plt.gca()
+    ax = df2.gca()
     #ax.set_yscale('log')
     #ax.set_xscale('log')
     #
     fnum += 1
     fig = df2.figure(fignum=fnum, doclf=True, title='hist scales')
     df2.show_histogram(scales, bins=20)
-    ax = df2.plt.gca()
+    ax = df2.gca()
     #ax.set_yscale('log')
     #ax.set_xscale('log')
     return fnum

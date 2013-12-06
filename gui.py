@@ -5,30 +5,21 @@ import os
 import os.path
 import sys
 
-import matplotlib
-if matplotlib.get_backend() != 'Qt4Agg':
-    print('gui> Configuring matplotlib for Qt4')
-    matplotlib.use('Qt4Agg')
+from HotSpotter import imread
 
-import PyQt4.Qt
-import PyQt4.QtCore as QtCore
-from PyQt4.Qt import QMessageBox
-from PyQt4.Qt import QCoreApplication, QApplication
-from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
-        QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal, \
-        QStandardItem, QStandardItemModel, QString, QObject
+import draw_func2 as df2
 
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-def print_off():
-    global print, print_
-    def print(*args, **kwargs): pass
-    def print_(*args, **kwargs): pass
+from PyQt4 import Qt, QtCore, QtGui
+from PyQt4.Qt import (QMainWindow, QApplication, QCoreApplication,
+                      QTableWidgetItem, QAbstractItemView, QWidget, Qt,
+                      pyqtSlot, pyqtSignal, QStandardItem, QStandardItemModel,
+                      QString, QObject, QInputDialog, QDialog, QTreeWidgetItem)
+from tpl.other.matplotlibwidget import MatplotlibWidget
+
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    _fromUtf8 = lambda s: s
 
 # Dynamic module reloading
 def reload_module():
@@ -39,22 +30,52 @@ rrr = reload_module
 
 IS_INIT = False
 
-def make_dummy_main_window():
-    mainwin = PyQt4.Qt.QMainWindow()
-    mainwin.setWindowTitle('Dummy Main Window')
-    mainwin.show()
-    return mainwin
-
 def make_main_window(hs=None):
-    from _frontend import HotSpotterMainWindow
-    main_win = HotSpotterMainWindow.HotSpotterMainWindow(hs)
+    main_win = MainWindowBackend(hs)
+    #main_win.draw_splash()
+    main_win.show()
     return main_win
 
+class MainWindowBackend(QtCore.QObject):
+    ''' Class used by the backend to send and recieve signals to and from the
+    frontend'''
+    def __init__(self, hs=None):
+        super(MainWindowBackend, self).__init__()
+        self.hs = None
+        self.win = MainWindowFrontend(hs)
+        df2.register_matplotlib_widget(self.win.plotWidget)
+        if hs is None:
+            self.connect_api(hs)
+            
+    def connect_api(self, hs):
+        print('[win] connecting api')
+        self.hs = hs
+
+    def draw_splash(self):
+        img = imread('_frontend/splash.png')
+        fig = df2.figure()
+        print(fig)
+        print(fig is self.win.plotWidget.figure)
+        df2.imshow(img)
+        df2.update()
+    
+    def show(self):
+        self.win.show()
+
+class MainWindowFrontend(QtGui.QMainWindow):
+    populateChipTblSignal   = pyqtSignal(list, list, list, list)
+    def __init__(self, hs=None):
+        from _frontend.MainSkel import Ui_mainSkel
+        super(MainWindowFrontend, self).__init__()
+        self.ui=Ui_mainSkel()
+        self.ui.setupUi(self)
+        self.plotWidget = MatplotlibWidget(self.ui.centralwidget)
+        self.plotWidget.setObjectName(_fromUtf8('plotWidget'))
+        self.ui.root_hlayout.addWidget(self.plotWidget)
+
+
 def select_files(caption='Select Files:', directory=None):
-    ''' EG: 
-    image_list = select_files('Select one or more images to add.')
-    print('Image List: '+repr(image_list))
-    '''
+    'Selects one or more files from disk using a qt dialog'
     print(caption)
     if directory is None: 
         directory = io.global_cache_read('select_directory')
@@ -138,10 +159,10 @@ def run_main_loop(app, is_root=True):
         print('[gui] using roots main loop')
 
 def msgbox(msg, title='msgbox'):
-    'Make a non modal critical QMessageBox.'
-    msgBox = QMessageBox(None);
+    'Make a non modal critical Qt.QMessageBox.'
+    msgBox = Qt.QMessageBox(None);
     msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-    msgBox.setStandardButtons(QMessageBox.Ok)
+    msgBox.setStandardButtons(Qt.QMessageBox.Ok)
     msgBox.setWindowTitle(title)
     msgBox.setText(msg)
     msgBox.setModal(False)
@@ -149,7 +170,19 @@ def msgbox(msg, title='msgbox'):
     msgBox.show()
     return msgBox
 
+def make_dummy_main_window():
+    mainwin = PyQt4.Qt.QMainWindow()
+    mainwin.setWindowTitle('Dummy Main Window')
+    mainwin.show()
+    return mainwin
+
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     print('__main__ = gui.py')
+    def test():
+        app, is_root = init_qtapp()
+        main_win = make_main_window()
+        app.setActiveWindow(main_win.win)
+        run_main_loop(app, is_root)
+    test()

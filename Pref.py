@@ -1,5 +1,4 @@
 from __future__ import division, print_function
-from helpers import printDBG, printERR, printINFO
 from Printable import DynStruct
 import cPickle
 import types
@@ -7,6 +6,9 @@ import sys
 import os.path
 import traceback
 import numpy as np
+
+def printDBG(msg):
+    pass
 
 # See if PyQt4 is installed
 try: 

@@ -65,6 +65,8 @@ class MatplotlibWidget(Canvas):
                  xlim=None, ylim=None, xscale='linear', yscale='linear',
                  width=4, height=3, dpi=100, hold=False):
         self.figure = Figure(figsize=(width, height), dpi=dpi)
+        self.figure.show = lambda: self.show()
+        self.figure.number = 0
         self.axes = self.figure.add_subplot(111)
         self.axes.set_title(title)
         self.axes.set_xlabel(xlabel)

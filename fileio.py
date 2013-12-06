@@ -235,6 +235,7 @@ def filesize_str(fpath):
     mb_str = helpers.file_megabytes_str(fpath)
     return 'filesize(%r)=%s' % (fname, mb_str)
 
+
 # --- Global Cache ---
 GLOBAL_CACHE_DIR = realpath('.hotspotter/global_cache')
 helpers.ensuredir(GLOBAL_CACHE_DIR)

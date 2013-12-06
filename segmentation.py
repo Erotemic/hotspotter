@@ -53,14 +53,11 @@ def resize_img_and_roi(img_fpath, roi_, new_size=None, sqrt_area=400.0):
     roi_resz = np.array(np.round(roi_ * fx), dtype=np.int64)
     return img_resz, roi_resz
 
-def test(cx=0):
-    import load_data2 as ld2
+def test(hs, cx=0):
     import draw_func2 as df2
     import os
     if not 'cx' in vars():
         cx = 0
-    hs = ld2.HotSpotter()
-    hs.load_tables(ld2.DEFAULT)
     # READ IMAGE AND ROI
     cx2_roi = hs.tables.cx2_roi
     cx2_gx = hs.tables.cx2_gx
@@ -71,8 +68,8 @@ def test(cx=0):
     img_fname = gx2_gname[gx]
     img_fpath = os.path.join(hs.dirs.img_dir, img_fname)
     #---
+    print('testing segment')
     seg_chip, img_mask = segment(img_fpath, roi_, new_size=None)
-
     df2.show_img(hs, cx, fignum=1, plotnum=131, title='original', doclf=True)
     df2.imshow(img_mask, fignum=1, plotnum=132, title='mask')
     df2.imshow(seg_chip, fignum=1, plotnum=133, title='segmented')
@@ -169,7 +166,6 @@ def segment(img_fpath, roi_, new_size=None):
     seg_chip = cv2.cvtColor(chip_hsv, cv2.COLOR_HSV2RGB)
     return seg_chip, img_mask
 
-
 def test2(chip, chip_mask):
 
     im(chip, 1)
@@ -206,10 +202,11 @@ if __name__ == '__main__':
     freeze_support()
     print('[segm] __main__ = segmentation.py')
     df2.reset()
-    try:
-        cx = int(sys.argv[1])
-        test(cx)
-    except Exception as ex:
-        print('usage: segmentation.py [cx] ARGS')
-        pass
+    import investigate_chip as ic2
+    import helpers
+    main_locals = ic2.main()
+    exec(helpers.execstr_dict(main_locals, 'main_locals'))
+    cx = 0
+    test(hs, cx)
+    #cx = int(sys.argv[1])
     exec(df2.present())

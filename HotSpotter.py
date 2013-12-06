@@ -81,6 +81,10 @@ def convert_if_needed(db_dir):
             img_dpath = gui.select_directory('Select directory with images in it')
         convert_db.convert_named_chips(db_dir, img_dpath)
 
+def imread(img_fpath):
+    img = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+    return img
+
 # ___CLASS HOTSPOTTER____
 class HotSpotter(DynStruct):
     '''The HotSpotter main class is a root handle to all relevant data'''
@@ -378,7 +382,7 @@ class HotSpotter(DynStruct):
     #--------------
     def cx2_image(hs, cx):
         img_fpath = hs.get_gname(cx, full=True)
-        img = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+        img = imread(img_fpath)
         return img
     #--------------
     def get_nx2_cxs(hs):
@@ -471,7 +475,6 @@ class HotSpotter(DynStruct):
             raise
     #--------------
     def get_chip(hs, cx):
-        imread = cv2.imread
         cx2_rchip_path = hs.cpaths.cx2_rchip_path
         if not np.iterable(cx):
             return imread(cx2_rchip_path[cx])

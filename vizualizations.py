@@ -72,7 +72,7 @@ def plot_name(hs, nx, nx2_cxs=None, fignum=0, hl_cxs=[], subtitle='',
     for px, cx in enumerate(cxs):
         df2.show_chip(hs, cx=cx, plotnum=pnum(px), draw_kpts=annote, kpts_alpha=.2)
         if cx in hl_cxs:
-            ax = df2.plt.gca()
+            ax = df2.gca()
             df2.draw_border(ax, df2.GREEN, 4)
         #plot_cx3(hs, cx)
     title = 'nx=%r -- name=%r' % (nx, name)
@@ -83,7 +83,7 @@ def plot_name(hs, nx, nx2_cxs=None, fignum=0, hl_cxs=[], subtitle='',
     df2.set_figtitle(title, subtitle)
 
 def plot_cx3(hs, cx):
-    ax = df2.plt.gca()
+    ax = df2.gca()
     rchip = hs.get_chip(cx)
     ax.imshow(rchip, interpolation='nearest')
     df2.plt.set_cmap('gray')

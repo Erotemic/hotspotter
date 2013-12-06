@@ -325,7 +325,7 @@ def save_figure(fignum=None, fpath=None, usetitle=False):
     #warnings.simplefilter("error")
     # Find the figure
     if fignum is None:
-        fig = plt.gcf()
+        fig = gcf()
     else:
         fig = plt.figure(fignum, figsize=FIGSIZE, dpi=DPI)
     fignum = fig.number
@@ -345,24 +345,24 @@ def save_figure(fignum=None, fpath=None, usetitle=False):
         fig.savefig(fpath_clean, dpi=DPI)
 
 def set_ticks(xticks, yticks):
-    ax = plt.gca()
+    ax = gca()
     ax.set_xticks(xticks)
     ax.set_yticks(yticks)
 
 def set_xticks(tick_set):
-    ax = plt.gca()
+    ax = gca()
     ax.set_xticks(tick_set)
 
 def set_yticks(tick_set):
-    ax = plt.gca()
+    ax = gca()
     ax.set_yticks(tick_set)
 
 def set_xlabel(lbl):
-    ax = plt.gca()
+    ax = gca()
     ax.set_xlabel(lbl, fontproperties=FONTS.xlabel)
 
 def set_ylabel(lbl):
-    ax = plt.gca()
+    ax = gca()
     ax.set_ylabel(lbl, fontproperties=FONTS.xlabel)
 
 def plot(*args, **kwargs):
@@ -377,7 +377,7 @@ def plot2(x_data,
           *args,
           **kwargs):
     do_plot = True
-    ax = plt.gca()
+    ax = gca()
     if len(x_data) != len(y_data):
         warnstr = '[df2] ! Warning:  len(x_data) != len(y_data). Cannot plot2'
         warnings.warn(warnstr)
@@ -432,7 +432,7 @@ def upperright_text(txt):
     ax_relative_text(.98, .02, txt, **txtargs)
 
 def ax_relative_text(x, y, txt, **kwargs):
-    ax = plt.gca()
+    ax = gca()
     xy, width, height = _axis_xy_width_height(ax)
     x_, y_ = ((xy[0])+x*width, (xy[1]+height)-y*height)
     if not kwargs.has_key( 'fontproperties'):
@@ -442,13 +442,13 @@ def ax_relative_text(x, y, txt, **kwargs):
 def fig_relative_text(x, y, txt, **kwargs):
     kwargs['horizontalalignment'] = 'center'
     kwargs['verticalalignment'] = 'center'
-    fig = plt.gcf()
+    fig = gcf()
     #xy, width, height = _axis_xy_width_height(ax)
     #x_, y_ = ((xy[0]+width)+x*width, (xy[1]+height)-y*height)
     fig.text(x, y, txt, **kwargs)
 
 def set_figtitle(figtitle, subtitle=''):
-    fig = plt.gcf()
+    fig = gcf()
     if subtitle != '':
         subtitle = '\n'+subtitle
     fig.suptitle(figtitle+subtitle, fontsize=14, fontweight='bold')
@@ -463,12 +463,39 @@ def customize_figure(fig, doclf):
         fig.user_notes = []
     fig.df2_closed = False
 
+
+plotWidget = None
+def register_matplotlib_widget(plotWidget_):
+    'talks to PyQt4 guis'
+    global plotWidget
+    plotWidget = plotWidget_
+
+def gcf():
+    if plotWidget is not None:
+        print('returning plotWidget')
+        fig = plotWidget.figure
+        return fig
+    return plt.gcf()
+
+def gca():
+    if plotWidget is not None:
+        print('returning plotWidget')
+        ax = plotWidget.axes
+        return ax
+    return plt.gca()
+
+def cla():
+    return plt.cla()
+
+def clf():
+    return plt.clf()
+
 def get_fig(fignum=None):
     printDBG('[df2] get_fig(fignum=%r)' % fignum)
     fig_kwargs = dict(figsize=FIGSIZE, dpi=DPI)
     if fignum is None:
         try: 
-            fig = plt.gcf()
+            fig = gcf()
         except Exception as ex:
             printDBG('[df2] get_fig(): ex=%r' % ex)
             fig = plt.figure(**fig_kwargs)
@@ -479,12 +506,12 @@ def get_fig(fignum=None):
         except Exception as ex:
             print(repr(ex))
             warnings.warn(repr(ex))
-            fig = plt.gcf()
+            fig = gcf()
     return fig
 
 def get_ax(fignum=None, plotnum=None):
     figure(fignum=fignum, plotnum=plotnum)
-    ax = plt.gca()
+    ax = gca()
     return ax
 
 def figure(fignum=None,
@@ -511,17 +538,17 @@ def figure(fignum=None,
             ax = plt.subplot(*plotnum)
             ax.cla()
         else:
-            ax = plt.gca()
+            ax = gca()
     else: 
         printDBG('[df2] *** OLD FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
         if not plotnum is None:
             ax = plt.subplot(*plotnum)
         else:
-            ax = plt.gca()
+            ax = gca()
         #ax  = axes_list[0]
     # Set the title
     if not title is None:
-        ax = plt.gca()
+        ax = gca()
         ax.set_title(title, fontproperties=FONTS.axtitle)
         # Add title to figure
         if figtitle is None and plotnum == (1,1,1):
@@ -537,8 +564,8 @@ def update_figure_size(fignum, width, height):
     fig.canvas.draw()
 
 def draw_pdf(data, draw_support=True, scale_to=None, label=None, colorx=0):
-    fig = plt.gcf()
-    ax = plt.gca()
+    fig = gcf()
+    ax = gca()
     data = np.array(data)
     if len(data) == 0:
         warnstr = '[df2] ! Warning: len(data) = 0. Cannot visualize pdf'
@@ -586,7 +613,7 @@ def show_histogram(data, bins=None, **kwargs):
     if bins is None:
         bins = dmax - dmin
     fig = figure(**kwargs)
-    ax  = plt.gca()
+    ax  = gca()
     ax.hist(data, bins=bins, range=(dmin,dmax))
     #help(np.bincount)
     fig.show()
@@ -609,12 +636,12 @@ def draw_stems(x_data, y_data):
     markerline, stemlines, baseline = pylab.stem(x_data_sort, y_data_sort, linefmt='-')
     pylab.setp(markerline, 'markerfacecolor', 'b')
     pylab.setp(baseline, 'linewidth', 0)
-    ax = plt.gca()
+    ax = gca()
     ax.set_xlim(min(x_data)-1, max(x_data)+1)
     ax.set_ylim(min(y_data)-1, max(max(y_data), max(x_data))+1)
 
 def legend():
-    ax = plt.gca()
+    ax = gca()
     ax.legend(prop=FONTS.legend)
 
 def draw_histpdf(data, label=None, draw_support=False, nbins=10):
@@ -628,12 +655,12 @@ def draw_hist(data, bins=None, nbins=10, weights=None):
         dmin = data.min()
         dmax = data.max()
         bins = dmax - dmin
-    ax  = plt.gca()
+    ax  = gca()
     freq, bins_, patches = ax.hist(data, bins=nbins, weights=weights, range=(dmin,dmax))
     return freq, bins_
     
 def variation_trunctate(data):
-    ax = plt.gca()
+    ax = gca()
     data = np.array(data)
     if len(data) == 0: 
         warnstr = '[df2] ! Warning: len(data) = 0. Cannot variation_truncate'
@@ -650,7 +677,7 @@ def variation_trunctate(data):
     #ax.set_yticks(no_zero_yticks)
 
 def draw_text(text_str, rgb_textFG=(0,0,0), rgb_textBG=(1,1,1)):
-    ax = plt.gca()
+    ax = gca()
     xy, width, height = _axis_xy_width_height(ax)
     text_x = xy[0] + (width / 2)
     text_y = xy[1] + (height / 2)

@@ -51,7 +51,7 @@ def draw_keypoint_patch(rchip, kp, desc=None, warped=False, **kwargs):
     df2.draw_kpts2([subkp], ell_color=color, pts=True)
     if not desc is None:
         df2.draw_sift(desc, [subkp])
-    #df2.draw_border(df2.plt.gca(), color, 1)
+    #df2.draw_border(df2.gca(), color, 1)
 
 def get_warped_patch(rchip, kp):
     'Returns warped patch around a keypoint'

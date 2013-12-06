@@ -58,10 +58,10 @@ def _dbdir_from_args(args, db_dir=None):
     if is_invalid_path(db_dir) and args.db is not None:
         # The shortname is specified
         db_dir = params.dev_databases[args.db]
+    return db_dir
 
 def _fix_args(hs):
     import params
-    params
     db_dir = hs.dirs.db_dir
     inverse_dev_databases = params.inverse_dev_databases()
     print(inverse_dev_databases)

@@ -50,7 +50,7 @@ def parse_arguments():
     add_bool('--save-figures', default=False)
     add_bool('--noannote', default=False)
     # Database selections
-    add_str('--db', None, 'specifies the short name of the database to load')
+    add_str('--db', 'DEFAULT', 'specifies the short name of the database to load')
     add_str('--dbdir', None, 'specifies the full path of the database to load')
     add_bool('--dbM', default=False)
     add_bool('--dbG', default=False)

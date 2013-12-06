@@ -77,6 +77,7 @@ dev_databases = {
     'FROGS'          : WORK_DIR  + '/Frogs',
     'TOADS'          : WORK_DIR2 + '/WY_Toads'
 }
+dev_databases['DEFAULT'] = dev_databases['NAUTS']
 # Add values from the database dict as global vars
 for key, val in dev_databases.iteritems():
     exec('%s = %r' % (key, val))
@@ -84,8 +85,6 @@ for key, val in dev_databases.iteritems():
 def inverse_dev_databases():
     return {val:key for (key, val) in dev_databases.iteritems()}
 
-DEFAULT = NAUTS
-#DEFAULT = LF_ALL
 
 #=====================================================
 # Flann Configurations

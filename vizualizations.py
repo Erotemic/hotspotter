@@ -13,8 +13,6 @@ import re
 import draw_func2 as df2
 import helpers
 import load_data2 as ld2
-import report_results2 as rr2
-import match_chips2 as mc2
 import oxsty_results
 import params
 from Printable import DynStruct
@@ -145,7 +143,8 @@ def plot_cx(allres, cx, style='kpts', subdir=None, annotations=True, title_aug='
 def plot_cx2(hs, res, style='kpts', subdir=None, annotations=True, title_aug=''):
     #cx_info(allres, cx)
     cx = res.qcx
-    title_suffix = rr2.get_title_suffix()
+    raise Exception("fix no rr2")
+    #title_suffix = rr2.get_title_suffix()
     if 'kpts' == style:
         subdir = 'plot_cx' if subdir is None else subdir
         rchip = hs.get_chip(cx)

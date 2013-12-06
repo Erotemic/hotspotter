@@ -14,7 +14,6 @@ import match_chips3 as mc3
 import numpy as np
 import load_data2 as ld2
 import draw_func2 as df2
-import match_chips2 as mc2
 import cv2
 import spatial_verification2 as sv2
 import helpers

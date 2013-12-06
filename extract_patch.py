@@ -5,7 +5,6 @@ import numpy as np
 import params
 import load_data2 as ld2
 import draw_func2 as df2
-import match_chips2 as mc2
 import vizualizations as viz
 import helpers
 import cv2

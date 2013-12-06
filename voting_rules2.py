@@ -13,7 +13,6 @@ import helpers
 import scipy.optimize
 import scipy
 import params
-import match_chips2 as mc2
 from itertools import izip
 import pandas as pd
 #from numba import autojit

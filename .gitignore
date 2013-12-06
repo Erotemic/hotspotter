@@ -1,5 +1,5 @@
 *~
-results*
+resut lts*
 build
 research/notingit
 hs_scripts/setup/Output
@@ -7,6 +7,7 @@ hotspotter/generated_version.py
 desktop.ini
 OpenGLContext.profile
 '
+\'
 *.un
 *.swp
 *.swo
@@ -23,6 +24,5 @@ OpenGLContext.profile
 *.a.*
 *.so.*
 .hotspotter
-
 *.exe
 *.dll

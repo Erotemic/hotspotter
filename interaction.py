@@ -11,7 +11,6 @@ import helpers
 import draw_func2 as df2
 import extract_patch as extract_patch
 import pyflann
-import tpl.extern_feat.linalg_helpers as lh
 
 def interact1(hs, qon_list, fnum=1):
     print('this is a demo interactive session')

@@ -171,7 +171,7 @@ def get_hotspotter_datafiles():
     # Include Matplotlib data (for figure images and things)
     data_files.extend(matplotlib.get_py2exe_datafiles())
     # Include TPL Libs
-    plat_tpllibdir = join('hotspotter', 'tpl','lib', sys.platform)
+    plat_tpllibdir = join('hotspotter','_tpl','lib', sys.platform)
     if sys.platform == 'win32':
         # Hack to get MinGW dlls in for FLANN
         data_files.append(('',[join(plat_tpllibdir, 'libgcc_s_dw2-1.dll'),
@@ -261,7 +261,7 @@ def package_application():
     setup(**setup_kwargs)
 
     if sys.platform == 'darwin':
-        subprocess.call(['cp', '-r', 'hotspotter/tpl/lib/darwin',
+        subprocess.call(['cp', '-r', 'hotspotter/_tpl/lib/darwin',
                          'dist/HotSpotter.app/Contents/Resources/lib/'])
 
 def get_info_setup_kwarg():

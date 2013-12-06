@@ -31,7 +31,7 @@ import os, sys
 import params
 import scipy.signal
 import scipy.ndimage.filters as filters
-from tpl.other import imtools
+from _tpl.other import imtools
 
 import warnings
 

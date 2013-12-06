@@ -14,7 +14,7 @@ from PyQt4.Qt import (QMainWindow, QApplication, QCoreApplication,
                       QTableWidgetItem, QAbstractItemView, QWidget, Qt,
                       pyqtSlot, pyqtSignal, QStandardItem, QStandardItemModel,
                       QString, QObject, QInputDialog, QDialog, QTreeWidgetItem)
-from tpl.other.matplotlibwidget import MatplotlibWidget
+from _tpl.other.matplotlibwidget import MatplotlibWidget
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

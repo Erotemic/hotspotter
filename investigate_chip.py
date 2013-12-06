@@ -361,12 +361,12 @@ def chip_info(hs, cx, notes=''):
     return locals()
 
 def intestigate_keypoint_interaction(hs, qon_list, fnum=1, **kwargs):
-    import tpl
+    import _tpl
     for qcx, ocxs, notes in qon_list:
         rchip = hs.get_chip(qcx)
         kpts  = hs.feats.cx2_kpts[qcx]
         desc  = hs.feats.cx2_desc[qcx]
-        tpl.extern_feat.keypoint_interaction(rchip, kpts, desc, fnum=fnum, **kwargs)
+        _tpl.extern_feat.keypoint_interaction(rchip, kpts, desc, fnum=fnum, **kwargs)
         fnum += 1
     return fnum
 

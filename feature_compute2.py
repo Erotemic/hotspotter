@@ -6,7 +6,7 @@ import __builtin__
 import draw_func2 as df2
 import algos
 import params
-import tpl.extern_feat as extern_feat
+import _tpl.extern_feat as extern_feat
 import helpers
 from Parallelize import parallel_compute
 from Printable import DynStruct

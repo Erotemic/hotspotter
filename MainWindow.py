@@ -5,7 +5,7 @@ import multiprocessing
 from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
         QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal, \
         QStandardItem, QStandardItemModel, QString, QObject
-from tpl.other.matplotlibwidget import MatplotlibWidget
+from _tpl.other.matplotlibwidget import MatplotlibWidget
 
 #-------------------------------------------
 def gui_log(fn):

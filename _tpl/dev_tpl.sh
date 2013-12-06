@@ -9,6 +9,7 @@ pip install openpyxl --updgrade
 #cd openpyxl
 #python setup.py install
 
+sudo apt-get install python-qt
 
 sudo apt-get install graphviz-dev
 sudo apt-get install graphviz

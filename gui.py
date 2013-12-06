@@ -44,11 +44,11 @@ def make_dummy_main_window():
     mainwin.setWindowTitle('Dummy Main Window')
     mainwin.show()
     return mainwin
-    
 
-class HotspotterMainWindow(QMainWindow):
-    def __init__(hsgui):
-        super( HotspotterMainWindow, hsgui ).__init__()
+def make_main_window(hs=None):
+    from _frontend import HotSpotterMainWindow
+    main_win = HotSpotterMainWindow.HotSpotterMainWindow(hs)
+    return main_win
 
 def select_files(caption='Select Files:', directory=None):
     ''' EG: 
@@ -117,7 +117,7 @@ def init_qtapp():
     app = QCoreApplication.instance() 
     is_root = app is None
     if is_root: # if not in qtconsole
-        print('Initializing QApplication')
+        print('[gui] Initializing QApplication')
         app = QApplication(sys.argv)
     else: 
         print('Parent already initialized QApplication')

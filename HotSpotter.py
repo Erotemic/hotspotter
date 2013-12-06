@@ -46,7 +46,8 @@ def _on_loaded_tables(hs):
         hs.vcd()
         if args.vcdq: sys.exit(1)
 
-def is_invalid_path(db_dir): return db_dir is None or not exists(db_dir)
+def is_invalid_path(db_dir): 
+    return db_dir is None or not exists(db_dir)
 
 def _dbdir_from_args(args, db_dir=None):
     import params
@@ -64,7 +65,6 @@ def _fix_args(hs):
     import params
     db_dir = hs.dirs.db_dir
     inverse_dev_databases = params.inverse_dev_databases()
-    print(inverse_dev_databases)
     db = inverse_dev_databases[db_dir]
     hs.args.db = db
 
@@ -105,9 +105,9 @@ class HotSpotter(DynStruct):
     def load2(hs, db_dir=None, load_all=False, **kwargs):
         '(current load function) Loads the appropriate database'
         import argparse2
+        print('[hs] load2()')
         hs.args = argparse2.parse_arguments()
         db_dir  = _dbdir_from_args(hs.args, db_dir)
-        print(hs.args)
         db_dir  = hs.select_database(db_dir)
         convert_if_needed(db_dir)
         hs.load_tables(db_dir)

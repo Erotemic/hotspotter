@@ -9,6 +9,9 @@ pip install openpyxl --updgrade
 #cd openpyxl
 #python setup.py install
 
+# cd ~/code
+#git clone https://github.com/rafaelolg/salienpy.git
+
 sudo apt-get install python-qt
 
 sudo apt-get install graphviz-dev

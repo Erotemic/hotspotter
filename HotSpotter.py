@@ -49,38 +49,6 @@ def _on_loaded_tables(hs):
 def is_invalid_path(db_dir): 
     return db_dir is None or not exists(db_dir)
 
-def _dbdir_from_args(args, db_dir=None):
-    import params
-    if args.dbM: args.db = 'MOTHERS'
-    if args.dbG: args.db = 'GZ'
-    if is_invalid_path(db_dir) and args.dbdir is not None:
-        # The full path is specified
-        db_dir = realpath(args.dbdir)
-    if is_invalid_path(db_dir) and args.db is not None:
-        # The shortname is specified
-        db_dir = params.dev_databases[args.db]
-    return db_dir
-
-def _fix_args(hs):
-    import params
-    db_dir = hs.dirs.db_dir
-    inverse_dev_databases = params.inverse_dev_databases()
-    db = inverse_dev_databases[db_dir]
-    hs.args.db = db
-
-def convert_if_needed(db_dir):
-    import load_data2 as ld2
-    import convert_db as convert_db
-    import gui
-    internal_dir = os.path.join(db_dir, ld2.RDIR_INTERNAL2) 
-    needs_convert = not exists(internal_dir)
-    if needs_convert:
-        print('[hs] Need to convert database: db_dir=%r' % db_dir)
-        img_dpath = join(db_dir, ld2.RDIR_IMG2)
-        if not exists(img_dpath):
-            img_dpath = gui.select_directory('Select directory with images in it')
-        convert_db.convert_named_chips(db_dir, img_dpath)
-
 def imread(img_fpath):
     img = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
     return img
@@ -88,38 +56,34 @@ def imread(img_fpath):
 # ___CLASS HOTSPOTTER____
 class HotSpotter(DynStruct):
     '''The HotSpotter main class is a root handle to all relevant data'''
-    def __init__(hs, db_dir=None, load_basic=False, **kwargs):
+    def __init__(hs, args=None, db_dir=None):
         super(HotSpotter, hs).__init__()
-        hs.args = None
+        hs.args = args
         hs.num_cx = None
         hs.tables = None
         hs.feats  = None
         hs.cpaths = None
         hs.dirs   = None
-        hs.train_sample_cx    = None
-        hs.test_sample_cx     = None
+        hs.train_sample_cx   = None
+        hs.test_sample_cx    = None
         hs.indexed_sample_cx = None
         hs.cx2_rchip_size = None
         hs.query_uid = None
-        if load_basic:
-            hs.load_basic(db_dir)
-        elif not db_dir is None:
-            hs.load_database(db_dir, **kwargs)
+        if db_dir is not None:
+            hs.args.dbdir = db_dir
     #---------------
-    def load2(hs, db_dir=None, load_all=False, **kwargs):
+    def load(hs, load_all=False):
         '(current load function) Loads the appropriate database'
-        import argparse2
-        print('[hs] load2()')
-        hs.args = argparse2.parse_arguments()
-        db_dir  = _dbdir_from_args(hs.args, db_dir)
-        db_dir  = hs.select_database(db_dir)
-        convert_if_needed(db_dir)
-        hs.load_tables(db_dir)
-        _fix_args(hs)
+        print('[hs] load()')
+        if not exists(hs.args.dbdir):
+            raise ValueError('db_dir=%r does not exist!' % (hs.args.dbdir))
+        convert_db.convert_if_needed(hs.args.dbdir)
+        hs.load_tables(hs.args.dbdir)
         if load_all:
             hs.load_chips()
             hs.load_features()
             hs.set_samples()
+        return hs
 
     def load_all(hs, db_dir, matcher=True, args=None, load_features=True, **kwargs):
         'will be depricated in favor of load2'
@@ -139,23 +103,6 @@ class HotSpotter(DynStruct):
         hs.set_samples()
         if not load_matcher: return 
         hs.load_matcher()
-
-    def select_database(hs, db_dir=None):
-        'Returns the database directory based on args, cache, or gui selection'
-        import gui
-        import fileio as io
-        args = hs.args
-        if is_invalid_path(db_dir) and not args.nocache_db:
-            # Read from cache
-            db_dir = io.global_cache_read('db_dir')
-            if db_dir == '.': db_dir = None
-        if is_invalid_path(db_dir) and gui.IS_INIT:
-            # All has failed. Ask the user and write to global cache.
-            db_dir = gui.select_directory('Select (or create) a database directory.')
-            io.global_cache_write('db_dir', db_dir)
-        if is_invalid_path(db_dir):
-            raise ValueError('db_dir=%r is not a valid directory' % db_dir)
-        return db_dir
 
     def load_tables(hs, db_dir):
         import load_data2 as ld2

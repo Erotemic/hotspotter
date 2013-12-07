@@ -9,6 +9,7 @@ from HotSpotter import imread
 
 import draw_func2 as df2
 
+import PyQt4
 from PyQt4 import Qt, QtCore, QtGui
 from PyQt4.Qt import (QMainWindow, QApplication, QCoreApplication,
                       QTableWidgetItem, QAbstractItemView, QWidget, Qt,

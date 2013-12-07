@@ -145,9 +145,9 @@ class HotspotterDirs(DynStruct):
         computed_sym = db_dir + '/Shortcut-to-computed'
         results_sym  = db_dir + '/Shortcut-to-results'
 
-        helpers.symlink(self.internal_dir, internal_sym, noraise=False)
-        helpers.symlink(self.computed_dir, computed_sym, noraise=False)
-        helpers.symlink(self.result_dir, results_sym, noraise=False)
+        #helpers.symlink(self.internal_dir, internal_sym, noraise=False)
+        #helpers.symlink(self.computed_dir, computed_sym, noraise=False)
+        #helpers.symlink(self.result_dir, results_sym, noraise=False)
 
 def tryindex(list, val):
     try: 

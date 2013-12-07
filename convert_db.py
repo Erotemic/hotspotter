@@ -32,6 +32,46 @@ import os
 import parse
 import sys
 
+import db_info
+
+def try_autoconvert(db_dir):
+    if db_info.has_v2_gt(path)
+        raise NotImplemented('hotspotter v2 conversion')
+    if db_info.has_v1_gt(path)
+        raise NotImplemented('hotspotter v1 conversion')
+    if db_info.has_ss_gt(path)
+        raise NotImplemented('stripe spotter conversion')
+    return False
+
+def is_current(db_dir):
+    return db_info.has_internal_tables(db_dir)
+
+def try_user_guided(db_dir):
+    import gui
+    import load_data2 as ld2
+    if db_info.is_imgdir(path):
+        img_dpath = join(db_dir, ld2.RDIR_IMG2)
+        convert_named_chips(db_dir, img_dpath)
+    pass
+
+def try_new_database(db_dir):
+    import gui
+    if gui.IS_INIT not exists(img_dpath):
+        img_dpath = gui.select_directory('Select directory with images in it')
+    return exists(db_dir) and len(os.listdir(db_dir)) == 0
+
+def convert_if_needed(db_dir):
+    if is_current(db_dir)
+        return db_dir
+    elif try_autoconvert(db_dir):
+        return db_dir
+    elif try_user_guided(db_dir):
+        pass
+    elif try_new_database(db_dir):
+        pass
+    else:
+        raise Exception('unknown and non-empty database directory')
+
 # Port of Philbin07 code to python
 def compute_ap(groundtruth_query, ranked_list):
     good_set = set(open(groundtruth_query + '_good.txt').readlines())

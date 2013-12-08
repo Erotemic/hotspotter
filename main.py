@@ -74,33 +74,31 @@ def parse_arguments():
     add_str('--show-best', [], 'integer or test name', nargs='*')
     add_str('--show-worst', [], 'integer or test name', nargs='*')
     args, unknown = parser.parse_known_args()
-    return args
-
-def fix_args(args):
-    import params
-    from os.path import exists
+    # Postprocess args
     if args.dbM: args.db = 'MOTHERS'
     if args.dbG: args.db = 'GZ'
     if args.dbdir is not None:
         # The full path is specified
         args.dbdir = realpath(args.dbdir)
+    if args.dbdir is None or args.dbdir in ['', ' ', '.'] or not exists(args.dbdir):
+        args.dbdir = None
+    return args
+
+def fix_args_shortnames(args):
+    import params
+    from os.path import exists
     if args.dbdir is None and args.db is not None:
         # The shortname is specified
         try:
             args.dbdir = params.dev_databases[args.db]
         except KeyError:
             pass
+    # Lookup shortname
     try:
-        # Lookup shortname
-        try:
-            inverse_dev_databases = params.inverse_dev_databases()
-            args.db = inverse_dev_databases[args.db_dir]
-        except KeyError:
-            pass
-    except Exception as ex:
+        inverse_dev_databases = params.inverse_dev_databases()
+        args.db = inverse_dev_databases[args.dbdir]
+    except KeyError:
         pass
-    if args.dbdir is None or args.dbdir in ['', ' ', '.'] or not exists(args.dbdir):
-        args.dbdir = None
     return args
 
 def on_ctrl_c(signal, frame):
@@ -117,21 +115,16 @@ def signal_set():
     import signal
     signal.signal(signal.SIGINT, on_ctrl_c)
 
-def user_selection(db_dir):
+def fix_args_with_cache(args):
     'Returns the database directory based on args, cache, or gui selection'
     import fileio as io
     import gui
-    if db_dir is None and not args.nocache_db:
+    if args.dbdir is None and not args.nocache_db:
         # Read from cache
-        db_dir = io.global_cache_read('db_dir')
-        if db_dir in ['.','']: db_dir = None
-        print('[main] trying to read db_dir from cache: '+repr(db_dir))
-    if db_dir is None and gui.IS_INIT:
-        # All has failed. Ask the user and write to global cache.
-        db_dir = gui.select_directory('Select (or create) a database directory.')
-        print('[main] user selects database: '+db_dir)
-        io.global_cache_write('db_dir', db_dir)
-    return db_dir
+        args.dbdir = io.global_cache_read('db_dir')
+        if args.dbdir in ['.','',' ']: args.dbdir = None
+        print('[main] trying to read db_dir from cache: '+repr(args.dbdir))
+    return args
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
@@ -140,8 +133,15 @@ if __name__ == '__main__':
     freeze_support()
     print('main.py')
     app, is_root = gui.init_qtapp()
-    args = fix_args(parse_arguments())
-    args.dbdir = user_selection(args.dbdir)
-    hs = HotSpotter.HotSpotter(args).load()
+    args = parse_arguments()
+    args = fix_args_shortnames(args)
+    args = fix_args_with_cache(args)
+    args = fix_args_shortnames(args)
+    hs = HotSpotter.HotSpotter(args)
+    hs.load()
     main_win = gui.make_main_window(hs)
-    gui.run_main_loop(app, is_root)
+    app.setActiveWindow(main_win.win)
+    gui.run_main_loop(app, is_root, main_win)
+
+
+

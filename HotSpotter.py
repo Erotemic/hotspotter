@@ -73,6 +73,7 @@ class HotSpotter(DynStruct):
             hs.args.dbdir = db_dir
     #---------------
     def load(hs, load_all=False):
+        import convert_db
         '(current load function) Loads the appropriate database'
         print('[hs] load()')
         if not exists(hs.args.dbdir):

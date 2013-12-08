@@ -168,10 +168,9 @@ def print_database_stats(db_stats):
 #--------------------
 def has_internal_tables(path):
     internal_dir = path+'/.hs_internals'
-    tables = [
-        internal_dir+'/chip_table.csv',
-        internal_dir+'/name_table.csv',
-        internal_dir+'/image_table.csv']
+    tables = [internal_dir+'/chip_table.csv',
+              internal_dir+'/name_table.csv',
+              internal_dir+'/image_table.csv']
     return all([exists(path) for path in tables])
 
 def is_imgdir(path):
@@ -201,21 +200,20 @@ def has_ss_gt(path):
 
 def has_v1_gt(path):
     info_table = path+'/animal_info_table.csv'
+    return exists(info_table)
 
 def has_v2_gt(path):
-    tables = [
-        path+'/image_table.csv',
-        path+'/instance_table.csv']
+    tables = [path+'/image_table.csv',
+              path+'/instance_table.csv']
     return all([exists(path) for path in tables])
 
 def has_partial_gt(path):
     internal_dir = path+'/.hs_internals'
-    tables = [
-        'flat_table.csv', 
-        internal_dir+'/chip_table.csv', 
-        'chip_table.csv',
-        internal_dir+'instance_table.csv',
-        'instance_table.csv']
+    tables = ['flat_table.csv', 
+              internal_dir+'/chip_table.csv', 
+              'chip_table.csv',
+              internal_dir+'instance_table.csv',
+              'instance_table.csv']
     return any([exists(path) for path in tables])
 
 def has_flat_table(path):

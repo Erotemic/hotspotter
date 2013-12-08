@@ -7,6 +7,9 @@ from PyQt4.Qt import QMainWindow, QTableWidgetItem, QMessageBox, \
         QStandardItem, QStandardItemModel, QString, QObject
 from _tpl.other.matplotlibwidget import MatplotlibWidget
 
+# http://stackoverflow.com/questions/2312210/window-icon-of-exe-in-pyqt4
+
+
 #-------------------------------------------
 def gui_log(fn):
     'log what happens in the GUI for debugging'

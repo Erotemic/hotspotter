@@ -314,76 +314,71 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
         best_Aff = np.eye(3)
     return best_Aff, best_inliers
 
-def show_inliers(hs, qcx, cx, inliers, title='inliers', **kwargs):
-    import load_data2 as ld2
-    df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm[inliers], title=title, **kwargs_)
-
 def test():
-    import load_data2 as ld2
     import params
     import dev
     import match_chips3 as mc3
-    import spatial_verification2 as sv2
-    xy_thresh         = params.__XY_THRESH__
-    max_scale = params.__SCALE_THRESH_HIGH__
-    min_scale  = params.__SCALE_THRESH_LOW__
-    qcx = helpers.get_arg_after('--qcx', type_=int, default=0)
-    cx  = helpers.get_arg_after('--cx', type_=int)
+    import DataStructures as ds
+    xy_thresh = .02
+    max_scale = 2
+    min_scale =.5 
+    #qcx = helpers.get_arg_after('--qcx', type_=int, default=0)
+    #cx  = helpers.get_arg_after('--cx', type_=int)
     #cx  = 113
-    if not 'hs' in vars():
-        main_locals = dev.dev_main()
-        exec(helpers.execstr_dict(main_locals, 'main_locals'))
-        cx = hs.get_other_cxs(qcx)[0]
-        res = mc3.query_groundtruth(hs, qcx, sv_on=False)
-        fm = res.cx2_fm[cx]
-        fs = res.cx2_fs[cx]
-        score = res.cx2_score[cx]
-        rchip1 = hs.get_chip(qcx)
-        rchip2 = hs.get_chip(cx)
-        # Get keypoints
-        kpts1 = hs.get_kpts(qcx)
-        kpts2 = hs.get_kpts(cx)
+    main_locals = dev.dev_main()
+    hs = main_locals['hs']        # hotspotter api
+    qcx = 0                       # query chip index
+    cx = hs.get_other_cxs(qcx)[0] # ground truth chip index
+
+    # Query to get result object
+    res = mc3.query_groundtruth(hs, qcx, sv_on=False)
+
+    # Get chip index to feature match
+    fm = res.cx2_fm[cx]
+    # Get chip index to feature score
+    fs = res.cx2_fs[cx]
+    score = res.cx2_score[cx]
+    # Read the images from disk
+    rchip1 = hs.get_chip(qcx)
+    rchip2 = hs.get_chip(cx)
+    # Get keypoints
+    kpts1 = hs.get_kpts(qcx)
+    kpts2 = hs.get_kpts(cx)
+    #
+    # Common arguments to df2.show_matches2
     args_ = [rchip1, rchip2, kpts1, kpts2]
-    diaglen_srd= rchip2.shape[0]**2 + rchip2.shape[1]**2
-    #with helpers.Timer('Computing inliers: '):
-    H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm,
-                                                          xy_thresh,
-                                                          max_scale,
-                                                          min_scale,
-                                                          diaglen_sqrd=diaglen_srd,
-                                                          min_num_inliers=4,
-                                                         just_affine=False)
+    diaglen_sqrd= rchip2.shape[0]**2 + rchip2.shape[1]**2
+
+    # How does H map rchip1 onto rchip2?
+    H, inliers = homography_inliers(kpts1, kpts2, fm,
+                                    xy_thresh,
+                                    max_scale,
+                                    min_scale,
+                                    diaglen_sqrd=diaglen_sqrd,
+                                    min_num_inliers=4)
+
+    # How does Aff map rchip1 to rchip2? 
+    Aff, aff_inliers = homography_inliers(kpts1, kpts2, fm,
+                                    xy_thresh,
+                                    max_scale,
+                                    min_scale,
+                                    diaglen_sqrd=diaglen_sqrd,
+                                    min_num_inliers=4, just_affine=True)
+
+    # Draw original matches
     df2.show_matches2(*args_+[fm], fs=None,
                       all_kpts=False, draw_lines=True,
                       doclf=True, title='Assigned matches', plotnum=(1,3,1))
 
+    # Draw affine 
     df2.show_matches2(*args_+[fm[aff_inliers]], fs=None,
                       all_kpts=False, draw_lines=True, doclf=True,
                       title='Affine inliers', plotnum=(1,3,2))
 
-    df2.show_matches2(*args_+[fm[aff_inliers]], fs=None,
+    # Draw homogrophy
+    df2.show_matches2(*args_+[fm[inliers]], fs=None,
                       all_kpts=False, draw_lines=True, doclf=True,
                       title='Homography inliers', plotnum=(1,3,3))
-
-def test2(qcx, cx):
-    import load_data2 as ld2
-    import spatial_verification2 as sv2
-    xy_thresh         = params.__XY_THRESH__
-    max_scale = params.__SCALE_THRESH_HIGH__
-    min_scale  = params.__SCALE_THRESH_LOW__
-    qcx = 27
-    cx  = 113
-    with helpers.RedirectStdout():
-        if not 'hs' in vars():
-            (hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2) = ld2.get_sv_test_data(qcx, cx)
-    args_ = [rchip1, rchip2, kpts1, kpts2]
-
-    with helpers.Timer('Computing inliers: '+str(qcx)+' '+str(cx)):
-        H, inliers, Aff, aff_inliers = sv2.homography_inliers(kpts1, kpts2, fm, 
-                                                              xy_thresh,
-                                                              max_scale,
-                                                              min_scale,
-                                                              min_num_inliers=4)
 
 if __name__ == '__main__':
     import multiprocessing
@@ -392,7 +387,6 @@ if __name__ == '__main__':
     import params
     import helpers
     import sys
-    mp.freeze_support()
     print('[sc2] __main__ = spatial_verification2.py')
     test()
     exec(df2.present())

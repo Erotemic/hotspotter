@@ -577,9 +577,12 @@ if __name__ == '__main__':
     if hs.args.printoff:
         all_printoff()
     #df2.update()
-    for count, qcx in enumerate(qcxs):
-        print(fmtstr % (count+1))
-        run_investigations(hs, qon_list)
+    run_investigations(hs, qon_list)
+    if hs.args.query is not None:
+        qcx = hs.cid2_cx(hs.args.query[0])
+        q_cfg = mc3.get_vsmany_cfg(hs, K=args.K, score_method=args.score_method)
+        res = mc3.query_database(hs, qcx, q_cfg=q_cfg)
+        res.show_topN(hs)
     print('[dev]====================')
     kwargs = {}
     dcxs = None
@@ -591,6 +594,13 @@ if __name__ == '__main__':
 
 
 '''
+python dev.py --db GZ --score-method borda --query 451 --K 5 --noshow-query --nocache-query --noshow-gt
+python dev.py --db GZ --score-method bordaw --query 451 --K 5 --noshow-query --nocache-query --noshow-gt
+python dev.py --db GZ --score-method pl --query 451 --K 5 --noshow-query --nocache-query --noshow-gt
+python dev.py --db GZ --score-method plw --query 451 --K 5 --noshow-query --nocache-query --noshow-gt
+python dev.py --db GZ --score-method csum --query 451 --K 5 --noshow-query --nocache-query --noshow-gt
+
+
 python dev.py --db GZ --tests kpts-interact  --histid 0
 python dev.py --db GZ --tests test-cfg-vsmany-1 --all-gt-cases
 python dev.py --db GZ --tests test-cfg-vsmany-1 --sthresh 30 250

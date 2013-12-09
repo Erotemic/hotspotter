@@ -25,7 +25,6 @@ import scipy as sp
 import scipy.sparse as spsparse
 import sklearn.preprocessing 
 from itertools import izip, chain
-import investigate_chip as invest
 import spatial_verification2 as sv2
 import DataStructures as ds
 import nn_filters

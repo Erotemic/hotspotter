@@ -64,7 +64,7 @@ def nn_bursty_weight(hs, qcx2_nns, q_cfg):
     return qcx2_bursty_weight
 
 '''
-%run investigate_chip.py
+%run dev.py
 q_cfg = mc3.prequery(hs)
 qcx2_nns = mf.nearest_neighbors(hs, qcxs, q_cfg)
 '''

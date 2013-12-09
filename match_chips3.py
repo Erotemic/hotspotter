@@ -29,7 +29,7 @@ import scipy as sp
 import scipy.sparse as spsparse
 import sklearn.preprocessing 
 from itertools import izip, chain
-import investigate_chip as invest
+import dev
 import DataStructures as ds
 import matching_functions as mf
 
@@ -272,7 +272,7 @@ if __name__ == '__main__':
     df2.reset()
     mf.rrr()
     ds.rrr()
-    main_locals = invest.main()
+    main_locals = dev.dev_main()
     execstr = helpers.execstr_dict(main_locals, 'main_locals')
     exec(execstr)
     qcx = qcxs[0]

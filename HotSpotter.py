@@ -50,8 +50,8 @@ def is_invalid_path(db_dir):
     return db_dir is None or not exists(db_dir)
 
 def imread(img_fpath):
-    img = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
-    return img
+    return cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR),
+                        cv2.COLOR_BGR2RGB)
 
 # ___CLASS HOTSPOTTER____
 class HotSpotter(DynStruct):
@@ -76,7 +76,7 @@ class HotSpotter(DynStruct):
         import convert_db
         '(current load function) Loads the appropriate database'
         print('[hs] load()')
-        if not exists(hs.args.dbdir):
+        if hs.args.dbdir is None or not exists(hs.args.dbdir):
             raise ValueError('db_dir=%r does not exist!' % (hs.args.dbdir))
         convert_db.convert_if_needed(hs.args.dbdir)
         hs.load_tables(hs.args.dbdir)
@@ -315,10 +315,10 @@ class HotSpotter(DynStruct):
         return nx2_name[cx2_nx[cx]]
     #--------------
     def cx2_gname(hs, cx, full=False):
-        return hs.get_gname(cx, full)
-    #--------------
-    def get_gname(hs, cx, full=False):
         gx =  hs.tables.cx2_gx[cx]
+        return hs.gx2_gname(gx, full)
+    #--------------
+    def gx2_gname(hs, gx, full=False):
         gname = hs.tables.gx2_gname[gx]
         if full:
             gname = join(hs.dirs.img_dir, gname)
@@ -327,10 +327,21 @@ class HotSpotter(DynStruct):
     def get_image(hs, gx=None, cx=None):
         if not cx is None: 
             return hs.cx2_image(cx)
+        if not gx is None: 
+            return hs.gx2_image(gx)
     #--------------
     def cx2_image(hs, cx):
-        img_fpath = hs.get_gname(cx, full=True)
+        gx =  hs.tables.cx2_gx[cx]
+        return hs.gx2_image(gx)
+    #--------------
+    def gx2_image(hs, gx):
+        img_fpath = hs.gx2_gname(gx, full=True)
         img = imread(img_fpath)
+        return img
+    #--------------
+    def splash_image(hs):
+        splash_fpath = realpath('_frontend/splash.png')
+        img = imread(splash_fpath)
         return img
     #--------------
     def get_nx2_cxs(hs):
@@ -343,6 +354,16 @@ class HotSpotter(DynStruct):
             if nx > 0:
                 nx2_cxs[nx].append(cx)
         return nx2_cxs
+    #--------------
+    def get_gx2_cxs(hs):
+        cx2_gx = hs.tables.cx2_gx
+        if len(cx2_gx) == 0:
+            return []
+        max_gx = len(hs.tables.gx2_gname)
+        gx2_cxs = [[] for _ in xrange(max_gx+1)]
+        for cx, gx in enumerate(cx2_gx):
+            gx2_cxs[gx].append(cx)
+        return gx2_cxs
     #--------------
     def get_other_cxs(hs, cx):
         cx2_nx   = hs.tables.cx2_nx

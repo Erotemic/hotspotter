@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/frontend/AddChipsChoiceDialog.ui'
+# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\_frontend\AddChipsChoiceDialog.ui'
 #
-# Created: Fri Sep 20 16:48:01 2013
-#      by: PyQt4 UI code generator 4.9.1
+# Created: Sun Dec 08 16:47:19 2013
+#      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,7 +12,16 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -59,16 +68,16 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Dialog", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton.setText(QtGui.QApplication.translate("Dialog", "The Images \n"
-"are the chips.", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton_2.setText(QtGui.QApplication.translate("Dialog", "Add chips\n"
-" yourself, manually.", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton_3.setText(QtGui.QApplication.translate("Dialog", "Let HotSpotter\n"
+        Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
+        self.pushButton.setText(_translate("Dialog", "The Images \n"
+"are the chips.", None))
+        self.pushButton_2.setText(_translate("Dialog", "Add chips\n"
+" yourself, manually.", None))
+        self.pushButton_3.setText(_translate("Dialog", "Let HotSpotter\n"
 " have a shot at it.\n"
-"(unimplemented)", None, QtGui.QApplication.UnicodeUTF8))
-        self.checkBox.setText(QtGui.QApplication.translate("Dialog", "Rembember Until End of Run", None, QtGui.QApplication.UnicodeUTF8))
-        self.checkBox_2.setText(QtGui.QApplication.translate("Dialog", "Remember In Preference File: %{pref_fname}", None, QtGui.QApplication.UnicodeUTF8))
+"(unimplemented)", None))
+        self.checkBox.setText(_translate("Dialog", "Rembember Until End of Run", None))
+        self.checkBox_2.setText(_translate("Dialog", "Remember In Preference File: %{pref_fname}", None))
 
 
 if __name__ == "__main__":

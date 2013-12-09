@@ -344,7 +344,7 @@ def get_keypoint_stats(hs):
     cx2_kpts = hs.feats.cx2_kpts
     cx2_nFeats = map(len, cx2_kpts)
     kpts = np.vstack(cx2_kpts)
-    print('[invest] --- LaTeX --- ')
+    print('[dbinfo] --- LaTeX --- ')
     _printopts = np.get_printoptions()
     np.set_printoptions(precision=3)
     acd = kpts[:,2:5].T
@@ -358,7 +358,7 @@ def get_keypoint_stats(hs):
     print(tex_kpts_stats)
     print(tex_scale_stats)
     np.set_printoptions(**_printopts)
-    print('[invest] ---/LaTeX --- ')
+    print('[dbinfo] ---/LaTeX --- ')
     return (tex_nKpts, tex_kpts_stats, tex_scale_stats)
 
 
@@ -369,7 +369,7 @@ if __name__ == '__main__':
     #print('[dev]-----------')
     #print('[dev] main()')
     #df2.DARKEN = .5
-    #main_locals = iv.main()
+    #main_locals = dev.dev_main()
     #exec(helpers.execstr_dict(main_locals, 'main_locals'))
     from multiprocessing import freeze_support
     freeze_support()

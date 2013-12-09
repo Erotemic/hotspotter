@@ -1,5 +1,5 @@
 import DataStructures as ds
-import investigate_chip as ic2
+import dev
 import match_chips3 as mc3
 import numpy as np
 import draw_func2 as df2
@@ -42,7 +42,7 @@ def start_interaction(hs, cx, notes):
     
 
 def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
-    chip_info_locals = ic2.chip_info(hs, cx)
+    chip_info_locals = dev.chip_info(hs, cx)
     chip_title = chip_info_locals['cxstr']+' '+chip_info_locals['name']
     chip_xlabel = chip_info_locals['gname']
     class State(DynStruct):
@@ -221,9 +221,8 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
-    print('[invest] __main__ ')
-    df2.DARKEN = .5
-    main_locals = ic2.main()
+    print('[interact] __main__ ')
+    main_locals = dev.dev_main()
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
     fnum = 1
     interact1(hs, qon_list, fnum)

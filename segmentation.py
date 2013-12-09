@@ -202,9 +202,9 @@ if __name__ == '__main__':
     freeze_support()
     print('[segm] __main__ = segmentation.py')
     df2.reset()
-    import investigate_chip as ic2
+    import dev
     import helpers
-    main_locals = ic2.main()
+    main_locals = dev.dev_main()
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
     cx = 0
     test(hs, cx)

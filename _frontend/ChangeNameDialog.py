@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/frontend/ChangeNameDialog.ui'
+# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\_frontend\ChangeNameDialog.ui'
 #
-# Created: Fri Sep 20 16:48:01 2013
-#      by: PyQt4 UI code generator 4.9.1
+# Created: Sun Dec 08 16:47:19 2013
+#      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,7 +12,16 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_changeNameDialog(object):
     def setupUi(self, changeNameDialog):
@@ -45,9 +54,9 @@ class Ui_changeNameDialog(object):
         QtCore.QMetaObject.connectSlotsByName(changeNameDialog)
 
     def retranslateUi(self, changeNameDialog):
-        changeNameDialog.setWindowTitle(QtGui.QApplication.translate("changeNameDialog", "Change Name Dialog", None, QtGui.QApplication.UnicodeUTF8))
-        self.label.setText(QtGui.QApplication.translate("changeNameDialog", "Change all names matching:", None, QtGui.QApplication.UnicodeUTF8))
-        self.label_2.setText(QtGui.QApplication.translate("changeNameDialog", "To the new name:", None, QtGui.QApplication.UnicodeUTF8))
+        changeNameDialog.setWindowTitle(_translate("changeNameDialog", "Change Name Dialog", None))
+        self.label.setText(_translate("changeNameDialog", "Change all names matching:", None))
+        self.label_2.setText(_translate("changeNameDialog", "To the new name:", None))
 
 
 if __name__ == "__main__":

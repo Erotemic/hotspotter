@@ -19,14 +19,15 @@ Copyright © 2005 Florent Rougon, 2006 Darren Dale
 __version__ = "1.0.0"
 
 from PyQt4.QtGui import QSizePolicy
-from PyQt4.QtCore import QSize
+from PyQt4.QtCore import QSize, QString
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as Canvas
 from matplotlib.figure import Figure
 
-from matplotlib import rcParams
-rcParams['font.size'] = 9
-
+try:
+    _fromUtf8 = QString.fromUtf8
+except AttributeError:
+    _fromUtf8 = lambda s: s
 
 class MatplotlibWidget(Canvas):
     """
@@ -65,21 +66,24 @@ class MatplotlibWidget(Canvas):
                  xlim=None, ylim=None, xscale='linear', yscale='linear',
                  width=4, height=3, dpi=100, hold=False):
         self.figure = Figure(figsize=(width, height), dpi=dpi)
-        self.figure.show = lambda: self.show()
-        self.figure.number = 0
-        self.axes = self.figure.add_subplot(111)
-        self.axes.set_title(title)
-        self.axes.set_xlabel(xlabel)
-        self.axes.set_ylabel(ylabel)
-        if xscale is not None:
-            self.axes.set_xscale(xscale)
-        if yscale is not None:
-            self.axes.set_yscale(yscale)
-        if xlim is not None:
-            self.axes.set_xlim(*xlim)
-        if ylim is not None:
-            self.axes.set_ylim(*ylim)
-        self.axes.hold(hold)
+        fig = self.figure
+        fig.show = lambda: self.show()
+        fig.number = 0
+        ax = fig.add_subplot(111)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        #self.axes.set_title(title)
+        #self.axes.set_xlabel(xlabel)
+        #self.axes.set_ylabel(ylabel)
+        #if xscale is not None:
+            #self.axes.set_xscale(xscale)
+        #if yscale is not None:
+            #self.axes.set_yscale(yscale)
+        #if xlim is not None:
+            #self.axes.set_xlim(*xlim)
+        #if ylim is not None:
+            #self.axes.set_ylim(*ylim)
+        #self.axes.hold(hold)
 
         Canvas.__init__(self, self.figure)
         self.setParent(parent)
@@ -93,8 +97,6 @@ class MatplotlibWidget(Canvas):
 
     def minimumSizeHint(self):
         return QSize(10, 10)
-
-
 
 #===============================================================================
 #   Example

@@ -319,6 +319,43 @@ def dump_orgres_matches(allres, orgres_type):
                 (score, rank, query_gname, result_gname)
         df2.set_figtitle(big_title)
         __dump_or_browse(allres.hs, orgres_type+'_matches'+allres.title_suffix)
+#------------------------------
+
+def show_image(hs, gx, annote=True):
+    fig = df2.figure(doclf=True)
+    img = hs.gx2_image(gx)
+    df2.imshow(img)
+    ax = df2.gca()
+    if annote:
+        # draw chips in the image
+        gx2_cxs = hs.get_gx2_cxs()
+        cxs = gx2_cxs[gx]
+        for cx in cxs:
+            roi = hs.get_roi(cx)
+            df2.draw_roi(ax, roi, hs.cxstr(cx))
+    df2.draw()
+        
+def show_splash(hs):
+    fig = df2.figure(doclf=True)
+    print('[viz] show_splash()')
+    img = hs.splash_image()
+    df2.imshow(img)
+    df2.draw()
+    #fig = self.win.plotWidget.figure
+    #ax = fig.get_axes()[0]
+    #ax.imshow(img)
+    #ax.set_xticks([])
+    #ax.set_yticks([])
+    #fig.canvas.draw()
+    #print(fig)
+    #print(fig is self.win.plotWidget.figure)
+
+def show_chip(hs, cx, annote=True):
+    #print(hs)
+    fig = df2.figure(doclf=True)
+    df2.show_chip(hs, cx=cx, draw_kpts=annote)
+    df2.draw()
+    
 
 if __name__ == '__main__':
     import multiprocessing

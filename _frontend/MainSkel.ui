@@ -198,18 +198,18 @@
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
-     <string>Convenience</string>
+     <string>Experimental</string>
     </property>
     <addaction name="actionConvertImage2Chip"/>
     <addaction name="actionBatch_Change_Name"/>
     <addaction name="separator"/>
     <addaction name="actionAdd_Metadata_Property"/>
-    <addaction name="actionAssign_Matches_Above_Threshold"/>
     <addaction name="actionIncrease_ROI_Size"/>
     <addaction name="separator"/>
     <addaction name="actionOpen_Data_Directory"/>
     <addaction name="actionOpen_Source_Directory"/>
     <addaction name="actionOpen_Internal_Directory"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -226,11 +226,8 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionView_Documentation"/>
-    <addaction name="actionHelpWorkflow"/>
-    <addaction name="actionHelpTroubles"/>
-    <addaction name="separator"/>
-    <addaction name="actionHelpCMD"/>
+    <addaction name="actionView_Docs"/>
+    <addaction name="actionAbout"/>
     <addaction name="separator"/>
     <addaction name="actionWriteLogs"/>
    </widget>
@@ -242,23 +239,15 @@
     <addaction name="separator"/>
     <addaction name="actionAdd_ROI"/>
     <addaction name="actionReselect_ROI"/>
-    <addaction name="actionReselect_Orientation"/>
+    <addaction name="actionReselect_Ori"/>
     <addaction name="actionRemove_Chip"/>
     <addaction name="separator"/>
     <addaction name="actionNext"/>
-   </widget>
-   <widget class="QMenu" name="menuExperiments">
-    <property name="title">
-     <string>Experiments</string>
-    </property>
-    <addaction name="actionMatching_Experiment"/>
-    <addaction name="actionName_Consistency_Experiment"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuActions"/>
    <addaction name="menuOptions"/>
    <addaction name="menuView"/>
-   <addaction name="menuExperiments"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionOpen_Database">
@@ -296,6 +285,9 @@
    </property>
   </action>
   <action name="actionTogEll">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Toggle Ellipses</string>
    </property>
@@ -323,9 +315,9 @@
     <string>GUI Help</string>
    </property>
   </action>
-  <action name="actionHelpTroubles">
+  <action name="actionAbout">
    <property name="text">
-    <string>Troubleshooting</string>
+    <string>About</string>
    </property>
   </action>
   <action name="actionHelpWorkflow">
@@ -377,6 +369,9 @@
    </property>
   </action>
   <action name="actionQuery">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Query</string>
    </property>
@@ -413,6 +408,9 @@
    </property>
   </action>
   <action name="actionConvertImage2Chip">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Convert All Images to Chips</string>
    </property>
@@ -422,7 +420,7 @@
     <string>Batch Change Name</string>
    </property>
   </action>
-  <action name="actionReselect_Orientation">
+  <action name="actionReselect_Ori">
    <property name="text">
     <string>Reselect Orientation</string>
    </property>
@@ -432,22 +430,22 @@
   </action>
   <action name="actionAdd_Metadata_Property">
    <property name="text">
-    <string>Add Metadata Property</string>
+    <string>Add Chip Property</string>
    </property>
   </action>
-  <action name="actionAssign_Matches_Above_Threshold">
+  <action name="actionAutoassign">
    <property name="text">
     <string>Assign Matches Above Threshold</string>
    </property>
   </action>
-  <action name="actionMatching_Experiment">
+  <action name="actionRankErrorExpt">
    <property name="text">
-    <string>Matching Experiment</string>
+    <string>Rank Error Experiment</string>
    </property>
   </action>
   <action name="actionName_Consistency_Experiment">
    <property name="text">
-    <string>Run Name Consistency Experiment</string>
+    <string>Name Consistency</string>
    </property>
   </action>
   <action name="actionIncrease_ROI_Size">
@@ -455,9 +453,17 @@
     <string>Increase all ROI Sizes</string>
    </property>
   </action>
-  <action name="actionView_Documentation">
+  <action name="actionView_Docs">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>View Documentation</string>
+   </property>
+  </action>
+  <action name="actionAutoassign_2">
+   <property name="text">
+    <string>Auto-Assign Matches</string>
    </property>
   </action>
  </widget>

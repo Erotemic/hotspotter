@@ -4,7 +4,7 @@ from distutils.core import setup
 from distutils.util import convert_path
 from fnmatch import fnmatchcase
 from os.path import dirname, realpath, join, exists, normpath, isdir, isfile, normpath
-import hs_scripts.setup.git_helpers as git_helpers
+from _setup import git_helpers as git_helpers
 #from hs_scripts.setup.configure as hs_configure
 import os
 import textwrap
@@ -84,7 +84,7 @@ AUTHOR_EMAIL        = 'hotspotter.ir@gmail.com'
 MAINTAINER          = AUTHOR
 MAINTAINER_EMAIL    = AUTHOR_EMAIL
 DESCRIPTION         = 'Image Search for Large Animal Databases.'
-LONG_DESCRIPTION    = open('doc/DESCRIPTION.txt').read()
+LONG_DESCRIPTION    = open('_doc/DESCRIPTION.txt').read()
 URL                 = 'http://www.cs.rpi.edu/~cralljp'
 DOWNLOAD_URL        = 'https://github.com/Erotemic/hotspotter/archive/release.zip'
 LICENSE             = 'GNU'
@@ -255,7 +255,7 @@ def package_application():
     # ---------
     # 
     # Do actual setup
-    print 'Running package setup with args: '
+    print('Running package setup with args: ')
     for key, val in setup_kwargs.iteritems():
         print(key+' : '+repr(val))
     setup(**setup_kwargs)
@@ -291,7 +291,7 @@ def get_system_setup_kwargs():
 def build_pyinstaller():
     import os
     cwd = normpath(realpath(dirname(__file__)))
-    print cwd
+    print(cwd)
     build_dir = join(cwd, 'build')
     dist_dir = join(cwd, 'dist')
     for rmdir in [build_dir, dist_dir]:
@@ -310,7 +310,7 @@ def compile_ui():
     pyuic4_cmd = {'win32'  : 'C:\Python27\Lib\site-packages\PyQt4\pyuic4',
                   'linux2' : 'pyuic4',
                   'darwin' : 'pyuic4'}[sys.platform]
-    widget_dir = join(dirname(realpath(__file__)), 'frontend')
+    widget_dir = join(dirname(realpath(__file__)), '_frontend')
     print('Compiling qt designer files in %r' % widget_dir)
     for widget_ui in helpers.glob(widget_dir, '*.ui'):
         widget_py = os.path.splitext(widget_ui)[0]+'.py'
@@ -320,7 +320,7 @@ def compile_ui():
 
 if __name__ == '__main__':
     import sys
-    print 'Entering HotSpotter setup'
+    print('Entering HotSpotter setup')
     for cmd in iter(sys.argv[1:]):
         if cmd == 'setup_boost':
             setup_boost()

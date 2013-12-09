@@ -4,9 +4,7 @@ from __future__ import division, print_function
 # Moved this up for faster help responce time
 def parse_arguments():
     import argparse
-    '''
-    Defines the arguments for investigate_chip.py
-    '''
+    '''Defines the arguments for hotspotter'''
     parser = argparse.ArgumentParser(description='HotSpotter - Investigate Chip', prefix_chars='+-')
     def_on  = {'action':'store_false', 'default':True}
     def_off = {'action':'store_true', 'default':False}
@@ -70,11 +68,20 @@ def parse_arguments():
     # Plotting Args
     add_bool('--printoff', default=False)
     add_bool('--horiz', default=True)
+    add_bool('--darken', default=False)
     add_str('--tests', [], 'integer or test name', nargs='*')
     add_str('--show-best', [], 'integer or test name', nargs='*')
     add_str('--show-worst', [], 'integer or test name', nargs='*')
     args, unknown = parser.parse_known_args()
+    args = args_postprocess(args)
+    args = fix_args_shortnames(args)
+    return args
+
+def args_postprocess(args):
     # Postprocess args
+    if args.darken:
+        import draw_func2 as df2
+        df2.DARKEN = .5
     if args.dbM: args.db = 'MOTHERS'
     if args.dbG: args.db = 'GZ'
     if args.dbdir is not None:
@@ -116,32 +123,30 @@ def signal_set():
     signal.signal(signal.SIGINT, on_ctrl_c)
 
 def fix_args_with_cache(args):
-    'Returns the database directory based on args, cache, or gui selection'
+    'Returns the database directory based on cache'
     import fileio as io
-    import gui
     if args.dbdir is None and not args.nocache_db:
         # Read from cache
         args.dbdir = io.global_cache_read('db_dir')
         if args.dbdir in ['.','',' ']: args.dbdir = None
         print('[main] trying to read db_dir from cache: '+repr(args.dbdir))
+    args = fix_args_shortnames(args)
     return args
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     import HotSpotter
-    import gui
+    import guitools
     freeze_support()
     print('main.py')
-    app, is_root = gui.init_qtapp()
+    app, is_root = guitools.init_qtapp()
     args = parse_arguments()
-    args = fix_args_shortnames(args)
     args = fix_args_with_cache(args)
-    args = fix_args_shortnames(args)
     hs = HotSpotter.HotSpotter(args)
-    hs.load()
-    main_win = gui.make_main_window(hs)
-    app.setActiveWindow(main_win.win)
-    gui.run_main_loop(app, is_root, main_win)
+    hs.load(load_all=True)
+    backend = guitools.make_main_window(hs)
+    app.setActiveWindow(backend.win)
+    guitools.run_main_loop(app, is_root, backend)
 
 
 

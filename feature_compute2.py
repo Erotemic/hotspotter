@@ -241,9 +241,9 @@ if __name__ == '__main__':
             else:
                 print('usage: feature_compute.py --cx [cx] --nRandKpts [num]')
     elif __LOAD_FEATURES2__:
-        import investigate_chip as iv
+        import dev
         import feature_compute2 as fc2
-        main_locals = iv.main(load_features=False)
+        main_locals = dev.dev_main(load_features=False)
         exec(helpers.execstr_dict(main_locals, 'main_locals'))
 
         cx = helpers.get_arg_after('--cx', type_=int)

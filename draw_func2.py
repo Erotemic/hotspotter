@@ -5,6 +5,7 @@ import sys
 import matplotlib
 import multiprocessing
 def printDBG(msg):
+    #print(msg)
     pass
 #print('LOAD_MODULE: draw_func2.py')
 MPL_BACKEND = matplotlib.get_backend()
@@ -123,6 +124,17 @@ try:
 except KeyError:
     TILE_WITHIN = (0, 30, 969, 1041)
 
+plotWidget = None
+def register_matplotlib_widget(plotWidget_):
+    'talks to PyQt4 guis'
+    global plotWidget
+    plotWidget = plotWidget_
+    fig = plotWidget.figure
+    axes_list = fig.get_axes()
+    ax = axes_list[0]
+    print(ax)
+    #plt.sca(ax)
+
 def OooScreen2():
     nRows = 1
     nCols = 1
@@ -215,6 +227,9 @@ def get_all_figures():
     return all_figures
 
 def all_figures_show():
+    if plotWidget is not None:
+        plotWidget.figure.show()
+        plotWidget.figure.canvas.draw()
     for fig in iter(get_all_figures()):
         time.sleep(.1)
         fig.show()
@@ -448,11 +463,15 @@ def upperright_text(txt):
                    color=ORANGE)
     ax_relative_text(.98, .02, txt, **txtargs)
 
-def ax_relative_text(x, y, txt, **kwargs):
-    ax = gca()
+def ax_relative_text(x, y, txt, ax=None, **kwargs):
+    if ax is None: ax = gca()
     xy, width, height = _axis_xy_width_height(ax)
     x_, y_ = ((xy[0])+x*width, (xy[1]+height)-y*height)
-    if not kwargs.has_key( 'fontproperties'):
+    ax_absolute_text(x_, y_, txt, ax=ax, **kwargs)
+
+def ax_absolute_text(x_, y_, txt, ax=None, **kwargs):
+    if ax is None: ax = gca()
+    if not kwargs.has_key('fontproperties'):
         kwargs['fontproperties'] = FONTS.relative
     ax.text(x_, y_, txt, **kwargs)
 
@@ -480,24 +499,17 @@ def customize_figure(fig, doclf):
         fig.user_notes = []
     fig.df2_closed = False
 
-
-plotWidget = None
-def register_matplotlib_widget(plotWidget_):
-    'talks to PyQt4 guis'
-    global plotWidget
-    plotWidget = plotWidget_
-
 def gcf():
     if plotWidget is not None:
-        print('returning plotWidget')
         fig = plotWidget.figure
         return fig
     return plt.gcf()
 
 def gca():
     if plotWidget is not None:
-        print('returning plotWidget')
-        ax = plotWidget.axes
+        axes_list = plotWidget.figure.get_axes()
+        current = 0
+        ax = axes_list[current]
         return ax
     return plt.gca()
 
@@ -510,6 +522,8 @@ def clf():
 def get_fig(fignum=None):
     printDBG('[df2] get_fig(fignum=%r)' % fignum)
     fig_kwargs = dict(figsize=FIGSIZE, dpi=DPI)
+    if plotWidget is not None:
+        return gcf()
     if fignum is None:
         try: 
             fig = gcf()
@@ -552,14 +566,16 @@ def figure(fignum=None,
     if doclf or len(axes_list) == 0:
         printDBG('[df2] *** NEW FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
         if not plotnum is None:
-            ax = plt.subplot(*plotnum)
+            #ax = plt.subplot(*plotnum)
+            ax = fig.add_subplot(*plotnum)
             ax.cla()
         else:
             ax = gca()
     else: 
         printDBG('[df2] *** OLD FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
         if not plotnum is None:
-            ax = plt.subplot(*plotnum)
+            #ax = plt.subplot(*plotnum)
+            ax = fig.add_subplot(*plotnum)
         else:
             ax = gca()
         #ax  = axes_list[0]
@@ -977,6 +993,7 @@ def imshow(img,
            plotnum=None,
            interpolation='nearest', 
            **kwargs):
+    'other interpolations = nearest, bicubic, bilinear'
     #printDBG('[df2] ----- IMSHOW ------ ')
     #printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
     #printDBG('[df2] *** fignum = %r, plotnum = %r ' % (fignum, plotnum))
@@ -988,9 +1005,8 @@ def imshow(img,
         imgdtype = img.dtype
         img = np.array(img, dtype=float) * DARKEN
         img = np.array(img, dtype=imgdtype) 
-    plt.imshow(img, interpolation=interpolation)
-    plt.set_cmap('gray')
-    ax = fig.gca()
+    ax.imshow(img, interpolation=interpolation)
+    #plt.set_cmap('gray')
     ax.set_xticks([])
     ax.set_yticks([])
     #ax.set_autoscale(False)
@@ -1150,25 +1166,33 @@ def show_matches_annote(hs, qcx, cx2_score,
     elif isgt_str == hs.TRUE_STR:    draw_border(ax, GREEN, 4)
     elif isgt_str == hs.FALSE_STR:   draw_border(ax, RED, 4)
     if show_gname:
-        ax.set_xlabel(hs.get_gname(cx), fontproperties=FONTS.xlabel)
+        ax.set_xlabel(hs.cx2_gname(cx), fontproperties=FONTS.xlabel)
     return ax
 
 def show_img(hs, cx, **kwargs):
     # Get the chip roi
     roi = hs.get_roi(cx)
-    (rx,ry,rw,rh) = roi
-    rxy = (rx,ry)
     # Get the image
     img = hs.get_image(cx=cx)
     # Draw image
     imshow(img, **kwargs)
     # Draw ROI
     ax = gca()
+    draw_roi(ax, roi)
+
+def draw_roi(ax, roi, label=None, bbox_color=(1,0,0)):
+    (rx,ry,rw,rh) = roi
+    rxy = (rx,ry)
     bbox = matplotlib.patches.Rectangle(rxy,rw,rh) 
-    bbox_color = [1, 0, 0]
     bbox.set_fill(False)
     bbox.set_edgecolor(bbox_color)
     ax.add_patch(bbox)
+    if label is not None:
+        ax_absolute_text(rx, ry, label, ax=ax,
+                horizontalalignment ='center',
+                verticalalignment   ='center',
+                color               =(1,1,1),
+                backgroundcolor     =(0,0,0))
 
 def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     imshow(rchip,fignum=fignum,title=title,**kwargs)
@@ -1187,7 +1211,7 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
         title_str += ', '+hs.num_indexed_gt_str(cx)
     fig, ax = imshow(rchip1, title=title_str, **kwargs)
     if not res is None: 
-        gname = hs.get_gname(cx)
+        gname = hs.cx2_gname(cx)
         ax.set_xlabel(gname, fontproperties=FONTS.xlabel)
     if not draw_kpts:
         return

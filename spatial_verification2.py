@@ -321,7 +321,7 @@ def show_inliers(hs, qcx, cx, inliers, title='inliers', **kwargs):
 def test():
     import load_data2 as ld2
     import params
-    import investigate_chip as ic2
+    import dev
     import match_chips3 as mc3
     import spatial_verification2 as sv2
     xy_thresh         = params.__XY_THRESH__
@@ -331,7 +331,7 @@ def test():
     cx  = helpers.get_arg_after('--cx', type_=int)
     #cx  = 113
     if not 'hs' in vars():
-        main_locals = ic2.main()
+        main_locals = dev.dev_main()
         exec(helpers.execstr_dict(main_locals, 'main_locals'))
         cx = hs.get_other_cxs(qcx)[0]
         res = mc3.query_groundtruth(hs, qcx, sv_on=False)

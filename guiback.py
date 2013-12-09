@@ -1,38 +1,23 @@
 from __future__ import division, print_function
 import __builtin__
-import fileio as io
-import os
-import os.path
 import sys
-from HotSpotter import imread
-import draw_func2 as df2
+from itertools import izip
+import fileio as io
+from os.path import realpath
 import PyQt4
+import draw_func2 as df2
+import vizualizations as viz
 from PyQt4 import Qt, QtCore, QtGui
-from PyQt4.Qt import (QMainWindow, QApplication, QCoreApplication,
-                      QTableWidgetItem, QAbstractItemView, QWidget, Qt,
-                      pyqtSlot, pyqtSignal, QStandardItem, QStandardItemModel,
-                      QString, QObject, QInputDialog, QDialog, QTreeWidgetItem)
-from _tpl.other.matplotlibwidget import MatplotlibWidget
-
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    _fromUtf8 = lambda s: s
+from PyQt4.Qt import pyqtSlot, pyqtSignal
+import guifront
+import guitools
 
 # Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[gui] reloading '+__name__)
+    print('[guiback] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 rrr = reload_module
-
-IS_INIT = False
-
-def make_main_window(hs=None):
-    gui_back = MainWindowBackend(hs=hs)
-    #main_win.draw_splash()
-    gui_back.win.show()
-    return gui_back
 
 class MainWindowBackend(QtCore.QObject):
     ''' Class used by the backend to send and recieve signals to and from the
@@ -42,10 +27,11 @@ class MainWindowBackend(QtCore.QObject):
         super(MainWindowBackend, self).__init__()
         print('[back] creating backend')
         self.hs = hs
-        self.win = MainWindowFrontend(gui_back=self)
+        self.win = guifront.MainWindowFrontend(backend=self)
+        self.selection = None
         df2.register_matplotlib_widget(self.win.plotWidget)
         # connect signals
-        self.populateSignal.connect(self.win.populateSlot)
+        self.populateSignal.connect(self.win.populate_tbl)
         if hs is not None:
             self.connect_api(hs)
             
@@ -60,12 +46,13 @@ class MainWindowBackend(QtCore.QObject):
         print('[win] populate_image_table()')
         #col_headers  = ['Image ID', 'Image Name', 'Chip IDs', 'Chip Names']
         #col_editable = [ False    ,  False      ,  False    ,  False      ]
-        col_headers   = ['Image Name']
-        col_editable  = [False]
+        col_headers   = ['Image Index', 'Image Name', 'Num Chips']
+        col_editable  = [False, False, False]
         # Populate table with valid image indexes
         gx2_gname = self.hs.tables.gx2_gname
+        gx2_cxs   = self.hs.get_gx2_cxs()
         row_list  = range(len(gx2_gname))
-        row2_datatup = [(gname,) for gname in gx2_gname]
+        row2_datatup = [(gx, gname, len(gx2_cxs[gx])) for gx, gname in enumerate(gx2_gname)]
         self.populateSignal.emit('image', col_headers, col_editable, row_list, row2_datatup)
 
     def populate_chip_table(self):
@@ -73,8 +60,10 @@ class MainWindowBackend(QtCore.QObject):
         col_headers  = ['Chip ID', 'Name', 'Image']
         col_editable = [ False  ,    True,   False]
         # Add User Properties to headers
-        #col_headers  += hs.tables.cx2_px.user_props.keys()
-        #col_editable += [True for key in cm.user_props.keys()]
+        prop_dict = self.hs.tables.prop_dict
+        prop_keys = prop_dict.keys()
+        col_headers  += prop_keys
+        col_editable += [True]*len(prop_keys)
         # Populate table with valid image indexes
         cx2_cid  = self.hs.tables.cx2_cid
         cx2_nx   = self.hs.tables.cx2_nx
@@ -82,8 +71,13 @@ class MainWindowBackend(QtCore.QObject):
         nx2_name = self.hs.tables.nx2_name
         gx2_gname = self.hs.tables.gx2_gname
         cx_list = [cx for cx, cid in enumerate(cx2_cid) if cid > 0]
-        xs_list = [(cx, cx2_nx[cx], cx2_gx[cx],) for cx in iter(cx_list)]
-        row2_datatup = [(cx2_cid[cx], nx2_name[nx], gx2_gname[gx],) for (cx, nx, gx) in iter(xs_list)]
+        # Build lists
+        cid_list   = [cx2_cid[cx] for cx in iter(cx_list)]
+        name_list  = [nx2_name[cx2_nx[cx]]  for cx in iter(cx_list)]
+        image_list = [gx2_gname[cx2_gx[cx]] for cx in iter(cx_list)]
+        prop_lists = [prop_dict[key] for key in prop_keys]
+        datatup_iter = izip(*[cid_list, name_list, image_list] + prop_lists)
+        row2_datatup = [tup for tup in datatup_iter]
         row_list  = range(len(row2_datatup))
         self.populateSignal.emit('chip', col_headers, col_editable, row_list, row2_datatup)
 
@@ -111,25 +105,42 @@ class MainWindowBackend(QtCore.QObject):
         print('[back] save_database')
         raise NotImplemented('');
 
+    @pyqtSlot(name='import_images')
+    def import_images(self):
+        print('[back] import_images')
+        raise NotImplemented('')
+
     @pyqtSlot(name='quit')
     def quit(self):
-         QtGui.qApp.quit
+        print('[back] quit()')
+        QtGui.qApp.quit()
 
     def add_images_from_dir(self):
+        print('[back] add_images_from_dir')
         img_dpath = select_directory('Select directory with images in it')
-
-    def draw_splash(self):
-        print('[back] draw_splash()')
-        img = imread('_frontend/splash.png')
-        fig = df2.figure()
-        print(fig)
-        print(fig is self.win.plotWidget.figure)
-        df2.imshow(img)
-        df2.update()
+        raise NotImplemented('')
     
     def show(self):
         self.win.show()
 
     @pyqtSlot(str, name='backend_print')
-    def backend_print(msg):
+    def backend_print(self, msg):
         print(msg)
+
+    @pyqtSlot(str, name='clear_selection')
+    def clear_selection(self):
+        print('[back] clear_selection()')
+        self.selection = None
+        viz.show_splash(self.hs)
+
+    @pyqtSlot(int, name='select_gx')
+    def select_gx(self, gx):
+        print('[back] select_gx(%r)' % gx)
+        self.selection = ('gx', gx)
+        viz.show_image(self.hs, gx)
+
+    @pyqtSlot(int, name='select_cid')
+    def select_cid(self, cid):
+        print('[back] select_cid(%r)' % cid)
+        cx = self.hs.cid2_cx(cid)
+        viz.show_chip(self.hs, cx)

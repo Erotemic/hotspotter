@@ -269,8 +269,8 @@ class Pref(DynStruct):
 
     # QT THINGS
     def createQWidget(self):
-        import gui
-        if not HAVE_PYQT:
+        import guitools
+        if not guitools.IS_INIT:
             raise Exception('Running without pyqt. cannot create')
         else:
             editpref_widget = EditPrefWidget(self)
@@ -355,7 +355,7 @@ def report_thread_error(fn):
 
 
 if HAVE_PYQT:
-    from frontend.EditPrefSkel import Ui_editPrefSkel
+    from _frontend.EditPrefSkel import Ui_editPrefSkel
     from PyQt4.Qt import QAbstractItemModel, QModelIndex, QVariant, Qt,\
             QObject, QComboBox, QMainWindow, QTableWidgetItem, QMessageBox,\
             QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal,\
@@ -469,6 +469,7 @@ if HAVE_PYQT:
             self.pref_skel = Ui_editPrefSkel()
             self.pref_skel.setupUi(self)
             self.pref_model = None
+            self.populatePrefTreeSlot(pref_struct)
             #self.pref_skel.redrawBUT.clicked.connect(fac.redraw)
             #self.pref_skel.defaultPrefsBUT.clicked.connect(fac.default_prefs)
             #self.pref_skel.unloadFeaturesAndModelsBUT.clicked.connect(fac.unload_features_and_models)
@@ -482,33 +483,22 @@ if HAVE_PYQT:
             self.pref_skel.prefTreeView.setModel(self.pref_model)
             self.pref_skel.prefTreeView.header().resizeSection(0,250)
 
-    def initQtApp():
-        # Attach to QtConsole's QApplication if able
-        from PyQt4.Qt import QCoreApplication, QApplication
-        app = QCoreApplication.instance() 
-        isRootApp = app is None
-        if isRootApp: # if not in qtconsole
-            # configure matplotlib 
-            import matplotlib
-            if matplotlib.get_backend() != 'Qt4Agg':
-                print('Pref> Configuring matplotlib for Qt4')
-                matplotlib.use('Qt4Agg')
-            # Run new root application
-            print('Starting new QApplication')
-            app = QApplication(sys.argv)
-        else: 
-            print('Running using parent QApplication')
-        return app, isRootApp 
     if __name__ == '__main__':
-        app, isRootApp = initQtApp()
-
+        import guitools
+        guitools.configure_matplotlib()
+        app, is_root = guitools.init_qtapp()
+        backend = None
+        #guitools.make_dummy_main_window()
         pref_root = Pref()
-        pref_root.a = Pref('fdsa')
-        pref_root.b = Pref('fdsb')
-        pref_root.c = Pref('fdsc')
-        pref_root.createQWidget()
+        r = pref_root
+        r.a = Pref()
+        r.b = Pref('pref value 1')
+        r.c = Pref('pref value 2')
+        r.a.d = Pref('nested1')
+        r.a.e = Pref()
+        r.a.f = Pref('nested3')
+        r.a.e.g = Pref('nested4')
+        print(pref_root)
+        prefWidget = pref_root.createQWidget()
+        guitools.run_main_loop(app, is_root, backend)
 
-        if isRootApp:
-            print('Running the application event loop')
-            sys.stdout.flush()
-            sys.exit(app.exec_())

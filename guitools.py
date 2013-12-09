@@ -22,6 +22,24 @@ rrr = reload_module
 
 IS_INIT = False
 
+def configure_matplotlib():
+    import matplotlib
+    import multiprocessing
+    backend = matplotlib.get_backend()
+    if multiprocessing.current_process().name == 'MainProcess':
+        print('[guitools] current backend is: %r' % backend)
+        print('[guitools] matplotlib.use(Qt4Agg)')
+    matplotlib.rcParams['toolbar'] = 'toolbar2'
+    matplotlib.rc('text', usetex=False)
+    #matplotlib.rcParams['text'].usetex = False
+    if backend != 'Qt4Agg':
+        matplotlib.use('Qt4Agg', warn=True, force=True)
+        backend = matplotlib.get_backend()
+        if multiprocessing.current_process().name == 'MainProcess':
+            print('[guitools] current backend is: %r' % backend)
+        #matplotlib.rcParams['toolbar'] = 'None'
+        #matplotlib.rcParams['interactive'] = True
+
 def select_files(caption='Select Files:', directory=None):
     'Selects one or more files from disk using a qt dialog'
     print(caption)
@@ -101,12 +119,17 @@ def msgbox(msg, title='msgbox'):
     return msgBox
 
 def make_dummy_main_window():
-    mainwin = PyQt4.Qt.QMainWindow()
-    mainwin.setWindowTitle('Dummy Main Window')
-    mainwin.show()
-    return mainwin
+    class DummyBackend(Qt.QObject):
+        def __init__(self):
+            super(DummyBackend,  self).__init__()
+            self.win = PyQt4.Qt.QMainWindow()
+            self.win.setWindowTitle('Dummy Main Window')
+            self.win.show()
+    backend = DummyBackend()
+    return backend
 
 def make_main_window(hs=None):
+
     import guiback
     backend = guiback.MainWindowBackend(hs=hs)
     backend.win.show()
@@ -129,6 +152,6 @@ if __name__ == '__main__':
     print('__main__ = gui.py')
     def test():
         app, is_root = init_qtapp()
-        main_win = make_main_window()
-        run_main_loop(app, is_root, main_win)
+        backend = make_dummy_main_window()
+        run_main_loop(app, is_root, backend)
     test()

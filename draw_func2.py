@@ -7,22 +7,8 @@ import multiprocessing
 def printDBG(msg):
     #print(msg)
     pass
-#print('LOAD_MODULE: draw_func2.py')
-MPL_BACKEND = matplotlib.get_backend()
-matplotlib.rcParams['toolbar'] = 'toolbar2'
-matplotlib.rc('text', usetex=False)
-#matplotlib.rcParams['text'].usetex = False
-#sys.exit(0)
-if MPL_BACKEND != 'Qt4Agg':
-    if multiprocessing.current_process().name == 'MainProcess':
-        printDBG('[df2] current backend is: %r' % MPL_BACKEND)
-        printDBG('[df2] matplotlib.use(Qt4Agg)')
-    matplotlib.use('Qt4Agg', warn=True, force=True)
-    MPL_BACKEND = matplotlib.get_backend()
-    if multiprocessing.current_process().name == 'MainProcess':
-        printDBG('[df2] current backend is: %r' % MPL_BACKEND)
-    #matplotlib.rcParams['toolbar'] = 'None'
-    #matplotlib.rcParams['interactive'] = True
+from guitools import configure_matplotlib
+configure_matplotlib()
 from matplotlib import gridspec
 from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib.patches import Rectangle, Circle, FancyArrow

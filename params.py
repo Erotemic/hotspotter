@@ -74,10 +74,11 @@ dev_databases = {
     'LF_ALL'         : WORK_DIR  + '/LF_all',
     'WS_HARD'        : WORK_DIR  + '/WS_hard',
 
-    'FROGS'          : WORK_DIR  + '/Frogs',
+    'FROGS'          : WORK_DIR2 + '/Frogs',
     'TOADS'          : WORK_DIR2 + '/WY_Toads'
 }
-dev_databases['DEFAULT'] = dev_databases['NAUTS']
+#dev_databases['DEFAULT'] = dev_databases['NAUTS']
+dev_databases['DEFAULT'] = None
 # Add values from the database dict as global vars
 for key, val in dev_databases.iteritems():
     exec('%s = %r' % (key, val))
@@ -143,8 +144,6 @@ REVERIFY_QUERY = False
 RESAVE_QUERY   = False
 
 WHITEN_FEATS   = False
-
-NUM_PROCS = 8 # Number of processessors
 
 #=====================================================
 # ALGO GLOBALS
@@ -362,9 +361,6 @@ if '--resave-query' in sys.argv:
 
 if '--print-checks' in sys.argv:
     helpers.PRINT_CHECKS = True
-
-if '--serial' in sys.argv:
-    NUM_PROCS = 1
 
 def OXFORD_defaults():
     # best scale params

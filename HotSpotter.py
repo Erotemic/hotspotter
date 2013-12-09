@@ -16,7 +16,9 @@ from PIL import Image
 from Printable import DynStruct
 import helpers
 import params
-from os.path import exists, join, realpath
+from os.path import exists, join, realpath, split, relpath
+from itertools import izip
+import shutil
 
 # Toggleable printing
 print = __builtin__.print
@@ -69,6 +71,7 @@ class HotSpotter(DynStruct):
         hs.indexed_sample_cx = None
         hs.cx2_rchip_size = None
         hs.query_uid = None
+        hs.needs_save = False
         if db_dir is not None:
             hs.args.dbdir = db_dir
     #---------------
@@ -85,6 +88,45 @@ class HotSpotter(DynStruct):
             hs.load_features()
             hs.set_samples()
         return hs
+
+    # Adding functions
+    # ---------------
+    def add_images(hs, fpath_list, move_images=True):
+        nImages = len(fpath_list)
+        print('[hs.add_imgs] adding %d images' % nImages)
+        new_fpath_list = []
+        img_dir = hs.dirs.img_dir
+        copy_list = []
+        helpers.ensurepath(img_dir)
+        if move_images:
+            # Build lists of where the new images will be
+            fpath_list2 = [join(img_dir, split(fpath)[1]) for fpath in fpath_list]
+            copy_iter = izip(fpath_list, fpath_list2) 
+            copy_list = [(src, dst) for src, dst in copy_iter if not exists(dst)]
+            nExist = len(fpath_list2) - len(copy_list)
+            print('[hs] copying %d images' % len(copy_list))
+            print('[hs] %d images already exist' % nExist)
+            for src, dst in copy_list:
+                shutil.copy(src, dst)
+        else:
+            print('[hs.add_imgs] using original image paths')
+            fpath_list2 = fpath_list
+        # Get location of the new images relative to the image dir
+        gx2_gname = hs.tables.gx2_gname.tolist()
+        relpath_list = [relpath(fpath, img_dir) for fpath in fpath_list2]
+        current_gname_set = set(gx2_gname)
+        # Check to make sure the gnames are not currently indexed
+        new_gnames = [gname for gname in relpath_list if not gname in current_gname_set]
+        nNewImages = len(new_gnames)
+        nIndexed = nImages - nNewImages
+        print('[hs.add_imgs] new_gnames:\n'+'\n'.join(new_gnames))
+        print('[hs.add_imgs] %d images already indexed.' % nIndexed)
+        print('[hs.add_imgs] Added %d new images.' % nIndexed)
+        # Append the new gnames to the hotspotter table
+        hs.tables.gx2_gname = np.array(gx2_gname+new_gnames)
+        if nNewImages > 0:
+            hs.needs_save = True
+        return nNewImages
 
     def load_all(hs, db_dir, matcher=True, args=None, load_features=True, **kwargs):
         'will be depricated in favor of load2'
@@ -122,11 +164,14 @@ class HotSpotter(DynStruct):
         pass
 
     def db_name(hs, devmode=False):
-        db_name = os.path.split(hs.dirs.db_dir)[1]
+        db_name = split(hs.dirs.db_dir)[1]
         if devmode:
             # Grab the dev name insetad
             import params
-            dev_dbs = dict((os.path.split(v)[1],k) for k, v in params.dev_databases.iteritems())
+            dev_databases = params.dev_databases
+            db_tups = [(v, k) for k, v in dev_databases.iteritems() if v is not None]
+            #print('  \n'.join(map(str,db_tups)))
+            dev_dbs = dict((split(v)[1] ,k) for v, k in db_tups)
             db_name = dev_dbs[db_name]
         return db_name
     #---------------
@@ -357,8 +402,6 @@ class HotSpotter(DynStruct):
     #--------------
     def get_gx2_cxs(hs):
         cx2_gx = hs.tables.cx2_gx
-        if len(cx2_gx) == 0:
-            return []
         max_gx = len(hs.tables.gx2_gname)
         gx2_cxs = [[] for _ in xrange(max_gx+1)]
         for cx, gx in enumerate(cx2_gx):

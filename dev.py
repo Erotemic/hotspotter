@@ -311,6 +311,10 @@ def get_qon_list(hs):
         ocid_list = [hs.get_other_cxs(cx) for cx in qcx_list]
         note_list = ['user selected qcid']*len(qcx_list)
         qon_list += zip(*[qcx_list, ocid_list, note_list])
+
+    if len(qon_list) == 0:
+        if hs.args.strict: raise Exception('no qon_list history')
+        qon_list = [(0, [], 'fallback_qon')]
     return qon_list
 
 def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
@@ -445,7 +449,6 @@ def dev_main(**kwargs):
     import HotSpotter
     import main as _main
     print('[dev] main()')
-    if 'hs' in vars(): return # useful when copy and pasting into ipython
     args = _main.parse_arguments()
     print('[dev] Loading DB=%r' % args.db)
     # Create Hotspotter API
@@ -466,8 +469,6 @@ def dev_main(**kwargs):
     notes = notes_list[0]
     print('========================')
     print('[dev] Loaded DB=%r' % args.db)
-    print('[dev] notes=%r' % notes)
-    qcxs = helpers.ensure_iterable(qcxs)
     return locals()
 #---end main script
     
@@ -575,16 +576,18 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     print('[dev] __main__ ')
-    main_locals = dev_main()
+    if not 'hs' in vars():
+        # useful when copy and pasting into ipython
+        main_locals = dev_main()
+        hs = main_locals['hs']
+        qon_list = main_locals['qon_list']
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
-    fmtstr = helpers.make_progress_fmt_str(len(qcxs), '[dev] investigation ')
     print('[dev]====================')
     if hs.args.printoff:
         all_printoff()
     # Big test function. Should be replaced with something
     # not as ugly soon. 
     run_investigations(hs, qon_list)
-    
     # A redundant query argument. Again, needs to be replaced. 
     if hs.args.query is not None:
         qcx = hs.cid2_cx(hs.args.query[0])

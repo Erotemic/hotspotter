@@ -104,7 +104,8 @@ class MainWindowBackend(QtCore.QObject):
             self.connect_api(hs)
         except Exception as ex:
             print('aborting open database')
-            print(ex)
+            print(repr(ex))
+            if hs.args.strict: raise
 
     @pyqtSlot(name='save_database')
     def save_database(self):

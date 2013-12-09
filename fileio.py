@@ -6,7 +6,7 @@ import fnmatch
 import pickle
 import cPickle
 import shelve
-from os.path import normpath, exists, realpath, join
+from os.path import normpath, exists, realpath, join, expanduser
 
 import datetime
 import timeit
@@ -237,12 +237,14 @@ def filesize_str(fpath):
 
 
 # --- Global Cache ---
-GLOBAL_CACHE_DIR = realpath('.hotspotter/global_cache')
+HOME = expanduser('~')
+#GLOBAL_CACHE_DIR = realpath('.hotspotter/global_cache')
+GLOBAL_CACHE_DIR = join(HOME, '.hotspotter/global_cache')
 helpers.ensuredir(GLOBAL_CACHE_DIR)
 
-def global_cache_read(cache_id):
+def global_cache_read(cache_id, default='.'):
     cache_fname = join(GLOBAL_CACHE_DIR, 'cached_dir_'+str(cache_id)+'.txt')
-    return helpers.read_from(cache_fname) if exists(cache_fname) else '.'
+    return helpers.read_from(cache_fname) if exists(cache_fname) else default
 
 def global_cache_write(cache_id, newdir):
     cache_fname = join(GLOBAL_CACHE_DIR, 'cached_dir_'+str(cache_id)+'.txt')

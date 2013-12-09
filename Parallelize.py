@@ -4,7 +4,6 @@ import __builtin__
 import multiprocessing as mp
 from helpers import Timer
 import sys
-import params
 import sys
 from os.path import exists
 from itertools import izip
@@ -47,8 +46,9 @@ def _worker(input, output):
 def cpu_count():
     return mp.cpu_count()
 
-def parallel_compute(func, arg_list, num_procs=None, lazy=True):
-    num_procs = params.NUM_PROCS if num_procs is None else num_procs
+def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None):
+    if args is not None and num_procs is None:
+        num_procs = args.num_procs
     task_list = make_task_list(func, arg_list, lazy=lazy)
     if len(task_list) == 0:
         print('[parallel] ... No '+func.func_name+' tasks left to compute!')

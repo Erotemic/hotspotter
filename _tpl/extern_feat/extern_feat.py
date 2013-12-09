@@ -5,7 +5,7 @@ import numpy as np
 import os, sys
 from os.path import dirname, realpath, join
 from PIL import Image
-from numpy import uint8, float32, diag, sqrt, abs
+from numpy import diag, sqrt, abs
 from numpy.linalg import det
 import cv2
 DESC_FACTOR = 3.0*np.sqrt(3.0)
@@ -27,6 +27,9 @@ if not os.path.exists(EXE_PATH):
 
 HESAFF_EXE = join(EXE_PATH, 'hesaff'+EXE_EXT)
 INRIA_EXE  = join(EXE_PATH, 'compute_descriptors'+EXE_EXT)
+
+KPTS_DTYPE = np.float64
+DESC_DTYPE = np.uint8
 
 def svd(M):
     #U, S, V = np.linalg.svd(M)
@@ -111,6 +114,8 @@ def compute_inria_feats(rchip_fpath, detect_type, extract_type, dict_args):
     '''
     outname = compute_inria_text_feats(rchip_fpath, detect_type, extract_type)
     kpts, desc = read_text_feat_file(outname)
+    if len(kpts) == 0:
+        return np.empty((0,5), dtype=KPTS_DTYPE), np.empty((0,5), dtype=DESC_DTYPE)
     kpts = fix_kpts_hack(kpts)
     kpts, desc = filter_kpts_scale(kpts, desc, **dict_args)
     return kpts, desc
@@ -119,6 +124,8 @@ def compute_perdoch_feats(rchip_fpath, dict_args):
     'Runs external perdoch detector'
     outname = compute_perdoch_text_feats(rchip_fpath)
     kpts, desc = read_text_feat_file(outname)
+    if len(kpts) == 0:
+        return np.empty((0,5), dtype=KPTS_DTYPE), np.empty((0,5), dtype=DESC_DTYPE)
     kpts = fix_kpts_hack(kpts)
     kpts, desc = filter_kpts_scale(kpts, desc, **dict_args)
     return kpts, desc
@@ -146,11 +153,11 @@ def read_text_feat_file(outname, be_clean=True):
         os.remove(outname)
     # Preallocate output
     kpts = np.zeros((nkpts, 5), dtype=float)
-    desc = np.zeros((nkpts, ndims), dtype=uint8)
+    desc = np.zeros((nkpts, ndims), dtype=DESC_DTYPE)
     for kx, line in enumerate(lines):
         data = line.split(' ')
-        kpts[kx,:] = np.array([float32(_) for _ in data[0:5]], dtype=float32)
-        desc[kx,:] = np.array([uint8(_) for _ in data[5: ]], dtype=uint8)
+        kpts[kx,:] = np.array([KPTS_DTYPE(_) for _ in data[0:5]], dtype=KPTS_DTYPE)
+        desc[kx,:] = np.array([DESC_DTYPE(_) for _ in data[5: ]], dtype=DESC_DTYPE)
     return (kpts, desc)
 
 def filter_kpts_scale(kpts, desc, scale_max=None, scale_min=None, **kwargs):
@@ -162,7 +169,8 @@ def filter_kpts_scale(kpts, desc, scale_max=None, scale_min=None, **kwargs):
     det_ = acd[0] * acd[2]
     scale = sqrt(det_)
     #print('scale.stats()=%r' % helpers.printable_mystats(scale))
-    is_valid = np.bitwise_and(scale_min < scale, scale < scale_max).flatten()
+    #is_valid = np.bitwise_and(scale_min < scale, scale < scale_max).flatten()
+    is_valid = np.logical_and(scale_min < scale, scale < scale_max).flatten()
     scale = scale[is_valid]
     kpts = kpts[is_valid]
     desc = desc[is_valid]
@@ -286,7 +294,6 @@ def test_extract_hesaff():
     from hotspotter import params
     from os.path import join, exists
     img_dir = join(params.GZ, 'images')
-    
     #rchip_fpath = join(img_dir, 'NewHack_zimg-0000236.jpg')
     # ('NewHack_zimg-0000254.jpg')
     #if not exists(rchip_fpath):
@@ -463,7 +470,6 @@ if __name__ == '__main__':
     import multiprocessing
     from hotspotter import draw_func2 as df2
     multiprocessing.freeze_support()
-    df2.DARKEN = .5
     test_extract_hesaff()
     df2.show()
-    #exec(df2.present())
+    exec(df2.present())

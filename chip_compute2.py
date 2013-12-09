@@ -326,7 +326,7 @@ def load_chip_paths(hs):
     pcc_kwargs = {
         'arg_list'  : [cx2_img_path, cx2_chip_path, cx2_roi, cx2_chip_sz],
         'lazy'      : (not '--nochipcache' in sys.argv),
-        'num_procs' : params.NUM_PROCS }
+        'num_procs' : hs.args.num_procs }
     #(img_path, chip_path, roi, new_size) = zip(*pcc_kwargs['arg_list'])[109]
     # Make a compute chip function with all the preprocessing your heart desires
     #preproc_func_list = []

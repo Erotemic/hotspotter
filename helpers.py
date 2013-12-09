@@ -113,7 +113,8 @@ def num_images_in_dir(path):
 
 def matches_image(fname):
     fname_ = fname.lower()
-    return any([fnmatch.fnmatch(fname_, pat) for pat in ['*.jpg', '*.png']])
+    img_pats = ['*'+ext for ext in IMG_EXTENSIONS]
+    return any([fnmatch.fnmatch(fname_, pat) for pat in img_pats])
 
 def list_images(img_dpath, ignore_list=[], recursive=True, fullpath=False):
     ignore_set = set(ignore_list)
@@ -662,10 +663,10 @@ def checkpath(path_, verbose=PRINT_CHECKS):
     'returns true if path_ exists on the filesystem'
     path_ = normpath(path_)
     if verbose:
-        print = print_
+        print = sys.stdout.write
         pretty_path = path_ndir_split(path_, 2)
         caller_name = get_caller_name()
-        print('[%s] checkpath(%r)' % (caller_name, pretty_path))
+        print_('[%s] checkpath(%r)' % (caller_name, pretty_path))
         if exists(path_):
             path_type = ''
             if isfile(path_):  path_type += 'file'
@@ -1314,7 +1315,7 @@ def _println(msg):
 
 def println(msg, *args):
     args = args+tuple('\n',)
-    return print_(msg, *args)
+    return print_(msg+''.join(args))
 def flush():
     sys.stdout.flush()
     return ''

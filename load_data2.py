@@ -155,11 +155,13 @@ def tryindex(list, val):
     except ValueError as ex:
         return -1
 
-def load_csv_tables(db_dir):
+def load_csv_tables(db_dir, allow_new_dir=True):
     '''
     Big function which loads the csv tables from a datatabase directory
     Returns HotspotterDirs and HotspotterTables
     '''
+    if 'vdd' in sys.argv:
+        helpers.vd(hs_dirs.db_dir)
     print('\n=============================')
     print('[ld2] Loading hotspotter csv tables: '+str(db_dir))
     print('=============================')
@@ -183,6 +185,9 @@ def load_csv_tables(db_dir):
     has_nametbl = helpers.checkpath(name_table)
     has_imgtbl  = helpers.checkpath(image_table)
     if not all([has_dbdir, has_imgdir, has_chiptbl, has_nametbl, has_imgtbl]):
+        if allow_new_dir:
+            hs_tables = HotspotterTables()
+            return hs_dirs, hs_tables
         errmsg  = ''
         errmsg += ('\n\n!!!!!\n\n')
         errmsg += ('  ! The data tables seem to not be loaded')
@@ -373,8 +378,6 @@ def load_csv_tables(db_dir):
                                   cx2_gx, cx2_roi, cx2_theta, prop_dict)
     print('[ld2] Done Loading hotspotter csv tables: '+str(db_dir))
 
-    if 'vdd' in sys.argv:
-        helpers.vd(hs_dirs.db_dir)
     if 'vcd' in sys.argv:
         helpers.vd(hs_dirs.computed_dir)
     return hs_dirs, hs_tables

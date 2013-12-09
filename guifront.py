@@ -80,9 +80,9 @@ def connect_experimental_signals(win):
     ui.actionName_Consistency_Experiment.triggered.connect(backend.autoassign)
 
 class MainWindowFrontend(QtGui.QMainWindow):
-    printSignal = pyqtSignal(str)
-    selectGxSignal   = pyqtSignal(int)
-    selectCidSignal  = pyqtSignal(int)
+    printSignal     = pyqtSignal(str)
+    selectGxSignal  = pyqtSignal(int)
+    selectCidSignal = pyqtSignal(int)
 
     def __init__(self, backend):
         super(MainWindowFrontend, self).__init__()
@@ -125,7 +125,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         ui.image_TBL.sortByColumn(0, Qt.AscendingOrder)
 
     def print(self, msg):
-        print('[front*] '+msg)
+        #print('[front*] '+msg)
         self.printSignal.emit('[front] '+msg)
 
     #def popup(self, pos):
@@ -137,6 +137,32 @@ class MainWindowFrontend(QtGui.QMainWindow):
         #action3 = menu.addAction("action2")
         #action = menu.exec_(self.ui.image_TBL.mapToGlobal(pos))
         #self.print('action = %r ' % action)
+
+    @pyqtSlot(bool)
+    def setEnabled(self, flag):
+        ui = self.ui
+        self.print('disable()')
+        # Enable or disable all actions
+        for uikey in ui.__dict__.keys():
+            if uikey.find('action') == 0:
+                ui.__dict__[uikey].setEnabled(flag)
+        ui.actionOpen_Database.setEnabled(True) # always allowed
+
+        # These are not yet useful disable them
+        actions = [item for list_ in [
+            #ui.menuFile.children(),
+            ui.menuActions.children(),
+            ui.menuOptions.children(),
+            ui.menuHelp.children(),
+            ui.menuExperimenal.children(),
+        ] for item in list_]
+        for item in actions:
+            item.setEnabled(False)
+
+        #for uikey in ui.__dict__.keys():
+            #if uikey.find('action') == 0:
+                #ui.__dict__[uikey].setEnabled(flag)
+
 
     def _populate_table(self, tbl, col_headers, col_editable, row_list, row2_datatup):
         self.print('_populate_table()')
@@ -194,8 +220,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
     @pyqtSlot(str, list, list, list, list)
     def populate_tbl(self, table_name, col_headers, col_editable,
                           row_list, row2_datatup):
-        self.print('populate_tbl()')
         table_name = str(table_name)
+        self.print('populate_tbl('+table_name+')')
         try:
             tbl = self.ui.__dict__[table_name+'_TBL']
         except KeyError as ex:
@@ -270,3 +296,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
         self.print('change_view()')
         prevBlock = self.ui.tablesTabWidget.blockSignals(True)
         self.ui.tablesTabWidget.blockSignals(prevBlock)
+
+    @pyqtSlot(str, str, list)
+    def modal_useroption(self, msg, title, options):
+        pass
+

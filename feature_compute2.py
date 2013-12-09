@@ -130,7 +130,8 @@ def load_feats_from_config(hs, feat_cfg):
         precompute_fn   =  feat_type2_precompute[feat_cfg.feat_type]
         cx2_dict_args   = [feat_cfg.get_dict_args()]*len(cx2_rchip_path)
         precompute_args = [cx2_rchip_path, cx2_feat_path, cx2_dict_args]
-        parallel_compute(precompute_fn, precompute_args, lazy=use_cache)
+        pfc_kwargs = dict(lazy=use_cache, num_procs=hs.args.num_procs)
+        parallel_compute(precompute_fn, precompute_args, **pfc_kwargs)
         # rchip_fpath=cx2_rchip_path[0]; feat_fpath=cx2_feat_path[0]
         # Load precomputed features sequentially
         cx2_kpts, cx2_desc = sequential_load_features(cx2_feat_path)
@@ -138,6 +139,18 @@ def load_feats_from_config(hs, feat_cfg):
         print('[fc2] Caching cx2_desc and cx2_kpts')
         io.smart_save(cx2_desc, dpath, 'cx2_desc', uid, ext)
         io.smart_save(cx2_kpts, dpath, 'cx2_kpts', uid, ext)
+
+    # Make sure the kpts and desc shapes are all correct
+    for cx in xrange(len(cx2_kpts)):
+        if cx2_kpts[cx].size == 0 or \
+           cx2_desc[cx].size == 0:
+            cx2_kpts[cx].shape = (0, 5)
+            cx2_desc[cx].shape = (0, 128)
+        #if cx2_kpts[cx].shape[1] != 5:
+            #pass
+        #if cx2_desc[cx].shape[1] != 128:
+            #raise Exception(str(cx))
+            #pass
     return cx2_kpts, cx2_desc
 
 def sequential_load_features(cx2_feat_path):
@@ -148,14 +161,21 @@ def sequential_load_features(cx2_feat_path):
     try: 
         fmt_str = helpers.make_progress_fmt_str(len(cx2_feat_path),
                                                 lbl='Loading feature: ')
-        for cx, feat_path in enumerate(cx2_feat_path):
-            npz = np.load(feat_path, mmap_mode=None)
+        for count, feat_path in enumerate(cx2_feat_path):
+            try:
+                npz = np.load(feat_path, mmap_mode=None)
+            except IOError:
+                print('\n')
+                helpers.checkpath(feat_path, verbose=True)
+                print('IOError on feat_path=%r' % feat_path)
+                print('reraising')
+                raise
             kpts = npz['arr_0']
             desc = npz['arr_1']
             npz.close()
             cx2_kpts.append(kpts)
             cx2_desc.append(desc)
-            helpers.print_(fmt_str % cx)
+            sys.stdout.write(fmt_str % (count+1))
         print('[fc2] Finished load of individual kpts and desc')
         cx2_desc = np.array(cx2_desc)
     except MemoryError as ex:

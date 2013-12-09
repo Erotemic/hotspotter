@@ -35,13 +35,13 @@ def rrr():
     reload_module()
 
 def try_autoconvert(db_dir):
-    if db_info.has_v2_gt(path):
+    if db_info.has_v2_gt(db_dir):
         raise NotImplemented('hotspotter v2 conversion')
-    if db_info.has_v1_gt(path):
+    if db_info.has_v1_gt(db_dir):
         raise NotImplemented('hotspotter v1 conversion')
-    if db_info.has_ss_gt(path):
+    if db_info.has_ss_gt(db_dir):
         raise NotImplemented('stripe spotter conversion')
-    if db_info.has_partial_gt(path):
+    if db_info.has_partial_gt(db_dir):
         raise NotImplemented('partial database recovery')
     return False
 
@@ -50,14 +50,16 @@ def is_current(db_dir):
 
 def try_user_guided(db_dir):
     import load_data2 as ld2
-    import gui
-    if db_info.is_imgdir(path):
+    import guitools
+    if db_info.is_imgdir(db_dir):
         img_dpath = join(db_dir, ld2.RDIR_IMG2)
-        convert_named_chips(db_dir, img_dpath)
+        gt_format = None
+        return init_database_from_images(db_dir, img_dpath, gt_format=gt_format,
+                                         allow_unknown_chips=False)
     pass
 
 def try_new_database(db_dir):
-    return exists(db_dir) and len(os.listdir(db_dir)) == 0
+    return exists(db_dir) #and len(os.listdir(db_dir)) == 0
 
 def convert_if_needed(db_dir):
     if is_current(db_dir):
@@ -285,8 +287,10 @@ def convert_from_oxford_style(db_dir):
 
 # Converts the name_num.jpg image format into a database
 def convert_named_chips(db_dir, img_dpath=None):
+    print('\n --- Convert Named Chips ---')
     # --- Initialize ---
     gt_format = '{}_{:d}.jpg'
+    print('gt_format (name, num) = %r' % gt_format)
     if img_dpath is None:
         img_dpath = db_dir + '/images'
     print('Converting db_dir=%r and img_dpath=%r' % (db_dir, img_dpath)) 
@@ -340,7 +344,8 @@ def convert_named_chips(db_dir, img_dpath=None):
     write_image_table(internal_dir, gx2_gid, gx2_gname)
    
 
-def init_database_from_images(db_dir, img_dpath=None, gt_format=None):
+def init_database_from_images(db_dir, img_dpath=None, gt_format=None,
+                              allow_unknown_chips=False):
     # --- Initialize ---
     if img_dpath is None:
         img_dpath = db_dir + '/images'
@@ -371,6 +376,8 @@ def init_database_from_images(db_dir, img_dpath=None, gt_format=None):
             name = '____'
         else:
             name, num = parse.parse(gt_format, gname)
+        if name == '____' and not allow_unknown_chips:
+            continue
         img_fpath = join(img_dpath, gname)
         roi = roi_from_imgsize(img_fpath)
         if not roi is None:
@@ -385,6 +392,7 @@ def init_database_from_images(db_dir, img_dpath=None, gt_format=None):
     write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta)
     write_name_table(internal_dir, nx2_nid, nx2_name)
     write_image_table(internal_dir, gx2_gid, gx2_gname)
+    return True
 
 def read_xlsx_file(xlsx_fpath):
     import openpyxl

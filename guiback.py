@@ -11,6 +11,8 @@ from PyQt4 import Qt, QtCore, QtGui
 from PyQt4.Qt import pyqtSlot, pyqtSignal
 import guifront
 import guitools
+import helpers
+from os.path import split
 
 # Dynamic module reloading
 def reload_module():
@@ -23,6 +25,8 @@ class MainWindowBackend(QtCore.QObject):
     ''' Class used by the backend to send and recieve signals to and from the
     frontend'''
     populateSignal = pyqtSignal(str, list, list, list, list)
+    setEnableSignal  = pyqtSignal(bool)
+
     def __init__(self, hs=None):
         super(MainWindowBackend, self).__init__()
         print('[back] creating backend')
@@ -32,14 +36,32 @@ class MainWindowBackend(QtCore.QObject):
         df2.register_matplotlib_widget(self.win.plotWidget)
         # connect signals
         self.populateSignal.connect(self.win.populate_tbl)
+        self.setEnableSignal.connect(self.win.setEnabled)
         if hs is not None:
             self.connect_api(hs)
+
+    def update_window_title(self):
+        if self.hs is None:
+            title = 'Hotspotter - NULL database'
+        if self.hs.dirs is None: 
+            title = 'Hotspotter - invalid database'
+        else:
+            db_dir = self.hs.dirs.db_dir
+            db_name = split(db_dir)[1]
+            title = 'Hotspotter - %r - %s' % (db_name, db_dir)
+        self.win.setWindowTitle(title)
             
     def connect_api(self, hs):
         print('[win] connecting api')
         self.hs = hs
-        self.populate_image_table()
-        self.populate_chip_table()
+        if hs.tables is not None:
+            self.populate_image_table()
+            self.populate_chip_table()
+            self.setEnableSignal.emit(True)
+            self.clear_selection()
+            self.update_window_title()
+        else:
+            self.setEnableSignal.emit(False)
         #self.database_loaded.emit()
 
     def populate_image_table(self):
@@ -88,11 +110,11 @@ class MainWindowBackend(QtCore.QObject):
         try:
             args = self.hs.args # Take previous args
             # Ask user for db
-            db_dir = select_directory('Select (or create) a database directory.')
+            db_dir = guitools.select_directory('Select (or create) a database directory.')
             print('[main] user selects database: '+db_dir)
             # Try and load db
             hs = HotSpotter.HotSpotter(args=args, db_dir=db_dir)
-            hs.load()
+            hs.load(load_all=True)
             # Write to cache and connect if successful
             io.global_cache_write('db_dir', db_dir)
             self.connect_api(hs)
@@ -107,18 +129,41 @@ class MainWindowBackend(QtCore.QObject):
 
     @pyqtSlot(name='import_images')
     def import_images(self):
+        msg = 'Import specific files or whole directory?'
+        title = 'Import Images'
+        options = ['Files', 'Directory']
+        reply = guitools.user_option(self.win, msg, title, options,
+                                     use_cache=False)
+        if reply == 'Files':
+            self.add_images_from_files()
+        if reply == 'Directory':
+            self.add_images_from_dir()
+
         print('[back] import_images')
-        raise NotImplemented('')
+        #raise NotImplemented('')
 
     @pyqtSlot(name='quit')
     def quit(self):
         print('[back] quit()')
         QtGui.qApp.quit()
 
+    def add_images_from_files(self):
+        print('[back] add_images_from_files()')
+        fpath_list = guitools.select_images('Select image files to import')
+        self._add_images(fpath_list)
+
     def add_images_from_dir(self):
-        print('[back] add_images_from_dir')
-        img_dpath = select_directory('Select directory with images in it')
-        raise NotImplemented('')
+        print('[back] add_images_from_dir()')
+        img_dpath = guitools.select_directory('Select directory with images in it')
+        print('selected ' + img_dpath)
+        fpath_list = helpers.list_images(img_dpath, fullpath=True)
+        self._add_images(fpath_list)
+
+    def _add_images(self, fpath_list):
+        print('[back] _add_images()')
+        num_new = self.hs.add_images(fpath_list)
+        if num_new > 0:
+            self.populate_image_table()
     
     def show(self):
         self.win.show()
@@ -144,3 +189,14 @@ class MainWindowBackend(QtCore.QObject):
         print('[back] select_cid(%r)' % cid)
         cx = self.hs.cid2_cx(cid)
         viz.show_chip(self.hs, cx)
+
+if __name__ == '__main__':
+    from multiprocessing import freeze_support
+    freeze_support()
+    import guitools
+    print('__main__ = gui.py')
+    app, is_root = guitools.init_qtapp()
+    backend = guitools.make_main_window()
+    win = backend.win
+    ui = win.ui
+    guitools.run_main_loop(app, is_root, backend)

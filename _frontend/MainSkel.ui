@@ -184,7 +184,7 @@
      <x>0</x>
      <y>0</y>
      <width>927</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -196,7 +196,7 @@
     <addaction name="actionImport_Images"/>
     <addaction name="actionQuit"/>
    </widget>
-   <widget class="QMenu" name="menuView">
+   <widget class="QMenu" name="menuExperimenal">
     <property name="title">
      <string>Experimental</string>
     </property>
@@ -247,7 +247,7 @@
    <addaction name="menuFile"/>
    <addaction name="menuActions"/>
    <addaction name="menuOptions"/>
-   <addaction name="menuView"/>
+   <addaction name="menuExperimenal"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionOpen_Database">

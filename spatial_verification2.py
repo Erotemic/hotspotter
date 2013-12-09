@@ -329,7 +329,7 @@ def test():
     hs  = main_locals['hs']        # hotspotter api
     qcx = main_locals['qcx']       # query chip index
     gt_cxs = hs.get_other_cxs(qcx) # list of ground truth chip indexes
-    if len(gt_cxs):
+    if len(gt_cxs) == 0:
         msg = 'q'+hs.cxstr(qcx)+' has no groundtruth'
         msg += 'cannot perform tests without groundtruth'
         raise Exception(msg)

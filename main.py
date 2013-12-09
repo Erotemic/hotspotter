@@ -44,6 +44,11 @@ def parse_arguments():
     add_bool('--nopresent', default=False)
     add_bool('--save-figures', default=False)
     add_bool('--noannote', default=False)
+    # Program behavior
+    add_int('--num-procs', 8, 'number of processes used in parallel tasks')
+    add_bool('--serial', default=False, help='Forces num_procs=1')
+    add_bool('--strict', default=False, help='Force failure in iffy areas')
+
     # Database selections
     add_str('--db', 'DEFAULT', 'specifies the short name of the database to load')
     add_str('--dbdir', None, 'specifies the full path of the database to load')
@@ -52,6 +57,7 @@ def parse_arguments():
     # View Directories
     add_bool('--vrd', default=False)
     add_bool('--vcd', default=False)
+    add_bool('--vdd', default=False)
     add_bool('--vrdq', default=False)
     add_bool('--vcdq', default=False)
     add_bool('--show-res', default=False)
@@ -82,7 +88,10 @@ def parse_arguments():
     return args
 
 def args_postprocess(args):
+    from os.path import realpath, exists
     # Postprocess args
+    if args.serial:
+        args.num_procs = 1
     if args.darken:
         import draw_func2 as df2
         df2.DARKEN = .5
@@ -143,14 +152,20 @@ if __name__ == '__main__':
     import guitools
     freeze_support()
     print('main.py')
+    signal_set()
     app, is_root = guitools.init_qtapp()
     args = parse_arguments()
     args = fix_args_with_cache(args)
+    if args.vdd:
+        import helpers
+        helpers.vd(args.dbdir)
+        args.vdd=False
     hs = HotSpotter.HotSpotter(args)
-    hs.load(load_all=True)
+    try: 
+        hs.load(load_all=False)
+    except ValueError as ex:
+        print(ex)
     backend = guitools.make_main_window(hs)
     app.setActiveWindow(backend.win)
     guitools.run_main_loop(app, is_root, backend)
-
-
-
+    signal_reset()

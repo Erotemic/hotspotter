@@ -5,6 +5,7 @@ import sys
 import PyQt4
 from PyQt4 import Qt, QtCore, QtGui
 import fileio as io
+import helpers
 
 IS_INIT = False
 
@@ -40,15 +41,80 @@ def configure_matplotlib():
         #matplotlib.rcParams['toolbar'] = 'None'
         #matplotlib.rcParams['interactive'] = True
 
-def select_files(caption='Select Files:', directory=None):
+def _addOptions(msgBox, options):
+    for opt in options:
+        role = QtGui.QMessageBox.ApplyRole
+        msgBox.addButton(QtGui.QPushButton(opt), role)
+
+def _cacheReply(msgBox):
+    dontPrompt = QtGui.QCheckBox('dont ask me again', parent=msgBox)
+    dontPrompt.blockSignals(True)
+    msgBox.addButton(dontPrompt, Qt.QMessageBox.ActionRole)
+    return dontPrompt
+
+def _newMsgBox(msg='', title='', parent=None, options=None, cache_reply=False):
+    msgBox = QtGui.QMessageBox(parent)
+    #msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+    msgBox.setStandardButtons(Qt.QMessageBox.NoButton)
+    msgBox.setWindowTitle(title)
+    msgBox.setText(msg)
+    msgBox.setModal(parent is not None)
+    return msgBox
+
+'''e.g
+msg     = 'Import specific files or whole directory?'
+title   = 'Import Images'
+options = ['Files', 'Directory']
+parent  = None
+msgBox = _newMsgBox(msg, title, parent)
+_addOptions(msgBox, options)
+dontPrompt = _cacheReply(msgBox)
+'''
+def user_option(parent, msg, title='question', options=['No', 'Yes'],
+                use_cache=False):
+    'Prompts user with several options with ability to save decision'
+    print('[guitools] user_option:\n %r: %s'+title+': '+msg)
+    # Recall decision
+    cache_id = helpers.hashstr(title+msg)
+    if use_cache:
+        reply = io.global_cache_read(cache_id, default=None)
+        if reply is not None: return reply
+    # Create message box
+    msgBox = _newMsgBox(msg, title, parent)
+    _addOptions(msgBox, options)
+    if use_cache:
+        dontPrompt = _cacheReply(msgBox)
+    # Wait for output
+    optx = msgBox.exec_()
+    reply = options[optx]
+    # Remember decision
+    if use_cache:
+        if dontPrompt.isChecked():
+            io.global_cache_write(cache_id, reply)
+    del msgBox
+    return reply
+
+def user_question(msg):
+    msgBox = Qt.QMessageBox.question(None, '', 'lovely day?')
+
+def getQtImageNameFilter():
+    imgNamePat = ' '.join(['*'+ext for ext in helpers.IMG_EXTENSIONS])
+    imgNameFilter = 'Images (%s)' % (imgNamePat)
+    return imgNameFilter
+
+def select_images(caption='Select images:', directory=None):
+    name_filter = getQtImageNameFilter()
+    return select_files(caption, directory, name_filter)
+
+def select_files(caption='Select Files:', directory=None, name_filter=None):
     'Selects one or more files from disk using a qt dialog'
     print(caption)
     if directory is None: 
         directory = io.global_cache_read('select_directory')
     qdlg = PyQt4.Qt.QFileDialog()
-    qfile_list = qdlg.getOpenFileNames(caption=caption, directory=directory)
+    qfile_list = qdlg.getOpenFileNames(caption=caption, directory=directory, filter=name_filter)
     file_list = map(str, qfile_list)
-    print('Selected Files: '+str(file_list))
+    print('Selected %d files' % len(file_list))
     io.global_cache_write('select_directory', directory)
     return file_list
 
@@ -102,9 +168,17 @@ def run_main_loop(app, is_root=True, backend=None):
         app.setActiveWindow(backend.win)
     if is_root:
         print('[guitools] running main loop.')
+        timer = ping_python_interpreter()
         sys.exit(app.exec_())
     else:
         print('[guitools] using roots main loop')
+
+def ping_python_interpreter(frequency=100):
+    'Create a QTimer which lets the python intepreter run every so often'
+    timer = Qt.QTimer()
+    timer.timeout.connect(lambda: None)
+    timer.start(frequency)
+    return timer
 
 def msgbox(msg, title='msgbox'):
     'Make a non modal critical Qt.QMessageBox.'
@@ -129,11 +203,9 @@ def make_dummy_main_window():
     return backend
 
 def make_main_window(hs=None):
-
     import guiback
     backend = guiback.MainWindowBackend(hs=hs)
     backend.win.show()
-    backend.clear_selection()
     return backend
 
 def popup_menu(widget, opt2_callback):
@@ -150,8 +222,7 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     print('__main__ = gui.py')
-    def test():
-        app, is_root = init_qtapp()
-        backend = make_dummy_main_window()
-        run_main_loop(app, is_root, backend)
-    test()
+    app, is_root = init_qtapp()
+    backend = make_dummy_main_window()
+    win = backend.win
+    run_main_loop(app, is_root, backend)

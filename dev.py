@@ -441,23 +441,28 @@ def print_history_table(args):
             count += 1
 
 def dev_main(**kwargs):
+    'Developer main script. Contains all you need to quickly start tests'
     import HotSpotter
     import main as _main
-    print('[iv] main()')
-    if 'hs' in vars(): return
-    # Load Hotspotter
+    print('[dev] main()')
+    if 'hs' in vars(): return # useful when copy and pasting into ipython
     args = _main.parse_arguments()
-    hs = HotSpotter.HotSpotter(args)
-    hs.load(load_all=True)
-    args = hs.args
-    qon_list = get_qon_list(hs)
     print('[dev] Loading DB=%r' % args.db)
+    # Create Hotspotter API
+    hs = HotSpotter.HotSpotter(args)
+    # Load tables, chips, and features
+    hs.load(load_all=True)
+    # Get the query/others/notes list
+    # this contains a list of cannonical test examples
+    # FIXME: This is specific to one machine right now
+    qon_list = get_qon_list(hs)
     if not args.noprinthist or True:
+        # Prints the cannonical chips
         print('---')
         print('[dev] print_history_table(hs.args)')
         print_history_table(hs.args)
-    qcxs_list, ocxs_list, notes_list = zip(*qon_list)
-    qcxs  = qcxs_list[0]
+    qcx_list, ocxs_list, notes_list = zip(*qon_list)
+    qcx   = qcx_list[0]
     notes = notes_list[0]
     print('========================')
     print('[dev] Loaded DB=%r' % args.db)

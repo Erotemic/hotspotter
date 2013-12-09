@@ -326,18 +326,33 @@ def test():
     #cx  = helpers.get_arg_after('--cx', type_=int)
     #cx  = 113
     main_locals = dev.dev_main()
-    hs = main_locals['hs']        # hotspotter api
-    qcx = 0                       # query chip index
-    cx = hs.get_other_cxs(qcx)[0] # ground truth chip index
+    hs  = main_locals['hs']        # hotspotter api
+    qcx = main_locals['qcx']       # query chip index
+    gt_cxs = hs.get_other_cxs(qcx) # list of ground truth chip indexes
+    if len(gt_cxs):
+        msg = 'q'+hs.cxstr(qcx)+' has no groundtruth'
+        msg += 'cannot perform tests without groundtruth'
+        raise Exception(msg)
+    cx = gt_cxs[0] # Pick a ground truth to test against
 
-    # Query to get result object
-    res = mc3.query_groundtruth(hs, qcx, sv_on=False)
+    # Query without spatial verification to get assigned matches
+    #res = mc3.query_database(hs, qcx, sv_on=False)   
+    # For testing purposes query_groundtruth is a bit faster than
+    # query_database. But there is no reason you cant query_database
+    res = mc3.query_groundtruth(hs, qcx, sv_on=False) 
 
     # Get chip index to feature match
-    fm = res.cx2_fm[cx]
+    fm = res.cx2_fm[cx] 
+    # A feature match is a list of M 2-tuples.
+    # fm = [(0, 5), (3,2), (11, 12), (4,4)]
+    # fm[:,0] are keypoint indexes into kpts1
+    # fm[:,1] are keypoint indexes into kpts2
+
     # Get chip index to feature score
+    # These are unused here
     fs = res.cx2_fs[cx]
     score = res.cx2_score[cx]
+
     # Read the images from disk
     rchip1 = hs.get_chip(qcx)
     rchip2 = hs.get_chip(cx)

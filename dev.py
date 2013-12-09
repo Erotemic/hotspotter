@@ -581,8 +581,11 @@ if __name__ == '__main__':
     print('[dev]====================')
     if hs.args.printoff:
         all_printoff()
-    #df2.update()
+    # Big test function. Should be replaced with something
+    # not as ugly soon. 
     run_investigations(hs, qon_list)
+    
+    # A redundant query argument. Again, needs to be replaced. 
     if hs.args.query is not None:
         qcx = hs.cid2_cx(hs.args.query[0])
         q_cfg = mc3.get_vsmany_cfg(hs, K=args.K, score_method=args.score_method)

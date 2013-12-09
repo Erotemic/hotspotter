@@ -73,7 +73,7 @@ def score_chipmatch_pos(hs, qcx, chipmatch, q_cfg, rule='borda'):
     # Map alternatives back to chips/names
     cx2_score, nx2_score = get_scores_from_altx2_score(hs, qcx, altx2_score, altx2_tnx)
     # HACK HACK HACK!!!
-    cx2_score = enforce_one_name_per_cscore(hs, cx2_score, chipmatch)
+    #cx2_score = enforce_one_name_per_cscore(hs, cx2_score, chipmatch)
     return cx2_score, nx2_score
 
 # chipmatch = qcx2_chipmatch[qcx]
@@ -99,7 +99,7 @@ def score_chipmatch_PL(hs, qcx, chipmatch, q_cfg):
     # Use probabilities as scores
     cx2_score, nx2_score = get_scores_from_altx2_score(hs, qcx, altx2_prob, altx2_tnx)
     # HACK HACK HACK!!!
-    cx2_score = enforce_one_name_per_cscore(hs, cx2_score, chipmatch)
+    #cx2_score = enforce_one_name_per_cscore(hs, cx2_score, chipmatch)
     return cx2_score, nx2_score
 
 TMP = []

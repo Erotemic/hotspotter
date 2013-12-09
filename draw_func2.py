@@ -1285,8 +1285,10 @@ def show_gt_matches(hs, res, fignum=3):
     _show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle, 
                        fignum=fignum, all_kpts=True)
 
-def show_match_analysis(hs, res, N=5, fignum=3, figtitle='', show_query=True,
+def show_match_analysis(hs, res, N=5, fignum=3, figtitle='', show_query=None,
                         annotations=True, compare_cxs=None, q_cfg=None, **kwargs):
+    if show_query is None: 
+        show_query = not hs.args.noshow_query
     if not compare_cxs is None:
         topN_cxs = compare_cxs
         figtitle = 'comparing to '+hs.cxstr(topN_cxs) + figtitle
@@ -1300,6 +1302,8 @@ def show_match_analysis(hs, res, N=5, fignum=3, figtitle='', show_query=True,
             figtitle = ('topscore=%r -- q%s' % (topscore, hs.cxstr(res.qcx))) + figtitle
     all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
     missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
+    if hs.args.noshow_gt:
+        missed_gt_cxs = []
     max_nCols = min(5,N)
     return _show_chip_matches(hs, res,
                               gt_cxs=missed_gt_cxs, 

@@ -184,32 +184,22 @@
      <x>0</x>
      <y>0</y>
      <width>927</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionNew_Database"/>
     <addaction name="actionOpen_Database"/>
+    <addaction name="separator"/>
     <addaction name="actionSave_Database"/>
-    <addaction name="actionImport_Images"/>
+    <addaction name="separator"/>
+    <addaction name="actionImport_Img_file"/>
+    <addaction name="actionImport_Img_dir"/>
+    <addaction name="separator"/>
     <addaction name="actionQuit"/>
-   </widget>
-   <widget class="QMenu" name="menuExperimenal">
-    <property name="title">
-     <string>Experimental</string>
-    </property>
-    <addaction name="actionConvertImage2Chip"/>
-    <addaction name="actionBatch_Change_Name"/>
-    <addaction name="separator"/>
-    <addaction name="actionAdd_Metadata_Property"/>
-    <addaction name="actionIncrease_ROI_Size"/>
-    <addaction name="separator"/>
-    <addaction name="actionOpen_Data_Directory"/>
-    <addaction name="actionOpen_Source_Directory"/>
-    <addaction name="actionOpen_Internal_Directory"/>
-    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -226,6 +216,7 @@
     <property name="title">
      <string>Help</string>
     </property>
+    <addaction name="actionExplore_db_dir"/>
     <addaction name="actionView_Docs"/>
     <addaction name="actionAbout"/>
     <addaction name="separator"/>
@@ -235,19 +226,33 @@
     <property name="title">
      <string>Actions</string>
     </property>
+    <addaction name="actionAdd_ROI"/>
+    <addaction name="actionNew_Chip_Property"/>
+    <addaction name="separator"/>
     <addaction name="actionQuery"/>
     <addaction name="separator"/>
-    <addaction name="actionAdd_ROI"/>
     <addaction name="actionReselect_ROI"/>
     <addaction name="actionReselect_Ori"/>
-    <addaction name="actionRemove_Chip"/>
     <addaction name="separator"/>
     <addaction name="actionNext"/>
+    <addaction name="separator"/>
+    <addaction name="actionDelete_Chip"/>
+   </widget>
+   <widget class="QMenu" name="menuBatch">
+    <property name="title">
+     <string>Batch</string>
+    </property>
+    <addaction name="actionPrecompute_Queries"/>
+    <addaction name="actionReindex_Database"/>
+    <addaction name="separator"/>
+    <addaction name="actionScale_all_ROIS"/>
+    <addaction name="separator"/>
+    <addaction name="actionConvert_all_images_into_chips"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuActions"/>
+   <addaction name="menuBatch"/>
    <addaction name="menuOptions"/>
-   <addaction name="menuExperimenal"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionOpen_Database">
@@ -266,9 +271,9 @@
     <string>Ctrl+S</string>
    </property>
   </action>
-  <action name="actionImport_Images">
+  <action name="actionImport_Img_file">
    <property name="text">
-    <string>Import Images</string>
+    <string>Import Images (select file)</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+I</string>
@@ -360,9 +365,9 @@
     <string>N</string>
    </property>
   </action>
-  <action name="actionRemove_Chip">
+  <action name="actionDelete_Chip">
    <property name="text">
-    <string>Remove Chip</string>
+    <string>Delete Chip</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Del</string>
@@ -464,6 +469,49 @@
   <action name="actionAutoassign_2">
    <property name="text">
     <string>Auto-Assign Matches</string>
+   </property>
+  </action>
+  <action name="actionNew_Database">
+   <property name="text">
+    <string>New Database</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionImport_Img_dir">
+   <property name="text">
+    <string>Import Images (select directory)</string>
+   </property>
+  </action>
+  <action name="actionPrecompute_Queries">
+   <property name="text">
+    <string>Precompute Queries</string>
+   </property>
+  </action>
+  <action name="actionReindex_Database">
+   <property name="text">
+    <string>Reindex Database</string>
+   </property>
+  </action>
+  <action name="actionExplore_db_dir">
+   <property name="text">
+    <string>View db_dir in finder/explorer</string>
+   </property>
+  </action>
+  <action name="actionScale_all_ROIS">
+   <property name="text">
+    <string>Scale all ROIs</string>
+   </property>
+  </action>
+  <action name="actionConvert_all_images_into_chips">
+   <property name="text">
+    <string>Convert all images into chips</string>
+   </property>
+  </action>
+  <action name="actionNew_Chip_Property">
+   <property name="text">
+    <string>New Chip Property</string>
    </property>
   </action>
  </widget>

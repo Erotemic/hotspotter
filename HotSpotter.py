@@ -89,6 +89,11 @@ class HotSpotter(DynStruct):
             hs.set_samples()
         return hs
 
+    def query(hs):
+        import match_chips3 as mc3
+        res = mc3.query_database(hs, qcx)
+        return res
+
     # Adding functions
     # ---------------
     def add_images(hs, fpath_list, move_images=True):
@@ -471,7 +476,14 @@ class HotSpotter(DynStruct):
         #return 'cx=%r' % cx
         return 'cid_list=%r' % hs.tables.cx2_cid[cx_list].tolist()
     #--------------
+    def cid2_gx(hs, cid):
+        'chip_id ==> image_index'
+        cx = self.cid2_cx(cid)
+        gx = self.tables.cx2_gx[cx]
+        return gx
+
     def cid2_cx(hs, cid):
+        'chip_id ==> chip_index'
         try: 
             array_index = helpers.array_index
             cx2_cid = hs.tables.cx2_cid

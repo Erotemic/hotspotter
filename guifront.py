@@ -38,18 +38,21 @@ def init_ui(win):
 
 def connect_file_signals(win):
     ui = win.ui; backend = win.backend
-    ui.actionQuit.triggered.connect(backend.quit)
+    ui.actionNew_Database.triggered.connect(backend.new_database)
     ui.actionOpen_Database.triggered.connect(backend.open_database)
     ui.actionSave_Database.triggered.connect(backend.save_database)
-    ui.actionImport_Images.triggered.connect(backend.import_images)
+    ui.actionImport_Img_file.triggered.connect(backend.import_images_from_file)
+    ui.actionImport_Img_dir.triggered.connect(backend.add_images_from_dir)
+    ui.actionQuit.triggered.connect(backend.quit)
 
 def connect_action_signals(win):
     ui = win.ui; backend = win.backend
-    ui.actionQuery.triggered.connect(backend.query)
     ui.actionAdd_ROI.triggered.connect(backend.add_roi)
-    ui.actionReselect_Ori.triggered.connect(backend.reselect_orientation)
+    ui.actionNew_Chip_Property.triggered.connect(backend.new_prop)
+    ui.actionQuery.triggered.connect(backend.query)
+    ui.actionReselect_Ori.triggered.connect(backend.reselect_ori)
     ui.actionReselect_ROI.triggered.connect(backend.reselect_roi)
-    ui.actionRemove_Chip.triggered.connect(backend.remove_chip)
+    ui.actionDelete_Chip.triggered.connect(backend.delete_chip)
     ui.actionNext.triggered.connect(backend.select_next)
 
 def connect_option_signals(win):
@@ -104,7 +107,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
 
         # Menubar signals
         connect_file_signals(self)
-        #connect_action_signals(self)
+        connect_action_signals(self)
         #connect_option_signals(self)
         #connect_convinience_signals(self)
         #connect_experimental_signals(self)
@@ -151,10 +154,10 @@ class MainWindowFrontend(QtGui.QMainWindow):
         # These are not yet useful disable them
         actions = [item for list_ in [
             #ui.menuFile.children(),
-            ui.menuActions.children(),
-            ui.menuOptions.children(),
-            ui.menuHelp.children(),
-            ui.menuExperimenal.children(),
+            #ui.menuActions.children(),
+            #ui.menuBatch.children(),
+            #ui.menuOptions.children(),
+            #ui.menuHelp.children(),
         ] for item in list_]
         for item in actions:
             item.setEnabled(False)

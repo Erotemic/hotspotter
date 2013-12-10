@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import __builtin__
 from os.path import split
 import sys
+import numpy as np
 import PyQt4
 from PyQt4 import Qt, QtCore, QtGui
 import fileio as io
@@ -41,6 +42,49 @@ def configure_matplotlib():
         #matplotlib.rcParams['toolbar'] = 'None'
         #matplotlib.rcParams['interactive'] = True
 
+
+# ---
+def select_orientation():
+    import draw_func2 as df2
+    print('[guitools] Define an orientation angle by clicking two points')
+    try:
+        # Compute an angle from user interaction
+        sys.stdout.flush()
+        fig = df2.gcf()
+        pts = np.array(fig.ginput(2))
+        print('[guitools] ginput(2) = %r' % pts)
+        # Get reference point to origin 
+        refpt = pts[0] - pts[1] 
+        #theta = np.math.atan2(refpt[1], refpt[0])
+        theta = np.math.atan(refpt[1]/refpt[0])
+        logmsg('The angle in radians is: '+str(theta))
+        return theta
+    except Exception as ex: 
+        logmsg('Annotate Orientation Failed'+str(ex))
+        return None
+
+# ---
+def select_roi():
+    import draw_func2 as df2
+    print('[guitools] Define a Rectanglular ROI by clicking two points.')
+    try:
+        sys.stdout.flush()
+        fig = df2.gcf()
+        pts = fig.ginput(2)
+        print('[guitools] ginput(2) = %r' % (pts,))
+        [(x1, y1), (x2, y2)] = pts 
+        xm = min(x1,x2)
+        xM = max(x1,x2)
+        ym = min(y1,y2)
+        yM = max(y1,y2)
+        xywh = map(round,(xm, ym, xM-xm, yM-ym))
+        roi = np.array(xywh, dtype=np.int32)
+        print('[guitools] roi = %r ' % (roi,))
+        return roi
+    except Exception as ex:
+        print('[guitools] ROI selection Failed:\n%r' % (ex,))
+        return None
+
 def _addOptions(msgBox, options):
     for opt in options:
         role = QtGui.QMessageBox.ApplyRole
@@ -70,7 +114,32 @@ msgBox = _newMsgBox(msg, title, parent)
 _addOptions(msgBox, options)
 dontPrompt = _cacheReply(msgBox)
 '''
-def user_option(parent, msg, title='question', options=['No', 'Yes'],
+def msgbox(msg, title='msgbox'):
+    'Make a non modal critical Qt.QMessageBox.'
+    msgBox = Qt.QMessageBox(None);
+    msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+    msgBox.setStandardButtons(Qt.QMessageBox.Ok)
+    msgBox.setWindowTitle(title)
+    msgBox.setText(msg)
+    msgBox.setModal(False)
+    msgBox.open(msgBox.close)
+    msgBox.show()
+    return msgBox
+
+def user_input(parent, msg, title='input dialog'):
+    reply, ok = QtGui.QInputDialog.getText(parent, title, msg)
+    if not ok: return None
+    return str(reply)
+
+def user_info(parent, msg, title='info'):
+    msgBox = _newMsgBox(msg, title, parent)
+    msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+    msgBox.setStandardButtons(Qt.QMessageBox.Ok)
+    msgBox.setModal(False)
+    msgBox.open(msgBox.close)
+    msgBox.show()
+
+def user_option(parent, msg, title='options', options=['No', 'Yes'],
                 use_cache=False):
     'Prompts user with several options with ability to save decision'
     print('[guitools] user_option:\n %r: %s'+title+': '+msg)
@@ -88,9 +157,8 @@ def user_option(parent, msg, title='question', options=['No', 'Yes'],
     optx = msgBox.exec_()
     reply = options[optx]
     # Remember decision
-    if use_cache:
-        if dontPrompt.isChecked():
-            io.global_cache_write(cache_id, reply)
+    if use_cache and dontPrompt.isChecked():
+        io.global_cache_write(cache_id, reply)
     del msgBox
     return reply
 
@@ -162,6 +230,11 @@ def init_qtapp():
     IS_INIT = True
     return app, is_root
 
+
+def exit_application():
+    print('[guitools] exiting application')
+    QtGui.qApp.quit()
+
 def run_main_loop(app, is_root=True, backend=None):
     if backend is not None:
         print('[guitools] setting active window')
@@ -179,18 +252,6 @@ def ping_python_interpreter(frequency=100):
     timer.timeout.connect(lambda: None)
     timer.start(frequency)
     return timer
-
-def msgbox(msg, title='msgbox'):
-    'Make a non modal critical Qt.QMessageBox.'
-    msgBox = Qt.QMessageBox(None);
-    msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-    msgBox.setStandardButtons(Qt.QMessageBox.Ok)
-    msgBox.setWindowTitle(title)
-    msgBox.setText(msg)
-    msgBox.setModal(False)
-    msgBox.open(msgBox.close)
-    msgBox.show()
-    return msgBox
 
 def make_dummy_main_window():
     class DummyBackend(Qt.QObject):

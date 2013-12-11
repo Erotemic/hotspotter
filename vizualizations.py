@@ -322,7 +322,8 @@ def dump_orgres_matches(allres, orgres_type):
 #------------------------------
 
 callback_id = None
-def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func):
+def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
+                    draw_roi=True, draw_roi_lbls=True, **kwargs):
     global callback_id
     # draw chips in the image
     cx_list = hs.gx2_cxs(gx)
@@ -333,10 +334,13 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func):
         roi = hs.get_roi(cx)
         # Draw the ROI
         roi_lbl = hs.cxstr(cx)
-        color = df2.DARK_ORANGE
         if cx in highlight_cxs:
-            color = df2.ORANGE
-        df2.draw_roi(ax, roi, roi_lbl, color)
+            bbox_color = df2.ORANGE      * np.array([1,1,1,.95])
+            lbl_color  = df2.BLACK       * np.array([1,1,1,.75])
+        else:
+            bbox_color = df2.DARK_ORANGE * np.array([1,1,1,.5])
+            lbl_color  = df2.BLACK       * np.array([1,1,1,.5])
+        df2.draw_roi(ax, roi, roi_lbl, bbox_color, lbl_color)
         # Index the roi centers (for interaction)
         (x,y,w,h) = roi
         xy_center = np.array([x+(w/2), y+(h/2)])
@@ -362,16 +366,22 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func):
 
 #def start_image_interaction(hs, gx, cx_clicked_func):
 
-def show_image(hs, gx, highlight_cxs=None, cx_clicked_func=None, annote=True):
+def show_image(hs, gx,
+               highlight_cxs=None,
+               cx_clicked_func=None,
+               draw_rois=True,
+               **kwargs):
     '''Shows an image. cx_clicked_func(cx) is a callback function'''
     fig = df2.figure(doclf=True)
     gname = hs.tables.gx2_gname[gx]
     img = hs.gx2_image(gx)
     df2.imshow(img, title=gname)
     ax = df2.gca()
+    annote = draw_rois or draw_roi_lbls
     if annote:
         if highlight_cxs is None: highlight_cxs = []
-        _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func)
+        _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
+                        draw_rois, **kwargs)
     df2.draw()
         
 def show_splash():

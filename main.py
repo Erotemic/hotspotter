@@ -152,7 +152,7 @@ def fix_args_with_cache(args):
 if __name__ == '__main__':
     import HotSpotter
     import guitools
-    multiprocssing.freeze_support()
+    multiprocessing.freeze_support()
     print('main.py')
     signal_set()
     app, is_root = guitools.init_qtapp()

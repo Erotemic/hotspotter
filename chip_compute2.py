@@ -245,10 +245,18 @@ class HotspotterChipPaths(DynStruct):
         self.cx2_rchip_path = []
         self.chip_uid = ''
 
-def load_chips(hs, chip_cfg):
+def load_chips(hs, chip_cfg=None, cx_list=None, **kwargs):
     print('\n=============================')
     print('[cc2] Precomputing chips and loading chip paths: %r' % hs.db_name())
     print('=============================')
+    if chip_cfg is None:
+        chip_cfg = ds.ChipConfig(**kwargs)
+    else:
+        chip_cfg.update(**kwargs)
+
+    if cx_list == []:
+        return
+
     img_dir      = hs.dirs.img_dir
     rchip_dir    = hs.dirs.rchip_dir
     chip_dir     = hs.dirs.chip_dir
@@ -269,8 +277,8 @@ def load_chips(hs, chip_cfg):
     maxcontr    = chip_cfg.maxcontrast    
 
     chip_uid = chip_cfg.get_uid()
-
-    print(helpers.indent(str(chip_cfg), '[cc2] '))
+    print('[cc2] chip_uid = %r' % chip_uid)
+    #print(helpers.indent(str(chip_cfg), '[cc2] '))
 
     # Full image path
     cx2_img_path = [img_dir+'/'+gx2_gname[gx] for gx in cx2_gx]

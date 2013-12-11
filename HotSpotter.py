@@ -99,7 +99,10 @@ class HotSpotter(DynStruct):
         if load_all:
             hs.load_chips()
             hs.load_features()
-            hs.set_samples()
+        else:
+            hs.load_chips([])
+            hs.load_features([])
+        hs.set_samples()
         return hs
 
     def load_tables(hs, db_dir):
@@ -110,15 +113,83 @@ class HotSpotter(DynStruct):
         hs.num_cx = len(hs.tables.cx2_cid)
         _on_loaded_tables(hs)
 
-    def load_chips(hs):
+    def load_chips(hs, cx_list=None):
         import chip_compute2 as cc2
-        hs_cpaths = cc2.load_chips(hs, hs.chip_cfg)
+        hs_cpaths = cc2.load_chips(hs, hs.chip_cfg, cx_list)
         hs.cpaths = hs_cpaths
 
-    def load_features(hs):
+    def load_features(hs, cx_list=None):
         import feature_compute2 as fc2
-        hs_feats = fc2.load_features(hs, hs.feat_cfg)
+        hs_feats = fc2.load_features(hs, hs.feat_cfg, cx_list)
         hs.feats = hs_feats
+
+    def set_samples(hs, test_samp=None,
+                        train_samp=None,
+                        indx_samp=None):
+        ''' This is the correct function to use when setting samples '''
+        print('[hs] set_samples():')
+        valid_cxs = hs.get_valid_cxs()
+        if test_samp is None:
+            print('[hs] * default: all chips in testing')
+            test_samp = valid_cxs
+        else:
+            print('[hs] * given: testing chips')
+        if train_samp is None:
+            print('[hs] * default: all chips in training')
+            train_samp = valid_cxs
+        else:
+            print('[hs] * given: training chips')
+        if indx_samp is None:
+            print('[hs] * default: training set as database set')
+            indx_samp = train_samp
+        else:
+            print('[hs] * given: indexed chips')
+
+        # Ensure samples are sorted
+        test_samp = sorted(test_samp)
+        train_samp = sorted(train_samp)
+        indx_samp = sorted(indx_samp)
+
+        # Debugging and Info
+        test_train_isect = np.intersect1d(test_samp, train_samp)
+        indx_train_isect   = np.intersect1d(indx_samp, train_samp)
+        indx_test_isect    = np.intersect1d(indx_samp, test_samp)
+        lentup = (len(test_samp), len(train_samp), len(indx_samp))
+        print('[hs]   ---')
+        print('[hs] * num_valid_cxs = %d' % len(valid_cxs))
+        print('[hs] * num_test=%d, num_train=%d, num_indx=%d' % lentup)
+        print('[hs] * | isect(test, train) |  = %d' % len(test_train_isect))
+        print('[hs] * | isect(indx, train) |  = %d' % len(indx_train_isect))
+        print('[hs] * | isect(indx, test)  |  = %d' % len(indx_test_isect))
+        
+        # Unload matcher if database changed
+        if hs.train_sample_cx != train_samp or hs.indexed_sample_cx != indx_samp:
+            hs.matcher = None
+
+        # Set the sample
+        hs.indexed_sample_cx  = indx_samp
+        hs.train_sample_cx    = train_samp
+        hs.test_sample_cx     = test_samp
+
+        # Hash the samples into sample ids
+        train_indx_hash = repr((tuple(train_samp), tuple(indx_samp)))
+        train_indx_id = str(len(indx_samp))+','+helpers.hashstr(train_indx_hash)
+        train_id = helpers.make_sample_id(train_samp)
+        indx_id  = helpers.make_sample_id(indx_samp)
+        test_id  = helpers.make_sample_id(test_samp) 
+ 
+        print('[hs] set_samples(): train_indx_id=%r' % train_indx_id)
+        print('[hs] set_samples(): train_id=%r' % train_id)
+        print('[hs] set_samples(): test_id=%r'  % test_id)
+        print('[hs] set_samples(): indx_id=%r'  % indx_id)
+        params.TRAIN_INDX_SAMPLE_ID = train_indx_id # Depricate
+        params.TRAIN_SAMPLE_ID      = train_id
+        params.INDX_SAMPLE_ID       = indx_id
+        params.TEST_SAMPLE_ID       = test_id
+        # Fix
+        hs.train_id = train_id
+        hs.indx_id  = indx_id
+
 
     #---------------
     # Query Functions
@@ -277,73 +348,6 @@ class HotSpotter(DynStruct):
         test_samp  = valid_cxs[pos1:pos2]
         train_samp = test_samp
         hs.set_samples(test_samp, train_samp)
-
-    def set_samples(hs, test_samp=None,
-                        train_samp=None,
-                        indx_samp=None):
-        ''' This is the correct function to use when setting samples '''
-        print('[hs] set_samples():')
-        valid_cxs = hs.get_valid_cxs()
-        if test_samp is None:
-            print('[hs] * default: all chips in testing')
-            test_samp = valid_cxs
-        else:
-            print('[hs] * given: testing chips')
-        if train_samp is None:
-            print('[hs] * default: all chips in training')
-            train_samp = valid_cxs
-        else:
-            print('[hs] * given: training chips')
-        if indx_samp is None:
-            print('[hs] * default: training set as database set')
-            indx_samp = train_samp
-        else:
-            print('[hs] * given: indexed chips')
-
-        # Ensure samples are sorted
-        test_samp = sorted(test_samp)
-        train_samp = sorted(train_samp)
-        indx_samp = sorted(indx_samp)
-
-        # Debugging and Info
-        test_train_isect = np.intersect1d(test_samp, train_samp)
-        indx_train_isect   = np.intersect1d(indx_samp, train_samp)
-        indx_test_isect    = np.intersect1d(indx_samp, test_samp)
-        lentup = (len(test_samp), len(train_samp), len(indx_samp))
-        print('[hs]   ---')
-        print('[hs] * num_valid_cxs = %d' % len(valid_cxs))
-        print('[hs] * num_test=%d, num_train=%d, num_indx=%d' % lentup)
-        print('[hs] * | isect(test, train) |  = %d' % len(test_train_isect))
-        print('[hs] * | isect(indx, train) |  = %d' % len(indx_train_isect))
-        print('[hs] * | isect(indx, test)  |  = %d' % len(indx_test_isect))
-        
-        # Unload matcher if database changed
-        if hs.train_sample_cx != train_samp or hs.indexed_sample_cx != indx_samp:
-            hs.matcher = None
-
-        # Set the sample
-        hs.indexed_sample_cx  = indx_samp
-        hs.train_sample_cx    = train_samp
-        hs.test_sample_cx     = test_samp
-
-        # Hash the samples into sample ids
-        train_indx_hash = repr((tuple(train_samp), tuple(indx_samp)))
-        train_indx_id = str(len(indx_samp))+','+helpers.hashstr(train_indx_hash)
-        train_id = helpers.make_sample_id(train_samp)
-        indx_id  = helpers.make_sample_id(indx_samp)
-        test_id  = helpers.make_sample_id(test_samp) 
- 
-        print('[hs] set_samples(): train_indx_id=%r' % train_indx_id)
-        print('[hs] set_samples(): train_id=%r' % train_id)
-        print('[hs] set_samples(): test_id=%r'  % test_id)
-        print('[hs] set_samples(): indx_id=%r'  % indx_id)
-        params.TRAIN_INDX_SAMPLE_ID = train_indx_id # Depricate
-        params.TRAIN_SAMPLE_ID      = train_id
-        params.INDX_SAMPLE_ID       = indx_id
-        params.TEST_SAMPLE_ID       = test_id
-        # Fix
-        hs.train_id = train_id
-        hs.indx_id  = indx_id
 
     def get_indexed_uid(hs, with_train=True, with_indx=True):
         indexed_uid = ''

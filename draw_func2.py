@@ -1184,7 +1184,8 @@ def show_img(hs, cx, **kwargs):
     ax = gca()
     draw_roi(ax, roi)
 
-def draw_roi(ax, roi, label=None, bbox_color=(1,0,0)):
+def draw_roi(ax, roi, label=None, bbox_color=(1,0,0),
+             lbl_bgcolor=(0,0,0), lbl_txtcolor=(1,1,1)):
     (rx,ry,rw,rh) = roi
     rxy = (rx,ry)
     bbox = matplotlib.patches.Rectangle(rxy,rw,rh) 
@@ -1195,8 +1196,8 @@ def draw_roi(ax, roi, label=None, bbox_color=(1,0,0)):
         ax_absolute_text(rx, ry, label, ax=ax,
                 horizontalalignment ='center',
                 verticalalignment   ='center',
-                color               =(1,1,1),
-                backgroundcolor     =(0,0,0))
+                color               =lbl_txtcolor,
+                backgroundcolor     =lbl_bgcolor)
 
 def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     imshow(rchip,fignum=fignum,title=title,**kwargs)

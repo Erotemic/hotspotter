@@ -249,12 +249,12 @@ def show_names(hs, qon_list, fnum=1):
 
 def vary_vsone_cfg(hs, qon_list, fnum, vary_dicts, **kwargs):
     vary_cfg = helpers.dict_union(*vary_dicts)
-    q_cfg = mc3.get_vsone_cfg(hs, **kwargs)
+    q_cfg = ds.get_vsone_cfg(hs, **kwargs)
     return vary_query_cfg(hs, qon_list, q_cfg, vary_cfg, fnum)
 
 def vary_vsmany_cfg(hs, qon_list, vary_cfg, fnum, **kwargs):
     vary_cfg = helpers.dict_union(*vary_dicts)
-    q_cfg = mc3.get_vsmany_cfg(hs, **kwargs)
+    q_cfg = ds.get_vsmany_cfg(hs, **kwargs)
     return vary_query_cfg(hs, qon_list, q_cfg, vary_cfg, fnum)
 
 def plot_keypoint_scales(hs, fnum=1):
@@ -320,7 +320,7 @@ def get_qon_list(hs):
 def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
     print('--------------------------------------')
     print('[dev] investigate_vsone_groundtruth')
-    q_cfg = mc3.get_vsone_cfg(sv_on=True, ratio_thresh=1.5)
+    q_cfg = ds.get_vsone_cfg(sv_on=True, ratio_thresh=1.5)
     for qcx, ocxs, notes in qon_list:
         res = mc3.query_groundtruth(hs, qcx, q_cfg)
         #print(q_cfg)
@@ -591,7 +591,7 @@ if __name__ == '__main__':
     # A redundant query argument. Again, needs to be replaced. 
     if hs.args.query is not None:
         qcx = hs.cid2_cx(hs.args.query[0])
-        q_cfg = mc3.get_vsmany_cfg(hs, K=args.K, score_method=args.score_method)
+        q_cfg = ds.get_vsmany_cfg(hs, K=args.K, score_method=args.score_method)
         res = mc3.query_database(hs, qcx, q_cfg=q_cfg)
         res.show_topN(hs)
     print('[dev]====================')

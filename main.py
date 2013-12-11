@@ -1,5 +1,6 @@
 #!/usr/bin/python2.7
 from __future__ import division, print_function
+import multiprocessing
 
 # Moved this up for faster help responce time
 def parse_arguments():
@@ -45,7 +46,9 @@ def parse_arguments():
     add_bool('--save-figures', default=False)
     add_bool('--noannote', default=False)
     # Program behavior
-    add_int('--num-procs', 8, 'number of processes used in parallel tasks')
+    num_cpus = multiprocessing.cpu_count()
+    num_proc_help = 'default to number of cpus = %d' % (num_cpus)
+    add_int('--num-procs', num_cpus, num_proc_help)
     add_bool('--serial', default=False, help='Forces num_procs=1')
     add_bool('--strict', default=False, help='Force failure in iffy areas')
 
@@ -147,10 +150,9 @@ def fix_args_with_cache(args):
     return args
 
 if __name__ == '__main__':
-    from multiprocessing import freeze_support
     import HotSpotter
     import guitools
-    freeze_support()
+    multiprocssing.freeze_support()
     print('main.py')
     signal_set()
     app, is_root = guitools.init_qtapp()

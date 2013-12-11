@@ -88,6 +88,7 @@ FONTS.ylabel   = FONTS.small
 FONTS.relative = FONTS.smaller
 
 ORANGE = np.array((255, 127,   0, 255))/255.0
+DARK_ORANGE = np.array((127, 63,   0, 255))/255.0
 RED    = np.array((255,   0,   0, 255))/255.0
 GREEN  = np.array((  0, 255,   0, 255))/255.0
 BLUE   = np.array((  0,   0, 255, 255))/255.0
@@ -315,13 +316,25 @@ def present(*args, **kwargs):
         all_figures_bring_to_front()
     # Return an exec string
     return textwrap.dedent(r'''
-    from hotspotter import helpers
     import matplotlib.pyplot as plt
     embedded = False
-    if not helpers.inIPython():
+
+    try:
+        __IPYTHON__
+        in_ipython = True
+    except NameError as nex:
+        in_ipython = False
+
+    try:
+        import IPython
+        have_ipython = True
+    except NameError as nex:
+        have_ipython = False
+    
+    if not in_ipython:
         if '--cmd' in sys.argv:
             print('[df2] Requested IPython shell with --cmd argument.')
-            if helpers.haveIPython():
+            if have_ipython:
                 print('[df2] Found IPython')
                 try: 
                     import IPython
@@ -565,8 +578,8 @@ def figure(fignum=None,
     else: 
         printDBG('[df2] *** OLD FIGURE '+str(fignum)+'.'+str(plotnum)+' ***')
         if not plotnum is None:
-            #ax = plt.subplot(*plotnum)
-            ax = fig.add_subplot(*plotnum)
+            ax = plt.subplot(*plotnum) # fig.add_subplot fails here
+            #ax = fig.add_subplot(*plotnum)
         else:
             ax = gca()
         #ax  = axes_list[0]

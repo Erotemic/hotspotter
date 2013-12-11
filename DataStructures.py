@@ -39,10 +39,11 @@ rrr = reload_module
 #=========================
 def query_result_fpath(hs, qcx, query_uid):
     qres_dir  = hs.dirs.qres_dir 
-    fname = 'res_%s_qcx=%d.npz' % (query_uid, qcx)
+    qcid  = hs.tables.cx2_cid[qcx]
+    fname = 'res_%s_qcid=%d.npz' % (query_uid, qcid)
     if len(fname) > 64:
         hash_id = helpers.hashstr(query_uid, 16)
-        fname = 'res_%s_qcx=%d.npz' % (hash_id, qcx)
+        fname = 'res_%s_qcid=%d.npz' % (hash_id, qcid)
     fpath = join(qres_dir, fname)
     return fpath
 
@@ -195,7 +196,7 @@ class NNIndex(object):
     def __init__(nn_index, hs, sx2_cx):
         cx2_desc  = hs.feats.cx2_desc
         # Make unique id for indexed descriptors
-        feat_uid   = ''.join(hs.feats.cfg.get_uid())
+        feat_uid   = ''.join(hs.feat_cfg.get_uid())
         sample_uid = helpers.make_sample_id(sx2_cx)
         uid = '_cxs(' + sample_uid + ')' + feat_uid
         # Number of features per sample chip
@@ -441,7 +442,7 @@ class QueryConfig(DynStruct):
         q_cfg.f_cfg  = FilterConfig(**kwargs)
         q_cfg.sv_cfg = SpatialVerifyConfig(**kwargs)
         q_cfg.a_cfg  = AggregateConfig(**kwargs)
-        q_cfg.feat_cfg = hs.feats.cfg
+        q_cfg.feat_cfg = hs.feat_cfg # Queries depend on features
         #
         q_cfg.use_cache = False
         # Data
@@ -477,3 +478,88 @@ class QueryConfig(DynStruct):
         uids += ['_dcxs('+helpers.hashstr(dcxs_)+')']
         uid = ''.join(uids)
         return uid
+
+class FeatureConfig(DynStruct):
+    def __init__(feat_cfg, hs, **kwargs):
+        super(FeatureConfig, feat_cfg).__init__()
+        feat_cfg.feat_type = ('hesaff', 'sift')
+        feat_cfg.whiten = False
+        feat_cfg.scale_min = 30 #0    # 30
+        feat_cfg.scale_max = 80 #9001 # 80
+        feat_cfg.chip_cfg = hs.chip_cfg # Features depend on chips
+        feat_cfg.update(**kwargs)
+    def get_dict_args(feat_cfg):
+        dict_args = {
+            'scale_min' : feat_cfg.scale_min,
+            'scale_max' : feat_cfg.scale_max, }
+        return dict_args
+    def get_uid(feat_cfg):
+        feat_uids = ['_FEAT(']
+        feat_uids += ['%s_%s' % feat_cfg.feat_type]
+        feat_uids += [',white'] * feat_cfg.whiten
+        feat_uids += [',%r_%r' % (feat_cfg.scale_min, feat_cfg.scale_max)]
+        feat_uids += [')']
+        feat_uids += [feat_cfg.chip_cfg.get_uid()]
+        return [''.join(feat_uids)]
+
+class ChipConfig(DynStruct):
+    def __init__(cc_cfg, **kwargs):
+        super(ChipConfig, cc_cfg).__init__()
+        cc_cfg.chip_sqrt_area = 750
+        cc_cfg.grabcut        = False
+        cc_cfg.histeq         = False
+        cc_cfg.region_norm    = False
+        cc_cfg.rank_eq        = False
+        cc_cfg.local_eq       = False
+        cc_cfg.maxcontrast    = False
+        cc_cfg.update(**kwargs)
+    def get_uid(cc_cfg):
+        chip_uid = []
+        chip_uid += ['histeq']  * cc_cfg.histeq
+        chip_uid += ['grabcut'] * cc_cfg.grabcut
+        chip_uid += ['regnorm'] * cc_cfg.region_norm
+        chip_uid += ['rankeq']  * cc_cfg.rank_eq
+        chip_uid += ['localeq'] * cc_cfg.local_eq
+        chip_uid += ['maxcont'] * cc_cfg.maxcontrast
+        isOrig = cc_cfg.chip_sqrt_area is None or cc_cfg.chip_sqrt_area <= 0
+        chip_uid += ['szorig'] if isOrig else ['sz%r' % cc_cfg.chip_sqrt_area]
+        return '_CHIP('+(','.join(chip_uid))+')'
+
+# Convinience
+
+def __dict_default_func(dict_):
+    # Sets keys only if they dont exist
+    def set_key(key, val):
+        if not dict_.has_key(key):
+            dict_[key] = val
+    return set_key
+
+def get_chip_cfg(**kwargs):
+    chip_cfg = ChipConfig(**kwargs)
+    return chip_cfg
+
+def get_feat_cfg(hs, **kwargs):
+    feat_cfg = FeatureConfig(hs, **kwargs)
+    return feat_cfg
+
+def get_vsmany_cfg(hs, **kwargs):
+    kwargs['query_type'] = 'vsmany'
+    kwargs_set = __dict_default_func(kwargs)
+    kwargs_set('lnbnn_weight', .001)
+    kwargs_set('K', 2)
+    kwargs_set('Knorm', 1)
+    q_cfg = QueryConfig(hs, **kwargs)
+    return q_cfg
+
+def get_vsone_cfg(hs, **kwargs):
+    kwargs['query_type'] = 'vsone'
+    kwargs_set = __dict_default_func(kwargs)
+    kwargs_set('lnbnn_weight', 0)
+    kwargs_set('checks', 256)
+    kwargs_set('K', 1)
+    kwargs_set('Knorm', 1)
+    kwargs_set('ratio_weight', 1.0)
+    kwargs_set('ratio_thresh', 1.5)
+    q_cfg = QueryConfig(hs, **kwargs)
+    return q_cfg
+

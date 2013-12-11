@@ -321,18 +321,57 @@ def dump_orgres_matches(allres, orgres_type):
         __dump_or_browse(allres.hs, orgres_type+'_matches'+allres.title_suffix)
 #------------------------------
 
-def show_image(hs, gx, annote=True):
+callback_id = None
+def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func):
+    global callback_id
+    # draw chips in the image
+    cx_list = hs.gx2_cxs(gx)
+    centers = []
+    interact = cx_clicked_func is not None
+    # Draw all chip indexes in the image
+    for cx in cx_list:
+        roi = hs.get_roi(cx)
+        # Draw the ROI
+        roi_lbl = hs.cxstr(cx)
+        color = df2.DARK_ORANGE
+        if cx in highlight_cxs:
+            color = df2.ORANGE
+        df2.draw_roi(ax, roi, roi_lbl, color)
+        # Index the roi centers (for interaction)
+        (x,y,w,h) = roi
+        xy_center = np.array([x+(w/2), y+(h/2)])
+        centers.append(xy_center)
+    # Put roi centers in numpy array
+    centers = np.array(centers)
+    # Create callback wrapper
+    def _on_click(event):
+        'Slot for matplotlib event'
+        if event.xdata is None: return
+        if len(centers) == 0: return
+        #print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
+        x,y = event.xdata, event.ydata
+        # Find nearest neighbor
+        dist = (centers.T[0] - x)**2 + (centers.T[1] - y)**2
+        cx = cx_list[dist.argsort()[0]]
+        cx_clicked_func(cx)
+    if callback_id is not None: 
+        fig.canvas.mpl_disconnect(callback_id)
+        callback_id = None
+    if interact:
+        callback_id = fig.canvas.mpl_connect('button_press_event', _on_click)
+
+#def start_image_interaction(hs, gx, cx_clicked_func):
+
+def show_image(hs, gx, highlight_cxs=None, cx_clicked_func=None, annote=True):
+    '''Shows an image. cx_clicked_func(cx) is a callback function'''
     fig = df2.figure(doclf=True)
+    gname = hs.tables.gx2_gname[gx]
     img = hs.gx2_image(gx)
-    df2.imshow(img)
+    df2.imshow(img, title=gname)
     ax = df2.gca()
     if annote:
-        # draw chips in the image
-        gx2_cxs = hs.get_gx2_cxs()
-        cxs = gx2_cxs[gx]
-        for cx in cxs:
-            roi = hs.get_roi(cx)
-            df2.draw_roi(ax, roi, hs.cxstr(cx))
+        if highlight_cxs is None: highlight_cxs = []
+        _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func)
     df2.draw()
         
 def show_splash():

@@ -54,33 +54,6 @@ rrr = reload_module
 #----------------------
 # Convinience Functions 
 #----------------------
-def __dict_default_func(dict_):
-    # Sets keys only if they dont exist
-    def set_key(key, val):
-        if not dict_.has_key(key):
-            dict_[key] = val
-    return set_key
-
-def get_vsmany_cfg(hs, **kwargs):
-    kwargs['query_type'] = 'vsmany'
-    kwargs_set = __dict_default_func(kwargs)
-    kwargs_set('lnbnn_weight', .001)
-    kwargs_set('K', 2)
-    kwargs_set('Knorm', 1)
-    q_cfg = ds.QueryConfig(hs, **kwargs)
-    return q_cfg
-
-def get_vsone_cfg(hs, **kwargs):
-    kwargs['query_type'] = 'vsone'
-    kwargs_set = __dict_default_func(kwargs)
-    kwargs_set('lnbnn_weight', 0)
-    kwargs_set('checks', 256)
-    kwargs_set('K', 1)
-    kwargs_set('Knorm', 1)
-    kwargs_set('ratio_weight', 1.0)
-    kwargs_set('ratio_thresh', 1.5)
-    q_cfg = ds.QueryConfig(hs, **kwargs)
-    return q_cfg
 
 def query_dcxs(hs, qcx, dcxs, q_cfg=None, **kwargs):
     result_list = execute_query_safe(hs, q_cfg, [qcx], dcxs, **kwargs)

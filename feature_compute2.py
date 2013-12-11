@@ -9,6 +9,7 @@ import params
 import _tpl.extern_feat as extern_feat
 import helpers
 from Parallelize import parallel_compute
+import DataStructures as ds
 from Printable import DynStruct
 import fileio as io
 # scientific
@@ -60,27 +61,6 @@ class HotspotterChipFeatures(DynStruct):
         self.cx2_kpts = None
         self.cfg   = None
 
-class FeatureConfig(DynStruct):
-    def __init__(feat_cfg, **kwargs):
-        super(FeatureConfig, feat_cfg).__init__()
-        feat_cfg.feat_type = ('hesaff', 'sift')
-        feat_cfg.whiten = False
-        feat_cfg.scale_min = 30 #0    # 30
-        feat_cfg.scale_max = 80 #9001 # 80
-        feat_cfg.update(**kwargs)
-    def get_dict_args(feat_cfg):
-        dict_args = {
-            'scale_min' : feat_cfg.scale_min,
-            'scale_max' : feat_cfg.scale_max, }
-        return dict_args
-    def get_uid(feat_cfg):
-        feat_uids = ['_FEAT(']
-        feat_uids += ['%s_%s' % feat_cfg.feat_type]
-        feat_uids += [',white'] * feat_cfg.whiten
-        feat_uids += [',%r_%r' % (feat_cfg.scale_min, feat_cfg.scale_max)]
-        feat_uids += [')']
-        feat_uids += [params.get_chip_uid()]
-        return [''.join(feat_uids)]
 
 def load_cached_feats(dpath, uid, ext, use_cache, load_kpts=True, load_desc=True):
     if not use_cache:
@@ -207,12 +187,12 @@ def load_features(hs, feat_cfg=None, **kwargs):
     # --- GET INPUT --- #
     hs_feats = HotspotterChipFeatures()
     if feat_cfg is None: 
-        feat_cfg = FeatureConfig(**kwargs)
+        feat_cfg = ds.FeatureConfig(**kwargs)
     feat_cfg.update(**kwargs)
     cx2_kpts, cx2_desc = load_feats_from_config(hs, feat_cfg)
     hs_feats.cx2_kpts  = cx2_kpts
     hs_feats.cx2_desc  = cx2_desc
-    hs_feats.cfg = feat_cfg
+    hs_feats.feat_uid = feat_cfg.get_uid()
     return hs_feats
 
 def clear_feature_cache(hs, feat_cfg):

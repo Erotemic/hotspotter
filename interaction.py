@@ -96,7 +96,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         sift = desc[fx]
         np.set_printoptions(precision=5)
         df2.cla()
-        fig1 = df2.figure(state.fnum , **kwargs)
+        fig1 = df2.figure(state.fnum, **kwargs)
         df2.imshow(rchip, plotnum=(2,1,1))
         #df2.imshow(rchip, plotnum=(1,2,1), title='inv(sqrtm(invE*)')
         #df2.imshow(rchip, plotnum=(1,2,2), title='inv(A)')
@@ -150,7 +150,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
             fx_ptr[0]=knnx[0]
             select_ith_keypoint(fx_ptr[0])
         print('>>>')
-    cid = fig.canvas.mpl_connect('button_press_event', on_click)
+    callback_id = fig.canvas.mpl_connect('button_press_event', on_click)
     
     select_ith_keypoint(fx_ptr[0])
     q_cfg = ds.QueryConfig(hs, **kwargs)

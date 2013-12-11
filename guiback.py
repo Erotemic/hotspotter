@@ -49,20 +49,22 @@ class MainWindowBackend(QtCore.QObject):
     def get_selected_gx(self):
         'selected image index'
         if self.selection is None: return None
-        type_, index = self.selection
+        type_ = self.selection['type_']
         if type_ == 'gx':
-            gx = index
-        if type_ == 'cid':
-            cid = index
-            gx = self.hs.cid2_gx(cid)
+            gx = self.selection['index']
+        if type_ == 'cx':
+            cx = self.selection['index']
+            gx = self.hs.tables.cx2_gx(cx)
         return gx
 
     def get_selected_cx(self):
         'selected chip index'
         if self.selection is None: return None
-        type_, index = self.selection
-        if type_ == 'cid':
-            cx = self.hs.cid2_gx(cid)
+        type_ = self.selection['type_']
+        if type_ == 'cx':
+            cx = self.selection['index']
+        if type_ == 'gx': 
+            cx = self.selection['sub']
         return cx
 
     def update_window_title(self):
@@ -103,9 +105,10 @@ class MainWindowBackend(QtCore.QObject):
         # Populate table with valid image indexes
         gx2_gname = self.hs.tables.gx2_gname
         gx2_cxs   = self.hs.get_gx2_cxs()
-        row_list  = range(len(gx2_gname))
         row2_datatup = [(gx, gname, len(gx2_cxs[gx])) 
-                        for gx, gname in enumerate(gx2_gname)]
+                        for gx, gname in enumerate(gx2_gname) 
+                        if gname != '']
+        row_list  = range(len(row2_datatup))
         self.populateSignal.emit('image', col_headers, col_editable, 
                                  row_list, row2_datatup)
 
@@ -185,17 +188,19 @@ class MainWindowBackend(QtCore.QObject):
 
     # Table selection
     @pyqtSlot(int, name='select_gx')
-    def select_gx(self, gx):
-        print('[*back] select_gx(%r)' % gx)
-        self.selection = ('gx', gx)
-        viz.show_image(self.hs, gx)
+    def select_gx(self, gx, cx=None):
+        print('[*back] select_gx(%r, %r)' % (gx, cx))
+        self.selection = {'type_':'gx', 'index':gx, 'sub':cx}
+        highlight_cxs = [] if cx is None else [cx]
+        cx_clicked_func = lambda cx: self.select_gx(gx, cx)
+        viz.show_image(self.hs, gx, highlight_cxs, cx_clicked_func)
 
     # Table selection
     @pyqtSlot(int, name='select_cid')
     def select_cid(self, cid):
         print('[*back] select_cid(%r)' % cid)
-        self.selection = ('cid', cid)
         cx = self.hs.cid2_cx(cid)
+        self.selection = {'type_':'cx', 'index':cx}
         viz.show_chip(self.hs, cx)
 
     #--------------------------------------------------------------------------
@@ -309,11 +314,13 @@ class MainWindowBackend(QtCore.QObject):
     @pyqtSlot(name='add_chip')
     def add_chip(self):
         print('[*back] add_chip()')
-        gx  = self.get_selected_gx()
+        gx = self.get_selected_gx()
         viz.show_image(self.hs, gx)
         roi = guitools.select_roi()
-        self.hs.add_chip(gx, roi)
-        viz.show_image(self.hs, gx)
+        cx = self.hs.add_chip(gx, roi)
+        self.populate_image_table()
+        self.populate_chip_table()
+        self.select_gx(gx, cx)
     # Action -> Query
     @pyqtSlot(name='query')
     def query(self):
@@ -324,26 +331,79 @@ class MainWindowBackend(QtCore.QObject):
     @pyqtSlot(name='reselect_roi')
     def reselect_roi(self):
         print('[*back] reselect_roi()')
+        cx = self.get_selected_cx()
+        if cx is None:
+            self.user_info('Cannot reselect ROI. No chip selected')
+            return 
+        gx = self.hs.tables.cx2_gx[cx]
+        viz.show_image(self.hs, gx, [cx])
         roi = guitools.select_roi()
+        self.hs.change_roi(cx, roi)
+        self.populate_image_table()
+        self.populate_chip_table()
+        self.select_gx(gx, cx)
         pass
     # Action -> Reselect ORI
     @pyqtSlot(name='reselect_ori')
     def reselect_ori(self):
         print('[*back] reselect_ori()')
+        cx = self.get_selected_cx()
+        if cx is None:
+            self.user_info('Cannot reselect orientation. No chip selected')
+            return 
+        gx = self.hs.tables.cx2_gx[cx]
+        viz.show_image(self.hs, gx, [cx])
         theta = guitools.select_ori()
+        self.hs.change_theta(cx, theta)
+        self.populate_image_table()
+        self.populate_chip_table()
+        self.select_gx(gx, cx)
         pass
     # Action -> Delete Chip
     @pyqtSlot(name='delete_chip')
     def delete_chip(self):
         print('[*back] delete_chip()')
-        reply = self.user_info('not imlemented')
+        cx = self.get_selected_cx()
+        if cx is None:
+            self.user_info('Cannot delete chip. No chip selected')
+            return 
+        gx = self.hs.tables.cx2_gx[cx]
+        self.hs.delete_chip(cx)
+        self.populate_image_table()
+        self.populate_chip_table()
+        self.select_gx(gx)
         pass
     # Action -> Next
     @pyqtSlot(name='select_next')
     def select_next(self):
         print('[*back] select_next()')
-        reply = self.user_info('not imlemented')
-        pass
+        if self.selection is None:
+            # No selection
+            reply = self.user_info('No selection. Cannot select next.')
+            return 
+        elif self.selection['type_'] == 'gx':
+            # Select next image
+            gx = self.selection['index']
+            gx2_gname = self.hs.tables.gx2_gname
+            next_gx = gx + 1
+            while next_gx < len(gx2_gname):
+                if gx2_gname[next_gx] != '':
+                    self.select_gx(next_gx)
+                    break
+                next_gx += 1
+            return
+        elif self.selection['type_'] == 'cx':
+            # Select next chip
+            cx = self.selection['index']
+            cx2_cid = self.hs.tables.cx2_cid
+            next_cx = cx + 1
+            while next_cx < len(cx2_cid):
+                if cx2_cid[next_cx] != 0:
+                    self.select_cx(next_cx)
+                    break
+                next_cx += 1
+            return
+        reply = self.user_info('Cannot next. At end of the list.')
 
     # Help Actions
     # 

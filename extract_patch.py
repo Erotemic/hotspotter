@@ -1,5 +1,5 @@
 #exec(open('__init__.py').read())
-from __future__ import division
+from __future__ import division, print_function
 import warnings
 import numpy as np
 import params
@@ -97,7 +97,7 @@ def get_patch(rchip, kp):
     #print('[get_patch] sfx=%r' % sfx)
     #print('[get_patch] ratio=%r' % ratio)
 
-    (chip_h, chip_w) = rchip.shape[0:2]
+    (chip_w, chip_h) = rchip.shape[0:2]
     ix1, ix2, xm = quantize_to_pixel_with_offset(x, radx, 0, chip_w)
     iy1, iy2, ym = quantize_to_pixel_with_offset(y, rady, 0, chip_h)
     patch = rchip[iy1:iy2, ix1:ix2]
@@ -116,13 +116,13 @@ def quantize_to_pixel_with_offset(z, radius, low, high):
             _______________ < radius
                 _____________ < quantized radius '''      
     (z1, z2) = (z-radius, z+radius)
-    iz1 = max(np.floor(z1), low)
-    iz2 = min(np.ceil(z2), high)
-    z_radius1 = np.ceil(z - iz1)
-    z_radius2 = np.ceil(iz2 - z)
+    iz1 = int(max(np.floor(z1), low))
+    iz2 = int(min(np.ceil(z2), high))
+    z_radius1 = int(np.ceil(z - iz1))
+    z_radius2 = int(np.ceil(iz2 - z))
     z_radius = min(z_radius1, z_radius2)
     (iz1, iz2) = (z-z_radius, z+z_radius)
-    z_radius = np.ceil(z - iz1)
+    z_radius = int(np.ceil(z - iz1))
     return iz1, iz2, z_radius
 
 def kp2_sf(kp):

@@ -67,20 +67,18 @@ def select_orientation():
 # ---
 def select_roi():
     import draw_func2 as df2
+    from matplotlib.backend_bases import mplDeprecation
     print('[*guitools] Define a Rectanglular ROI by clicking two points.')
     try:
         sys.stdout.flush()
         fig = df2.gcf()
         with warnings.catch_warnings():
-            warnings.filterwarnings("ignore")
-            #,category=DeprecationWarning
-        pts = fig.ginput(2)
+            warnings.filterwarnings("ignore", category=mplDeprecation)
+            pts = fig.ginput(2)
         print('[*guitools] ginput(2) = %r' % (pts,))
         [(x1, y1), (x2, y2)] = pts 
-        xm = min(x1,x2)
-        xM = max(x1,x2)
-        ym = min(y1,y2)
-        yM = max(y1,y2)
+        xm = min(x1,x2); xM = max(x1,x2)
+        ym = min(y1,y2); yM = max(y1,y2)
         xywh = map(int, map(round,(xm, ym, xM-xm, yM-ym)))
         roi = np.array(xywh, dtype=np.int32)
         print('[*guitools] roi = %r ' % (roi,))

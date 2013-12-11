@@ -397,13 +397,19 @@ def alloc_lists(num_alloc):
     'allocates space for a numpy array of lists'
     return [[] for _ in xrange(num_alloc)]
 
-def get_timestamp(format='filename'):
+def get_timestamp(format_='filename', use_second=False):
     now = datetime.datetime.now()
-    time_tup = (now.year, now.month, now.day, now.hour, now.minute)
-    time_formats = {
-        'filename': 'ymd-%04d-%02d-%02d_hm-%02d-%02d',
-        'comment' : '# (yyyy-mm-dd hh:mm) %04d-%02d-%02d %02d:%02d' }
-    stamp = time_formats[format] % time_tup
+    if use_second:
+        time_tup = (now.year, now.month, now.day, now.hour, now.minute, now.second)
+        time_formats = {
+            'filename': 'ymd_hms-%04d-%02d-%02d_%02d-%02d-%02d',
+            'comment' : '# (yyyy-mm-dd hh:mm:ss) %04d-%02d-%02d %02d:%02d:%02d' }
+    else: 
+        time_tup = (now.year, now.month, now.day, now.hour, now.minute)
+        time_formats = {
+            'filename': 'ymd_hm-%04d-%02d-%02d_%02d-%02d',
+            'comment' : '# (yyyy-mm-dd hh:mm) %04d-%02d-%02d %02d:%02d' }
+    stamp = time_formats[format_] % time_tup
     return stamp
 
 def make_progress_fmt_str(max_val, lbl='Progress: '):

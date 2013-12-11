@@ -17,7 +17,7 @@ import guitools
 # Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[guifront] reloading '+__name__)
+    print('[*front] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 rrr = reload_module
 
@@ -27,6 +27,7 @@ def init_plotWidget(win):
     from _tpl.other.matplotlibwidget import MatplotlibWidget
     plotWidget = MatplotlibWidget(win.ui.centralwidget)
     plotWidget.setObjectName(guitools._fromUtf8('plotWidget'))
+    plotWidget.setFocus()
     win.ui.root_hlayout.addWidget(plotWidget)
     return plotWidget
 
@@ -47,7 +48,7 @@ def connect_file_signals(win):
 
 def connect_action_signals(win):
     ui = win.ui; backend = win.backend
-    ui.actionAdd_ROI.triggered.connect(backend.add_roi)
+    ui.actionAdd_Chip.triggered.connect(backend.add_chip)
     ui.actionNew_Chip_Property.triggered.connect(backend.new_prop)
     ui.actionQuery.triggered.connect(backend.query)
     ui.actionReselect_Ori.triggered.connect(backend.reselect_ori)
@@ -66,6 +67,7 @@ def connect_help_signals(win):
     ui = win.ui; backend = win.backend
     msg_event = lambda title, msg: lambda: guitools.msgbox(title, msg)
     #ui.actionView_Docs.triggered.connect(backend.view_docs)
+    ui.actionView_DBDir.triggered.connect(backend.view_database_dir)
     ui.actionAbout.triggered.connect(msg_event('About', 'hotspotter'))
     #ui.actionWriteLogs.triggered.connect(backend.write_logs)
 
@@ -89,7 +91,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
 
     def __init__(self, backend):
         super(MainWindowFrontend, self).__init__()
-        print('[front] creating frontend')
+        print('[*front] creating frontend')
         self.prev_tbl_item = None
         self.backend = backend
         self.ui = init_ui(self)
@@ -128,8 +130,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
         ui.image_TBL.sortByColumn(0, Qt.AscendingOrder)
 
     def print(self, msg):
-        #print('[front*] '+msg)
-        self.printSignal.emit('[front] '+msg)
+        #print('[*front*] '+msg)
+        self.printSignal.emit('[*front] '+msg)
 
     #def popup(self, pos):
         #for i in self.ui.image_TBL.selectionModel().selection().indexes():
@@ -141,15 +143,26 @@ class MainWindowFrontend(QtGui.QMainWindow):
         #action = menu.exec_(self.ui.image_TBL.mapToGlobal(pos))
         #self.print('action = %r ' % action)
 
-    @pyqtSlot(bool)
+    @pyqtSlot(bool, name='setPlotWidgetEnabled')
+    def setPlotWidgetEnabled(self, flag):
+        flag = bool(flag)
+        self.print('setPlotWidgetEnabled(%r)' % flag)
+        print(self.plotWidget)
+        self.plotWidget.setVisible(flag)
+
+    @pyqtSlot(bool, name='setEnabled')
     def setEnabled(self, flag):
+        self.print('setEnabled(%r)' % flag)
         ui = self.ui
-        self.print('disable()')
         # Enable or disable all actions
         for uikey in ui.__dict__.keys():
             if uikey.find('action') == 0:
                 ui.__dict__[uikey].setEnabled(flag)
         ui.actionOpen_Database.setEnabled(True) # always allowed
+        ui.actionNew_Database.setEnabled(True) # always allowed
+        ui.actionQuit.setEnabled(True) # always allowed
+        ui.actionAbout.setEnabled(True) # always allowed
+        ui.actionView_Docs.setEnabled(True) # always allowed
 
         # These are not yet useful disable them
         actions = [item for list_ in [
@@ -165,7 +178,6 @@ class MainWindowFrontend(QtGui.QMainWindow):
         #for uikey in ui.__dict__.keys():
             #if uikey.find('action') == 0:
                 #ui.__dict__[uikey].setEnabled(flag)
-
 
     def _populate_table(self, tbl, col_headers, col_editable, row_list, row2_datatup):
         self.print('_populate_table()')

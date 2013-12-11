@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import __builtin__
 import sys
 from itertools import izip
-from os.path import realpath, split
+from os.path import realpath, split, exists, join
 # Qt
 from PyQt4 import Qt, QtCore, QtGui
 from PyQt4.Qt import pyqtSlot, pyqtSignal
@@ -17,7 +17,7 @@ import vizualizations as viz
 # Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[guiback] reloading '+__name__)
+    print('[*back] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 rrr = reload_module
 
@@ -26,19 +26,21 @@ class MainWindowBackend(QtCore.QObject):
     #--------------------------------------------------------------------------
     # Backend Signals
     populateSignal = pyqtSignal(str, list, list, list, list)
-    setEnableSignal  = pyqtSignal(bool)
+    setEnabledSignal = pyqtSignal(bool)
+    setPlotWidgetEnabledSignal = pyqtSignal(bool)
     #--------------------------------------------------------------------------
     # Constructor
     def __init__(self, hs=None):
         super(MainWindowBackend, self).__init__()
-        print('[back] creating backend')
+        print('[*back] creating backend')
         self.hs = hs
         self.win = guifront.MainWindowFrontend(backend=self)
         self.selection = None
         df2.register_matplotlib_widget(self.win.plotWidget)
         # connect signals
         self.populateSignal.connect(self.win.populate_tbl)
-        self.setEnableSignal.connect(self.win.setEnabled)
+        self.setEnabledSignal.connect(self.win.setEnabled)
+        self.setPlotWidgetEnabledSignal.connect(self.win.setPlotWidgetEnabled)
         if hs is not None:
             self.connect_api(hs)
     #--------------------------------------------------------------------------
@@ -75,20 +77,25 @@ class MainWindowBackend(QtCore.QObject):
         self.win.setWindowTitle(title)
             
     def connect_api(self, hs):
-        print('[win] connect_api()')
+        print('[*back] connect_api()')
         self.hs = hs
         if hs.tables is not None:
             self.populate_image_table()
             self.populate_chip_table()
-            self.setEnableSignal.emit(True)
+            self.setEnabledSignal.emit(True)
+            #self.setPlotWidgetEnabledSignal.emit(False)
+            #print(self.win.plotWidget)
+            #print(self.win.plotWidget.isVisible())
+            #self.win.setPlotWidgetEnabled(False)
+            #self.win.plotWidget.setVisible(False)
             self.clear_selection()
             self.update_window_title()
         else:
-            self.setEnableSignal.emit(False)
+            self.setEnabledSignal.emit(False)
         #self.database_loaded.emit()
 
     def populate_image_table(self):
-        print('[win] populate_image_table()')
+        print('[*back] populate_image_table()')
         #col_headers  = ['Image ID', 'Image Name', 'Chip IDs', 'Chip Names']
         #col_editable = [ False    ,  False      ,  False    ,  False      ]
         col_headers   = ['Image Index', 'Image Name', 'Num Chips']
@@ -103,7 +110,7 @@ class MainWindowBackend(QtCore.QObject):
                                  row_list, row2_datatup)
 
     def populate_chip_table(self):
-        print('[win] populate_chip_table()')
+        print('[*back] populate_chip_table()')
         col_headers  = ['Chip ID', 'Name', 'Image']
         col_editable = [ False  ,    True,   False]
         # Add User Properties to headers
@@ -134,7 +141,7 @@ class MainWindowBackend(QtCore.QObject):
     #--------------------------------------------------------------------------
 
     def _add_images(self, fpath_list):
-        print('[back] _add_images()')
+        print('[*back] _add_images()')
         num_new = self.hs.add_images(fpath_list)
         if num_new > 0:
             self.populate_image_table()
@@ -145,27 +152,48 @@ class MainWindowBackend(QtCore.QObject):
     def user_input(self, *args, **kwargs):
         return guitools.user_input(self.win, *args, **kwargs)
 
+    def user_option(self, *args, **kwargs):
+        return guitools.user_option(self.win, *args, **kwargs)
+
+    def get_work_directory(self, use_cache=True):
+        print('[*back] get_work_directory()')
+        cache_id = 'work_directory_cache_id'
+        if use_cache:
+            work_dir = io.global_cache_read(cache_id, default='.')
+            if work_dir is not '.' and exists(work_dir):
+                return work_dir
+        msg_dir = 'Work directory not currently set. Select a work directory'
+        work_dir = guitools.select_directory(msg_dir)
+        if not exists(work_dir):
+            msg_try = 'Directory %r does not exist.' % work_dir
+            opt_try = ['Try Again']
+            try_again = self.user_option(msg_try, 'get work dir failed', opt_try, False)
+            if try_again == 'Try Again':
+                return self.get_work_dir(use_cache)
+        io.global_cache_write(cache_id, work_dir)
+        return work_dir
+
     @pyqtSlot(str, name='backend_print')
     def backend_print(self, msg):
         print(msg)
 
     @pyqtSlot(str, name='clear_selection')
     def clear_selection(self):
-        print('[back] clear_selection()')
+        print('[*back] clear_selection()')
         self.selection = None
-        viz.show_splash(self.hs)
+        viz.show_splash()
 
     # Table selection
     @pyqtSlot(int, name='select_gx')
     def select_gx(self, gx):
-        print('[back] select_gx(%r)' % gx)
+        print('[*back] select_gx(%r)' % gx)
         self.selection = ('gx', gx)
         viz.show_image(self.hs, gx)
 
     # Table selection
     @pyqtSlot(int, name='select_cid')
     def select_cid(self, cid):
-        print('[back] select_cid(%r)' % cid)
+        print('[*back] select_cid(%r)' % cid)
         self.selection = ('cid', cid)
         cx = self.hs.cid2_cx(cid)
         viz.show_chip(self.hs, cx)
@@ -174,20 +202,52 @@ class MainWindowBackend(QtCore.QObject):
     # File menu slots
     #--------------------------------------------------------------------------
     # File -> New Database
-    @pyqtSlot(name='open_database')
+    @pyqtSlot(name='new_database')
     def new_database(self):
-        guitools.select_directory('Select the new database location')
+        print('[*back] new_database()')
         new_db = self.user_input('Enter the new database name')
+        msg_put = 'Where should I put %r?' % new_db 
+        opt_put = ['Choose Directory', 'My Work Dir']
+        reply = self.user_option(msg_put, 'options', opt_put, True)
+        if reply == opt_put[1]:
+            put_dir = self.get_work_directory()
+        elif reply == opt_put[0]:
+            put_dir = guitools.select_directory('Select where to put the new database')
+        elif reply == None:
+            print('[*back] abort new database()')
+            return None
+        else:
+            raise Exception('Unknown reply=%r' % reply)
+
+        new_db_dir = join(put_dir, new_db)
+
+        # Check the put directory exists and the new database does not exist
+        msg_try = None
+        if not exists(put_dir):
+            msg_try = 'Directory %r does not exist.' % put_dir
+        elif exists(new_db_dir):
+            msg_try = 'New Database %r already exists.' % new_db_dir
+        if msg_try is not None:
+            opt_try = ['Try Again']
+            title_try = 'New Database Failed'
+            try_again = self.user_option(msg_try, title_try, opt_try, False)
+            if try_again == 'Try Again':
+                return self.new_database()
+        print('[*back] valid new_db_dir = %r' % new_db_dir)
+        helpers.ensurepath(new_db_dir)
+        self.open_database(new_db_dir)
+
     # File -> Open Database
     @pyqtSlot(name='open_database')
-    def open_database(self):
-        print('[back] open_database')
+    def open_database(self, db_dir=None):
+        print('[*back] open_database')
         import HotSpotter
         # Try to load db
         try:  
             # Use the same args in a new (opened) database
             args = self.hs.args 
-            db_dir = guitools.select_directory('Select (or create) a database directory.')
+            if db_dir is None:
+                db_dir = guitools.select_directory('Select (or create) a database directory.')
             print('[main] user selects database: '+db_dir)
             # Try and load db
             hs = HotSpotter.HotSpotter(args=args, db_dir=db_dir)
@@ -201,16 +261,16 @@ class MainWindowBackend(QtCore.QObject):
     # File -> Save Database
     @pyqtSlot(name='save_database')
     def save_database(self):
-        print('[back] save_database')
-        reply = self.user_info('save database not imlemented')
+        print('[*back] save_database')
+        self.hs.save_database()
     # File -> Import Images
     @pyqtSlot(name='import_images')
     def import_images(self):
-        print('[back] import images')
+        print('[*back] import images')
         msg = 'Import specific files or whole directory?'
         title = 'Import Images'
         options = ['Files', 'Directory']
-        reply = guitools.user_option(self.win, msg, title, options, False)
+        reply = self.user_option(msg, title, options, False)
         if reply == 'Files':
             self.add_images_from_files()
         if reply == 'Directory':
@@ -219,62 +279,77 @@ class MainWindowBackend(QtCore.QObject):
     # File -> Import Images From File
     @pyqtSlot(name='import_images_from_file')
     def add_images_from_files(self):
-        print('[back] add_images_from_files()')
+        print('[*back] add_images_from_files()')
         fpath_list = guitools.select_images('Select image files to import')
         self._add_images(fpath_list)
     # File -> Import Images From Directory
     @pyqtSlot(name='import_images_from_dir')
     def add_images_from_dir(self):
-        print('[back] add_images_from_dir()')
+        print('[*back] add_images_from_dir()')
         img_dpath = guitools.select_directory('Select directory with images in it')
-        print('[back] selected ' + img_dpath)
+        print('[*back] selected ' + img_dpath)
         fpath_list = helpers.list_images(img_dpath, fullpath=True)
         self._add_images(fpath_list)
     # File -> Quit
     @pyqtSlot(name='quit')
     def quit(self):
-        print('[back] quit()')
+        print('[*back] quit()')
         guitools.exit_application()
 
     #--------------------------------------------------------------------------
     # Action menu slots
     #--------------------------------------------------------------------------
     # Action -> New Chip Property
+    @pyqtSlot(name='new_prop')
     def new_prop(self):
-        print('[back] new_prop()')
+        print('[*back] new_prop()')
         reply = self.user_info('not imlemented')
         pass
     # Action -> Add ROI
-    def add_roi(self):
-        print('[back] add_roi()')
+    @pyqtSlot(name='add_chip')
+    def add_chip(self):
+        print('[*back] add_chip()')
         gx  = self.get_selected_gx()
+        viz.show_image(self.hs, gx)
         roi = guitools.select_roi()
-        pass
+        self.hs.add_chip(gx, roi)
+        viz.show_image(self.hs, gx)
     # Action -> Query
+    @pyqtSlot(name='query')
     def query(self):
-        print('[back] query()')
+        print('[*back] query()')
         reply = self.user_info('not imlemented')
         pass
     # Action -> Reselect ROI
+    @pyqtSlot(name='reselect_roi')
     def reselect_roi(self):
-        print('[back] reselect_roi()')
+        print('[*back] reselect_roi()')
         roi = guitools.select_roi()
         pass
     # Action -> Reselect ORI
+    @pyqtSlot(name='reselect_ori')
     def reselect_ori(self):
-        print('[back] reselect_ori()')
+        print('[*back] reselect_ori()')
         theta = guitools.select_ori()
         pass
     # Action -> Delete Chip
+    @pyqtSlot(name='delete_chip')
     def delete_chip(self):
-        print('[back] delete_chip()')
+        print('[*back] delete_chip()')
         reply = self.user_info('not imlemented')
         pass
     # Action -> Next
+    @pyqtSlot(name='select_next')
     def select_next(self):
-        print('[back] select_next()')
+        print('[*back] select_next()')
         reply = self.user_info('not imlemented')
         pass
+
+    # Help Actions
+    # 
+    @pyqtSlot(name='view_database_dir')
+    def view_database_dir(self):
+        self.hs.vdd()
     
 if __name__ == '__main__':
     from multiprocessing import freeze_support

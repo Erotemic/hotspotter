@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import __builtin__
 from os.path import split
 import sys
+import warnings
 import numpy as np
 import PyQt4
 from PyQt4 import Qt, QtCore, QtGui
@@ -18,7 +19,7 @@ except AttributeError:
 # Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[guitools] reloading '+__name__)
+    print('[*guitools] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 rrr = reload_module
 
@@ -29,8 +30,8 @@ def configure_matplotlib():
     import multiprocessing
     backend = matplotlib.get_backend()
     if multiprocessing.current_process().name == 'MainProcess':
-        print('[guitools] current backend is: %r' % backend)
-        print('[guitools] matplotlib.use(Qt4Agg)')
+        print('[*guitools] current backend is: %r' % backend)
+        print('[*guitools] matplotlib.use(Qt4Agg)')
     matplotlib.rcParams['toolbar'] = 'toolbar2'
     matplotlib.rc('text', usetex=False)
     #matplotlib.rcParams['text'].usetex = False
@@ -38,7 +39,7 @@ def configure_matplotlib():
         matplotlib.use('Qt4Agg', warn=True, force=True)
         backend = matplotlib.get_backend()
         if multiprocessing.current_process().name == 'MainProcess':
-            print('[guitools] current backend is: %r' % backend)
+            print('[*guitools] current backend is: %r' % backend)
         #matplotlib.rcParams['toolbar'] = 'None'
         #matplotlib.rcParams['interactive'] = True
 
@@ -46,13 +47,13 @@ def configure_matplotlib():
 # ---
 def select_orientation():
     import draw_func2 as df2
-    print('[guitools] Define an orientation angle by clicking two points')
+    print('[*guitools] Define an orientation angle by clicking two points')
     try:
         # Compute an angle from user interaction
         sys.stdout.flush()
         fig = df2.gcf()
         pts = np.array(fig.ginput(2))
-        print('[guitools] ginput(2) = %r' % pts)
+        #print('[*guitools] ginput(2) = %r' % pts)
         # Get reference point to origin 
         refpt = pts[0] - pts[1] 
         #theta = np.math.atan2(refpt[1], refpt[0])
@@ -66,26 +67,30 @@ def select_orientation():
 # ---
 def select_roi():
     import draw_func2 as df2
-    print('[guitools] Define a Rectanglular ROI by clicking two points.')
+    print('[*guitools] Define a Rectanglular ROI by clicking two points.')
     try:
         sys.stdout.flush()
         fig = df2.gcf()
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore")
+            #,category=DeprecationWarning
         pts = fig.ginput(2)
-        print('[guitools] ginput(2) = %r' % (pts,))
+        print('[*guitools] ginput(2) = %r' % (pts,))
         [(x1, y1), (x2, y2)] = pts 
         xm = min(x1,x2)
         xM = max(x1,x2)
         ym = min(y1,y2)
         yM = max(y1,y2)
-        xywh = map(round,(xm, ym, xM-xm, yM-ym))
+        xywh = map(int, map(round,(xm, ym, xM-xm, yM-ym)))
         roi = np.array(xywh, dtype=np.int32)
-        print('[guitools] roi = %r ' % (roi,))
+        print('[*guitools] roi = %r ' % (roi,))
         return roi
     except Exception as ex:
-        print('[guitools] ROI selection Failed:\n%r' % (ex,))
+        print('[*guitools] ROI selection Failed:\n%r' % (ex,))
         return None
 
 def _addOptions(msgBox, options):
+    #msgBox.addButton(Qt.QMessageBox.Close)
     for opt in options:
         role = QtGui.QMessageBox.ApplyRole
         msgBox.addButton(QtGui.QPushButton(opt), role)
@@ -99,21 +104,15 @@ def _cacheReply(msgBox):
 def _newMsgBox(msg='', title='', parent=None, options=None, cache_reply=False):
     msgBox = QtGui.QMessageBox(parent)
     #msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-    msgBox.setStandardButtons(Qt.QMessageBox.NoButton)
+    #std_buts = Qt.QMessageBox.Close
+    #std_buts = Qt.QMessageBox.NoButton
+    std_buts = Qt.QMessageBox.Cancel
+    msgBox.setStandardButtons(std_buts)
     msgBox.setWindowTitle(title)
     msgBox.setText(msg)
     msgBox.setModal(parent is not None)
     return msgBox
 
-'''e.g
-msg     = 'Import specific files or whole directory?'
-title   = 'Import Images'
-options = ['Files', 'Directory']
-parent  = None
-msgBox = _newMsgBox(msg, title, parent)
-_addOptions(msgBox, options)
-dontPrompt = _cacheReply(msgBox)
-'''
 def msgbox(msg, title='msgbox'):
     'Make a non modal critical Qt.QMessageBox.'
     msgBox = Qt.QMessageBox(None);
@@ -139,10 +138,9 @@ def user_info(parent, msg, title='info'):
     msgBox.open(msgBox.close)
     msgBox.show()
 
-def user_option(parent, msg, title='options', options=['No', 'Yes'],
-                use_cache=False):
+def user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=False):
     'Prompts user with several options with ability to save decision'
-    print('[guitools] user_option:\n %r: %s'+title+': '+msg)
+    print('[*guitools] user_option:\n %r: %s'+title+': '+msg)
     # Recall decision
     cache_id = helpers.hashstr(title+msg)
     if use_cache:
@@ -155,7 +153,16 @@ def user_option(parent, msg, title='options', options=['No', 'Yes'],
         dontPrompt = _cacheReply(msgBox)
     # Wait for output
     optx = msgBox.exec_()
-    reply = options[optx]
+    if optx == Qt.QMessageBox.Cancel:
+        return None
+    try:
+        reply = options[optx]
+    except Exception as ex:
+        print('[*guitools] USER OPTION EXCEPTION !')
+        print('[*guitools] optx = %r' % optx)
+        print('[*guitools] options = %r' % options)
+        print('[*guitools] ex = %r' % ex)
+        raise
     # Remember decision
     if use_cache and dontPrompt.isChecked():
         io.global_cache_write(cache_id, reply)
@@ -204,7 +211,7 @@ def show_open_db_dlg(parent=None):
         db_dir = io.global_cache_read('db_dir')
         if db_dir == '.': 
             db_dir = None
-    print('[guitools] cached db_dir=%r' % db_dir)
+    print('[*guitools] cached db_dir=%r' % db_dir)
     if parent is None:
         parent = PyQt4.QtGui.QDialog()
     opendb_ui = OpenDatabaseDialog.Ui_Dialog()
@@ -219,7 +226,7 @@ def init_qtapp():
     app = Qt.QCoreApplication.instance() 
     is_root = app is None
     if is_root: # if not in qtconsole
-        print('[guitools] Initializing QApplication')
+        print('[*guitools] Initializing QApplication')
         app = Qt.QApplication(sys.argv)
     try:
         __IPYTHON__
@@ -232,19 +239,19 @@ def init_qtapp():
 
 
 def exit_application():
-    print('[guitools] exiting application')
+    print('[*guitools] exiting application')
     QtGui.qApp.quit()
 
 def run_main_loop(app, is_root=True, backend=None):
     if backend is not None:
-        print('[guitools] setting active window')
+        print('[*guitools] setting active window')
         app.setActiveWindow(backend.win)
     if is_root:
-        print('[guitools] running main loop.')
+        print('[*guitools] running main loop.')
         timer = ping_python_interpreter()
         sys.exit(app.exec_())
     else:
-        print('[guitools] using roots main loop')
+        print('[*guitools] using roots main loop')
 
 def ping_python_interpreter(frequency=100):
     'Create a QTimer which lets the python intepreter run every so often'

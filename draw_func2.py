@@ -118,8 +118,11 @@ def register_matplotlib_widget(plotWidget_):
     fig = plotWidget.figure
     axes_list = fig.get_axes()
     ax = axes_list[0]
-    print(ax)
     #plt.sca(ax)
+
+def imread(img_fpath):
+    _img = cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR)
+    return cv2.cvtColor(_img, cv2.COLOR_BGR2RGB)
 
 def OooScreen2():
     nRows = 1
@@ -487,12 +490,14 @@ def customize_figure(fig, doclf):
 
 def gcf():
     if plotWidget is not None:
+        #print('is plotwidget visible = %r' % plotWidget.isVisible())
         fig = plotWidget.figure
         return fig
     return plt.gcf()
 
 def gca():
     if plotWidget is not None:
+        #print('is plotwidget visible = %r' % plotWidget.isVisible())
         axes_list = plotWidget.figure.get_axes()
         current = 0
         ax = axes_list[current]

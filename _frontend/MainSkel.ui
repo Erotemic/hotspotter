@@ -216,7 +216,7 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionExplore_db_dir"/>
+    <addaction name="actionView_DBDir"/>
     <addaction name="actionView_Docs"/>
     <addaction name="actionAbout"/>
     <addaction name="separator"/>
@@ -226,7 +226,7 @@
     <property name="title">
      <string>Actions</string>
     </property>
-    <addaction name="actionAdd_ROI"/>
+    <addaction name="actionAdd_Chip"/>
     <addaction name="actionNew_Chip_Property"/>
     <addaction name="separator"/>
     <addaction name="actionQuery"/>
@@ -338,9 +338,9 @@
     <string>P</string>
    </property>
   </action>
-  <action name="actionAdd_ROI">
+  <action name="actionAdd_Chip">
    <property name="text">
-    <string>Add ROI</string>
+    <string>Add Chip</string>
    </property>
    <property name="shortcut">
     <string>A</string>
@@ -494,9 +494,9 @@
     <string>Reindex Database</string>
    </property>
   </action>
-  <action name="actionExplore_db_dir">
+  <action name="actionView_DBDir">
    <property name="text">
-    <string>View db_dir in finder/explorer</string>
+    <string>View Database Dir</string>
    </property>
   </action>
   <action name="actionScale_all_ROIS">

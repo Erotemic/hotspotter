@@ -140,8 +140,8 @@ def __read_oxsty_gtfile(gt_fpath, name, quality, img_dpath, corrupted_gname_set)
             oxsty_chip_info_list.append(oxsty_chip_info)
     return oxsty_chip_info_list
 
-#db_dir = ld2.PARIS
-db_dir = ld2.OXFORD
+#db_dir = params.PARIS
+db_dir = params.OXFORD
 def convert_from_oxford_style(db_dir):
     # Get directories for the oxford groundtruth
     oxford_gt_dpath      = join(db_dir, 'oxford_style_gt')
@@ -729,8 +729,8 @@ def write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid,
             column_type.append(str)
 
     chip_table = ld2.make_csv_table(column_labels, column_list, header, column_type)
-    chip_table_fname  = join(internal_dir,  'chip_table.csv')
-    write_to_wrapper(chip_table_fname, chip_table)
+    chip_table_fpath  = join(internal_dir, ld2.CHIP_TABLE_FNAME)
+    write_to_wrapper(chip_table_fpath, chip_table)
 
 def write_name_table(internal_dir, nx2_nid, nx2_name):
     helpers.__PRINT_WRITES__ = True
@@ -739,8 +739,8 @@ def write_name_table(internal_dir, nx2_nid, nx2_name):
     column_list   = [nx2_nid[2:], nx2_name[2:]] # dont write ____ for backcomp
     header = '# name table'
     name_table = ld2.make_csv_table(column_labels, column_list, header)
-    name_table_fname  = join(internal_dir,  'name_table.csv')
-    write_to_wrapper(name_table_fname, name_table)
+    name_table_fpath  = join(internal_dir, ld2.NAME_TABLE_FNAME)
+    write_to_wrapper(name_table_fpath, name_table)
 
 def write_image_table(internal_dir, gx2_gid, gx2_gname):
     helpers.__PRINT_WRITES__ = True
@@ -750,8 +750,8 @@ def write_image_table(internal_dir, gx2_gid, gx2_gname):
     column_list   = [gx2_gid, gx2_gname, gx2_aif]
     header = '# image table'
     image_table = ld2.make_csv_table(column_labels, column_list, header)
-    image_table_fname = join(internal_dir, 'image_table.csv')
-    write_to_wrapper(image_table_fname, image_table)
+    image_table_fpath = join(internal_dir, ld2.IMAGE_TABLE_FNAME)
+    write_to_wrapper(image_table_fpath, image_table)
 
 #----- Specific Databases ----
 

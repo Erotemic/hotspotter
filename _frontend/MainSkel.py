@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\joncrall\code\hotspotter\_frontend\MainSkel.ui'
+# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\_frontend\MainSkel.ui'
 #
-# Created: Tue Dec 10 11:27:27 2013
-#      by: PyQt4 UI code generator 4.9.6
+# Created: Tue Dec 10 19:06:34 2013
+#      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -157,8 +157,8 @@ class Ui_mainSkel(object):
         self.actionHelpWorkflow.setObjectName(_fromUtf8("actionHelpWorkflow"))
         self.actionTogPts = QtGui.QAction(mainSkel)
         self.actionTogPts.setObjectName(_fromUtf8("actionTogPts"))
-        self.actionAdd_ROI = QtGui.QAction(mainSkel)
-        self.actionAdd_ROI.setObjectName(_fromUtf8("actionAdd_ROI"))
+        self.actionAdd_Chip = QtGui.QAction(mainSkel)
+        self.actionAdd_Chip.setObjectName(_fromUtf8("actionAdd_Chip"))
         self.actionReselect_ROI = QtGui.QAction(mainSkel)
         self.actionReselect_ROI.setObjectName(_fromUtf8("actionReselect_ROI"))
         self.actionNext = QtGui.QAction(mainSkel)
@@ -208,8 +208,8 @@ class Ui_mainSkel(object):
         self.actionPrecompute_Queries.setObjectName(_fromUtf8("actionPrecompute_Queries"))
         self.actionReindex_Database = QtGui.QAction(mainSkel)
         self.actionReindex_Database.setObjectName(_fromUtf8("actionReindex_Database"))
-        self.actionExplore_db_dir = QtGui.QAction(mainSkel)
-        self.actionExplore_db_dir.setObjectName(_fromUtf8("actionExplore_db_dir"))
+        self.actionView_DBDir = QtGui.QAction(mainSkel)
+        self.actionView_DBDir.setObjectName(_fromUtf8("actionView_DBDir"))
         self.actionScale_all_ROIS = QtGui.QAction(mainSkel)
         self.actionScale_all_ROIS.setObjectName(_fromUtf8("actionScale_all_ROIS"))
         self.actionConvert_all_images_into_chips = QtGui.QAction(mainSkel)
@@ -231,12 +231,12 @@ class Ui_mainSkel(object):
         self.menuOptions.addAction(self.actionTogPlt)
         self.menuOptions.addSeparator()
         self.menuOptions.addAction(self.actionPreferences)
-        self.menuHelp.addAction(self.actionExplore_db_dir)
+        self.menuHelp.addAction(self.actionView_DBDir)
         self.menuHelp.addAction(self.actionView_Docs)
         self.menuHelp.addAction(self.actionAbout)
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionWriteLogs)
-        self.menuActions.addAction(self.actionAdd_ROI)
+        self.menuActions.addAction(self.actionAdd_Chip)
         self.menuActions.addAction(self.actionNew_Chip_Property)
         self.menuActions.addSeparator()
         self.menuActions.addAction(self.actionQuery)
@@ -298,8 +298,8 @@ class Ui_mainSkel(object):
         self.actionHelpWorkflow.setText(_translate("mainSkel", "Workflow Help", None))
         self.actionTogPts.setText(_translate("mainSkel", "Toggle Points", None))
         self.actionTogPts.setShortcut(_translate("mainSkel", "P", None))
-        self.actionAdd_ROI.setText(_translate("mainSkel", "Add ROI", None))
-        self.actionAdd_ROI.setShortcut(_translate("mainSkel", "A", None))
+        self.actionAdd_Chip.setText(_translate("mainSkel", "Add Chip", None))
+        self.actionAdd_Chip.setShortcut(_translate("mainSkel", "A", None))
         self.actionReselect_ROI.setText(_translate("mainSkel", "Reselect ROI", None))
         self.actionReselect_ROI.setShortcut(_translate("mainSkel", "R", None))
         self.actionNext.setText(_translate("mainSkel", "Select Next", None))
@@ -331,7 +331,7 @@ class Ui_mainSkel(object):
         self.actionImport_Img_dir.setText(_translate("mainSkel", "Import Images (select directory)", None))
         self.actionPrecompute_Queries.setText(_translate("mainSkel", "Precompute Queries", None))
         self.actionReindex_Database.setText(_translate("mainSkel", "Reindex Database", None))
-        self.actionExplore_db_dir.setText(_translate("mainSkel", "View db_dir in finder/explorer", None))
+        self.actionView_DBDir.setText(_translate("mainSkel", "View Database Dir", None))
         self.actionScale_all_ROIS.setText(_translate("mainSkel", "Scale all ROIs", None))
         self.actionConvert_all_images_into_chips.setText(_translate("mainSkel", "Convert all images into chips", None))
         self.actionNew_Chip_Property.setText(_translate("mainSkel", "New Chip Property", None))

@@ -52,8 +52,8 @@ def is_invalid_path(db_dir):
     return db_dir is None or not exists(db_dir)
 
 def imread(img_fpath):
-    return cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR),
-                        cv2.COLOR_BGR2RGB)
+    _img = cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR)
+    return cv2.cvtColor(_img, cv2.COLOR_BGR2RGB)
 
 # ___CLASS HOTSPOTTER____
 class HotSpotter(DynStruct):
@@ -96,6 +96,21 @@ class HotSpotter(DynStruct):
 
     # Adding functions
     # ---------------
+    def add_chip(hs, gx, roi):
+        print('[hs] adding chip to gx=%r' % gx)
+        if len(hs.tables.cx2_cid) > 0:
+            next_cid = hs.tables.cx2_cid.max() + 1
+        else:
+            next_cid = 1
+        hs.tables.cx2_cid = np.concatenate((hs.tables.cx2_cid, [next_cid]))
+        hs.tables.cx2_nx  = np.concatenate((hs.tables.cx2_nx,  [0]))
+        hs.tables.cx2_gx  = np.concatenate((hs.tables.cx2_gx,  [gx]))
+        hs.tables.cx2_roi = np.vstack((hs.tables.cx2_roi, [roi]))
+        hs.tables.cx2_theta = np.concatenate((hs.tables.cx2_theta, [0]))
+        for key in hs.tables.prop_dict.keys():
+            hs.tables.prop_dict[key] = np.concatenate(prop_dict[key], [''])
+        hs.num_cx += 1
+
     def add_images(hs, fpath_list, move_images=True):
         nImages = len(fpath_list)
         print('[hs.add_imgs] adding %d images' % nImages)
@@ -334,7 +349,11 @@ class HotSpotter(DynStruct):
         # depends on feat
         indexed_uid += hs.feats.cfg.get_uid()
         return indexed_uid
-
+    #---------------
+    def save_database(hs):
+        print('[hs] save_database')
+        import load_data2 as ld2
+        ld2.write_csv_tables(hs)
     #---------------
     def delete_computed_dir(hs):
         computed_dir = hs.dirs.computed_dir
@@ -342,17 +361,17 @@ class HotSpotter(DynStruct):
     #---------------
     def vdd(hs):
         db_dir = os.path.normpath(hs.dirs.db_dir)
-        print('[hs] opening db_dir: %r ' % db_dir)
+        print('[hs] viewing db_dir: %r ' % db_dir)
         helpers.vd(db_dir)
     #---------------
     def vcd(hs):
         computed_dir = os.path.normpath(hs.dirs.computed_dir)
-        print('[hs] opening computed_dir: %r ' % computed_dir)
+        print('[hs] viewing computed_dir: %r ' % computed_dir)
         helpers.vd(computed_dir)
     #--------------
     def vrd(hs):
         result_dir = os.path.normpath(hs.dirs.result_dir)
-        print('[hs] opening result_dir: %r ' % result_dir)
+        print('[hs] viewing result_dir: %r ' % result_dir)
         helpers.vd(result_dir)
     #--------------
     def get_roi(hs, cx):
@@ -389,11 +408,6 @@ class HotSpotter(DynStruct):
         img = imread(img_fpath)
         return img
     #--------------
-    def splash_image(hs):
-        splash_fpath = realpath('_frontend/splash.png')
-        img = imread(splash_fpath)
-        return img
-    #--------------
     def get_nx2_cxs(hs):
         cx2_nx = hs.tables.cx2_nx
         if len(cx2_nx) == 0:
@@ -409,6 +423,8 @@ class HotSpotter(DynStruct):
         cx2_gx = hs.tables.cx2_gx
         max_gx = len(hs.tables.gx2_gname)
         gx2_cxs = [[] for _ in xrange(max_gx+1)]
+        print(cx2_gx)
+        print(cx2_gx.dtype)
         for cx, gx in enumerate(cx2_gx):
             gx2_cxs[gx].append(cx)
         return gx2_cxs

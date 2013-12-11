@@ -83,6 +83,7 @@ class MatplotlibWidget(Canvas):
             #self.axes.set_xlim(*xlim)
         #if ylim is not None:
             #self.axes.set_ylim(*ylim)
+        #self.axes = ax
         #self.axes.hold(hold)
 
         Canvas.__init__(self, self.figure)

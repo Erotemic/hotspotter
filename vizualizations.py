@@ -335,10 +335,11 @@ def show_image(hs, gx, annote=True):
             df2.draw_roi(ax, roi, hs.cxstr(cx))
     df2.draw()
         
-def show_splash(hs):
-    fig = df2.figure(doclf=True)
+def show_splash():
     print('[viz] show_splash()')
-    img = hs.splash_image()
+    fig = df2.figure(doclf=True)
+    splash_fpath = realpath('_frontend/splash.png')
+    img = df2.imread(splash_fpath)
     df2.imshow(img)
     df2.draw()
     #fig = self.win.plotWidget.figure

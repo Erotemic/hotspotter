@@ -7,7 +7,7 @@ from __future__ import division, print_function
 import __builtin__
 import sys
 # Standard
-from os.path import join
+from os.path import join, exists, splitext
 import cv2
 import fnmatch
 import os
@@ -46,11 +46,14 @@ def rrr(): reload_module()
 def printDBG(msg, lbl=''):
     print('DBG: '+lbl+str(msg))
 
+CHIP_TABLE_FNAME = 'chip_table.csv'
+NAME_TABLE_FNAME = 'name_table.csv'
+IMAGE_TABLE_FNAME = 'image_table.csv'
+
 # TODO: Allow alternative internal directories
 RDIR_INTERNAL_ALTS = ['/hs_internals']
 RDIR_INTERNAL2 = '.hs_internals'
 RDIR_IMG2 = 'images'
-
 
 # paths relative to dbdir
 RDIR_IMG      = '/'+RDIR_IMG2
@@ -105,13 +108,14 @@ class HotspotterTables(DynStruct):
                  cx2_theta = [],
                  prop_dict = {}):
         super(HotspotterTables, self).__init__()
-        self.gx2_gname    = np.array(gx2_gname)
-        self.nx2_name     = np.array(nx2_name)
-        self.cx2_cid      = np.array(cx2_cid)
-        self.cx2_nx       = np.array(cx2_nx)
-        self.cx2_gx       = np.array(cx2_gx)
-        self.cx2_roi      = np.array(cx2_roi)
-        self.cx2_theta    = np.array(cx2_theta)
+        self.gx2_gname    = np.array(gx2_gname, dtype=str)
+        self.nx2_name     = np.array(nx2_name, dtype=str)
+        self.cx2_cid      = np.array(cx2_cid, dtype=np.int32)
+        self.cx2_nx       = np.array(cx2_nx, dtype=np.int32)
+        self.cx2_gx       = np.array(cx2_gx, dtype=np.int32)
+        self.cx2_roi      = np.array(cx2_roi, dtype=np.int32)
+        self.cx2_roi.shape = (self.cx2_roi.size // 4, 4)
+        self.cx2_theta    = np.array(cx2_theta, dtype=np.float32)
         self.prop_dict    = prop_dict
 
 # ___CLASS HOTSPOTTER DIRS________
@@ -175,9 +179,9 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     internal_dir = hs_dirs.internal_dir
     db_dir       = hs_dirs.db_dir
     # --- Table Names ---
-    chip_table   = internal_dir + '/chip_table.csv'
-    name_table   = internal_dir + '/name_table.csv'
-    image_table  = internal_dir + '/image_table.csv' # TODO: Make optional
+    chip_table   = join(internal_dir, CHIP_TABLE_FNAME)
+    name_table   = join(internal_dir, NAME_TABLE_FNAME)
+    image_table  = join(internal_dir, IMAGE_TABLE_FNAME) # TODO: Make optional
     # --- CHECKS ---
     has_dbdir   = helpers.checkpath(db_dir)
     has_imgdir  = helpers.checkpath(img_dir)
@@ -209,12 +213,11 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         # ------------------
         print('[ld2] Loading name table: '+name_table)
         nx2_name = ['____', '____']
-        nid2_nx  = { 0:0, 1:1}
+        nid2_nx  = {0:0, 1:1}
         name_lines = open(name_table,'r')
         for line_num, csv_line in enumerate(name_lines):
             csv_line = csv_line.strip('\n\r\t ')
-            if len(csv_line) == 0 or csv_line.find('#') == 0:
-                continue
+            if len(csv_line) == 0 or csv_line.find('#') == 0: continue
             csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
             nid = int(csv_fields[0])
             name = csv_fields[1]
@@ -381,76 +384,20 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     if 'vcd' in sys.argv:
         helpers.vd(hs_dirs.computed_dir)
     return hs_dirs, hs_tables
-    
-
-def __print_chiptableX(hs_tables):
-    #print(hs_tables.execstr('hs_tables'))
-    #exec(hs_tables.execstr('hs_tables'))
-    cx2_gx    = hs_tables.cx2_gx
-    cx2_cid   = hs_tables.cx2_cid
-    cx2_nx    = hs_tables.cx2_nx
-    cx2_theta = hs_tables.cx2_theta
-    cx2_roi   = hs_tables.cx2_roi
-    #prop_names = ','.join(px2_propname)
-    print('=======================================================')
-    print('# Begin ChipTableX')
-    print('# ChipID, NameX,  ImgX,     roi[tl_x  tl_y  w  h],  theta')
-    chip_iter = iter(zip(cx2_cid, cx2_nx, cx2_gx, cx2_roi, cx2_theta))
-    for (cid, nx, gx, roi, theta) in chip_iter:
-        print('%8d, %5d, %5d, %25s, %6.3f' % (cid, nx, gx, str(roi).replace(',',''), theta))
-    print('# End ChipTableX')
-    print('=======================================================')
-
-def print_chiptable(hs_tables):
-    #exec(hs_tables.execstr('hs_tables'))
-    #print(hs_tables.execstr('hs_tables'))
-    #prop_names = ','.join(px2_propname)
-    print('=======================================================')
-    print('# Begin ChipTable')
-    # Get length of the max vals for formating
-    cx2_cid   = hs_tables.cx2_cid
-    cx2_theta = hs_tables.cx2_theta
-    cx2_gname = [hs_tables.gx2_gname[gx] for gx in  hs_tables.cx2_gx]
-    cx2_name  = [hs_tables.nx2_name[nx]  for nx in  hs_tables.cx2_nx]
-    cx2_stroi = [str(roi).replace(',','') for roi in  hs_tables.cx2_roi]
-    max_gname = max([len(gname) for gname in iter( cx2_gname)])
-    max_name  = max([len(name)  for name  in iter( cx2_name) ])
-    max_stroi = max([len(stroi) for stroi in iter( cx2_stroi)])
-    _mxG = str(max([max_gname+1, 5]))
-    _mxN = str(max([max_name+1, 4]))
-    _mxR = str(max([max_stroi+1, 21]))
-
-    fmt_str = '%8d, %'+_mxN+'s, %'+_mxG+'s, %'+_mxR+'s, %6.3f'
-
-    c_head = '# ChipID'
-    n_head = ('%'+_mxN+'s') %  'Name'
-    g_head = ('%'+_mxG+'s') %  'Image'
-    r_head = ('%'+_mxR+'s') %  'roi[tl_x  tl_y  w  h]'
-    t_head = ' theta'
-    header = ', '.join([c_head,n_head,g_head,r_head,t_head])
-    print(header)
-
-    # Build the table
-    chip_iter = iter(zip( cx2_cid, cx2_name, cx2_gname, cx2_stroi, cx2_theta))
-    for (cid, name, gname, stroi, theta) in chip_iter:
-        _roi  = str(roi).replace(',',' ') 
-        print(fmt_str % (cid, name, gname, stroi, theta))
-
-    print('# End ChipTable')
-    print('=======================================================')
-
-
+   
 def make_csv_table(column_labels=None, column_list=[], header='', column_type=None):
     if len(column_list) == 0: 
         print('[ld2] No columns')
         return header
-    column_len  = [len(col) for col in column_list]
-    num_data =  column_len[0] 
+    column_len = [len(col) for col in column_list]
+    num_data = column_len[0] 
     if num_data == 0:
-        print('[ld2] No data')
+        print('[ld2.make_csv_table()] No data. (header=%r)' % (header,))
         return header
     if any([num_data != clen for clen in column_len]):
-        print('[ld2] inconsistent column length')
+        print('[lds] column_labels = %r ' % (column_labels,))
+        print('[lds] column_len = %r ' % (column_len,))
+        print('[ld2] inconsistent column lengths')
         return header
 
     if column_type is None:
@@ -481,7 +428,7 @@ def make_csv_table(column_labels=None, column_list=[], header='', column_type=No
     
     for col, lbl, coltype in iter(zip(column_list, column_labels, column_type)):
         if coltype == types.ListType:
-            col_str  = [str(c).replace(',',' ') for c in iter(col)]
+            col_str  = [str(c).replace(',',' ').replace('.','') for c in iter(col)]
         elif coltype == types.FloatType:
             col_str = [('%.2f') % float(c) for c in iter(col)]
         elif coltype == types.IntType:
@@ -504,21 +451,99 @@ def make_csv_table(column_labels=None, column_list=[], header='', column_type=No
     csv_text = '\n'.join(csv_rows)
     return csv_text
 
-# Common databases I use
-FROGS     = params.WORK_DIR+'/Frogs'
-JAGUARS   = params.WORK_DIR+'/JAG_Jaguar_Data'
-NAUTS     = params.WORK_DIR+'/NAUT_Dan'
-GZ_ALL    = params.WORK_DIR+'/GZ_ALL'
-WS_HARD   = params.WORK_DIR+'/WS_hard'
-MOTHERS   = params.WORK_DIR+'/HSDB_zebra_with_mothers'
-OXFORD    = params.WORK_DIR+'/Oxford_Buildings'
-PARIS     = params.WORK_DIR+'/Paris_Buildings'
-SONOGRAMS = params.WORK_DIR+'/sonograms'
+def backup_csv_tables(hs, force_backup=False):
+    internal_dir = hs.dirs.internal_dir
+    backup_dir = join(internal_dir, 'backup_v0.1.0')
+    if not exists(backup_dir) or force_backup:
+        helpers.ensuredir(backup_dir)
+        timestamp = helpers.get_timestamp(use_second=True)
+        def do_backup(fname):
+            src = join(internal_dir, fname)
+            dst_fname = ('%s_bak-'+timestamp+'%s') % splitext(fname)
+            dst = join(backup_dir, dst_fname)
+            if exists(src): shutil.copy(src, dst)
+        do_backup(CHIP_TABLE_FNAME)
+        do_backup(NAME_TABLE_FNAME)
+        do_backup(IMAGE_TABLE_FNAME)
 
-#if sys.platform == 'linux2':
-    #DEFAULT = MOTHERS
-#else:
-DEFAULT = params.DEFAULT
+def write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid,
+                     cx2_roi, cx2_theta, prop_dict=None):
+    print('[ld2] Writing Chip Table')
+    # Make chip_table.csv
+    header = '# chip table'
+    column_labels = ['ChipID', 'ImgID', 'NameID', 'roi[tl_x  tl_y  w  h]', 'theta']
+    column_list   = [cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta]
+    column_type   = [int, int, int, list, float]
+    if not prop_dict is None:
+        for key, val in prop_dict.iteritems():
+            column_labels.append(key)
+            column_list.append(val)
+            column_type.append(str)
+
+    chip_table = make_csv_table(column_labels, column_list, header, column_type)
+    chip_table_fpath  = join(internal_dir, CHIP_TABLE_FNAME)
+    helpers.write_to(chip_table_fpath, chip_table)
+
+def write_name_table(internal_dir, nx2_nid, nx2_name):
+    print('[ld2] Writing Name Table')
+    # Make name_table.csv
+    column_labels = ['nid', 'name']
+    column_list   = [nx2_nid[2:], nx2_name[2:]] # dont write ____ for backcomp
+    header = '# name table'
+    name_table = make_csv_table(column_labels, column_list, header)
+    name_table_fpath  = join(internal_dir, NAME_TABLE_FNAME)
+    helpers.write_to(name_table_fpath, name_table)
+
+def write_image_table(internal_dir, gx2_gid, gx2_gname):
+    print('[ld2] Writing Image Table')
+    # Make image_table.csv 
+    column_labels = ['gid', 'gname', 'aif'] # do aif for backwards compatibility
+    gx2_aif = np.ones(len(gx2_gid), dtype=np.uint32)
+    column_list   = [gx2_gid, gx2_gname, gx2_aif]
+    header = '# image table'
+    image_table = make_csv_table(column_labels, column_list, header)
+    image_table_fpath = join(internal_dir, IMAGE_TABLE_FNAME)
+    helpers.write_to(image_table_fpath, image_table)
+
+def write_csv_tables(hs):
+    'Saves the tables to disk'
+    import convert_db
+    internal_dir = hs.dirs.internal_dir
+    CREATE_BACKUP = True
+    if CREATE_BACKUP:
+        backup_csv_tables(hs, force_backup=True)
+
+    # Valid indexes
+    valid_cx = np.where(hs.tables.cx2_cid > 0)[0]
+    valid_nx = np.where(hs.tables.nx2_name != '')[0]
+    valid_gx = np.where(hs.tables.gx2_gname != '')[0]
+
+    # Valid chip tables
+    cx2_cid   = hs.tables.cx2_cid[valid_cx]
+    # Use the indexes as ids (FIXME: Just go back to g/n-ids)
+    cx2_gid   = hs.tables.cx2_gx[valid_cx]+1 # FIXME
+    cx2_nid   = hs.tables.cx2_nx[valid_cx]   # FIXME
+    cx2_roi   = hs.tables.cx2_roi[valid_cx]
+    cx2_theta = hs.tables.cx2_theta[valid_cx]
+    prop_dict = {propkey:cx2_propval[valid_cx] 
+                 for (propkey, cx2_propval) in hs.tables.prop_dict}
+
+    # Valid name tables
+    nx2_nid   = valid_nx # FIXME
+    nx2_name  = hs.tables.nx2_name[valid_nx]
+
+    # Image Tables
+    gx2_gid   = valid_gx+1 # FIXME
+    gx2_gname = hs.tables.gx2_gname[valid_gx]
+
+    # Do write
+    # these were stolen from convert chips. TODO: Remove them there.
+    write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid,
+                     cx2_roi, cx2_theta, prop_dict)
+    write_name_table(internal_dir, nx2_nid, nx2_name)
+    write_image_table(internal_dir, gx2_gid, gx2_gname)
+    
+
 
 @helpers.unit_test
 def test_load_csv():

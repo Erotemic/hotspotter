@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\joncrall\code\hotspotter\_frontend\MainDialog.ui'
+# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\_frontend\MainDialog.ui'
 #
-# Created: Tue Dec 10 11:27:27 2013
-#      by: PyQt4 UI code generator 4.9.6
+# Created: Tue Dec 10 19:06:34 2013
+#      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!
 

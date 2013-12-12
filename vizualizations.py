@@ -159,14 +159,14 @@ def plot_cx2(hs, res, style='kpts', subdir=None, annotations=True, title_aug='')
         df2.draw_kpts2(kpts)
     if 'gt_matches' == style: 
         subdir = 'gt_matches' if subdir is None else subdir
-        df2.show_gt_matches(hs, res, fignum=FIGNUM)
+        show_gt_matches(hs, res, fignum=FIGNUM)
     if 'top5' == style:
         subdir = 'top5' if subdir is None else subdir
-        df2.show_topN_matches(hs, res, N=5, fignum=FIGNUM)
+        show_topN_matches(hs, res, N=5, fignum=FIGNUM)
     if 'analysis' == style:
         subdir = 'analysis' if subdir is None else subdir
-        df2.show_match_analysis(hs, res, N=5, fignum=FIGNUM,
-                                annotations=annotations, figtitle=title_aug)
+        show_match_analysis(hs, res, N=5, fignum=FIGNUM,
+                            annotations=annotations, figtitle=title_aug)
     subdir += title_suffix
     __dump_or_browse(hs, subdir)
 
@@ -520,7 +520,6 @@ def show_matches_annote_res(res, hs, cx,
     return show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx,
                          fignum, plotnum, title_aug, title_suff, **kwargs)
 
-# TODO: This should go in viz
 def show_matches_annote(hs, qcx, cx2_score, 
                         cx2_fm, cx2_fs, cx,
                         fignum=None, plotnum=None, 
@@ -603,16 +602,10 @@ def show_match_analysis(hs, res, N=5, fignum=3, figtitle='', show_query=None,
     if hs.args.noshow_gt:
         missed_gt_cxs = []
     max_nCols = min(5,N)
-    return _show_chip_matches(hs, res,
-                              gt_cxs=missed_gt_cxs, 
-                              topN_cxs=topN_cxs,
-                              figtitle=figtitle,
-                              max_nCols=max_nCols,
-                              show_query=show_query,
-                              fignum=fignum,
-                              annotations=annotations,
-                              q_cfg=q_cfg,
-                              **kwargs)
+    return _show_chip_matches(hs, res, gt_cxs=missed_gt_cxs, topN_cxs=topN_cxs,
+                              figtitle=figtitle, max_nCols=max_nCols,
+                              show_query=show_query, fignum=fignum,
+                              annotations=annotations, q_cfg=q_cfg, **kwargs)
 
 def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
                        topN_cxs=None, gt_cxs=None, show_query=False,

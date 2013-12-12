@@ -9,7 +9,6 @@ import warnings
 import textwrap
 import re
 # Hotspotter Frontend Imports
-import draw_func2 as df2
 # Hotspotter Imports
 import fileio as io
 import helpers
@@ -32,6 +31,7 @@ from itertools import izip, chain
 import dev
 import DataStructures as ds
 import matching_functions as mf
+from helpers import tic, toc
 
 # Toggleable printing
 print = __builtin__.print
@@ -157,7 +157,6 @@ def execute_query_safe(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **k
             res.save(hs)
     return result_list
 
-from helpers import tic, toc
 def execute_query_fast(hs, q_cfg, qcxs, dcxs):
     '''Executes a query and assumes q_cfg has all precomputed information'''
     # Nearest neighbors
@@ -225,7 +224,7 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
         SV = res.get_SV()
         docomp   = (resCOMP is None) or (res is resCOMP)
         comp_cxs = None if docomp else resCOMP.topN_cxs(N)
-        df2.show_match_analysis(hs, res, N, fnum, aug, SV=SV,
+        viz.show_match_analysis(hs, res, N, fnum, aug, SV=SV,
                                 compare_cxs=comp_cxs, **kwshow) 
     def show_(resORIG, resFILT, resSVER, fnum, aug=''):
         resCOMP = None if compare_to is None else eval('res'+compare_to)
@@ -236,10 +235,11 @@ def matcher_test(hs, qcx, fnum=1, **kwargs):
     # Show Driver
     for (res1, res2, res3, taug) in res_list:
         fnum = show_(res1, res2, res3, fnum, taug)
-    df2.update()
     return fnum
 
 if __name__ == '__main__':
+    import draw_func2 as df2
+    import vizualizations as viz
     #exec(open('match_chips3.py').read())
     df2.rrr()
     df2.reset()

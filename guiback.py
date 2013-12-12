@@ -201,7 +201,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[*back] select_cid(%r)' % cid)
         cx = self.hs.cid2_cx(cid)
         self.selection = {'type_':'cx', 'index':cx}
-        viz.show_chip(self.hs, cx)
+        viz.show_chip(self.hs, cx, draw_kpts=True)
 
     #--------------------------------------------------------------------------
     # File menu slots
@@ -263,6 +263,8 @@ class MainWindowBackend(QtCore.QObject):
         except Exception as ex:
             print('aborting open database')
             print(ex)
+            if self.hs.args.strict:
+                raise
     # File -> Save Database
     @pyqtSlot(name='save_database')
     def save_database(self):
@@ -398,18 +400,59 @@ class MainWindowBackend(QtCore.QObject):
             cx2_cid = self.hs.tables.cx2_cid
             next_cx = cx + 1
             while next_cx < len(cx2_cid):
-                if cx2_cid[next_cx] != 0:
-                    self.select_cx(next_cx)
+                cid = cx2_cid[next_cx]
+                if cid != 0:
+                    self.select_cid(cid)
                     break
                 next_cx += 1
             return
         reply = self.user_info('Cannot next. At end of the list.')
+
+    # Batch Actions
+    @pyqtSlot(name='precompute_feats')
+    def precompute_feats(self):
+        print('[back] precompute_feats()')
+        prevBlock = self.win.blockSignals(True)
+        self.hs.load_chips()
+        self.hs.load_features()
+        self.win.blockSignals(prevBlock)
+        print('[back] Finished precomputing features')
+
+    @pyqtSlot(name='precompute_queries')
+    def precompute_queries(self):
+        #http://stackoverflow.com/questions/15637768/pyqt-how-to-capture-output-of-pythons-interpreter-and-display-it-in-qedittext
+        print('[back] precompute_queries()')
+        prevBlock = self.win.blockSignals(True)
+        self.precompute_feats()
+        valid_cx = self.hs.get_valid_cxs()
+        for qcx in valid_cx:
+            print('[back] query qcx=%r' % qcx)
+            self.hs.query(qcx)
+        self.win.blockSignals(prevBlock)
+        print('[back] Finished precomputing queries')
 
     # Help Actions
     # 
     @pyqtSlot(name='view_database_dir')
     def view_database_dir(self):
         self.hs.vdd()
+
+    @pyqtSlot(name='view_computed_dir')
+    def view_computed_dir(self):
+        self.hs.vcd()
+
+    @pyqtSlot(name='view_global_prefs')
+    def view_global_dir(self):
+        self.hs.vgd()
+    #---
+
+    @pyqtSlot(name='delete_computed_dir')
+    def delete_computed_dir(self):
+        self.hs.delete_computed_dir()
+
+    @pyqtSlot(name='delete_global_prefs')
+    def delete_global_prefs(self):
+        self.hs.delete_global_prefs()
     
 if __name__ == '__main__':
     from multiprocessing import freeze_support

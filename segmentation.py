@@ -5,6 +5,7 @@ import helpers
 import cv2
 import algos
 import draw_func2 as df2
+import fileio as io
 import sys
 
 DEBUG_SEGM = False
@@ -27,7 +28,7 @@ def im(img, fignum=0):
 
 def resize_img_and_roi(img_fpath, roi_, new_size=None, sqrt_area=400.0):
     printDBG('[segm] imread(%r) ' % img_fpath)
-    full_img = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+    full_img = io.imread(img_fpath)
     (full_h, full_w) = full_img.shape[:2]                 # Image Shape
     printDBG('[segm] full_img.shape=%r' % (full_img.shape,))
     (rw_, rh_) = roi_[2:]

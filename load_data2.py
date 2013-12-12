@@ -20,9 +20,9 @@ import numpy as np
 from PIL import Image
 # Hotspotter
 from Printable import DynStruct
+import DataStructures as ds
 import helpers
 import params
-from HotSpotter import *
 
 # Toggleable printing
 print = __builtin__.print
@@ -73,12 +73,13 @@ RDIR_QRES     = '/.hs_internals/computed/query_results'
 
 # Testing helper functions
 def get_test_data(qcx=0, cx=None, db_dir=None):
-    import load_data2 as ld2
+    import params
+    import HotSpotter
     hs = helpers.search_stack_for_localvar('hs')
     if db_dir is None:
-        db_dir = ld2.DEFAULT
+        db_dir = params.DEFAULT
     if hs is None:
-        hs = ld2.HotSpotter(db_dir)
+        hs = HotSpotter.HotSpotter(db_dir)
     if cx is None:
         cx = hs.get_other_cxs(qcx)[0]
     fm, fs, score = hs.get_assigned_matches_to(qcx, cx)

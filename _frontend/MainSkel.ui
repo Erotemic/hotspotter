@@ -184,7 +184,7 @@
      <x>0</x>
      <y>0</y>
      <width>927</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -216,11 +216,17 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionView_DBDir"/>
-    <addaction name="actionView_Docs"/>
     <addaction name="actionAbout"/>
+    <addaction name="actionView_Docs"/>
+    <addaction name="separator"/>
+    <addaction name="actionView_DBDir"/>
+    <addaction name="actionView_Computed_Dir"/>
+    <addaction name="actionView_Global_Dir"/>
     <addaction name="separator"/>
     <addaction name="actionWriteLogs"/>
+    <addaction name="separator"/>
+    <addaction name="actionDelete_computed_directory"/>
+    <addaction name="actionDelete_global_preferences"/>
    </widget>
    <widget class="QMenu" name="menuActions">
     <property name="title">
@@ -242,8 +248,8 @@
     <property name="title">
      <string>Batch</string>
     </property>
+    <addaction name="actionPrecomputeChipsFeatures"/>
     <addaction name="actionPrecompute_Queries"/>
-    <addaction name="actionReindex_Database"/>
     <addaction name="separator"/>
     <addaction name="actionScale_all_ROIS"/>
     <addaction name="separator"/>
@@ -489,9 +495,9 @@
     <string>Precompute Queries</string>
    </property>
   </action>
-  <action name="actionReindex_Database">
+  <action name="actionPrecomputeChipsFeatures">
    <property name="text">
-    <string>Reindex Database</string>
+    <string>Precompute Chips/Features</string>
    </property>
   </action>
   <action name="actionView_DBDir">
@@ -512,6 +518,26 @@
   <action name="actionNew_Chip_Property">
    <property name="text">
     <string>New Chip Property</string>
+   </property>
+  </action>
+  <action name="actionDelete_computed_directory">
+   <property name="text">
+    <string>Delete Computed Dir</string>
+   </property>
+  </action>
+  <action name="actionDelete_global_preferences">
+   <property name="text">
+    <string>Delete Global Prefs</string>
+   </property>
+  </action>
+  <action name="actionView_Computed_Dir">
+   <property name="text">
+    <string>View Computed Dir</string>
+   </property>
+  </action>
+  <action name="actionView_Global_Dir">
+   <property name="text">
+    <string>View Global Dir</string>
    </property>
   </action>
  </widget>

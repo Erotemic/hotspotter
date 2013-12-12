@@ -176,7 +176,7 @@ class QueryResult(DynStruct):
         return topN_cxs
     def show_query(res, hs, **kwargs):
         print('[res] show_query')
-        df2.show_chip(hs, res=res, **kwargs)
+        viz.show_chip(hs, res=res, **kwargs)
     def show_topN(res, hs, **kwargs):
         print('[res] show_topN')
         if not 'SV' in kwargs.keys():
@@ -487,6 +487,9 @@ class FeatureConfig(DynStruct):
         feat_cfg.scale_min = 30 #0    # 30
         feat_cfg.scale_max = 80 #9001 # 80
         feat_cfg.chip_cfg = hs.chip_cfg # Features depend on chips
+        feat_cfg.feat_uid = ''
+        if feat_cfg.chip_cfg is None:
+            raise Exception('Chip config is required')
         feat_cfg.update(**kwargs)
     def get_dict_args(feat_cfg):
         dict_args = {
@@ -583,6 +586,20 @@ class HotspotterDirs(DynStruct):
         #helpers.symlink(self.internal_dir, internal_sym, noraise=False)
         #helpers.symlink(self.computed_dir, computed_sym, noraise=False)
         #helpers.symlink(self.result_dir, results_sym, noraise=False)
+
+class HotspotterChipPaths(DynStruct):
+    def __init__(self):
+        super(HotspotterChipPaths, self).__init__()
+        self.cx2_chip_path  = []
+        self.cx2_rchip_path = []
+        self.chip_uid = ''
+
+class HotspotterChipFeatures(DynStruct):
+    def __init__(self):
+        super(HotspotterChipFeatures, self).__init__()
+        self.cx2_desc = []
+        self.cx2_kpts = []
+        self.feat_uid = ''
 
 # Convinience
 

@@ -25,7 +25,6 @@ from Printable import DynStruct
 import DataStructures as ds
 import helpers
 import algos
-import draw_func2 as df2
 import load_data2 as ld2
 import numpy as np
 import os, sys
@@ -34,6 +33,8 @@ import scipy.ndimage.filters as filters
 from _tpl.other import imtools
 
 import warnings
+from itertools import izip
+from os.path import join
 
 import skimage
 import skimage.morphology
@@ -234,43 +235,55 @@ def pil2_float_img(chip):
         #chip_ /= 255.0
     return chip_
 
+def get_normalized_chip_sizes(roi_list, sqrt_area=None):
+    'Computes a normalized chip size to rescale to'
+    if not (sqrt_area is None or sqrt_area <= 0):
+        target_area = sqrt_area ** 2
+        def _resz(w, h):
+            ht = np.sqrt(target_area * h / w)
+            wt = w * ht / h
+            return (int(round(wt)), int(round(ht)))
+        chipsz_list = [_resz(float(w), float(h)) for (x,y,w,h) in roi_list]
+    else: # no rescaling
+        chipsz_list = [(int(w), int(h)) for (x,y,w,h) in roi_list]
+    return chipsz_list
+
 # =======================================
 # Main Script 
 # =======================================
 
-class HotspotterChipPaths(DynStruct):
-    def __init__(self):
-        super(HotspotterChipPaths, self).__init__()
-        self.cx2_chip_path  = []
-        self.cx2_rchip_path = []
-        self.chip_uid = ''
-
-def load_chips(hs, chip_cfg=None, cx_list=None, **kwargs):
+def load_chips(hs, cx_list=None, **kwargs):
     print('\n=============================')
     print('[cc2] Precomputing chips and loading chip paths: %r' % hs.db_name())
     print('=============================')
-    if chip_cfg is None:
-        chip_cfg = ds.ChipConfig(**kwargs)
-    else:
-        chip_cfg.update(**kwargs)
-
-    # Get or create chip paths object
-    hs_cpaths = HotspotterChipPaths() if hs.cpaths is None else hs.cpaths
-
-    if cx_list == []: return # Hack
-
-    
-    img_dir      = hs.dirs.img_dir
-    rchip_dir    = hs.dirs.rchip_dir
-    chip_dir     = hs.dirs.chip_dir
-
-    cx2_gx       = hs.tables.cx2_gx
-    cx2_cid      = hs.tables.cx2_cid
-    cx2_theta    = hs.tables.cx2_theta
-    cx2_roi      = hs.tables.cx2_roi
-    gx2_gname    = hs.tables.gx2_gname
-
-    # Get parameters
+    #----------------
+    # COMPUTE SETUP 
+    #----------------
+    # 1.1) Get/Update ChipConfig and ChipPaths objects
+    if hs.chip_cfg is not None: hs.chip_cfg.update(**kwargs)
+    else: hs.chip_cfg = ds.ChipConfig(**kwargs)
+    chip_cfg = hs.chip_cfg
+    if hs.cpaths is None: hs.cpaths = ds.HotspotterChipPaths()
+    chip_uid = chip_cfg.get_uid()
+    print('[cc2] chip_uid = %r' % chip_uid)
+    if hs.cpaths.chip_uid != '' and hs.cpaths.chip_uid != chip_uid:
+        raise Exception('Disagreement: chip_uid = %r' % hs.cpaths.chip_uid)
+    # Get the list of chips to load
+    cx_list = hs.get_valid_cxs() if cx_list is None else cx_list
+    if cx_list == []: return # HACK
+    if not np.iterable(cx_list): cx_list = [cx_list]
+    # Get table information
+    try: 
+        gx_list    = hs.tables.cx2_gx[cx_list]
+        cid_list   = hs.tables.cx2_cid[cx_list]
+        theta_list = hs.tables.cx2_theta[cx_list]
+        roi_list   = hs.tables.cx2_roi[cx_list]
+        gname_list = hs.tables.gx2_gname[gx_list]
+    except IndexError as ex: 
+        print(repr(ex))
+        print('cx_list=%r' % cx_list)
+        raise
+    # Get ChipConfig Parameters
     sqrt_area   = chip_cfg.chip_sqrt_area
     grabcut     = chip_cfg.grabcut        
     histeq      = chip_cfg.histeq         
@@ -279,87 +292,103 @@ def load_chips(hs, chip_cfg=None, cx_list=None, **kwargs):
     localeq     = chip_cfg.local_eq       
     maxcontr    = chip_cfg.maxcontrast    
 
-    chip_uid = chip_cfg.get_uid()
-    print('[cc2] chip_uid = %r' % chip_uid)
-    #print(helpers.indent(str(chip_cfg), '[cc2] '))
+    #---------------------------
+    # ___Normalized Chip Args___
+    #---------------------------
+    # Full Image Paths: where to extract the chips from 
+    img_dir = hs.dirs.img_dir
+    gfpath_list = [join(img_dir, gname) for gname in iter(gname_list)]
+    # Chip Paths: where to write extracted chips to
+    _cfname_fmt = 'cid%d'+chip_uid+'.png'
+    _cfpath_fmt = join(hs.dirs.chip_dir, _cfname_fmt)
+    cfpath_list = [_cfpath_fmt  % cid for cid in iter(cid_list)]
+    # Normalized Chip Sizes: ensure chips have about sqrt_area squared pixels
+    chipsz_list = get_normalized_chip_sizes(roi_list, sqrt_area)
 
-    # Full image path
-    cx2_img_path = [img_dir+'/'+gx2_gname[gx] for gx in cx2_gx]
+    #-------------------------
+    #____Rotated Chip Args____
+    #-------------------------
+    # Rotated Chp Paths: where to write rotated chips to
+    _rfname_fmt = 'cid%d'+chip_uid+'.rot.png'
+    _rfpath_fmt = join(hs.dirs.rchip_dir, _rfname_fmt)
+    rfpath_list_ = [_rfpath_fmt % cid for cid in iter(cid_list)]
+    # If theta is 0 there is no need to rotate
+    _fn = lambda cfpath, rfpath, theta: cfpath if theta == 0 else rfpath
+    rfpath_list = [_fn(*tup) for tup in izip(cfpath_list, rfpath_list_, theta_list)]
 
-    # Paths to chip, rotated chip
-    chip_format     =  chip_dir+'/CID_%d'+chip_uid+'.png'
-    cx2_chip_path   = [chip_format  % cid for cid in cx2_cid]
-
-    # Compute normalized chip sizes
-    cx2_imgchip_sz = [(float(w), float(h)) for (x,y,w,h) in cx2_roi]
-    if not (sqrt_area is None or sqrt_area <= 0):
-        target_area = sqrt_area ** 2
-        def _resz(w, h):
-            ht = np.sqrt(target_area * h / w)
-            wt = w * ht / h
-            return (int(round(wt)), int(round(ht)))
-        cx2_chip_sz = [_resz(float(w), float(h)) for (x,y,w,h) in cx2_roi]
-    else: # no rescaling
-        cx2_chip_sz = [(int(w), int(h)) for (x,y,w,h) in cx2_roi]
-
-    # --- COMPUTE CHIPS --- # 
+    #--------------------------
+    # EXTRACT AND RESIZE CHIPS
+    #--------------------------
+    num_procs = hs.args.num_procs
+    if len(cx_list) < num_procs / 2:
+        num_procs = 1 # Hack for small amount of tasks
     pcc_kwargs = {
-        'arg_list'  : [cx2_img_path, cx2_chip_path, cx2_roi, cx2_chip_sz],
+        'arg_list'  : [gfpath_list, cfpath_list, roi_list, chipsz_list],
         'lazy'      : not hs.args.nocache_chips,
         'num_procs' : hs.args.num_procs }
+    # FIXME: Parallel Computations of different parameters. Not robust to all parameter settings
+    if grabcut: parallel_compute(compute_grabcut_chip, **pcc_kwargs)
+    elif region_norm and histeq: parallel_compute(compute_reg_norm_and_histeq_chip, **pcc_kwargs)
+    elif region_norm: parallel_compute(compute_reg_norm_chip, **pcc_kwargs)
+    elif histeq: parallel_compute(compute_histeq_chip, **pcc_kwargs)
+    elif rankeq: parallel_compute(compute_rankeq_chip, **pcc_kwargs)
+    elif localeq and maxcontr: parallel_compute(compute_localeq_contr_chip, **pcc_kwargs)
+    elif localeq: parallel_compute(compute_localeq_chip, **pcc_kwargs)
+    elif maxcontr: parallel_compute(compute_contrast_stretch_chip, **pcc_kwargs)
+    else: parallel_compute(compute_bare_chip, **pcc_kwargs)
 
-    if grabcut:
-        parallel_compute(compute_grabcut_chip, **pcc_kwargs)
-    elif region_norm and histeq: 
-        parallel_compute(compute_reg_norm_and_histeq_chip, **pcc_kwargs)
-    elif region_norm: 
-        parallel_compute(compute_reg_norm_chip, **pcc_kwargs)
-    elif histeq: 
-        parallel_compute(compute_histeq_chip, **pcc_kwargs)
-    elif rankeq:
-        parallel_compute(compute_rankeq_chip, **pcc_kwargs)
-    elif localeq and maxcontr:
-        parallel_compute(compute_localeq_contr_chip, **pcc_kwargs)
-    elif localeq:
-        parallel_compute(compute_localeq_chip, **pcc_kwargs)
-    elif maxcontr:
-        parallel_compute(compute_contrast_stretch_chip, **pcc_kwargs)
-    else:
-        parallel_compute(compute_bare_chip, **pcc_kwargs)
-
-    # --- ROTATE CHIPS --- # 
-    #cx2_rchip_path  = [rchip_format % cid for cid in cx2_cid]
-    rchip_format = rchip_dir + '/CID_%d' + chip_uid + '.rot.png'
-    cx2_rchip_path = [rchip_format % cid if cx2_theta[cx] != 0 else cx2_chip_path[cx]
-                      for (cx, cid) in enumerate(cx2_cid)]
-    pcc_kwargs['arg_list'] = [cx2_chip_path, cx2_rchip_path, cx2_theta] 
+    #--------------------------
+    # ROTATE CHIPS
+    #--------------------------
+    # Get the computations that you need to do (i.e. theta != 0)
+    indexes2 = [lx for lx, theta in enumerate(theta_list) if theta != 0]
+    cx_list2 = [cx_list[lx] for lx in iter(indexes2)]
+    theta_list2  = [theta_list[lx] for lx in iter(indexes2)]
+    cfpath_list2 = [cfpath_list[lx] for lx in iter(indexes2)]
+    rfpath_list2 = [rfpath_list[lx] for lx in iter(indexes2)]
+    
+    pcc_kwargs['arg_list'] = [cfpath_list2, rfpath_list2, theta_list2] 
     parallel_compute(rotate_chip, **pcc_kwargs)
 
-    # --- RETURN CHIP PATHS --- #
-
+    #----------------------
+    # UPDATE API VARIABLES
+    #----------------------
     print('[cc2] Done Precomputing chips and loading chip paths')
 
-    # Build hotspotter path object
-    hs_cpaths.cx2_chip_path  = cx2_chip_path
-    hs_cpaths.cx2_rchip_path = cx2_rchip_path
-    hs_cpaths.chip_uid = chip_cfg.get_uid()
-    return hs_cpaths
+    # Extend the datastructure if needed
+    list_size = max(cx_list)
+    helpers.ensure_list_size(hs.cpaths.cx2_chip_path, list_size)
+    helpers.ensure_list_size(hs.cpaths.cx2_rchip_path, list_size)
+    # Copy the values into the ChipPaths object
+    for lx, cx in enumerate(cx_list):
+        hs.cpaths.cx2_chip_path[cx] = cfpath_list[lx]
+    for lx, cx in enumerate(cx_list):
+        hs.cpaths.cx2_rchip_path[cx] = rfpath_list[lx]
+    hs.cpaths.chip_uid = chip_uid
+    print('[cc2]=============================')
     
 if __name__ == '__main__':
-    from multiprocessing import freeze_support
-    freeze_support()
-    # --- LOAD DATA --- #
-    db_dir = ld2.DEFAULT
-    db_dir = ld2.WS_HARD
-    hs = ld2.HotSpotter()
-    hs.load_tables(db_dir)
+    import multiprocessing
+    multiprocessing.freeze_support()
+    import main
+    import HotSpotter
+    import vizualizations as viz
+    import chip_compute2 as cc2
+    from chip_compute2 import *
+    # Debugging vars
+    chip_cfg=None
+    cx_list=None
+    kwargs = {}
+    # --- LOAD TABLES --- #
+    args = main.parse_arguments(db='NAUTS')
+    hs = HotSpotter.HotSpotter(args)
+    hs.load_tables()
     hs.set_samples()
     # --- LOAD CHIPS --- #
-    hs_cpaths = load_chips(hs)
-    hs.cpaths = hs_cpaths
+    load_chips(hs)
     cx = helpers.get_arg_after('--cx', type_=int)
     if not cx is None:
-        df2.show_chip(hs, cx, draw_kpts=False)
+        viz.show_chip(hs, cx, draw_kpts=False)
     else:
         print('usage: feature_compute.py --cx [cx]')
-    exec(df2.present())
+    exec(viz.present())

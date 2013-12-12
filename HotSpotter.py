@@ -13,10 +13,16 @@ import types
 import numpy as np
 from PIL import Image
 # Hotspotter
+import load_data2 as ld2
+import chip_compute2 as cc2
+import feature_compute2 as fc2
+import match_chips3 as mc3
+import convert_db
 from Printable import DynStruct
 import DataStructures as ds
 import helpers
 import params
+import fileio as io
 from os.path import exists, join, realpath, split, relpath
 from itertools import izip
 import shutil
@@ -52,10 +58,6 @@ def _on_loaded_tables(hs):
 def is_invalid_path(db_dir): 
     return db_dir is None or not exists(db_dir)
 
-def imread(img_fpath):
-    _img = cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR)
-    return cv2.cvtColor(_img, cv2.COLOR_BGR2RGB)
-
 # ___CLASS HOTSPOTTER____
 class HotSpotter(DynStruct):
     '''The HotSpotter main class is a root handle to all relevant data'''
@@ -83,45 +85,44 @@ class HotSpotter(DynStruct):
     # Loading Functions
     #---------------
     def load(hs, load_all=False):
-        import convert_db
         '(current load function) Loads the appropriate database'
         print('[hs] load()')
-        if hs.args.dbdir is None or not exists(hs.args.dbdir):
-            raise ValueError('db_dir=%r does not exist!' % (hs.args.dbdir))
-        convert_db.convert_if_needed(hs.args.dbdir)
-        hs.load_tables(hs.args.dbdir)
+        hs.load_tables()
+        hs.load_configs()
+        hs.set_samples()
+        if load_all:
+            print('[hs] load_all=True')
+            hs.load_chips()
+            hs.load_features()
+        else:
+            print('[hs] load_all=False')
+            hs.load_chips([])
+            hs.load_features([])
+        return hs
+
+    def load_configs(hs):
         hs.chip_cfg = ds.get_chip_cfg()
         kwargs_ = {}
         (kwargs_['scale_min'],
          kwargs_['scale_max']) = hs.args.sthresh
         hs.feat_cfg = ds.get_feat_cfg(hs, **kwargs_)
-        hs.q_cfg    = ds.get_vsmany_cfg(hs)
-        if load_all:
-            hs.load_chips()
-            hs.load_features()
-        else:
-            hs.load_chips([])
-            hs.load_features([])
-        hs.set_samples()
-        return hs
 
-    def load_tables(hs, db_dir):
-        import load_data2 as ld2
-        hs_dirs, hs_tables = ld2.load_csv_tables(db_dir)
+    def load_tables(hs):
+        # Check to make sure dbdir is specified correctly
+        if hs.args.dbdir is None or not exists(hs.args.dbdir):
+            raise ValueError('db_dir=%r does not exist!' % (hs.args.dbdir))
+        convert_db.convert_if_needed(hs.args.dbdir)
+        hs_dirs, hs_tables = ld2.load_csv_tables(hs.args.dbdir)
         hs.tables  = hs_tables
         hs.dirs    = hs_dirs
         hs.num_cx = len(hs.tables.cx2_cid)
         _on_loaded_tables(hs)
 
     def load_chips(hs, cx_list=None):
-        import chip_compute2 as cc2
-        hs_cpaths = cc2.load_chips(hs, hs.chip_cfg, cx_list)
-        hs.cpaths = hs_cpaths
+        cc2.load_chips(hs, cx_list)
 
     def load_features(hs, cx_list=None):
-        import feature_compute2 as fc2
-        hs_feats = fc2.load_features(hs, hs.feat_cfg, cx_list)
-        hs.feats = hs_feats
+        fc2.load_features(hs, cx_list=cx_list)
 
     def set_samples(hs, test_samp=None,
                         train_samp=None,
@@ -151,16 +152,18 @@ class HotSpotter(DynStruct):
         indx_samp = sorted(indx_samp)
 
         # Debugging and Info
-        test_train_isect = np.intersect1d(test_samp, train_samp)
-        indx_train_isect   = np.intersect1d(indx_samp, train_samp)
-        indx_test_isect    = np.intersect1d(indx_samp, test_samp)
-        lentup = (len(test_samp), len(train_samp), len(indx_samp))
-        print('[hs]   ---')
-        print('[hs] * num_valid_cxs = %d' % len(valid_cxs))
-        print('[hs] * num_test=%d, num_train=%d, num_indx=%d' % lentup)
-        print('[hs] * | isect(test, train) |  = %d' % len(test_train_isect))
-        print('[hs] * | isect(indx, train) |  = %d' % len(indx_train_isect))
-        print('[hs] * | isect(indx, test)  |  = %d' % len(indx_test_isect))
+        DEBUG_SET_SAMPLE = True
+        if DEBUG_SET_SAMPLE:
+            test_train_isect = np.intersect1d(test_samp, train_samp)
+            indx_train_isect = np.intersect1d(indx_samp, train_samp)
+            indx_test_isect  = np.intersect1d(indx_samp, test_samp)
+            lentup = (len(test_samp), len(train_samp), len(indx_samp))
+            print('[hs]   ---')
+            print('[hs] * num_valid_cxs = %d' % len(valid_cxs))
+            print('[hs] * num_test=%d, num_train=%d, num_indx=%d' % lentup)
+            print('[hs] * | isect(test, train) |  = %d' % len(test_train_isect))
+            print('[hs] * | isect(indx, train) |  = %d' % len(indx_train_isect))
+            print('[hs] * | isect(indx, test)  |  = %d' % len(indx_test_isect))
         
         # Unload matcher if database changed
         if hs.train_sample_cx != train_samp or hs.indexed_sample_cx != indx_samp:
@@ -189,45 +192,85 @@ class HotSpotter(DynStruct):
         # Fix
         hs.train_id = train_id
         hs.indx_id  = indx_id
+        # The query_cfg must resample
+        hs.query_cfg = None
 
 
     #---------------
     # Query Functions
     #---------------
-    def query(hs):
-        import match_chips3 as mc3
-        res = mc3.query_database(hs, qcx)
+    def query(hs, qcx):
+        if hs.query_cfg is None:
+            hs.query_cfg = ds.get_vsmany_cfg(hs)
+        res = mc3.query_database(hs, qcx, hs.query_cfg)
         return res
 
     # ---------------
     # Modifying functions
     # ---------------
-    def change_roi(hs, cx, new_roi):
-        hs.tables.cx2_roi[cx] = new_roi
+
+    def unload_cxdata(hs, cx):
+        'unloads features and chips. not tables'
+        print('[hs] unload_cxdata(cx=%r)' % cx)
+        lists = [hs.feats.cx2_kpts,
+                 hs.feats.cx2_desc,
+                 hs.cpaths.cx2_rchip_path,
+                 hs.cpaths.cx2_chip_path]
+        for list_ in lists:
+            helpers.ensure_list_size(list_, cx)
+            list_[cx] = None
+
+    def delete_cxdata(hs, cx):
+        'deletes features and chips. not tables'
+        hs.unload_cxdata(cx)
+        print('[hs] delete_cxdata(cx=%r)' % cx)
+        cid = hs.tables.cx2_cid[cx]
+        cid_str_list = ['cid%d_' % cid,
+                        'qcid=%d.npz' % cid, ]
+        for cid_str in cid_str_list:
+            helpers.remove_files_in_dir(hs.dirs.computed_dir, '*'+cid_str+'*',
+                                        recursive=True, verbose=True, dryrun=False)
+
+    def on_modification(hs, cx=None, gx=None):
         hs.needs_save = True
+    def on_addition(hs, cx=None, gx=None, resample=True):
+        hs.needs_save = True
+        if resample:
+            hs.set_samples(hs)
+    def on_deletion(hs, cx=None, gx=None, resample=True):
+        hs.needs_save = True
+        if resample:
+            hs.set_samples()
+
+    def change_roi(hs, cx, new_roi):
+        hs.delete_cxdata(cx)
+        hs.on_modification(cx=cx)
+        hs.tables.cx2_roi[cx] = new_roi
 
     def change_theta(hs, cx, new_theta):
+        hs.delete_cxdata(cx)
+        hs.on_modification(cx=cx)
         hs.tables.cx2_theta[cx] = new_theta
-        hs.needs_save = True
 
     def change_name(hs, cx, new_name):
+        hs.on_modification()
         new_nx_ = np.where(hs.tables.nx2_name == new_name)[0]
         if len(new_nx_) == 0:
             new_nx = self.add_name(new_name)
         else:
             new_nx = new_nx_[0]
         hs.tables.cx2_nx[cx] = new_nx
-        hs.needs_save = True
 
     # ---------------
     # Adding functions
     # ---------------
+
     def add_name(hs, name): 
         nx2_name = self.tables.nx2_name.tolist()
         nx2_name.append(name)
         self.tables.nx2_name = np.array(nx2_name)
         nx = len(self.tables.nx2_name)
-        hs.needs_save = True
+        hs.on_addition()
         return nx
 
     def add_chip(hs, gx, roi):
@@ -245,7 +288,7 @@ class HotSpotter(DynStruct):
             hs.tables.prop_dict[key] = np.concatenate(prop_dict[key], [''])
         hs.num_cx += 1
         cx = len(hs.tables.cx2_cid)-1
-        hs.needs_save = True
+        hs.on_addition()
         return cx
 
     def add_images(hs, fpath_list, move_images=True):
@@ -282,24 +325,26 @@ class HotSpotter(DynStruct):
         # Append the new gnames to the hotspotter table
         hs.tables.gx2_gname = np.array(gx2_gname+new_gnames)
         if nNewImages > 0:
-            hs.needs_save = True
+            hs.on_addition()
         return nNewImages
 
     # ---------------
     # Deleting functions
     # ---------------
-    def delete_chip(hs, cx):
+
+    def delete_chip(hs, cx, resample=True):
+        hs.delete_cxdata(cx)
         hs.tables.cx2_cid[cx] = -1
         hs.tables.cx2_gx[cx]  = -1
         hs.tables.cx2_nx[cx]  = -1
-        hs.needs_save = True
+        hs.on_deletion(cx=cx, resample=resample)
 
     def delete_image(hs, gx):
         cx_list = hs.gx2_cxs(gx)
-        hs.tables.gx2_gname[gx] = ''
         for cx in cx_list:
-            hs.delete_chip(cx)
-        hs.needs_save = True
+            hs.delete_chip(cx, resample=False)
+        hs.tables.gx2_gname[gx] = ''
+        hs.on_deletion(gx=gx)
 
     # ---------------
     # Getting functions
@@ -317,7 +362,7 @@ class HotSpotter(DynStruct):
         return db_name
     #---------------
     def get_valid_cxs(hs):
-        valid_cxs, = np.where(np.array(hs.tables.cx2_cid) > 0)
+        valid_cxs = np.where(hs.tables.cx2_cid > 0)[0]
         return valid_cxs
 
     def get_valid_cxs_with_indexed_groundtruth(hs):
@@ -361,13 +406,19 @@ class HotSpotter(DynStruct):
     #---------------
     def save_database(hs):
         print('[hs] save_database')
-        import load_data2 as ld2
         ld2.write_csv_tables(hs)
         hs.needs_save = False
     #---------------
     def delete_computed_dir(hs):
         computed_dir = hs.dirs.computed_dir
-        helpers.remove_files_in_dir(computed_dir, recursive=True)
+        [hs.unload_cxdata(cx) for cx in hs.get_valid_cxs()]
+        helpers.remove_files_in_dir(computed_dir, recursive=True, verbose=True,
+                                    dryrun=False)
+    #---------------
+    def delete_global_prefs(hs):
+        global_cache_dir = io.GLOBAL_CACHE_DIR
+        helpers.remove_files_in_dir(global_cache_dir, recursive=True, verbose=True,
+                                    dryrun=False)
     #---------------
     def vdd(hs):
         db_dir = os.path.normpath(hs.dirs.db_dir)
@@ -378,6 +429,11 @@ class HotSpotter(DynStruct):
         computed_dir = os.path.normpath(hs.dirs.computed_dir)
         print('[hs] viewing computed_dir: %r ' % computed_dir)
         helpers.vd(computed_dir)
+    #---------------
+    def vgd(hs):
+        global_dir = io.GLOBAL_CACHE_DIR
+        print('[hs] viewing global_dir: %r ' % global_dir)
+        helpers.vd(global_dir)
     #--------------
     def vrd(hs):
         result_dir = os.path.normpath(hs.dirs.result_dir)
@@ -415,7 +471,7 @@ class HotSpotter(DynStruct):
     #--------------
     def gx2_image(hs, gx):
         img_fpath = hs.gx2_gname(gx, full=True)
-        img = imread(img_fpath)
+        img = io.imread(img_fpath)
         return img
     #--------------
     def get_nx2_cxs(hs):
@@ -516,7 +572,7 @@ class HotSpotter(DynStruct):
         try: 
             array_index = helpers.array_index
             cx2_cid = hs.tables.cx2_cid
-            if type(cid) is types.IntType:
+            if helpers.is_int(cid):
                 return array_index(cx2_cid, cid)
             else:
                 return np.array([array_index(cx2_cid, cid_) for cid_ in cid])
@@ -527,33 +583,50 @@ class HotSpotter(DynStruct):
             print('---------')
             raise
     #--------------
+    def _try_cxlist_get(hs, cx, cx_list_):
+        if np.iterable(cx):
+            ret = [cx_list_[cx_] for cx_ in cx]
+            if any([val is None for val in ret]):
+                raise IndexError()
+        else:
+            ret = cx_list_[cx]
+            if ret is None:
+                raise IndexError()
+        return ret
+    #--------------
+    def _onthefly_cxlist_get(hs, cx, cx_list_, load_fn):
+        '''tries to get from the cx indexed list and performs a cx load function
+        if unable to get failure'''
+        try: 
+            ret = hs._try_cxlist_get(cx, cx_list_)
+        except IndexError as ex:
+            load_fn(cx)
+            ret = hs._try_cxlist_get(cx, cx_list_)
+        return ret
+
+    #--------------
+    def get_desc(hs, cx):
+        cx2_desc = hs.feats.cx2_desc
+        return hs._onthefly_cxlist_get(cx, cx2_desc, hs.load_features)
+    #--------------
+    def get_kpts(hs, cx):
+        cx2_kpts = hs.feats.cx2_kpts
+        return hs._onthefly_cxlist_get(cx, cx2_kpts, hs.load_features)
+    #--------------
     def get_rchip_path(hs, cx):
         cx2_rchip_path = hs.cpaths.cx2_rchip_path
+        return hs._onthefly_cxlist_get(cx, cx2_rchip_path, hs.load_chips)
     #--------------
     def get_chip(hs, cx):
-        cx2_rchip_path = hs.cpaths.cx2_rchip_path
-        if not np.iterable(cx):
-            return imread(cx2_rchip_path[cx])
+        rchip_path = hs.get_rchip_path(cx)
+        if np.iterable(cx):
+            return [io.imread(fpath) for fpath in rchip_path]
         else:
-            return [imread(cx2_rchip_path[cx_]) for cx_ in cx]
+            return io.imread(rchip_path)
     #--------------
     def get_chip_pil(hs, cx):
         chip = Image.open(hs.cpaths.cx2_rchip_path[cx])
         return chip
-    #--------------
-    def get_desc(hs, cx):
-        cx2_desc = hs.feats.cx2_desc
-        if not np.iterable(cx):
-            return cx2_desc[cx]
-        else:
-            return [cx2_desc[cx_] for cx_ in cx]
-    #--------------
-    def get_kpts(hs, cx):
-        cx2_kpts = hs.feats.cx2_kpts
-        if not np.iterable(cx):
-            return cx2_kpts[cx]
-        else:
-            return [cx2_kpts[cx_] for cx_ in cx]
     #--------------
     def _cx2_rchip_size(hs, cx):
         rchip_path = hs.cpaths.cx2_rchip_path[cx]
@@ -568,36 +641,6 @@ class HotSpotter(DynStruct):
         if hs.cx2_rchip_size is None:
             hs.load_cx2_rchip_size()
         return hs.cx2_rchip_size
-    #--------------
-    def get_features(hs, cx):
-        import spatial_verification2 as sv2
-        fx2_kp     = hs.feats.cx2_kpts[cx]
-        fx2_desc   = hs.feats.cx2_desc[cx]
-        fx2_scale  = sv2.keypoint_scale(fx2_kp)
-        return (fx2_kp, fx2_desc, fx2_scale)
-
-    def get_feature_fn(hs, cx):
-        (fx2_kp, fx2_desc, fx2_scale) = hs.get_features(cx)
-        def fx2_feature(fx):
-            kp    = fx2_kp[fx:fx+1]
-            desc  = fx2_desc[fx]
-            scale = fx2_scale[fx]
-            radius = 3*np.sqrt(3*scale)
-            return (kp, scale, radius, desc)
-        return fx2_feature
-    #--------------
-    def get_assigned_matches(hs, qcx):
-        cx2_desc = hs.feats.cx2_desc
-        cx2_fm, cx2_fs, cx2_score = hs.matcher.assign_matches(qcx, cx2_desc)
-        return cx2_fm, cx2_fs, cx2_score
-    #--------------
-    def get_assigned_matches_to(hs, qcx, cx):
-        cx2_fm, cx2_fs, cx2_score = hs.get_assigned_matches(qcx)
-        print(cx2_score.argsort()[::-1])
-        fm = cx2_fm[cx]
-        fs = cx2_fs[cx]
-        score = cx2_score[cx]
-        return fm, fs, score
     #--------------
     def free_some_memory(hs):
         print('[hs] Releasing matcher memory')

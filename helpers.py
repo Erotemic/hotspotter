@@ -397,6 +397,13 @@ def alloc_lists(num_alloc):
     'allocates space for a numpy array of lists'
     return [[] for _ in xrange(num_alloc)]
 
+def ensure_list_size(list_, size_):
+    'extend list to max_cx'
+    lendiff = (size_+1) - len(list_)
+    if lendiff > 0:
+        extension = [None for _ in xrange(lendiff)]
+        list_.extend(extension)
+
 def get_timestamp(format_='filename', use_second=False):
     now = datetime.datetime.now()
     if use_second:
@@ -617,18 +624,22 @@ def remove_file(fpath, verbose=True, dryrun=False):
         return False
     return True
 
-def remove_files_in_dir(dpath, fname_pattern='*', recursive=False, **kwargs):
+def remove_files_in_dir(dpath, fname_pattern='*', recursive=False,
+                        verbose=True, dryrun=False, **kwargs):
     print('[helpers] Removing files:')
     print('  * in dpath = %r ' % dpath) 
     print('  * matching pattern = %r' % fname_pattern) 
     print('  * recursive = %r' % recursive) 
     num_removed, num_matched = (0,0)
     if not exists(dpath):
-        printWARN('!!! dir = %r does not exist!' % dpath)
+        msg = ('!!! dir = %r does not exist!' % dpath)
+        print(msg)
+        warnings.warn(msg, category=UserWarning)
     for root, dname_list, fname_list in os.walk(dpath):
         for fname in fnmatch.filter(fname_list, fname_pattern):
             num_matched += 1
-            num_removed += remove_file(join(root, fname), **kwargs)
+            num_removed += remove_file(join(root, fname), verbose=verbose, 
+                                       dryrun=dryrun, **kwargs)
         if not recursive:
             break
     print('[helpers] ... Removed %d/%d files' % (num_removed, num_matched))
@@ -922,12 +933,15 @@ class ModulePrintLock():
         for module in self.module_list:
             module.print_on()
 
-
-
-def make_sample_id(sample):
+def make_sample_id(sample, lbl=None, withlen=True):
     'Input: sample - a list of chip indexes, Output: hashstr'
     hash_input = repr(tuple(sample)) # Full String Representation
-    return str(len(sample))+','+hashstr(hash_input)
+    sample_id = hashstr(hash_input)
+    if withlen:
+        sample_id = ','.join((str(len(sample)), sample_id))
+    if lbl is not None:
+        sample_id = ''.join((lbl, '(', sample_id, ')'))
+    return sample_id
 
 #def valid_filename_ascii_chars():
     ## Find invalid chars
@@ -1376,11 +1390,12 @@ def listfind(list_, tofind):
         return None
 
 # Tests for data types
-VALID_INT_TYPES = (np.typeDict['int64'],
+VALID_INT_TYPES = (types.IntType,
+                   types.LongType,
+                   np.typeDict['int64'],
                    np.typeDict['int32'],
                    np.typeDict['uint8'],
-                   types.LongType,
-                   types.IntType)
+                   )
 VALID_FLOAT_TYPES = (types.FloatType,
                      np.typeDict['float64'],
                      np.typeDict['float32'],

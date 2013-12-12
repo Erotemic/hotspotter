@@ -14,6 +14,9 @@ import timeit
 import helpers
 import params
 import numpy as np
+import cv2
+from PIL import Image
+#import skimage
 
 # Toggleable printing
 print = __builtin__.print
@@ -234,6 +237,37 @@ def filesize_str(fpath):
     _, fname = os.path.split(fpath)
     mb_str = helpers.file_megabytes_str(fpath)
     return 'filesize(%r)=%s' % (fname, mb_str)
+
+
+
+def imread_cv2(img_fpath):
+    try: 
+        img = cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    except Exception as ex:
+        print('[io] Failed to read: %r' % img_fpath)
+        raise
+    return img
+
+def imread_PIL(img_fpath):
+    try: 
+        img = Image.open(img_fpath)
+        img = np.asarray(img)
+        #img = skimage.util.img_as_uint(img)
+    except Exception as ex:
+        print('[io] Failed to read: %r' % img_fpath)
+        raise
+    return img
+
+def imread(img_fpath):
+    try: 
+        img = Image.open(img_fpath)
+        img = np.asarray(img)
+        #img = skimage.util.img_as_uint(img)
+    except Exception as ex:
+        print('[io] Failed to read: %r' % img_fpath)
+        raise
+    return img
 
 
 # --- Global Cache ---

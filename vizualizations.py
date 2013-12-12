@@ -13,12 +13,14 @@ import re
 import draw_func2 as df2
 import helpers
 import load_data2 as ld2
+import fileio as io
 import oxsty_results
 import params
 from Printable import DynStruct
 # Scientific imports
 import numpy as np
 import matplotlib.gridspec as gridspec
+from draw_func2 import present
 
 # Toggleable printing
 print = __builtin__.print
@@ -148,8 +150,7 @@ def plot_cx2(hs, res, style='kpts', subdir=None, annotations=True, title_aug='')
     if 'kpts' == style:
         subdir = 'plot_cx' if subdir is None else subdir
         rchip = hs.get_chip(cx)
-        kpts  = hs.feats.cx2_kpts[cx]
-        title = '%s\n%s' % (hs.cxstr(cx), title_suffix)
+        kpts  = hs.get_kpts(cx)
         print('[viz] Plotting'+title)
         df2.imshow(rchip, fignum=FIGNUM, title=title, doclf=True)
         df2.draw_kpts2(kpts)
@@ -388,7 +389,7 @@ def show_splash():
     print('[viz] show_splash()')
     fig = df2.figure(doclf=True)
     splash_fpath = realpath('_frontend/splash.png')
-    img = df2.imread(splash_fpath)
+    img = io.imread(splash_fpath)
     df2.imshow(img)
     df2.draw()
     #fig = self.win.plotWidget.figure
@@ -400,12 +401,100 @@ def show_splash():
     #print(fig)
     #print(fig is self.win.plotWidget.figure)
 
-def show_chip(hs, cx, annote=True):
-    #print(hs)
+def show_chip(hs, cx=None, res=None, **kwargs):
     fig = df2.figure(doclf=True)
-    df2.show_chip(hs, cx=cx, draw_kpts=annote)
+    draw_chip(hs, cx=cx, res=res, **kwargs)
     df2.draw()
-    
+
+def draw_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
+              nRandKpts=None, kpts_alpha=None, prefix='', **kwargs):
+    if not res is None:
+        cx = res.qcx
+    if not allres is None:
+        res = allres.qcx2_res[cx]
+    rchip1    = hs.get_chip(cx)
+    title_str = prefix
+    # Add info to title
+    if info: 
+        gname = hs.cx2_gname(cx)
+        name = hs.cx2_name(cx)
+        ngt_str = hs.num_indexed_gt_str(cx)
+        title_str += ', '.join([name, hs.cxstr(cx), ngt_str])
+    fig, ax = df2.imshow(rchip1, title=title_str, **kwargs)
+    #if not res is None: 
+    if info:
+        ax.set_xlabel(gname, fontproperties=df2.FONTS.xlabel)
+    if not draw_kpts:
+        return
+    kpts1 = hs.get_kpts(cx)
+    kpts_args = dict(offset=(0,0), ell_linewidth=1.5, ell=True, pts=False)
+    # Draw keypoints with groundtruth information
+    if not res is None:
+        gt_cxs = hs.get_other_indexed_cxs(cx)
+        # Get keypoint indexes
+        def stack_unique(fx_list):
+            try:
+                if len(fx_list) == 0:
+                    return np.array([], dtype=int)
+                stack_list = np.hstack(fx_list)
+                stack_ints = np.array(stack_list, dtype=int)
+                unique_ints = np.unique(stack_ints)
+                return unique_ints
+            except Exception as ex:
+                 # debug in case of exception (seem to be happening)
+                 print('==============')
+                 print('Ex: %r' %ex)
+                 print('----')
+                 print('fx_list = %r ' % fx_list)
+                 print('----')
+                 print('stack_insts = %r' % stack_ints)
+                 print('----')
+                 print('unique_ints = %r' % unique_ints)
+                 print('==============')
+                 print(unique_ints)
+                 raise
+        all_fx = np.arange(len(kpts1))
+        cx2_fm = res.get_cx2_fm()
+        fx_list1 = [fm[:,0] for fm in cx2_fm]
+        fx_list2 = [fm[:,0] for fm in cx2_fm[gt_cxs]] if len(gt_cxs) > 0 else np.array([])
+        matched_fx = stack_unique(fx_list1)
+        true_matched_fx = stack_unique(fx_list2)
+        noise_fx = np.setdiff1d(all_fx, matched_fx)
+        # Print info
+        print('[df2] %s has %d keypoints. %d true-matching. %d matching. %d noisy.' %
+             (hs.cxstr(cx), len(all_fx), len(true_matched_fx), len(matched_fx), len(noise_fx)))
+        # Get keypoints
+        kpts_true  = kpts1[true_matched_fx]
+        kpts_match = kpts1[matched_fx, :]
+        kpts_noise = kpts1[noise_fx, :]
+        # Draw keypoints
+        legend_tups = []
+        # helper function taking into acount phantom labels
+        def _kpts_helper(kpts_, color, alpha, label):
+            df2.draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha, **kpts_args)
+            phant_ = Circle((0, 0), 1, fc=color)
+            legend_tups.append((phant_, label))
+        _kpts_helper(kpts_noise,  df2.RED, .1, 'Unverified')
+        _kpts_helper(kpts_match, df2.BLUE, .4, 'Verified')
+        _kpts_helper(kpts_true, df2.GREEN, .6, 'True Matches')
+        #plt.legend(*zip(*legend_tups), framealpha=.2)
+    # Just draw boring keypoints
+    else:
+        if kpts_alpha is None: 
+            kpts_alpha = .4
+        if not nRandKpts is None: 
+            nkpts1 = len(kpts1)
+            fxs1 = np.arange(nkpts1)
+            size = nRandKpts
+            replace = False
+            p = np.ones(nkpts1)
+            p = p / p.sum()
+            fxs_randsamp = np.random.choice(fxs1, size, replace, p)
+            kpts1 = kpts1[fxs_randsamp]
+            ax = gca()
+            ax.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1), fontproperties=FONTS.xlabel)
+            # show a random sample of kpts
+        df2.draw_kpts2(kpts1, ell_alpha=kpts_alpha, ell_color=df2.RED, **kpts_args)
 
 if __name__ == '__main__':
     import multiprocessing

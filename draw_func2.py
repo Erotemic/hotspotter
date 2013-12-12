@@ -121,10 +121,6 @@ def register_matplotlib_widget(plotWidget_):
     ax = axes_list[0]
     #plt.sca(ax)
 
-def imread(img_fpath):
-    _img = cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR)
-    return cv2.cvtColor(_img, cv2.COLOR_BGR2RGB)
-
 def OooScreen2():
     nRows = 1
     nCols = 1
@@ -1009,7 +1005,14 @@ def imshow(img,
         imgdtype = img.dtype
         img = np.array(img, dtype=float) * DARKEN
         img = np.array(img, dtype=imgdtype) 
-    ax.imshow(img, interpolation=interpolation)
+
+    plt_imshow_kwargs = {
+        'interpolation':interpolation,
+        'cmap':plt.get_cmap('gray'),
+        'vmin':0,
+        'vmax':255,
+    }
+    ax.imshow(img, **plt_imshow_kwargs)
     #plt.set_cmap('gray')
     ax.set_xticks([])
     ax.set_yticks([])
@@ -1203,92 +1206,6 @@ def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     imshow(rchip,fignum=fignum,title=title,**kwargs)
     draw_kpts2(kpts)
 
-def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
-              nRandKpts=None, kpts_alpha=None, prefix='', **kwargs):
-    if not res is None:
-        cx = res.qcx
-    if not allres is None:
-        res = allres.qcx2_res[cx]
-    rchip1    = hs.get_chip(cx)
-    title_str = prefix + hs.cxstr(cx)
-    # Add info to title
-    if info: 
-        title_str += ', '+hs.num_indexed_gt_str(cx)
-    fig, ax = imshow(rchip1, title=title_str, **kwargs)
-    if not res is None: 
-        gname = hs.cx2_gname(cx)
-        ax.set_xlabel(gname, fontproperties=FONTS.xlabel)
-    if not draw_kpts:
-        return
-    kpts1  = hs.get_kpts(cx)
-    kpts_args = dict(offset=(0,0), ell_linewidth=1.5, ell=True, pts=False)
-    # Draw keypoints with groundtruth information
-    if not res is None:
-        gt_cxs = hs.get_other_indexed_cxs(cx)
-        # Get keypoint indexes
-        def stack_unique(fx_list):
-            try:
-                if len(fx_list) == 0:
-                    return np.array([], dtype=int)
-                stack_list = np.hstack(fx_list)
-                stack_ints = np.array(stack_list, dtype=int)
-                unique_ints = np.unique(stack_ints)
-                return unique_ints
-            except Exception as ex:
-                 # debug in case of exception (seem to be happening)
-                 print('==============')
-                 print('Ex: %r' %ex)
-                 print('----')
-                 print('fx_list = %r ' % fx_list)
-                 print('----')
-                 print('stack_insts = %r' % stack_ints)
-                 print('----')
-                 print('unique_ints = %r' % unique_ints)
-                 print('==============')
-                 print(unique_ints)
-                 raise
-        all_fx = np.arange(len(kpts1))
-        cx2_fm = res.get_cx2_fm()
-        fx_list1 = [fm[:,0] for fm in cx2_fm]
-        fx_list2 = [fm[:,0] for fm in cx2_fm[gt_cxs]] if len(gt_cxs) > 0 else np.array([])
-        matched_fx = stack_unique(fx_list1)
-        true_matched_fx = stack_unique(fx_list2)
-        noise_fx = np.setdiff1d(all_fx, matched_fx)
-        # Print info
-        print('[df2] %s has %d keypoints. %d true-matching. %d matching. %d noisy.' %
-             (hs.cxstr(cx), len(all_fx), len(true_matched_fx), len(matched_fx), len(noise_fx)))
-        # Get keypoints
-        kpts_true  = kpts1[true_matched_fx]
-        kpts_match = kpts1[matched_fx, :]
-        kpts_noise = kpts1[noise_fx, :]
-        # Draw keypoints
-        legend_tups = []
-        # helper function taking into acount phantom labels
-        def _kpts_helper(kpts_, color, alpha, label):
-            draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha, **kpts_args)
-            phant_ = Circle((0, 0), 1, fc=color)
-            legend_tups.append((phant_, label))
-        _kpts_helper(kpts_noise,   RED, .1, 'Unverified')
-        _kpts_helper(kpts_match,  BLUE, .4, 'Verified')
-        _kpts_helper(kpts_true,  GREEN, .6, 'True Matches')
-        #plt.legend(*zip(*legend_tups), framealpha=.2)
-    # Just draw boring keypoints
-    else:
-        if kpts_alpha is None: 
-            kpts_alpha = .4
-        if not nRandKpts is None: 
-            nkpts1 = len(kpts1)
-            fxs1 = np.arange(nkpts1)
-            size = nRandKpts
-            replace = False
-            p = np.ones(nkpts1)
-            p = p / p.sum()
-            fxs_randsamp = np.random.choice(fxs1, size, replace, p)
-            kpts1 = kpts1[fxs_randsamp]
-            ax = gca()
-            ax.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1), fontproperties=FONTS.xlabel)
-            # show a random sample of kpts
-        draw_kpts2(kpts1, ell_alpha=kpts_alpha, ell_color=RED, **kpts_args)
 
 def show_topN_matches(hs, res, N=5, fignum=4): 
     figtitle = ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))

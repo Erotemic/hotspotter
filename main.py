@@ -3,7 +3,7 @@ from __future__ import division, print_function
 import multiprocessing
 
 # Moved this up for faster help responce time
-def parse_arguments():
+def parse_arguments(**kwargs):
     import argparse
     '''Defines the arguments for hotspotter'''
     parser = argparse.ArgumentParser(description='HotSpotter - Investigate Chip', prefix_chars='+-')
@@ -86,6 +86,7 @@ def parse_arguments():
     add_str('--show-best', [], 'integer or test name', nargs='*')
     add_str('--show-worst', [], 'integer or test name', nargs='*')
     args, unknown = parser.parse_known_args()
+    args.__dict__.update(**kwargs)
     args = args_postprocess(args)
     args = fix_args_shortnames(args)
     return args
@@ -166,7 +167,8 @@ if __name__ == '__main__':
     try: 
         hs.load(load_all=False)
     except ValueError as ex:
-        print(ex)
+        print('[main] ValueError = %r' % (ex,))
+        if hs.args.strict: raise
     backend = guitools.make_main_window(hs)
     app.setActiveWindow(backend.win)
     guitools.run_main_loop(app, is_root, backend)

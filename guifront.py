@@ -1,11 +1,8 @@
 from __future__ import division, print_function
 import __builtin__
-import fileio as io
 import os
 import os.path
 import sys
-from HotSpotter import imread
-import draw_func2 as df2
 import PyQt4
 from PyQt4 import Qt, QtCore, QtGui
 from PyQt4.Qt import (QMainWindow, QApplication, QCoreApplication,
@@ -68,16 +65,23 @@ def connect_help_signals(win):
     msg_event = lambda title, msg: lambda: guitools.msgbox(title, msg)
     #ui.actionView_Docs.triggered.connect(backend.view_docs)
     ui.actionView_DBDir.triggered.connect(backend.view_database_dir)
+    ui.actionView_Computed_Dir.triggered.connect(backend.view_computed_dir)
+    ui.actionView_Global_Dir.triggered.connect(backend.view_global_dir)
+
     ui.actionAbout.triggered.connect(msg_event('About', 'hotspotter'))
+    ui.actionDelete_computed_directory.triggered.connect(backend.delete_computed_dir)
+    ui.actionDelete_global_preferences.triggered.connect(backend.delete_global_prefs)
     #ui.actionWriteLogs.triggered.connect(backend.write_logs)
 
-def connect_convinience_signals(win):
+def connect_batch_signals(win):
     ui = win.ui; backend = win.backend
-    ui.actionConvertImage2Chip.triggered.connect(backend.convert_images2chips)
-    ui.actionBatch_Change_Name.triggered.connect(backend.batch_rename)
-    ui.actionAddMetaProp.triggered.connect(backend.add_chip_property)
-    ui.actionAutoassign.triggered.connect(backend.autoassign)
-    ui.actionIncrease_ROI_Size.triggered.connect(backend.expand_rois)
+    #ui.actionBatch_Change_Name.triggered.connect(backend.batch_rename)
+    ui.actionPrecomputeChipsFeatures.triggered.connect(backend.precompute_feats)
+    ui.actionPrecompute_Queries.triggered.connect(backend.precompute_queries)
+    #ui.actionScale_all_ROIS.triggered.connect(backend.expand_rois)
+    #ui.actionConvert_all_images_into_chips.triggered.connect(backend.convert_images2chips)
+    #ui.actionAddMetaProp.triggered.connect(backend.add_chip_property)
+    #ui.actionAutoassign.triggered.connect(backend.autoassign)
 
 def connect_experimental_signals(win):
     ui = win.ui; backend = win.backend
@@ -111,7 +115,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         connect_file_signals(self)
         connect_action_signals(self)
         #connect_option_signals(self)
-        #connect_convinience_signals(self)
+        connect_batch_signals(self)
         #connect_experimental_signals(self)
         connect_help_signals(self)
         # 

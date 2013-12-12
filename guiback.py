@@ -34,9 +34,11 @@ class MainWindowBackend(QtCore.QObject):
         super(MainWindowBackend, self).__init__()
         print('[*back] creating backend')
         self.hs = hs
-        self.win = guifront.MainWindowFrontend(backend=self)
+        kwargs_ = {'use_plot_widget':False}
+        self.win = guifront.MainWindowFrontend(backend=self, **kwargs_)
         self.selection = None
-        df2.register_matplotlib_widget(self.win.plotWidget)
+        if kwargs_['use_plot_widget']:
+            df2.register_matplotlib_widget(self.win.plotWidget)
         # connect signals
         self.populateSignal.connect(self.win.populate_tbl)
         self.setEnabledSignal.connect(self.win.setEnabled)
@@ -327,7 +329,12 @@ class MainWindowBackend(QtCore.QObject):
     @pyqtSlot(name='query')
     def query(self):
         print('[*back] query()')
-        reply = self.user_info('not imlemented')
+        cx = self.get_selected_cx()
+        if cx is None:
+            self.user_info('Cannot query. No chip selected')
+            return
+        res = self.hs.query(cx)
+        res.show_topN(self.hs)
         pass
     # Action -> Reselect ROI
     @pyqtSlot(name='reselect_roi')

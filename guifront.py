@@ -93,13 +93,14 @@ class MainWindowFrontend(QtGui.QMainWindow):
     selectGxSignal  = pyqtSignal(int)
     selectCidSignal = pyqtSignal(int)
 
-    def __init__(self, backend):
+    def __init__(self, backend, use_plot_widget=True):
         super(MainWindowFrontend, self).__init__()
         print('[*front] creating frontend')
         self.prev_tbl_item = None
         self.backend = backend
         self.ui = init_ui(self)
-        self.plotWidget = init_plotWidget(self)
+        if use_plot_widget:
+            self.plotWidget = init_plotWidget(self)
         self.connect_signals()
 
     def connect_signals(self):

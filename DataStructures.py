@@ -10,8 +10,8 @@ from zipfile import error as BadZipFile # Screwy naming convention.
 import helpers
 import params
 import algos
-import draw_func2 as df2
-#
+import vizualizations as viz
+
 import numpy as np
 import pyflann
 from Printable import DynStruct
@@ -181,10 +181,10 @@ class QueryResult(DynStruct):
         print('[res] show_topN')
         if not 'SV' in kwargs.keys():
             kwargs['SV'] = res.get_SV()
-        df2.show_match_analysis(hs, res, **kwargs)
+        viz.show_match_analysis(hs, res, **kwargs)
 
     def plot_matches(res, hs, cx, fnum=1, **kwargs):
-        df2.show_matches_annote_res(res, hs, cx, fignum=fnum, draw_pts=False, **kwargs)
+        viz.show_matches_annote_res(res, hs, cx, fignum=fnum, draw_pts=False, **kwargs)
 
 #=========================
 # NN (FLANN) Index Class

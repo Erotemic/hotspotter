@@ -96,63 +96,6 @@ def get_sv_test_data(qcx=0, cx=None):
 
 # ______________________________
 
-# ___CLASS HOTSPOTTER TABLES____
-class HotspotterTables(DynStruct):
-    def __init__(self, 
-                 gx2_gname = [],
-                 nx2_name  = ['____','____'],
-                 cx2_cid   = [],
-                 cx2_nx    = [],
-                 cx2_gx    = [],
-                 cx2_roi   = [],
-                 cx2_theta = [],
-                 prop_dict = {}):
-        super(HotspotterTables, self).__init__()
-        self.gx2_gname    = np.array(gx2_gname, dtype=str)
-        self.nx2_name     = np.array(nx2_name, dtype=str)
-        self.cx2_cid      = np.array(cx2_cid, dtype=np.int32)
-        self.cx2_nx       = np.array(cx2_nx, dtype=np.int32)
-        self.cx2_gx       = np.array(cx2_gx, dtype=np.int32)
-        self.cx2_roi      = np.array(cx2_roi, dtype=np.int32)
-        self.cx2_roi.shape = (self.cx2_roi.size // 4, 4)
-        self.cx2_theta    = np.array(cx2_theta, dtype=np.float32)
-        self.prop_dict    = prop_dict
-
-# ___CLASS HOTSPOTTER DIRS________
-class HotspotterDirs(DynStruct):
-    def __init__(self, db_dir):
-        super(HotspotterDirs, self).__init__()
-        # Class variables
-        self.db_dir       = db_dir
-        self.img_dir      = db_dir + RDIR_IMG
-        self.internal_dir = db_dir + RDIR_INTERNAL
-        self.computed_dir = db_dir + RDIR_COMPUTED
-        self.chip_dir     = db_dir + RDIR_CHIP
-        self.rchip_dir    = db_dir + RDIR_RCHIP
-        self.feat_dir     = db_dir + RDIR_FEAT
-        self.cache_dir    = db_dir + RDIR_CACHE
-        self.result_dir   = db_dir + RDIR_RESULTS
-        self.qres_dir     = db_dir + RDIR_QRES
-        # Make directories if needbe
-        helpers.ensure_path(self.internal_dir)
-        helpers.ensure_path(self.computed_dir)
-        helpers.ensure_path(self.chip_dir)
-        helpers.ensure_path(self.rchip_dir)
-        helpers.ensure_path(self.feat_dir)
-        helpers.ensure_path(self.result_dir)
-        helpers.ensure_path(self.rchip_dir)
-        helpers.ensure_path(self.qres_dir)
-        helpers.ensure_path(self.cache_dir)
-
-        # Shortcut to internals
-        internal_sym = db_dir + '/Shortcut-to-hs_internals'
-        computed_sym = db_dir + '/Shortcut-to-computed'
-        results_sym  = db_dir + '/Shortcut-to-results'
-
-        #helpers.symlink(self.internal_dir, internal_sym, noraise=False)
-        #helpers.symlink(self.computed_dir, computed_sym, noraise=False)
-        #helpers.symlink(self.result_dir, results_sym, noraise=False)
-
 def tryindex(list, val):
     try: 
         return list.index(val)
@@ -169,7 +112,8 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     print('\n=============================')
     print('[ld2] Loading hotspotter csv tables: '+str(db_dir))
     print('=============================')
-    hs_dirs = HotspotterDirs(db_dir)
+    hs_dirs = ds.HotspotterDirs(db_dir)
+    hs_tables = ds.HotspotterTables()
     #exec(hs_dirs.execstr('hs_dirs'))
     #print(hs_dirs.execstr('hs_dirs'))
     feat_dir     = hs_dirs.feat_dir
@@ -188,9 +132,9 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     has_chiptbl = helpers.checkpath(chip_table)
     has_nametbl = helpers.checkpath(name_table)
     has_imgtbl  = helpers.checkpath(image_table)
+
     if not all([has_dbdir, has_imgdir, has_chiptbl, has_nametbl, has_imgtbl]):
         if allow_new_dir:
-            hs_tables = HotspotterTables()
             return hs_dirs, hs_tables
         errmsg  = ''
         errmsg += ('\n\n!!!!!\n\n')
@@ -245,10 +189,8 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 continue
             csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
             gid = int(csv_fields[0])
-            if len(csv_fields) == 3: 
-                gname = csv_fields[1]
-            if len(csv_fields) == 4: 
-                gname = csv_fields[1:3]
+            if len(csv_fields) == 3: gname = csv_fields[1]
+            if len(csv_fields) == 4: gname = csv_fields[1:3]
             gid2_gx[gid] = len(gx2_gname)
             gx2_gname.append(gname)
         nTableImgs = len(gx2_gname)
@@ -280,7 +222,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         # Load Chip Table Header
         cid_lines = open(chip_table,'r').readlines()
         # Header Markers
-        header_numdata   = '# NumData '
+        header_numdata = '# NumData '
         header_csvformat_re = '# *ChipID,'
         # Default Header Variables
         chip_csv_format = ['ChipID', 'ImgID',  'NameID',   'roi[tl_x  tl_y  w  h]',  'theta']
@@ -374,13 +316,14 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     if params.VERBOSE_LOAD_DATA:
         print('[ld2] Loaded: '+str(len(cx2_cid))+' chips')
         print('[ld2] Done loading chip table')
+
     # Return all information from load_tables
     #hs_tables.gid2_gx = gid2_gx
     #hs_tables.nid2_nx  = nid2_nx
-    hs_tables =  HotspotterTables(gx2_gname, nx2_name, cx2_cid, cx2_nx,
-                                  cx2_gx, cx2_roi, cx2_theta, prop_dict)
-    print('[ld2] Done Loading hotspotter csv tables: '+str(db_dir))
+    hs_tables.init(gx2_gname, nx2_name, cx2_cid, cx2_nx, cx2_gx, 
+                   cx2_roi, cx2_theta, prop_dict)
 
+    print('[ld2] Done Loading hotspotter csv tables: '+str(db_dir))
     if 'vcd' in sys.argv:
         helpers.vd(hs_dirs.computed_dir)
     return hs_dirs, hs_tables

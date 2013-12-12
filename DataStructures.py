@@ -193,21 +193,21 @@ FM_DTYPE  = np.uint32
 FK_DTYPE  = np.int16
 FS_DTYPE  = np.float32
 class NNIndex(object):
-    def __init__(nn_index, hs, sx2_cx):
+    def __init__(nn_index, hs, cx_list):
         cx2_desc  = hs.feats.cx2_desc
         # Make unique id for indexed descriptors
         feat_uid   = ''.join(hs.feat_cfg.get_uid())
-        sample_uid = helpers.make_sample_id(sx2_cx)
+        sample_uid = helpers.make_sample_id(cx_list)
         uid = '_cxs(' + sample_uid + ')' + feat_uid
         # Number of features per sample chip
-        sx2_nFeat = [len(cx2_desc[sx]) for sx in iter(sx2_cx)]
+        sx2_nFeat = [len(cx2_desc[sx]) for sx in iter(cx_list)]
         # Inverted index from indexed descriptor to chipx and featx 
-        _ax2_cx = [[cx]*nFeat for (cx, nFeat) in izip(sx2_cx, sx2_nFeat)]
+        _ax2_cx = [[cx]*nFeat for (cx, nFeat) in izip(cx_list, sx2_nFeat)]
         _ax2_fx = [range(nFeat) for nFeat in iter(sx2_nFeat)]
         ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
         ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
         # Aggregate indexed descriptors into continuous structure
-        ax2_desc = np.vstack([cx2_desc[cx] for cx in sx2_cx])
+        ax2_desc = np.vstack([cx2_desc[cx] for cx in cx_list])
         # Build/Load the flann index
         flann_params = {'algorithm':'kdtree', 'trees':4}
         precomp_kwargs = {'cache_dir'    : hs.dirs.cache_dir,
@@ -525,6 +525,65 @@ class ChipConfig(DynStruct):
         chip_uid += ['szorig'] if isOrig else ['sz%r' % cc_cfg.chip_sqrt_area]
         return '_CHIP('+(','.join(chip_uid))+')'
 
+
+
+
+# ___CLASS HOTSPOTTER TABLES____
+class HotspotterTables(DynStruct):
+    def __init__(self, *args, **kwargs):
+        super(HotspotterTables, self).__init__()
+        self.init(*args, **kwargs)
+
+    def init(self,
+             gx2_gname = [], nx2_name  = ['____','____'],
+             cx2_cid   = [], cx2_nx    = [], cx2_gx    = [],
+             cx2_roi   = [], cx2_theta = [], prop_dict = {}):
+        self.gx2_gname    = np.array(gx2_gname, dtype=str)
+        self.nx2_name     = np.array(nx2_name, dtype=str)
+        self.cx2_cid      = np.array(cx2_cid, dtype=np.int32)
+        self.cx2_nx       = np.array(cx2_nx, dtype=np.int32)
+        self.cx2_gx       = np.array(cx2_gx, dtype=np.int32)
+        self.cx2_roi      = np.array(cx2_roi, dtype=np.int32)
+        self.cx2_roi.shape = (self.cx2_roi.size // 4, 4)
+        self.cx2_theta    = np.array(cx2_theta, dtype=np.float32)
+        self.prop_dict    = prop_dict
+
+# ___CLASS HOTSPOTTER DIRS________
+class HotspotterDirs(DynStruct):
+    def __init__(self, db_dir):
+        super(HotspotterDirs, self).__init__()
+        import load_data2 as ld2
+        # Class variables
+        self.db_dir       = db_dir
+        self.img_dir      = db_dir + ld2.RDIR_IMG
+        self.internal_dir = db_dir + ld2.RDIR_INTERNAL
+        self.computed_dir = db_dir + ld2.RDIR_COMPUTED
+        self.chip_dir     = db_dir + ld2.RDIR_CHIP
+        self.rchip_dir    = db_dir + ld2.RDIR_RCHIP
+        self.feat_dir     = db_dir + ld2.RDIR_FEAT
+        self.cache_dir    = db_dir + ld2.RDIR_CACHE
+        self.result_dir   = db_dir + ld2.RDIR_RESULTS
+        self.qres_dir     = db_dir + ld2.RDIR_QRES
+        # Make directories if needbe
+        helpers.ensure_path(self.internal_dir)
+        helpers.ensure_path(self.computed_dir)
+        helpers.ensure_path(self.chip_dir)
+        helpers.ensure_path(self.rchip_dir)
+        helpers.ensure_path(self.feat_dir)
+        helpers.ensure_path(self.result_dir)
+        helpers.ensure_path(self.rchip_dir)
+        helpers.ensure_path(self.qres_dir)
+        helpers.ensure_path(self.cache_dir)
+
+        # Shortcut to internals
+        internal_sym = db_dir + '/Shortcut-to-hs_internals'
+        computed_sym = db_dir + '/Shortcut-to-computed'
+        results_sym  = db_dir + '/Shortcut-to-results'
+
+        #helpers.symlink(self.internal_dir, internal_sym, noraise=False)
+        #helpers.symlink(self.computed_dir, computed_sym, noraise=False)
+        #helpers.symlink(self.result_dir, results_sym, noraise=False)
+
 # Convinience
 
 def __dict_default_func(dict_):
@@ -562,4 +621,6 @@ def get_vsone_cfg(hs, **kwargs):
     kwargs_set('ratio_thresh', 1.5)
     q_cfg = QueryConfig(hs, **kwargs)
     return q_cfg
+
+
 

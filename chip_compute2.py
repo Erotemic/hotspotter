@@ -254,9 +254,12 @@ def load_chips(hs, chip_cfg=None, cx_list=None, **kwargs):
     else:
         chip_cfg.update(**kwargs)
 
-    if cx_list == []:
-        return
+    # Get or create chip paths object
+    hs_cpaths = HotspotterChipPaths() if hs.cpaths is None else hs.cpaths
 
+    if cx_list == []: return # Hack
+
+    
     img_dir      = hs.dirs.img_dir
     rchip_dir    = hs.dirs.rchip_dir
     chip_dir     = hs.dirs.chip_dir
@@ -337,7 +340,6 @@ def load_chips(hs, chip_cfg=None, cx_list=None, **kwargs):
     print('[cc2] Done Precomputing chips and loading chip paths')
 
     # Build hotspotter path object
-    hs_cpaths = HotspotterChipPaths()
     hs_cpaths.cx2_chip_path  = cx2_chip_path
     hs_cpaths.cx2_rchip_path = cx2_rchip_path
     hs_cpaths.chip_uid = chip_cfg.get_uid()

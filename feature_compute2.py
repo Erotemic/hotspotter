@@ -44,12 +44,6 @@ def rrr(): reload_module()
 # Parallelizable Work Functions          
 # =======================================
 
-feat_type2_precompute = {
-    ('hesaff','sift') : extern_feat.precompute_hesaff,
-    ('harris','sift') : extern_feat.precompute_harris,
-    ('mser',  'sift') : extern_feat.precompute_mser,
-}
-
 # =======================================
 # Main Script 
 # =======================================
@@ -59,20 +53,17 @@ class HotspotterChipFeatures(DynStruct):
         super(HotspotterChipFeatures, self).__init__()
         self.cx2_desc = None
         self.cx2_kpts = None
-        self.cfg   = None
 
-
-def load_cached_feats(dpath, uid, ext, use_cache, load_kpts=True, load_desc=True):
+def load_feats_from_bigcache(cache_dir, uid, ext, use_cache, load_kpts=True, load_desc=True):
     if not use_cache:
         return None, None
-    # Try to load from the cache first
-    #io.debug_smart_load(dpath, fname='*', uid=uid, ext='.*')
+    #io.debug_smart_load(cache_dir, fname='*', uid=uid, ext='.*')
     if load_kpts:
-        cx2_kpts = io.smart_load(dpath, 'cx2_kpts', uid, ext, can_fail=True)
+        cx2_kpts = io.smart_load(cache_dir, 'cx2_kpts', uid, ext, can_fail=True)
     else: 
         raise NotImplemented('[fc2] that hack is for desc only')
     if load_desc: 
-        cx2_desc = io.smart_load(dpath, 'cx2_desc', uid, ext, can_fail=True)
+        cx2_desc = io.smart_load(cache_dir, 'cx2_desc', uid, ext, can_fail=True)
     elif not cx2_kpts is None: #HACK
         print('[fc2] ! Not loading descriptors')
         cx2_desc = np.array([np.array([])] * len(cx2_kpts))
@@ -81,44 +72,6 @@ def load_cached_feats(dpath, uid, ext, use_cache, load_kpts=True, load_desc=True
     return cx2_kpts, cx2_desc
 
 def load_feats_from_config(hs, feat_cfg):
-    feat_uid  = ''.join(feat_cfg.get_uid())
-    print('[fc2] Loading features: UID='+str(feat_uid))
-    hs_dirs = hs.dirs
-    hs_tables = hs.tables
-    hs_cpaths = hs.cpaths
-    # Paths to features
-    feat_dir       = hs_dirs.feat_dir
-    cache_dir      = hs_dirs.cache_dir
-    cx2_rchip_path = hs_cpaths.cx2_rchip_path
-    cx2_cid        = hs_tables.cx2_cid
-    # args for smart load/save
-    dpath = cache_dir
-    uid   = feat_uid
-    ext   = '.npy'
-    use_cache = not hs.args.nocache_feats
-    cx2_kpts, cx2_desc = load_cached_feats(dpath, uid, ext, use_cache)
-    if not (cx2_kpts is None or cx2_desc is None):
-        # This is pretty dumb. Gotta have a more intelligent save/load
-        cx2_desc_ = cx2_desc.tolist()
-        cx2_kpts  = cx2_kpts.tolist()
-        print('[fc2]  Loaded cx2_kpts and cx2_desc from cache')
-        #print all([np.all(desc == desc_) for desc, desc_ in zip(cx2_desc, cx2_desc_)])
-    else:
-        print('[fc2]  Loading individual '+feat_uid+' features')
-        cx2_feat_path = [feat_dir+'/CID_%d%s.npz' % (cid, feat_uid) for cid in cx2_cid]
-        # Compute features, saving them to disk 
-        precompute_fn   =  feat_type2_precompute[feat_cfg.feat_type]
-        cx2_dict_args   = [feat_cfg.get_dict_args()]*len(cx2_rchip_path)
-        precompute_args = [cx2_rchip_path, cx2_feat_path, cx2_dict_args]
-        pfc_kwargs = dict(lazy=use_cache, num_procs=hs.args.num_procs)
-        parallel_compute(precompute_fn, precompute_args, **pfc_kwargs)
-        # rchip_fpath=cx2_rchip_path[0]; feat_fpath=cx2_feat_path[0]
-        # Load precomputed features sequentially
-        cx2_kpts, cx2_desc = sequential_load_features(cx2_feat_path)
-        # Cache all the features
-        print('[fc2] Caching cx2_desc and cx2_kpts')
-        io.smart_save(cx2_desc, dpath, 'cx2_desc', uid, ext)
-        io.smart_save(cx2_kpts, dpath, 'cx2_kpts', uid, ext)
 
     # Make sure the kpts and desc shapes are all correct
     for cx in xrange(len(cx2_kpts)):
@@ -185,18 +138,59 @@ def whiten_features(cx2_desc):
 
 def load_features(hs, feat_cfg=None, cx_list=None, **kwargs):
     # --- GET INPUT --- #
-    hs_feats = HotspotterChipFeatures()
+    if hs.feats is None:
+        hs.feats = HotspotterChipFeatures()
     if feat_cfg is None: 
         feat_cfg = ds.FeatureConfig(**kwargs)
     else:
         feat_cfg.update(**kwargs)
     if cx_list == []:
         return
-    cx2_kpts, cx2_desc = load_feats_from_config(hs, feat_cfg)
-    hs_feats.cx2_kpts  = cx2_kpts
-    hs_feats.cx2_desc  = cx2_desc
-    hs_feats.feat_uid = feat_cfg.get_uid()
-    return hs_feats
+    feat_uid  = ''.join(feat_cfg.get_uid())
+    print('[fc2] Loading features: UID='+str(feat_uid))
+    # Paths to features
+    if cx_list is None:
+        cx_list = hs.get_valid_cx()
+    feat_dir       = hs.dirs.feat_dir
+    cache_dir      = hs.dirs.cache_dir
+        
+    cx2_rchip_path = hs.cpaths.cx2_rchip_path[cx_list]
+    cx2_cid        =  hs.tables.cx2_cid[cx_list]
+    # args for smart load/save
+    sample_uid = helpers.make_sample_id(cx_list)
+    uid = feat_uid + '_cxs(' + sample_uid + ')'
+    ext = '.npy'
+    use_cache = not hs.args.nocache_feats
+    cx2_kpts, cx2_desc = load_feats_from_bigcache(cache_dir, uid, ext, use_cache)
+    if not (cx2_kpts is None or cx2_desc is None):
+        # This is pretty dumb. Gotta have a more intelligent save/load
+        cx2_desc_ = cx2_desc.tolist()
+        cx2_kpts  = cx2_kpts.tolist()
+        print('[fc2]  Loaded cx2_kpts and cx2_desc from cache')
+    else:
+        print('[fc2]  Loading individual '+feat_uid+' features')
+        cx2_feat_path = [feat_dir+'/CID_%d%s.npz' % (cid, feat_uid) for cid in cx2_cid]
+        # Compute features, saving them to disk 
+        feat_type2_precompute = {
+            ('hesaff','sift') : extern_feat.precompute_hesaff,
+            ('harris','sift') : extern_feat.precompute_harris,
+            ('mser',  'sift') : extern_feat.precompute_mser, }
+        precompute_fn   = feat_type2_precompute[feat_cfg.feat_type]
+        cx2_dict_args   = [feat_cfg.get_dict_args()]*len(cx2_rchip_path)
+        precompute_args = [cx2_rchip_path, cx2_feat_path, cx2_dict_args]
+        pfc_kwargs = dict(lazy=use_cache, num_procs=hs.args.num_procs)
+        parallel_compute(precompute_fn, precompute_args, **pfc_kwargs)
+        # rchip_fpath=cx2_rchip_path[0]; feat_fpath=cx2_feat_path[0]
+        # Load precomputed features sequentially
+        cx2_kpts, cx2_desc = sequential_load_features(cx2_feat_path)
+        # Cache all the features
+        print('[fc2] Caching cx2_desc and cx2_kpts')
+        io.smart_save(cx2_desc, cache_dir, 'cx2_desc', uid, ext)
+        io.smart_save(cx2_kpts, cache_dir, 'cx2_kpts', uid, ext)
+    
+    hs.feats.cx2_kpts[cx_list]  = cx2_kpts[cx_list]
+    hs.feats.cx2_desc[cx_list]  = cx2_desc[cx_list]
+    hs.feats.feat_uid = feat_cfg.get_uid()
 
 def clear_feature_cache(hs, feat_cfg):
     feat_dir = hs.dirs.feat_dir

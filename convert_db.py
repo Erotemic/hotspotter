@@ -36,13 +36,13 @@ def rrr():
 
 def try_autoconvert(db_dir):
     if db_info.has_v2_gt(db_dir):
-        raise NotImplemented('hotspotter v2 conversion')
+        raise NotImplementedError('hotspotter v2 conversion')
     if db_info.has_v1_gt(db_dir):
-        raise NotImplemented('hotspotter v1 conversion')
+        raise NotImplementedError('hotspotter v1 conversion')
     if db_info.has_ss_gt(db_dir):
-        raise NotImplemented('stripe spotter conversion')
+        raise NotImplementedError('stripe spotter conversion')
     if db_info.has_partial_gt(db_dir):
-        raise NotImplemented('partial database recovery')
+        raise NotImplementedError('partial database recovery')
     return False
 
 def is_current(db_dir):

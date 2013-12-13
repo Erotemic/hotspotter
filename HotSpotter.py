@@ -197,6 +197,8 @@ class HotSpotter(DynStruct):
     def query(hs, qcx):
         if hs.query_cfg is None:
             hs.query_cfg = ds.get_vsmany_cfg(hs)
+            hs.load_chips()
+            hs.load_features()
         res = mc3.query_database(hs, qcx, hs.query_cfg)
         return res
 

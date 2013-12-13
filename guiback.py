@@ -39,6 +39,7 @@ class MainWindowBackend(QtCore.QObject):
         self.selection = None
         if kwargs_['use_plot_widget']:
             df2.register_matplotlib_widget(self.win.plotWidget)
+        df2.register_qt4_win(self.win)
         # connect signals
         self.populateSignal.connect(self.win.populate_tbl)
         self.setEnabledSignal.connect(self.win.setEnabled)
@@ -288,7 +289,7 @@ class MainWindowBackend(QtCore.QObject):
             self.add_images_from_files()
         if reply == 'Directory':
             self.add_images_from_dir()
-        #raise NotImplemented('')
+        #raise NotImplementedError('')
     # File -> Import Images From File
     @pyqtSlot(name='import_images_from_file')
     def add_images_from_files(self):

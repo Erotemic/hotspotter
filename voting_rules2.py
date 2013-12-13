@@ -35,10 +35,10 @@ def score_chipmatch_csum(chipmatch):
     return cx2_score
 
 def score_chipmatch_nsum(hs, qcx, chipmatch, q_cfg):
-    raise NotImplemented('nsum')
+    raise NotImplementedError('nsum')
 
 def score_chipmatch_nunique(hs, qcx, chipmatch, q_cfg):
-    raise NotImplemented('nunique')
+    raise NotImplementedError('nunique')
 
 def enforce_one_name_per_cscore(hs, cx2_score, chipmatch):
     'this is a hack to make the same name only show up once in the top ranked list'

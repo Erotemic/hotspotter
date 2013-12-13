@@ -256,17 +256,17 @@ class MainWindowFrontend(QtGui.QMainWindow):
     @pyqtSlot(QtGui.QTableWidgetItem)
     def res_tbl_changed(self, item):
         self.print('res_tbl_changed()')
-        raise NotImplemented('res_tbl_changed()')
+        raise NotImplementedError('res_tbl_changed()')
 
     @pyqtSlot(QtGui.QTableWidgetItem)
     def img_tbl_changed(self, item):
         self.print('img_tbl_changed()')
-        raise NotImplemented('img_tbl_changed()')
+        raise NotImplementedError('img_tbl_changed()')
 
     @pyqtSlot(QtGui.QTableWidgetItem)
     def img_tbl_changed(self, item):
         self.print('img_tbl_changed()')
-        raise NotImplemented('img_tbl_changed()')
+        raise NotImplementedError('img_tbl_changed()')
 
     @pyqtSlot(QtGui.QTableWidgetItem)
     def chip_tbl_changed(self, item):

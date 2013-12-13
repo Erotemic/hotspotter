@@ -228,6 +228,15 @@ def get_all_figures():
     all_figures = sorted(all_figures, key=lambda fig:fig.number)
     return all_figures
 
+
+qt4_wins = []
+def register_qt4_win(win):
+    global qt4_wins
+    qt4_wins.append(win)
+
+def get_all_qt4_wins():
+    return qt4_wins
+
 def all_figures_show():
     if plotWidget is not None:
         plotWidget.figure.show()
@@ -263,10 +272,15 @@ def all_figures_tile(num_rc=(3,4),
         #x_off, yoff = (x_off-2000, y_off-1000)
         x_pad, y_pad = (0, 100)
     all_figures = get_all_figures()
-    for i, fig in enumerate(all_figures):
-        qtwin = fig.canvas.manager.window
-        if not isinstance(qtwin, matplotlib.backends.backend_qt4.MainWindow):
-            raise NotImplemented('need to add more window manager handlers')
+    all_qt4wins = get_all_qt4_wins()
+    from matplotlib.backends import backend_qt4
+    from PyQt4 import QtGui
+
+    def position_window(i, win):
+        isqt4_mpl = isinstance(win, backend_qt4.MainWindow)
+        isqt4_back = isinstance(win, QtGui.QMainWindow)
+        if not isqt4_mpl and not isqt4_back:
+            raise NotImplementedError('%r-th Backend %r is not a Qt Window' % (i, win))
         if row_first:
             y = (i % num_rows)*(h+h_off) + 40
             x = (int(i/num_rows))*(w+w_off) + x_pad
@@ -275,7 +289,14 @@ def all_figures_tile(num_rc=(3,4),
             y = (int(i/num_cols))*(h+h_off) + y_pad
         x+=x_off
         y+=y_off
-        qtwin.setGeometry(x,y,w,h)
+        win.setGeometry(x,y,w,h)
+    ioff = 0
+    for i, win in enumerate(all_qt4wins):
+        position_window(i, win)
+        ioff += 1
+    for i, fig in enumerate(all_figures):
+        win = fig.canvas.manager.window
+        position_window(i+ioff, win)
 
 def all_figures_bring_to_front():
     all_figures = get_all_figures()

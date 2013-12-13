@@ -162,7 +162,7 @@ def __smart_load(fpath, verbose, allow_alternative=False, can_fail=True, **kwarg
             convert_alternative(fpath, verbose, can_fail=can_fail, **kwargs)
     # Ensure a valid extension
     if ext_ == '':
-        raise NotImplemented('')
+        raise NotImplementedError('')
     else:
         load_func = ext2_load_func[ext_]
         # Do actual data loading

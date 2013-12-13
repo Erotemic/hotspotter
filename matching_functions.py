@@ -156,7 +156,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, q_cfg):
 #load_precomputed(cx, q_cfg)
 def score_chipmatch(hs, qcx, chipmatch, score_method, q_cfg=None):
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
-    print('[mf] * Scoring chipmatch: '+score_method)
+    print('[mf] * Scoring chipmatch: %s cx=%r' % (score_method, qcx))
     if score_method == 'csum':
         cx2_score = vr2.score_chipmatch_csum(chipmatch)
     elif score_method == 'nsum':
@@ -339,7 +339,7 @@ def spatial_verification(hs, qcx2_chipmatch, q_cfg):
     USE_1_to_2 = True
     # Find a transform from chip2 to chip1 (the old way was 1 to 2)
     for qcx in qcx2_chipmatch.iterkeys():
-        print('[mf] verify qcx=%r' % qcx)
+        #print('[mf] verify qcx=%r' % qcx)
         chipmatch = qcx2_chipmatch[qcx]
         cx2_prescore = score_chipmatch(hs, qcx, chipmatch, prescore_method, q_cfg)
         (cx2_fm, cx2_fs, cx2_fk) = chipmatch
@@ -445,7 +445,7 @@ def load_resdict(hs, qcxs, q_cfg, aug=''):
 
 # qcx2_chipmatch = matchesSVER
 def chipmatch_to_resdict(hs, qcx2_chipmatch, q_cfg, aug=''):
-    print('[mf] Step 6) chipmatch -> res')
+    print('[mf] Step 6) Convert chipmatch -> res')
     real_uid, title_uid = special_uids(q_cfg, aug)
     score_method = q_cfg.a_cfg.score_method
     # Create the result structures for each query.

@@ -519,45 +519,6 @@ def keyboard(banner=None):
         pdb.set_trace()
 
 
-def ipython_execstr():
-    return textwrap.dedent(r'''
-    import matplotlib.pyplot as plt
-    embedded = False
-
-    try:
-        __IPYTHON__
-        in_ipython = True
-    except NameError as nex:
-        in_ipython = False
-
-    try:
-        import IPython
-        have_ipython = True
-    except NameError as nex:
-        have_ipython = False
-    
-    if not in_ipython:
-        if '--cmd' in sys.argv or 'devmode' in vars():
-            print('[helpers] Requested IPython shell with --cmd argument.')
-            if have_ipython:
-                print('[helpers] Found IPython')
-                try: 
-                    import IPython
-                    print('[helpers] Presenting in new ipython shell.')
-                    embedded = True
-                    IPython.embed()
-                except Exception as ex:
-                    print(repr(ex)+'\n!!!!!!!!')
-                    embedded = False
-            else:
-                print('[helpers] IPython is not installed')
-        if not embedded: 
-            print('[helpers] Presenting in normal shell.')
-            print('[helpers] ... plt.show()')
-            plt.show()
-    else: 
-        print('Presenting in current ipython shell.')
-    ''')
 
 
 
@@ -1193,6 +1154,38 @@ except Exception as ex:
     printWARN(repr(ex)+'\n!!!!!!!!')
     embedded = False
 '''
+def ipython_execstr():
+    return textwrap.dedent(r'''
+    import matplotlib.pyplot as plt
+    import sys
+    embedded = False
+    try:
+        __IPYTHON__
+        in_ipython = True
+    except NameError:
+        in_ipython = False
+    try:
+        import IPython
+        have_ipython = True
+    except NameError:
+        have_ipython = False
+    if in_ipython:
+        print('Presenting in current ipython shell.')
+    elif '--cmd' in sys.argv or 'devmode' in vars():
+        print('[helpers] Requested IPython shell with --cmd argument.')
+        if have_ipython:
+            print('[helpers] Found IPython')
+            try: 
+                import IPython
+                print('[helpers] Presenting in new ipython shell.')
+                embedded = True
+                IPython.embed()
+            except Exception as ex:
+                print(repr(ex)+'\n!!!!!!!!')
+                embedded = False
+        else:
+            print('[helpers] IPython is not installed')
+    ''')
 
 def execstr_parent_locals():
     parent_locals = get_parent_locals()
@@ -1430,6 +1423,11 @@ def get_arg_after(arg, type_=None, default=None):
     except Exception as ex:
         pass
     return arg_after
+
+def get_arg_flag(arg, default=False):
+    if arg in sys.argv:
+        return not default
+    return default
 
 def listfind(list_, tofind):
     try: 

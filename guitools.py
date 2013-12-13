@@ -1,5 +1,4 @@
 from __future__ import division, print_function
-import __builtin__
 from os.path import split
 import sys
 import warnings
@@ -16,14 +15,13 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-# Dynamic module reloading
-def reload_module():
-    import imp, sys
-    print('[*guitools] reloading '+__name__)
-    imp.reload(sys.modules[__name__])
-rrr = reload_module
 
-IS_INIT = False
+# Dynamic module reloading
+def rrr():
+    import imp
+    print('[*guitools] reloading ' + __name__)
+    imp.reload(sys.modules[__name__])
+
 
 def configure_matplotlib():
     import multiprocessing
@@ -46,7 +44,6 @@ def configure_matplotlib():
         #matplotlib.rcParams['interactive'] = True
 
 
-# ---
 def select_orientation():
     import draw_func2 as df2
     print('[*guitools] Define an orientation angle by clicking two points')
@@ -56,17 +53,17 @@ def select_orientation():
         fig = df2.gcf()
         pts = np.array(fig.ginput(2))
         #print('[*guitools] ginput(2) = %r' % pts)
-        # Get reference point to origin 
-        refpt = pts[0] - pts[1] 
+        # Get reference point to origin
+        refpt = pts[0] - pts[1]
         #theta = np.math.atan2(refpt[1], refpt[0])
-        theta = np.math.atan(refpt[1]/refpt[0])
-        logmsg('The angle in radians is: '+str(theta))
+        theta = np.math.atan(refpt[1] / refpt[0])
+        print('The angle in radians is: %r' % theta)
         return theta
-    except Exception as ex: 
-        logmsg('Annotate Orientation Failed'+str(ex))
+    except Exception as ex:
+        print('Annotate Orientation Failed %r' % ex)
         return None
 
-# ---
+
 def select_roi():
     import draw_func2 as df2
     from matplotlib.backend_bases import mplDeprecation
@@ -78,10 +75,12 @@ def select_roi():
             warnings.filterwarnings("ignore", category=mplDeprecation)
             pts = fig.ginput(2)
         print('[*guitools] ginput(2) = %r' % (pts,))
-        [(x1, y1), (x2, y2)] = pts 
-        xm = min(x1,x2); xM = max(x1,x2)
-        ym = min(y1,y2); yM = max(y1,y2)
-        xywh = map(int, map(round,(xm, ym, xM-xm, yM-ym)))
+        [(x1, y1), (x2, y2)] = pts
+        xm = min(x1, x2)
+        xM = max(x1, x2)
+        ym = min(y1, y2)
+        yM = max(y1, y2)
+        xywh = map(int, map(round, (xm, ym, xM - xm, yM - ym)))
         roi = np.array(xywh, dtype=np.int32)
         print('[*guitools] roi = %r ' % (roi,))
         return roi
@@ -89,17 +88,20 @@ def select_roi():
         print('[*guitools] ROI selection Failed:\n%r' % (ex,))
         return None
 
+
 def _addOptions(msgBox, options):
     #msgBox.addButton(Qt.QMessageBox.Close)
     for opt in options:
         role = QtGui.QMessageBox.ApplyRole
         msgBox.addButton(QtGui.QPushButton(opt), role)
 
+
 def _cacheReply(msgBox):
     dontPrompt = QtGui.QCheckBox('dont ask me again', parent=msgBox)
     dontPrompt.blockSignals(True)
     msgBox.addButton(dontPrompt, Qt.QMessageBox.ActionRole)
     return dontPrompt
+
 
 def _newMsgBox(msg='', title='', parent=None, options=None, cache_reply=False):
     msgBox = QtGui.QMessageBox(parent)
@@ -113,9 +115,10 @@ def _newMsgBox(msg='', title='', parent=None, options=None, cache_reply=False):
     msgBox.setModal(parent is not None)
     return msgBox
 
+
 def msgbox(msg, title='msgbox'):
     'Make a non modal critical Qt.QMessageBox.'
-    msgBox = Qt.QMessageBox(None);
+    msgBox = Qt.QMessageBox(None)
     msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
     msgBox.setStandardButtons(Qt.QMessageBox.Ok)
     msgBox.setWindowTitle(title)
@@ -125,10 +128,13 @@ def msgbox(msg, title='msgbox'):
     msgBox.show()
     return msgBox
 
+
 def user_input(parent, msg, title='input dialog'):
     reply, ok = QtGui.QInputDialog.getText(parent, title, msg)
-    if not ok: return None
+    if not ok:
+        return None
     return str(reply)
+
 
 def user_info(parent, msg, title='info'):
     msgBox = _newMsgBox(msg, title, parent)
@@ -138,14 +144,16 @@ def user_info(parent, msg, title='info'):
     msgBox.open(msgBox.close)
     msgBox.show()
 
+
 def user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=False):
     'Prompts user with several options with ability to save decision'
-    print('[*guitools] user_option:\n %r: %s'+title+': '+msg)
+    print('[*guitools] user_option:\n %r: %s' + title + ': ' + msg)
     # Recall decision
-    cache_id = helpers.hashstr(title+msg)
+    cache_id = helpers.hashstr(title + msg)
     if use_cache:
         reply = io.global_cache_read(cache_id, default=None)
-        if reply is not None: return reply
+        if reply is not None:
+            return reply
     # Create message box
     msgBox = _newMsgBox(msg, title, parent)
     _addOptions(msgBox, options)
@@ -169,22 +177,27 @@ def user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=F
     del msgBox
     return reply
 
+
 def user_question(msg):
     msgBox = Qt.QMessageBox.question(None, '', 'lovely day?')
+    return msgBox
+
 
 def getQtImageNameFilter():
-    imgNamePat = ' '.join(['*'+ext for ext in helpers.IMG_EXTENSIONS])
+    imgNamePat = ' '.join(['*' + ext for ext in helpers.IMG_EXTENSIONS])
     imgNameFilter = 'Images (%s)' % (imgNamePat)
     return imgNameFilter
+
 
 def select_images(caption='Select images:', directory=None):
     name_filter = getQtImageNameFilter()
     return select_files(caption, directory, name_filter)
 
+
 def select_files(caption='Select Files:', directory=None, name_filter=None):
     'Selects one or more files from disk using a qt dialog'
     print(caption)
-    if directory is None: 
+    if directory is None:
         directory = io.global_cache_read('select_directory')
     qdlg = PyQt4.Qt.QFileDialog()
     qfile_list = qdlg.getOpenFileNames(caption=caption, directory=directory, filter=name_filter)
@@ -193,46 +206,50 @@ def select_files(caption='Select Files:', directory=None, name_filter=None):
     io.global_cache_write('select_directory', directory)
     return file_list
 
+
 def select_directory(caption='Select Directory', directory=None):
     print(caption)
-    if directory is None: 
+    if directory is None:
         directory = io.global_cache_read('select_directory')
     qdlg = PyQt4.Qt.QFileDialog()
     qopt = PyQt4.Qt.QFileDialog.ShowDirsOnly
     qdlg_kwargs = dict(caption=caption, options=qopt, directory=directory)
     dpath = str(qdlg.getExistingDirectory(**qdlg_kwargs))
-    print('Selected Directory: '+dpath)
+    print('Selected Directory: %r' % dpath)
     io.global_cache_write('select_directory', split(dpath)[0])
     return dpath
-    
+
+
 def show_open_db_dlg(parent=None):
+    # OLD
     from _frontend import OpenDatabaseDialog
-    if not '-nc' in sys.argv and not '--nocache' in sys.argv: 
+    if not '-nc' in sys.argv and not '--nocache' in sys.argv:
         db_dir = io.global_cache_read('db_dir')
-        if db_dir == '.': 
+        if db_dir == '.':
             db_dir = None
     print('[*guitools] cached db_dir=%r' % db_dir)
     if parent is None:
         parent = PyQt4.QtGui.QDialog()
     opendb_ui = OpenDatabaseDialog.Ui_Dialog()
     opendb_ui.setupUi(parent)
-    opendb_ui.new_db_but.clicked.connect(create_new_database)
-    opendb_ui.open_db_but.clicked.connect(open_old_database)
+    #opendb_ui.new_db_but.clicked.connect(create_new_database)
+    #opendb_ui.open_db_but.clicked.connect(open_old_database)
     parent.show()
     return opendb_ui, parent
 
+
 def init_qtapp():
     global IS_INIT
-    app = Qt.QCoreApplication.instance() 
+    app = Qt.QCoreApplication.instance()
     is_root = app is None
-    if is_root: # if not in qtconsole
+    if is_root:  # if not in qtconsole
         print('[*guitools] Initializing QApplication')
         app = Qt.QApplication(sys.argv)
     try:
         __IPYTHON__
         is_root = False
     # You are not root if you are in IPYTHON
-    except NameError as ex:
+    except NameError:
         pass
     IS_INIT = True
     return app, is_root
@@ -242,16 +259,18 @@ def exit_application():
     print('[*guitools] exiting application')
     QtGui.qApp.quit()
 
+
 def run_main_loop(app, is_root=True, backend=None):
     if backend is not None:
         print('[*guitools] setting active window')
         app.setActiveWindow(backend.win)
     if is_root:
         print('[*guitools] running main loop.')
-        timer = ping_python_interpreter()
+        timer = ping_python_interpreter()  # NOQA
         sys.exit(app.exec_())
     else:
         print('[*guitools] using roots main loop')
+
 
 def ping_python_interpreter(frequency=100):
     'Create a QTimer which lets the python intepreter run every so often'
@@ -259,6 +278,7 @@ def ping_python_interpreter(frequency=100):
     timer.timeout.connect(lambda: None)
     timer.start(frequency)
     return timer
+
 
 def make_dummy_main_window():
     class DummyBackend(Qt.QObject):
@@ -270,11 +290,12 @@ def make_dummy_main_window():
     backend = DummyBackend()
     return backend
 
-def make_main_window(hs=None):
+
+def make_main_window(*args, **kwargs):
     import guiback
-    backend = guiback.MainWindowBackend(hs=hs)
-    backend.win.show()
+    backend = guiback.make_main_window(*args, **kwargs)
     return backend
+
 
 def popup_menu(widget, opt2_callback):
     def popup_slot(pos):
@@ -284,7 +305,9 @@ def popup_menu(widget, opt2_callback):
                    iter(opt2_callback)]
         #pos=QtGui.QCursor.pos()
         selection = menu.exec_(widget.mapToGlobal(pos))
+        return selection, actions
     return popup_slot
+
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support

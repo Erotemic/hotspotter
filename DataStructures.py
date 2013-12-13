@@ -97,7 +97,7 @@ class QueryResult(DynStruct):
     def load(res, hs):
         'Loads the result from the given database'
         fpath = res.get_fpath(hs)
-        print('[ds] Load res fpath=%r' % (split(fpath)[1],))
+        print('[ds] res.load() fpath=%r' % (split(fpath)[1],))
         try:
             with open(fpath, 'rb') as file_:
                 npz = np.load(file_)
@@ -108,10 +108,10 @@ class QueryResult(DynStruct):
             res.query_uid = str(res.query_uid)
             return True
         except IOError as ex:
-            print('[ds] Caught IOError: %r' % ex)
+            #print('[ds] Caught IOError: %r' % ex)
             if not exists(fpath):
-                print(fpath)
-                print('[ds] QueryResult(qcx=%d) does not exist' % res.qcx)
+                #print(fpath)
+                #print('[ds] QueryResult(qcx=%d) does not exist' % res.qcx)
                 raise
             else:
                 msg = ['[ds] QueryResult(qcx=%d) is corrupted' % (res.qcx)]

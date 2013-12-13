@@ -160,10 +160,6 @@ class HotSpotter(DynStruct):
             print('[hs] * | isect(indx, train) |  = %d' % len(indx_train_isect))
             print('[hs] * | isect(indx, test)  |  = %d' % len(indx_test_isect))
         
-        # Unload matcher if database changed
-        if hs.train_sample_cx != train_samp or hs.indexed_sample_cx != indx_samp:
-            hs.matcher = None
-
         # Set the sample
         hs.indexed_sample_cx  = indx_samp
         hs.train_sample_cx    = train_samp
@@ -188,6 +184,7 @@ class HotSpotter(DynStruct):
         hs.train_id = train_id
         hs.indx_id  = indx_id
         # The query_cfg must resample
+        # Unload ~~matcher~~ query config if database changed
         hs.query_cfg = None
 
 
@@ -592,7 +589,6 @@ class HotSpotter(DynStruct):
             load_fn(cx_input)
             ret = hs._try_cxlist_get(cx_input, cx2_var)
         return ret
-
     #--------------
     def get_desc(hs, cx_input):
         cx2_desc = hs.feats.cx2_desc
@@ -620,27 +616,13 @@ class HotSpotter(DynStruct):
     def _cx2_rchip_size(hs, cx):
         rchip_path = hs.cpaths.cx2_rchip_path[cx]
         return Image.open(rchip_path).size
-
+    #--------------
     def load_cx2_rchip_size(hs):
         cx2_rchip_path = hs.cpaths.cx2_rchip_path
         cx2_rchip_size = [Image.open(path).size for path in cx2_rchip_path]
         hs.cx2_rchip_size = cx2_rchip_size
-
+    #--------------
     def get_cx2_rchip_size(hs):
         if hs.cx2_rchip_size is None:
             hs.load_cx2_rchip_size()
         return hs.cx2_rchip_size
-    #--------------
-    def free_some_memory(hs):
-        print('[hs] Releasing matcher memory')
-        import gc
-        helpers.memory_profile()
-        print("[hs] HotSpotter Referrers: "+str(gc.get_referrers(hs)))
-        print("[hs] Matcher Referrers: "+str(gc.get_referrers(hs.matcher)))
-        print("[hs] Desc Referrers: "+str(gc.get_referrers(hs.feats.cx2_desc)))
-        #reffers = gc.get_referrers(hs.feats.cx2_desc) #del reffers
-        del hs.feats.cx2_desc
-        del hs.matcher
-        gc.collect()
-        helpers.memory_profile()
-        ans = raw_input('[hs] good?')

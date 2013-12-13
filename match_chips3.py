@@ -67,7 +67,9 @@ def query_groundtruth(hs, qcx, q_cfg=None, **kwargs):
     return query_dcxs(hs, qcx, gt_cxs, q_cfg, **kwargs)
 
 def query_database(hs, qcx, q_cfg=None, **kwargs):
+    print('\n====================')
     print('[mc3] query database')
+    print('====================')
     if hs.indexed_sample_cx is None:
         hs.set_samples()
     if q_cfg is None:
@@ -119,7 +121,6 @@ def prequery(hs, q_cfg=None, **kwargs):
     return q_cfg
 
 def load_cached_query(hs, q_cfg, aug_list=['']):
-    print('[query] query result cache')
     qcxs = q_cfg.qcxs
     result_list = []
     for aug in aug_list:
@@ -127,7 +128,7 @@ def load_cached_query(hs, q_cfg, aug_list=['']):
         if qcx2_res is None: 
             return None
         result_list.append(qcx2_res)
-    print('[query] cache hit\n')
+    print('[mc3] ... query result cache hit\n')
     return result_list
 
 #----------------------
@@ -135,8 +136,7 @@ def load_cached_query(hs, q_cfg, aug_list=['']):
 #----------------------
 def execute_query_safe(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **kwargs):
     '''Executes a query, performs all checks, callable on-the-fly'''
-    print('[query]-------')
-    print('[query] Execute query safe: q%s' % hs.cxstr(qcxs))
+    print('[mc3] Execute query safe: q%s' % hs.cxstr(qcxs))
     if q_cfg is None: q_cfg = ds.QueryConfig(hs, **kwargs)
     if dcxs is None: dcxs = hs.indexed_sample_cx
     q_cfg.qcxs = qcxs
@@ -153,8 +153,8 @@ def execute_query_safe(hs, q_cfg=None, qcxs=None, dcxs=None, use_cache=True, **k
         result_list = load_cached_query(hs, q_cfg)
         if not result_list is None: 
             return result_list
-    print('[query] qcxs=%r' % q_cfg.qcxs)
-    print('[query] len(dcxs)=%r' % len(q_cfg.dcxs))
+    print('[mc3] qcxs=%r' % q_cfg.qcxs)
+    print('[mc3] len(dcxs)=%r' % len(q_cfg.dcxs))
     ensure_nn_index(hs, q_cfg, dcxs)
     result_list = execute_query_fast(hs, q_cfg, qcxs, dcxs)
     for qcx2_res in result_list:

@@ -131,3 +131,19 @@ def target_dsize(img, M):
         return rchip, rchip_size, fx2_kp, fx2_scale, fx2_desc
     rchip1, rchip_size1, fx2_kp1, fx2_scale1, fx2_desc1 = get_features(qcx)
     rchip2, rchip_size2, fx2_kp2, fx2_scale2, fx2_desc2 = get_features(cx)
+
+
+    #--------------
+    def free_some_memory(hs):
+        print('[hs] Releasing matcher memory')
+        import gc
+        helpers.memory_profile()
+        print("[hs] HotSpotter Referrers: "+str(gc.get_referrers(hs)))
+        print("[hs] Matcher Referrers: "+str(gc.get_referrers(hs.matcher)))
+        print("[hs] Desc Referrers: "+str(gc.get_referrers(hs.feats.cx2_desc)))
+        #reffers = gc.get_referrers(hs.feats.cx2_desc) #del reffers
+        del hs.feats.cx2_desc
+        del hs.matcher
+        gc.collect()
+        helpers.memory_profile()
+        ans = raw_input('[hs] good?')

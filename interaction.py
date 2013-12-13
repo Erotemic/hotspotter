@@ -2,13 +2,11 @@ import DataStructures as ds
 import dev
 import match_chips3 as mc3
 import numpy as np
-import draw_func2 as df2
 import helpers
 from Printable import DynStruct
 import sys
 import params
 import helpers
-import draw_func2 as df2
 import extract_patch as extract_patch
 import pyflann
 
@@ -220,6 +218,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
+    import draw_func2 as df2
     freeze_support()
     print('[interact] __main__ ')
     main_locals = dev.dev_main()

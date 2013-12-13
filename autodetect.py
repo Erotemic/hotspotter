@@ -1,7 +1,5 @@
 from __init__ import *
 import load_data2 as ld2
-import draw_func2 as df2
-import vizualizations as viz
 import match_chips2 as mc2
 import report_results2 as rr2
 import db_info
@@ -9,6 +7,8 @@ import params
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
+    import draw_func2 as df2
+    import vizualizations as viz
     freeze_support()
     #db_dir = params.PZ_DanExt_Test
     #db_dir = params.PZ_DanExt_All

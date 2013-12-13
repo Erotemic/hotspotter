@@ -59,7 +59,7 @@ __CHECKPATH_VERBOSE__ = False
 
 VERY_VERBOSE = False
 
-def __DEPRICATED__(func):
+def DEPRICATED(func):
     'deprication decorator'
     warn_msg = 'Depricated call to: %s' % func.__name__
     def __DEP_WRAPPER(*args, **kwargs):
@@ -189,7 +189,13 @@ def intersect_ordered(list1, list2):
             #new_list.append(item)
     return new_list
 
+@DEPRICATED
 def array_index(array, item):
+    return np.where(array==item)[0][0]
+
+@DEPRICATED
+def index_of(item, array):
+    'index of [item] in [array]'
     return np.where(array==item)[0][0]
 
 def intersect2d_numpy(A, B): 
@@ -598,11 +604,11 @@ def cmd(command):
 
 #---------------
 
-@__DEPRICATED__
+@DEPRICATED
 def filecheck(fpath):
     return exists(fpath)
 
-@__DEPRICATED__
+@DEPRICATED
 def dircheck(dpath,makedir=True):
     if not exists(dpath):
         if not makedir:
@@ -1211,7 +1217,7 @@ def execstr_timeitsetup(dict_, exclude_list=[]):
     return setup
 
 
-@__DEPRICATED__
+@DEPRICATED
 def dict_execstr(dict_, local_name=None):
     return execstr_dict(dict_, local_name)
 
@@ -1240,7 +1246,7 @@ def execstr_func(func):
     return execstr
 def execstr_src(func):
     return execstr_func(func)
-@__DEPRICATED__
+@DEPRICATED
 def get_exec_src(func):
     return execstr_func(func)
 
@@ -1390,22 +1396,26 @@ def listfind(list_, tofind):
         return None
 
 # Tests for data types
-VALID_INT_TYPES = (types.IntType,
+VALID_INT_TYPES = set((types.IntType,
                    types.LongType,
                    np.typeDict['int64'],
                    np.typeDict['int32'],
                    np.typeDict['uint8'],
-                   )
-VALID_FLOAT_TYPES = (types.FloatType,
+                   ))
+VALID_FLOAT_TYPES = set((types.FloatType,
                      np.typeDict['float64'],
                      np.typeDict['float32'],
-                     np.typeDict['float16'])
+                     np.typeDict['float16']))
+
+VALID_STRING_TYPES = set((types.StringType,))
 #valid_int_types = (np.int64,  np.int32,  np.int16,  np.int8,
                         #np.uint64, np.uint32, np.uint16, np.uint8)
 #valid_float_types = (float, np.float64, np.float32, np.float16)
 def is_int(num):
     return type(num) in VALID_INT_TYPES
 def is_float(num):
+    return type(num) in VALID_FLOAT_TYPES
+def is_str(num):
     return type(num) in VALID_FLOAT_TYPES
 def is_iterable(var):
     return np.iterable(var)

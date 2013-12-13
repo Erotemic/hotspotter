@@ -2,13 +2,7 @@ from __future__ import division, print_function
 import __builtin__
 import sys
 # Standard
-import cv2
-import fnmatch
 import os
-import re
-import sys
-import textwrap
-import types
 # Science
 import numpy as np
 from PIL import Image
@@ -21,9 +15,10 @@ import convert_db
 from Printable import DynStruct
 import DataStructures as ds
 import helpers
+import tools
 import params
 import fileio as io
-from os.path import exists, join, realpath, split, relpath
+from os.path import exists, join, split, relpath
 from itertools import izip
 import shutil
 
@@ -152,7 +147,7 @@ class HotSpotter(DynStruct):
         indx_samp = sorted(indx_samp)
 
         # Debugging and Info
-        DEBUG_SET_SAMPLE = True
+        DEBUG_SET_SAMPLE = False
         if DEBUG_SET_SAMPLE:
             test_train_isect = np.intersect1d(test_samp, train_samp)
             indx_train_isect = np.intersect1d(indx_samp, train_samp)
@@ -256,7 +251,7 @@ class HotSpotter(DynStruct):
         hs.on_modification()
         new_nx_ = np.where(hs.tables.nx2_name == new_name)[0]
         if len(new_nx_) == 0:
-            new_nx = self.add_name(new_name)
+            new_nx = hs.add_name(new_name)
         else:
             new_nx = new_nx_[0]
         hs.tables.cx2_nx[cx] = new_nx
@@ -266,10 +261,10 @@ class HotSpotter(DynStruct):
     # ---------------
 
     def add_name(hs, name): 
-        nx2_name = self.tables.nx2_name.tolist()
+        nx2_name = hs.tables.nx2_name.tolist()
         nx2_name.append(name)
-        self.tables.nx2_name = np.array(nx2_name)
-        nx = len(self.tables.nx2_name)
+        hs.tables.nx2_name = np.array(nx2_name)
+        nx = len(hs.tables.nx2_name)
         hs.on_addition()
         return nx
 
@@ -279,13 +274,14 @@ class HotSpotter(DynStruct):
             next_cid = hs.tables.cx2_cid.max() + 1
         else:
             next_cid = 1
-        hs.tables.cx2_cid = np.concatenate((hs.tables.cx2_cid, [next_cid]))
-        hs.tables.cx2_nx  = np.concatenate((hs.tables.cx2_nx,  [0]))
-        hs.tables.cx2_gx  = np.concatenate((hs.tables.cx2_gx,  [gx]))
-        hs.tables.cx2_roi = np.vstack((hs.tables.cx2_roi, [roi]))
+        # Allocate space for a new chip
+        hs.tables.cx2_cid   = np.concatenate((hs.tables.cx2_cid, [next_cid]))
+        hs.tables.cx2_nx    = np.concatenate((hs.tables.cx2_nx,  [0]))
+        hs.tables.cx2_gx    = np.concatenate((hs.tables.cx2_gx,  [gx]))
+        hs.tables.cx2_roi   = np.vstack((hs.tables.cx2_roi, [roi]))
         hs.tables.cx2_theta = np.concatenate((hs.tables.cx2_theta, [0]))
         for key in hs.tables.prop_dict.keys():
-            hs.tables.prop_dict[key] = np.concatenate(prop_dict[key], [''])
+            hs.tables.prop_dict[key] = np.concatenate(hs.tables.prop_dict[key], [''])
         hs.num_cx += 1
         cx = len(hs.tables.cx2_cid)-1
         hs.on_addition()
@@ -294,7 +290,6 @@ class HotSpotter(DynStruct):
     def add_images(hs, fpath_list, move_images=True):
         nImages = len(fpath_list)
         print('[hs.add_imgs] adding %d images' % nImages)
-        new_fpath_list = []
         img_dir = hs.dirs.img_dir
         copy_list = []
         helpers.ensurepath(img_dir)
@@ -376,7 +371,6 @@ class HotSpotter(DynStruct):
 
     def get_valid_cxs_with_name_in_samp(hs, sample_cxs):
         'returns the valid_cxs which have a correct match in sample_cxs'
-        cx2_nx = hs.tables.cx2_nx
         valid_cxs = hs.get_valid_cxs()
         in_sample_flag = hs.flag_cxs_with_name_in_sample(valid_cxs, sample_cxs)
         cxs_in_sample = valid_cxs[in_sample_flag]
@@ -563,59 +557,50 @@ class HotSpotter(DynStruct):
     #--------------
     def cid2_gx(hs, cid):
         'chip_id ==> image_index'
-        cx = self.cid2_cx(cid)
-        gx = self.tables.cx2_gx[cx]
+        cx = hs.tables.cid2_cx(cid)
+        gx = hs.tables.cx2_gx[cx]
         return gx
 
-    def cid2_cx(hs, cid):
+    @tools.class_iter_input
+    def cid2_cx(hs, cid_input):
         'chip_id ==> chip_index'
-        try: 
-            array_index = helpers.array_index
-            cx2_cid = hs.tables.cx2_cid
-            if helpers.is_int(cid):
-                return array_index(cx2_cid, cid)
-            else:
-                return np.array([array_index(cx2_cid, cid_) for cid_ in cid])
-        except Exception as ex:
-            print('---------')
-            print(cid)
-            print(cx2_cid)
-            print('---------')
-            raise
+        index_of = tools.index_of
+        cx2_cid = hs.tables.cx2_cid
+        cx_output = [index_of(cid, cx2_cid) for cid in cid_input]
+        return cx_output
     #--------------
-    def _try_cxlist_get(hs, cx, cx_list_):
-        if np.iterable(cx):
-            ret = [cx_list_[cx_] for cx_ in cx]
-            if any([val is None for val in ret]):
-                raise IndexError()
-        else:
-            ret = cx_list_[cx]
-            if ret is None:
-                raise IndexError()
+    @tools.class_iter_input
+    def _try_cxlist_get(hs, cx_input, cx2_var):
+        ''' Input: cx_input: a vector input, cx2_var: a array mapping cx to a
+        variable Returns: list of values corresponding with cx_input '''
+        ret = [cx2_var[cx_] for cx_ in cx_input]
+        # None is invalid in a cx2_var array
+        if any([val is None for val in ret]):
+            raise IndexError()
         return ret
     #--------------
-    def _onthefly_cxlist_get(hs, cx, cx_list_, load_fn):
-        '''tries to get from the cx indexed list and performs a cx load function
+    def _onthefly_cxlist_get(hs, cx_input, cx2_var, load_fn):
+        '''tries to get from the cx_input indexed list and performs a cx load function
         if unable to get failure'''
         try: 
-            ret = hs._try_cxlist_get(cx, cx_list_)
+            ret = hs._try_cxlist_get(cx_input, cx2_var)
         except IndexError as ex:
-            load_fn(cx)
-            ret = hs._try_cxlist_get(cx, cx_list_)
+            load_fn(cx_input)
+            ret = hs._try_cxlist_get(cx_input, cx2_var)
         return ret
 
     #--------------
-    def get_desc(hs, cx):
+    def get_desc(hs, cx_input):
         cx2_desc = hs.feats.cx2_desc
-        return hs._onthefly_cxlist_get(cx, cx2_desc, hs.load_features)
+        return hs._onthefly_cxlist_get(cx_input, cx2_desc, hs.load_features)
     #--------------
-    def get_kpts(hs, cx):
+    def get_kpts(hs, cx_input):
         cx2_kpts = hs.feats.cx2_kpts
-        return hs._onthefly_cxlist_get(cx, cx2_kpts, hs.load_features)
+        return hs._onthefly_cxlist_get(cx_input, cx2_kpts, hs.load_features)
     #--------------
-    def get_rchip_path(hs, cx):
+    def get_rchip_path(hs, cx_input):
         cx2_rchip_path = hs.cpaths.cx2_rchip_path
-        return hs._onthefly_cxlist_get(cx, cx2_rchip_path, hs.load_chips)
+        return hs._onthefly_cxlist_get(cx_input, cx2_rchip_path, hs.load_chips)
     #--------------
     def get_chip(hs, cx):
         rchip_path = hs.get_rchip_path(cx)

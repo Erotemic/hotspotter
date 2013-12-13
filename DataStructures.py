@@ -145,7 +145,7 @@ class QueryResult(DynStruct):
         if gt_cxs is None and hs is None: raise Exception('[res] error')
         if gt_cxs is None: gt_cxs = hs.get_other_cxs(res.qcx)
         cx2_score = res.get_cx2_score()
-        top_cxs   = cx2_score.argsort()[::-1]
+        top_cxs  = cx2_score.argsort()[::-1]
         foundpos = [np.where(top_cxs == cx)[0] for cx in gt_cxs]
         ranks_   = [r if len(r) > 0 else [-1] for r in foundpos]
         assert all([len(r) == 1 for r in ranks_])
@@ -163,6 +163,7 @@ class QueryResult(DynStruct):
         if SV is None:
             SV = res.get_SV()
         return res.cx2_fs_V if SV else res.cx2_fs
+
     def topN_cxs(res, N, q_cfg=None):
         cx2_score = res.get_cx2_score()
         top_cxs = cx2_score.argsort()[::-1]
@@ -174,14 +175,22 @@ class QueryResult(DynStruct):
         nTop = min(N, nIndexed)
         topN_cxs = top_cxs[0:nTop]
         return topN_cxs
+
     def show_query(res, hs, **kwargs):
         print('[res] show_query')
         viz.show_chip(hs, res=res, **kwargs)
-    def show_topN(res, hs, **kwargs):
-        print('[res] show_topN')
-        if not 'SV' in kwargs.keys():
-            kwargs['SV'] = res.get_SV()
-        viz.show_match_analysis(hs, res, **kwargs)
+
+    def show_analysis(res, hs, *args, **kwargs):
+        return viz.res_show_analysis(res, hs, *args, **kwargs)
+
+    def show_top(res, hs, *args, **kwargs):
+        return viz.show_top(res, hs, *args, **kwargs)
+
+    def show_gt_matches(res, hs, *args, **kwargs):
+        figtitle = ('q%s -- GroundTruth' % (hs.cxstr(res.qcx)))
+        gt_cxs = hs.get_other_indexed_cxs(res.qcx)
+        viz._show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle, 
+                           fignum=fignum, all_kpts=True)
 
     def plot_matches(res, hs, cx, fnum=1, **kwargs):
         viz.show_matches_annote_res(res, hs, cx, fignum=fnum, draw_pts=False, **kwargs)

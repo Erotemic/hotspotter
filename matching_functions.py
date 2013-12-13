@@ -1,36 +1,15 @@
 from __future__ import division, print_function
 import __builtin__
 import sys
-import itertools
-import os
-import warnings
-import textwrap
-# Hotspotter Frontend Imports
-import draw_func2 as df2
-# Hotspotter Imports
-import fileio as io
-import helpers
-from helpers import Timer, tic, toc, printWARN
-from Printable import DynStruct
-import algos
-import spatial_verification2 as sv2
-import load_data2
-import params
-# Math and Science Imports
-import cv2
-import matplotlib.pyplot as plt
-import numpy as np
-import pyflann
-import scipy as sp
-import scipy.sparse as spsparse
-import sklearn.preprocessing 
-from itertools import izip, chain
-import spatial_verification2 as sv2
+from itertools import izip
+# Hotspotter
 import DataStructures as ds
+import helpers
 import nn_filters
-import scipy.optimize
+import spatial_verification2 as sv2
 import voting_rules2 as vr2
-import pandas as pd
+# Scientific 
+import numpy as np
 
 MARK_AFTER = 40
 

@@ -485,7 +485,7 @@ def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
                 qcid_list += [qcid]
                 ocid_list += [ocids]
                 note_list += [notes]
-        qcx_list = hs.cid2_cx(qcid_list).tolist()
+        qcx_list = hs.cid2_cx(qcid_list)
     for cx, cid in enumerate(cx2_cid):
         if not cx in qcx_list and cid > 0:
             gt_cxs = hs.get_other_cxs(cx)

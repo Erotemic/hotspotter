@@ -1,5 +1,7 @@
 #!/usr/bin/python2.7
 from __future__ import division, print_function
+import matplotlib
+matplotlib.use('Qt4Agg')
 import multiprocessing
 
 # Moved this up for faster help responce time
@@ -7,8 +9,6 @@ def parse_arguments(**kwargs):
     import argparse
     '''Defines the arguments for hotspotter'''
     parser = argparse.ArgumentParser(description='HotSpotter - Investigate Chip', prefix_chars='+-')
-    def_on  = {'action':'store_false', 'default':True}
-    def_off = {'action':'store_true', 'default':False}
     addarg = parser.add_argument
     def add_meta(switch, type, default, help, step=None, **kwargs):
         dest = switch.strip('-').replace('-','_')
@@ -110,7 +110,6 @@ def args_postprocess(args):
 
 def fix_args_shortnames(args):
     import params
-    from os.path import exists
     if args.dbdir is None and args.db is not None:
         # The shortname is specified
         try:
@@ -152,8 +151,8 @@ def fix_args_with_cache(args):
 
 if __name__ == '__main__':
     import HotSpotter
-    import guitools
     multiprocessing.freeze_support()
+    import guitools
     print('main.py')
     signal_set()
     app, is_root = guitools.init_qtapp()

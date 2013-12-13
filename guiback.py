@@ -186,16 +186,27 @@ class MainWindowBackend(QtCore.QObject):
     def clear_selection(self):
         print('[*back] clear_selection()')
         self.selection = None
-        viz.show_splash()
+        viz.show_splash(fnum=1)
+        df2.set_figtitle('A Nice View')
+        df2.draw()
 
     # Table selection
     @pyqtSlot(int, name='select_gx')
     def select_gx(self, gx, cx=None):
         print('[*back] select_gx(%r, %r)' % (gx, cx))
+        if cx is None:
+            cxs = self.hs.gx2_cxs(gx)
+            if len(cxs > 0):
+                cx = cxs[0]
+                highlight_cxs = [cx]
+            else:
+                highlight_cxs = []
+        else:
+            highlight_cxs = []
         self.selection = {'type_':'gx', 'index':gx, 'sub':cx}
-        highlight_cxs = [] if cx is None else [cx]
         cx_clicked_func = lambda cx: self.select_gx(gx, cx)
-        viz.show_image(self.hs, gx, highlight_cxs, cx_clicked_func)
+        fig = df2.figure(fignum=1, doclf=True)
+        self.show_image(gx, highlight_cxs, cx_clicked_func)
 
     # Table selection
     @pyqtSlot(int, name='select_cid')
@@ -203,8 +214,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[*back] select_cid(%r)' % cid)
         cx = self.hs.cid2_cx(cid)
         self.selection = {'type_':'cx', 'index':cx}
-        viz.show_chip(self.hs, cx, draw_kpts=True)
-
+        self.show_chip(cx)
     #--------------------------------------------------------------------------
     # File menu slots
     #--------------------------------------------------------------------------
@@ -305,6 +315,27 @@ class MainWindowBackend(QtCore.QObject):
         print('[*back] quit()')
         guitools.exit_application()
 
+    def show_image(self, gx, sel_cxs=[], cx_clicked_func=None):
+        df2.plt.clf()
+        fig = df2.figure(fignum=1, doclf=True)
+        viz.show_image(self.hs, gx, sel_cxs, cx_clicked_func)
+        df2.set_figtitle('Image View')
+        df2.draw()
+
+    def show_query(self, res):
+        df2.figure(fignum=3)
+        df2.plt.clf()
+        res.show_top(self.hs, fnum=3)
+        df2.set_figtitle('Query View')
+        df2.draw()
+
+    def show_chip(self, cx):
+        fig = df2.figure(fignum=2, doclf=True)
+        df2.plt.clf()
+        viz.show_chip_interaction(self.hs, cx, '', fnum=2)
+        #viz.show_chip(self.hs, cx)
+        df2.set_figtitle('Chip View')
+        df2.draw()
     #--------------------------------------------------------------------------
     # Action menu slots
     #--------------------------------------------------------------------------
@@ -319,7 +350,6 @@ class MainWindowBackend(QtCore.QObject):
     def add_chip(self):
         print('[*back] add_chip()')
         gx = self.get_selected_gx()
-        viz.show_image(self.hs, gx)
         roi = guitools.select_roi()
         cx = self.hs.add_chip(gx, roi)
         self.populate_image_table()
@@ -334,8 +364,7 @@ class MainWindowBackend(QtCore.QObject):
             self.user_info('Cannot query. No chip selected')
             return
         res = self.hs.query(cx)
-        res.show_topN(self.hs)
-        pass
+        self.show_query(res)
     # Action -> Reselect ROI
     @pyqtSlot(name='reselect_roi')
     def reselect_roi(self):
@@ -345,7 +374,7 @@ class MainWindowBackend(QtCore.QObject):
             self.user_info('Cannot reselect ROI. No chip selected')
             return 
         gx = self.hs.tables.cx2_gx[cx]
-        viz.show_image(self.hs, gx, [cx])
+        self.show_image(gx, [cx])
         roi = guitools.select_roi()
         self.hs.change_roi(cx, roi)
         self.populate_image_table()
@@ -361,7 +390,7 @@ class MainWindowBackend(QtCore.QObject):
             self.user_info('Cannot reselect orientation. No chip selected')
             return 
         gx = self.hs.tables.cx2_gx[cx]
-        viz.show_image(self.hs, gx, [cx])
+        self.show_image(gx, [cx])
         theta = guitools.select_ori()
         self.hs.change_theta(cx, theta)
         self.populate_image_table()

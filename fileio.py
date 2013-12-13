@@ -5,12 +5,10 @@ import os
 import fnmatch
 import pickle
 import cPickle
-import shelve
+#import shelve
 from os.path import normpath, exists, realpath, join, expanduser
-
-import datetime
-import timeit
-
+#import datetime
+#import timeit
 import helpers
 import params
 import numpy as np
@@ -354,13 +352,6 @@ if __name__ == '__main__':
             helpers.toc(tt)
         helpers.toc(tt_total)
         print('------------------')
-
-
-    fpath = ld2.OXFORD+'/.hs_internals/computed/cache/cx2_desc_HESAFF_szorig.npz'
-    fpath_py = ld2.OXFORD+'/.hs_internals/computed/cache/cx2_desc_HESAFF_szorig.npy'
-    fpath_pyz = ld2.OXFORD+'/.hs_internals/computed/cache/cx2_desc_TEMP.npz'
-
-
     print(helpers.file_megabytes_str(fpath))
 
     tic = helpers.tic

@@ -1,40 +1,51 @@
 ''' Lots of functions for drawing and plotting visiony things '''
 from __future__ import division, print_function
 import __builtin__
-import sys
-import matplotlib
-import multiprocessing
-def printDBG(msg):
-    #print(msg)
-    pass
-from guitools import configure_matplotlib
-configure_matplotlib()
-from matplotlib import gridspec
-from matplotlib.collections import PatchCollection, LineCollection
-from matplotlib.patches import Rectangle, Circle, FancyArrow
-from matplotlib.transforms import Affine2D
-from matplotlib.font_manager import FontProperties
-import matplotlib.pyplot as plt
-from PyQt4.QtCore import Qt
-import time
-import scipy.stats
-import types
-import textwrap
-import cv2
-import matplotlib.pyplot as plt
-import numpy as np
+# Python
+from itertools import izip
+from os.path import splitext, split, join, normpath
+import colorsys
+import itertools
 import os
 import pylab
 import sys
+import textwrap
+import time
 import types
 import warnings
-import itertools
-from itertools import izip
-import helpers
-import re
-import params
-import os
+import multiprocessing
+# Matplotlib / Qt
+import matplotlib
+backend = matplotlib.get_backend()
+if multiprocessing.current_process().name == 'MainProcess':
+    print('[df2] current backend is: %r' % backend)
+    print('[df2] matplotlib.use(Qt4Agg)')
+    matplotlib.rcParams['toolbar'] = 'toolbar2'
+    matplotlib.rc('text', usetex=False)
+    #matplotlib.rcParams['text'].usetex = False
+    if backend != 'Qt4Agg':
+        matplotlib.use('Qt4Agg', warn=True, force=True)
+        backend = matplotlib.get_backend()
+        if multiprocessing.current_process().name == 'MainProcess':
+            print('[*guitools] current backend is: %r' % backend)
+        #matplotlib.rcParams['toolbar'] = 'None'
+        #matplotlib.rcParams['interactive'] = True
+from matplotlib.collections import PatchCollection, LineCollection
+from matplotlib.font_manager import FontProperties
+from matplotlib.patches import Rectangle, Circle, FancyArrow
+from matplotlib.transforms import Affine2D
+import matplotlib.pyplot as plt
+from PyQt4.QtCore import Qt
+# Scientific
+import numpy as np
+import scipy.stats
+# HotSpotter
 from Printable import DynStruct
+import helpers
+
+def printDBG(msg):
+    #print(msg)
+    pass
 
 # Toggleable printing
 print = __builtin__.print
@@ -50,9 +61,6 @@ def print_off():
 # Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[df2] reloading '+__name__)
-    imp.reload(sys.modules[__name__])
-    helpermodule = sys.modules['draw_func2_helpers']
     print('[df2] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr(): reload_module()
@@ -116,9 +124,9 @@ def register_matplotlib_widget(plotWidget_):
     'talks to PyQt4 guis'
     global plotWidget
     plotWidget = plotWidget_
-    fig = plotWidget.figure
-    axes_list = fig.get_axes()
-    ax = axes_list[0]
+    #fig = plotWidget.figure
+    #axes_list = fig.get_axes()
+    #ax = axes_list[0]
     #plt.sca(ax)
 
 def OooScreen2():
@@ -158,9 +166,13 @@ def _axis_xy_width_height(ax, xaug=0, yaug=0, waug=0, haug=0):
     height = (autoAxis[3]-autoAxis[2])+haug
     return xy, width, height
     
-def draw_border(ax, color=GREEN, lw=2):
+def draw_border(ax, color=GREEN, lw=2, offset=None):
     'draws rectangle border around a subplot'
     xy, width, height = _axis_xy_width_height(ax, -.7, -.2, 1, .4)
+    if offset is not None:
+        xoff, yoff = offset
+        xy = [xy[0], yoff]
+        height = - height - yoff
     rect = matplotlib.patches.Rectangle(xy, width, height, lw=lw)
     rect = ax.add_patch(rect)
     rect.set_clip_on(False)
@@ -306,7 +318,7 @@ def present(*args, **kwargs):
     'execing present should cause IPython magic'
     print('[df2] Presenting figures...')
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore",category=DeprecationWarning)
+        warnings.simplefilter("ignore")
         all_figures_tile(*args, **kwargs)
         all_figures_show()
         all_figures_bring_to_front()
@@ -367,7 +379,7 @@ def save_figure(fignum=None, fpath=None, usetitle=False):
         fpath = join(fpath, title)
     # Sanatize the filename
     fpath_clean = sanatize_img_fpath(fpath)
-    fname_clean = split(fpath_clean)[1]
+    #fname_clean = split(fpath_clean)[1]
     print('[df2] save_figure() %r' % (fpath_clean,))
     #adjust_subplots()
     with warnings.catch_warnings():
@@ -460,6 +472,15 @@ def upperright_text(txt):
                    backgroundcolor=(0,0,0,.5),
                    color=ORANGE)
     ax_relative_text(.98, .02, txt, **txtargs)
+
+def lowerright_text(txt):
+    txtargs = dict(horizontalalignment='right',
+                   verticalalignment='top',
+                   #fontsize='smaller',
+                   #fontweight='ultralight', 
+                   backgroundcolor=(0,0,0,.5),
+                   color=ORANGE)
+    ax_relative_text(.98, .92, txt, **txtargs)
 
 def ax_relative_text(x, y, txt, ax=None, **kwargs):
     if ax is None: ax = gca()
@@ -757,11 +778,9 @@ def execstr_global():
 
 # ---- IMAGE CREATION FUNCTIONS ---- 
 def draw_sift(desc, kp=None):
-    '''
-    desc = np.random.rand(128)
-    desc = desc / np.sqrt((desc**2).sum())
-    desc = np.round(desc * 255)
-    '''
+    ''' desc = np.random.rand(128)
+        desc = desc / np.sqrt((desc**2).sum())
+        desc = np.round(desc * 255) '''
     ax = gca()
     tau = 2*np.pi
     DSCALE = .25
@@ -781,8 +800,7 @@ def draw_sift(desc, kp=None):
     arm_dxy = np.array(zip(*cirlce_rad2xy(arm_ori, arm_mag))) 
     yxt_gen = itertools.product(xrange(NY),xrange(NX),xrange(NORIENTS))
     yx_gen  = itertools.product(xrange(NY),xrange(NX))
-
-    # Transforms
+    # Transform the drawing of the SIFT descriptor to the its elliptical patch
     axTrans = ax.transData
     kpTrans = None
     if kp is None:
@@ -790,26 +808,14 @@ def draw_sift(desc, kp=None):
     kp = np.array(kp)   
     kpT = kp.T
     x, y, a, c, d = kpT[:,0]
-    #a_ = 1/a
-    #b_ = (-c)/(a*d)
-    #d_ = 1/d
-    #a_ = 1/np.sqrt(a) 
-    #b_ = c/(-np.sqrt(a)*d - a*np.sqrt(d))
-    #d_ = 1/np.sqrt(d)
     transMat = [( a, 0, x),
                 ( c, d, y),
                 ( 0, 0, 1)]
     kpTrans = Affine2D(transMat)
     axTrans = ax.transData
-    #print('\ntranform=%r ' % transform)
-    # Draw Arms
+    # Draw 8 directional arms in each of the 4x4 grid cells
     arrow_patches = []
     arrow_patches2 = []
-    #print(index)
-    #print((x, y, t))
-    #index = 127 - ((NY - 1 - y)*(NX*NORIENTS) + (NX - 1 - x)*(NORIENTS) + (NORIENTS - 1 - t))
-    #index = ((NY - 1 - y)*(NX*NORIENTS) + (NX - 1 - x)*(NORIENTS) + (t))
-    #index = ((x)*(NY*NORIENTS) + (y)*(NORIENTS) + (t))
     for y,x,t in yxt_gen:
         index = y*NX*NORIENTS + x*NORIENTS + t
         (dx, dy) = arm_dxy[index]
@@ -817,39 +823,37 @@ def draw_sift(desc, kp=None):
         arw_y  = y*XYSCALE + XYSHIFT
         arw_dy = dy*DSCALE * 1.5 # scale for viz Hack
         arw_dx = dx*DSCALE * 1.5
-        posA = (arw_x, arw_y)
-        posB = (arw_x+arw_dx, arw_y+arw_dy)
+        #posA = (arw_x, arw_y)
+        #posB = (arw_x+arw_dx, arw_y+arw_dy)
         _args = [arw_x, arw_y, arw_dx, arw_dy]
         _kwargs = dict(head_width=.0001, transform=kpTrans, length_includes_head=False)
         arrow_patches  += [FancyArrow(*_args, **_kwargs)]
         arrow_patches2 += [FancyArrow(*_args, **_kwargs)]
-    # Draw Circles
+    # Draw circles around each of the 4x4 grid cells
     circle_patches = []
     for y,x in yx_gen:
         circ_xy = (x*XYSCALE + XYSHIFT, y*XYSCALE + XYSHIFT)
         circ_radius = DSCALE
         circle_patches += [Circle(circ_xy, circ_radius, transform=kpTrans)]
-        
-    circ_collection = matplotlib.collections.PatchCollection(circle_patches)
+    # Efficiently draw many patches with PatchCollections
+    circ_collection = PatchCollection(circle_patches)
     circ_collection.set_facecolor('none')
     circ_collection.set_transform(axTrans)
     circ_collection.set_edgecolor(BLACK)
     circ_collection.set_alpha(.5)
-
     # Body of arrows
-    arw_collection = matplotlib.collections.PatchCollection(arrow_patches)
+    arw_collection = PatchCollection(arrow_patches)
     arw_collection.set_transform(axTrans)
     arw_collection.set_linewidth(.5)
     arw_collection.set_color(RED)
     arw_collection.set_alpha(1)
-
-    #Border of arrows
+    # Border of arrows
     arw_collection2 = matplotlib.collections.PatchCollection(arrow_patches2)
     arw_collection2.set_transform(axTrans)
     arw_collection2.set_linewidth(1)
     arw_collection2.set_color(BLACK)
     arw_collection2.set_alpha(1)
-
+    # Add artists to axes
     ax.add_collection(circ_collection)
     ax.add_collection(arw_collection2)
     ax.add_collection(arw_collection)
@@ -913,7 +917,6 @@ def draw_kpts2(kpts, offset=(0,0),
     ax = gca()
     pltTrans = ax.transData
     ell_actors = []
-    eps = 1E-9
     # data
     kpts = np.array(kpts)   
     kptsT = kpts.T
@@ -944,7 +947,7 @@ def draw_kpts2(kpts, offset=(0,0),
                 bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
                 dIS = 1/np.sqrt(d)
                 cIS = b
-                #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
+                #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+1E-9)
         else:
             aIS = a
             bIS = b
@@ -1092,7 +1095,7 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
     else:
         #color_list = [((x)/nMatches,1-((x)/nMatches),0) for x in xrange(nMatches)]
         #cmap = lambda x: (x, 1-x, 0)
-        cmap = plt.get_cmap('prism')
+        #cmap = plt.get_cmap('prism')
         #color_list = [cmap(mx/nMatches) for mx in xrange(nMatches)]
         colors = distinct_colors(nMatches)
         pt2_args = dict(pts=draw_pts, ell=False, pts_color=BLACK, pts_size=8)
@@ -1117,8 +1120,7 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
             pts_args.update(dict(pts_size=6, color_list=acolors))
             _drawkpts(**pt2_args)
             _drawkpts(**pts_args)
-
-    return fig, ax
+    return fig, ax, woff, hoff
 
 def deterministic_shuffle(list_):
     randS = int(np.random.rand()*np.uint(0-2)/2)
@@ -1128,7 +1130,6 @@ def deterministic_shuffle(list_):
 
 def distinct_colors(N):
     # http://blog.jianhuashao.com/2011/09/generate-n-distinct-colors.html
-    import colorsys
     sat = .878
     val = .878
     HSV_tuples = [(x*1.0/N, sat, val) for x in xrange(N)]
@@ -1164,36 +1165,3 @@ def draw_roi(ax, roi, label=None, bbox_color=(1,0,0),
                 verticalalignment   ='center',
                 color               =lbl_txtcolor,
                 backgroundcolor     =lbl_bgcolor)
-
-if __name__ == '__main__':
-    import multiprocessing
-    multiprocessing.freeze_support()
-    print('=================================')
-    print('[df2] __main__ = draw_func2.py')
-    print('=================================')
-    from __init__ import *
-    qcx = 0
-    hs = ld2.HotSpotter()
-    hs.load_tables(ld2.DEFAULT)
-    hs.load_chips()
-    hs.load_features()
-    hs.set_samples()
-    res = mc2.build_result_qcx(hs, qcx)
-    print('')
-    print('''
-    exec(open("draw_func2.py").read())
-    ''')
-    N=5
-    df2.rrr()
-    figtitle='q%s -- Analysis' % (hs.cxstr(res.qcx),)
-    topN_cxs = res.topN_cxs(N)
-    all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
-    gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
-    max_nCols = max(5,N)
-    fignum=3
-    show_query = True
-    all_kpts = False
-    #get_geometry(1)
-    df2.show_match_analysis(hs, res, N)
-    df2.update()
-    exec(df2.present())

@@ -1,6 +1,27 @@
 from __future__ import division, print_function
 import __builtin__
+# Python
 import sys
+from os.path import realpath, join
+import os
+import textwrap
+# Matplotlib
+import fileio as io
+import helpers
+import matplotlib.pyplot as plt
+# Scientific
+from PIL import Image, ImageOps
+import pyflann
+import sklearn.decomposition
+import sklearn.preprocessing as sklpreproc
+import sklearn
+import numpy as np
+import scipy as sp
+import signal
+import scipy.sparse as spsparse
+# HotSpotter
+import params
+
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
@@ -18,26 +39,6 @@ def reload_module():
     print('[algos] reloading '+__name__)
     imp.reload(sys.modules[__name__])
 def rrr(): reload_module()
-import draw_func2 as df2
-from PIL import Image, ImageOps
-from os.path import realpath, join
-import helpers
-import fileio as io
-import imp
-import matplotlib.pyplot as plt
-import numpy as np
-import os
-import params
-import pyflann
-import sklearn.decomposition
-import sklearn.preprocessing as sklpreproc
-import sklearn
-import scipy as sp
-import signal
-import scipy.sparse as spsparse
-#print('LOAD_MODULE: algos.py')
-#imp.reload(sys.modules['hotspotter.helpers'])
-#imp.reload(sys.modules['params'])
 
 def xywh_to_tlbr(roi, img_wh):
     (img_w, img_h) = img_wh
@@ -48,7 +49,6 @@ def xywh_to_tlbr(roi, img_wh):
     x2 = min(x+w, img_w-1)
     y2 = min(y+h, img_h-1)
     return (x1, y1, x2, y2)
-
 
 def localmax(signal1d):
     maxpos = []
@@ -72,7 +72,6 @@ def viz_localmax(signal1d):
     df2.plot(x_data, y_data)
     df2.plot(maxpos, signal1d[maxpos], 'ro')
     df2.update()
-
 
 def sparse_normalize_rows(csr_mat):
     return sklpreproc.normalize(csr_mat, norm='l2', axis=1, copy=False)
@@ -240,7 +239,6 @@ def plot_clusters(data, datax2_clusterx, clusters):
         ax.scatter(clus_x, clus_y, clus_z, s=500, c=clus_colors, marker='*')
     return fig
 
-import textwrap
 def force_quit_akmeans(signal, frame):
     try: 
         print(textwrap.dedent('''
@@ -469,6 +467,7 @@ def precompute_flann(data, cache_dir=None, uid='', flann_params=None):
 
 if __name__ == '__main__':
     import multiprocessing
+    import draw_func2 as df2
     multiprocessing.freeze_support()
 
     np.random.seed(seed=0) # RANDOM SEED (for reproducibility)

@@ -4,9 +4,7 @@ import numpy as np
 import helpers
 import cv2
 import algos
-import draw_func2 as df2
 import fileio as io
-import sys
 
 DEBUG_SEGM = False
 
@@ -23,6 +21,7 @@ def printDBG(msg):
     pass
 
 def im(img, fignum=0):
+    import draw_func2 as df2
     df2.imshow(img, fignum=fignum)
     df2.update()
 
@@ -96,6 +95,7 @@ def fill_holes(mask):
     out = cv2.drawContours(image, contours, -1, (1, 0, 0))
 
 def test_clean_mask():
+    import draw_func2 as df2
     mask = chip_mask
     print('Cleaning')
     mask2 = clean_mask(mask, 0, 3, .020)
@@ -195,13 +195,13 @@ def test2(chip, chip_mask):
 
     im(seg_chip, 8)
     df2.present()
-    
 
 
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     print('[segm] __main__ = segmentation.py')
+    import draw_func2 as df2
     df2.reset()
     import dev
     import helpers

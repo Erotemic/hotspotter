@@ -26,12 +26,14 @@ rrr = reload_module
 IS_INIT = False
 
 def configure_matplotlib():
-    import matplotlib
     import multiprocessing
+    import matplotlib
     backend = matplotlib.get_backend()
     if multiprocessing.current_process().name == 'MainProcess':
         print('[*guitools] current backend is: %r' % backend)
         print('[*guitools] matplotlib.use(Qt4Agg)')
+    else:
+        return
     matplotlib.rcParams['toolbar'] = 'toolbar2'
     matplotlib.rc('text', usetex=False)
     #matplotlib.rcParams['text'].usetex = False

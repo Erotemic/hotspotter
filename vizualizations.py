@@ -1,26 +1,19 @@
 from __future__ import division, print_function
 import __builtin__
-import sys
-# Standard library imports
-import datetime
-import os
-import subprocess
-import textwrap
-from itertools import izip
-from os.path import realpath, join, normpath
-import re
-# Hotspotter imports
+import matplotlib
+matplotlib.use('Qt4Agg')
 import draw_func2 as df2
-import helpers
-import load_data2 as ld2
-import fileio as io
-import oxsty_results
-import params
-from Printable import DynStruct
-# Scientific imports
+# Python
+from os.path import realpath, join
+import multiprocessing
+import os
+import re
+import sys
+# Scientific
 import numpy as np
-import matplotlib.gridspec as gridspec
-from draw_func2 import present
+# Hotspotter
+import fileio as io
+import helpers
 
 # Toggleable printing
 print = __builtin__.print
@@ -43,6 +36,9 @@ rrr = reload_module
 
 def printDBG(msg):
     pass
+
+def present(*args, **kwargs):
+    return df2.present()
 
 BROWSE = True
 DUMP = False
@@ -84,91 +80,6 @@ def plot_name(hs, nx, nx2_cxs=None, fignum=0, hl_cxs=[], subtitle='',
     #gs2.tight_layout(fig)
     #gs2.update(top=df2.TOP_SUBPLOT_ADJUST)
     df2.set_figtitle(title, subtitle)
-
-def plot_cx3(hs, cx):
-    ax = df2.gca()
-    rchip = hs.get_chip(cx)
-    ax.imshow(rchip, interpolation='nearest')
-    df2.plt.set_cmap('gray')
-    df2.set_ticks([],[])
-    gname = hs.cx2_gname(cx)
-    cid = hs.tables.cx2_cid[cx]
-    ax.set_xlabel(gname)
-    ax.set_title(hs.cxstr(cx))
-
-def cx_info(allres, cx, SV=True):
-    hs = allres.hs
-    res = allres.qcx2_res[cx]
-    print_top_res_scores(hs, res, view_top=10)
-    #gt_cxs = hs.get_other_cxs(cx)
-    gt_cxs = hs.get_other_indexed_cxs(cx)
-    print('[viz] Ground truth '+hs.cx_liststr(gt_cxs))
-    print('[viz] num groundtruth = '+str(len(gt_cxs)))
-    print_top_res_scores(hs, res, view_top=10, SV=True)
-
-def print_top_res_scores(hs, res, view_top=10, SV=True):
-    qcx = res.qcx
-    cx2_score = res.cx2_score_V if SV else res.cx2_score
-    lbl = ['(assigned)', '(assigned+V)'][SV]
-    cx2_nx     = hs.tables.cx2_nx
-    nx2_name   = hs.tables.nx2_name
-    qnx        = cx2_nx[qcx]
-    #other_cx   = hs.get_other_cxs(qcx)
-    other_cx   = hs.get_other_indexed_cxs(qcx)
-    top_cx     = cx2_score.argsort()[::-1]
-    top_scores = cx2_score[top_cx] 
-    top_nx     = cx2_nx[top_cx]
-    view_top   = min(len(top_scores), np.uint32(view_top))
-    print('---------------------------------------')
-    print('[viz]Inspecting matches of q%s name=%s' % (hs.cxstr(qcx), hs.cx2_name(qcx)))
-    print('[viz] * Matched against %d other chips' % len(cx2_score))
-    print('[viz] * Ground truth chip indexes:\n   gt_%s' % hs.cx_liststr(other_cx))
-    print('[viz]The ground truth scores '+lbl+' are: ')
-    for cx in iter(other_cx):
-        score = cx2_score[cx]
-        print('[viz]--> %s, score=%6.2f' % (hs.cxstr(cx, 4), score))
-    print('---------------------------------------')
-    print(('The top %d chips and scores '+lbl+' are: ') % view_top)
-    for topx in xrange(view_top):
-        tscore = top_scores[topx]
-        tcx    = top_cx[topx]
-        if tcx == qcx: continue
-        tnx    = cx2_nx[tcx]
-        _mark = '-->' if tnx == qnx else '  -'
-        print('[viz]'+_mark+' %s, score=%6.2f' % (hs.cxstr(cx), tscore))
-    print('---------------------------------------')
-    print('---------------------------------------')
-
-def plot_cx(allres, cx, style='kpts', subdir=None, annotations=True, title_aug=''):
-    hs    = allres.hs
-    qcx2_res = allres.qcx2_res
-    res = qcx2_res[cx]
-    plot_cx2(hs, res, style=style, subdir=subdir, annotations=annotations, title_aug=title_aug)
-
-def plot_cx2(hs, res, style='kpts', subdir=None, annotations=True, title_aug=''):
-    #cx_info(allres, cx)
-    cx = res.qcx
-    raise Exception("fix no rr2")
-    #title_suffix = rr2.get_title_suffix()
-    if 'kpts' == style:
-        subdir = 'plot_cx' if subdir is None else subdir
-        rchip = hs.get_chip(cx)
-        kpts  = hs.get_kpts(cx)
-        print('[viz] Plotting'+title)
-        df2.imshow(rchip, fignum=FIGNUM, title=title, doclf=True)
-        df2.draw_kpts2(kpts)
-    if 'gt_matches' == style: 
-        subdir = 'gt_matches' if subdir is None else subdir
-        show_gt_matches(hs, res, fignum=FIGNUM)
-    if 'top5' == style:
-        subdir = 'top5' if subdir is None else subdir
-        show_topN_matches(hs, res, N=5, fignum=FIGNUM)
-    if 'analysis' == style:
-        subdir = 'analysis' if subdir is None else subdir
-        show_match_analysis(hs, res, N=5, fignum=FIGNUM,
-                            annotations=annotations, figtitle=title_aug)
-    subdir += title_suffix
-    __dump_or_browse(hs, subdir)
 
 def plot_rank_stem(allres, orgres_type='true'):
     print('[viz] plotting rank stem')
@@ -226,7 +137,7 @@ def plot_score_matrix(allres):
     score_img = np.copy(score_matrix)
     score_img[score_img < 0] = 0
     score_img[score_img > 255] = 255
-    dim = 0
+    #dim = 0
     #score_img = helpers.norm_zero_one(score_img, dim=dim)
     df2.figure(fignum=FIGNUM, doclf=True, title=title)
     df2.imshow(score_img, fignum=FIGNUM)
@@ -235,11 +146,9 @@ def plot_score_matrix(allres):
     __dump_or_browse(allres.hs, 'scoreviz')
 
 # Dump logic
-
 def __browse():
     print('[viz] Browsing Image')
     df2.show()
-
 def __dump(hs, subdir):
     #print('[viz] Dumping Image')
     fpath = hs.dirs.result_dir
@@ -248,7 +157,6 @@ def __dump(hs, subdir):
         helpers.ensurepath(fpath)
     df2.save_figure(fpath=fpath, usetitle=True)
     df2.reset()
-
 def save_if_requested(hs, subdir):
     if not hs.args.save_figures:
         return
@@ -260,7 +168,6 @@ def save_if_requested(hs, subdir):
         helpers.ensurepath(fpath)
     df2.save_figure(fpath=fpath, usetitle=True)
     df2.reset()
-
 def __dump_or_browse(hs, subdir=None):
     #fig = df2.plt.gcf()
     #fig.tight_layout()
@@ -269,31 +176,26 @@ def __dump_or_browse(hs, subdir=None):
     if DUMP:
         __dump(hs, subdir)
 
-def plot_tt_bt_tf_matches(allres, qcx):
+def plot_tt_bt_tf_matches(hs, allres, qcx):
     #print('Visualizing result: ')
     #res.printme()
     res = allres.qcx2_res[qcx]
-
     ranks = (allres.top_true_qcx_arrays[0][qcx],
              allres.bot_true_qcx_arrays[0][qcx],
              allres.top_false_qcx_arrays[0][qcx])
-
-    scores = (allres.top_true_qcx_arrays[1][qcx],
-             allres.bot_true_qcx_arrays[1][qcx],
-             allres.top_false_qcx_arrays[1][qcx])
-
+    #scores = (allres.top_true_qcx_arrays[1][qcx],
+             #allres.bot_true_qcx_arrays[1][qcx],
+             #allres.top_false_qcx_arrays[1][qcx])
     cxs = (allres.top_true_qcx_arrays[2][qcx],
            allres.bot_true_qcx_arrays[2][qcx],
            allres.top_false_qcx_arrays[2][qcx])
-
     titles = ('best True rank='+str(ranks[0])+' ',
               'worst True rank='+str(ranks[1])+' ',
               'best False rank='+str(ranks[2])+' ')
-
     df2.figure(fignum=1, plotnum=231)
-    show_matches_annote_res(res, hs, cxs[0], False, fignum=1, plotnum=131, title_aug=titles[0])
-    show_matches_annote_res(res, hs, cxs[1], False, fignum=1, plotnum=132, title_aug=titles[1])
-    show_matches_annote_res(res, hs, cxs[2], False, fignum=1, plotnum=133, title_aug=titles[2])
+    res.plot_matches(res, hs, cxs[0], False, fignum=1, plotnum=131, title_aug=titles[0])
+    res.plot_matches(res, hs, cxs[1], False, fignum=1, plotnum=132, title_aug=titles[1])
+    res.plot_matches(res, hs, cxs[2], False, fignum=1, plotnum=133, title_aug=titles[2])
     fig_title = 'fig q'+hs.cxstr(qcx)+' TT BT TF -- ' + allres.title_suffix
     df2.set_figtitle(fig_title)
     #df2.set_figsize(_fn, 1200,675)
@@ -304,7 +206,7 @@ def dump_gt_matches(allres):
     'Displays the matches to ground truth for all queries'
     for qcx in xrange(0, len(qcx2_res)):
         res = qcx2_res[qcx]
-        show_gt_matches(hs, res, fignum=FIGNUM)
+        res.show_gt_matches(hs, fignum=FIGNUM)
         __dump_or_browse(allres.hs, 'gt_matches'+allres.title_suffix)
 
 def dump_orgres_matches(allres, orgres_type):
@@ -375,27 +277,25 @@ def show_image(hs, gx,
                highlight_cxs=None,
                cx_clicked_func=None,
                draw_rois=True,
+               fnum = 1, 
                **kwargs):
     '''Shows an image. cx_clicked_func(cx) is a callback function'''
-    fig = df2.figure(doclf=True)
+    fig = df2.figure(fignum=1, doclf=True)
     gname = hs.tables.gx2_gname[gx]
     img = hs.gx2_image(gx)
     df2.imshow(img, title=gname)
     ax = df2.gca()
-    annote = draw_rois or draw_roi_lbls
-    if annote:
+    if draw_rois:
         if highlight_cxs is None: highlight_cxs = []
         _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
                         draw_rois, **kwargs)
-    df2.draw()
         
-def show_splash():
+def show_splash(fnum=1):
     print('[viz] show_splash()')
-    fig = df2.figure(doclf=True)
+    df2.figure(fignum=fnum, doclf=True)
     splash_fpath = realpath('_frontend/splash.png')
     img = io.imread(splash_fpath)
-    df2.imshow(img)
-    df2.draw()
+    df2.imshow(img, fignum=fnum)
     #fig = self.win.plotWidget.figure
     #ax = fig.get_axes()[0]
     #ax.imshow(img)
@@ -405,8 +305,90 @@ def show_splash():
     #print(fig)
     #print(fig is self.win.plotWidget.figure)
 
-def show_chip(hs, cx=None, res=None, **kwargs):
-    fig = df2.figure(doclf=True)
+def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
+    import dev
+    from Printable import DynStruct
+    import extract_patch
+    chip_info_locals = dev.chip_info(hs, cx)
+    chip_title = chip_info_locals['cxstr']+' '+chip_info_locals['name']
+    chip_xlabel = chip_info_locals['gname']
+    class State(DynStruct):
+        def __init__(state):
+            super(State, state).__init__()
+            state.reset()
+        def reset(state):
+            state.res = None
+            state.scale_min = None
+            state.scale_max = None
+            state.fnum = 1
+            state.fnum_offset = 1
+    state = State()
+    state.fnum = fnum
+    fx_ptr = [0]
+    hprint = helpers.horiz_print
+    rchip = hs.get_chip(cx)
+    kpts = hs.get_kpts(cx)
+    desc = hs.get_desc(cx)
+    scale = np.sqrt(kpts.T[2]*kpts.T[4])
+    # Start off keypoints with no filters
+    is_valid = np.ones(len(kpts), dtype=bool)
+
+    def select_ith_keypoint(fx):
+        print('-------------------------------------------')
+        print('[interact] viewing ith=%r keypoint' % fx)
+        kp = kpts[fx]
+        sift = desc[fx]
+        np.set_printoptions(precision=5)
+        df2.cla()
+        fig1 = df2.figure(state.fnum, **kwargs)
+        df2.imshow(rchip, plotnum=(2,1,1))
+        #df2.imshow(rchip, plotnum=(1,2,1), title='inv(sqrtm(invE*)')
+        #df2.imshow(rchip, plotnum=(1,2,2), title='inv(A)')
+        ell_args = {'ell_alpha':.4, 'ell_linewidth':1.8, 'rect':False}
+        df2.draw_kpts2(kpts[is_valid], ell_color=df2.ORANGE, **ell_args)
+        df2.draw_kpts2(kpts[fx:fx+1], ell_color=df2.BLUE, **ell_args)
+        ax = df2.gca()
+        #ax.set_title(str(fx)+' old=b(inv(sqrtm(invE*)) and new=o(A=invA)')
+        scale = np.sqrt(kp[2]*kp[4])
+        printops = np.get_printoptions()
+        np.set_printoptions(precision=1)
+        ax.set_title(chip_title)
+        ax.set_xlabel(chip_xlabel)
+        
+        extract_patch.draw_keypoint_patch(rchip, kp, sift, plotnum=(2,2,3))
+        ax = df2.gca()
+        ax.set_title('affine feature\nfx=%r scale=%.1f' % (fx, scale))
+        extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, plotnum=(2,2,4))
+        ax = df2.gca()
+        ax.set_title('warped feature\ninvA=%r ' % str(kp))
+        golden_wh = lambda x:map(int,map(round,(x*.618 , x*.312)))
+        Ooo_50_50 = {'num_rc':(1,1), 'wh':golden_wh(1400*2)}
+        np.set_printoptions(**printops)
+        #df2.present(**Ooo_50_50)
+        #df2.update()
+        fig1.show()
+        fig1.canvas.draw()
+        #df2.show()
+
+    fig = df2.figure(state.fnum )
+    xy = kpts.T[0:2].T
+    # Flann doesn't help here at all
+    flann_ptr = [None]
+    def on_click(event):
+        if event.xdata is None: return
+        print('[interact] button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
+        event.button, event.x, event.y, event.xdata, event.ydata))
+        x,y = event.xdata, event.ydata
+        dist = (kpts.T[0] - x)**2 + (kpts.T[1] - y)**2
+        fx_ptr[0] = dist.argsort()[0]
+        select_ith_keypoint(fx_ptr[0])
+        print('>>>')
+    select_ith_keypoint(fx_ptr[0])
+    callback_id = fig.canvas.mpl_connect('button_press_event', on_click)
+    select_ith_keypoint(fx_ptr[0])
+
+def show_chip(hs, cx=None, res=None, fnum=2, **kwargs):
+    df2.figure(fignum=fnum, doclf=True)
     draw_chip(hs, cx=cx, res=res, **kwargs)
     df2.draw()
 
@@ -495,14 +477,46 @@ def draw_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
             p = p / p.sum()
             fxs_randsamp = np.random.choice(fxs1, size, replace, p)
             kpts1 = kpts1[fxs_randsamp]
-            ax = gca()
-            ax.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1), fontproperties=FONTS.xlabel)
+            df2.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1))
             # show a random sample of kpts
         df2.draw_kpts2(kpts1, ell_alpha=kpts_alpha, ell_color=df2.RED, **kpts_args)
 
 def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
-    imshow(rchip,fignum=fignum,title=title,**kwargs)
-    draw_kpts2(kpts)
+    df2.imshow(rchip,fignum=fignum,title=title,**kwargs)
+    df2.draw_kpts2(kpts)
+
+def show_top(res, hs, N=5, fnum=3, **kwargs):
+    figtitle = ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))
+    topN_cxs = res.topN_cxs(N)
+    return _show_chip_matches(hs, res, topN_cxs=topN_cxs, fignum=fnum, figtitle=figtitle,
+                        all_kpts=False, **kwargs)
+
+def res_show_analysis(res, hs, N=5, fignum=3, figtitle='', show_query=None,
+                      annotations=True, compare_cxs=None, q_cfg=None, **kwargs):
+        print('[res] show_analysis()')
+        if show_query is None: 
+            show_query = not hs.args.noshow_query
+        if not compare_cxs is None:
+            topN_cxs = compare_cxs
+            figtitle = 'comparing to '+hs.cxstr(topN_cxs) + figtitle
+        else:
+            topN_cxs = res.topN_cxs(N, q_cfg)
+            if len(topN_cxs) == 0: 
+                warnings.warn('len(topN_cxs) == 0')
+                figtitle = 'WARNING: no top scores!' + hs.cxstr(res.qcx)
+            else:
+                topscore = res.get_cx2_score()[topN_cxs][0]
+                figtitle = ('topscore=%r -- q%s' % (topscore, hs.cxstr(res.qcx))) + figtitle
+        all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
+        missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
+        if hs.args.noshow_gt:
+            missed_gt_cxs = []
+        max_nCols = min(5,N)
+        return _show_chip_matches(hs, res, gt_cxs=missed_gt_cxs, topN_cxs=topN_cxs,
+                                  figtitle=figtitle, max_nCols=max_nCols,
+                                  show_query=show_query, fignum=fignum,
+                                  annotations=annotations, q_cfg=q_cfg, **kwargs)
+
 
 def show_matches_annote_res(res, hs, cx,
                             fignum=None, 
@@ -536,7 +550,7 @@ def show_matches_annote(hs, qcx, cx2_score,
     if np.isnan(cx):
         nan_img = np.zeros((100,100), dtype=np.uint8)
         title='(qx%r v NAN)' % (qcx)
-        imshow(nan_img, fignum=fignum, plotnum=plotnum, title=title)
+        df2.imshow(nan_img, fignum=fignum, plotnum=plotnum, title=title)
         return 
     # Read query and result info (chips, names, ...)
     rchip1, rchip2 = hs.get_chip([qcx, cx])
@@ -554,58 +568,21 @@ def show_matches_annote(hs, qcx, cx2_score,
     if not title_pref is None: title = title_pref + title
     if not title_suff is None: title = title + title_suff
     # Draw the matches
-    fig, ax = df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, 
+    fig, ax,  woff, hoff = df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, 
                             fignum=fignum, plotnum=plotnum,
                             title=title, **kwargs)
-    df2.upperright_text(hs.vs_str(qcx, cx))
+    offset = (woff, hoff)
+    qcx_str = 'q'+hs.cxstr(qcx)
+    cx_str = hs.cxstr(cx)
+    df2.upperright_text(qcx_str)
+    df2.lowerright_text(cx_str)
     # Finish annotations
-    if   isgt_str == hs.UNKNOWN_STR: df2.draw_border(ax, df2.WHITE, 4)
-    elif isgt_str == hs.TRUE_STR:    df2.draw_border(ax, df2.GREEN, 4)
-    elif isgt_str == hs.FALSE_STR:   df2.draw_border(ax, df2.RED, 4)
+    if   isgt_str == hs.UNKNOWN_STR: df2.draw_border(ax, df2.WHITE, 4, offset=offset)
+    elif isgt_str == hs.TRUE_STR:    df2.draw_border(ax, df2.GREEN, 4, offset=offset)
+    elif isgt_str == hs.FALSE_STR:   df2.draw_border(ax, df2.ORANGE, 4, offset=offset)
     if show_gname:
         ax.set_xlabel(hs.cx2_gname(cx), fontproperties=df2.FONTS.xlabel)
     return ax
-
-
-
-def show_topN_matches(hs, res, N=5, fignum=4): 
-    figtitle = ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))
-    topN_cxs = res.topN_cxs(N)
-    max_nCols = max(5,N)
-    _show_chip_matches(hs, res, topN_cxs=topN_cxs, figtitle=figtitle, 
-                       fignum=fignum, all_kpts=False)
-
-def show_gt_matches(hs, res, fignum=3): 
-    figtitle = ('q%s -- GroundTruth' % (hs.cxstr(res.qcx)))
-    gt_cxs = hs.get_other_indexed_cxs(res.qcx)
-    max_nCols = max(5,len(gt_cxs))
-    _show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle, 
-                       fignum=fignum, all_kpts=True)
-
-def show_match_analysis(hs, res, N=5, fignum=3, figtitle='', show_query=None,
-                        annotations=True, compare_cxs=None, q_cfg=None, **kwargs):
-    if show_query is None: 
-        show_query = not hs.args.noshow_query
-    if not compare_cxs is None:
-        topN_cxs = compare_cxs
-        figtitle = 'comparing to '+hs.cxstr(topN_cxs) + figtitle
-    else:
-        topN_cxs = res.topN_cxs(N, q_cfg)
-        if len(topN_cxs) == 0: 
-            warnings.warn('len(topN_cxs) == 0')
-            figtitle = 'WARNING: no top scores!' + hs.cxstr(res.qcx)
-        else:
-            topscore = res.get_cx2_score()[topN_cxs][0]
-            figtitle = ('topscore=%r -- q%s' % (topscore, hs.cxstr(res.qcx))) + figtitle
-    all_gt_cxs = hs.get_other_indexed_cxs(res.qcx)
-    missed_gt_cxs = np.setdiff1d(all_gt_cxs, topN_cxs)
-    if hs.args.noshow_gt:
-        missed_gt_cxs = []
-    max_nCols = min(5,N)
-    return _show_chip_matches(hs, res, gt_cxs=missed_gt_cxs, topN_cxs=topN_cxs,
-                              figtitle=figtitle, max_nCols=max_nCols,
-                              show_query=show_query, fignum=fignum,
-                              annotations=annotations, q_cfg=q_cfg, **kwargs)
 
 def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
                        topN_cxs=None, gt_cxs=None, show_query=False,
@@ -634,7 +611,6 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
     nGtRows   = int(np.ceil(nGtSubplts / nGTCols))
     nTopNRows = int(np.ceil(nTopNSubplts / nTopNCols))
     nGtCells = nGtRows * nGTCols
-    nTopNCells = nTopNRows * nTopNCols
     if split_plots:
         nRows = nGtRows
     else:
@@ -695,5 +671,20 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
     return fig
 
 if __name__ == '__main__':
-    import multiprocessing
     multiprocessing.freeze_support()
+    print('=================================')
+    print('[viz] __main__ = vizualizations.py')
+    print('=================================')
+    import main
+    import HotSpotter
+    args = main.parse_arguments(db='NAUTS')
+    hs = HotSpotter.HotSpotter(args)
+    hs.load(load_all=True)
+    cx = helpers.get_arg_after('--cx', type_=int)
+    qcx = hs.get_valid_cxs()[0]
+    if cx is not None: qcx = cx
+    res = hs.query(qcx)
+    N=5
+    res.show_top(hs, N)
+    df2.update()
+    exec(df2.present())

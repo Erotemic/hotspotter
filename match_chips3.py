@@ -68,7 +68,12 @@ def query_groundtruth(hs, qcx, q_cfg=None, **kwargs):
 
 def query_database(hs, qcx, q_cfg=None, **kwargs):
     print('[mc3] query database')
-    dcxs = hs.indexed_sample_cx
+    if hs.indexed_sample_cx is None:
+        hs.set_samples()
+    if q_cfg is None:
+        q_cfg = hs.query_cfg
+    dcxs = hs.get_valid_cxs()
+    #dcxs = hs.indexed_sample_cx
     return query_dcxs(hs, qcx, dcxs, q_cfg, **kwargs)
 
 def make_nn_index(hs, sx2_cx=None):

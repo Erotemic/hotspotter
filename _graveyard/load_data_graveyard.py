@@ -57,3 +57,7 @@ def print_chiptable(hs_tables):
     print('=======================================================')
 
 
+@helpers.__DEPRICATED__
+def get_sv_test_data(qcx=0, cx=None):
+    return get_test_data(qcx, cx)
+

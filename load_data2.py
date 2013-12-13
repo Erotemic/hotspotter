@@ -91,10 +91,6 @@ def get_test_data(qcx=0, cx=None, db_dir=None):
     print('(hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2)')
     return (hs, qcx, cx, fm, fs, rchip1, rchip2, kpts1, kpts2)
 
-@helpers.__DEPRICATED__
-def get_sv_test_data(qcx=0, cx=None):
-    return get_test_data(qcx, cx)
-
 # ______________________________
 
 def tryindex(list, val):

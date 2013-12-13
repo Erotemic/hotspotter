@@ -1,20 +1,13 @@
 from __future__ import division, print_function
 import __builtin__
-import matplotlib
-import textwrap
-import draw_func2 as df2
+# Python
 import sys
-import vizualizations as viz
-import matplotlib
+from itertools import izip
+# Scientific
+import pandas as pd
 import numpy as np
-from numpy import linalg
 from numpy.linalg import svd
 import helpers
-import scipy.optimize
-import scipy
-import params
-from itertools import izip
-import pandas as pd
 #from numba import autojit
 
 # Toggleable printing
@@ -199,7 +192,6 @@ def _filter_utilities(qfx2_utilities, max_alts=200):
 
 def _utilities2_pairwise_breaking(qfx2_utilities):
     print('[vote] building pairwise matrix')
-    arr_   = np.array
     hstack = np.hstack
     cartesian = helpers.cartesian
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
@@ -253,9 +245,6 @@ def _get_alts_from_utilities(qfx2_utilities):
 
 def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
     print('[vote] building pairwise matrix')
-    arr_   = np.array
-    hstack = np.hstack
-    cartesian = helpers.cartesian
     tnxs, altx2_tnx, tnx2_altx, nUtilities, nAlts, altxs = _get_alts_from_utilities(qfx2_utilities)
     pairwise_mat = np.zeros((nAlts, nAlts))
     # agent to alternative vote vectors 
@@ -278,20 +267,23 @@ def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
         nUnreport = len(corder)
         # pairwise winners and losers
         for r_win in xrange(0, nReport):
+            # for each prefered alternative
             i = porder[r_win]
             wi = worder[r_win]
+            # count the reported victories: i > j
             for r_lose in xrange(r_win+1, nReport):
                 j = porder[r_lose]
-                wj = worder[r_lose]
-                w = wi
+                #wj = worder[r_lose]
                 #w = wi - wj
+                w = wi
                 pairwise_mat[i,j] += w
                 pairwise_mat[j,j] -= w
+            # count the un-reported victories: i > j
             for r_lose in xrange(nUnreport):
                 j = corder[r_lose]
-                wj = 0
-                w = wi
+                #wj = 0
                 #w = wi - wj
+                w = wi
                 pairwise_mat[i,j] += w
                 pairwise_mat[j,j] -= w
             nVoters += wi

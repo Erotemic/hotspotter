@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/MainSkel.ui'
 #
-# Created: Fri Dec 13 11:03:47 2013
+# Created: Fri Dec 13 12:18:43 2013
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -217,6 +217,8 @@ class Ui_mainSkel(object):
         self.actionView_Global_Dir.setObjectName(_fromUtf8("actionView_Global_Dir"))
         self.actionLayout_Figures = QtGui.QAction(mainSkel)
         self.actionLayout_Figures.setObjectName(_fromUtf8("actionLayout_Figures"))
+        self.actionDev_Mode_IPython = QtGui.QAction(mainSkel)
+        self.actionDev_Mode_IPython.setObjectName(_fromUtf8("actionDev_Mode_IPython"))
         self.menuFile.addAction(self.actionNew_Database)
         self.menuFile.addAction(self.actionOpen_Database)
         self.menuFile.addSeparator()
@@ -245,6 +247,8 @@ class Ui_mainSkel(object):
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionDelete_computed_directory)
         self.menuHelp.addAction(self.actionDelete_global_preferences)
+        self.menuHelp.addSeparator()
+        self.menuHelp.addAction(self.actionDev_Mode_IPython)
         self.menuActions.addAction(self.actionAdd_Chip)
         self.menuActions.addAction(self.actionNew_Chip_Property)
         self.menuActions.addSeparator()
@@ -351,6 +355,8 @@ class Ui_mainSkel(object):
         self.actionView_Global_Dir.setText(QtGui.QApplication.translate("mainSkel", "View Global Dir", None, QtGui.QApplication.UnicodeUTF8))
         self.actionLayout_Figures.setText(QtGui.QApplication.translate("mainSkel", "Layout Figures", None, QtGui.QApplication.UnicodeUTF8))
         self.actionLayout_Figures.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+L", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionDev_Mode_IPython.setText(QtGui.QApplication.translate("mainSkel", "Dev Mode (IPython)", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionDev_Mode_IPython.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+Alt+Shift+D", None, QtGui.QApplication.UnicodeUTF8))
 
 
 if __name__ == "__main__":

@@ -519,6 +519,48 @@ def keyboard(banner=None):
         pdb.set_trace()
 
 
+def ipython_execstr():
+    return textwrap.dedent(r'''
+    import matplotlib.pyplot as plt
+    embedded = False
+
+    try:
+        __IPYTHON__
+        in_ipython = True
+    except NameError as nex:
+        in_ipython = False
+
+    try:
+        import IPython
+        have_ipython = True
+    except NameError as nex:
+        have_ipython = False
+    
+    if not in_ipython:
+        if '--cmd' in sys.argv or 'devmode' in vars():
+            print('[helpers] Requested IPython shell with --cmd argument.')
+            if have_ipython:
+                print('[helpers] Found IPython')
+                try: 
+                    import IPython
+                    print('[helpers] Presenting in new ipython shell.')
+                    embedded = True
+                    IPython.embed()
+                except Exception as ex:
+                    print(repr(ex)+'\n!!!!!!!!')
+                    embedded = False
+            else:
+                print('[helpers] IPython is not installed')
+        if not embedded: 
+            print('[helpers] Presenting in normal shell.')
+            print('[helpers] ... plt.show()')
+            plt.show()
+    else: 
+        print('Presenting in current ipython shell.')
+    ''')
+
+
+
 def print_frame(frame):
     frame = frame if 'frame' in vars() else inspect.currentframe()
     attr_list = ['f_code.co_name', 'f_back', 'f_lineno',

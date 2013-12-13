@@ -229,6 +229,8 @@
     <addaction name="separator"/>
     <addaction name="actionDelete_computed_directory"/>
     <addaction name="actionDelete_global_preferences"/>
+    <addaction name="separator"/>
+    <addaction name="actionDev_Mode_IPython"/>
    </widget>
    <widget class="QMenu" name="menuActions">
     <property name="title">
@@ -551,6 +553,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+L</string>
+   </property>
+  </action>
+  <action name="actionDev_Mode_IPython">
+   <property name="text">
+    <string>Dev Mode (IPython)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+Shift+D</string>
    </property>
   </action>
  </widget>

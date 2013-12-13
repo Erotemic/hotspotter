@@ -469,6 +469,14 @@ class MainWindowBackend(QtCore.QObject):
         print('[back] layout')
         viz.present()
 
+    @pyqtSlot(name='dev_mode')
+    def dev_mode(self):
+        print('[back] dev_mode (not working)')
+        backend = self
+        hs = self.hs
+        devmode = True
+        #exec(helpers.ipython_execstr())
+
     # Help Actions
     # 
     @pyqtSlot(name='view_database_dir')

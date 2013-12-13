@@ -348,44 +348,7 @@ def present(*args, **kwargs):
         all_figures_show()
         all_figures_bring_to_front()
     # Return an exec string
-    return textwrap.dedent(r'''
-    import matplotlib.pyplot as plt
-    embedded = False
-
-    try:
-        __IPYTHON__
-        in_ipython = True
-    except NameError as nex:
-        in_ipython = False
-
-    try:
-        import IPython
-        have_ipython = True
-    except NameError as nex:
-        have_ipython = False
-    
-    if not in_ipython:
-        if '--cmd' in sys.argv:
-            print('[df2] Requested IPython shell with --cmd argument.')
-            if have_ipython:
-                print('[df2] Found IPython')
-                try: 
-                    import IPython
-                    print('df2: Presenting in new ipython shell.')
-                    embedded = True
-                    IPython.embed()
-                except Exception as ex:
-                    helpers.printWARN(repr(ex)+'\n!!!!!!!!')
-                    embedded = False
-            else:
-                print('[df2] IPython is not installed')
-        if not embedded: 
-            print('[df2] Presenting in normal shell.')
-            print('[df2] ... plt.show()')
-            plt.show()
-    else: 
-        print('Presenting in current ipython shell.')
-    ''')
+    return helpers.ipython_execstr()
 
 def save_figure(fignum=None, fpath=None, usetitle=False):
     #import warnings

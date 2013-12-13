@@ -72,6 +72,7 @@ def connect_help_signals(win):
     ui.actionAbout.triggered.connect(msg_event('About', 'hotspotter'))
     ui.actionDelete_computed_directory.triggered.connect(backend.delete_computed_dir)
     ui.actionDelete_global_preferences.triggered.connect(backend.delete_global_prefs)
+    ui.actionDev_Mode_IPython.triggered.connect(backend.dev_mode)
     #ui.actionWriteLogs.triggered.connect(backend.write_logs)
 
 def connect_batch_signals(win):

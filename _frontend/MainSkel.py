@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/MainSkel.ui'
 #
-# Created: Thu Dec 12 17:06:08 2013
+# Created: Fri Dec 13 11:03:47 2013
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -215,6 +215,8 @@ class Ui_mainSkel(object):
         self.actionView_Computed_Dir.setObjectName(_fromUtf8("actionView_Computed_Dir"))
         self.actionView_Global_Dir = QtGui.QAction(mainSkel)
         self.actionView_Global_Dir.setObjectName(_fromUtf8("actionView_Global_Dir"))
+        self.actionLayout_Figures = QtGui.QAction(mainSkel)
+        self.actionLayout_Figures.setObjectName(_fromUtf8("actionLayout_Figures"))
         self.menuFile.addAction(self.actionNew_Database)
         self.menuFile.addAction(self.actionOpen_Database)
         self.menuFile.addSeparator()
@@ -224,6 +226,8 @@ class Ui_mainSkel(object):
         self.menuFile.addAction(self.actionImport_Img_dir)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
+        self.menuOptions.addAction(self.actionLayout_Figures)
+        self.menuOptions.addSeparator()
         self.menuOptions.addAction(self.actionTogEll)
         self.menuOptions.addAction(self.actionTogPts)
         self.menuOptions.addSeparator()
@@ -336,6 +340,7 @@ class Ui_mainSkel(object):
         self.actionImport_Img_dir.setText(QtGui.QApplication.translate("mainSkel", "Import Images (select directory)", None, QtGui.QApplication.UnicodeUTF8))
         self.actionPrecompute_Queries.setText(QtGui.QApplication.translate("mainSkel", "Precompute Queries", None, QtGui.QApplication.UnicodeUTF8))
         self.actionPrecomputeChipsFeatures.setText(QtGui.QApplication.translate("mainSkel", "Precompute Chips/Features", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionPrecomputeChipsFeatures.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+Return", None, QtGui.QApplication.UnicodeUTF8))
         self.actionView_DBDir.setText(QtGui.QApplication.translate("mainSkel", "View Database Dir", None, QtGui.QApplication.UnicodeUTF8))
         self.actionScale_all_ROIS.setText(QtGui.QApplication.translate("mainSkel", "Scale all ROIs", None, QtGui.QApplication.UnicodeUTF8))
         self.actionConvert_all_images_into_chips.setText(QtGui.QApplication.translate("mainSkel", "Convert all images into chips", None, QtGui.QApplication.UnicodeUTF8))
@@ -344,6 +349,8 @@ class Ui_mainSkel(object):
         self.actionDelete_global_preferences.setText(QtGui.QApplication.translate("mainSkel", "Delete Global Prefs", None, QtGui.QApplication.UnicodeUTF8))
         self.actionView_Computed_Dir.setText(QtGui.QApplication.translate("mainSkel", "View Computed Dir", None, QtGui.QApplication.UnicodeUTF8))
         self.actionView_Global_Dir.setText(QtGui.QApplication.translate("mainSkel", "View Global Dir", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionLayout_Figures.setText(QtGui.QApplication.translate("mainSkel", "Layout Figures", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionLayout_Figures.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+L", None, QtGui.QApplication.UnicodeUTF8))
 
 
 if __name__ == "__main__":

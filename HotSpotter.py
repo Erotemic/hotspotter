@@ -493,10 +493,11 @@ class HotSpotter(DynStruct):
         return gx2_cxs
     #--------------
     def get_other_cxs(hs, cx):
+        print
         cx2_nx   = hs.tables.cx2_nx
         nx = cx2_nx[cx]
         if nx <= 1:
-            return np.array([])
+            return np.array([], ds.X_DTYPE)
         other_cx_, = np.where(cx2_nx == nx)
         other_cx  = other_cx_[other_cx_ != cx]
         return other_cx
@@ -551,6 +552,7 @@ class HotSpotter(DynStruct):
         else: 
             return hs.cx_liststr(cx)
     #--------------
+    @tools.debug_exception
     def cx_liststr(hs, cx_list):
         #return 'cx=%r' % cx
         return 'cid_list=%r' % hs.tables.cx2_cid[cx_list].tolist()

@@ -103,13 +103,16 @@ BLUE   = np.array((  0,   0, 255, 255))/255.0
 YELLOW = np.array((255, 255,   0, 255))/255.0
 BLACK  = np.array((  0,   0,   0, 255))/255.0
 WHITE  = np.array((255, 255, 255, 255))/255.0
+GRAY   = np.array((127, 127, 127, 255))/255.0
+DARK_PURP = np.array((102,  0, 153, 255))/255.0
+
 
 DPI = 80
 #FIGSIZE = (24) # default windows fullscreen
-FIGSIZE_MED = (20,10) 
+FIGSIZE_MED = (12,6) 
 FIGSIZE_BIG = (24,12) 
 
-FIGSIZE = FIGSIZE_BIG 
+FIGSIZE = FIGSIZE_MED
 
 try:
     if sys.platform == 'win32':
@@ -171,8 +174,9 @@ def draw_border(ax, color=GREEN, lw=2, offset=None):
     xy, width, height = _axis_xy_width_height(ax, -.7, -.2, 1, .4)
     if offset is not None:
         xoff, yoff = offset
-        xy = [xy[0], yoff]
+        xy = [xoff, yoff]
         height = - height - yoff
+        width = width - xoff
     rect = matplotlib.patches.Rectangle(xy, width, height, lw=lw)
     rect = ax.add_patch(rect)
     rect.set_clip_on(False)
@@ -464,13 +468,14 @@ def upperleft_text(txt):
                    color=ORANGE)
     ax_relative_text(.02, .02, txt, **txtargs)
 
-def upperright_text(txt):
+def upperright_text(txt, offset=None):
     txtargs = dict(horizontalalignment='right',
                    verticalalignment='top',
                    #fontsize='smaller',
                    #fontweight='ultralight', 
                    backgroundcolor=(0,0,0,.5),
-                   color=ORANGE)
+                   color=ORANGE,
+                   offset=offset)
     ax_relative_text(.98, .02, txt, **txtargs)
 
 def lowerright_text(txt):
@@ -482,10 +487,22 @@ def lowerright_text(txt):
                    color=ORANGE)
     ax_relative_text(.98, .92, txt, **txtargs)
 
-def ax_relative_text(x, y, txt, ax=None, **kwargs):
+def absolute_lbl(x_, y_, txt, **kwargs):
+    txtargs = dict(horizontalalignment='right',
+                   verticalalignment='top',
+                   backgroundcolor=(0,0,0,.5),
+                   color=ORANGE,
+                   **kwargs)
+    ax_absolute_text(x_, y_, txt, **txtargs)
+
+def ax_relative_text(x, y, txt, ax=None, offset=None, **kwargs):
     if ax is None: ax = gca()
     xy, width, height = _axis_xy_width_height(ax)
     x_, y_ = ((xy[0])+x*width, (xy[1]+height)-y*height)
+    if offset is not None:
+        xoff, yoff = offset
+        x_ += xoff
+        y_ += yoff
     ax_absolute_text(x_, y_, txt, ax=ax, **kwargs)
 
 def ax_absolute_text(x_, y_, txt, ax=None, **kwargs):
@@ -1071,7 +1088,9 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
                   draw_lines=True,
                   draw_ell=True, 
                   draw_pts=True,
-                  ell_alpha=None, **kwargs):
+                  ell_alpha=None,
+                  lbl1=None, 
+                  lbl2=None, **kwargs):
     '''Draws feature matches 
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''
@@ -1079,12 +1098,18 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
         assert kpts1.shape == kpts2.shape
         fm = np.tile(np.arange(0, len(kpts1)), (2,1)).T
     # get matching keypoints + offset
+    (h1, w1) = rchip1.shape[0:2] # get chip dimensions 
+    (h2, w2) = rchip2.shape[0:2]
     match_img, woff, hoff = stack_images(rchip1, rchip2, vert)
     fig, ax = imshow(match_img, fignum=fignum,
                 plotnum=plotnum, title=title,
                 **kwargs)
     nMatches = len(fm)
     upperleft_text('#match=%d' % nMatches)
+    if lbl1 is not None:
+        absolute_lbl(w1, 0, lbl1)
+    if lbl2 is not None:
+        absolute_lbl(w2+woff, 0+hoff, lbl2)
     if all_kpts:
         # Draw all keypoints as simple points
         all_args = dict(ell=False, pts=draw_pts, pts_color=GREEN, pts_size=2, ell_alpha=ell_alpha)
@@ -1155,7 +1180,7 @@ def draw_roi(ax, roi, label=None, bbox_color=(1,0,0),
              lbl_bgcolor=(0,0,0), lbl_txtcolor=(1,1,1)):
     (rx,ry,rw,rh) = roi
     rxy = (rx,ry)
-    bbox = matplotlib.patches.Rectangle(rxy,rw,rh) 
+    bbox = matplotlib.patches.Rectangle(rxy,rw,rh, lw=2) 
     bbox.set_fill(False)
     bbox.set_edgecolor(bbox_color)
     ax.add_patch(bbox)

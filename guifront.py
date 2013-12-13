@@ -55,10 +55,11 @@ def connect_action_signals(win):
 
 def connect_option_signals(win):
     ui = win.ui; backend = win.backend
-    ui.actionTogEll.triggered.connect(backend.toggle_ellipse)
-    ui.actionTogPts.triggered.connect(backend.toggle_points)
-    ui.actionTogPlt.triggered.connect(backend.toggle_plotWidget)
-    ui.actionPreferences.triggered.connect(backend.select_next)
+    ui.actionLayout_Figures.triggered.connect(backend.layout_figures)
+    #ui.actionTogEll.triggered.connect(backend.toggle_ellipse)
+    #ui.actionTogPts.triggered.connect(backend.toggle_points)
+    #ui.actionTogPlt.triggered.connect(backend.toggle_plotWidget)
+    #ui.actionPreferences.triggered.connect(backend.select_next)
 
 def connect_help_signals(win):
     ui = win.ui; backend = win.backend
@@ -115,7 +116,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         # Menubar signals
         connect_file_signals(self)
         connect_action_signals(self)
-        #connect_option_signals(self)
+        connect_option_signals(self)
         connect_batch_signals(self)
         #connect_experimental_signals(self)
         connect_help_signals(self)

@@ -245,8 +245,9 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
             bbox_color = df2.ORANGE      * np.array([1,1,1,.95])
             lbl_color  = df2.BLACK       * np.array([1,1,1,.75])
         else:
-            bbox_color = df2.DARK_ORANGE * np.array([1,1,1,.5])
-            lbl_color  = df2.BLACK       * np.array([1,1,1,.5])
+            dark_alpha = np.array([1,1,1,.6])
+            bbox_color = df2.DARK_ORANGE * dark_alpha
+            lbl_color  = df2.BLACK       * dark_alpha
         df2.draw_roi(ax, roi, roi_lbl, bbox_color, lbl_color)
         # Index the roi centers (for interaction)
         (x,y,w,h) = roi
@@ -309,6 +310,11 @@ def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
     import dev
     from Printable import DynStruct
     import extract_patch
+
+    rchip = hs.get_chip(cx) # this has to be first in case chips arnt loaded
+    kpts = hs.get_kpts(cx)
+    desc = hs.get_desc(cx)
+
     chip_info_locals = dev.chip_info(hs, cx)
     chip_title = chip_info_locals['cxstr']+' '+chip_info_locals['name']
     chip_xlabel = chip_info_locals['gname']
@@ -326,9 +332,6 @@ def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
     state.fnum = fnum
     fx_ptr = [0]
     hprint = helpers.horiz_print
-    rchip = hs.get_chip(cx)
-    kpts = hs.get_kpts(cx)
-    desc = hs.get_desc(cx)
     scale = np.sqrt(kpts.T[2]*kpts.T[4])
     # Start off keypoints with no filters
     is_valid = np.ones(len(kpts), dtype=bool)
@@ -485,8 +488,8 @@ def show_keypoints(rchip,kpts,fignum=0,title=None, **kwargs):
     df2.imshow(rchip,fignum=fignum,title=title,**kwargs)
     df2.draw_kpts2(kpts)
 
-def show_top(res, hs, N=5, fnum=3, **kwargs):
-    figtitle = ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))
+def show_top(res, hs, N=5, fnum=3, figtitle='', **kwargs):
+    figtitle += ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))
     topN_cxs = res.topN_cxs(N)
     return _show_chip_matches(hs, res, topN_cxs=topN_cxs, fignum=fnum, figtitle=figtitle,
                         all_kpts=False, **kwargs)
@@ -568,16 +571,18 @@ def show_matches_annote(hs, qcx, cx2_score,
     if not title_pref is None: title = title_pref + title
     if not title_suff is None: title = title + title_suff
     # Draw the matches
-    fig, ax,  woff, hoff = df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, 
-                            fignum=fignum, plotnum=plotnum,
-                            title=title, **kwargs)
-    offset = (woff, hoff)
     qcx_str = 'q'+hs.cxstr(qcx)
     cx_str = hs.cxstr(cx)
-    df2.upperright_text(qcx_str)
-    df2.lowerright_text(cx_str)
+    fig, ax,  woff, hoff = df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs, 
+                            fignum=fignum, plotnum=plotnum, lbl1=qcx_str,
+                                             lbl2=cx_str,
+                            title=title, **kwargs)
+    offset = (woff, hoff)
+    #df2.upperright_text(qcx_str)
+    #df2.upperright_text(cx_str, offset=offset)
+    #df2.lowerright_text(cx_str)
     # Finish annotations
-    if   isgt_str == hs.UNKNOWN_STR: df2.draw_border(ax, df2.WHITE, 4, offset=offset)
+    if   isgt_str == hs.UNKNOWN_STR: df2.draw_border(ax, df2.DARK_PURP, 4, offset=offset)
     elif isgt_str == hs.TRUE_STR:    df2.draw_border(ax, df2.GREEN, 4, offset=offset)
     elif isgt_str == hs.FALSE_STR:   df2.draw_border(ax, df2.ORANGE, 4, offset=offset)
     if show_gname:

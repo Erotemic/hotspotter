@@ -205,6 +205,8 @@
     <property name="title">
      <string>Options</string>
     </property>
+    <addaction name="actionLayout_Figures"/>
+    <addaction name="separator"/>
     <addaction name="actionTogEll"/>
     <addaction name="actionTogPts"/>
     <addaction name="separator"/>
@@ -499,6 +501,9 @@
    <property name="text">
     <string>Precompute Chips/Features</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Return</string>
+   </property>
   </action>
   <action name="actionView_DBDir">
    <property name="text">
@@ -538,6 +543,14 @@
   <action name="actionView_Global_Dir">
    <property name="text">
     <string>View Global Dir</string>
+   </property>
+  </action>
+  <action name="actionLayout_Figures">
+   <property name="text">
+    <string>Layout Figures</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
    </property>
   </action>
  </widget>

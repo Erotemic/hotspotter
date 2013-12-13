@@ -201,6 +201,10 @@ class QueryResult(DynStruct):
 FM_DTYPE  = np.uint32
 FK_DTYPE  = np.int16
 FS_DTYPE  = np.float32
+
+ID_DTYPE = np.int32
+X_DTYPE  = np.int32
+
 class NNIndex(object):
     def __init__(nn_index, hs, cx_list):
         cx2_desc  = hs.feats.cx2_desc
@@ -552,9 +556,9 @@ class HotspotterTables(DynStruct):
              cx2_roi   = [], cx2_theta = [], prop_dict = {}):
         self.gx2_gname    = np.array(gx2_gname, dtype=str)
         self.nx2_name     = np.array(nx2_name, dtype=str)
-        self.cx2_cid      = np.array(cx2_cid, dtype=np.int32)
-        self.cx2_nx       = np.array(cx2_nx, dtype=np.int32)
-        self.cx2_gx       = np.array(cx2_gx, dtype=np.int32)
+        self.cx2_cid      = np.array(cx2_cid, dtype=ID_DTYPE)
+        self.cx2_nx       = np.array(cx2_nx, dtype=X_DTYPE)
+        self.cx2_gx       = np.array(cx2_gx, dtype=X_DTYPE)
         self.cx2_roi      = np.array(cx2_roi, dtype=np.int32)
         self.cx2_roi.shape = (self.cx2_roi.size // 4, 4)
         self.cx2_theta    = np.array(cx2_theta, dtype=np.float32)

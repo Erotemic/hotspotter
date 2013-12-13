@@ -198,15 +198,9 @@ class MainWindowBackend(QtCore.QObject):
             cxs = self.hs.gx2_cxs(gx)
             if len(cxs > 0):
                 cx = cxs[0]
-                highlight_cxs = [cx]
-            else:
-                highlight_cxs = []
-        else:
-            highlight_cxs = []
+        highlight_cxs = [] if cx is None else [cx]
         self.selection = {'type_':'gx', 'index':gx, 'sub':cx}
-        cx_clicked_func = lambda cx: self.select_gx(gx, cx)
-        fig = df2.figure(fignum=1, doclf=True)
-        self.show_image(gx, highlight_cxs, cx_clicked_func)
+        self.show_image(gx, highlight_cxs)
 
     # Table selection
     @pyqtSlot(int, name='select_cid')
@@ -315,9 +309,10 @@ class MainWindowBackend(QtCore.QObject):
         print('[*back] quit()')
         guitools.exit_application()
 
-    def show_image(self, gx, sel_cxs=[], cx_clicked_func=None):
+    def show_image(self, gx, sel_cxs=[]):
         df2.plt.clf()
         fig = df2.figure(fignum=1, doclf=True)
+        cx_clicked_func = lambda cx: self.select_gx(gx, cx)
         viz.show_image(self.hs, gx, sel_cxs, cx_clicked_func)
         df2.set_figtitle('Image View')
         df2.draw()
@@ -325,8 +320,7 @@ class MainWindowBackend(QtCore.QObject):
     def show_query(self, res):
         df2.figure(fignum=3)
         df2.plt.clf()
-        res.show_top(self.hs, fnum=3)
-        df2.set_figtitle('Query View')
+        res.show_top(self.hs, fnum=3, figtitle='Query View ')
         df2.draw()
 
     def show_chip(self, cx):
@@ -466,6 +460,13 @@ class MainWindowBackend(QtCore.QObject):
             self.hs.query(qcx)
         self.win.blockSignals(prevBlock)
         print('[back] Finished precomputing queries')
+
+    # Option Actions
+    # 
+    @pyqtSlot(name='layout_figures')
+    def layout_figures(self):
+        print('[back] layout')
+        viz.present()
 
     # Help Actions
     # 

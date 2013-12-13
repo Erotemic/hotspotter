@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/MainDialog.ui'
 #
-# Created: Thu Dec 12 17:06:07 2013
+# Created: Fri Dec 13 11:03:47 2013
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!

@@ -325,18 +325,9 @@ def show_image(hs, gx,
 
 def show_splash(fnum=1, **kwargs):
     print('[viz] show_splash()')
-    df2.figure(fignum=fnum, doclf=True)
     splash_fpath = realpath('_frontend/splash.png')
     img = io.imread(splash_fpath)
     df2.imshow(img, fignum=fnum, **kwargs)
-    #fig = self.win.plotWidget.figure
-    #ax = fig.get_axes()[0]
-    #ax.imshow(img)
-    #ax.set_xticks([])
-    #ax.set_yticks([])
-    #fig.canvas.draw()
-    #print(fig)
-    #print(fig is self.win.plotWidget.figure)
 
 
 def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
@@ -344,84 +335,59 @@ def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
     from Printable import DynStruct
     import extract_patch
 
-    rchip = hs.get_chip(cx)  # this has to be first in case chips arnt loaded
+    # Get chip info (make sure get_chip is called first)
+    rchip = hs.get_chip(cx) 
     kpts = hs.get_kpts(cx)
     desc = hs.get_desc(cx)
 
-    chip_info_locals = dev.chip_info(hs, cx)
-    chip_title = chip_info_locals['cxstr'] + ' ' + chip_info_locals['name']
-    chip_xlabel = chip_info_locals['gname']
+    cxstr = hs.cxstr(cx)
+    name  = hs.cx2_name(cx)
+    gname = hs.cx2_gname(cx)
 
-    class State(DynStruct):
-        def __init__(state):
-            super(State, state).__init__()
-            state.reset()
-
-        def reset(state):
-            state.res = None
-            state.scale_min = None
-            state.scale_max = None
-            state.fnum = 1
-            state.fnum_offset = 1
-    state = State()
-    state.fnum = fnum
-    fx_ptr = [0]
-    #hprint = helpers.horiz_print
-    #scale = np.sqrt(kpts.T[2]*kpts.T[4])
-    # Start off keypoints with no filters
-    is_valid = np.ones(len(kpts), dtype=bool)
+    fig = df2.figure(fignum=fnum)
 
     def select_ith_keypoint(fx):
         print('-------------------------------------------')
         print('[interact] viewing ith=%r keypoint' % fx)
+        # Get the fx-th keypiont
         kp = kpts[fx]
+        scale = np.sqrt(kp[2] * kp[4])
         sift = desc[fx]
-        np.set_printoptions(precision=5)
+        # Draw the image with keypoint fx highlighted
+        fig = df2.figure(fignum=fnum)
         df2.cla()
-        fig1 = df2.figure(state.fnum, **kwargs)
-        df2.imshow(rchip, plotnum=(2, 1, 1))
-        #df2.imshow(rchip, plotnum=(1,2,1), title='inv(sqrtm(invE*)')
-        #df2.imshow(rchip, plotnum=(1,2,2), title='inv(A)')
+        df2.imshow(rchip, plotnum=(2, 1, 1), fignum=fnum)
         ell_args = {'ell_alpha': .4, 'ell_linewidth': 1.8, 'rect': False}
-        df2.draw_kpts2(kpts[is_valid], ell_color=df2.ORANGE, **ell_args)
+        df2.draw_kpts2(kpts, ell_color=df2.ORANGE, **ell_args)
         df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.BLUE, **ell_args)
         ax = df2.gca()
-        #ax.set_title(str(fx)+' old=b(inv(sqrtm(invE*)) and new=o(A=invA)')
-        scale = np.sqrt(kp[2] * kp[4])
-        printops = np.get_printoptions()
-        np.set_printoptions(precision=1)
-        ax.set_title(chip_title)
-        ax.set_xlabel(chip_xlabel)
-
+        ax.set_title(cxstr + ' ' + name)
+        ax.set_xlabel(gname)
+        
+        # Draw the unwarped selected feature
         extract_patch.draw_keypoint_patch(rchip, kp, sift, plotnum=(2, 2, 3))
         ax = df2.gca()
-        ax.set_title('affine feature\nfx=%r scale=%.1f' % (fx, scale))
+        xy_str = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
+        ax.set_title('affine feature\nfx=%r scale=%.1f\n%s' % (fx, scale, xy_str))
+
+        # Draw the warped selected feature
         extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, plotnum=(2, 2, 4))
         ax = df2.gca()
-        ax.set_title('warped feature\ninvA=%r ' % str(kp))
-        #golden_wh = lambda x:map(int,map(round,(x * .618 , x * .312)))
-        #Ooo_50_50 = {'num_rc':(1,1), 'wh':golden_wh(1400 * 2)}
-        np.set_printoptions(**printops)
-        #df2.present(**Ooo_50_50)
-        #df2.update()
-        fig1.show()
-        fig1.canvas.draw()
-        #df2.show()
-
-    fig = df2.figure(state.fnum)
-    # Flann doesn't help here at all
+        acd_str = '[(%.1f,  0),\n' % (kp[2],)
+        acd_str += '  (%.1f, %.1f)]' % (kp[3], kp[4],)
+        ax.set_title('warped feature inv(A) =\n'+acd_str)
+        fig.canvas.draw()
 
     def _on_click(event):
         if event.xdata is None:
             return
         tup = (event.button, event.x, event.y, event.xdata, event.ydata)
-        print('[interact] button=%d, x=%d, y=%d, xdata=%f, ydata=%f' % tup)
         x, y = event.xdata, event.ydata
         dist = (kpts.T[0] - x) ** 2 + (kpts.T[1] - y) ** 2
-        fx_ptr[0] = dist.argsort()[0]
-        select_ith_keypoint(fx_ptr[0])
-        print('>>>')
-    select_ith_keypoint(fx_ptr[0])
+        fx = dist.argmin()
+        select_ith_keypoint(fx)
+    fx = 0
+    select_ith_keypoint(fx)
 
     callback_id = fig.__dict__.get('callback_id', None)
     if callback_id is not None:
@@ -748,10 +714,15 @@ if __name__ == '__main__':
     hs.load(load_all=True)
     cx = helpers.get_arg_after('--cx', type_=int)
     qcx = hs.get_valid_cxs()[0]
-    if cx is not None:
-        qcx = cx
-    res = hs.query(qcx)
-    N = 5
-    res.show_top(hs, N)
+    doquery = False
+    dochip = True
+    if doquery:
+        if cx is not None:
+            qcx = cx
+        res = hs.query(qcx)
+        N = 5
+        res.show_top(hs, N)
+    if dochip:
+        show_chip_interaction(hs, qcx, '', fnum=2)
     df2.update()
     exec(df2.present())

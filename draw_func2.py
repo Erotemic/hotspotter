@@ -363,6 +363,8 @@ def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
     printDBG('[df2]     xy_pads = %r' % ((x_pad, y_pad),))
 
     if sys.platform == 'win32':
+        h_off +=   0
+        w_off +=  40
         x_off +=  40
         y_off +=  40
         x_pad +=   0

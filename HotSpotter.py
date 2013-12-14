@@ -437,6 +437,9 @@ class HotSpotter(DynStruct):
         roi = hs.tables.cx2_roi[cx]
         return roi
     #--------------
+    def cx2_cid(hs, cx):
+        return hs.tables.cx2_cid[cx]
+    #--------------
     def cx2_name(hs, cx):
         cx2_nx = hs.tables.cx2_nx
         nx2_name =hs.tables.nx2_name

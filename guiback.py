@@ -51,6 +51,41 @@ class MainWindowBackend(QtCore.QObject):
             self.connect_api(hs)
 
     #--------------------------------------------------------------------------
+    # Draw Functions
+    #--------------------------------------------------------------------------
+
+    def show_splash(self):
+        df2.figure(fignum=1)
+        df2.plt.clf()
+        viz.show_splash(fnum=1)
+        df2.set_figtitle('A Nice View')
+        df2.draw()
+
+    def show_image(self, gx, sel_cxs=[]):
+        df2.figure(fignum=1)
+        df2.plt.clf()
+        cx_clicked_func = lambda cx: self.select_gx(gx, cx)
+        viz.show_image(self.hs, gx, sel_cxs, cx_clicked_func,
+                       fnum=1, figtitle='Image View')
+        df2.draw()
+
+    def show_chip(self, cx):
+        df2.figure(fignum=2)
+        df2.plt.clf()
+        INTERACTIVE_CHIPS = True
+        if INTERACTIVE_CHIPS:
+            viz.show_chip_interaction(self.hs, cx, '', fnum=2, figtitle='Chip View')
+        else:
+            viz.show_chip(self.hs, cx, fnum=2, figtitle='Chip View')
+        df2.draw()
+
+    def show_query(self, res):
+        df2.figure(fignum=3)
+        df2.plt.clf()
+        res.show_top(self.hs, fnum=3, figtitle='Query View ')
+        df2.draw()
+
+    #--------------------------------------------------------------------------
     # Work Functions
     #--------------------------------------------------------------------------
     def get_selected_gx(self):
@@ -193,9 +228,7 @@ class MainWindowBackend(QtCore.QObject):
     def clear_selection(self):
         print('[*back] clear_selection()')
         self.selection = None
-        viz.show_splash(fnum=1)
-        df2.set_figtitle('A Nice View')
-        df2.draw()
+        self.show_splash()
 
     # Table selection
     @pyqtSlot(int, name='select_gx')
@@ -205,6 +238,9 @@ class MainWindowBackend(QtCore.QObject):
             cxs = self.hs.gx2_cxs(gx)
             if len(cxs > 0):
                 cx = cxs[0]
+        if cx is not None:
+            cid = self.hs.tables.cx2_cid[cx]
+            self.select_cid(cid)
         highlight_cxs = [] if cx is None else [cx]
         self.selection = {'type_': 'gx', 'index': gx, 'sub': cx}
         self.show_image(gx, highlight_cxs)
@@ -321,28 +357,6 @@ class MainWindowBackend(QtCore.QObject):
     def quit(self):
         print('[*back] quit()')
         guitools.exit_application()
-
-    def show_image(self, gx, sel_cxs=[]):
-        df2.plt.clf()
-        df2.figure(fignum=1, doclf=True)
-        cx_clicked_func = lambda cx: self.select_gx(gx, cx)
-        viz.show_image(self.hs, gx, sel_cxs, cx_clicked_func)
-        df2.set_figtitle('Image View')
-        df2.draw()
-
-    def show_query(self, res):
-        df2.figure(fignum=3)
-        df2.plt.clf()
-        res.show_top(self.hs, fnum=3, figtitle='Query View ')
-        df2.draw()
-
-    def show_chip(self, cx):
-        df2.figure(fignum=2, doclf=True)
-        df2.plt.clf()
-        viz.show_chip_interaction(self.hs, cx, '', fnum=2)
-        #viz.show_chip(self.hs, cx)
-        df2.set_figtitle('Chip View')
-        df2.draw()
 
     #--------------------------------------------------------------------------
     # Action menu slots

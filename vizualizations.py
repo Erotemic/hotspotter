@@ -331,12 +331,10 @@ def show_splash(fnum=1, **kwargs):
 
 
 def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
-    import dev
-    from Printable import DynStruct
     import extract_patch
 
     # Get chip info (make sure get_chip is called first)
-    rchip = hs.get_chip(cx) 
+    rchip = hs.get_chip(cx)
     kpts = hs.get_kpts(cx)
     desc = hs.get_desc(cx)
 
@@ -361,32 +359,37 @@ def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
         df2.draw_kpts2(kpts, ell_color=df2.ORANGE, **ell_args)
         df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.BLUE, **ell_args)
         ax = df2.gca()
-        ax.set_title(cxstr + ' ' + name)
+        ax.set_title(cxstr + ' name=' + name)
         ax.set_xlabel(gname)
-        
-        # Draw the unwarped selected feature
-        extract_patch.draw_keypoint_patch(rchip, kp, sift, plotnum=(2, 2, 3))
-        ax = df2.gca()
+
         xy_str = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
-        ax.set_title('affine feature\nfx=%r scale=%.1f\n%s' % (fx, scale, xy_str))
+        acd_str = '[(%3.1f,  0.00),\n' % (kp[2],)
+        acd_str += ' (%3.1f, %3.1f)]' % (kp[3], kp[4],)
+        # Draw the unwarped selected feature
+        extract_patch.draw_keypoint_patch(rchip, kp, sift, plotnum=(2, 3, 4))
+        ax = df2.gca()
+        ax.set_title('affine feature inv(A) =')
+        ax.set_xlabel(acd_str)
 
         # Draw the warped selected feature
-        extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, plotnum=(2, 2, 4))
+        extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, plotnum=(2, 3, 5))
         ax = df2.gca()
-        acd_str = '[(%.1f,  0),\n' % (kp[2],)
-        acd_str += '  (%.1f, %.1f)]' % (kp[3], kp[4],)
-        ax.set_title('warped feature inv(A) =\n'+acd_str)
+        ax.set_title('warped feature')
+        ax.set_xlabel('fx=%r scale=%.1f\n%s' % (fx, scale, xy_str))
+
+        df2.figure(fignum=fnum, plotnum=(2,3,6))
+        df2.draw_sift_signature(sift, 'sift gradient histogram')
+
         fig.canvas.draw()
 
     def _on_click(event):
         if event.xdata is None:
             return
-        tup = (event.button, event.x, event.y, event.xdata, event.ydata)
         x, y = event.xdata, event.ydata
         dist = (kpts.T[0] - x) ** 2 + (kpts.T[1] - y) ** 2
         fx = dist.argmin()
         select_ith_keypoint(fx)
-    fx = 0
+    fx = 1897
     select_ith_keypoint(fx)
 
     callback_id = fig.__dict__.get('callback_id', None)
@@ -414,7 +417,7 @@ def draw_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
         gname = hs.cx2_gname(cx)
         name = hs.cx2_name(cx)
         ngt_str = hs.num_indexed_gt_str(cx)
-        title_str += ', '.join([name, hs.cxstr(cx), ngt_str])
+        title_str += ', name='.join([name, hs.cxstr(cx), ngt_str])
     fig, ax = df2.imshow(rchip1, title=title_str, **kwargs)
     #if not res is None:
     if info:
@@ -709,7 +712,7 @@ if __name__ == '__main__':
     print('=================================')
     import main
     import HotSpotter
-    args = main.parse_arguments(db='NAUTS')
+    args = main.parse_arguments(db='MOTHERS')
     hs = HotSpotter.HotSpotter(args)
     hs.load(load_all=True)
     cx = helpers.get_arg_after('--cx', type_=int)

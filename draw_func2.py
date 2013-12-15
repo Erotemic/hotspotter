@@ -39,6 +39,7 @@ from PyQt4.QtCore import Qt
 import numpy as np
 import scipy.stats
 # HotSpotter
+import tools
 from Printable import DynStruct
 import helpers
 
@@ -762,13 +763,6 @@ def figure(fignum=None,
     return fig
 
 
-# GRAVEYARD
-def update_figure_size(fignum, width, height):
-    fig = get_fig(fignum)
-    set_geometry(fig, 40, 40, width, height)
-    fig.canvas.draw()
-
-
 def draw_pdf(data, draw_support=True, scale_to=None, label=None, colorx=0):
     fig = gcf()
     ax = gca()
@@ -833,7 +827,10 @@ def show_signature(sig, **kwargs):
     fig.show()
 
 
-def draw_stems(x_data, y_data):
+def draw_stems(x_data=None, y_data=None):
+    if y_data is not None and x_data is None:
+        x_data = np.arange(len(y_data))
+        pass
     if len(x_data) != len(y_data):
         print('[df2] WARNING draw_stems(): len(x_data)!=len(y_data)')
     if len(x_data) == 0:
@@ -849,6 +846,38 @@ def draw_stems(x_data, y_data):
     ax = gca()
     ax.set_xlim(min(x_data) - 1, max(x_data) + 1)
     ax.set_ylim(min(y_data) - 1, max(max(y_data), max(x_data)) + 1)
+
+
+def draw_sift_signature(sift, title=''):
+    ax = gca()
+    draw_bars(sift, 16)
+    ax.set_xlim(0, 128)
+    ax.set_ylim(0, 256)
+    xy, width, height = _axis_xy_width_height(ax)
+
+    rect = matplotlib.patches.Rectangle(xy, width, height, lw=0, zorder=0)
+    rect = ax.add_patch(rect)
+    rect.set_clip_on(False)
+    rect.set_fill(True)
+    rect.set_color(BLACK * .9)
+    ax.set_xticks(np.arange(9) * 16)
+    ax.set_yticks(np.arange(9) * 32)
+    ax.set_title(title)
+
+
+def draw_bars(y_data, nColorSplits=1):
+    width = 1
+    nDims = len(y_data)
+    nGroup = nDims // nColorSplits
+    ori_colors = distinct_colors(nColorSplits)
+    x_data = np.arange(nDims)
+    ax = gca()
+    for ix in xrange(nColorSplits):
+        xs = np.arange(nGroup) + (nGroup * ix)
+        color = ori_colors[ix]
+        x_dat = x_data[xs]
+        y_dat = y_data[xs]
+        ax.bar(x_dat, y_dat, width, color=color, edgecolor=np.array(color) * .8)
 
 
 def legend():
@@ -893,6 +922,7 @@ def variation_trunctate(data):
 
 
 # ---- IMAGE CREATION FUNCTIONS ----
+@tools.debug_exception
 def draw_sift(desc, kp=None):
     ''' desc = np.random.rand(128)
         desc = desc / np.sqrt((desc**2).sum())

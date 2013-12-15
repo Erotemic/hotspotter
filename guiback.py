@@ -54,11 +54,11 @@ class MainWindowBackend(QtCore.QObject):
     # Draw Functions
     #--------------------------------------------------------------------------
 
-    def show_splash(self):
-        df2.figure(fignum=1)
+    def show_splash(self, fnum=1, view='Nice'):
+        df2.figure(fignum=fnum)
         df2.plt.clf()
-        viz.show_splash(fnum=1)
-        df2.set_figtitle('A Nice View')
+        viz.show_splash(fnum=fnum)
+        df2.set_figtitle(view+' View')
         df2.draw()
 
     def show_image(self, gx, sel_cxs=[]):
@@ -228,7 +228,9 @@ class MainWindowBackend(QtCore.QObject):
     def clear_selection(self):
         print('[*back] clear_selection()')
         self.selection = None
-        self.show_splash()
+        self.show_splash(1, 'Image')
+        self.show_splash(2, 'Chip')
+        self.show_splash(3, 'Results')
 
     # Table selection
     @pyqtSlot(int, name='select_gx')

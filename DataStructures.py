@@ -189,11 +189,11 @@ class QueryResult(DynStruct):
     def show_gt_matches(res, hs, *args, **kwargs):
         figtitle = ('q%s -- GroundTruth' % (hs.cxstr(res.qcx)))
         gt_cxs = hs.get_other_indexed_cxs(res.qcx)
-        viz._show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle, 
-                           fignum=fignum, all_kpts=True)
+        viz._show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle,
+                               all_kpts=True, *args, **kwargs)
 
-    def plot_matches(res, hs, cx, fnum=1, **kwargs):
-        viz.show_matches_annote_res(res, hs, cx, fignum=fnum, draw_pts=False, **kwargs)
+    def plot_matches(res, hs, cx, **kwargs):
+        viz.show_matches_annote_res(res, hs, cx, draw_pts=False, **kwargs)
 
 #=========================
 # NN (FLANN) Index Class
@@ -205,6 +205,7 @@ FS_DTYPE  = np.float32
 ID_DTYPE = np.int32
 X_DTYPE  = np.int32
 
+
 class NNIndex(object):
     def __init__(nn_index, hs, cx_list):
         cx2_desc  = hs.feats.cx2_desc
@@ -214,18 +215,18 @@ class NNIndex(object):
         uid = '_cxs(' + sample_uid + ')' + feat_uid
         # Number of features per sample chip
         sx2_nFeat = [len(cx2_desc[sx]) for sx in iter(cx_list)]
-        # Inverted index from indexed descriptor to chipx and featx 
-        _ax2_cx = [[cx]*nFeat for (cx, nFeat) in izip(cx_list, sx2_nFeat)]
+        # Inverted index from indexed descriptor to chipx and featx
+        _ax2_cx = [[cx] * nFeat for (cx, nFeat) in izip(cx_list, sx2_nFeat)]
         _ax2_fx = [range(nFeat) for nFeat in iter(sx2_nFeat)]
         ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
         ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
         # Aggregate indexed descriptors into continuous structure
         ax2_desc = np.vstack([cx2_desc[cx] for cx in cx_list])
         # Build/Load the flann index
-        flann_params = {'algorithm':'kdtree', 'trees':4}
-        precomp_kwargs = {'cache_dir'    : hs.dirs.cache_dir,
-                          'uid'          : uid,
-                          'flann_params' : flann_params, }
+        flann_params = {'algorithm': 'kdtree', 'trees': 4}
+        precomp_kwargs = {'cache_dir': hs.dirs.cache_dir,
+                          'uid': uid,
+                          'flann_params': flann_params, }
         flann = algos.precompute_flann(ax2_desc, **precomp_kwargs)
         #----
         # Agg Data
@@ -233,6 +234,7 @@ class NNIndex(object):
         nn_index.ax2_fx   = ax2_fx
         nn_index.ax2_data = ax2_desc
         nn_index.flann = flann
+
     def __del__(nn_index):
         if not nn_index.flann:
             nn_index.flann.delete_index()

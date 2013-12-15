@@ -11,6 +11,7 @@ from os.path import join, exists, splitext
 import cv2
 import fnmatch
 import os
+import shutil
 import re
 import sys
 import textwrap

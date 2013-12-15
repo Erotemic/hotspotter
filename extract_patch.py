@@ -84,14 +84,12 @@ def get_patch(rchip, kp):
     #print('[get_patch] sfx=%r' % sfx)
     #print('[get_patch] ratio=%r' % ratio)
     (chip_h, chip_w) = rchip.shape[0:2]
-    print('[get_patch()] chip wh = (%r, %r)' % (chip_w, chip_h))
-    print('[get_patch()] kp = %r ' % kp)
+    #print('[get_patch()] chip wh = (%r, %r)' % (chip_w, chip_h))
+    #print('[get_patch()] kp = %r ' % kp)
     quantx = quantize_to_pixel_with_offset(x, radx, 0, chip_w)
     quanty = quantize_to_pixel_with_offset(y, rady, 0, chip_h)
     ix1, ix2, xm = quantx
     iy1, iy2, ym = quanty
-    print('[get_patch()] quantx = %r' % (quantx,))
-    print('[get_patch()] quanty = %r' % (quanty,))
     patch = rchip[iy1:iy2, ix1:ix2]
     subkp = kp.copy()  # subkeypoint in patch coordinates
     subkp[0:2] = (xm, ym)
@@ -106,27 +104,26 @@ def quantize_to_pixel_with_offset(z, radius, low, high):
       ^     ^ ^                    ^
       z1    z iz                   z2
             ________________________ < radius
-                _____________________ < quantized radius 
+                _____________________ < quantized radius
     ========|
                 '''
-    print('quan pxl: z=%r, radius=%r, low=%r, high=%r' % (z, radius, low, high))
-    print('-----------')
-    print('z = %r' % z)
-    print('radius = %r' % radius)
+    #print('quan pxl: z=%r, radius=%r, low=%r, high=%r' % (z, radius, low, high))
+    #print('-----------')
+    #print('z = %r' % z)
+    #print('radius = %r' % radius)
     # Non quantized bounds
     z1 = z - radius
     z2 = z + radius
-    print('bounds = %r, %r' % (z1, z2))
+    #print('bounds = %r, %r' % (z1, z2))
     # Quantized bounds
     iz1 = int(max(np.floor(z1), low))
     iz2 = int(min(np.ceil(z2), high))
-    print('ibounds = %r, %r' % (iz1, iz2))
+    #print('ibounds = %r, %r' % (iz1, iz2))
     # Quantized min radius
     z_radius1 = int(np.ceil(z - iz1))
     z_radius2 = int(np.ceil(iz2 - z))
     z_radius = min(z_radius1, z_radius2)
-    print('z_radius=%r' % z_radius)
-
+    #print('z_radius=%r' % z_radius)
     return iz1, iz2, z_radius
 
 

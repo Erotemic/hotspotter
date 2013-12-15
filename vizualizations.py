@@ -7,7 +7,7 @@ import draw_func2 as df2
 from os.path import realpath, join
 import multiprocessing
 import os
-import re
+#import re
 import sys
 import warnings
 # Scientific
@@ -91,7 +91,7 @@ def plot_name(hs, nx, nx2_cxs=None, fignum=0, hl_cxs=[], subtitle='',
         title += ' noannote'
     #gs2.tight_layout(fig)
     #gs2.update(top=df2.TOP_SUBPLOT_ADJUST)
-    df2.set_figtitle(title, subtitle)
+    #df2.set_figtitle(title, subtitle)
 
 
 def plot_rank_stem(allres, orgres_type='true'):
@@ -330,7 +330,7 @@ def show_splash(fnum=1, **kwargs):
     df2.imshow(img, fignum=fnum, **kwargs)
 
 
-def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
+def show_chip_interaction(hs, cx, fnum=2, **kwargs):
     import extract_patch
 
     # Get chip info (make sure get_chip is called first)
@@ -354,9 +354,12 @@ def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
         # Draw the image with keypoint fx highlighted
         fig = df2.figure(fignum=fnum)
         df2.cla()
-        df2.imshow(rchip, plotnum=(2, 1, 1), fignum=fnum)
         ell_args = {'ell_alpha': .4, 'ell_linewidth': 1.8, 'rect': False}
-        df2.draw_kpts2(kpts, ell_color=df2.ORANGE, **ell_args)
+        show_chip(hs, cx=cx, rchip=rchip, kpts=kpts, plotnum=(2, 1, 1),
+                  fignum=fnum, ell_args=ell_args)
+        #df2.imshow(rchip, plotnum=(2, 1, 1), fignum=fnum)
+        #df2.draw_kpts2(kpts, ell_color=df2.ORANGE, **ell_args)
+        # Draw highlighted point
         df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.BLUE, **ell_args)
         ax = df2.gca()
         ax.set_title(cxstr + ' name=' + name)
@@ -389,8 +392,10 @@ def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
         dist = (kpts.T[0] - x) ** 2 + (kpts.T[1] - y) ** 2
         fx = dist.argmin()
         select_ith_keypoint(fx)
-    fx = 1897
-    select_ith_keypoint(fx)
+    #fx = 1897
+    #select_ith_keypoint(fx)
+    # Draw without keypoints the first time
+    show_chip(hs, cx=cx, draw_kpts=False)
 
     callback_id = fig.__dict__.get('callback_id', None)
     if callback_id is not None:
@@ -399,27 +404,36 @@ def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
 
 
 def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
-              nRandKpts=None, kpts_alpha=None, prefix='', fnum=2, **kwargs):
+              nRandKpts=None, kpts_alpha=None, kpts=None, rchip=None,
+              ell_alpha=None, ell_color=None, prefix='', ell_args=None, fnum=2, **kwargs):
     if not res is None:
         cx = res.qcx
     if not allres is None:
         res = allres.qcx2_res[cx]
-    rchip1    = hs.get_chip(cx)
+    if rchip is None:
+        rchip = hs.get_chip(cx)
     title_str = prefix
     # Add info to title
     if info:
         gname = hs.cx2_gname(cx)
         name = hs.cx2_name(cx)
         ngt_str = hs.num_indexed_gt_str(cx)
-        title_str += ', name='.join([name, hs.cxstr(cx), ngt_str])
-    fig, ax = df2.imshow(rchip1, title=title_str, **kwargs)
+        title_str += ' '.join(['name=%s' % name, hs.cxstr(cx), ngt_str,
+                               'gname=%s' % gname])
+
+    fnum = kwargs.pop('fnum', fnum)
+    fnum = kwargs.pop('fignum', fnum)
+    fig, ax = df2.imshow(rchip, title=title_str, fignum=fnum, **kwargs)
     #if not res is None:
-    if info:
-        ax.set_xlabel(gname, fontproperties=df2.FONTS.xlabel)
     if not draw_kpts:
         return
-    kpts1 = hs.get_kpts(cx)
-    kpts_args = dict(offset=(0, 0), ell_linewidth=1.5, ell=True, pts=False)
+    if kpts is None:
+        kpts = hs.get_kpts(cx)
+    if ell_args is None:
+        ell_args = {'offset': (0, 0),
+                    'ell_linewidth': 1.5,
+                    'ell': True,
+                    'pts': False}
     # Draw keypoints with groundtruth information
     if not res is None:
         gt_cxs = hs.get_other_indexed_cxs(cx)
@@ -434,19 +448,13 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
                 unique_ints = np.unique(stack_ints)
                 return unique_ints
             except Exception as ex:
-                # debug in case of exception (seem to be happening)
-                print('==============')
                 print('Ex: %r' % ex)
-                print('----')
                 print('fx_list = %r ' % fx_list)
-                print('----')
                 print('stack_insts = %r' % stack_ints)
-                print('----')
                 print('unique_ints = %r' % unique_ints)
-                print('==============')
                 print(unique_ints)
                 raise
-        all_fx = np.arange(len(kpts1))
+        all_fx = np.arange(len(kpts))
         cx2_fm = res.get_cx2_fm()
         fx_list1 = [fm[:, 0] for fm in cx2_fm]
         fx_list2 = [fm[:, 0] for fm in cx2_fm[gt_cxs]] if len(gt_cxs) > 0 else np.array([])
@@ -457,15 +465,17 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
         print('[df2] %s has %d keypoints. %d true-matching. %d matching. %d noisy.' %
              (hs.cxstr(cx), len(all_fx), len(true_matched_fx), len(matched_fx), len(noise_fx)))
         # Get keypoints
-        kpts_true  = kpts1[true_matched_fx]
-        kpts_match = kpts1[matched_fx, :]
-        kpts_noise = kpts1[noise_fx, :]
+        kpts_true  = kpts[true_matched_fx]
+        kpts_match = kpts[matched_fx, :]
+        kpts_noise = kpts[noise_fx, :]
         # Draw keypoints
         legend_tups = []
+        ell_alpha = ell_args.pop('ell_alpha', ell_alpha)
+        ell_color = ell_args.pop('ell_color', ell_color)
 
         # helper function taking into acount phantom labels
         def _kpts_helper(kpts_, color, alpha, label):
-            df2.draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha, **kpts_args)
+            df2.draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha, **ell_args)
             phant_ = df2.Circle((0, 0), 1, fc=color)
             legend_tups.append((phant_, label))
         _kpts_helper(kpts_noise,  df2.RED, .1, 'Unverified')
@@ -474,20 +484,26 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
         #plt.legend(*zip(*legend_tups), framealpha=.2)
     # Just draw boring keypoints
     else:
-        if kpts_alpha is None:
-            kpts_alpha = .4
+        kpts_alpha = ell_args.pop('kpts_alpha', kpts_alpha)
+        ell_alpha = ell_args.pop('ell_alpha', ell_alpha)
+        ell_alpha = kpts_alpha
+        if ell_alpha is None:
+            ell_alpha = .4
         if not nRandKpts is None:
-            nkpts1 = len(kpts1)
+            nkpts1 = len(kpts)
             fxs1 = np.arange(nkpts1)
             size = nRandKpts
             replace = False
             p = np.ones(nkpts1)
             p = p / p.sum()
             fxs_randsamp = np.random.choice(fxs1, size, replace, p)
-            kpts1 = kpts1[fxs_randsamp]
+            kpts = kpts[fxs_randsamp]
             df2.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1))
             # show a random sample of kpts
-        df2.draw_kpts2(kpts1, ell_alpha=kpts_alpha, ell_color=df2.RED, **kpts_args)
+        if ell_color is None:
+            ell_color = df2.RED
+
+        df2.draw_kpts2(kpts, ell_color=ell_color, ell_alpha=ell_alpha, **ell_args)
 
 
 def show_keypoints(rchip, kpts, fignum=0, title=None, **kwargs):
@@ -495,11 +511,11 @@ def show_keypoints(rchip, kpts, fignum=0, title=None, **kwargs):
     df2.draw_kpts2(kpts)
 
 
-def show_top(res, hs, N=5, fnum=3, figtitle='', **kwargs):
-    figtitle += ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))
+def show_top(res, hs, N=5, figtitle='', **kwargs):
+    #figtitle += ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))
     topN_cxs = res.topN_cxs(N)
-    return _show_chip_matches(hs, res, topN_cxs=topN_cxs, fignum=fnum,
-                              figtitle=figtitle, all_kpts=False, **kwargs)
+    return _show_chip_matches(hs, res, topN_cxs=topN_cxs, figtitle=figtitle,
+                              all_kpts=False, **kwargs)
 
 
 def res_show_analysis(res, hs, N=5, fignum=3, figtitle='', show_query=None,
@@ -557,6 +573,7 @@ def show_matches_annote(hs, qcx, cx2_score,
                         showTF=True,
                         showScore=True,
                         **kwargs):
+    fignum = kwargs.pop('fnum', fignum)
     ' Shows matches with annotations '
     printDBG('[df2] Showing matches from %s in fignum=%r' % (hs.vs_str(cx, qcx), fignum))
     if np.isnan(cx):
@@ -595,21 +612,26 @@ def show_matches_annote(hs, qcx, cx2_score,
     #df2.lowerright_text(cx_str)
     # Finish annotations
     if isgt_str == hs.UNKNOWN_STR:
-        df2.draw_border(ax, df2.DARK_PURP, 4, offset=offset)
+        unknown_color = df2.DARK_PURP
+        df2.draw_border(ax, unknown_color, 4, offset=offset)
     elif isgt_str == hs.TRUE_STR:
-        df2.draw_border(ax, df2.GREEN, 4, offset=offset)
+        true_color = (0, 1, 0)
+        df2.draw_border(ax, true_color, 4, offset=offset)
     elif isgt_str == hs.FALSE_STR:
-        df2.draw_border(ax, df2.ORANGE, 4, offset=offset)
+        false_color = (1, .2, 0)
+        df2.draw_border(ax, false_color, 4, offset=offset)
         if show_gname:
             ax.set_xlabel(hs.cx2_gname(cx), fontproperties=df2.FONTS.xlabel)
     return ax
 
 
-def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
-                       topN_cxs=None, gt_cxs=None, show_query=False,
-                       all_kpts=False, fignum=3, annotations=True, q_cfg=None,
-                       split_plots=False, **kwargs):
+def _show_chip_matches(hs, res, figtitle='', max_nCols=5, topN_cxs=None,
+                       gt_cxs=None, show_query=False, all_kpts=False,
+                       annotations=True, q_cfg=None, split_plots=False,
+                       **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
+    fignum = kwargs.pop('fignum', 3)
+    fignum = kwargs.pop('fnum', 3)
     #print('========================')
     #print('[viz] Show chip matches:')
     if topN_cxs is None:
@@ -640,19 +662,19 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
         nRows = nTopNRows + nGtRows
     # Helper function for drawing matches to one cx
 
-    def show_matches_(cx, orank, plotnum):
+    def _show_matches_fn(cx, orank, plotnum):
         aug = 'rank=%r\n' % orank
         printDBG('[viz] plotting: %r'  % (plotnum,))
         kwshow  = dict(draw_ell=annote, draw_pts=annote, draw_lines=annote,
                        ell_alpha=.5, all_kpts=all_kpts, **kwargs)
-        show_matches_annote_res(res, hs, cx, title_aug=aug, plotnum=plotnum, **kwshow)
+        show_matches_annote_res(res, hs, cx, title_aug=aug, fignum=fignum, plotnum=plotnum, **kwshow)
 
-    def show_query(plotx_shift, rowcols):
+    def _show_query_fn(plotx_shift, rowcols):
         printDBG('Plotting Query:')
         plotx = plotx_shift + 1
         plotnum = (rowcols[0], rowcols[1], plotx)
         printDBG('[viz] plotting: %r' % (plotnum,))
-        show_chip(hs, res=res, plotnum=plotnum, draw_kpts=annote, prefix='query ')
+        show_chip(hs, res=res, plotnum=plotnum, draw_kpts=annote, prefix='query', fignum=fignum)
 
     # Helper to draw many cxs
     def plot_matches_cxs(cx_list, plotx_shift, rowcols):
@@ -666,24 +688,25 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
                 orank = -1
                 continue
             orank = oranks[0] + 1
-            show_matches_(cx, orank, plotnum)
+            _show_matches_fn(cx, orank, plotnum)
 
     query_uid = res.query_uid
-    query_uid = re.sub(r'_trainID\([0-9]*,........\)', '', query_uid)
-    query_uid = re.sub(r'_indxID\([0-9]*,........\)', '', query_uid)
-    query_uid = re.sub(r'_dcxs\(........\)', '', query_uid)
+    #query_uid = re.sub(r'_trainID\([0-9]*,........\)', '', query_uid)
+    #query_uid = re.sub(r'_indxID\([0-9]*,........\)', '', query_uid)
+    #query_uid = re.sub(r'_dcxs\(........\)', '', query_uid)
+    print('fignum=%r' % fignum)
 
     fig = df2.figure(fignum=fignum)
     fig.clf()
     df2.plt.subplot(nRows, nGTCols, 1)
     # Plot Query
     if show_query:
-        show_query(0, (nRows, nGTCols))
+        _show_query_fn(0, (nRows, nGTCols))
     # Plot Ground Truth
     plot_matches_cxs(gt_cxs, nQuerySubplts, (nRows, nGTCols))
     # Plot TopN in a new figure
     if split_plots:
-        df2.set_figtitle(figtitle + 'GT', query_uid)
+        #df2.set_figtitle(figtitle + 'GT', query_uid)
         nRows = nTopNRows
         fig = df2.figure(fignum=fignum + 9000)
         fig.clf()
@@ -693,9 +716,11 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
         shift_topN = nGtCells
     plot_matches_cxs(topN_cxs, shift_topN, (nRows, nTopNCols))
     if split_plots:
-        df2.set_figtitle(figtitle + 'topN', query_uid)
+        pass
+        #df2.set_figtitle(figtitle + 'topN', query_uid)
     else:
-        df2.set_figtitle(figtitle, query_uid)
+        pass
+        #df2.set_figtitle(figtitle, query_uid)
     print('-----------------')
     return fig
 
@@ -720,6 +745,6 @@ if __name__ == '__main__':
         N = 5
         res.show_top(hs, N)
     if dochip:
-        show_chip_interaction(hs, qcx, '', fnum=2)
+        show_chip_interaction(hs, qcx, fnum=2)
     df2.update()
     exec(df2.present())

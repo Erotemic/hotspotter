@@ -74,15 +74,16 @@ class MainWindowBackend(QtCore.QObject):
         df2.plt.clf()
         INTERACTIVE_CHIPS = True
         if INTERACTIVE_CHIPS:
-            viz.show_chip_interaction(self.hs, cx, '', fnum=2, figtitle='Chip View')
+            viz.show_chip_interaction(self.hs, cx, fnum=2, figtitle='Chip View')
         else:
             viz.show_chip(self.hs, cx, fnum=2, figtitle='Chip View')
         df2.draw()
 
     def show_query(self, res):
+        print('[back*] show_query()')
         df2.figure(fignum=3)
         df2.plt.clf()
-        res.show_top(self.hs, fnum=3, figtitle='Query View ')
+        res.show_top(self.hs, fignum=3, figtitle='Query View ')
         df2.draw()
 
     #--------------------------------------------------------------------------
@@ -240,9 +241,11 @@ class MainWindowBackend(QtCore.QObject):
             cxs = self.hs.gx2_cxs(gx)
             if len(cxs > 0):
                 cx = cxs[0]
-        if cx is not None:
-            cid = self.hs.tables.cx2_cid[cx]
-            self.select_cid(cid)
+        if cx is None:
+            self.show_splash(2, 'Chip')
+        else:
+            #cid = self.hs.tables.cx2_cid[cx]
+            self.show_chip(cx)
         highlight_cxs = [] if cx is None else [cx]
         self.selection = {'type_': 'gx', 'index': gx, 'sub': cx}
         self.show_image(gx, highlight_cxs)
@@ -252,8 +255,8 @@ class MainWindowBackend(QtCore.QObject):
     def select_cid(self, cid):
         print('[*back] select_cid(%r)' % cid)
         cx = self.hs.cid2_cx(cid)
-        self.selection = {'type_': 'cx', 'index': cx}
-        self.show_chip(cx)
+        gx = self.hs.tables.cx2_gx[cx]
+        self.select_gx(gx, cx=cx)
 
     #--------------------------------------------------------------------------
     # File menu slots

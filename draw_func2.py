@@ -102,7 +102,7 @@ FONTS.medbold   = FontProperties(weight='bold', size=MED)
 FONTS.largebold = FontProperties(weight='bold', size=LARGE)
 
 FONTS.legend   = FONTS.large
-FONTS.figtitle = FONTS.largebold
+FONTS.figtitle = FONTS.med
 FONTS.axtitle  = FONTS.med
 FONTS.subtitle = FONTS.med
 FONTS.xlabel   = FONTS.small
@@ -651,7 +651,7 @@ def set_figtitle(figtitle, subtitle=''):
         subtitle = '\n' + subtitle
     fig.suptitle(figtitle + subtitle, fontsize=14, fontweight='bold')
     fig.suptitle(figtitle, x=.5, y=.98, fontproperties=FONTS.figtitle)
-    fig_relative_text(.5, .95, subtitle, fontproperties=FONTS.subtitle)
+    #fig_relative_text(.5, .96, subtitle, fontproperties=FONTS.subtitle)
     fig.canvas.set_window_title(figtitle)
     adjust_subplots()
 
@@ -1249,7 +1249,7 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
                      plotnum=plotnum, title=title,
                      **kwargs)
     nMatches = len(fm)
-    upperleft_text('#match=%d' % nMatches)
+    #upperleft_text('#match=%d' % nMatches)
     if lbl1 is not None:
         absolute_lbl(w1, 0, lbl1)
     if lbl2 is not None:

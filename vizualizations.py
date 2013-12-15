@@ -81,7 +81,7 @@ def plot_name(hs, nx, nx2_cxs=None, fignum=0, hl_cxs=[], subtitle='',
     fig = df2.figure(fignum=fignum, plotnum=pnum(0), **kwargs)
     fig.clf()
     for px, cx in enumerate(cxs):
-        draw_chip(hs, cx=cx, plotnum=pnum(px), draw_kpts=annote, kpts_alpha=.2)
+        show_chip(hs, cx=cx, plotnum=pnum(px), draw_kpts=annote, kpts_alpha=.2)
         if cx in hl_cxs:
             ax = df2.gca()
             df2.draw_border(ax, df2.GREEN, 4)
@@ -377,7 +377,7 @@ def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
         ax.set_title('warped feature')
         ax.set_xlabel('fx=%r scale=%.1f\n%s' % (fx, scale, xy_str))
 
-        df2.figure(fignum=fnum, plotnum=(2,3,6))
+        df2.figure(fignum=fnum, plotnum=(2, 3, 6))
         df2.draw_sift_signature(sift, 'sift gradient histogram')
 
         fig.canvas.draw()
@@ -398,14 +398,8 @@ def show_chip_interaction(hs, cx, notes, fnum=2, **kwargs):
     fig.callback_id = fig.canvas.mpl_connect('button_press_event', _on_click)
 
 
-def show_chip(hs, cx=None, res=None, fnum=2, **kwargs):
-    df2.figure(fignum=fnum, doclf=True)
-    draw_chip(hs, cx=cx, res=res, **kwargs)
-    df2.draw()
-
-
-def draw_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
-              nRandKpts=None, kpts_alpha=None, prefix='', **kwargs):
+def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
+              nRandKpts=None, kpts_alpha=None, prefix='', fnum=2, **kwargs):
     if not res is None:
         cx = res.qcx
     if not allres is None:
@@ -653,7 +647,7 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
                        ell_alpha=.5, all_kpts=all_kpts, **kwargs)
         show_matches_annote_res(res, hs, cx, title_aug=aug, plotnum=plotnum, **kwshow)
 
-    def plot_query(plotx_shift, rowcols):
+    def show_query(plotx_shift, rowcols):
         printDBG('Plotting Query:')
         plotx = plotx_shift + 1
         plotnum = (rowcols[0], rowcols[1], plotx)
@@ -684,7 +678,7 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5,
     df2.plt.subplot(nRows, nGTCols, 1)
     # Plot Query
     if show_query:
-        plot_query(0, (nRows, nGTCols))
+        show_query(0, (nRows, nGTCols))
     # Plot Ground Truth
     plot_matches_cxs(gt_cxs, nQuerySubplts, (nRows, nGTCols))
     # Plot TopN in a new figure

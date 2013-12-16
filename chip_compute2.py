@@ -308,6 +308,7 @@ def load_chips(hs, cx_list=None, **kwargs):
         return  # HACK
     if not np.iterable(cx_list):
         cx_list = [cx_list]
+    cx_list = np.array(cx_list)  # HACK
     hs.cpaths.chip_uid = chip_uid
     # Get table information
     try:
@@ -318,7 +319,8 @@ def load_chips(hs, cx_list=None, **kwargs):
         gname_list = hs.tables.gx2_gname[gx_list]
     except IndexError as ex:
         print(repr(ex))
-        print('cx_list=%r' % cx_list)
+        print(hs.tables)
+        print('cx_list=%r' % (cx_list,))
         raise
     # Get ChipConfig Parameters
     sqrt_area   = chip_cfg['chip_sqrt_area']

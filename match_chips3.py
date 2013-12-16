@@ -6,6 +6,7 @@ import re
 # HotSpotter
 import helpers
 from helpers import tic, toc
+import tools
 import dev
 import DataStructures as ds
 import matching_functions as mf
@@ -102,6 +103,9 @@ def simplify_test_uid(test_uid):
 def ensure_nn_index(hs, query_cfg, dcxs):
     dcxs_ = tuple(dcxs)
     if not dcxs_ in query_cfg._dcxs2_index:
+        # Make sure the features are all computed first
+        hs.load_chips(dcxs_)
+        hs.load_features(dcxs_)
         data_index = ds.NNIndex(hs, dcxs)
         query_cfg._dcxs2_index[dcxs_] = data_index
     query_cfg._data_index = query_cfg._dcxs2_index[dcxs_]
@@ -147,6 +151,8 @@ def execute_query_safe(hs, query_cfg=None, qcxs=None, dcxs=None, use_cache=True,
         (dcxs, qcxs) = (query_cfg._qcxs, query_cfg._dcxs)
     elif query_type == 'vsmany':
         (dcxs, qcxs) = (query_cfg._dcxs, query_cfg._qcxs)
+    else:
+        raise Exception('Unknown query_type=%r' % query_type)
     # caching
     if not hs.args.nocache_query:
         result_list = load_cached_query(hs, query_cfg)

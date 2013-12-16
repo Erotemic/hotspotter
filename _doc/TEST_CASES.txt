@@ -1,1 +1,64 @@
-hoiem - parts detectors review
+#hoiem - parts detectors review
+
+
+New database
+- new databases can be created intuitively
+
+Open database 
+- old databases can be opened intuitively
+- databases in other formats (stripe spotter, old hotspotter versions) are
+  converted automatically when opened
+
+Save database
+- The database saves its tables correctly to <dbdir>/.hs_internals
+
+Import Images
+- Images are moved into the <dbdir> image folder, added to tables
+and are not moved if they are duplicated images. 
+
+
+Query 
+- Performs query on selected chip.
+- Recomputes any dirty information.
+- Results are correct even after applying other actions which modify the
+  database (like adding a chip or changing a property)
+
+Add Chip
+- Can easilly select a new ROI to become a chip and it adds it self to the
+  tables succesfully. 
+
+Reselect ROI / Orientation
+- Modifies selecected chip properties and removes old chip/feature info
+- Ensures queries do not use old info 
+
+
+Delete Chip
+- Removes chip from tables 
+- doesnt leave anything bad behind (like a png which could be mistaken for a
+  new chips png)
+
+Precompute Features 
+- Reindexes and computes all chips and features. 
+
+
+Pecompute Queries
+- Runs all queries so results can be quickly viewed later. 
+
+
+Layout Figures
+- Figures never should go off the monitor
+
+
+Edit Preferences
+- Should be able to change algo settings on the fly and relevant computations
+  implicitly marked as dirty and recomputed before any new query. 
+
+
+
+Delete Computed Dir
+- Correctly removes all precomputed files (but not the csv tables!)
+
+Delete Global Dir
+- Removes cached settings in ~/.hotspotter/global_cache
+
+

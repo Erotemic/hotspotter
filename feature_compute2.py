@@ -190,6 +190,7 @@ def load_features(hs, cx_list=None, **kwargs):
         return  # HACK
     if not np.iterable(cx_list):
         cx_list = [cx_list]
+    cx_list = np.array(cx_list)  # HACK
     if use_big_cache:  # use only if all descriptors requested
         kpts_list, desc_list = _load_features_bigcache(hs, cx_list)
     else:

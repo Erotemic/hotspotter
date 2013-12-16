@@ -231,7 +231,7 @@ class NNIndex(object):
         sample_uid = helpers.make_sample_id(cx_list)
         uid = '_cxs(' + sample_uid + ')' + feat_uid
         # Number of features per sample chip
-        sx2_nFeat = [len(cx2_desc[sx]) for sx in iter(cx_list)]
+        sx2_nFeat = [len(cx2_desc[cx]) for cx in iter(cx_list)]
         # Inverted index from indexed descriptor to chipx and featx
         _ax2_cx = [[cx] * nFeat for (cx, nFeat) in izip(cx_list, sx2_nFeat)]
         _ax2_fx = [range(nFeat) for nFeat in iter(sx2_nFeat)]

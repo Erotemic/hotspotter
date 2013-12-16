@@ -57,10 +57,9 @@ def connect_option_signals(win):
     ui = win.ui
     backend = win.backend
     ui.actionLayout_Figures.triggered.connect(backend.layout_figures)
-    #ui.actionTogEll.triggered.connect(backend.toggle_ellipse)
+    ui.actionPreferences.triggered.connect(backend.edit_preferences)
     #ui.actionTogPts.triggered.connect(backend.toggle_points)
     #ui.actionTogPlt.triggered.connect(backend.toggle_plotWidget)
-    #ui.actionPreferences.triggered.connect(backend.select_next)
 
 
 def connect_help_signals(win):

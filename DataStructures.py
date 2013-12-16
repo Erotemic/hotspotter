@@ -75,9 +75,9 @@ class QueryResult(DynStruct):
                  #'weight_time', 'filt_time', 'build_time', 'verify_time',
                  #'cx2_fm', 'cx2_fs', 'cx2_fk', 'cx2_score', 'cx2_fm_V',
                  #'cx2_fs_V', 'cx2_fk_V', 'cx2_score_V']
-    def __init__(res, qcx, uid, q_cfg=None):
+    def __init__(res, qcx, uid, query_cfg=None):
         super(QueryResult, res).__init__()
-        res.true_uid  = '' if q_cfg is None else q_cfg.get_uid()
+        res.true_uid  = '' if query_cfg is None else query_cfg.get_uid()
         res.qcx       = qcx
         res.query_uid = uid
         res.uid       = uid
@@ -190,11 +190,11 @@ class QueryResult(DynStruct):
             SV = res.get_SV()
         return res.cx2_fs_V if SV else res.cx2_fs
 
-    def topN_cxs(res, N, q_cfg=None):
+    def topN_cxs(res, N, query_cfg=None):
         cx2_score = res.get_cx2_score()
         top_cxs = cx2_score.argsort()[::-1]
-        if not q_cfg is None:
-            top_cxs = np.intersect1d(top_cxs, q_cfg.dcxs)
+        if not query_cfg is None:
+            top_cxs = np.intersect1d(top_cxs, query_cfg._dcxs)
         nIndexed = len(top_cxs)
         if N == 'all':
             N = nIndexed
@@ -227,7 +227,7 @@ class NNIndex(object):
     def __init__(nn_index, hs, cx_list):
         cx2_desc  = hs.feats.cx2_desc
         # Make unique id for indexed descriptors
-        feat_uid   = ''.join(hs.feat_cfg.get_uid())
+        feat_uid   = ''.join(hs.prefs.feat_cfg.get_uid())
         sample_uid = helpers.make_sample_id(cx_list)
         uid = '_cxs(' + sample_uid + ')' + feat_uid
         # Number of features per sample chip
@@ -267,14 +267,17 @@ class NNIndex(object):
             #dict1[key] = val
 
 
-class NNConfig(Pref):
+#ConfigBase = Pref
+ConfigBase = DynStruct
+
+class NNConfig(ConfigBase):
     def __init__(nn_cfg, **kwargs):
         super(NNConfig, nn_cfg).__init__()
         # Core
         nn_cfg.K = 2
         nn_cfg.Knorm = 1
         # Filters
-        nn_cfg.checks = 1024  # 512#128
+        nn_cfg.checks  = 1024  # 512#128
         nn_cfg.update(**kwargs)
 
     def get_uid(nn_cfg):
@@ -308,23 +311,23 @@ def any_inlist(list_, search_list):
     return any([search in set_ for search in search_list])
 
 
-class FilterConfig(Pref):
+class FilterConfig(ConfigBase):
     # Rename to scoring mechanism
-    def __init__(f_cfg, **kwargs):
-        super(FilterConfig, f_cfg).__init__()
-        f_cfg = f_cfg
-        f_cfg.filt_on = True
-        f_cfg.Krecip = 0  # 0 := off
-        f_cfg.nnfilter_list = []
+    def __init__(filt_cfg, **kwargs):
+        super(FilterConfig, filt_cfg).__init__()
+        filt_cfg = filt_cfg
+        filt_cfg.filt_on = True
+        filt_cfg.Krecip = 0  # 0 := off
+        filt_cfg._nnfilter_list = []
         #
-        #f_cfg.nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio', 'lnrat']
-        f_cfg._valid_filters = []
+        #filt_cfg._nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio', 'lnrat']
+        filt_cfg._valid_filters = []
 
         def addfilt(sign, filt, thresh, weight):
-            f_cfg.nnfilter_list.append(filt)
-            f_cfg._valid_filters.append((sign, filt))
-            f_cfg.__dict__[filt + '_thresh'] = thresh
-            f_cfg.__dict__[filt + '_weight'] = weight
+            filt_cfg._nnfilter_list.append(filt)
+            filt_cfg._valid_filters.append((sign, filt))
+            filt_cfg.__dict__[filt + '_thresh'] = thresh
+            filt_cfg.__dict__[filt + '_weight'] = weight
         #tuple(Sign, Filt, ValidSignThresh, ScoreMetaWeight)
         # thresh test is: sign * score <= sign * thresh
         addfilt(+1, 'roidist', None, 0)  # Lower  scores are better
@@ -334,61 +337,61 @@ class FilterConfig(Pref):
         addfilt(-1, 'lnbnn',  None, 0)  # Higher scores are better
         addfilt(-1, 'lnrat',  None, 0)  # Higher scores are better
         #addfilt(+1, 'scale' )
-        f_cfg.filt2_tw = {}
-        f_cfg.update(**kwargs)
+        filt_cfg._filt2_tw = {}
+        filt_cfg.update(**kwargs)
 
-    def make_feasible(f_cfg, q_cfg):
+    def make_feasible(filt_cfg, query_cfg):
         '''
         removes invalid parameter settings over all cfgs (move to QueryConfig)
         '''
-        nn_cfg = q_cfg.nn_cfg
+        nn_cfg = query_cfg.nn_cfg
 
         # Ensure the list of on filters is valid given the weight and thresh
-        if f_cfg.ratio_thresh <= 1:
-            f_cfg.ratio_thresh = None
-        if f_cfg.roidist_thresh >= 1:
-            f_cfg.roidist_thresh = None
-        if f_cfg.bursty_thresh   <= 1:
-            f_cfg.bursty_thresh = None
+        if filt_cfg.ratio_thresh <= 1:
+            filt_cfg.ratio_thresh = None
+        if filt_cfg.roidist_thresh >= 1:
+            filt_cfg.roidist_thresh = None
+        if filt_cfg.bursty_thresh   <= 1:
+            filt_cfg.bursty_thresh = None
 
         # FIXME: Non-Independent parameters.
         # Need to explicitly model correlation somehow
-        if f_cfg.Krecip == 0:
-            f_cfg.recip_thresh = None
-        elif f_cfg.recip_thresh is None:
-            f_cfg.recip_thresh = 0
+        if filt_cfg.Krecip == 0:
+            filt_cfg.recip_thresh = None
+        elif filt_cfg.recip_thresh is None:
+            filt_cfg.recip_thresh = 0
 
         def ensure_filter(filt, sign):
             '''ensure filter in the list if valid else remove
             (also ensure the sign/thresh/weight dict)'''
-            thresh = f_cfg.__dict__[filt + '_thresh']
-            weight = f_cfg.__dict__[filt + '_weight']
+            thresh = filt_cfg.__dict__[filt + '_thresh']
+            weight = filt_cfg.__dict__[filt + '_weight']
             stw = ((sign, thresh), weight)
-            f_cfg.filt2_tw[filt] = stw
+            filt_cfg._filt2_tw[filt] = stw
             if thresh is None and weight == 0:
-                listrm(f_cfg.nnfilter_list, filt)
-            elif not filt in f_cfg.nnfilter_list:
-                f_cfg.nnfilter_list += [filt]
-        for (sign, filt) in f_cfg._valid_filters:
+                listrm(filt_cfg._nnfilter_list, filt)
+            elif not filt in filt_cfg._nnfilter_list:
+                filt_cfg._nnfilter_list += [filt]
+        for (sign, filt) in filt_cfg._valid_filters:
             ensure_filter(filt, sign)
 
         # Set Knorm to 0 if there is no normalizing filter on.
         norm_depends = ['lnbnn', 'ratio', 'lnrat']
-        if nn_cfg.Knorm <= 0 and not any_inlist(f_cfg.nnfilter_list, norm_depends):
-            #listrm_list(f_cfg.nnfilter_list, norm_depends)
+        if nn_cfg.Knorm <= 0 and not any_inlist(filt_cfg._nnfilter_list, norm_depends):
+            #listrm_list(filt_cfg._nnfilter_list , norm_depends)
             # FIXME: Knorm is not independent of the other parameters.
             # Find a way to make it independent.
             nn_cfg.Knorm = 0
 
-    def get_uid(f_cfg):
-        if not f_cfg.filt_on:
+    def get_uid(filt_cfg):
+        if not filt_cfg.filt_on:
             return ['_FILT()']
-        on_filters = dict_subset(f_cfg.filt2_tw,
-                                 f_cfg.nnfilter_list)
+        on_filters = dict_subset(filt_cfg._filt2_tw,
+                                 filt_cfg._nnfilter_list)
         uid = ['_FILT(']
         twstr = signthreshweight_str(on_filters)
-        if f_cfg.Krecip != 0 and 'recip' in f_cfg.nnfilter_list:
-            uid += ['Kr' + str(f_cfg.Krecip)]
+        if filt_cfg.Krecip != 0 and 'recip' in filt_cfg._nnfilter_list:
+            uid += ['Kr' + str(filt_cfg.Krecip)]
             if len(twstr) > 0:
                 uid += [',']
         if len(twstr) > 0:
@@ -414,10 +417,11 @@ def signthreshweight_str(on_filters):
     #return helpers.remove_chars(str(dict_), [' ','\'','}','{',':'])
 
 
-class SpatialVerifyConfig(Pref):
+class SpatialVerifyConfig(ConfigBase):
     def __init__(sv_cfg, **kwargs):
         super(SpatialVerifyConfig, sv_cfg).__init__()
-        sv_cfg.scale_thresh  = (.5, 2)
+        sv_cfg.scale_thresh_low = .5
+        sv_cfg.scale_thresh_high = 2
         sv_cfg.xy_thresh = .002
         sv_cfg.nShortlist = 1000
         sv_cfg.prescore_method = 'csum'
@@ -433,7 +437,8 @@ class SpatialVerifyConfig(Pref):
         uid = ['_SV(']
         uid += [str(sv_cfg.nShortlist)]
         uid += [',' + str(sv_cfg.xy_thresh)]
-        scale_str = helpers.remove_chars(str(sv_cfg.scale_thresh), ' ()')
+        scale_thresh = (sv_cfg.scale_thresh_low, sv_cfg.scale_thresh_high)
+        scale_str = helpers.remove_chars(str(scale_thresh), ' ()')
         uid += [',' + scale_str.replace(',', '_')]
         uid += [',cdl' * sv_cfg.use_chip_extent]  # chip diag len
         uid += [',aff' * sv_cfg.just_affine]  # chip diag len
@@ -442,13 +447,13 @@ class SpatialVerifyConfig(Pref):
         return uid
 
 
-class AggregateConfig(Pref):
-    def __init__(a_cfg, **kwargs):
-        super(AggregateConfig, a_cfg).__init__()
-        a_cfg.query_type   = 'vsmany'
+class AggregateConfig(ConfigBase):
+    def __init__(agg_cfg, **kwargs):
+        super(AggregateConfig, agg_cfg).__init__()
+        agg_cfg.query_type   = 'vsmany'
         # chipsum, namesum, placketluce
-        a_cfg.isWeighted = False  # nsum, pl
-        a_cfg.score_method = 'csum'  # nsum, pl
+        agg_cfg.isWeighted = False  # nsum, pl
+        agg_cfg.score_method = 'csum'  # nsum, pl
         alt_methods = {
             'topk': 'topk',
             'borda': 'borda',
@@ -457,89 +462,88 @@ class AggregateConfig(Pref):
             'namesum': 'nsum',
         }
         # For Placket-Luce
-        a_cfg.max_alts = 1000
+        agg_cfg.max_alts = 1000
         #-----
         # User update
-        a_cfg.update(**kwargs)
+        agg_cfg.update(**kwargs)
         # ---
-        key = a_cfg.score_method.lower()
+        key = agg_cfg.score_method.lower()
         # Use w as a toggle for weighted mode
         if key.find('w') == len(key) - 1:
-            a_cfg.isWeighted = True
+            agg_cfg.isWeighted = True
             key = key[:-1]
-            a_cfg.score_method = key
+            agg_cfg.score_method = key
         # Sanatize the scoring method
         if key in alt_methods:
-            a_cfg.score_method = alt_methods[key]
+            agg_cfg.score_method = alt_methods[key]
 
-    def get_uid(a_cfg):
+    def get_uid(agg_cfg):
         uid = []
         uid += ['_AGG(']
-        uid += [a_cfg.query_type]
-        uid += [',', a_cfg.score_method]
-        if a_cfg.isWeighted:
+        uid += [agg_cfg.query_type]
+        uid += [',', agg_cfg.score_method]
+        if agg_cfg.isWeighted:
             uid += ['w']
-        if a_cfg.score_method == 'pl':
-            uid += [',%d' % (a_cfg.max_alts,)]
+        if agg_cfg.score_method  == 'pl':
+            uid += [',%d' % (agg_cfg.max_alts,)]
         uid += [') ']
         return uid
 
 
-class QueryConfig(Pref):
-    def __init__(q_cfg, hs, **kwargs):
-        super(QueryConfig, q_cfg).__init__()
-        q_cfg.nn_cfg = NNConfig(**kwargs)
-        q_cfg.f_cfg  = FilterConfig(**kwargs)
-        q_cfg.sv_cfg = SpatialVerifyConfig(**kwargs)
-        q_cfg.a_cfg  = AggregateConfig(**kwargs)
-        q_cfg.feat_cfg = hs.feat_cfg  # Queries depend on features
+class QueryConfig(ConfigBase):
+    def __init__(query_cfg, hs, **kwargs):
+        super(QueryConfig, query_cfg).__init__()
+        query_cfg.nn_cfg  = NNConfig(**kwargs)
+        query_cfg.filt_cfg  = FilterConfig(**kwargs)
+        query_cfg.sv_cfg  = SpatialVerifyConfig(**kwargs)
+        query_cfg.agg_cfg  = AggregateConfig(**kwargs)
+        query_cfg._feat_cfg  = hs.prefs.feat_cfg  # Queries depend on features
         #
-        q_cfg.use_cache = False
-        # Data
-        q_cfg.qcxs = []
-        q_cfg.dcxs = []
-        q_cfg.data_index = None  # current index
-        q_cfg.dcxs2_index = {}  # L1 cached indexes
-        q_cfg.update(**kwargs)
-        q_cfg.f_cfg.make_feasible(q_cfg)
+        query_cfg.use_cache = False
+        # Data TODO: Separate this
+        query_cfg._qcxs = []
+        query_cfg._dcxs = []
+        query_cfg._data_index = None  # current index
+        query_cfg._dcxs2_index = {}  # L1 cached indexes
+        query_cfg.update(**kwargs)
+        query_cfg.filt_cfg.make_feasible(query_cfg)
 
-    def update_cfg(q_cfg, **kwargs):
-        q_cfg.nn_cfg.update(**kwargs)
-        q_cfg.f_cfg.update(**kwargs)
-        q_cfg.sv_cfg.update(**kwargs)
-        q_cfg.a_cfg.update(**kwargs)
-        q_cfg.update(**kwargs)
-        q_cfg.f_cfg.make_feasible(q_cfg)
+    def update_cfg(query_cfg, **kwargs):
+        query_cfg.nn_cfg.update(**kwargs)
+        query_cfg.filt_cfg.update(**kwargs)
+        query_cfg.sv_cfg.update(**kwargs)
+        query_cfg.agg_cfg.update(**kwargs)
+        query_cfg.update(**kwargs)
+        query_cfg.filt_cfg.make_feasible(query_cfg)
 
-    def get_uid(q_cfg, *args, **kwargs):
-        dcxs_ = repr(tuple(q_cfg.dcxs))
+    def get_uid(query_cfg, *args, **kwargs):
+        dcxs_ = repr(tuple(query_cfg._dcxs))
         uids = []
         if not 'noNN' in args:
-            uids += q_cfg.nn_cfg.get_uid(**kwargs)
+            uids += query_cfg.nn_cfg.get_uid(**kwargs)
         if not 'noFILT' in args:
-            uids += q_cfg.f_cfg.get_uid(**kwargs)
+            uids += query_cfg.filt_cfg.get_uid(**kwargs)
         if not 'noSV' in args:
-            uids += q_cfg.sv_cfg.get_uid(**kwargs)
+            uids += query_cfg.sv_cfg.get_uid(**kwargs)
         if not 'noAGG' in args:
-            uids += q_cfg.a_cfg.get_uid(**kwargs)
+            uids += query_cfg.agg_cfg.get_uid(**kwargs)
         if not 'noCHIP' in args:
-            uids += q_cfg.feat_cfg.get_uid()
+            uids += query_cfg._feat_cfg.get_uid()
         # In case you don't search the entire dataset
         uids += ['_dcxs(' + helpers.hashstr(dcxs_) + ')']
         uid = ''.join(uids)
         return uid
 
 
-class FeatureConfig(Pref):
+class FeatureConfig(ConfigBase):
     def __init__(feat_cfg, hs, **kwargs):
         super(FeatureConfig, feat_cfg).__init__()
-        feat_cfg.feat_type = ('hesaff', 'sift')
+        feat_cfg.feat_type = 'hesaff+sift'
         feat_cfg.whiten = False
         feat_cfg.scale_min = 30  # 0    # 30
         feat_cfg.scale_max = 80  # 9001 # 80
-        feat_cfg.chip_cfg = hs.chip_cfg  # Features depend on chips
-        feat_cfg.feat_uid = ''
-        if feat_cfg.chip_cfg is None:
+        feat_cfg._chip_cfg = hs.prefs.chip_cfg  # Features depend on chips
+        if feat_cfg._chip_cfg is None:
             raise Exception('Chip config is required')
         feat_cfg.update(**kwargs)
 
@@ -551,24 +555,24 @@ class FeatureConfig(Pref):
 
     def get_uid(feat_cfg):
         feat_uids = ['_FEAT(']
-        feat_uids += ['%s_%s' % feat_cfg.feat_type]
+        feat_uids += feat_cfg.feat_type
         feat_uids += [',white'] * feat_cfg.whiten
         feat_uids += [',%r_%r' % (feat_cfg.scale_min, feat_cfg.scale_max)]
         feat_uids += [')']
-        feat_uids += [feat_cfg.chip_cfg.get_uid()]
+        feat_uids += [feat_cfg._chip_cfg.get_uid()]
         return [''.join(feat_uids)]
 
 
-class ChipConfig(Pref):
+class ChipConfig(ConfigBase):
     def __init__(cc_cfg, **kwargs):
         super(ChipConfig, cc_cfg).__init__()
         cc_cfg.chip_sqrt_area = 750
-        cc_cfg.grabcut        = False
-        cc_cfg.histeq         = False
-        cc_cfg.region_norm    = False
-        cc_cfg.rank_eq        = False
-        cc_cfg.local_eq       = False
-        cc_cfg.maxcontrast    = False
+        cc_cfg.grabcut         = False
+        cc_cfg.histeq          = False
+        cc_cfg.region_norm     = False
+        cc_cfg.rank_eq         = False
+        cc_cfg.local_eq        = False
+        cc_cfg.maxcontrast     = False
         cc_cfg.update(**kwargs)
 
     def get_uid(cc_cfg):
@@ -579,13 +583,12 @@ class ChipConfig(Pref):
         chip_uid += ['rankeq']  * cc_cfg.rank_eq
         chip_uid += ['localeq'] * cc_cfg.local_eq
         chip_uid += ['maxcont'] * cc_cfg.maxcontrast
-        isOrig = cc_cfg.chip_sqrt_area is None or cc_cfg.chip_sqrt_area <= 0
+        isOrig = cc_cfg.chip_sqrt_area is None or cc_cfg.chip_sqrt_area  <= 0
         chip_uid += ['szorig'] if isOrig else ['sz%r' % cc_cfg.chip_sqrt_area]
         return '_CHIP(' + (','.join(chip_uid)) + ')'
 
 
 class HotspotterTables(DynStruct):
-
     def __init__(self, *args, **kwargs):
         super(HotspotterTables, self).__init__()
         self.init(*args, **kwargs)
@@ -665,27 +668,27 @@ def __dict_default_func(dict_):
     return set_key
 
 
-def get_chip_cfg(**kwargs):
+def make_chip_cfg(**kwargs):
     chip_cfg = ChipConfig(**kwargs)
     return chip_cfg
 
 
-def get_feat_cfg(hs, **kwargs):
+def make_feat_cfg(hs, **kwargs):
     feat_cfg = FeatureConfig(hs, **kwargs)
     return feat_cfg
 
 
-def get_vsmany_cfg(hs, **kwargs):
+def make_vsmany_cfg(hs, **kwargs):
     kwargs['query_type'] = 'vsmany'
     kwargs_set = __dict_default_func(kwargs)
     kwargs_set('lnbnn_weight', .001)
     kwargs_set('K', 2)
     kwargs_set('Knorm', 1)
-    q_cfg = QueryConfig(hs, **kwargs)
-    return q_cfg
+    query_cfg = QueryConfig(hs, **kwargs)
+    return query_cfg
 
 
-def get_vsone_cfg(hs, **kwargs):
+def make_vsone_cfg(hs, **kwargs):
     kwargs['query_type'] = 'vsone'
     kwargs_set = __dict_default_func(kwargs)
     kwargs_set('lnbnn_weight', 0)
@@ -694,5 +697,5 @@ def get_vsone_cfg(hs, **kwargs):
     kwargs_set('Knorm', 1)
     kwargs_set('ratio_weight', 1.0)
     kwargs_set('ratio_thresh', 1.5)
-    q_cfg = QueryConfig(hs, **kwargs)
-    return q_cfg
+    query_cfg = QueryConfig(hs, **kwargs)
+    return query_cfg

@@ -83,14 +83,16 @@ class HotSpotter(DynStruct):
         hs.train_sample_cx   = None
         hs.test_sample_cx    = None
         hs.indexed_sample_cx = None
-        hs.cx2_rchip_size = None
-        hs.query_uid = None
-        hs.needs_save = False
+        hs.cx2_rchip_size    = None
+        hs.needs_save        = False
         #
-        hs.prefs = Pref()
-        hs.feat_cfg  = None
-        hs.chip_cfg  = None
-        hs.query_cfg = None
+        hs.prefs = Pref('root')
+        feat_args = {}
+        (feat_args['scale_min'],
+         feat_args['scale_max']) = hs.args.sthresh
+        hs.prefs.chip_cfg  = ds.make_chip_cfg()
+        hs.prefs.feat_cfg  = ds.make_feat_cfg(hs)
+        hs.prefs.query_cfg = ds.make_vsmany_cfg(hs, **feat_args)
         if db_dir is not None:
             hs.args.dbdir = db_dir
 
@@ -101,7 +103,6 @@ class HotSpotter(DynStruct):
         '(current load function) Loads the appropriate database'
         print('[hs] load()')
         hs.load_tables()
-        hs.load_configs()
         hs.set_samples()
         if load_all:
             print('[hs] load_all=True')
@@ -112,13 +113,6 @@ class HotSpotter(DynStruct):
             hs.load_chips([])
             hs.load_features([])
         return hs
-
-    def load_configs(hs):
-        hs.chip_cfg = ds.get_chip_cfg()
-        kwargs_ = {}
-        (kwargs_['scale_min'],
-         kwargs_['scale_max']) = hs.args.sthresh
-        hs.feat_cfg = ds.get_feat_cfg(hs, **kwargs_)
 
     def load_tables(hs):
         # Check to make sure dbdir is specified correctly
@@ -200,17 +194,18 @@ class HotSpotter(DynStruct):
         hs.indx_id  = indx_id
         # The query_cfg must resample
         # Unload ~~matcher~~ query config if database changed
-        hs.query_cfg = None
+        #hs.prefs.query_cfg = None
+        hs.prefs.query_cfg = ds.make_vsmany_cfg(hs)
 
     #---------------
     # Query Functions
     #---------------
     def query(hs, qcx):
-        if hs.query_cfg is None:
-            hs.query_cfg = ds.get_vsmany_cfg(hs)
+        if hs.prefs.query_cfg is None:
+            hs.prefs.query_cfg = ds.make_vsmany_cfg(hs)
             hs.load_chips()
             hs.load_features()
-        res = mc3.query_database(hs, qcx, hs.query_cfg)
+        res = mc3.query_database(hs, qcx, hs.prefs.query_cfg)
         return res
 
     # ---------------

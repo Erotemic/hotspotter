@@ -151,7 +151,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
     callback_id = fig.canvas.mpl_connect('button_press_event', on_click)
     
     select_ith_keypoint(fx_ptr[0])
-    q_cfg = ds.QueryConfig(hs, **kwargs)
+    query_cfg = ds.QueryConfig(hs, **kwargs)
     while True:
       try:
         print('>>>')
@@ -165,9 +165,9 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
             fx_ptr[0] += 1
             select_ith_keypoint(fx_ptr[0])
         elif cmd in ['q', 'query']:
-            print(q_cfg)
-            print(q_cfg.get_uid())
-            res = mc3.query_database(hs, cx, q_cfg=q_cfg, use_cache=False)
+            print(query_cfg)
+            print(query_cfg.get_uid())
+            res = mc3.query_database(hs, cx, query_cfg=query_cfg, use_cache=False)
             state.res = res
             resfnum = state.fnum + state.fnum_offset
             res.show_topN(hs, fignum=resfnum)
@@ -176,26 +176,26 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
             #fig_res.show()
             #fig_res.canvas.draw()
         elif cmd == 'K':
-            q_cfg.update_cfg(K=int(ans[1]))
+            query_cfg.update_cfg(K=int(ans[1]))
         elif cmd == 'svoff':
-            q_cfg.update_cfg(sv_on=False)
+            query_cfg.update_cfg(sv_on=False)
         elif cmd == 'svon':
-            q_cfg.update_cfg(sv_on=True)
+            query_cfg.update_cfg(sv_on=True)
         elif cmd == 'test':
-            q_cfg.update_cfg(sv_on=True, K=20, use_chip_extent=True)
+            query_cfg.update_cfg(sv_on=True, K=20, use_chip_extent=True)
         elif cmd in ['m', 'mytest']:
             mycmd = open('mytest.py').read();
             print(mycmd)
             exec mycmd in locals(), globals()
-            print(q_cfg)
-            res = mc3.query_database(hs, cx, q_cfg=q_cfg, use_cache=False)
+            print(query_cfg)
+            res = mc3.query_database(hs, cx, query_cfg=query_cfg, use_cache=False)
             state.res = res
             resfnum = state.fnum + state.fnum_offset
             res.show_topN(hs, fignum=resfnum)
             df2.update()
         elif cmd == 'test2':
-            q_cfg.update_cfg(sv_on=True, K=20, use_chip_extent=True, xy_thresh=.1)
-            #q_cfg.update_cfg(sv_on=True, K=20, use_chip_extent=False)
+            query_cfg.update_cfg(sv_on=True, K=20, use_chip_extent=True, xy_thresh=.1)
+            #query_cfg.update_cfg(sv_on=True, K=20, use_chip_extent=False)
         elif cmd == 'reset':
             update_valid(reset=True)
         elif cmd in ['fig']:

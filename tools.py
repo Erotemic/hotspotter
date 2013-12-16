@@ -14,7 +14,9 @@ VALID_FLOAT_TYPES = set((types.FloatType,
 
 VALID_STRING_TYPES = set((types.StringType,))
 
-VALID_LIST_TYPES = set((types.ListType,))
+#VALID_LIST_TYPES = set((types.ListType,))
+
+#VALID_BOOLEAN_TYPES = set((types.BooleanType,))
 
 
 def index_of(item, array):
@@ -47,17 +49,28 @@ def debug_exception(func):
     return ex_wrapper
 
 
-def is_int(num):
-    return type(num) in VALID_INT_TYPES
+def is_int(var):
+    return type(var) in VALID_INT_TYPES
 
 
-def is_float(num):
-    return type(num) in VALID_FLOAT_TYPES
+def is_float(var):
+    return type(var) in VALID_FLOAT_TYPES
 
 
-def is_str(num):
-    return type(num) in VALID_FLOAT_TYPES
+def is_str(var):
+    return type(var) in VALID_FLOAT_TYPES
 
 
-def is_list(num):
-    return type(num) in VALID_LIST_TYPES
+def is_bool(var):
+    return isinstance(var, bool)
+    #return type(var) in VALID_BOOLEAN_TYPES
+
+
+def is_dict(var):
+    return isinstance(var, dict)
+    #return type(var) in VALID_BOOLEAN_TYPES
+
+
+def is_list(var):
+    return isinstance(var, list)
+    #return type(num) in VALID_LIST_TYPES

@@ -34,10 +34,10 @@ def score_chipmatch_csum(chipmatch):
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     return cx2_score
 
-def score_chipmatch_nsum(hs, qcx, chipmatch, q_cfg):
+def score_chipmatch_nsum(hs, qcx, chipmatch, query_cfg):
     raise NotImplementedError('nsum')
 
-def score_chipmatch_nunique(hs, qcx, chipmatch, q_cfg):
+def score_chipmatch_nunique(hs, qcx, chipmatch, query_cfg):
     raise NotImplementedError('nunique')
 
 def enforce_one_name_per_cscore(hs, cx2_score, chipmatch):
@@ -55,10 +55,10 @@ def enforce_one_name_per_cscore(hs, cx2_score, chipmatch):
         cx2_score[cxs_to_zero] = 0
     return cx2_score
 
-def score_chipmatch_pos(hs, qcx, chipmatch, q_cfg, rule='borda'):
+def score_chipmatch_pos(hs, qcx, chipmatch, query_cfg, rule='borda'):
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
-    K = q_cfg.nn_cfg.K
-    isWeighted = q_cfg.a_cfg.isWeighted
+    K = query_cfg.nn_cfg.K
+    isWeighted = query_cfg.agg_cfg.isWeighted
     # Create voting vectors of top K utilities
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
     # Run Positional Scoring Rule
@@ -70,10 +70,10 @@ def score_chipmatch_pos(hs, qcx, chipmatch, q_cfg, rule='borda'):
     return cx2_score, nx2_score
 
 # chipmatch = qcx2_chipmatch[qcx]
-def score_chipmatch_PL(hs, qcx, chipmatch, q_cfg):
-    K = q_cfg.nn_cfg.K
-    max_alts = q_cfg.a_cfg.max_alts
-    isWeighted = q_cfg.a_cfg.isWeighted
+def score_chipmatch_PL(hs, qcx, chipmatch, query_cfg):
+    K = query_cfg.nn_cfg.K
+    max_alts = query_cfg.agg_cfg.max_alts
+    isWeighted = query_cfg.agg_cfg.isWeighted
     # Create voting vectors of top K utilities
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
     qfx2_utilities = _filter_utilities(qfx2_utilities, max_alts)
@@ -204,14 +204,14 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
     qfx2_porder = [np.array([tnx2_altx[util[1]] for util in utils])
                    for utils in qfx2_utilities]
     def sum_win(ij):  # pairiwse wins on off-diagonal
-        pairwise_mat[ij[0], ij[1]] += 1 
+        pairwise_mat[ij[0], ij[1]] += 1
     def sum_loss(ij): # pairiwse wins on off-diagonal
         pairwise_mat[ij[1], ij[1]] -= 1
     nVoters = 0
     for qfx in xrange(nUtilities):
         # partial and compliment order over alternatives
         porder = pd.unique(qfx2_porder[qfx])
-        nReport = len(porder) 
+        nReport = len(porder)
         if nReport == 0: continue
         #sys.stdout.write('.')
         corder = np.setdiff1d(altxs, porder)
@@ -226,9 +226,9 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
         map(sum_loss, iter(pw_votes))
         nVoters += 1
     #print('')
-    PLmatrix = pairwise_mat / nVoters     
+    PLmatrix = pairwise_mat / nVoters
     # sum(0) gives you the sum over rows, which is summing each column
-    # Basically a column stochastic matrix should have 
+    # Basically a column stochastic matrix should have
     # M.sum(0) = 0
     #print('CheckMat = %r ' % all(np.abs(PLmatrix.sum(0)) < 1E-9))
     return PLmatrix, altx2_tnx
@@ -247,9 +247,9 @@ def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
     print('[vote] building pairwise matrix')
     tnxs, altx2_tnx, tnx2_altx, nUtilities, nAlts, altxs = _get_alts_from_utilities(qfx2_utilities)
     pairwise_mat = np.zeros((nAlts, nAlts))
-    # agent to alternative vote vectors 
+    # agent to alternative vote vectors
     qfx2_porder = [np.array([tnx2_altx[util[1]] for util in utils]) for utils in qfx2_utilities]
-    # agent to alternative weight/utility vectors 
+    # agent to alternative weight/utility vectors
     qfx2_worder = [np.array([util[2] for util in utils]) for utils in qfx2_utilities]
     nVoters = 0
     for qfx in xrange(nUtilities):
@@ -260,7 +260,7 @@ def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
         idx = np.sort(idx)
         porder = porder[idx]
         worder = worder[idx]
-        nReport = len(porder) 
+        nReport = len(porder)
         if nReport == 0: continue
         #sys.stdout.write('.')
         corder = np.setdiff1d(altxs, porder)
@@ -288,21 +288,21 @@ def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
                 pairwise_mat[j,j] -= w
             nVoters += wi
     #print('')
-    PLmatrix = pairwise_mat / nVoters     
+    PLmatrix = pairwise_mat / nVoters
     # sum(0) gives you the sum over rows, which is summing each column
-    # Basically a column stochastic matrix should have 
+    # Basically a column stochastic matrix should have
     # M.sum(0) = 0
     #print('CheckMat = %r ' % all(np.abs(PLmatrix.sum(0)) < 1E-9))
     return PLmatrix, altx2_tnx
 
 # Positional Scoring Rules
-     
+
 
 def positional_scoring_rule(qfx2_utilities, rule, isWeighted):
     tnxs, altx2_tnx, tnx2_altx, nUtilities, nAlts, altxs = _get_alts_from_utilities(qfx2_utilities)
-    # agent to alternative vote vectors 
+    # agent to alternative vote vectors
     qfx2_porder = [np.array([tnx2_altx[util[1]] for util in utils]) for utils in qfx2_utilities]
-    # agent to alternative weight/utility vectors 
+    # agent to alternative weight/utility vectors
     if isWeighted:
         qfx2_worder = [np.array([util[2] for util in utils]) for utils in qfx2_utilities]
     else:

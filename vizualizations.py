@@ -519,7 +519,7 @@ def show_top(res, hs, N=5, figtitle='', **kwargs):
 
 
 def res_show_analysis(res, hs, N=5, fignum=3, figtitle='', show_query=None,
-                      annotations=True, compare_cxs=None, q_cfg=None, **kwargs):
+                      annotations=True, compare_cxs=None, query_cfg=None, **kwargs):
         print('[res] show_analysis()')
         if show_query is None:
             show_query = not hs.args.noshow_query
@@ -527,7 +527,7 @@ def res_show_analysis(res, hs, N=5, fignum=3, figtitle='', show_query=None,
             topN_cxs = compare_cxs
             figtitle = 'comparing to ' + hs.cxstr(topN_cxs) + figtitle
         else:
-            topN_cxs = res.topN_cxs(N, q_cfg)
+            topN_cxs = res.topN_cxs(N, query_cfg)
             if len(topN_cxs) == 0:
                 warnings.warn('len(topN_cxs) == 0')
                 figtitle = 'WARNING: no top scores!' + hs.cxstr(res.qcx)
@@ -542,7 +542,7 @@ def res_show_analysis(res, hs, N=5, fignum=3, figtitle='', show_query=None,
         return _show_chip_matches(hs, res, gt_cxs=missed_gt_cxs, topN_cxs=topN_cxs,
                                   figtitle=figtitle, max_nCols=max_nCols,
                                   show_query=show_query, fignum=fignum,
-                                  annotations=annotations, q_cfg=q_cfg, **kwargs)
+                                  annotations=annotations, query_cfg=query_cfg, **kwargs)
 
 
 def show_matches_annote_res(res, hs, cx,
@@ -646,7 +646,7 @@ def show_matches_annote(hs, qcx, cx2_score,
 
 def _show_chip_matches(hs, res, figtitle='', max_nCols=5, topN_cxs=None,
                        gt_cxs=None, show_query=False, all_kpts=False,
-                       annotations=True, q_cfg=None, split_plots=False,
+                       annotations=True, query_cfg=None, split_plots=False,
                        **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
     fignum = kwargs.pop('fignum', 3)
@@ -661,7 +661,7 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5, topN_cxs=None,
     print('[viz] #top=%r #missed_gts=%r' % (len(topN_cxs), len(gt_cxs)))
     print('[viz] * max_nCols=%r' % (max_nCols,))
     print('[viz] * show_query=%r' % (show_query,))
-    ranked_cxs = res.topN_cxs('all', q_cfg=q_cfg)
+    ranked_cxs = res.topN_cxs('all', query_cfg=query_cfg)
     annote = annotations
     # Build a subplot grid
     nQuerySubplts = 1 if show_query else 0

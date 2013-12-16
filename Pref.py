@@ -6,7 +6,8 @@ import sys
 import os.path
 import traceback
 import numpy as np
-import helpers
+import tools
+import warnings
 
 
 def printDBG(msg):
@@ -42,12 +43,12 @@ class Pref(DynStruct):
                  choices=None, depeq=None, fpath='', copy_dict=None,
                  parent=None):
         '''Creates a pref struct that will save itself to pref_fpath if
-        available and have initail members of some dictionary'''
+        available and have init all members of some dictionary'''
         super(Pref, self).__init__(child_exclude_list=['_intern', '_tree'],
                                    copy_dict=copy_dict)
-        # Define internal structures
+
+        # self._intern describes this node
         self._intern = DynStruct()
-        self._tree = DynStruct()
         self._intern.name    = 'root'
         self._intern.value   = None
         self._intern.type    = Pref
@@ -55,6 +56,8 @@ class Pref(DynStruct):
         self._intern.fpath   = fpath
         self._intern.depeq   = depeq
 
+        # self._tree describes node's chilren
+        self._tree = DynStruct()
         self._tree.parent               = parent
         self._tree.hidden_children      = []
         self._tree.child_list           = []
@@ -64,16 +67,16 @@ class Pref(DynStruct):
         # Check if this is a leaf node and if so the type
         if choices is not None:
             sel = 0
-            if helpers.is_int(default):
+            if tools.is_int(default):
                 sel = default
-            elif helpers.is_str(default):
+            elif tools.is_str(default):
                 sel = choices.index(default)
                 if sel == -1:
                     raise Exception('Default: %r is not in the chioces: %r '
                                     % (default, choices))
             default = (sel, choices)
             self._intern.type = 'combo'
-        elif default is None:
+        elif default is not None:
             self._intern.type = type(default)
         self._intern.value = default
 
@@ -99,7 +102,7 @@ class Pref(DynStruct):
         return choices[sel]
 
     def full_name(self):
-        if self._tree.parent == None:
+        if self._tree.parent is None:
             return self._intern.name
         return self._tree.parent.full_name() + '.' + self._intern.name
 
@@ -108,7 +111,7 @@ class Pref(DynStruct):
             row = self._tree.child_names.index(name)
             #child = self._tree.child_list[row]  # child node to "overwrite"
             _typestr = self._tree.child_list[row]._intern.type
-            if isinstance(_typestr, str):
+            if tools.is_str(_typestr):
                 return _typestr
         return None
 
@@ -118,7 +121,7 @@ class Pref(DynStruct):
         (sel, choices) = self._intern.value
         if new_val in choices:
             new_sel = choices.index(new_val)
-        elif helpers.is_int(new_val) and\
+        elif tools.is_int(new_val) and\
                 new_val < len(choices) and\
                 new_val >= 0:
             new_sel = new_val
@@ -132,7 +135,7 @@ class Pref(DynStruct):
         printDBG( "Overwriting Attribute: %r %r" % (name, attr))
         row = self._tree.child_names.index(name)
         child = self._tree.child_list[row]  # child node to "overwrite"
-        if type(attr) == Pref:
+        if isinstance(attr, Pref):
             if attr._intern.type == Pref:
                 # Main Branch Logic
                 for (key, val) in attr.iteritems():
@@ -150,25 +153,29 @@ class Pref(DynStruct):
             self.__dict__[name] = child.value()
 
     def __new_attr(self, name, attr):
-        ' --- New Attribute Wrapper ---'
-        if type(attr) == Pref:
+        '''On a new child attribute:
+            1) Check to see if it is wrapped by a Pref object
+            2) If not do so, if so add it to the tree structure '''
+        if isinstance(attr, Pref):
+            # Child attribute already has a Pref wrapping
             printDBG( "New Attribute: %r %r" % (name, attr.value()))
-            # If The New Attribute already has a PrefWrapper
             new_childx = len(self._tree.child_names)
-            attr._tree.parent = self     # Give Child Parent
-            attr._intern.name = name     # Give Child Name
+            # Children know about parents
+            attr._tree.parent = self     # Give child parent
+            attr._intern.name = name     # Give child name
             if attr._intern.depeq is None:
-                attr._intern.depeq = self._intern.depeq  # Give Child Parent Dependencies
+                attr._intern.depeq = self._intern.depeq  # Give child parent dependencies
             if attr._intern.hidden:
                 self._tree.hidden_children.append(new_childx)
                 self._tree.hidden_children.sort()
-            attr._intern.aschildx = new_childx  # Used for QTIndexing
-            # Add To Internal Tree Structure
-            self._tree.child_names.append(name)
+            # Used for QTIndexing
+            attr._intern.aschildx = new_childx
+            # Parents know about children
+            self._tree.child_names.append(name)  # Add child to tree
             self._tree.child_list.append(attr)
-            self.__dict__[name] = attr.value()
+            self.__dict__[name] = attr.value()   # Add child value to dict
         else:
-            # If no wrapper, create one and readd
+            # The child attribute is not wrapped. Wrap with Pref and readd.
             if attr is None:
                 attr = 'None'
             pref_attr = Pref(default=attr)
@@ -176,11 +183,11 @@ class Pref(DynStruct):
 
     # Attributes are children
     def __setattr__(self, name, attr):
-        'Wraps objects as preferences if not done already'
-        if len(name) > 0 and name[0] == '_':
-            # Default behavior for _printable_exclude, _intern, _tree, etc
+        'Wraps child attributes in a Pref object if not already done'
+        # No wrapping for private vars: _printable_exclude, _intern, _tree
+        if name.find('_') == 0:
             return super(DynStruct, self).__setattr__(name, attr)
-        # --- Overwrite Attribute ---
+        # Overwrite if child exists
         if name in self._tree.child_names:
             self.__overwrite_attr(name, attr)
         else:
@@ -214,7 +221,7 @@ class Pref(DynStruct):
         return pref_dict
 
     def save(self):
-        'Saves prefeters to disk in the form of a dict'
+        'Saves prefs to disk in dict format'
         if self._intern.fpath in ['', None]:
             if self._tree.parent is not None:
                 printDBG('Can my parent save me?')
@@ -235,24 +242,24 @@ class Pref(DynStruct):
             try:
                 pref_dict = cPickle.load(f)
             except EOFError:
-                import warnings
                 warnings.warn('Preference file did not load correctly')
                 return False
-        if not isinstance(pref_dict, dict):
+        if not tools.is_dict(pref_dict):
             raise Exception('Preference file is corrupted')
         self.add_dict(pref_dict)
         return True
 
     def toggle(self, key):
         'Toggles a boolean key'
-        if not isinstance(self[key], bool):
+        if not tools.is_bool(self[key]):
         #if not self._intern.type != types.BooleanType:
             raise Exception('Cannot toggle the non-boolean type: ' + str(key))
         self.pref_update(key, not self[key])
 
     def __str__(self):
         if self._intern.value is not None:
-            ret = super(DynStruct, self).__str__().replace('\n    ', '')
+            ret = super(DynStruct, self).__str__()
+            #.replace('\n    ', '')
             ret += 'LEAF ' + repr(self._intern.name) + ':' + repr(self._intern.value)
             return ret
         else:
@@ -301,7 +308,7 @@ class Pref(DynStruct):
         if column == 0:
             return self._intern.name
         data = self.value()
-        if type(data) == Pref:  # Recursive Case: Pref
+        if isinstance(data, Pref):  # Recursive Case: Pref
             data = ''
         return data
 
@@ -322,13 +329,13 @@ class Pref(DynStruct):
             new_val = 'BadThingsHappenedInPref'
             if self._intern.type == Pref:
                 raise Exception('Qt can only change leafs')
-            elif self._intern.type == types.IntType:  # NOQA
+            elif self._intern.type in [types.IntType]:
                 new_val = int(qvar.toInt()[0])
-            elif self._intern.type == types.StringType:  # NOQA
+            elif self._intern.type in [types.StringType]:
                 new_val = str(qvar.toString())
-            elif self._intern.type == types.FloatType:  # NOQA
+            elif self._intern.type in [types.FloatType]:
                 new_val = float(qvar.toFloat()[0])
-            elif self._intern.type == types.BooleanType:  # NOQA
+            elif self._intern.type in [types.BooleanType]:
                 new_val = bool(qvar.toBool())
             elif self._intern.type == 'combo':
                 new_val = qvar.toString()
@@ -337,25 +344,25 @@ class Pref(DynStruct):
         return 'PrefNotEditable'
 
 
-# Decorator to help catch errors that QT wont report
-def report_thread_error(fn):
-    def report_thread_error_wrapper(*args, **kwargs):
-        try:
-            ret = fn(*args, **kwargs)
-            return ret
-        except Exception as ex:
-            print('\n\n *!!* Thread Raised Exception: ' + str(ex))
-            print('\n\n *!!* Thread Exception Traceback: \n\n' + traceback.format_exc())
-            sys.stdout.flush()
-            et, ei, tb = sys.exc_info()
-            raise
-    return report_thread_error_wrapper
-
-
 if HAVE_PYQT:
     from _frontend.EditPrefSkel import Ui_editPrefSkel
     from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
                           Qt, QObject, pyqtSlot)
+
+    # Decorator to help catch errors that QT wont report
+    def report_thread_error(fn):
+        def report_thread_error_wrapper(*args, **kwargs):
+            try:
+                ret = fn(*args, **kwargs)
+                return ret
+            except Exception as ex:
+                print('\n\n *!!* Thread Raised Exception: ' + str(ex))
+                print('\n\n *!!* Thread Exception Traceback: \n\n' + traceback.format_exc())
+                sys.stdout.flush()
+                et, ei, tb = sys.exc_info()
+                raise
+        return report_thread_error_wrapper
+
     #QComboBox
 
     class QPreferenceModel(QAbstractItemModel):
@@ -483,19 +490,47 @@ if HAVE_PYQT:
 
     if __name__ == '__main__':
         import guitools
+        import Pref
+        import DataStructures as ds
+
+        class Pref2(Pref.Pref):
+            def __init__(self):
+                super(Pref2, self).__init__()
+                self.prop1 = 'hello'
+                self.prop2 = None
+                self.prop3 = 123
+                self.prop4 = True
+                self.prop5 = 0
+                self.prop6 = 0.0
+                self.prop7 = [1, 2, 3, 4]
+                self.prop8 = (1, 2, 3, 4,)
+                self.prop9 = Pref.Pref()
+                self.prop9.subprop = ''
+
         guitools.configure_matplotlib()
         app, is_root = guitools.init_qtapp()
         backend = None
         #guitools.make_dummy_main_window()
-        pref_root = Pref()
-        r = pref_root
-        r.a = Pref()
-        r.b = Pref('pref value 1')
-        r.c = Pref('pref value 2')
-        r.a.d = Pref('nested1')
-        r.a.e = Pref()
-        r.a.f = Pref('nested3')
-        r.a.e.g = Pref('nested4')
-        print(pref_root)
-        prefWidget = pref_root.createQWidget()
+        prefs = Pref.Pref()
+        r = prefs
+        r.a = Pref.Pref()
+        r.b = Pref.Pref('pref value 1')
+        r.c = Pref.Pref('pref value 2')
+        r.a.d = Pref.Pref('nested1')
+        r.a.e = Pref.Pref()
+        r.a.f = Pref.Pref('nested3')
+        r.a.e.g = Pref.Pref('nested4')
+
+        pref2 = Pref2()
+
+        r.pref2 = pref2
+        chip_cfg = ds.make_chip_cfg()
+        r.chip_cfg = chip_cfg
+        #feat_cfg = ds.make_feat_cfg()
+        #r.feat_cfg = feat_cfg
+        #query_cfg = ds.make_vsmany_cfg()
+        #r.query_cfg = query_cfg
+
+        print(prefs)
+        prefWidget = prefs.createQWidget()
         guitools.run_main_loop(app, is_root, backend)

@@ -437,6 +437,12 @@ class MainWindowBackend(QtCore.QObject):
             self.hs.change_prop(cx, key, val)
         self.populate_chip_table()
 
+    @pyqtSlot(name='edit_preferences')
+    def edit_preferences(self):
+        print('[*back] edit_preferences')
+        print(self.hs.prefs)
+        self.edit_prefs = self.hs.prefs.createQWidget()
+
     # Action -> Delete Chip
     @pyqtSlot(name='delete_chip')
     def delete_chip(self):

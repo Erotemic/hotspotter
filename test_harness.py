@@ -79,10 +79,10 @@ def print_test_results(test_results):
 # Display Test Results
 #-----------
 # Run configuration for each qon
-def get_test_results(hs, qon_list, q_cfg, cfgx=0, nCfg=1,
+def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
                      force_load=False):
-    print('[harn] get_test_results(): %r' % q_cfg.get_uid())
-    query_uid = q_cfg.get_uid()
+    print('[harn] get_test_results(): %r' % query_cfg.get_uid())
+    query_uid = query_cfg.get_uid()
     hs_uid    = hs.db_name()
     qon_uid   = helpers.hashstr(repr(tuple(qon_list)))
     test_uid  = hs_uid + query_uid + qon_uid
@@ -110,7 +110,7 @@ def get_test_results(hs, qon_list, q_cfg, cfgx=0, nCfg=1,
         title = 'q'+ hs.cxstr(qcx) + ' - ' + notes
         #print('[harn] title=%r' % (title,))
         #print('[harn] gt_'+hs.cxstr(gt_cxs))
-        res_list = mc3.execute_query_safe(hs, q_cfg, [qcx])
+        res_list = mc3.execute_query_safe(hs, query_cfg, [qcx])
         bestranks = []
         algos = []
         qonx2_reslist += [res_list]

@@ -160,15 +160,15 @@ def top_matching_features(res, axnum=None, match_type=''):
     fig = df2.figure(0)
     df2.plot(sorted_score)
 
-def vary_query_cfg(hs, qon_list, q_cfg=None, vary_cfg=None, fnum=1):
+def vary_query_cfg(hs, qon_list, query_cfg=None, vary_cfg=None, fnum=1):
     # Ground truth matches
     for qcx, ocxs, notes in qon_list:
         gt_cxs = hs.get_groundtruth_cxs(qcx)
         for cx in gt_cxs:
-            fnum = vary_two_cfg(hs, qcx, cx, notes, q_cfg, vary_cfg, fnum)
+            fnum = vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum)
     return fnum
 
-def vary_two_cfg(hs, qcx, cx, notes, q_cfg, vary_cfg, fnum=1):
+def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
     if len(vary_cfg) > 2:
         raise Exception('can only vary at most two cfgeters')
     print('[dev] vary_two_cfg: q'+hs.vs_str(qcx, cx))
@@ -193,25 +193,25 @@ def vary_two_cfg(hs, qcx, cx, notes, q_cfg, vary_cfg, fnum=1):
     # Vary cfg1
     #df2..gcf().clf()
     print_lock_ = helpers.ModulePrintLock(mc3, df2)
-    assign_alg = q_cfg.a_cfg.query_type
+    assign_alg = query_cfg.agg_cfg.query_type
     vert = not hs.args.horiz
     plt_match_args = dict(fnum=fnum, show_gname=False, showTF=False, vert=vert)
     for rowx, cfg1_value in enumerate(cfg1_steps):
-        q_cfg.update_cfg(**{cfg1_name:cfg1_value})
+        query_cfg.update_cfg(**{cfg1_name:cfg1_value})
         y_title = cfg1_name+'='+helpers.format(cfg1_value, 3)
         # Vary cfg2 
         for colx, cfg2_value in enumerate(cfg2_steps):
-            q_cfg.update_cfg(**{cfg2_name:cfg2_value})
+            query_cfg.update_cfg(**{cfg2_name:cfg2_value})
             plotnum = (nRows, nCols, rowx*nCols+colx+1)
             # HACK
             #print(plotnum)
-            #print(q_cfg)
+            #print(query_cfg)
             # query only the chips of interest (groundtruth) when doing vsone
             if assign_alg == 'vsone':
-                res = mc3.query_groundtruth(hs, qcx, q_cfg)
+                res = mc3.query_groundtruth(hs, qcx, query_cfg)
             # query the entire database in vsmany (just as fast as vgroundtruth)
             elif assign_alg == 'vsmany':
-                res = mc3.query_database(hs, qcx, q_cfg)
+                res = mc3.query_database(hs, qcx, query_cfg)
             res.plot_matches(hs, cx, plotnum=plotnum, **plt_match_args)
             x_title = cfg2_name + '='+helpers.format(cfg2_value, 3)  #helpers.commas(cfg2_value, 3)
             ax = df2.gca()
@@ -222,7 +222,7 @@ def vary_two_cfg(hs, qcx, cx, notes, q_cfg, vary_cfg, fnum=1):
     del print_lock_
     vary_title = '%s vary %s and %s' % (assign_alg, cfg1_name, cfg2_name)
     figtitle =  '%s %s %s' % (vary_title, hs.vs_str(qcx, cx), notes)
-    subtitle = mc3.simplify_test_uid(q_cfg.get_uid())
+    subtitle = mc3.simplify_test_uid(query_cfg.get_uid())
     df2.set_figtitle(figtitle, subtitle)
     df2.adjust_subplots_xylabels()
     fnum += 1
@@ -249,13 +249,13 @@ def show_names(hs, qon_list, fnum=1):
 
 def vary_vsone_cfg(hs, qon_list, fnum, vary_dicts, **kwargs):
     vary_cfg = helpers.dict_union(*vary_dicts)
-    q_cfg = ds.get_vsone_cfg(hs, **kwargs)
-    return vary_query_cfg(hs, qon_list, q_cfg, vary_cfg, fnum)
+    query_cfg = ds.get_vsone_cfg(hs, **kwargs)
+    return vary_query_cfg(hs, qon_list, query_cfg, vary_cfg, fnum)
 
 def vary_vsmany_cfg(hs, qon_list, vary_cfg, fnum, **kwargs):
     vary_cfg = helpers.dict_union(*vary_dicts)
-    q_cfg = ds.get_vsmany_cfg(hs, **kwargs)
-    return vary_query_cfg(hs, qon_list, q_cfg, vary_cfg, fnum)
+    query_cfg = ds.get_vsmany_cfg(hs, **kwargs)
+    return vary_query_cfg(hs, qon_list, query_cfg, vary_cfg, fnum)
 
 def plot_keypoint_scales(hs, fnum=1):
     print('[dev] plot_keypoint_scales()')
@@ -320,14 +320,14 @@ def get_qon_list(hs):
 def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
     print('--------------------------------------')
     print('[dev] investigate_vsone_groundtruth')
-    q_cfg = ds.get_vsone_cfg(sv_on=True, ratio_thresh=1.5)
+    query_cfg = ds.get_vsone_cfg(sv_on=True, ratio_thresh=1.5)
     for qcx, ocxs, notes in qon_list:
-        res = mc3.query_groundtruth(hs, qcx, q_cfg)
-        #print(q_cfg)
+        res = mc3.query_groundtruth(hs, qcx, query_cfg)
+        #print(query_cfg)
         #print(res)
         #res.show_query(hs, fignum=fnum)
         fnum += 1
-        res.show_topN(hs, fignum=fnum, q_cfg=q_cfg)
+        res.show_topN(hs, fignum=fnum, query_cfg=query_cfg)
         fnum += 1
     return fnum
 
@@ -591,13 +591,13 @@ if __name__ == '__main__':
     # A redundant query argument. Again, needs to be replaced. 
     if hs.args.query is not None:
         qcx = hs.cid2_cx(hs.args.query[0])
-        q_cfg = ds.get_vsmany_cfg(hs, K=args.K, score_method=args.score_method)
-        res = mc3.query_database(hs, qcx, q_cfg=q_cfg)
+        query_cfg = ds.get_vsmany_cfg(hs, K=args.K, score_method=args.score_method)
+        res = mc3.query_database(hs, qcx, query_cfg=query_cfg)
         res.show_topN(hs)
     print('[dev]====================')
     kwargs = {}
     dcxs = None
-    q_cfg = None
+    query_cfg = None
     if hs.args.nopresent:
         print('...not presenting')
         sys.exit(0)

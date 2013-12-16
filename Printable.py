@@ -55,28 +55,38 @@ class AbstractPrintable(object):
 
     def get_printable(self,
                       type_bit=True,
-                      print_exclude_aug = [], 
+                      print_exclude_aug=[],
                       val_bit=True,
                       max_valstr=1000,
                       justlength=False):
         body = ''
         attri_list = []
-        exclude_key_list = list(self._printable_exclude)+list(print_exclude_aug)
+        exclude_key_list = list(self._printable_exclude) + list(print_exclude_aug)
         for (key, val) in self.__dict__.iteritems():
-            if key in exclude_key_list: continue
-            namestr = str(key)
-            typestr = printableType(val, name=key, parent=self)
-            if not val_bit:
-                attri_list.append( (typestr, namestr, '<ommited>') )
-                continue
-            valstr  = printableVal(val,type_bit=type_bit, justlength=justlength)
-            if len(valstr) > max_valstr:
-                valstr = valstr[0:max_valstr/2]+valstr[-max_valstr/2:-1]
-            attri_list.append( (typestr, namestr, valstr) )    
+            try:
+                if key in exclude_key_list:
+                    continue
+                namestr = str(key)
+                typestr = printableType(val, name=key, parent=self)
+                if not val_bit:
+                    attri_list.append((typestr, namestr, '<ommited>'))
+                    continue
+                valstr  = printableVal(val, type_bit=type_bit, justlength=justlength)
+                if len(valstr) > max_valstr:
+                    pos1 =  max_valstr // 2
+                    pos2 = -max_valstr // 2
+                    valstr = valstr[0:pos1] + valstr[pos2:-1]
+                attri_list.append((typestr, namestr, valstr))
+            except Exception as ex:
+                print('[printable] ERROR %r' % ex)
+                print('[printable] ERROR key = %r' % key)
+                print('[printable] ERROR val = %r' % val)
+                print('[printable] ERROR valstr = %r' % valstr)
+                raise
         attri_list.sort()
         for (typestr, namestr, valstr) in attri_list:
             entrytail = '\n' if valstr.count('\n') <= 1 else '\n\n'
-            typestr2 = typestr+' ' if type_bit else ''
+            typestr2 = typestr + ' ' if type_bit else ''
             body += typestr2 + namestr + ' = ' + valstr + entrytail
         return body
 

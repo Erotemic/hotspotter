@@ -6,49 +6,45 @@ import sys
 import os.path
 import traceback
 import numpy as np
+import helpers
+
 
 def printDBG(msg):
     pass
 
+
 # See if PyQt4 is installed
-try: 
-    import PyQt4
+try:
+    import PyQt4  # NOQA
     HAVE_PYQT = True
 except ImportError as ex:
     HAVE_PYQT = False
 
-def reload_module():
-    import imp, sys
-    imp.reload(sys.modules[__name__])
+
 def rrr():
-    print('[pref] Reloading: '+__name__)
-    reload_module()
+    'Dynamic module reloading'
+    import imp
+    print('[pref] Reloading: ' + __name__)
+    imp.reload(sys.modules[__name__])
+
 
 class Pref(DynStruct):
     '''
-    Structure for Creating Preferences. 
-    Caveats: 
+    Structure for Creating Preferences.
+    Caveats:
         When using a value call with ['valname'] to be safe
-    Features: 
+    Features:
       * Can be saved and loaded.
-      * Can be nested 
+      * Can be nested
       * Dynamically add/remove
     '''
-    def __init__(self,\
-                 default=None,\
-                 doc='',\
-                 min=None,\
-                 max=None,\
-                 hidden=False,\
-                 choices=None,\
-                 depeq=None,\
-                 fpath='',\
-                 copy_dict=None,\
+    def __init__(self, default=None, doc='', min=None, max=None, hidden=False,
+                 choices=None, depeq=None, fpath='', copy_dict=None,
                  parent=None):
         '''Creates a pref struct that will save itself to pref_fpath if
         available and have initail members of some dictionary'''
-        super(Pref, self).__init__(child_exclude_list=\
-                                   ['_intern', '_tree'], copy_dict=copy_dict)
+        super(Pref, self).__init__(child_exclude_list=['_intern', '_tree'],
+                                   copy_dict=copy_dict)
         # Define internal structures
         self._intern = DynStruct()
         self._tree = DynStruct()
@@ -59,33 +55,33 @@ class Pref(DynStruct):
         self._intern.fpath   = fpath
         self._intern.depeq   = depeq
 
-        self._tree.parent    = parent
-        self._tree.hidden_children = []
-        self._tree.child_list  = []
-        self._tree.child_names = []
+        self._tree.parent               = parent
+        self._tree.hidden_children      = []
+        self._tree.child_list           = []
+        self._tree.child_names          = []
         self._tree.num_visible_children = 0
-        self._tree.aschildx    = 0 
+        self._tree.aschildx             = 0
         # Check if this is a leaf node and if so the type
-        if choices != None:
+        if choices is not None:
             sel = 0
-            if type(default) == types.IntType:
+            if helpers.is_int(default):
                 sel = default
-            elif type(default) == types.StringType:
+            elif helpers.is_str(default):
                 sel = choices.index(default)
                 if sel == -1:
-                    raise Exception('Default: %r is not in the chioces: %r '\
-                                    % (default, choices) )
+                    raise Exception('Default: %r is not in the chioces: %r '
+                                    % (default, choices))
             default = (sel, choices)
             self._intern.type = 'combo'
-        elif default != None:
+        elif default is None:
             self._intern.type = type(default)
         self._intern.value = default
-    
+
     def get_printable(self, type_bit=True, print_exclude_aug=[]):
         # Remove unsatisfied dependencies from the printed structure
         further_aug = print_exclude_aug[:]
         for child_name in self._tree.child_names:
-            depeq = self[child_name+'_internal']._intern.depeq
+            depeq = self[child_name + '_internal']._intern.depeq
             if not depeq is None and depeq[0].value() != depeq[1]:
                 further_aug.append(child_name)
         return super(Pref, self).get_printable(type_bit, print_exclude_aug=further_aug)
@@ -96,7 +92,7 @@ class Pref(DynStruct):
         elif self._intern.type == 'combo':
             return self.combo_val()
         else:
-            return self._intern.value #TODO AS REFERENCE
+            return self._intern.value  # TODO AS REFERENCE
 
     def combo_val(self):
         (sel, choices) = self._intern.value
@@ -105,17 +101,16 @@ class Pref(DynStruct):
     def full_name(self):
         if self._tree.parent == None:
             return self._intern.name
-        return self._tree.parent.full_name()+'.'+self._intern.name
+        return self._tree.parent.full_name() + '.' + self._intern.name
 
     def customPrintableType(self, name):
         if name in self._tree.child_names:
             row = self._tree.child_names.index(name)
-            child = self._tree.child_list[row] # child node to "overwrite"
+            #child = self._tree.child_list[row]  # child node to "overwrite"
             _typestr = self._tree.child_list[row]._intern.type
             if isinstance(_typestr, str):
                 return _typestr
         return None
-
 
     def change_combo_val(self, new_val):
         '''Checks to see if a selection is a valid index or choice of
@@ -123,18 +118,20 @@ class Pref(DynStruct):
         (sel, choices) = self._intern.value
         if new_val in choices:
             new_sel = choices.index(new_val)
-        elif type(new_val) == types.IntType and\
+        elif helpers.is_int(new_val) and\
                 new_val < len(choices) and\
                 new_val >= 0:
             new_sel = new_val
         else:
-            printERR('The available choices are: '+str(self._intern.value[1]))
+            msg = ('The available choices are: ' + str(self._intern.value[1]))
+            print(msg)
+            raise Exception(msg)
         return (new_sel, choices)
 
     def __overwrite_attr(self, name, attr):
-        printDBG( "Overwriting Attribute: %r %r" % (name, attr) )
+        printDBG( "Overwriting Attribute: %r %r" % (name, attr))
         row = self._tree.child_names.index(name)
-        child = self._tree.child_list[row] # child node to "overwrite"
+        child = self._tree.child_list[row]  # child node to "overwrite"
         if type(attr) == Pref:
             if attr._intern.type == Pref:
                 # Main Branch Logic
@@ -142,37 +139,37 @@ class Pref(DynStruct):
                     child.__setattr__(key, val)
             else:
                 self.__overwrite_attr(name, attr.value())
-        else: # Main Leaf Logic: 
-            assert child._intern.type != Pref, self.full_name()+' Must be a leaf'
+        else:  # Main Leaf Logic:
+            assert child._intern.type != Pref, self.full_name() + ' Must be a leaf'
             if child._intern.type == 'combo':
                 newval = child.change_combo_val(attr)
             else:
                 newval = attr
             # Keep user-readonly map up to date with internals
             child._intern.value = newval
-            self.__dict__[name] = child.value() 
+            self.__dict__[name] = child.value()
 
     def __new_attr(self, name, attr):
         ' --- New Attribute Wrapper ---'
         if type(attr) == Pref:
-            printDBG( "New Attribute: %r %r" % (name, attr.value()) )
+            printDBG( "New Attribute: %r %r" % (name, attr.value()))
             # If The New Attribute already has a PrefWrapper
             new_childx = len(self._tree.child_names)
             attr._tree.parent = self     # Give Child Parent
             attr._intern.name = name     # Give Child Name
-            if attr._intern.depeq == None:
-                attr._intern.depeq = self._intern.depeq # Give Child Parent Dependencies
+            if attr._intern.depeq is None:
+                attr._intern.depeq = self._intern.depeq  # Give Child Parent Dependencies
             if attr._intern.hidden:
                 self._tree.hidden_children.append(new_childx)
                 self._tree.hidden_children.sort()
-            attr._intern.aschildx = new_childx # Used for QTIndexing
+            attr._intern.aschildx = new_childx  # Used for QTIndexing
             # Add To Internal Tree Structure
             self._tree.child_names.append(name)
             self._tree.child_list.append(attr)
-            self.__dict__[name] = attr.value() 
+            self.__dict__[name] = attr.value()
         else:
             # If no wrapper, create one and readd
-            if attr == None:
+            if attr is None:
                 attr = 'None'
             pref_attr = Pref(default=attr)
             self.__new_attr(name, pref_attr)
@@ -198,12 +195,12 @@ class Pref(DynStruct):
 
     def iteritems(self):
         for (key, val) in self.__dict__.iteritems():
-            if key in self._printable_exclude: 
+            if key in self._printable_exclude:
                 continue
             yield (key, val)
 
     def to_dict(self, split_structs_bit=False):
-        '''Converts prefeters to a dictionary. 
+        '''Converts prefeters to a dictionary.
         Children Pref can be optionally separated'''
         pref_dict = {}
         struct_dict = {}
@@ -218,14 +215,14 @@ class Pref(DynStruct):
 
     def save(self):
         'Saves prefeters to disk in the form of a dict'
-        if self._intern.fpath in ['', None]: 
-            if self._tree.parent != None:
+        if self._intern.fpath in ['', None]:
+            if self._tree.parent is not None:
                 printDBG('Can my parent save me?')
                 return self._tree.parent.save()
             printDBG('I cannot be saved. I have no parents.')
             return False
         with open(self._intern.fpath, 'w') as f:
-            printDBG('Saving to '+self._intern.fpath)
+            printDBG('Saving to ' + self._intern.fpath)
             pref_dict = self.to_dict()
             cPickle.dump(pref_dict, f)
         return True
@@ -241,27 +238,27 @@ class Pref(DynStruct):
                 import warnings
                 warnings.warn('Preference file did not load correctly')
                 return False
-        if type(pref_dict) != types.DictType:
+        if not isinstance(pref_dict, dict):
             raise Exception('Preference file is corrupted')
         self.add_dict(pref_dict)
         return True
 
     def toggle(self, key):
         'Toggles a boolean key'
-        if type(self[key]) != types.BooleanType:
+        if not isinstance(self[key], bool):
         #if not self._intern.type != types.BooleanType:
-            raise Exception('Cannot toggle the non-boolean type: '+str(key))
-        self.update(key, not self[key])
+            raise Exception('Cannot toggle the non-boolean type: ' + str(key))
+        self.pref_update(key, not self[key])
 
     def __str__(self):
-        if self._intern.value != None:
-            ret = super(DynStruct, self).__str__().replace('\n    ','')
-            ret += 'LEAF '+repr(self._intern.name)+':'+repr(self._intern.value)
+        if self._intern.value is not None:
+            ret = super(DynStruct, self).__str__().replace('\n    ', '')
+            ret += 'LEAF ' + repr(self._intern.name) + ':' + repr(self._intern.value)
             return ret
         else:
             return super(DynStruct, self).__str__()
 
-    def update(self, key, new_val):
+    def pref_update(self, key, new_val):
         'Changes a prefeters value and saves it to disk'
         printDBG('Updating Preference: %s to %r' % (key, str(new_val)))
         self.__setattr__(key, new_val)
@@ -304,7 +301,7 @@ class Pref(DynStruct):
         if column == 0:
             return self._intern.name
         data = self.value()
-        if type(data) == Pref: # Recursive Case: Pref
+        if type(data) == Pref:  # Recursive Case: Pref
             data = ''
         return data
 
@@ -313,53 +310,53 @@ class Pref(DynStruct):
         self._intern.depeq
         if self._intern.name in uneditable_hack:
             return False
-        if self._intern.depeq != None:
+        if self._intern.depeq is not None:
             return self._intern.depeq[0].value() == self._intern.depeq[1]
-        return self._intern.value != None
+        return self._intern.value is not None
 
     def qt_set_leaf_data(self, qvar):
         'Sets backend data using QVariants'
-        if self._tree.parent == None: 
+        if self._tree.parent is None:
             raise Exception('Cannot set root preference')
         if self.qt_is_editable():
             new_val = 'BadThingsHappenedInPref'
             if self._intern.type == Pref:
                 raise Exception('Qt can only change leafs')
-            elif self._intern.type == types.IntType:
+            elif self._intern.type == types.IntType:  # NOQA
                 new_val = int(qvar.toInt()[0])
-            elif self._intern.type == types.StringType:
+            elif self._intern.type == types.StringType:  # NOQA
                 new_val = str(qvar.toString())
-            elif self._intern.type == types.FloatType:
+            elif self._intern.type == types.FloatType:  # NOQA
                 new_val = float(qvar.toFloat()[0])
-            elif self._intern.type == types.BooleanType:
+            elif self._intern.type == types.BooleanType:  # NOQA
                 new_val = bool(qvar.toBool())
             elif self._intern.type == 'combo':
                 new_val = qvar.toString()
              # Save to disk
-            return self._tree.parent.update(self._intern.name, new_val)
+            return self._tree.parent.pref_update(self._intern.name, new_val)
         return 'PrefNotEditable'
+
 
 # Decorator to help catch errors that QT wont report
 def report_thread_error(fn):
     def report_thread_error_wrapper(*args, **kwargs):
         try:
-            ret = fn(*args, **kwargs);
+            ret = fn(*args, **kwargs)
             return ret
         except Exception as ex:
-            printINFO('\n\n *!!* Thread Raised Exception: '+str(ex))
-            printINFO('\n\n *!!* Thread Exception Traceback: \n\n'+traceback.format_exc())
+            print('\n\n *!!* Thread Raised Exception: ' + str(ex))
+            print('\n\n *!!* Thread Exception Traceback: \n\n' + traceback.format_exc())
             sys.stdout.flush()
             et, ei, tb = sys.exc_info()
-            raise 
+            raise
     return report_thread_error_wrapper
 
 
 if HAVE_PYQT:
     from _frontend.EditPrefSkel import Ui_editPrefSkel
-    from PyQt4.Qt import QAbstractItemModel, QModelIndex, QVariant, Qt,\
-            QObject, QComboBox, QMainWindow, QTableWidgetItem, QMessageBox,\
-            QAbstractItemView,  QWidget, Qt, pyqtSlot, pyqtSignal,\
-            QStandardItem, QStandardItemModel, QString, QObject
+    from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
+                          Qt, QObject, pyqtSlot)
+    #QComboBox
 
     class QPreferenceModel(QAbstractItemModel):
         'Convention states only items with column index 0 can have children'
@@ -367,7 +364,7 @@ if HAVE_PYQT:
         def __init__(self, pref_struct, parent=None):
             super(QPreferenceModel, self).__init__(parent)
             self.rootPref  = pref_struct
-        #-----------
+
         @report_thread_error
         def index2Pref(self, index=QModelIndex()):
             '''Internal helper method'''
@@ -376,6 +373,7 @@ if HAVE_PYQT:
                 if item:
                     return item
             return self.rootPref
+
         #-----------
         # Overloaded ItemModel Read Functions
         @report_thread_error
@@ -390,7 +388,7 @@ if HAVE_PYQT:
 
         @report_thread_error
         def data(self, index, role=Qt.DisplayRole):
-            '''Returns the data stored under the given role 
+            '''Returns the data stored under the given role
             for the item referred to by the index.'''
             if not index.isValid():
                 return QVariant()
@@ -416,7 +414,7 @@ if HAVE_PYQT:
         def parent(self, index=None):
             '''Returns the parent of the model item with the given index.
             If the item has no parent, an invalid QModelIndex is returned.'''
-            if index is None: # Overload with QObject.parent()
+            if index is None:  # Overload with QObject.parent()
                 return QObject.parent(self)
             if not index.isValid():
                 return QModelIndex()
@@ -425,7 +423,7 @@ if HAVE_PYQT:
             if parentPref == self.rootPref:
                 return QModelIndex()
             return self.createIndex(parentPref.qt_parents_index_of_me(), 0, parentPref)
-        
+
         #-----------
         # Overloaded ItemModel Write Functions
         @report_thread_error
@@ -449,7 +447,7 @@ if HAVE_PYQT:
                 return False
             leafPref = self.index2Pref(index)
             result = leafPref.qt_set_leaf_data(data)
-            if result == True:
+            if result is True:
                 self.dataChanged.emit(index, index)
             return result
 
@@ -465,7 +463,7 @@ if HAVE_PYQT:
     class EditPrefWidget(QWidget):
         'The Settings Pane; Subclass of Main Windows.'
         def __init__(self, pref_struct):
-            super( EditPrefWidget, self ).__init__()
+            super(EditPrefWidget, self).__init__()
             self.pref_skel = Ui_editPrefSkel()
             self.pref_skel.setupUi(self)
             self.pref_model = None
@@ -477,11 +475,11 @@ if HAVE_PYQT:
         @pyqtSlot(Pref, name='populatePrefTreeSlot')
         def populatePrefTreeSlot(self, pref_struct):
             'Populates the Preference Tree Model'
-            printDBG('Bulding Preference Model of: '+repr(pref_struct))
+            printDBG('Bulding Preference Model of: ' + repr(pref_struct))
             self.pref_model = pref_struct._createQPreferenceModel()
-            printDBG('Built: '+repr(self.pref_model))
+            printDBG('Built: ' + repr(self.pref_model))
             self.pref_skel.prefTreeView.setModel(self.pref_model)
-            self.pref_skel.prefTreeView.header().resizeSection(0,250)
+            self.pref_skel.prefTreeView.header().resizeSection(0, 250)
 
     if __name__ == '__main__':
         import guitools
@@ -501,4 +499,3 @@ if HAVE_PYQT:
         print(pref_root)
         prefWidget = pref_root.createQWidget()
         guitools.run_main_loop(app, is_root, backend)
-

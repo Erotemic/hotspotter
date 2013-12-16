@@ -12,6 +12,7 @@ import helpers
 import fileio as io
 import draw_func2 as df2
 import vizualizations as viz
+import HotSpotter
 
 
 def rrr():
@@ -50,28 +51,27 @@ class MainWindowBackend(QtCore.QObject):
         if hs is not None:
             self.connect_api(hs)
 
-    #--------------------------------------------------------------------------
+    #------------------------
     # Draw Functions
-    #--------------------------------------------------------------------------
-
+    #------------------------
     def show_splash(self, fnum=1, view='Nice'):
-        df2.figure(fignum=fnum)
-        df2.plt.clf()
+        fig = df2.figure(fignum=fnum)
+        fig.clf()
         viz.show_splash(fnum=fnum)
-        df2.set_figtitle(view+' View')
+        df2.set_figtitle('%s View' % view)
         df2.draw()
 
     def show_image(self, gx, sel_cxs=[]):
-        df2.figure(fignum=1)
-        df2.plt.clf()
+        fig = df2.figure(fignum=1)
+        fig.clf()
         cx_clicked_func = lambda cx: self.select_gx(gx, cx)
         viz.show_image(self.hs, gx, sel_cxs, cx_clicked_func,
                        fnum=1, figtitle='Image View')
         df2.draw()
 
     def show_chip(self, cx):
-        df2.figure(fignum=2)
-        df2.plt.clf()
+        fig = df2.figure(fignum=2)
+        fig.clf()
         INTERACTIVE_CHIPS = True
         if INTERACTIVE_CHIPS:
             viz.show_chip_interaction(self.hs, cx, fnum=2, figtitle='Chip View')
@@ -81,14 +81,14 @@ class MainWindowBackend(QtCore.QObject):
 
     def show_query(self, res):
         print('[back*] show_query()')
-        df2.figure(fignum=3)
-        df2.plt.clf()
+        fig = df2.figure(fignum=3)
+        fig.clf()
         res.show_top(self.hs, fignum=3, figtitle='Query View ')
         df2.draw()
 
-    #--------------------------------------------------------------------------
+    #----------------------
     # Work Functions
-    #--------------------------------------------------------------------------
+    #----------------------
     def get_selected_gx(self):
         'selected image index'
         if self.selection is None:
@@ -130,11 +130,6 @@ class MainWindowBackend(QtCore.QObject):
             self.populate_image_table()
             self.populate_chip_table()
             self.setEnabledSignal.emit(True)
-            #self.setPlotWidgetEnabledSignal.emit(False)
-            #print(self.win.plotWidget)
-            #print(self.win.plotWidget.isVisible())
-            #self.win.setPlotWidgetEnabled(False)
-            #self.win.plotWidget.setVisible(False)
             self.clear_selection()
             self.update_window_title()
         else:
@@ -143,24 +138,24 @@ class MainWindowBackend(QtCore.QObject):
 
     def populate_image_table(self):
         print('[*back] populate_image_table()')
-        #col_headers  = ['Image ID', 'Image Name', 'Chip IDs', 'Chip Names']
-        #col_editable = [ False    ,  False      ,  False    ,  False      ]
-        col_headers   = ['Image Index', 'Image Name', 'Num Chips']
-        col_editable  = [False, False, False]
+        img_headers = (('Image Index', False),
+                       ('Image Name', False), ('Num Chips', False))
+        col_headers, col_editable = map(list, zip(*img_headers))
         # Populate table with valid image indexes
         gx2_gname = self.hs.tables.gx2_gname
-        gx2_cxs   = self.hs.get_gx2_cxs()
-        row2_datatup = [(gx, gname, len(gx2_cxs[gx]))
-                        for gx, gname in enumerate(gx2_gname)
-                        if gname != '']
+        gx2_cxs   = self.hs.gx2_cxs
+        gx_list  = self.hs.get_valid_gxs()
+        gname_list = [gx2_gname[gx] for gx in iter(gx_list)]
+        num_cxs_list = [len(gx2_cxs(gx)) for gx in iter(gx_list)]
+        row2_datatup = [tup for tup in izip(gx_list, gname_list, num_cxs_list)]
         row_list  = range(len(row2_datatup))
         self.populateSignal.emit('image', col_headers, col_editable,
                                  row_list, row2_datatup)
 
     def populate_chip_table(self):
         print('[*back] populate_chip_table()')
-        col_headers  = ['Chip ID', 'Name', 'Image']
-        col_editable = [False,       True,   False]
+        chip_headers = (('Chip ID', False), ('Name', True), ('Image', False))
+        col_headers, col_editable = map(list, zip(*chip_headers))
         # Add User Properties to headers
         prop_dict = self.hs.tables.prop_dict
         prop_keys = prop_dict.keys()
@@ -172,15 +167,15 @@ class MainWindowBackend(QtCore.QObject):
         cx2_gx   = self.hs.tables.cx2_gx
         nx2_name = self.hs.tables.nx2_name
         gx2_gname = self.hs.tables.gx2_gname
-        cx_list = [cx for cx, cid in enumerate(cx2_cid) if cid > 0]
+        cx_list = self.hs.get_valid_cxs()
         # Build lists
         cid_list   = [cx2_cid[cx] for cx in iter(cx_list)]
         name_list  = [nx2_name[cx2_nx[cx]] for cx in iter(cx_list)]
         image_list = [gx2_gname[cx2_gx[cx]] for cx in iter(cx_list)]
-        prop_lists = [prop_dict[key] for key in prop_keys]
-        datatup_iter = izip(*[cid_list, name_list, image_list] + prop_lists)
-        row2_datatup = [tup for tup in datatup_iter]
-        row_list  = range(len(row2_datatup))
+        prop_lists = [[prop_dict[key][cx] for cx in iter(cx_list)] for key in iter(prop_keys)]
+        unziped_list = [cid_list, name_list, image_list] + prop_lists
+        row2_datatup = [tup for tup in izip(*unziped_list)]
+        row_list = range(len(row2_datatup))
         self.populateSignal.emit('chip', col_headers, col_editable,
                                  row_list, row2_datatup)
 
@@ -223,9 +218,10 @@ class MainWindowBackend(QtCore.QObject):
 
     @pyqtSlot(str, name='backend_print')
     def backend_print(self, msg):
+        msg = str(msg)
         print(msg)
 
-    @pyqtSlot(str, name='clear_selection')
+    @pyqtSlot(name='clear_selection')
     def clear_selection(self):
         print('[*back] clear_selection()')
         self.selection = None
@@ -301,7 +297,6 @@ class MainWindowBackend(QtCore.QObject):
     @pyqtSlot(name='open_database')
     def open_database(self, db_dir=None):
         print('[*back] open_database')
-        import HotSpotter
         # Try to load db
         try:
             # Use the same args in a new (opened) database
@@ -370,8 +365,9 @@ class MainWindowBackend(QtCore.QObject):
     @pyqtSlot(name='new_prop')
     def new_prop(self):
         print('[*back] new_prop()')
-        self.user_info('not imlemented')
-        pass
+        new_prop = self.user_input('What is the new property name?')
+        self.hs.add_property(new_prop)
+        self.populate_chip_table()
 
     # Action -> Add ROI
     @pyqtSlot(name='add_chip')
@@ -428,6 +424,18 @@ class MainWindowBackend(QtCore.QObject):
         self.populate_chip_table()
         self.select_gx(gx, cx)
         pass
+
+    # Change chip propery
+    @pyqtSlot(int, str, str, name='change_chip_property')
+    def change_chip_property(self, cid, key, val):
+        key, val = map(str, (key, val))
+        print('[*back] change_chip_property(%r, %r, %r)' % (cid, key, val))
+        cx = self.hs.cid2_cx(cid)
+        if key == 'Name':
+            self.hs.change_name(cx, val)
+        else:
+            self.hs.change_prop(cx, key, val)
+        self.populate_chip_table()
 
     # Action -> Delete Chip
     @pyqtSlot(name='delete_chip')
@@ -520,6 +528,13 @@ class MainWindowBackend(QtCore.QObject):
         hs = self.hs    # NOQA
         devmode = True  # NOQA
         print(helpers.indent(str(hs), '[*back] '))
+        print('---')
+
+        rrr()
+        guitools.rrr()
+        guifront.rrr()
+        HotSpotter.rrr()
+        viz.rrr()
         #exec(helpers.ipython_execstr())
 
     # Help Actions

@@ -20,7 +20,6 @@ import helpers
 BROWSE = True
 DUMP = False
 FIGNUM = 1
-callback_id = None
 
 # Toggleable printing
 print = __builtin__.print
@@ -263,7 +262,7 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
     interact = cx_clicked_func is not None
     # Draw all chip indexes in the image
     for cx in cx_list:
-        roi = hs.get_roi(cx)
+        roi = hs.cx2_roi(cx)
         # Draw the ROI
         roi_lbl = hs.cxstr(cx)
         if cx in highlight_cxs:
@@ -295,11 +294,11 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
         cx = cx_list[dist.argsort()[0]]
         cx_clicked_func(cx)
 
-    callback_id = fig.__dict__.get('callback_id', None)
-    if callback_id is not None:
-        fig.canvas.mpl_disconnect(callback_id)
+    button_press_cbid = fig.__dict__.get('button_press_cbid', None)
+    if button_press_cbid is not None:
+        fig.canvas.mpl_disconnect(button_press_cbid)
     if interact:
-        fig.callback_id = fig.canvas.mpl_connect('button_press_event', _on_click)
+        fig.button_press_cbid = fig.canvas.mpl_connect('button_press_event', _on_click)
 
 
 #def start_image_interaction(hs, gx, cx_clicked_func):
@@ -362,8 +361,7 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
         # Draw highlighted point
         df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.BLUE, **ell_args)
         ax = df2.gca()
-        ax.set_title(cxstr + ' name=' + name)
-        ax.set_xlabel(gname)
+        #ax.set_title('%s name=%r gname=%r' % (cxstr, name, gname))
 
         xy_str = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
         acd_str = '[(%3.1f,  0.00),\n' % (kp[2],)
@@ -381,7 +379,7 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
         ax.set_xlabel('fx=%r scale=%.1f\n%s' % (fx, scale, xy_str))
 
         df2.figure(fignum=fnum, plotnum=(2, 3, 6))
-        df2.draw_sift_signature(sift, 'sift gradient histogram')
+        df2.draw_sift_signature(sift, 'sift gradient orientation histogram')
 
         fig.canvas.draw()
 
@@ -397,10 +395,10 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
     # Draw without keypoints the first time
     show_chip(hs, cx=cx, draw_kpts=False)
 
-    callback_id = fig.__dict__.get('callback_id', None)
-    if callback_id is not None:
-        fig.canvas.mpl_disconnect(callback_id)
-    fig.callback_id = fig.canvas.mpl_connect('button_press_event', _on_click)
+    button_press_cbid = fig.__dict__.get('button_press_cbid', None)
+    if button_press_cbid is not None:
+        fig.canvas.mpl_disconnect(button_press_cbid)
+    fig.button_press_cbid = fig.canvas.mpl_connect('button_press_event', _on_click)
 
 
 def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
@@ -418,8 +416,10 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
         gname = hs.cx2_gname(cx)
         name = hs.cx2_name(cx)
         ngt_str = hs.num_indexed_gt_str(cx)
-        title_str += ' '.join(['name=%s' % name, hs.cxstr(cx), ngt_str,
-                               'gname=%s' % gname])
+        title_str += ', '.join([hs.cxstr(cx),
+                               'name=%r' % name,
+                               'gname=%r' % gname,
+                               ngt_str, ])
 
     fnum = kwargs.pop('fnum', fnum)
     fnum = kwargs.pop('fignum', fnum)
@@ -569,7 +569,8 @@ def show_matches_annote(hs, qcx, cx2_score,
                         title_suff=None,
                         show_cx=False,
                         show_cid=True,
-                        show_gname=True,
+                        show_gname=False,
+                        show_name=True,
                         showTF=True,
                         showScore=True,
                         **kwargs):
@@ -588,7 +589,20 @@ def show_matches_annote(hs, qcx, cx2_score,
     fm = cx2_fm[cx]
     fs = cx2_fs[cx]
     # Build the title string
-    isgt_str  = hs.is_true_match_str(qcx, cx)
+    UNKNOWN_STR = '???'
+    TRUE_STR    = 'TRUE'
+    FALSE_STR   = 'FALSE'
+
+    def is_true_match_str(qcx, cx):
+        is_true, is_unknown = hs.is_true_match(qcx, cx)
+        if is_unknown:
+            return UNKNOWN_STR
+        elif is_true:
+            return TRUE_STR
+        else:
+            return FALSE_STR
+
+    isgt_str  = is_true_match_str(qcx, cx)
     title = ''
     if showTF:
         title += '*' + isgt_str + '*'
@@ -611,17 +625,22 @@ def show_matches_annote(hs, qcx, cx2_score,
     #df2.upperright_text(cx_str, offset=offset)
     #df2.lowerright_text(cx_str)
     # Finish annotations
-    if isgt_str == hs.UNKNOWN_STR:
+    if isgt_str == UNKNOWN_STR:
         unknown_color = df2.DARK_PURP
         df2.draw_border(ax, unknown_color, 4, offset=offset)
-    elif isgt_str == hs.TRUE_STR:
+    elif isgt_str == TRUE_STR:
         true_color = (0, 1, 0)
         df2.draw_border(ax, true_color, 4, offset=offset)
-    elif isgt_str == hs.FALSE_STR:
+    elif isgt_str == FALSE_STR:
         false_color = (1, .2, 0)
         df2.draw_border(ax, false_color, 4, offset=offset)
-        if show_gname:
-            ax.set_xlabel(hs.cx2_gname(cx), fontproperties=df2.FONTS.xlabel)
+    xlabel = []
+    if show_gname:
+        xlabel.append('gname=%r' % hs.cx2_gname(cx))
+    if show_name:
+        xlabel.append('name=%r' % hs.cx2_name(cx))
+    if len(xlabel) > 0:
+        df2.set_xlabel(', '.join(xlabel))
     return ax
 
 
@@ -690,7 +709,7 @@ def _show_chip_matches(hs, res, figtitle='', max_nCols=5, topN_cxs=None,
             orank = oranks[0] + 1
             _show_matches_fn(cx, orank, plotnum)
 
-    query_uid = res.query_uid
+    #query_uid = res.query_uid
     #query_uid = re.sub(r'_trainID\([0-9]*,........\)', '', query_uid)
     #query_uid = re.sub(r'_indxID\([0-9]*,........\)', '', query_uid)
     #query_uid = re.sub(r'_dcxs\(........\)', '', query_uid)

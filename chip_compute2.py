@@ -284,18 +284,18 @@ def load_chips(hs, cx_list=None, **kwargs):
         print('cx_list=%r' % cx_list)
         raise
     # Get ChipConfig Parameters
-    sqrt_area   = chip_cfg.chip_sqrt_area
-    grabcut     = chip_cfg.grabcut        
-    histeq      = chip_cfg.histeq         
-    region_norm = chip_cfg.region_norm    
-    rankeq      = chip_cfg.rank_eq        
-    localeq     = chip_cfg.local_eq       
-    maxcontr    = chip_cfg.maxcontrast    
+    sqrt_area   = chip_cfg['chip_sqrt_area']
+    grabcut     = chip_cfg['grabcut']
+    histeq      = chip_cfg['histeq']
+    region_norm = chip_cfg['region_norm']
+    rankeq      = chip_cfg['rank_eq']
+    localeq     = chip_cfg['local_eq']
+    maxcontr    = chip_cfg['maxcontrast']
 
     #---------------------------
     # ___Normalized Chip Args___
     #---------------------------
-    # Full Image Paths: where to extract the chips from 
+    # Full Image Paths: where to extract the chips from
     img_dir = hs.dirs.img_dir
     gfpath_list = [join(img_dir, gname) for gname in iter(gname_list)]
     # Chip Paths: where to write extracted chips to
@@ -367,6 +367,7 @@ def load_chips(hs, cx_list=None, **kwargs):
     hs.cpaths.chip_uid = chip_uid
     print('[cc2]=============================')
     
+
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()

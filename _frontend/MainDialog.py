@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/MainDialog.ui'
+# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\_frontend\MainDialog.ui'
 #
-# Created: Fri Dec 13 12:18:42 2013
-#      by: PyQt4 UI code generator 4.9.1
+# Created: Sun Dec 15 14:13:56 2013
+#      by: PyQt4 UI code generator 4.10.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,7 +12,16 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -60,22 +69,22 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Dialog", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton_2.setText(QtGui.QApplication.translate("Dialog", "Open Database\n"
+        Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
+        self.pushButton_2.setText(_translate("Dialog", "Open Database\n"
 " Currently open:\n"
-"%{db_path}s", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton_5.setText(QtGui.QApplication.translate("Dialog", "Peruse Database\n"
-" Num Identified: %d{nNames} ; Num Unchecked Images: %d ;  Num Unrefined Rois: %d", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton_3.setText(QtGui.QApplication.translate("Dialog", "1. Add Images\n"
+"%{db_path}s", None))
+        self.pushButton_5.setText(_translate("Dialog", "Peruse Database\n"
+" Num Identified: %d{nNames} ; Num Unchecked Images: %d ;  Num Unrefined Rois: %d", None))
+        self.pushButton_3.setText(_translate("Dialog", "1. Add Images\n"
 "Current number of tracked images: \n"
-" Internally: %{nImg_internal}d ; Externally: %{nImg_external}d", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton_4.setText(QtGui.QApplication.translate("Dialog", "2. Mark Regions of Interest\n"
-"Current number of tracked chips: %d{nChips}d", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton.setText(QtGui.QApplication.translate("Dialog", "3. Run Queries\n"
-"Current number of unidentified animals: %d{nUnidentified}", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton_8.setText(QtGui.QApplication.translate("Dialog", "Preferences", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton_6.setText(QtGui.QApplication.translate("Dialog", "Help", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton_7.setText(QtGui.QApplication.translate("Dialog", "Quit", None, QtGui.QApplication.UnicodeUTF8))
+" Internally: %{nImg_internal}d ; Externally: %{nImg_external}d", None))
+        self.pushButton_4.setText(_translate("Dialog", "2. Mark Regions of Interest\n"
+"Current number of tracked chips: %d{nChips}d", None))
+        self.pushButton.setText(_translate("Dialog", "3. Run Queries\n"
+"Current number of unidentified animals: %d{nUnidentified}", None))
+        self.pushButton_8.setText(_translate("Dialog", "Preferences", None))
+        self.pushButton_6.setText(_translate("Dialog", "Help", None))
+        self.pushButton_7.setText(_translate("Dialog", "Quit", None))
 
 
 if __name__ == "__main__":

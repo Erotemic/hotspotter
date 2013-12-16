@@ -656,10 +656,29 @@ def set_figtitle(figtitle, subtitle=''):
     adjust_subplots()
 
 
+def on_key_press_event(event):
+    'redirects keypress events to main window'
+    global QT4_WINS
+    print('[df2] %r' % event)
+    print('[df2] %r' % str(event.__dict__))
+    for qtwin in QT4_WINS:
+        key = event.key
+        print(key)
+        # TODO: FINISH ME
+        #PyQt4.QtGui.QKeyEvent
+        #qtwin.keyPressEvent(event)
+        #fig.canvas.manager.window.keyPressEvent()
+
+
 def customize_figure(fig, doclf):
     if not 'user_stat_list' in fig.__dict__.keys() or doclf:
         fig.user_stat_list = []
         fig.user_notes = []
+    # Catch key press events
+    key_event_cbid = fig.__dict__.get('key_event_cbid', None)
+    if key_event_cbid is not None:
+        fig.canvas.mpl_disconnect(key_event_cbid)
+    fig.key_event_cbid = fig.canvas.mpl_connect('key_press_event', on_key_press_event)
     fig.df2_closed = False
 
 

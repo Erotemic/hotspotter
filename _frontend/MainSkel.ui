@@ -103,7 +103,7 @@
      <x>0</x>
      <y>0</y>
      <width>927</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -125,9 +125,6 @@
      <string>Options</string>
     </property>
     <addaction name="actionLayout_Figures"/>
-    <addaction name="separator"/>
-    <addaction name="actionTogEll"/>
-    <addaction name="actionTogPts"/>
     <addaction name="separator"/>
     <addaction name="actionPreferences"/>
    </widget>
@@ -189,6 +186,9 @@
    <property name="shortcut">
     <string>Ctrl+O</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionSave_Database">
    <property name="text">
@@ -197,6 +197,9 @@
    <property name="shortcut">
     <string>Ctrl+S</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionImport_Img_file">
    <property name="text">
@@ -204,6 +207,9 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+I</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionOpen_Data_Directory">
@@ -248,8 +254,14 @@
    </property>
   </action>
   <action name="actionAbout">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>About</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionHelpWorkflow">
@@ -272,6 +284,9 @@
    <property name="shortcut">
     <string>A</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionReselect_ROI">
    <property name="text">
@@ -279,6 +294,9 @@
    </property>
    <property name="shortcut">
     <string>R</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionNext">
@@ -291,6 +309,9 @@
    <property name="shortcut">
     <string>N</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionDelete_Chip">
    <property name="text">
@@ -298,6 +319,9 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Del</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionQuery">
@@ -310,6 +334,9 @@
    <property name="shortcut">
     <string>Q</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionPrev">
    <property name="text">
@@ -317,8 +344,14 @@
    </property>
   </action>
   <action name="actionWriteLogs">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Write Logs</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionOpen_Internal_Directory">
@@ -333,10 +366,16 @@
    <property name="shortcut">
     <string>Ctrl+P</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionQuit">
    <property name="text">
     <string>Quit</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionConvertImage2Chip">
@@ -358,6 +397,9 @@
    </property>
    <property name="shortcut">
     <string>O</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionAdd_Metadata_Property">
@@ -387,10 +429,13 @@
   </action>
   <action name="actionView_Docs">
    <property name="enabled">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>View Documentation</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionAutoassign_2">
@@ -405,15 +450,24 @@
    <property name="shortcut">
     <string>Ctrl+N</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionImport_Img_dir">
    <property name="text">
     <string>Import Images (select directory)</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionPrecompute_Queries">
    <property name="text">
     <string>Precompute Queries</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionPrecomputeChipsFeatures">
@@ -423,45 +477,78 @@
    <property name="shortcut">
     <string>Ctrl+Return</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionView_DBDir">
    <property name="text">
     <string>View Database Dir</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionScale_all_ROIS">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Scale all ROIs</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionConvert_all_images_into_chips">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Convert all images into chips</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionNew_Chip_Property">
    <property name="text">
     <string>New Chip Property</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionDelete_computed_directory">
    <property name="text">
     <string>Delete Computed Dir</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionDelete_global_preferences">
    <property name="text">
     <string>Delete Global Prefs</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionView_Computed_Dir">
    <property name="text">
     <string>View Computed Dir</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionView_Global_Dir">
    <property name="text">
     <string>View Global Dir</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionLayout_Figures">
@@ -471,6 +558,9 @@
    <property name="shortcut">
     <string>Ctrl+L</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionDev_Mode_IPython">
    <property name="text">
@@ -478,6 +568,9 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Alt+Shift+D</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
  </widget>

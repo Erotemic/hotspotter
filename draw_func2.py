@@ -35,7 +35,6 @@ from matplotlib.patches import Rectangle, Circle, FancyArrow
 from matplotlib.transforms import Affine2D
 import matplotlib.pyplot as plt
 # Qt
-import PyQt4
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
 # Scientific
@@ -656,14 +655,14 @@ def set_figtitle(figtitle, subtitle=''):
     adjust_subplots()
 
 
-TMPMPLEVENT = None
+TMP_mevent = None
 
 
-def convert_keypress_event_mpl_to_qt4(mplevent):
-    global TMPMPLEVENT
-    TMPMPLEVENT = mplevent
+def convert_keypress_event_mpl_to_qt4(mevent):
+    global TMP_mevent
+    TMP_mevent = mevent
     # Grab the key from the mpl.KeyPressEvent
-    key = mplevent.key
+    key = mevent.key
     print('[df2] convert event mpl -> qt4')
     print('[df2] key=%r' % key)
     # dicts modified from backend_qt4.py
@@ -731,17 +730,29 @@ def convert_keypress_event_mpl_to_qt4(mplevent):
     qevent = QtGui.QKeyEvent(type_, key_, modifiers, text, autorep, count)
     return qevent
 
-def test_build_qkeyevent():
-    type_ = QtCore.QEvent.Type(QtCore.QEvent.KeyPress)  # The type should always be KeyPress
-    text = QtCore.QString('A')  # The text is somewhat arbitrary
-    modifiers = QtCore.Qt.NoModifier  # initialize to no modifiers
-    modifiers = modifiers | QtCore.Qt.ControlModifier
-    modifiers = modifiers | QtCore.Qt.AltModifier
-    key_ = ord('A')  # Qt works with uppercase keys
-    autorep = False  # default false
-    count   = 1  # default 1
-    qevent = QtGui.QKeyEvent(type_, key_, modifiers, text, autorep, count)
 
+def test_build_qkeyevent():
+    import draw_func2 as df2
+    qtwin = df2.QT4_WINS[0]
+    # This reconstructs an test mplevent
+    canvas = df2.figure(1).canvas
+    mevent = matplotlib.backend_bases.KeyEvent('key_press_event', canvas, u'ctrl+p', x=672, y=230.0)
+    qevent = df2.convert_keypress_event_mpl_to_qt4(mevent)
+    app = qtwin.backend.app
+    app.sendEvent(qtwin.ui, mevent)
+    #type_ = QtCore.QEvent.Type(QtCore.QEvent.KeyPress)  # The type should always be KeyPress
+    #text = QtCore.QString('A')  # The text is somewhat arbitrary
+    #modifiers = QtCore.Qt.NoModifier  # initialize to no modifiers
+    #modifiers = modifiers | QtCore.Qt.ControlModifier
+    #modifiers = modifiers | QtCore.Qt.AltModifier
+    #key_ = ord('A')  # Qt works with uppercase keys
+    #autorep = False  # default false
+    #count   = 1  # default 1
+    #qevent = QtGui.QKeyEvent(type_, key_, modifiers, text, autorep, count)
+    return qevent
+
+
+# This actually doesn't matter
 def on_key_press_event(event):
     'redirects keypress events to main window'
     global QT4_WINS
@@ -762,11 +773,13 @@ def customize_figure(fig, doclf):
     if not 'user_stat_list' in fig.__dict__.keys() or doclf:
         fig.user_stat_list = []
         fig.user_notes = []
+    # We dont need to catch keypress events because you just need to set it as
+    # an application level shortcut
     # Catch key press events
-    key_event_cbid = fig.__dict__.get('key_event_cbid', None)
-    if key_event_cbid is not None:
-        fig.canvas.mpl_disconnect(key_event_cbid)
-    fig.key_event_cbid = fig.canvas.mpl_connect('key_press_event', on_key_press_event)
+    #key_event_cbid = fig.__dict__.get('key_event_cbid', None)
+    #if key_event_cbid is not None:
+        #fig.canvas.mpl_disconnect(key_event_cbid)
+    #fig.key_event_cbid = fig.canvas.mpl_connect('key_press_event', on_key_press_event)
     fig.df2_closed = False
 
 

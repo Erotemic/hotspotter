@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\_frontend\Troubleshooting.ui'
+# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/Troubleshooting.ui'
 #
-# Created: Sun Dec 15 14:13:56 2013
-#      by: PyQt4 UI code generator 4.10.1
+# Created: Tue Dec 17 15:43:09 2013
+#      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,16 +12,7 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+    _fromUtf8 = lambda s: s
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -82,16 +73,16 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
-        self.pushButton.setText(_translate("Dialog", "Delete Preference Directory", None))
-        self.pushButton_2.setText(_translate("Dialog", "Delete Entire Computed Directory", None))
-        self.pushButton_4.setText(_translate("Dialog", "Delete Chips", None))
-        self.pushButton_5.setText(_translate("Dialog", "Delete Chip Representations", None))
-        self.pushButton_3.setText(_translate("Dialog", "Delete Visual Model", None))
-        self.pushButton_6.setText(_translate("Dialog", "Email Developer to Report a Bug\n"
-"crallj@rpi.edu", None))
-        self.checkBox.setText(_translate("Dialog", "Rembember Until End of Run", None))
-        self.checkBox_2.setText(_translate("Dialog", "Remember In Preference File: %{pref_fname}", None))
+        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Dialog", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButton.setText(QtGui.QApplication.translate("Dialog", "Delete Preference Directory", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButton_2.setText(QtGui.QApplication.translate("Dialog", "Delete Entire Computed Directory", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButton_4.setText(QtGui.QApplication.translate("Dialog", "Delete Chips", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButton_5.setText(QtGui.QApplication.translate("Dialog", "Delete Chip Representations", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButton_3.setText(QtGui.QApplication.translate("Dialog", "Delete Visual Model", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButton_6.setText(QtGui.QApplication.translate("Dialog", "Email Developer to Report a Bug\n"
+"crallj@rpi.edu", None, QtGui.QApplication.UnicodeUTF8))
+        self.checkBox.setText(QtGui.QApplication.translate("Dialog", "Rembember Until End of Run", None, QtGui.QApplication.UnicodeUTF8))
+        self.checkBox_2.setText(QtGui.QApplication.translate("Dialog", "Remember In Preference File: %{pref_fname}", None, QtGui.QApplication.UnicodeUTF8))
 
 
 if __name__ == "__main__":

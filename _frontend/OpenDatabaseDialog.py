@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\jon.crall\code\hotspotter\_frontend\OpenDatabaseDialog.ui'
+# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/OpenDatabaseDialog.ui'
 #
-# Created: Sun Dec 15 14:13:56 2013
-#      by: PyQt4 UI code generator 4.10.1
+# Created: Tue Dec 17 15:43:08 2013
+#      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,16 +12,7 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+    _fromUtf8 = lambda s: s
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -51,10 +42,10 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
-        self.label.setText(_translate("Dialog", "HotSpotter - Animal Instance Recognition (dev version)", None))
-        self.new_db_but.setText(_translate("Dialog", "New Database", None))
-        self.open_db_but.setText(_translate("Dialog", "Open Database", None))
+        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Dialog", None, QtGui.QApplication.UnicodeUTF8))
+        self.label.setText(QtGui.QApplication.translate("Dialog", "HotSpotter - Animal Instance Recognition (dev version)", None, QtGui.QApplication.UnicodeUTF8))
+        self.new_db_but.setText(QtGui.QApplication.translate("Dialog", "New Database", None, QtGui.QApplication.UnicodeUTF8))
+        self.open_db_but.setText(QtGui.QApplication.translate("Dialog", "Open Database", None, QtGui.QApplication.UnicodeUTF8))
 
 
 if __name__ == "__main__":

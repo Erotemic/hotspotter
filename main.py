@@ -92,6 +92,8 @@ def parse_arguments(**kwargs):
     add_bool('--nocache-chips', default=False)
     add_bool('--nocache-query', default=False)
     add_bool('--nocache-feats', default=False)
+    add_bool('--nocache-flann', default=False)
+    add_bool('--nocache-prefs', default=False)
     # Plotting Args
     add_bool('--noshow-query', default=False)
     add_bool('--noshow-gt', default=False)

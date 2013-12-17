@@ -74,6 +74,7 @@ def nearest_neighbors(hs, qcxs, query_cfg):
     checks = nn_cfg.checks
     printDBG('checks = %r' % checks)
     cx2_desc = hs.feats.cx2_desc
+    printDBG(str(query_cfg.get_printable()))
 
     def nnfunc(qfx2_desc):
         #print(qfx2_desc.shape)

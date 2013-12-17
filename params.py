@@ -75,7 +75,9 @@ dev_databases = {
     'WS_HARD'        : WORK_DIR  + '/WS_hard',
 
     'FROGS'          : WORK_DIR2 + '/Frogs',
-    'TOADS'          : WORK_DIR2 + '/WY_Toads'
+    'TOADS'          : WORK_DIR2 + '/WY_Toads',
+    'SEALS'          : WORK_DIR2 + '/Seals',
+
 }
 #dev_databases['DEFAULT'] = dev_databases['NAUTS']
 dev_databases['DEFAULT'] = None
@@ -83,8 +85,9 @@ dev_databases['DEFAULT'] = None
 for key, val in dev_databases.iteritems():
     exec('%s = %r' % (key, val))
 
+
 def inverse_dev_databases():
-    return {val:key for (key, val) in dev_databases.iteritems()}
+    return {val: key for (key, val) in dev_databases.iteritems()}
 
 
 #=====================================================
@@ -126,7 +129,7 @@ BOW_AKMEANS_FLANN_PARAMS = {'algorithm':'kdtree',
                                 'trees'    :8,
                                 'checks'   :64}
 
-BOW_WORDS_FLANN_PARAMS   = hs1_params 
+BOW_WORDS_FLANN_PARAMS   = hs1_params
 VSMANY_FLANN_PARAMS      = hs1_params
 VSONE_FLANN_PARAMS       = hs1_params
 FLANN_PARAMS       = hs1_params
@@ -206,7 +209,7 @@ def get_chip_uid():
     rankeq = ['','_rankeq'][__RANK_EQ__]
     localeq = ['','_localeq'][__LOCAL_EQ__]
     maxcontrast = ['','_maxcont'][__MAXCONTRAST__]
-    resize = ['_szorig', ('_sz%r' % __CHIP_SQRT_AREA__)][not isorig] 
+    resize = ['_szorig', ('_sz%r' % __CHIP_SQRT_AREA__)][not isorig]
     chip_uid = resize + grabcut + histeq + myeq + rankeq + localeq + maxcontrast
     return chip_uid
 
@@ -246,7 +249,7 @@ def get_indexed_uid(with_train=True, with_indx=True):
 
 def get_query_uid():
     query_uid = ''
-    query_uid += '_sv(' 
+    query_uid += '_sv('
     query_uid += str(__NUM_RERANK__)
     query_uid += ',' + str(__XY_THRESH__)
     query_uid += ',' + str(__SCALE_THRESH_HIGH__)
@@ -364,7 +367,7 @@ if '--print-checks' in sys.argv:
 
 def OXFORD_defaults():
     # best scale params
-    import params 
+    import params
     params.__XY_THRESH__         = 0.01
     params.__SCALE_THRESH_HIGH__ = 8
     params.__SCALE_THRESH_LOW__  = 0.5
@@ -372,15 +375,15 @@ def OXFORD_defaults():
     params.__BOW_NUM_WORDS__  = long(1e6)
 
 def GZ_defaults():
-    import params 
+    import params
     params.__BOW_NUM_WORDS__  = 87638
 
 def PZ_defaults():
-    import params 
+    import params
     params.__BOW_NUM_WORDS__  = 139454
 
 def MOTHERS_defaults():
-    import params 
+    import params
     params.__BOW_NUM_WORDS__  = 16225
 
 if '--dbG' in sys.argv:

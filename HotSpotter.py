@@ -87,10 +87,10 @@ class HotSpotter(DynStruct):
         #
         pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')
         hs.prefs = Pref('root', fpath=pref_fpath)
-        pref_load_success = hs.prefs.load()
-        print('[hs] Able to load prefs? ...%s' % ('Yes' if pref_load_success else 'No'))
-        if not pref_load_success:
+        if hs.args.nocache_prefs:
             hs.default_preferences()
+        else:
+            hs.load_preferences()
         #if args is not None:
             #hs.prefs.N = args.N if args is not None
             #args_dict = vars(args)
@@ -99,6 +99,15 @@ class HotSpotter(DynStruct):
         hs.query_history = [(None, None)]
         if db_dir is not None:
             hs.args.dbdir = db_dir
+
+    def load_preferences(hs):
+        print('[hs] load preferences')
+        pref_load_success = hs.prefs.load()
+        print('[hs] Able to load prefs? ...%s' % ('Yes' if pref_load_success else 'No'))
+        if not pref_load_success:
+            hs.default_preferences()
+        # Preferences will try to load the FLANN index. Undo this.
+        hs.prefs.query_cfg.unload_data()
 
     def default_preferences(hs):
         print('[hs] defaulting preferences')

@@ -6,7 +6,6 @@ import re
 # HotSpotter
 import helpers
 from helpers import tic, toc
-import tools
 import dev
 import DataStructures as ds
 import matching_functions as mf

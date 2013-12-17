@@ -26,6 +26,10 @@ ConfigBase = Pref
 #ConfigBase = DynStruct
 
 
+def printDBG(msg):
+    print('[DS.DBG] ' + msg)
+
+
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
@@ -254,7 +258,8 @@ class NNIndex(object):
         flann_params = {'algorithm': 'kdtree', 'trees': 4}
         precomp_kwargs = {'cache_dir': hs.dirs.cache_dir,
                           'uid': uid,
-                          'flann_params': flann_params, }
+                          'flann_params': flann_params,
+                          'force_recompute': hs.args.nocache_flann}
         flann = algos.precompute_flann(ax2_desc, **precomp_kwargs)
         #----
         # Agg Data
@@ -263,8 +268,15 @@ class NNIndex(object):
         nn_index.ax2_data = ax2_desc
         nn_index.flann = flann
 
+    def __getstate__(nn_index):
+        printDBG('get state NNIndex')
+        if nn_index.flann is not None:
+            nn_index.flann.delete_index()
+            nn_index.flann = None
+
     def __del__(nn_index):
-        if not nn_index.flann:
+        printDBG('deleting NNIndex')
+        if nn_index.flann is not None:
             nn_index.flann.delete_index()
             nn_index.flann = None
 
@@ -334,6 +346,7 @@ def signthreshweight_str(on_filters):
         stw_list.append(stw_str)
     return ','.join(stw_list)
     #return helpers.remove_chars(str(dict_), [' ','\'','}','{',':'])
+
 
 class FilterConfig(ConfigBase):
     # Rename to scoring mechanism
@@ -427,6 +440,7 @@ class FilterConfig(ConfigBase):
         uid += [')']
         return uid
 
+
 class SpatialVerifyConfig(ConfigBase):
     def __init__(sv_cfg, **kwargs):
         super(SpatialVerifyConfig, sv_cfg).__init__(name='sv_cfg')
@@ -509,12 +523,20 @@ class QueryConfig(ConfigBase):
         query_cfg.agg_cfg   = AggregateConfig(**kwargs)
         query_cfg._feat_cfg = hs.prefs.feat_cfg  # Queries depend on features
         query_cfg.use_cache = False
-        # Data TODO: Separate this
-        query_cfg._qcxs = []
-        query_cfg._dcxs = []
-        query_cfg._data_index  = None  # current index
-        query_cfg._dcxs2_index = {}  # cached indexes
+        query_cfg.unload_data()
         query_cfg.update_cfg(**kwargs)
+
+    def unload_data(query_cfg):
+        # Data TODO: Separate this
+        print('[query_cfg] unload_data()')
+        query_cfg._qcxs = []
+        print('[query_cfg] unload_data(1)')
+        query_cfg._dcxs = []
+        print('[query_cfg] unload_data(2)')
+        query_cfg._data_index  = None  # current index
+        print('[query_cfg] unload_data(3)')
+        query_cfg._dcxs2_index = {}  # cached indexes
+        print('[query_cfg] unload_data(success)')
 
     def update_cfg(query_cfg, **kwargs):
         query_cfg._feat_cfg.update(**kwargs)

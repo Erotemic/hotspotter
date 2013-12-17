@@ -483,7 +483,8 @@ def precompute_akmeans(data, num_clusters, max_iters=100,
     return (datax2_clusterx, clusters)
 
 
-def precompute_flann(data, cache_dir=None, uid='', flann_params=None):
+def precompute_flann(data, cache_dir=None, uid='', flann_params=None,
+                     force_recompute=False):
     ''' Tries to load a cached flann index before doing anything'''
     print('[algos] precompute_flann(%r): ' % uid)
     cache_dir = '.' if cache_dir is None else cache_dir
@@ -498,7 +499,7 @@ def precompute_flann(data, cache_dir=None, uid='', flann_params=None):
     # Load the index if it exists
     flann = pyflann.FLANN()
     load_success = False
-    if helpers.checkpath(flann_fpath):
+    if helpers.checkpath(flann_fpath) and not force_recompute:
         try:
             #print('[algos] precompute_flann():
                 #trying to load: %r ' % flann_fname)

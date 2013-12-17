@@ -1,7 +1,6 @@
 from __future__ import division, print_function
 from Printable import DynStruct
 import cPickle
-import types
 import sys
 import os.path
 import traceback
@@ -17,14 +16,15 @@ from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
 # ---
 PrefNode = DynStruct
 
+
 def printDBG(msg):
     #print('[PREFS] '+msg)
     pass
 
+
 # ---
 # Functions
 # ---
-
 def rrr():
     'Dynamic module reloading'
     import imp
@@ -39,6 +39,7 @@ except AttributeError:
         return s
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
+
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig, _encoding)
 except AttributeError:
@@ -60,23 +61,24 @@ def report_thread_error(fn):
             raise
     return report_thread_error_wrapper
 
+
 # ---
 # Classes
 # ---
-
 class PrefInternal(DynStruct):
     def __init__(_intern, name, doc, default, hidden, fpath, depeq, choices):
         super(PrefInternal, _intern).__init__(child_exclude_list=[])
         # self._intern describes this node
-        _intern.name    = name    # A node has a name
-        _intern.doc     = doc     # A node has a name
-        _intern.value   = default # A node has a value
-        _intern.hidden  = hidden  # A node can be hidden
-        _intern.fpath   = fpath   # A node is cached to
-        _intern.depeq   = depeq   # A node depends on
+        _intern.name    = name     # A node has a name
+        _intern.doc     = doc      # A node has a name
+        _intern.value   = default  # A node has a value
+        _intern.hidden  = hidden   # A node can be hidden
+        _intern.fpath   = fpath    # A node is cached to
+        _intern.depeq   = depeq    # A node depends on
         # Some preferences are constrained to a list of choices
         if choices is not None:
-            self._intern.value = PrefChoice(choices, default)
+            _intern.value = PrefChoice(choices, default)
+
 
 class PrefTree(DynStruct):
     def __init__(_tree, parent):
@@ -89,6 +91,7 @@ class PrefTree(DynStruct):
         _tree.child_names          = []  # Each child has a name
         _tree.num_visible_children = 0   # Statistic
         _tree.aschildx             = 0   # This node is the x-th child
+
 
 class PrefChoice(DynStruct):
     def __init__(self, choices, default):
@@ -107,8 +110,8 @@ class PrefChoice(DynStruct):
         else:
             raise('Exception: Unknown newval=%r' % new_val)
         if self.sel < 0 or self.sel > len(self.choices):
-            raise Exception('new_val: %r is not in the choices: %r '
-                        % (default, choices))
+            raise Exception('self.sel=%r is not in the self.choices=%r '
+                            % (self.sel, self.choices))
 
     def combo_val(self):
         return self.choices[self.sel]
@@ -130,13 +133,12 @@ class Pref(PrefNode):
     def __init__(self,
                  default=PrefNode,  # Default value for a Pref is to be itself
                  doc='empty docs',  # Documentation for a preference
-                 hidden=False,   # Is a hidden preference?
-                 choices=None,   # A list of choices
-                 depeq=None,     # List of tuples representing dependencies
-                 fpath='',       # Where to save to
-                 name='root',
-                 parent=None     # Reference to parent Pref
-                ):
+                 hidden=False,      # Is a hidden preference?
+                 choices=None,      # A list of choices
+                 depeq=None,        # List of tuples representing dependencies
+                 fpath='',          # Where to save to
+                 name='root',       # Name of this node
+                 parent=None):      # Reference to parent Pref
         '''Creates a pref struct that will save itself to pref_fpath if
         available and have init all members of some dictionary'''
         super(Pref, self).__init__(child_exclude_list=['_intern', '_tree'])
@@ -153,7 +155,7 @@ class Pref(PrefNode):
     def toggle(self, key):
         'Toggles a boolean key'
         val = self[key]
-        assert isinstance(val, bool), 'key[%r] = %r is not a bool' % (key,val)
+        assert isinstance(val, bool), 'key[%r] = %r is not a bool' % (key, val)
         self.pref_update(key, not val)
 
     def change_combo_val(self, new_val):
@@ -176,7 +178,7 @@ class Pref(PrefNode):
                     child.__setattr__(key, val)
             else:
                 self.__overwrite_child_attr(name, attr.value())
-        else: # Main Leaf Logic:
+        else:  # Main Leaf Logic:
             #assert(not issubclass(child._intern.type, PrefNode), #(self.full_name() + ' Must be a leaf'))
             # Keep user-readonly map up to date with internals
             if isinstance(child._intern.value, PrefChoice):
@@ -316,9 +318,12 @@ class Pref(PrefNode):
             return False
         with open(self._intern.fpath, 'r') as f:
             try:
+                print('load: %r' % self._intern.fpath)
                 pref_dict = cPickle.load(f)
             except EOFError:
-                warnings.warn('Preference file did not load correctly')
+                msg = '[pref] WARNING: Preference file did not load correctly'
+                print(msg)
+                warnings.warn(msg)
                 return False
         if not tools.is_dict(pref_dict):
             raise Exception('Preference file is corrupted')
@@ -429,8 +434,8 @@ class Pref(PrefNode):
                 def cast_order(var, order=[int, float, str]):
                     for type_ in order:
                         try:
-                            return ret
                             ret = type_(var)
+                            return ret
                         except Exception:
                             continue
                 new_val = cast_order(str(qvar.toString()))
@@ -451,10 +456,10 @@ class Pref(PrefNode):
             return self._tree.parent.pref_update(self._intern.name, new_val)
         return 'PrefNotEditable'
 
+
 # ---
 # THE ABSTRACT ITEM MODEL
 # ---
-
 #QComboBox
 class QPreferenceModel(QAbstractItemModel):
     'Convention states only items with column index 0 can have children'
@@ -558,10 +563,10 @@ class QPreferenceModel(QAbstractItemModel):
                 return QVariant('Config Value')
         return QVariant()
 
+
 # ---
 # THE PREFERENCE SKELETON
 # ---
-
 class Ui_editPrefSkel(object):
     def setupUi(self, editPrefSkel):
         editPrefSkel.setObjectName(_fromUtf8("editPrefSkel"))
@@ -602,10 +607,10 @@ class Ui_editPrefSkel(object):
         self.unloadFeaturesAndModelsBUT.setText(_translate("editPrefSkel", "Unload Features and Models", None))
         self.defaultPrefsBUT.setText(_translate("editPrefSkel", "Defaults", None))
 
+
 # ---
 # THE PREFERENCE WIDGET
 # ---
-
 class EditPrefWidget(QWidget):
     'The Settings Pane; Subclass of Main Windows.'
     def __init__(self, pref_struct):
@@ -674,4 +679,3 @@ if __name__ == '__main__':
     print(prefs)
     prefWidget = prefs.createQWidget()
     guitools.run_main_loop(app, is_root, backend)
-

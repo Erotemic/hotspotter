@@ -299,6 +299,7 @@ class Pref(PrefNode):
         return pref_dict
 
     def save(self):
+        print('[pref.save()]')
         'Saves prefs to disk in dict format'
         if self._intern.fpath in ['', None]:
             if self._tree.parent is not None:
@@ -313,16 +314,17 @@ class Pref(PrefNode):
         return True
 
     def load(self):
+        print('[pref.load()]')
         'Read pref dict stored on disk. Overwriting current values.'
         if not os.path.exists(self._intern.fpath):
             return False
         with open(self._intern.fpath, 'r') as f:
             try:
-                print('load: %r' % self._intern.fpath)
+                printDBG('load: %r' % self._intern.fpath)
                 pref_dict = cPickle.load(f)
             except EOFError:
                 msg = '[pref] WARNING: Preference file did not load correctly'
-                print(msg)
+                printDBG(msg)
                 warnings.warn(msg)
                 return False
         if not tools.is_dict(pref_dict):

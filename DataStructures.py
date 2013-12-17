@@ -273,6 +273,8 @@ class NNIndex(object):
         if nn_index.flann is not None:
             nn_index.flann.delete_index()
             nn_index.flann = None
+        # This class is not pickleable
+        return None
 
     def __del__(nn_index):
         printDBG('deleting NNIndex')

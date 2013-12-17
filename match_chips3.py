@@ -79,9 +79,8 @@ def query_database(hs, qcx, query_cfg=None, **kwargs):
     print('\n====================')
     print('[mc3] query database')
     print('====================')
-    if hs.indexed_sample_cx is None:
-        hs.set_samples()
     dcxs = hs.get_indexed_sample()
+    print(dcxs)
     return query_dcxs(hs, qcx, dcxs, query_cfg, **kwargs)
 
 

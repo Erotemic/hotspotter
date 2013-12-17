@@ -270,15 +270,15 @@ class NNIndex(object):
 
     def __getstate__(nn_index):
         printDBG('get state NNIndex')
-        if nn_index.flann is not None:
-            nn_index.flann.delete_index()
-            nn_index.flann = None
+        #if 'flann' in nn_index.__dict__ and nn_index.flann is not None:
+            #nn_index.flann.delete_index()
+            #nn_index.flann = None
         # This class is not pickleable
         return None
 
     def __del__(nn_index):
         printDBG('deleting NNIndex')
-        if nn_index.flann is not None:
+        if 'flann' in nn_index.__dict__ and nn_index.flann is not None:
             nn_index.flann.delete_index()
             nn_index.flann = None
 

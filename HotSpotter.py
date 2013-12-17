@@ -254,16 +254,18 @@ class HotSpotter(DynStruct):
             list_[cx] = None
             hs.dirty = True
 
+    def delete_ciddata(hs, cid):
+        cid_str_list = ['cid%d_' % cid, 'qcid=%d.npz' % cid, ]
+        for cid_str in cid_str_list:
+            helpers.remove_files_in_dir(hs.dirs.computed_dir, '*' + cid_str + '*',
+                                        recursive=True, verbose=True, dryrun=False)
+
     def delete_cxdata(hs, cx):
         'deletes features and chips. not tables'
         hs.unload_cxdata(cx)
         print('[hs] delete_cxdata(cx=%r)' % cx)
         cid = hs.tables.cx2_cid[cx]
-        cid_str_list = ['cid%d_' % cid,
-                        'qcid=%d.npz' % cid, ]
-        for cid_str in cid_str_list:
-            helpers.remove_files_in_dir(hs.dirs.computed_dir, '*' + cid_str + '*',
-                                        recursive=True, verbose=True, dryrun=False)
+        hs.delete_ciddata(cid)
 
     def change_roi(hs, cx, new_roi):
         # This changes the entire chip.
@@ -324,6 +326,8 @@ class HotSpotter(DynStruct):
             next_cid = hs.tables.cx2_cid.max() + 1
         else:
             next_cid = 1
+        # Remove any cids
+        hs.delete_ciddata(next_cid)
         # Allocate space for a new chip
         hs.tables.cx2_cid   = np.concatenate((hs.tables.cx2_cid, [next_cid]))
         hs.tables.cx2_nx    = np.concatenate((hs.tables.cx2_nx,  [0]))

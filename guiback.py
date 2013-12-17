@@ -231,6 +231,10 @@ class MainWindowBackend(QtCore.QObject):
         msg = str(msg)
         print(msg)
 
+    def set_state(self, state):
+        print('[*back] set state = %r' % state)
+        pass
+
     @pyqtSlot(name='clear_selection')
     def clear_selection(self, **kwargs):
         print('[*back] clear_selection()')
@@ -385,6 +389,9 @@ class MainWindowBackend(QtCore.QObject):
         print('[*back] add_chip()')
         gx = self.get_selected_gx()
         roi = guitools.select_roi()
+        if roi is None:
+            print('[back*] roiselection failed. Not adding')
+            return
         cx = self.hs.add_chip(gx, roi)
         self.populate_image_table()
         self.populate_chip_table()
@@ -415,6 +422,9 @@ class MainWindowBackend(QtCore.QObject):
         gx = self.hs.tables.cx2_gx[cx]
         self.show_image(gx, [cx], **kwargs)
         roi = guitools.select_roi()
+        if roi is None:
+            print('[back*] roiselection failed. Not adding')
+            return
         self.hs.change_roi(cx, roi)
         self.populate_image_table()
         self.populate_chip_table()
@@ -432,6 +442,9 @@ class MainWindowBackend(QtCore.QObject):
         gx = self.hs.tables.cx2_gx[cx]
         self.show_image(gx, [cx], **kwargs)
         theta = guitools.select_ori()
+        if theta is None:
+            print('[back*] roiselection failed. Not adding')
+            return
         self.hs.change_theta(cx, theta)
         self.populate_image_table()
         self.populate_chip_table()
@@ -578,25 +591,20 @@ class MainWindowBackend(QtCore.QObject):
 
     @pyqtSlot(name='dev_mode')
     def dev_mode(self):
-        print('[*back] dev_mode (not working)')
+        print('[*back] dev_mode (iteraction not working)')
         backend = self  # NOQA
         hs = self.hs    # NOQA
         devmode = True  # NOQA
-        print(helpers.indent(str(hs), '[*back] '))
-        print('---')
-        print(self.hs.prefs.query_cfg)
-        print('---')
-        print(self.hs.prefs)
-        print('---')
+        print(helpers.indent(str(hs), '[*back.hs] '))
         rrr()
         guitools.rrr()
         guifront.rrr()
         HotSpotter.rrr()
         viz.rrr()
-        if self.timer is not None:
+        #if self.timer is not None:
             #self.timer.pause()
-            exec(helpers.ipython_execstr())
-            self.timer.start()
+            #exec(helpers.ipython_execstr())
+            #self.timer.start()
 
     # Help Actions
     @pyqtSlot(name='view_database_dir')

@@ -28,7 +28,7 @@ from collections import OrderedDict
 # Can also reduce the chips being indexed
 
 # What happens when we take all other possible ground truth matches out
-# of the database index? 
+# of the database index?
 
 #mc3.rrr(); mf.rrr(); dev.rrr(); ds.rrr(); vr2.rrr()
 #vr2.print_off()
@@ -57,7 +57,7 @@ def get_vary_dicts(test_cfg_name_list):
         evalstr = '_testcfgs.'+cfg_name
         test_cfg = eval(evalstr)
         vary_dicts.append(test_cfg)
-    if len(vary_dicts) == 0: 
+    if len(vary_dicts) == 0:
         valid_cfg_names = get_valid_testcfg_names()
         raise Exception('Choose a valid testcfg:\n'+valid_cfg_names)
     return vary_dicts
@@ -92,8 +92,8 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
     qonx2_bestranks = []
     nChips = hs.num_cx
     nNames = len(hs.tables.nx2_name) - 2
-    nQuery = len(qon_list) 
-    #NMultiNames = 
+    nQuery = len(qon_list)
+    #NMultiNames =
     nPrevQ = nQuery*cfgx
     qonx2_reslist = []
     if  not hs.args.nocache_query and (not force_load):
@@ -106,7 +106,7 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
         [harn]----------------
         [harn] TEST %d/%d
         [harn]----------------''' % (qonx+nPrevQ+1, nQuery*nCfg)))
-        gt_cxs = hs.get_other_cxs(qcx)
+        gt_cxs = hs.get_other_indexed(qcx)
         title = 'q'+ hs.cxstr(qcx) + ' - ' + notes
         #print('[harn] title=%r' % (title,))
         #print('[harn] gt_'+hs.cxstr(gt_cxs))
@@ -138,7 +138,7 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
     return test_results, qonx2_reslist
 
 #-----------
-# Test Each configuration 
+# Test Each configuration
 def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     vary_dicts = get_vary_dicts(test_cfg_name_list)
     print('\n*********************\n')
@@ -165,7 +165,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
         [harn]---------------')
         [harn] TEST_CFG %d/%d'
         [harn]---------------'''  % (cfgx+1, nCfg)))
-        force_load = cfgx in hs.args.c 
+        force_load = cfgx in hs.args.c
         (mat_vals,), qonx2_reslist =\
                 get_test_results(hs, qon_list, test_cfg, cfgx, nCfg, force_load)
         mat_list.append(mat_vals)
@@ -175,14 +175,14 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
             assert len(qcx2_res) == 1
             res = qcx2_res.values()[0]
             rc2_res[qonx, cfgx] = res
-        # Keep the best results 
+        # Keep the best results
     print('[harn] Finished testing parameters')
     print('')
     print('---------------------------------')
     #--------------------
     # Print Best Results
     rank_mat = np.hstack(mat_list)
-    # Label the rank matrix: 
+    # Label the rank matrix:
     _colxs = np.arange(nCfg)
     lbld_mat = np.vstack([_colxs, rank_mat])
     _rowxs = np.arange(nQuery+1).reshape(nQuery+1,1)-1
@@ -232,7 +232,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
             print('[row_score] best_rank = %d ' % min_rank)
             print('[row_score] minimizing_configs = %s ' %
                 indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    '))
-            if ranks.max() > 0: 
+            if ranks.max() > 0:
                 new_hard_qonx_list += [qonx]
         print('--- hard qon_list (w.r.t these configs) ---')
         new_hard_qon_list = []

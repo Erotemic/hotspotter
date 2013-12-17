@@ -2,6 +2,9 @@
 #exec(open('_research/dev.py').read())
 from __future__ import division, print_function
 import __builtin__
+import matplotlib
+matplotlib.use('Qt4Agg')
+import draw_func2 as df2
 import argparse
 import textwrap
 import sys
@@ -163,7 +166,7 @@ def top_matching_features(res, axnum=None, match_type=''):
 def vary_query_cfg(hs, qon_list, query_cfg=None, vary_cfg=None, fnum=1):
     # Ground truth matches
     for qcx, ocxs, notes in qon_list:
-        gt_cxs = hs.get_groundtruth_cxs(qcx)
+        gt_cxs = hs.get_other_indexed_cxs(qcx)
         for cx in gt_cxs:
             fnum = vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum)
     return fnum
@@ -199,7 +202,7 @@ def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
     for rowx, cfg1_value in enumerate(cfg1_steps):
         query_cfg.update_cfg(**{cfg1_name:cfg1_value})
         y_title = cfg1_name+'='+helpers.format(cfg1_value, 3)
-        # Vary cfg2 
+        # Vary cfg2
         for colx, cfg2_value in enumerate(cfg2_steps):
             query_cfg.update_cfg(**{cfg2_name:cfg2_value})
             plotnum = (nRows, nCols, rowx*nCols+colx+1)
@@ -308,7 +311,7 @@ def get_qon_list(hs):
     else:
         print('[dev] Chosen qcid=%r' % hs.args.qcid)
         qcx_list =  helpers.ensure_iterable(hs.cid2_cx(hs.args.qcid))
-        ocid_list = [hs.get_other_cxs(cx) for cx in qcx_list]
+        ocid_list = [hs.get_other_indexed_cxs(cx) for cx in qcx_list]
         note_list = ['user selected qcid']*len(qcx_list)
         qon_list += zip(*[qcx_list, ocid_list, note_list])
 
@@ -342,7 +345,7 @@ def chip_info(hs, cx, notes=''):
     name = hs.tables.nx2_name[nx]
     gname = hs.tables.gx2_gname[gx]
     indexed_gt_cxs = hs.get_other_indexed_cxs(cx)
-    gt_cxs = hs.get_other_cxs(cx)
+    gt_cxs = hs.get_other_indexed_cxs(cx)
     kpts = hs.get_kpts(cx)
     cxstr = hs.cxstr(cx)
     print('------------------')
@@ -375,7 +378,7 @@ def intestigate_keypoint_interaction(hs, qon_list, fnum=1, **kwargs):
     return fnum
 
 def dbstats(hs):
-    import db_info 
+    import db_info
     # Chip / Name / Image stats
     dbinfo_locals = db_info.db_info(hs)
     db_name = hs.db_name(True)
@@ -404,7 +407,7 @@ def dbstats(hs):
     dedent = textwrap.dedent
 
     tabular_head = dedent(r'''
-    \begin{tabular}{|l|l|} 
+    \begin{tabular}{|l|l|}
     ''')
     tabular_tail = dedent(r'''
     \end{tabular}
@@ -471,7 +474,7 @@ def dev_main(**kwargs):
     print('[dev] Loaded DB=%r' % args.db)
     return locals()
 #---end main script
-    
+
 def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
     cx2_cid = hs.tables.cx2_cid
     qcid_list = []
@@ -488,7 +491,7 @@ def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
         qcx_list = hs.cid2_cx(qcid_list)
     for cx, cid in enumerate(cx2_cid):
         if not cx in qcx_list and cid > 0:
-            gt_cxs = hs.get_other_cxs(cx)
+            gt_cxs = hs.get_other_indexed_cxs(cx)
             if with_nogt and len(gt_cxs) == 0: pass
             elif with_gt and len(gt_cxs) > 0: pass
             else: continue
@@ -520,8 +523,8 @@ def run_investigations(hs, qon_list):
     if '2' in args.tests or 'vary-vsmany-k-xy' in args.tests:
         fnum = vary_vsmany_cfg(hs, qon_list, fnum, [K_, xy_])
     if '3' in args.tests:
-        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=True) 
-        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=False) 
+        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=True)
+        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=False)
     if '4' in args.tests:
         fnum = investigate_scoring_rules(hs, qcx, fnum)
     if '6' in args.tests:
@@ -546,7 +549,7 @@ def run_investigations(hs, qon_list):
         fnum = interaction.interact1(hs, qon_list, fnum)
     if '14' in args.tests or 'list-cfg-tests' in args.tests or 'list' in args.tests:
         print(test_harness.get_valid_testcfg_names())
-    # Allow any testcfg to be in tests like: 
+    # Allow any testcfg to be in tests like:
     # vsone_1 or vsmany_3
     import _test_configurations as _testcfgs
     testcfg_keys = vars(_testcfgs).keys()
@@ -586,14 +589,14 @@ if __name__ == '__main__':
     if hs.args.printoff:
         all_printoff()
     # Big test function. Should be replaced with something
-    # not as ugly soon. 
+    # not as ugly soon.
     run_investigations(hs, qon_list)
-    # A redundant query argument. Again, needs to be replaced. 
+    # A redundant query argument. Again, needs to be replaced.
     if hs.args.query is not None:
         qcx = hs.cid2_cx(hs.args.query[0])
-        query_cfg = ds.get_vsmany_cfg(hs, K=args.K, score_method=args.score_method)
+        query_cfg = ds.default_vsmany_cfg(hs, K=args.K, score_method=args.score_method)
         res = mc3.query_database(hs, qcx, query_cfg=query_cfg)
-        res.show_topN(hs)
+        res.show_top(hs)
     print('[dev]====================')
     kwargs = {}
     dcxs = None
@@ -619,8 +622,8 @@ python dev.py --db GZ --tests test-cfg-vsmany-1 --sthresh 30 250
 python dev.py --dbM --tests 15 chip-info --histid 0 --sthresh 30 250
 
 python dev.py --dbM --tests test-cfg-vsmany-3 --all-gt-cases
-python dev.py --dbM --tests test-cfg-vsmany-3 --sthresh 30 80 
-python dev.py --dbG --tests test-cfg-vsmany-3 --sthresh 30 80 
+python dev.py --dbM --tests test-cfg-vsmany-3 --sthresh 30 80
+python dev.py --dbG --tests test-cfg-vsmany-3 --sthresh 30 80
 
 # Database information
 python dev.py --dbG  --tests dbinfo

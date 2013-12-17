@@ -21,7 +21,7 @@ import match_chips3 as mc3
 import params
 import tools
 from Printable import DynStruct
-from Pref import Pref
+from Preferences import Pref
 
 # Toggleable printing
 print = __builtin__.print
@@ -86,15 +86,32 @@ class HotSpotter(DynStruct):
         hs.cx2_rchip_size    = None
         hs.needs_save        = False
         #
-        hs.prefs = Pref('root')
-        feat_args = {}
-        (feat_args['scale_min'],
-         feat_args['scale_max']) = hs.args.sthresh
-        hs.prefs.chip_cfg  = ds.make_chip_cfg()
-        hs.prefs.feat_cfg  = ds.make_feat_cfg(hs)
-        hs.prefs.query_cfg = ds.make_vsmany_cfg(hs, **feat_args)
+        pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')
+        hs.prefs = Pref('root', fpath=pref_fpath)
+        pref_load_success = hs.prefs.load()
+        print('[hs] Able to load prefs? ...%s' % ('Yes' if pref_load_success else 'No'))
+        if not pref_load_success:
+            hs.default_preferences()
+        #if args is not None:
+            #hs.prefs.N = args.N if args is not None
+            #args_dict = vars(args)
+            #hs.update_preferences(**args_dict)
+
+        hs.query_history = [(None, None)]
         if db_dir is not None:
             hs.args.dbdir = db_dir
+
+    def default_preferences(hs):
+        print('[hs] defaulting preferences')
+        hs.prefs.chip_cfg  = ds.default_chip_cfg()
+        hs.prefs.feat_cfg  = ds.default_feat_cfg(hs)
+        hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
+        hs.prefs.N = 2
+        hs.prefs.name_scoring = False
+
+    def update_preferences(hs, **kwargs):
+        print('[hs] updateing preferences')
+        hs.prefs.query_cfg.update_cfg(**kwargs)
 
     #---------------
     # Loading Functions
@@ -103,7 +120,7 @@ class HotSpotter(DynStruct):
         '(current load function) Loads the appropriate database'
         print('[hs] load()')
         hs.load_tables()
-        hs.set_samples()
+        hs.update_samples()
         if load_all:
             print('[hs] load_all=True')
             hs.load_chips()
@@ -131,9 +148,25 @@ class HotSpotter(DynStruct):
     def load_features(hs, cx_list=None):
         fc2.load_features(hs, cx_list=cx_list)
 
-    def set_samples(hs, test_samp=None, train_samp=None, indx_samp=None):
+    def refresh_features(hs, cx_list=None):
+        hs.load_chips(cx_list)
+        hs.load_features(cx_list=cx_list)
+
+    def update_samples_split_pos(hs, pos):
+        valid_cxs = hs.get_valid_cxs()
+        test_samp  = valid_cxs[:pos]
+        train_samp = valid_cxs[pos + 1:]
+        hs.update_samples(test_samp, train_samp)
+
+    def update_samples_range(hs, pos1, pos2):
+        valid_cxs = hs.get_valid_cxs()
+        test_samp  = valid_cxs[pos1:pos2]
+        train_samp = test_samp
+        hs.update_samples(test_samp, train_samp)
+
+    def update_samples(hs, test_samp=None, train_samp=None, indx_samp=None):
         ''' This is the correct function to use when setting samples '''
-        print('[hs] set_samples():')
+        print('[hs] update_samples():')
         valid_cxs = hs.get_valid_cxs()
         if test_samp is None:
             print('[hs] * default: all chips in testing')
@@ -174,37 +207,17 @@ class HotSpotter(DynStruct):
         hs.train_sample_cx    = train_samp
         hs.test_sample_cx     = test_samp
 
-        # Hash the samples into sample ids
-        train_indx_hash = repr((tuple(train_samp), tuple(indx_samp)))
-        train_indx_id = str(len(indx_samp)) + ',' + helpers.hashstr(train_indx_hash)
-        train_id = helpers.make_sample_id(train_samp)
-        indx_id  = helpers.make_sample_id(indx_samp)
-        test_id  = helpers.make_sample_id(test_samp)
-
-        print('[hs] set_samples(): train_indx_id=%r' % train_indx_id)
-        print('[hs] set_samples(): train_id=%r' % train_id)
-        print('[hs] set_samples(): test_id=%r'  % test_id)
-        print('[hs] set_samples(): indx_id=%r'  % indx_id)
-        params.TRAIN_INDX_SAMPLE_ID = train_indx_id  # Depricate
-        params.TRAIN_SAMPLE_ID      = train_id
-        params.INDX_SAMPLE_ID       = indx_id
-        params.TEST_SAMPLE_ID       = test_id
-        # Fix
-        hs.train_id = train_id
-        hs.indx_id  = indx_id
-        # The query_cfg must resample
-        # Unload ~~matcher~~ query config if database changed
-        #hs.prefs.query_cfg = None
-        hs.prefs.query_cfg = ds.make_vsmany_cfg(hs)
+    def get_indexed_sample(hs):
+        dcxs = hs.indexed_sample_cx
+        return dcxs
 
     #---------------
     # Query Functions
     #---------------
     def query(hs, qcx):
         if hs.prefs.query_cfg is None:
-            hs.prefs.query_cfg = ds.make_vsmany_cfg(hs)
-            hs.load_chips()
-            hs.load_features()
+            hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
+            hs.refresh_data()
         res = mc3.query_database(hs, qcx, hs.prefs.query_cfg)
         return res
 
@@ -219,9 +232,15 @@ class HotSpotter(DynStruct):
                  hs.feats.cx2_desc,
                  hs.cpaths.cx2_rchip_path,
                  hs.cpaths.cx2_chip_path]
+        if cx == 'all':
+            hs.feats  = None
+            hs.cpaths = None
+            hs.dirty = True
+            return
         for list_ in lists:
             helpers.ensure_list_size(list_, cx)
             list_[cx] = None
+            hs.dirty = True
 
     def delete_cxdata(hs, cx):
         'deletes features and chips. not tables'
@@ -234,41 +253,37 @@ class HotSpotter(DynStruct):
             helpers.remove_files_in_dir(hs.dirs.computed_dir, '*' + cid_str + '*',
                                         recursive=True, verbose=True, dryrun=False)
 
-    def on_modification(hs, cx=None, gx=None):
-        hs.needs_save = True
-
-    def on_addition(hs, cx=None, gx=None, resample=True):
-        hs.needs_save = True
-        if resample:
-            hs.set_samples(hs)
-
-    def on_deletion(hs, cx=None, gx=None, resample=True):
-        hs.needs_save = True
-        if resample:
-            hs.set_samples()
-
     def change_roi(hs, cx, new_roi):
+        # This changes the entire chip.
+        # Delete precomputed data.
+        # Invalidate results
         hs.delete_cxdata(cx)
-        hs.on_modification(cx=cx)
         hs.tables.cx2_roi[cx] = new_roi
+        hs.needs_save = True
+        self.invalidated_results = True
 
     def change_theta(hs, cx, new_theta):
         hs.delete_cxdata(cx)
-        hs.on_modification(cx=cx)
         hs.tables.cx2_theta[cx] = new_theta
+        hs.needs_save = True
+        self.invalidated_results = True
 
     def change_name(hs, cx, new_name):
-        hs.on_modification()
         new_nx_ = np.where(hs.tables.nx2_name == new_name)[0]
         if len(new_nx_) == 0:
             new_nx = hs.add_name(new_name)
         else:
             new_nx = new_nx_[0]
         hs.tables.cx2_nx[cx] = new_nx
+        hs.needs_save = True
+        # this doesn't invalidate results... yet
+        # It will when we go to multi-image
 
     def change_prop(hs, cx, key, val):
-        hs.on_modification()
         hs.tables.prop_dict[key][cx] = val
+        hs.needs_save = True
+        # this doesn't invalidate results... yet
+        # It might! will when we go to multi-image
 
     # ---------------
     # Adding functions
@@ -278,6 +293,7 @@ class HotSpotter(DynStruct):
         if new_prop in hs.tables.prop_dict:
             raise UserWarning('Cannot add an already existing property')
         hs.tables.prop_dict[new_prop] = ['' for _ in xrange(hs.num_cx)]
+        hs.needs_save = True
 
     def add_name(hs, name):
         # TODO: Allocate memory better (use python lists)
@@ -285,6 +301,7 @@ class HotSpotter(DynStruct):
         nx2_name.append(name)
         hs.tables.nx2_name = np.array(nx2_name)
         nx = len(hs.tables.nx2_name) - 1
+        hs.needs_save = True
         return nx
 
     def add_chip(hs, gx, roi):
@@ -306,7 +323,9 @@ class HotSpotter(DynStruct):
             prop_dict[key].append('')
         hs.num_cx += 1
         cx = len(hs.tables.cx2_cid) - 1
-        hs.on_addition()
+        hs.update_samples(hs)
+        hs.needs_save = True
+        hs.invalidated_results = True
         return cx
 
     def add_images(hs, fpath_list, move_images=True):
@@ -341,8 +360,8 @@ class HotSpotter(DynStruct):
         print('[hs.add_imgs] Added %d new images.' % nIndexed)
         # Append the new gnames to the hotspotter table
         hs.tables.gx2_gname = np.array(gx2_gname + new_gnames)
-        if nNewImages > 0:
-            hs.on_addition()
+        hs.update_samples(hs)
+        hs.needs_save = True
         return nNewImages
 
     # ---------------
@@ -354,14 +373,19 @@ class HotSpotter(DynStruct):
         hs.tables.cx2_cid[cx] = -1
         hs.tables.cx2_gx[cx]  = -1
         hs.tables.cx2_nx[cx]  = -1
-        hs.on_deletion(cx=cx, resample=resample)
+        if resample:
+            hs.update_samples()
+        hs.needs_save = True
+        hs.invalidated_results = True
 
     def delete_image(hs, gx):
         cx_list = hs.gx2_cxs(gx)
         for cx in cx_list:
             hs.delete_chip(cx, resample=False)
         hs.tables.gx2_gname[gx] = ''
-        hs.on_deletion(gx=gx)
+        hs.update_samples()
+        hs.needs_save = True
+        hs.invalidated_results = True
 
     def delete_computed_dir(hs):
         computed_dir = hs.dirs.computed_dir
@@ -397,28 +421,6 @@ class HotSpotter(DynStruct):
         in_sample_flag = hs.flag_cxs_with_name_in_sample(valid_cxs, sample_cxs)
         cxs_in_sample = valid_cxs[in_sample_flag]
         return cxs_in_sample
-
-    def set_sample_split_pos(hs, pos):
-        valid_cxs = hs.get_valid_cxs()
-        test_samp  = valid_cxs[:pos]
-        train_samp = valid_cxs[pos + 1:]
-        hs.set_samples(test_samp, train_samp)
-
-    def set_sample_range(hs, pos1, pos2):
-        valid_cxs = hs.get_valid_cxs()
-        test_samp  = valid_cxs[pos1:pos2]
-        train_samp = test_samp
-        hs.set_samples(test_samp, train_samp)
-
-    def get_indexed_uid(hs, with_train=True, with_indx=True):
-        indexed_uid = ''
-        if with_train:
-            indexed_uid += '_trainID(%s)' % hs.train_id
-        if with_indx:
-            indexed_uid += '_indxID(%s)' % hs.indx_id
-        # depends on feat
-        indexed_uid += hs.feats.cfg.get_uid()
-        return indexed_uid
 
     #---------------
     # View Directories
@@ -477,6 +479,11 @@ class HotSpotter(DynStruct):
         return hs.get_valid_cxs_with_name_in_samp(hs.indexed_sample_cx)
 
     # chip index --> property
+
+    #@tools.class_iter_input
+
+    def cx2_gx(hs, cx):
+        gx = hs.tables.cx2_gx[cx]
 
     def cx2_roi(hs, cx):
         roi = hs.tables.cx2_roi[cx]
@@ -566,10 +573,6 @@ class HotSpotter(DynStruct):
         other_cx = hs.get_other_cxs(cx)
         other_indexed_cx = np.intersect1d(other_cx, hs.indexed_sample_cx)
         return other_indexed_cx
-
-    def get_groundtruth_cxs(hs, qcx):
-        gt_cxs = hs.get_other_cxs(qcx)
-        return gt_cxs
 
     # Strings
 

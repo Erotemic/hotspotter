@@ -40,17 +40,18 @@ def score_chipmatch_nsum(hs, qcx, chipmatch, query_cfg):
 def score_chipmatch_nunique(hs, qcx, chipmatch, query_cfg):
     raise NotImplementedError('nunique')
 
-def enforce_one_name_per_cscore(hs, cx2_score, chipmatch):
+def enforce_one_name(hs, cx2_score, chipmatch=None, cx2_chipscore=None):
     'this is a hack to make the same name only show up once in the top ranked list'
-    (_, cx2_fs, _) = chipmatch
-    cx2_csum_score = np.array([np.sum(fs) for fs in cx2_fs])
+    if chipmatch is not None:
+        (_, cx2_fs, _) = chipmatch
+        cx2_chipscore = np.array([np.sum(fs) for fs in cx2_fs])
     nx2_cxs = hs.get_nx2_cxs()
     cx2_score = np.array(cx2_score)
     for nx, cxs in enumerate(nx2_cxs):
         if len(cxs) < 2 or nx <= 1: continue
         #print(cxs)
         # zero the cxs with the lowest csum score
-        sortx = cx2_csum_score[cxs].argsort()
+        sortx = cx2_chipscore[cxs].argsort()
         cxs_to_zero = np.array(cxs)[sortx[0:-1]]
         cx2_score[cxs_to_zero] = 0
     return cx2_score

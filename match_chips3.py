@@ -45,14 +45,33 @@ def rrr():
 #----------------------
 
 def query_dcxs(hs, qcx, dcxs, query_cfg=None, **kwargs):
+    'wrapper that bypasses all that "qcx2_ map" buisness'
+    if query_cfg is None:
+        query_cfg = hs.prefs.query_cfg
+    query_uid = ''.join(query_cfg.get_uid('noCHIP'))
+    feat_uid = ''.join(query_cfg._feat_cfg.get_uid())
+    query_hist_id = (query_uid, feat_uid)
+    if hs.query_history[-1][0] != feat_uid:
+        print('[mc3] need to reload features')
+        hs.unload_cxdata('all')
+        hs.refresh_features()
+        hs.query_history.append(query_hist_id)
+    elif hs.query_history[-1][1] != query_uid:
+        print('[mc3] need to refresh features')
+        hs.refresh_features()
+        hs.query_history.append(query_hist_id)
+
+    query_uid = ''.join(query_cfg.get_uid())
+    print('[mc3] query_dcxs(): query_uid = %r ' % query_uid)
     result_list = execute_query_safe(hs, query_cfg, [qcx], dcxs, **kwargs)
     res = result_list[0].values()[0]
     return res
 
 
 def query_groundtruth(hs, qcx, query_cfg=None, **kwargs):
+    'wrapper that restricts query to only known groundtruth'
     print('[mc3] query groundtruth')
-    gt_cxs = hs.get_other_cxs(qcx)
+    gt_cxs = hs.get_other_indexed_cxs(qcx)
     print('[mc3] len(gt_cxs) = %r' % (gt_cxs,))
     return query_dcxs(hs, qcx, gt_cxs, query_cfg, **kwargs)
 
@@ -63,10 +82,7 @@ def query_database(hs, qcx, query_cfg=None, **kwargs):
     print('====================')
     if hs.indexed_sample_cx is None:
         hs.set_samples()
-    if query_cfg is None:
-        query_cfg = hs.prefs.query_cfg
-    dcxs = hs.get_valid_cxs()
-    #dcxs = hs.indexed_sample_cx
+    dcxs = hs.get_indexed_sample()
     return query_dcxs(hs, qcx, dcxs, query_cfg, **kwargs)
 
 

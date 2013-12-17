@@ -1188,7 +1188,10 @@ def imshow(img,
         'vmin': 0,
         'vmax': 255,
     }
-    ax.imshow(img, **plt_imshow_kwargs)
+    try:
+        ax.imshow(img, **plt_imshow_kwargs)
+    except TypeError as te:
+        print('ERROR %r' % te)
     #plt.set_cmap('gray')
     ax.set_xticks([])
     ax.set_yticks([])

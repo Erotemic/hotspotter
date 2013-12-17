@@ -54,6 +54,7 @@ def parse_arguments(**kwargs):
     add_float('--xy-thresh', .001, '', step=.005)
     add_float('--ratio-thresh', 1.2, '', step=.1)
     add_int('--K', 2, 'for K-nearest-neighbors', step=20)
+    add_int('--N', None, 'num neighbors to show', step=20)
     add_int('--sthresh', (10, 80), 'scale threshold', nargs='*')
     add_str('--score-method', 'csum', 'aggregation method')
     add_int('--query',  None, 'query chip-id to investigate', nargs='*')
@@ -192,15 +193,22 @@ if __name__ == '__main__':
         args.vdd = False
     # Build hotspotter database
     hs = HotSpotter.HotSpotter(args)
+    cids = hs.args.query
     try:
-        hs.load(load_all=False)
+        if cids is not None and len(cids) > 0:
+            hs.load(load_all=True)
+            backend = guitools.make_main_window(hs, app)
+            res = backend.query(cid=cids[0])
+        else:
+            hs.load(load_all=False)
+            backend = guitools.make_main_window(hs, app)
     except ValueError as ex:
         print('[main] ValueError = %r' % (ex,))
         if hs.args.strict:
             raise
     # Connect database to the backend gui
-    backend = guitools.make_main_window(hs, app)
     app.setActiveWindow(backend.win)
+
     # Allow for a IPython connection by passing the --cmd flag
     embedded = False
     exec(helpers.ipython_execstr())

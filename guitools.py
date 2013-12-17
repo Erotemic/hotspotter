@@ -267,12 +267,14 @@ def run_main_loop(app, is_root=True, backend=None):
     if is_root:
         print('[*guitools] running main loop.')
         timer = ping_python_interpreter()  # NOQA
+        if backend is not None:
+            backend.timer = timer
         sys.exit(app.exec_())
     else:
         print('[*guitools] using roots main loop')
 
 
-def ping_python_interpreter(frequency=100):
+def ping_python_interpreter(frequency=2000):
     'Create a QTimer which lets the python intepreter run every so often'
     timer = Qt.QTimer()
     timer.timeout.connect(lambda: None)

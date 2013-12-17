@@ -6,7 +6,7 @@ import warnings
 import cv2
 import numpy.linalg as linalg
 import numpy as np
-import scipy 
+import scipy
 import scipy.linalg
 import scipy.sparse as sparse
 import scipy.sparse.linalg as sparse_linalg
@@ -92,7 +92,7 @@ def normalize_xy_points(x_m, y_m):
     y_norm = (y_m - mean_y) * sy
     return x_norm, y_norm, T
 
-def homography_inliers(kpts1, kpts2, fm, 
+def homography_inliers(kpts1, kpts2, fm,
                        xy_thresh,
                        max_scale,
                        min_scale,
@@ -112,7 +112,7 @@ def homography_inliers(kpts1, kpts2, fm,
     xy_thresh_sqrd = diaglen_sqrd * xy_thresh
     Aff, aff_inliers = affine_inliers(x1_m, y1_m, acd1_m, fm[:, 0],
                                       x2_m, y2_m, acd2_m, fm[:, 1],
-                                      xy_thresh_sqrd, 
+                                      xy_thresh_sqrd,
                                       max_scale,
                                       min_scale)
     # Cannot find good affine correspondence
@@ -131,7 +131,7 @@ def homography_inliers(kpts1, kpts2, fm,
     x2_mn, y2_mn, T2 = normalize_xy_points(x2_ma, y2_ma)
     # Compute homgraphy transform from 1-->2 using affine inliers
     H_prime = compute_homog(x1_mn, y1_mn, x2_mn, y2_mn)
-    try: 
+    try:
         # Computes ax = b # x = linalg.solve(a, b)
         H = linalg.solve(T2, H_prime).dot(T1) # Unnormalize
     except linalg.LinAlgError as ex:
@@ -147,10 +147,10 @@ def homography_inliers(kpts1, kpts2, fm,
     y1_mt = H21*(x1_m) + H22*(y1_m) + H23
     z1_mt = H31*(x1_m) + H32*(y1_m) + H33
     # --- Find (Squared) Distance Error ---
-    #scale_err = np.abs(np.linalg.det(H)) * det2_m / det1_m 
+    #scale_err = np.abs(np.linalg.det(H)) * det2_m / det1_m
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        xy_err = (x1_mt/z1_mt - x2_m)**2 + (y1_mt/z1_mt - y2_m)**2 
+        xy_err = (x1_mt/z1_mt - x2_m)**2 + (y1_mt/z1_mt - y2_m)**2
     # Estimate final inliers
     inliers = np.where(xy_err < xy_thresh_sqrd)[0]
     return H, inliers
@@ -171,16 +171,16 @@ acd2_m = np.array(((1, 1, 1, 1, 1),
 
 acd1_m = array([[ 105.65855929,   69.88258445,   50.26711542,   47.0972872, 37.77338979,
                   80.37862456,   65.7670833 ,   52.42491175, 47.73791486,  47.73791486],
-                  [  40.25470409,   33.37290799,  -14.38396778,    5.09841855, 8.36304015,  
+                  [  40.25470409,   33.37290799,  -14.38396778,    5.09841855, 8.36304015,
                   9.40799471,   -0.22772558,   21.09104681, 33.6183116 ,   33.6183116 ],
-                  [  85.21461723,   38.1541563 ,   49.27567372,   19.63477339, 24.12673413,  
+                  [  85.21461723,   38.1541563 ,   49.27567372,   19.63477339, 24.12673413,
                   34.08558994,   35.23499677,   19.37915367, 29.8612585 ,   29.8612585 ]])
 
 acd2_m = array([[ 27.18315876,  40.44774347,  18.83472822,  46.03951988, 25.48597903,
                 42.33150267,  34.53070584,  45.37374314, 42.9485725 ,  53.62149774],
-                [ 11.08605802,  -7.47303884,  -9.39089399,  -6.87968738, 0.61334048,  
+                [ 11.08605802,  -7.47303884,  -9.39089399,  -6.87968738, 0.61334048,
                 15.89417442, -38.28506581,   5.9434218 , 25.10330357,  28.30194991],
-                [ 14.73551714,  16.44658993,  33.51034403,  19.36112975, 39.17426044, 
+                [ 14.73551714,  16.44658993,  33.51034403,  19.36112975, 39.17426044,
                 31.73842067,  27.55071888,  21.49176377, 21.40969283,  23.89992898]])
 
 ai = acd1_m[0][0]
@@ -206,7 +206,7 @@ def det_acd(acd):
 def inv_acd(acd, det):
     'Lower triangular inverse'
     return np.array((acd[2], -acd[1], acd[0])) / det
-def dot_acd(acd1, acd2): 
+def dot_acd(acd1, acd2):
     'Lower triangular dot product'
     a = (acd1[0] * acd2[0])
     c = (acd1[1] * acd2[0]) + (acd1[2] * acd2[1])
@@ -215,17 +215,17 @@ def dot_acd(acd1, acd2):
 # --------------------------------
 def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
                    x2_m, y2_m, acd2_m, fx2_m,
-                   xy_thresh_sqrd, 
+                   xy_thresh_sqrd,
                    max_scale, min_scale):
     '''Estimates inliers deterministically using elliptical shapes
     1_m = img1_matches; 2_m = img2_matches
-    x and y are locations, acd are the elliptical shapes. 
+    x and y are locations, acd are the elliptical shapes.
     fx are the original feature indexes (used for making sure 1 keypoint isn't assigned to 2)
 
-    FROM PERDOCH 2009: 
+    FROM PERDOCH 2009:
         H = inv(Aj).dot(Rj.T).dot(Ri).dot(Ai)
         H = inv(Aj).dot(Ai)
-        The input acd's are assumed to be 
+        The input acd's are assumed to be
         invA = ([a 0],[c d])
 
     REMEMBER our acd is actually inv(acd)
@@ -251,7 +251,7 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
     # HACK: Because what I thought was A is actually invA,  need to invert calculation
     #Aff_list = dot_acd(inv2_m, acd1_m)
     Aff_list = dot_acd(acd2_m, inv1_m)
-    # Compute scale change of all transformations 
+    # Compute scale change of all transformations
     detAff_list = det_acd(Aff_list)
     # Test all hypothesis
     for mx in xrange(len(x1_m)):
@@ -268,12 +268,12 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
         x1_mt   = x2_hypo + Aa*(x1_m - x1_hypo)
         y1_mt   = y2_hypo + Ac*(x1_m - x1_hypo) + Ad*(y1_m - y1_hypo)
         # --- Find (Squared) Distance Error ---
-        xy_err    = (x1_mt - x2_m)**2 + (y1_mt - y2_m)**2 
+        xy_err    = (x1_mt - x2_m)**2 + (y1_mt - y2_m)**2
         # --- Find (Squared) Scale Error ---
-        #scale_err = Adet * det2_m / det1_m 
-        scale_err = Adet * det1_m / det2_m 
+        #scale_err = Adet * det2_m / det1_m
+        scale_err = Adet * det1_m / det2_m
         # --- Determine Inliers ---
-        xy_inliers_flag = xy_err < xy_thresh_sqrd 
+        xy_inliers_flag = xy_err < xy_thresh_sqrd
         scale_inliers_flag = np.logical_and(scale_err > min_scale,
                                             scale_err < max_scale)
         hypo_inliers_flag = np.logical_and(xy_inliers_flag, scale_inliers_flag)
@@ -292,7 +292,7 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
         hypo_inliers = np.where(hypo_inliers_flag)[0][unique_assigned_flag]
         '''
         hypo_inliers = np.where(hypo_inliers_flag)[0]
-        
+
         #---
         # Try to not double count inlier matches that are counted twice
         # probably need something a little bit more robust here.
@@ -300,17 +300,17 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
         num_hypo_inliers = len(unique_hypo_inliers)
         # --- Update Best Inliers ---
         if num_hypo_inliers > num_best_inliers:
-            best_mx = mx 
+            best_mx = mx
             best_inliers = hypo_inliers
             num_best_inliers = num_hypo_inliers
-    if not best_mx is None: 
+    if not best_mx is None:
         (Aa, Ac, Ad) = Aff_list[:, best_mx]
         (x1, y1, x2, y2) = (x1_m[best_mx], y1_m[best_mx],
                             x2_m[best_mx], y2_m[best_mx])
         best_Aff = np.array([(Aa,  0,  x2-Aa*x1      ),
                              (Ac, Ad,  y2-Ac*x1-Ad*y1),
                              ( 0,  0,               1)])
-    else: 
+    else:
         best_Aff = np.eye(3)
     return best_Aff, best_inliers
 
@@ -321,14 +321,14 @@ def test():
     import DataStructures as ds
     xy_thresh = .02
     max_scale = 2
-    min_scale =.5 
+    min_scale =.5
     #qcx = helpers.get_arg_after('--qcx', type_=int, default=0)
     #cx  = helpers.get_arg_after('--cx', type_=int)
     #cx  = 113
     main_locals = dev.dev_main()
     hs  = main_locals['hs']        # hotspotter api
     qcx = main_locals['qcx']       # query chip index
-    gt_cxs = hs.get_other_cxs(qcx) # list of ground truth chip indexes
+    gt_cxs = hs.get_other_indexed_cxs(qcx) # list of ground truth chip indexes
     if len(gt_cxs) == 0:
         msg = 'q'+hs.cxstr(qcx)+' has no groundtruth'
         msg += 'cannot perform tests without groundtruth'
@@ -336,13 +336,13 @@ def test():
     cx = gt_cxs[0] # Pick a ground truth to test against
 
     # Query without spatial verification to get assigned matches
-    #res = mc3.query_database(hs, qcx, sv_on=False)   
+    #res = mc3.query_database(hs, qcx, sv_on=False)
     # For testing purposes query_groundtruth is a bit faster than
     # query_database. But there is no reason you cant query_database
-    res = mc3.query_groundtruth(hs, qcx, sv_on=False) 
+    res = mc3.query_groundtruth(hs, qcx, sv_on=False)
 
     # Get chip index to feature match
-    fm = res.cx2_fm[cx] 
+    fm = res.cx2_fm[cx]
     # A feature match is a list of M 2-tuples.
     # fm = [(0, 5), (3,2), (11, 12), (4,4)]
     # fm[:,0] are keypoint indexes into kpts1
@@ -372,7 +372,7 @@ def test():
                                     diaglen_sqrd=diaglen_sqrd,
                                     min_num_inliers=4)
 
-    # How does Aff map rchip1 to rchip2? 
+    # How does Aff map rchip1 to rchip2?
     Aff, aff_inliers = homography_inliers(kpts1, kpts2, fm,
                                     xy_thresh,
                                     max_scale,
@@ -385,7 +385,7 @@ def test():
                       all_kpts=False, draw_lines=True,
                       doclf=True, title='Assigned matches', plotnum=(1,3,1))
 
-    # Draw affine 
+    # Draw affine
     df2.show_matches2(*args_+[fm[aff_inliers]], fs=None,
                       all_kpts=False, draw_lines=True, doclf=True,
                       title='Affine inliers', plotnum=(1,3,2))

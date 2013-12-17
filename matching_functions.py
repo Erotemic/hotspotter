@@ -112,14 +112,18 @@ def weight_neighbors(hs, qcx2_nns, query_cfg):
 def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw):
     qfx2_score = np.ones(qfx2_nn.shape, dtype=ds.FS_DTYPE)
     qfx2_valid = np.ones(qfx2_nn.shape, dtype=np.bool)
+    print(filt2_tw)
     # Apply the filter weightings to determine feature validity and scores
     for filt, cx2_weights in filt2_weights.iteritems():
         qfx2_weights = cx2_weights[qcx]
         (sign, thresh), weight = filt2_tw[filt]
-        printDBG('[mf] * filt=%r ' % filt)
-        if not thresh is None or not weight == 0:
+        print('[mf] * filt=%r ' % filt)
+        print('[mf] * thresh=%r ' % thresh)
+        print('[mf] * sign=%r ' % sign)
+
+        if isinstance(thresh, (int, float)) or not weight == 0:
             printDBG('[mf] * \\ qfx2_weights = %r' % helpers.printable_mystats(qfx2_weights.flatten()))
-        if not thresh is None:
+        if isinstance(thresh, (int, float)):
             qfx2_passed = sign * qfx2_weights <= sign * thresh
             nValid  = qfx2_valid.sum()
             qfx2_valid  = np.bitwise_and(qfx2_valid, qfx2_passed)
@@ -192,10 +196,11 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, query_cfg=None):
     else:
         raise Exception('[mf] unknown scoring method:' + score_method)
     cx2_nMatch = np.array(map(len, cx2_fm))
-    # Autoremove chips with no score
-    cx2_score = (cx2_score * (cx2_nMatch != 0))
+    # Autoremove chips with no match support
+    cx2_score *= (cx2_nMatch != 0)
     # Autoremove chips which are not the top scoring in their name
-    cx2_score = vr2.enforce_one_name_per_cscore(hs, cx2_score, chipmatch)
+    #if hs.prefs.display_prefs.:
+    #cx2_score = vr2.enforce_one_name_per_cscore(hs, cx2_score, chipmatch)
     return cx2_score
 
 

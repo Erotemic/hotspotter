@@ -13,7 +13,7 @@ import vizualizations as viz
 
 import numpy as np
 from Printable import DynStruct
-from Pref import Pref
+from Preferences import Pref
 
 FM_DTYPE  = np.uint32
 FK_DTYPE  = np.int16
@@ -21,6 +21,10 @@ FS_DTYPE  = np.float32
 
 ID_DTYPE = np.int32
 X_DTYPE  = np.int32
+
+ConfigBase = Pref
+#ConfigBase = DynStruct
+
 
 # Toggleable printing
 print = __builtin__.print
@@ -117,6 +121,7 @@ class QueryResult(DynStruct):
         'Loads the result from the given database'
         fpath = res.get_fpath(hs)
         print('[ds] res.load() fpath=%r' % (split(fpath)[1],))
+        qcx_good = res.qcx
         try:
             with open(fpath, 'rb') as file_:
                 npz = np.load(file_)
@@ -151,6 +156,7 @@ class QueryResult(DynStruct):
         except Exception as ex:
             print('Caught other Exception: %r' % ex)
             raise
+        res.qcx = qcx_good
 
     def get_SV(res):
         #return res.cx2_fm_V.size > 0
@@ -166,7 +172,7 @@ class QueryResult(DynStruct):
         if gt_cxs is None and hs is None:
             raise Exception('[res] error')
         if gt_cxs is None:
-            gt_cxs = hs.get_other_cxs(res.qcx)
+            gt_cxs = hs.get_other_indexed_cxs(res.qcx)
         cx2_score = res.get_cx2_score()
         top_cxs  = cx2_score.argsort()[::-1]
         foundpos = [np.where(top_cxs == cx)[0] for cx in gt_cxs]
@@ -176,29 +182,34 @@ class QueryResult(DynStruct):
         return gt_ranks
 
     def get_cx2_score(res, SV=None):
-        if SV is None:
-            SV = res.get_SV()
-        return res.cx2_score_V if SV else res.cx2_score
+        return res.cx2_score
 
     def get_cx2_fm(res, SV=None):
-        if SV is None:
-            SV = res.get_SV()
-        return res.cx2_fm_V if SV else res.cx2_fm
+        return res.cx2_fm
 
     def get_cx2_fs(res, SV=None):
-        if SV is None:
-            SV = res.get_SV()
-        return res.cx2_fs_V if SV else res.cx2_fs
+        return res.cx2_fs
 
-    def topN_cxs(res, N, query_cfg=None):
-        cx2_score = res.get_cx2_score()
+    def topN_cxs(res, hs, N=None):
+        import voting_rules2 as vr2
+        cx2_score = np.array(res.get_cx2_score())
+        if hs.prefs.name_scoring:
+            cx2_chipscore = np.array(cx2_score)
+            cx2_score = vr2.enforce_one_name(hs, cx2_score,
+                                             cx2_chipscore=cx2_chipscore)
         top_cxs = cx2_score.argsort()[::-1]
-        if not query_cfg is None:
-            top_cxs = np.intersect1d(top_cxs, query_cfg._dcxs)
+        dcxs_ = set(hs.get_indexed_sample()) - set([res.qcx])
+        top_cxs = [cx for cx in iter(top_cxs) if cx in dcxs_]
+        #top_cxs = np.intersect1d(top_cxs, hs.get_indexed_sample())
         nIndexed = len(top_cxs)
+        if N is None:
+            N = hs.prefs.N
         if N == 'all':
             N = nIndexed
+        #print('[res] cx2_score = %r' % (cx2_score,))
+        #print('[res] returning top_cxs = %r' % (top_cxs,))
         nTop = min(N, nIndexed)
+        #print('[res] returning nTop = %r' % (nTop,))
         topN_cxs = top_cxs[0:nTop]
         return topN_cxs
 
@@ -267,9 +278,6 @@ class NNIndex(object):
             #dict1[key] = val
 
 
-#ConfigBase = Pref
-ConfigBase = DynStruct
-
 class NNConfig(ConfigBase):
     def __init__(nn_cfg, **kwargs):
         super(NNConfig, nn_cfg).__init__()
@@ -311,10 +319,26 @@ def any_inlist(list_, search_list):
     return any([search in set_ for search in search_list])
 
 
+def signthreshweight_str(on_filters):
+    stw_list = []
+    for key, val in on_filters.iteritems():
+        ((sign, thresh), weight) = val
+        stw_str = key
+        if thresh is None and weight == 0:
+            continue
+        if thresh is not None:
+            sstr = ['<', '>'][sign == -1]  # actually <=, >=
+            stw_str += sstr + str(thresh)
+        if weight != 0:
+            stw_str += '_' + str(weight)
+        stw_list.append(stw_str)
+    return ','.join(stw_list)
+    #return helpers.remove_chars(str(dict_), [' ','\'','}','{',':'])
+
 class FilterConfig(ConfigBase):
     # Rename to scoring mechanism
     def __init__(filt_cfg, **kwargs):
-        super(FilterConfig, filt_cfg).__init__()
+        super(FilterConfig, filt_cfg).__init__(name='filt_cfg')
         filt_cfg = filt_cfg
         filt_cfg.filt_on = True
         filt_cfg.Krecip = 0  # 0 := off
@@ -324,10 +348,11 @@ class FilterConfig(ConfigBase):
         filt_cfg._valid_filters = []
 
         def addfilt(sign, filt, thresh, weight):
+            print('[addfilt] %r %r %r %r' % (sign, filt, thresh, weight))
             filt_cfg._nnfilter_list.append(filt)
             filt_cfg._valid_filters.append((sign, filt))
-            filt_cfg.__dict__[filt + '_thresh'] = thresh
-            filt_cfg.__dict__[filt + '_weight'] = weight
+            filt_cfg[filt + '_thresh'] = thresh
+            filt_cfg[filt + '_weight'] = weight
         #tuple(Sign, Filt, ValidSignThresh, ScoreMetaWeight)
         # thresh test is: sign * score <= sign * thresh
         addfilt(+1, 'roidist', None, 0)  # Lower  scores are better
@@ -361,11 +386,14 @@ class FilterConfig(ConfigBase):
         elif filt_cfg.recip_thresh is None:
             filt_cfg.recip_thresh = 0
 
-        def ensure_filter(filt, sign):
+        #print('[ds]----')
+        #print(filt_cfg)
+        #print('[ds]----')
+        def _ensure_filter(filt, sign):
             '''ensure filter in the list if valid else remove
             (also ensure the sign/thresh/weight dict)'''
-            thresh = filt_cfg.__dict__[filt + '_thresh']
-            weight = filt_cfg.__dict__[filt + '_weight']
+            thresh = filt_cfg[filt + '_thresh']
+            weight = filt_cfg[filt + '_weight']
             stw = ((sign, thresh), weight)
             filt_cfg._filt2_tw[filt] = stw
             if thresh is None and weight == 0:
@@ -373,7 +401,7 @@ class FilterConfig(ConfigBase):
             elif not filt in filt_cfg._nnfilter_list:
                 filt_cfg._nnfilter_list += [filt]
         for (sign, filt) in filt_cfg._valid_filters:
-            ensure_filter(filt, sign)
+            _ensure_filter(filt, sign)
 
         # Set Knorm to 0 if there is no normalizing filter on.
         norm_depends = ['lnbnn', 'ratio', 'lnrat']
@@ -399,27 +427,9 @@ class FilterConfig(ConfigBase):
         uid += [')']
         return uid
 
-
-def signthreshweight_str(on_filters):
-    stw_list = []
-    for key, val in on_filters.iteritems():
-        ((sign, thresh), weight) = val
-        stw_str = key
-        if thresh is None and weight == 0:
-            continue
-        if thresh is not None:
-            sstr = ['<', '>'][sign == -1]  # actually <=, >=
-            stw_str += sstr + str(thresh)
-        if weight != 0:
-            stw_str += '_' + str(weight)
-        stw_list.append(stw_str)
-    return ','.join(stw_list)
-    #return helpers.remove_chars(str(dict_), [' ','\'','}','{',':'])
-
-
 class SpatialVerifyConfig(ConfigBase):
     def __init__(sv_cfg, **kwargs):
-        super(SpatialVerifyConfig, sv_cfg).__init__()
+        super(SpatialVerifyConfig, sv_cfg).__init__(name='sv_cfg')
         sv_cfg.scale_thresh_low = .5
         sv_cfg.scale_thresh_high = 2
         sv_cfg.xy_thresh = .002
@@ -449,7 +459,7 @@ class SpatialVerifyConfig(ConfigBase):
 
 class AggregateConfig(ConfigBase):
     def __init__(agg_cfg, **kwargs):
-        super(AggregateConfig, agg_cfg).__init__()
+        super(AggregateConfig, agg_cfg).__init__(name='agg_cfg')
         agg_cfg.query_type   = 'vsmany'
         # chipsum, namesum, placketluce
         agg_cfg.isWeighted = False  # nsum, pl
@@ -492,23 +502,23 @@ class AggregateConfig(ConfigBase):
 
 class QueryConfig(ConfigBase):
     def __init__(query_cfg, hs, **kwargs):
-        super(QueryConfig, query_cfg).__init__()
-        query_cfg.nn_cfg  = NNConfig(**kwargs)
+        super(QueryConfig, query_cfg).__init__(name='query_cfg')
+        query_cfg.nn_cfg    = NNConfig(**kwargs)
         query_cfg.filt_cfg  = FilterConfig(**kwargs)
-        query_cfg.sv_cfg  = SpatialVerifyConfig(**kwargs)
-        query_cfg.agg_cfg  = AggregateConfig(**kwargs)
-        query_cfg._feat_cfg  = hs.prefs.feat_cfg  # Queries depend on features
-        #
+        query_cfg.sv_cfg    = SpatialVerifyConfig(**kwargs)
+        query_cfg.agg_cfg   = AggregateConfig(**kwargs)
+        query_cfg._feat_cfg = hs.prefs.feat_cfg  # Queries depend on features
         query_cfg.use_cache = False
         # Data TODO: Separate this
         query_cfg._qcxs = []
         query_cfg._dcxs = []
-        query_cfg._data_index = None  # current index
-        query_cfg._dcxs2_index = {}  # L1 cached indexes
-        query_cfg.update(**kwargs)
-        query_cfg.filt_cfg.make_feasible(query_cfg)
+        query_cfg._data_index  = None  # current index
+        query_cfg._dcxs2_index = {}  # cached indexes
+        query_cfg.update_cfg(**kwargs)
 
     def update_cfg(query_cfg, **kwargs):
+        query_cfg._feat_cfg.update(**kwargs)
+        query_cfg._feat_cfg._chip_cfg.update(**kwargs)
         query_cfg.nn_cfg.update(**kwargs)
         query_cfg.filt_cfg.update(**kwargs)
         query_cfg.sv_cfg.update(**kwargs)
@@ -537,7 +547,7 @@ class QueryConfig(ConfigBase):
 
 class FeatureConfig(ConfigBase):
     def __init__(feat_cfg, hs, **kwargs):
-        super(FeatureConfig, feat_cfg).__init__()
+        super(FeatureConfig, feat_cfg).__init__(name='feat_cfg')
         feat_cfg.feat_type = 'hesaff+sift'
         feat_cfg.whiten = False
         feat_cfg.scale_min = 30  # 0    # 30
@@ -565,7 +575,7 @@ class FeatureConfig(ConfigBase):
 
 class ChipConfig(ConfigBase):
     def __init__(cc_cfg, **kwargs):
-        super(ChipConfig, cc_cfg).__init__()
+        super(ChipConfig, cc_cfg).__init__(name='chip_cfg')
         cc_cfg.chip_sqrt_area = 750
         cc_cfg.grabcut         = False
         cc_cfg.histeq          = False
@@ -668,17 +678,17 @@ def __dict_default_func(dict_):
     return set_key
 
 
-def make_chip_cfg(**kwargs):
+def default_chip_cfg(**kwargs):
     chip_cfg = ChipConfig(**kwargs)
     return chip_cfg
 
 
-def make_feat_cfg(hs, **kwargs):
+def default_feat_cfg(hs, **kwargs):
     feat_cfg = FeatureConfig(hs, **kwargs)
     return feat_cfg
 
 
-def make_vsmany_cfg(hs, **kwargs):
+def default_vsmany_cfg(hs, **kwargs):
     kwargs['query_type'] = 'vsmany'
     kwargs_set = __dict_default_func(kwargs)
     kwargs_set('lnbnn_weight', .001)
@@ -688,7 +698,7 @@ def make_vsmany_cfg(hs, **kwargs):
     return query_cfg
 
 
-def make_vsone_cfg(hs, **kwargs):
+def default_vsone_cfg(hs, **kwargs):
     kwargs['query_type'] = 'vsone'
     kwargs_set = __dict_default_func(kwargs)
     kwargs_set('lnbnn_weight', 0)

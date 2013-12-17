@@ -6,6 +6,9 @@ import types
 import numpy as np
 import os.path
 
+MAX_VALSTR = -1
+#100000
+
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
@@ -40,11 +43,11 @@ class AbstractPrintable(object):
     def printme(self):
         print(str(self))
 
-    def printme2(self, 
-                 type_bit=True, 
+    def printme2(self,
+                 type_bit=True,
                  print_exclude_aug = [],
-                 val_bit=True, 
-                 max_valstr=1000,
+                 val_bit=True,
+                 max_valstr=MAX_VALSTR,
                  justlength=True):
         to_print = self.get_printable(type_bit=type_bit,
                                       print_exclude_aug=print_exclude_aug,
@@ -57,7 +60,7 @@ class AbstractPrintable(object):
                       type_bit=True,
                       print_exclude_aug=[],
                       val_bit=True,
-                      max_valstr=1000,
+                      max_valstr=MAX_VALSTR,
                       justlength=False):
         body = ''
         attri_list = []
@@ -72,16 +75,19 @@ class AbstractPrintable(object):
                     attri_list.append((typestr, namestr, '<ommited>'))
                     continue
                 valstr  = printableVal(val, type_bit=type_bit, justlength=justlength)
-                if len(valstr) > max_valstr:
+                if len(valstr) > max_valstr and max_valstr > 0:
                     pos1 =  max_valstr // 2
                     pos2 = -max_valstr // 2
-                    valstr = valstr[0:pos1] + valstr[pos2:-1]
+                    valstr = valstr[0:pos1] + ' \n ~~~ \n ' + valstr[pos2:-1]
                 attri_list.append((typestr, namestr, valstr))
             except Exception as ex:
                 print('[printable] ERROR %r' % ex)
                 print('[printable] ERROR key = %r' % key)
                 print('[printable] ERROR val = %r' % val)
-                print('[printable] ERROR valstr = %r' % valstr)
+                try:
+                    print('[printable] ERROR valstr = %r' % valstr)
+                except Exception:
+                    pass
                 raise
         attri_list.sort()
         for (typestr, namestr, valstr) in attri_list:
@@ -121,7 +127,7 @@ def printableVal(val,type_bit=True, justlength=False):
         info = npArrInfo(val)
         if info.dtypestr == 'bool':
             _valstr = '{ shape:'+info.shapestr+' bittotal: '+info.bittotal+'}'# + '\n  |_____'
-        else: 
+        else:
             _valstr = '{ shape:'+info.shapestr+' mM:'+info.minmaxstr+' }'# + '\n  |_____'
     # String
     elif type(val) is types.StringType:
@@ -145,7 +151,7 @@ def printableVal(val,type_bit=True, justlength=False):
     if _valstr.find('\n') > 0: # Indent if necessary
         _valstr = _valstr.replace('\n','\n    ')
         _valstr = '\n    '+_valstr
-    _valstr = re.sub('\n *$','', _valstr) # Replace empty lines 
+    _valstr = re.sub('\n *$','', _valstr) # Replace empty lines
     return _valstr
 #---------------
 
@@ -205,7 +211,7 @@ class DynStruct(AbstractPrintable):
     def execstr(self, local_name):
         '''returns a string which when evaluated will
            add the stored variables to the current namespace
-           
+
            localname is the name of the variable in the current scope
            * use locals().update(dyn.to_dict()) instead
         '''
@@ -227,9 +233,9 @@ def npArrInfo(arr):
     elif info.dtypestr[0] == '|':
         info.minmaxstr = 'NA'
     else:
-        if arr.size > 0: 
+        if arr.size > 0:
             info.minmaxstr = '(%r,%r)' % (arr.min(), arr.max())
-        else: 
+        else:
             info.minmaxstr = '(None)'
     return info
 

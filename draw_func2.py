@@ -34,6 +34,9 @@ from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle, Circle, FancyArrow
 from matplotlib.transforms import Affine2D
 import matplotlib.pyplot as plt
+# Qt
+import PyQt4
+from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
 # Scientific
 import numpy as np
@@ -78,6 +81,7 @@ def rrr():
 
 
 QT4_WINS = []
+plotWidget = None
 
 
 SMALL_FONTS = False
@@ -172,9 +176,6 @@ def execstr_global():
     return execstr
 
 
-plotWidget = None
-
-
 def register_matplotlib_widget(plotWidget_):
     'talks to PyQt4 guis'
     global plotWidget
@@ -183,6 +184,11 @@ def register_matplotlib_widget(plotWidget_):
     #axes_list = fig.get_axes()
     #ax = axes_list[0]
     #plt.sca(ax)
+
+
+def register_qt4_win(win):
+    global QT4_WINS
+    QT4_WINS.append(win)
 
 
 def OooScreen2():
@@ -308,11 +314,6 @@ def get_all_figures():
     return all_figures
 
 
-def register_qt4_win(win):
-    global QT4_WINS
-    QT4_WINS.append(win)
-
-
 def get_all_qt4_wins():
     return QT4_WINS
 
@@ -343,7 +344,6 @@ def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
                      row_first=True, no_tile=False):
     'Lays out all figures in a grid. if wh is a scalar, a golden ratio is used'
     from matplotlib.backends import backend_qt4
-    from PyQt4 import QtGui
 
     if no_tile:
         return
@@ -656,14 +656,102 @@ def set_figtitle(figtitle, subtitle=''):
     adjust_subplots()
 
 
+TMPMPLEVENT = None
+
+
+def convert_keypress_event_mpl_to_qt4(mplevent):
+    global TMPMPLEVENT
+    TMPMPLEVENT = mplevent
+    # Grab the key from the mpl.KeyPressEvent
+    key = mplevent.key
+    print('[df2] convert event mpl -> qt4')
+    print('[df2] key=%r' % key)
+    # dicts modified from backend_qt4.py
+    mpl2qtkey = {'control': Qt.Key_Control, 'shift': Qt.Key_Shift,
+                 'alt': Qt.Key_Alt, 'super': Qt.Key_Meta,
+                 'enter': Qt.Key_Return, 'left': Qt.Key_Left, 'up': Qt.Key_Up,
+                 'right': Qt.Key_Right, 'down': Qt.Key_Down,
+                 'escape': Qt.Key_Escape, 'f1': Qt.Key_F1, 'f2': Qt.Key_F2,
+                 'f3': Qt.Key_F3, 'f4': Qt.Key_F4, 'f5': Qt.Key_F5,
+                 'f6': Qt.Key_F6, 'f7': Qt.Key_F7, 'f8': Qt.Key_F8,
+                 'f9': Qt.Key_F9, 'f10': Qt.Key_F10, 'f11': Qt.Key_F11,
+                 'f12': Qt.Key_F12, 'home': Qt.Key_Home, 'end': Qt.Key_End,
+                 'pageup': Qt.Key_PageUp, 'pagedown': Qt.Key_PageDown}
+    # Reverse the control and super (aka cmd/apple) keys on OSX
+    if sys.platform == 'darwin':
+        mpl2qtkey.update({'super': Qt.Key_Control, 'control': Qt.Key_Meta, })
+
+    # Try to reconstruct QtGui.KeyEvent
+    type_ = QtCore.QEvent.Type(QtCore.QEvent.KeyPress)  # The type should always be KeyPress
+    text = ''
+    # Try to extract the original modifiers
+    modifiers = QtCore.Qt.NoModifier  # initialize to no modifiers
+    if key.find(u'ctrl+') >= 0:
+        modifiers = modifiers | QtCore.Qt.ControlModifier
+        key = key.replace(u'ctrl+', u'')
+        print('[df2] has ctrl modifier')
+        text += 'Ctrl+'
+    if key.find(u'alt+') >= 0:
+        modifiers = modifiers | QtCore.Qt.AltModifier
+        key = key.replace(u'alt+', u'')
+        print('[df2] has alt modifier')
+        text += 'Alt+'
+    if key.find(u'super+') >= 0:
+        modifiers = modifiers | QtCore.Qt.MetaModifier
+        key = key.replace(u'super+', u'')
+        print('[df2] has super modifier')
+        text += 'Super+'
+    if key.isupper():
+        modifiers = modifiers | QtCore.Qt.ShiftModifier
+        print('[df2] has shift modifier')
+        text += 'Shift+'
+    # Try to extract the original key
+    try:
+        if key in mpl2qtkey:
+            key_ = mpl2qtkey[key]
+        else:
+            key_ = ord(key.upper())  # Qt works with uppercase keys
+            text += key.upper()
+    except Exception as ex:
+        print('[df2] ERROR key=%r' % key)
+        print('[df2] ERROR %r' % ex)
+        raise
+    autorep = False  # default false
+    count   = 1  # default 1
+    text = QtCore.QString(text)  # The text is somewhat arbitrary
+    # Create the QEvent
+    print('----------------')
+    print('[df2] Create event')
+    print('[df2] type_ = %r' % type_)
+    print('[df2] text = %r' % text)
+    print('[df2] modifiers = %r' % modifiers)
+    print('[df2] autorep = %r' % autorep)
+    print('[df2] count = %r ' % count)
+    print('----------------')
+    qevent = QtGui.QKeyEvent(type_, key_, modifiers, text, autorep, count)
+    return qevent
+
+def test_build_qkeyevent():
+    type_ = QtCore.QEvent.Type(QtCore.QEvent.KeyPress)  # The type should always be KeyPress
+    text = QtCore.QString('A')  # The text is somewhat arbitrary
+    modifiers = QtCore.Qt.NoModifier  # initialize to no modifiers
+    modifiers = modifiers | QtCore.Qt.ControlModifier
+    modifiers = modifiers | QtCore.Qt.AltModifier
+    key_ = ord('A')  # Qt works with uppercase keys
+    autorep = False  # default false
+    count   = 1  # default 1
+    qevent = QtGui.QKeyEvent(type_, key_, modifiers, text, autorep, count)
+
 def on_key_press_event(event):
     'redirects keypress events to main window'
     global QT4_WINS
     print('[df2] %r' % event)
     print('[df2] %r' % str(event.__dict__))
     for qtwin in QT4_WINS:
-        key = event.key
-        print(key)
+        qevent = convert_keypress_event_mpl_to_qt4(event)
+        app = qtwin.backend.app
+        print('[df2] attempting to send qevent to qtwin')
+        app.sendEvent(qtwin, qevent)
         # TODO: FINISH ME
         #PyQt4.QtGui.QKeyEvent
         #qtwin.keyPressEvent(event)

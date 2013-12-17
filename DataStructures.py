@@ -8,8 +8,6 @@ from zipfile import error as BadZipFile  # Screwy naming convention.
 #
 import helpers
 import params
-import algos
-import vizualizations as viz
 
 import numpy as np
 from Printable import DynStruct
@@ -25,9 +23,14 @@ X_DTYPE  = np.int32
 ConfigBase = Pref
 #ConfigBase = DynStruct
 
+DEBUG = False
 
-def printDBG(msg):
-    print('[DS.DBG] ' + msg)
+if DEBUG:
+    def printDBG(msg):
+        print('[DS.DBG] ' + msg)
+else:
+    def printDBG(msg):
+        pass
 
 
 # Toggleable printing
@@ -218,28 +221,34 @@ class QueryResult(DynStruct):
         return topN_cxs
 
     def show_query(res, hs, **kwargs):
+        import vizualizations as viz
         print('[res] show_query')
         viz.show_chip(hs, res=res, **kwargs)
 
     def show_analysis(res, hs, *args, **kwargs):
+        import vizualizations as viz
         return viz.res_show_analysis(res, hs, *args, **kwargs)
 
     def show_top(res, hs, *args, **kwargs):
+        import vizualizations as viz
         return viz.show_top(res, hs, *args, **kwargs)
 
     def show_gt_matches(res, hs, *args, **kwargs):
+        import vizualizations as viz
         figtitle = ('q%s -- GroundTruth' % (hs.cxstr(res.qcx)))
         gt_cxs = hs.get_other_indexed_cxs(res.qcx)
         viz._show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle,
                                all_kpts=True, *args, **kwargs)
 
     def plot_matches(res, hs, cx, **kwargs):
+        import vizualizations as viz
         viz.show_matches_annote_res(res, hs, cx, draw_pts=False, **kwargs)
 
 
 class NNIndex(object):
     'Nearest Neighbor (FLANN) Index Class'
     def __init__(nn_index, hs, cx_list):
+        import algos
         cx2_desc  = hs.feats.cx2_desc
         # Make unique id for indexed descriptors
         feat_uid   = ''.join(hs.prefs.feat_cfg.get_uid())
@@ -363,7 +372,7 @@ class FilterConfig(ConfigBase):
         filt_cfg._valid_filters = []
 
         def addfilt(sign, filt, thresh, weight):
-            print('[addfilt] %r %r %r %r' % (sign, filt, thresh, weight))
+            printDBG('[addfilt] %r %r %r %r' % (sign, filt, thresh, weight))
             filt_cfg._nnfilter_list.append(filt)
             filt_cfg._valid_filters.append((sign, filt))
             filt_cfg[filt + '_thresh'] = thresh
@@ -448,7 +457,7 @@ class SpatialVerifyConfig(ConfigBase):
         super(SpatialVerifyConfig, sv_cfg).__init__(name='sv_cfg')
         sv_cfg.scale_thresh_low = .5
         sv_cfg.scale_thresh_high = 2
-        sv_cfg.xy_thresh = .002
+        sv_cfg.xy_thresh = .01
         sv_cfg.nShortlist = 1000
         sv_cfg.prescore_method = 'csum'
         sv_cfg.use_chip_extent = False
@@ -517,28 +526,32 @@ class AggregateConfig(ConfigBase):
 
 
 class QueryConfig(ConfigBase):
-    def __init__(query_cfg, hs, **kwargs):
+    def __init__(query_cfg, hs=None, **kwargs):
         super(QueryConfig, query_cfg).__init__(name='query_cfg')
         query_cfg.nn_cfg    = NNConfig(**kwargs)
         query_cfg.filt_cfg  = FilterConfig(**kwargs)
         query_cfg.sv_cfg    = SpatialVerifyConfig(**kwargs)
         query_cfg.agg_cfg   = AggregateConfig(**kwargs)
-        query_cfg._feat_cfg = hs.prefs.feat_cfg  # Queries depend on features
+        if hs is not None:
+            query_cfg._feat_cfg = hs.prefs.feat_cfg  # Queries depend on features
+        else:
+            query_cfg._feat_cfg = None  # creating without hs delays crash
         query_cfg.use_cache = False
         query_cfg.unload_data()
-        query_cfg.update_cfg(**kwargs)
+        if hs is not None:
+            query_cfg.update_cfg(**kwargs)
 
     def unload_data(query_cfg):
         # Data TODO: Separate this
-        print('[query_cfg] unload_data()')
+        printDBG('[query_cfg] unload_data()')
         query_cfg._qcxs = []
-        print('[query_cfg] unload_data(1)')
+        printDBG('[query_cfg] unload_data(1)')
         query_cfg._dcxs = []
-        print('[query_cfg] unload_data(2)')
+        printDBG('[query_cfg] unload_data(2)')
         query_cfg._data_index  = None  # current index
-        print('[query_cfg] unload_data(3)')
+        printDBG('[query_cfg] unload_data(3)')
         query_cfg._dcxs2_index = {}  # cached indexes
-        print('[query_cfg] unload_data(success)')
+        printDBG('[query_cfg] unload_data(success)')
 
     def update_cfg(query_cfg, **kwargs):
         query_cfg._feat_cfg.update(**kwargs)
@@ -551,6 +564,8 @@ class QueryConfig(ConfigBase):
         query_cfg.filt_cfg.make_feasible(query_cfg)
 
     def get_uid(query_cfg, *args, **kwargs):
+        if query_cfg._feat_cfg is None:
+            raise Exception('Chip config is required')
         dcxs_ = repr(tuple(query_cfg._dcxs))
         uids = []
         if not 'noNN' in args:
@@ -576,9 +591,10 @@ class FeatureConfig(ConfigBase):
         feat_cfg.whiten = False
         feat_cfg.scale_min = 30  # 0    # 30
         feat_cfg.scale_max = 80  # 9001 # 80
-        feat_cfg._chip_cfg = hs.prefs.chip_cfg  # Features depend on chips
-        if feat_cfg._chip_cfg is None:
-            raise Exception('Chip config is required')
+        if hs is not None:
+            feat_cfg._chip_cfg = hs.prefs.chip_cfg  # Features depend on chips
+        else:
+            feat_cfg._chip_cfg = None  # creating without hs delays crash
         feat_cfg.update(**kwargs)
 
     def get_dict_args(feat_cfg):
@@ -588,6 +604,8 @@ class FeatureConfig(ConfigBase):
         return dict_args
 
     def get_uid(feat_cfg):
+        if feat_cfg._chip_cfg is None:
+            raise Exception('Chip config is required')
         feat_uids = ['_FEAT(']
         feat_uids += feat_cfg.feat_type
         feat_uids += [',white'] * feat_cfg.whiten
@@ -715,8 +733,9 @@ def default_feat_cfg(hs, **kwargs):
 def default_vsmany_cfg(hs, **kwargs):
     kwargs['query_type'] = 'vsmany'
     kwargs_set = __dict_default_func(kwargs)
-    kwargs_set('lnbnn_weight', .001)
-    kwargs_set('K', 2)
+    kwargs_set('lnbnn_weight', .01)
+    kwargs_set('xy_thresh', .01)
+    kwargs_set('K', 4)
     kwargs_set('Knorm', 1)
     query_cfg = QueryConfig(hs, **kwargs)
     return query_cfg

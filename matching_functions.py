@@ -18,7 +18,7 @@ print = __builtin__.print
 print_ = sys.stdout.write
 
 
-DEBUG_MF = True
+DEBUG_MF = False
 if DEBUG_MF:
     def printDBG(msg):
         print('[MF.DBG]' + msg)

@@ -80,7 +80,6 @@ def query_database(hs, qcx, query_cfg=None, **kwargs):
     print('[mc3] query database')
     print('====================')
     dcxs = hs.get_indexed_sample()
-    print(dcxs)
     return query_dcxs(hs, qcx, dcxs, query_cfg, **kwargs)
 
 

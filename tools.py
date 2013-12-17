@@ -19,6 +19,10 @@ VALID_STRING_TYPES = set((types.StringType,))
 #VALID_BOOLEAN_TYPES = set((types.BooleanType,))
 
 
+def printDBG(msg):
+    pass
+
+
 def index_of(item, array):
     'index of [item] in [array]'
     return np.where(array == item)[0][0]
@@ -49,8 +53,27 @@ def debug_exception(func):
     return ex_wrapper
 
 
+def assert_int(var, lbl='var'):
+    try:
+        assert is_int(var), 'type(%s)=%r =? INT' % (lbl, gettype(var))
+    except AssertionError:
+        print('[tools] VALID_INT_TYPES: %r' % VALID_INT_TYPES)
+        raise
+
+
+def gettype(var):
+    'Gets types accounting for numpy'
+    return var.dtype.type if isinstance(var, np.ndarray) else type(var)
+
+
+def istype(var, valid_types):
+    'Checks for types accounting for numpy'
+    return gettype(var) in valid_types
+
+
 def is_int(var):
-    return type(var) in VALID_INT_TYPES
+    printDBG('Checking type: type(var) = %r ' % gettype(var))
+    return istype(var, VALID_INT_TYPES)
 
 
 def is_float(var):

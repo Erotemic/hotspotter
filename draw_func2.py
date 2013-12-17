@@ -748,7 +748,7 @@ def figure(fignum=None,
     # Ensure my customized settings
     customize_figure(fig, doclf)
     # Convert plotnum to tuple format
-    if helpers.is_int(plotnum):
+    if tools.is_int(plotnum):
         nr = plotnum // 100
         nc = plotnum // 10 - (nr * 10)
         px = plotnum - (nr * 100) - (nc * 10)

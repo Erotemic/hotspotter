@@ -289,7 +289,7 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
             return
         #print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
         x, y = event.xdata, event.ydata
-        # Find nearest neighbor
+        # Find ROI center nearest to the clicked point
         dist = (centers.T[0] - x) ** 2 + (centers.T[1] - y) ** 2
         cx = cx_list[dist.argsort()[0]]
         cx_clicked_func(cx)
@@ -299,6 +299,7 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
         fig.canvas.mpl_disconnect(button_press_cbid)
     if interact:
         fig.button_press_cbid = fig.canvas.mpl_connect('button_press_event', _on_click)
+        fig.button_press_callback = _on_click
 
 
 #def start_image_interaction(hs, gx, cx_clicked_func):

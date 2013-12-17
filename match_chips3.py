@@ -95,7 +95,7 @@ def make_nn_index(hs, sx2_cx=None):
 
 def unify_cfgs(cfg_list):
     # Super HACK so all query configs share the same nearest neighbor indexes
-    GLOBAL_dcxs2_index = cfg_list[0].dcxs2_index
+    GLOBAL_dcxs2_index = cfg_list[0]._dcxs2_index
     for query_cfg in cfg_list:
         query_cfg._dcxs2_index = GLOBAL_dcxs2_index
 

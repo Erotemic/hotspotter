@@ -2,25 +2,16 @@ from __future__ import division, print_function
 import itertools
 import textwrap
 import match_chips3 as mc3
-import matching_functions as mf
 import DataStructures as ds
 import dev
-import voting_rules2 as vr2
 import draw_func2 as df2
 import fileio as io
-import chip_compute2 as cc2
-import feature_compute2 as fc2
-import load_data2 as ld2
-import HotSpotter
-import algos
-import re
-import Parallelize as parallel
 #from match_chips3 import *
 import helpers as helpers
 import numpy as np
 import sys
 from os.path import join
-from collections import OrderedDict
+import _test_configurations as _testcfgs
 
 # What are good ways we can divide up FLANN indexes instead of having one
 # monolithic index? Divide up in terms of properties of the database chips
@@ -43,24 +34,25 @@ from collections import OrderedDict
 #parallel.print_off()
 #mc3.print_off()
 
+
 def get_valid_testcfg_names():
-    import _test_configurations as _testcfgs
     testcfg_keys = vars(_testcfgs).keys()
     testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
     valid_cfg_names = helpers.indent('\n'.join(testcfg_locals), '  * ')
     return valid_cfg_names
 
+
 def get_vary_dicts(test_cfg_name_list):
-    import _test_configurations as _testcfgs
     vary_dicts = []
     for cfg_name in test_cfg_name_list:
-        evalstr = '_testcfgs.'+cfg_name
+        evalstr = '_testcfgs.' + cfg_name
         test_cfg = eval(evalstr)
         vary_dicts.append(test_cfg)
     if len(vary_dicts) == 0:
         valid_cfg_names = get_valid_testcfg_names()
-        raise Exception('Choose a valid testcfg:\n'+valid_cfg_names)
+        raise Exception('Choose a valid testcfg:\n' + valid_cfg_names)
     return vary_dicts
+
 
 #---------
 # Helpers
@@ -74,6 +66,7 @@ def print_test_results(test_results):
     #print('[harn] row_lbls=\n%s' % str(row_lbls))
     #print('[harn] col_lbls=\n%s' % str('\n  '.join(col_lbls)))
     print('[harn] lowest_gt_ranks(NN,FILT,SV)=\n%s' % str(mat_vals))
+
 
 #---------------
 # Display Test Results
@@ -90,26 +83,29 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
     io_kwargs = dict(dpath=cache_dir, fname='test_results', uid=test_uid, ext='.cPkl')
     # High level caching
     qonx2_bestranks = []
-    nChips = hs.num_cx
-    nNames = len(hs.tables.nx2_name) - 2
+    #nChips = hs.num_cx
+    #nNames = len(hs.tables.nx2_name) - 2
     nQuery = len(qon_list)
     #NMultiNames =
-    nPrevQ = nQuery*cfgx
+    nPrevQ = nQuery * cfgx
     qonx2_reslist = []
     if  not hs.args.nocache_query and (not force_load):
         test_results = io.smart_load(**io_kwargs)
-        if test_results is None: pass
-        elif len(test_results) != 1: print('recaching test_results')
-        elif not test_results is None: return test_results, [[{0:None}]]*nQuery
+        if test_results is None:
+            pass
+        elif len(test_results) != 1:
+            print('recaching test_results')
+        elif not test_results is None:
+            return test_results, [[{0: None}]] * nQuery
     for qonx, (qcx, ocids, notes) in enumerate(qon_list):
         print(textwrap.dedent('''
         [harn]----------------
         [harn] TEST %d/%d
-        [harn]----------------''' % (qonx+nPrevQ+1, nQuery*nCfg)))
-        gt_cxs = hs.get_other_indexed(qcx)
-        title = 'q'+ hs.cxstr(qcx) + ' - ' + notes
+        [harn]----------------''' % (qonx + nPrevQ + 1, nQuery * nCfg)))
+        gt_cxs = hs.get_other_indexed_cxs(qcx)
+        #title = 'q' + hs.cxstr(qcx) + ' - ' + notes
         #print('[harn] title=%r' % (title,))
-        #print('[harn] gt_'+hs.cxstr(gt_cxs))
+        #print('[harn] gt_' + hs.cxstr(gt_cxs))
         res_list = mc3.execute_query_safe(hs, query_cfg, [qcx])
         bestranks = []
         algos = []
@@ -136,6 +132,7 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
     helpers.ensuredir('results')
     io.smart_save(test_results, **io_kwargs)
     return test_results, qonx2_reslist
+
 
 #-----------
 # Test Each configuration
@@ -164,10 +161,10 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
         print(textwrap.dedent('''
         [harn]---------------')
         [harn] TEST_CFG %d/%d'
-        [harn]---------------'''  % (cfgx+1, nCfg)))
+        [harn]---------------'''  % (cfgx + 1, nCfg)))
         force_load = cfgx in hs.args.c
-        (mat_vals,), qonx2_reslist =\
-                get_test_results(hs, qon_list, test_cfg, cfgx, nCfg, force_load)
+        (mat_vals, ), qonx2_reslist = get_test_results(hs, qon_list, test_cfg,
+                                                       cfgx, nCfg, force_load)
         mat_list.append(mat_vals)
         for qonx, reslist in enumerate(qonx2_reslist):
             assert len(reslist) == 1
@@ -185,7 +182,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     # Label the rank matrix:
     _colxs = np.arange(nCfg)
     lbld_mat = np.vstack([_colxs, rank_mat])
-    _rowxs = np.arange(nQuery+1).reshape(nQuery+1,1)-1
+    _rowxs = np.arange(nQuery + 1).reshape(nQuery + 1, 1) - 1
     lbld_mat = np.hstack([_rowxs, lbld_mat])
     # Build row labels
     qonx2_lbl = []
@@ -228,10 +225,10 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
             bestCFG_X = np.where(ranks == min_rank)[0]
             qonx2_min_rank.append(min_rank)
             qonx2_argmin_rank.append(bestCFG_X)
-            print('[row_score] %3d) %s' % (qonx,qonx2_lbl[qonx]) )
+            print('[row_score] %3d) %s' % (qonx, qonx2_lbl[qonx]))
             print('[row_score] best_rank = %d ' % min_rank)
             print('[row_score] minimizing_configs = %s ' %
-                indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    '))
+                  indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    '))
             if ranks.max() > 0:
                 new_hard_qonx_list += [qonx]
         print('--- hard qon_list (w.r.t these configs) ---')
@@ -240,29 +237,30 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
             # New list is in cid format instead of cx format
             # because you should be copying and pasting it
             qcx, ocxs, notes = qon_list[qonx]
-            notes += ' ranks = '+str(rank_mat[qonx])
+            notes += ' ranks = ' + str(rank_mat[qonx])
             qcid = hs.tables.cx2_cid[qcx]
             ocids = hs.tables.cx2_cid[ocxs]
             new_hard_qon_list += [(qcid, list(ocids), notes)]
         print('\n'.join(map(repr, new_hard_qon_list)))
+
     #------------
     def rankscore_str(thresh, nLess, total):
         #helper to print rank scores of configs
-        percent = 100* nLess / total
-        return '#ranks < %d = %d/%d = (%.1f%%) (err=%d)' % (thresh, nLess, total, percent, (total-nLess))
+        percent = 100 * nLess / total
+        return '#ranks < %d = %d/%d = (%.1f%%) (err=%d)' % (thresh, nLess, total, percent, (total - nLess))
     print('')
     print('[harn]-------------')
     print('[harn] Scores per config')
     print('[harn]-------------')
     X_list = [1, 5]
     # Build a dictionary mapping X (as in #ranks < X) to a list of cfg scores
-    nLessX_dict = {int(X):np.zeros(nCfg) for X in iter(X_list)}
+    nLessX_dict = {int(X): np.zeros(nCfg) for X in iter(X_list)}
     for cfgx in xrange(nCfg):
-        ranks = rank_mat[:,cfgx]
-        print('[col_score] %d) %s' % (cfgx, cfgx2_lbl[cfgx]) )
+        ranks = rank_mat[:, cfgx]
+        print('[col_score] %d) %s' % (cfgx, cfgx2_lbl[cfgx]))
         for X in iter(X_list):
             nLessX_ = sum(np.bitwise_and(ranks < X, ranks >= 0))
-            print('[col_score] '+rankscore_str(X, nLessX_, nQuery))
+            print('[col_score] ' + rankscore_str(X, nLessX_, nQuery))
             nLessX_dict[int(X)][cfgx] = nLessX_
 
     LATEX_SUMMARY = True
@@ -271,7 +269,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
         # Create configuration latex table
         criteria_lbls = ['#ranks < %d' % X for X in X_list]
         db_name = hs.db_name(True)
-        cfg_score_title = db_name+' rank scores'
+        cfg_score_title = db_name + ' rank scores'
         cfgscores = np.array([nLessX_dict[int(X)] for X in X_list]).T
         import latex_formater as latex
 
@@ -310,9 +308,9 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     print('\n'.join(best_rankscore_summary))
     # Draw results
     print(hs.args.r)
-    for r,c in itertools.product(hs.args.r, hs.args.c):
+    for r, c in itertools.product(hs.args.r, hs.args.c):
         #print('viewing (r,c)=(%r,%r)' % (r,c))
-        res = rc2_res[r,c]
+        res = rc2_res[r, c]
         #res.printme()
         res.show_topN(hs, fignum=fnum)
         fnum += 1
@@ -325,7 +323,8 @@ if __name__ == '__main__':
     print('[harn]-----------')
     print('[harn] main()')
     main_locals = dev.dev_main()
-    exec(helpers.execstr_dict(main_locals, 'main_locals'))
+    hs = main_locals['hs']
+    qon_list = main_locals['qon_list']
     #test_cfg_name_list = ['vsone_1']
     #test_cfg_name_list = ['vsmany_3456']
     test_cfg_name_list = ['vsmany_srule']

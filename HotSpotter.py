@@ -18,7 +18,6 @@ import fileio as io
 import helpers
 import load_data2 as ld2
 import match_chips3 as mc3
-import params
 import tools
 from Printable import DynStruct
 from Preferences import Pref
@@ -184,10 +183,14 @@ class HotSpotter(DynStruct):
         else:
             print('[hs] * given: indexed chips')
 
+        tools.assert_int(test_samp, 'test_samp')
+        tools.assert_int(train_samp, 'train_samp')
+        tools.assert_int(indx_samp, 'indx_samp')
+
         # Ensure samples are sorted
-        test_samp = sorted(test_samp)
+        test_samp  = sorted(test_samp)
         train_samp = sorted(train_samp)
-        indx_samp = sorted(indx_samp)
+        indx_samp  = sorted(indx_samp)
 
         # Debugging and Info
         DEBUG_SET_SAMPLE = False
@@ -260,13 +263,13 @@ class HotSpotter(DynStruct):
         hs.delete_cxdata(cx)
         hs.tables.cx2_roi[cx] = new_roi
         hs.needs_save = True
-        self.invalidated_results = True
+        hs.invalidated_results = True
 
     def change_theta(hs, cx, new_theta):
         hs.delete_cxdata(cx)
         hs.tables.cx2_theta[cx] = new_theta
         hs.needs_save = True
-        self.invalidated_results = True
+        hs.invalidated_results = True
 
     def change_name(hs, cx, new_name):
         new_nx_ = np.where(hs.tables.nx2_name == new_name)[0]
@@ -323,7 +326,7 @@ class HotSpotter(DynStruct):
             prop_dict[key].append('')
         hs.num_cx += 1
         cx = len(hs.tables.cx2_cid) - 1
-        hs.update_samples(hs)
+        hs.update_samples()
         hs.needs_save = True
         hs.invalidated_results = True
         return cx
@@ -360,7 +363,7 @@ class HotSpotter(DynStruct):
         print('[hs.add_imgs] Added %d new images.' % nIndexed)
         # Append the new gnames to the hotspotter table
         hs.tables.gx2_gname = np.array(gx2_gname + new_gnames)
-        hs.update_samples(hs)
+        hs.update_samples()
         hs.needs_save = True
         return nNewImages
 
@@ -484,6 +487,7 @@ class HotSpotter(DynStruct):
 
     def cx2_gx(hs, cx):
         gx = hs.tables.cx2_gx[cx]
+        return gx
 
     def cx2_roi(hs, cx):
         roi = hs.tables.cx2_roi[cx]

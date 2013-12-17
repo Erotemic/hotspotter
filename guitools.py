@@ -71,6 +71,11 @@ def select_roi():
     try:
         sys.stdout.flush()
         fig = df2.gcf()
+        # Disconnect any other button_press events
+        button_press_cbid = fig.__dict__.get('button_press_cbid', None)
+        button_press_callback = fig.__dict__.get('button_press_callback', None)
+        if button_press_cbid is not None:
+            fig.canvas.mpl_disconnect(button_press_cbid)
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=mplDeprecation)
             pts = fig.ginput(2)
@@ -82,6 +87,10 @@ def select_roi():
         yM = max(y1, y2)
         xywh = map(int, map(round, (xm, ym, xM - xm, yM - ym)))
         roi = np.array(xywh, dtype=np.int32)
+        # Reconnect the old button press events
+        if button_press_cbid is not None:
+            fig.button_press_cbid = fig.canvas.mpl_connect('button_press_event', button_press_callback)
+            fig.button_press_callback = button_press_callback
         print('[*guitools] roi = %r ' % (roi,))
         return roi
     except Exception as ex:
@@ -274,7 +283,7 @@ def run_main_loop(app, is_root=True, backend=None):
         print('[*guitools] using roots main loop')
 
 
-def ping_python_interpreter(frequency=2000):
+def ping_python_interpreter(frequency=4200):
     'Create a QTimer which lets the python intepreter run every so often'
     timer = Qt.QTimer()
     timer.timeout.connect(lambda: None)

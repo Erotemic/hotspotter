@@ -18,6 +18,15 @@ print = __builtin__.print
 print_ = sys.stdout.write
 
 
+DEBUG_MF = True
+if DEBUG_MF:
+    def printDBG(msg):
+        print('[MF.DBG]' + msg)
+else:
+    def printDBG(msg):
+        pass
+
+
 def print_on():
     global print, print_
     print =  __builtin__.print
@@ -41,9 +50,12 @@ def rrr():
     imp.reload(sys.modules[__name__])
 
 
-def printDBG(msg):
+def mark_progress_silent():
     pass
-    #print('[DBG] ' + msg)
+
+
+def mark_progress_quiet():
+    print_('.')
 
 
 #============================
@@ -54,30 +66,33 @@ def nearest_neighbors(hs, qcxs, query_cfg):
     data_index = query_cfg._data_index
     flann = data_index.flann
     nn_cfg  = query_cfg.nn_cfg
-    print(''.join(['[mf] Step 1) Assign nearest neighbors: '] + nn_cfg.get_uid()))
+    print('[mf] Step 1) Assign nearest neighbors: ' + ''.join(nn_cfg.get_uid()))
     K = nn_cfg.K
+    printDBG('K = %r' % K)
     Knorm = nn_cfg.Knorm
+    printDBG('Knorm = %r' % Knorm)
     checks = nn_cfg.checks
+    printDBG('checks = %r' % checks)
     cx2_desc = hs.feats.cx2_desc
 
     def nnfunc(qfx2_desc):
         #print(qfx2_desc.shape)
         #print(data_index)
+        printDBG('Executing nnsearch K+Knorm=%r; checks=%r' % (K + Knorm, checks))
+        printDBG('flann = %r' % flann)
         return flann.nn_index(qfx2_desc, K + Knorm, checks=checks)
     #qcx2_nns = {qcx:func(qcx) for qcx in qcxs}
     qcx2_nns = {}
     nNN = 0
     nDesc = 0
 
-    def mark_progress():
-        pass
-    if len(qcxs) > MARK_AFTER:
-        def mark_progress():  # NOQA
-            print_('.')
+    mark_progress = mark_progress_quiet if len(qcxs) > MARK_AFTER else mark_progress_silent
     for qcx in qcxs:
         printDBG('[mf] Finding nearest neighbors of qcx=%r' % (qcx,))
         mark_progress()
         qfx2_desc = cx2_desc[qcx]
+        printDBG('[mf] qfx2_desc.shape nearest neighbors of qcx=%r' % (qcx,))
+        helpers.printvar2('qfx2_desc', '.shape')
         (qfx2_dx, qfx2_dist) = nnfunc(qfx2_desc)
         qcx2_nns[qcx] = (qfx2_dx, qfx2_dist)
         nNN += qfx2_dx.size
@@ -147,11 +162,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, query_cfg):
     filt2_tw = filt_cfg._filt2_tw
     print('[mf] Step 3) Filter neighbors')
 
-    def mark_progress():
-        pass
-    if len(qcx2_nns) > MARK_AFTER:
-        def mark_progress():  # NOQA
-            print_('.')
+    mark_progress = mark_progress_quiet if len(qcx2_nns) > MARK_AFTER else mark_progress_silent
     for qcx in qcx2_nns.iterkeys():
         mark_progress()
         printDBG('[mf] --------------')
@@ -225,11 +236,7 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, query_cfg):
         cx2_fm, cx2_fs, cx2_fk = new_fmfsfk(hs)
 
     # Iterate over chips with nearest neighbors
-    def mark_progress():
-        pass
-    if len(qcx2_nns) > MARK_AFTER:
-        def mark_progress():  # NOQA
-            print_('.')
+    mark_progress = mark_progress_quiet if len(qcx2_nns) > MARK_AFTER else mark_progress_silent
     for qcx in qcx2_nns.iterkeys():
         mark_progress()
         #print('[mf] * scoring q' + hs.cxstr(qcx))

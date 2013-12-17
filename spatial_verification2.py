@@ -103,7 +103,9 @@ def homography_inliers(kpts1, kpts2, fm,
         #return None
     # Not enough data
     # Estimate affine correspondence convert to SV_DTYPE
+    # matching feature indexes
     fx1_m, fx2_m = fm[:, 0], fm[:, 1]
+    # x, y, a, c, d : postion, shape
     x1_m, y1_m, acd1_m = split_kpts(kpts1[fx1_m, :].T)
     x2_m, y2_m, acd2_m = split_kpts(kpts2[fx2_m, :].T)
     # Get diagonal length
@@ -133,7 +135,7 @@ def homography_inliers(kpts1, kpts2, fm,
     H_prime = compute_homog(x1_mn, y1_mn, x2_mn, y2_mn)
     try:
         # Computes ax = b # x = linalg.solve(a, b)
-        H = linalg.solve(T2, H_prime).dot(T1) # Unnormalize
+        H = linalg.solve(T1, H_prime).dot(T2) # Unnormalize
     except linalg.LinAlgError as ex:
         printWARN('[sv2] Warning 285 '+repr(ex), )
         #raise
@@ -372,14 +374,39 @@ def test():
                                     diaglen_sqrd=diaglen_sqrd,
                                     min_num_inliers=4)
 
-    # How does Aff map rchip1 to rchip2?
+    print(fm)
+    print('Homography inliers')
+    print(inliers)
+    print('H')
+    print(H)
+    print(rchip1.shape, rchip2.shape)
+    homography_transformed = cv2.warpPerspective(rchip1, H, rchip2.shape[0:2])
+    homography_transformed = cv2.resize(homography_transformed, (int(rchip2.shape[1]/4), int(rchip2.shape[0]/4)))
+    
+    # How does Aff map rchip1 to rchip2? 
+
     Aff, aff_inliers = homography_inliers(kpts1, kpts2, fm,
                                     xy_thresh,
                                     max_scale,
                                     min_scale,
                                     diaglen_sqrd=diaglen_sqrd,
                                     min_num_inliers=4, just_affine=True)
+    print('Affine inliers')
+    print(aff_inliers)
+    print('Aff')
+    print(Aff[0:2,:])
+    print (kpts1.shape, kpts2.shape)
+    #print (cv2.getAffineTransform(kpts1[aff_inliers], kpts2[aff_inliers]))
+    affine_transformed = cv2.warpAffine(rchip1, Aff[0:2,:], rchip2.shape[0:2])
+    affine_transformed = cv2.resize(affine_transformed, (int(rchip2.shape[1]/4), int(rchip2.shape[0]/4)))
 
+    original_resized = cv2.resize(rchip1, (int(rchip1.shape[1]/4), int(rchip1.shape[0]/4)))
+    dest_resized = cv2.resize(rchip2, (int(rchip2.shape[1]/4), int(rchip2.shape[0]/4)))
+    cv2.imshow('Source', original_resized)
+    cv2.imshow('Destination', dest_resized)
+    cv2.imshow('Homography', homography_transformed)
+    cv2.imshow('Affine', affine_transformed)
+    df2.imshow(original_resized, title='Source')
     # Draw original matches
     df2.show_matches2(*args_+[fm], fs=None,
                       all_kpts=False, draw_lines=True,

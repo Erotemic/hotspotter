@@ -355,38 +355,48 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
         fig = df2.figure(fignum=fnum)
         df2.cla()
         ell_args = {'ell_alpha': .4, 'ell_linewidth': 1.8, 'rect': False}
+        # Draw chip + keypoints
         show_chip(hs, cx=cx, rchip=rchip, kpts=kpts, plotnum=(2, 1, 1),
                   fignum=fnum, ell_args=ell_args)
-        #df2.imshow(rchip, plotnum=(2, 1, 1), fignum=fnum)
-        #df2.draw_kpts2(kpts, ell_color=df2.ORANGE, **ell_args)
         # Draw highlighted point
         df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.BLUE, **ell_args)
-        ax = df2.gca()
-        #ax.set_title('%s name=%r gname=%r' % (cxstr, name, gname))
 
+        # Feature strings
         xy_str = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
         acd_str = '[(%3.1f,  0.00),\n' % (kp[2],)
         acd_str += ' (%3.1f, %3.1f)]' % (kp[3], kp[4],)
+
         # Draw the unwarped selected feature
         extract_patch.draw_keypoint_patch(rchip, kp, sift, plotnum=(2, 3, 4))
         ax = df2.gca()
+        ax._hs_viewtype = 'unwarped'
         ax.set_title('affine feature inv(A) =')
         ax.set_xlabel(acd_str)
 
         # Draw the warped selected feature
         extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, plotnum=(2, 3, 5))
         ax = df2.gca()
+        ax._hs_viewtype = 'warped'
         ax.set_title('warped feature')
         ax.set_xlabel('fx=%r scale=%.1f\n%s' % (fx, scale, xy_str))
 
         df2.figure(fignum=fnum, plotnum=(2, 3, 6))
+        ax = df2.gca()
         df2.draw_sift_signature(sift, 'sift gradient orientation histogram')
+        ax._hs_viewtype = 'histogram'
 
         fig.canvas.draw()
 
     def _on_click(event):
-        if event.xdata is None:
-            return
+        #print('\n===========')
+        #print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
+        if event.xdata is None or event.inaxes is None:
+            return  # The click is not in any axis
+        #print('---')
+        hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', None)
+        #print('hs_viewtype=%r' % hs_viewtype)
+        if hs_viewtype != 'chip':
+            return  # The click is not in the chip axis
         x, y = event.xdata, event.ydata
         dist = (kpts.T[0] - x) ** 2 + (kpts.T[1] - y) ** 2
         fx = dist.argmin()
@@ -425,6 +435,7 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
     fnum = kwargs.pop('fnum', fnum)
     fnum = kwargs.pop('fignum', fnum)
     fig, ax = df2.imshow(rchip, title=title_str, fignum=fnum, **kwargs)
+    ax._hs_viewtype = 'chip'  # Customize axis
     #if not res is None:
     if not draw_kpts:
         return

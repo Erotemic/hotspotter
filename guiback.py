@@ -58,7 +58,7 @@ class MainWindowBackend(QtCore.QObject):
     # Draw Functions
     #------------------------
     def show_splash(self, fnum=1, view='Nice', **kwargs):
-        fig = df2.figure(fignum=fnum)
+        fig = df2.figure(fignum=fnum, doclf=True)
         fig.clf()
         viz.show_splash(fnum=fnum)
         df2.set_figtitle('%s View' % view)
@@ -66,7 +66,7 @@ class MainWindowBackend(QtCore.QObject):
             df2.draw()
 
     def show_image(self, gx, sel_cxs=[], **kwargs):
-        fig = df2.figure(fignum=1)
+        fig = df2.figure(fignum=1, doclf=True)
         fig.clf()
         cx_clicked_func = lambda cx: self.select_gx(gx, cx)
         viz.show_image(self.hs, gx, sel_cxs, cx_clicked_func,
@@ -75,7 +75,7 @@ class MainWindowBackend(QtCore.QObject):
             df2.draw()
 
     def show_chip(self, cx, **kwargs):
-        fig = df2.figure(fignum=2)
+        fig = df2.figure(fignum=2, doclf=True)
         fig.clf()
         INTERACTIVE_CHIPS = True  # This should always be True
         if INTERACTIVE_CHIPS:
@@ -88,7 +88,7 @@ class MainWindowBackend(QtCore.QObject):
 
     def show_query(self, res, **kwargs):
         print('[back*] show_query()')
-        fig = df2.figure(fignum=3)
+        fig = df2.figure(fignum=3, doclf=True)
         fig.clf()
         res.show_top(self.hs, fignum=3, figtitle='Query View ')
         if kwargs.get('dodraw', True) or DISABLE_NODRAW:

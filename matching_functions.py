@@ -93,7 +93,7 @@ def nearest_neighbors(hs, qcxs, query_cfg):
         mark_progress()
         qfx2_desc = cx2_desc[qcx]
         printDBG('[mf] qfx2_desc.shape nearest neighbors of qcx=%r' % (qcx,))
-        helpers.printvar2('qfx2_desc', '.shape')
+        #helpers.printvar2('qfx2_desc', '.shape')
         (qfx2_dx, qfx2_dist) = nnfunc(qfx2_desc)
         qcx2_nns[qcx] = (qfx2_dx, qfx2_dist)
         nNN += qfx2_dx.size

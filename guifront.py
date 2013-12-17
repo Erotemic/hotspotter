@@ -99,6 +99,7 @@ def connect_experimental_signals(win):
 
 class MainWindowFrontend(QtGui.QMainWindow):
     printSignal     = pyqtSignal(str)
+    quitSignal      = pyqtSignal()
     selectGxSignal  = pyqtSignal(int)
     selectCidSignal = pyqtSignal(int)
     changeCidSignal = pyqtSignal(int, str, str)
@@ -113,12 +114,19 @@ class MainWindowFrontend(QtGui.QMainWindow):
             self.plotWidget = init_plotWidget(self)
         self.connect_signals()
 
+    @pyqtSlot(name='closeEvent')
+    def closeEvent(self, event):
+        self.printSignal.emit('[*front] closeEvent')
+        event.accept()
+        self.quitSignal.emit()
+
     def connect_signals(self):
         # Connect signals to slots
         backend = self.backend
         ui = self.ui
         # Frontend Signals
         self.printSignal.connect(backend.backend_print)
+        self.quitSignal.connect(backend.quit)
         self.selectGxSignal.connect(backend.select_gx)
         self.selectCidSignal.connect(backend.select_cid)
         self.changeCidSignal.connect(backend.change_chip_property)

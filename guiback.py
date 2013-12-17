@@ -24,6 +24,7 @@ def rrr():
 
 DISABLE_NODRAW = True
 
+
 class MainWindowBackend(QtCore.QObject):
     'Sends and recieves signals to and from the frontend'
     #--------------------------------------------------------------------------
@@ -481,32 +482,34 @@ class MainWindowBackend(QtCore.QObject):
         elif select_mode == 'unannotated':
             msg = self.select_next_unannotated()
         else:
-            raise Exception('uknown=%r' % unannotated)
+            raise Exception('uknown=%r' % select_mode)
         if msg is not None:
             self.user_info(msg)
 
     def select_next_unannotated(self):
-        msg = 'Error'
+        msg = 'err'
         if self.selection is None or self.selection['type_'] == 'gx':
-            valid_gxs = hs.get_valid_gxs()
+            valid_gxs = self.hs.get_valid_gxs()
             has_chips = lambda gx: len(self.hs.gx2_cxs(gx)) > 0
             hascxs_list = map(has_chips, iter(valid_gxs))
             try:
                 gx = valid_gxs[hascxs_list.index(False)]
                 self.select_gx(gx)
+                return
             except ValueError:
-                return 'All images have detections. Excellent!'
-        if msg is not None and self.selection['type_'] == 'cx':
-            valid_cxs = hs.get_valid_cxs()
+                msg = 'All images have detections. Excellent! '
+        if self.selection is None or msg is not None and self.selection['type_'] == 'cx':
+            valid_cxs = self.hs.get_valid_cxs()
             has_name = lambda cx: self.hs.cx2_name(cx) != '____'
-            is_named = np.array(map(has_name, iter(valid_cxs)))
+            is_named = map(has_name, iter(valid_cxs))
             try:
                 cx = valid_cxs[is_named.index(False)]
-                cid = hs.tables.cx2_cid[cx]
+                cid = self.hs.tables.cx2_cid[cx]
                 self.select_cid(cid)
                 return
             except ValueError:
-                return 'All chips are named. Awesome!'
+                msg = 'All chips are named. Awesome! '
+        return msg
 
     def select_next_in_order(self):
         if self.selection is None:

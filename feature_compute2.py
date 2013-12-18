@@ -200,7 +200,7 @@ def load_features(hs, cx_list=None, **kwargs):
     else:
         kpts_list, desc_list = _load_features_individualy(hs, cx_list)
     # Extend the datastructure if needed
-    list_size = max(cx_list)
+    list_size = max(cx_list) + 1
     helpers.ensure_list_size(hs.feats.cx2_kpts, list_size)
     helpers.ensure_list_size(hs.feats.cx2_desc, list_size)
     # Copy the values into the ChipPaths object

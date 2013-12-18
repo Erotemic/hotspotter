@@ -1427,14 +1427,21 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
 def disconnect_callback(fig, callback_type):
     #print('[df2] disconnect %r callback' % callback_type)
     cbid_type = callback_type + '_cbid'
+    cbfn_type = callback_type + '_func'
     cbid = fig.__dict__.get(cbid_type, None)
+    cbfn = fig.__dict__.get(cbfn_type, None)
     if cbid is not None:
         fig.canvas.mpl_disconnect(cbid)
+    else:
+        cbfn = None
     fig.__dict__[cbid_type] = None
+    return cbid, cbfn
 
 
 def connect_callback(fig, callback_type, callback_fn):
     #print('[df2] register %r callback' % callback_type)
+    if callback_fn is None:
+        return
     cbid_type = callback_type + '_cbid'
     cbfn_type = callback_type + '_func'
     fig.__dict__[cbid_type] = fig.canvas.mpl_connect(callback_type, callback_fn)

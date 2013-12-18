@@ -4,7 +4,7 @@ import sys
 from itertools import izip
 # Hotspotter
 import DataStructures as ds
-import helpers
+#import helpers
 import nn_filters  # NOQA
 import spatial_verification2 as sv2
 import voting_rules2 as vr2
@@ -58,6 +58,11 @@ def mark_progress_quiet():
     print_('.')
 
 
+class QueryException(Exception):
+    def __init__(self, msg):
+        super(QueryException, self).__init__(msg)
+
+
 #============================
 # Nearest Neighbors
 #============================
@@ -94,6 +99,8 @@ def nearest_neighbors(hs, qcxs, query_cfg):
         qfx2_desc = cx2_desc[qcx]
         #printDBG('[mf] qfx2_desc.shape nearest neighbors of qcx=%r' % (qcx,))
         #helpers.printvar2('qfx2_desc', '.shape')
+        if len(qfx2_desc) == 0:
+            raise QueryException('Query %r has no descriptors! Please delete it.' % hs.cxstr(qcx))
         (qfx2_dx, qfx2_dist) = nnfunc(qfx2_desc)
         qcx2_nns[qcx] = (qfx2_dx, qfx2_dist)
         nNN += qfx2_dx.size
@@ -141,10 +148,10 @@ def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw):
             #printDBG('[mf] * \\ qfx2_weights = %r' % helpers.printable_mystats(qfx2_weights.flatten()))
         if isinstance(thresh, (int, float)):
             qfx2_passed = sign * qfx2_weights <= sign * thresh
-            nValid  = qfx2_valid.sum()
+            #nValid  = qfx2_valid.sum()
             qfx2_valid  = np.bitwise_and(qfx2_valid, qfx2_passed)
-            nPassed = (True - qfx2_passed).sum()
-            nAdded = nValid - qfx2_valid.sum()
+            #nPassed = (True - qfx2_passed).sum()
+            #nAdded = nValid - qfx2_valid.sum()
             #print(str(sign * qfx2_weights))
             #printDBG('[mf] * \\ *thresh=%r, nFailed=%r, nFiltered=%r' % (sign * thresh, nPassed, nAdded))
         if not weight == 0:
@@ -161,8 +168,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, query_cfg):
     dx2_cx = data_index.ax2_cx
     #printDBG('[mf] unique(dx2_cx) = %r ' % (np.unique(dx2_cx),))
     filt2_tw = filt_cfg._filt2_tw
-    print('[mf] Step 3) Filter neighbors: '+''.join(filt_cfg.get_uid()))
-
+    print('[mf] Step 3) Filter neighbors: ' + ''.join(filt_cfg.get_uid()))
     mark_progress = mark_progress_quiet if len(qcx2_nns) > MARK_AFTER else mark_progress_silent
     for qcx in qcx2_nns.iterkeys():
         mark_progress()
@@ -452,9 +458,9 @@ def _fix_fmfsfk(cx2_fm, cx2_fs, cx2_fk):
 
 
 def new_fmfsfk(hs):
-    cx2_fm = [[] for _ in xrange(hs.num_cx)]
-    cx2_fs = [[] for _ in xrange(hs.num_cx)]
-    cx2_fk = [[] for _ in xrange(hs.num_cx)]
+    cx2_fm = [[] for _ in xrange(hs.get_num_chips())]
+    cx2_fs = [[] for _ in xrange(hs.get_num_chips())]
+    cx2_fk = [[] for _ in xrange(hs.get_num_chips())]
     return cx2_fm, cx2_fs, cx2_fk
 
 

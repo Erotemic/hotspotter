@@ -291,7 +291,7 @@ def load_chips(hs, cx_list=None, **kwargs):
     # COMPUTE SETUP
     #----------------
     # 1.1) Get/Update ChipConfig and ChipPaths objects
-    print('[cc2] cx_list = %r' % (cx_list,))
+    #print('[cc2] cx_list = %r' % (cx_list,))
     if hs.prefs.chip_cfg is not None:
         hs.prefs.chip_cfg.update(**kwargs)
     else:
@@ -314,8 +314,8 @@ def load_chips(hs, cx_list=None, **kwargs):
         return  # HACK
     cx_list = np.array(cx_list)  # HACK
     hs.cpaths.chip_uid = chip_uid
-    print('[cc2] Requested %d chips' % (len(cx_list)))
-    print('[cc2] cx_list = %r' % (cx_list,))
+    #print('[cc2] Requested %d chips' % (len(cx_list)))
+    #print('[cc2] cx_list = %r' % (cx_list,))
     # Get table information
     try:
         gx_list    = hs.tables.cx2_gx[cx_list]
@@ -409,7 +409,7 @@ def load_chips(hs, cx_list=None, **kwargs):
     print('[cc2] Done Precomputing chips and loading chip paths')
 
     # Extend the datastructure if needed
-    list_size = max(cx_list)
+    list_size = max(cx_list) + 1
     helpers.ensure_list_size(hs.cpaths.cx2_chip_path, list_size)
     helpers.ensure_list_size(hs.cpaths.cx2_rchip_path, list_size)
     # Copy the values into the ChipPaths object
@@ -417,6 +417,7 @@ def load_chips(hs, cx_list=None, **kwargs):
         hs.cpaths.cx2_chip_path[cx] = cfpath_list[lx]
     for lx, cx in enumerate(cx_list):
         hs.cpaths.cx2_rchip_path[cx] = rfpath_list[lx]
+    hs.load_cx2_rchip_size()  # TODO: Loading rchip size should be handled more robustly
     print('[cc2]=============================')
 
 

@@ -67,18 +67,18 @@ class MainWindowBackend(QtCore.QObject):
         df2.set_figtitle('%s View' % view)
         if kwargs.get('dodraw', True) or DISABLE_NODRAW:
             df2.draw()
-        print(r'[/back] finished show_splash()')
+        #print(r'[/back] finished show_splash()')
 
-    def show_image(self, gx, sel_cxs=[], **kwargs):
+    def show_image(self, gx, sel_cxs=[], figtitle='Image View', **kwargs):
         print(r'[\back] show_image()')
         fig = df2.figure(fignum=1, doclf=True)
         fig.clf()
         cx_clicked_func = lambda cx: self.select_gx(gx, cx)
         viz.show_image(self.hs, gx, sel_cxs, cx_clicked_func,
-                       fnum=1, figtitle='Image View')
+                       fnum=1, figtitle=figtitle)
         if kwargs.get('dodraw', True) or DISABLE_NODRAW:
             df2.draw()
-        print(r'[/back] finished show_image()')
+        #print(r'[/back] finished show_image()')
 
     def show_chip(self, cx, **kwargs):
         print(r'[\back] show_chip()')
@@ -92,7 +92,7 @@ class MainWindowBackend(QtCore.QObject):
             viz.show_chip(self.hs, cx, fnum=2, figtitle='Chip View')
         if kwargs.get('dodraw', True) or DISABLE_NODRAW:
             df2.draw()
-        print(r'[/back] finished show_chip()')
+        #print(r'[/back] finished show_chip()')
 
     def show_query(self, res, **kwargs):
         print(r'[\back] show_query()')
@@ -104,7 +104,7 @@ class MainWindowBackend(QtCore.QObject):
             res.show_top(self.hs, fignum=3, figtitle='Query View ')
         if kwargs.get('dodraw', True) or DISABLE_NODRAW:
             df2.draw()
-        print(r'[/back] finished show_query()')
+        #print(r'[/back] finished show_query()')
 
     #----------------------
     # Work Functions
@@ -208,7 +208,7 @@ class MainWindowBackend(QtCore.QObject):
         num_new = self.hs.add_images(fpath_list)
         if num_new > 0:
             self.populate_image_table()
-        print(r'[/back] finished _add_images()')
+        #print(r'[/back] finished _add_images()')
         print('')
 
     def user_info(self, *args, **kwargs):
@@ -318,7 +318,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[*back] valid new_db_dir = %r' % new_db_dir)
         helpers.ensurepath(new_db_dir)
         self.open_database(new_db_dir)
-        print(r'[/back] finished new_database()')
+        #print(r'[/back] finished new_database()')
         print('')
 
     # File -> Open Database
@@ -353,7 +353,7 @@ class MainWindowBackend(QtCore.QObject):
     def save_database(self):
         print(r'[\back] save_database()')
         self.hs.save_database()
-        print(r'[/back] finished save_database()')
+        #print(r'[/back] finished save_database()')
         print('')
 
     # File -> Import Images
@@ -411,6 +411,7 @@ class MainWindowBackend(QtCore.QObject):
     def add_chip(self):
         print(r'[\back] add_chip()')
         gx = self.get_selected_gx()
+        self.show_image(gx, figtitle='Image View - Select ROI (click two points)')
         roi = guitools.select_roi()
         if roi is None:
             print('[back*] roiselection failed. Not adding')
@@ -426,21 +427,26 @@ class MainWindowBackend(QtCore.QObject):
     # Action -> Query
     @pyqtSlot(name='query')
     def query(self, cid=None):
-        prevBlock = self.win.blockSignals(True)
+        #prevBlock = self.win.blockSignals(True)
         print(r'[\back] query()')
         if cid is not None:
             self.select_cid(cid, dodraw=False)
         cx = self.get_selected_cx()
         if cx is None:
+            #self.win.blockSignals(prevBlock)
             self.user_info('Cannot query. No chip selected')
             return
         res = self.hs.query(cx)
+        if isinstance(res, str):
+            self.user_info(res)
+            #self.win.blockSignals(prevBlock)
+            return
         self.current_res = res
         self.populate_result_table()
         print(r'[/back] finished query')
         print('')
         self.show_query(res)
-        self.win.blockSignals(prevBlock)
+        #self.win.blockSignals(prevBlock)
         return res
 
     # Action -> Reselect ROI
@@ -452,7 +458,7 @@ class MainWindowBackend(QtCore.QObject):
             self.user_info('Cannot reselect ROI. No chip selected')
             return
         gx = self.hs.tables.cx2_gx[cx]
-        self.show_image(gx, [cx], **kwargs)
+        self.show_image(gx, [cx], figtitle='Image View - ReSelect ROI (click two points)', **kwargs)
         roi = guitools.select_roi()
         if roi is None:
             print('[back*] roiselection failed. Not adding')
@@ -475,8 +481,8 @@ class MainWindowBackend(QtCore.QObject):
             self.user_info('Cannot reselect orientation. No chip selected')
             return
         gx = self.hs.tables.cx2_gx[cx]
-        self.show_image(gx, [cx], **kwargs)
-        theta = guitools.select_ori()
+        self.show_image(gx, [cx], figtitle='Image View - Select Orientation (click two points)', **kwargs)
+        theta = guitools.select_orientation()
         if theta is None:
             print('[back*] roiselection failed. Not adding')
             return
@@ -612,11 +618,10 @@ class MainWindowBackend(QtCore.QObject):
     @pyqtSlot(name='precompute_feats')
     def precompute_feats(self):
         print(r'[\back] precompute_feats()')
-        prevBlock = self.win.blockSignals(True)
+        #prevBlock = self.win.blockSignals(True)
         self.hs.update_samples()
-        self.hs.load_chips()
-        self.hs.load_features()
-        self.win.blockSignals(prevBlock)
+        self.hs.refresh_features()
+        #self.win.blockSignals(prevBlock)
         print(r'[/back] Finished precomputing features')
         print('')
 
@@ -624,7 +629,7 @@ class MainWindowBackend(QtCore.QObject):
     def precompute_queries(self):
         #http://stackoverflow.com/questions/15637768/pyqt-how-to-capture-output-of-pythons-interpreter-and-display-it-in-qedittext
         print(r'[\back] precompute_queries()')
-        prevBlock = self.win.blockSignals(True)
+        #prevBlock = self.win.blockSignals(True)
         self.precompute_feats()
         valid_cx = self.hs.get_valid_cxs()
         import matching_functions as mf
@@ -645,7 +650,7 @@ class MainWindowBackend(QtCore.QObject):
         mc3.print_on()
         ds.print_on()
         mf.print_on()
-        self.win.blockSignals(prevBlock)
+        #self.win.blockSignals(prevBlock)
         print(r'[/back] Finished precomputing queries')
         print('')
 
@@ -663,7 +668,7 @@ class MainWindowBackend(QtCore.QObject):
         else:
             print('[*back] WARNING: cannot detect screen geometry')
         df2.present(num_rc=(2, 2), wh=dlen, wh_off=(0, 60))
-        print(r'[\back] finished laying out figures')
+        #print(r'[\back] finished laying out figures')
 
     @pyqtSlot(name='dev_mode')
     def dev_mode(self):

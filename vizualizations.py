@@ -308,6 +308,7 @@ def show_image(hs, gx,
                cx_clicked_func=None,
                draw_rois=True,
                fnum=1,
+               figtitle='Img',
                **kwargs):
     '''Shows an image. cx_clicked_func(cx) is a callback function'''
     gname = hs.tables.gx2_gname[gx]
@@ -319,6 +320,7 @@ def show_image(hs, gx,
             highlight_cxs = []
         _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
                         draw_rois, **kwargs)
+    df2.set_figtitle(figtitle)
 
 
 def show_splash(fnum=1, **kwargs):
@@ -403,6 +405,9 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
         if hs_viewtype != 'chip':
             return  # The click is not in the chip axis
         kpts = hs.get_kpts(cx)
+        if len(kpts) == 0:
+            print('This chip has no keypoints')
+            return
         x, y = event.xdata, event.ydata
         dist = (kpts.T[0] - x) ** 2 + (kpts.T[1] - y) ** 2
         fx = dist.argmin()

@@ -17,10 +17,7 @@ import db_info
 
 
 # BUGS: TODO:
-# Toggle the Chip Keypoint View
 # Orientation within chip
-
-# Unload features on chip_uid change
 
 # Toggleable printing
 print = __builtin__.print
@@ -35,14 +32,18 @@ def print_on():
 
 def print_off():
     global print, print_
-    def print(*args, **kwargs): pass
-    def print_(*args, **kwargs): pass
+
+    def print(*args, **kwargs):
+        pass
+
+    def print_(*args, **kwargs):
+        pass
 
 
 def rrr():
     '# Dynamic module reloading'
-    import imp, sys
-    print('[___] reloading '+__name__)
+    import imp
+    print('[___] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
 
 

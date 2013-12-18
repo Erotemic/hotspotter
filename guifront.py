@@ -182,27 +182,22 @@ class MainWindowFrontend(QtGui.QMainWindow):
         for uikey in ui.__dict__.keys():
             if uikey.find('action') == 0:
                 ui.__dict__[uikey].setEnabled(flag)
-        ui.actionOpen_Database.setEnabled(True)  # always allowed
-        ui.actionNew_Database.setEnabled(True)  # always allowed
-        ui.actionQuit.setEnabled(True)  # always allowed
-        ui.actionAbout.setEnabled(True)  # always allowed
-        ui.actionView_Docs.setEnabled(True)  # always allowed
+
+        # The following options are always enabled
+        ui.actionOpen_Database.setEnabled(True)              # always allowed
+        ui.actionNew_Database.setEnabled(True)               # always allowed
+        ui.actionQuit.setEnabled(True)                       # always allowed
+        ui.actionAbout.setEnabled(True)                      # always allowed
+        ui.actionView_Docs.setEnabled(True)                  # always allowed
         ui.actionDelete_global_preferences.setEnabled(True)  # always allowed
 
-        # These are not yet useful disable them
-        actions = [item for list_ in [
-            #ui.menuFile.children(),
-            #ui.menuActions.children(),
-            #ui.menuBatch.children(),
-            #ui.menuOptions.children(),
-            #ui.menuHelp.children(),
-        ] for item in list_]
-        for item in actions:
-            item.setEnabled(False)
-
-        #for uikey in ui.__dict__.keys():
-            #if uikey.find('action') == 0:
-                #ui.__dict__[uikey].setEnabled(flag)
+        # The following options are no implemented. Disable them
+        ui.actionConvert_all_images_into_chips.setEnabled(False)
+        ui.actionBatch_Change_Name.setEnabled(False)
+        ui.actionScale_all_ROIS.setEnabled(False)
+        ui.actionWriteLogs.setEnabled(False)
+        ui.actionAbout.setEnabled(False)
+        ui.actionView_Docs.setEnabled(False)
 
     def _populate_table(self, tbl, col_headers, col_editable, row_list, row2_datatup):
         self.print('_populate_table()')
@@ -284,7 +279,6 @@ class MainWindowFrontend(QtGui.QMainWindow):
                              'valid names:\n  ' + '\n  '.join(valid_table_names)])
             raise Exception(msg)
         self._populate_table(tbl, col_headers, col_editable, row_list, row2_datatup)
-
 
     # Table Changed Functions
     @pyqtSlot(QtGui.QTableWidgetItem)

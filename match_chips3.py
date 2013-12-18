@@ -141,7 +141,7 @@ def load_cached_query(hs, query_cfg, aug_list=['']):
         if qcx2_res is None:
             return None
         result_list.append(qcx2_res)
-    print('[mc3] ... query result cache hit\n')
+    print('[mc3] ... query result cache hit')
     return result_list
 
 

@@ -370,6 +370,6 @@ class DisplayConfig(ConfigBase):
     def __init__(display_cfg, **kwargs):
         super(DisplayConfig, display_cfg).__init__(name='display_cfg')
         display_cfg.N = 5
-        display_cfg.showanalysis = True
         display_cfg.name_scoring = False
-        display_cfg.showanalysis = False
+        display_cfg.showanalysis = True
+        display_cfg.annotations  = True

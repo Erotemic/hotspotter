@@ -269,13 +269,13 @@ def exit_application():
     QtGui.qApp.quit()
 
 
-def run_main_loop(app, is_root=True, backend=None):
+def run_main_loop(app, is_root=True, backend=None, **kwargs):
     if backend is not None:
         print('[*guitools] setting active window')
         app.setActiveWindow(backend.win)
     if is_root:
         print('[*guitools] running main loop.')
-        timer = ping_python_interpreter()  # NOQA
+        timer = ping_python_interpreter(**kwargs)  # NOQA
         if backend is not None:
             backend.timer = timer
         sys.exit(app.exec_())
@@ -283,7 +283,7 @@ def run_main_loop(app, is_root=True, backend=None):
         print('[*guitools] using roots main loop')
 
 
-def ping_python_interpreter(frequency=100):  # 4200):
+def ping_python_interpreter(frequency=4200):  # 4200):
     'Create a QTimer which lets the python intepreter run every so often'
     timer = Qt.QTimer()
     timer.timeout.connect(lambda: None)

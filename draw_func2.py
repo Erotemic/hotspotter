@@ -6,7 +6,6 @@ from itertools import izip
 from os.path import splitext, split, join, normpath
 import colorsys
 import itertools
-import os
 import pylab
 import sys
 import textwrap
@@ -131,13 +130,9 @@ FIGSIZE_BIG = (24, 12)
 
 FIGSIZE = FIGSIZE_MED
 
-try:
-    if sys.platform == 'win32':
-        compname = os.environ['COMPUTER_NAME']
-        if compname == 'Ooo':
-            TILE_WITHIN = (-1912, 30, -969, 1071)
-except KeyError:
-    TILE_WITHIN = (0, 30, 969, 1041)
+tile_within = (-1, 30, 969, 1041)
+if helpers.get_computer_name() == 'Ooo':
+    TILE_WITHIN = (-1912, 30, -969, 1071)
 
 DISTINCT_COLORS = True  # and False
 DARKEN = None

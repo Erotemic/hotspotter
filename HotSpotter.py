@@ -630,8 +630,7 @@ class HotSpotter(DynStruct):
         def _2ocxs(cx, nx):
             other_cx_ = np.where(cx2_nx == nx)[0]
             return other_cx_[other_cx_ != cx]
-        others_list = [_2ocxs(cx, nx)
-                       if nx <= 1 else np.array([], ds.X_DTYPE)
+        others_list = [_2ocxs(cx, nx) if nx > 1 else np.array([], ds.X_DTYPE)
                        for nx, cx in izip(nx_list, cx_input)]
         return others_list
 

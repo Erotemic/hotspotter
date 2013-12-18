@@ -333,9 +333,6 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
 
     # Get chip info (make sure get_chip is called first)
     rchip = hs.get_chip(cx)
-    kpts = hs.get_kpts(cx)
-    desc = hs.get_desc(cx)
-
     #cxstr = hs.cxstr(cx)
     #name  = hs.cx2_name(cx)
     #gname = hs.cx2_gname(cx)
@@ -346,6 +343,9 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
         print('-------------------------------------------')
         print('[interact] viewing ith=%r keypoint' % fx)
         # Get the fx-th keypiont
+        kpts = hs.get_kpts(cx)
+        desc = hs.get_desc(cx)
+
         kp = kpts[fx]
         scale = np.sqrt(kp[2] * kp[4])
         sift = desc[fx]
@@ -384,17 +384,25 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
         ax._hs_viewtype = 'histogram'
         fig.canvas.draw()
 
+    def default_chip_view():
+        fig = df2.figure(fignum=fnum)
+        fig.clf()
+        show_chip(hs, cx=cx, draw_kpts=False)  # Toggle no keypoints view
+        fig.canvas.draw()
+
     def _on_chip_click(event):
         #print('\n===========')
         #print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
         print('\n[viz] clicked chip')
         if event.xdata is None or event.inaxes is None:
+            default_chip_view()
             return  # The click is not in any axis
         #print('---')
         hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', None)
         #print('hs_viewtype=%r' % hs_viewtype)
         if hs_viewtype != 'chip':
             return  # The click is not in the chip axis
+        kpts = hs.get_kpts(cx)
         x, y = event.xdata, event.ydata
         dist = (kpts.T[0] - x) ** 2 + (kpts.T[1] - y) ** 2
         fx = dist.argmin()
@@ -587,7 +595,7 @@ def show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=None,
                         show_name=True, showTF=True, showScore=True, **kwargs):
     fignum = kwargs.pop('fnum', fignum)
     ' Shows matches with annote -ations '
-    print('[viz.show_matches_annote()] Showing matches from %s' % (hs.vs_str(cx, qcx)))
+    #print('[viz.show_matches_annote()] Showing matches from %s' % (hs.vs_str(cx, qcx)))
     if np.isnan(cx):
         nan_img = np.zeros((100, 100), dtype=np.uint8)
         title = '(qx%r v NAN)' % (qcx)
@@ -659,7 +667,7 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
               show_query=False, all_kpts=False, annote=True, query_cfg=None,
               split_plots=False, interact=True, **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
-    print('[viz._show_res()] %r ' % locals())
+    #print('[viz._show_res()] %r ' % locals())
     fignum = kwargs.pop('fignum', 3)
     fignum = kwargs.pop('fnum', 3)
     #print('========================')
@@ -730,7 +738,7 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
     #query_uid = re.sub(r'_trainID\([0-9]*,........\)', '', query_uid)
     #query_uid = re.sub(r'_indxID\([0-9]*,........\)', '', query_uid)
     #query_uid = re.sub(r'_dcxs\(........\)', '', query_uid)
-    print('[viz._show_res()] fignum=%r' % fignum)
+    #print('[viz._show_res()] fignum=%r' % fignum)
 
     fig = df2.figure(fignum=fignum)
     fig.clf()
@@ -760,8 +768,7 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
         df2.set_figtitle(figtitle)
 
     if interact:
-        printDBG('[viz._show_res()] starting interaction')
-
+        #printDBG('[viz._show_res()] starting interaction')
         # Create
         def _on_res_click(event):
             'result interaction mpl event callback slot'

@@ -584,13 +584,13 @@ class Ui_editPrefSkel(object):
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         #
-        self.redrawBUT = QtGui.QPushButton(editPrefSkel)
-        self.redrawBUT.setObjectName(_fromUtf8("redrawBUT"))
-        self.horizontalLayout.addWidget(self.redrawBUT)
-        #
-        self.unloadFeaturesAndModelsBUT = QtGui.QPushButton(editPrefSkel)
-        self.unloadFeaturesAndModelsBUT.setObjectName(_fromUtf8("unloadFeaturesAndModelsBUT"))
-        self.horizontalLayout.addWidget(self.unloadFeaturesAndModelsBUT)
+        #self.redrawBUT = QtGui.QPushButton(editPrefSkel)
+        #self.redrawBUT.setObjectName(_fromUtf8("redrawBUT"))
+        #self.horizontalLayout.addWidget(self.redrawBUT)
+        ##
+        #self.unloadFeaturesAndModelsBUT = QtGui.QPushButton(editPrefSkel)
+        #self.unloadFeaturesAndModelsBUT.setObjectName(_fromUtf8("unloadFeaturesAndModelsBUT"))
+        #self.horizontalLayout.addWidget(self.unloadFeaturesAndModelsBUT)
         #
         self.defaultPrefsBUT = QtGui.QPushButton(editPrefSkel)
         self.defaultPrefsBUT.setObjectName(_fromUtf8("defaultPrefsBUT"))
@@ -605,8 +605,8 @@ class Ui_editPrefSkel(object):
     def retranslateUi(self, editPrefSkel):
         # UTF-8 Support
         editPrefSkel.setWindowTitle(_translate("editPrefSkel", "Edit Preferences", None))
-        self.redrawBUT.setText(_translate("editPrefSkel", "Redraw", None))
-        self.unloadFeaturesAndModelsBUT.setText(_translate("editPrefSkel", "Unload Features and Models", None))
+        #self.redrawBUT.setText(_translate("editPrefSkel", "Redraw", None))
+        #self.unloadFeaturesAndModelsBUT.setText(_translate("editPrefSkel", "Unload Features and Models", None))
         self.defaultPrefsBUT.setText(_translate("editPrefSkel", "Defaults", None))
 
 

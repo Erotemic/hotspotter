@@ -213,6 +213,9 @@ class MainWindowFrontend(QtGui.QMainWindow):
             opt2_callback = [
                 ('header', lambda: print('finishme')),
                 ('cancel', lambda: print('cancel')), ]
+            # HENDRIK / JASON TODO:
+            # I have a small right-click context menu working
+            # Can one of you put some useful functions in these?
             popup_slot = guitools.popup_menu(tbl, opt2_callback)
             hheader.customContextMenuRequested.connect(popup_slot)
 
@@ -243,7 +246,13 @@ class MainWindowFrontend(QtGui.QMainWindow):
             for col, data in enumerate(data_tup):
                 item = QtGui.QTableWidgetItem()
                 try:
-                    int_data = int(data)
+                    int_data = int(data)  # HENDRIK/JASON TODO: Right now
+                                          # columns cannot display float data.
+                                          # fix this for the case of result
+                                          # confidence scores. (It would be nice
+                                          # the type of data was detected right
+                                          # here and the QDisplayRole was set
+                                          # accordingly)
                     item.setData(Qt.DisplayRole, int_data)
                 except ValueError:  # for strings
                     item.setText(str(data))
@@ -275,11 +284,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
             raise Exception(msg)
         self._populate_table(tbl, col_headers, col_editable, row_list, row2_datatup)
 
-    @pyqtSlot(QtGui.QTableWidgetItem)
-    def res_tbl_changed(self, item):
-        self.print('res_tbl_changed()')
-        raise NotImplementedError('res_tbl_changed()')
 
+    # Table Changed Functions
     @pyqtSlot(QtGui.QTableWidgetItem)
     def img_tbl_changed(self, item):
         self.print('img_tbl_changed()')
@@ -289,24 +295,50 @@ class MainWindowFrontend(QtGui.QMainWindow):
     def chip_tbl_changed(self, item):
         'A Chip had a data member changed '
         self.print('chip_tbl_changed()')
-        # Get selected chip
         sel_row = item.row()
+        sel_col = item.column()
+        # Get selected chipid
         sel_cid = int(self.ui.chip_TBL.item(sel_row, 0).text())
         # Get the changed property key and value
-        sel_col = item.column()
-        new_val = str(item.text()).replace(',', ';;')
+        new_val = str(item.text()).replace(',', ';;') # sanatize for csv
+        # Get which column is being changed
         header_lbl = str(self.ui.chip_TBL.horizontalHeaderItem(sel_col).text())
         # Tell the backend about the change
         self.changeCidSignal.emit(sel_cid, header_lbl, new_val)
 
     @pyqtSlot(QtGui.QTableWidgetItem)
-    def res_tbl_clicked(self, item):
+    def res_tbl_changed(self, item):
         'A Chip was Renamed in Result View'
-        self.print('res_tbl_clicked()')
-        sel_row  = item.row()
-        sel_cid  = int(self.ei.res_TBL.item(sel_row, 1).text())
-        new_name = str(item.text())
-        self.renameChipIdSignal.emit(new_name, int(sel_cid))
+        self.print('res_tbl_changed()')
+        sel_row  = item.row() # The changed row
+        sel_col = item.column()
+        sel_cid  = int(self.ui.res_TBL.item(sel_row, 2).text()) # The changed row's chip id
+        # Get which column is being changed
+        header_lbl = str(self.ui.res_TBL.horizontalHeaderItem(sel_col).text())
+        # The changed items's value
+        new_val = str(item.text()).replace(',', ';;') # sanatize for csv
+        # Tell the backend about the change
+        self.changeCidSignal.emit(sel_cid, header_lbl, new_val)
+        # Hendrik/Jason TODO:
+        # It would be nice if we could get a vizualization similar to the chip
+        # vizualization so that the clicked result gets a 1v1 comparison view w/
+        # query Matching keypoints should be able to be clicked and show the top
+        # 5 rows of the top matching keypoints where each row shows the query
+        # patch, the matched patch, and the normalizing patch
+
+    # Table Clicked Functions
+    @pyqtSlot(QtGui.QTableWidgetItem)
+    def res_tbl_clicked(self, item):
+        sel_row = item.row()
+        sel_col = item.column()
+        self.print('res_tbl_clicked(%r, %r)' % (sel_row, sel_col))
+        if item == self.prev_tbl_item:
+            return
+        self.prev_tbl_item = item
+        header_lbl = str(self.ui.res_TBL.horizontalHeaderItem(2).text())
+        assert header_lbl == 'Chip ID'
+        sel_cid = int(self.ui.res_TBL.item(sel_row, 2).text())
+        self.selectCidSignal.emit(sel_cid)
 
     @pyqtSlot(QtGui.QTableWidgetItem)
     def img_tbl_clicked(self, item):

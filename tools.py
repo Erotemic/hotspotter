@@ -9,9 +9,9 @@ VALID_INT_TYPES = (types.IntType,
                    np.typeDict['uint8'],)
 
 VALID_FLOAT_TYPES = (types.FloatType,
-                         np.typeDict['float64'],
-                         np.typeDict['float32'],
-                         np.typeDict['float16'],)
+                     np.typeDict['float64'],
+                     np.typeDict['float32'],
+                     np.typeDict['float16'],)
 
 DEBUG = False
 

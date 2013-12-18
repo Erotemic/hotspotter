@@ -90,7 +90,10 @@ class MainWindowBackend(QtCore.QObject):
         print('[back*] show_query()')
         fig = df2.figure(fignum=3, doclf=True)
         fig.clf()
-        res.show_top(self.hs, fignum=3, figtitle='Query View ')
+        if self.hs.prefs.showanalysis:
+            res.show_analysis(self.hs, fignum=3, figtitle='Analysis View')
+        else:
+            res.show_top(self.hs, fignum=3, figtitle='Query View ')
         if kwargs.get('dodraw', True) or DISABLE_NODRAW:
             df2.draw()
 
@@ -149,15 +152,23 @@ class MainWindowBackend(QtCore.QObject):
         col_headers  = ['Image Index', 'Image Name', 'Num Chips']
         col_editable = [False,                False,       False]
         # Populate table with valid image indexes
-        gx2_gname = self.hs.tables.gx2_gname
-        gx2_cxs   = self.hs.gx2_cxs
-        gx_list  = self.hs.get_valid_gxs()
-        gname_list = [gx2_gname[gx] for gx in iter(gx_list)]
-        num_cxs_list = [len(gx2_cxs(gx)) for gx in iter(gx_list)]
-        row2_datatup = [tup for tup in izip(gx_list, gname_list, num_cxs_list)]
-        row_list  = range(len(row2_datatup))
-        self.populateSignal.emit('image', col_headers, col_editable,
-                                 row_list, row2_datatup)
+        gx_list = self.hs.get_valid_gxs()
+        datatup_list = self.hs.get_img_datatupe_list(gx_list)
+        row_list = range(len(datatup_list))
+        self.populateSignal.emit('image', col_headers, col_editable, row_list, datatup_list)
+
+    def populate_result_table(self, res):
+        print('[*back] populate_image_table()')
+        col_headers  = ['Rank', 'Matching Name', 'Chip ID',  'Confidence']
+        col_editable = [False,             True,      True,         False]
+        top_cxs = res.topN_cxs(self.hs, N='all')
+        hs = self.hs
+        qcx = res.qcx
+        datatup_list = hs.get_res_datatup_list(top_cxs, res.cx2_score)
+        # The ! mark is used for ascii sorting. TODO: can we work arround this?
+        datatup_list = [('!Query Chip', hs.cx2_name(qcx), hs.cx2_cid(qcx), '---')] + datatup_list
+        row_list = range(len(datatup_list))
+        self.populateSignal.emit('res', col_headers, col_editable, row_list, datatup_list)
 
     def populate_chip_table(self):
         print('[*back] populate_chip_table()')
@@ -166,33 +177,20 @@ class MainWindowBackend(QtCore.QObject):
         # Add User Properties to headers
         prop_dict = self.hs.tables.prop_dict
         prop_keys = prop_dict.keys()
-        col_headers  += prop_keys
+        col_headers += prop_keys
         col_editable += [True] * len(prop_keys)
         # Populate table with valid image indexes
-        cx2_cid  = self.hs.tables.cx2_cid
-        cx2_nx   = self.hs.tables.cx2_nx
-        cx2_gx   = self.hs.tables.cx2_gx
-        nx2_name = self.hs.tables.nx2_name
-        gx2_gname = self.hs.tables.gx2_gname
         cx_list = self.hs.get_valid_cxs()
         # Build lists of column values
-        cid_list   = [cx2_cid[cx] for cx in iter(cx_list)]
-        name_list  = [nx2_name[cx2_nx[cx]] for cx in iter(cx_list)]
-        image_list = [gx2_gname[cx2_gx[cx]] for cx in iter(cx_list)]
-        gtcxs_list = [self.hs.get_other_indexed_cxs(cx) for cx in iter(cx_list)]
-        ngt_list = [len(gtcxs) for gtcxs in iter(gtcxs_list)]
-        prop_lists = [[prop_dict[key][cx] for cx in iter(cx_list)] for key in iter(prop_keys)]
+        datatup_list = self.hs.get_chip_datatup_list(cx_list)
         # Define order of columns
-        unziped_list = [cid_list, name_list, image_list, ngt_list] + prop_lists
-        row2_datatup = [tup for tup in izip(*unziped_list)]
-        row_list = range(len(row2_datatup))
-        self.populateSignal.emit('chip', col_headers, col_editable,
-                                 row_list, row2_datatup)
+        row_list = range(len(datatup_list))
+        self.populateSignal.emit('chip', col_headers, col_editable, row_list, datatup_list)
+
 
     #--------------------------------------------------------------------------
     # Helper functions
     #--------------------------------------------------------------------------
-
     def _add_images(self, fpath_list):
         print('[*back] _add_images()')
         num_new = self.hs.add_images(fpath_list)
@@ -408,6 +406,7 @@ class MainWindowBackend(QtCore.QObject):
             self.user_info('Cannot query. No chip selected')
             return
         res = self.hs.query(cx)
+        self.populate_result_table(res)
         self.show_query(res)
         return res
 
@@ -463,10 +462,15 @@ class MainWindowBackend(QtCore.QObject):
             self.hs.change_prop(cx, key, val)
         self.populate_chip_table()
 
+    def defaults():
+        self.hs.default_preferences()
+
     @pyqtSlot(name='edit_preferences')
     def edit_preferences(self):
         print('[*back] edit_preferences')
         self.edit_prefs = self.hs.prefs.createQWidget()
+        epw = self.edit_prefs
+        epw.defaultsBUT.clicked.connect(self.defaults)
         query_uid = ''.join(self.hs.prefs.query_cfg.get_uid())
         print('[*back] query_uid = %s' % query_uid)
 
@@ -570,9 +574,24 @@ class MainWindowBackend(QtCore.QObject):
         prevBlock = self.win.blockSignals(True)
         self.precompute_feats()
         valid_cx = self.hs.get_valid_cxs()
-        for qcx in valid_cx:
-            print('[*back] query qcx=%r' % qcx)
-            self.hs.query(qcx)
+        import matching_functions as mf
+        import DataStructures as ds
+        import match_chips3 as mc3
+        import sys
+        if self.hs.args.quiet:
+            mc3.print_off()
+            ds.print_off()
+            mf.print_off()
+        fmtstr = helpers.progress_str(len(valid_cx), '[back*] Query qcx=%r: ')
+        for count, qcx in enumerate(valid_cx):
+            sys.stdout.write(fmtstr % (qcx, count))
+            self.hs.query(qcx, dochecks=False)
+            if count % 100 == 0:
+                sys.stdout.write('\n ...')
+        sys.stdout.write('\n ...')
+        mc3.print_on()
+        ds.print_on()
+        mf.print_on()
         self.win.blockSignals(prevBlock)
         print('[*back] Finished precomputing queries')
 

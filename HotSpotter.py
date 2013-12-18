@@ -107,6 +107,7 @@ class HotSpotter(DynStruct):
         if not pref_load_success:
             hs.default_preferences()
         # Preferences will try to load the FLANN index. Undo this.
+        hs.prefs.showanalysis = True
         hs.prefs.query_cfg.unload_data()
 
     def default_preferences(hs):
@@ -114,7 +115,7 @@ class HotSpotter(DynStruct):
         hs.prefs.chip_cfg  = ds.default_chip_cfg()
         hs.prefs.feat_cfg  = ds.default_feat_cfg(hs)
         hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
-        hs.prefs.N = 2
+        hs.prefs.showanalysis = True
         hs.prefs.name_scoring = False
 
     def update_preferences(hs, **kwargs):
@@ -226,11 +227,11 @@ class HotSpotter(DynStruct):
     #---------------
     # Query Functions
     #---------------
-    def query(hs, qcx):
-        if hs.prefs.query_cfg is None:
+    def query(hs, qcx, dochecks=True):
+        if hs.prefs.query_cfg is None and dochecks:
             hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
             hs.refresh_data()
-        res = mc3.query_database(hs, qcx, hs.prefs.query_cfg)
+        res = mc3.query_database(hs, qcx, hs.prefs.query_cfg, dochecks=dochecks)
         return res
 
     # ---------------
@@ -463,6 +464,48 @@ class HotSpotter(DynStruct):
     #---------------
     # Getting functions
     # ---------------
+
+    def get_img_datatupe_list(hs, gx_list):
+        # Data for GUI Image Table
+        gx2_gname = hs.tables.gx2_gname
+        gx2_cxs   = hs.gx2_cxs
+        gname_list = [gx2_gname[gx] for gx in iter(gx_list)]
+        num_cxs_list = [len(gx2_cxs(gx)) for gx in iter(gx_list)]
+        datatup_list = [tup for tup in izip(gx_list, gname_list, num_cxs_list)]
+        return datatup_list
+
+    def get_res_datatup_list(hs, cx_list, cx2_score):
+        # Data for GUI Results Table
+        cx2_cid  = hs.tables.cx2_cid
+        cx2_nx   = hs.tables.cx2_nx
+        nx2_name = hs.tables.nx2_name
+        cid_list   = [cx2_cid[cx]   for cx in iter(cx_list)]
+        score_list = [cx2_score[cx] for cx in iter(cx_list)]
+        name_list  = [nx2_name[cx2_nx[cx]] for cx in iter(cx_list)]
+        rank_list  = range(len(cx_list))
+        unziped_tups = [rank_list, name_list, cid_list, score_list]
+        datatup_list = [tup for tup in izip(*unziped_tups)]
+        return datatup_list
+
+    def get_chip_datatup_list(hs, cx_list):
+        # Data for GUI Chip Table
+        prop_dict = hs.tables.prop_dict
+        cx2_cid  = hs.tables.cx2_cid
+        cx2_nx   = hs.tables.cx2_nx
+        cx2_gx   = hs.tables.cx2_gx
+        nx2_name = hs.tables.nx2_name
+        gx2_gname = hs.tables.gx2_gname
+        prop_keys  = prop_dict.keys()
+        cid_list   = [cx2_cid[cx]           for cx in iter(cx_list)]
+        name_list  = [nx2_name[cx2_nx[cx]]  for cx in iter(cx_list)]
+        image_list = [gx2_gname[cx2_gx[cx]] for cx in iter(cx_list)]
+        gtcxs_list = hs.get_other_indexed_cxs(cx_list)
+        ngt_list =   [len(gtcxs) for gtcxs in iter(gtcxs_list)]
+        prop_lists = [[prop_dict[key][cx] for cx in iter(cx_list)] for key in iter(prop_keys)]
+        unziped_tups = [cid_list, name_list, image_list, ngt_list] + prop_lists
+        datatup_list = [tup for tup in izip(*unziped_tups)]
+        return datatup_list
+
     def db_name(hs, devmode=False):
         db_name = split(hs.dirs.db_dir)[1]
         if devmode:
@@ -576,21 +619,25 @@ class HotSpotter(DynStruct):
             gx2_cxs[gx].append(cx)
         return gx2_cxs
 
-    def get_other_cxs(hs, cx):
-        print
-        cx2_nx   = hs.tables.cx2_nx
-        nx = cx2_nx[cx]
-        if nx <= 1:
-            return np.array([], ds.X_DTYPE)
-        other_cx_, = np.where(cx2_nx == nx)
-        other_cx  = other_cx_[other_cx_ != cx]
-        return other_cx
+    @tools.class_iter_input
+    def get_other_cxs(hs, cx_input):
+        cx2_nx = hs.tables.cx2_nx
+        nx_list = [cx2_nx[cx] for cx in iter(cx_input)]
+        def _2ocxs(cx, nx):
+            other_cx_ = np.where(cx2_nx == nx)[0]
+            return other_cx_[other_cx_ != cx]
+        others_list = [_2ocxs(cx, nx)
+                       if nx <= 1 else np.array([], ds.X_DTYPE) \
+                       for nx, cx in izip(nx_list, cx_input) ]
+        return others_list
 
-    def get_other_indexed_cxs(hs, cx):
-        other_cx = hs.get_other_cxs(cx)
-        other_indexed_cx = np.intersect1d(other_cx, hs.indexed_sample_cx)
-        return other_indexed_cx
-
+    @tools.class_iter_input
+    def get_other_indexed_cxs(hs, cx_input):
+        other_list_ = hs.get_other_cxs(cx_input)
+        indx_samp  = hs.indexed_sample_cx
+        other_list = [np.intersect1d(ocxs, indx_samp) for
+                      ocxs in iter(other_list_)]
+        return other_list
     # Strings
 
     def is_true_match(hs, qcx, cx):

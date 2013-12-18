@@ -48,19 +48,25 @@ if __name__ == '__main__':
         args.vdd = False
     # Build hotspotter database
     hs = HotSpotter.HotSpotter(args)
+    backend = guitools.make_main_window(hs, app)
+
     cids = hs.args.query
-    try:
-        if cids is not None and len(cids) > 0:
-            hs.load(load_all=True)
-            backend = guitools.make_main_window(hs, app)
-            res = backend.query(cid=cids[0])
+    # Preload data if you do any of these flags
+    if hs.args.autoquery or len(cids) > 0:
+        hs.load(load_all=True)
+    # Autocompute all queries
+    if hs.args.autoquery:
+        backend.precompute_queries()
+    if len(cids) > 0:
+        try:
+            qcid = cids[0]
+            res = backend.query(qcid)
+        except ValueError as ex:
+            print('[main] ValueError = %r' % (ex,))
+            if hs.args.strict:
+                raise
         else:
             hs.load(load_all=False)
-            backend = guitools.make_main_window(hs, app)
-    except ValueError as ex:
-        print('[main] ValueError = %r' % (ex,))
-        if hs.args.strict:
-            raise
     # Connect database to the backend gui
     app.setActiveWindow(backend.win)
 

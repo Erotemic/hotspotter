@@ -43,25 +43,25 @@ def rrr():
 # Convinience Functions
 #----------------------
 
-def query_dcxs(hs, qcx, dcxs, query_cfg=None, **kwargs):
+def query_dcxs(hs, qcx, dcxs, query_cfg=None, dochecks=True, **kwargs):
     'wrapper that bypasses all that "qcx2_ map" buisness'
-    if query_cfg is None:
+    if dochecks and query_cfg is None:
         query_cfg = hs.prefs.query_cfg
     query_uid = ''.join(query_cfg.get_uid('noCHIP'))
     feat_uid = ''.join(query_cfg._feat_cfg.get_uid())
     query_hist_id = (query_uid, feat_uid)
-    if hs.query_history[-1][0] != feat_uid:
-        print('[mc3] need to reload features')
-        hs.unload_cxdata('all')
-        hs.refresh_features()
-        hs.query_history.append(query_hist_id)
-    elif hs.query_history[-1][1] != query_uid:
-        print('[mc3] need to refresh features')
-        hs.refresh_features()
-        hs.query_history.append(query_hist_id)
-
-    query_uid = ''.join(query_cfg.get_uid())
-    print('[mc3] query_dcxs(): query_uid = %r ' % query_uid)
+    if dochecks:
+        if hs.query_history[-1][0] != feat_uid:
+            print('[mc3] need to reload features')
+            hs.unload_cxdata('all')
+            hs.refresh_features()
+            hs.query_history.append(query_hist_id)
+        elif hs.query_history[-1][1] != query_uid:
+            print('[mc3] need to refresh features')
+            hs.refresh_features()
+            hs.query_history.append(query_hist_id)
+        query_uid = ''.join(query_cfg.get_uid())
+        print('[mc3] query_dcxs(): query_uid = %r ' % query_uid)
     result_list = execute_query_safe(hs, query_cfg, [qcx], dcxs, **kwargs)
     res = result_list[0].values()[0]
     return res

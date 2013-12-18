@@ -15,7 +15,7 @@ class ArgumentParser2(object):
         dest = switch.strip('-').replace('-', '_')
         self.add_arg(switch, metavar=dest, type=type, default=default, help=help, **kwargs)
 
-    def add_bool(self, switch, default=False, *args, **kwargs):
+    def add_flag(self, switch, default=False, *args, **kwargs):
         action = 'store_false' if default else 'store_true'
         dest = switch.strip('-').replace('-', '_')
         self.add_arg(switch, dest=dest, action=action, default=default, *args, **kwargs)
@@ -54,39 +54,41 @@ def make_argparse2(description, *args, **kwargs):
 
 def main_argparse(parser2):
     parser2 = parser2.add_argument_group('Main')
-    parser2.add_int('--query', help='query chip-id to investigate', nargs='*')
+    parser2.add_flag('--autoquery')
+    parser2.add_intlist('--query', default=[], help='query chip-id to investigate')
     parser2.add_int('--qcid', help='query chip-id to investigate', nargs='*')
     parser2.add_intlist('--ocid', help='query chip-id to investigate')
     parser2.add_int('--histid', help='history id (hard cases)')
     parser2.add_intlist('--r', help='view row')
     parser2.add_intlist('--c', help='view col')
-    parser2.add_bool('--nopresent')
-    parser2.add_bool('--save-figures')
-    parser2.add_bool('--noannote')
+    parser2.add_flag('--nopresent')
+    parser2.add_flag('--save-figures')
+    parser2.add_flag('--noannote')
+    parser2.add_flag('--quiet')
 
 
 def dev_argparse(parser2):
     # Testing flags
     parser2 = parser2.add_argument_group('Dev')
-    parser2.add_bool('--test-vsmany')
-    parser2.add_bool('--test-vsone')
-    parser2.add_bool('--all-cases')
-    parser2.add_bool('--all-gt-cases')
+    parser2.add_flag('--test-vsmany')
+    parser2.add_flag('--test-vsone')
+    parser2.add_flag('--all-cases')
+    parser2.add_flag('--all-gt-cases')
     # Plotting Args
-    parser2.add_bool('--noshow-query')
-    parser2.add_bool('--noshow-gt')
-    parser2.add_bool('--printoff')
-    parser2.add_bool('--horiz', True)
-    parser2.add_bool('--darken')
+    parser2.add_flag('--noshow-query')
+    parser2.add_flag('--noshow-gt')
+    parser2.add_flag('--printoff')
+    parser2.add_flag('--horiz', True)
+    parser2.add_flag('--darken')
     parser2.add_str('--tests',  [], 'integer or test name', nargs='*')
     # View Directories
-    parser2.add_bool('--vrd')
-    parser2.add_bool('--vcd')
-    parser2.add_bool('--vdd')
-    parser2.add_bool('--vrdq')
-    parser2.add_bool('--vcdq')
-    parser2.add_bool('--show-res')
-    parser2.add_bool('--noprinthist', True)
+    parser2.add_flag('--vrd')
+    parser2.add_flag('--vcd')
+    parser2.add_flag('--vdd')
+    parser2.add_flag('--vrdq')
+    parser2.add_flag('--vcdq')
+    parser2.add_flag('--show-res')
+    parser2.add_flag('--noprinthist', True)
 
 
 def database_argparase(parser2):
@@ -94,8 +96,8 @@ def database_argparase(parser2):
     parser2 = parser2.add_argument_group('Database')
     parser2.add_str('--db', 'DEFAULT', 'specifies the short name of the database to load')
     parser2.add_str('--dbdir', None, 'specifies the full path of the database to load')
-    parser2.add_bool('--dbM')
-    parser2.add_bool('--dbG')
+    parser2.add_flag('--dbM')
+    parser2.add_flag('--dbG')
 
 
 def behavior_argparse(parser2):
@@ -104,8 +106,8 @@ def behavior_argparse(parser2):
     num_cpus = multiprocessing.cpu_count()
     num_proc_help = 'default to number of cpus = %d' % (num_cpus)
     parser2.add_int('--num-procs', num_cpus, num_proc_help)
-    parser2.add_bool('--serial', help='Forces num_procs=1')
-    parser2.add_bool('--strict', help='Force failure in iffy areas')
+    parser2.add_flag('--serial', help='Forces num_procs=1')
+    parser2.add_flag('--strict', help='Force failure in iffy areas')
 
 
 def cfg_argparse(parser2):
@@ -144,12 +146,12 @@ def cfg_argparse(parser2):
 def cache_argparse(parser2):
     # Cache flags
     parser2 = parser2.add_argument_group('Cache')
-    parser2.add_bool('--nocache-db', help='forces user to specify database directory')
-    parser2.add_bool('--nocache-chips')
-    parser2.add_bool('--nocache-query')
-    parser2.add_bool('--nocache-feats')
-    parser2.add_bool('--nocache-flann')
-    parser2.add_bool('--nocache-prefs')
+    parser2.add_flag('--nocache-db', help='forces user to specify database directory')
+    parser2.add_flag('--nocache-chips')
+    parser2.add_flag('--nocache-query')
+    parser2.add_flag('--nocache-feats')
+    parser2.add_flag('--nocache-flann')
+    parser2.add_flag('--nocache-prefs')
 
 
 def args_postprocess(args):

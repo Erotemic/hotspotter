@@ -471,6 +471,11 @@ def get_timestamp(format_='filename', use_second=False):
     return stamp
 
 
+
+def progress_str(max_val, lbl='Progress: '):
+    return make_progress_fmt_str(max_val, lbl)
+
+# DEPRICATE
 def make_progress_fmt_str(max_val, lbl='Progress: '):
     r'makes format string that prints progress: %Xd/MAX_VAL with backspaces'
     max_str = str(max_val)

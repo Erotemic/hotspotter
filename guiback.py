@@ -493,6 +493,7 @@ class MainWindowBackend(QtCore.QObject):
     def defaults(self):
         print(r'[\back] defaulting preferences')
         self.hs.default_preferences()
+        self.edit_prefs
         print(r'[/back] defaulted preferences')
         print('')
 
@@ -501,7 +502,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[*back] edit_preferences')
         self.edit_prefs = self.hs.prefs.createQWidget()
         epw = self.edit_prefs
-        epw.ui.defaultsBUT.clicked.connect(self.defaults)
+        epw.ui.defaultPrefsBUT.clicked.connect(self.defaults)
         query_uid = ''.join(self.hs.prefs.query_cfg.get_uid())
         print('[*back] query_uid = %s' % query_uid)
         print(r'[/back] defaulted preferences')

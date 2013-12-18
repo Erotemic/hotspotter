@@ -20,6 +20,12 @@ if multiprocessing.current_process().name == 'MainProcess':
     print('[df2] matplotlib.use(Qt4Agg)')
     matplotlib.rcParams['toolbar'] = 'toolbar2'
     matplotlib.rc('text', usetex=False)
+    mpl_keypress_shortcuts = [key for key in matplotlib.rcParams.keys() if key.find('keymap') == 0]
+    #for key in mpl_keypress_shortcuts:
+        #print('%s = %s' % (key, matplotlib.rcParams[key]))
+    # Disable mpl shortcuts
+    for key in mpl_keypress_shortcuts:
+        matplotlib.rcParams[key] = ''
     #matplotlib.rcParams['text'].usetex = False
     if backend != 'Qt4Agg':
         matplotlib.use('Qt4Agg', warn=True, force=True)

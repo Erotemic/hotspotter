@@ -1,5 +1,4 @@
 from __future__ import division, print_function
-from itertools import izip
 from os.path import split, exists, join
 # Qt
 from PyQt4 import QtCore
@@ -90,7 +89,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[back*] show_query()')
         fig = df2.figure(fignum=3, doclf=True)
         fig.clf()
-        if self.hs.prefs.showanalysis:
+        if self.hs.display_cfg.showanalysis:
             res.show_analysis(self.hs, fignum=3, figtitle='Analysis View')
         else:
             res.show_top(self.hs, fignum=3, figtitle='Query View ')
@@ -186,7 +185,6 @@ class MainWindowBackend(QtCore.QObject):
         # Define order of columns
         row_list = range(len(datatup_list))
         self.populateSignal.emit('chip', col_headers, col_editable, row_list, datatup_list)
-
 
     #--------------------------------------------------------------------------
     # Helper functions
@@ -308,7 +306,7 @@ class MainWindowBackend(QtCore.QObject):
     # File -> Open Database
     @pyqtSlot(name='open_database')
     def open_database(self, db_dir=None):
-        print('[*back] open_database')
+        print(r'[\back] open_database')
         # Try to load db
         try:
             # Use the same args in a new (opened) database
@@ -322,11 +320,13 @@ class MainWindowBackend(QtCore.QObject):
             # Write to cache and connect if successful
             io.global_cache_write('db_dir', db_dir)
             self.connect_api(hs)
+            self.layout_figures()
         except Exception as ex:
             print('aborting open database')
             print(ex)
             if self.hs.args.strict:
                 raise
+        print(r'[/back] open_database()')
 
     # File -> Save Database
     @pyqtSlot(name='save_database')
@@ -462,7 +462,7 @@ class MainWindowBackend(QtCore.QObject):
             self.hs.change_prop(cx, key, val)
         self.populate_chip_table()
 
-    def defaults():
+    def defaults(self):
         self.hs.default_preferences()
 
     @pyqtSlot(name='edit_preferences')
@@ -470,7 +470,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[*back] edit_preferences')
         self.edit_prefs = self.hs.prefs.createQWidget()
         epw = self.edit_prefs
-        epw.defaultsBUT.clicked.connect(self.defaults)
+        epw.ui.defaultsBUT.clicked.connect(self.defaults)
         query_uid = ''.join(self.hs.prefs.query_cfg.get_uid())
         print('[*back] query_uid = %s' % query_uid)
 
@@ -598,7 +598,7 @@ class MainWindowBackend(QtCore.QObject):
     # Option Actions
     @pyqtSlot(name='layout_figures')
     def layout_figures(self):
-        print('[*back] layout')
+        print('[*back] layout_figures()')
         dlen = 1618
         if self.app is not None:
             app = self.app
@@ -606,6 +606,8 @@ class MainWindowBackend(QtCore.QObject):
             width = screen_rect.width()
             height = screen_rect.height()
             dlen = np.sqrt(width ** 2 + height ** 2) / 1.618
+        else:
+            print('[*back] WARNING: cannot detect screen geometry')
         df2.present(num_rc=(2, 2), wh=dlen, wh_off=(0, 60))
 
     @pyqtSlot(name='dev_mode')
@@ -649,12 +651,17 @@ class MainWindowBackend(QtCore.QObject):
 
 
 def make_main_window(hs=None, app=None):
+    print(r'[\back] make_main_window()')
     backend = MainWindowBackend(hs=hs)
     backend.app = app
+    print('[back] backend.win.show()')
     backend.win.show()
     backend.layout_figures()
+    print('[back] backend.layout_figures()')
     if app is not None:
+        print('[back] app.setActiveWindow(backend.win)')
         app.setActiveWindow(backend.win)
+    print(r'[/back] Finished creating main win')
     return backend
 
 

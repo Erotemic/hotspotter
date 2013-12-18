@@ -617,13 +617,13 @@ class EditPrefWidget(QWidget):
     'The Settings Pane; Subclass of Main Windows.'
     def __init__(self, pref_struct):
         super(EditPrefWidget, self).__init__()
-        self.pref_skel = Ui_editPrefSkel()
-        self.pref_skel.setupUi(self)
+        self.ui = Ui_editPrefSkel()
+        self.ui.setupUi(self)
         self.pref_model = None
         self.populatePrefTreeSlot(pref_struct)
-        #self.pref_skel.redrawBUT.clicked.connect(fac.redraw)
-        #self.pref_skel.defaultPrefsBUT.clicked.connect(fac.default_prefs)
-        #self.pref_skel.unloadFeaturesAndModelsBUT.clicked.connect(fac.unload_features_and_models)
+        #self.ui.redrawBUT.clicked.connect(fac.redraw)
+        #self.ui.defaultPrefsBUT.clicked.connect(fac.default_prefs)
+        #self.ui.unloadFeaturesAndModelsBUT.clicked.connect(fac.unload_features_and_models)
 
     @pyqtSlot(Pref, name='populatePrefTreeSlot')
     def populatePrefTreeSlot(self, pref_struct):
@@ -632,8 +632,8 @@ class EditPrefWidget(QWidget):
         #Creates a QStandardItemModel that you can connect to a QTreeView
         self.pref_model = QPreferenceModel(pref_struct)
         printDBG('Built: ' + repr(self.pref_model))
-        self.pref_skel.prefTreeView.setModel(self.pref_model)
-        self.pref_skel.prefTreeView.header().resizeSection(0, 250)
+        self.ui.prefTreeView.setModel(self.pref_model)
+        self.ui.prefTreeView.header().resizeSection(0, 250)
 
 if __name__ == '__main__':
     import guitools

@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use('Qt4Agg')
 import multiprocessing
 
+
 def on_ctrl_c(signal, frame):
     import sys
     print('Caught ctrl+c')

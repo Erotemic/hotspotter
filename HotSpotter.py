@@ -103,20 +103,19 @@ class HotSpotter(DynStruct):
     def load_preferences(hs):
         print('[hs] load preferences')
         pref_load_success = hs.prefs.load()
-        print('[hs] Able to load prefs? ...%s' % ('Yes' if pref_load_success else 'No'))
+        print('[hs] Able to load prefs? ...%s' %
+              ('Yes' if pref_load_success else 'No'))
         if not pref_load_success:
             hs.default_preferences()
         # Preferences will try to load the FLANN index. Undo this.
-        hs.prefs.showanalysis = True
         hs.prefs.query_cfg.unload_data()
 
     def default_preferences(hs):
         print('[hs] defaulting preferences')
+        hs.prefs.display_cfg = ds.default_display_cfg()
         hs.prefs.chip_cfg  = ds.default_chip_cfg()
         hs.prefs.feat_cfg  = ds.default_feat_cfg(hs)
         hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
-        hs.prefs.showanalysis = True
-        hs.prefs.name_scoring = False
 
     def update_preferences(hs, **kwargs):
         print('[hs] updateing preferences')

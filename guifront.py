@@ -187,6 +187,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         ui.actionQuit.setEnabled(True)  # always allowed
         ui.actionAbout.setEnabled(True)  # always allowed
         ui.actionView_Docs.setEnabled(True)  # always allowed
+        ui.actionDelete_global_preferences.setEnabled(True)  # always allowed
 
         # These are not yet useful disable them
         actions = [item for list_ in [

@@ -1,26 +1,26 @@
 import numpy as np
 import types
+import sys
 
-VALID_INT_TYPES = set((types.IntType,
-                       types.LongType,
-                       np.typeDict['int64'],
-                       np.typeDict['int32'],
-                       np.typeDict['uint8'],))
+VALID_INT_TYPES = (types.IntType,
+                   types.LongType,
+                   np.typeDict['int64'],
+                   np.typeDict['int32'],
+                   np.typeDict['uint8'],)
 
-VALID_FLOAT_TYPES = set((types.FloatType,
+VALID_FLOAT_TYPES = (types.FloatType,
                          np.typeDict['float64'],
                          np.typeDict['float32'],
-                         np.typeDict['float16'],))
+                         np.typeDict['float16'],)
 
-VALID_STRING_TYPES = set((types.StringType,))
+DEBUG = False
 
-#VALID_LIST_TYPES = set((types.ListType,))
-
-#VALID_BOOLEAN_TYPES = set((types.BooleanType,))
-
-
-def printDBG(msg):
-    pass
+if DEBUG:
+    def printDBG(msg):
+        print('[tools.DBG] '+msg)
+else:
+    def printDBG(msg):
+        pass
 
 
 def index_of(item, array):
@@ -55,25 +55,38 @@ def debug_exception(func):
 
 def assert_int(var, lbl='var'):
     try:
-        assert is_int(var), 'type(%s)=%r =? INT' % (lbl, gettype(var))
+        assert is_int(var), 'type(%s)=%r is not int' % (lbl, get_type(var))
     except AssertionError:
+        print('[tools] %s = %r' % (lbl, var))
         print('[tools] VALID_INT_TYPES: %r' % VALID_INT_TYPES)
         raise
 
+if sys.platform == 'win32':
+    # Well this is a weird system specific error
+    # https://github.com/numpy/numpy/issues/3667
+    def get_type(var):
+        'Gets types accounting for numpy'
+        return var.dtype if isinstance(var, np.ndarray) else type(var)
+else:
+    def get_type(var):
+        'Gets types accounting for numpy'
+        return var.dtype.type if isinstance(var, np.ndarray) else type(var)
 
-def gettype(var):
-    'Gets types accounting for numpy'
-    return var.dtype.type if isinstance(var, np.ndarray) else type(var)
 
 
-def istype(var, valid_types):
+def is_type(var, valid_types):
     'Checks for types accounting for numpy'
-    return gettype(var) in valid_types
+    #printDBG('checking type var=%r' % (var,))
+    #var_type = type(var)
+    #printDBG('type is type(var)=%r' % (var_type,))
+    #printDBG('must be in valid_types=%r' % (valid_types,))
+    #ret = var_type in valid_types
+    #printDBG('result is %r ' % ret)
+    return get_type(var) in valid_types
 
 
 def is_int(var):
-    printDBG('Checking type: type(var) = %r ' % gettype(var))
-    return istype(var, VALID_INT_TYPES)
+    return is_type(var, VALID_INT_TYPES)
 
 
 def is_float(var):

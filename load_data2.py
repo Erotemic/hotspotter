@@ -113,6 +113,8 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     has_nametbl = helpers.checkpath(name_table)
     has_imgtbl  = helpers.checkpath(image_table)
 
+    # TODO DETECT OLD FORMATS HERE
+
     if not all([has_dbdir, has_imgdir, has_chiptbl, has_nametbl, has_imgtbl]):
         if allow_new_dir:
             return hs_dirs, hs_tables

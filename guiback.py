@@ -426,6 +426,7 @@ class MainWindowBackend(QtCore.QObject):
     # Action -> Query
     @pyqtSlot(name='query')
     def query(self, cid=None):
+        prevBlock = self.win.blockSignals(True)
         print(r'[\back] query()')
         if cid is not None:
             self.select_cid(cid, dodraw=False)
@@ -439,6 +440,7 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] finished query')
         print('')
         self.show_query(res)
+        self.win.blockSignals(prevBlock)
         return res
 
     # Action -> Reselect ROI
@@ -611,6 +613,7 @@ class MainWindowBackend(QtCore.QObject):
     def precompute_feats(self):
         print(r'[\back] precompute_feats()')
         prevBlock = self.win.blockSignals(True)
+        self.hs.update_samples()
         self.hs.load_chips()
         self.hs.load_features()
         self.win.blockSignals(prevBlock)

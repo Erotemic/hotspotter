@@ -238,17 +238,24 @@ class HotSpotter(DynStruct):
     # Modifying functions
     # ---------------
 
+    def unload_all(hs):
+        print('[hs] unloading all data')
+        hs.feats  = None
+        hs.cpaths = None
+        hs.dirty = True
+        hs.prefs.query_cfg.unload_data()
+        print('[hs] finished unloading all data')
+
     def unload_cxdata(hs, cx):
         'unloads features and chips. not tables'
         print('[hs] unload_cxdata(cx=%r)' % cx)
+        hs.prefs.query_cfg.unload_data()
         lists = [hs.feats.cx2_kpts,
                  hs.feats.cx2_desc,
                  hs.cpaths.cx2_rchip_path,
                  hs.cpaths.cx2_chip_path]
         if cx == 'all':
-            hs.feats  = None
-            hs.cpaths = None
-            hs.dirty = True
+            hs.unload_all()
             return
         for list_ in lists:
             helpers.ensure_list_size(list_, cx)
@@ -275,7 +282,6 @@ class HotSpotter(DynStruct):
         hs.delete_cxdata(cx)
         hs.tables.cx2_roi[cx] = new_roi
         hs.needs_save = True
-        hs.invalidated_results = True
 
     def change_theta(hs, cx, new_theta):
         hs.delete_cxdata(cx)
@@ -305,6 +311,8 @@ class HotSpotter(DynStruct):
     # ---------------
 
     def add_property(hs, new_prop):
+        if new_prop is None:
+            return
         if new_prop in hs.tables.prop_dict:
             raise UserWarning('Cannot add an already existing property')
         hs.tables.prop_dict[new_prop] = ['' for _ in xrange(hs.num_cx)]
@@ -328,6 +336,7 @@ class HotSpotter(DynStruct):
         else:
             next_cid = 1
         # Remove any cids
+        hs.prefs.query_cfg.unload_data()
         hs.delete_ciddata(next_cid)
         # Allocate space for a new chip
         hs.tables.cx2_cid   = np.concatenate((hs.tables.cx2_cid, [next_cid]))
@@ -342,7 +351,6 @@ class HotSpotter(DynStruct):
         cx = len(hs.tables.cx2_cid) - 1
         hs.update_samples()
         hs.needs_save = True
-        hs.invalidated_results = True
         return cx
 
     def add_images(hs, fpath_list, move_images=True):
@@ -406,7 +414,8 @@ class HotSpotter(DynStruct):
 
     def delete_computed_dir(hs):
         computed_dir = hs.dirs.computed_dir
-        [hs.unload_cxdata(cx) for cx in hs.get_valid_cxs()]
+        hs.unload_all()
+        #[hs.unload_cxdata(cx) for cx in hs.get_valid_cxs()]
         helpers.remove_files_in_dir(computed_dir, recursive=True, verbose=True,
                                     dryrun=False)
 

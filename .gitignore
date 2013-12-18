@@ -1,6 +1,7 @@
 *~
 resut lts*
 build
+dist
 research/notingit
 hs_scripts/setup/Output
 hotspotter/generated_version.py

@@ -281,8 +281,9 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
     centers = np.array(centers)
 
     # Create callback wrapper
-    def _on_click(event):
+    def _on_image_click(event):
         'Slot for matplotlib event'
+        print('\n[viz] clicked image')
         if event.xdata is None:
             return
         if len(centers) == 0:
@@ -294,12 +295,9 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
         cx = cx_list[dist.argsort()[0]]
         cx_clicked_func(cx)
 
-    button_press_cbid = fig.__dict__.get('button_press_cbid', None)
-    if button_press_cbid is not None:
-        fig.canvas.mpl_disconnect(button_press_cbid)
+    df2.disconnect_callback(fig, 'button_press_event')
     if interact:
-        fig.button_press_cbid = fig.canvas.mpl_connect('button_press_event', _on_click)
-        fig.button_press_callback = _on_click
+        df2.connect_callback(fig, 'button_press_event', _on_image_click)
 
 
 #def start_image_interaction(hs, gx, cx_clicked_func):
@@ -384,12 +382,12 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
         ax = df2.gca()
         df2.draw_sift_signature(sift, 'sift gradient orientation histogram')
         ax._hs_viewtype = 'histogram'
-
         fig.canvas.draw()
 
-    def _on_click(event):
+    def _on_chip_click(event):
         #print('\n===========')
         #print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
+        print('\n[viz] clicked chip')
         if event.xdata is None or event.inaxes is None:
             return  # The click is not in any axis
         #print('---')
@@ -405,11 +403,8 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
     #select_ith_keypoint(fx)
     # Draw without keypoints the first time
     show_chip(hs, cx=cx, draw_kpts=False)
-
-    button_press_cbid = fig.__dict__.get('button_press_cbid', None)
-    if button_press_cbid is not None:
-        fig.canvas.mpl_disconnect(button_press_cbid)
-    fig.button_press_cbid = fig.canvas.mpl_connect('button_press_event', _on_click)
+    df2.disconnect_callback(fig, 'button_press_event')
+    df2.connect_callback(fig, 'button_press_event', _on_chip_click)
 
 
 def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
@@ -528,13 +523,13 @@ def show_top(res, hs, N=5, figtitle='', **kwargs):
 
 
 def res_show_analysis(res, hs, fignum=3, figtitle='', show_query=None,
-                      annotations=None, cx_list=None, query_cfg=None, **kwargs):
+                      annote=None, cx_list=None, query_cfg=None, **kwargs):
         print('[viz] show_analysis()')
         # Do we show the query image
         if show_query is None:
             show_query = not hs.args.noshow_query
-        if annotations is None:
-            annotations = hs.prefs.display_cfg.annotations
+        if annote is None:
+            annote = hs.prefs.display_cfg.annotations
 
         # Compare to cx_list instead of using top ranks
         if not cx_list is None:
@@ -566,7 +561,7 @@ def res_show_analysis(res, hs, fignum=3, figtitle='', show_query=None,
         return _show_res(hs, res, gt_cxs=showgt_cxs, topN_cxs=topN_cxs,
                          figtitle=figtitle, max_nCols=max_nCols,
                          show_query=show_query, fignum=fignum,
-                         annotations=annotations, query_cfg=query_cfg, **kwargs)
+                         annote=annote, query_cfg=query_cfg, **kwargs)
 
 
 def show_matches_annote_res(res, hs, cx,
@@ -591,7 +586,7 @@ def show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=None,
                         show_cx=False, show_cid=True, show_gname=False,
                         show_name=True, showTF=True, showScore=True, **kwargs):
     fignum = kwargs.pop('fnum', fignum)
-    ' Shows matches with annotations '
+    ' Shows matches with annote -ations '
     print('[viz.show_matches_annote()] Showing matches from %s' % (hs.vs_str(cx, qcx)))
     if np.isnan(cx):
         nan_img = np.zeros((100, 100), dtype=np.uint8)
@@ -640,7 +635,7 @@ def show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=None,
     #df2.upperright_text(qcx_str)
     #df2.upperright_text(cx_str, offset=offset)
     #df2.lowerright_text(cx_str)
-    # Finish annotations
+    # Finish annote -ations
     if isgt_str == UNKNOWN_STR:
         unknown_color = df2.DARK_PURP
         df2.draw_border(ax, unknown_color, 4, offset=offset)
@@ -661,9 +656,10 @@ def show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=None,
 
 
 def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
-              show_query=False, all_kpts=False, annotations=True,
-              query_cfg=None, split_plots=False, **kwargs):
+              show_query=False, all_kpts=False, annote=True, query_cfg=None,
+              split_plots=False, interact=True, **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
+    print('[viz._show_res()] %r ' % locals())
     fignum = kwargs.pop('fignum', 3)
     fignum = kwargs.pop('fnum', 3)
     #print('========================')
@@ -681,7 +677,6 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
     #print('[viz._show_res()] * max_nCols=%r' % (max_nCols,))
     #print('[viz._show_res()] * show_query=%r' % (show_query,))
     ranked_cxs = res.topN_cxs(hs, N='all')
-    annote = annotations
     # Build a subplot grid
     nQuerySubplts = 1 if show_query else 0
     nGtSubplts = nQuerySubplts + (0 if gt_cxs is None else len(gt_cxs))
@@ -701,6 +696,7 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
     # Helper function for drawing matches to one cx
 
     def _show_matches_fn(cx, orank, plotnum):
+        'helper for viz._show_res'
         aug = 'rank=%r\n' % orank
         #printDBG('[viz._show_res()] plotting: %r'  % (plotnum,))
         kwshow  = dict(draw_ell=annote, draw_pts=annote, draw_lines=annote,
@@ -708,14 +704,16 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
         show_matches_annote_res(res, hs, cx, title_aug=aug, fignum=fignum, plotnum=plotnum, **kwshow)
 
     def _show_query_fn(plotx_shift, rowcols):
+        'helper for viz._show_res'
         #printDBG('[viz._show_res()] Plotting Query:')
         plotx = plotx_shift + 1
         plotnum = (rowcols[0], rowcols[1], plotx)
         #printDBG('[viz._show_res()] plotting: %r' % (plotnum,))
-        show_chip(hs, res=res, plotnum=plotnum, draw_kpts=annote, prefix='query', fignum=fignum)
+        show_chip(hs, res=res, plotnum=plotnum, draw_kpts=annote, prefix='q', fignum=fignum)
 
     # Helper to draw many cxs
-    def plot_matches_cxs(cx_list, plotx_shift, rowcols):
+    def _plot_matches_cxs(cx_list, plotx_shift, rowcols):
+        'helper for viz._show_res'
         if cx_list is None:
             return
         for ox, cx in enumerate(cx_list):
@@ -741,7 +739,7 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
     if show_query:
         _show_query_fn(0, (nRows, nGTCols))
     # Plot Ground Truth
-    plot_matches_cxs(gt_cxs, nQuerySubplts, (nRows, nGTCols))
+    _plot_matches_cxs(gt_cxs, nQuerySubplts, (nRows, nGTCols))
     # Plot TopN in a new figure
     if split_plots:
         #df2.set_figtitle(figtitle + 'GT', query_uid)
@@ -752,13 +750,33 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
         shift_topN = 0
     else:
         shift_topN = nGtCells
-    plot_matches_cxs(topN_cxs, shift_topN, (nRows, nTopNCols))
+    _plot_matches_cxs(topN_cxs, shift_topN, (nRows, nTopNCols))
     if split_plots:
         pass
         #df2.set_figtitle(figtitle + 'topN', query_uid)
     else:
         pass
         #df2.set_figtitle(figtitle, query_uid)
+        df2.set_figtitle(figtitle)
+
+    if interact:
+        printDBG('[viz._show_res()] starting interaction')
+
+        # Create
+        def _on_res_click(event):
+            'result interaction mpl event callback slot'
+            print('\n[viz] clicked result')
+            if event.xdata is None:
+                return
+            _show_res(hs, res, figtitle=figtitle, max_nCols=max_nCols, topN_cxs=topN_cxs,
+                      gt_cxs=gt_cxs, show_query=show_query, all_kpts=all_kpts,
+                      annote=not annote, query_cfg=query_cfg, split_plots=split_plots,
+                      interact=interact, **kwargs)
+            fig.canvas.draw()
+
+        df2.disconnect_callback(fig, 'button_press_event')
+        if interact:
+            df2.connect_callback(fig, 'button_press_event', _on_res_click)
     printDBG('[viz._show_res()] Finished')
     return fig
 

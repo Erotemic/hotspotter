@@ -39,6 +39,7 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[\back] creating backend')
         self.hs  = hs
         self.app = app
+        self.current_res = None
         self.timer = None
         kwargs_ = {'use_plot_widget': False}
         self.win = guifront.MainWindowFrontend(backend=self, **kwargs_)
@@ -165,8 +166,12 @@ class MainWindowBackend(QtCore.QObject):
         row_list = range(len(datatup_list))
         self.populateSignal.emit('image', col_headers, col_editable, row_list, datatup_list)
 
-    def populate_result_table(self, res):
-        print('[*back] populate_image_table()')
+    def populate_result_table(self):
+        print('[*back] populate_result_table()')
+        res = self.current_res
+        if res is None:
+            print('[*back] no results available')
+            return
         col_headers  = ['Rank', 'Matching Name', 'Chip ID',  'Confidence']
         col_editable = [False,             True,      True,         False]
         top_cxs = res.topN_cxs(self.hs, N='all')
@@ -397,6 +402,7 @@ class MainWindowBackend(QtCore.QObject):
         new_prop = self.user_input('What is the new property name?')
         self.hs.add_property(new_prop)
         self.populate_chip_table()
+        self.populate_result_table()
         print(r'[/back] added new_prop=%r' % new_prop)
         print('')
 
@@ -412,6 +418,7 @@ class MainWindowBackend(QtCore.QObject):
         cx = self.hs.add_chip(gx, roi)
         self.populate_image_table()
         self.populate_chip_table()
+        self.populate_result_table()
         self.select_gx(gx, cx)
         print(r'[/back] added chip')
         print('')
@@ -427,7 +434,8 @@ class MainWindowBackend(QtCore.QObject):
             self.user_info('Cannot query. No chip selected')
             return
         res = self.hs.query(cx)
-        self.populate_result_table(res)
+        self.current_res = res
+        self.populate_result_table()
         print(r'[/back] finished query')
         print('')
         self.show_query(res)
@@ -450,6 +458,7 @@ class MainWindowBackend(QtCore.QObject):
         self.hs.change_roi(cx, roi)
         self.populate_image_table()
         self.populate_chip_table()
+        self.populate_result_table()
         self.select_gx(gx, cx, **kwargs)
         print(r'[/back] reselected ROI=%r' % roi)
         print('')
@@ -472,6 +481,7 @@ class MainWindowBackend(QtCore.QObject):
         self.hs.change_theta(cx, theta)
         self.populate_image_table()
         self.populate_chip_table()
+        self.populate_result_table()
         self.select_gx(gx, cx, **kwargs)
         print(r'[/back] reselected theta=%r' % theta)
         print('')
@@ -482,11 +492,12 @@ class MainWindowBackend(QtCore.QObject):
         key, val = map(str, (key, val))
         print('[*back] change_chip_property(%r, %r, %r)' % (cid, key, val))
         cx = self.hs.cid2_cx(cid)
-        if key == 'Name':
+        if key in ['Name', 'Matching Name']:
             self.hs.change_name(cx, val)
         else:
             self.hs.change_prop(cx, key, val)
         self.populate_chip_table()
+        self.populate_result_table()
         print(r'[/back] changed property')
         print('')
 
@@ -520,6 +531,7 @@ class MainWindowBackend(QtCore.QObject):
         self.hs.delete_chip(cx)
         self.populate_image_table()
         self.populate_chip_table()
+        self.populate_result_table()
         self.select_gx(gx)
         print(r'[/back] deleted cx=%r' % cx)
         print('')

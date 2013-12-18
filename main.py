@@ -44,30 +44,32 @@ if __name__ == '__main__':
     app, is_root = guitools.init_qtapp()
     # Parse arguments
     args = argparse2.fix_args_with_cache(args)
+    # Process relevant args
+    cids = args.query
     if args.vdd:
         helpers.vd(args.dbdir)
         args.vdd = False
-    # Build hotspotter database
+
+    # --- Build HotSpotter API ---
     hs = HotSpotter.HotSpotter(args)
+    # Load all data if needed now, otherwise be lazy
+    load_all = hs.args.autoquery or len(cids) > 0
+    try:
+        hs.load(load_all=load_all)
+    except ValueError as ex:
+        print('[main] ValueError = %r' % (ex,))
+        if hs.args.strict:
+            raise
+    # Create main window only after data is loaded
     backend = guitools.make_main_window(hs, app)
 
-    cids = hs.args.query
-    # Preload data if you do any of these flags
-    if hs.args.autoquery or len(cids) > 0:
-        hs.load(load_all=True)
+    # --- Run Startup Commands ---
     # Autocompute all queries
     if hs.args.autoquery:
         backend.precompute_queries()
     if len(cids) > 0:
-        try:
             qcid = cids[0]
             res = backend.query(qcid)
-        except ValueError as ex:
-            print('[main] ValueError = %r' % (ex,))
-            if hs.args.strict:
-                raise
-        else:
-            hs.load(load_all=False)
     # Connect database to the backend gui
     app.setActiveWindow(backend.win)
 

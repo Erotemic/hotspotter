@@ -89,7 +89,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[back*] show_query()')
         fig = df2.figure(fignum=3, doclf=True)
         fig.clf()
-        if self.hs.display_cfg.showanalysis:
+        if self.hs.prefs.display_cfg.showanalysis:
             res.show_analysis(self.hs, fignum=3, figtitle='Analysis View')
         else:
             res.show_top(self.hs, fignum=3, figtitle='Query View ')
@@ -313,13 +313,14 @@ class MainWindowBackend(QtCore.QObject):
             args = self.hs.args
             if db_dir is None:
                 db_dir = guitools.select_directory('Select (or create) a database directory.')
-            print('[main] user selects database: ' + db_dir)
-            # Try and load db
-            hs = HotSpotter.HotSpotter(args=args, db_dir=db_dir)
-            hs.load(load_all=False)
-            # Write to cache and connect if successful
-            io.global_cache_write('db_dir', db_dir)
-            self.connect_api(hs)
+            with helpers.Indenter():
+                print('[main] user selects database: ' + db_dir)
+                # Try and load db
+                hs = HotSpotter.HotSpotter(args=args, db_dir=db_dir)
+                hs.load(load_all=False)
+                # Write to cache and connect if successful
+                io.global_cache_write('db_dir', db_dir)
+                self.connect_api(hs)
             self.layout_figures()
         except Exception as ex:
             print('aborting open database')

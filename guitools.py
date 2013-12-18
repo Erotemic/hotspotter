@@ -283,7 +283,7 @@ def run_main_loop(app, is_root=True, backend=None):
         print('[*guitools] using roots main loop')
 
 
-def ping_python_interpreter(frequency=4200):
+def ping_python_interpreter(frequency=100):  # 4200):
     'Create a QTimer which lets the python intepreter run every so often'
     timer = Qt.QTimer()
     timer.timeout.connect(lambda: None)

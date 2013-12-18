@@ -471,9 +471,9 @@ def get_timestamp(format_='filename', use_second=False):
     return stamp
 
 
-
 def progress_str(max_val, lbl='Progress: '):
     return make_progress_fmt_str(max_val, lbl)
+
 
 # DEPRICATE
 def make_progress_fmt_str(max_val, lbl='Progress: '):
@@ -1214,17 +1214,28 @@ class RedirectStdout(object):
         self.record = self.stream.read()
         return self.record
 
+    def update(self):
+        self.stream.flush()
+        self.record = self.stream.read()
+        self._stdout_old.write(indent(self.record, self.lbl))
+
     def dump(self):
         print(indent(self.record, self.lbl))
 
     def __enter__(self):
         self.start()
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.stop()
         if not self.lbl is None:
             if self.show_on_exit:
                 self.dump()
+
+
+class Indenter(RedirectStdout):
+    def __init__(self):
+        super(Indenter, self).__init__(lbl='    ', autostart=True)
 
 
 def choose(n, k):

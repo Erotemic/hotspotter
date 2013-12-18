@@ -301,7 +301,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         # Get selected chipid
         sel_cid = int(self.ui.chip_TBL.item(sel_row, 0).text())
         # Get the changed property key and value
-        new_val = str(item.text()).replace(',', ';;') # sanatize for csv
+        new_val = str(item.text()).replace(',', ';;')  # sanatize for csv
         # Get which column is being changed
         header_lbl = str(self.ui.chip_TBL.horizontalHeaderItem(sel_col).text())
         # Tell the backend about the change
@@ -311,13 +311,13 @@ class MainWindowFrontend(QtGui.QMainWindow):
     def res_tbl_changed(self, item):
         'A Chip was Renamed in Result View'
         self.print('res_tbl_changed()')
-        sel_row  = item.row() # The changed row
+        sel_row  = item.row()  # The changed row
         sel_col = item.column()
-        sel_cid  = int(self.ui.res_TBL.item(sel_row, 2).text()) # The changed row's chip id
+        sel_cid  = int(self.ui.res_TBL.item(sel_row, 2).text())  # The changed row's chip id
         # Get which column is being changed
         header_lbl = str(self.ui.res_TBL.horizontalHeaderItem(sel_col).text())
         # The changed items's value
-        new_val = str(item.text()).replace(',', ';;') # sanatize for csv
+        new_val = str(item.text()).replace(',', ';;')  # sanatize for csv
         # Tell the backend about the change
         self.changeCidSignal.emit(sel_cid, header_lbl, new_val)
         # Hendrik/Jason TODO:

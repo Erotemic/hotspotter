@@ -383,7 +383,7 @@ def default_vsmany_cfg(hs, **kwargs):
     kwargs['query_type'] = 'vsmany'
     kwargs_set = __dict_default_func(kwargs)
     kwargs_set('lnbnn_weight', .01)
-    kwargs_set('xy_thresh', .01)
+    kwargs_set('xy_thresh', .1)
     kwargs_set('K', 4)
     kwargs_set('Knorm', 1)
     query_cfg = Config.QueryConfig(hs, **kwargs)

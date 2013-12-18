@@ -72,6 +72,7 @@ class HotSpotter(DynStruct):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
         super(HotSpotter, hs).__init__()
+        print(r'[\hs] Creating HotSpotter API')
         hs.args = args
         hs.num_cx = None
         hs.tables = None
@@ -95,10 +96,10 @@ class HotSpotter(DynStruct):
             #hs.prefs.N = args.N if args is not None
             #args_dict = vars(args)
             #hs.update_preferences(**args_dict)
-
         hs.query_history = [(None, None)]
         if db_dir is not None:
             hs.args.dbdir = db_dir
+        print(r'[/hs] Created HotSpotter API')
 
     def load_preferences(hs):
         print('[hs] load preferences')
@@ -582,7 +583,6 @@ class HotSpotter(DynStruct):
         return cx_list
 
     # build metaproperty tables
-
     def cid2_gx(hs, cid):
         'chip_id ==> image_index'
         cx = hs.tables.cid2_cx(cid)
@@ -591,6 +591,7 @@ class HotSpotter(DynStruct):
 
     @tools.class_iter_input
     def cid2_cx(hs, cid_input):
+        'returns chipids belonging to a chip index(s)'
         'chip_id ==> chip_index'
         index_of = tools.index_of
         cx2_cid = hs.tables.cx2_cid
@@ -598,6 +599,7 @@ class HotSpotter(DynStruct):
         return cx_output
 
     def get_nx2_cxs(hs):
+        'returns mapping from name indexes to chip indexes'
         cx2_nx = hs.tables.cx2_nx
         if len(cx2_nx) == 0:
             return [[], []]
@@ -609,6 +611,7 @@ class HotSpotter(DynStruct):
         return nx2_cxs
 
     def get_gx2_cxs(hs):
+        'returns mapping from image indexes to chip indexes'
         cx2_gx = hs.tables.cx2_gx
         max_gx = len(hs.tables.gx2_gname)
         gx2_cxs = [[] for _ in xrange(max_gx + 1)]
@@ -620,18 +623,21 @@ class HotSpotter(DynStruct):
 
     @tools.class_iter_input
     def get_other_cxs(hs, cx_input):
+        'returns other chips with the same known name'
         cx2_nx = hs.tables.cx2_nx
         nx_list = [cx2_nx[cx] for cx in iter(cx_input)]
+
         def _2ocxs(cx, nx):
             other_cx_ = np.where(cx2_nx == nx)[0]
             return other_cx_[other_cx_ != cx]
         others_list = [_2ocxs(cx, nx)
-                       if nx <= 1 else np.array([], ds.X_DTYPE) \
-                       for nx, cx in izip(nx_list, cx_input) ]
+                       if nx <= 1 else np.array([], ds.X_DTYPE)
+                       for nx, cx in izip(nx_list, cx_input)]
         return others_list
 
     @tools.class_iter_input
     def get_other_indexed_cxs(hs, cx_input):
+        'returns other indexed chips with the same known name'
         other_list_ = hs.get_other_cxs(cx_input)
         indx_samp  = hs.indexed_sample_cx
         other_list = [np.intersect1d(ocxs, indx_samp) for

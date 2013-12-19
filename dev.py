@@ -460,9 +460,9 @@ def print_history_table(args):
 def dev_main(**kwargs):
     'Developer main script. Contains all you need to quickly start tests'
     import HotSpotter
-    import main as _main
+    import argparse2
     print('[dev] main()')
-    args = _main.parse_arguments()
+    args = argparse2.parse_arguments()
     print('[dev] Loading DB=%r' % args.db)
     # Create Hotspotter API
     hs = HotSpotter.HotSpotter(args)

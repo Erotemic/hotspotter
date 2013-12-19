@@ -595,7 +595,11 @@ class HotSpotter(DynStruct):
         'chip_id ==> chip_index'
         index_of = tools.index_of
         cx2_cid = hs.tables.cx2_cid
-        cx_output = [index_of(cid, cx2_cid) for cid in cid_input]
+        try:
+            cx_output = [index_of(cid, cx2_cid) for cid in cid_input]
+        except IndexError as ex:
+            print('[hs] ERROR %r ' % ex)
+            print('[hs] ERROR a cid in %r does not exist.' % (cid_input,))
         return cx_output
 
     def get_nx2_cxs(hs):

@@ -1,74 +1,83 @@
 from __future__ import division, print_function
 import __builtin__
 import sys
-from helpers import printWARN, printINFO
 import warnings
 import cv2
 import numpy.linalg as linalg
 import numpy as np
-import scipy
-import scipy.linalg
 import scipy.sparse as sparse
 import scipy.sparse.linalg as sparse_linalg
 # skimage.transform
 # http://stackoverflow.com/questions/11462781/fast-2d-rigid-body-transformations-in-numpy-scipy
 # skimage.transform.fast_homography(im, H)
 # Toggleable printing
+
 print = __builtin__.print
 print_ = sys.stdout.write
+
+
 def print_on():
     global print, print_
     print =  __builtin__.print
     print_ = sys.stdout.write
+
+
 def print_off():
     global print, print_
-    def print(*args, **kwargs): pass
-    def print_(*args, **kwargs): pass
 
-# Dynamic module reloading
-def reload_module():
-    import imp, sys
-    print('[sv2] reloading '+__name__)
+    def print(*args, **kwargs):
+        pass
+
+    def print_(*args, **kwargs):
+        pass
+
+
+def rrr():
+    'Dynamic module reloading'
+    import imp
+    print('[sv2] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
-rrr = reload_module
 
 SV_DTYPE = np.float64
 
-# Generate 6 degrees of freedom homography transformation
+
 def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
-    '''Computes homography from normalized (0 to 1) point correspondences
+    '''Generate 6 degrees of freedom homography transformation
+    Computes homography from normalized (0 to 1) point correspondences
     from 2 --> 1 '''
     num_pts = len(x1_mn)
-    Mbynine = np.zeros((2*num_pts,9), dtype=SV_DTYPE)
-    for ix in xrange(num_pts): # Loop over inliers
+    Mbynine = np.zeros((2 * num_pts, 9), dtype=SV_DTYPE)
+    for ix in xrange(num_pts):  # Loop over inliers
         # Concatinate all 2x9 matrices into an Mx9 matrix
-        u2      = x2_mn[ix]
-        v2      = y2_mn[ix]
-        (d,e,f) = (   -x1_mn[ix],    -y1_mn[ix],  -1)
-        (g,h,i) = ( v2*x1_mn[ix],  v2*y1_mn[ix],  v2)
-        (j,k,l) = (    x1_mn[ix],     y1_mn[ix],   1)
-        (p,q,r) = (-u2*x1_mn[ix], -u2*y1_mn[ix], -u2)
-        Mbynine[ix*2]   = (0, 0, 0, d, e, f, g, h, i)
-        Mbynine[ix*2+1] = (j, k, l, 0, 0, 0, p, q, r)
-    # Solve for the nullspace of the Mbynine
+        u2        = x2_mn[ix]
+        v2        = y2_mn[ix]
+        (d, e, f) = (     -x1_mn[ix],      -y1_mn[ix],  -1)
+        (g, h, i) = ( v2 * x1_mn[ix],  v2 * y1_mn[ix],  v2)
+        (j, k, l) = (      x1_mn[ix],       y1_mn[ix],   1)
+        (p, q, r) = (-u2 * x1_mn[ix], -u2 * y1_mn[ix], -u2)
+        Mbynine[ix * 2]     = (0, 0, 0, d, e, f, g, h, i)
+        Mbynine[ix * 2 + 1] = (j, k, l, 0, 0, 0, p, q, r)
+    # Solve for the nullspace of the Mbynine (solves least squares)
     try:
         (u, s, v) = linalg.svd(Mbynine)
     except MemoryError as ex:
-        printWARN('[sv2] Caught MemErr %r during full SVD. Trying sparse SVD.' % (ex))
+        print('[sv2] Caught MemErr %r during full SVD. Trying sparse SVD.' % (ex))
         MbynineSparse = sparse.lil_matrix(Mbynine)
         (u, s, v) = sparse_linalg.svds(MbynineSparse)
-    except linalg.LinAlgError as ex2:
+    except linalg.LinAlgError:
         return np.eye(3)
     # Rearange the nullspace into a homography
-    h = v[-1] # v = V.H # (transposed in matlab)
-    H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]  ) )
+    h = v[-1]  # v = V.H # (transposed in matlab)
+    H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]))
     return H
+
 
 def calc_diaglen_sqrd(x_m, y_m):
     x_extent_sqrd = (x_m.max() - x_m.min()) ** 2
     y_extent_sqrd = (y_m.max() - y_m.min()) ** 2
     diaglen_sqrd = x_extent_sqrd + y_extent_sqrd
     return diaglen_sqrd
+
 
 def split_kpts(kpts5xN):
     'breakup keypoints into position and shape'
@@ -77,9 +86,10 @@ def split_kpts(kpts5xN):
     _acds = np.array(kpts5xN[2:5], dtype=SV_DTYPE)
     return _xs, _ys, _acds
 
+
 def normalize_xy_points(x_m, y_m):
     'Returns a transformation to normalize points to mean=0, stddev=1'
-    mean_x = x_m.mean() # center of mass
+    mean_x = x_m.mean()  # center of mass
     mean_y = y_m.mean()
     std_x = x_m.std()
     std_y = y_m.std()
@@ -91,6 +101,7 @@ def normalize_xy_points(x_m, y_m):
     x_norm = (x_m - mean_x) * sx
     y_norm = (y_m - mean_y) * sy
     return x_norm, y_norm, T
+
 
 def homography_inliers(kpts1, kpts2, fm,
                        xy_thresh,
@@ -125,9 +136,9 @@ def homography_inliers(kpts1, kpts2, fm,
         return None
     # Get corresponding points and shapes
     (x1_ma, y1_ma, acd1_m) = (x1_m[aff_inliers], y1_m[aff_inliers],
-                              acd1_m[:,aff_inliers])
+                              acd1_m[:, aff_inliers])
     (x2_ma, y2_ma, acd2_m) = (x2_m[aff_inliers], y2_m[aff_inliers],
-                              acd2_m[:,aff_inliers])
+                              acd2_m[:, aff_inliers])
     # Normalize affine inliers
     x1_mn, y1_mn, T1 = normalize_xy_points(x1_ma, y1_ma)
     x2_mn, y2_mn, T2 = normalize_xy_points(x2_ma, y2_ma)
@@ -135,9 +146,9 @@ def homography_inliers(kpts1, kpts2, fm,
     H_prime = compute_homog(x1_mn, y1_mn, x2_mn, y2_mn)
     try:
         # Computes ax = b # x = linalg.solve(a, b)
-        H = linalg.solve(T1, H_prime).dot(T2) # Unnormalize
+        H = linalg.solve(T1, H_prime).dot(T2)  # Unnormalize
     except linalg.LinAlgError as ex:
-        printWARN('[sv2] Warning 285 '+repr(ex), )
+        print('[sv2] Warning 285 ' + repr(ex), )
         #raise
         return None
 
@@ -145,14 +156,14 @@ def homography_inliers(kpts1, kpts2, fm,
      (H21, H22, H23),
      (H31, H32, H33)) = H
     # Transform all xy1 matches to xy2 space
-    x1_mt = H11*(x1_m) + H12*(y1_m) + H13
-    y1_mt = H21*(x1_m) + H22*(y1_m) + H23
-    z1_mt = H31*(x1_m) + H32*(y1_m) + H33
+    x1_mt = H11 * (x1_m) + H12 * (y1_m) + H13
+    y1_mt = H21 * (x1_m) + H22 * (y1_m) + H23
+    z1_mt = H31 * (x1_m) + H32 * (y1_m) + H33
     # --- Find (Squared) Distance Error ---
     #scale_err = np.abs(np.linalg.det(H)) * det2_m / det1_m
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        xy_err = (x1_mt/z1_mt - x2_m)**2 + (y1_mt/z1_mt - y2_m)**2
+        xy_err = (x1_mt / z1_mt - x2_m) ** 2 + (y1_mt / z1_mt - y2_m) ** 2
     # Estimate final inliers
     inliers = np.where(xy_err < xy_thresh_sqrd)[0]
     return H, inliers
@@ -198,6 +209,8 @@ Aj = np.array([[aj,0],[cj,dj]])
 
 Ah = np.array([(ai, 0, 0),(ci, di, 0), (0,0,1)])
 '''
+
+
 #---
 # Ensure that a feature doesn't have multiple assignments
 # --------------------------------
@@ -205,15 +218,21 @@ Ah = np.array([(ai, 0, 0),(ci, di, 0), (0,0,1)])
 def det_acd(acd):
     'Lower triangular determinant'
     return acd[0] * acd[2]
+
+
 def inv_acd(acd, det):
     'Lower triangular inverse'
     return np.array((acd[2], -acd[1], acd[0])) / det
+
+
 def dot_acd(acd1, acd2):
     'Lower triangular dot product'
     a = (acd1[0] * acd2[0])
     c = (acd1[1] * acd2[0]) + (acd1[2] * acd2[1])
     d = (acd1[2] * acd2[2])
     return np.array((a, c, d))
+
+
 # --------------------------------
 def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
                    x2_m, y2_m, acd2_m, fx2_m,
@@ -231,7 +250,7 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
         invA = ([a 0],[c d])
 
     REMEMBER our acd is actually inv(acd)
-    We transform from 1->2
+    We transform from 1 - >2
     '''
     #print(repr((acd1_m.T[0:10]).T))
     #print(repr((acd2_m.T[0:10]).T))
@@ -267,10 +286,10 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
         x2_hypo = x2_m[mx]
         y2_hypo = y2_m[mx]
         # --- Transform from xy1 to xy2 ---
-        x1_mt   = x2_hypo + Aa*(x1_m - x1_hypo)
-        y1_mt   = y2_hypo + Ac*(x1_m - x1_hypo) + Ad*(y1_m - y1_hypo)
+        x1_mt   = x2_hypo + Aa * (x1_m - x1_hypo)
+        y1_mt   = y2_hypo + Ac * (x1_m - x1_hypo) + Ad * (y1_m - y1_hypo)
         # --- Find (Squared) Distance Error ---
-        xy_err    = (x1_mt - x2_m)**2 + (y1_mt - y2_m)**2
+        xy_err    = (x1_mt - x2_m) ** 2 + (y1_mt - y2_m) ** 2
         # --- Find (Squared) Scale Error ---
         #scale_err = Adet * det2_m / det1_m
         scale_err = Adet * det1_m / det2_m
@@ -309,33 +328,35 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
         (Aa, Ac, Ad) = Aff_list[:, best_mx]
         (x1, y1, x2, y2) = (x1_m[best_mx], y1_m[best_mx],
                             x2_m[best_mx], y2_m[best_mx])
-        best_Aff = np.array([(Aa,  0,  x2-Aa*x1      ),
-                             (Ac, Ad,  y2-Ac*x1-Ad*y1),
-                             ( 0,  0,               1)])
+        xt = x2 - Aa * x1
+        yt = y2 - Ac * x1 - Ad * y1
+        # Save the winning hypothesis transformation
+        best_Aff = np.array([(Aa,  0,  xt),
+                             (Ac, Ad,  yt),
+                             ( 0,  0,  1)])
     else:
         best_Aff = np.eye(3)
     return best_Aff, best_inliers
 
+
 def test():
-    import params
     import dev
     import match_chips3 as mc3
-    import DataStructures as ds
     xy_thresh = .02
     max_scale = 2
-    min_scale =.5
+    min_scale = .5
     #qcx = helpers.get_arg_after('--qcx', type_=int, default=0)
     #cx  = helpers.get_arg_after('--cx', type_=int)
     #cx  = 113
     main_locals = dev.dev_main()
     hs  = main_locals['hs']        # hotspotter api
     qcx = main_locals['qcx']       # query chip index
-    gt_cxs = hs.get_other_indexed_cxs(qcx) # list of ground truth chip indexes
+    gt_cxs = hs.get_other_indexed_cxs(qcx)  # list of ground truth chip indexes
     if len(gt_cxs) == 0:
-        msg = 'q'+hs.cxstr(qcx)+' has no groundtruth'
+        msg = 'q' + hs.cxstr(qcx) + ' has no groundtruth'
         msg += 'cannot perform tests without groundtruth'
         raise Exception(msg)
-    cx = gt_cxs[0] # Pick a ground truth to test against
+    cx = gt_cxs[0]  # Pick a ground truth to test against
 
     # Query without spatial verification to get assigned matches
     #res = mc3.query_database(hs, qcx, sv_on=False)
@@ -352,8 +373,8 @@ def test():
 
     # Get chip index to feature score
     # These are unused here
-    fs = res.cx2_fs[cx]
-    score = res.cx2_score[cx]
+    #fs = res.cx2_fs[cx]
+    #score = res.cx2_score[cx]
 
     # Read the images from disk
     rchip1 = hs.get_chip(qcx)
@@ -364,7 +385,7 @@ def test():
     #
     # Common arguments to df2.show_matches2
     args_ = [rchip1, rchip2, kpts1, kpts2]
-    diaglen_sqrd= rchip2.shape[0]**2 + rchip2.shape[1]**2
+    diaglen_sqrd = rchip2.shape[0] ** 2 + rchip2.shape[1] ** 2
 
     # How does H map rchip1 onto rchip2?
     H, inliers = homography_inliers(kpts1, kpts2, fm,
@@ -381,53 +402,50 @@ def test():
     print(H)
     print(rchip1.shape, rchip2.shape)
     homography_transformed = cv2.warpPerspective(rchip1, H, rchip2.shape[0:2])
-    homography_transformed = cv2.resize(homography_transformed, (int(rchip2.shape[1]/4), int(rchip2.shape[0]/4)))
-    
-    # How does Aff map rchip1 to rchip2? 
+    homography_transformed = cv2.resize(homography_transformed, (int(rchip2.shape[1] / 4), int(rchip2.shape[0] / 4)))
 
+    # How does Aff map rchip1 to rchip2?
     Aff, aff_inliers = homography_inliers(kpts1, kpts2, fm,
-                                    xy_thresh,
-                                    max_scale,
-                                    min_scale,
-                                    diaglen_sqrd=diaglen_sqrd,
-                                    min_num_inliers=4, just_affine=True)
+                                          xy_thresh,
+                                          max_scale,
+                                          min_scale,
+                                          diaglen_sqrd=diaglen_sqrd,
+                                          min_num_inliers=4, just_affine=True)
     print('Affine inliers')
     print(aff_inliers)
     print('Aff')
-    print(Aff[0:2,:])
+    print(Aff[0:2, :])
     print (kpts1.shape, kpts2.shape)
     #print (cv2.getAffineTransform(kpts1[aff_inliers], kpts2[aff_inliers]))
-    affine_transformed = cv2.warpAffine(rchip1, Aff[0:2,:], rchip2.shape[0:2])
-    affine_transformed = cv2.resize(affine_transformed, (int(rchip2.shape[1]/4), int(rchip2.shape[0]/4)))
+    affine_transformed = cv2.warpAffine(rchip1, Aff[0:2, :], rchip2.shape[0:2])
+    affine_transformed = cv2.resize(affine_transformed, (int(rchip2.shape[1] / 4), int(rchip2.shape[0] / 4)))
 
-    original_resized = cv2.resize(rchip1, (int(rchip1.shape[1]/4), int(rchip1.shape[0]/4)))
-    dest_resized = cv2.resize(rchip2, (int(rchip2.shape[1]/4), int(rchip2.shape[0]/4)))
+    original_resized = cv2.resize(rchip1, (int(rchip1.shape[1] / 4), int(rchip1.shape[0] / 4)))
+    dest_resized = cv2.resize(rchip2, (int(rchip2.shape[1] / 4), int(rchip2.shape[0] / 4)))
     cv2.imshow('Source', original_resized)
     cv2.imshow('Destination', dest_resized)
     cv2.imshow('Homography', homography_transformed)
     cv2.imshow('Affine', affine_transformed)
     df2.imshow(original_resized, title='Source')
     # Draw original matches
-    df2.show_matches2(*args_+[fm], fs=None,
+    df2.show_matches2(*args_ + [fm], fs=None,
                       all_kpts=False, draw_lines=True,
-                      doclf=True, title='Assigned matches', plotnum=(1,3,1))
+                      doclf=True, title='Assigned matches', plotnum=(1, 3, 1))
 
     # Draw affine
-    df2.show_matches2(*args_+[fm[aff_inliers]], fs=None,
+    df2.show_matches2(*args_ + [fm[aff_inliers]], fs=None,
                       all_kpts=False, draw_lines=True, doclf=True,
-                      title='Affine inliers', plotnum=(1,3,2))
+                      title='Affine inliers', plotnum=(1, 3, 2))
 
     # Draw homogrophy
-    df2.show_matches2(*args_+[fm[inliers]], fs=None,
+    df2.show_matches2(*args_ + [fm[inliers]], fs=None,
                       all_kpts=False, draw_lines=True, doclf=True,
-                      title='Homography inliers', plotnum=(1,3,3))
+                      title='Homography inliers', plotnum=(1, 3, 3))
 
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
     import draw_func2 as df2
-    import params
-    import helpers
     import sys
     print('[sc2] __main__ = spatial_verification2.py')
     test()

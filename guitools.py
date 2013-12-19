@@ -273,18 +273,37 @@ def run_main_loop(app, is_root=True, backend=None, **kwargs):
     if backend is not None:
         print('[*guitools] setting active window')
         app.setActiveWindow(backend.win)
+        backend.timer = ping_python_interpreter(**kwargs)
     if is_root:
-        print('[*guitools] running main loop.')
-        timer = ping_python_interpreter(**kwargs)  # NOQA
-        if backend is not None:
-            backend.timer = timer
-        sys.exit(app.exec_())
+        exec_core_app_loop(app)
+        #exec_core_event_loop(app)
     else:
         print('[*guitools] using roots main loop')
 
 
+def exec_core_event_loop(app):
+    # This works but does not allow IPython injection
+    print('[*guitools] running core application loop.')
+    try:
+        from IPython.lib.inputhook import enable_qt4
+        enable_qt4()
+        from IPython.lib.guisupport import start_event_loop_qt4
+        print('Starting ipython qt4 hook')
+        start_event_loop_qt4(app)
+    except ImportError:
+        pass
+    app.exec_()
+
+
+def exec_core_app_loop(app):
+    # This works but does not allow IPython injection
+    print('[*guitools] running core application loop.')
+    app.exec_()
+    #sys.exit(app.exec_())
+
+
 def ping_python_interpreter(frequency=4200):  # 4200):
-    'Create a QTimer which lets the python intepreter run every so often'
+    'Create a QTimer which lets the python catch ctrl+c'
     timer = Qt.QTimer()
     timer.timeout.connect(lambda: None)
     timer.start(frequency)

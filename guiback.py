@@ -83,7 +83,7 @@ def select_next_in_order(self):
     return 'end of the list'
 
 
-def slot(*types):  # This is called at wrap time to get args
+def slot_(*types):  # This is called at wrap time to get args
     'wrapper around pyqtslot decorator'
     DEBUG = True
     if DEBUG:
@@ -91,6 +91,7 @@ def slot(*types):  # This is called at wrap time to get args
 
         def pyqtSlotWrapper(func):
             func_name = func.func_name
+            print('[@back] Wrapping %r with slot_' % func.func_name)
 
             @pyqtSlot(*types, name=func.func_name)
             def slot_wrapper(self, *args, **kwargs):
@@ -115,6 +116,22 @@ def slot(*types):  # This is called at wrap time to get args
             slot_wrapper.func_name = func_name
             return slot_wrapper
     return pyqtSlotWrapper
+
+
+def blocking(func):
+    print('[@back] Wrapping %r with blocking' % func.func_name)
+
+    def block_wrapper(self, *args, **kwargs):
+        print('[back] BLOCKING')
+        wasBlocked = self.blockSignals(True)
+        wasBlocked_ = self.win.blockSignals(True)
+        result = func(self, *args, **kwargs)
+        self.blockSignals(wasBlocked)
+        self.win.blockSignals(wasBlocked_)
+        print('[back] UNBLOCKING')
+        return result
+    block_wrapper.func_name = func.func_name
+    return block_wrapper
 
 
 #------------------------
@@ -320,11 +337,11 @@ class MainWindowBackend(QtCore.QObject):
     #--------------------------------------------------------------------------
     # Misc Slots
     #--------------------------------------------------------------------------
-    @slot(str)
+    @slot_(str)
     def backend_print(self, msg):
         print(str(msg))
 
-    @slot()
+    @slot_()
     def clear_selection(self, **kwargs):
         self.selection = None
         self.show_splash(1, 'Image', dodraw=False)
@@ -332,7 +349,7 @@ class MainWindowBackend(QtCore.QObject):
         self.show_splash(3, 'Results', **kwargs)
 
     # Table Click -> Image Table
-    @slot(int)
+    @slot_(int)
     def select_gx(self, gx, cx=None, **kwargs):
         if cx is None:
             cxs = self.hs.gx2_cxs(gx)
@@ -347,20 +364,20 @@ class MainWindowBackend(QtCore.QObject):
         self.show_image(gx, highlight_cxs, **kwargs)
 
     # Table Click -> Chip Table
-    @slot(int)
+    @slot_(int)
     def select_cid(self, cid, **kwargs):
         cx = self.hs.cid2_cx(cid)
         gx = self.hs.tables.cx2_gx[cx]
         self.select_gx(gx, cx=cx, **kwargs)
 
     # Button Click -> Preferences Defaults
-    @slot()
+    @slot_()
     def default_preferences(self):
         # TODO: Propogate changes back to self.edit_prefs.ui
         self.hs.default_preferences()
 
     # Table Edit -> Change Chip Property
-    @slot(int, str, str)
+    @slot_(int, str, str)
     def change_chip_property(self, cid, key, val):
         key, val = map(str, (key, val))
         print('[*back] change_chip_property(%r, %r, %r)' % (cid, key, val))
@@ -377,7 +394,7 @@ class MainWindowBackend(QtCore.QObject):
     # File Slots
     #--------------------------------------------------------------------------
     # File -> New Database
-    @slot()
+    @slot_()
     def new_database(self):
         new_db = self.user_input('Enter the new database name')
         msg_put = 'Where should I put %r?' % new_db
@@ -410,7 +427,7 @@ class MainWindowBackend(QtCore.QObject):
         self.open_database(new_db_dir)
 
     # File -> Open Database
-    @slot()
+    @slot_()
     def open_database(self, db_dir=None):
         try:
             # Use the same args in a new (opened) database
@@ -433,12 +450,12 @@ class MainWindowBackend(QtCore.QObject):
         print('')
 
     # File -> Save Database
-    @slot()
+    @slot_()
     def save_database(self):
         self.hs.save_database()
 
     # File -> Import Images
-    @slot()
+    @slot_()
     def import_images(self):
         print('[*back] import images')
         msg = 'Import specific files or whole directory?'
@@ -451,7 +468,7 @@ class MainWindowBackend(QtCore.QObject):
             self.import_images_from_dir()
 
     # File -> Import Images From File
-    @slot()
+    @slot_()
     def import_images_from_file(self):
         fpath_list = guitools.select_images('Select image files to import')
         self.hs.add_images(fpath_list)
@@ -459,7 +476,7 @@ class MainWindowBackend(QtCore.QObject):
         print('')
 
     # File -> Import Images From Directory
-    @slot()
+    @slot_()
     def import_images_from_dir(self):
         img_dpath = guitools.select_directory('Select directory with images in it')
         print('[*back] selected %r' % img_dpath)
@@ -469,7 +486,7 @@ class MainWindowBackend(QtCore.QObject):
         print('')
 
     # File -> Quit
-    @slot()
+    @slot_()
     def quit(self):
         guitools.exit_application()
 
@@ -477,7 +494,7 @@ class MainWindowBackend(QtCore.QObject):
     # Action menu slots
     #--------------------------------------------------------------------------
     # Action -> New Chip Property
-    @slot()
+    @slot_()
     def new_prop(self):
         newprop = self.user_input('What is the new property name?')
         self.hs.add_property(newprop)
@@ -487,7 +504,7 @@ class MainWindowBackend(QtCore.QObject):
         print('')
 
     # Action -> Add ROI
-    @slot()
+    @slot_()
     def add_chip(self):
         gx = self.get_selected_gx()
         self.show_image(gx, figtitle='Image View - Select ROI (click two points)')
@@ -503,7 +520,7 @@ class MainWindowBackend(QtCore.QObject):
         print('')
 
     # Action -> Query
-    @slot()
+    @slot_()
     def query(self, cid=None):
         #prevBlock = self.win.blockSignals(True)
         print(r'[\back] query()')
@@ -529,7 +546,7 @@ class MainWindowBackend(QtCore.QObject):
         return res
 
     # Action -> Reselect ROI
-    @slot()
+    @slot_()
     def reselect_roi(self, **kwargs):
         print(r'[\back] reselect_roi()')
         cx = self.get_selected_cx()
@@ -552,7 +569,8 @@ class MainWindowBackend(QtCore.QObject):
         pass
 
     # Action -> Reselect ORI
-    @slot()
+    @slot_()
+    @blocking
     def reselect_ori(self, **kwargs):
         cx = self.get_selected_cx()
         if cx is None:
@@ -573,7 +591,7 @@ class MainWindowBackend(QtCore.QObject):
         print('')
 
     # Action -> Delete Chip
-    @slot()
+    @slot_()
     def delete_chip(self):
         cx = self.get_selected_cx()
         if cx is None:
@@ -589,7 +607,7 @@ class MainWindowBackend(QtCore.QObject):
         print('')
 
     # Action -> Next
-    @slot()
+    @slot_()
     def select_next(self):
         select_mode = 'in_order'  # 'unannotated'
         if select_mode == 'in_order':
@@ -605,7 +623,7 @@ class MainWindowBackend(QtCore.QObject):
     # Batch menu slots
     #--------------------------------------------------------------------------
     # Batch -> Precompute Feats
-    @slot()
+    @slot_()
     def precompute_feats(self):
         #prevBlock = self.win.blockSignals(True)
         self.hs.update_samples()
@@ -614,7 +632,7 @@ class MainWindowBackend(QtCore.QObject):
         print('')
 
     # Batch -> Precompute Queries
-    @slot()
+    @slot_()
     def precompute_queries(self):
         # TODO:
         #http://stackoverflow.com/questions/15637768/
@@ -648,7 +666,7 @@ class MainWindowBackend(QtCore.QObject):
     # Option menu slots
     #--------------------------------------------------------------------------
     # Options -> Layout Figures
-    @slot()
+    @slot_()
     def layout_figures(self):
         if self.app is not None:
             app = self.app
@@ -662,7 +680,7 @@ class MainWindowBackend(QtCore.QObject):
         df2.present(num_rc=(2, 2), wh=dlen, wh_off=(0, 60))
 
     # Options -> Edit Preferences
-    @slot()
+    @slot_()
     def edit_preferences(self):
         self.edit_prefs = self.hs.prefs.createQWidget()
         epw = self.edit_prefs
@@ -675,29 +693,29 @@ class MainWindowBackend(QtCore.QObject):
     # Help menu slots
     #--------------------------------------------------------------------------
     # Help -> View Directory Slots
-    @slot()
+    @slot_()
     def view_database_dir(self):
         self.hs.vdd()
 
-    @slot()
+    @slot_()
     def view_computed_dir(self):
         self.hs.vcd()
 
-    @slot()
+    @slot_()
     def view_global_dir(self):
         self.hs.vgd()
 
     # Help -> Delete Directory Slots
-    @slot()
+    @slot_()
     def delete_computed_dir(self):
         self.hs.delete_computed_dir()
 
-    @slot()
+    @slot_()
     def delete_global_prefs(self):
         self.hs.delete_global_prefs()
 
     # Help -> Developer Help
-    @slot()
+    @slot_()
     def dev_help(self):
         backend = self  # NOQA
         hs = self.hs    # NOQA

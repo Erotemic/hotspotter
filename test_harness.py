@@ -312,7 +312,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
         #print('viewing (r,c)=(%r,%r)' % (r,c))
         res = rc2_res[r, c]
         #res.printme()
-        res.show_topN(hs, fignum=fnum)
+        res.show_topN(hs, fnum=fnum)
         fnum += 1
     print('--remember you have --r and --c available to you')
 

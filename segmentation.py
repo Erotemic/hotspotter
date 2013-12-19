@@ -20,9 +20,9 @@ def printDBG(msg):
         print(msg)
     pass
 
-def im(img, fignum=0):
+def im(img, fnum=0):
     import draw_func2 as df2
-    df2.imshow(img, fignum=fignum)
+    df2.imshow(img, fnum=fnum)
     df2.update()
 
 def resize_img_and_roi(img_fpath, roi_, new_size=None, sqrt_area=400.0):
@@ -70,9 +70,9 @@ def test(hs, cx=0):
     #---
     print('testing segment')
     seg_chip, img_mask = segment(img_fpath, roi_, new_size=None)
-    viz.show_image(hs, gx, fnum=1, plotnum=131, title='original', doclf=True)
-    df2.imshow(img_mask, fignum=1, plotnum=132, title='mask')
-    df2.imshow(seg_chip, fignum=1, plotnum=133, title='segmented')
+    viz.show_image(hs, gx, fnum=1, pnum=131, title='original', doclf=True)
+    df2.imshow(img_mask, fnum=1, pnum=132, title='mask')
+    df2.imshow(seg_chip, fnum=1, pnum=133, title='segmented')
 
 def clean_mask(mask, num_dilate=3, num_erode=3, window_frac=.025):
     '''Clean the mask
@@ -107,15 +107,15 @@ def test_clean_mask():
     mask8 = clean_mask(mask7, 1, 0, .025)
     mask9 = clean_mask(mask8, 1, 3, .025)
     print('Drawing')
-    df2.imshow(mask,  plotnum=331)
-    df2.imshow(mask2, plotnum=332)
-    df2.imshow(mask3, plotnum=333)
-    df2.imshow(mask4, plotnum=334)
-    df2.imshow(mask5, plotnum=335)
-    df2.imshow(mask6, plotnum=336)
-    df2.imshow(mask7, plotnum=337)
-    df2.imshow(mask8, plotnum=338)
-    df2.imshow(mask9, plotnum=339)
+    df2.imshow(mask,  pnum=331)
+    df2.imshow(mask2, pnum=332)
+    df2.imshow(mask3, pnum=333)
+    df2.imshow(mask4, pnum=334)
+    df2.imshow(mask5, pnum=335)
+    df2.imshow(mask6, pnum=336)
+    df2.imshow(mask7, pnum=337)
+    df2.imshow(mask8, pnum=338)
+    df2.imshow(mask9, pnum=339)
     print('Updating')
     df2.update()
     print('Done')

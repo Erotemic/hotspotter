@@ -95,9 +95,9 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         np.set_printoptions(precision=5)
         df2.cla()
         fig1 = df2.figure(state.fnum, **kwargs)
-        df2.imshow(rchip, plotnum=(2,1,1))
-        #df2.imshow(rchip, plotnum=(1,2,1), title='inv(sqrtm(invE*)')
-        #df2.imshow(rchip, plotnum=(1,2,2), title='inv(A)')
+        df2.imshow(rchip, pnum=(2,1,1))
+        #df2.imshow(rchip, pnum=(1,2,1), title='inv(sqrtm(invE*)')
+        #df2.imshow(rchip, pnum=(1,2,2), title='inv(A)')
         ell_args = {'ell_alpha':.4, 'ell_linewidth':1.8, 'rect':False}
         df2.draw_kpts2(kpts[is_valid], ell_color=df2.ORANGE, **ell_args)
         df2.draw_kpts2(kpts[fx:fx+1], ell_color=df2.BLUE, **ell_args)
@@ -109,10 +109,10 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         ax.set_title(chip_title)
         ax.set_xlabel(chip_xlabel)
         
-        extract_patch.draw_keypoint_patch(rchip, kp, sift, plotnum=(2,2,3))
+        extract_patch.draw_keypoint_patch(rchip, kp, sift, pnum=(2,2,3))
         ax = df2.gca()
         ax.set_title('affine feature\nfx=%r scale=%.1f' % (fx, scale))
-        extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, plotnum=(2,2,4))
+        extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, pnum=(2,2,4))
         ax = df2.gca()
         ax.set_title('warped feature\ninvA=%r ' % str(kp))
         golden_wh = lambda x:map(int,map(round,(x*.618 , x*.312)))
@@ -170,9 +170,9 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
             res = mc3.query_database(hs, cx, query_cfg=query_cfg, use_cache=False)
             state.res = res
             resfnum = state.fnum + state.fnum_offset
-            res.show_topN(hs, fignum=resfnum)
+            res.show_topN(hs, fnum=resfnum)
             df2.update()
-            #fig_res = df2.figure(fignum=resfnum)
+            #fig_res = df2.figure(fnum=resfnum)
             #fig_res.show()
             #fig_res.canvas.draw()
         elif cmd == 'K':
@@ -191,7 +191,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
             res = mc3.query_database(hs, cx, query_cfg=query_cfg, use_cache=False)
             state.res = res
             resfnum = state.fnum + state.fnum_offset
-            res.show_topN(hs, fignum=resfnum)
+            res.show_topN(hs, fnum=resfnum)
             df2.update()
         elif cmd == 'test2':
             query_cfg.update_cfg(sv_on=True, K=20, use_chip_extent=True, xy_thresh=.1)

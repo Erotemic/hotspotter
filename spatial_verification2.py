@@ -432,21 +432,21 @@ def test():
     df2.imshow(rchip_aff, title='Affine')
     df2.figure(5)
     df2.imshow(original_resized, title='Source')
-    df2.figure(6, plotnum=(1, 3, 1))
+    df2.figure(6, pnum=(1, 3, 1))
     # Draw original matches
     df2.show_matches2(*args_ + [fm], fs=None,
                       all_kpts=False, draw_lines=True,
-                      doclf=True, title='Assigned matches', plotnum=(1, 3, 1))
+                      doclf=True, title='Assigned matches', pnum=(1, 3, 1))
 
     # Draw affine
     df2.show_matches2(*args_ + [fm[aff_inliers]], fs=None,
                       all_kpts=False, draw_lines=True, doclf=True,
-                      title='Affine inliers', plotnum=(1, 3, 2))
+                      title='Affine inliers', pnum=(1, 3, 2))
 
     # Draw homogrophy
     df2.show_matches2(*args_ + [fm[inliers]], fs=None,
                       all_kpts=False, draw_lines=True, doclf=True,
-                      title='Homography inliers', plotnum=(1, 3, 3))
+                      title='Homography inliers', pnum=(1, 3, 3))
 
 if __name__ == '__main__':
     import multiprocessing

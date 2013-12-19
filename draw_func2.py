@@ -287,14 +287,14 @@ def sanatize_img_fpath(fpath):
     return fpath_clean
 
 
-def set_geometry(fignum, x, y, w, h):
-    fig = get_fig(fignum)
+def set_geometry(fnum, x, y, w, h):
+    fig = get_fig(fnum)
     qtwin = fig.canvas.manager.window
     qtwin.setGeometry(x, y, w, h)
 
 
-def get_geometry(fignum):
-    fig = get_fig(fignum)
+def get_geometry(fnum):
+    fig = get_fig(fnum)
     qtwin = fig.canvas.manager.window
     (x1, y1, x2, y2) = qtwin.geometry().getCoords()
     (x, y, w, h) = (x1, y1, x2 - x1, y2 - y1)
@@ -465,15 +465,15 @@ def present(*args, **kwargs):
     return execstr
 
 
-def save_figure(fignum=None, fpath=None, usetitle=False):
+def save_figure(fnum=None, fpath=None, usetitle=False):
     #import warnings
     #warnings.simplefilter("error")
     # Find the figure
-    if fignum is None:
+    if fnum is None:
         fig = gcf()
     else:
-        fig = plt.figure(fignum, figsize=FIGSIZE, dpi=DPI)
-    fignum = fig.number
+        fig = plt.figure(fnum, figsize=FIGSIZE, dpi=DPI)
+    fnum = fig.number
     if fpath is None:
         # Find the title
         fpath = sanatize_img_fname(fig.canvas.get_window_title())
@@ -816,21 +816,21 @@ def clf():
     return plt.clf()
 
 
-def get_fig(fignum=None):
-    printDBG('[df2] get_fig(fignum=%r)' % fignum)
+def get_fig(fnum=None):
+    printDBG('[df2] get_fig(fnum=%r)' % fnum)
     fig_kwargs = dict(figsize=FIGSIZE, dpi=DPI)
     if plotWidget is not None:
         return gcf()
-    if fignum is None:
+    if fnum is None:
         try:
             fig = gcf()
         except Exception as ex:
             printDBG('[df2] get_fig(): ex=%r' % ex)
             fig = plt.figure(**fig_kwargs)
-        fignum = fig.number
+        fnum = fig.number
     else:
         try:
-            fig = plt.figure(fignum, **fig_kwargs)
+            fig = plt.figure(fnum, **fig_kwargs)
         except Exception as ex:
             print(repr(ex))
             warnings.warn(repr(ex))
@@ -838,43 +838,43 @@ def get_fig(fignum=None):
     return fig
 
 
-def get_ax(fignum=None, plotnum=None):
-    figure(fignum=fignum, plotnum=plotnum)
+def get_ax(fnum=None, pnum=None):
+    figure(fnum=fnum, pnum=pnum)
     ax = gca()
     return ax
 
 
-def figure(fignum=None,
+def figure(fnum=None,
            doclf=False,
            title=None,
-           plotnum=(1, 1, 1),
+           pnum=(1, 1, 1),
            figtitle=None,
            **kwargs):
     #matplotlib.pyplot.xkcd()
-    fig = get_fig(fignum)
+    fig = get_fig(fnum)
     axes_list = fig.get_axes()
     # Ensure my customized settings
     customize_figure(fig, doclf)
-    # Convert plotnum to tuple format
-    if tools.is_int(plotnum):
-        nr = plotnum // 100
-        nc = plotnum // 10 - (nr * 10)
-        px = plotnum - (nr * 100) - (nc * 10)
-        plotnum = (nr, nc, px)
+    # Convert pnum to tuple format
+    if tools.is_int(pnum):
+        nr = pnum // 100
+        nc = pnum // 10 - (nr * 10)
+        px = pnum - (nr * 100) - (nc * 10)
+        pnum = (nr, nc, px)
     # Get the subplot
     if doclf or len(axes_list) == 0:
-        printDBG('[df2] *** NEW FIGURE %r.%r ***' % (fignum, plotnum))
-        if not plotnum is None:
-            #ax = plt.subplot(*plotnum)
-            ax = fig.add_subplot(*plotnum)
+        printDBG('[df2] *** NEW FIGURE %r.%r ***' % (fnum, pnum))
+        if not pnum is None:
+            #ax = plt.subplot(*pnum)
+            ax = fig.add_subplot(*pnum)
             ax.cla()
         else:
             ax = gca()
     else:
-        printDBG('[df2] *** OLD FIGURE %r.%r ***' % (fignum, plotnum))
-        if not plotnum is None:
-            ax = plt.subplot(*plotnum)  # fig.add_subplot fails here
-            #ax = fig.add_subplot(*plotnum)
+        printDBG('[df2] *** OLD FIGURE %r.%r ***' % (fnum, pnum))
+        if not pnum is None:
+            ax = plt.subplot(*pnum)  # fig.add_subplot fails here
+            #ax = fig.add_subplot(*pnum)
         else:
             ax = gca()
         #ax  = axes_list[0]
@@ -883,10 +883,10 @@ def figure(fignum=None,
         ax = gca()
         ax.set_title(title, fontproperties=FONTS.axtitle)
         # Add title to figure
-        if figtitle is None and plotnum == (1, 1, 1):
+        if figtitle is None and pnum == (1, 1, 1):
             figtitle = title
         if not figtitle is None:
-            fig.canvas.set_window_title('fig %r %s' % (fignum, figtitle))
+            fig.canvas.set_window_title('fig %r %s' % (fnum, figtitle))
     return fig
 
 
@@ -1271,19 +1271,19 @@ def draw_kpts2(kpts, offset=(0, 0),
 
 # ---- CHIP DISPLAY COMMANDS ----
 def imshow(img,
-           fignum=None,
+           fnum=None,
            title=None,
            figtitle=None,
-           plotnum=None,
+           pnum=None,
            interpolation='nearest',
            **kwargs):
     'other interpolations = nearest, bicubic, bilinear'
     #printDBG('[df2] ----- IMSHOW ------ ')
-    #printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fignum, title))
-    #printDBG('[df2] *** fignum = %r, plotnum = %r ' % (fignum, plotnum))
+    #printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fnum, title))
+    #printDBG('[df2] *** fnum = %r, pnum = %r ' % (fnum, pnum))
     #printDBG('[df2] *** img.shape = %r ' % (img.shape,))
     #printDBG('[df2] *** img.stats = %r ' % (helpers.printable_mystats(img),))
-    fig = figure(fignum=fignum, plotnum=plotnum, title=title, figtitle=figtitle, **kwargs)
+    fig = figure(fnum=fnum, pnum=pnum, title=title, figtitle=figtitle, **kwargs)
     ax = gca()
     if not DARKEN is None:
         imgdtype = img.dtype
@@ -1305,7 +1305,7 @@ def imshow(img,
     ax.set_yticks([])
     #ax.set_autoscale(False)
     #try:
-        #if plotnum == 111:
+        #if pnum == 111:
             #fig.tight_layout()
     #except Exception as ex:
         #print('[df2] !! Exception durring fig.tight_layout: '+repr(ex))
@@ -1357,7 +1357,7 @@ def stack_images(img1, img2, vert=None):
 
 
 def show_matches2(rchip1, rchip2, kpts1, kpts2,
-                  fm=None, fs=None, fignum=None, plotnum=None,
+                  fm=None, fs=None, fnum=None, pnum=None,
                   title=None, vert=None, all_kpts=True,
                   draw_lines=True,
                   draw_ell=True,
@@ -1375,8 +1375,8 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
     (h1, w1) = rchip1.shape[0:2]  # get chip dimensions
     (h2, w2) = rchip2.shape[0:2]
     match_img, woff, hoff = stack_images(rchip1, rchip2, vert)
-    fig, ax = imshow(match_img, fignum=fignum,
-                     plotnum=plotnum, title=title,
+    fig, ax = imshow(match_img, fnum=fnum,
+                     pnum=pnum, title=title,
                      **kwargs)
     nMatches = len(fm)
     #upperleft_text('#match=%d' % nMatches)

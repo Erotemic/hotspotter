@@ -217,9 +217,9 @@ def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
         # Vary cfg2
         for colx, cfg2_value in enumerate(cfg2_steps):
             query_cfg.update_cfg(**{cfg2_name: cfg2_value})
-            plotnum = (nRows, nCols, rowx * nCols + colx + 1)
+            pnum = (nRows, nCols, rowx * nCols + colx + 1)
             # HACK
-            #print(plotnum)
+            #print(pnum)
             #print(query_cfg)
             # query only the chips of interest (groundtruth) when doing vsone
             if assign_alg == 'vsone':
@@ -227,7 +227,7 @@ def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
             # query the entire database in vsmany (just as fast as vgroundtruth)
             elif assign_alg == 'vsmany':
                 res = mc3.query_database(hs, qcx, query_cfg)
-            res.plot_matches(hs, cx, plotnum=plotnum, **plt_match_args)
+            res.plot_matches(hs, cx, pnum=pnum, **plt_match_args)
             x_title = cfg2_name + '=' + helpers.format(cfg2_value, 3)  # helpers.commas(cfg2_value, 3)
             ax = df2.gca()
             if rowx == len(cfg1_steps) - 1:
@@ -247,7 +247,7 @@ def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
 
 def plot_name(hs, qcx, fnum=1, **kwargs):
     print('[dev] Plotting name')
-    viz.plot_name_of_cx(hs, qcx, fignum=fnum, **kwargs)
+    viz.plot_name_of_cx(hs, qcx, fnum=fnum, **kwargs)
     return fnum + 1
 
 
@@ -293,14 +293,14 @@ def plot_keypoint_scales(hs, fnum=1):
     np.set_printoptions(**_printopts)
     print('[dev] ---/LaTeX --- ')
     #
-    df2.figure(fignum=fnum, doclf=True, title='sorted scales')
+    df2.figure(fnum=fnum, doclf=True, title='sorted scales')
     df2.plot(scales)
     #ax = df2.gca()
     #ax.set_yscale('log')
     #ax.set_xscale('log')
     #
     fnum += 1
-    df2.figure(fignum=fnum, doclf=True, title='hist scales')
+    df2.figure(fnum=fnum, doclf=True, title='hist scales')
     df2.show_histogram(scales, bins=20)
     #ax = df2.gca()
     #ax.set_yscale('log')
@@ -348,9 +348,9 @@ def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
         res = mc3.query_groundtruth(hs, qcx, query_cfg)
         #print(query_cfg)
         #print(res)
-        #res.show_query(hs, fignum=fnum)
+        #res.show_query(hs, fnum=fnum)
         fnum += 1
-        res.show_topN(hs, fignum=fnum, query_cfg=query_cfg)
+        res.show_topN(hs, fnum=fnum, query_cfg=query_cfg)
         fnum += 1
     return fnum
 

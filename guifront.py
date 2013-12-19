@@ -2,6 +2,7 @@ from __future__ import division, print_function
 from PyQt4 import QtGui
 from PyQt4.Qt import (QAbstractItemView, pyqtSlot, pyqtSignal, Qt)
 import guitools
+import tools
 
 IS_INIT = False
 
@@ -103,6 +104,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
     selectGxSignal  = pyqtSignal(int)
     selectCidSignal = pyqtSignal(int)
     changeCidSignal = pyqtSignal(int, str, str)
+    querySignal = pyqtSignal()
 
     def __init__(self, backend, use_plot_widget=True):
         super(MainWindowFrontend, self).__init__()
@@ -130,6 +132,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         self.selectGxSignal.connect(backend.select_gx)
         self.selectCidSignal.connect(backend.select_cid)
         self.changeCidSignal.connect(backend.change_chip_property)
+        self.querySignal.connect(backend.query)
 
         # Menubar signals
         connect_file_signals(self)
@@ -223,11 +226,13 @@ class MainWindowFrontend(QtGui.QMainWindow):
         def set_table_context_menu(tbl):
             tbl.setContextMenuPolicy(Qt.CustomContextMenu)
             opt2_callback = [
-                ('item',  lambda: print('finishme')),
-                ('cancel', lambda: print('cancel')), ]
+                ('Query', self.querySignal.emit),
+                #('item',  lambda: print('finishme')),
+                #('cancel', lambda: print('cancel')), ]
+                ]
             popup_slot = guitools.popup_menu(tbl, opt2_callback)
             tbl.customContextMenuRequested.connect(popup_slot)
-        set_header_context_menu(hheader)
+        #set_header_context_menu(hheader)
         set_table_context_menu(tbl)
 
         sort_col = hheader.sortIndicatorSection()
@@ -246,19 +251,11 @@ class MainWindowFrontend(QtGui.QMainWindow):
             data_tup = row2_datatup[row]
             for col, data in enumerate(data_tup):
                 item = QtGui.QTableWidgetItem()
-                try:
-                    int_data = int(data)  # HENDRIK/JASON TODO: Right now
-                                          # columns cannot display float data.
-                                          # fix this for the case of result
-                                          # confidence scores. (It would be nice
-                                          # the type of data was detected right
-                                          # here and the QDisplayRole was set
-                                          # accordingly)
-                    item.setData(Qt.DisplayRole, int_data)
-                except ValueError:  # for strings
-                    item.setText(str(data))
-                except TypeError:  # for lists
-                    item.setText(str(data))
+
+                if tools.is_int(data): item.setData(Qt.DisplayRole, int(data))
+                elif tools.is_float(data): item.setData(Qt.DisplayRole, float(data))
+                else: item.setText(str(data))
+
                 item.setTextAlignment(Qt.AlignHCenter)
                 if col_editable[col]:
                     item.setFlags(item.flags() | Qt.ItemIsEditable)

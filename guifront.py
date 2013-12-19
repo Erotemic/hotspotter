@@ -114,6 +114,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
         self.ui = init_ui(self)
         if use_plot_widget:
             self.plotWidget = init_plotWidget(self)
+        # Progress bar is not hooked up yet
+        self.ui.progressBar.setVisible(False)
         self.connect_signals()
 
     @pyqtSlot(name='closeEvent')

@@ -144,7 +144,6 @@ class MainWindowBackend(QtCore.QObject):
     #------------------------
     populateSignal = pyqtSignal(str, list, list, list, list)
     setEnabledSignal = pyqtSignal(bool)
-    setPlotWidgetEnabledSignal = pyqtSignal(bool)
 
     #------------------------
     # Constructor
@@ -164,7 +163,6 @@ class MainWindowBackend(QtCore.QObject):
         # connect signals
         self.populateSignal.connect(self.win.populate_tbl)
         self.setEnabledSignal.connect(self.win.setEnabled)
-        self.setPlotWidgetEnabledSignal.connect(self.win.setPlotWidgetEnabled)
         if hs is not None:
             self.connect_api(hs)
 

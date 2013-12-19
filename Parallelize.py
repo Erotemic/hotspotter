@@ -53,10 +53,6 @@ def _worker(input, output):
         output.put(result)
 
 
-def cpu_count():
-    return mp.cpu_count()
-
-
 def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None):
     if args is not None and num_procs is None:
         num_procs = args.num_procs
@@ -65,7 +61,7 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None):
         print('[parallel] ... No %s tasks left to compute!' % func.func_name)
         return None
     # Do not execute small tasks in parallel
-    if len(task_list) < num_procs:
+    if len(task_list) < num_procs / 2 or len(task_list) == 1:
         num_procs = 1
     if num_procs > 1:
         msg = 'Distributing %d %s tasks to %d parallel processes' % (len(task_list), func.func_name, num_procs)

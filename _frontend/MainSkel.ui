@@ -93,7 +93,18 @@
      </layout>
     </item>
     <item row="2" column="1">
-     <layout class="QHBoxLayout" name="status_HLayout"/>
+     <layout class="QHBoxLayout" name="status_HLayout">
+      <item>
+       <widget class="QProgressBar" name="progressBar">
+        <property name="value">
+         <number>24</number>
+        </property>
+        <property name="textVisible">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>

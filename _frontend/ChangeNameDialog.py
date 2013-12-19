@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/ChangeNameDialog.ui'
 #
-# Created: Thu Dec 19 10:25:55 2013
+# Created: Thu Dec 19 15:59:50 2013
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!

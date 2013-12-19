@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/MainSkel.ui'
 #
-# Created: Thu Dec 19 10:25:55 2013
+# Created: Thu Dec 19 15:59:49 2013
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -75,6 +75,11 @@ class Ui_mainSkel(object):
         self.gridLayout_2.addLayout(self.root_hlayout, 1, 1, 1, 1)
         self.status_HLayout = QtGui.QHBoxLayout()
         self.status_HLayout.setObjectName(_fromUtf8("status_HLayout"))
+        self.progressBar = QtGui.QProgressBar(self.centralwidget)
+        self.progressBar.setProperty("value", 24)
+        self.progressBar.setTextVisible(True)
+        self.progressBar.setObjectName(_fromUtf8("progressBar"))
+        self.status_HLayout.addWidget(self.progressBar)
         self.gridLayout_2.addLayout(self.status_HLayout, 2, 1, 1, 1)
         mainSkel.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(mainSkel)

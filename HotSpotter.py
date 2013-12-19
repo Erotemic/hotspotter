@@ -52,7 +52,7 @@ def rrr():
     imp.reload(sys.modules[__name__])
 
 
-def _on_loaded_tables(hs):
+def _checkargs_onload(hs):
     'checks relevant arguments after loading tables'
     args = hs.args
     if args.vrd or args.vrdq:
@@ -63,10 +63,6 @@ def _on_loaded_tables(hs):
         hs.vcd()
         if args.vcdq:
             sys.exit(1)
-
-
-def is_invalid_path(db_dir):
-    return db_dir is None or not exists(db_dir)
 
 
 class HotSpotter(DynStruct):
@@ -149,7 +145,7 @@ class HotSpotter(DynStruct):
         hs.tables  = hs_tables
         hs.dirs    = hs_dirs
         hs.num_cx = len(hs.tables.cx2_cid)
-        _on_loaded_tables(hs)
+        _checkargs_onload(hs)
 
     def load_chips(hs, cx_list=None):
         cc2.load_chips(hs, cx_list)
@@ -220,28 +216,16 @@ class HotSpotter(DynStruct):
         hs.train_sample_cx    = train_samp
         hs.test_sample_cx     = test_samp
 
-    def get_indexed_sample(hs):
-        dcxs = hs.indexed_sample_cx
-        return dcxs
+    # --------------
+    # Saving functions
+    # --------------
+    def save_database(hs):
+        print('[hs] save_database')
+        ld2.write_csv_tables(hs)
 
     #---------------
-    # Query Functions
+    # On Modification
     #---------------
-    def query(hs, qcx, dochecks=True):
-        if hs.prefs.query_cfg is None and dochecks:
-            hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
-            hs.refresh_data()
-        try:
-            res = mc3.query_database(hs, qcx, hs.prefs.query_cfg, dochecks=dochecks)
-        except mf.QueryException as ex:
-            print(repr(ex))
-            return repr(ex)
-        return res
-
-    # ---------------
-    # Modifying functions
-    # ---------------
-
     def unload_all(hs):
         print('[hs] unloading all data')
         hs.cx2_rchip_size = None  # HACK this should be part of hs.cpaths
@@ -281,6 +265,23 @@ class HotSpotter(DynStruct):
         cid = hs.tables.cx2_cid[cx]
         hs.delete_ciddata(cid)
 
+    #---------------
+    # Query Functions
+    #---------------
+    def query(hs, qcx, dochecks=True):
+        if hs.prefs.query_cfg is None and dochecks:
+            hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
+            hs.refresh_data()
+        try:
+            res = mc3.query_database(hs, qcx, hs.prefs.query_cfg, dochecks=dochecks)
+        except mf.QueryException as ex:
+            print(repr(ex))
+            return repr(ex)
+        return res
+
+    # ---------------
+    # Change functions
+    # ---------------
     def change_roi(hs, cx, new_roi):
         # This changes the entire chip.
         # Delete precomputed data.
@@ -306,7 +307,6 @@ class HotSpotter(DynStruct):
     # ---------------
     # Adding functions
     # ---------------
-
     def add_property(hs, new_prop):
         if new_prop is None:
             return
@@ -386,7 +386,6 @@ class HotSpotter(DynStruct):
     # ---------------
     # Deleting functions
     # ---------------
-
     def delete_chip(hs, cx, resample=True):
         hs.delete_cxdata(cx)
         hs.tables.cx2_cid[cx] = -1
@@ -415,56 +414,11 @@ class HotSpotter(DynStruct):
         helpers.remove_files_in_dir(global_cache_dir, recursive=True, verbose=True,
                                     dryrun=False)
 
-    # --------------
-    # Saving functions
-    # --------------
-
-    def save_database(hs):
-        print('[hs] save_database')
-        ld2.write_csv_tables(hs)
-    # -----
-
-    def flag_cxs_with_name_in_sample(hs, cxs, sample_cxs):
-        cx2_nx = hs.tables.cx2_nx
-        samp_nxs_set = set(cx2_nx[sample_cxs])
-        in_sample_flag = np.array([cx2_nx[cx] in samp_nxs_set for cx in cxs])
-        return in_sample_flag
-
-    def get_valid_cxs_with_name_in_samp(hs, sample_cxs):
-        'returns the valid_cxs which have a correct match in sample_cxs'
-        valid_cxs = hs.get_valid_cxs()
-        in_sample_flag = hs.flag_cxs_with_name_in_sample(valid_cxs, sample_cxs)
-        cxs_in_sample = valid_cxs[in_sample_flag]
-        return cxs_in_sample
-
-    #---------------
-    # View Directories
-    def vdd(hs):
-        db_dir = os.path.normpath(hs.dirs.db_dir)
-        print('[hs] viewing db_dir: %r ' % db_dir)
-        helpers.vd(db_dir)
-
-    def vcd(hs):
-        computed_dir = os.path.normpath(hs.dirs.computed_dir)
-        print('[hs] viewing computed_dir: %r ' % computed_dir)
-        helpers.vd(computed_dir)
-
-    def vgd(hs):
-        global_dir = io.GLOBAL_CACHE_DIR
-        print('[hs] viewing global_dir: %r ' % global_dir)
-        helpers.vd(global_dir)
-
-    def vrd(hs):
-        result_dir = os.path.normpath(hs.dirs.result_dir)
-        print('[hs] viewing result_dir: %r ' % result_dir)
-        helpers.vd(result_dir)
-
     #---------------
     # Getting functions
     # ---------------
-
     def get_img_datatupe_list(hs, gx_list):
-        # Data for GUI Image Table
+        'Data for GUI Image Table'
         gx2_gname = hs.tables.gx2_gname
         gx2_cxs   = hs.gx2_cxs
         gname_list = [gx2_gname[gx] for gx in iter(gx_list)]
@@ -473,7 +427,7 @@ class HotSpotter(DynStruct):
         return datatup_list
 
     def get_res_datatup_list(hs, cx_list, cx2_score):
-        # Data for GUI Results Table
+        'Data for GUI Results Table'
         cx2_cid  = hs.tables.cx2_cid
         cx2_nx   = hs.tables.cx2_nx
         nx2_name = hs.tables.nx2_name
@@ -486,7 +440,7 @@ class HotSpotter(DynStruct):
         return datatup_list
 
     def get_chip_datatup_list(hs, cx_list):
-        # Data for GUI Chip Table
+        'Data for GUI Chip Table'
         prop_dict = hs.tables.prop_dict
         cx2_cid  = hs.tables.cx2_cid
         cx2_nx   = hs.tables.cx2_nx
@@ -504,7 +458,7 @@ class HotSpotter(DynStruct):
         datatup_list = [tup for tup in izip(*unziped_tups)]
         return datatup_list
 
-    def db_name(hs, devmode=False):
+    def get_db_name(hs, devmode=False):
         db_name = split(hs.dirs.db_dir)[1]
         if devmode:
             # Grab the dev name insetad
@@ -519,6 +473,23 @@ class HotSpotter(DynStruct):
     # -------
     # Get valid index functions
     # -------
+    def get_indexed_sample(hs):
+        dcxs = hs.indexed_sample_cx
+        return dcxs
+
+    def flag_cxs_with_name_in_sample(hs, cxs, sample_cxs):
+        cx2_nx = hs.tables.cx2_nx
+        samp_nxs_set = set(cx2_nx[sample_cxs])
+        in_sample_flag = np.array([cx2_nx[cx] in samp_nxs_set for cx in cxs])
+        return in_sample_flag
+
+    def get_valid_cxs_with_name_in_samp(hs, sample_cxs):
+        'returns the valid_cxs which have a correct match in sample_cxs'
+        valid_cxs = hs.get_valid_cxs()
+        in_sample_flag = hs.flag_cxs_with_name_in_sample(valid_cxs, sample_cxs)
+        cxs_in_sample = valid_cxs[in_sample_flag]
+        return cxs_in_sample
+
     def get_num_chips(hs):
         return len(hs.tables.cx2_cid)
 
@@ -538,8 +509,6 @@ class HotSpotter(DynStruct):
         return hs.get_valid_cxs_with_name_in_samp(hs.indexed_sample_cx)
 
     # chip index --> property
-
-    #@tools.class_iter_input
 
     def cx2_gx(hs, cx):
         gx = hs.tables.cx2_gx[cx]
@@ -646,8 +615,8 @@ class HotSpotter(DynStruct):
         other_list = [np.intersect1d(ocxs, indx_samp) for
                       ocxs in iter(other_list_)]
         return other_list
-    # Strings
 
+    # Strings
     def is_true_match(hs, qcx, cx):
         cx2_nx  = hs.tables.cx2_nx
         qnx = cx2_nx[qcx]
@@ -747,6 +716,9 @@ class HotSpotter(DynStruct):
             hs.load_cx2_rchip_size()
         return hs.cx2_rchip_size
 
+    #---------------
+    # Print Tables
+
     def print_name_table(hs):
         print(ld2.make_name_csv(hs))
 
@@ -755,3 +727,25 @@ class HotSpotter(DynStruct):
 
     def print_chip_table(hs):
         print(ld2.make_chip_csv(hs))
+
+    #---------------
+    # View Directories
+    def vdd(hs):
+        db_dir = os.path.normpath(hs.dirs.db_dir)
+        print('[hs] viewing db_dir: %r ' % db_dir)
+        helpers.vd(db_dir)
+
+    def vcd(hs):
+        computed_dir = os.path.normpath(hs.dirs.computed_dir)
+        print('[hs] viewing computed_dir: %r ' % computed_dir)
+        helpers.vd(computed_dir)
+
+    def vgd(hs):
+        global_dir = io.GLOBAL_CACHE_DIR
+        print('[hs] viewing global_dir: %r ' % global_dir)
+        helpers.vd(global_dir)
+
+    def vrd(hs):
+        result_dir = os.path.normpath(hs.dirs.result_dir)
+        print('[hs] viewing result_dir: %r ' % result_dir)
+        helpers.vd(result_dir)

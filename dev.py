@@ -1,3 +1,4 @@
+#!/usr/bin/python2.7
 #exec(open('__init__.py').read())
 #exec(open('_research/dev.py').read())
 from __future__ import division, print_function
@@ -404,7 +405,7 @@ def dbstats(hs):
     import db_info
     # Chip / Name / Image stats
     dbinfo_locals = db_info.db_info(hs)
-    db_name = hs.db_name(True)
+    db_name = hs.get_db_name(True)
     #num_images = dbinfo_locals['num_images']
     num_chips = dbinfo_locals['num_chips']
     num_names = len(dbinfo_locals['valid_nxs'])
@@ -612,13 +613,18 @@ if __name__ == '__main__':
     print('[dev]====================')
     if hs.args.printoff:
         all_printoff()
+
+    if hs.args.export_qon_list:
+        print(qon_list)
+        pass
     # Big test function. Should be replaced with something
     # not as ugly soon.
     run_investigations(hs, qon_list)
     # A redundant query argument. Again, needs to be replaced.
-    if hs.args.query is not None:
+    if hs.args.query is not None and len(hs.args.query) > 0:
         qcx = hs.cid2_cx(hs.args.query[0])
         res = hs.query(qcx)
+        if hs.has_property('Notes')
         res.show_top(hs)
     print('[dev]====================')
     kwargs = {}

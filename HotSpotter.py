@@ -18,6 +18,7 @@ import fileio as io
 import helpers
 import load_data2 as ld2
 import match_chips3 as mc3
+import matching_functions as mf
 import tools
 from Printable import DynStruct
 from Preferences import Pref
@@ -84,7 +85,6 @@ class HotSpotter(DynStruct):
         hs.test_sample_cx    = None
         hs.indexed_sample_cx = None
         hs.cx2_rchip_size    = None
-        hs.needs_save        = False
         #
         pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')
         hs.prefs = Pref('root', fpath=pref_fpath)
@@ -231,29 +231,42 @@ class HotSpotter(DynStruct):
         if hs.prefs.query_cfg is None and dochecks:
             hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
             hs.refresh_data()
-        res = mc3.query_database(hs, qcx, hs.prefs.query_cfg, dochecks=dochecks)
+        try:
+            res = mc3.query_database(hs, qcx, hs.prefs.query_cfg, dochecks=dochecks)
+        except mf.QueryException as ex:
+            print(repr(ex))
+            return repr(ex)
         return res
 
     # ---------------
     # Modifying functions
     # ---------------
 
+    def unload_all(hs):
+        print('[hs] unloading all data')
+        hs.cx2_rchip_size = None  # HACK this should be part of hs.cpaths
+        hs.feats  = ds.HotspotterChipFeatures()
+        hs.cpaths = ds.HotspotterChipPaths()
+        hs.prefs.query_cfg.unload_data()
+        print('[hs] finished unloading all data')
+
     def unload_cxdata(hs, cx):
         'unloads features and chips. not tables'
         print('[hs] unload_cxdata(cx=%r)' % cx)
-        lists = [hs.feats.cx2_kpts,
-                 hs.feats.cx2_desc,
-                 hs.cpaths.cx2_rchip_path,
-                 hs.cpaths.cx2_chip_path]
+        # HACK This should not really be removed EVERY time you unload any cx
+        hs.cx2_rchip_size = None  # HACK, should detect lack of info in cpaths
+        hs.prefs.query_cfg.unload_data()
+        lists = []
+        if hs.cpaths is not None:
+            lists += [hs.feats.cx2_kpts, hs.feats.cx2_desc]
+        if hs.feats is not None:
+            lists += [hs.cpaths.cx2_rchip_path, hs.cpaths.cx2_chip_path]
         if cx == 'all':
-            hs.feats  = None
-            hs.cpaths = None
-            hs.dirty = True
+            hs.unload_all()
             return
         for list_ in lists:
-            helpers.ensure_list_size(list_, cx)
+            helpers.ensure_list_size(list_, cx + 1)
             list_[cx] = None
-            hs.dirty = True
 
     def delete_ciddata(hs, cid):
         cid_str_list = ['cid%d_' % cid, 'qcid=%d.npz' % cid, ]
@@ -274,14 +287,10 @@ class HotSpotter(DynStruct):
         # Invalidate results
         hs.delete_cxdata(cx)
         hs.tables.cx2_roi[cx] = new_roi
-        hs.needs_save = True
-        hs.invalidated_results = True
 
     def change_theta(hs, cx, new_theta):
         hs.delete_cxdata(cx)
         hs.tables.cx2_theta[cx] = new_theta
-        hs.needs_save = True
-        hs.invalidated_results = True
 
     def change_name(hs, cx, new_name):
         new_nx_ = np.where(hs.tables.nx2_name == new_name)[0]
@@ -290,25 +299,20 @@ class HotSpotter(DynStruct):
         else:
             new_nx = new_nx_[0]
         hs.tables.cx2_nx[cx] = new_nx
-        hs.needs_save = True
-        # this doesn't invalidate results... yet
-        # It will when we go to multi-image
 
     def change_prop(hs, cx, key, val):
         hs.tables.prop_dict[key][cx] = val
-        hs.needs_save = True
-        # this doesn't invalidate results... yet
-        # It might! will when we go to multi-image
 
     # ---------------
     # Adding functions
     # ---------------
 
     def add_property(hs, new_prop):
+        if new_prop is None:
+            return
         if new_prop in hs.tables.prop_dict:
             raise UserWarning('Cannot add an already existing property')
         hs.tables.prop_dict[new_prop] = ['' for _ in xrange(hs.num_cx)]
-        hs.needs_save = True
 
     def add_name(hs, name):
         # TODO: Allocate memory better (use python lists)
@@ -316,7 +320,6 @@ class HotSpotter(DynStruct):
         nx2_name.append(name)
         hs.tables.nx2_name = np.array(nx2_name)
         nx = len(hs.tables.nx2_name) - 1
-        hs.needs_save = True
         return nx
 
     def add_chip(hs, gx, roi):
@@ -327,7 +330,7 @@ class HotSpotter(DynStruct):
             next_cid = hs.tables.cx2_cid.max() + 1
         else:
             next_cid = 1
-        # Remove any cids
+        # Remove any conflicts from disk
         hs.delete_ciddata(next_cid)
         # Allocate space for a new chip
         hs.tables.cx2_cid   = np.concatenate((hs.tables.cx2_cid, [next_cid]))
@@ -341,8 +344,8 @@ class HotSpotter(DynStruct):
         hs.num_cx += 1
         cx = len(hs.tables.cx2_cid) - 1
         hs.update_samples()
-        hs.needs_save = True
-        hs.invalidated_results = True
+        # Remove any conflicts from memory
+        hs.unload_cxdata(cx)
         return cx
 
     def add_images(hs, fpath_list, move_images=True):
@@ -378,7 +381,6 @@ class HotSpotter(DynStruct):
         # Append the new gnames to the hotspotter table
         hs.tables.gx2_gname = np.array(gx2_gname + new_gnames)
         hs.update_samples()
-        hs.needs_save = True
         return nNewImages
 
     # ---------------
@@ -390,10 +392,9 @@ class HotSpotter(DynStruct):
         hs.tables.cx2_cid[cx] = -1
         hs.tables.cx2_gx[cx]  = -1
         hs.tables.cx2_nx[cx]  = -1
+        hs.num_cx -= 1
         if resample:
             hs.update_samples()
-        hs.needs_save = True
-        hs.invalidated_results = True
 
     def delete_image(hs, gx):
         cx_list = hs.gx2_cxs(gx)
@@ -401,12 +402,11 @@ class HotSpotter(DynStruct):
             hs.delete_chip(cx, resample=False)
         hs.tables.gx2_gname[gx] = ''
         hs.update_samples()
-        hs.needs_save = True
-        hs.invalidated_results = True
 
     def delete_computed_dir(hs):
         computed_dir = hs.dirs.computed_dir
-        [hs.unload_cxdata(cx) for cx in hs.get_valid_cxs()]
+        hs.unload_all()
+        #[hs.unload_cxdata(cx) for cx in hs.get_valid_cxs()]
         helpers.remove_files_in_dir(computed_dir, recursive=True, verbose=True,
                                     dryrun=False)
 
@@ -422,8 +422,6 @@ class HotSpotter(DynStruct):
     def save_database(hs):
         print('[hs] save_database')
         ld2.write_csv_tables(hs)
-        hs.needs_save = False
-
     # -----
 
     def flag_cxs_with_name_in_sample(hs, cxs, sample_cxs):
@@ -521,6 +519,8 @@ class HotSpotter(DynStruct):
     # -------
     # Get valid index functions
     # -------
+    def get_num_chips(hs):
+        return len(hs.tables.cx2_cid)
 
     def get_valid_cxs(hs):
         valid_cxs = np.where(hs.tables.cx2_cid > 0)[0]
@@ -630,8 +630,7 @@ class HotSpotter(DynStruct):
         def _2ocxs(cx, nx):
             other_cx_ = np.where(cx2_nx == nx)[0]
             return other_cx_[other_cx_ != cx]
-        others_list = [_2ocxs(cx, nx)
-                       if nx <= 1 else np.array([], ds.X_DTYPE)
+        others_list = [_2ocxs(cx, nx) if nx > 1 else np.array([], ds.X_DTYPE)
                        for nx, cx in izip(nx_list, cx_input)]
         return others_list
 
@@ -726,14 +725,26 @@ class HotSpotter(DynStruct):
 
     def _cx2_rchip_size(hs, cx):
         rchip_path = hs.cpaths.cx2_rchip_path[cx]
+        if rchip_path is None:
+            return (0, 0)
         return Image.open(rchip_path).size
 
     def load_cx2_rchip_size(hs):
+        # TODO: this should be integrated in hs.cpaths instead
         cx2_rchip_path = hs.cpaths.cx2_rchip_path
-        cx2_rchip_size = [Image.open(path).size for path in cx2_rchip_path]
+        cx2_rchip_size = [(0, 0) if path is None else Image.open(path).size for path in cx2_rchip_path]
         hs.cx2_rchip_size = cx2_rchip_size
 
     def get_cx2_rchip_size(hs):
+        # Hendrik/Jason TODO:
+        # cx2_rchip_size returns the width and height of the preprocessed (and
+        # rotated) chip. Currently this is stored directly in the HotSpotter
+        # object, but it should really become a member of the hs.cpaths
+        # (ChipPaths) object, and be precomputed on the fly like cx2_chip_path
+        # and cx2_rchip_path. This is used in a few places so be sure to grep
+        # for rchip_size and make sure any changes you make are robust.
+        # Talk to me if you decide to tackle this one. It requires a bit of
+        # knowledge of how the data structures are set up.
         if hs.cx2_rchip_size is None:
             hs.load_cx2_rchip_size()
         return hs.cx2_rchip_size

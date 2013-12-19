@@ -291,7 +291,8 @@ def load_chips(hs, cx_list=None, **kwargs):
     # COMPUTE SETUP
     #----------------
     # 1.1) Get/Update ChipConfig and ChipPaths objects
-    if hs.prefs['chip_cfg'] is not None:
+    #print('[cc2] cx_list = %r' % (cx_list,))
+    if hs.prefs.chip_cfg is not None:
         hs.prefs.chip_cfg.update(**kwargs)
     else:
         hs.prefs.chip_cfg = ds.ChipConfig(**kwargs)
@@ -301,15 +302,20 @@ def load_chips(hs, cx_list=None, **kwargs):
     chip_uid = chip_cfg.get_uid()
     print('[cc2] chip_uid = %r' % chip_uid)
     if hs.cpaths.chip_uid != '' and hs.cpaths.chip_uid != chip_uid:
-        raise Exception('Disagreement: chip_uid = %r' % hs.cpaths.chip_uid)
+        print('[cc2] Disagreement: chip_uid = %r' % hs.cpaths.chip_uid)
+        print('[cc2] Unloading all chip information')
+        hs.unload_all()
+        hs.cpaths = ds.HotspotterChipPaths()
     # Get the list of chips to load
     cx_list = hs.get_valid_cxs() if cx_list is None else cx_list
-    if cx_list == []:
-        return  # HACK
     if not np.iterable(cx_list):
         cx_list = [cx_list]
+    if len(cx_list) == 0:
+        return  # HACK
     cx_list = np.array(cx_list)  # HACK
     hs.cpaths.chip_uid = chip_uid
+    #print('[cc2] Requested %d chips' % (len(cx_list)))
+    #print('[cc2] cx_list = %r' % (cx_list,))
     # Get table information
     try:
         gx_list    = hs.tables.cx2_gx[cx_list]
@@ -403,7 +409,7 @@ def load_chips(hs, cx_list=None, **kwargs):
     print('[cc2] Done Precomputing chips and loading chip paths')
 
     # Extend the datastructure if needed
-    list_size = max(cx_list)
+    list_size = max(cx_list) + 1
     helpers.ensure_list_size(hs.cpaths.cx2_chip_path, list_size)
     helpers.ensure_list_size(hs.cpaths.cx2_rchip_path, list_size)
     # Copy the values into the ChipPaths object
@@ -411,6 +417,7 @@ def load_chips(hs, cx_list=None, **kwargs):
         hs.cpaths.cx2_chip_path[cx] = cfpath_list[lx]
     for lx, cx in enumerate(cx_list):
         hs.cpaths.cx2_rchip_path[cx] = rfpath_list[lx]
+    hs.load_cx2_rchip_size()  # TODO: Loading rchip size should be handled more robustly
     print('[cc2]=============================')
 
 
@@ -430,7 +437,7 @@ if __name__ == '__main__':
     args = main.parse_arguments(db='NAUTS')
     hs = HotSpotter.HotSpotter(args)
     hs.load_tables()
-    hs.set_samples()
+    hs.update_samples()
     # --- LOAD CHIPS --- #
     cc2.load_chips(hs)
     cx = helpers.get_arg_after('--cx', type_=int)

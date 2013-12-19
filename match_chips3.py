@@ -117,8 +117,7 @@ def ensure_nn_index(hs, query_cfg, dcxs):
     dcxs_ = tuple(dcxs)
     if not dcxs_ in query_cfg._dcxs2_index:
         # Make sure the features are all computed first
-        hs.load_chips(dcxs_)
-        hs.load_features(dcxs_)
+        hs.refresh_features(dcxs_)
         data_index = ds.NNIndex(hs, dcxs)
         query_cfg._dcxs2_index[dcxs_] = data_index
     query_cfg._data_index = query_cfg._dcxs2_index[dcxs_]
@@ -141,7 +140,7 @@ def load_cached_query(hs, query_cfg, aug_list=['']):
         if qcx2_res is None:
             return None
         result_list.append(qcx2_res)
-    print('[mc3] ... query result cache hit\n')
+    print('[mc3] ... query result cache hit')
     return result_list
 
 

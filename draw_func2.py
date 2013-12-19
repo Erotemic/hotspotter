@@ -6,7 +6,6 @@ from itertools import izip
 from os.path import splitext, split, join, normpath
 import colorsys
 import itertools
-import os
 import pylab
 import sys
 import textwrap
@@ -21,6 +20,12 @@ if multiprocessing.current_process().name == 'MainProcess':
     print('[df2] matplotlib.use(Qt4Agg)')
     matplotlib.rcParams['toolbar'] = 'toolbar2'
     matplotlib.rc('text', usetex=False)
+    mpl_keypress_shortcuts = [key for key in matplotlib.rcParams.keys() if key.find('keymap') == 0]
+    #for key in mpl_keypress_shortcuts:
+        #print('%s = %s' % (key, matplotlib.rcParams[key]))
+    # Disable mpl shortcuts
+    for key in mpl_keypress_shortcuts:
+        matplotlib.rcParams[key] = ''
     #matplotlib.rcParams['text'].usetex = False
     if backend != 'Qt4Agg':
         matplotlib.use('Qt4Agg', warn=True, force=True)
@@ -131,13 +136,9 @@ FIGSIZE_BIG = (24, 12)
 
 FIGSIZE = FIGSIZE_MED
 
-try:
-    if sys.platform == 'win32':
-        compname = os.environ['COMPUTER_NAME']
-        if compname == 'Ooo':
-            TILE_WITHIN = (-1912, 30, -969, 1071)
-except KeyError:
-    TILE_WITHIN = (0, 30, 969, 1041)
+tile_within = (-1, 30, 969, 1041)
+if helpers.get_computer_name() == 'Ooo':
+    TILE_WITHIN = (-1912, 30, -969, 1071)
 
 DISTINCT_COLORS = True  # and False
 DARKEN = None
@@ -594,13 +595,13 @@ def lowerright_text(txt):
     ax_relative_text(.98, .92, txt, **txtargs)
 
 
-def absolute_lbl(x_, y_, txt, **kwargs):
+def absolute_lbl(x_, y_, txt, roffset=(-.02, -.02), **kwargs):
     txtargs = dict(horizontalalignment='right',
                    verticalalignment='top',
                    backgroundcolor=(0, 0, 0, .5),
                    color=ORANGE,
                    **kwargs)
-    ax_absolute_text(x_, y_, txt, **txtargs)
+    ax_absolute_text(x_, y_, txt, roffset=roffset, **txtargs)
 
 
 def ax_relative_text(x, y, txt, ax=None, offset=None, **kwargs):
@@ -615,11 +616,17 @@ def ax_relative_text(x, y, txt, ax=None, offset=None, **kwargs):
     ax_absolute_text(x_, y_, txt, ax=ax, **kwargs)
 
 
-def ax_absolute_text(x_, y_, txt, ax=None, **kwargs):
+def ax_absolute_text(x_, y_, txt, ax=None, roffset=None, **kwargs):
     if ax is None:
         ax = gca()
     if 'fontproperties' in kwargs:
         kwargs['fontproperties'] = FONTS.relative
+    if roffset is not None:
+        xroff, yroff = roffset
+        xy, width, height = _axis_xy_width_height(ax)
+        x_ += xroff * width
+        y_ += yroff * height
+
     ax.text(x_, y_, txt, **kwargs)
 
 
@@ -649,7 +656,7 @@ def set_figtitle(figtitle, subtitle=''):
     if subtitle != '':
         subtitle = '\n' + subtitle
     fig.suptitle(figtitle + subtitle, fontsize=14, fontweight='bold')
-    fig.suptitle(figtitle, x=.5, y=.98, fontproperties=FONTS.figtitle)
+    #fig.suptitle(figtitle, x=.5, y=.98, fontproperties=FONTS.figtitle)
     #fig_relative_text(.5, .96, subtitle, fontproperties=FONTS.subtitle)
     fig.canvas.set_window_title(figtitle)
     adjust_subplots()
@@ -1415,3 +1422,27 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
             _drawkpts(**pt2_args)
             _drawkpts(**pts_args)
     return fig, ax, woff, hoff
+
+
+def disconnect_callback(fig, callback_type):
+    #print('[df2] disconnect %r callback' % callback_type)
+    cbid_type = callback_type + '_cbid'
+    cbfn_type = callback_type + '_func'
+    cbid = fig.__dict__.get(cbid_type, None)
+    cbfn = fig.__dict__.get(cbfn_type, None)
+    if cbid is not None:
+        fig.canvas.mpl_disconnect(cbid)
+    else:
+        cbfn = None
+    fig.__dict__[cbid_type] = None
+    return cbid, cbfn
+
+
+def connect_callback(fig, callback_type, callback_fn):
+    #print('[df2] register %r callback' % callback_type)
+    if callback_fn is None:
+        return
+    cbid_type = callback_type + '_cbid'
+    cbfn_type = callback_type + '_func'
+    fig.__dict__[cbid_type] = fig.canvas.mpl_connect(callback_type, callback_fn)
+    fig.__dict__[cbfn_type] = callback_fn

@@ -46,18 +46,23 @@ def configure_matplotlib():
 
 def select_orientation():
     import draw_func2 as df2
+    from matplotlib.backend_bases import mplDeprecation
     print('[*guitools] Define an orientation angle by clicking two points')
     try:
         # Compute an angle from user interaction
         sys.stdout.flush()
         fig = df2.gcf()
-        pts = np.array(fig.ginput(2))
+        oldcbid, oldcbfn = df2.disconnect_callback(fig, 'button_press_event')
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=mplDeprecation)
+            pts = np.array(fig.ginput(2))
         #print('[*guitools] ginput(2) = %r' % pts)
         # Get reference point to origin
         refpt = pts[0] - pts[1]
         #theta = np.math.atan2(refpt[1], refpt[0])
         theta = np.math.atan(refpt[1] / refpt[0])
         print('The angle in radians is: %r' % theta)
+        df2.connect_callback(fig, 'button_press_event', oldcbfn)
         return theta
     except Exception as ex:
         print('Annotate Orientation Failed %r' % ex)
@@ -72,10 +77,7 @@ def select_roi():
         sys.stdout.flush()
         fig = df2.gcf()
         # Disconnect any other button_press events
-        button_press_cbid = fig.__dict__.get('button_press_cbid', None)
-        button_press_callback = fig.__dict__.get('button_press_callback', None)
-        if button_press_cbid is not None:
-            fig.canvas.mpl_disconnect(button_press_cbid)
+        oldcbid, oldcbfn = df2.disconnect_callback(fig, 'button_press_event')
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=mplDeprecation)
             pts = fig.ginput(2)
@@ -88,9 +90,7 @@ def select_roi():
         xywh = map(int, map(round, (xm, ym, xM - xm, yM - ym)))
         roi = np.array(xywh, dtype=np.int32)
         # Reconnect the old button press events
-        if button_press_cbid is not None:
-            fig.button_press_cbid = fig.canvas.mpl_connect('button_press_event', button_press_callback)
-            fig.button_press_callback = button_press_callback
+        df2.connect_callback(fig, 'button_press_event', oldcbfn)
         print('[*guitools] roi = %r ' % (roi,))
         return roi
     except Exception as ex:
@@ -269,13 +269,13 @@ def exit_application():
     QtGui.qApp.quit()
 
 
-def run_main_loop(app, is_root=True, backend=None):
+def run_main_loop(app, is_root=True, backend=None, **kwargs):
     if backend is not None:
         print('[*guitools] setting active window')
         app.setActiveWindow(backend.win)
     if is_root:
         print('[*guitools] running main loop.')
-        timer = ping_python_interpreter()  # NOQA
+        timer = ping_python_interpreter(**kwargs)  # NOQA
         if backend is not None:
             backend.timer = timer
         sys.exit(app.exec_())
@@ -283,7 +283,7 @@ def run_main_loop(app, is_root=True, backend=None):
         print('[*guitools] using roots main loop')
 
 
-def ping_python_interpreter(frequency=100):  # 4200):
+def ping_python_interpreter(frequency=4200):  # 4200):
     'Create a QTimer which lets the python intepreter run every so often'
     timer = Qt.QTimer()
     timer.timeout.connect(lambda: None)

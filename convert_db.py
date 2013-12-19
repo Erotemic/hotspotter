@@ -15,24 +15,37 @@ import sys
 
 import db_info
 
+
+# BUGS: TODO:
+# Orientation within chip
+
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
+
+
 def print_on():
     global print, print_
     print =  __builtin__.print
     print_ = sys.stdout.write
+
+
 def print_off():
     global print, print_
-    def print(*args, **kwargs): pass
-    def print_(*args, **kwargs): pass
-# Dynamic module reloading
-def reload_module():
-    import imp, sys
-    print('[___] reloading '+__name__)
-    imp.reload(sys.modules[__name__])
+
+    def print(*args, **kwargs):
+        pass
+
+    def print_(*args, **kwargs):
+        pass
+
+
 def rrr():
-    reload_module()
+    '# Dynamic module reloading'
+    import imp
+    print('[___] reloading ' + __name__)
+    imp.reload(sys.modules[__name__])
+
 
 def try_autoconvert(db_dir):
     if db_info.has_v2_gt(db_dir):
@@ -45,8 +58,10 @@ def try_autoconvert(db_dir):
         raise NotImplementedError('partial database recovery')
     return False
 
+
 def is_current(db_dir):
     return db_info.has_internal_tables(db_dir)
+
 
 def try_user_guided(db_dir):
     import load_data2 as ld2
@@ -58,8 +73,10 @@ def try_user_guided(db_dir):
                                          allow_unknown_chips=False)
     pass
 
+
 def try_new_database(db_dir):
     return exists(db_dir) #and len(os.listdir(db_dir)) == 0
+
 
 def convert_if_needed(db_dir):
     if is_current(db_dir):
@@ -73,6 +90,7 @@ def convert_if_needed(db_dir):
     else:
         raise Exception('unknown and non-empty database directory')
 
+
 # Port of Philbin07 code to python
 def compute_ap(groundtruth_query, ranked_list):
     good_set = set(open(groundtruth_query + '_good.txt').readlines())
@@ -80,6 +98,7 @@ def compute_ap(groundtruth_query, ranked_list):
     junk_set = set(open(groundtruth_query + '_junk.txt').readlines())
     pos_set  = set.union(good_set, ok_set)
     ap = compute_ap(pos_set, junk_set, ranked_list);
+
 
 def compute_ap(pos, amb, ranked_list):
     old_recall = 0.0
@@ -106,8 +125,8 @@ def compute_ap(pos, amb, ranked_list):
 # just read the query images
 # use philbins thing to compute ap
 
-# It looks like images can have multiple labels. 
-# in oxford its either 5 of the same or 10 of two. 
+# It looks like images can have multiple labels.
+# in oxford its either 5 of the same or 10 of two.
 
 def __oxgtfile2_oxsty_gttup(gt_fname):
     # num is an id not a number of chips
@@ -126,13 +145,13 @@ def __read_oxsty_gtfile(gt_fpath, name, quality, img_dpath, corrupted_gname_set)
             fields = line.split(' ')
             gname = fields[0].replace('oxc1_','')+'.jpg'
             # >:( Because PARIS just cant keep paths consistent
-            if gname.find('paris_') >= 0: 
+            if gname.find('paris_') >= 0:
                 paris_hack = gname[6:gname.rfind('_')]
                 gname = join(paris_hack, gname)
             if gname in corrupted_gname_set: continue
             if len(fields) > 1: # if has roi
                 roi =  map(int, map(round, map(float, fields[1:])))
-            else: 
+            else:
                 gpath = join(img_dpath, gname)
                 (w,h) = Image.open(gpath).size
                 roi = [0,0,w,h]
@@ -161,7 +180,7 @@ def convert_from_oxford_style(db_dir):
     gname_list_ = [join(relpath(root, img_dpath), fname).replace('\\','/').replace('./','')\
                     for (root,dlist,flist) in os.walk(img_dpath)
                     for fname in iter(flist)]
-    gname_list = [gname for gname in iter(gname_list_) 
+    gname_list = [gname for gname in iter(gname_list_)
                   if not gname in corrupted_gname_set and helpers.matches_image(gname)]
     print(' * num_images = %d ' % len(gname_list))
 
@@ -184,7 +203,7 @@ def convert_from_oxford_style(db_dir):
         gt_fpath = join(oxford_gt_dpath, gt_fname)
         name_set.add(name)
         oxsty_chip_info_sublist = __read_oxsty_gtfile(gt_fpath, name,
-                                                      quality, img_dpath, 
+                                                      quality, img_dpath,
                                                      corrupted_gname_set)
         if quality == 'query':
             for (gname, roi) in iter(oxsty_chip_info_sublist):
@@ -226,8 +245,8 @@ def convert_from_oxford_style(db_dir):
     print('adding to table: ')
     gx2_gname = gname_list
     nx2_name  = ['____', '____'] + list(name_set)
-    nx2_nid   = [1, 1]+range(2,len(name_set)+2)
-    gx2_gid   = range(1,len(gx2_gname)+1)
+    nx2_nid   = [1, 1] + range(2, len(name_set) + 2)
+    gx2_gid   = range(1, len(gx2_gname) + 1)
 
     cx2_cid     = []
     cx2_theta   = []
@@ -235,8 +254,8 @@ def convert_from_oxford_style(db_dir):
     cx2_roi     = []
     cx2_nx      = []
     cx2_gx      = []
-    prop_dict   = {'oxnum':[]}
-  
+    prop_dict   = {'oxnum': []}
+
     def add_to_hs_tables(gname, name, roi, quality, num=''):
         cid = len(cx2_cid) + 1
         nx = nx2_name.index(name)
@@ -251,7 +270,7 @@ def convert_from_oxford_style(db_dir):
         prop_dict['oxnum'].append(num)
         sys.stdout.write(('\b'*10)+'cid = %4d' % cid)
         return cid
-        
+
     for gname, roi, name, num in query_chips:
         add_to_hs_tables(gname, name, roi, 'query', num)
 
@@ -266,11 +285,11 @@ def convert_from_oxford_style(db_dir):
 
     for gname in gname_without_groundtruth_list:
         gpath = join(img_dpath, gname)
-        try: 
-            (w,h) = Image.open(gpath).size
+        try:
+            (w, h) = Image.open(gpath).size
             roi = [0, 0, w, h]
             add_to_hs_tables(gname, '____', roi, 'unknown')
-        except Exception as ex: 
+        except Exception as ex:
             print('Exception ex=%r' % ex)
             print('Not adding gname=%r' % gname)
             print('----')
@@ -285,6 +304,7 @@ def convert_from_oxford_style(db_dir):
     write_name_table(internal_dir, nx2_nid, nx2_name)
     write_image_table(internal_dir, gx2_gid, gx2_gname)
 
+
 # Converts the name_num.jpg image format into a database
 def convert_named_chips(db_dir, img_dpath=None):
     print('\n --- Convert Named Chips ---')
@@ -293,11 +313,11 @@ def convert_named_chips(db_dir, img_dpath=None):
     print('gt_format (name, num) = %r' % gt_format)
     if img_dpath is None:
         img_dpath = db_dir + '/images'
-    print('Converting db_dir=%r and img_dpath=%r' % (db_dir, img_dpath)) 
+    print('Converting db_dir=%r and img_dpath=%r' % (db_dir, img_dpath))
     # --- Build Image Table ---
     helpers.print_('Building name table: ')
     gx2_gname = helpers.list_images(img_dpath)
-    gx2_gid   = range(1,len(gx2_gname)+1)
+    gx2_gid   = range(1, len(gx2_gname) + 1)
     print('There are %d images' % len(gx2_gname))
     # ---- Build Name Table ---
     helpers.print_('Building name table: ')
@@ -306,16 +326,17 @@ def convert_named_chips(db_dir, img_dpath=None):
         name, num = parse.parse(gt_format, gname)
         name_set.add(name)
     nx2_name  = ['____', '____'] + list(name_set)
-    nx2_nid   = [1, 1]+range(2,len(name_set)+2)
-    print('There are %d names' % (len(nx2_name)-2))
+    nx2_nid   = [1, 1] + range(2, len(name_set) + 2)
+    print('There are %d names' % (len(nx2_name) - 2))
     # ---- Build Chip Table ---
-    helpers.print_('Building chip table: ')
+    print('[converdb] Building chip table: ')
     cx2_cid     = []
     cx2_theta   = []
     cx2_roi     = []
     cx2_nx      = []
     cx2_gx      = []
     cid = 1
+
     def add_to_hs_tables(gname, name, roi, theta=0):
         cid = len(cx2_cid) + 1
         nx = nx2_name.index(name)
@@ -326,6 +347,7 @@ def convert_named_chips(db_dir, img_dpath=None):
         cx2_gx.append(gx)
         cx2_theta.append(theta)
         return cid
+
     for gx, gname in enumerate(gx2_gname):
         name, num = parse.parse(gt_format, gname)
         img_fpath = join(img_dpath, gname)
@@ -342,14 +364,14 @@ def convert_named_chips(db_dir, img_dpath=None):
     write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta)
     write_name_table(internal_dir, nx2_nid, nx2_name)
     write_image_table(internal_dir, gx2_gid, gx2_gname)
-   
+
 
 def init_database_from_images(db_dir, img_dpath=None, gt_format=None,
                               allow_unknown_chips=False):
     # --- Initialize ---
     if img_dpath is None:
         img_dpath = db_dir + '/images'
-    print('Converting db_dir=%r and img_dpath=%r' % (db_dir, img_dpath)) 
+    print('Converting db_dir=%r and img_dpath=%r' % (db_dir, img_dpath))
     gx2_gid, gx2_gname = imagetables_from_img_dpath(img_dpath)
     name_set = groundtruth_from_imagenames(gx2_gname, gt_format)
     nx2_name, nx2_nid = nametables_from_nameset(name_set)
@@ -471,7 +493,7 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
     print('[convert] Building name table')
     def get_lbl_pos(column_labels, valid_labels):
         for lbl in valid_labels:
-            index = helpers.listfind(column_labels, lbl) 
+            index = helpers.listfind(column_labels, lbl)
             if index != None: return index
         raise Exception('There is no valid label')
     name_colx = get_lbl_pos(column_labels, ['ANIMAL_ID', 'AnimalID'])
@@ -490,14 +512,14 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
             colx_list.append(colx)
         return colx_list
     # ---------
-    # Essential properties 
+    # Essential properties
     prop2_colx_list = {}
     try:
         image_colx_list = get_multiprop_colx_list('IMAGE_')
     except Exception as ex:
         image_colx_list = get_multiprop_colx_list('Image')
     # ---------
-    # Nonessential multi-properties 
+    # Nonessential multi-properties
     try_multiprops = ['DATE_NO']
     multiprop2_colx = {}
     for key in try_multiprops:
@@ -510,7 +532,7 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
     try_props = ['SEX']
     prop2_colx = {}
     for key in try_props:
-        try: 
+        try:
             other_colx = get_lbl_pos(column_labels, [key])
             prop2_colx[key] = other_colx
         except Exception as ex:
@@ -520,7 +542,7 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
     try_match_props = ['matches', 'WildID_score']
     pairprop2_colx = {}
     for key in try_match_props:
-        try: 
+        try:
             other_colx = get_lbl_pos(column_labels, [key])
             pairprop2_colx[key] = other_colx
         except Exception as ex:
@@ -615,7 +637,7 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
 
     known_gx_set = set(cx2_gx)
     for gx, gname in enumerate(gx2_gname):
-        if gx in known_gx_set: continue 
+        if gx in known_gx_set: continue
         name     = '____'
         roi      = roi_from_imgsize(join(img_dpath, gname), silent=False)
         tbl_kwargs1 = {key:'NA' for key, val in multiprop2_colx.iteritems()}
@@ -638,10 +660,10 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
     print('[convert] finished conversion')
 
 #------------------------
-# New modular function below 
+# New modular function below
 
 def roi_from_imgsize(img_fpath, silent=False):
-    try: 
+    try:
         (w,h) = Image.open(img_fpath).size
         roi = [1, 1, w, h]
         return roi
@@ -688,7 +710,7 @@ def diff_strings(str1, str2):
             line1 = line1.replace('test_','')
             line1 = line1.replace('testA_','')
             line2 = line2.replace(' ','')
-            if line1 != line2: 
+            if line1 != line2:
                 print('--- Line: %r ---' % linex)
                 sys.stdout.write(line1)
                 sys.stdout.write(line2)
@@ -696,7 +718,7 @@ def diff_strings(str1, str2):
 def write_to_wrapper(csv_fpath, csv_string):
     if exists(csv_fpath) and DIFF_CHECK:
         print('table already exists: %r' % csv_fpath)
-        with open(csv_fpath) as file: 
+        with open(csv_fpath) as file:
             csv_string2 = file.read()
             if csv_string2 == csv_string:
                 print('No difference!')
@@ -744,7 +766,7 @@ def write_name_table(internal_dir, nx2_nid, nx2_name):
 
 def write_image_table(internal_dir, gx2_gid, gx2_gname):
     helpers.__PRINT_WRITES__ = True
-    # Make image_table.csv 
+    # Make image_table.csv
     column_labels = ['gid', 'gname', 'aif'] # do aif for backwards compatibility
     gx2_aif = np.ones(len(gx2_gid), dtype=np.uint32)
     column_list   = [gx2_gid, gx2_gname, gx2_aif]
@@ -759,9 +781,9 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     helpers.PRINT_CHECKS = True
-    if 'paris' in sys.argv: 
+    if 'paris' in sys.argv:
         convert_from_oxford_style(params.PARIS)
-    if 'oxford' in sys.argv: 
+    if 'oxford' in sys.argv:
         convert_from_oxford_style(params.OXFORD)
     if 'wildebeast' in sys.argv:
         wildid_xlsx_to_tables(params.WILDEBEAST)

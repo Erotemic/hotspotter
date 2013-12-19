@@ -271,11 +271,8 @@ class QueryConfig(ConfigBase):
         # Data TODO: Separate this
         printDBG('[query_cfg] unload_data()')
         query_cfg._qcxs = []
-        printDBG('[query_cfg] unload_data(1)')
         query_cfg._dcxs = []
-        printDBG('[query_cfg] unload_data(2)')
         query_cfg._data_index  = None  # current index
-        printDBG('[query_cfg] unload_data(3)')
         query_cfg._dcxs2_index = {}  # cached indexes
         printDBG('[query_cfg] unload_data(success)')
 
@@ -370,6 +367,6 @@ class DisplayConfig(ConfigBase):
     def __init__(display_cfg, **kwargs):
         super(DisplayConfig, display_cfg).__init__(name='display_cfg')
         display_cfg.N = 5
-        display_cfg.showanalysis = True
         display_cfg.name_scoring = False
-        display_cfg.showanalysis = False
+        display_cfg.showanalysis = True
+        display_cfg.annotations  = True

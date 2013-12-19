@@ -136,7 +136,7 @@ class QueryResult(DynStruct):
             res.query_uid = str(res.query_uid)
             return True
         except IOError as ex:
-            #print('[ds] Caught IOError: %r' % ex)
+            print('[ds] encountered IOError: %r' % ex)
             if not exists(fpath):
                 #print(fpath)
                 #print('[ds] QueryResult(qcx=%d) does not exist' % res.qcx)
@@ -254,7 +254,7 @@ class NNIndex(object):
         ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
         ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
         # Aggregate indexed descriptors into continuous structure
-        ax2_desc = np.vstack([cx2_desc[cx] for cx in cx_list])
+        ax2_desc = np.vstack([cx2_desc[cx] for cx in cx_list if len(cx2_desc[cx]) > 0])
         # Build/Load the flann index
         flann_params = {'algorithm': 'kdtree', 'trees': 4}
         precomp_kwargs = {'cache_dir': hs.dirs.cache_dir,

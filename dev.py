@@ -5,7 +5,6 @@ import __builtin__
 import matplotlib
 matplotlib.use('Qt4Agg')
 import draw_func2 as df2
-import argparse
 import textwrap
 import sys
 from os.path import join
@@ -15,8 +14,6 @@ import DataStructures as ds
 import matching_functions as mf
 import match_chips3 as mc3
 import numpy as np
-import load_data2 as ld2
-import draw_func2 as df2
 import cv2
 import spatial_verification2 as sv2
 import helpers
@@ -232,10 +229,12 @@ def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
     viz.save_if_requested(hs, vary_title)
     return fnum
 
+
 def plot_name(hs, qcx, fnum=1, **kwargs):
     print('[dev] Plotting name')
     viz.plot_name_of_cx(hs, qcx, fignum=fnum, **kwargs)
     return fnum+1
+
 
 def show_names(hs, qon_list, fnum=1):
     '''The most recent plot names function, works with qon_list'''
@@ -250,15 +249,18 @@ def show_names(hs, qon_list, fnum=1):
             df2.save_figure(fpath=names_dir, usetitle=True)
     return fnum
 
+
 def vary_vsone_cfg(hs, qon_list, fnum, vary_dicts, **kwargs):
     vary_cfg = helpers.dict_union(*vary_dicts)
     query_cfg = ds.get_vsone_cfg(hs, **kwargs)
     return vary_query_cfg(hs, qon_list, query_cfg, vary_cfg, fnum)
 
+
 def vary_vsmany_cfg(hs, qon_list, vary_cfg, fnum, **kwargs):
     vary_cfg = helpers.dict_union(*vary_dicts)
     query_cfg = ds.get_vsmany_cfg(hs, **kwargs)
     return vary_query_cfg(hs, qon_list, query_cfg, vary_cfg, fnum)
+
 
 def plot_keypoint_scales(hs, fnum=1):
     print('[dev] plot_keypoint_scales()')
@@ -270,7 +272,7 @@ def plot_keypoint_scales(hs, fnum=1):
     np.set_printoptions(precision=3)
     print(pytex.latex_scalar(r'\# keypoints, ', len(kpts)))
     print(pytex.latex_mystats(r'\# keypoints per image', cx2_nFeats))
-    acd = kpts[:,2:5].T
+    acd = kpts[:, 2:5].T
     scales = np.sqrt(acd[0] * acd[2])
     scales = np.array(sorted(scales))
     print(pytex.latex_mystats(r'keypoint scale', scales))
@@ -290,6 +292,7 @@ def plot_keypoint_scales(hs, fnum=1):
     #ax.set_yscale('log')
     #ax.set_xscale('log')
     return fnum
+
 
 def get_qon_list(hs):
     print('[dev] get_qon_list()')
@@ -320,6 +323,7 @@ def get_qon_list(hs):
         qon_list = [(0, [], 'fallback_qon')]
     return qon_list
 
+
 def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
     print('--------------------------------------')
     print('[dev] investigate_vsone_groundtruth')
@@ -334,10 +338,12 @@ def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
         fnum += 1
     return fnum
 
+
 def investigate_chip_info(hs, qon_list, fnum=1):
     for qcx, ocxs, notes in qon_list:
         chip_info(hs, qcx, notes)
     return fnum
+
 
 def chip_info(hs, cx, notes=''):
     nx = hs.tables.cx2_nx[cx]
@@ -367,6 +373,7 @@ def chip_info(hs, cx, notes=''):
     print(helpers.indent('\n'.join(infostr_list), '    '))
     return locals()
 
+
 def intestigate_keypoint_interaction(hs, qon_list, fnum=1, **kwargs):
     import _tpl
     for qcx, ocxs, notes in qon_list:
@@ -376,6 +383,7 @@ def intestigate_keypoint_interaction(hs, qon_list, fnum=1, **kwargs):
         _tpl.extern_feat.keypoint_interaction(rchip, kpts, desc, fnum=fnum, **kwargs)
         fnum += 1
     return fnum
+
 
 def dbstats(hs):
     import db_info
@@ -438,6 +446,7 @@ def dbstats(hs):
 # Main Script
 # exec(open('dev.py').read())
 
+
 def print_history_table(args):
     print('------------')
     print('[dev] Printing history table:')
@@ -446,6 +455,7 @@ def print_history_table(args):
         if args.db == histentry[0]:
             print('%d: %r' % (count, histentry))
             count += 1
+
 
 def dev_main(**kwargs):
     'Developer main script. Contains all you need to quickly start tests'
@@ -475,6 +485,7 @@ def dev_main(**kwargs):
     return locals()
 #---end main script
 
+
 def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
     cx2_cid = hs.tables.cx2_cid
     qcid_list = []
@@ -499,6 +510,7 @@ def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
             ocid_list += [[gt_cxs]]
             note_list += ['NA']
     return qcx_list, ocid_list, note_list
+
 
 # Driver Function
 def run_investigations(hs, qon_list):
@@ -576,8 +588,7 @@ def all_printoff():
     #parallel.print_off()
 
 if __name__ == '__main__':
-    from multiprocessing import freeze_support
-    freeze_support()
+    multiprocessing.freeze_support()
     print('[dev] __main__ ')
     if not 'hs' in vars():
         # useful when copy and pasting into ipython
@@ -604,7 +615,7 @@ if __name__ == '__main__':
     if hs.args.nopresent:
         print('...not presenting')
         sys.exit(0)
-    exec(df2.present()) #**df2.OooScreen2()
+    exec(df2.present())  # **df2.OooScreen2()
 
 
 '''

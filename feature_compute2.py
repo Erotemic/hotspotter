@@ -183,20 +183,24 @@ def load_features(hs, cx_list=None, **kwargs):
     feat_uid = ''.join(hs.prefs.feat_cfg.get_uid())
     print('[fc2] feat_uid = %r' % feat_uid)
     if hs.feats.feat_uid != '' and hs.feats.feat_uid != feat_uid:
-        raise Exception('Disagreement: feat_uid = %r' % hs.feats.feat_uid)
+        print('[fc2] Disagreement: feat_uid = %r' % hs.feats.feat_uid)
+        print('[fc2] Unloading all chip information')
+        hs.unload_all()
+        hs.load_chips(cx_list=cx_list)
+        hs.feats  = ds.HotspotterChipFeatures()
     # Get the list of chips to load
     cx_list = hs.get_valid_cxs() if cx_list is None else cx_list
-    if cx_list == []:
-        return  # HACK
     if not np.iterable(cx_list):
         cx_list = [cx_list]
+    if len(cx_list) == 0:
+        return  # HACK
     cx_list = np.array(cx_list)  # HACK
     if use_big_cache:  # use only if all descriptors requested
         kpts_list, desc_list = _load_features_bigcache(hs, cx_list)
     else:
         kpts_list, desc_list = _load_features_individualy(hs, cx_list)
     # Extend the datastructure if needed
-    list_size = max(cx_list)
+    list_size = max(cx_list) + 1
     helpers.ensure_list_size(hs.feats.cx2_kpts, list_size)
     helpers.ensure_list_size(hs.feats.cx2_desc, list_size)
     # Copy the values into the ChipPaths object

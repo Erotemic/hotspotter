@@ -501,6 +501,15 @@ def find_std_inliers(data, m=2):
     return abs(data - np.mean(data)) < m * np.std(data)
 
 
+def my_computer_names():
+    return ['Ooo', 'Hyrule', 'BakerStreet']
+
+
+def get_computer_name():
+    import platform
+    return platform.node()
+
+
 def win_shortcut(source, link_name):
     import ctypes
     csl = ctypes.windll.kernel32.CreateSymbolicLinkW

@@ -78,5 +78,5 @@ if __name__ == '__main__':
     exec(helpers.ipython_execstr())
     if not embedded:
         # If not in IPython run the QT main loop
-        guitools.run_main_loop(app, is_root, backend)
+        guitools.run_main_loop(app, is_root, backend, frequency=100)
     signal_reset()

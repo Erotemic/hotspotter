@@ -83,7 +83,7 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
     io_kwargs = dict(dpath=cache_dir, fname='test_results', uid=test_uid, ext='.cPkl')
     # High level caching
     qonx2_bestranks = []
-    #nChips = hs.num_cx
+    #nChips = hs.get_num_chip()
     #nNames = len(hs.tables.nx2_name) - 2
     nQuery = len(qon_list)
     #NMultiNames =

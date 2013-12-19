@@ -99,7 +99,7 @@ def slot(*types):  # This is called at wrap time to get args
                 argstr = ', '.join(argstr_list + kwastr_list)
                 print('[**back] %s(%s)' % (func_name, argstr))
                 result = func(self, *args, **kwargs)
-                print('[**back] Finished %s(%s)\n' % (func_name, argstr))
+                print('[**back] Finished %s(%s)' % (func_name, argstr))
                 return result
 
             slot_wrapper.func_name = func_name
@@ -368,9 +368,10 @@ class MainWindowBackend(QtCore.QObject):
         if key in ['Name', 'Matching Name']:
             self.hs.change_name(cx, val)
         else:
-            self.hs.change_prop(cx, key, val)
+            self.hs.change_property(cx, key, val)
         self.populate_chip_table()
         self.populate_result_table()
+        print('')
 
     #--------------------------------------------------------------------------
     # File Slots
@@ -429,6 +430,7 @@ class MainWindowBackend(QtCore.QObject):
             print(ex)
             if self.hs.args.strict:
                 raise
+        print('')
 
     # File -> Save Database
     @slot()
@@ -444,9 +446,9 @@ class MainWindowBackend(QtCore.QObject):
         options = ['Files', 'Directory']
         reply = self.user_option(msg, title, options, False)
         if reply == 'Files':
-            self.add_images_from_files()
+            self.import_images_from_file()
         if reply == 'Directory':
-            self.add_images_from_dir()
+            self.import_images_from_dir()
 
     # File -> Import Images From File
     @slot()
@@ -454,6 +456,7 @@ class MainWindowBackend(QtCore.QObject):
         fpath_list = guitools.select_images('Select image files to import')
         self.hs.add_images(fpath_list)
         self.populate_image_table()
+        print('')
 
     # File -> Import Images From Directory
     @slot()
@@ -463,6 +466,7 @@ class MainWindowBackend(QtCore.QObject):
         fpath_list = helpers.list_images(img_dpath, fullpath=True)
         self.hs.add_images(fpath_list)
         self.populate_image_table()
+        print('')
 
     # File -> Quit
     @slot()
@@ -475,11 +479,12 @@ class MainWindowBackend(QtCore.QObject):
     # Action -> New Chip Property
     @slot()
     def new_prop(self):
-        new_prop = self.user_input('What is the new property name?')
-        self.hs.add_property(new_prop)
+        newprop = self.user_input('What is the new property name?')
+        self.hs.add_property(newprop)
         self.populate_chip_table()
         self.populate_result_table()
-        print(r'[/back] added new_prop = %r' % new_prop)
+        print(r'[/back] added newprop = %r' % newprop)
+        print('')
 
     # Action -> Add ROI
     @slot()
@@ -495,6 +500,7 @@ class MainWindowBackend(QtCore.QObject):
         self.populate_chip_table()
         self.populate_result_table()
         self.select_gx(gx, cx)
+        print('')
 
     # Action -> Query
     @slot()
@@ -518,6 +524,7 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] finished query')
         print('')
         self.show_query(res)
+        print('')
         #self.win.blockSignals(prevBlock)
         return res
 
@@ -563,6 +570,7 @@ class MainWindowBackend(QtCore.QObject):
         self.populate_result_table()
         self.select_gx(gx, cx, **kwargs)
         print(r'[/back] reselected theta=%r' % theta)
+        print('')
 
     # Action -> Delete Chip
     @slot()
@@ -578,6 +586,7 @@ class MainWindowBackend(QtCore.QObject):
         self.populate_result_table()
         self.select_gx(gx)
         print('[back] deleted cx=%r\n' % cx)
+        print('')
 
     # Action -> Next
     @slot()
@@ -602,6 +611,7 @@ class MainWindowBackend(QtCore.QObject):
         self.hs.update_samples()
         self.hs.refresh_features()
         #self.win.blockSignals(prevBlock)
+        print('')
 
     # Batch -> Precompute Queries
     @slot()
@@ -631,6 +641,7 @@ class MainWindowBackend(QtCore.QObject):
         mc3.print_on()
         ds.print_on()
         mf.print_on()
+        print('')
         #self.win.blockSignals(prevBlock)
 
     #--------------------------------------------------------------------------
@@ -658,6 +669,7 @@ class MainWindowBackend(QtCore.QObject):
         epw.ui.defaultPrefsBUT.clicked.connect(self.default_preferences)
         query_uid = ''.join(self.hs.prefs.query_cfg.get_uid())
         print('[*back] query_uid = %s' % query_uid)
+        print('')
 
     #--------------------------------------------------------------------------
     # Help menu slots

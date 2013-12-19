@@ -71,7 +71,7 @@ class HotSpotter(DynStruct):
         super(HotSpotter, hs).__init__()
         print(r'[\hs] Creating HotSpotter API')
         hs.args = args
-        hs.num_cx = None
+        #hs.num_cx = None
         hs.tables = None
         hs.feats  = None
         hs.cpaths = None
@@ -144,7 +144,7 @@ class HotSpotter(DynStruct):
         hs_dirs, hs_tables = ld2.load_csv_tables(hs.args.dbdir)
         hs.tables  = hs_tables
         hs.dirs    = hs_dirs
-        hs.num_cx = len(hs.tables.cx2_cid)
+        #hs.num_cx = len(hs.tables.cx2_cid)
         _checkargs_onload(hs)
 
     def load_chips(hs, cx_list=None):
@@ -283,36 +283,33 @@ class HotSpotter(DynStruct):
     # Change functions
     # ---------------
     def change_roi(hs, cx, new_roi):
-        # This changes the entire chip.
-        # Delete precomputed data.
-        # Invalidate results
-        hs.delete_cxdata(cx)
+        hs.delete_cxdata(cx)  # Delete old data
         hs.tables.cx2_roi[cx] = new_roi
 
     def change_theta(hs, cx, new_theta):
-        hs.delete_cxdata(cx)
+        hs.delete_cxdata(cx)  # Delete old data
         hs.tables.cx2_theta[cx] = new_theta
 
     def change_name(hs, cx, new_name):
         new_nx_ = np.where(hs.tables.nx2_name == new_name)[0]
-        if len(new_nx_) == 0:
-            new_nx = hs.add_name(new_name)
-        else:
-            new_nx = new_nx_[0]
+        new_nx  = new_nx_[0] if len(new_nx_) > 0 else hs.add_name(new_name)
         hs.tables.cx2_nx[cx] = new_nx
 
-    def change_prop(hs, cx, key, val):
+    def change_property(hs, cx, key, val):
         hs.tables.prop_dict[key][cx] = val
+
+    def get_property(hs, cx, key):
+        return hs.tables.prop_dict[key][cx]
 
     # ---------------
     # Adding functions
     # ---------------
-    def add_property(hs, new_prop):
-        if new_prop is None:
-            return
-        if new_prop in hs.tables.prop_dict:
-            raise UserWarning('Cannot add an already existing property')
-        hs.tables.prop_dict[new_prop] = ['' for _ in xrange(hs.num_cx)]
+    def add_property(hs, key):
+        if not isinstance(key, str):
+            raise UserWarning('New property %r is a %r, not a string.' % (key, type(key)))
+        if key in hs.tables.prop_dict:
+            raise UserWarning('Property add an already existing property')
+        hs.tables.prop_dict[key] = ['' for _ in xrange(hs.get_num_chips())]
 
     def add_name(hs, name):
         # TODO: Allocate memory better (use python lists)
@@ -341,7 +338,7 @@ class HotSpotter(DynStruct):
         prop_dict = hs.tables.prop_dict
         for key in prop_dict.iterkeys():
             prop_dict[key].append('')
-        hs.num_cx += 1
+        #hs.num_cx += 1
         cx = len(hs.tables.cx2_cid) - 1
         hs.update_samples()
         # Remove any conflicts from memory
@@ -391,7 +388,7 @@ class HotSpotter(DynStruct):
         hs.tables.cx2_cid[cx] = -1
         hs.tables.cx2_gx[cx]  = -1
         hs.tables.cx2_nx[cx]  = -1
-        hs.num_cx -= 1
+        #hs.num_cx -= 1
         if resample:
             hs.update_samples()
 
@@ -417,13 +414,16 @@ class HotSpotter(DynStruct):
     #---------------
     # Getting functions
     # ---------------
+    def has_property(hs, key):
+        return key in hs.tables.prop_dict
+
     def get_img_datatupe_list(hs, gx_list):
         'Data for GUI Image Table'
         gx2_gname = hs.tables.gx2_gname
-        gx2_cxs   = hs.gx2_cxs
+        gx2_cxs = hs.gx2_cxs
         gname_list = [gx2_gname[gx] for gx in iter(gx_list)]
-        num_cxs_list = [len(gx2_cxs(gx)) for gx in iter(gx_list)]
-        datatup_list = [tup for tup in izip(gx_list, gname_list, num_cxs_list)]
+        nChips_list = [len(gx2_cxs(gx)) for gx in iter(gx_list)]
+        datatup_list = [tup for tup in izip(gx_list, gname_list, nChips_list)]
         return datatup_list
 
     def get_res_datatup_list(hs, cx_list, cx2_score):
@@ -442,10 +442,10 @@ class HotSpotter(DynStruct):
     def get_chip_datatup_list(hs, cx_list):
         'Data for GUI Chip Table'
         prop_dict = hs.tables.prop_dict
-        cx2_cid  = hs.tables.cx2_cid
-        cx2_nx   = hs.tables.cx2_nx
-        cx2_gx   = hs.tables.cx2_gx
-        nx2_name = hs.tables.nx2_name
+        cx2_cid   = hs.tables.cx2_cid
+        cx2_nx    = hs.tables.cx2_nx
+        cx2_gx    = hs.tables.cx2_gx
+        nx2_name  = hs.tables.nx2_name
         gx2_gname = hs.tables.gx2_gname
         prop_keys  = prop_dict.keys()
         cid_list   = [cx2_cid[cx]           for cx in iter(cx_list)]
@@ -508,6 +508,7 @@ class HotSpotter(DynStruct):
     def get_valid_cxs_with_indexed_groundtruth(hs):
         return hs.get_valid_cxs_with_name_in_samp(hs.indexed_sample_cx)
 
+    #----
     # chip index --> property
 
     def cx2_gx(hs, cx):
@@ -534,6 +535,7 @@ class HotSpotter(DynStruct):
         gx =  hs.tables.cx2_gx[cx]
         return hs.gx2_image(gx)
 
+    #----
     # image index --> property
 
     def gx2_gname(hs, gx, full=False):

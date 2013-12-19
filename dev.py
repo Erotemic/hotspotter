@@ -585,6 +585,23 @@ def run_investigations(hs, qon_list):
             fnum = test_harness.test_configurations(hs, qon_list, [test_cfg_name], fnum)
 
 
+def export_qon_list(hs, qon_list):
+    print('[dev] Exporting query-object-notes to property tables')
+    if not hs.has_property('Notes'):
+        hs.add_property('Notes')
+    for qcx, ocxs, notes in qon_list:
+        print('----')
+        old_prop = hs.get_property(qcx, 'Notes')
+        print('old = ' + old_prop)
+        print(notes)
+        if old_prop.find(notes) == -1:
+            new_prop = notes if old_prop == '' else old_prop + '; ' + notes
+            print('new: ' + new_prop)
+            hs.change_property(qcx, 'Notes', new_prop)
+        print(hs.get_property(qcx, 'Notes'))
+    hs.save_database()
+
+
 def all_printoff():
     import fileio as io
     import HotSpotter
@@ -614,9 +631,8 @@ if __name__ == '__main__':
     if hs.args.printoff:
         all_printoff()
 
-    if hs.args.export_qon_list:
-        print(qon_list)
-        pass
+    if hs.args.export_qon:
+        export_qon_list(hs, qon_list)
     # Big test function. Should be replaced with something
     # not as ugly soon.
     run_investigations(hs, qon_list)
@@ -624,7 +640,6 @@ if __name__ == '__main__':
     if hs.args.query is not None and len(hs.args.query) > 0:
         qcx = hs.cid2_cx(hs.args.query[0])
         res = hs.query(qcx)
-        if hs.has_property('Notes')
         res.show_top(hs)
     print('[dev]====================')
     kwargs = {}

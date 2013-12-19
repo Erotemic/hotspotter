@@ -283,7 +283,7 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
     # Create callback wrapper
     def _on_image_click(event):
         'Slot for matplotlib event'
-        print('\n[viz] clicked image')
+        print('[viz] clicked image')
         if event.xdata is None:
             return
         if len(centers) == 0:
@@ -395,7 +395,7 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
     def _on_chip_click(event):
         #print('\n===========')
         #print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
-        print('\n[viz] clicked chip')
+        print('[viz] clicked chip')
         if event.xdata is None or event.inaxes is None:
             default_chip_view()
             return  # The click is not in any axis
@@ -778,7 +778,7 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
         # Create
         def _on_res_click(event):
             'result interaction mpl event callback slot'
-            print('\n[viz] clicked result')
+            print('[viz] clicked result')
             if event.xdata is None:
                 return
             _show_res(hs, res, figtitle=figtitle, max_nCols=max_nCols, topN_cxs=topN_cxs,

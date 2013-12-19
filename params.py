@@ -419,58 +419,6 @@ for argv in iter(sys.argv):
             MOTHERS_defaults()
 
 
-def make_pref_object():
-    'Not finished yet, but its a start'
-    import Pref
-    Pref.rrr()
-    # --- chip compute ---
-    chip = Pref.Pref()
-    chip.chip_sqrt_area = 750
-    chip.histeq         = False
-    chip.region_norm    = False
-    chip.rank_eq        = False
-    chip.local_eq       = False
-    chip.maxcontrast    = False
-    #-----------------------
-    # --- feature compute ---
-    feat = Pref.Pref()
-    feat.feat_type       = 'HESAFF'  # Feature type to use
-    #-----------------------
-    # -- vsone --
-    vsone  = Pref.Pref()
-    vsone.ratio_thresh   = 1.5       # Thresholds for one-vs-one
-    # -- vsmany --
-    vsmany = Pref.Pref()
-    vsmany.K             = 5         # Number of matches for one-vs-many
-    vsmany.score_type    = 'LNBNN'
-    # -- bow --
-    bow = Pref.Pref()
-    bow.num_words    = long(5e4) # Vocab size for bag of words
-    bow.nDesc_per_word = 14 # Vocab size for bag of words
-    # --- match chips ---
-    match = Pref.Pref()
-    match.match_type = 'vsmany'  # Matching type
-    match.use_krnn = False
-    match.use_snn  = False
-    #-----------------------
-    # --- spatial verification ---
-    verify  = Pref.Pref()
-    verify.num_rerank        = 1000      # Number of top matches to spatially re-rank
-    verify.xy_thresh         = .1        # % diaglen of keypoint extent
-    verify.scale_thresh_low  = .5
-    verify.scale_thresh_high = 2
-    #-----------------------
-    # --- all preferences ---
-    prefs = Pref.Pref()
-    prefs.chip = chip
-    prefs.match = match
-    prefs.vsmany = vsmany
-    prefs.vsone = vsone
-    prefs.bow = bow
-    prefs.verify = verify
-    #-----------------------
-    epw = prefs.createQWidget()
-
 if __name__ == '__main__':
     print('[params] __main__ = params.py')
     print('[params] Param string:')

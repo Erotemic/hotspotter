@@ -23,6 +23,96 @@ def rrr():
 
 DISABLE_NODRAW = True
 
+# Helper functions (should probably be moved into HotSpotter API)
+
+
+def select_next_unannotated(self):
+    msg = 'err'
+    if self.selection is None or self.selection['type_'] == 'gx':
+        valid_gxs = self.hs.get_valid_gxs()
+        has_chips = lambda gx: len(self.hs.gx2_cxs(gx)) > 0
+        hascxs_list = map(has_chips, iter(valid_gxs))
+        try:
+            gx = valid_gxs[hascxs_list.index(False)]
+            self.select_gx(gx)
+            return
+        except ValueError:
+            msg = 'All images have detections. Excellent! '
+    if self.selection is None or msg is not None and self.selection['type_'] == 'cx':
+        valid_cxs = self.hs.get_valid_cxs()
+        has_name = lambda cx: self.hs.cx2_name(cx) != '____'
+        is_named = map(has_name, iter(valid_cxs))
+        try:
+            cx = valid_cxs[is_named.index(False)]
+            cid = self.hs.tables.cx2_cid[cx]
+            self.select_cid(cid)
+            return
+        except ValueError:
+            msg = 'All chips are named. Awesome! '
+    return msg
+
+
+def select_next_in_order(self):
+    if self.selection is None:
+        # No selection
+        #return self.select_next_unannotated()
+        self.selection = {'type_': 'gx', 'index': -1}
+    if self.selection['type_'] == 'gx':
+        # Select next image
+        gx = self.selection['index']
+        gx2_gname = self.hs.tables.gx2_gname
+        next_gx = gx + 1
+        while next_gx < len(gx2_gname):
+            if gx2_gname[next_gx] != '':
+                self.select_gx(next_gx)
+                break
+            next_gx += 1
+        return
+    elif self.selection['type_'] == 'cx':
+        # Select next chip
+        cx = self.selection['index']
+        cx2_cid = self.hs.tables.cx2_cid
+        next_cx = cx + 1
+        while next_cx < len(cx2_cid):
+            cid = cx2_cid[next_cx]
+            if cid != 0:
+                self.select_cid(cid)
+                break
+            next_cx += 1
+        return
+    return 'end of the list'
+
+
+def slot(*types):  # This is called at wrap time to get args
+    'wrapper around pyqtslot decorator'
+    DEBUG = True
+    if DEBUG:
+        # Wrap with debug statments
+
+        def pyqtSlotWrapper(func):
+            func_name = func.func_name
+
+            @pyqtSlot(*types, name=func.func_name)
+            def slot_wrapper(self, *args, **kwargs):
+                argstr_list = map(str, args)
+                kwastr_list = ['%s=%s' % item for item in kwargs.iteritems()]
+                argstr = ', '.join(argstr_list + kwastr_list)
+                print('[back.DBG] %s(%s)' % (func_name, argstr))
+                return func(self, *args, **kwargs)
+            slot_wrapper.func_name = func_name
+            return slot_wrapper
+    else:
+        # Wrap wihout any debugging
+        def pyqtSlotWrapper(func):
+            func_name = func.func_name
+
+            @pyqtSlot(*types, name=func.func_name)
+            def slot_wrapper(self, *args, **kwargs):
+                return func(self, *args, **kwargs)
+            slot_wrapper.func_name = func_name
+            return slot_wrapper
+    return pyqtSlotWrapper
+
 
 class MainWindowBackend(QtCore.QObject):
     'Sends and recieves signals to and from the frontend'
@@ -60,7 +150,7 @@ class MainWindowBackend(QtCore.QObject):
     # Draw Functions
     #------------------------
     def show_splash(self, fnum=1, view='Nice', **kwargs):
-        print(r'[\back] show_splash()')
+        #print(r'[\back] show_splash()')
         fig = df2.figure(fignum=fnum, doclf=True)
         fig.clf()
         viz.show_splash(fnum=fnum)
@@ -70,7 +160,7 @@ class MainWindowBackend(QtCore.QObject):
         #print(r'[/back] finished show_splash()')
 
     def show_image(self, gx, sel_cxs=[], figtitle='Image View', **kwargs):
-        print(r'[\back] show_image()')
+        #print(r'[\back] show_image()')
         fig = df2.figure(fignum=1, doclf=True)
         fig.clf()
         cx_clicked_func = lambda cx: self.select_gx(gx, cx)
@@ -238,27 +328,26 @@ class MainWindowBackend(QtCore.QObject):
         io.global_cache_write(cache_id, work_dir)
         return work_dir
 
-    @pyqtSlot(str, name='backend_print')
+    #--------------------------------------------------------------------------
+    # Slots
+    #--------------------------------------------------------------------------
+
+    @slot(str)
     def backend_print(self, msg):
         msg = str(msg)
         print(msg)
 
-    def set_state(self, state):
-        print('[*back] set state = %r' % state)
-        pass
-
-    @pyqtSlot(name='clear_selection')
+    @slot()
     def clear_selection(self, **kwargs):
-        print('[*back] clear_selection()')
+        #print('[*back] clear_selection()')
         self.selection = None
         self.show_splash(1, 'Image', dodraw=False)
         self.show_splash(2, 'Chip', dodraw=False)
         self.show_splash(3, 'Results', **kwargs)
 
-    # Table selection
-    @pyqtSlot(int, name='select_gx')
+    @slot(int)  # Image table selection
     def select_gx(self, gx, cx=None, **kwargs):
-        print('[*back] select_gx(%r, %r)' % (gx, cx))
+        #print('[*back] select_gx(%r, %r)' % (gx, cx))
         if cx is None:
             cxs = self.hs.gx2_cxs(gx)
             if len(cxs > 0):
@@ -272,21 +361,16 @@ class MainWindowBackend(QtCore.QObject):
         self.selection = {'type_': 'gx', 'index': gx, 'sub': cx}
         self.show_image(gx, highlight_cxs, **kwargs)
 
-    # Table selection
-    @pyqtSlot(int, name='select_cid')
+    @slot(int)  # Chip table selection
     def select_cid(self, cid, **kwargs):
-        print('[*back] select_cid(%r)' % cid)
+        #print('[*back] select_cid(%r)' % cid)
         cx = self.hs.cid2_cx(cid)
         gx = self.hs.tables.cx2_gx[cx]
         self.select_gx(gx, cx=cx, **kwargs)
 
-    #--------------------------------------------------------------------------
-    # File menu slots
-    #--------------------------------------------------------------------------
-    # File -> New Database
-    @pyqtSlot(name='new_database')
+    @slot()  # File -> New Database
     def new_database(self):
-        print(r'[\back] new_database()')
+        #print(r'[\back] new_database()')
         new_db = self.user_input('Enter the new database name')
         msg_put = 'Where should I put %r?' % new_db
         opt_put = ['Choose Directory', 'My Work Dir']
@@ -319,10 +403,9 @@ class MainWindowBackend(QtCore.QObject):
         helpers.ensurepath(new_db_dir)
         self.open_database(new_db_dir)
         #print(r'[/back] finished new_database()')
-        print('')
+        #print('')
 
-    # File -> Open Database
-    @pyqtSlot(name='open_database')
+    @slot()  # File -> Open Database
     def open_database(self, db_dir=None):
         print(r'[\back] open_database')
         # Try to load db
@@ -348,16 +431,14 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] open_database()')
         print('')
 
-    # File -> Save Database
-    @pyqtSlot(name='save_database')
+    @slot()  # File -> Save Database
     def save_database(self):
         print(r'[\back] save_database()')
         self.hs.save_database()
         #print(r'[/back] finished save_database()')
         print('')
 
-    # File -> Import Images
-    @pyqtSlot(name='import_images')
+    @slot()  # File -> Import Images
     def import_images(self):
         print('[*back] import images')
         msg = 'Import specific files or whole directory?'
@@ -370,46 +451,42 @@ class MainWindowBackend(QtCore.QObject):
             self.add_images_from_dir()
         #raise NotImplementedError('')
 
-    # File -> Import Images From File
-    @pyqtSlot(name='import_images_from_file')
-    def add_images_from_files(self):
-        print('[*back] add_images_from_files()')
+    @slot()  # File -> Import Images From File
+    def import_images_from_file(self):
+        #print('[*back] add_images_from_files()')
         fpath_list = guitools.select_images('Select image files to import')
         self._add_images(fpath_list)
 
-    # File -> Import Images From Directory
-    @pyqtSlot(name='import_images_from_dir')
-    def add_images_from_dir(self):
-        print('[*back] add_images_from_dir()')
+    @slot()  # File -> Import Images From Directory
+    def import_images_from_dir(self):
+        #print('[*back] add_images_from_dir()')
         img_dpath = guitools.select_directory('Select directory with images in it')
         print('[*back] selected ' + img_dpath)
         fpath_list = helpers.list_images(img_dpath, fullpath=True)
         self._add_images(fpath_list)
 
-    # File -> Quit
-    @pyqtSlot(name='quit')
+    @slot()  # File -> Quit
     def quit(self):
-        print('[*back] quit()')
+        #print('[*back] quit()')
         guitools.exit_application()
 
     #--------------------------------------------------------------------------
     # Action menu slots
     #--------------------------------------------------------------------------
-    # Action -> New Chip Property
-    @pyqtSlot(name='new_prop')
+
+    @slot()  # Action -> New Chip Property
     def new_prop(self):
-        print(r'[\back] new_prop()')
+        #print(r'[\back] new_prop()')
         new_prop = self.user_input('What is the new property name?')
         self.hs.add_property(new_prop)
         self.populate_chip_table()
         self.populate_result_table()
         print(r'[/back] added new_prop=%r' % new_prop)
-        print('')
+        #print('')
 
-    # Action -> Add ROI
-    @pyqtSlot(name='add_chip')
+    @slot()  # Action -> Add ROI
     def add_chip(self):
-        print(r'[\back] add_chip()')
+        #print(r'[\back] add_chip()')
         gx = self.get_selected_gx()
         self.show_image(gx, figtitle='Image View - Select ROI (click two points)')
         roi = guitools.select_roi()
@@ -421,11 +498,10 @@ class MainWindowBackend(QtCore.QObject):
         self.populate_chip_table()
         self.populate_result_table()
         self.select_gx(gx, cx)
-        print(r'[/back] added chip')
-        print('')
+        #print(r'[/back] added chip')
+        #print('')
 
-    # Action -> Query
-    @pyqtSlot(name='query')
+    @slot()  # Action -> Query
     def query(self, cid=None):
         #prevBlock = self.win.blockSignals(True)
         print(r'[\back] query()')
@@ -449,8 +525,7 @@ class MainWindowBackend(QtCore.QObject):
         #self.win.blockSignals(prevBlock)
         return res
 
-    # Action -> Reselect ROI
-    @pyqtSlot(name='reselect_roi')
+    @slot()  # Action -> Reselect ROI
     def reselect_roi(self, **kwargs):
         print(r'[\back] reselect_roi()')
         cx = self.get_selected_cx()
@@ -472,8 +547,7 @@ class MainWindowBackend(QtCore.QObject):
         print('')
         pass
 
-    # Action -> Reselect ORI
-    @pyqtSlot(name='reselect_ori')
+    @slot()  # Action -> Reselect ORI
     def reselect_ori(self, **kwargs):
         print('[*back] reselect_ori()')
         cx = self.get_selected_cx()
@@ -494,8 +568,7 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] reselected theta=%r' % theta)
         print('')
 
-    # Change chip propery
-    @pyqtSlot(int, str, str, name='change_chip_property')
+    @slot(int, str, str)  # Change chip propery
     def change_chip_property(self, cid, key, val):
         key, val = map(str, (key, val))
         print('[*back] change_chip_property(%r, %r, %r)' % (cid, key, val))
@@ -509,28 +582,29 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] changed property')
         print('')
 
+    @slot()  # Preferences Defaults
     def defaults(self):
-        print(r'[\back] defaulting preferences')
+        #print(r'[\back] defaulting preferences')
         self.hs.default_preferences()
-        self.edit_prefs
-        print(r'[/back] defaulted preferences')
-        print('')
+        # TODO: Propogate changes back to self.edit_prefs.ui
+        #print(r'[/back] defaulted preferences')
+        #print('')
 
-    @pyqtSlot(name='edit_preferences')
+    @slot()
     def edit_preferences(self):
-        print('[*back] edit_preferences')
+        #print('[*back] edit_preferences')
         self.edit_prefs = self.hs.prefs.createQWidget()
         epw = self.edit_prefs
         epw.ui.defaultPrefsBUT.clicked.connect(self.defaults)
         query_uid = ''.join(self.hs.prefs.query_cfg.get_uid())
         print('[*back] query_uid = %s' % query_uid)
-        print(r'[/back] defaulted preferences')
-        print('')
+        #print(r'[/back] defaulted preferences')
+        #print('')
 
     # Action -> Delete Chip
-    @pyqtSlot(name='delete_chip')
+    @slot()
     def delete_chip(self):
-        print('[*back] delete_chip()')
+        #print('[*back] delete_chip()')
         cx = self.get_selected_cx()
         if cx is None:
             self.user_info('Cannot delete chip. No chip selected')
@@ -541,83 +615,26 @@ class MainWindowBackend(QtCore.QObject):
         self.populate_chip_table()
         self.populate_result_table()
         self.select_gx(gx)
-        print(r'[/back] deleted cx=%r' % cx)
-        print('')
+        print('[back] deleted cx=%r\n' % cx)
 
     # Action -> Next
-    @pyqtSlot(name='select_next')
+    @slot()
     def select_next(self):
-        print('[*back] select_next()')
+        #print('[*back] select_next()')
         select_mode = 'in_order'  # 'unannotated'
         if select_mode == 'in_order':
-            msg = self.select_next_in_order()
+            msg = select_next_in_order(self)
         elif select_mode == 'unannotated':
-            msg = self.select_next_unannotated()
+            msg = select_next_unannotated(self)
         else:
             raise Exception('uknown=%r' % select_mode)
         if msg is not None:
             self.user_info(msg)
-        print(r'[/back] selected next')
+        print('[/back] selected next')
 
-    def select_next_unannotated(self):
-        msg = 'err'
-        if self.selection is None or self.selection['type_'] == 'gx':
-            valid_gxs = self.hs.get_valid_gxs()
-            has_chips = lambda gx: len(self.hs.gx2_cxs(gx)) > 0
-            hascxs_list = map(has_chips, iter(valid_gxs))
-            try:
-                gx = valid_gxs[hascxs_list.index(False)]
-                self.select_gx(gx)
-                return
-            except ValueError:
-                msg = 'All images have detections. Excellent! '
-        if self.selection is None or msg is not None and self.selection['type_'] == 'cx':
-            valid_cxs = self.hs.get_valid_cxs()
-            has_name = lambda cx: self.hs.cx2_name(cx) != '____'
-            is_named = map(has_name, iter(valid_cxs))
-            try:
-                cx = valid_cxs[is_named.index(False)]
-                cid = self.hs.tables.cx2_cid[cx]
-                self.select_cid(cid)
-                return
-            except ValueError:
-                msg = 'All chips are named. Awesome! '
-        return msg
-
-    def select_next_in_order(self):
-        if self.selection is None:
-            # No selection
-            #return self.select_next_unannotated()
-            self.selection = {'type_': 'gx', 'index': -1}
-        if self.selection['type_'] == 'gx':
-            # Select next image
-            gx = self.selection['index']
-            gx2_gname = self.hs.tables.gx2_gname
-            next_gx = gx + 1
-            while next_gx < len(gx2_gname):
-                if gx2_gname[next_gx] != '':
-                    self.select_gx(next_gx)
-                    break
-                next_gx += 1
-            return
-        elif self.selection['type_'] == 'cx':
-            # Select next chip
-            cx = self.selection['index']
-            cx2_cid = self.hs.tables.cx2_cid
-            next_cx = cx + 1
-            while next_cx < len(cx2_cid):
-                cid = cx2_cid[next_cx]
-                if cid != 0:
-                    self.select_cid(cid)
-                    break
-                next_cx += 1
-            return
-        return 'end of the list'
-
-    # Batch Actions
-    @pyqtSlot(name='precompute_feats')
+    @slot()  # Batch -> Precompute Feats
     def precompute_feats(self):
-        print(r'[\back] precompute_feats()')
+        #print(r'[\back] precompute_feats()')
         #prevBlock = self.win.blockSignals(True)
         self.hs.update_samples()
         self.hs.refresh_features()
@@ -625,10 +642,13 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] Finished precomputing features')
         print('')
 
-    @pyqtSlot(name='precompute_queries')
+    @slot()  # Batch -> Precompute Queries
     def precompute_queries(self):
-        #http://stackoverflow.com/questions/15637768/pyqt-how-to-capture-output-of-pythons-interpreter-and-display-it-in-qedittext
-        print(r'[\back] precompute_queries()')
+        # TODO:
+        #http://stackoverflow.com/questions/15637768/
+        # pyqt-how-to-capture-output-of-pythons-interpreter-
+        # and-display-it-in-qedittext
+        #print(r'[\back] precompute_queries()')
         #prevBlock = self.win.blockSignals(True)
         self.precompute_feats()
         valid_cx = self.hs.get_valid_cxs()
@@ -654,8 +674,7 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] Finished precomputing queries')
         print('')
 
-    # Option Actions
-    @pyqtSlot(name='layout_figures')
+    @slot()  # Options -> Layout Figures
     def layout_figures(self):
         print(r'[\back] layout_figures()')
         dlen = 1618
@@ -670,9 +689,9 @@ class MainWindowBackend(QtCore.QObject):
         df2.present(num_rc=(2, 2), wh=dlen, wh_off=(0, 60))
         #print(r'[\back] finished laying out figures')
 
-    @pyqtSlot(name='dev_mode')
-    def dev_mode(self):
-        print(r'[\back] dev_mode (prints internal state)')
+    @slot()  # Help -> Developer Help
+    def dev_help(self):
+        print(r'[\back] dev_help (prints internal state)')
         backend = self  # NOQA
         hs = self.hs    # NOQA
         devmode = True  # NOQA
@@ -682,31 +701,35 @@ class MainWindowBackend(QtCore.QObject):
         guifront.rrr()
         HotSpotter.rrr()
         viz.rrr()
-        print(r'[\back] finished dev_mode')
+        print(r'[\back] finished dev_help')
         #if self.timer is not None:
             #self.timer.pause()
             #exec(helpers.ipython_execstr())
             #self.timer.start()
 
-    # Help Actions
-    @pyqtSlot(name='view_database_dir')
+    # ----------
+    # View Directory Slots
+    # ----------
+    @slot()
     def view_database_dir(self):
         self.hs.vdd()
 
-    @pyqtSlot(name='view_computed_dir')
+    @slot()
     def view_computed_dir(self):
         self.hs.vcd()
 
-    @pyqtSlot(name='view_global_prefs')
+    @slot()
     def view_global_dir(self):
         self.hs.vgd()
-    #---
 
-    @pyqtSlot(name='delete_computed_dir')
+    # ----------
+    # Delete Directory Slots
+    # ----------
+    @slot()
     def delete_computed_dir(self):
         self.hs.delete_computed_dir()
 
-    @pyqtSlot(name='delete_global_prefs')
+    @slot()
     def delete_global_prefs(self):
         self.hs.delete_global_prefs()
 

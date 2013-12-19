@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/Troubleshooting.ui'
 #
-# Created: Tue Dec 17 15:43:09 2013
+# Created: Thu Dec 19 10:25:55 2013
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!

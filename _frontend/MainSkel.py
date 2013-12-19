@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/MainSkel.ui'
 #
-# Created: Tue Dec 17 15:43:09 2013
+# Created: Thu Dec 19 10:25:55 2013
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -348,7 +348,7 @@ class Ui_mainSkel(object):
         self.actionView_Global_Dir.setText(QtGui.QApplication.translate("mainSkel", "View Global Dir", None, QtGui.QApplication.UnicodeUTF8))
         self.actionLayout_Figures.setText(QtGui.QApplication.translate("mainSkel", "Layout Figures", None, QtGui.QApplication.UnicodeUTF8))
         self.actionLayout_Figures.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+L", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionDev_Mode_IPython.setText(QtGui.QApplication.translate("mainSkel", "Dev Mode (IPython)", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionDev_Mode_IPython.setText(QtGui.QApplication.translate("mainSkel", "Developer Help", None, QtGui.QApplication.UnicodeUTF8))
         self.actionDev_Mode_IPython.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+Alt+Shift+D", None, QtGui.QApplication.UnicodeUTF8))
 
 

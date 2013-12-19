@@ -225,7 +225,7 @@ def build_pyinstaller():
             os.system('rm -rf '+rmdir)
     os.system('pyinstaller _setup/pyinstaller-hotspotter.spec') 
 
-    if sys.platform == 'darwin':
+    if sys.platform == 'darwin' and exists("dist/HotSpotter.app/Contents/"):
         shutil.copyfile("_setup/hsicon.icns", "dist/HotSpotter.app/Contents/Resources/icon-windowed.icns")
         shutil.copyfile("_setup/Info.plist", "dist/HotSpotter.app/Contents/Info.plist")
 

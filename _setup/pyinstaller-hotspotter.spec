@@ -1,5 +1,5 @@
 # -*- mode: python -*-
-# sudo python pyinstaller.py -F -w /hotspotter/main.py -i /hotspotter/hsicon.icns -n HotSpotter
+# sudo python pyinstaller.py -F -w /hotspotter/main.py -i /hotspotter/_setup/hsicon.icns -n HotSpotter
 
 import os
 import sys 

@@ -123,9 +123,9 @@ def clean():
     assert exists('_setup'), 'must be run in hotspotter directory'
     cwd = normpath(realpath(dirname(__file__)))
     print('Current working directory: %r' % cwd)
-    helpers.remove_file(join(cwd, 'dist'))
-    helpers.remove_file(join(cwd, 'build'))
-    helpers.remove_file(join(cwd, "'"))
+    helpers.delete(join(cwd, 'dist'))
+    helpers.delete(join(cwd, 'build'))
+    helpers.delete(join(cwd, "'"))  # idk where this file comes from
 
 
 def fix_tpl_permissions():

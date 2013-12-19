@@ -693,14 +693,14 @@ def dircheck(dpath, makedir=True):
     return True
 
 
-def remove_file(fpath, verbose=True, dryrun=False):
+def remove_file(fpath, verbose=True, dryrun=False, **kwargs):
     try:
         if dryrun:
             if verbose:
-                print('[helpers] Dryrem ' + fpath)
+                print('[helpers] Dryrem %r' % fpath)
         else:
             if verbose:
-                print('[helpers] Removing ' + fpath)
+                print('[helpers] Removing %r' % fpath)
             os.remove(fpath)
     except OSError as e:
         printWARN('OSError: %s,\n Could not delete %s' % (str(e), fpath))
@@ -708,8 +708,18 @@ def remove_file(fpath, verbose=True, dryrun=False):
     return True
 
 
-def remove_files_in_dir(dpath, fname_pattern='*', recursive=False,
-                        verbose=True, dryrun=False, **kwargs):
+def remove_dirs(dpath, dryrun=False, **kwargs):
+    print('[helpers] Removing directory: %r' % dpath)
+    try:
+        shutil.rmtree(dpath)
+    except OSError as e:
+        printWARN('OSError: %s,\n Could not delete %s' % (str(e), dpath))
+        return False
+    return True
+
+
+def remove_files_in_dir(dpath, fname_pattern='*', recursive=False, verbose=True,
+                        dryrun=False, **kwargs):
     print('[helpers] Removing files:')
     print('  * in dpath = %r ' % dpath)
     print('  * matching pattern = %r' % fname_pattern)
@@ -728,6 +738,21 @@ def remove_files_in_dir(dpath, fname_pattern='*', recursive=False,
             break
     print('[helpers] ... Removed %d/%d files' % (num_removed, num_matched))
     return True
+
+
+def delete(path, dryrun=False, recursive=True, verbose=True, **kwargs):
+    print('[helpers] Deleting path=%r' % path)
+    rmargs = dict(dryrun=dryrun, recursive=recursive, verbose=verbose, **kwargs)
+    if not exists(path):
+        msg = ('..does not exist!')
+        print(msg)
+        return False
+    if isdir(path):
+        flag = remove_files_in_dir(path, **rmargs)
+        flag = flag and remove_dirs(path, **rmargs)
+    elif isfile(path):
+        flag = remove_file(path, **rmargs)
+    return flag
 
 
 def longest_existing_path(_path):

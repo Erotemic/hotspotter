@@ -479,8 +479,10 @@ def dev_main(**kwargs):
     import argparse2
     print('[dev] main()')
     args = argparse2.parse_arguments()
+
     print('[dev] args.db=%r' % args.db)
     print('[dev] args.dbdir=%r' % args.dbdir)
+
     # Create Hotspotter API
     hs = HotSpotter.HotSpotter(args)
     # Load tables, chips, and features

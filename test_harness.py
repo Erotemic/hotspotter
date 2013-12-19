@@ -103,9 +103,9 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
         [harn] TEST %d/%d
         [harn]----------------''' % (qonx + nPrevQ + 1, nQuery * nCfg)))
         gt_cxs = hs.get_other_indexed_cxs(qcx)
-        #title = 'q' + hs.cxstr(qcx) + ' - ' + notes
+        #title = 'q' + hs.cidstr(qcx) + ' - ' + notes
         #print('[harn] title=%r' % (title,))
-        #print('[harn] gt_' + hs.cxstr(gt_cxs))
+        #print('[harn] gt_' + hs.cidstr(gt_cxs))
         res_list = mc3.execute_query_safe(hs, query_cfg, [qcx])
         bestranks = []
         algos = []
@@ -188,7 +188,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     qonx2_lbl = []
     for qonx in xrange(nQuery):
         qcx, ocxs, notes = qon_list[qonx]
-        label = 'qonx %d) q%s -- notes=%s' % (qonx, hs.cxstr(qcx), notes)
+        label = 'qonx %d) q%s -- notes=%s' % (qonx, hs.cidstr(qcx), notes)
         qonx2_lbl.append(label)
     qonx2_lbl = np.array(qonx2_lbl)
     # Build col labels

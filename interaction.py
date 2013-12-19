@@ -41,7 +41,7 @@ def start_interaction(hs, cx, notes):
 
 def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
     chip_info_locals = dev.chip_info(hs, cx)
-    chip_title = chip_info_locals['cxstr']+' '+chip_info_locals['name']
+    chip_title = chip_info_locals['cidstr']+' '+chip_info_locals['name']
     chip_xlabel = chip_info_locals['gname']
     class State(DynStruct):
         def __init__(state):

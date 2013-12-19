@@ -353,7 +353,7 @@ def test():
     qcx = main_locals['qcx']       # query chip index
     gt_cxs = hs.get_other_indexed_cxs(qcx)  # list of ground truth chip indexes
     if len(gt_cxs) == 0:
-        msg = 'q' + hs.cxstr(qcx) + ' has no groundtruth'
+        msg = 'q' + hs.cidstr(qcx) + ' has no groundtruth'
         msg += 'cannot perform tests without groundtruth'
         raise Exception(msg)
     cx = gt_cxs[0]  # Pick a ground truth to test against

@@ -580,7 +580,7 @@ class MainWindowBackend(QtCore.QObject):
         self.show_image(gx, [cx], figtitle='Image View - Select Orientation (click two points)', **kwargs)
         theta = guitools.select_orientation()
         if theta is None:
-            print('[back*] roiselection failed. Not adding')
+            print('[back*] theta selection failed. Not adding')
             return
         self.hs.change_theta(cx, theta)
         self.populate_image_table()

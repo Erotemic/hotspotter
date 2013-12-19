@@ -53,9 +53,9 @@ def select_orientation():
         sys.stdout.flush()
         fig = df2.gcf()
         oldcbid, oldcbfn = df2.disconnect_callback(fig, 'button_press_event')
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=mplDeprecation)
-            pts = np.array(fig.ginput(2))
+        #with warnings.catch_warnings():
+            #warnings.filterwarnings("ignore", category=mplDeprecation)
+        pts = np.array(fig.ginput(2))
         #print('[*guitools] ginput(2) = %r' % pts)
         # Get reference point to origin
         refpt = pts[0] - pts[1]
@@ -78,9 +78,9 @@ def select_roi():
         fig = df2.gcf()
         # Disconnect any other button_press events
         oldcbid, oldcbfn = df2.disconnect_callback(fig, 'button_press_event')
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=mplDeprecation)
-            pts = fig.ginput(2)
+        #with warnings.catch_warnings():
+            #warnings.filterwarnings("ignore", category=mplDeprecation)
+        pts = fig.ginput(2)
         print('[*guitools] ginput(2) = %r' % (pts,))
         [(x1, y1), (x2, y2)] = pts
         xm = min(x1, x2)

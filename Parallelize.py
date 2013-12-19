@@ -4,28 +4,36 @@ import __builtin__
 import multiprocessing as mp
 from helpers import Timer
 import sys
-import sys
 from os.path import exists
 from itertools import izip
 
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
+
+
 def print_on():
     global print, print_
     print =  __builtin__.print
     print_ = sys.stdout.write
+
+
 def print_off():
     global print, print_
-    def print(*args, **kwargs): pass
-    def print_(*args, **kwargs): pass
+
+    def print(*args, **kwargs):
+        pass
+
+    def print_(*args, **kwargs):
+        pass
+
 
 # Dynamic module reloading
-def reload_module():
-    import imp, sys
-    print('[parallel] reloading '+__name__)
+def rrr():
+    import imp
+    print('[parallel] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
-rrr = reload_module
+
 
 def _calculate(func, args):
     result = func(*args)
@@ -38,31 +46,36 @@ def _calculate(func, args):
              #arg_str))
     return result
 
+
 def _worker(input, output):
     for func, args in iter(input.get, 'STOP'):
         result = _calculate(func, args)
         output.put(result)
 
+
 def cpu_count():
     return mp.cpu_count()
+
 
 def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None):
     if args is not None and num_procs is None:
         num_procs = args.num_procs
     task_list = make_task_list(func, arg_list, lazy=lazy)
     if len(task_list) == 0:
-        print('[parallel] ... No '+func.func_name+' tasks left to compute!')
+        print('[parallel] ... No %s tasks left to compute!' % func.func_name)
         return None
+    # Do not execute small tasks in parallel
+    if len(task_list) < num_procs:
+        num_procs = 1
     if num_procs > 1:
-        msg = 'Distributing %d %s tasks to %d parallel processes' % \
-                (len(task_list), func.func_name, num_procs)
-    else: 
-        msg = 'Executing %d %s tasks in serial' % \
-                (len(task_list), func.func_name)
+        msg = 'Distributing %d %s tasks to %d parallel processes' % (len(task_list), func.func_name, num_procs)
+    else:
+        msg = 'Executing %d %s tasks in serial' % (len(task_list),
+                                                   func.func_name)
     try:
         ret = parallelize_tasks(task_list, num_procs, msg=msg)
     except Exception as ex:
-        print('Problem while parallelizing task: ')
+        print('Problem while parallelizing task: %r' % ex)
         print('task_list: ')
         for task in task_list:
             print('  %r' % (task,))
@@ -71,8 +84,9 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None):
         raise
     return ret
 
+
 def make_task_list(func, arg_list, lazy=True):
-    ''' 
+    '''
     The input should alawyas be argument 1
     The output should always be argument 2
     '''
@@ -86,27 +100,28 @@ def make_task_list(func, arg_list, lazy=True):
     print('[parallel] Already computed %d %s tasks' % (nSkip, func.func_name))
     return task_list
 
+
 def parallelize_tasks(task_list, num_procs, msg=''):
     '''
     Used for embarissingly parallel tasks, which write output to disk
     '''
-    with Timer(msg=msg) as t:
+    with Timer(msg=msg):
         if num_procs > 1:
             if False:
                 print('[parallel] Computing in parallel process')
             return _parallelize_tasks(task_list, num_procs, False)
         else:
             result_list = []
-            if False: 
+            if False:
                 print('[parallel] Computing in serial process')
             total = len(task_list)
             sys.stdout.write('    ')
             for count, (fn, args) in enumerate(task_list):
                 if False:
                     print('[parallel] computing %d / %d ' % (count, total))
-                else: 
+                else:
                     sys.stdout.write('.')
-                    if (count+1) % 80 == 0:
+                    if (count + 1) % 80 == 0:
                         sys.stdout.write('\n    ')
                     sys.stdout.flush()
                 result = fn(*args)
@@ -114,14 +129,15 @@ def parallelize_tasks(task_list, num_procs, msg=''):
             sys.stdout.write('\n')
             return result_list
 
+
 def _parallelize_tasks(task_list, num_procs, verbose):
     '''
-    Input: task list: [ (fn, args), ... ] 
+    Input: task list: [ (fn, args), ... ]
     '''
     task_queue = mp.Queue()
     done_queue = mp.Queue()
-    if verbose: 
-        print('[parallel] Submiting '+str(len(task_list))+' tasks:')
+    if verbose:
+        print('[parallel] Submiting %d tasks:' % len(task_list))
     # queue tasks
     for task in iter(task_list):
         task_queue.put(task)
@@ -135,12 +151,14 @@ def _parallelize_tasks(task_list, num_procs, verbose):
             print(done_queue.get())
     else:
         sys.stdout.write('    ')
-        newln_len = num_procs * int(80/num_procs)
+        newln_len = num_procs * int(80 / num_procs)
         for i in xrange(len(task_list)):
             done_queue.get()
             sys.stdout.write('.')
-            if (i+1) % num_procs == 0: sys.stdout.write(' ')
-            if (i+1) % newln_len == 0: sys.stdout.write('\n    ')
+            if (i + 1) % num_procs == 0:
+                sys.stdout.write(' ')
+            if (i + 1) % newln_len == 0:
+                sys.stdout.write('\n    ')
             sys.stdout.flush()
         print('\n[parallel]  ... done')
     # Tell child processes to stop
@@ -156,14 +174,14 @@ if __name__ == '__main__':
     import numpy as np
 
     p = multiprocessing.Pool(processes=8)
-    data_list = [np.random.rand(1000,9) for _ in xrange(1000)]
+    data_list = [np.random.rand(1000, 9) for _ in xrange(1000)]
     data = data_list[0]
 
     def complex_func(data):
         tmp = 0
-        for ix in xrange(0,100):
-            _r = np.random.rand(10,10)
-            u1,s1,v1 = np.linalg.svd(_r)
+        for ix in xrange(0, 100):
+            _r = np.random.rand(10, 10)
+            u1, s1, v1 = np.linalg.svd(_r)
             tmp += s1[0]
         u, s, v = np.linalg.svd(data)
         return s[0] + tmp
@@ -173,10 +191,7 @@ if __name__ == '__main__':
     with helpers.Timer('par'):
         x1 = p.map(complex_func, data_list)
 
-
     '''
     %timeit p.map(numpy.sqrt, x)
     %timeit map(numpy.sqrt, x)
-
-
     '''

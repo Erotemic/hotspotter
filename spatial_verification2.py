@@ -395,14 +395,14 @@ def test():
                                     diaglen_sqrd=diaglen_sqrd,
                                     min_num_inliers=4)
 
-    print(fm)
-    print('Homography inliers')
-    print(inliers)
-    print('H')
-    print(H)
-    print(rchip1.shape, rchip2.shape)
-    homography_transformed = cv2.warpPerspective(rchip1, H, rchip2.shape[0:2])
-    homography_transformed = cv2.resize(homography_transformed, (int(rchip2.shape[1] / 4), int(rchip2.shape[0] / 4)))
+    #print(fm)
+    #print('Homography inliers')
+    #print(inliers)
+    #print('H')
+    #print(H)
+    #print(rchip1.shape, rchip2.shape)
+    rchip_homog = cv2.warpPerspective(rchip1, H, rchip2.shape[0:2])
+    rchip_homog = cv2.resize(rchip_homog, (int(rchip2.shape[1] / 4), int(rchip2.shape[0] / 4)))
 
     # How does Aff map rchip1 to rchip2?
     Aff, aff_inliers = homography_inliers(kpts1, kpts2, fm,
@@ -411,22 +411,28 @@ def test():
                                           min_scale,
                                           diaglen_sqrd=diaglen_sqrd,
                                           min_num_inliers=4, just_affine=True)
-    print('Affine inliers')
-    print(aff_inliers)
-    print('Aff')
-    print(Aff[0:2, :])
-    print (kpts1.shape, kpts2.shape)
+    #print('Affine inliers')
+    #print(aff_inliers)
+    #print('Aff')
+    #print(Aff[0:2, :])
+    #print (kpts1.shape, kpts2.shape)
     #print (cv2.getAffineTransform(kpts1[aff_inliers], kpts2[aff_inliers]))
-    affine_transformed = cv2.warpAffine(rchip1, Aff[0:2, :], rchip2.shape[0:2])
-    affine_transformed = cv2.resize(affine_transformed, (int(rchip2.shape[1] / 4), int(rchip2.shape[0] / 4)))
+    rchip_aff = cv2.warpAffine(rchip1, Aff[0:2, :], rchip2.shape[0:2])
+    rchip_aff = cv2.resize(rchip_aff, (int(rchip2.shape[1] / 4), int(rchip2.shape[0] / 4)))
 
     original_resized = cv2.resize(rchip1, (int(rchip1.shape[1] / 4), int(rchip1.shape[0] / 4)))
     dest_resized = cv2.resize(rchip2, (int(rchip2.shape[1] / 4), int(rchip2.shape[0] / 4)))
-    cv2.imshow('Source', original_resized)
-    cv2.imshow('Destination', dest_resized)
-    cv2.imshow('Homography', homography_transformed)
-    cv2.imshow('Affine', affine_transformed)
+    df2.figure(1)
     df2.imshow(original_resized, title='Source')
+    df2.figure(2)
+    df2.imshow(dest_resized, title='Destination')
+    df2.figure(3)
+    df2.imshow(rchip_homog, title='Homography')
+    df2.figure(4)
+    df2.imshow(rchip_aff, title='Affine')
+    df2.figure(5)
+    df2.imshow(original_resized, title='Source')
+    df2.figure(6, plotnum=(1, 3, 1))
     # Draw original matches
     df2.show_matches2(*args_ + [fm], fs=None,
                       all_kpts=False, draw_lines=True,

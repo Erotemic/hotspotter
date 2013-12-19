@@ -36,7 +36,7 @@ ROOT_DLLS = ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']
 lib_rpath = normpath(join('_tpl/extern_feat/', sys.platform))
 # Walk the lib dir
 walk_path = join(hsroot, lib_rpath)
-print "Adding lib files from directory:" , walk_path
+print "Adding lib files from directory:",  walk_path
 for root, dirs, files in os.walk(walk_path):
     for lib_name in files:
         print "Adding lib name:", lib_name

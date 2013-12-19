@@ -348,6 +348,7 @@ class MainWindowBackend(QtCore.QObject):
 
     # Table Click -> Image Table
     @slot_(int)
+    @blocking
     def select_gx(self, gx, cx=None, **kwargs):
         if cx is None:
             cxs = self.hs.gx2_cxs(gx)
@@ -363,6 +364,7 @@ class MainWindowBackend(QtCore.QObject):
 
     # Table Click -> Chip Table
     @slot_(int)
+    @blocking
     def select_cid(self, cid, **kwargs):
         cx = self.hs.cid2_cx(cid)
         gx = self.hs.tables.cx2_gx[cx]

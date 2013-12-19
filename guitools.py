@@ -60,7 +60,7 @@ def select_orientation():
         # Get reference point to origin
         refpt = pts[0] - pts[1]
         #theta = np.math.atan2(refpt[1], refpt[0])
-        theta = np.math.atan(refpt[1] / refpt[0])
+        theta = np.math.atan2(refpt[1], refpt[0])
         print('The angle in radians is: %r' % theta)
         df2.connect_callback(fig, 'button_press_event', oldcbfn)
         return theta

@@ -39,7 +39,7 @@ def setup_submodules():
     execute_syscalls('''
     git submodule add '''+server+'''tpl-hotspotter.git hotspotter/tpl
     git submodule update --init
-    git submodule init 
+    git submodule init
     git submodule update''')
 
 def fix_tpl_permissions():
@@ -74,7 +74,7 @@ def setup_boost():
     boost_root = 'C:/boost_1_53_0'
     boost_lib = boost_root + '/stage/lib'
     python_root = 'C:/Python27'
-    site_packages = python_root +'/Lib/site-packages'
+    site_packages = python_root + '/Lib/site-packages'
     #copy(boost_lib+'/libboost_python-mgw46-mt-1_53.dll',
     #site_packages+'/libboost_python-mgw46-mt-1_53.dll')
     INCLUDE_DIRS = [

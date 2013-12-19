@@ -1,0 +1,21 @@
+Add Option: save_database on query
+
+Get the spatial verification demo working. Homography seems to be broken. 
+Try and fix these problems. 
+
+Disallow clicks to other figures in an interaction mode.
+
+Fix depricated ginput
+
+
+ChipCompute recieved a divide by zero error when using target area. 
+It must not be getting the valid cx list correctly. 
+
+
+
+Tail to nose select orientation does not allow correct direction selection.
+* switch to atan2
+* add arrow widget 
+
+
+Change file doesn't exist to Cache Miss

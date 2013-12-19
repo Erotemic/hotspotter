@@ -1,26 +1,18 @@
 #!/usr/bin/env python
 from __future__ import division, print_function
-from distutils.core import setup
-from distutils.util import convert_path
-from fnmatch import fnmatchcase
-from os.path import dirname, realpath, join, exists, isdir, isfile, normpath
-from _setup import git_helpers as git_helpers
-#from hs_scripts.setup.configure as hs_configure
+from os.path import dirname, realpath, join, exists, normpath
 import os
-import textwrap
 import shutil
 import helpers
 import sys
 
-INSTALL_REQUIRES = \
-[
+INSTALL_REQUIRES = [
     'numpy>=1.5.0',
     'scipy>=0.7.2',
     'PIL>=1.1.7'
 ]
 
-MODULES = \
-[
+MODULES = [
     'sip',
     'PyQt4',
     'PyQt4.Qt',
@@ -37,27 +29,23 @@ MODULES = \
 
 
 #'parse'
-INSTALL_OPTIONAL = \
-[
+INSTALL_OPTIONAL = [
     'python-qt>=.50',
     'matplotlib>=1.2.1rc1',
     #'pyvlfeat>=0.1.1a3'
 ]
 
-INSTALL_OTHER = \
-[
+INSTALL_OTHER = [
     'boost-python>=1.52',
     'Cython>=.18',
     'ipython>=.13.1'
 ]
 
-INSTALL_BUILD = \
-[
+INSTALL_BUILD = [
     'Cython'
 ]
 
-INSTALL_DEV = \
-[
+INSTALL_DEV =  [
     'py2exe>=0.6.10dev',
     'pyflakes>=0.6.1',
     'pylint>=0.27.0',
@@ -95,12 +83,16 @@ MICRO               = 0
 SUFFIX              = ''  # Should be blank except for rc's, betas, etc.
 ISRELEASED          = False
 VERSION             = '%d.%d.%d%s' % (MAJOR, MINOR, MICRO, SUFFIX)
+
+
 def build_pyinstaller():
-    import os
     cwd = normpath(realpath(dirname(__file__)))
-    print(cwd)
+    print('Current working directory: %r' % cwd)
     build_dir = join(cwd, 'build')
     dist_dir = join(cwd, 'dist')
+    assert exists('setup.py'), 'must be run in hotspotter directory'
+    assert exists('../hotspotter/setup.py'), 'must be run in hotspotter directory'
+    assert exists('_setup'), 'must be run in hotspotter directory'
     for rmdir in [build_dir, dist_dir]:
         if exists(rmdir):
             helpers.remove_file(rmdir)
@@ -110,6 +102,7 @@ def build_pyinstaller():
         shutil.copyfile("_setup/hsicon.icns", "dist/HotSpotter.app/Contents/Resources/icon-windowed.icns")
         shutil.copyfile("_setup/Info.plist", "dist/HotSpotter.app/Contents/Info.plist")
 
+
 def compile_ui():
     'Compiles the qt designer *.ui files into python code'
     pyuic4_cmd = {'win32':  'C:\Python27\Lib\site-packages\PyQt4\pyuic4',
@@ -118,20 +111,33 @@ def compile_ui():
     widget_dir = join(dirname(realpath(__file__)), '_frontend')
     print('Compiling qt designer files in %r' % widget_dir)
     for widget_ui in helpers.glob(widget_dir, '*.ui'):
-        widget_py = os.path.splitext(widget_ui)[0]+'.py'
-        cmd = pyuic4_cmd+' -x '+widget_ui+' -o '+widget_py
-        print('compile_ui()>'+cmd)
+        widget_py = os.path.splitext(widget_ui)[0] + '.py'
+        cmd = ' '.join([pyuic4_cmd, '-x', widget_ui, '-o', widget_py])
+        print('compile_ui()>' + cmd)
         os.system(cmd)
 
+
+def clean():
+    assert exists('setup.py'), 'must be run in hotspotter directory'
+    assert exists('../hotspotter/setup.py'), 'must be run in hotspotter directory'
+    assert exists('_setup'), 'must be run in hotspotter directory'
+    cwd = normpath(realpath(dirname(__file__)))
+    print('Current working directory: %r' % cwd)
+    helpers.remove_file(join(cwd, 'dist'))
+    helpers.remove_file(join(cwd, 'build'))
+    helpers.remove_file(join(cwd, "'"))
+
+
+def fix_tpl_permissions():
+    os.system('chmod +x _tpl/extern_feat/*.mac')
+    os.system('chmod +x _tpl/extern_feat/*.ln')
+
+
 if __name__ == '__main__':
-    import sys
     print('Entering HotSpotter setup')
     for cmd in iter(sys.argv[1:]):
-        if cmd == 'setup_boost':
-            setup_boost()
-            sys.exit(0)
-        if cmd in ['fix_issues', 'configure']:
-            configure()
+        if cmd in ['clean']:
+            clean()
             sys.exit(0)
         if cmd in ['buildui', 'ui', 'compile_ui']:
             compile_ui()
@@ -139,6 +145,3 @@ if __name__ == '__main__':
         if cmd in ['build_pyinstaller', 'build_installer']:
             build_pyinstaller()
             sys.exit(0)
-        if cmd in ['localize', 'setup_localize.py']:
-            from setup_localize import *
-    #package_application() - moved to graveyard (pyapp_pyexe.py)

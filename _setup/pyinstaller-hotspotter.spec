@@ -3,7 +3,7 @@
 
 import os
 import sys 
-from os.path import join, dirname, exists, normpath
+from os.path import join, exists, normpath
 
 #hsroot = '/hotspotter'
 hsroot = os.getcwd()
@@ -49,14 +49,14 @@ for root, dirs, files in os.walk(walk_path):
         a.datas += [(toc_dest, toc_src, 'DATA')]
 
 # Add documentation folder
-a.datas += [('_doc/HotSpotterUserGuide.pdf', join(hsroot, '_doc','HotSpotterUserGuide.pdf'), 'DATA')]
+a.datas += [('_doc/HotSpotterUserGuide.pdf', join(hsroot, '_doc', 'HotSpotterUserGuide.pdf'), 'DATA')]
 # Add Landmark
 # a.datas += [(hsroot, join(hsroot, hsroot), 'DATA')]
 
 # Get Correct Icon
-icon_cpmap = { 'darwin' : 'hsicon.icns',
-               'win32'  : 'hsicon.ico' ,
-               'linux2' : 'hsicon.ico' }
+icon_cpmap = { 'darwin': 'hsicon.icns',
+               'win32':  'hsicon.ico',
+               'linux2': 'hsicon.ico'}
 iconfile = join(hsroot, '_setup', icon_cpmap[sys.platform])
 
 # Get Correct Extension
@@ -64,11 +64,11 @@ ext_cpmap  = {'darwin':'', 'win32':'.exe', 'linux2':'.ln'}
 appext   = ext_cpmap[sys.platform]
 
 if sys.platform == 'win32':
-  exe_name = 'build/HotSpotterApp.exe'
+    exe_name = 'build/HotSpotterApp.exe'
 elif sys.platform == 'linux2':
-  exe_name = 'build/HotSpotterApp.ln'
+    exe_name = 'build/HotSpotterApp.ln'
 elif sys.platform == 'darwin':
-  exe_name = 'build/pyi.darwin/HotSpotterApp/HotSpotterApp'
+    exe_name = 'build/pyi.darwin/HotSpotterApp/HotSpotterApp'
 
 
 pyz = PYZ(a.pure)
@@ -92,6 +92,6 @@ coll = COLLECT(exe,
 
 bundle_name = 'HotSpotter'
 if sys.platform == "darwin":
-  bundle_name += '.app'
+    bundle_name += '.app'
 
 app = BUNDLE(coll, name=join('dist', bundle_name))

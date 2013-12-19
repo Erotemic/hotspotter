@@ -69,7 +69,7 @@ def plot_name(hs, nx, nx2_cxs=None, fignum=0, hl_cxs=[], subtitle='',
         cxs = nx2_cxs[nx]
     else:
         cxs = np.where(cx2_nx == nx)[0]
-    print('[viz] plot_name %r' % hs.cxstr(cxs))
+    print('[viz] plot_name %r' % hs.cidstr(cxs))
     ncxs  = len(cxs)
     #nCols = int(min(np.ceil(np.sqrt(ncxs)), 5))
     nCols = int(min(ncxs, 5))
@@ -219,7 +219,7 @@ def plot_tt_bt_tf_matches(hs, allres, qcx):
     res.plot_matches(res, hs, cxs[0], False, fignum=1, plotnum=131, title_aug=titles[0])
     res.plot_matches(res, hs, cxs[1], False, fignum=1, plotnum=132, title_aug=titles[1])
     res.plot_matches(res, hs, cxs[2], False, fignum=1, plotnum=133, title_aug=titles[2])
-    fig_title = 'fig q' + hs.cxstr(qcx) + ' TT BT TF -- ' + allres.title_suffix
+    fig_title = 'fig q' + hs.cidstr(qcx) + ' TT BT TF -- ' + allres.title_suffix
     df2.set_figtitle(fig_title)
     #df2.set_figsize(_fn, 1200,675)
 
@@ -264,7 +264,7 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
     for cx in cx_list:
         roi = hs.cx2_roi(cx)
         # Draw the ROI
-        roi_lbl = hs.cxstr(cx)
+        roi_lbl = hs.cidstr(cx)
         if cx in highlight_cxs:
             bbox_color = df2.ORANGE * np.array([1, 1, 1, .95])
             lbl_color  = df2.BLACK * np.array([1, 1, 1, .75])
@@ -283,7 +283,7 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
     # Create callback wrapper
     def _on_image_click(event):
         'Slot for matplotlib event'
-        print('\n[viz] clicked image')
+        print('[viz] clicked image')
         if event.xdata is None:
             return
         if len(centers) == 0:
@@ -335,7 +335,7 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
 
     # Get chip info (make sure get_chip is called first)
     rchip = hs.get_chip(cx)
-    #cxstr = hs.cxstr(cx)
+    #cidstr = hs.cidstr(cx)
     #name  = hs.cx2_name(cx)
     #gname = hs.cx2_gname(cx)
 
@@ -395,7 +395,7 @@ def show_chip_interaction(hs, cx, fnum=2, **kwargs):
     def _on_chip_click(event):
         #print('\n===========')
         #print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
-        print('\n[viz] clicked chip')
+        print('[viz] clicked chip')
         if event.xdata is None or event.inaxes is None:
             default_chip_view()
             return  # The click is not in any axis
@@ -435,7 +435,7 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
         gname = hs.cx2_gname(cx)
         name = hs.cx2_name(cx)
         ngt_str = hs.num_indexed_gt_str(cx)
-        title_str += ', '.join([hs.cxstr(cx), 'name=%r' % name,
+        title_str += ', '.join([hs.cidstr(cx), 'name=%r' % name,
                                'gname=%r' % gname, ngt_str, ])
     fnum = kwargs.pop('fnum', fnum)
     fnum = kwargs.pop('fignum', fnum)
@@ -480,7 +480,7 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
         noise_fx = np.setdiff1d(all_fx, matched_fx)
         # Print info
         print('[viz.show_chip()] %s has %d keypoints. %d true-matching. %d matching. %d noisy.' %
-             (hs.cxstr(cx), len(all_fx), len(true_matched_fx), len(matched_fx), len(noise_fx)))
+             (hs.cidstr(cx), len(all_fx), len(true_matched_fx), len(matched_fx), len(noise_fx)))
         # Get keypoints
         kpts_true  = kpts[true_matched_fx]
         kpts_match = kpts[matched_fx, :]
@@ -528,9 +528,10 @@ def show_keypoints(rchip, kpts, fignum=0, title=None, **kwargs):
     df2.draw_kpts2(kpts)
 
 
-def show_top(res, hs, N=5, figtitle='', **kwargs):
-    #figtitle += ('q%s -- TOP %r' % (hs.cxstr(res.qcx), N))
+def show_top(res, hs, figtitle='', **kwargs):
     topN_cxs = res.topN_cxs(hs)
+    N = len(topN_cxs)
+    figtitle += ('q%s -- TOP %r' % (hs.cidstr(res.qcx), N))
     return _show_res(hs, res, topN_cxs=topN_cxs, figtitle=figtitle,
                      all_kpts=False, **kwargs)
 
@@ -548,16 +549,16 @@ def res_show_analysis(res, hs, fignum=3, figtitle='', show_query=None,
         if not cx_list is None:
             print('[viz.analysis] showing a given list of cxs')
             topN_cxs = cx_list
-            figtitle = 'comparing to ' + hs.cxstr(topN_cxs) + figtitle
+            figtitle = 'comparing to ' + hs.cidstr(topN_cxs) + figtitle
         else:
             print('[viz.analysis] showing topN cxs')
             topN_cxs = res.topN_cxs(hs)
             if len(topN_cxs) == 0:
                 warnings.warn('len(topN_cxs) == 0')
-                figtitle = 'WARNING: no top scores!' + hs.cxstr(res.qcx)
+                figtitle = 'WARNING: no top scores!' + hs.cidstr(res.qcx)
             else:
                 topscore = res.get_cx2_score()[topN_cxs][0]
-                figtitle = ('topscore=%r -- q%s' % (topscore, hs.cxstr(res.qcx))) + figtitle
+                figtitle = ('topscore=%r -- q%s' % (topscore, hs.cidstr(res.qcx))) + figtitle
 
         # Do we show the ground truth?
         if hs.args.noshow_gt:
@@ -638,8 +639,8 @@ def show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fignum=None,
     if not title_suff is None:
         title = title + title_suff
     # Draw the matches
-    qcx_str = 'q' + hs.cxstr(qcx)
-    cx_str = hs.cxstr(cx)
+    qcx_str = 'q' + hs.cidstr(qcx)
+    cx_str = hs.cidstr(cx)
     fig, ax,  woff, hoff = df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm,
                                              fs, fignum=fignum, plotnum=plotnum,
                                              lbl1=qcx_str, lbl2=cx_str,
@@ -777,7 +778,7 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
         # Create
         def _on_res_click(event):
             'result interaction mpl event callback slot'
-            print('\n[viz] clicked result')
+            print('[viz] clicked result')
             if event.xdata is None:
                 return
             _show_res(hs, res, figtitle=figtitle, max_nCols=max_nCols, topN_cxs=topN_cxs,

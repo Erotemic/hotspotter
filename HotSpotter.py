@@ -52,7 +52,7 @@ def rrr():
     imp.reload(sys.modules[__name__])
 
 
-def _on_loaded_tables(hs):
+def _checkargs_onload(hs):
     'checks relevant arguments after loading tables'
     args = hs.args
     if args.vrd or args.vrdq:
@@ -65,17 +65,13 @@ def _on_loaded_tables(hs):
             sys.exit(1)
 
 
-def is_invalid_path(db_dir):
-    return db_dir is None or not exists(db_dir)
-
-
 class HotSpotter(DynStruct):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
         super(HotSpotter, hs).__init__()
         print(r'[\hs] Creating HotSpotter API')
         hs.args = args
-        hs.num_cx = None
+        #hs.num_cx = None
         hs.tables = None
         hs.feats  = None
         hs.cpaths = None
@@ -148,8 +144,8 @@ class HotSpotter(DynStruct):
         hs_dirs, hs_tables = ld2.load_csv_tables(hs.args.dbdir)
         hs.tables  = hs_tables
         hs.dirs    = hs_dirs
-        hs.num_cx = len(hs.tables.cx2_cid)
-        _on_loaded_tables(hs)
+        #hs.num_cx = len(hs.tables.cx2_cid)
+        _checkargs_onload(hs)
 
     def load_chips(hs, cx_list=None):
         cc2.load_chips(hs, cx_list)
@@ -220,28 +216,16 @@ class HotSpotter(DynStruct):
         hs.train_sample_cx    = train_samp
         hs.test_sample_cx     = test_samp
 
-    def get_indexed_sample(hs):
-        dcxs = hs.indexed_sample_cx
-        return dcxs
+    # --------------
+    # Saving functions
+    # --------------
+    def save_database(hs):
+        print('[hs] save_database')
+        ld2.write_csv_tables(hs)
 
     #---------------
-    # Query Functions
+    # On Modification
     #---------------
-    def query(hs, qcx, dochecks=True):
-        if hs.prefs.query_cfg is None and dochecks:
-            hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
-            hs.refresh_data()
-        try:
-            res = mc3.query_database(hs, qcx, hs.prefs.query_cfg, dochecks=dochecks)
-        except mf.QueryException as ex:
-            print(repr(ex))
-            return repr(ex)
-        return res
-
-    # ---------------
-    # Modifying functions
-    # ---------------
-
     def unload_all(hs):
         print('[hs] unloading all data')
         hs.cx2_rchip_size = None  # HACK this should be part of hs.cpaths
@@ -281,38 +265,51 @@ class HotSpotter(DynStruct):
         cid = hs.tables.cx2_cid[cx]
         hs.delete_ciddata(cid)
 
+    #---------------
+    # Query Functions
+    #---------------
+    def query(hs, qcx, dochecks=True):
+        if hs.prefs.query_cfg is None and dochecks:
+            hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
+            hs.refresh_data()
+        try:
+            res = mc3.query_database(hs, qcx, hs.prefs.query_cfg, dochecks=dochecks)
+        except mf.QueryException as ex:
+            print(repr(ex))
+            return repr(ex)
+        return res
+
+    # ---------------
+    # Change functions
+    # ---------------
     def change_roi(hs, cx, new_roi):
-        # This changes the entire chip.
-        # Delete precomputed data.
-        # Invalidate results
-        hs.delete_cxdata(cx)
+        hs.delete_cxdata(cx)  # Delete old data
         hs.tables.cx2_roi[cx] = new_roi
 
     def change_theta(hs, cx, new_theta):
-        hs.delete_cxdata(cx)
+        hs.delete_cxdata(cx)  # Delete old data
         hs.tables.cx2_theta[cx] = new_theta
 
     def change_name(hs, cx, new_name):
         new_nx_ = np.where(hs.tables.nx2_name == new_name)[0]
-        if len(new_nx_) == 0:
-            new_nx = hs.add_name(new_name)
-        else:
-            new_nx = new_nx_[0]
+        new_nx  = new_nx_[0] if len(new_nx_) > 0 else hs.add_name(new_name)
         hs.tables.cx2_nx[cx] = new_nx
 
-    def change_prop(hs, cx, key, val):
+    def change_property(hs, cx, key, val):
         hs.tables.prop_dict[key][cx] = val
+
+    def get_property(hs, cx, key):
+        return hs.tables.prop_dict[key][cx]
 
     # ---------------
     # Adding functions
     # ---------------
-
-    def add_property(hs, new_prop):
-        if new_prop is None:
-            return
-        if new_prop in hs.tables.prop_dict:
-            raise UserWarning('Cannot add an already existing property')
-        hs.tables.prop_dict[new_prop] = ['' for _ in xrange(hs.num_cx)]
+    def add_property(hs, key):
+        if not isinstance(key, str):
+            raise UserWarning('New property %r is a %r, not a string.' % (key, type(key)))
+        if key in hs.tables.prop_dict:
+            raise UserWarning('Property add an already existing property')
+        hs.tables.prop_dict[key] = ['' for _ in xrange(hs.get_num_chips())]
 
     def add_name(hs, name):
         # TODO: Allocate memory better (use python lists)
@@ -341,7 +338,7 @@ class HotSpotter(DynStruct):
         prop_dict = hs.tables.prop_dict
         for key in prop_dict.iterkeys():
             prop_dict[key].append('')
-        hs.num_cx += 1
+        #hs.num_cx += 1
         cx = len(hs.tables.cx2_cid) - 1
         hs.update_samples()
         # Remove any conflicts from memory
@@ -386,13 +383,12 @@ class HotSpotter(DynStruct):
     # ---------------
     # Deleting functions
     # ---------------
-
     def delete_chip(hs, cx, resample=True):
         hs.delete_cxdata(cx)
         hs.tables.cx2_cid[cx] = -1
         hs.tables.cx2_gx[cx]  = -1
         hs.tables.cx2_nx[cx]  = -1
-        hs.num_cx -= 1
+        #hs.num_cx -= 1
         if resample:
             hs.update_samples()
 
@@ -415,65 +411,23 @@ class HotSpotter(DynStruct):
         helpers.remove_files_in_dir(global_cache_dir, recursive=True, verbose=True,
                                     dryrun=False)
 
-    # --------------
-    # Saving functions
-    # --------------
-
-    def save_database(hs):
-        print('[hs] save_database')
-        ld2.write_csv_tables(hs)
-    # -----
-
-    def flag_cxs_with_name_in_sample(hs, cxs, sample_cxs):
-        cx2_nx = hs.tables.cx2_nx
-        samp_nxs_set = set(cx2_nx[sample_cxs])
-        in_sample_flag = np.array([cx2_nx[cx] in samp_nxs_set for cx in cxs])
-        return in_sample_flag
-
-    def get_valid_cxs_with_name_in_samp(hs, sample_cxs):
-        'returns the valid_cxs which have a correct match in sample_cxs'
-        valid_cxs = hs.get_valid_cxs()
-        in_sample_flag = hs.flag_cxs_with_name_in_sample(valid_cxs, sample_cxs)
-        cxs_in_sample = valid_cxs[in_sample_flag]
-        return cxs_in_sample
-
-    #---------------
-    # View Directories
-    def vdd(hs):
-        db_dir = os.path.normpath(hs.dirs.db_dir)
-        print('[hs] viewing db_dir: %r ' % db_dir)
-        helpers.vd(db_dir)
-
-    def vcd(hs):
-        computed_dir = os.path.normpath(hs.dirs.computed_dir)
-        print('[hs] viewing computed_dir: %r ' % computed_dir)
-        helpers.vd(computed_dir)
-
-    def vgd(hs):
-        global_dir = io.GLOBAL_CACHE_DIR
-        print('[hs] viewing global_dir: %r ' % global_dir)
-        helpers.vd(global_dir)
-
-    def vrd(hs):
-        result_dir = os.path.normpath(hs.dirs.result_dir)
-        print('[hs] viewing result_dir: %r ' % result_dir)
-        helpers.vd(result_dir)
-
     #---------------
     # Getting functions
     # ---------------
+    def has_property(hs, key):
+        return key in hs.tables.prop_dict
 
     def get_img_datatupe_list(hs, gx_list):
-        # Data for GUI Image Table
+        'Data for GUI Image Table'
         gx2_gname = hs.tables.gx2_gname
-        gx2_cxs   = hs.gx2_cxs
+        gx2_cxs = hs.gx2_cxs
         gname_list = [gx2_gname[gx] for gx in iter(gx_list)]
-        num_cxs_list = [len(gx2_cxs(gx)) for gx in iter(gx_list)]
-        datatup_list = [tup for tup in izip(gx_list, gname_list, num_cxs_list)]
+        nChips_list = [len(gx2_cxs(gx)) for gx in iter(gx_list)]
+        datatup_list = [tup for tup in izip(gx_list, gname_list, nChips_list)]
         return datatup_list
 
     def get_res_datatup_list(hs, cx_list, cx2_score):
-        # Data for GUI Results Table
+        'Data for GUI Results Table'
         cx2_cid  = hs.tables.cx2_cid
         cx2_nx   = hs.tables.cx2_nx
         nx2_name = hs.tables.nx2_name
@@ -486,12 +440,12 @@ class HotSpotter(DynStruct):
         return datatup_list
 
     def get_chip_datatup_list(hs, cx_list):
-        # Data for GUI Chip Table
+        'Data for GUI Chip Table'
         prop_dict = hs.tables.prop_dict
-        cx2_cid  = hs.tables.cx2_cid
-        cx2_nx   = hs.tables.cx2_nx
-        cx2_gx   = hs.tables.cx2_gx
-        nx2_name = hs.tables.nx2_name
+        cx2_cid   = hs.tables.cx2_cid
+        cx2_nx    = hs.tables.cx2_nx
+        cx2_gx    = hs.tables.cx2_gx
+        nx2_name  = hs.tables.nx2_name
         gx2_gname = hs.tables.gx2_gname
         prop_keys  = prop_dict.keys()
         cid_list   = [cx2_cid[cx]           for cx in iter(cx_list)]
@@ -504,7 +458,7 @@ class HotSpotter(DynStruct):
         datatup_list = [tup for tup in izip(*unziped_tups)]
         return datatup_list
 
-    def db_name(hs, devmode=False):
+    def get_db_name(hs, devmode=False):
         db_name = split(hs.dirs.db_dir)[1]
         if devmode:
             # Grab the dev name insetad
@@ -519,6 +473,23 @@ class HotSpotter(DynStruct):
     # -------
     # Get valid index functions
     # -------
+    def get_indexed_sample(hs):
+        dcxs = hs.indexed_sample_cx
+        return dcxs
+
+    def flag_cxs_with_name_in_sample(hs, cxs, sample_cxs):
+        cx2_nx = hs.tables.cx2_nx
+        samp_nxs_set = set(cx2_nx[sample_cxs])
+        in_sample_flag = np.array([cx2_nx[cx] in samp_nxs_set for cx in cxs])
+        return in_sample_flag
+
+    def get_valid_cxs_with_name_in_samp(hs, sample_cxs):
+        'returns the valid_cxs which have a correct match in sample_cxs'
+        valid_cxs = hs.get_valid_cxs()
+        in_sample_flag = hs.flag_cxs_with_name_in_sample(valid_cxs, sample_cxs)
+        cxs_in_sample = valid_cxs[in_sample_flag]
+        return cxs_in_sample
+
     def get_num_chips(hs):
         return len(hs.tables.cx2_cid)
 
@@ -537,9 +508,8 @@ class HotSpotter(DynStruct):
     def get_valid_cxs_with_indexed_groundtruth(hs):
         return hs.get_valid_cxs_with_name_in_samp(hs.indexed_sample_cx)
 
+    #----
     # chip index --> property
-
-    #@tools.class_iter_input
 
     def cx2_gx(hs, cx):
         gx = hs.tables.cx2_gx[cx]
@@ -565,6 +535,7 @@ class HotSpotter(DynStruct):
         gx =  hs.tables.cx2_gx[cx]
         return hs.gx2_image(gx)
 
+    #----
     # image index --> property
 
     def gx2_gname(hs, gx, full=False):
@@ -595,7 +566,11 @@ class HotSpotter(DynStruct):
         'chip_id ==> chip_index'
         index_of = tools.index_of
         cx2_cid = hs.tables.cx2_cid
-        cx_output = [index_of(cid, cx2_cid) for cid in cid_input]
+        try:
+            cx_output = [index_of(cid, cx2_cid) for cid in cid_input]
+        except IndexError as ex:
+            print('[hs] ERROR %r ' % ex)
+            print('[hs] ERROR a cid in %r does not exist.' % (cid_input,))
         return cx_output
 
     def get_nx2_cxs(hs):
@@ -642,8 +617,8 @@ class HotSpotter(DynStruct):
         other_list = [np.intersect1d(ocxs, indx_samp) for
                       ocxs in iter(other_list_)]
         return other_list
-    # Strings
 
+    # Strings
     def is_true_match(hs, qcx, cx):
         cx2_nx  = hs.tables.cx2_nx
         qnx = cx2_nx[qcx]
@@ -664,19 +639,13 @@ class HotSpotter(DynStruct):
         num_gt = len(hs.get_other_indexed_cxs(cx))
         return '#gt=%r' % num_gt
 
-    def cxstr(hs, cx, digits=None):
-        #return 'cx=%r' % cx
+    def cidstr(hs, cx, digits=None):
+        cx2_cid = hs.tables.cx2_cid
         if not np.iterable(cx):
-            if not digits is None:
-                return ('cid=%' + str(digits) + 'd') % hs.tables.cx2_cid[cx]
-            return 'cid=%d' % hs.tables.cx2_cid[cx]
+            int_fmt = '%d' if digits is None else ('%' + str(digits) + 'd')
+            return 'cid=' + int_fmt % cx2_cid[cx]
         else:
-            return hs.cx_liststr(cx)
-
-    @tools.debug_exception
-    def cx_liststr(hs, cx_list):
-        #return 'cx=%r' % cx
-        return 'cid_list=%r' % hs.tables.cx2_cid[cx_list].tolist()
+            return 'cids=[%s]' % ', '.join(['%d' % cx2_cid[cx_] for cx_ in cx])
 
     # Precomputed properties
 
@@ -749,6 +718,9 @@ class HotSpotter(DynStruct):
             hs.load_cx2_rchip_size()
         return hs.cx2_rchip_size
 
+    #---------------
+    # Print Tables
+
     def print_name_table(hs):
         print(ld2.make_name_csv(hs))
 
@@ -757,3 +729,25 @@ class HotSpotter(DynStruct):
 
     def print_chip_table(hs):
         print(ld2.make_chip_csv(hs))
+
+    #---------------
+    # View Directories
+    def vdd(hs):
+        db_dir = os.path.normpath(hs.dirs.db_dir)
+        print('[hs] viewing db_dir: %r ' % db_dir)
+        helpers.vd(db_dir)
+
+    def vcd(hs):
+        computed_dir = os.path.normpath(hs.dirs.computed_dir)
+        print('[hs] viewing computed_dir: %r ' % computed_dir)
+        helpers.vd(computed_dir)
+
+    def vgd(hs):
+        global_dir = io.GLOBAL_CACHE_DIR
+        print('[hs] viewing global_dir: %r ' % global_dir)
+        helpers.vd(global_dir)
+
+    def vrd(hs):
+        result_dir = os.path.normpath(hs.dirs.result_dir)
+        print('[hs] viewing result_dir: %r ' % result_dir)
+        helpers.vd(result_dir)

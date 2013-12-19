@@ -149,7 +149,7 @@ def load_cached_query(hs, query_cfg, aug_list=['']):
 #----------------------
 def execute_query_safe(hs, query_cfg=None, qcxs=None, dcxs=None, use_cache=True, **kwargs):
     '''Executes a query, performs all checks, callable on-the-fly'''
-    print('[mc3] Execute query safe: q%s' % hs.cxstr(qcxs))
+    print('[mc3] Execute query safe: q%s' % hs.cidstr(qcxs))
     if query_cfg is None:
         query_cfg = ds.QueryConfig(hs, **kwargs)
     if dcxs is None:

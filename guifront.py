@@ -38,7 +38,7 @@ def connect_file_signals(win):
     ui.actionOpen_Database.triggered.connect(backend.open_database)
     ui.actionSave_Database.triggered.connect(backend.save_database)
     ui.actionImport_Img_file.triggered.connect(backend.import_images_from_file)
-    ui.actionImport_Img_dir.triggered.connect(backend.add_images_from_dir)
+    ui.actionImport_Img_dir.triggered.connect(backend.import_images_from_dir)
     ui.actionQuit.triggered.connect(backend.quit)
 
 
@@ -75,7 +75,7 @@ def connect_help_signals(win):
     ui.actionAbout.triggered.connect(msg_event('About', 'hotspotter'))
     ui.actionDelete_computed_directory.triggered.connect(backend.delete_computed_dir)
     ui.actionDelete_global_preferences.triggered.connect(backend.delete_global_prefs)
-    ui.actionDev_Mode_IPython.triggered.connect(backend.dev_mode)
+    ui.actionDev_Mode_IPython.triggered.connect(backend.dev_help)
     #ui.actionWriteLogs.triggered.connect(backend.write_logs)
 
 
@@ -157,8 +157,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
         ui.image_TBL.sortByColumn(0, Qt.AscendingOrder)
 
     def print(self, msg):
-        #print('[*front*] '+msg)
-        self.printSignal.emit('[*front] ' + msg)
+        print('[*front*] ' + msg)
+        #self.printSignal.emit('[*front] ' + msg)
 
     #def popup(self, pos):
         #for i in self.ui.image_TBL.selectionModel().selection().indexes():
@@ -187,12 +187,12 @@ class MainWindowFrontend(QtGui.QMainWindow):
                 ui.__dict__[uikey].setEnabled(flag)
 
         # The following options are always enabled
-        ui.actionOpen_Database.setEnabled(True)              # always allowed
-        ui.actionNew_Database.setEnabled(True)               # always allowed
-        ui.actionQuit.setEnabled(True)                       # always allowed
-        ui.actionAbout.setEnabled(True)                      # always allowed
-        ui.actionView_Docs.setEnabled(True)                  # always allowed
-        ui.actionDelete_global_preferences.setEnabled(True)  # always allowed
+        ui.actionOpen_Database.setEnabled(True)
+        ui.actionNew_Database.setEnabled(True)
+        ui.actionQuit.setEnabled(True)
+        ui.actionAbout.setEnabled(True)
+        ui.actionView_Docs.setEnabled(True)
+        ui.actionDelete_global_preferences.setEnabled(True)
 
         # The following options are no implemented. Disable them
         ui.actionConvert_all_images_into_chips.setEnabled(False)
@@ -221,10 +221,10 @@ class MainWindowFrontend(QtGui.QMainWindow):
         def set_table_context_menu(tbl):
             tbl.setContextMenuPolicy(Qt.CustomContextMenu)
             opt2_callback = [
-                ('Query', self.querySignal.emit),
+                ('Query', self.querySignal.emit), ]
                 #('item',  lambda: print('finishme')),
                 #('cancel', lambda: print('cancel')), ]
-                ]
+
             popup_slot = guitools.popup_menu(tbl, opt2_callback)
             tbl.customContextMenuRequested.connect(popup_slot)
         #set_header_context_menu(hheader)
@@ -247,9 +247,12 @@ class MainWindowFrontend(QtGui.QMainWindow):
             for col, data in enumerate(data_tup):
                 item = QtGui.QTableWidgetItem()
 
-                if tools.is_int(data): item.setData(Qt.DisplayRole, int(data))
-                elif tools.is_float(data): item.setData(Qt.DisplayRole, float(data))
-                else: item.setText(str(data))
+                if tools.is_int(data):
+                    item.setData(Qt.DisplayRole, int(data))
+                elif tools.is_float(data):
+                    item.setData(Qt.DisplayRole, float(data))
+                else:
+                    item.setText(str(data))
 
                 item.setTextAlignment(Qt.AlignHCenter)
                 if col_editable[col]:

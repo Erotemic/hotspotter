@@ -76,14 +76,14 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
                      force_load=False):
     print('[harn] get_test_results(): %r' % query_cfg.get_uid())
     query_uid = query_cfg.get_uid()
-    hs_uid    = hs.db_name()
+    hs_uid    = hs.get_db_name()
     qon_uid   = helpers.hashstr(repr(tuple(qon_list)))
     test_uid  = hs_uid + query_uid + qon_uid
     cache_dir = join(hs.dirs.cache_dir, 'test_harness_results')
     io_kwargs = dict(dpath=cache_dir, fname='test_results', uid=test_uid, ext='.cPkl')
     # High level caching
     qonx2_bestranks = []
-    #nChips = hs.num_cx
+    #nChips = hs.get_num_chip()
     #nNames = len(hs.tables.nx2_name) - 2
     nQuery = len(qon_list)
     #NMultiNames =
@@ -103,9 +103,9 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
         [harn] TEST %d/%d
         [harn]----------------''' % (qonx + nPrevQ + 1, nQuery * nCfg)))
         gt_cxs = hs.get_other_indexed_cxs(qcx)
-        #title = 'q' + hs.cxstr(qcx) + ' - ' + notes
+        #title = 'q' + hs.cidstr(qcx) + ' - ' + notes
         #print('[harn] title=%r' % (title,))
-        #print('[harn] gt_' + hs.cxstr(gt_cxs))
+        #print('[harn] gt_' + hs.cidstr(gt_cxs))
         res_list = mc3.execute_query_safe(hs, query_cfg, [qcx])
         bestranks = []
         algos = []
@@ -188,7 +188,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     qonx2_lbl = []
     for qonx in xrange(nQuery):
         qcx, ocxs, notes = qon_list[qonx]
-        label = 'qonx %d) q%s -- notes=%s' % (qonx, hs.cxstr(qcx), notes)
+        label = 'qonx %d) q%s -- notes=%s' % (qonx, hs.cidstr(qcx), notes)
         qonx2_lbl.append(label)
     qonx2_lbl = np.array(qonx2_lbl)
     # Build col labels
@@ -268,7 +268,7 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
         print('--- LaTeX ---')
         # Create configuration latex table
         criteria_lbls = ['#ranks < %d' % X for X in X_list]
-        db_name = hs.db_name(True)
+        db_name = hs.get_db_name(True)
         cfg_score_title = db_name + ' rank scores'
         cfgscores = np.array([nLessX_dict[int(X)] for X in X_list]).T
         import latex_formater as latex

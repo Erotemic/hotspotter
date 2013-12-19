@@ -100,7 +100,7 @@ def nearest_neighbors(hs, qcxs, query_cfg):
         #printDBG('[mf] qfx2_desc.shape nearest neighbors of qcx=%r' % (qcx,))
         #helpers.printvar2('qfx2_desc', '.shape')
         if len(qfx2_desc) == 0:
-            raise QueryException('Query %r has no descriptors! Please delete it.' % hs.cxstr(qcx))
+            raise QueryException('Query %r has no descriptors! Please delete it.' % hs.cidstr(qcx))
         (qfx2_dx, qfx2_dist) = nnfunc(qfx2_desc)
         qcx2_nns[qcx] = (qfx2_dx, qfx2_dist)
         nNN += qfx2_dx.size
@@ -173,7 +173,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, query_cfg):
     for qcx in qcx2_nns.iterkeys():
         mark_progress()
         #printDBG('[mf] --------------')
-        #printDBG('[mf] * scoring q' + hs.cxstr(qcx))
+        #printDBG('[mf] * scoring q' + hs.cidstr(qcx))
         (qfx2_dx, _) = qcx2_nns[qcx]
         qfx2_nn = qfx2_dx[:, 0:K]
         qfx2_score, qfx2_valid = _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw)
@@ -246,7 +246,7 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, query_cfg):
     mark_progress = mark_progress_quiet if len(qcx2_nns) > MARK_AFTER else mark_progress_silent
     for qcx in qcx2_nns.iterkeys():
         mark_progress()
-        #print('[mf] * scoring q' + hs.cxstr(qcx))
+        #print('[mf] * scoring q' + hs.cidstr(qcx))
         (qfx2_dx, _) = qcx2_nns[qcx]
         (qfx2_fs, qfx2_valid) = qcx2_nnfilt[qcx]
         nQuery = len(qfx2_dx)

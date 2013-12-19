@@ -113,7 +113,7 @@ class DirectoryStats(object):
 
     def add_path(self, path):
         db_version = get_database_version(path)
-        if not db_version is None: 
+        if not db_version is None:
             db_stats = DatabaseStats(path, db_version, self.root_dir)
             self.db_stats_list.append(db_stats)
         elif is_not_leaf(path):
@@ -209,8 +209,8 @@ def has_v2_gt(path):
 
 def has_partial_gt(path):
     internal_dir = path+'/.hs_internals'
-    tables = ['flat_table.csv', 
-              internal_dir+'/chip_table.csv', 
+    tables = ['flat_table.csv',
+              internal_dir+'/chip_table.csv',
               'chip_table.csv',
               internal_dir+'instance_table.csv',
               'instance_table.csv']
@@ -269,12 +269,12 @@ def db_info(hs):
     nx2_cxs    = np.array(hs.get_nx2_cxs())
     nx2_nChips = np.array(map(len, nx2_cxs))
     uniden_cxs = np.hstack(nx2_cxs[[0, 1]])
-    num_uniden = nx2_nChips[0] + nx2_nChips[1] 
+    num_uniden = nx2_nChips[0] + nx2_nChips[1]
     nx2_nChips[0:2] = 0 # remove uniden names
     # Seperate singleton / multitons
     multiton_nxs,  = np.where(nx2_nChips > 1)
     singleton_nxs, = np.where(nx2_nChips == 1)
-    valid_nxs      = np.hstack([multiton_nxs, singleton_nxs]) 
+    valid_nxs      = np.hstack([multiton_nxs, singleton_nxs])
     num_names_with_gt = len(multiton_nxs)
     # Chip Info
     cx2_roi = hs.tables.cx2_roi
@@ -324,7 +324,7 @@ def db_info(hs):
     num_names = len(valid_nxs)
     # print
     info_str = '\n'.join([
-    (' DB Info: '+hs.db_name()),
+    (' DB Info: '+hs.get_db_name()),
     (' * #Img   = %d' % num_images),
     (' * #Chips = %d' % num_chips),
     (' * #Names = %d' % len(valid_nxs)),
@@ -332,7 +332,7 @@ def db_info(hs):
     (' * #Singleton Names    = %d' % len(singleton_nxs)),
     (' * #Multiton Names     = %d' % len(multiton_nxs)),
     (' * #Multiton Chips     = %d' % len(multiton_cxs)),
-    (' * Chips per Multiton Names = %s' % (multiton_stats,)), 
+    (' * Chips per Multiton Names = %s' % (multiton_stats,)),
     (' * #Img in dir = %d' % len(img_list)),
     (' * Image Size Stats = %s' % (img_size_stats,)),
     (' * Chip Size Stats = %s' % (chip_size_stats,)),])
@@ -374,13 +374,13 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
 
-    if sys.argv > 1: 
+    if sys.argv > 1:
         import params
         import sys
         path = params.DEFAULT
         db_version = get_database_version(path)
         print('db_version=%r' % db_version)
-        if not db_version is None: 
+        if not db_version is None:
             db_stats = DatabaseStats(path, db_version, params.WORK_DIR)
             print_database_stats(db_stats)
         sys.exit(0)

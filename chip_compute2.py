@@ -285,7 +285,7 @@ def get_normalized_chip_sizes(roi_list, sqrt_area=None):
 # =======================================
 def load_chips(hs, cx_list=None, **kwargs):
     print('\n=============================')
-    print('[cc2] Precomputing chips and loading chip paths: %r' % hs.db_name())
+    print('[cc2] Precomputing chips and loading chip paths: %r' % hs.get_db_name())
     print('=============================')
     #----------------
     # COMPUTE SETUP

@@ -228,7 +228,7 @@ class QueryResult(DynStruct):
         return viz.show_top(res, hs, *args, **kwargs)
 
     def show_gt_matches(res, hs, *args, **kwargs):
-        figtitle = ('q%s -- GroundTruth' % (hs.cxstr(res.qcx)))
+        figtitle = ('q%s -- GroundTruth' % (hs.cidstr(res.qcx)))
         gt_cxs = hs.get_other_indexed_cxs(res.qcx)
         viz._show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle,
                                all_kpts=True, *args, **kwargs)

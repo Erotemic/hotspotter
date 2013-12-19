@@ -564,7 +564,7 @@
   </action>
   <action name="actionDev_Mode_IPython">
    <property name="text">
-    <string>Dev Mode (IPython)</string>
+    <string>Developer Help</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Alt+Shift+D</string>

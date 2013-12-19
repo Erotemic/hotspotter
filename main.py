@@ -11,6 +11,8 @@ from __future__ import division, print_function
 import matplotlib
 matplotlib.use('Qt4Agg')
 import multiprocessing
+import argparse2
+args = argparse2.parse_arguments()
 
 
 def on_ctrl_c(signal, frame):
@@ -33,8 +35,6 @@ def signal_set():
 if __name__ == '__main__':
     # Necessary for windows parallelization
     multiprocessing.freeze_support()
-    import argparse2
-    args = argparse2.parse_arguments()
     import HotSpotter
     import guitools
     import helpers

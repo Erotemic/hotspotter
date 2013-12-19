@@ -166,7 +166,7 @@ def _load_features_bigcache(hs, cx_list):
 
 def load_features(hs, cx_list=None, **kwargs):
     print('\n=============================')
-    print('[fc2] Precomputing and loading features: %r' % hs.db_name())
+    print('[fc2] Precomputing and loading features: %r' % hs.get_db_name())
     print('=============================')
     #----------------
     # COMPUTE SETUP

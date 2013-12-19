@@ -1,3 +1,4 @@
+#!/usr/bin/python2.7
 #exec(open('__init__.py').read())
 #exec(open('_research/dev.py').read())
 from __future__ import division, print_function
@@ -14,31 +15,42 @@ import DataStructures as ds
 import matching_functions as mf
 import match_chips3 as mc3
 import numpy as np
-import cv2
-import spatial_verification2 as sv2
+#import cv2
+#import spatial_verification2 as sv2
 import helpers
-import sys
-import params
+#import sys
+#import params
 import vizualizations as viz
 import voting_rules2 as vr2
 
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
+
+
 def print_on():
     global print, print_
     print =  __builtin__.print
     print_ = sys.stdout.write
+
+
 def print_off():
     global print, print_
-    def print(*args, **kwargs): pass
-    def print_(*args, **kwargs): pass
-# Dynamic module reloading
-def reload_module():
-    import imp, sys
-    print('[dev] reloading '+__name__)
+
+    def print(*args, **kwargs):
+        pass
+
+    def print_(*args, **kwargs):
+        pass
+
+
+def rrr():
+    'Dynamic module reloading'
+    import imp
+    import sys
+    print('[dev] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
-def rrr(): reload_module()
+
 
 def history_entry(database='', cid=-1, ocids=[], notes='', cx=-1):
     return (database, cid, ocids, notes)
@@ -82,55 +94,55 @@ MANUAL_GZ_HISTORY = [
     history_entry('GZ', 450,     [614],            notes='other zebra match'),
 ]
 
-AUTO_GZ_HISTORY = map(lambda tup: tuple(['GZ']+list(tup)), [
                                                                                 #csum, pl, plw, borda
-    (662  , [263                             ], 'viewpoint / shadow (circle) ranks = [16 20 20 20]'),
-    (1046 , [                                ], 'extreme viewpoint #gt=2 ranks     = [592 592 592 592]'),
-    (838  , [802, 981                        ], 'viewpoint / quality ranks         = [607 607 607 607]'),
-    (501  , [141                             ], 'dark lighting ranks               = [483 483 483 483]'),
-    (802  , [981                             ], 'viewpoint / quality /no matches   = [722 722 722 722]'),
-    (907  , [828, 961                        ], 'occluded but (spatial verif)      = [645 645 645 645]'),
-    (1047 , [                                ], 'extreme viewpoint #gt=4 ranks     = [582 582 582 582]'),
-    (16   , [635                             ], 'NA ranks                          = [839 839 839 839]'),
-    (140  , [501                             ], 'NA ranks                          = [194 194 194 194]'),
-    (981  , [803                             ], 'foal extreme viewpoint ranks      = [ 8  9  9 11]'),
-    (425  , [662                             ], 'NA ranks                          = [21 33 30 34]'),
-    (681  , [198, 454, 765                   ], 'NA ranks                          = [2 6 6 6]'),
-    (463  , [174                             ], 'LNBNN failure ranks               = [3 0 3 0]'),
-    (306  , [113                             ], 'occlusion ranks                   = [1 1 1 1]'),
-    (311  , [290                             ], 'quality ranks                     = [1 2 1 2]'),
-    (460  , [614, 461                        ], 'background match ranks            = [2 1 2 1]'),
-    (465  , [590, 461                        ], 'background match ranks            = [3 0 3 0]'),
-    (454  , [199, 448                        ], 'forground match ranks             = [5 3 3 2]'),
-    (445  , [703, 436                        ], 'forground match ranks             = [1 2 2 2]'),
-    (453  , [683, 454                        ], 'forground match ranks             = [2 3 4 0]'),
-    (550  , [552, 453                        ], 'forground match ranks             = [5 5 5 4]'),
-    (450  , [615                             ], 'other zebra match ranks           = [3 4 4 4]'),
-    (95   , [255                             ], 'NA ranks                          = [2 5 5 5]'),
-    (112  , [306                             ], 'NA ranks                          = [1 2 2 2]'),
-    (183  , [178                             ], 'NA ranks                          = [1 2 2 2]'),
-    (184  , [34, 39, 227, 619                ], 'NA ranks                          = [1 1 1 1]'),
-    (253  , [343                             ], 'NA ranks                          = [1 1 1 1]'),
-    (276  , [45, 48                          ], 'NA ranks                          = [1 0 1 0]'),
-    (277  , [113, 124                        ], 'NA ranks                          = [1 0 1 0]'),
-    (289  , [311                             ], 'NA ranks                          = [2 1 2 1]'),
-    (339  , [315                             ], 'NA ranks                          = [1 1 1 1]'),
-    (340  , [317                             ], 'NA ranks                          = [1 0 1 0]'),
-    (415  , [408                             ], 'NA ranks                          = [1 3 2 4]'),
-    (430  , [675                             ], 'NA ranks                          = [1 0 1 0]'),
-    (436  , [60, 61, 548, 708, 760           ], 'NA ranks                          = [1 0 0 0]'),
-    (441  , [421                             ], 'NA ranks                          = [5 5 6 5]'),
-    (442  , [693, 777                        ], 'NA ranks                          = [1 0 1 0]'),
-    (443  , [420, 478                        ], 'NA ranks                          = [5 4 6 4]'),
-    (444  , [573                             ], 'NA ranks                          = [5 3 5 3]'),
-    (446  , [565, 678, 705                   ], 'NA ranks                          = [1 0 0 0]'),
-    (451  , [541, 549                        ], 'NA ranks                          = [2 0 1 0]'),
-    (456  , [172, 174, 219, 637              ], 'NA ranks                          = [3 1 2 0]'),
-    (661  , [59                              ], 'NA ranks                          = [0 4 4 4]'),
-    (720  , [556, 714                        ], 'NA ranks                          = [1 0 0 0]'),
-    (763  , [632                             ], 'NA ranks                          = [0 6 0 6]'),
-    (1044 , [845, 878, 927, 1024, 1025, 1042 ], 'NA ranks                          = [1 0 0 0]'),
-    (1045 , [846, 876                        ], 'NA ranks                          = [1 0 1 0]'),
+AUTO_GZ_HISTORY = map(lambda tup: tuple(['GZ'] + list(tup)), [
+    (662,   [263],                              'viewpoint / shadow (circle) ranks = [16 20 20 20]'),
+    (1046,  [],                                 'extreme viewpoint #gt=2 ranks     = [592 592 592 592]'),
+    (838,   [802, 981],                         'viewpoint / quality ranks         = [607 607 607 607]'),
+    (501,   [141],                              'dark lighting ranks               = [483 483 483 483]'),
+    (802,   [981],                              'viewpoint / quality /no matches   = [722 722 722 722]'),
+    (907,   [828, 961],                         'occluded but (spatial verif)      = [645 645 645 645]'),
+    (1047,  [],                                 'extreme viewpoint #gt=4 ranks     = [582 582 582 582]'),
+    (16,    [635],                              'NA ranks                          = [839 839 839 839]'),
+    (140,   [501],                              'NA ranks                          = [194 194 194 194]'),
+    (981,   [803],                              'foal extreme viewpoint ranks      = [ 8  9  9 11]'),
+    (425,   [662],                              'NA ranks                          = [21 33 30 34]'),
+    (681,   [198, 454, 765],                    'NA ranks                          = [2 6 6 6]'),
+    (463,   [174],                              'LNBNN failure ranks               = [3 0 3 0]'),
+    (306,   [113],                              'occlusion ranks                   = [1 1 1 1]'),
+    (311,   [290],                              'quality ranks                     = [1 2 1 2]'),
+    (460,   [614, 461],                         'background match ranks            = [2 1 2 1]'),
+    (465,   [590, 461],                         'background match ranks            = [3 0 3 0]'),
+    (454,   [199, 448],                         'forground match ranks             = [5 3 3 2]'),
+    (445,   [703, 436],                         'forground match ranks             = [1 2 2 2]'),
+    (453,   [683, 454],                         'forground match ranks             = [2 3 4 0]'),
+    (550,   [552, 453],                         'forground match ranks             = [5 5 5 4]'),
+    (450,   [615],                              'other zebra match ranks           = [3 4 4 4]'),
+    (95,    [255],                              'NA ranks                          = [2 5 5 5]'),
+    (112,   [306],                              'NA ranks                          = [1 2 2 2]'),
+    (183,   [178],                              'NA ranks                          = [1 2 2 2]'),
+    (184,   [34, 39, 227, 619],                 'NA ranks                          = [1 1 1 1]'),
+    (253,   [343],                              'NA ranks                          = [1 1 1 1]'),
+    (276,   [45, 48],                           'NA ranks                          = [1 0 1 0]'),
+    (277,   [113, 124],                         'NA ranks                          = [1 0 1 0]'),
+    (289,   [311],                              'NA ranks                          = [2 1 2 1]'),
+    (339,   [315],                              'NA ranks                          = [1 1 1 1]'),
+    (340,   [317],                              'NA ranks                          = [1 0 1 0]'),
+    (415,   [408],                              'NA ranks                          = [1 3 2 4]'),
+    (430,   [675],                              'NA ranks                          = [1 0 1 0]'),
+    (436,   [60, 61, 548, 708, 760],            'NA ranks                          = [1 0 0 0]'),
+    (441,   [421],                              'NA ranks                          = [5 5 6 5]'),
+    (442,   [693, 777],                         'NA ranks                          = [1 0 1 0]'),
+    (443,   [420, 478],                         'NA ranks                          = [5 4 6 4]'),
+    (444,   [573],                              'NA ranks                          = [5 3 5 3]'),
+    (446,   [565, 678, 705],                    'NA ranks                          = [1 0 0 0]'),
+    (451,   [541, 549],                         'NA ranks                          = [2 0 1 0]'),
+    (456,   [172, 174, 219, 637],               'NA ranks                          = [3 1 2 0]'),
+    (661,   [59],                               'NA ranks                          = [0 4 4 4]'),
+    (720,   [556, 714],                         'NA ranks                          = [1 0 0 0]'),
+    (763,   [632],                              'NA ranks                          = [0 6 0 6]'),
+    (1044,  [845, 878, 927, 1024, 1025, 1042],  'NA ranks                          = [1 0 0 0]'),
+    (1045,  [846, 876],                         'NA ranks                          = [1 0 1 0]'),
 ])
 HISTORY += AUTO_GZ_HISTORY
 
@@ -141,8 +153,9 @@ def mothers_problem_pairs():
     quality = [(27, 26),  (52, 53), (67, 68), (73, 71), ]
     lighting = [(105, 104), ( 49,  50), ( 93,  94), ]
     confused = []
-    occluded = [(64,65), ]
+    occluded = [(64, 65), ]
     return locals()
+
 
 # Just put in PL
 def top_matching_features(res, axnum=None, match_type=''):
@@ -156,9 +169,10 @@ def top_matching_features(res, axnum=None, match_type=''):
 
     cx_fx_fs_sorted = np.array(sorted(cx_fx_fs_list, key=lambda x: x[2])[::-1])
 
-    sorted_score = cx_fx_fs_sorted[:,2]
-    fig = df2.figure(0)
+    sorted_score = cx_fx_fs_sorted[:, 2]
+    df2.figure(0)
     df2.plot(sorted_score)
+
 
 def vary_query_cfg(hs, qon_list, query_cfg=None, vary_cfg=None, fnum=1):
     # Ground truth matches
@@ -168,10 +182,11 @@ def vary_query_cfg(hs, qon_list, query_cfg=None, vary_cfg=None, fnum=1):
             fnum = vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum)
     return fnum
 
+
 def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
     if len(vary_cfg) > 2:
         raise Exception('can only vary at most two cfgeters')
-    print('[dev] vary_two_cfg: q'+hs.vs_str(qcx, cx))
+    print('[dev] vary_two_cfg: q' + hs.vs_str(qcx, cx))
     cfg_keys = vary_cfg.keys()
     cfg_vals = vary_cfg.values()
     cfg1_name = cfg_keys[0]
@@ -185,9 +200,9 @@ def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
     print('[dev] %r = %r ' % (cfg1_name, cfg1_steps))
     print('[dev] %r = %r ' % (cfg2_name, cfg2_steps))
     ylabel_args = dict(rotation='horizontal',
-                        verticalalignment='bottom',
-                        horizontalalignment='right',
-                        fontproperties=df2.FONTS.medbold)
+                       verticalalignment='bottom',
+                       horizontalalignment='right',
+                       fontproperties=df2.FONTS.medbold)
     xlabel_args = dict(fontproperties=df2.FONTS.medbold)
     #ax = df2.gca()
     # Vary cfg1
@@ -197,12 +212,12 @@ def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
     vert = not hs.args.horiz
     plt_match_args = dict(fnum=fnum, show_gname=False, showTF=False, vert=vert)
     for rowx, cfg1_value in enumerate(cfg1_steps):
-        query_cfg.update_cfg(**{cfg1_name:cfg1_value})
-        y_title = cfg1_name+'='+helpers.format(cfg1_value, 3)
+        query_cfg.update_cfg(**{cfg1_name: cfg1_value})
+        y_title = cfg1_name + '=' + helpers.format(cfg1_value, 3)
         # Vary cfg2
         for colx, cfg2_value in enumerate(cfg2_steps):
-            query_cfg.update_cfg(**{cfg2_name:cfg2_value})
-            plotnum = (nRows, nCols, rowx*nCols+colx+1)
+            query_cfg.update_cfg(**{cfg2_name: cfg2_value})
+            plotnum = (nRows, nCols, rowx * nCols + colx + 1)
             # HACK
             #print(plotnum)
             #print(query_cfg)
@@ -213,7 +228,7 @@ def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
             elif assign_alg == 'vsmany':
                 res = mc3.query_database(hs, qcx, query_cfg)
             res.plot_matches(hs, cx, plotnum=plotnum, **plt_match_args)
-            x_title = cfg2_name + '='+helpers.format(cfg2_value, 3)  #helpers.commas(cfg2_value, 3)
+            x_title = cfg2_name + '=' + helpers.format(cfg2_value, 3)  # helpers.commas(cfg2_value, 3)
             ax = df2.gca()
             if rowx == len(cfg1_steps) - 1:
                 ax.set_xlabel(x_title, **xlabel_args)
@@ -233,17 +248,16 @@ def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
 def plot_name(hs, qcx, fnum=1, **kwargs):
     print('[dev] Plotting name')
     viz.plot_name_of_cx(hs, qcx, fignum=fnum, **kwargs)
-    return fnum+1
+    return fnum + 1
 
 
 def show_names(hs, qon_list, fnum=1):
     '''The most recent plot names function, works with qon_list'''
-    args = hs.args
     result_dir = hs.dirs.result_dir
     names_dir = join(result_dir, 'show_names')
     helpers.ensuredir(names_dir)
     for (qcx, ocxs, notes) in qon_list:
-        print('Showing q%s - %r' % (hs.cxstr(qcx), notes))
+        print('Showing q%s - %r' % (hs.cidstr(qcx), notes))
         fnum = plot_name(hs, qcx, fnum, subtitle=notes, annote=not hs.args.noannote)
         if hs.args.save_figures:
             df2.save_figure(fpath=names_dir, usetitle=True)
@@ -256,7 +270,7 @@ def vary_vsone_cfg(hs, qon_list, fnum, vary_dicts, **kwargs):
     return vary_query_cfg(hs, qon_list, query_cfg, vary_cfg, fnum)
 
 
-def vary_vsmany_cfg(hs, qon_list, vary_cfg, fnum, **kwargs):
+def vary_vsmany_cfg(hs, qon_list, vary_dicts, fnum, **kwargs):
     vary_cfg = helpers.dict_union(*vary_dicts)
     query_cfg = ds.get_vsmany_cfg(hs, **kwargs)
     return vary_query_cfg(hs, qon_list, query_cfg, vary_cfg, fnum)
@@ -279,21 +293,22 @@ def plot_keypoint_scales(hs, fnum=1):
     np.set_printoptions(**_printopts)
     print('[dev] ---/LaTeX --- ')
     #
-    fig = df2.figure(fignum=fnum, doclf=True, title='sorted scales')
+    df2.figure(fignum=fnum, doclf=True, title='sorted scales')
     df2.plot(scales)
-    ax = df2.gca()
+    #ax = df2.gca()
     #ax.set_yscale('log')
     #ax.set_xscale('log')
     #
     fnum += 1
-    fig = df2.figure(fignum=fnum, doclf=True, title='hist scales')
+    df2.figure(fignum=fnum, doclf=True, title='hist scales')
     df2.show_histogram(scales, bins=20)
-    ax = df2.gca()
+    #ax = df2.gca()
     #ax.set_yscale('log')
     #ax.set_xscale('log')
     return fnum
 
 
+# DEPRICATE THIS
 def get_qon_list(hs):
     print('[dev] get_qon_list()')
     # Get query ids
@@ -315,11 +330,12 @@ def get_qon_list(hs):
         print('[dev] Chosen qcid=%r' % hs.args.qcid)
         qcx_list =  helpers.ensure_iterable(hs.cid2_cx(hs.args.qcid))
         ocid_list = [hs.get_other_indexed_cxs(cx) for cx in qcx_list]
-        note_list = ['user selected qcid']*len(qcx_list)
+        note_list = ['user selected qcid'] * len(qcx_list)
         qon_list += zip(*[qcx_list, ocid_list, note_list])
 
     if len(qon_list) == 0:
-        if hs.args.strict: raise Exception('no qon_list history')
+        if hs.args.strict:
+            raise Exception('no qon_list history')
         qon_list = [(0, [], 'fallback_qon')]
     return qon_list
 
@@ -353,11 +369,11 @@ def chip_info(hs, cx, notes=''):
     indexed_gt_cxs = hs.get_other_indexed_cxs(cx)
     gt_cxs = hs.get_other_indexed_cxs(cx)
     kpts = hs.get_kpts(cx)
-    cxstr = hs.cxstr(cx)
+    cidstr = hs.cidstr(cx)
     print('------------------')
     print('[dev] Chip Info ')
     infostr_list = [
-        cxstr,
+        cidstr,
         'notes=%r' % notes,
         'cx=%r' % cx,
         'gx=%r' % gx,
@@ -367,8 +383,8 @@ def chip_info(hs, cx, notes=''):
         'len(kpts)=%r' % len(kpts),
         'nGroundTruth = %s ' % str(len(gt_cxs)),
         'nIndexedGroundTruth = %s ' % str(len(indexed_gt_cxs)),
-        'Ground Truth: %s' % (hs.cx_liststr(gt_cxs),),
-        'IndexedGroundTruth = %s' % (hs.cx_liststr(indexed_gt_cxs),),
+        'Ground Truth: %s' % (hs.cidstr(gt_cxs),),
+        'IndexedGroundTruth = %s' % (hs.cidstr(indexed_gt_cxs),),
     ]
     print(helpers.indent('\n'.join(infostr_list), '    '))
     return locals()
@@ -389,8 +405,8 @@ def dbstats(hs):
     import db_info
     # Chip / Name / Image stats
     dbinfo_locals = db_info.db_info(hs)
-    db_name = hs.db_name(True)
-    num_images = dbinfo_locals['num_images']
+    db_name = hs.get_db_name(True)
+    #num_images = dbinfo_locals['num_images']
     num_chips = dbinfo_locals['num_chips']
     num_names = len(dbinfo_locals['valid_nxs'])
     num_singlenames = len(dbinfo_locals['singleton_nxs'])
@@ -407,11 +423,11 @@ def dbstats(hs):
     tex_multi_stats = pytex.latex_mystats(r'\# multistats', multiton_nx2_nchips)
 
     tex_kpts_scale_thresh = pytex.latex_multicolumn('Scale Threshold (%d %d)' %
-                                                      (hs.feats.cfg.scale_min,
-                                                       hs.feats.cfg.scale_max))+r'\\'+'\n'
+                                                    (hs.feats.cfg.scale_min,
+                                                     hs.feats.cfg.scale_max)) + r'\\' + '\n'
 
     (tex_nKpts, tex_kpts_stats, tex_scale_stats) = db_info.get_keypoint_stats(hs)
-    tex_title = pytex.latex_multicolumn(db_name+' database statistics')+r'\\'+'\n'
+    tex_title = pytex.latex_multicolumn(db_name + ' database statistics') + r'\\' + '\n'
     dedent = textwrap.dedent
 
     tabular_head = dedent(r'''
@@ -420,15 +436,15 @@ def dbstats(hs):
     tabular_tail = dedent(r'''
     \end{tabular}
     ''')
-    hline = ''.join([r'\hline','\n'])
+    hline = ''.join([r'\hline', '\n'])
     tabular_body_list = [
         tex_title,
         tex_nChip,
         tex_nName,
-        tex_nSingleName ,
-        tex_nMultiName  ,
-        tex_nMultiChip  ,
-        tex_multi_stats ,
+        tex_nSingleName,
+        tex_nMultiName,
+        tex_nMultiChip,
+        tex_multi_stats,
         '',
         tex_kpts_scale_thresh,
         tex_nKpts,
@@ -460,10 +476,11 @@ def print_history_table(args):
 def dev_main(**kwargs):
     'Developer main script. Contains all you need to quickly start tests'
     import HotSpotter
-    import main as _main
+    import argparse2
     print('[dev] main()')
-    args = _main.parse_arguments()
-    print('[dev] Loading DB=%r' % args.db)
+    args = argparse2.parse_arguments()
+    print('[dev] args.db=%r' % args.db)
+    print('[dev] args.dbdir=%r' % args.dbdir)
     # Create Hotspotter API
     hs = HotSpotter.HotSpotter(args)
     # Load tables, chips, and features
@@ -503,9 +520,12 @@ def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
     for cx, cid in enumerate(cx2_cid):
         if not cx in qcx_list and cid > 0:
             gt_cxs = hs.get_other_indexed_cxs(cx)
-            if with_nogt and len(gt_cxs) == 0: pass
-            elif with_gt and len(gt_cxs) > 0: pass
-            else: continue
+            if with_nogt and len(gt_cxs) == 0:
+                pass
+            elif with_gt and len(gt_cxs) > 0:
+                pass
+            else:
+                continue
             qcx_list += [cx]
             ocid_list += [[gt_cxs]]
             note_list += ['NA']
@@ -517,17 +537,17 @@ def run_investigations(hs, qon_list):
     import test_harness
     args = hs.args
     qcx = qon_list[0][0]
-    print('[dev] Running Investigation: '+hs.cxstr(qcx))
+    print('[dev] Running Investigation: ' + hs.cidstr(qcx))
     fnum = 1
     #view_all_history_names_in_db(hs, 'MOTHERS')
     #fnum = compare_matching_methods(hs, qcx, fnum)
-    #xy_  = {'xy_thresh'    : [None, .2, .02, .002]}
-    #xy_  = {'xy_thresh'    : [None, .02, .002, .001, .0005]}
-    xy_  = {'xy_thresh'    : [None, .02, .002]}
-    #rat_ = {'ratio_thresh' : [None, 1.4, 1.6, 1.8]}
-    rat_ = {'ratio_thresh' : [None, 1.5, 1.7]}
-    K_   = {'K'            : [2, 5, 10]}
-    Kr_  = {'Krecip'       : [0, 2, 5, 10]}
+    #xy_  = {'xy_thresh':     [None, .2, .02, .002]}
+    #xy_  = {'xy_thresh':     [None, .02, .002, .001, .0005]}
+    #rat_ = {'ratio_thresh':  [None, 1.4, 1.6, 1.8]}
+    xy_  = {'xy_thresh':     [None, .02, .002]}
+    rat_ = {'ratio_thresh':  [None, 1.5, 1.7]}
+    K_   = {'K':             [2, 5, 10]}
+    Kr_  = {'Krecip':        [0, 2, 5, 10]}
     if '0' in args.tests or 'show-names' in args.tests:
         show_names(hs, qon_list)
     if '1' in args.tests or 'vary-vsone-rat-xy' in args.tests:
@@ -537,12 +557,6 @@ def run_investigations(hs, qon_list):
     if '3' in args.tests:
         fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=True)
         fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=False)
-    if '4' in args.tests:
-        fnum = investigate_scoring_rules(hs, qcx, fnum)
-    if '6' in args.tests:
-        measure_k_rankings(hs)
-    if '7' in args.tests:
-        measure_cx_rankings(hs)
     #if '8' in args.tests:
         #mc3.compare_scoring(hs)
     if '8' in args.tests or 'dbstats' in args.tests:
@@ -569,6 +583,23 @@ def run_investigations(hs, qon_list):
     for test_cfg_name in testcfg_locals:
         if test_cfg_name in args.tests:
             fnum = test_harness.test_configurations(hs, qon_list, [test_cfg_name], fnum)
+
+
+def export_qon_list(hs, qon_list):
+    print('[dev] Exporting query-object-notes to property tables')
+    if not hs.has_property('Notes'):
+        hs.add_property('Notes')
+    for qcx, ocxs, notes in qon_list:
+        print('----')
+        old_prop = hs.get_property(qcx, 'Notes')
+        print('old = ' + old_prop)
+        print(notes)
+        if old_prop.find(notes) == -1:
+            new_prop = notes if old_prop == '' else old_prop + '; ' + notes
+            print('new: ' + new_prop)
+            hs.change_property(qcx, 'Notes', new_prop)
+        print(hs.get_property(qcx, 'Notes'))
+    hs.save_database()
 
 
 def all_printoff():
@@ -599,14 +630,16 @@ if __name__ == '__main__':
     print('[dev]====================')
     if hs.args.printoff:
         all_printoff()
+
+    if hs.args.export_qon:
+        export_qon_list(hs, qon_list)
     # Big test function. Should be replaced with something
     # not as ugly soon.
     run_investigations(hs, qon_list)
     # A redundant query argument. Again, needs to be replaced.
-    if hs.args.query is not None:
+    if hs.args.query is not None and len(hs.args.query) > 0:
         qcx = hs.cid2_cx(hs.args.query[0])
-        query_cfg = ds.default_vsmany_cfg(hs, K=args.K, score_method=args.score_method)
-        res = mc3.query_database(hs, qcx, query_cfg=query_cfg)
+        res = hs.query(qcx)
         res.show_top(hs)
     print('[dev]====================')
     kwargs = {}

@@ -52,7 +52,7 @@ import helpers
 
 
 def printDBG(msg):
-    print(msg)
+    #print(msg)
     pass
 
 # Toggleable printing
@@ -1273,7 +1273,7 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
            interpolation='nearest', **kwargs):
     'other interpolations = nearest, bicubic, bilinear'
     #printDBG('[df2] ----- IMSHOW ------ ')
-    print('[***df2.imshow] fnum=%r pnum=%r title=%r *** ' % (fnum, pnum, title))
+    #printDBG('[***df2.imshow] fnum=%r pnum=%r title=%r *** ' % (fnum, pnum, title))
     #printDBG('[***df2.imshow] img.shape = %r ' % (img.shape,))
     #printDBG('[***df2.imshow] img.stats = %r ' % (helpers.printable_mystats(img),))
     fig = figure(fnum=fnum, pnum=pnum, title=title, figtitle=figtitle, **kwargs)

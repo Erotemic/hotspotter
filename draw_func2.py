@@ -52,7 +52,7 @@ import helpers
 
 
 def printDBG(msg):
-    #print(msg)
+    print(msg)
     pass
 
 # Toggleable printing
@@ -1269,19 +1269,13 @@ def draw_kpts2(kpts, offset=(0, 0),
 
 
 # ---- CHIP DISPLAY COMMANDS ----
-def imshow(img,
-           fnum=None,
-           title=None,
-           figtitle=None,
-           pnum=None,
-           interpolation='nearest',
-           **kwargs):
+def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
+           interpolation='nearest', **kwargs):
     'other interpolations = nearest, bicubic, bilinear'
     #printDBG('[df2] ----- IMSHOW ------ ')
-    #printDBG('[df2] *** imshow in fig=%r title=%r *** ' % (fnum, title))
-    #printDBG('[df2] *** fnum = %r, pnum = %r ' % (fnum, pnum))
-    #printDBG('[df2] *** img.shape = %r ' % (img.shape,))
-    #printDBG('[df2] *** img.stats = %r ' % (helpers.printable_mystats(img),))
+    print('[***df2.imshow] fnum=%r pnum=%r title=%r *** ' % (fnum, pnum, title))
+    #printDBG('[***df2.imshow] img.shape = %r ' % (img.shape,))
+    #printDBG('[***df2.imshow] img.stats = %r ' % (helpers.printable_mystats(img),))
     fig = figure(fnum=fnum, pnum=pnum, title=title, figtitle=figtitle, **kwargs)
     ax = gca()
     if not DARKEN is None:

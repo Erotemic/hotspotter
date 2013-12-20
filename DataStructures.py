@@ -155,8 +155,9 @@ class HotspotterDirs(DynStruct):
 class HotspotterChipPaths(DynStruct):
     def __init__(self):
         super(HotspotterChipPaths, self).__init__()
-        self.cx2_chip_path  = []
+        #self.cx2_chip_path  = []  # Unused
         self.cx2_rchip_path = []
+        self.cx2_rchip_size = []
         self.chip_uid = ''
 
 

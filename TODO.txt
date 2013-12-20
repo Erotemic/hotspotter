@@ -22,3 +22,5 @@ Change file doesn't exist to Cache Miss
 
 
 Get rid of the qon_list in dev.py
+
+Utilize exif tags in images

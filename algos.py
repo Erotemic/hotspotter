@@ -49,6 +49,14 @@ def rrr():
 
 def xywh_to_tlbr(roi, img_wh):
     (img_w, img_h) = img_wh
+    if img_w == 0 or img_h == 0:
+        img_w = 1
+        img_h = 1
+        msg = '[cc2.1] Your csv tables have an invalid ROI.'
+        print(msg)
+        #warnings.warn(msg)
+        #ht = 1
+        #wt = 1
     # Ensure ROI is within bounds
     (x, y, w, h) = roi
     x1 = max(x, 0)

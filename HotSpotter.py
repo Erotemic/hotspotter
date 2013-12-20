@@ -80,7 +80,7 @@ class HotSpotter(DynStruct):
         hs.train_sample_cx   = None
         hs.test_sample_cx    = None
         hs.indexed_sample_cx = None
-        hs.cx2_rchip_size    = None
+        #hs.cx2_rchip_size    = None
         #
         pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')
         hs.prefs = Pref('root', fpath=pref_fpath)
@@ -228,7 +228,7 @@ class HotSpotter(DynStruct):
     #---------------
     def unload_all(hs):
         print('[hs] unloading all data')
-        hs.cx2_rchip_size = None  # HACK this should be part of hs.cpaths
+        #hs.cx2_rchip_size = None  # HACK this should be part of hs.cpaths
         hs.feats  = ds.HotspotterChipFeatures()
         hs.cpaths = ds.HotspotterChipPaths()
         hs.prefs.query_cfg.unload_data()
@@ -238,13 +238,13 @@ class HotSpotter(DynStruct):
         'unloads features and chips. not tables'
         print('[hs] unload_cxdata(cx=%r)' % cx)
         # HACK This should not really be removed EVERY time you unload any cx
-        hs.cx2_rchip_size = None  # HACK, should detect lack of info in cpaths
-        hs.prefs.query_cfg.unload_data()
+        #hs.cx2_rchip_size = None  # HACK, should detect lack of info in cpaths
+        hs.prefs.query_cfg.unload_data()  # TODO: Separate query data from cfg
         lists = []
         if hs.cpaths is not None:
-            lists += [hs.feats.cx2_kpts, hs.feats.cx2_desc]
+            lists += [hs.cpaths.cx2_rchip_path, hs.cpaths.cx2_rchip_size]
         if hs.feats is not None:
-            lists += [hs.cpaths.cx2_rchip_path, hs.cpaths.cx2_chip_path]
+            lists += [hs.feats.cx2_kpts, hs.feats.cx2_desc]
         if cx == 'all':
             hs.unload_all()
             return
@@ -705,19 +705,9 @@ class HotSpotter(DynStruct):
         hs.cx2_rchip_size = cx2_rchip_size
 
     def get_cx2_rchip_size(hs):
-        # Hendrik/Jason TODO:
-        # cx2_rchip_size returns the width and height of the preprocessed (and
-        # rotated) chip. Currently this is stored directly in the HotSpotter
-        # object, but it should really become a member of the hs.cpaths
-        # (ChipPaths) object, and be precomputed on the fly like cx2_chip_path
-        # and cx2_rchip_path. This is used in a few places so be sure to grep
-        # for rchip_size and make sure any changes you make are robust.
-        # Talk to me if you decide to tackle this one. It requires a bit of
-        # knowledge of how the data structures are set up.
-        if hs.cx2_rchip_size is None:
-            hs.load_cx2_rchip_size()
-        return hs.cx2_rchip_size
-
+        cx_input = hs.get_valid_cxs()
+        cx2_rchip_size = hs.cpaths.cx2_rchip_size
+        return hs._onthefly_cxlist_get(cx_input, cx2_rchip_size, hs.load_chips)
     #---------------
     # Print Tables
 

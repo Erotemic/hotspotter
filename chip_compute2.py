@@ -425,6 +425,8 @@ def load_chips(hs, cx_list=None, **kwargs):
     pcc_kwargs['arg_list'] = [cfpath_list2, rfpath_list2, theta_list2]
     parallel_compute(rotate_chip, **pcc_kwargs)
 
+    # Read sizes
+    rsize_list = [(None, None) if path is None else Image.open(path).size for path in cfpath_list]
     #----------------------
     # UPDATE API VARIABLES
     #----------------------
@@ -432,13 +434,16 @@ def load_chips(hs, cx_list=None, **kwargs):
 
     # Extend the datastructure if needed
     list_size = max(cx_list) + 1
-    helpers.ensure_list_size(hs.cpaths.cx2_chip_path, list_size)
+    #helpers.ensure_list_size(hs.cpaths.cx2_chip_path, list_size)
     helpers.ensure_list_size(hs.cpaths.cx2_rchip_path, list_size)
+    helpers.ensure_list_size(hs.cpaths.cx2_rchip_size, list_size)
     # Copy the values into the ChipPaths object
-    for lx, cx in enumerate(cx_list):
-        hs.cpaths.cx2_chip_path[cx] = cfpath_list[lx]
+    #for lx, cx in enumerate(cx_list):
+        #hs.cpaths.cx2_chip_path[cx] = cfpath_list[lx]
     for lx, cx in enumerate(cx_list):
         hs.cpaths.cx2_rchip_path[cx] = rfpath_list[lx]
+    for lx, cx in enumerate(cx_list):
+        hs.cpaths.cx2_rchip_size[cx] = rsize_list[lx]
     hs.load_cx2_rchip_size()  # TODO: Loading rchip size should be handled more robustly
     print('[cc2]=============================')
 

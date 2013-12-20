@@ -577,11 +577,7 @@ def res_show_analysis(res, hs, fnum=3, figtitle='', show_query=None,
                          annote=annote, query_cfg=query_cfg, **kwargs)
 
 
-def show_matches_annote_res(res, hs, cx,
-                            fnum=None,
-                            pnum=None,
-                            title_aug=None,
-                            **kwargs):
+def show_matches_annote_res(res, hs, cx, title_aug=None, **kwargs):
     '''
     Wrapper for show_matches_annote
     '''
@@ -590,17 +586,19 @@ def show_matches_annote_res(res, hs, cx,
     cx2_fm    = res.get_cx2_fm()
     cx2_fs    = res.get_cx2_fs()
     title_suff = None
-    return show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, fnum,
-                               pnum, title_aug, title_suff, **kwargs)
+    return show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx,
+                               title_aug, title_suff, **kwargs)
 
 
 def show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx,
-                        pnum=None, title_pref=None, title_suff=None,
+                        title_pref=None, title_suff=None,
                         show_cx=False, show_cid=True, show_gname=False,
                         show_name=True, showTF=True, showScore=True, **kwargs):
     fnum = kwargs.pop('fnum', None)
+    pnum = kwargs.pop('pnum', None)
     ' Shows matches with annote -ations '
-    #print('[viz.show_matches_annote()] Showing matches from %s' % (hs.vs_str(cx, qcx)))
+    print('[viz.show_matches_annote()] Showing matches from %s' % (hs.vs_str(cx, qcx)))
+    print('[viz.show_matches_annote()] fnum=%r, pnum=%r' % (fnum, pnum))
     if np.isnan(cx):
         nan_img = np.zeros((100, 100), dtype=np.uint8)
         title = '(qx%r v NAN)' % (qcx)
@@ -634,9 +632,9 @@ def show_matches_annote(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx,
         score_str = (' score=' + helpers.num_fmt(score)) % (score)
         title += score_str
     if not title_pref is None:
-        title = title_pref + title
+        title = str(title_pref) + str(title)
     if not title_suff is None:
-        title = title + title_suff
+        title = str(title) + str(title_suff)
     # Draw the matches
     qcx_str = 'q' + hs.cidstr(qcx)
     cx_str = hs.cidstr(cx)
@@ -672,7 +670,7 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
               show_query=False, all_kpts=False, annote=True, query_cfg=None,
               split_plots=False, interact=True, **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
-    #print('[viz._show_res()] %r ' % locals())
+    print('[viz._show_res()] %s ' % helpers.printableVal(locals()))
     fnum = kwargs.pop('fnum', 3)
     #print('========================')
     #print('[viz] Show chip matches:')
@@ -686,8 +684,8 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
     print('[viz._show_res()] #topN=%r #missed_gts=%r/%r' % (len(topN_cxs),
                                                             len(gt_cxs),
                                                             len(all_gts)))
-    #print('[viz._show_res()] * max_nCols=%r' % (max_nCols,))
-    #print('[viz._show_res()] * show_query=%r' % (show_query,))
+    print('[viz._show_res()] * max_nCols=%r' % (max_nCols,))
+    print('[viz._show_res()] * show_query=%r' % (show_query,))
     ranked_cxs = res.topN_cxs(hs, N='all')
     # Build a subplot grid
     nQuerySubplts = 1 if show_query else 0
@@ -710,22 +708,22 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
     def _show_matches_fn(cx, orank, pnum):
         'helper for viz._show_res'
         aug = 'rank=%r\n' % orank
-        #printDBG('[viz._show_res()] plotting: %r'  % (pnum,))
+        print('[viz._show_res()] plotting: %r'  % (pnum,))
         kwshow  = dict(draw_ell=annote, draw_pts=annote, draw_lines=annote,
                        ell_alpha=.5, all_kpts=all_kpts, **kwargs)
         show_matches_annote_res(res, hs, cx, title_aug=aug, fnum=fnum, pnum=pnum, **kwshow)
 
     def _show_query_fn(plotx_shift, rowcols):
         'helper for viz._show_res'
-        #printDBG('[viz._show_res()] Plotting Query:')
         plotx = plotx_shift + 1
         pnum = (rowcols[0], rowcols[1], plotx)
-        #printDBG('[viz._show_res()] plotting: %r' % (pnum,))
+        print('[viz._show_res()] Plotting Query: pnum=%r' % (pnum,))
         show_chip(hs, res=res, pnum=pnum, draw_kpts=annote, prefix='q', fnum=fnum)
 
     # Helper to draw many cxs
     def _plot_matches_cxs(cx_list, plotx_shift, rowcols):
         'helper for viz._show_res'
+        print('[viz._show_res()] Plotting Chips %s:' % hs.cidstr(cx_list))
         if cx_list is None:
             return
         for ox, cx in enumerate(cx_list):
@@ -744,7 +742,7 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
     #query_uid = re.sub(r'_dcxs\(........\)', '', query_uid)
     #print('[viz._show_res()] fnum=%r' % fnum)
 
-    fig = df2.figure(fnum=fnum)
+    fig = df2.figure(fnum=fnum, pnum=(nRows, nGTCols, 1), doclf=True)
     fig.clf()
     df2.plt.subplot(nRows, nGTCols, 1)
     # Plot Query
@@ -771,7 +769,7 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
         #df2.set_figtitle(figtitle, query_uid)
         df2.set_figtitle(figtitle)
 
-    if interact:
+    if interact and False:
         #printDBG('[viz._show_res()] starting interaction')
         # Create
         def _on_res_click(event):
@@ -788,7 +786,7 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
         df2.disconnect_callback(fig, 'button_press_event')
         if interact:
             df2.connect_callback(fig, 'button_press_event', _on_res_click)
-    printDBG('[viz._show_res()] Finished')
+    print('[viz._show_res()] Finished')
     return fig
 
 if __name__ == '__main__':

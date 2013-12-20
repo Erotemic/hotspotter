@@ -166,7 +166,7 @@ def execute_query_safe(hs, query_cfg=None, qcxs=None, dcxs=None, use_cache=True,
     else:
         raise Exception('Unknown query_type=%r' % query_type)
     # caching
-    if not hs.args.nocache_query:
+    if not hs.args.nocache_query and use_cache:
         result_list = load_cached_query(hs, query_cfg)
         if not result_list is None:
             return result_list

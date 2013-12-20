@@ -103,70 +103,6 @@ def normalize_xy_points(x_m, y_m):
     return x_norm, y_norm, T
 
 
-def homography_inliers(kpts1, kpts2, fm,
-                       xy_thresh,
-                       max_scale,
-                       min_scale,
-                       diaglen_sqrd=None,
-                       min_num_inliers=4,
-                       just_affine=False):
-    #if len(fm) < min_num_inliers:
-        #return None
-    # Not enough data
-    # Estimate affine correspondence convert to SV_DTYPE
-    # matching feature indexes
-    fx1_m, fx2_m = fm[:, 0], fm[:, 1]
-    # x, y, a, c, d : postion, shape
-    x1_m, y1_m, acd1_m = split_kpts(kpts1[fx1_m, :].T)
-    x2_m, y2_m, acd2_m = split_kpts(kpts2[fx2_m, :].T)
-    # Get diagonal length
-    if diaglen_sqrd is None:
-        diaglen_sqrd = calc_diaglen_sqrd(x2_m, y2_m)
-    xy_thresh_sqrd = diaglen_sqrd * xy_thresh
-    Aff, aff_inliers = affine_inliers(x1_m, y1_m, acd1_m, fm[:, 0],
-                                      x2_m, y2_m, acd2_m, fm[:, 1],
-                                      xy_thresh_sqrd,
-                                      max_scale,
-                                      min_scale)
-    # Cannot find good affine correspondence
-    if just_affine:
-        #raise Exception('No affine inliers')
-        return Aff, aff_inliers
-    if len(aff_inliers) < min_num_inliers:
-        return None
-    # Get corresponding points and shapes
-    (x1_ma, y1_ma, acd1_m) = (x1_m[aff_inliers], y1_m[aff_inliers],
-                              acd1_m[:, aff_inliers])
-    (x2_ma, y2_ma, acd2_m) = (x2_m[aff_inliers], y2_m[aff_inliers],
-                              acd2_m[:, aff_inliers])
-    # Normalize affine inliers
-    x1_mn, y1_mn, T1 = normalize_xy_points(x1_ma, y1_ma)
-    x2_mn, y2_mn, T2 = normalize_xy_points(x2_ma, y2_ma)
-    # Compute homgraphy transform from 1-->2 using affine inliers
-    H_prime = compute_homog(x1_mn, y1_mn, x2_mn, y2_mn)
-    try:
-        # Computes ax = b # x = linalg.solve(a, b)
-        H = linalg.solve(T1, H_prime).dot(T2)  # Unnormalize
-    except linalg.LinAlgError as ex:
-        print('[sv2] Warning 285 ' + repr(ex), )
-        #raise
-        return None
-
-    ((H11, H12, H13),
-     (H21, H22, H23),
-     (H31, H32, H33)) = H
-    # Transform all xy1 matches to xy2 space
-    x1_mt = H11 * (x1_m) + H12 * (y1_m) + H13
-    y1_mt = H21 * (x1_m) + H22 * (y1_m) + H23
-    z1_mt = H31 * (x1_m) + H32 * (y1_m) + H33
-    # --- Find (Squared) Distance Error ---
-    #scale_err = np.abs(np.linalg.det(H)) * det2_m / det1_m
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        xy_err = (x1_mt / z1_mt - x2_m) ** 2 + (y1_mt / z1_mt - y2_m) ** 2
-    # Estimate final inliers
-    inliers = np.where(xy_err < xy_thresh_sqrd)[0]
-    return H, inliers
 '''
 fx1_m  = np.array( (1, 2, 3, 4, 5))
 x1_m   = np.array( (1, 2, 1, 4, 5))
@@ -339,10 +275,76 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
     return best_Aff, best_inliers
 
 
+def homography_inliers(kpts1, kpts2, fm,
+                       xy_thresh,
+                       max_scale,
+                       min_scale,
+                       diaglen_sqrd=None,
+                       min_num_inliers=4,
+                       just_affine=False):
+    #if len(fm) < min_num_inliers:
+        #return None
+    # Not enough data
+    # Estimate affine correspondence convert to SV_DTYPE
+    # matching feature indexes
+    fx1_m, fx2_m = fm[:, 0], fm[:, 1]
+    # x, y, a, c, d : postion, shape
+    x1_m, y1_m, acd1_m = split_kpts(kpts1[fx1_m, :].T)
+    x2_m, y2_m, acd2_m = split_kpts(kpts2[fx2_m, :].T)
+    # Get diagonal length
+    if diaglen_sqrd is None:
+        diaglen_sqrd = calc_diaglen_sqrd(x2_m, y2_m)
+    xy_thresh_sqrd = diaglen_sqrd * xy_thresh
+    Aff, aff_inliers = affine_inliers(x1_m, y1_m, acd1_m, fm[:, 0],
+                                      x2_m, y2_m, acd2_m, fm[:, 1],
+                                      xy_thresh_sqrd,
+                                      max_scale,
+                                      min_scale)
+    # Cannot find good affine correspondence
+    if just_affine:
+        #raise Exception('No affine inliers')
+        return Aff, aff_inliers
+    if len(aff_inliers) < min_num_inliers:
+        return None
+    # Get corresponding points and shapes
+    (x1_ma, y1_ma, acd1_m) = (x1_m[aff_inliers], y1_m[aff_inliers],
+                              acd1_m[:, aff_inliers])
+    (x2_ma, y2_ma, acd2_m) = (x2_m[aff_inliers], y2_m[aff_inliers],
+                              acd2_m[:, aff_inliers])
+    # Normalize affine inliers
+    x1_mn, y1_mn, T1 = normalize_xy_points(x1_ma, y1_ma)
+    x2_mn, y2_mn, T2 = normalize_xy_points(x2_ma, y2_ma)
+    # Compute homgraphy transform from 1-->2 using affine inliers
+    H_prime = compute_homog(x1_mn, y1_mn, x2_mn, y2_mn)
+    try:
+        # Computes ax = b # x = linalg.solve(a, b)
+        H = linalg.solve(T2, H_prime).dot(T1)  # Unnormalize
+    except linalg.LinAlgError as ex:
+        print('[sv2] Warning 285 ' + repr(ex), )
+        #raise
+        return None
+
+    ((H11, H12, H13),
+     (H21, H22, H23),
+     (H31, H32, H33)) = H
+    # Transform all xy1 matches to xy2 space
+    x1_mt = H11 * (x1_m) + H12 * (y1_m) + H13
+    y1_mt = H21 * (x1_m) + H22 * (y1_m) + H23
+    z1_mt = H31 * (x1_m) + H32 * (y1_m) + H33
+    # --- Find (Squared) Distance Error ---
+    #scale_err = np.abs(np.linalg.det(H)) * det2_m / det1_m
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        xy_err = (x1_mt / z1_mt - x2_m) ** 2 + (y1_mt / z1_mt - y2_m) ** 2
+    # Estimate final inliers
+    inliers = np.where(xy_err < xy_thresh_sqrd)[0]
+    return H, inliers
+
+
 def test():
     import dev
     import match_chips3 as mc3
-    xy_thresh = .02
+    xy_thresh = .0002
     max_scale = 2
     min_scale = .5
     #qcx = helpers.get_arg_after('--qcx', type_=int, default=0)
@@ -362,7 +364,7 @@ def test():
     #res = mc3.query_database(hs, qcx, sv_on=False)
     # For testing purposes query_groundtruth is a bit faster than
     # query_database. But there is no reason you cant query_database
-    res = mc3.query_groundtruth(hs, qcx, sv_on=False)
+    res = mc3.query_groundtruth(hs, qcx, sv_on=False, use_cache=False)
 
     # Get chip index to feature match
     fm = res.cx2_fm[cx]
@@ -383,17 +385,73 @@ def test():
     kpts1 = hs.get_kpts(qcx)
     kpts2 = hs.get_kpts(cx)
     #
-    # Common arguments to df2.show_matches2
-    args_ = [rchip1, rchip2, kpts1, kpts2]
     diaglen_sqrd = rchip2.shape[0] ** 2 + rchip2.shape[1] ** 2
-
+    # How does Aff map rchip1 to rchip2?
+    Aff, aff_inliers = homography_inliers(kpts1, kpts2, fm, xy_thresh, max_scale,
+                                          min_scale, diaglen_sqrd=diaglen_sqrd,
+                                          min_num_inliers=4, just_affine=True)
     # How does H map rchip1 onto rchip2?
-    H, inliers = homography_inliers(kpts1, kpts2, fm,
-                                    xy_thresh,
-                                    max_scale,
-                                    min_scale,
-                                    diaglen_sqrd=diaglen_sqrd,
+    H, inliers = homography_inliers(kpts1, kpts2, fm, xy_thresh, max_scale,
+                                    min_scale, diaglen_sqrd=diaglen_sqrd,
                                     min_num_inliers=4)
+
+    # rchips are in shape = (height, width)
+    (h1, w1) = rchip1.shape[0:2]
+    (h2, w2) = rchip2.shape[0:2]
+    wh1 = (w1, h1)
+    wh2 = (w2, h2)
+    print('wh1 = %r' % (wh1,))
+    print('wh2 = %r' % (wh2,))
+
+    # Transform the chips
+    rchip1_Ht = cv2.warpPerspective(rchip1, H, wh2)
+    rchip1_At = cv2.warpAffine(rchip1, Aff[0:2, :], wh2)
+
+    rchip2_blendA = (rchip1_At / 2) + (rchip2 / 2)
+    rchip2_blendH = (rchip1_Ht / 2) + (rchip2 / 2)
+    #rchip1_invhom = cv2.warpPerspective(rchip1, np.linalg.inv(H), rchip2.shape[0:2])
+    #rchip1_invaff = cv2.warpAffine(rchip1, np.linalg.inv(Aff)[0:2, :], rchip2.shape[0:2])
+
+    # Resize chips
+    #resz_fn = lambda shape: tuple(map(int, (shape[1] / 4, shape[0] / 4)))
+    #new_sz1 = resz_fn(rchip1.shape)
+    #new_sz2 = resz_fn(rchip2.shape)
+    #rchip1_invhom = cv2.resize(rchip1_invhom, new_sz2)
+    #rchip1_homog  = cv2.resize(rchip1_homog, new_sz2)
+    #rchip1_aff = cv2.resize(rchip1_aff, new_sz2)
+    #rchip1_invaff = cv2.resize(rchip1_invaff, new_sz2)
+    #rchip1_ = cv2.resize(rchip1, new_sz1)
+    #rchip2_ = cv2.resize(rchip2, new_sz2)
+
+    # Draw the transformations
+
+    def _pnum(px):
+        return (2, 4, px)
+
+    def _imshow1(chip, title, px, *args, **kwargs):
+        df2.imshow(chip, *args, title=title, fnum=1, pnum=_pnum(px), **kwargs)
+    _imshow1(rchip1,    'Source',      1)
+    _imshow1(rchip1_At, 'Affine',      2)
+    _imshow1(rchip2,    'Destination', 3)
+    _imshow1(rchip2_blendA,    'Aff Blend',   4)
+
+    _imshow1(rchip1,    'Source',      5)
+    _imshow1(rchip1_Ht, 'Homog',       6)
+    _imshow1(rchip2,    'Destination', 7)
+    _imshow1(rchip2_blendH,    'Homog Blend', 8)
+
+
+    df2.figure(6, pnum=(1, 3, 1))
+
+    # Draw original matches, affine inliers, and homography inliers
+    def _show_matches(fm, **kwargs):
+        # Helper with common arguments to df2.show_matches2
+        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs=None,
+                          all_kpts=False, draw_lines=True, doclf=True, **kwargs)
+    _show_matches(fm, title='Assigned matches', pnum=(1, 3, 1))
+    _show_matches(fm[aff_inliers], title='Affine inliers', pnum=(1, 3, 2))
+    _show_matches(fm[inliers], title='Homography inliers', pnum=(1, 3, 3))
+
 
     #print(fm)
     #print('Homography inliers')
@@ -401,52 +459,12 @@ def test():
     #print('H')
     #print(H)
     #print(rchip1.shape, rchip2.shape)
-    rchip_homog = cv2.warpPerspective(rchip1, H, rchip2.shape[0:2])
-    rchip_homog = cv2.resize(rchip_homog, (int(rchip2.shape[1] / 4), int(rchip2.shape[0] / 4)))
-
-    # How does Aff map rchip1 to rchip2?
-    Aff, aff_inliers = homography_inliers(kpts1, kpts2, fm,
-                                          xy_thresh,
-                                          max_scale,
-                                          min_scale,
-                                          diaglen_sqrd=diaglen_sqrd,
-                                          min_num_inliers=4, just_affine=True)
     #print('Affine inliers')
     #print(aff_inliers)
     #print('Aff')
     #print(Aff[0:2, :])
     #print (kpts1.shape, kpts2.shape)
     #print (cv2.getAffineTransform(kpts1[aff_inliers], kpts2[aff_inliers]))
-    rchip_aff = cv2.warpAffine(rchip1, Aff[0:2, :], rchip2.shape[0:2])
-    rchip_aff = cv2.resize(rchip_aff, (int(rchip2.shape[1] / 4), int(rchip2.shape[0] / 4)))
-
-    original_resized = cv2.resize(rchip1, (int(rchip1.shape[1] / 4), int(rchip1.shape[0] / 4)))
-    dest_resized = cv2.resize(rchip2, (int(rchip2.shape[1] / 4), int(rchip2.shape[0] / 4)))
-    df2.figure(1)
-    df2.imshow(original_resized, title='Source')
-    df2.figure(2)
-    df2.imshow(dest_resized, title='Destination')
-    df2.figure(3)
-    df2.imshow(rchip_homog, title='Homography')
-    df2.figure(4)
-    df2.imshow(rchip_aff, title='Affine')
-    df2.figure(5)
-    df2.imshow(original_resized, title='Source')
-    df2.figure(6, pnum=(1, 3, 1))
-    # Draw original matches
-    df2.show_matches2(*args_ + [fm], fs=None,
-                      all_kpts=False, draw_lines=True,
-                      doclf=True, title='Assigned matches', pnum=(1, 3, 1))
-
-    # Draw affine
-    df2.show_matches2(*args_ + [fm[aff_inliers]], fs=None,
-                      all_kpts=False, draw_lines=True, doclf=True,
-                      title='Affine inliers', pnum=(1, 3, 2))
-
-    # Draw homogrophy
-    df2.show_matches2(*args_ + [fm[inliers]], fs=None,
-                      all_kpts=False, draw_lines=True, doclf=True,
-                      title='Homography inliers', pnum=(1, 3, 3))
 
 if __name__ == '__main__':
     import multiprocessing

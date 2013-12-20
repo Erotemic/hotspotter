@@ -844,12 +844,11 @@ def get_ax(fnum=None, pnum=None):
     return ax
 
 
-def figure(fnum=None,
-           doclf=False,
-           title=None,
-           pnum=(1, 1, 1),
-           figtitle=None,
-           **kwargs):
+def figure(fnum=None, doclf=False, title=None, pnum=(1, 1, 1), figtitle=None, **kwargs):
+    '''
+    fnum = fignum = figure number
+    pnum = plotnum = plot tuple
+    '''
     #matplotlib.pyplot.xkcd()
     fig = get_fig(fnum)
     axes_list = fig.get_axes()

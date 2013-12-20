@@ -54,6 +54,22 @@ def reload_module():
     imp.reload(sys.modules[__name__])
 
 
+def xywh_to_tlbr(roi, img_wh):
+    (img_w, img_h) = img_wh
+    if img_w == 0 or img_h == 0:
+        msg = '[cc2.1] Your csv tables have an invalid ROI.'
+        print(msg)
+        warnings.warn(msg)
+        img_w = 1
+        img_h = 1
+    # Ensure ROI is within bounds
+    (x, y, w, h) = roi
+    x1 = max(x, 0)
+    y1 = max(y, 0)
+    x2 = min(x + w, img_w - 1)
+    y2 = min(y + h, img_h - 1)
+    return (x1, y1, x2, y2)
+
 # =======================================
 # Parallelizable Work Functions
 # =======================================
@@ -63,7 +79,7 @@ def __compute_chip(img_path, chip_path, roi, new_size):
     Saves as png'''
     # Read image
     img = Image.open(img_path)
-    (x1, y1, x2, y2) = algos.xywh_to_tlbr(roi, img.size)
+    (x1, y1, x2, y2) = xywh_to_tlbr(roi, img.size)
     # http://docs.wand-py.org/en/0.3.3/guide/resizecrop.html#crop-images
     # Crop out ROI: left, upper, right, lower
     #img.transform(resize='x100') #img.transform(resize='640x480>')
@@ -271,9 +287,15 @@ def get_normalized_chip_sizes(roi_list, sqrt_area=None):
         target_area = sqrt_area ** 2
 
         def _resz(w, h):
-            ht = np.sqrt(target_area * h / w)
-            wt = w * ht / h
-            return (int(round(wt)), int(round(ht)))
+            try:
+                ht = np.sqrt(target_area * h / w)
+                wt = w * ht / h
+                return (int(round(wt)), int(round(ht)))
+            except Exception:
+                msg = '[cc2.2] Your csv tables have an invalid ROI.'
+                print(msg)
+                warnings.warn(msg)
+                return (1, 1)
         chipsz_list = [_resz(float(w), float(h)) for (x, y, w, h) in roi_list]
     else:  # no rescaling
         chipsz_list = [(int(w), int(h)) for (x, y, w, h) in roi_list]

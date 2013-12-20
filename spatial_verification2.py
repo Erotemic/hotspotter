@@ -1,7 +1,6 @@
 from __future__ import division, print_function
 import __builtin__
 import sys
-import warnings
 import cv2
 import numpy.linalg as linalg
 import numpy as np
@@ -279,7 +278,7 @@ def homography_inliers(kpts1, kpts2, fm,
                        xy_thresh,
                        max_scale,
                        min_scale,
-                       diaglen_sqrd=None,
+                       dlen_sqrd2=None,
                        min_num_inliers=4,
                        just_affine=False):
     #if len(fm) < min_num_inliers:
@@ -292,14 +291,11 @@ def homography_inliers(kpts1, kpts2, fm,
     x1_m, y1_m, acd1_m = split_kpts(kpts1[fx1_m, :].T)
     x2_m, y2_m, acd2_m = split_kpts(kpts2[fx2_m, :].T)
     # Get diagonal length
-    if diaglen_sqrd is None:
-        diaglen_sqrd = calc_diaglen_sqrd(x2_m, y2_m)
-    xy_thresh_sqrd = diaglen_sqrd * xy_thresh
+    dlen_sqrd2 = calc_diaglen_sqrd(x2_m, y2_m) if dlen_sqrd2 is None else dlen_sqrd2
+    xy_thresh_sqrd = dlen_sqrd2 * xy_thresh
     Aff, aff_inliers = affine_inliers(x1_m, y1_m, acd1_m, fm[:, 0],
                                       x2_m, y2_m, acd2_m, fm[:, 1],
-                                      xy_thresh_sqrd,
-                                      max_scale,
-                                      min_scale)
+                                      xy_thresh_sqrd, max_scale, min_scale)
     # Cannot find good affine correspondence
     if just_affine:
         #raise Exception('No affine inliers')
@@ -307,10 +303,10 @@ def homography_inliers(kpts1, kpts2, fm,
     if len(aff_inliers) < min_num_inliers:
         return None
     # Get corresponding points and shapes
-    (x1_ma, y1_ma, acd1_m) = (x1_m[aff_inliers], y1_m[aff_inliers],
-                              acd1_m[:, aff_inliers])
-    (x2_ma, y2_ma, acd2_m) = (x2_m[aff_inliers], y2_m[aff_inliers],
-                              acd2_m[:, aff_inliers])
+    (x1_ma, y1_ma, acd1_m) = (
+        x1_m[aff_inliers], y1_m[aff_inliers], acd1_m[:, aff_inliers])
+    (x2_ma, y2_ma, acd2_m) = (
+        x2_m[aff_inliers], y2_m[aff_inliers], acd2_m[:, aff_inliers])
     # Normalize affine inliers
     x1_mn, y1_mn, T1 = normalize_xy_points(x1_ma, y1_ma)
     x2_mn, y2_mn, T2 = normalize_xy_points(x2_ma, y2_ma)
@@ -320,8 +316,8 @@ def homography_inliers(kpts1, kpts2, fm,
         # Computes ax = b # x = linalg.solve(a, b)
         H = linalg.solve(T2, H_prime).dot(T1)  # Unnormalize
     except linalg.LinAlgError as ex:
-        print('[sv2] Warning 285 ' + repr(ex), )
-        #raise
+        print('[sv2] Warning 285 %r' % ex)
+        # raise
         return None
 
     ((H11, H12, H13),
@@ -331,79 +327,84 @@ def homography_inliers(kpts1, kpts2, fm,
     x1_mt = H11 * (x1_m) + H12 * (y1_m) + H13
     y1_mt = H21 * (x1_m) + H22 * (y1_m) + H23
     z1_mt = H31 * (x1_m) + H32 * (y1_m) + H33
-    # --- Find (Squared) Distance Error ---
+    # --- Find (Squared) Homography Distance Error ---
     #scale_err = np.abs(np.linalg.det(H)) * det2_m / det1_m
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        xy_err = (x1_mt / z1_mt - x2_m) ** 2 + (y1_mt / z1_mt - y2_m) ** 2
+    z1_mt[z1_mt == 0] = 1E-14  # Avoid divide by zero  # NOQA
+    xy_err = ((x1_mt / z1_mt) - x2_m) ** 2 + ((y1_mt / z1_mt) - y2_m) ** 2
     # Estimate final inliers
     inliers = np.where(xy_err < xy_thresh_sqrd)[0]
     return H, inliers
 
 
-def test():
-    import dev
-    import helpers
+# ---- TEST FUNCTIONS ---- #
+def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
+    '''A feature match (fm) is a list of M 2-tuples.
+    fm = [(0, 5), (3,2), (11, 12), (4,4)]
+    fm[:,0] are keypoint indexes into kpts1
+    fm[:,1] are keypoint indexes into kpts2
+    '''
+    print('[sv] ensure_fm()')
     import match_chips3 as mc3
+    import QueryResult as qr
+    if fm is not None:
+        return fm
+    if res == 'db':
+        # Query without spatial verification to get assigned matches
+        res = mc3.query_database(hs, cx1, sv_on=False, use_cache=False)
+    elif res == 'gt':
+        # For testing purposes query_groundtruth is a bit faster than
+        # query_database. But there is no reason you cant query_database
+        res = mc3.query_groundtruth(hs, cx1, sv_on=False, use_cache=False)
+    assert isinstance(res, qr.QueryResult)
+    # Get chip index to feature match
+    fm = res.cx2_fm[cx2]
+    if len(fm) == 0:
+        raise Exception('No feature matches for %s' % hs.vs_str(cx1, cx2))
+    print('[sv] len(fm) = %r' % len(fm))
+    return fm
+
+
+def ensure_cx2(hs, cx1, cx2=None):
+    print('[sv] ensure_cx2()')
+    gt_cxs = hs.get_other_indexed_cxs(cx1)  # list of ground truth chip indexes
+    if len(gt_cxs) == 0:
+        msg = 'q%s has no groundtruth' % hs.cidstr(cx1)
+        msg += 'cannot perform tests without groundtruth'
+        raise Exception(msg)
+    cx2 = gt_cxs[0]  # Pick a ground truth to test against
+    print('[sv] cx2 = %r' % cx2)
+    return cx2
+
+
+def viz_spatial_verification(hs, cx1, **kwargs):
+    #kwargs = {}
+    import helpers
+    import tools
+    from skimage import color
+    import spatial_verification2 as sv2
     xy_thresh = .0002
     max_scale = 2
     min_scale = .5
-
-    main_locals = dev.dev_main()
-    hs  = main_locals['hs']        # hotspotter api
-    qcx = main_locals['qcx']       # query chip index
-    gt_cxs = hs.get_other_indexed_cxs(qcx)  # list of ground truth chip indexes
-    if len(gt_cxs) == 0:
-        msg = 'q' + hs.cidstr(qcx) + ' has no groundtruth'
-        msg += 'cannot perform tests without groundtruth'
-        raise Exception(msg)
-    cx = gt_cxs[0]  # Pick a ground truth to test against
-
-    # Query without spatial verification to get assigned matches
-    #res = mc3.query_database(hs, qcx, sv_on=False, use_cache=False)
-    # For testing purposes query_groundtruth is a bit faster than
-    # query_database. But there is no reason you cant query_database
-    res = mc3.query_groundtruth(hs, qcx, sv_on=False, use_cache=False)
-
-    # Get chip index to feature match
-    # A feature match is a list of M 2-tuples.
-    # fm = [(0, 5), (3,2), (11, 12), (4,4)]
-    # fm[:,0] are keypoint indexes into kpts1
-    # fm[:,1] are keypoint indexes into kpts2
-    assert res is not None, 'res is None'
-    fm = res.cx2_fm[cx]
-    if len(fm) == 0:
-        raise Exception('No feature matches for %s' % hs.vs_str(qcx, cx))
-
-    # Read the images from disk
-    rchip1 = hs.get_chip(qcx)
-    rchip2 = hs.get_chip(cx)
-    assert rchip1 is not None, 'rchip1 is None'
-    assert rchip2 is not None, 'rchip2 is None'
+    cx2 = ensure_cx2(hs, cx1, kwargs.get('cx2', None))
+    fm  = ensure_fm(hs, cx1, cx2, kwargs.get('fm', None))
+    # Get keypoints
+    rchip1 = kwargs['rchip1'] if 'rchip1' in kwargs else hs.get_chip(cx1)
+    rchip2 = kwargs['rchip2'] if 'rchip1' in kwargs else hs.get_chip(cx2)
+    kpts1 = kwargs['kpts1'] if 'kpts1' in kwargs else hs.get_kpts(cx1)
+    kpts2 = kwargs['kpts2'] if 'kpts2' in kwargs else hs.get_kpts(cx2)
+    dlen_sqrd2 = rchip2.shape[0] ** 2 + rchip2.shape[1] ** 2
     # rchips are in shape = (height, width)
     (h1, w1) = rchip1.shape[0:2]
     (h2, w2) = rchip2.shape[0:2]
     wh1 = (w1, h1)
     wh2 = (w2, h2)
-    print('wh1 = %r' % (wh1,))
-    print('wh2 = %r' % (wh2,))
-
-    # Get keypoints
-    kpts1 = hs.get_kpts(qcx)
-    kpts2 = hs.get_kpts(cx)
-    diaglen_sqrd = rchip2.shape[0] ** 2 + rchip2.shape[1] ** 2
-
-    assert kpts1 is not None, 'kpts1 is None'
-    assert kpts2 is not None, 'kpts2 is None'
-    assert fm is not None, 'fm is None'
-    assert xy_thresh is not None, 'xy_thresh is None'
-    assert max_scale is not None, 'max_scale is None'
-    assert min_scale is not None, 'min_scale is None'
+    print('[viz.sv] wh1 = %r' % (wh1,))
+    print('[viz.sv] wh2 = %r' % (wh2,))
 
     # Get affine and homog mapping from rchip1 to rchip2
-    homog_args = [kpts1, kpts2, fm, xy_thresh, max_scale, min_scale, diaglen_sqrd, 4]
-    Aff, aff_inliers = homography_inliers(*homog_args, just_affine=True)
-    H, inliers = homography_inliers(*homog_args, just_affine=False)
+    homog_args = [kpts1, kpts2, fm, xy_thresh, max_scale, min_scale, dlen_sqrd2, 4]
+    Aff, aff_inliers = sv2.homography_inliers(*homog_args, just_affine=True)
+    H, inliers = sv2.homography_inliers(*homog_args, just_affine=False)
     print(helpers.horiz_string(['H = ', str(H)]))
     print(helpers.horiz_string(['Aff = ', str(Aff)]))
 
@@ -411,8 +412,52 @@ def test():
     rchip1_Ht = cv2.warpPerspective(rchip1, H, wh2)
     rchip1_At = cv2.warpAffine(rchip1, Aff[0:2, :], wh2)
 
-    rchip2_blendA = (rchip1_At / 2) + (rchip2 / 2)
-    rchip2_blendH = (rchip1_Ht / 2) + (rchip2 / 2)
+    USE_LAB = False  # True  # False
+
+    if USE_LAB:
+        isInt = tools.is_int(rchip2)
+        rchip2_blendA = np.zeros((h2, w2, 3), dtype=rchip2.dtype)
+        rchip2_blendH = np.zeros((h2, w2, 3), dtype=rchip2.dtype)
+        rchip2_blendA = np.rollaxis(rchip2_blendA, 2)
+        rchip2_blendH = np.rollaxis(rchip2_blendH, 2)
+        #rchip2_blendA[0] = (rchip2 / 2) + (rchip1_At / 2)
+        #rchip2_blendH[0] = (rchip2 / 2) + (rchip1_Ht / 2)
+        #rchip2_blendA[0] /= 1 + (122 * isInt)
+        #rchip2_blendH[0] /= 1 + (122 * isInt)
+        rchip2_blendA[0] += 255
+        rchip2_blendH[0] += 255
+        rchip2_blendA[1] = rchip2
+        rchip2_blendH[1] = rchip2
+        rchip2_blendA[2] = rchip1_At
+        rchip2_blendH[2] = rchip1_Ht
+        rchip2_blendA = np.rollaxis(np.rollaxis(rchip2_blendA, 2), 2)
+        rchip2_blendH = np.rollaxis(np.rollaxis(rchip2_blendH, 2), 2)
+        print('unchanged stats')
+        print(helpers.printable_mystats(rchip2_blendH.flatten()))
+        print(helpers.printable_mystats(rchip2_blendA.flatten()))
+        if isInt:
+            print('is int')
+            rchip2_blendA = np.array(rchip2_blendA, dtype=float)
+            rchip2_blendH = np.array(rchip2_blendH, dtype=float)
+        else:
+            print('is float')
+        print('div stats')
+        print(helpers.printable_mystats(rchip2_blendH.flatten()))
+        print(helpers.printable_mystats(rchip2_blendA.flatten()))
+        rchip2_blendA = color.lab2rgb(rchip2_blendA)
+        rchip2_blendH = color.lab2rgb(rchip2_blendH)
+        if isInt:
+            print('is int')
+            rchip2_blendA = np.array(np.round(rchip2_blendA * 255), dtype=np.uint8)
+            rchip2_blendH = np.array(np.round(rchip2_blendH * 255), dtype=np.uint8)
+        print('changed stats')
+        print(helpers.printable_mystats(rchip2_blendH.flatten()))
+        print(helpers.printable_mystats(rchip2_blendA.flatten()))
+    else:
+        rchip2_blendA = np.zeros((h2, w2), dtype=rchip2.dtype)
+        rchip2_blendH = np.zeros((h2, w2), dtype=rchip2.dtype)
+        rchip2_blendA = rchip2 / 2 + rchip1_At / 2
+        rchip2_blendH = rchip2 / 2 + rchip1_Ht / 2
 
     def _draw_chip(title, chip, px, *args, **kwargs):
         df2.imshow(chip, *args, title=title, fnum=1, pnum=(3, 4, px), **kwargs)
@@ -420,24 +465,32 @@ def test():
     # Draw original matches, affine inliers, and homography inliers
     def _draw_matches(title, fm, px):
         # Helper with common arguments to df2.show_matches2
-        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs=None, fnum=1,
-                          pnum=(3, 3, px), title=title, all_kpts=False,
-                          draw_lines=True, doclf=True)
+        dmkwargs = dict(fs=None, title=title, all_kpts=False, draw_lines=True,
+                        doclf=True, fnum=1, pnum=(3, 3, px))
+        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, **dmkwargs)
 
-    # Show the matches
+    # Draw the Assigned -> Affine -> Homography matches
     _draw_matches('Assigned matches', fm, 1)
     _draw_matches('Affine inliers', fm[aff_inliers], 2)
     _draw_matches('Homography inliers', fm[inliers], 3)
-
-    # Draw the transformations
+    # Draw the Affine Transformations
     _draw_chip('Source', rchip1, 5)
     _draw_chip('Affine', rchip1_At, 6)
     _draw_chip('Destination', rchip2, 7)
     _draw_chip('Aff Blend', rchip2_blendA, 8)
+    # Draw the Homography Transformation
     _draw_chip('Source', rchip1, 9)
     _draw_chip('Homog', rchip1_Ht, 10)
     _draw_chip('Destination', rchip2, 11)
     _draw_chip('Homog Blend', rchip2_blendH, 12)
+
+
+def test():
+    import dev
+    main_locals = dev.dev_main()
+    hs  = main_locals['hs']        # hotspotter api
+    qcx = main_locals['qcx']       # query chip index
+    viz_spatial_verification(hs, qcx)
 
     #rchip1_invhom = cv2.warpPerspective(rchip1, np.linalg.inv(H), rchip2.shape[0:2])
     #rchip1_invaff = cv2.warpAffine(rchip1, np.linalg.inv(Aff)[0:2, :], rchip2.shape[0:2])
@@ -470,11 +523,11 @@ def test():
     #score = res.cx2_score[cx]
 
 
-
-
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
+    import matplotlib
+    matplotlib.use('Qt4Agg')
     import draw_func2 as df2
     import sys
     print('[sc2] __main__ = spatial_verification2.py')

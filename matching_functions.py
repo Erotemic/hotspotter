@@ -4,6 +4,7 @@ import sys
 from itertools import izip
 # Hotspotter
 import DataStructures as ds
+import QueryResult as qr
 #import helpers
 import nn_filters  # NOQA
 import spatial_verification2 as sv2
@@ -133,7 +134,7 @@ def weight_neighbors(hs, qcx2_nns, query_cfg):
 # Neighbor scoring (Voting Profiles)
 #==========================
 def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw):
-    qfx2_score = np.ones(qfx2_nn.shape, dtype=ds.FS_DTYPE)
+    qfx2_score = np.ones(qfx2_nn.shape, dtype=qr.FS_DTYPE)
     qfx2_valid = np.ones(qfx2_nn.shape, dtype=np.bool)
     #printDBG(filt2_tw)
     # Apply the filter weightings to determine feature validity and scores
@@ -302,9 +303,9 @@ def chipmatch2_neighbors(hs, qcx2_chipmatch, query_cfg):
         fss  = np.hstack(cx2_fs)
         fks  = np.hstack(cx2_fk)
         # Rebuild the nearest neigbhor matrixes
-        qfx2_cx = -np.ones((nQuery, K), np.int)
-        qfx2_fx = -np.ones((nQuery, K), np.int)
-        qfx2_fs = -np.ones((nQuery, K), ds.FS_DTYPE)
+        qfx2_cx = -np.ones((nQuery, K), ds.X_DTYPE)
+        qfx2_fx = -np.ones((nQuery, K), qr.X_DTYPE)
+        qfx2_fs = -np.ones((nQuery, K), qr.FS_DTYPE)
         qfx2_valid = np.zeros((nQuery, K), np.bool)
         # Populate nearest neigbhor matrixes
         for qfx, k in izip(qfxs, fks):
@@ -440,9 +441,9 @@ def spatial_verification(hs, qcx2_chipmatch, query_cfg):
 
 def _fix_fmfsfk(cx2_fm, cx2_fs, cx2_fk):
     # Convert to numpy
-    fm_dtype_ = ds.FM_DTYPE
-    fs_dtype_ = ds.FS_DTYPE
-    fk_dtype_ = ds.FK_DTYPE
+    fm_dtype_ = qr.FM_DTYPE
+    fs_dtype_ = qr.FS_DTYPE
+    fk_dtype_ = qr.FK_DTYPE
     cx2_fm = [np.array(fm, fm_dtype_) for fm in iter(cx2_fm)]
     cx2_fs = [np.array(fs, fs_dtype_) for fs in iter(cx2_fs)]
     cx2_fk = [np.array(fk, fk_dtype_) for fk in iter(cx2_fk)]
@@ -487,7 +488,7 @@ def load_resdict(hs, qcxs, query_cfg, aug=''):
     try:
         qcx2_res = {}
         for qcx in qcxs:
-            res = ds.QueryResult(qcx, real_uid, query_cfg)
+            res = qr.QueryResult(qcx, real_uid, query_cfg)
             res.load(hs)
             qcx2_res[qcx] = res
     except IOError:
@@ -505,7 +506,7 @@ def chipmatch_to_resdict(hs, qcx2_chipmatch, query_cfg, aug=''):
     for qcx in qcx2_chipmatch.iterkeys():
         chipmatch = qcx2_chipmatch[qcx]
         cx2_score = score_chipmatch(hs, qcx, chipmatch, score_method, query_cfg)
-        res = ds.QueryResult(qcx, real_uid, query_cfg)
+        res = qr.QueryResult(qcx, real_uid, query_cfg)
         res.cx2_score = cx2_score
         (res.cx2_fm, res.cx2_fs, res.cx2_fk) = chipmatch
         res.title = (title_uid + ' ' + aug).strip(' ')

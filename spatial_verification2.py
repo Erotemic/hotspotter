@@ -343,13 +343,12 @@ def homography_inliers(kpts1, kpts2, fm,
 
 def test():
     import dev
+    import helpers
     import match_chips3 as mc3
     xy_thresh = .0002
     max_scale = 2
     min_scale = .5
-    #qcx = helpers.get_arg_after('--qcx', type_=int, default=0)
-    #cx  = helpers.get_arg_after('--cx', type_=int)
-    #cx  = 113
+
     main_locals = dev.dev_main()
     hs  = main_locals['hs']        # hotspotter api
     qcx = main_locals['qcx']       # query chip index
@@ -361,40 +360,26 @@ def test():
     cx = gt_cxs[0]  # Pick a ground truth to test against
 
     # Query without spatial verification to get assigned matches
-    #res = mc3.query_database(hs, qcx, sv_on=False)
+    #res = mc3.query_database(hs, qcx, sv_on=False, use_cache=False)
     # For testing purposes query_groundtruth is a bit faster than
     # query_database. But there is no reason you cant query_database
     res = mc3.query_groundtruth(hs, qcx, sv_on=False, use_cache=False)
 
     # Get chip index to feature match
-    fm = res.cx2_fm[cx]
     # A feature match is a list of M 2-tuples.
     # fm = [(0, 5), (3,2), (11, 12), (4,4)]
     # fm[:,0] are keypoint indexes into kpts1
     # fm[:,1] are keypoint indexes into kpts2
-
-    # Get chip index to feature score
-    # These are unused here
-    #fs = res.cx2_fs[cx]
-    #score = res.cx2_score[cx]
+    assert res is not None, 'res is None'
+    fm = res.cx2_fm[cx]
+    if len(fm) == 0:
+        raise Exception('No feature matches for %s' % hs.vs_str(qcx, cx))
 
     # Read the images from disk
     rchip1 = hs.get_chip(qcx)
     rchip2 = hs.get_chip(cx)
-    # Get keypoints
-    kpts1 = hs.get_kpts(qcx)
-    kpts2 = hs.get_kpts(cx)
-    #
-    diaglen_sqrd = rchip2.shape[0] ** 2 + rchip2.shape[1] ** 2
-    # How does Aff map rchip1 to rchip2?
-    Aff, aff_inliers = homography_inliers(kpts1, kpts2, fm, xy_thresh, max_scale,
-                                          min_scale, diaglen_sqrd=diaglen_sqrd,
-                                          min_num_inliers=4, just_affine=True)
-    # How does H map rchip1 onto rchip2?
-    H, inliers = homography_inliers(kpts1, kpts2, fm, xy_thresh, max_scale,
-                                    min_scale, diaglen_sqrd=diaglen_sqrd,
-                                    min_num_inliers=4)
-
+    assert rchip1 is not None, 'rchip1 is None'
+    assert rchip2 is not None, 'rchip2 is None'
     # rchips are in shape = (height, width)
     (h1, w1) = rchip1.shape[0:2]
     (h2, w2) = rchip2.shape[0:2]
@@ -403,12 +388,57 @@ def test():
     print('wh1 = %r' % (wh1,))
     print('wh2 = %r' % (wh2,))
 
+    # Get keypoints
+    kpts1 = hs.get_kpts(qcx)
+    kpts2 = hs.get_kpts(cx)
+    diaglen_sqrd = rchip2.shape[0] ** 2 + rchip2.shape[1] ** 2
+
+    assert kpts1 is not None, 'kpts1 is None'
+    assert kpts2 is not None, 'kpts2 is None'
+    assert fm is not None, 'fm is None'
+    assert xy_thresh is not None, 'xy_thresh is None'
+    assert max_scale is not None, 'max_scale is None'
+    assert min_scale is not None, 'min_scale is None'
+
+    # Get affine and homog mapping from rchip1 to rchip2
+    homog_args = [kpts1, kpts2, fm, xy_thresh, max_scale, min_scale, diaglen_sqrd, 4]
+    Aff, aff_inliers = homography_inliers(*homog_args, just_affine=True)
+    H, inliers = homography_inliers(*homog_args, just_affine=False)
+    print(helpers.horiz_string(['H = ', str(H)]))
+    print(helpers.horiz_string(['Aff = ', str(Aff)]))
+
     # Transform the chips
     rchip1_Ht = cv2.warpPerspective(rchip1, H, wh2)
     rchip1_At = cv2.warpAffine(rchip1, Aff[0:2, :], wh2)
 
     rchip2_blendA = (rchip1_At / 2) + (rchip2 / 2)
     rchip2_blendH = (rchip1_Ht / 2) + (rchip2 / 2)
+
+    def _draw_chip(title, chip, px, *args, **kwargs):
+        df2.imshow(chip, *args, title=title, fnum=1, pnum=(3, 4, px), **kwargs)
+
+    # Draw original matches, affine inliers, and homography inliers
+    def _draw_matches(title, fm, px):
+        # Helper with common arguments to df2.show_matches2
+        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs=None, fnum=1,
+                          pnum=(3, 3, px), title=title, all_kpts=False,
+                          draw_lines=True, doclf=True)
+
+    # Show the matches
+    _draw_matches('Assigned matches', fm, 1)
+    _draw_matches('Affine inliers', fm[aff_inliers], 2)
+    _draw_matches('Homography inliers', fm[inliers], 3)
+
+    # Draw the transformations
+    _draw_chip('Source', rchip1, 5)
+    _draw_chip('Affine', rchip1_At, 6)
+    _draw_chip('Destination', rchip2, 7)
+    _draw_chip('Aff Blend', rchip2_blendA, 8)
+    _draw_chip('Source', rchip1, 9)
+    _draw_chip('Homog', rchip1_Ht, 10)
+    _draw_chip('Destination', rchip2, 11)
+    _draw_chip('Homog Blend', rchip2_blendH, 12)
+
     #rchip1_invhom = cv2.warpPerspective(rchip1, np.linalg.inv(H), rchip2.shape[0:2])
     #rchip1_invaff = cv2.warpAffine(rchip1, np.linalg.inv(Aff)[0:2, :], rchip2.shape[0:2])
 
@@ -422,41 +452,9 @@ def test():
     #rchip1_invaff = cv2.resize(rchip1_invaff, new_sz2)
     #rchip1_ = cv2.resize(rchip1, new_sz1)
     #rchip2_ = cv2.resize(rchip2, new_sz2)
-
-    # Draw the transformations
-
-    def _pnum(px):
-        return (2, 4, px)
-
-    def _imshow1(chip, title, px, *args, **kwargs):
-        df2.imshow(chip, *args, title=title, fnum=1, pnum=_pnum(px), **kwargs)
-    _imshow1(rchip1,    'Source',      1)
-    _imshow1(rchip1_At, 'Affine',      2)
-    _imshow1(rchip2,    'Destination', 3)
-    _imshow1(rchip2_blendA,    'Aff Blend',   4)
-
-    _imshow1(rchip1,    'Source',      5)
-    _imshow1(rchip1_Ht, 'Homog',       6)
-    _imshow1(rchip2,    'Destination', 7)
-    _imshow1(rchip2_blendH,    'Homog Blend', 8)
-
-
-    df2.figure(6, pnum=(1, 3, 1))
-
-    # Draw original matches, affine inliers, and homography inliers
-    def _show_matches(fm, **kwargs):
-        # Helper with common arguments to df2.show_matches2
-        df2.show_matches2(rchip1, rchip2, kpts1, kpts2, fm, fs=None,
-                          all_kpts=False, draw_lines=True, doclf=True, **kwargs)
-    _show_matches(fm, title='Assigned matches', pnum=(1, 3, 1))
-    _show_matches(fm[aff_inliers], title='Affine inliers', pnum=(1, 3, 2))
-    _show_matches(fm[inliers], title='Homography inliers', pnum=(1, 3, 3))
-
-
     #print(fm)
     #print('Homography inliers')
     #print(inliers)
-    #print('H')
     #print(H)
     #print(rchip1.shape, rchip2.shape)
     #print('Affine inliers')
@@ -466,6 +464,14 @@ def test():
     #print (kpts1.shape, kpts2.shape)
     #print (cv2.getAffineTransform(kpts1[aff_inliers], kpts2[aff_inliers]))
 
+    # Get chip index to feature score
+    # These are unused here
+    #fs = res.cx2_fs[cx]
+    #score = res.cx2_score[cx]
+
+
+
+
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
@@ -473,4 +479,4 @@ if __name__ == '__main__':
     import sys
     print('[sc2] __main__ = spatial_verification2.py')
     test()
-    exec(df2.present())
+    exec(df2.present(num_rc=(1, 1), wh=2500))

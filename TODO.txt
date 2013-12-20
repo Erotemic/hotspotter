@@ -19,3 +19,6 @@ Tail to nose select orientation does not allow correct direction selection.
 
 
 Change file doesn't exist to Cache Miss
+
+
+Get rid of the qon_list in dev.py

@@ -312,26 +312,26 @@ def plot_keypoint_scales(hs, fnum=1):
 def get_qon_list(hs):
     print('[dev] get_qon_list()')
     # Get query ids
-    qon_list = []
     histids = None if hs.args.histid is None else np.array(hs.args.histid)
     if hs.args.all_cases:
-        qon_list = zip(*get_cases(hs, with_gt=True, with_nogt=True))
+        qon_all = zip(*get_cases(hs, with_gt=True, with_nogt=True))
     elif hs.args.all_gt_cases:
-        qon_list = zip(*get_cases(hs, with_hard=True, with_gt=True, with_nogt=False))
+        qon_all = zip(*get_cases(hs, with_hard=True, with_gt=True, with_nogt=False))
     elif hs.args.qcid is None:
-        qon_hard = zip(*get_cases(hs, with_hard=True, with_gt=False, with_nogt=False))
-        if histids is None:
-            print('[dev] Chosen all hard histids')
-            qon_list += qon_hard
-        elif not histids is None:
-            print('[dev] Chosen histids=%r' % histids)
-            qon_list += [qon_hard[id_] for id_ in histids]
+        qon_all = zip(*get_cases(hs, with_hard=True, with_gt=False, with_nogt=False))
     else:
         print('[dev] Chosen qcid=%r' % hs.args.qcid)
         qcx_list =  helpers.ensure_iterable(hs.cid2_cx(hs.args.qcid))
         ocid_list = [hs.get_other_indexed_cxs(cx) for cx in qcx_list]
         note_list = ['user selected qcid'] * len(qcx_list)
-        qon_list += zip(*[qcx_list, ocid_list, note_list])
+        qon_all = zip(*[qcx_list, ocid_list, note_list])
+
+    if histids is None:
+        qon_list = qon_all
+    elif not histids is None:
+        histids = helpers.ensure_iterable(histids)
+        print('[dev] Chosen histids=%r' % histids)
+        qon_list = [qon_all[id_] for id_ in histids]
 
     if len(qon_list) == 0:
         if hs.args.strict:

@@ -1,20 +1,37 @@
+#--- Annoyances ----
+
+* When there is one chip in the database it reports a weird error on query.
+* Make this error more descriptive. 
+
+FIXED ~~* When editing the name of an animal, it has to redraw the chip and image ~~
+        ~~* before the name editing can happen. ~~
+
+
+#--- Issues ----
+
+Query Result saves query indexes instead of query-ids
+
+---
+
+# Add option to force computation of queries
+# Add option to delete all precomputed queries
+
 Add Option: save_database on query
 
-Get the spatial verification demo working. Homography seems to be broken. 
-Try and fix these problems. 
+FIXED: ~~Get the spatial verification demo working. Homography seems to be broken. ~~
+FIXED: ~~Try and fix these problems. ~~
 
 Disallow clicks to other figures in an interaction mode.
 
 Fix depricated ginput
 
-
+HALF_FIXED: NEED TO REMOVE OLD CODE. 
 ChipCompute recieved a divide by zero error when using target area. 
 It must not be getting the valid cx list correctly. 
 
 
-
 Tail to nose select orientation does not allow correct direction selection.
-* switch to atan2
+FIXED: ~~* switch to atan2~~
 * add arrow widget 
 
 

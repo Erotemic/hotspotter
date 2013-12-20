@@ -695,20 +695,20 @@ class HotSpotter(DynStruct):
         chip = Image.open(hs.cpaths.cx2_rchip_path[cx])
         return chip
 
-    def _cx2_rchip_size(hs, cx):
-        rchip_path = hs.cpaths.cx2_rchip_path[cx]
-        if rchip_path is None:
-            return (0, 0)
-        return Image.open(rchip_path).size
+    #def _cx2_rchip_size(hs, cx):
+        #rchip_path = hs.cpaths.cx2_rchip_path[cx]
+        #if rchip_path is None:
+            #return (0, 0)
+        #return Image.open(rchip_path).size
 
-    def load_cx2_rchip_size(hs):
-        # TODO: this should be integrated in hs.cpaths instead
-        cx2_rchip_path = hs.cpaths.cx2_rchip_path
-        cx2_rchip_size = [(0, 0) if path is None else Image.open(path).size for path in cx2_rchip_path]
-        hs.cx2_rchip_size = cx2_rchip_size
+    #def load_cx2_rchip_size(hs):
+        ## TODO: this should be integrated in hs.cpaths instead
+        #cx2_rchip_path = hs.cpaths.cx2_rchip_path
+        #cx2_rchip_size = [(0, 0) if path is None else Image.open(path).size for path in cx2_rchip_path]
+        #hs.cx2_rchip_size = cx2_rchip_size
 
-    def get_cx2_rchip_size(hs):
-        cx_input = hs.get_valid_cxs()
+    def cx2_rchip_size(hs, cx_input):
+        #cx_input = hs.get_valid_cxs()
         cx2_rchip_size = hs.cpaths.cx2_rchip_size
         return hs._onthefly_cxlist_get(cx_input, cx2_rchip_size, hs.load_chips)
     #---------------

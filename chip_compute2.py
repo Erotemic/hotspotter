@@ -70,6 +70,7 @@ def xywh_to_tlbr(roi, img_wh):
     y2 = min(y + h, img_h - 1)
     return (x1, y1, x2, y2)
 
+
 # =======================================
 # Parallelizable Work Functions
 # =======================================
@@ -444,7 +445,7 @@ def load_chips(hs, cx_list=None, **kwargs):
         hs.cpaths.cx2_rchip_path[cx] = rfpath_list[lx]
     for lx, cx in enumerate(cx_list):
         hs.cpaths.cx2_rchip_size[cx] = rsize_list[lx]
-    hs.load_cx2_rchip_size()  # TODO: Loading rchip size should be handled more robustly
+    #hs.load_cx2_rchip_size()  # TODO: Loading rchip size should be handled more robustly
     print('[cc2]=============================')
 
 

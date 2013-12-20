@@ -383,7 +383,7 @@ def spatial_verification(hs, qcx2_chipmatch, query_cfg):
     use_chip_extent = sv_cfg.use_chip_extent
     min_nInliers    = sv_cfg.min_nInliers
     just_affine     = sv_cfg.just_affine
-    cx2_rchip_size = hs.get_cx2_rchip_size()
+    cx2_rchip_size  = hs.cpaths.cx2_rchip_size
     cx2_kpts = hs.feats.cx2_kpts
     qcx2_chipmatchSV = {}
     print(query_cfg._dcxs)

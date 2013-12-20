@@ -31,6 +31,11 @@ def init_ui(win):
     return ui
 
 
+def tblheader_text(tbl, col):
+    header_item = str(tbl.horizontalHeaderItem(2))
+    return header_item.text()
+
+
 def connect_file_signals(win):
     ui = win.ui
     backend = win.backend
@@ -284,6 +289,21 @@ class MainWindowFrontend(QtGui.QMainWindow):
             raise Exception(msg)
         self._populate_table(tbl, col_headers, col_editable, row_list, row2_datatup)
 
+    def get_tbl_header(self, tbl, col):
+        return str(tbl.horizontalHeaderItem(col).text())
+
+    def get_tbl_cid(self, tbl, row, cid_col):
+        cid_header = self.get_tbl_header(tbl, cid_col)
+        assert cid_header == 'Chip ID', 'Header is %s' % cid_header
+        cid = int(tbl.item(row, cid_col).text())
+        return cid
+
+    def get_tbl_gid(self, tbl, row, gid_col):
+        gid_header = self.get_tbl_header(tbl, gid_col)
+        assert gid_header == 'Image Index', 'Header is %s' % gid_header
+        gid = int(tbl.item(row, gid_col).text())
+        return gid
+
     # Table Changed Functions
     @pyqtSlot(QtGui.QTableWidgetItem)
     def img_tbl_changed(self, item):
@@ -292,71 +312,77 @@ class MainWindowFrontend(QtGui.QMainWindow):
 
     @pyqtSlot(QtGui.QTableWidgetItem)
     def chip_tbl_changed(self, item):
-        'A Chip had a data member changed '
+        'Chip Table Chip Changed'
         self.print('chip_tbl_changed()')
-        sel_row = item.row()
-        sel_col = item.column()
+        tbl = self.ui.chip_TBL
+        row, col = (item.row(), item.column())
         # Get selected chipid
-        sel_cid = int(self.ui.chip_TBL.item(sel_row, 0).text())
+        sel_cid = self.get_tbl_cid(tbl, row, 0)
         # Get the changed property key and value
         new_val = str(item.text()).replace(',', ';;')  # sanatize for csv
         # Get which column is being changed
-        header_lbl = str(self.ui.chip_TBL.horizontalHeaderItem(sel_col).text())
+        header_lbl = self.get_tbl_header(tbl, col)
         # Tell the backend about the change
         self.changeCidSignal.emit(sel_cid, header_lbl, new_val)
 
     @pyqtSlot(QtGui.QTableWidgetItem)
     def res_tbl_changed(self, item):
-        'A Chip was Renamed in Result View'
+        'Result Table Chip Changed'
         self.print('res_tbl_changed()')
-        sel_row  = item.row()  # The changed row
-        sel_col = item.column()
-        sel_cid  = int(self.ui.res_TBL.item(sel_row, 2).text())  # The changed row's chip id
+        tbl = self.ui.res_TBL
+        row, col = (item.row(), item.column())
+        sel_cid  = self.get_tbl_cid(tbl, row, 2)  # The changed row's chip id
         # Get which column is being changed
-        header_lbl = str(self.ui.res_TBL.horizontalHeaderItem(sel_col).text())
+        header_lbl = self.get_tbl_header(tbl, col)
         # The changed items's value
         new_val = str(item.text()).replace(',', ';;')  # sanatize for csv
         # Tell the backend about the change
         self.changeCidSignal.emit(sel_cid, header_lbl, new_val)
-        # Hendrik/Jason TODO:
-        # It would be nice if we could get a vizualization similar to the chip
-        # vizualization so that the clicked result gets a 1v1 comparison view w/
-        # query Matching keypoints should be able to be clicked and show the top
-        # 5 rows of the top matching keypoints where each row shows the query
-        # patch, the matched patch, and the normalizing patch
 
     # Table Clicked Functions
     @pyqtSlot(QtGui.QTableWidgetItem)
     def res_tbl_clicked(self, item):
-        sel_row = item.row()
-        sel_col = item.column()
-        self.print('res_tbl_clicked(%r, %r)' % (sel_row, sel_col))
+        'Result Table Clicked'
+        tbl = self.ui.res_TBL
+        row, col = (item.row(), item.column())
+        self.print('res_tbl_clicked(%r, %r)' % (row, col))
+        if self.get_tbl_header(tbl, col) == 'Matching Name':
+            self.print('[front] does not select when clicking name column')
+            return
         if item == self.prev_tbl_item:
             return
         self.prev_tbl_item = item
-        header_lbl = str(self.ui.res_TBL.horizontalHeaderItem(2).text())
-        assert header_lbl == 'Chip ID'
-        sel_cid = int(self.ui.res_TBL.item(sel_row, 2).text())
+        # Get the clicked Chip ID (from res tbl)
+        sel_cid = self.get_tbl_cid(tbl, row, 2)
         self.selectResSignal.emit(sel_cid)
 
     @pyqtSlot(QtGui.QTableWidgetItem)
     def img_tbl_clicked(self, item):
-        self.print('img_tbl_clicked()')
+        'Image Table Clicked'
+        tbl = self.ui.image_TBL
+        row = item.row()
+        self.print('img_tbl_clicked(%r)' % (row))
         if item == self.prev_tbl_item:
             return
         self.prev_tbl_item = item
-        sel_row = item.row()
-        sel_gid = int(self.ui.image_TBL.item(sel_row, 0).text())
+        # Get the clicked Image ID
+        sel_gid = self.get_tbl_gid(tbl, row, 0)
         self.selectGxSignal.emit(sel_gid)
 
     @pyqtSlot(QtGui.QTableWidgetItem)
     def chip_tbl_clicked(self, item):
-        self.print('chip_tbl_clicked()')
+        'Chip Table Clicked'
+        tbl = self.ui.chip_TBL
+        row, col = (item.row(), item.column())
+        self.print('chip_tbl_clicked(%r, %r)' % (row, col))
+        if self.get_tbl_header(tbl, col) == 'Name':
+            self.print('[front] does not select when clicking name column')
+            return
         if item == self.prev_tbl_item:
             return
         self.prev_tbl_item = item
-        sel_row = item.row()
-        sel_cid = int(self.ui.chip_TBL.item(sel_row, 0).text())
+        # Get the clicked Chip ID (from chip tbl)
+        sel_cid = self.get_tbl_cid(tbl, row, 0)
         self.selectCidSignal.emit(sel_cid)
 
     @pyqtSlot(int, name='change_view')

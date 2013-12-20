@@ -102,7 +102,7 @@ def nn_roidist_weight(hs, qcx2_nns, query_cfg):
     'Filters a matches to those within roughly the same spatial arangement'
     data_index = query_cfg._data_index
     K = query_cfg.nn_cfg.K
-    cx2_rchip_size = hs.get_cx2_rchip_size()
+    cx2_rchip_size = hs.cpaths.cx2_rchip_size
     cx2_kpts = hs.feats.cx2_kpts
     dx2_cx = data_index.ax2_cx
     dx2_fx = data_index.ax2_fx

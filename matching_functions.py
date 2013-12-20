@@ -372,9 +372,10 @@ def _precompute_topx2_dlen_sqrd(cx2_rchip_size, cx2_kpts, cx2_fm, topx2_cx,
 def spatial_verification(hs, qcx2_chipmatch, query_cfg):
     sv_cfg = query_cfg.sv_cfg
     if not sv_cfg.sv_on or sv_cfg.xy_thresh is None:
+        print('[mf] Step 5) Spatial verification: off')
         return qcx2_chipmatch
     print('[mf] Step 5) Spatial verification: %r' % ''.join(sv_cfg.get_uid()))
-    prescore_method  = sv_cfg.prescore_method
+    prescore_method = sv_cfg.prescore_method
     nShortlist      = sv_cfg.nShortlist
     xy_thresh       = sv_cfg.xy_thresh
     min_scale = sv_cfg.scale_thresh_low
@@ -385,6 +386,8 @@ def spatial_verification(hs, qcx2_chipmatch, query_cfg):
     cx2_rchip_size = hs.get_cx2_rchip_size()
     cx2_kpts = hs.feats.cx2_kpts
     qcx2_chipmatchSV = {}
+    print(query_cfg._dcxs)
+    dcxs_ = set(query_cfg._dcxs)
     USE_1_to_2 = True
     # Find a transform from chip2 to chip1 (the old way was 1 to 2)
     for qcx in qcx2_chipmatch.iterkeys():
@@ -392,7 +395,8 @@ def spatial_verification(hs, qcx2_chipmatch, query_cfg):
         chipmatch = qcx2_chipmatch[qcx]
         cx2_prescore = score_chipmatch(hs, qcx, chipmatch, prescore_method, query_cfg)
         (cx2_fm, cx2_fs, cx2_fk) = chipmatch
-        topx2_cx = cx2_prescore.argsort()[::-1]
+        topx2_cx = cx2_prescore.argsort()[::-1]  # Only allow indexed cxs to be in the top results
+        topx2_cx = [cx for cx in iter(topx2_cx) if cx in dcxs_]
         nRerank = min(len(topx2_cx), nShortlist)
         # Precompute output container
         cx2_fm_V, cx2_fs_V, cx2_fk_V = new_fmfsfk(hs)

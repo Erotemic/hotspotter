@@ -9,7 +9,7 @@ import tools
 import warnings
 from PyQt4 import QtCore, QtGui
 from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
-                      Qt, QObject, pyqtSlot)
+                      QString, Qt, QObject, pyqtSlot)
 
 # ---
 # GLOBALS
@@ -78,6 +78,9 @@ class PrefInternal(DynStruct):
         # Some preferences are constrained to a list of choices
         if choices is not None:
             _intern.value = PrefChoice(choices, default)
+
+    def type(_intern):
+        return type(_intern.value)
 
 
 class PrefTree(DynStruct):
@@ -370,12 +373,12 @@ class Pref(PrefNode):
 
     def pref_update(self, key, new_val):
         'Changes a prefeters value and saves it to disk'
-        printDBG('Updating Preference: %s to %r' % (key, str(new_val)))
+        print('Update and save pref from: %s=%r, to: %s=%r' % (key, str(self[key]), key, str(new_val)))
         self.__setattr__(key, new_val)
         return self.save()
 
     def update(self, **kwargs):
-        printDBG('Updating Preference: kwargs = %r' % (kwargs))
+        #print('Updating Preference: kwargs = %r' % (kwargs))
         self_keys = set(self.__dict__.keys())
         for key, val in kwargs.iteritems():
             if key in self_keys:
@@ -411,6 +414,9 @@ class Pref(PrefNode):
         data = self.value()
         if isinstance(data, Pref):  # Recursive Case: Pref
             data = ''
+        elif data is None:
+            # Check for a get of None
+            data = 'None'
         return data
 
     def qt_is_editable(self):
@@ -425,6 +431,11 @@ class Pref(PrefNode):
 
     def qt_set_leaf_data(self, qvar):
         'Sets backend data using QVariants'
+        print('[pref] qt_set_leaf_data: qvar=%r' % qvar)
+        print('[pref] qt_set_leaf_data: _intern.name=%r' % self._intern.name)
+        print('[pref] qt_set_leaf_data: _intern.type_=%r' % self._intern.type())
+        print('[pref] qt_set_leaf_data: _intern.value=%r' % self._intern.value)
+
         if self._tree.parent is None:
             raise Exception('[Pref.qtleaf] Cannot set root preference')
         if self.qt_is_editable():
@@ -441,20 +452,25 @@ class Pref(PrefNode):
                         except Exception:
                             continue
                 new_val = cast_order(str(qvar.toString()))
+            if isinstance(self._intern.value, bool):
+                new_val = bool(qvar.toBool())
             elif isinstance(self._intern.value, int):
                 new_val = int(qvar.toInt()[0])
-            elif isinstance(self._intern.value, str):
-                new_val = str(qvar.toString())
             elif isinstance(self._intern.value, float):
                 new_val = float(qvar.toFloat()[0])
-            elif isinstance(self._intern.value, bool):
-                new_val = bool(qvar.toBool())
+            elif isinstance(self._intern.value, str):
+                new_val = str(qvar.toString())
             elif isinstance(self._intern.value, PrefChoice):
                 new_val = qvar.toString()
+                # Check for a set of None
+                if new_val == 'None':
+                    new_val = None
             else:
                 raise ValueError('[Pref.qtleaf] Unknown internal type = %r' %
                                  type(self._intern.value))
              # save to disk after modifying data
+            print('[pref] qt_set_leaf_data: new_val=%r' % new_val)
+            print('[pref] qt_set_leaf_data: type(new_val)=%r' % type(new_val))
             return self._tree.parent.pref_update(self._intern.name, new_val)
         return 'PrefNotEditable'
 
@@ -500,7 +516,17 @@ class QPreferenceModel(QAbstractItemModel):
         if role != Qt.DisplayRole and role != Qt.EditRole:
             return QVariant()
         nodePref = self.index2Pref(index)
-        return QVariant(nodePref.qt_get_data(index.column()))
+        data = nodePref.qt_get_data(index.column())
+        var = QVariant(data)
+        #print('--- data() ---')
+        #print('role = %r' % role)
+        #print('data = %r' % data)
+        #print('type(data) = %r' % type(data))
+        if isinstance(data, float):
+            var = QVariant(QString.number(data, format='g', precision=6))
+        #print('var= %r' % var)
+        #print('type(var)= %r' % type(var))
+        return var
 
     @report_thread_error
     def index(self, row, col, parent=QModelIndex()):
@@ -550,6 +576,10 @@ class QPreferenceModel(QAbstractItemModel):
         'Sets the role data for the item at index to value.'
         if role != Qt.EditRole:
             return False
+        #print('--- setData() ---')
+        #print('role = %r' % role)
+        #print('data = %r' % data)
+        #print('type(data) = %r' % type(data))
         leafPref = self.index2Pref(index)
         result = leafPref.qt_set_leaf_data(data)
         if result is True:

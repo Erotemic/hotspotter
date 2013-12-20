@@ -24,3 +24,29 @@ Change file doesn't exist to Cache Miss
 Get rid of the qon_list in dev.py
 
 Utilize exif tags in images
+
+
+Features seem to be loaded too often
+
+#-----------
+# I need to get a paper this next semester
+# I need to get candidate
+
+Big thing is multiple views
+
+Zebraness - 
+
+Parts based recognition from non-forground 
+
+Identificiation before species recognition 
+
+Adaptive Scale and Coverarge
+
+What happens when we have more than one view in the database
+
+What is the right similarity measure
+
+Turning scores into probabilities
+
+# ---
+

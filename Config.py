@@ -71,7 +71,7 @@ class NNConfig(ConfigBase):
     def __init__(nn_cfg, **kwargs):
         super(NNConfig, nn_cfg).__init__()
         # Core
-        nn_cfg.K = 2
+        nn_cfg.K = 4
         nn_cfg.Knorm = 1
         # Filters
         nn_cfg.checks  = 1024  # 512#128
@@ -109,7 +109,7 @@ class FilterConfig(ConfigBase):
         addfilt(-1, 'recip',     0, 0)  # Higher scores are better
         addfilt(+1, 'bursty', None, 0)  # Lower  scores are better
         addfilt(-1, 'ratio',  None, 0)  # Higher scores are better
-        addfilt(-1, 'lnbnn',  None, 0)  # Higher scores are better
+        addfilt(-1, 'lnbnn',  None, .01)  # Higher scores are better
         addfilt(-1, 'lnrat',  None, 0)  # Higher scores are better
         #addfilt(+1, 'scale' )
         filt_cfg._filt2_tw = {}
@@ -119,7 +119,6 @@ class FilterConfig(ConfigBase):
         '''
         removes invalid parameter settings over all cfgs (move to QueryConfig)
         '''
-        nn_cfg = query_cfg.nn_cfg
 
         # Ensure the list of on filters is valid given the weight and thresh
         if filt_cfg.ratio_thresh <= 1:
@@ -154,12 +153,14 @@ class FilterConfig(ConfigBase):
             _ensure_filter(filt, sign)
 
         # Set Knorm to 0 if there is no normalizing filter on.
-        norm_depends = ['lnbnn', 'ratio', 'lnrat']
-        if nn_cfg.Knorm <= 0 and not any_inlist(filt_cfg._nnfilter_list, norm_depends):
-            #listrm_list(filt_cfg._nnfilter_list , norm_depends)
-            # FIXME: Knorm is not independent of the other parameters.
-            # Find a way to make it independent.
-            nn_cfg.Knorm = 0
+        if query_cfg is not None:
+            nn_cfg = query_cfg.nn_cfg
+            norm_depends = ['lnbnn', 'ratio', 'lnrat']
+            if nn_cfg.Knorm <= 0 and not any_inlist(filt_cfg._nnfilter_list, norm_depends):
+                #listrm_list(filt_cfg._nnfilter_list , norm_depends)
+                # FIXME: Knorm is not independent of the other parameters.
+                # Find a way to make it independent.
+                nn_cfg.Knorm = 0
 
     def get_uid(filt_cfg):
         if not filt_cfg.filt_on:
@@ -183,7 +184,7 @@ class SpatialVerifyConfig(ConfigBase):
         super(SpatialVerifyConfig, sv_cfg).__init__(name='sv_cfg')
         sv_cfg.scale_thresh_low = .5
         sv_cfg.scale_thresh_high = 2
-        sv_cfg.xy_thresh = .01
+        sv_cfg.xy_thresh = .002
         sv_cfg.nShortlist = 1000
         sv_cfg.prescore_method = 'csum'
         sv_cfg.use_chip_extent = False
@@ -368,5 +369,48 @@ class DisplayConfig(ConfigBase):
         super(DisplayConfig, display_cfg).__init__(name='display_cfg')
         display_cfg.N = 5
         display_cfg.name_scoring = False
-        display_cfg.showanalysis = True
+        display_cfg.showanalysis = False
         display_cfg.annotations  = True
+
+
+# Convinience
+def __dict_default_func(dict_):
+    # Sets keys only if they dont exist
+    def set_key(key, val):
+        if not key in dict_:
+            dict_[key] = val
+    return set_key
+
+
+def default_display_cfg(**kwargs):
+    display_cfg = DisplayConfig(**kwargs)
+    return display_cfg
+
+
+def default_chip_cfg(**kwargs):
+    chip_cfg = ChipConfig(**kwargs)
+    return chip_cfg
+
+
+def default_feat_cfg(hs, **kwargs):
+    feat_cfg = FeatureConfig(hs, **kwargs)
+    return feat_cfg
+
+
+def default_vsmany_cfg(hs, **kwargs):
+    kwargs['query_type'] = 'vsmany'
+    query_cfg = QueryConfig(hs, **kwargs)
+    return query_cfg
+
+
+def default_vsone_cfg(hs, **kwargs):
+    kwargs['query_type'] = 'vsone'
+    kwargs_set = __dict_default_func(kwargs)
+    kwargs_set('lnbnn_weight', 0)
+    kwargs_set('checks', 256)
+    kwargs_set('K', 1)
+    kwargs_set('Knorm', 1)
+    kwargs_set('ratio_weight', 1.0)
+    kwargs_set('ratio_thresh', 1.5)
+    query_cfg = QueryConfig(hs, **kwargs)
+    return query_cfg

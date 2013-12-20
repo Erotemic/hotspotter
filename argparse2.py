@@ -114,15 +114,16 @@ def behavior_argparse(parser2):
 
 def cfg_argparse(parser2):
     parser2 = parser2.add_argument_group('Config')
-    import DataStructures as ds
-    _qcfg = ds.default_vsmany_cfg(None)
-    _fcfg = ds.default_feat_cfg(None)
-    _ccfg = ds.default_chip_cfg()
+    import Config
+    _qcfg = Config.default_vsmany_cfg(None)
+    _fcfg = Config.default_feat_cfg(None)
+    _ccfg = Config.default_chip_cfg()
+    _dcfg = Config.default_display_cfg()
     _filtcfg = _qcfg.filt_cfg
     _svcfg = _qcfg.sv_cfg
     _nncfg = _qcfg.nn_cfg
     _aggcfg = _qcfg.agg_cfg
-    defcfg_list = [_fcfg, _ccfg, _filtcfg, _svcfg, _nncfg, _aggcfg]
+    defcfg_list = [_fcfg, _ccfg, _filtcfg, _svcfg, _nncfg, _aggcfg, _dcfg]
     for cfg in defcfg_list:
         for key, val in cfg.iteritems():
             if key.find('_') == 0:

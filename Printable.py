@@ -226,6 +226,18 @@ class DynStruct(AbstractPrintable):
                 dyn_dict[key] = val
         return dyn_dict
 
+    def flat_dict(self, dyn_dict={}, only_public=True):
+        for (key, val) in self.__dict__.iteritems():
+            if key in self._printable_exclude:
+                continue
+            elif only_public and key.find('_') == 0:
+                continue
+            elif isinstance(val, DynStruct):
+                val.flat_dict(dyn_dict, only_public)
+            else:
+                dyn_dict[key] = val
+        return dyn_dict
+
     def execstr(self, local_name):
         '''returns a string which when evaluated will
            add the stored variables to the current namespace

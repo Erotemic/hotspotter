@@ -8,6 +8,7 @@ import helpers
 from helpers import tic, toc
 import dev
 import DataStructures as ds
+import Config
 import matching_functions as mf
 
 # Toggleable printing
@@ -46,7 +47,8 @@ def rrr():
 def query_dcxs(hs, qcx, dcxs, query_cfg=None, dochecks=True, **kwargs):
     'wrapper that bypasses all that "qcx2_ map" buisness'
     if dochecks and query_cfg is None:
-        query_cfg = hs.prefs.query_cfg
+        query_cfg = Config.default_vsmany_cfg(hs, **kwargs)
+        #query_cfg = hs.prefs.query_cfg
     query_uid = ''.join(query_cfg.get_uid('noCHIP'))
     feat_uid = ''.join(query_cfg._feat_cfg.get_uid())
     query_hist_id = (query_uid, feat_uid)

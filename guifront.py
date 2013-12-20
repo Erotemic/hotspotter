@@ -103,6 +103,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
     quitSignal      = pyqtSignal()
     selectGxSignal  = pyqtSignal(int)
     selectCidSignal = pyqtSignal(int)
+    selectResSignal = pyqtSignal(int)
     changeCidSignal = pyqtSignal(int, str, str)
     querySignal = pyqtSignal()
 
@@ -134,6 +135,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         self.selectGxSignal.connect(backend.select_gx)
         self.selectCidSignal.connect(backend.select_cid)
         self.changeCidSignal.connect(backend.change_chip_property)
+        self.selectResSignal.connect(backend.select_res_cid)
         self.querySignal.connect(backend.query)
 
         # Menubar signals
@@ -335,7 +337,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         header_lbl = str(self.ui.res_TBL.horizontalHeaderItem(2).text())
         assert header_lbl == 'Chip ID'
         sel_cid = int(self.ui.res_TBL.item(sel_row, 2).text())
-        self.selectCidSignal.emit(sel_cid)
+        self.selectResSignal.emit(sel_cid)
 
     @pyqtSlot(QtGui.QTableWidgetItem)
     def img_tbl_clicked(self, item):

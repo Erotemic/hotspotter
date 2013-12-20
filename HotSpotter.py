@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image
 # Hotspotter
 import DataStructures as ds
+import Config
 import chip_compute2 as cc2
 import convert_db
 import feature_compute2 as fc2
@@ -99,6 +100,7 @@ class HotSpotter(DynStruct):
 
     def load_preferences(hs):
         print('[hs] load preferences')
+        hs.default_preferences()
         pref_load_success = hs.prefs.load()
         print('[hs] Able to load prefs? ...%s' %
               ('Yes' if pref_load_success else 'No'))
@@ -109,10 +111,10 @@ class HotSpotter(DynStruct):
 
     def default_preferences(hs):
         print('[hs] defaulting preferences')
-        hs.prefs.display_cfg = ds.default_display_cfg()
-        hs.prefs.chip_cfg  = ds.default_chip_cfg()
-        hs.prefs.feat_cfg  = ds.default_feat_cfg(hs)
-        hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
+        hs.prefs.display_cfg = Config.default_display_cfg()
+        hs.prefs.chip_cfg  = Config.default_chip_cfg()
+        hs.prefs.feat_cfg  = Config.default_feat_cfg(hs)
+        hs.prefs.query_cfg = Config.default_vsmany_cfg(hs)
 
     def update_preferences(hs, **kwargs):
         print('[hs] updateing preferences')
@@ -270,7 +272,7 @@ class HotSpotter(DynStruct):
     #---------------
     def query(hs, qcx, dochecks=True):
         if hs.prefs.query_cfg is None and dochecks:
-            hs.prefs.query_cfg = ds.default_vsmany_cfg(hs)
+            hs.prefs.query_cfg = Config.default_vsmany_cfg(hs)
             hs.refresh_data()
         try:
             res = mc3.query_database(hs, qcx, hs.prefs.query_cfg, dochecks=dochecks)
@@ -571,6 +573,7 @@ class HotSpotter(DynStruct):
         except IndexError as ex:
             print('[hs] ERROR %r ' % ex)
             print('[hs] ERROR a cid in %r does not exist.' % (cid_input,))
+            raise
         return cx_output
 
     def get_nx2_cxs(hs):

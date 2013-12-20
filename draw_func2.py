@@ -344,25 +344,20 @@ def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
                      row_first=True, no_tile=False):
     'Lays out all figures in a grid. if wh is a scalar, a golden ratio is used'
     from matplotlib.backends import backend_qt4
-
     if no_tile:
         return
-
     if not np.iterable(wh):
         wh = golden_wh(wh)
-
     num_rows, num_cols = num_rc
     w, h = wh
     x_off, y_off = xy_off
     w_off, h_off = wh_off
     x_pad, y_pad = (0, 0)
-
     printDBG('[df2] Tile all figures: ')
     printDBG('[df2]     wh = %r' % ((w, h),))
     printDBG('[df2]     xy_offsets = %r' % ((x_off, y_off),))
     printDBG('[df2]     wh_offsets = %r' % ((w_off, h_off),))
     printDBG('[df2]     xy_pads = %r' % ((x_pad, y_pad),))
-
     if sys.platform == 'win32':
         h_off +=   0
         w_off +=  40
@@ -370,7 +365,6 @@ def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
         y_off +=  40
         x_pad +=   0
         y_pad += 100
-
     all_figures = get_all_figures()
     all_qt4wins = get_all_qt4_wins()
 
@@ -844,7 +838,8 @@ def get_ax(fnum=None, pnum=None):
     return ax
 
 
-def figure(fnum=None, doclf=False, title=None, pnum=(1, 1, 1), figtitle=None, **kwargs):
+def figure(fnum=None, doclf=False, title=None, pnum=(1, 1, 1), figtitle=None,
+           trueclf=False, **kwargs):
     '''
     fnum = fignum = figure number
     pnum = plotnum = plot tuple
@@ -860,6 +855,8 @@ def figure(fnum=None, doclf=False, title=None, pnum=(1, 1, 1), figtitle=None, **
         nc = pnum // 10 - (nr * 10)
         px = pnum - (nr * 100) - (nc * 10)
         pnum = (nr, nc, px)
+    if trueclf:  # a bit hacky. Need to rectify doclf and trueclf
+        fig.clf()
     # Get the subplot
     if doclf or len(axes_list) == 0:
         printDBG('[df2] *** NEW FIGURE %r.%r ***' % (fnum, pnum))
@@ -1147,8 +1144,8 @@ def feat_scores_to_color(fs, cmap_='hot'):
     return colors
 
 
-def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
-                  color_list=None):
+def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
+                color_list=None):
     if not DISTINCT_COLORS:
         color_list = None
     # input data
@@ -1178,17 +1175,10 @@ def draw_matches2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
     ax.add_collection(line_group)
 
 
-def draw_kpts2(kpts, offset=(0, 0),
-               ell=SHOW_ELLS,
-               pts=False,
-               pts_color=ORANGE,
-               pts_size=POINT_SIZE,
-               ell_alpha=ELL_ALPHA,
-               ell_linewidth=ELL_LINEWIDTH,
-               ell_color=ELL_COLOR,
-               color_list=None,
-               wrong_way=False,
-               rect=None):
+def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
+               pts_size=POINT_SIZE, ell_alpha=ELL_ALPHA,
+               ell_linewidth=ELL_LINEWIDTH, ell_color=ELL_COLOR,
+               color_list=None, wrong_way=False, rect=None):
     if not DISTINCT_COLORS:
         color_list = None
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
@@ -1349,30 +1339,26 @@ def stack_images(img1, img2, vert=None):
     return imgB, woff, hoff
 
 
-def show_matches2(rchip1, rchip2, kpts1, kpts2,
-                  fm=None, fs=None, fnum=None, pnum=None,
-                  title=None, vert=None, all_kpts=True,
-                  draw_lines=True,
-                  draw_ell=True,
-                  draw_pts=True,
-                  ell_alpha=None,
-                  lbl1=None,
-                  lbl2=None, **kwargs):
+def draw_matches2(rchip1, rchip2, kpts1, kpts2, fm=None, fs=None, title=None,
+                  vert=None, all_kpts=True, draw_lines=True, draw_ell=True,
+                  draw_pts=True, ell_alpha=None, lbl1=None, lbl2=None,
+                  fnum=None, pnum=None, show_nMatches=False, **kwargs):
     '''Draws feature matches
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''
+    printDBG('[df2] draw_matches2() fnum=%r, pnum=%r' % (fnum, pnum))
     if fm is None:
-        assert kpts1.shape == kpts2.shape
+        assert kpts1.shape == kpts2.shape, 'fm must not be none if keypoints have different shapes'
         fm = np.tile(np.arange(0, len(kpts1)), (2, 1)).T
     # get matching keypoints + offset
-    (h1, w1) = rchip1.shape[0:2]  # get chip dimensions
+    (h1, w1) = rchip1.shape[0:2]  # get chip (h, w) dimensions
     (h2, w2) = rchip2.shape[0:2]
     match_img, woff, hoff = stack_images(rchip1, rchip2, vert)
-    fig, ax = imshow(match_img, fnum=fnum,
-                     pnum=pnum, title=title,
-                     **kwargs)
+    # Draw the stacked images
+    fig, ax = imshow(match_img, title=title, fnum=fnum, pnum=pnum)
     nMatches = len(fm)
-    #upperleft_text('#match=%d' % nMatches)
+    if show_nMatches:
+        upperleft_text('#match=%d' % nMatches)
     if lbl1 is not None:
         absolute_lbl(w1, 0, lbl1)
     if lbl2 is not None:
@@ -1389,6 +1375,7 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
         #cmap = lambda x: (x, 1-x, 0)
         #cmap = plt.get_cmap('prism')
         #color_list = [cmap(mx/nMatches) for mx in xrange(nMatches)]
+        # Define args for keypoints, lines, ellipses, ...
         colors = distinct_colors(nMatches)
         pt2_args = dict(pts=draw_pts, ell=False, pts_color=BLACK, pts_size=8)
         pts_args = dict(pts=draw_pts, ell=False, pts_color=ORANGE, pts_size=6,
@@ -1397,12 +1384,12 @@ def show_matches2(rchip1, rchip2, kpts1, kpts2,
         # Draw matching ellipses
         offset = (woff, hoff)
 
-        def _drawkpts(**kwargs):
-            draw_kpts2(kpts1[fm[:, 0]], **kwargs)
-            draw_kpts2(kpts2[fm[:, 1]], offset=offset, **kwargs)
+        def _drawkpts(**_kwargs):
+            draw_kpts2(kpts1[fm[:, 0]], **_kwargs)
+            draw_kpts2(kpts2[fm[:, 1]], offset=offset, **_kwargs)
 
-        def _drawlines(**kwargs):
-            draw_matches2(kpts1, kpts2, fm, fs, kpts2_offset=offset, **kwargs)
+        def _drawlines(**_kwargs):
+            draw_lines2(kpts1, kpts2, fm, fs, kpts2_offset=offset, **_kwargs)
         # Draw matching lines
         if draw_ell:
             _drawkpts(**ell_args)

@@ -1249,9 +1249,9 @@ class RedirectStdout(object):
         return self.record
 
     def update(self):
-        self.stream.flush()
-        self.record = self.stream.read()
-        self._stdout_old.write(indent(self.record, self.lbl))
+        self.stop()
+        self.dump()
+        self.start()
 
     def dump(self):
         print(indent(self.record, self.lbl))

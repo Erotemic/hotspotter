@@ -83,6 +83,7 @@ def select_next_in_order(self):
     return 'end of the list'
 
 
+# SLOT DECORATOR
 def slot_(*types):  # This is called at wrap time to get args
     'wrapper around pyqtslot decorator'
     DEBUG = True
@@ -98,9 +99,10 @@ def slot_(*types):  # This is called at wrap time to get args
                 argstr_list = map(str, args)
                 kwastr_list = ['%s=%s' % item for item in kwargs.iteritems()]
                 argstr = ', '.join(argstr_list + kwastr_list)
-                print('[**back] %s(%s)' % (func_name, argstr))
+                print('[**back.slot_] %s(%s)' % (func_name, argstr))
+                #with helpers.Indenter():
                 result = func(self, *args, **kwargs)
-                print('[**back] Finished %s(%s)' % (func_name, argstr))
+                print('[**back.slot_] Finished %s(%s)' % (func_name, argstr))
                 return result
 
             slot_wrapper.func_name = func_name
@@ -118,20 +120,47 @@ def slot_(*types):  # This is called at wrap time to get args
     return pyqtSlotWrapper
 
 
+# BLOCKING DECORATOR
 def blocking(func):
     print('[@back] Wrapping %r with blocking' % func.func_name)
 
     def block_wrapper(self, *args, **kwargs):
-        print('[back] BLOCKING')
-        wasBlocked = self.blockSignals(True)
+        #print('[back] BLOCKING')
+        #wasBlocked = self.blockSignals(True)
         wasBlocked_ = self.win.blockSignals(True)
-        result = func(self, *args, **kwargs)
-        self.blockSignals(wasBlocked)
+        try:
+            result = func(self, *args, **kwargs)
+        except Exception as ex:
+            #self.blockSignals(wasBlocked)
+            self.win.blockSignals(wasBlocked_)
+            print('Block wrapper caugt exception in %r' % func.func_name)
+            print('self = %r' % self)
+            print('*args = %r' % (args,))
+            print('**kwargs = %r' % (kwargs,))
+            print('ex = %r' % ex)
+            self.user_info('Error in blocking ex=%r' % ex)
+            raise
+        #self.blockSignals(wasBlocked)
         self.win.blockSignals(wasBlocked_)
-        print('[back] UNBLOCKING')
+        #print('[back] UNBLOCKING')
         return result
     block_wrapper.func_name = func.func_name
     return block_wrapper
+
+
+# DRAWING DECORATOR
+def drawing(func):
+    print('[@back] Wrapping %r with drawing' % func.func_name)
+
+    def drawing_wrapper(self, *args, **kwargs):
+        #print('[back] DRAWING')
+        result = func(self, *args, **kwargs)
+        #print('[back] DONE DRAWING')
+        if kwargs.get('dodraw', True) or DISABLE_NODRAW:
+            df2.draw()
+        return result
+    drawing_wrapper.func_name = func.func_name
+    return drawing_wrapper
 
 
 #------------------------
@@ -169,44 +198,61 @@ class MainWindowBackend(QtCore.QObject):
     #------------------------
     # Draw Functions
     #------------------------
+    @drawing
     def show_splash(self, fnum=1, view='Nice', **kwargs):
-        fig = df2.figure(fnum=fnum, doclf=True)
-        fig.clf()
+        df2.figure(fnum=fnum, doclf=True, trueclf=True)
         viz.show_splash(fnum=fnum)
         df2.set_figtitle('%s View' % view)
-        if kwargs.get('dodraw', True) or DISABLE_NODRAW:
-            df2.draw()
 
+    @drawing
     def show_image(self, gx, sel_cxs=[], figtitle='Image View', **kwargs):
-        fig = df2.figure(fnum=1, doclf=True)
-        fig.clf()
+        df2.figure(fnum=1, doclf=True, trueclf=True)
         cx_clicked_func = lambda cx: self.select_gx(gx, cx)
         viz.show_image(self.hs, gx, sel_cxs, cx_clicked_func,
                        fnum=1, figtitle=figtitle)
-        if kwargs.get('dodraw', True) or DISABLE_NODRAW:
-            df2.draw()
 
+    @drawing
     def show_chip(self, cx, **kwargs):
-        fig = df2.figure(fnum=2, doclf=True)
-        fig.clf()
+        df2.figure(fnum=2, doclf=True, trueclf=True)
         INTERACTIVE_CHIPS = True  # This should always be True
         if INTERACTIVE_CHIPS:
             interact_fn = viz.show_chip_interaction
             interact_fn(self.hs, cx, fnum=2, figtitle='Chip View')
         else:
             viz.show_chip(self.hs, cx, fnum=2, figtitle='Chip View')
-        if kwargs.get('dodraw', True) or DISABLE_NODRAW:
-            df2.draw()
 
-    def show_query(self, res, **kwargs):
-        fig = df2.figure(fnum=3, doclf=True)
-        fig.clf()
+    @drawing
+    def show_query_result(self, res, **kwargs):
+        df2.figure(fnum=3, doclf=True, trueclf=True)
+
+        def clicked_cid_fn(cid):
+            cx_list = [self.hs.cid2_cx(cid)]
+            return self.show_single_query(res, cx_list)
+        ctrl_clicked_fn = drawing(viz.get_sv_from_cid_fn(self.hs, res.qcx))
         if self.hs.prefs.display_cfg.showanalysis:
-            res.show_analysis(self.hs, fnum=3, figtitle='Analysis View')
+            # Define callback for show_analysis
+            res.show_analysis(self.hs, fnum=3, figtitle=' Analysis View',
+                              clicked_cid_fn=clicked_cid_fn,
+                              ctrl_clicked_cid_fn=ctrl_clicked_fn)
         else:
-            res.show_top(self.hs, fnum=3, figtitle='Query View ')
-        if kwargs.get('dodraw', True) or DISABLE_NODRAW:
-            df2.draw()
+            res.show_top(self.hs, fnum=3, figtitle='Query View ',
+                         clicked_cid_fn=clicked_cid_fn,
+                         ctrl_clicked_cid_fn=ctrl_clicked_fn)
+
+    @drawing
+    def show_single_query(self, res, cx_list, **kwargs):
+        # Define callback for show_analysis
+
+        @drawing
+        def clicked_cid_fn(cid):
+            print('clicked me')
+            pass
+        df2.figure(fnum=4, doclf=True, trueclf=True)
+        ctrl_clicked_fn = drawing(viz.get_sv_from_cid_fn(self.hs, res.qcx))
+        res.show_analysis(self.hs, fnum=4, cx_list=cx_list, noshow_gt=True,
+                          figtitle=' Result Inspection View',
+                          clicked_cid_fn=clicked_cid_fn,
+                          ctrl_clicked_fn=ctrl_clicked_fn)
 
     #----------------------
     # Work Functions
@@ -287,8 +333,8 @@ class MainWindowBackend(QtCore.QObject):
 
     def populate_chip_table(self):
         print('[*back] populate_chip_table()')
-        col_headers  = ['Chip ID', 'Name', 'Image', 'Num Indexed Others']
-        col_editable = [False,       True,   False,                False]
+        col_headers  = ['Chip ID', 'Name', 'Image', '#GT']
+        col_editable = [False,       True,   False, False]
         # Add User Properties to headers
         prop_dict = self.hs.tables.prop_dict
         prop_keys = prop_dict.keys()
@@ -364,20 +410,29 @@ class MainWindowBackend(QtCore.QObject):
 
     # Table Click -> Chip Table
     @slot_(int)
-    @blocking
     def select_cid(self, cid, **kwargs):
         cx = self.hs.cid2_cx(cid)
-        gx = self.hs.tables.cx2_gx[cx]
+        gx = self.hs.cx2_gx(cx)
         self.select_gx(gx, cx=cx, **kwargs)
+
+    # Table Click -> Chip Table
+    @slot_(int)
+    def select_res_cid(self, cid, **kwargs):
+        cx = self.hs.cid2_cx(cid)
+        gx = self.hs.cx2_gx(cx)
+        self.select_gx(gx, cx=cx, dodraw=False, **kwargs)
+        self.show_single_query(self.current_res, [cx], **kwargs)
 
     # Button Click -> Preferences Defaults
     @slot_()
+    @blocking
     def default_preferences(self):
         # TODO: Propogate changes back to self.edit_prefs.ui
         self.hs.default_preferences()
 
     # Table Edit -> Change Chip Property
     @slot_(int, str, str)
+    @blocking
     def change_chip_property(self, cid, key, val):
         key, val = map(str, (key, val))
         print('[*back] change_chip_property(%r, %r, %r)' % (cid, key, val))
@@ -395,6 +450,7 @@ class MainWindowBackend(QtCore.QObject):
     #--------------------------------------------------------------------------
     # File -> New Database
     @slot_()
+    @blocking
     def new_database(self):
         new_db = self.user_input('Enter the new database name')
         msg_put = 'Where should I put %r?' % new_db
@@ -428,6 +484,7 @@ class MainWindowBackend(QtCore.QObject):
 
     # File -> Open Database
     @slot_()
+    @blocking
     def open_database(self, db_dir=None):
         try:
             # Use the same args in a new (opened) database
@@ -451,11 +508,13 @@ class MainWindowBackend(QtCore.QObject):
 
     # File -> Save Database
     @slot_()
+    @blocking
     def save_database(self):
         self.hs.save_database()
 
     # File -> Import Images
     @slot_()
+    @blocking
     def import_images(self):
         print('[*back] import images')
         msg = 'Import specific files or whole directory?'
@@ -469,6 +528,7 @@ class MainWindowBackend(QtCore.QObject):
 
     # File -> Import Images From File
     @slot_()
+    @blocking
     def import_images_from_file(self):
         fpath_list = guitools.select_images('Select image files to import')
         self.hs.add_images(fpath_list)
@@ -477,6 +537,7 @@ class MainWindowBackend(QtCore.QObject):
 
     # File -> Import Images From Directory
     @slot_()
+    @blocking
     def import_images_from_dir(self):
         img_dpath = guitools.select_directory('Select directory with images in it')
         print('[*back] selected %r' % img_dpath)
@@ -495,6 +556,7 @@ class MainWindowBackend(QtCore.QObject):
     #--------------------------------------------------------------------------
     # Action -> New Chip Property
     @slot_()
+    @blocking
     def new_prop(self):
         newprop = self.user_input('What is the new property name?')
         self.hs.add_property(newprop)
@@ -505,6 +567,7 @@ class MainWindowBackend(QtCore.QObject):
 
     # Action -> Add ROI
     @slot_()
+    @blocking
     def add_chip(self):
         gx = self.get_selected_gx()
         self.show_image(gx, figtitle='Image View - Select ROI (click two points)')
@@ -521,32 +584,34 @@ class MainWindowBackend(QtCore.QObject):
 
     # Action -> Query
     @slot_()
+    @blocking
     def query(self, cid=None):
         #prevBlock = self.win.blockSignals(True)
-        print(r'[\back] query()')
-        if cid is not None:
-            self.select_cid(cid, dodraw=False)
-        cx = self.get_selected_cx()
+        print('[**back] query(cid=%r)' % cid)
+        cx = self.get_selected_cx() if cid is None else self.hs.cid2_cx(cid)
+        print('[**back.query()] cx = %r)' % cx)
         if cx is None:
-            #self.win.blockSignals(prevBlock)
             self.user_info('Cannot query. No chip selected')
             return
-        res = self.hs.query(cx)
+        try:
+            res = self.hs.query(cx)
+        except Exception as ex:
+            # TODO Catch actuall exceptions here
+            print('[**back.query()] ex = %r' % ex)
+            raise
         if isinstance(res, str):
             self.user_info(res)
-            #self.win.blockSignals(prevBlock)
             return
         self.current_res = res
         self.populate_result_table()
         print(r'[/back] finished query')
         print('')
-        self.show_query(res)
-        print('')
-        #self.win.blockSignals(prevBlock)
+        self.show_query_result(res)
         return res
 
     # Action -> Reselect ROI
     @slot_()
+    @blocking
     def reselect_roi(self, **kwargs):
         print(r'[\back] reselect_roi()')
         cx = self.get_selected_cx()
@@ -592,6 +657,7 @@ class MainWindowBackend(QtCore.QObject):
 
     # Action -> Delete Chip
     @slot_()
+    @blocking
     def delete_chip(self):
         cx = self.get_selected_cx()
         if cx is None:
@@ -608,6 +674,7 @@ class MainWindowBackend(QtCore.QObject):
 
     # Action -> Next
     @slot_()
+    @blocking
     def select_next(self):
         select_mode = 'in_order'  # 'unannotated'
         if select_mode == 'in_order':
@@ -624,6 +691,7 @@ class MainWindowBackend(QtCore.QObject):
     #--------------------------------------------------------------------------
     # Batch -> Precompute Feats
     @slot_()
+    @blocking
     def precompute_feats(self):
         #prevBlock = self.win.blockSignals(True)
         self.hs.update_samples()
@@ -633,6 +701,7 @@ class MainWindowBackend(QtCore.QObject):
 
     # Batch -> Precompute Queries
     @slot_()
+    @blocking
     def precompute_queries(self):
         # TODO:
         #http://stackoverflow.com/questions/15637768/
@@ -667,6 +736,7 @@ class MainWindowBackend(QtCore.QObject):
     #--------------------------------------------------------------------------
     # Options -> Layout Figures
     @slot_()
+    @blocking
     def layout_figures(self):
         if self.app is not None:
             app = self.app
@@ -677,7 +747,7 @@ class MainWindowBackend(QtCore.QObject):
         else:
             print('[*back] WARNING: cannot detect screen geometry')
             dlen = 1618
-        df2.present(num_rc=(2, 2), wh=dlen, wh_off=(0, 60))
+        df2.present(num_rc=(2, 3), wh=dlen, wh_off=(0, 60))
 
     # Options -> Edit Preferences
     @slot_()
@@ -716,6 +786,7 @@ class MainWindowBackend(QtCore.QObject):
 
     # Help -> Developer Help
     @slot_()
+    @blocking
     def dev_help(self):
         backend = self  # NOQA
         hs = self.hs    # NOQA

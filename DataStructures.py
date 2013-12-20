@@ -7,7 +7,6 @@ import helpers
 
 import numpy as np
 from Printable import DynStruct
-import Config
 
 ID_DTYPE = np.int32  # id datatype
 X_DTYPE  = np.int32  # indeX datatype
@@ -167,51 +166,3 @@ class HotspotterChipFeatures(DynStruct):
         self.cx2_desc = []
         self.cx2_kpts = []
         self.feat_uid = ''
-
-
-# Convinience
-def __dict_default_func(dict_):
-    # Sets keys only if they dont exist
-    def set_key(key, val):
-        if not key in dict_:
-            dict_[key] = val
-    return set_key
-
-
-def default_display_cfg(**kwargs):
-    display_cfg = Config.DisplayConfig(**kwargs)
-    return display_cfg
-
-
-def default_chip_cfg(**kwargs):
-    chip_cfg = Config.ChipConfig(**kwargs)
-    return chip_cfg
-
-
-def default_feat_cfg(hs, **kwargs):
-    feat_cfg = Config.FeatureConfig(hs, **kwargs)
-    return feat_cfg
-
-
-def default_vsmany_cfg(hs, **kwargs):
-    kwargs['query_type'] = 'vsmany'
-    kwargs_set = __dict_default_func(kwargs)
-    kwargs_set('lnbnn_weight', .01)
-    kwargs_set('xy_thresh', .1)
-    kwargs_set('K', 4)
-    kwargs_set('Knorm', 1)
-    query_cfg = Config.QueryConfig(hs, **kwargs)
-    return query_cfg
-
-
-def default_vsone_cfg(hs, **kwargs):
-    kwargs['query_type'] = 'vsone'
-    kwargs_set = __dict_default_func(kwargs)
-    kwargs_set('lnbnn_weight', 0)
-    kwargs_set('checks', 256)
-    kwargs_set('K', 1)
-    kwargs_set('Knorm', 1)
-    kwargs_set('ratio_weight', 1.0)
-    kwargs_set('ratio_thresh', 1.5)
-    query_cfg = Config.QueryConfig(hs, **kwargs)
-    return query_cfg

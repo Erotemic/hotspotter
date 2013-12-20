@@ -30,7 +30,7 @@ def print_top_res_scores(hs, res, view_top=10, SV=True):
     #other_cx   = hs.get_other_cxs(qcx)
     other_cx   = hs.get_other_indexed_cxs(qcx)
     top_cx     = cx2_score.argsort()[::-1]
-    top_scores = cx2_score[top_cx] 
+    top_scores = cx2_score[top_cx]
     top_nx     = cx2_nx[top_cx]
     view_top   = min(len(top_scores), np.uint32(view_top))
     print('---------------------------------------')
@@ -71,7 +71,7 @@ def plot_cx2(hs, res, style='kpts', subdir=None, annotations=True, title_aug='')
         print('[viz] Plotting'+title)
         df2.imshow(rchip, fignum=FIGNUM, title=title, doclf=True)
         df2.draw_kpts2(kpts)
-    if 'gt_matches' == style: 
+    if 'gt_matches' == style:
         subdir = 'gt_matches' if subdir is None else subdir
         show_gt_matches(hs, res, fignum=FIGNUM)
     if 'top5' == style:
@@ -85,3 +85,129 @@ def plot_cx2(hs, res, style='kpts', subdir=None, annotations=True, title_aug='')
     __dump_or_browse(hs, subdir)
 
 
+
+
+# SPLIT PLOTS
+
+def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
+              show_query=False, all_kpts=False, annote=True, query_cfg=None,
+              split_plots=False, interact=True, **kwargs):
+    ''' Displays query chip, groundtruth matches, and top 5 matches'''
+    #printDBG('[viz._show_res()] %s ' % helpers.printableVal(locals()))
+    fnum = kwargs.pop('fnum', 3)
+    #print('========================')
+    #print('[viz] Show chip matches:')
+    if topN_cxs is None:
+        topN_cxs = []
+    if gt_cxs is None:
+        gt_cxs = []
+    qcx = res.qcx
+    all_gts = hs.get_other_indexed_cxs(qcx)
+    #print('[viz._show_res()]----------------')
+    print('[viz._show_res()] #topN=%r #missed_gts=%r/%r' % (len(topN_cxs),
+                                                            len(gt_cxs),
+                                                            len(all_gts)))
+    #printDBG('[viz._show_res()] * max_nCols=%r' % (max_nCols,))
+    #printDBG('[viz._show_res()] * show_query=%r' % (show_query,))
+    ranked_cxs = res.topN_cxs(hs, N='all')
+    # Build a subplot grid
+    nQuerySubplts = 1 if show_query else 0
+    nGtSubplts = nQuerySubplts + (0 if gt_cxs is None else len(gt_cxs))
+    nTopNSubplts  = 0 if topN_cxs is None else len(topN_cxs)
+    nTopNCols = min(max_nCols, nTopNSubplts)
+    nGTCols   = min(max_nCols, nGtSubplts)
+    if not split_plots:
+        nGTCols = max(nGTCols, nTopNCols)
+        nTopNCols = nGTCols
+    nGtRows   = 0 if nGTCols == 0 else int(np.ceil(nGtSubplts / nGTCols))
+    nTopNRows = 0 if nTopNCols == 0 else int(np.ceil(nTopNSubplts / nTopNCols))
+    nGtCells = nGtRows * nGTCols
+    if split_plots:
+        nRows = nGtRows
+    else:
+        nRows = nTopNRows + nGtRows
+    # Helper function for drawing matches to one cx
+
+    def _show_matches_fn(cx, orank, pnum):
+        'helper for viz._show_res'
+        aug = 'rank=%r\n' % orank
+        #printDBG('[viz._show_res()] plotting: %r'  % (pnum,))
+        kwshow  = dict(draw_ell=annote, draw_pts=annote, draw_lines=annote,
+                       ell_alpha=.5, all_kpts=all_kpts, **kwargs)
+        show_matches_annote_res(res, hs, cx, title_aug=aug, fnum=fnum, pnum=pnum, **kwshow)
+
+    def _show_query_fn(plotx_shift, rowcols):
+        'helper for viz._show_res'
+        plotx = plotx_shift + 1
+        pnum = (rowcols[0], rowcols[1], plotx)
+        #printDBG('[viz._show_res()] Plotting Query: pnum=%r' % (pnum,))
+        show_chip(hs, res=res, pnum=pnum, draw_kpts=annote, prefix='q', fnum=fnum)
+
+    # Helper to draw many cxs
+    def _plot_matches_cxs(cx_list, plotx_shift, rowcols):
+        'helper for viz._show_res'
+        #printDBG('[viz._show_res()] Plotting Chips %s:' % hs.cidstr(cx_list))
+        if cx_list is None:
+            return
+        for ox, cx in enumerate(cx_list):
+            plotx = ox + plotx_shift + 1
+            pnum = (rowcols[0], rowcols[1], plotx)
+            oranks = np.where(ranked_cxs == cx)[0]
+            if len(oranks) == 0:
+                orank = -1
+                continue
+            orank = oranks[0] + 1
+            _show_matches_fn(cx, orank, pnum)
+
+    #query_uid = res.query_uid
+    #query_uid = re.sub(r'_trainID\([0-9]*,........\)', '', query_uid)
+    #query_uid = re.sub(r'_indxID\([0-9]*,........\)', '', query_uid)
+    #query_uid = re.sub(r'_dcxs\(........\)', '', query_uid)
+    #print('[viz._show_res()] fnum=%r' % fnum)
+
+    fig = df2.figure(fnum=fnum, pnum=(nRows, nGTCols, 1), doclf=True)
+    fig.clf()
+    df2.plt.subplot(nRows, nGTCols, 1)
+    # Plot Query
+    if show_query:
+        _show_query_fn(0, (nRows, nGTCols))
+    # Plot Ground Truth
+    _plot_matches_cxs(gt_cxs, nQuerySubplts, (nRows, nGTCols))
+    # Plot TopN in a new figure
+    if split_plots:
+        #df2.set_figtitle(figtitle + 'GT', query_uid)
+        nRows = nTopNRows
+        fig = df2.figure(fnum=fnum + 9000)
+        fig.clf()
+        df2.plt.subplot(nRows, nTopNCols, 1)
+        shift_topN = 0
+    else:
+        shift_topN = nGtCells
+    _plot_matches_cxs(topN_cxs, shift_topN, (nRows, nTopNCols))
+    if split_plots:
+        pass
+        #df2.set_figtitle(figtitle + 'topN', query_uid)
+    else:
+        pass
+        #df2.set_figtitle(figtitle, query_uid)
+        df2.set_figtitle(figtitle)
+
+    if interact:
+        #printDBG('[viz._show_res()] starting interaction')
+        # Create
+        def _on_res_click(event):
+            'result interaction mpl event callback slot'
+            print('[viz] clicked result')
+            if event.xdata is None:
+                return
+            _show_res(hs, res, figtitle=figtitle, max_nCols=max_nCols, topN_cxs=topN_cxs,
+                      gt_cxs=gt_cxs, show_query=show_query, all_kpts=all_kpts,
+                      annote=not annote, split_plots=split_plots,
+                      interact=interact, **kwargs)
+            fig.canvas.draw()
+
+        df2.disconnect_callback(fig, 'button_press_event')
+        if interact:
+            df2.connect_callback(fig, 'button_press_event', _on_res_click)
+    #printDBG('[viz._show_res()] Finished')
+    return fig

@@ -37,6 +37,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     import HotSpotter
     import guitools
+    import guiback
     import helpers
     print('main.py')
     signal_set()
@@ -61,7 +62,7 @@ if __name__ == '__main__':
         if hs.args.strict:
             raise
     # Create main window only after data is loaded
-    backend = guitools.make_main_window(hs, app)
+    backend = guiback.make_main_window(hs, app)
 
     # --- Run Startup Commands ---
     # Autocompute all queries

@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from os.path import split
 import sys
-import warnings
+#import warnings
 import numpy as np
 import PyQt4
 from PyQt4 import Qt, QtCore, QtGui
@@ -46,7 +46,7 @@ def configure_matplotlib():
 
 def select_orientation():
     import draw_func2 as df2
-    from matplotlib.backend_bases import mplDeprecation
+    #from matplotlib.backend_bases import mplDeprecation
     print('[*guitools] Define an orientation angle by clicking two points')
     try:
         # Compute an angle from user interaction
@@ -58,7 +58,7 @@ def select_orientation():
         pts = np.array(fig.ginput(2))
         #print('[*guitools] ginput(2) = %r' % pts)
         # Get reference point to origin
-        refpt = pts[0] - pts[1]
+        refpt = pts[1] - pts[0]
         #theta = np.math.atan2(refpt[1], refpt[0])
         theta = np.math.atan2(refpt[1], refpt[0])
         print('The angle in radians is: %r' % theta)
@@ -71,7 +71,7 @@ def select_orientation():
 
 def select_roi():
     import draw_func2 as df2
-    from matplotlib.backend_bases import mplDeprecation
+    #from matplotlib.backend_bases import mplDeprecation
     print('[*guitools] Define a Rectanglular ROI by clicking two points.')
     try:
         sys.stdout.flush()
@@ -318,12 +318,6 @@ def make_dummy_main_window():
             self.win.setWindowTitle('Dummy Main Window')
             self.win.show()
     backend = DummyBackend()
-    return backend
-
-
-def make_main_window(*args, **kwargs):
-    import guiback
-    backend = guiback.make_main_window(*args, **kwargs)
     return backend
 
 

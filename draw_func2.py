@@ -1,4 +1,9 @@
 ''' Lots of functions for drawing and plotting visiony things '''
+# TODO: New naming scheme
+# viz_<func_name> will clear everything. The current axes and fig: clf, cla.  # Will add annotations
+# show_<func_name> will always clear the current axes, but not fig: cla # Might # add annotates?
+# plot_<func_name> will not clear the axes or figure. More useful for graphs
+# draw_<func_name> same as plot for now. More useful for images
 from __future__ import division, print_function
 import __builtin__
 # Python
@@ -118,7 +123,6 @@ FONTS.ylabel   = FONTS.small
 FONTS.relative = FONTS.smaller
 
 ORANGE = np.array((255, 127,   0, 255)) / 255.0
-DARK_ORANGE = np.array((127, 63,   0, 255)) / 255.0
 RED    = np.array((255,   0,   0, 255)) / 255.0
 GREEN  = np.array((  0, 255,   0, 255)) / 255.0
 BLUE   = np.array((  0,   0, 255, 255)) / 255.0
@@ -126,8 +130,10 @@ YELLOW = np.array((255, 255,   0, 255)) / 255.0
 BLACK  = np.array((  0,   0,   0, 255)) / 255.0
 WHITE  = np.array((255, 255, 255, 255)) / 255.0
 GRAY   = np.array((127, 127, 127, 255)) / 255.0
-DARK_PURP = np.array((102,  0, 153, 255)) / 255.0
-
+FALSE_RED    = np.array((255,  51,   0, 255)) / 255.0
+TRUE_GREEN   = np.array((  0, 255,   0, 255)) / 255.0
+DARK_ORANGE  = np.array((127,  63,   0, 255)) / 255.0
+UNKNOWN_PURP = np.array((102,   0, 153, 255)) / 255.0
 
 DPI = 80
 #FIGSIZE = (24) # default windows fullscreen
@@ -886,7 +892,7 @@ def figure(fnum=None, doclf=False, title=None, pnum=(1, 1, 1), figtitle=None,
     return fig
 
 
-def draw_pdf(data, draw_support=True, scale_to=None, label=None, colorx=0):
+def plot_pdf(data, draw_support=True, scale_to=None, label=None, colorx=0):
     fig = gcf()
     ax = gca()
     data = np.array(data)
@@ -950,14 +956,14 @@ def show_signature(sig, **kwargs):
     fig.show()
 
 
-def draw_stems(x_data=None, y_data=None):
+def plot_stems(x_data=None, y_data=None):
     if y_data is not None and x_data is None:
         x_data = np.arange(len(y_data))
         pass
     if len(x_data) != len(y_data):
-        print('[df2] WARNING draw_stems(): len(x_data)!=len(y_data)')
+        print('[df2] WARNING plot_stems(): len(x_data)!=len(y_data)')
     if len(x_data) == 0:
-        print('[df2] WARNING draw_stems(): len(x_data)=len(y_data)=0')
+        print('[df2] WARNING plot_stems(): len(x_data)=len(y_data)=0')
     x_data_ = np.array(x_data)
     y_data_ = np.array(y_data)
     x_data_sort = x_data_[y_data_.argsort()[::-1]]
@@ -971,9 +977,10 @@ def draw_stems(x_data=None, y_data=None):
     ax.set_ylim(min(y_data) - 1, max(max(y_data), max(x_data)) + 1)
 
 
-def draw_sift_signature(sift, title=''):
+def plot_sift_signature(sift, title='', fnum=None, pnum=None):
+    figure(fnum=fnum, pnum=pnum)
     ax = gca()
-    draw_bars(sift, 16)
+    plot_bars(sift, 16)
     ax.set_xlim(0, 128)
     ax.set_ylim(0, 256)
     xy, width, height = _axis_xy_width_height(ax)
@@ -986,9 +993,10 @@ def draw_sift_signature(sift, title=''):
     ax.set_xticks(np.arange(9) * 16)
     ax.set_yticks(np.arange(9) * 32)
     ax.set_title(title)
+    return ax
 
 
-def draw_bars(y_data, nColorSplits=1):
+def plot_bars(y_data, nColorSplits=1):
     width = 1
     nDims = len(y_data)
     nGroup = nDims // nColorSplits
@@ -1008,12 +1016,12 @@ def legend():
     ax.legend(prop=FONTS.legend)
 
 
-def draw_histpdf(data, label=None, draw_support=False, nbins=10):
-    freq, _ = draw_hist(data, nbins=nbins)
-    draw_pdf(data, draw_support=draw_support, scale_to=freq.max(), label=label)
+def plot_histpdf(data, label=None, draw_support=False, nbins=10):
+    freq, _ = plot_hist(data, nbins=nbins)
+    plot_pdf(data, draw_support=draw_support, scale_to=freq.max(), label=label)
 
 
-def draw_hist(data, bins=None, nbins=10, weights=None):
+def plot_hist(data, bins=None, nbins=10, weights=None):
     if isinstance(data, list):
         data = np.array(data)
     if bins is None:
@@ -1050,6 +1058,7 @@ def draw_sift(desc, kp=None):
     ''' desc = np.random.rand(128)
         desc = desc / np.sqrt((desc**2).sum())
         desc = np.round(desc * 255) '''
+    # This is draw, because it is an overlay
     ax = gca()
     tau = 2 * np.pi
     DSCALE = .25
@@ -1145,7 +1154,7 @@ def feat_scores_to_color(fs, cmap_='hot'):
 
 
 def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
-                color_list=None):
+                color_list=None, **kwargs):
     if not DISTINCT_COLORS:
         color_list = None
     # input data
@@ -1178,7 +1187,7 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
 def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
                pts_size=POINT_SIZE, ell_alpha=ELL_ALPHA,
                ell_linewidth=ELL_LINEWIDTH, ell_color=ELL_COLOR,
-               color_list=None, wrong_way=False, rect=None):
+               color_list=None, wrong_way=False, rect=None, **kwargs):
     if not DISTINCT_COLORS:
         color_list = None
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
@@ -1339,69 +1348,82 @@ def stack_images(img1, img2, vert=None):
     return imgB, woff, hoff
 
 
-def draw_matches2(rchip1, rchip2, kpts1, kpts2, fm=None, fs=None, title=None,
-                  vert=None, all_kpts=True, draw_lines=True, draw_ell=True,
-                  draw_pts=True, ell_alpha=None, lbl1=None, lbl2=None,
-                  fnum=None, pnum=None, show_nMatches=False, **kwargs):
-    '''Draws feature matches
+def show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm=None, title=None,
+                    vert=False, fnum=None, pnum=None, **kwargs):
+    '''Draws two chips and the feature matches between them. feature matches
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''
     printDBG('[df2] draw_matches2() fnum=%r, pnum=%r' % (fnum, pnum))
-    if fm is None:
-        assert kpts1.shape == kpts2.shape, 'fm must not be none if keypoints have different shapes'
-        fm = np.tile(np.arange(0, len(kpts1)), (2, 1)).T
     # get matching keypoints + offset
     (h1, w1) = rchip1.shape[0:2]  # get chip (h, w) dimensions
     (h2, w2) = rchip2.shape[0:2]
+    # Stack the compared chips
     match_img, woff, hoff = stack_images(rchip1, rchip2, vert)
-    # Draw the stacked images
+    xywh1 = (0, 0, w1, h1)
+    xywh2 = (woff, hoff, w2, h2)
+    # Show the stacked chips
     fig, ax = imshow(match_img, title=title, fnum=fnum, pnum=pnum)
-    nMatches = len(fm)
-    if show_nMatches:
-        upperleft_text('#match=%d' % nMatches)
-    if lbl1 is not None:
-        absolute_lbl(w1, 0, lbl1)
-    if lbl2 is not None:
-        absolute_lbl(w2 + woff, 0 + hoff, lbl2)
-    if all_kpts:
-        # Draw all keypoints as simple points
-        all_args = dict(ell=False, pts=draw_pts, pts_color=GREEN, pts_size=2, ell_alpha=ell_alpha)
-        draw_kpts2(kpts1, **all_args)
-        draw_kpts2(kpts2, offset=(woff, hoff), **all_args)
-    if nMatches == 0:
-        printDBG('[df2] There are no feature matches to plot!')
-    else:
-        #color_list = [((x)/nMatches,1-((x)/nMatches),0) for x in xrange(nMatches)]
-        #cmap = lambda x: (x, 1-x, 0)
-        #cmap = plt.get_cmap('prism')
-        #color_list = [cmap(mx/nMatches) for mx in xrange(nMatches)]
-        # Define args for keypoints, lines, ellipses, ...
-        colors = distinct_colors(nMatches)
-        pt2_args = dict(pts=draw_pts, ell=False, pts_color=BLACK, pts_size=8)
-        pts_args = dict(pts=draw_pts, ell=False, pts_color=ORANGE, pts_size=6,
-                        color_list=add_alpha(colors))
-        ell_args = dict(ell=draw_ell, pts=False, color_list=colors)
-        # Draw matching ellipses
-        offset = (woff, hoff)
+    # Overlay feature match nnotations
+    draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, **kwargs)
+    return ax, xywh1, xywh2
 
+
+def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
+                lbl2=None, fnum=None, pnum=None, rect=False, **kwargs):
+    '''Draws the matching features. This is draw because it is an overlay
+    xywh1 - location of rchip1 in the axes
+    xywh2 - location or rchip2 in the axes
+    '''
+    if fm is None:
+        assert kpts1.shape == kpts2.shape, 'shapes different or fm not none'
+        fm = np.tile(np.arange(0, len(kpts1)), (2, 1)).T
+    pts       = kwargs.get('draw_pts', False)
+    ell       = kwargs.get('draw_ell', True)
+    lines     = kwargs.get('draw_lines', True)
+    ell_alpha = kwargs.get('ell_alpha', .4)
+    num_match = len(fm)
+    print('[df2.draw_fnmatch] num_match=%r' % num_match)
+    x1, y1, w1, h1 = xywh1
+    x2, y2, w2, h2 = xywh2
+    offset2 = (x2, y2)
+    # Custom user label for chips 1 and 2
+    if lbl1 is not None:
+        absolute_lbl(x1 + w1, y1, lbl1)
+    if lbl2 is not None:
+        absolute_lbl(x2 + w2, y2, lbl2)
+    # Plot the number of matches
+    if kwargs.get('show_nMatches', False):
+        upperleft_text('#match=%d' % num_match)
+    # Draw all keypoints in both chips as points
+    if kwargs.get('all_kpts', False):
+        all_args = dict(ell=False, pts=pts, pts_color=GREEN, pts_size=2,
+                        ell_alpha=ell_alpha, rect=rect, **kwargs)
+        draw_kpts2(kpts1, **all_args)
+        draw_kpts2(kpts2, offset=offset2, **all_args)
+    # Draw Lines and Ellipses and Points oh my
+    if num_match > 0:
+        colors = [kwargs['colors']]*num_match if 'colors' in kwargs else distinct_colors(num_match)
+        acols = add_alpha(colors)
+
+        # Helper functions
         def _drawkpts(**_kwargs):
-            draw_kpts2(kpts1[fm[:, 0]], **_kwargs)
-            draw_kpts2(kpts2[fm[:, 1]], offset=offset, **_kwargs)
+            fxs1 = fm[:, 0]
+            fxs2 = fm[:, 1]
+            draw_kpts2(kpts1[fxs1], rect=rect, **_kwargs)
+            draw_kpts2(kpts2[fxs2], offset=offset2, rect=rect, **_kwargs)
 
         def _drawlines(**_kwargs):
-            draw_lines2(kpts1, kpts2, fm, fs, kpts2_offset=offset, **_kwargs)
-        # Draw matching lines
-        if draw_ell:
-            _drawkpts(**ell_args)
-        if draw_lines:
-            _drawlines(color_list=colors)
-        if draw_pts:
-            #_drawkpts(**pts_args)
-            acolors = add_alpha(colors)
-            pts_args.update(dict(pts_size=6, color_list=acolors))
-            _drawkpts(**pt2_args)
-            _drawkpts(**pts_args)
-    return fig, ax, woff, hoff
+            draw_lines2(kpts1, kpts2, fm, fs, kpts2_offset=offset2, **_kwargs)
+
+        # User helpers
+        if ell:
+            _drawkpts(pts=False, ell=True, color_list=colors, **kwargs)
+        if pts:
+            _drawkpts(pts_size=8, pts=True, ell=False, pts_color=BLACK, **kwargs)
+            _drawkpts(pts_size=6, pts=True, ell=False, color_list=acols, **kwargs)
+        if lines:
+            _drawlines(color_list=colors, **kwargs)
+    return None
 
 
 def disconnect_callback(fig, callback_type):

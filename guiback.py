@@ -224,35 +224,17 @@ class MainWindowBackend(QtCore.QObject):
     @drawing
     def show_query_result(self, res, **kwargs):
         df2.figure(fnum=3, doclf=True, trueclf=True)
-
-        def clicked_cid_fn(cid):
-            cx_list = [self.hs.cid2_cx(cid)]
-            return self.show_single_query(res, cx_list)
-        ctrl_clicked_fn = drawing(viz.get_sv_from_cid_fn(self.hs, res.qcx))
         if self.hs.prefs.display_cfg.showanalysis:
             # Define callback for show_analysis
-            res.show_analysis(self.hs, fnum=3, figtitle=' Analysis View',
-                              clicked_cid_fn=clicked_cid_fn,
-                              ctrl_clicked_cid_fn=ctrl_clicked_fn)
+            res.show_analysis(self.hs, fnum=3, figtitle=' Analysis View')
         else:
-            res.show_top(self.hs, fnum=3, figtitle='Query View ',
-                         clicked_cid_fn=clicked_cid_fn,
-                         ctrl_clicked_cid_fn=ctrl_clicked_fn)
+            res.show_top(self.hs, fnum=3, figtitle='Query View ')
 
     @drawing
-    def show_single_query(self, res, cx_list, **kwargs):
+    def show_single_query(self, res, cx, **kwargs):
         # Define callback for show_analysis
-
-        @drawing
-        def clicked_cid_fn(cid):
-            print('clicked me')
-            pass
         df2.figure(fnum=4, doclf=True, trueclf=True)
-        ctrl_clicked_fn = drawing(viz.get_sv_from_cid_fn(self.hs, res.qcx))
-        res.show_analysis(self.hs, fnum=4, cx_list=cx_list, noshow_gt=True,
-                          figtitle=' Result Inspection View',
-                          clicked_cid_fn=clicked_cid_fn,
-                          ctrl_clicked_fn=ctrl_clicked_fn)
+        res.interact_chipres(self.hs, cx, fnum=4, figtitle=' Result Inspection View')
 
     #----------------------
     # Work Functions
@@ -421,7 +403,7 @@ class MainWindowBackend(QtCore.QObject):
         cx = self.hs.cid2_cx(cid)
         gx = self.hs.cx2_gx(cx)
         self.select_gx(gx, cx=cx, dodraw=False, **kwargs)
-        self.show_single_query(self.current_res, [cx], **kwargs)
+        self.show_single_query(self.current_res, cx, **kwargs)
 
     # Button Click -> Preferences Defaults
     @slot_()

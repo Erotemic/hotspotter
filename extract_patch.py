@@ -20,7 +20,11 @@ def svd(M):
     return U, S, V
 
 
-def draw_keypoint_patch(rchip, kp, desc=None, warped=False, **kwargs):
+def draw_warped_keypoint_patch(rchip, kp, **kwargs):
+    return draw_keypoint_patch(rchip, kp, warped=True, **kwargs)
+
+
+def draw_keypoint_patch(rchip, kp, sift=None, warped=False, **kwargs):
     #print('--------------------')
     #print('[extract] Draw Patch')
     if warped:
@@ -33,10 +37,11 @@ def draw_keypoint_patch(rchip, kp, desc=None, warped=False, **kwargs):
     #print('[extract] subkp = '+str(subkp))
     #print('[extract] patch.shape = %r' % (patch.shape,))
     color = (0, 0, 1)
-    df2.imshow(patch, **kwargs)
+    fig, ax = df2.imshow(patch, **kwargs)
     df2.draw_kpts2([subkp], ell_color=color, pts=True)
-    if not desc is None:
-        df2.draw_sift(desc, [subkp])
+    if not sift is None:
+        df2.draw_sift(sift, [subkp])
+    return ax
     #df2.draw_border(df2.gca(), color, 1)
 
 

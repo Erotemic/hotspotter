@@ -6,6 +6,7 @@ import os
 from os.path import exists, join, split, relpath
 from itertools import izip
 import shutil
+import functools
 # Science
 import numpy as np
 from PIL import Image
@@ -266,6 +267,7 @@ class HotSpotter(DynStruct):
         print('[hs] delete_cxdata(cx=%r)' % cx)
         cid = hs.tables.cx2_cid[cx]
         hs.delete_ciddata(cid)
+        #hs._read_chip.clear_cache()
 
     #---------------
     # Query Functions
@@ -546,6 +548,7 @@ class HotSpotter(DynStruct):
             gname = join(hs.dirs.img_dir, gname)
         return gname
 
+    #@functools.lru_cache(max_size=5)
     def gx2_image(hs, gx):
         img_fpath = hs.gx2_gname(gx, full=True)
         img = io.imread(img_fpath)
@@ -653,10 +656,11 @@ class HotSpotter(DynStruct):
     # Precomputed properties
 
     @tools.class_iter_input
+    @tools.debug_exception
     def _try_cxlist_get(hs, cx_input, cx2_var):
         ''' Input: cx_input: a vector input, cx2_var: a array mapping cx to a
         variable Returns: list of values corresponding with cx_input '''
-        ret = [cx2_var[cx_] for cx_ in cx_input]
+        ret = [cx2_var[cx] for cx in cx_input]
         # None is invalid in a cx2_var array
         if any([val is None for val in ret]):
             raise IndexError()
@@ -684,16 +688,20 @@ class HotSpotter(DynStruct):
         cx2_rchip_path = hs.cpaths.cx2_rchip_path
         return hs._onthefly_cxlist_get(cx_input, cx2_rchip_path, hs.load_chips)
 
-    def get_chip(hs, cx):
-        rchip_path = hs.get_rchip_path(cx)
-        if np.iterable(cx):
-            return [io.imread(fpath) for fpath in rchip_path]
-        else:
-            return io.imread(rchip_path)
-
     def get_chip_pil(hs, cx):
         chip = Image.open(hs.cpaths.cx2_rchip_path[cx])
         return chip
+
+    #@functools.lru_cache(max_size=10)
+    def _read_chip(hs, fpath):
+        return io.imread(fpath)
+
+    def get_chip(hs, cx_input):
+        rchip_path = hs.get_rchip_path(cx_input)
+        if np.iterable(cx_input):
+            return [hs._read_chip(fpath) for fpath in rchip_path]
+        else:
+            return hs._read_chip(rchip_path)
 
     #def _cx2_rchip_size(hs, cx):
         #rchip_path = hs.cpaths.cx2_rchip_path[cx]

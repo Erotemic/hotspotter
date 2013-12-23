@@ -30,6 +30,7 @@ import load_data2 as ld2
 import match_chips3 as mc3
 import matching_functions as mf
 import voting_rules2 as vr2
+import vizualizations as viz
 
 if __name__ == 'main':
     exec(open('dbgimport.py').read())

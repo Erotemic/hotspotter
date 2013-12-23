@@ -211,3 +211,50 @@ def _show_res(hs, res, figtitle='', max_nCols=5, topN_cxs=None, gt_cxs=None,
             df2.connect_callback(fig, 'button_press_event', _on_res_click)
     #printDBG('[viz._show_res()] Finished')
     return fig
+
+
+
+# USE LAB
+    USE_LAB = False  # True  # False
+
+    import tools
+    from skimage import color
+    if USE_LAB:
+        isInt = tools.is_int(rchip2)
+        rchip2_blendA = np.zeros((h2, w2, 3), dtype=rchip2.dtype)
+        rchip2_blendH = np.zeros((h2, w2, 3), dtype=rchip2.dtype)
+        rchip2_blendA = np.rollaxis(rchip2_blendA, 2)
+        rchip2_blendH = np.rollaxis(rchip2_blendH, 2)
+        #rchip2_blendA[0] = (rchip2 / 2) + (rchip1_At / 2)
+        #rchip2_blendH[0] = (rchip2 / 2) + (rchip1_Ht / 2)
+        #rchip2_blendA[0] /= 1 + (122 * isInt)
+        #rchip2_blendH[0] /= 1 + (122 * isInt)
+        rchip2_blendA[0] += 255
+        rchip2_blendH[0] += 255
+        rchip2_blendA[1] = rchip2
+        rchip2_blendH[1] = rchip2
+        rchip2_blendA[2] = rchip1_At
+        rchip2_blendH[2] = rchip1_Ht
+        rchip2_blendA = np.rollaxis(np.rollaxis(rchip2_blendA, 2), 2)
+        rchip2_blendH = np.rollaxis(np.rollaxis(rchip2_blendH, 2), 2)
+        print('unchanged stats')
+        print(helpers.printable_mystats(rchip2_blendH.flatten()))
+        print(helpers.printable_mystats(rchip2_blendA.flatten()))
+        if isInt:
+            print('is int')
+            rchip2_blendA = np.array(rchip2_blendA, dtype=float)
+            rchip2_blendH = np.array(rchip2_blendH, dtype=float)
+        else:
+            print('is float')
+        print('div stats')
+        print(helpers.printable_mystats(rchip2_blendH.flatten()))
+        print(helpers.printable_mystats(rchip2_blendA.flatten()))
+        rchip2_blendA = color.lab2rgb(rchip2_blendA)
+        rchip2_blendH = color.lab2rgb(rchip2_blendH)
+        if isInt:
+            print('is int')
+            rchip2_blendA = np.array(np.round(rchip2_blendA * 255), dtype=np.uint8)
+            rchip2_blendH = np.array(np.round(rchip2_blendH * 255), dtype=np.uint8)
+        print('changed stats')
+        print(helpers.printable_mystats(rchip2_blendH.flatten()))
+        print(helpers.printable_mystats(rchip2_blendA.flatten()))

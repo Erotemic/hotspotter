@@ -227,7 +227,7 @@ def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
             # query the entire database in vsmany (just as fast as vgroundtruth)
             elif assign_alg == 'vsmany':
                 res = mc3.query_database(hs, qcx, query_cfg)
-            res.plot_matches(hs, cx, pnum=pnum, **plt_match_args)
+            res.plot_single_match(hs, cx, pnum=pnum, **plt_match_args)
             x_title = cfg2_name + '=' + helpers.format(cfg2_value, 3)  # helpers.commas(cfg2_value, 3)
             ax = df2.gca()
             if rowx == len(cfg1_steps) - 1:

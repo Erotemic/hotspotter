@@ -13,6 +13,7 @@ import numpy as np
 # Hotspotter
 import fileio as io
 import helpers
+import extract_patch
 from os.path import realpath
 
 
@@ -93,6 +94,12 @@ def plot_name(hs, nx, nx2_cxs=None, fnum=0, hl_cxs=[], subtitle='',
 #^^^ OLD
 
 
+def nearest_kp(x, y, kpts):
+    dist = (kpts.T[0] - x) ** 2 + (kpts.T[1] - y) ** 2
+    fx = dist.argmin()
+    return fx, dist[fx]
+
+
 def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
                     draw_roi=True, draw_roi_lbls=True, **kwargs):
     # draw chips in the image
@@ -127,7 +134,7 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
             return
         if len(centers) == 0:
             return
-        #print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
+        #printDBG('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
         x, y = event.xdata, event.ydata
         # Find ROI center nearest to the clicked point
         dist = (centers.T[0] - x) ** 2 + (centers.T[1] - y) ** 2
@@ -165,7 +172,6 @@ def show_splash(fnum=1, **kwargs):
 
 
 def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
-    import extract_patch
 
     # Get chip info (make sure get_chip is called first)
     rchip = hs.get_chip(cx)
@@ -188,37 +194,36 @@ def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
         # Draw the image with keypoint fx highlighted
         fig = df2.figure(fnum=fnum)
         df2.cla()
-        ell_args = {'ell_alpha': .4, 'ell_linewidth': 1.8, 'rect': False}
+        ell_args = {'ell_alpha': .4, 'ell_linewidth': 1.8}
         # Draw chip + keypoints
         show_chip(hs, cx=cx, rchip=rchip, kpts=kpts, pnum=(2, 1, 1),
                   fnum=fnum, ell_args=ell_args)
         # Draw highlighted point
-        df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.BLUE, **ell_args)
+        df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.BLUE, rect=True, **ell_args)
 
         # Feature strings
-        xy_str = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
-        acd_str = '[(%3.1f,  0.00),\n' % (kp[2],)
+        xy_str   = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
+        acd_str  = '[(%3.1f,  0.00),\n' % (kp[2],)
         acd_str += ' (%3.1f, %3.1f)]' % (kp[3], kp[4],)
 
         # Draw the unwarped selected feature
-        extract_patch.draw_keypoint_patch(rchip, kp, sift, pnum=(2, 3, 4))
-        ax = df2.gca()
+        ax = extract_patch.draw_keypoint_patch(rchip, kp, sift, pnum=(2, 3, 4))
         ax._hs_viewtype = 'unwarped'
         ax.set_title('affine feature inv(A) =')
         ax.set_xlabel(acd_str)
 
         # Draw the warped selected feature
-        extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, pnum=(2, 3, 5))
-        ax = df2.gca()
+        ax = extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, pnum=(2, 3, 5))
         ax._hs_viewtype = 'warped'
         ax.set_title('warped feature')
         ax.set_xlabel('fx=%r scale=%.1f\n%s' % (fx, scale, xy_str))
 
         df2.figure(fnum=fnum, pnum=(2, 3, 6))
         ax = df2.gca()
-        df2.draw_sift_signature(sift, 'sift gradient orientation histogram')
+        df2.plot_sift_signature(sift, 'sift gradient orientation histogram')
         ax._hs_viewtype = 'histogram'
-        fig.canvas.draw()
+        #fig.canvas.draw()
+        df2.draw()
 
     def default_chip_view():
         fig = df2.figure(fnum=fnum)
@@ -243,8 +248,7 @@ def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
             print('This chip has no keypoints')
             return
         x, y = event.xdata, event.ydata
-        dist = (kpts.T[0] - x) ** 2 + (kpts.T[1] - y) ** 2
-        fx = dist.argmin()
+        fx = nearest_kp(x, y, kpts)[0]
         select_ith_keypoint(fx)
     #fx = 1897
     #select_ith_keypoint(fx)
@@ -416,113 +420,171 @@ def res_show_analysis(res, hs, **kwargs):
                          show_query=show_query, **kwargs)
 
 
-def show_a_match_res(res, hs, cx, title_aug=None, **kwargs):
-    '''
-    Wrapper for show_a_match
-    '''
+def res_show_chipres(res, hs, cx, **kwargs):
+    'Wrapper for show_chipres(show annotated chip match result) '
     qcx = res.qcx
     cx2_score = res.get_cx2_score()
     cx2_fm    = res.get_cx2_fm()
     cx2_fs    = res.get_cx2_fs()
-    title_suff = None
-    return show_a_match(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, title_aug, title_suff, **kwargs)
+    cx2_fk    = res.get_cx2_fk()
+    return show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
+                        **kwargs)
 
 
-def show_a_match(hs, qcx, cx2_score, cx2_fm, cx2_fs, cx, title_pref=None,
-                 title_suff=None, show_cx=False, show_cid=True,
-                 show_gname=False, show_name=True, showTF=True, showScore=True,
-                 **kwargs):
+def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk, **kwargs):
+    'shows single annotated match result.'
     fnum = kwargs.pop('fnum', None)
     pnum = kwargs.pop('pnum', None)
-    #
-    UNKNOWN_STR = '???'
-    TRUE_STR    = 'TRUE'
-    FALSE_STR   = 'FALSE'
-    qcx_str = 'q' + hs.cidstr(qcx)
-    vs_str = hs.vs_str(qcx, cx)
-    #
-    ' Shows matches with annote -ations '
-    printDBG('[viz.show_a_match()] Showing matches from %s' % (vs_str))
-    printDBG('[viz.show_a_match()] fnum=%r, pnum=%r' % (fnum, pnum))
+    #printDBG('[viz.show_chipres()] Showing matches from %s' % (vs_str))
+    #printDBG('[viz.show_chipres()] fnum=%r, pnum=%r' % (fnum, pnum))
+    # Test valid cx
     if np.isnan(cx):
-        nan_img = np.zeros((100, 100), dtype=np.uint8)
-        title = '(qx%r v NAN)' % (qcx)
+        nan_img = np.zeros((32, 32), dtype=np.uint8)
+        title = '(q%s v %r)' % (hs.cidstr(qcx), cx)
         df2.imshow(nan_img, fnum=fnum, pnum=pnum, title=title)
         return
-    # Read query and result info (chips, names, ...)
-    rchip1, rchip2 = hs.get_chip([qcx, cx])
-    kpts1, kpts2   = hs.get_kpts([qcx, cx])
     score = cx2_score[cx]
     fm = cx2_fm[cx]
     fs = cx2_fs[cx]
-    # Build the title string
-
-    def is_true_match_str(qcx, cx):
-        is_true, is_unknown = hs.is_true_match(qcx, cx)
-        if is_unknown:
-            return UNKNOWN_STR
-        elif is_true:
-            return TRUE_STR
-        else:
-            return FALSE_STR
-
-    isgt_str  = is_true_match_str(qcx, cx)
-    title = ''
-    if showTF:
-        title += '*' + isgt_str + '*'
-    if showScore:
+    fk = cx2_fk[cx]
+    vs_str = hs.vs_str(qcx, cx)
+    # Read query and result info (chips, names, ...)
+    rchip1, rchip2 = hs.get_chip([qcx, cx])
+    kpts1, kpts2   = hs.get_kpts([qcx, cx])
+    # Build annotation strings / colors
+    lbl1 = 'q' + hs.cidstr(qcx)
+    lbl2 = hs.cidstr(cx)
+    #(truestr, falsestr, nonamestr) = ('SameName', 'DiffName', 'NoName')
+    (truestr, falsestr, nonamestr) = ('TRUE', 'FALSE', '???')
+    is_true, is_unknown = hs.is_true_match(qcx, cx)
+    isgt_str = nonamestr if is_unknown else (truestr if is_true else falsestr)
+    match_color = {nonamestr: df2.UNKNOWN_PURP,
+                   truestr:   df2.TRUE_GREEN,
+                   falsestr:  df2.FALSE_RED}[isgt_str]
+    # Build title
+    title = '*%s*' % isgt_str if kwargs.get('showTF', True) else ''
+    if kwargs.get('showScore', True):
         score_str = (' score=' + helpers.num_fmt(score)) % (score)
         title += score_str
-    if not title_pref is None:
-        title = str(title_pref) + str(title)
-    if not title_suff is None:
-        title = str(title) + str(title_suff)
-    # Draw the matches
-    cx_str = hs.cidstr(cx)
-    fig, ax,  woff, hoff = df2.draw_matches2(rchip1, rchip2, kpts1, kpts2, fm,
-                                             fs, lbl1=qcx_str, lbl2=cx_str,
-                                             title=title, fnum=fnum, pnum=pnum,
-                                             **kwargs)
-    offset = (woff, hoff)
-    ax._hs_viewtype = 'matches ' + vs_str
-    #df2.upperright_text(qcx_str)
-    #df2.upperright_text(cx_str, offset=offset)
-    #df2.lowerright_text(cx_str)
-    # Finish annote -ations
-    if isgt_str == UNKNOWN_STR:
-        unknown_color = df2.DARK_PURP
-        df2.draw_border(ax, unknown_color, 4, offset=offset)
-    elif isgt_str == TRUE_STR:
-        true_color = (0, 1, 0)
-        df2.draw_border(ax, true_color, 4, offset=offset)
-    elif isgt_str == FALSE_STR:
-        false_color = (1, .2, 0)
-        df2.draw_border(ax, false_color, 4, offset=offset)
-    xlabel = []
-    if show_gname:
-        xlabel.append('gname=%r' % hs.cx2_gname(cx))
-    if show_name:
-        xlabel.append('name=%r' % hs.cx2_name(cx))
-    if len(xlabel) > 0:
-        df2.set_xlabel(', '.join(xlabel))
-    return ax
+    if 'title_pref' in kwargs:
+        title = kwargs['title_pref'] + str(title)
+    if 'title_suff' in kwargs:
+        title = str(title) + kwargs['title_suff']
+    # Build xlabel
+    xlabel_ = []
+    if kwargs.get('show_gname', False):
+        xlabel_.append('gname=%r' % hs.cx2_gname(cx))
+    if kwargs.get('show_name', True):
+        xlabel_.append('name=%r' % hs.cx2_name(cx))
+    xlabel = ', '.join(xlabel_)
+
+    # Draws the chips and keypoint matches
+    scm2 = df2.show_chipmatch2
+    kwargs_ = dict(fs=fs, lbl1=lbl1, lbl2=lbl2, title=title, fnum=fnum,
+                    pnum=pnum, **kwargs)
+    ax, xywh1, xywh2 = scm2(rchip1, rchip2, kpts1, kpts2, fm, **kwargs_)
+    x1, y1, w1, h1 = xywh1
+    x2, y2, w2, h2 = xywh2
+    offset2 = (x2, y2)
+    df2.draw_border(ax, match_color, 4, offset=offset2)
+    df2.set_xlabel(xlabel)
+    ax._hs_viewtype = 'chipres %s' % vs_str
+    return ax, xywh1, xywh2
 
 
-def get_sv_from_cid_fn(hs, cx1):
-    def _sv_on_cid_fn(cid):
-        cx2 = hs.cid2_cx(cid)
-        fig = df2.figure(fnum=4, doclf=True, trueclf=True)
-        df2.disconnect_callback(fig, 'button_press_event')
-        viz_spatial_verification(hs, cx1, cx2=cx2, fnum=4)
+def interact_chipres(hs, res, cx, fnum=4, **kwargs):
+    'Interacts with a single chipres'
+    print('[viz] interact_chipres()')
+    # Initialize interaction by drawing matches
+    qcx = res.qcx
+    fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
+    ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=(1,1,1), **kwargs)
+    rchip1, rchip2 = hs.get_chip([qcx, cx])
+    kpts1, kpts2   = hs.get_kpts([qcx, cx])
+    desc1, desc2   = hs.get_desc([qcx, cx])
+    fm = res.cx2_fm[cx]
+
+    # Define interaction functions
+    def _select_fm(mx):
+        print('\n[viz] view feature match mx=%r' % mx)
+        # Get the mx-th feature match
+        fx1, fx2 = fm[mx]
+        kp1, kp2     = kpts1[fx1], kpts2[fx2]
+        sift1, sift2 = desc1[fx1], desc2[fx2]
+        # Extracted keypoints to draw
+        extracted_list = [(rchip1, kp1, sift1), (rchip2, kp2, sift2),]
+        nRows = len(extracted_list) + 1
+        # Draw chips + feature matches
+        df2.figure(fnum=fnum, pnum=(nRows, 1, 1), doclf=True, trueclf=True)
+        pnum1 = (nRows, 1, 1)
+        ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=pnum1,
+                                            colors=df2.BLUE, **kwargs)
+        # Draw selected match
+        sel_fm = np.array([(fx1, fx2)])
+        ell_args = {'ell_alpha': .4, 'ell_linewidth': 1.8, 'rect': False}
+        df2.draw_fmatch(xywh1, xywh2, kpts1, kpts2, sel_fm, fnum=fnum,
+                        pnum=pnum1, lines=False, rect=True, colors=df2.ORANGE)
+        # Helper functions
+        draw_patch = extract_patch.draw_keypoint_patch
+        plot_siftsig = df2.plot_sift_signature
+        pnum_ = lambda px: (nRows, 3, px)
+
+        def draw_feat_row(rchip, kp, sift, px):
+            #printDBG('[viz] draw_feat_row px=%r' % px)
+            # Draw the unwarped selected feature
+            ax = draw_patch(rchip, kp, sift, fnum=fnum, pnum=pnum_(px + 1))
+            ax._hs_viewtype = 'unwarped'
+            # Draw the warped selected feature
+            ax = draw_patch(rchip, kp, sift, fnum=fnum, pnum=pnum_(px + 2),
+                            warped=True)
+            ax._hs_viewtype = 'warped'
+            # Draw the SIFT representation
+            sigtitle = 'sift gradient orientation histogram'
+            ax = plot_siftsig(sift, sigtitle, fnum=fnum, pnum=pnum_(px + 3))
+            ax._hs_viewtype = 'histogram'
+            return px + 3
+        px = 3  # plot offset
+        for (rchip, kp, sift) in extracted_list:
+            px = draw_feat_row(rchip, kp, sift, px)
         fig.canvas.draw()
-        pass
-    return _sv_on_cid_fn
+
+    def _on_chipres_clicked(event):
+        printDBG('[viz] clicked chipres')
+        (x, y) = (event.xdata, event.ydata)
+        # Out of axes click
+        if None in [x, y, event.inaxes]:
+            return interact_chipres(hs, res, fnum)
+        hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', '')
+        printDBG('hs_viewtype=%r' % hs_viewtype)
+        # Click in match axes
+        if hs_viewtype.find('chipres') == 0:
+            # Select nearest feature match to the click
+            kpts1_m = kpts1[fm[:, 0]]
+            kpts2_m = kpts2[fm[:, 1]]
+            x2, y2, w2, h2 = xywh2
+            _mx1, _dist1 = nearest_kp(x, y, kpts1_m)
+            _mx2, _dist2 = nearest_kp(x - x2, y - y2, kpts2_m)
+            mx = _mx1 if _dist1 < _dist2 else _mx2
+            _select_fm(mx)
+        elif hs_viewtype.find('warped') == 0:
+            printDBG('[viz] clicked warped')
+        elif hs_viewtype.find('unwarped') == 0:
+            printDBG('[viz] clicked unwarped')
+        elif hs_viewtype.find('histogram') == 0:
+            printDBG('[viz] clicked hist')
+        else:
+            printDBG('[viz] what did you click?!')
+    printDBG('[viz] Drawing and starting interaction')
+    fig = df2.gcf()
+    df2.draw()
+    df2.disconnect_callback(fig, 'button_press_event')
+    df2.connect_callback(fig, 'button_press_event', _on_chipres_clicked)
 
 
 def _show_res(hs, res, **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
     #printDBG('[viz._show_res()] %s ' % helpers.printableVal(locals()))
-    printDBG = print
+    #printDBG = print
     fnum       = kwargs.get('fnum', 3)
     figtitle   = kwargs.get('figtitle', '')
     topN_cxs   = kwargs.get('topN_cxs', [])
@@ -532,14 +594,12 @@ def _show_res(hs, res, **kwargs):
     max_nCols  = kwargs.get('max_nCols', 5)
     interact   = kwargs.get('interact', True)
     annote     = kwargs.pop('annote', True)  # this is toggled
-    clicked_cid_fn = kwargs.get('clicked_cid_fn', None)
-    ctrl_clicked_cid_fn = kwargs.get('ctrl_clicked_cid_fn', get_sv_from_cid_fn(hs, res.qcx))
 
     printDBG('========================')
     printDBG('[viz._show_res()]----------------')
     all_gts = hs.get_other_indexed_cxs(res.qcx)
-    print('[viz._show_res()] #topN=%r #missed_gts=%r/%r' %
-          (len(topN_cxs), len(gt_cxs), len(all_gts)))
+    _tup = tuple(map(len, (topN_cxs, gt_cxs, all_gts)))
+    print('[viz._show_res()] #topN=%r #missed_gts=%r/%r' % _tup)
     printDBG('[viz._show_res()] * fnum=%r' % (fnum,))
     printDBG('[viz._show_res()] * figtitle=%r' % (figtitle,))
     printDBG('[viz._show_res()] * max_nCols=%r' % (max_nCols,))
@@ -557,16 +617,8 @@ def _show_res(hs, res, **kwargs):
     nTopNRows     = 0 if nTopNCols == 0 else int(np.ceil(nTopNSubplts / nTopNCols))
     nGtCells      = nGtRows * nGTCols
     nRows         = nTopNRows + nGtRows
-    # Helper function for drawing matches to one cx
 
-    def _show_matches_fn(cx, orank, pnum):
-        'helper for viz._show_res'
-        aug = 'rank=%r\n' % orank
-        #printDBG('[viz._show_res()] plotting: %r'  % (pnum,))
-        _kwshow  = dict(draw_ell=annote, draw_pts=annote, draw_lines=annote,
-                        ell_alpha=.5, all_kpts=all_kpts)
-        show_a_match_res(res, hs, cx, title_aug=aug, fnum=fnum, pnum=pnum, **_kwshow)
-
+    # Helpers
     def _show_query_fn(plotx_shift, rowcols):
         'helper for viz._show_res'
         plotx = plotx_shift + 1
@@ -574,9 +626,16 @@ def _show_res(hs, res, **kwargs):
         #printDBG('[viz._show_res()] Plotting Query: pnum=%r' % (pnum,))
         show_chip(hs, res=res, draw_kpts=annote, prefix='q', fnum=fnum, pnum=pnum)
 
-    # Helper to draw many cxs
+    def _show_matches_fn(cx, orank, pnum):
+        'Helper function for drawing matches to one cx'
+        aug = 'rank=%r\n' % orank
+        #printDBG('[viz._show_res()] plotting: %r'  % (pnum,))
+        _kwshow  = dict(draw_ell=annote, draw_pts=annote, draw_lines=annote,
+                        ell_alpha=.5, all_kpts=all_kpts)
+        res.show_chipres(hs, cx, title_aug=aug, fnum=fnum, pnum=pnum, **_kwshow)
+
     def _plot_matches_cxs(cx_list, plotx_shift, rowcols):
-        'helper for viz._show_res'
+        'helper for viz._show_res to draw many cxs'
         #printDBG('[viz._show_res()] Plotting Chips %s:' % hs.cidstr(cx_list))
         if cx_list is None:
             return
@@ -604,32 +663,51 @@ def _show_res(hs, res, **kwargs):
     # Result Interaction
     if interact:
         printDBG('[viz._show_res()] starting interaction')
+        def _ctrlclicked_cx(cx):
+            printDBG('ctrl+clicked cx=%r' % cx)
+            fig = df2.figure(fnum=4, doclf=True, trueclf=True)
+            df2.disconnect_callback(fig, 'button_press_event')
+            viz_spatial_verification(hs, cx1, cx2=cx2, fnum=4)
+            fig.canvas.draw()
+
+        def _clicked_cx(cx):
+            printDBG('clicked cx=%r' % cx)
+            res.interact_chipres(hs, cx, fnum=4)
+            fig = df2.gcf()
+            fig.canvas.draw()
+
+        def _clicked_none():
+            # Toggle if the click is not in any axis
+            printDBG('clicked none')
+            _show_res(hs, res, annote=not annote, **kwargs)
+            fig.canvas.draw()
 
         def _on_res_click(event):
             'result interaction mpl event callback slot'
             print('[viz] clicked result')
             if event.xdata is None or event.inaxes is None:
-                # Toggle if the click is not in any axis
-                _show_res(hs, res, annote=not annote, **kwargs)
-                fig.canvas.draw()
-                return
-            hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', None)
+                print('clicked outside axes')
+                return _clicked_none()
+            hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', '')
+            printDBG(event.__dict__)
             printDBG('hs_viewtype=%r' % hs_viewtype)
-            print(event.__dict__)
-            # Clicked a specific cid
-            if isinstance(hs_viewtype, str) and hs_viewtype.find('matches') == 0:
+            # Clicked a specific chipres
+            if hs_viewtype.find('chipres') == 0:
                 cid = int(hs_viewtype[hs_viewtype.find(' v ') + 3:-1])
-                if ctrl_clicked_cid_fn is not None and event.key == 'control':
+                cx  = hs.cid2_cx(cid)
+                # Ctrl-Click
+                key = '' if event.key is None else event.key
+                print('key = %r' % key)
+                if key.find('control') == 0:
                     print('[viz] result control clicked')
-                    ctrl_clicked_cid_fn(cid)
-                elif clicked_cid_fn is not None:
+                    return _ctrlclicked_cx(cx)
+                # Left-Click
+                else:
                     print('[viz] result clicked')
-                    clicked_cid_fn(cid)
-            df2.draw()
+                    return _clicked_cx(cx)
 
         df2.disconnect_callback(fig, 'button_press_event')
-        if interact:
-            df2.connect_callback(fig, 'button_press_event', _on_res_click)
+        df2.connect_callback(fig, 'button_press_event', _on_res_click)
     printDBG('[viz._show_res()] Finished')
     return fig
 
@@ -687,8 +765,6 @@ def ensure_cx2(hs, cx1, cx2=None):
 def viz_spatial_verification(hs, cx1, **kwargs):
     #kwargs = {}
     import helpers
-    import tools
-    from skimage import color
     import spatial_verification2 as sv2
     import cv2
     print('\n======================')
@@ -731,52 +807,10 @@ def viz_spatial_verification(hs, cx1, **kwargs):
     print('warp affine')
     rchip1_At = cv2.warpAffine(rchip1, Aff[0:2, :], wh2)
 
-    USE_LAB = False  # True  # False
-
-    if USE_LAB:
-        isInt = tools.is_int(rchip2)
-        rchip2_blendA = np.zeros((h2, w2, 3), dtype=rchip2.dtype)
-        rchip2_blendH = np.zeros((h2, w2, 3), dtype=rchip2.dtype)
-        rchip2_blendA = np.rollaxis(rchip2_blendA, 2)
-        rchip2_blendH = np.rollaxis(rchip2_blendH, 2)
-        #rchip2_blendA[0] = (rchip2 / 2) + (rchip1_At / 2)
-        #rchip2_blendH[0] = (rchip2 / 2) + (rchip1_Ht / 2)
-        #rchip2_blendA[0] /= 1 + (122 * isInt)
-        #rchip2_blendH[0] /= 1 + (122 * isInt)
-        rchip2_blendA[0] += 255
-        rchip2_blendH[0] += 255
-        rchip2_blendA[1] = rchip2
-        rchip2_blendH[1] = rchip2
-        rchip2_blendA[2] = rchip1_At
-        rchip2_blendH[2] = rchip1_Ht
-        rchip2_blendA = np.rollaxis(np.rollaxis(rchip2_blendA, 2), 2)
-        rchip2_blendH = np.rollaxis(np.rollaxis(rchip2_blendH, 2), 2)
-        print('unchanged stats')
-        print(helpers.printable_mystats(rchip2_blendH.flatten()))
-        print(helpers.printable_mystats(rchip2_blendA.flatten()))
-        if isInt:
-            print('is int')
-            rchip2_blendA = np.array(rchip2_blendA, dtype=float)
-            rchip2_blendH = np.array(rchip2_blendH, dtype=float)
-        else:
-            print('is float')
-        print('div stats')
-        print(helpers.printable_mystats(rchip2_blendH.flatten()))
-        print(helpers.printable_mystats(rchip2_blendA.flatten()))
-        rchip2_blendA = color.lab2rgb(rchip2_blendA)
-        rchip2_blendH = color.lab2rgb(rchip2_blendH)
-        if isInt:
-            print('is int')
-            rchip2_blendA = np.array(np.round(rchip2_blendA * 255), dtype=np.uint8)
-            rchip2_blendH = np.array(np.round(rchip2_blendH * 255), dtype=np.uint8)
-        print('changed stats')
-        print(helpers.printable_mystats(rchip2_blendH.flatten()))
-        print(helpers.printable_mystats(rchip2_blendA.flatten()))
-    else:
-        rchip2_blendA = np.zeros((h2, w2), dtype=rchip2.dtype)
-        rchip2_blendH = np.zeros((h2, w2), dtype=rchip2.dtype)
-        rchip2_blendA = rchip2 / 2 + rchip1_At / 2
-        rchip2_blendH = rchip2 / 2 + rchip1_Ht / 2
+    rchip2_blendA = np.zeros((h2, w2), dtype=rchip2.dtype)
+    rchip2_blendH = np.zeros((h2, w2), dtype=rchip2.dtype)
+    rchip2_blendA = rchip2 / 2 + rchip1_At / 2
+    rchip2_blendH = rchip2 / 2 + rchip1_Ht / 2
 
     df2.figure(fnum=fnum, pnum=(3, 4, 1), doclf=True, trueclf=True)
 
@@ -785,10 +819,10 @@ def viz_spatial_verification(hs, cx1, **kwargs):
 
     # Draw original matches, affine inliers, and homography inliers
     def _draw_matches(title, fm, px):
-        # Helper with common arguments to df2.draw_matches2
+        # Helper with common arguments to df2.show_chipmatch2
         dmkwargs = dict(fs=None, title=title, all_kpts=False, draw_lines=True,
                         doclf=True, fnum=fnum, pnum=(3, 3, px))
-        df2.draw_matches2(rchip1, rchip2, kpts1, kpts2, fm, show_nMatches=True, **dmkwargs)
+        df2.show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm, show_nMatches=True, **dmkwargs)
 
     # Draw the Assigned -> Affine -> Homography matches
     _draw_matches('Assigned matches', fm, 1)

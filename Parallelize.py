@@ -57,17 +57,18 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None):
     if args is not None and num_procs is None:
         num_procs = args.num_procs
     task_list = make_task_list(func, arg_list, lazy=lazy)
-    if len(task_list) == 0:
+    nTasks = len(task_list)
+    if nTasks == 0:
         print('[parallel] ... No %s tasks left to compute!' % func.func_name)
         return None
     # Do not execute small tasks in parallel
-    if len(task_list) < num_procs / 2 or len(task_list) == 1:
+    if nTasks < num_procs / 2 or nTasks == 1:
         num_procs = 1
+    num_procs = min(num_procs, nTasks)
     if num_procs > 1:
-        msg = 'Distributing %d %s tasks to %d parallel processes' % (len(task_list), func.func_name, num_procs)
+        msg = 'Distributing %d %s tasks to %d parallel processes' % (nTasks, func.func_name, num_procs)
     else:
-        msg = 'Executing %d %s tasks in serial' % (len(task_list),
-                                                   func.func_name)
+        msg = 'Executing %d %s tasks in serial' % (nTasks, func.func_name)
     try:
         ret = parallelize_tasks(task_list, num_procs, msg=msg)
     except Exception as ex:
@@ -103,18 +104,20 @@ def parallelize_tasks(task_list, num_procs, msg=''):
     '''
     with Timer(msg=msg):
         if num_procs > 1:
+            # Parallelize tasks
             if False:
                 print('[parallel] Computing in parallel process')
             return _parallelize_tasks(task_list, num_procs, False)
         else:
+            # Serialize Tasks
             result_list = []
             if False:
                 print('[parallel] Computing in serial process')
-            total = len(task_list)
+            nTasks = len(task_list)
             sys.stdout.write('    ')
             for count, (fn, args) in enumerate(task_list):
                 if False:
-                    print('[parallel] computing %d / %d ' % (count, total))
+                    print('[parallel] computing %d / %d ' % (count, nTasks))
                 else:
                     sys.stdout.write('.')
                     if (count + 1) % 80 == 0:

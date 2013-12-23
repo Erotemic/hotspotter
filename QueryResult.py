@@ -10,6 +10,7 @@ import vizualizations as viz
 import helpers
 import params
 from Printable import DynStruct
+import voting_rules2 as vr2
 
 
 FM_DTYPE  = np.uint32   # Feature Match datatype
@@ -39,8 +40,7 @@ def query_result_exists(hs, qcx, query_uid):
 class QueryResult(DynStruct):
     #__slots__ = ['true_uid', 'qcx', 'query_uid', 'uid', 'title', 'nn_time',
                  #'weight_time', 'filt_time', 'build_time', 'verify_time',
-                 #'cx2_fm', 'cx2_fs', 'cx2_fk', 'cx2_score', 'cx2_fm_V',
-                 #'cx2_fs_V', 'cx2_fk_V', 'cx2_score_V']
+                 #'cx2_fm', 'cx2_fs', 'cx2_fk', 'cx2_score']
     def __init__(res, qcx, uid, query_cfg=None):
         super(QueryResult, res).__init__()
         res.true_uid  = '' if query_cfg is None else query_cfg.get_uid()
@@ -59,11 +59,6 @@ class QueryResult(DynStruct):
         res.cx2_fs = np.array([], dtype=FS_DTYPE)
         res.cx2_fk = np.array([], dtype=FM_DTYPE)
         res.cx2_score = np.array([])
-        # TODO: Remove these
-        res.cx2_fm_V = np.array([], dtype=FM_DTYPE)
-        res.cx2_fs_V = np.array([], dtype=FS_DTYPE)
-        res.cx2_fk_V = np.array([], dtype=FM_DTYPE)
-        res.cx2_score_V = np.array([])
 
     def has_cache(res, hs):
         return query_result_exists(hs, res.qcx)
@@ -73,8 +68,8 @@ class QueryResult(DynStruct):
 
     def save(res, hs):
         fpath = res.get_fpath(hs)
-        print('[ds] cache result: %r' % (fpath if params.VERBOSE_CACHE
-                                         else split(fpath)[1],))
+        print('[qr] cache save: %r' % (fpath if params.VERBOSE_CACHE
+                                       else split(fpath)[1],))
         with open(fpath, 'wb') as file_:
             np.savez(file_, **res.__dict__.copy())
         return True
@@ -120,10 +115,6 @@ class QueryResult(DynStruct):
             raise
         res.qcx = qcx_good
 
-    def get_SV(res):
-        #return res.cx2_fm_V.size > 0
-        return len(res.cx2_score_V) > 0
-
     def cache_bytes(res, hs):
         fpath = res.get_fpath(hs)
         return helpers.file_bytes(fpath)
@@ -143,17 +134,19 @@ class QueryResult(DynStruct):
         gt_ranks = [r[0] for r in ranks_]
         return gt_ranks
 
-    def get_cx2_score(res, SV=None):
+    def get_cx2_score(res):
         return res.cx2_score
 
-    def get_cx2_fm(res, SV=None):
+    def get_cx2_fm(res):
         return res.cx2_fm
 
-    def get_cx2_fs(res, SV=None):
+    def get_cx2_fs(res):
         return res.cx2_fs
 
+    def get_cx2_fk(res):
+        return res.cx2_fk
+
     def topN_cxs(res, hs, N=None):
-        import voting_rules2 as vr2
         cx2_score = np.array(res.get_cx2_score())
         if hs.prefs.display_cfg.name_scoring:
             cx2_chipscore = np.array(cx2_score)
@@ -188,8 +181,11 @@ class QueryResult(DynStruct):
     def show_gt_matches(res, hs, *args, **kwargs):
         figtitle = ('q%s -- GroundTruth' % (hs.cidstr(res.qcx)))
         gt_cxs = hs.get_other_indexed_cxs(res.qcx)
-        viz._show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle,
-                               all_kpts=True, *args, **kwargs)
+        return viz._show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle,
+                                      all_kpts=True, *args, **kwargs)
 
-    def plot_matches(res, hs, cx, **kwargs):
-        viz.show_matches_annote_res(res, hs, cx, draw_pts=False, **kwargs)
+    def show_chipres(res, hs, cx, **kwargs):
+        return viz.res_show_chipres(res, hs, cx, **kwargs)
+
+    def interact_chipres(res, hs, cx, **kwargs):
+        return viz.interact_chipres(hs, res, cx, **kwargs)

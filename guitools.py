@@ -7,8 +7,11 @@ import PyQt4
 from PyQt4 import Qt, QtCore, QtGui
 import fileio as io
 import helpers
+import draw_func2 as df2
 
 IS_INIT = False
+DISABLE_NODRAW = True
+DEBUG = True
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -26,26 +29,159 @@ def rrr():
 def configure_matplotlib():
     import multiprocessing
     import matplotlib
-    backend = matplotlib.get_backend()
+    mplbackend = matplotlib.get_backend()
     if multiprocessing.current_process().name == 'MainProcess':
-        print('[*guitools] current backend is: %r' % backend)
+        print('[*guitools] current mplbackend is: %r' % mplbackend)
         print('[*guitools] matplotlib.use(Qt4Agg)')
     else:
         return
     matplotlib.rcParams['toolbar'] = 'toolbar2'
     matplotlib.rc('text', usetex=False)
     #matplotlib.rcParams['text'].usetex = False
-    if backend != 'Qt4Agg':
+    if mplbackend != 'Qt4Agg':
         matplotlib.use('Qt4Agg', warn=True, force=True)
-        backend = matplotlib.get_backend()
+        mplbackend = matplotlib.get_backend()
         if multiprocessing.current_process().name == 'MainProcess':
-            print('[*guitools] current backend is: %r' % backend)
+            print('[*guitools] current mplbackend is: %r' % mplbackend)
         #matplotlib.rcParams['toolbar'] = 'None'
         #matplotlib.rcParams['interactive'] = True
 
 
+#---------------
+# SLOT DECORATORS
+def dbgslot_(*types):  # This is called at wrap time to get args
+    'wrapper around pyqtslot decorator'
+
+    # Wrap with debug statments
+    def pyqtSlotWrapper(func):
+        func_name = func.func_name
+        print('[@guitools] Wrapping %r with dbgslot_' % func.func_name)
+
+        @Qt.pyqtSlot(*types, name=func.func_name)
+        def slot_wrapper(self, *args, **kwargs):
+            argstr_list = map(str, args)
+            kwastr_list = ['%s=%s' % item for item in kwargs.iteritems()]
+            argstr = ', '.join(argstr_list + kwastr_list)
+            print('[**dbgslot_] %s(%s)' % (func_name, argstr))
+            #with helpers.Indenter():
+            result = func(self, *args, **kwargs)
+            print('[**dbgslot_] Finished %s(%s)' % (func_name, argstr))
+            return result
+
+        slot_wrapper.func_name = func_name
+        return slot_wrapper
+    return pyqtSlotWrapper
+
+
+def infoslot_(*types):  # This is called at wrap time to get args
+    'wrapper around pyqtslot decorator'
+
+    # Wrap with debug statments
+    def pyqtSlotWrapper(func):
+        func_name = func.func_name
+        print('[@guitools] Wrapping %r with infoslot_' % func.func_name)
+
+        @Qt.pyqtSlot(*types, name=func.func_name)
+        def slot_wrapper(self, *args, **kwargs):
+            print('[**infoslot_] %s()' % (func_name))
+            #with helpers.Indenter():
+            result = func(self, *args, **kwargs)
+            print('[**infoslot_] Finished %s()' % (func_name))
+            return result
+
+        slot_wrapper.func_name = func_name
+        return slot_wrapper
+    return pyqtSlotWrapper
+
+def fastslot_(*types):
+    'wrapper around pyqtslot decorator'
+
+    # Wrap wihout any debugging
+    def pyqtSlotWrapper(func):
+        func_name = func.func_name
+
+        @Qt.pyqtSlot(*types, name=func.func_name)
+        def slot_wrapper(self, *args, **kwargs):
+            return func(self, *args, **kwargs)
+        slot_wrapper.func_name = func_name
+        return slot_wrapper
+    return pyqtSlotWrapper
+
+slot_ = dbgslot_ if DEBUG else fastslot_
+#/SLOT DECORATOR
+#---------------
+
+
+# BLOCKING DECORATOR
+# TODO: This decorator has to be specific to either front or back. Is there a
+# way to make it more general?
+def backblocking(func):
+    print('[@guitools] Wrapping %r with backblocking' % func.func_name)
+
+    def block_wrapper(back, *args, **kwargs):
+        #print('[guitools] BLOCKING')
+        wasBlocked_ = back.front.blockSignals(True)
+        try:
+            result = func(back, *args, **kwargs)
+        except Exception as ex:
+            back.front.blockSignals(wasBlocked_)
+            print('Block wrapper caugt exception in %r' % func.func_name)
+            print('back = %r' % back)
+            print('*args = %r' % (args,))
+            print('**kwargs = %r' % (kwargs,))
+            print('ex = %r' % ex)
+            back.user_info('Error in blocking ex=%r' % ex)
+            raise
+        back.front.blockSignals(wasBlocked_)
+        #print('[guitools] UNBLOCKING')
+        return result
+    block_wrapper.func_name = func.func_name
+    return block_wrapper
+
+
+def frontblocking(func):
+    # HACK: blocking2 is specific to fron
+    print('[@guitools] Wrapping %r with frontblocking' % func.func_name)
+
+    def block_wrapper(front, *args, **kwargs):
+        #print('[guitools] BLOCKING')
+        #wasBlocked = self.blockSignals(True)
+        wasBlocked_ = front.blockSignals(True)
+        try:
+            result = func(front, *args, **kwargs)
+        except Exception as ex:
+            front.blockSignals(wasBlocked_)
+            print('Block wrapper caugt exception in %r' % func.func_name)
+            print('front = %r' % front)
+            print('*args = %r' % (args,))
+            print('**kwargs = %r' % (kwargs,))
+            print('ex = %r' % ex)
+            front.user_info('Error in blocking ex=%r' % ex)
+            raise
+        front.blockSignals(wasBlocked_)
+        #print('[guitools] UNBLOCKING')
+        return result
+    block_wrapper.func_name = func.func_name
+    return block_wrapper
+
+
+# DRAWING DECORATOR
+def drawing(func):
+    'Wraps a class function and draws windows on completion'
+    print('[@guitools] Wrapping %r with drawing' % func.func_name)
+
+    def drawing_wrapper(self, *args, **kwargs):
+        #print('[guitools] DRAWING')
+        result = func(self, *args, **kwargs)
+        #print('[guitools] DONE DRAWING')
+        if kwargs.get('dodraw', True) or DISABLE_NODRAW:
+            df2.draw()
+        return result
+    drawing_wrapper.func_name = func.func_name
+    return drawing_wrapper
+
+
 def select_orientation():
-    import draw_func2 as df2
     #from matplotlib.backend_bases import mplDeprecation
     print('[*guitools] Define an orientation angle by clicking two points')
     try:
@@ -70,7 +206,6 @@ def select_orientation():
 
 
 def select_roi():
-    import draw_func2 as df2
     #from matplotlib.backend_bases import mplDeprecation
     print('[*guitools] Define a Rectanglular ROI by clicking two points.')
     try:
@@ -269,11 +404,11 @@ def exit_application():
     QtGui.qApp.quit()
 
 
-def run_main_loop(app, is_root=True, backend=None, **kwargs):
-    if backend is not None:
+def run_main_loop(app, is_root=True, back=None, **kwargs):
+    if back is not None:
         print('[*guitools] setting active window')
-        app.setActiveWindow(backend.win)
-        backend.timer = ping_python_interpreter(**kwargs)
+        app.setActiveWindow(back.front)
+        back.timer = ping_python_interpreter(**kwargs)
     if is_root:
         exec_core_app_loop(app)
         #exec_core_event_loop(app)
@@ -314,11 +449,11 @@ def make_dummy_main_window():
     class DummyBackend(Qt.QObject):
         def __init__(self):
             super(DummyBackend,  self).__init__()
-            self.win = PyQt4.Qt.QMainWindow()
-            self.win.setWindowTitle('Dummy Main Window')
-            self.win.show()
-    backend = DummyBackend()
-    return backend
+            self.front = PyQt4.Qt.QMainWindow()
+            self.front.setWindowTitle('Dummy Main Window')
+            self.front.show()
+    back = DummyBackend()
+    return back
 
 
 def popup_menu(widget, opt2_callback):
@@ -338,6 +473,6 @@ if __name__ == '__main__':
     freeze_support()
     print('__main__ = gui.py')
     app, is_root = init_qtapp()
-    backend = make_dummy_main_window()
-    win = backend.win
-    run_main_loop(app, is_root, backend)
+    back = make_dummy_main_window()
+    front = back.front
+    run_main_loop(app, is_root, back)

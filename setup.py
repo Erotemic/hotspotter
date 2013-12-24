@@ -10,6 +10,14 @@ INSTALL_REQUIRES = [
     'numpy>=1.5.0',
     'scipy>=0.7.2',
     'PIL>=1.1.7'
+    'argparse>=1.2.1'
+    'ipython>=1.1.0'
+    'pylru>=1.0.6'
+    'pandas>=0.12.0',
+    'python-qt>=.50',
+    'matplotlib>=1.3.1',
+    'scikit-image>=0.9dev'
+    'scikit-learn>=0.14a1'
 ]
 
 MODULES = [
@@ -30,8 +38,6 @@ MODULES = [
 
 #'parse'
 INSTALL_OPTIONAL = [
-    'python-qt>=.50',
-    'matplotlib>=1.2.1rc1',
     #'pyvlfeat>=0.1.1a3'
 ]
 

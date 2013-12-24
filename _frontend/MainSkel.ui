@@ -114,7 +114,7 @@
      <x>0</x>
      <y>0</y>
      <width>927</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -152,10 +152,12 @@
     <addaction name="separator"/>
     <addaction name="actionWriteLogs"/>
     <addaction name="separator"/>
+    <addaction name="actionDelete_Precomputed_Results"/>
     <addaction name="actionDelete_computed_directory"/>
     <addaction name="actionDelete_global_preferences"/>
     <addaction name="separator"/>
     <addaction name="actionDev_Mode_IPython"/>
+    <addaction name="actionDeveloper_Reload"/>
    </widget>
    <widget class="QMenu" name="menuActions">
     <property name="title">
@@ -194,6 +196,9 @@
    <property name="text">
     <string>Open Database</string>
    </property>
+   <property name="toolTip">
+    <string>Opens a different database directory. </string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
    </property>
@@ -204,6 +209,12 @@
   <action name="actionSave_Database">
    <property name="text">
     <string>Save Database</string>
+   </property>
+   <property name="iconText">
+    <string>Save Database</string>
+   </property>
+   <property name="toolTip">
+    <string>Saves the added images / chip properties / and changed names to the database csv tables.</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
@@ -292,6 +303,9 @@
    <property name="text">
     <string>Add Chip</string>
    </property>
+   <property name="toolTip">
+    <string>When adding a chip, you select an ROI in Image View. The ROI defines a new chip and it is added (but not saved) to the database.</string>
+   </property>
    <property name="shortcut">
     <string>A</string>
    </property>
@@ -302,6 +316,9 @@
   <action name="actionReselect_ROI">
    <property name="text">
     <string>Reselect ROI</string>
+   </property>
+   <property name="toolTip">
+    <string>Changes the ROI of a chip. Previously associated results and chip data are removed and recomputed. </string>
    </property>
    <property name="shortcut">
     <string>R</string>
@@ -315,7 +332,7 @@
     <string>Select Next</string>
    </property>
    <property name="toolTip">
-    <string>Selects the next unidentified CID or Untagged GID</string>
+    <string>Selects the next image or chip in the database. </string>
    </property>
    <property name="shortcut">
     <string>N</string>
@@ -327,6 +344,9 @@
   <action name="actionDelete_Chip">
    <property name="text">
     <string>Delete Chip</string>
+   </property>
+   <property name="toolTip">
+    <string>Removes a chip from the database. </string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Del</string>
@@ -341,6 +361,9 @@
    </property>
    <property name="text">
     <string>Query</string>
+   </property>
+   <property name="toolTip">
+    <string>Issues the currently selected chip as a query. The result table is then populated.</string>
    </property>
    <property name="shortcut">
     <string>Q</string>
@@ -374,6 +397,9 @@
    <property name="text">
     <string>Edit Preferences</string>
    </property>
+   <property name="toolTip">
+    <string>Changes algorithm parameters and program behavior.</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+P</string>
    </property>
@@ -384,6 +410,9 @@
   <action name="actionQuit">
    <property name="text">
     <string>Quit</string>
+   </property>
+   <property name="toolTip">
+    <string>Exits the program</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
@@ -405,6 +434,9 @@
   <action name="actionReselect_Ori">
    <property name="text">
     <string>Reselect Orientation</string>
+   </property>
+   <property name="toolTip">
+    <string>Changes the orientation of a chip. Previously associated results and chip data are removed and recomputed. </string>
    </property>
    <property name="shortcut">
     <string>O</string>
@@ -458,6 +490,9 @@
    <property name="text">
     <string>New Database</string>
    </property>
+   <property name="toolTip">
+    <string>Create a new folder to use as a database. </string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
    </property>
@@ -477,6 +512,9 @@
    <property name="text">
     <string>Precompute Queries</string>
    </property>
+   <property name="toolTip">
+    <string>This might take anywhere from a coffee break to an overnight  procedure depending on how many ROIs you've made. It queries each chip and saves the result which allows multiple queries to be rapidly inspected later. </string>
+   </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
    </property>
@@ -484,6 +522,9 @@
   <action name="actionPrecomputeChipsFeatures">
    <property name="text">
     <string>Precompute Chips/Features</string>
+   </property>
+   <property name="toolTip">
+    <string>Extracts all chips from images, and computes features. This loads the data into memory and reduces waiting time between selecting chips and images.</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Return</string>
@@ -496,6 +537,9 @@
    <property name="text">
     <string>View Database Dir</string>
    </property>
+   <property name="toolTip">
+    <string>Opens the database folder in your operating system's native file browser (explorer/finder/nautilus)</string>
+   </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
    </property>
@@ -506,6 +550,9 @@
    </property>
    <property name="text">
     <string>Scale all ROIs</string>
+   </property>
+   <property name="toolTip">
+    <string>Changes the size of every ROI in the database. </string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
@@ -518,6 +565,9 @@
    <property name="text">
     <string>Convert all images into chips</string>
    </property>
+   <property name="toolTip">
+    <string>Every image without a chip has an ROI added to it spanning the entire image.</string>
+   </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
    </property>
@@ -526,13 +576,19 @@
    <property name="text">
     <string>New Chip Property</string>
    </property>
+   <property name="toolTip">
+    <string>Creates a new column in the chip table for user properties.</string>
+   </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionDelete_computed_directory">
    <property name="text">
-    <string>Delete Computed Dir</string>
+    <string>Delete Computed Directory</string>
+   </property>
+   <property name="toolTip">
+    <string>Deletes all precomputations (not your ROIs or properties though) and lets all data be recomputed and reloaded. This puts your database in a cleaner state. </string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
@@ -540,7 +596,10 @@
   </action>
   <action name="actionDelete_global_preferences">
    <property name="text">
-    <string>Delete Global Prefs</string>
+    <string>Delete Global Preferences</string>
+   </property>
+   <property name="toolTip">
+    <string>This deletes global preferences like the previously opened database, your work directory, and defaults algorithm preferences. Use if HotSpotter crashes on loading a database. </string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
@@ -550,6 +609,9 @@
    <property name="text">
     <string>View Computed Dir</string>
    </property>
+   <property name="toolTip">
+    <string>Opens the directory where all precomputed chips, query results, and features are stored. </string>
+   </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
    </property>
@@ -558,6 +620,9 @@
    <property name="text">
     <string>View Global Dir</string>
    </property>
+   <property name="toolTip">
+    <string>This is youre ~/.hotspotter folder, which stores non-database-specific preferences.</string>
+   </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
    </property>
@@ -565,6 +630,9 @@
   <action name="actionLayout_Figures">
    <property name="text">
     <string>Layout Figures</string>
+   </property>
+   <property name="toolTip">
+    <string>Organizes windows in a grid</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+L</string>
@@ -575,13 +643,32 @@
   </action>
   <action name="actionDev_Mode_IPython">
    <property name="text">
-    <string>Developer Help</string>
+    <string>Developer Mode (IPython)</string>
+   </property>
+   <property name="toolTip">
+    <string>This allows IPython interaction in the terminal and disables GUI interaction until the &quot;exit&quot; command is entered in IPython. </string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Alt+Shift+D</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionDelete_Precomputed_Results">
+   <property name="text">
+    <string>Delete Cached Query Results</string>
+   </property>
+   <property name="toolTip">
+    <string>Removes all precomputed results. Use if you expect that your results may be corrupted.</string>
+   </property>
+  </action>
+  <action name="actionDeveloper_Reload">
+   <property name="text">
+    <string>Developer Reload</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+R</string>
    </property>
   </action>
  </widget>

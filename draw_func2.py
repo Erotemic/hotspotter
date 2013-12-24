@@ -422,7 +422,6 @@ def bring_to_front(fig):
     qtwin.raise_()
     qtwin.activateWindow()
     qtwin.setWindowFlags(Qt.WindowStaysOnTopHint)
-    qtwin.show()
     qtwin.setWindowFlags(Qt.WindowFlags(0))
     qtwin.show()
 
@@ -1382,7 +1381,7 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
     lines     = kwargs.get('draw_lines', True)
     ell_alpha = kwargs.get('ell_alpha', .4)
     num_match = len(fm)
-    print('[df2.draw_fnmatch] num_match=%r' % num_match)
+    #printDBG('[df2.draw_fnmatch] num_match=%r' % num_match)
     x1, y1, w1, h1 = xywh1
     x2, y2, w2, h2 = xywh2
     offset2 = (x2, y2)
@@ -1402,7 +1401,7 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
         draw_kpts2(kpts2, offset=offset2, **all_args)
     # Draw Lines and Ellipses and Points oh my
     if num_match > 0:
-        colors = [kwargs['colors']]*num_match if 'colors' in kwargs else distinct_colors(num_match)
+        colors = [kwargs['colors']] * num_match if 'colors' in kwargs else distinct_colors(num_match)
         acols = add_alpha(colors)
 
         # Helper functions

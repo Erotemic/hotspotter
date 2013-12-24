@@ -62,22 +62,22 @@ if __name__ == '__main__':
         if hs.args.strict:
             raise
     # Create main window only after data is loaded
-    backend = guiback.make_main_window(hs, app)
+    back = guiback.make_main_window(hs, app)
 
     # --- Run Startup Commands ---
     # Autocompute all queries
     if hs.args.autoquery:
-        backend.precompute_queries()
+        back.precompute_queries()
     if len(cids) > 0:
             qcid = cids[0]
-            res = backend.query(qcid)
-    # Connect database to the backend gui
-    app.setActiveWindow(backend.win)
+            res = back.query(qcid)
+    # Connect database to the back gui
+    app.setActiveWindow(back.front)
 
     # Allow for a IPython connection by passing the --cmd flag
     embedded = False
     exec(helpers.ipython_execstr())
     if not embedded:
         # If not in IPython run the QT main loop
-        guitools.run_main_loop(app, is_root, backend, frequency=100)
+        guitools.run_main_loop(app, is_root, back, frequency=100)
     signal_reset()

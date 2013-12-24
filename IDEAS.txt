@@ -1,0 +1,10 @@
+coverage measure - 
+allocate a binary pixel mask for the query and result. 
+for each matching keypoint warp a unit circle to an ellipse using inv(A)
+mark that pixel as on
+the ratio of on to off pixels is the coverage measure. 
+
+ALTERNATIVE: Instead of on to off pixels, take all keypoints from the image
+and warp them using the same technique. The ratio of this mask vs the
+matching mask is the coverage measure. 
+

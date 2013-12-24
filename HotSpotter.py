@@ -6,7 +6,6 @@ import os
 from os.path import exists, join, split, relpath
 from itertools import izip
 import shutil
-import functools
 # Science
 import numpy as np
 from PIL import Image
@@ -230,11 +229,13 @@ class HotSpotter(DynStruct):
     # On Modification
     #---------------
     def unload_all(hs):
-        print('[hs] unloading all data')
+        print('[hs] Unloading all data')
         #hs.cx2_rchip_size = None  # HACK this should be part of hs.cpaths
         hs.feats  = ds.HotspotterChipFeatures()
         hs.cpaths = ds.HotspotterChipPaths()
         hs.prefs.query_cfg.unload_data()
+        hs._read_chip.clear_cache()
+        hs.gx2_image.clear_cache()
         print('[hs] finished unloading all data')
 
     def unload_cxdata(hs, cx):
@@ -243,6 +244,8 @@ class HotSpotter(DynStruct):
         # HACK This should not really be removed EVERY time you unload any cx
         #hs.cx2_rchip_size = None  # HACK, should detect lack of info in cpaths
         hs.prefs.query_cfg.unload_data()  # TODO: Separate query data from cfg
+        hs._read_chip.clear_cache()
+        hs.gx2_image.clear_cache()
         lists = []
         if hs.cpaths is not None:
             lists += [hs.cpaths.cx2_rchip_path, hs.cpaths.cx2_rchip_size]
@@ -257,6 +260,8 @@ class HotSpotter(DynStruct):
 
     def delete_ciddata(hs, cid):
         cid_str_list = ['cid%d_' % cid, 'qcid=%d.npz' % cid, ]
+        hs._read_chip.clear_cache()
+        hs.gx2_image.clear_cache()
         for cid_str in cid_str_list:
             helpers.remove_files_in_dir(hs.dirs.computed_dir, '*' + cid_str + '*',
                                         recursive=True, verbose=True, dryrun=False)
@@ -267,7 +272,8 @@ class HotSpotter(DynStruct):
         print('[hs] delete_cxdata(cx=%r)' % cx)
         cid = hs.tables.cx2_cid[cx]
         hs.delete_ciddata(cid)
-        #hs._read_chip.clear_cache()
+        hs._read_chip.clear_cache()
+        hs.gx2_image.clear_cache()
 
     #---------------
     # Query Functions
@@ -415,35 +421,34 @@ class HotSpotter(DynStruct):
         helpers.remove_files_in_dir(global_cache_dir, recursive=True, verbose=True,
                                     dryrun=False)
 
+    def delete_queryresults_dir(hs):
+        qres_dir = hs.dirs.qres_dir
+        hs.unload_all()
+        #[hs.unload_cxdata(cx) for cx in hs.get_valid_cxs()]
+        helpers.remove_files_in_dir(qres_dir, recursive=True, verbose=True,
+                                    dryrun=False)
+
     #---------------
     # Getting functions
     # ---------------
     def has_property(hs, key):
         return key in hs.tables.prop_dict
 
-    def get_img_datatupe_list(hs, gx_list):
+    def get_img_datatupe_list(hs, gx_list, header_order=['Image Index', 'Image Name', '#Chips']):
         'Data for GUI Image Table'
         gx2_gname = hs.tables.gx2_gname
         gx2_cxs = hs.gx2_cxs
-        gname_list = [gx2_gname[gx] for gx in iter(gx_list)]
-        nChips_list = [len(gx2_cxs(gx)) for gx in iter(gx_list)]
-        datatup_list = [tup for tup in izip(gx_list, gname_list, nChips_list)]
-        return datatup_list
-
-    def get_res_datatup_list(hs, cx_list, cx2_score):
-        'Data for GUI Results Table'
-        cx2_cid  = hs.tables.cx2_cid
-        cx2_nx   = hs.tables.cx2_nx
-        nx2_name = hs.tables.nx2_name
-        cid_list   = [cx2_cid[cx]   for cx in iter(cx_list)]
-        score_list = [cx2_score[cx] for cx in iter(cx_list)]
-        name_list  = [nx2_name[cx2_nx[cx]] for cx in iter(cx_list)]
-        rank_list  = range(len(cx_list))
-        unziped_tups = [rank_list, name_list, cid_list, score_list]
+        cols = {
+            'Image Index': gx_list,
+            'Image Name':  [gx2_gname[gx] for gx in iter(gx_list)],
+            '#Chips':      [len(gx2_cxs(gx)) for gx in iter(gx_list)],
+        }
+        unziped_tups = [cols[header] for header in header_order]
         datatup_list = [tup for tup in izip(*unziped_tups)]
         return datatup_list
 
-    def get_chip_datatup_list(hs, cx_list):
+    def get_chip_datatup_list(hs, cx_list,
+                              header_order=['Chip ID', 'Name', 'Image', '#GT']):
         'Data for GUI Chip Table'
         prop_dict = hs.tables.prop_dict
         cx2_cid   = hs.tables.cx2_cid
@@ -451,14 +456,32 @@ class HotSpotter(DynStruct):
         cx2_gx    = hs.tables.cx2_gx
         nx2_name  = hs.tables.nx2_name
         gx2_gname = hs.tables.gx2_gname
-        prop_keys  = prop_dict.keys()
-        cid_list   = [cx2_cid[cx]           for cx in iter(cx_list)]
-        name_list  = [nx2_name[cx2_nx[cx]]  for cx in iter(cx_list)]
-        image_list = [gx2_gname[cx2_gx[cx]] for cx in iter(cx_list)]
         gtcxs_list = hs.get_other_indexed_cxs(cx_list)
-        ngt_list =   [len(gtcxs) for gtcxs in iter(gtcxs_list)]
-        prop_lists = [[prop_dict[key][cx] for cx in iter(cx_list)] for key in iter(prop_keys)]
-        unziped_tups = [cid_list, name_list, image_list, ngt_list] + prop_lists
+        cols = {
+            'Chip ID': [cx2_cid[cx]           for cx in iter(cx_list)],
+            'Name':    [nx2_name[cx2_nx[cx]]  for cx in iter(cx_list)],
+            'Image':   [gx2_gname[cx2_gx[cx]] for cx in iter(cx_list)],
+            '#GT':     [len(gtcxs) for gtcxs in iter(gtcxs_list)],
+        }
+        for key, val in prop_dict.iteritems():
+            cols[key] = [val[cx] for cx in iter(cx_list)]
+        unziped_tups = [cols[header] for header in header_order]
+        datatup_list = [tup for tup in izip(*unziped_tups)]
+        return datatup_list
+
+    def get_res_datatup_list(hs, cx_list, cx2_score,
+                             header_order=['Rank', 'Confidence', 'Matching Name', 'Chip ID']):
+        'Data for GUI Results Table'
+        cx2_cid  = hs.tables.cx2_cid
+        cx2_nx   = hs.tables.cx2_nx
+        nx2_name = hs.tables.nx2_name
+        cols = {
+            'Rank':          range(len(cx_list)),
+            'Confidence':    [cx2_score[cx] for cx in iter(cx_list)],
+            'Matching Name': [nx2_name[cx2_nx[cx]] for cx in iter(cx_list)],
+            'Chip ID':       [cx2_cid[cx]   for cx in iter(cx_list)],
+        }
+        unziped_tups = [cols[header] for header in header_order]
         datatup_list = [tup for tup in izip(*unziped_tups)]
         return datatup_list
 
@@ -548,7 +571,7 @@ class HotSpotter(DynStruct):
             gname = join(hs.dirs.img_dir, gname)
         return gname
 
-    #@functools.lru_cache(max_size=5)
+    @tools.lru_cache(max_size=7)
     def gx2_image(hs, gx):
         img_fpath = hs.gx2_gname(gx, full=True)
         img = io.imread(img_fpath)
@@ -692,7 +715,7 @@ class HotSpotter(DynStruct):
         chip = Image.open(hs.cpaths.cx2_rchip_path[cx])
         return chip
 
-    #@functools.lru_cache(max_size=10)
+    @tools.lru_cache(max_size=7)
     def _read_chip(hs, fpath):
         return io.imread(fpath)
 
@@ -702,18 +725,6 @@ class HotSpotter(DynStruct):
             return [hs._read_chip(fpath) for fpath in rchip_path]
         else:
             return hs._read_chip(rchip_path)
-
-    #def _cx2_rchip_size(hs, cx):
-        #rchip_path = hs.cpaths.cx2_rchip_path[cx]
-        #if rchip_path is None:
-            #return (0, 0)
-        #return Image.open(rchip_path).size
-
-    #def load_cx2_rchip_size(hs):
-        ## TODO: this should be integrated in hs.cpaths instead
-        #cx2_rchip_path = hs.cpaths.cx2_rchip_path
-        #cx2_rchip_size = [(0, 0) if path is None else Image.open(path).size for path in cx2_rchip_path]
-        #hs.cx2_rchip_size = cx2_rchip_size
 
     def cx2_rchip_size(hs, cx_input):
         #cx_input = hs.get_valid_cxs()

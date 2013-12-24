@@ -3,25 +3,28 @@
 #exec(open('_research/dev.py').read())
 from __future__ import division, print_function
 import __builtin__
+# Matplotlib
 import matplotlib
 matplotlib.use('Qt4Agg')
-import draw_func2 as df2
+# Standard
 import textwrap
 import sys
 from os.path import join
 import multiprocessing
+# Scientific
+import numpy as np
+#import cv2
+# HotSpotter
+import draw_func2 as df2
 import latex_formater as pytex
 import DataStructures as ds
 import matching_functions as mf
 import match_chips3 as mc3
-import numpy as np
-#import cv2
 #import spatial_verification2 as sv2
 import helpers
-#import sys
-#import params
 import vizualizations as viz
 import voting_rules2 as vr2
+
 
 # Toggleable printing
 print = __builtin__.print
@@ -42,6 +45,17 @@ def print_off():
 
     def print_(*args, **kwargs):
         pass
+
+
+def dev_reload():
+    print('[dev] performing dev_reload')
+    rrr()
+    ds.rrr()
+    mf.rrr()
+    mc3.rrr()
+    viz.rrr()
+    vr2.rrr()
+    helpers.rrr()
 
 
 def rrr():

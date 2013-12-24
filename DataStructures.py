@@ -1,11 +1,12 @@
 from __future__ import division, print_function
 import __builtin__
+# Standard
 import sys
 from itertools import izip, chain
-#
-import helpers
-
+# Scientific
 import numpy as np
+# HotSpotter
+import helpers
 from Printable import DynStruct
 
 ID_DTYPE = np.int32  # id datatype
@@ -121,17 +122,20 @@ class HotspotterDirs(DynStruct):
     def __init__(self, db_dir):
         super(HotspotterDirs, self).__init__()
         import load_data2 as ld2
+        from os.path import join
         # Class variables
         self.db_dir       = db_dir
-        self.img_dir      = db_dir + ld2.RDIR_IMG
-        self.internal_dir = db_dir + ld2.RDIR_INTERNAL
-        self.computed_dir = db_dir + ld2.RDIR_COMPUTED
-        self.chip_dir     = db_dir + ld2.RDIR_CHIP
-        self.rchip_dir    = db_dir + ld2.RDIR_RCHIP
-        self.feat_dir     = db_dir + ld2.RDIR_FEAT
-        self.cache_dir    = db_dir + ld2.RDIR_CACHE
-        self.result_dir   = db_dir + ld2.RDIR_RESULTS
-        self.qres_dir     = db_dir + ld2.RDIR_QRES
+        self.img_dir      = join(db_dir, ld2.RDIR_IMG)
+        self.internal_dir = join(db_dir, ld2.RDIR_INTERNAL)
+        self.computed_dir = join(db_dir, ld2.RDIR_COMPUTED)
+        self.chip_dir     = join(db_dir, ld2.RDIR_CHIP)
+        self.rchip_dir    = join(db_dir, ld2.RDIR_RCHIP)
+        self.feat_dir     = join(db_dir, ld2.RDIR_FEAT)
+        self.cache_dir    = join(db_dir, ld2.RDIR_CACHE)
+        self.result_dir   = join(db_dir, ld2.RDIR_RESULTS)
+        self.qres_dir     = join(db_dir, ld2.RDIR_QRES)
+
+    def ensure_dirs(self):
         # Make directories if needbe
         helpers.ensure_path(self.internal_dir)
         helpers.ensure_path(self.computed_dir)

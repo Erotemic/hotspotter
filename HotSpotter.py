@@ -13,7 +13,6 @@ from PIL import Image
 import DataStructures as ds
 import Config
 import chip_compute2 as cc2
-import convert_db
 import feature_compute2 as fc2
 import fileio as io
 import helpers
@@ -70,7 +69,7 @@ class HotSpotter(DynStruct):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
         super(HotSpotter, hs).__init__()
-        print(r'[\hs] Creating HotSpotter API')
+        #printDBG('[\hs] Creating HotSpotter API')
         hs.args = args
         #hs.num_cx = None
         hs.tables = None
@@ -96,7 +95,7 @@ class HotSpotter(DynStruct):
         hs.query_history = [(None, None)]
         if db_dir is not None:
             hs.args.dbdir = db_dir
-        print(r'[/hs] Created HotSpotter API')
+        #printDBG(r'[/hs] Created HotSpotter API')
 
     def load_preferences(hs):
         print('[hs] load preferences')
@@ -129,11 +128,11 @@ class HotSpotter(DynStruct):
         hs.load_tables()
         hs.update_samples()
         if load_all:
-            print('[hs] load_all=True')
+            #printDBG('[hs] load_all=True')
             hs.load_chips()
             hs.load_features()
         else:
-            print('[hs] load_all=False')
+            #printDBG('[hs] load_all=False')
             hs.load_chips([])
             hs.load_features([])
         return hs
@@ -142,11 +141,13 @@ class HotSpotter(DynStruct):
         # Check to make sure dbdir is specified correctly
         if hs.args.dbdir is None or not exists(hs.args.dbdir):
             raise ValueError('db_dir=%r does not exist!' % (hs.args.dbdir))
-        convert_db.convert_if_needed(hs.args.dbdir)
-        hs_dirs, hs_tables = ld2.load_csv_tables(hs.args.dbdir)
-        hs.tables  = hs_tables
-        hs.dirs    = hs_dirs
-        #hs.num_cx = len(hs.tables.cx2_cid)
+        # convert_db.convert_if_needed(hs.args.dbdir)
+        hs_dirs, hs_tables, db_version = ld2.load_csv_tables(hs.args.dbdir)
+        hs.tables = hs_tables
+        hs.dirs = hs_dirs
+        if db_version != 'current':
+            print('Loaded db_version=%r. Converting...' % db_version)
+            hs.save_database()
         _checkargs_onload(hs)
 
     def load_chips(hs, cx_list=None):
@@ -176,20 +177,20 @@ class HotSpotter(DynStruct):
         print('[hs] update_samples():')
         valid_cxs = hs.get_valid_cxs()
         if test_samp is None:
-            print('[hs] * default: all chips in testing')
+            #print('[hs] * default: all chips in testing')
             test_samp = valid_cxs
-        else:
-            print('[hs] * given: testing chips')
+        #else:
+            #print('[hs] * given: testing chips')
         if train_samp is None:
             print('[hs] * default: all chips in training')
             train_samp = valid_cxs
-        else:
-            print('[hs] * given: training chips')
+        #else:
+            #print('[hs] * given: training chips')
         if indx_samp is None:
-            print('[hs] * default: training set as database set')
+            #print('[hs] * default: training set as database set')
             indx_samp = train_samp
-        else:
-            print('[hs] * given: indexed chips')
+        #else:
+            #print('[hs] * given: indexed chips')
 
         tools.assert_int(test_samp, 'test_samp')
         tools.assert_int(train_samp, 'train_samp')

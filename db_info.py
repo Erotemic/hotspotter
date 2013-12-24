@@ -165,13 +165,15 @@ def print_database_stats(db_stats):
         print(db_stats.db_dir)
         print('num images: %d' % helpers.num_images_in_dir(db_stats.db_dir))
 
+
 #--------------------
 def has_internal_tables(path):
-    internal_dir = path+'/.hs_internals'
-    tables = [internal_dir+'/chip_table.csv',
-              internal_dir+'/name_table.csv',
-              internal_dir+'/image_table.csv']
-    return all([exists(path) for path in tables])
+    internal_dir = join(path, '.hs_internals')
+    tables = [join(internal_dir, 'chip_table.csv'),
+              join(internal_dir, 'name_table.csv'),
+              join(internal_dir, 'image_table.csv')]
+    return all([exists(path_) for path_ in tables])
+
 
 def is_imgdir(path):
     if not isdir(path):
@@ -194,38 +196,47 @@ def is_imgdir(path):
             num_files += 1
     return False
 
+
 def has_ss_gt(path):
-    ss_data = path+'/SightingData.txt'
-    return exists(ss_data)
+    ss_data = join(path, 'SightingData.csv')
+    print(ss_data)
+    return helpers.checkpath(ss_data, verbose=True)
+
 
 def has_v1_gt(path):
-    info_table = path+'/animal_info_table.csv'
-    return exists(info_table)
+    info_table = join(path, 'animal_info_table.csv')
+    print(info_table)
+    return helpers.checkpath(info_table, verbose=True)
+
 
 def has_v2_gt(path):
-    tables = [path+'/image_table.csv',
-              path+'/instance_table.csv']
-    return all([exists(path) for path in tables])
+    tables = [join(path, 'image_table.csv'),
+              join(path, 'instance_table.csv')]
+    return all([exists(path_) for path_ in tables])
+
 
 def has_partial_gt(path):
-    internal_dir = path+'/.hs_internals'
-    tables = ['flat_table.csv',
-              internal_dir+'/chip_table.csv',
-              'chip_table.csv',
-              internal_dir+'instance_table.csv',
-              'instance_table.csv']
-    return any([exists(path) for path in tables])
+    internal_dir = join(path, '.hs_internals')
+    useful_files = ['flat_table.csv',
+                    join(internal_dir, '/chip_table.csv'),
+                    'chip_table.csv',
+                    join(internal_dir, 'instance_table.csv'),
+                    'instance_table.csv']
+    return any([exists(path_) for path_ in useful_files])
+
 
 def has_flat_table(path):
-    tables = [path + '/flat_table.csv']
-    return all([exists(path) for path in tables])
+    tables = [join(path, '/flat_table.csv')]
+    return all([exists(path_) for path_ in tables])
+
 
 def has_tables(path):
     tables = [
-        path+'/chip_table.csv',
-        path+'/image_table.csv']
-    return all([exists(path) for path in tables])
+        join(path, '/chip_table.csv'),
+        join(path, '/image_table.csv')]
+    return all([exists(path_) for path_ in tables])
 #--------------------
+
 
 def get_database_version(path):
     is_head = has_internal_tables(path)
@@ -246,10 +257,11 @@ def get_database_version(path):
         version = None
 
     if not version is None:
-        if not exists(path+'/images'):
+        if not exists(join(path, 'images')):
             version += '+broken'
         version = '(%s)' % version
     return version
+
 
 def is_not_leaf(path):
     if not isdir(path) or islink(path):

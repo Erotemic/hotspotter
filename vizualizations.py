@@ -165,7 +165,7 @@ def show_image(hs, gx, highlight_cxs=None, cx_clicked_func=None, draw_rois=True,
 
 
 def show_splash(fnum=1, **kwargs):
-    print('[viz] show_splash()')
+    #printDBG('[viz] show_splash()')
     splash_fpath = realpath('_frontend/splash.png')
     img = io.imread(splash_fpath)
     df2.imshow(img, fnum=fnum, **kwargs)
@@ -481,7 +481,7 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk, **kwargs):
     # Draws the chips and keypoint matches
     scm2 = df2.show_chipmatch2
     kwargs_ = dict(fs=fs, lbl1=lbl1, lbl2=lbl2, title=title, fnum=fnum,
-                   pnum=pnum, **kwargs)
+                   pnum=pnum, vert=hs.prefs.display_cfg.vert, **kwargs)
     ax, xywh1, xywh2 = scm2(rchip1, rchip2, kpts1, kpts2, fm, **kwargs_)
     x1, y1, w1, h1 = xywh1
     x2, y2, w2, h2 = xywh2

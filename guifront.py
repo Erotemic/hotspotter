@@ -113,7 +113,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
 
     def __init__(front, back, use_plot_widget=True):
         super(MainWindowFrontend, front).__init__()
-        print('[*front] creating frontend')
+        #print('[*front] creating frontend')
         front.prev_tbl_item = None
         front.back = back
         front.ui = init_ui(front)
@@ -135,7 +135,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
 
     @slot_()
     def closeEvent(front, event):
-        front.printSignal.emit('[*front] closeEvent')
+        #front.printSignal.emit('[*front] closeEvent')
         event.accept()
         front.quitSignal.emit()
 
@@ -191,13 +191,12 @@ class MainWindowFrontend(QtGui.QMainWindow):
     @slot_(bool)
     def setPlotWidgetEnabled(front, flag):
         flag = bool(flag)
-        front.print('setPlotWidgetEnabled(%r)' % flag)
-        print(front.plotWidget)
+        #front.printDBG('setPlotWidgetEnabled(%r)' % flag)
         front.plotWidget.setVisible(flag)
 
     @slot_(bool)
     def setEnabled(front, flag):
-        front.print('setEnabled(%r)' % flag)
+        #front.printDBG('setEnabled(%r)' % flag)
         ui = front.ui
         # Enable or disable all actions
         for uikey in ui.__dict__.keys():
@@ -221,7 +220,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         ui.actionView_Docs.setEnabled(False)
 
     def _populate_table(front, tbl, col_headers, col_editable, row_list, row2_datatup):
-        front.print('_populate_table()')
+        #front.printDBG('_populate_table()')
         hheader = tbl.horizontalHeader()
 
         def set_header_context_menu(hheader):
@@ -291,7 +290,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
     def populate_tbl(front, table_name, col_headers, col_editable,
                      row_list, row2_datatup):
         table_name = str(table_name)
-        front.print('populate_tbl(%s)' % table_name)
+        #front.printDBG('populate_tbl(%s)' % table_name)
         try:
             tbl = front.ui.__dict__['%s_TBL' % table_name]
         except KeyError:

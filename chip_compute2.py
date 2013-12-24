@@ -71,6 +71,13 @@ def xywh_to_tlbr(roi, img_wh):
     return (x1, y1, x2, y2)
 
 
+def Imageopen(img_path):
+    try:
+        return Image.open(img_path)
+    except IOError:
+        raise
+
+
 # =======================================
 # Parallelizable Work Functions
 # =======================================

@@ -386,7 +386,7 @@ def spatial_verification(hs, qcx2_chipmatch, query_cfg):
     cx2_rchip_size  = hs.cpaths.cx2_rchip_size
     cx2_kpts = hs.feats.cx2_kpts
     qcx2_chipmatchSV = {}
-    print(query_cfg._dcxs)
+    #print(query_cfg._dcxs)
     dcxs_ = set(query_cfg._dcxs)
     USE_1_to_2 = True
     # Find a transform from chip2 to chip1 (the old way was 1 to 2)

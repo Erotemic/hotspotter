@@ -317,7 +317,7 @@ class Pref(PrefNode):
         return True
 
     def load(self):
-        print('[pref.load()]')
+        #printDBG('[pref.load()]')
         'Read pref dict stored on disk. Overwriting current values.'
         if not os.path.exists(self._intern.fpath):
             return False
@@ -432,6 +432,9 @@ class Pref(PrefNode):
     def qt_set_leaf_data(self, qvar):
         'Sets backend data using QVariants'
         print('[pref] qt_set_leaf_data: qvar=%r' % qvar)
+        print('[pref] qt_set_leaf_data: qvar=%s' % str(qvar))
+        print('[pref] qt_set_leaf_data: qvar=%s' % str(qvar.toString()))
+
         print('[pref] qt_set_leaf_data: _intern.name=%r' % self._intern.name)
         print('[pref] qt_set_leaf_data: _intern.type_=%r' % self._intern.type())
         print('[pref] qt_set_leaf_data: _intern.value=%r' % self._intern.value)
@@ -444,7 +447,7 @@ class Pref(PrefNode):
                 raise Exception('[Pref.qtleaf] Qt can only change leafs')
             elif self._intern.value is None:
                 # None could be a number of types
-                def cast_order(var, order=[int, float, str]):
+                def cast_order(var, order=[bool, int, float, str]):
                     for type_ in order:
                         try:
                             ret = type_(var)
@@ -453,7 +456,7 @@ class Pref(PrefNode):
                             continue
                 new_val = cast_order(str(qvar.toString()))
             if isinstance(self._intern.value, bool):
-                new_val = bool(qvar.toBool())
+                new_val = bool(qvar.toBool()[0])
             elif isinstance(self._intern.value, int):
                 new_val = int(qvar.toInt()[0])
             elif isinstance(self._intern.value, float):
@@ -462,12 +465,22 @@ class Pref(PrefNode):
                 new_val = str(qvar.toString())
             elif isinstance(self._intern.value, PrefChoice):
                 new_val = qvar.toString()
-                # Check for a set of None
                 if new_val == 'None':
                     new_val = None
             else:
-                raise ValueError('[Pref.qtleaf] Unknown internal type = %r' %
-                                 type(self._intern.value))
+                try:
+                    new_val = str(qvar.toString())
+                except Exception:
+                    raise ValueError('[Pref.qtleaf] Unknown internal type = %r'
+                                     % type(self._intern.value))
+            # Check for a set of None
+            if isinstance(new_val, str):
+                if new_val.upper() == 'NONE':
+                    new_val = None
+                if new_val.upper() in 'TRUE':
+                    new_val = True
+                if new_val.upper() == 'FALSE':
+                    new_val = False
              # save to disk after modifying data
             print('[pref] qt_set_leaf_data: new_val=%r' % new_val)
             print('[pref] qt_set_leaf_data: type(new_val)=%r' % type(new_val))
@@ -524,6 +537,10 @@ class QPreferenceModel(QAbstractItemModel):
         #print('type(data) = %r' % type(data))
         if isinstance(data, float):
             var = QVariant(QString.number(data, format='g', precision=6))
+        if isinstance(data, bool):
+            var = QVariant(data).toString()
+        if isinstance(data, int):
+            var = QVariant(data).toString()
         #print('var= %r' % var)
         #print('type(var)= %r' % type(var))
         return var

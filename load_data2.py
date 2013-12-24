@@ -14,6 +14,7 @@ import re
 import multiprocessing
 # Science
 import numpy as np
+from PIL import Image
 # Hotspotter
 import DataStructures as ds
 import helpers
@@ -58,31 +59,34 @@ NAME_TABLE_FNAME = 'name_table.csv'
 IMAGE_TABLE_FNAME = 'image_table.csv'
 
 # TODO: Allow alternative internal directories
-RDIR_INTERNAL_ALTS = ['/hs_internals']
-RDIR_INTERNAL2 = '.hs_internals'
+RDIR_INTERNAL_ALTS = ['.hs_internals']
+RDIR_INTERNAL2 = '_hsdb'
 RDIR_IMG2 = 'images'
 
 # paths relative to dbdir
-RDIR_IMG      = '/' + RDIR_IMG2
-RDIR_INTERNAL = '/' + RDIR_INTERNAL2
-RDIR_COMPUTED = '/.hs_internals/computed'
-RDIR_CHIP     = '/.hs_internals/computed/chips'
-RDIR_RCHIP    = '/.hs_internals/computed/temp'
-RDIR_CACHE    = '/.hs_internals/computed/cache'
-RDIR_FEAT     = '/.hs_internals/computed/feats'
-RDIR_RESULTS  = '/.hs_internals/computed/results'
-RDIR_QRES     = '/.hs_internals/computed/query_results'
+RDIR_IMG      = RDIR_IMG2
+RDIR_INTERNAL = RDIR_INTERNAL2
+RDIR_COMPUTED = join(RDIR_INTERNAL2, 'computed')
+RDIR_CHIP     = join(RDIR_COMPUTED, 'chips')
+RDIR_RCHIP    = join(RDIR_COMPUTED, 'temp')
+RDIR_CACHE    = join(RDIR_COMPUTED, 'cache')
+RDIR_FEAT     = join(RDIR_COMPUTED, 'feats')
+RDIR_RESULTS  = join(RDIR_COMPUTED, 'results')
+RDIR_QRES     = join(RDIR_COMPUTED, 'query_results')
 
 #========================================
 # DRIVER CODE
 #========================================
 
 
-def tryindex(list, val):
-    try:
-        return list.index(val)
-    except ValueError:
-        return -1
+def tryindex(list, *args):
+    for val in args:
+        try:
+            return list.index(val)
+        except ValueError:
+            pass
+    return -1
+    #print('[ld2] Unable to find args=%r in list=%r' % (args, list))
 
 
 def load_csv_tables(db_dir, allow_new_dir=True):
@@ -93,7 +97,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     if 'vdd' in sys.argv:
         helpers.vd(db_dir)
     print('\n=============================')
-    print('[ld2] Loading hotspotter csv tables: ' + str(db_dir))
+    print('[ld2] Loading hotspotter csv tables: %r' % db_dir)
     print('=============================')
     hs_dirs = ds.HotspotterDirs(db_dir)
     hs_tables = ds.HotspotterTables()
@@ -113,20 +117,93 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     has_nametbl = helpers.checkpath(name_table)
     has_imgtbl  = helpers.checkpath(image_table)
 
-    # TODO DETECT OLD FORMATS HERE
+    # ChipTable Header Markers
+    header_numdata = '# NumData '
+    header_csvformat_re = '# *ChipID,'
+    v12_csvformat_re = r'#[0-9]*\) '
+    # Default ChipTable Header Variables
+    chip_csv_format = ['ChipID', 'ImgID',  'NameID',   'roi[tl_x  tl_y  w  h]',  'theta']
+    v12_csv_format = ['instance_id', 'image_id', 'name_id', 'roi']
 
-    if not all([has_dbdir, has_imgdir, has_chiptbl, has_nametbl, has_imgtbl]):
-        if allow_new_dir:
-            return hs_dirs, hs_tables
-        errmsg  = ''
-        errmsg += ('\n\n!!!!!\n\n')
-        errmsg += ('  ! The data tables seem to not be loaded')
-        errmsg += (' Files in internal dir: %r' % internal_dir)
-        for fname in os.listdir(internal_dir):
-            errmsg += ('   ! fname')
-        errmsg += ('\n\n!!!!!\n\n')
-        print(errmsg)
-        raise Exception(errmsg)
+    # TODO DETECT OLD FORMATS HERE
+    db_version = 'current'
+    isCurrentVersion = all([has_dbdir, has_imgdir, has_chiptbl, has_nametbl, has_imgtbl])
+    print('[ld2] isCurrentVersion=%r' % isCurrentVersion)
+    IS_VERSION_1_OR_2 = False
+
+    if not isCurrentVersion:
+        helpers.checkpath(db_dir, verbose=True)
+        helpers.checkpath(img_dir, verbose=True)
+        helpers.checkpath(chip_table, verbose=True)
+        helpers.checkpath(name_table, verbose=True)
+        helpers.checkpath(image_table, verbose=True)
+        import db_info
+
+        def assign_alternate(tblname):
+            path = join(db_dir, tblname)
+            if helpers.checkpath(path, verbose=True):
+                return path
+            path = join(db_dir, '.hs_internals', tblname)
+            if helpers.checkpath(path, verbose=True):
+                return path
+            raise Exception('bad state=%r' % tblname)
+        #
+        if db_info.has_v2_gt(db_dir):
+            IS_VERSION_1_OR_2 = True
+            db_version = 'hotspotter-v2'
+            chip_csv_format = []
+            header_csvformat_re = v12_csvformat_re
+            chip_table  = assign_alternate('instance_table.csv')
+            name_table  = assign_alternate('name_table.csv')
+            image_table = assign_alternate('image_table.csv')
+        #
+        elif db_info.has_v1_gt(db_dir):
+            IS_VERSION_1_OR_2 = True
+            db_version = 'hotspotter-v1'
+            chip_csv_format = []
+            header_csvformat_re = v12_csvformat_re
+            chip_table  = assign_alternate('animal_info_table.csv')
+            name_table  = assign_alternate('name_table.csv')
+            image_table = assign_alternate('image_table.csv')
+        #
+        elif db_info.has_ss_gt(db_dir):
+            db_version = 'stripespotter'
+            chip_table = join(db_dir, 'SightingData.csv')
+
+            chip_csv_format = ['imgindex', 'original_filepath', 'roi', 'animal_name']
+            header_csvformat_re = '#imgindex,'
+            #raise NotImplementedError('stripe spotter conversion')
+            if not helpers.checkpath(chip_table, verbose=True):
+                raise Exception('bad state chip_table=%r' % chip_table)
+        elif db_info.has_partial_gt(db_dir):
+            print('[ld2] detected incomplete database')
+            raise NotImplementedError('partial database recovery')
+        else:
+            try:
+                db_version = 'current'  # Well almost
+                chip_table   = assign_alternate(CHIP_TABLE_FNAME)
+                name_table   = assign_alternate(NAME_TABLE_FNAME)
+                image_table  = assign_alternate(IMAGE_TABLE_FNAME)
+            except Exception:
+                if allow_new_dir:
+                    print('[ld2] detected new dir')
+                    hs_dirs.ensure_dirs()
+                    return hs_dirs, hs_tables
+                else:
+                    print('[ld2] I AM IN A BAD STATE!')
+                    errmsg  = ''
+                    errmsg += ('\n\n!!!!!\n\n')
+                    errmsg += ('  ! The data tables seem to not be loaded')
+                    errmsg += (' Files in internal dir: %r' % internal_dir)
+                    for fname in os.listdir(internal_dir):
+                        errmsg += ('   ! fname')
+                    errmsg += ('\n\n!!!!!\n\n')
+                    print(errmsg)
+                    raise Exception(errmsg)
+    if not helpers.checkpath(chip_table):
+        raise Exception('bad state chip_table=%r' % chip_table)
+    print('[ld2] detected %r' % db_version)
+    hs_dirs.ensure_dirs()
     print('-------------------------')
     print('[ld2] Loading database tables: ')
     cid_lines  = []
@@ -154,7 +231,18 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         if params.VERBOSE_LOAD_DATA:
             print('[ld2] * Loaded %r names (excluding unknown names)' % (len(nx2_name) - 2))
             print('[ld2] * Done loading name table')
+    except IOError as ex:
+        print('IOError: %r' % ex)
+        print('[ld2.name] loading without name table')
+        #raise
+    except Exception as ex:
+        print('[ld2.name] ERROR %r' % ex)
+        #print('[ld2.name] ERROR name_tbl parsing: %s' % (''.join(cid_lines)))
+        print('[ld2.name] ERROR on line number:  %r' % (line_num))
+        print('[ld2.name] ERROR on line:         %r' % (csv_line))
+        print('[ld2.name] ERROR on fields:       %r' % (csv_fields))
 
+    try:
         # -------------------
         # --- READ IMAGES ---
         # -------------------
@@ -175,7 +263,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             if len(csv_fields) == 3:
                 gname = csv_fields[1]
             if len(csv_fields) == 4:
-                gname = csv_fields[1:3]
+                gname = '.'.join(csv_fields[1:3])
             gid2_gx[gid] = len(gx2_gname)
             gx2_gname.append(gname)
         nTableImgs = len(gx2_gname)
@@ -199,42 +287,72 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             print('[ld2] %r were already specified in the table' % nDirImgsAlready)
             print('[ld2] Loaded %r images' % len(gx2_gname))
             print('[ld2] Done loading images')
+    except IOError:
+        print('IOError: %r' % ex)
+        print('[ld2.gname] loading without image table')
+        #raise
+    except Exception as ex:
+        print('[ld2.img] ERROR %r' % ex)
+        #print('[ld2.img] ERROR image_tbl parsing: %s' % (''.join(cid_lines)))
+        print('[ld2.img] ERROR on line number:  %r' % (line_num))
+        print('[ld2.img] ERROR on line:         %r' % (csv_line))
+        print('[ld2.img] ERROR on fields:       %r' % (csv_fields))
+        raise
 
+    try:
         # ------------------
         # --- READ CHIPS ---
         # ------------------
         print('[ld2] Loading chip table: %r' % chip_table)
         # Load Chip Table Header
         cid_lines = open(chip_table, 'r').readlines()
-        # Header Markers
-        header_numdata = '# NumData '
-        header_csvformat_re = '# *ChipID,'
-        # Default Header Variables
-        chip_csv_format = ['ChipID', 'ImgID',  'NameID',   'roi[tl_x  tl_y  w  h]',  'theta']
         num_data   = -1
         # Parse Chip Table Header
         for line_num, csv_line in enumerate(cid_lines):
+            #print('[LINE %4d] %r' % (line_num, csv_line))
             csv_line = csv_line.strip('\n\r\t ')
             if len(csv_line) == 0:
+                #print('[LINE %4d] BROKEN' % (line_num))
                 continue
             csv_line = csv_line.strip('\n')
             if csv_line.find('#') != 0:
+                #print('[LINE %4d] BROKEN' % (line_num))
                 break  # Break after header
-            if not re.search(header_csvformat_re, csv_line) is None:
-                chip_csv_format = [_.strip() for _ in csv_line.strip('#').split(',')]
+            if re.search(header_csvformat_re, csv_line) is not None:
+                #print('[LINE %4d] SEARCH' % (line_num))
+                # Specified Header Variables
+                if IS_VERSION_1_OR_2:
+                    #print(csv_line)
+                    end_ = csv_line.find('-')
+                    if end_ != -1:
+                        end_ = end_ - 1
+                        #print('end_=%r' % end_)
+                        fieldname = csv_line[5:end_]
+                    else:
+                        fieldname = csv_line[5:]
+                    #print(fieldname)
+                    chip_csv_format += [fieldname]
+
+                else:
+                    chip_csv_format = [_.strip() for _ in csv_line.strip('#').split(',')]
+                #print('[ld2] read chip_csv_format: %r' % chip_csv_format)
             if csv_line.find(header_numdata) == 0:
+                #print('[LINE %4d] NUM_DATA' % (line_num))
                 num_data = int(csv_line.replace(header_numdata, ''))
+        if IS_VERSION_1_OR_2 and len(chip_csv_format) == 0:
+            chip_csv_format = v12_csv_format
         if params.VERBOSE_LOAD_DATA:
             print('[ld2] num_chips: %r' % num_data)
             print('[ld2] chip_csv_format: %r ' % chip_csv_format)
-        cid_x   = tryindex(chip_csv_format, 'ChipID')
-        gid_x   = tryindex(chip_csv_format, 'ImgID')
-        nid_x   = tryindex(chip_csv_format, 'NameID')
-        roi_x   = tryindex(chip_csv_format, 'roi[tl_x  tl_y  w  h]')
+        #print('[ld2.chip] Header Columns: %s\n    ' % '\n   '.join(chip_csv_format))
+        cid_x   = tryindex(chip_csv_format, 'ChipID', 'imgindex', 'instance_id')
+        gid_x   = tryindex(chip_csv_format, 'ImgID', 'image_id')
+        nid_x   = tryindex(chip_csv_format, 'NameID', 'name_id')
+        roi_x   = tryindex(chip_csv_format, 'roi[tl_x  tl_y  w  h]', 'roi')
         theta_x = tryindex(chip_csv_format, 'theta')
         # new fields
-        gname_x = tryindex(chip_csv_format, 'Image')
-        name_x  = tryindex(chip_csv_format, 'Name')
+        gname_x = tryindex(chip_csv_format, 'Image', 'original_filepath')
+        name_x  = tryindex(chip_csv_format, 'Name', 'animal_name')
         required_x = [cid_x, gid_x, gname_x, nid_x, name_x, roi_x, theta_x]
         # Hotspotter Chip Tables
         cx2_cid   = []
@@ -257,30 +375,60 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             if len(csv_line) == 0 or csv_line.find('#') == 0:
                 continue
             csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
+            #
             # Load Chip ID
-            cid = int(csv_fields[cid_x])
-            # Load Chip Image Info
-            if gid_x != -1:
-                gid = int(csv_fields[gid_x])
-                gx  = gid2_gx[gid]
-            elif gname_x != -1:
-                gname = csv_fields[gname_x]
-                gx = gx2_gname.index(gname)
-            # Load Chip Name Info
-            if nid_x != -1:
-                nid = int(csv_fields[nid_x])
-                nx = nid2_nx[nid]
-            elif name_x != -1:
-                name = csv_fields[name_x]
-                nx = nx2_name.index(name)
+            try:
+                cid = int(csv_fields[cid_x])
+            except ValueError:
+                print('cid_x = %r' % cid_x)
+                print('csv_fields = %r' % csv_fields)
+                print('csv_fields[cid_x] = %r' % csv_fields[cid_x])
+                print(chip_csv_format)
+                raise
+            #
             # Load Chip ROI Info
-            roi_str = csv_fields[roi_x].strip('[').strip(']')
-            roi = [int(_) for _ in roi_str.split()]
+            if roi_x != -1:
+                roi_str = csv_fields[roi_x].strip('[').strip(']')
+                roi = [int(round(float(_))) for _ in roi_str.split()]
+            #
             # Load Chip theta Info
             if theta_x != -1:
                 theta = float(csv_fields[theta_x])
             else:
                 theta = 0
+            #
+            # Load Image ID/X
+            if gid_x != -1:
+                gid = int(csv_fields[gid_x])
+                gx  = gid2_gx[gid]
+            elif gname_x != -1:
+                gname = csv_fields[gname_x]
+                if db_version == 'stripespotter':
+                    if not exists(gname):
+                        gname = 'img-%07d.jpg' % cid
+                        gpath = join(db_dir, 'images', gname)
+                        w, h = Image.open(gpath).size
+                        roi = [1, 1, w, h]
+                try:
+                    gx = gx2_gname.index(gname)
+                except ValueError:
+                    gx = len(gx2_gname)
+                    gx2_gname.append(gname)
+            #
+            # Load Name ID/X
+            if nid_x != -1:
+                #print('namedbg csv_fields=%r' % csv_fields)
+                #print('namedbg nid_x = %r' % nid_x)
+                nid = int(csv_fields[nid_x])
+                #print('namedbg %r' % nid)
+                nx = nid2_nx[nid]
+            elif name_x != -1:
+                name = csv_fields[name_x]
+                try:
+                    nx = nx2_name.index(name)
+                except ValueError:
+                    nx = len(nx2_name)
+                    nx2_name.append(name)
             # Append info to cid lists
             cx2_cid.append(cid)
             cx2_gx.append(gx)
@@ -292,11 +440,12 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 prop_val = csv_fields[x]
                 prop_dict[prop].append(prop_val)
     except Exception as ex:
-        print('[ld2] ERROR %r' % ex)
-        print('[ld2] ERROR parsing: %s' % (''.join(cid_lines)))
-        print('[ld2] ERROR on line number:  %r' % (line_num))
-        print('[ld2] ERROR on line:         %r' % (csv_line))
-        print('[ld2] ERROR on fields:       %r' % (csv_fields))
+        print('[chip.ld2] ERROR %r' % ex)
+        #print('[chip.ld2] ERROR parsing: %s' % (''.join(cid_lines)))
+        print('[chip.ld2] ERROR reading header:  %r' % (line_num))
+        print('[chip.ld2] ERROR on line number:  %r' % (line_num))
+        print('[chip.ld2] ERROR on line:         %r' % (csv_line))
+        print('[chip.ld2] ERROR on fields:       %r' % (csv_fields))
         raise
 
     if params.VERBOSE_LOAD_DATA:
@@ -312,7 +461,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     print('[ld2] Done Loading hotspotter csv tables: %r' % (db_dir))
     if 'vcd' in sys.argv:
         helpers.vd(hs_dirs.computed_dir)
-    return hs_dirs, hs_tables
+    return hs_dirs, hs_tables, db_version
 
 
 def make_csv_table(column_labels=None, column_list=[], header='', column_type=None):
@@ -481,5 +630,5 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     import draw_func2 as df2
     db_dir = params.DEFAULT
-    hs_dirs, hs_tables = load_csv_tables(db_dir)
+    hs_dirs, hs_tables, version = load_csv_tables(db_dir)
     exec(df2.present())

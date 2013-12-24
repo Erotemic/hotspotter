@@ -215,7 +215,7 @@ class MainWindowBackend(QtCore.QObject):
         #back.database_loaded.emit()
 
     def populate_image_table(back):
-        print('[*back] populate_image_table()')
+        #print('[*back] populate_image_table()')
         col_headers  = back.imgtbl_headers
         col_editable = back.imgtbl_editable_flags
         # Populate table with valid image indexes
@@ -225,7 +225,7 @@ class MainWindowBackend(QtCore.QObject):
         back.populateSignal.emit('image', col_headers, col_editable, row_list, datatup_list)
 
     def populate_chip_table(back):
-        print('[*back] populate_chip_table()')
+        #print('[*back] populate_chip_table()')
         col_headers  = back.chiptbl_headers[:]
         col_editable = back.chiptbl_editable_flags[:]
         # Add User Properties to headers
@@ -742,14 +742,14 @@ class MainWindowBackend(QtCore.QObject):
 
 # Creation function
 def make_main_window(hs=None, app=None):
-    print(r'[*back] make_main_window()')
+    #printDBG(r'[*back] make_main_window()')
     back = MainWindowBackend(hs=hs)
     back.app = app
     back.front.show()
     back.layout_figures()
     if app is not None:
         app.setActiveWindow(back.front)
-    print('[*back] Finished creating main front\n')
+    #print('[*back] Finished creating main front\n')
     return back
 
 

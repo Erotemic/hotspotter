@@ -371,6 +371,7 @@ class DisplayConfig(ConfigBase):
         display_cfg.name_scoring = False
         display_cfg.showanalysis = False
         display_cfg.annotations  = True
+        display_cfg.vert  = None
 
 
 # Convinience

@@ -10,8 +10,8 @@ import helpers
 import draw_func2 as df2
 
 IS_INIT = False
-DISABLE_NODRAW = True
-DEBUG = True
+DISABLE_NODRAW = False
+DEBUG = False
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -79,19 +79,20 @@ def infoslot_(*types):  # This is called at wrap time to get args
     # Wrap with debug statments
     def pyqtSlotWrapper(func):
         func_name = func.func_name
-        print('[@guitools] Wrapping %r with infoslot_' % func.func_name)
+        #printDBG('[@guitools] Wrapping %r with infoslot_' % func.func_name)
 
         @Qt.pyqtSlot(*types, name=func.func_name)
         def slot_wrapper(self, *args, **kwargs):
-            print('[**infoslot_] %s()' % (func_name))
+            #printDBG('[**infoslot_] %s()' % (func_name))
             #with helpers.Indenter():
             result = func(self, *args, **kwargs)
-            print('[**infoslot_] Finished %s()' % (func_name))
+            #printDBG('[**infoslot_] Finished %s()' % (func_name))
             return result
 
         slot_wrapper.func_name = func_name
         return slot_wrapper
     return pyqtSlotWrapper
+
 
 def fastslot_(*types):
     'wrapper around pyqtslot decorator'
@@ -116,7 +117,7 @@ slot_ = dbgslot_ if DEBUG else fastslot_
 # TODO: This decorator has to be specific to either front or back. Is there a
 # way to make it more general?
 def backblocking(func):
-    print('[@guitools] Wrapping %r with backblocking' % func.func_name)
+    #printDBG('[@guitools] Wrapping %r with backblocking' % func.func_name)
 
     def block_wrapper(back, *args, **kwargs):
         #print('[guitools] BLOCKING')
@@ -141,7 +142,7 @@ def backblocking(func):
 
 def frontblocking(func):
     # HACK: blocking2 is specific to fron
-    print('[@guitools] Wrapping %r with frontblocking' % func.func_name)
+    #printDBG('[@guitools] Wrapping %r with frontblocking' % func.func_name)
 
     def block_wrapper(front, *args, **kwargs):
         #print('[guitools] BLOCKING')
@@ -168,7 +169,7 @@ def frontblocking(func):
 # DRAWING DECORATOR
 def drawing(func):
     'Wraps a class function and draws windows on completion'
-    print('[@guitools] Wrapping %r with drawing' % func.func_name)
+    #printDBG('[@guitools] Wrapping %r with drawing' % func.func_name)
 
     def drawing_wrapper(self, *args, **kwargs):
         #print('[guitools] DRAWING')

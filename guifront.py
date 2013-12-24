@@ -142,6 +142,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         #import sys
         #front.ui.outputEdit.setPlainText(sys.stdout)
         import sys
+        print('[front] stealing standard out')
         front.ostream = StreamStealer()
         front.ostream.message.connect(front.on_write)
         front.ostream.flush_.connect(front.on_flush)
@@ -457,9 +458,13 @@ class MainWindowFrontend(QtGui.QMainWindow):
     def on_write(front, message):
         front.ui.outputEdit.moveCursor(QtGui.QTextCursor.End)
         front.ui.outputEdit.insertPlainText(message)
+        if front.back.app is not None:
+            front.back.app.processEvents()
 
     @slot_()
     def on_flush(front):
+        if front.back.app is not None:
+            front.back.app.processEvents()
         pass
         #front.ui.outputEdit.moveCursor(QtGui.QTextCursor.End)
         #front.ui.outputEdit.insertPlainText(message)

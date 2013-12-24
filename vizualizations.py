@@ -724,7 +724,6 @@ def _show_res(hs, res, **kwargs):
                     print('[viz] result clicked')
                     return _clicked_cx(cx)
 
-        df2.bring_to_front(fig)
         df2.disconnect_callback(fig, 'button_press_event')
         df2.connect_callback(fig, 'button_press_event', _on_res_click)
     printDBG('[viz._show_res()] Finished')

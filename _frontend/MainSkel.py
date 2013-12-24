@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'C:\Users\joncrall\code\hotspotter\_frontend\MainSkel.ui'
 #
-# Created: Tue Dec 24 02:26:11 2013
+# Created: Tue Dec 24 02:51:53 2013
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,23 +26,15 @@ except AttributeError:
 class Ui_mainSkel(object):
     def setupUi(self, mainSkel):
         mainSkel.setObjectName(_fromUtf8("mainSkel"))
-        mainSkel.resize(932, 573)
+        mainSkel.resize(1013, 744)
         self.centralwidget = QtGui.QWidget(mainSkel)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.gridLayout_2 = QtGui.QGridLayout(self.centralwidget)
         self.gridLayout_2.setObjectName(_fromUtf8("gridLayout_2"))
         self.astat_vlayout = QtGui.QVBoxLayout()
         self.astat_vlayout.setObjectName(_fromUtf8("astat_vlayout"))
-        self.gridLayout = QtGui.QGridLayout()
-        self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
-        self.progressBar = QtGui.QProgressBar(self.centralwidget)
-        self.progressBar.setProperty("value", 24)
-        self.progressBar.setObjectName(_fromUtf8("progressBar"))
-        self.gridLayout.addWidget(self.progressBar, 2, 0, 1, 1)
-        self.outputEdit = QtGui.QTextEdit(self.centralwidget)
-        self.outputEdit.setAcceptRichText(True)
-        self.outputEdit.setObjectName(_fromUtf8("outputEdit"))
-        self.gridLayout.addWidget(self.outputEdit, 1, 0, 1, 1)
+        self.verticalLayout_8 = QtGui.QVBoxLayout()
+        self.verticalLayout_8.setObjectName(_fromUtf8("verticalLayout_8"))
         self.tablesTabWidget = QtGui.QTabWidget(self.centralwidget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -90,12 +82,25 @@ class Ui_mainSkel(object):
         self.verticalLayout_4.addWidget(self.res_TBL)
         self.verticalLayout_5.addLayout(self.verticalLayout_4)
         self.tablesTabWidget.addTab(self.result_view, _fromUtf8(""))
-        self.gridLayout.addWidget(self.tablesTabWidget, 0, 0, 1, 1)
-        self.astat_vlayout.addLayout(self.gridLayout)
+        self.verticalLayout_8.addWidget(self.tablesTabWidget)
+        self.outputEdit = QtGui.QTextEdit(self.centralwidget)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.outputEdit.sizePolicy().hasHeightForWidth())
+        self.outputEdit.setSizePolicy(sizePolicy)
+        self.outputEdit.setAcceptRichText(True)
+        self.outputEdit.setObjectName(_fromUtf8("outputEdit"))
+        self.verticalLayout_8.addWidget(self.outputEdit)
+        self.progressBar = QtGui.QProgressBar(self.centralwidget)
+        self.progressBar.setProperty("value", 24)
+        self.progressBar.setObjectName(_fromUtf8("progressBar"))
+        self.verticalLayout_8.addWidget(self.progressBar)
+        self.astat_vlayout.addLayout(self.verticalLayout_8)
         self.gridLayout_2.addLayout(self.astat_vlayout, 2, 0, 1, 1)
         mainSkel.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(mainSkel)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 932, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1013, 21))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'C:\Users\joncrall\code\hotspotter\_frontend\OpenDatabaseDialog.ui'
 #
-# Created: Tue Dec 24 02:26:12 2013
+# Created: Tue Dec 24 02:51:53 2013
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!

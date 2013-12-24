@@ -380,6 +380,7 @@ class MainWindowBackend(QtCore.QObject):
         elif reply == opt_put[0]:
             put_dir = guitools.select_directory('Select where to put the new database')
         elif reply is None:
+            back.user_info('Aborting new database')
             print('[*back] abort new database()')
             return None
         else:
@@ -419,6 +420,7 @@ class MainWindowBackend(QtCore.QObject):
             back.connect_api(hs)
             back.layout_figures()
         except Exception as ex:
+            back.user_info('Aborting open database')
             print('aborting open database')
             print(ex)
             if back.hs.args.strict:

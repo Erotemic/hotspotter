@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'C:\Users\joncrall\code\hotspotter\_frontend\MainSkel.ui'
 #
-# Created: Mon Dec 23 19:46:23 2013
+# Created: Tue Dec 24 02:26:11 2013
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,13 +26,23 @@ except AttributeError:
 class Ui_mainSkel(object):
     def setupUi(self, mainSkel):
         mainSkel.setObjectName(_fromUtf8("mainSkel"))
-        mainSkel.resize(927, 573)
+        mainSkel.resize(932, 573)
         self.centralwidget = QtGui.QWidget(mainSkel)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.gridLayout_2 = QtGui.QGridLayout(self.centralwidget)
         self.gridLayout_2.setObjectName(_fromUtf8("gridLayout_2"))
-        self.root_hlayout = QtGui.QHBoxLayout()
-        self.root_hlayout.setObjectName(_fromUtf8("root_hlayout"))
+        self.astat_vlayout = QtGui.QVBoxLayout()
+        self.astat_vlayout.setObjectName(_fromUtf8("astat_vlayout"))
+        self.gridLayout = QtGui.QGridLayout()
+        self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
+        self.progressBar = QtGui.QProgressBar(self.centralwidget)
+        self.progressBar.setProperty("value", 24)
+        self.progressBar.setObjectName(_fromUtf8("progressBar"))
+        self.gridLayout.addWidget(self.progressBar, 2, 0, 1, 1)
+        self.outputEdit = QtGui.QTextEdit(self.centralwidget)
+        self.outputEdit.setAcceptRichText(True)
+        self.outputEdit.setObjectName(_fromUtf8("outputEdit"))
+        self.gridLayout.addWidget(self.outputEdit, 1, 0, 1, 1)
         self.tablesTabWidget = QtGui.QTabWidget(self.centralwidget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -80,19 +90,12 @@ class Ui_mainSkel(object):
         self.verticalLayout_4.addWidget(self.res_TBL)
         self.verticalLayout_5.addLayout(self.verticalLayout_4)
         self.tablesTabWidget.addTab(self.result_view, _fromUtf8(""))
-        self.root_hlayout.addWidget(self.tablesTabWidget)
-        self.gridLayout_2.addLayout(self.root_hlayout, 1, 1, 1, 1)
-        self.status_HLayout = QtGui.QHBoxLayout()
-        self.status_HLayout.setObjectName(_fromUtf8("status_HLayout"))
-        self.progressBar = QtGui.QProgressBar(self.centralwidget)
-        self.progressBar.setProperty("value", 24)
-        self.progressBar.setTextVisible(True)
-        self.progressBar.setObjectName(_fromUtf8("progressBar"))
-        self.status_HLayout.addWidget(self.progressBar)
-        self.gridLayout_2.addLayout(self.status_HLayout, 2, 1, 1, 1)
+        self.gridLayout.addWidget(self.tablesTabWidget, 0, 0, 1, 1)
+        self.astat_vlayout.addLayout(self.gridLayout)
+        self.gridLayout_2.addLayout(self.astat_vlayout, 2, 0, 1, 1)
         mainSkel.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(mainSkel)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 927, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 932, 21))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -290,7 +293,7 @@ class Ui_mainSkel(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(mainSkel)
-        self.tablesTabWidget.setCurrentIndex(0)
+        self.tablesTabWidget.setCurrentIndex(2)
         QtCore.QMetaObject.connectSlotsByName(mainSkel)
 
     def retranslateUi(self, mainSkel):

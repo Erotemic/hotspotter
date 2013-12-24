@@ -1,5 +1,5 @@
 from __future__ import division, print_function
-from PyQt4 import QtGui
+from PyQt4 import QtGui, QtCore
 from PyQt4.Qt import (QAbstractItemView, pyqtSignal, Qt)
 import guitools
 import tools
@@ -15,6 +15,20 @@ def rrr():
     import sys
     print('[*front] reloading %s' % __name__)
     imp.reload(sys.modules[__name__])
+
+
+class StreamStealer(QtCore.QObject):
+    message = QtCore.pyqtSignal(str)
+    flush_ =  QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(StreamStealer, self).__init__(parent)
+
+    def write(self, message):
+        self.message.emit(str(message))
+
+    def flush(self):
+        self.flush_.emit()
 
 
 def init_plotWidget(front):
@@ -122,6 +136,16 @@ class MainWindowFrontend(QtGui.QMainWindow):
         # Progress bar is not hooked up yet
         front.ui.progressBar.setVisible(False)
         front.connect_signals()
+        front.steal_stdout()
+
+    def steal_stdout(front):
+        #import sys
+        #front.ui.outputEdit.setPlainText(sys.stdout)
+        import sys
+        front.ostream = StreamStealer()
+        front.ostream.message.connect(front.on_write)
+        front.ostream.flush_.connect(front.on_flush)
+        sys.stdout = front.ostream
 
     # TODO: this code is duplicated in back
     def user_info(front, *args, **kwargs):
@@ -428,3 +452,14 @@ class MainWindowFrontend(QtGui.QMainWindow):
     @slot_(str, str, list)
     def modal_useroption(front, msg, title, options):
         pass
+
+    @slot_(str)
+    def on_write(front, message):
+        front.ui.outputEdit.moveCursor(QtGui.QTextCursor.End)
+        front.ui.outputEdit.insertPlainText(message)
+
+    @slot_()
+    def on_flush(front):
+        pass
+        #front.ui.outputEdit.moveCursor(QtGui.QTextCursor.End)
+        #front.ui.outputEdit.insertPlainText(message)

@@ -175,9 +175,6 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             #raise NotImplementedError('stripe spotter conversion')
             if not helpers.checkpath(chip_table, verbose=True):
                 raise Exception('bad state chip_table=%r' % chip_table)
-        elif db_info.has_partial_gt(db_dir):
-            print('[ld2] detected incomplete database')
-            raise NotImplementedError('partial database recovery')
         else:
             try:
                 db_version = 'current'  # Well almost
@@ -185,7 +182,10 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 name_table   = assign_alternate(NAME_TABLE_FNAME)
                 image_table  = assign_alternate(IMAGE_TABLE_FNAME)
             except Exception:
-                if allow_new_dir:
+                if db_info.has_partial_gt(db_dir):
+                    print('[ld2] detected incomplete database')
+                    raise NotImplementedError('partial database recovery')
+                elif allow_new_dir:
                     print('[ld2] detected new dir')
                     hs_dirs.ensure_dirs()
                     return hs_dirs, hs_tables

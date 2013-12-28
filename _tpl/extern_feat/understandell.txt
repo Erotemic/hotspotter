@@ -1,0 +1,165 @@
+At work I've come across some linear algebra having to do with ellipses. 
+
+I am given the inverse of a matrix E representing an ellipse. E is real, symmetric, and satisfies the property that for any point x=[u, v].T on the ellipse (relative to the origin), x.T * E * x = 1
+
+So, having one of these invE matrixes 
+
+
+    # eg
+    invE = np.array([[0.00812996, 0.00553573], 
+                     [0.00553573, 0.0159823]])
+
+What would be very useful is a transformation where points on the ellipse boundary are mapped onto the boundary of a unit circle. This is given by a matrix A, where A.T * A = E
+
+Such a matrix can be calculated as such: 
+
+     X, W_, Yt = svd(invE) # Yt == X because invE is symmetric
+     W = diag(W_)
+     invA = X.dot(sqrt(W))
+     A = inv(A)
+
+We can confirm the validity by showing: 
+
+     E = inv(invE)
+     np.all(A.T.dot(A) - E < 1E-9)  # == might not work due to numerical issues
+
+
+-----
+
+All of this can be understood by examining the singular value decompositions of A and E
+
+    // The svds of E and A
+    X * W * X.T = E
+    U * S * V.T = A
+    // The inverse of E and A
+    X.T * 1/W * X = invE
+    V * 1/S * U.T = invA
+
+    // It is known that the symmetric E can be decomposed as such
+    A.T * A = E
+    // Sub in for SVD
+    (U * S * V.T).T * (U * S * V.T) = E
+    // Transpose Identity
+    (V * S * U.T)   * (U * S * V.T) = E
+    // Matrix multiplication is associative
+    (V * S * U.T * U * S * V.T) = E
+    // U is orthorogonal
+    (V * S * S * V.T) = E
+    // S is diagonal    
+    (V * S^2 * V.T) = E
+
+    // Because V is orthogonal and S^2 is diagonal, nothing stops us from saying
+    V = X
+    S = sqrt(W)
+
+    // Now the SVD of E can be understood in terms of A's SVD
+    V   * S   * S   * V.T = E
+    V.T * 1/S * 1/S * V   = invE
+    V * S = A
+    V.T * 1/S = invA
+
+    // For full understanding of the last line I find it worth noting 
+    invA * invA.T = invE
+
+-----
+
+
+This is all good, but there is one problem. A is actually specified up to some arbitrary rotation: Q. This can be seen in this equation: 
+
+(Q * A).T * (Q * A) = A.T * A = E
+
+To account for this, it helps to ensure that A is "pointing down". **This is the part I don't understand fully.**
+
+Computing A as we are, we are not guaranteed anything in terms of rotation. However, the code I'm using performs a step which transforms A into a lower triangular matrix. 
+
+If you are given an A' = [[a', b'], [c', d']], we would like to output a matrix A = [[a, 0], [c, d]] such that A' = QA
+The algorithmic steps for this are: 
+
+
+    det_ = abs(a_ * d_ - b_ * c_)
+    b2a2_ = sqrt(b_ * b_ + a_ * a_)
+ 
+    a = b2a2_ 
+    b = 0
+    c = (d_ * b_ + c_ * a_) / (b2a2_ )
+    d = det_ / b2a2_ 
+
+---------
+
+So, I've gotten as far as writing these equations
+
+    a' =  cos(theta) * a - sin(theta) * c
+    b' = -sin(theta) * d
+    c' =  sin(theta) * a + cos(theta) * c
+    d' =  cos(theta) * d
+
+    a = sqrt(b' * b' + a' * a')
+    c = (d' * b' + c' * a') / a
+    d = |a' * d' - b' * d'| / a
+
+
+
+But I'm failing to understand what's happening here. I get that I put in the numbers and that it works, but I'd like to know why. What is special about sqrt(b'^2 + a'^2) ? Its the length of the first row vector of A', but other that that I'm lost. 
+
+
+
+
+--------
+
+
+
+    Using the example I have
+
+
+    import numpy as np
+    from numpy.linalg import svd, inv
+    invE = np.array([[ 0.00812996,  0.00553573], [ 0.00553573,  0.0159823 ]])
+    X, W_, Yt = svd(invE)
+    invA = X.dot(sqrt(diag(W_)))
+    A = inv(invA)
+    E = inv(invE)
+    # We should now have:
+    # E    = np.array([[ 160.96398828,  -55.75249988], [ -55.75249988,   81.88000389]])
+    # invA = np.array([[ 0.06301606,  0.06448981], [ 0.12194996, -0.03332428]])
+    # A    = np.array([[ 0.06301606,  0.06448981], [ 0.12194996, -0.03332428]])
+    #
+    # Checks
+    def arr_eq(M1, M2, R):
+        'helper for checking floating point equality'
+        C = M1.dot(M2)
+        diff = (C - R).flatten()
+        return np.all(np.abs(diff) < 1E-9)
+    assert arr_eq(A.T, A, E), 'A.T * A != E'
+    assert arr_eq(invA, invA.T, invE), 'invA * invA.T != invE'
+
+
+    # Now for the code I dont understand
+    def convert_lowertriangular(A_):
+        (a_, b_, c_, d_) = A_.flatten()
+        det_  = (a_ * d_ - b_ * c_)
+        sqrtdet_  = np.sqrt(np.abs(det_))
+        b2a2_ = np.sqrt(b_**2  +  a_**2)
+        # Build components of lower triangular A
+        a = sqrtdet_ * b2a2_ / sqrtdet_
+        b = 0
+        c = sqrtdet_ * (d_ * b_ + c_ * a_) / (sqrtdet_ * b2a2_ )
+        d = np.sign(det_) * sqrtdet_ * sqrtdet_ / b2a2_ 
+        #
+        AL = np.array([[a, b], [c, d]])
+        return AL
+
+    invAL = convert_lowertriangular(invA)
+    print(invE)
+    print(invA.dot(invA.T))
+    print(invAL.dot(invAL.T))
+
+    print('----')
+
+
+    AL = convert_lowertriangular(A.copy())
+    print(E)
+    print(A.T.dot(A))
+    print(AL.T.dot(AL)) # Peculiar, this doesnt actually work
+
+    AL = inv(convert_lowertriangular(inv(A)))
+    print(AL.T.dot(AL)) # Hmmm, if I invert perform the operation, and invert back it works

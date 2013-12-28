@@ -669,16 +669,18 @@ class HotSpotter(DynStruct):
         num_gt = len(hs.get_other_indexed_cxs(cx))
         return '#gt=%r' % num_gt
 
-    def cidstr(hs, cx, digits=None):
+    def cidstr(hs, cx, digits=None, notes=False):
         cx2_cid = hs.tables.cx2_cid
         if not np.iterable(cx):
             int_fmt = '%d' if digits is None else ('%' + str(digits) + 'd')
-            return 'cid=' + int_fmt % cx2_cid[cx]
+            cid_str = 'cid=' + int_fmt % cx2_cid[cx]
         else:
-            return 'cids=[%s]' % ', '.join(['%d' % cx2_cid[cx_] for cx_ in cx])
+            cid_str = 'cids=[%s]' % ', '.join(['%d' % cx2_cid[cx_] for cx_ in cx])
+        if notes:
+            cid_str += ' todonotes'
+        return cid_str
 
     # Precomputed properties
-
     @tools.class_iter_input
     @tools.debug_exception
     def _try_cxlist_get(hs, cx_input, cx2_var):

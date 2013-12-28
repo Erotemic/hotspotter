@@ -188,16 +188,16 @@ def top_matching_features(res, axnum=None, match_type=''):
     df2.plot(sorted_score)
 
 
-def vary_query_cfg(hs, qon_list, query_cfg=None, vary_cfg=None, fnum=1):
+def vary_query_cfg(hs, qcx_list, query_cfg=None, vary_cfg=None, fnum=1):
     # Ground truth matches
-    for qcx, ocxs, notes in qon_list:
+    for qcx in qcx_list:
         gt_cxs = hs.get_other_indexed_cxs(qcx)
         for cx in gt_cxs:
-            fnum = vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum)
+            fnum = vary_two_cfg(hs, qcx, cx, query_cfg, vary_cfg, fnum)
     return fnum
 
 
-def vary_two_cfg(hs, qcx, cx, notes, query_cfg, vary_cfg, fnum=1):
+def vary_two_cfg(hs, qcx, cx, query_cfg, vary_cfg, fnum=1):
     if len(vary_cfg) > 2:
         raise Exception('can only vary at most two cfgeters')
     print('[dev] vary_two_cfg: q' + hs.vs_str(qcx, cx))
@@ -265,29 +265,29 @@ def plot_name(hs, qcx, fnum=1, **kwargs):
     return fnum + 1
 
 
-def show_names(hs, qon_list, fnum=1):
-    '''The most recent plot names function, works with qon_list'''
+def show_names(hs, qcx_list, fnum=1):
+    '''The most recent plot names function, works with qcx_list'''
     result_dir = hs.dirs.result_dir
     names_dir = join(result_dir, 'show_names')
     helpers.ensuredir(names_dir)
-    for (qcx, ocxs, notes) in qon_list:
-        print('Showing q%s - %r' % (hs.cidstr(qcx), notes))
+    for (qcx) in qcx_list:
+        print('Showing q%s - %r' % (hs.cidstr(qcx, notes=True)))
         fnum = plot_name(hs, qcx, fnum, subtitle=notes, annote=not hs.args.noannote)
         if hs.args.save_figures:
             df2.save_figure(fpath=names_dir, usetitle=True)
     return fnum
 
 
-def vary_vsone_cfg(hs, qon_list, fnum, vary_dicts, **kwargs):
+def vary_vsone_cfg(hs, qcx_list, fnum, vary_dicts, **kwargs):
     vary_cfg = helpers.dict_union(*vary_dicts)
     query_cfg = ds.get_vsone_cfg(hs, **kwargs)
-    return vary_query_cfg(hs, qon_list, query_cfg, vary_cfg, fnum)
+    return vary_query_cfg(hs, qcx_list, query_cfg, vary_cfg, fnum)
 
 
-def vary_vsmany_cfg(hs, qon_list, vary_dicts, fnum, **kwargs):
+def vary_vsmany_cfg(hs, qcx_list, vary_dicts, fnum, **kwargs):
     vary_cfg = helpers.dict_union(*vary_dicts)
     query_cfg = ds.get_vsmany_cfg(hs, **kwargs)
-    return vary_query_cfg(hs, qon_list, query_cfg, vary_cfg, fnum)
+    return vary_query_cfg(hs, qcx_list, query_cfg, vary_cfg, fnum)
 
 
 def plot_keypoint_scales(hs, fnum=1):
@@ -354,11 +354,11 @@ def get_qon_list(hs):
     return qon_list
 
 
-def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
+def investigate_vsone_groundtruth(hs, qcx_list, fnum=1):
     print('--------------------------------------')
     print('[dev] investigate_vsone_groundtruth')
     query_cfg = ds.get_vsone_cfg(sv_on=True, ratio_thresh=1.5)
-    for qcx, ocxs, notes in qon_list:
+    for qcx in qcx_list:
         res = mc3.query_groundtruth(hs, qcx, query_cfg)
         #print(query_cfg)
         #print(res)
@@ -369,9 +369,9 @@ def investigate_vsone_groundtruth(hs, qon_list, fnum=1):
     return fnum
 
 
-def investigate_chip_info(hs, qon_list, fnum=1):
-    for qcx, ocxs, notes in qon_list:
-        chip_info(hs, qcx, notes)
+def investigate_chip_info(hs, qcx_list, fnum=1):
+    for qcx in qcx_list:
+        chip_info(hs, qcx)
     return fnum
 
 
@@ -404,9 +404,9 @@ def chip_info(hs, cx, notes=''):
     return locals()
 
 
-def intestigate_keypoint_interaction(hs, qon_list, fnum=1, **kwargs):
+def intestigate_keypoint_interaction(hs, qcx_list, fnum=1, **kwargs):
     import _tpl
-    for qcx, ocxs, notes in qon_list:
+    for qcx in qcx_list:
         rchip = hs.get_chip(qcx)
         kpts  = hs.feats.cx2_kpts[qcx]
         desc  = hs.feats.cx2_desc[qcx]
@@ -549,10 +549,10 @@ def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
 
 
 # Driver Function
-def run_investigations(hs, qon_list):
+def run_investigations(hs, qcx_list):
     import test_harness
     args = hs.args
-    qcx = qon_list[0][0]
+    qcx = qcx_list[0]
     print('[dev] Running Investigation: ' + hs.cidstr(qcx))
     fnum = 1
     #view_all_history_names_in_db(hs, 'MOTHERS')
@@ -565,14 +565,14 @@ def run_investigations(hs, qon_list):
     K_   = {'K':             [2, 5, 10]}
     Kr_  = {'Krecip':        [0, 2, 5, 10]}
     if '0' in args.tests or 'show-names' in args.tests:
-        show_names(hs, qon_list)
+        show_names(hs, qcx_list)
     if '1' in args.tests or 'vary-vsone-rat-xy' in args.tests:
-        fnum = vary_vsone_cfg(hs, qon_list, fnum, [rat_, xy_])
+        fnum = vary_vsone_cfg(hs, qcx_list, fnum, [rat_, xy_])
     if '2' in args.tests or 'vary-vsmany-k-xy' in args.tests:
-        fnum = vary_vsmany_cfg(hs, qon_list, fnum, [K_, xy_])
+        fnum = vary_vsmany_cfg(hs, qcx_list, fnum, [K_, xy_])
     if '3' in args.tests:
-        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=True)
-        fnum = vary_query_cfg(hs, qon_list, fnum, [K_, Kr_], sv_on=False)
+        fnum = vary_query_cfg(hs, qcx_list, fnum, [K_, Kr_], sv_on=True)
+        fnum = vary_query_cfg(hs, qcx_list, fnum, [K_, Kr_], sv_on=False)
     #if '8' in args.tests:
         #mc3.compare_scoring(hs)
     if '8' in args.tests or 'dbstats' in args.tests:
@@ -581,14 +581,14 @@ def run_investigations(hs, qon_list):
        'scale' in args.tests:
         fnum = plot_keypoint_scales(hs)
     if '10' in args.tests or 'vsone-gt' in args.tests:
-        fnum = investigate_vsone_groundtruth(hs, qon_list, fnum)
+        fnum = investigate_vsone_groundtruth(hs, qcx_list, fnum)
     if '11' in args.tests or 'chip-info' in args.tests:
-        fnum = investigate_chip_info(hs, qon_list, fnum)
+        fnum = investigate_chip_info(hs, qcx_list, fnum)
     if '12' in args.tests or 'kpts-interact' in args.tests:
-        fnum = intestigate_keypoint_interaction(hs, qon_list)
+        fnum = intestigate_keypoint_interaction(hs, qcx_list)
     if '13' in args.tests or 'interact' in args.tests:
         import interaction
-        fnum = interaction.interact1(hs, qon_list, fnum)
+        fnum = interaction.interact1(hs, qcx_list, fnum)
     if '14' in args.tests or 'list-cfg-tests' in args.tests or 'list' in args.tests:
         print(test_harness.get_valid_testcfg_names())
     # Allow any testcfg to be in tests like:
@@ -598,14 +598,14 @@ def run_investigations(hs, qon_list):
     testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
     for test_cfg_name in testcfg_locals:
         if test_cfg_name in args.tests:
-            fnum = test_harness.test_configurations(hs, qon_list, [test_cfg_name], fnum)
+            fnum = test_harness.test_configurations(hs, qcx_list, [test_cfg_name], fnum)
 
 
-def export_qon_list(hs, qon_list):
+def export_qon_list(hs, qcx_list):
     print('[dev] Exporting query-object-notes to property tables')
     if not hs.has_property('Notes'):
         hs.add_property('Notes')
-    for qcx, ocxs, notes in qon_list:
+    for qcx, ocxs, notes in qcx_list:
         print('----')
         old_prop = hs.get_property(qcx, 'Notes')
         print('old = ' + old_prop)
@@ -641,6 +641,7 @@ if __name__ == '__main__':
     main_locals = dev_main()
     hs = main_locals['hs']
     qon_list = main_locals['qon_list']
+    qcx_list = main_locals['qcx_list']
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
     print('[dev]====================')
     if hs.args.printoff:
@@ -650,7 +651,7 @@ if __name__ == '__main__':
         export_qon_list(hs, qon_list)
     # Big test function. Should be replaced with something
     # not as ugly soon.
-    run_investigations(hs, qon_list)
+    run_investigations(hs, qcx_list)
     # A redundant query argument. Again, needs to be replaced.
     if hs.args.query is not None and len(hs.args.query) > 0:
         qcx = hs.cid2_cx(hs.args.query[0])

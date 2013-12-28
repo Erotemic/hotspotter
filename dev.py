@@ -550,7 +550,7 @@ def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
 
 # Driver Function
 def run_investigations(hs, qcx_list):
-    import test_harness
+    import experiment_harness
     args = hs.args
     qcx = qcx_list[0]
     print('[dev] Running Investigation: ' + hs.cidstr(qcx))
@@ -590,15 +590,15 @@ def run_investigations(hs, qcx_list):
         import interaction
         fnum = interaction.interact1(hs, qcx_list, fnum)
     if '14' in args.tests or 'list-cfg-tests' in args.tests or 'list' in args.tests:
-        print(test_harness.get_valid_testcfg_names())
+        print(experiment_harness.get_valid_testcfg_names())
     # Allow any testcfg to be in tests like:
     # vsone_1 or vsmany_3
-    import _test_configurations as _testcfgs
+    import experiment_configs as _testcfgs
     testcfg_keys = vars(_testcfgs).keys()
     testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
     for test_cfg_name in testcfg_locals:
         if test_cfg_name in args.tests:
-            fnum = test_harness.test_configurations(hs, qcx_list, [test_cfg_name], fnum)
+            fnum = experiment_harness.test_configurations(hs, qcx_list, [test_cfg_name], fnum)
 
 
 def export_qon_list(hs, qcx_list):

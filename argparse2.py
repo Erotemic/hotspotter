@@ -12,8 +12,12 @@ class ArgumentParser2(object):
         self.add_arg = parser.add_argument
 
     def add_meta(self, switch, type, default=None, help='', **kwargs):
-        dest = switch.strip('-').replace('-', '_')
-        self.add_arg(switch, metavar=dest, type=type, default=default, help=help, **kwargs)
+        if isinstance(switch, tuple):
+            dest = switch[0].strip('-').replace('-', '_')
+            self.add_arg(*switch, metavar=dest, type=type, default=default, help=help, **kwargs)
+        else:
+            dest = switch.strip('-').replace('-', '_')
+            self.add_arg(switch, metavar=dest, type=type, default=default, help=help, **kwargs)
 
     def add_flag(self, switch, default=False, *args, **kwargs):
         action = 'store_false' if default else 'store_true'
@@ -82,7 +86,7 @@ def dev_argparse(parser2):
     parser2.add_flag('--printoff')
     parser2.add_flag('--horiz', True)
     parser2.add_flag('--darken')
-    parser2.add_str('--tests',  [], 'integer or test name', nargs='*')
+    parser2.add_str(('--tests', '--test', '-t'),  [], 'integer or test name', nargs='*')
     # View Directories
     parser2.add_flag('--vrd')
     parser2.add_flag('--vcd')

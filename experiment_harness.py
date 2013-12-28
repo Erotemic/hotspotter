@@ -156,12 +156,13 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     nQuery = len(qcx_list)
     rc2_res = np.empty((nQuery, nCfg), dtype=list)
     mat_list = []
+    c = hs.get_arg('cols', [])
     for cfgx, test_cfg in enumerate(cfg_list):
         print(textwrap.dedent('''
         [harn]---------------')
         [harn] TEST_CFG %d/%d'
         [harn]---------------'''  % (cfgx + 1, nCfg)))
-        force_load = False if hs.args.c is None else cfgx in hs.args.c
+        force_load = cfgx in c
         (mat_vals, ), qx2_reslist = get_test_results(hs, qcx_list, test_cfg,
                                                      cfgx, nCfg, force_load)
         mat_list.append(mat_vals)
@@ -305,14 +306,15 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('[col_score] --- summary ---')
     print('\n'.join(best_rankscore_summary))
     # Draw results
-    print(hs.args.r)
-    for r, c in itertools.product(hs.args.r, hs.args.c):
+    rciter = itertools.product(hs.get_arg('rows', []),
+                               hs.get_arg('cols', []))
+    for r, c in rciter:
         #print('viewing (r,c)=(%r,%r)' % (r,c))
         res = rc2_res[r, c]
         #res.printme()
         res.show_topN(hs, fnum=fnum)
         fnum += 1
-    print('--remember you have --r and --c available to you')
+    print('--remember you have -r and -c available to you')
 
 if __name__ == '__main__':
     import multiprocessing

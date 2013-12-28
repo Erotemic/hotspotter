@@ -733,6 +733,15 @@ class HotSpotter(DynStruct):
         #cx_input = hs.get_valid_cxs()
         cx2_rchip_size = hs.cpaths.cx2_rchip_size
         return hs._onthefly_cxlist_get(cx_input, cx2_rchip_size, hs.load_chips)
+
+    def get_arg(hs, argname, default=None):
+        try:
+            val = eval('hs.args.' + argname)
+            result = default if val is None else val
+        except KeyError:
+            result = default
+        return result
+
     #---------------
     # Print Tables
 

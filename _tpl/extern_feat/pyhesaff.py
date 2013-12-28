@@ -1,4 +1,6 @@
-import ctypes
+import matplotlib
+matplotlib.use('Qt4Agg', warn=True, force=True)
+import ctypes as C
 #from ctypes.util import find_library
 import numpy as np
 from os.path import join, exists, abspath, dirname, normpath
@@ -51,7 +53,7 @@ def find_lib_fpath(libname, root_dir, recurse_down=True):
 def load_library2(libname, rootdir):
     lib_fpath = find_lib_fpath(libname, root_dir)
     try:
-        clib = ctypes.cdll[lib_fpath]
+        clib = C.cdll[lib_fpath]
     except Exception as ex:
         print('Caught exception: %r' % ex)
         raise ImportError('Cannot load dynamic library. Did you compile FLANN?')
@@ -59,54 +61,116 @@ def load_library2(libname, rootdir):
 
 #def load_hesaff_lib():
 # LOAD LIBRARY
-root_dir = abspath(dirname(__file__))
+if '__file__' in vars():
+    root_dir = abspath(dirname(__file__))
+else:
+    root_dir = abspath(dirname('.'))
 libname = 'hesaff'
 hesaff_lib = load_library2(libname, root_dir)
 
 # Define types
-ctype_flags = 'aligned, c_contiguous'
+#str or tuple of str
+#Array flags; may be one or more of:
+#C_CONTIGUOUS / C / CONTIGUOUS
+#F_CONTIGUOUS / F / FORTRAN
+#OWNDATA / O
+#WRITEABLE / W
+#ALIGNED / A
+#UPDATEIFCOPY / U
 # numpy dtypes
-kpts_dtype = np.float64
+kpts_dtype = np.float32
 desc_dtype = np.uint8
 # ctypes
-voidp_t = ctypes.c_void_p
-int_t = ctypes.c_int
-kpts_t = np.ctypeslib.ndpointer(dtype=kpts_dtype, ndim=2, flags=ctype_flags)
-desc_t = np.ctypeslib.ndpointer(dtype=desc_dtype, ndim=2, flags=ctype_flags)
-intp_t = ctypes.POINTER(ctypes.c_long)
-cstring_t = ctypes.c_char_p
+obj_t = C.c_void_p
+kpts_t = np.ctypeslib.ndpointer(dtype=kpts_dtype, ndim=2, flags='aligned, c_contiguous, writeable')
+desc_t = np.ctypeslib.ndpointer(dtype=desc_dtype, ndim=2, flags='aligned, c_contiguous, writeable')
+str_t = C.c_char_p
+int_t = C.c_int
 
 # Test
-hesaff_lib.make_hesaff.restype   = voidp_t
-hesaff_lib.make_hesaff.argtypes  = [cstring_t]
-hesaff_lib.detect.argtypes       = [voidp_t, intp_t]
-hesaff_lib.exportArrays.argtypes = [voidp_t, kpts_t, desc_t]
-hesaff_lib.extractDesc.argtypes  = [voidp_t, int_t, kpts_t, desc_t]
+hesaff_lib.make_hesaff.restype = obj_t
+hesaff_lib.make_hesaff.argtypes = [str_t]
+#
+hesaff_lib.detect.restype = int_t
+hesaff_lib.detect.argtypes = [obj_t]
+#
+hesaff_lib.exportArrays.restype = None
+hesaff_lib.exportArrays.argtypes = [obj_t, int_t, kpts_t, desc_t]
+#
+hesaff_lib.extractDesc.restype = None
+hesaff_lib.extractDesc.argtypes = [obj_t, int_t, kpts_t, desc_t]
 
 
-def hesaff_detect(img_fpath):
+img_fpath = 'build/zebra.jpg'
+img_fpath = '../lena.png'
+
+try:
+    x = profile  # NoQA
+except Exception:
+    def profile(func):
+        return func
+
+
+@profile
+def detect_hesaff_kpts(img_fpath, dict_args={}):
     # Make detector and read image
     hesaff_ptr = hesaff_lib.make_hesaff(abspath(img_fpath))
     # Return the number of keypoints detected
-    nKpts_ptr = ctypes.pointer(ctypes.c_long(0))
-    hesaff_lib.detect(hesaff_ptr, nKpts_ptr)
-    nKpts = nKpts_ptr.contents.value
-    print('hesafflib detected: %r keypoints' % nKpts)
+    nKpts = hesaff_lib.detect(hesaff_ptr)
+    #print('[pyhesaff] detected: %r keypoints' % nKpts)
     # Allocate arrays
     kpts = np.empty((nKpts, 5), kpts_dtype)
     desc = np.empty((nKpts, 128), desc_dtype)
+    desc2 = np.empty((nKpts, 128), desc_dtype)
+    desc3 = np.empty((nKpts, 128), desc_dtype)
+    #kpts = np.require(kpts, kpts_dtype, ['ALIGNED'])
+    #desc = np.require(desc, desc_dtype, ['ALIGNED'])
     # Populate arrays
-    hesaff_lib.exportArrays(hesaff_ptr, kpts, desc)
+    hesaff_lib.exportArrays(hesaff_ptr, nKpts, kpts, desc)
+    # TODO: Incorporate parameters
+    # TODO: Scale Factor
+    hesaff_lib.extractDesc(hesaff_ptr, nKpts, kpts, desc2)
+    hesaff_lib.extractDesc(hesaff_ptr, nKpts, kpts, desc3)
+    #print('[hesafflib] returned')
     return kpts, desc
 
-#print(kpts)
-#print(desc)
+
+def expand_scale(kpts, scale):
+    kpts.T[2] *= scale
+    kpts.T[3] *= scale
+    kpts.T[4] *= scale
+    return kpts
+
 
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
     from hotspotter import fileio as io
     from hotspotter import draw_func2 as df2
-    image = io.imread('lena.png')
-    kpts, desc = hesaff_detect('lena.png')
+    img_fpath = abspath('lena.png')
+    img_fpath = abspath('zebra.jpg')
+    image = io.imread(img_fpath)
+    kpts, desc = detect_hesaff_kpts(img_fpath)
+    print('detected')
+    print('showing')
     df2.imshow(image)
+    print('drawing')
+    #kpts = np.array([[100, 100, 20, 10, 20]])
+    fx = 100
+    stride = 42
+    kxs = np.arange(len(kpts))
+    np.random.shuffle(kxs)
+    #kpts2 = kpts[::stride, :]
+    kpts2 = kpts[kxs[0:10]]
+    cols = df2.distinct_colors(len(kpts2))
+    df2.draw_kpts2(kpts2, ell_alpha=.6, ell_linewidth=2,
+                   ell_color=cols, rect=True)
+    expand_scale(kpts2, 2)
+    df2.draw_kpts2(kpts2, ell_alpha=.5, ell_linewidth=3,
+                   ell_color=cols, rect=True)
+
+    print('present')
+    exec_str = df2.present()
+    #print(exec_str)
+    exec(exec_str)
+#C:\Users\joncrall\code\ell_desc

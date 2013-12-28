@@ -1183,10 +1183,14 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
     ax.add_collection(line_group)
 
 
+def draw_kpts(kpts, *args, **kwargs):
+    draw_kpts2(kpts, *args, **kwargs)
+
+
 def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
                pts_size=POINT_SIZE, ell_alpha=ELL_ALPHA,
                ell_linewidth=ELL_LINEWIDTH, ell_color=ELL_COLOR,
-               color_list=None, wrong_way=False, rect=None, **kwargs):
+               color_list=None, rect=None, **kwargs):
     if not DISTINCT_COLORS:
         color_list = None
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
@@ -1209,33 +1213,13 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
             rect = False
     if ell or rect:
         printDBG('[df2] draw_kpts() drawing ell kptsT.shape=%r' % (kptsT.shape,))
+        # We have the transformation from unit circle to ellipse here. (inv(A))
         a = kptsT[2]
         b = np.zeros(len(a))
         c = kptsT[3]
         d = kptsT[4]
-        # Sympy Calculated sqrtm(inv(A) for A in kpts)
-        # inv(sqrtm([(a, 0), (c, d)]) =
-        #  [1/sqrt(a), c/(-sqrt(a)*d - a*sqrt(d))]
-        #  [        0,                  1/sqrt(d)]
-        if wrong_way:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                aIS = 1 / np.sqrt(a)
-                bIS = c / (-np.sqrt(a) * d - a * np.sqrt(d))
-                dIS = 1 / np.sqrt(d)
-                cIS = b
-                #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+1E-9)
-        else:
-            aIS = a
-            bIS = b
-            cIS = c
-            dIS = d
-            # Just inverse
-            #aIS = 1/a
-            #bIS = -c/(a*d)
-            #dIS = 1/d
 
-        kpts_iter = izip(x, y, aIS, bIS, cIS, dIS)
+        kpts_iter = izip(x, y, a, b, c, d)
         aff_list = [Affine2D([( a_, b_, x_),
                               ( c_, d_, y_),
                               (  0,  0,  1)])

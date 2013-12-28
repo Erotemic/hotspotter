@@ -434,7 +434,25 @@ def load_chips(hs, cx_list=None, **kwargs):
     parallel_compute(rotate_chip, **pcc_kwargs)
 
     # Read sizes
-    rsize_list = [(None, None) if path is None else Image.open(path).size for path in cfpath_list]
+    try:
+        rsize_list = [(None, None) if path is None else Image.open(path).size
+                      for path in iter(cfpath_list)]
+    except IOError as ex:
+        import gc
+        gc.collect()
+        print('[cc] ex=%r' % ex)
+        print('path=%r' % path)
+        if helpers.checkpath(path, verbose=True):
+            import time
+            time.sleep(1)  # delays for 1 seconds
+            print('[cc] file exists but cause IOError?')
+            print('[cc] probably corrupted. Removing it')
+            try:
+                helpers.remove_file(path)
+            except OSError:
+                print('Something bad happened')
+                raise
+        raise
     #----------------------
     # UPDATE API VARIABLES
     #----------------------

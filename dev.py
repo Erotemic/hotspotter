@@ -637,11 +637,10 @@ def all_printoff():
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     print('[dev] __main__ ')
-    if not 'hs' in vars():
-        # useful when copy and pasting into ipython
-        main_locals = dev_main()
-        hs = main_locals['hs']
-        qon_list = main_locals['qon_list']
+    # useful when copy and pasting into ipython
+    main_locals = dev_main()
+    hs = main_locals['hs']
+    qon_list = main_locals['qon_list']
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
     print('[dev]====================')
     if hs.args.printoff:

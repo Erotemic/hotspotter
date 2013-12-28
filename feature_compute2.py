@@ -115,10 +115,10 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
     return kpts_list, desc_list
 
 
+# Maps a preference string into a function
 feat_type2_precompute = {
     'hesaff+sift': extern_feat.precompute_hesaff,
-    'harris+sift': extern_feat.precompute_harris,
-    'mser+sift': extern_feat.precompute_mser, }
+}
 
 
 def _load_features_individualy(hs, cx_list):

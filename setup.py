@@ -147,7 +147,8 @@ def run_process(args, silent=True):
     print('Running: %r' % args)
     import subprocess
     PIPE = subprocess.PIPE
-    proc = subprocess.Popen(args, stdout=PIPE, stderr=PIPE)
+    # DANGEROUS
+    proc = subprocess.Popen(args, stdout=PIPE, stderr=PIPE, shell=True)
     if silent:
         (out, err) = proc.communicate()
     else:

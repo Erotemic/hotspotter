@@ -183,8 +183,10 @@ def args_postprocess(args):
 
 def fix_args_shortnames(args):
     import params
-    if args.dbdir is None and args.db is not None:
-        # The shortname is specified
+    print('[argparse2] fix_args_shortnames(): %r' % args.db)
+    print('[argparse2] mapping %r to %r' % (args.db, args.dbdir))
+    # The shortname is specified
+    if (args.dbdir is None) and (args.db is not None):
         try:
             args.dbdir = params.dev_databases[args.db]
         except KeyError:
@@ -195,6 +197,7 @@ def fix_args_shortnames(args):
         args.db = inverse_dev_databases[args.dbdir]
     except KeyError:
         pass
+    print('[argparse2] mapped %r to %r' % (args.db, args.dbdir))
     return args
 
 

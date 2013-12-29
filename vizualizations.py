@@ -109,6 +109,7 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
     # Draw all chip indexes in the image
     for cx in cx_list:
         roi = hs.cx2_roi(cx)
+        theta = hs.cx2_theta(cx)
         # Draw the ROI
         roi_lbl = hs.cidstr(cx)
         if cx in highlight_cxs:
@@ -118,7 +119,7 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
             dark_alpha = np.array([1, 1, 1, .6])
             bbox_color = df2.DARK_ORANGE * dark_alpha
             lbl_color  = df2.BLACK       * dark_alpha
-        df2.draw_roi(ax, roi, roi_lbl, bbox_color, lbl_color)
+        df2.draw_roi(ax, roi, roi_lbl, bbox_color, lbl_color, theta=theta)
         # Index the roi centers (for interaction)
         (x, y, w, h) = roi
         xy_center = np.array([x + (w / 2), y + (h / 2)])

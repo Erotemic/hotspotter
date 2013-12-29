@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'C:\Users\joncrall\code\hotspotter\_frontend\MainSkel.ui'
 #
-# Created: Tue Dec 24 02:51:53 2013
+# Created: Sat Dec 28 22:32:16 2013
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -298,7 +298,7 @@ class Ui_mainSkel(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(mainSkel)
-        self.tablesTabWidget.setCurrentIndex(2)
+        self.tablesTabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(mainSkel)
 
     def retranslateUi(self, mainSkel):

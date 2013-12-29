@@ -24,6 +24,12 @@ print = __builtin__.print
 print_ = sys.stdout.write
 
 
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
+
+
 def print_on():
     global print, print_
     print = __builtin__.print
@@ -491,6 +497,7 @@ def precompute_akmeans(data, num_clusters, max_iters=100,
     return (datax2_clusterx, clusters)
 
 
+@profile
 def precompute_flann(data, cache_dir=None, uid='', flann_params=None,
                      force_recompute=False):
     ''' Tries to load a cached flann index before doing anything'''

@@ -34,9 +34,32 @@ a = Analysis(scripts, hiddenimports=[], hookspath=None)  # NOQA
 
 def add_data(a, dst, src):
     import textwrap
-    from os.path import normpath
-    src = normpath(src)
-    dst = normpath(dst)
+    from hotspotter import helpers
+    from os.path import dirname, normpath
+
+    def fixwin32_shortname(path1):
+        import ctypes
+        try:
+            #import win32file
+            #buf = ctypes.create_unicode_buffer(buflen)
+            path1 = unicode(path1)
+            buflen = 260  # max size
+            buf = ctypes.create_unicode_buffer(buflen)
+            ctypes.windll.kernel32.GetLongPathNameW(path1, buf, buflen)
+            #win32file.GetLongPathName(path1, )
+            path2 = buf.value
+        except Exception as ex:
+            path2 = path1
+            print(ex)
+        return path2
+
+    def platform_path(path):
+        path1 = normpath(path)
+        path2 = fixwin32_shortname(path1)
+        return path2
+    src = platform_path(src)
+    dst = platform_path(dst)
+    helpers.ensurepath(dirname(src))
     pretty_paths = tuple(map(lambda str: str.replace('\\', '/'), (dst, src)))
     print(textwrap.dedent('''
     [setup] a.add_data(

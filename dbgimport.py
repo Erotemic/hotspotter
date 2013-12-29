@@ -34,3 +34,5 @@ import vizualizations as viz
 
 if __name__ == 'main':
     exec(open('dbgimport.py').read())
+
+#img_fpath = helpers.get_img_fpath()

@@ -86,6 +86,9 @@ def DEPRICATED(func):
     return __DEP_WRAPPER
 
 
+def get_img_fpath():
+    return 'C:\\lena.png'
+
 def horiz_print(*args):
     toprint = horiz_string(args)
     print(toprint)
@@ -1892,3 +1895,4 @@ if __name__ == '__main__':
     seen = set([])
     print('[helpers] seen=%r' % seen)
     explore_module(module, maxdepth=0, seen=seen, nonmodules=False)
+

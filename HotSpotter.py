@@ -282,7 +282,7 @@ class HotSpotter(DynStruct):
     def query(hs, qcx, dochecks=True):
         if hs.prefs.query_cfg is None and dochecks:
             hs.prefs.query_cfg = Config.default_vsmany_cfg(hs)
-            hs.refresh_data()
+            #hs.refresh_data()
         try:
             res = mc3.query_database(hs, qcx, hs.prefs.query_cfg, dochecks=dochecks)
         except mf.QueryException as ex:
@@ -552,6 +552,10 @@ class HotSpotter(DynStruct):
     def cx2_roi(hs, cx):
         roi = hs.tables.cx2_roi[cx]
         return roi
+
+    def cx2_theta(hs, cx):
+        theta = hs.tables.cx2_theta[cx]
+        return theta
 
     def cx2_cid(hs, cx):
         return hs.tables.cx2_cid[cx]

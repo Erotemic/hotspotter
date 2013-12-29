@@ -25,6 +25,11 @@ import tools
 print = __builtin__.print
 print_ = sys.stdout.write
 
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
+
 
 def print_on():
     global print, print_
@@ -89,6 +94,7 @@ def tryindex(list, *args):
     #print('[ld2] Unable to find args=%r in list=%r' % (args, list))
 
 
+@profile
 def load_csv_tables(db_dir, allow_new_dir=True):
     '''
     Big function which loads the csv tables from a datatabase directory

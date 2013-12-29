@@ -256,13 +256,37 @@ def draw_border(ax, color=GREEN, lw=2, offset=None):
 
 
 def draw_roi(ax, roi, label=None, bbox_color=(1, 0, 0),
-             lbl_bgcolor=(0, 0, 0), lbl_txtcolor=(1, 1, 1)):
+             lbl_bgcolor=(0, 0, 0), lbl_txtcolor=(1, 1, 1), theta=0):
     (rx, ry, rw, rh) = roi
-    rxy = (rx, ry)
-    bbox = matplotlib.patches.Rectangle(rxy, rw, rh, lw=2)
+    t_start = ax.transData
+    cos_ = np.cos(theta)
+    sin_ = np.sin(theta)
+    rot_t = Affine2D([( cos_, -sin_, 0),
+                      ( sin_,  cos_, 0),
+                      (  0,       0, 1)])
+    scale_t = Affine2D([( rw,  0, 0),
+                        ( 0,  rh, 0),
+                        ( 0,   0, 1)])
+    trans_t = Affine2D([( 1,  0, rx + rw / 2),
+                        ( 0,  1, ry + rh / 2),
+                        ( 0,  0, 1)])
+    t_end = t_start + rot_t + scale_t + trans_t
+    t_end = rot_t + scale_t + trans_t + t_start
+    bbox = matplotlib.patches.Rectangle((-.5, -.5), 1, 1, lw=2, transform=t_end)
+    arw_x, arw_y   = (-.5, -.5)
+    arw_dx, arw_dy = (1, 0)
+    _args = [arw_x, arw_y, arw_dx, arw_dy]
+    _kwargs = dict(head_width=.1, transform=t_end, length_includes_head=True)
+    arrow = FancyArrow(*_args, **_kwargs)
+
     bbox.set_fill(False)
+    #bbox.set_transform(trans)
     bbox.set_edgecolor(bbox_color)
+    arrow.set_edgecolor(bbox_color)
+    arrow.set_facecolor(bbox_color * .9)
+
     ax.add_patch(bbox)
+    ax.add_patch(arrow)
     if label is not None:
         ax_absolute_text(rx, ry, label, ax=ax,
                          horizontalalignment='center',

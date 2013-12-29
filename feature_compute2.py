@@ -14,6 +14,11 @@ import DataStructures as ds
 import _tpl.extern_feat as extern_feat
 from Parallelize import parallel_compute
 
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
+
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
@@ -100,7 +105,8 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
             npz.close()
             kpts_list.append(kpts)
             desc_list.append(desc)
-            sys.stdout.write(fmt_str % (count + 1))
+            sys.stdout.write('.')
+            #sys.stdout.write(fmt_str % (count + 1))
         print('')
         print('[fc2] Finished load of individual kpts and desc')
     except MemoryError:
@@ -121,6 +127,7 @@ feat_type2_precompute = {
 }
 
 
+@profile
 def _load_features_individualy(hs, cx_list):
     use_cache = not hs.args.nocache_feats
     feat_cfg = hs.prefs.feat_cfg
@@ -164,6 +171,7 @@ def _load_features_bigcache(hs, cx_list):
     return kpts_list, desc_list
 
 
+@profile
 def load_features(hs, cx_list=None, **kwargs):
     print('\n=============================')
     print('[fc2] Precomputing and loading features: %r' % hs.get_db_name())

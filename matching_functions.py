@@ -126,11 +126,11 @@ def weight_neighbors(hs, qcx2_nns, query_cfg):
     filt_cfg = query_cfg.filt_cfg
     if not filt_cfg.filt_on:
         return  {}
-    print(''.join(['[mf] Step 2) Weight neighbors: '] + filt_cfg.get_uid()))
+    #SPEEDprint(''.join(['[mf] Step 2) Weight neighbors: '] + filt_cfg.get_uid()))
     nnfilter_list = filt_cfg._nnfilter_list
     filt2_weights = {}
     for nnfilter in nnfilter_list:
-        print('[mf] * computing %s weights' % nnfilter)
+        #SPEEDprint('[mf] * computing %s weights' % nnfilter)
         nnfilter_fn = eval('nn_filters.nn_' + nnfilter + '_weight')
         filt2_weights[nnfilter] = nnfilter_fn(hs, qcx2_nns, query_cfg)
     return filt2_weights
@@ -176,7 +176,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, query_cfg):
     dx2_cx = data_index.ax2_cx
     #printDBG('[mf] unique(dx2_cx) = %r ' % (np.unique(dx2_cx),))
     filt2_tw = filt_cfg._filt2_tw
-    print('[mf] Step 3) Filter neighbors: ' + ''.join(filt_cfg.get_uid()))
+    #SPEEDprint('[mf] Step 3) Filter neighbors: ' + ''.join(filt_cfg.get_uid()))
     mark_progress = mark_progress_quiet if len(qcx2_nns) > MARK_AFTER else mark_progress_silent
     for qcx in qcx2_nns.iterkeys():
         mark_progress()
@@ -207,7 +207,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, query_cfg):
 @profile
 def score_chipmatch(hs, qcx, chipmatch, score_method, query_cfg=None):
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
-    print('[mf] * Scoring chipmatch: %s cx=%r' % (score_method, qcx))
+    #SPEEDprint('[mf] * Scoring chipmatch: %s cx=%r' % (score_method, qcx))
     if score_method == 'csum':
         cx2_score = vr2.score_chipmatch_csum(chipmatch)
     #elif score_method == 'nsum':

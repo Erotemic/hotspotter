@@ -1,5 +1,8 @@
 from __future__ import division, print_function
 import __builtin__
+if __name__ == '__main__':
+    import matplotlib
+    matplotlib.use('Qt4Agg')
 import sys
 from PIL import Image
 from Parallelize import parallel_compute
@@ -9,6 +12,7 @@ import helpers
 import algos
 #import load_data2 as ld2
 import numpy as np
+import fileio as io
 #import os
 #import scipy.signal
 #import scipy.ndimage.filters as filters
@@ -23,8 +27,14 @@ import skimage.morphology
 import skimage.filter.rank
 import skimage.exposure
 import skimage.util
+import cv2
 
 import segmentation
+
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
 
 # Toggleable printing
 print = __builtin__.print
@@ -47,7 +57,7 @@ def print_off():
         pass
 
 
-def reload_module():
+def rrr():
     'Dynamic module reloading'
     import imp
     print('[cc2] reloading ' + __name__)
@@ -81,21 +91,84 @@ def Imageopen(img_path):
 # =======================================
 # Parallelizable Work Functions
 # =======================================
-def __compute_chip(img_path, chip_path, roi, new_size):
-    '''Crops chip from image ; Converts to grayscale ;
-    Resizes to standard size ; Equalizes the histogram
-    Saves as png'''
-    # Read image
-    img = Image.open(img_path)
-    (x1, y1, x2, y2) = xywh_to_tlbr(roi, img.size)
-    # http://docs.wand-py.org/en/0.3.3/guide/resizecrop.html#crop-images
-    # Crop out ROI: left, upper, right, lower
-    #img.transform(resize='x100') #img.transform(resize='640x480>')
-    raw_chip = img.crop((x1, y1, x2, y2))
-    # Scale chip, but do not rotate
-    chip = raw_chip.convert('L').resize(new_size, Image.ANTIALIAS)
-    # Save chip to disk
-    return chip
+NEW_ORIENT = True
+if NEW_ORIENT:
+    def build_transform(x, y, w, h, w_, h_, theta):
+        sx = (w_ / w)  # ** 2
+        sy = (h_ / h)  # ** 2
+        cos_ = np.cos(-theta)
+        sin_ = np.sin(-theta)
+        tx = -(x + (w / 2))
+        ty = -(y + (h / 2))
+        T1 = np.array([[1, 0, tx],
+                       [0, 1, ty],
+                       [0, 0, 1]], np.float64)
+
+        S = np.array([[sx, 0,  0],
+                      [0, sy,  0],
+                      [0,  0,  1]], np.float64)
+
+        R = np.array([[cos_, -sin_, 0],
+                      [sin_,  cos_, 0],
+                      [   0,     0, 1]], np.float64)
+
+        T2 = np.array([[1, 0, (w_ / 2)],
+                       [0, 1, (h_ / 2)],
+                       [0, 0, 1]], np.float64)
+        M = T2.dot(S.dot(R.dot(T1)))
+        #.dot(R)#.dot(S).dot(T2)
+        Aff = M[0:2, :] / M[2, 2]
+        #helpers.horiz_print(S, T1, T2)
+        print('T1======')
+        print(T1)
+        print('R------')
+        print(R)
+        print('S------')
+        print(S)
+        print('T2------')
+        print(T2)
+        print('M------')
+        print(M)
+        print('Aff------')
+        print(Aff)
+        print('======')
+        return Aff
+
+    def __compute_chip(img_path, chip_path, roi, theta, new_size):
+        '''Crops chip from image ; Converts to grayscale ;
+        Resizes to standard size ; Equalizes the histogram
+        Saves as png'''
+        # Read image
+        img = io.imread(img_path)
+        (gh, gw) = img.shape[:2]
+        (rx, ry, rw, rh) = roi
+        #(x1, y1, x2, y2) = xywh_to_tlbr(roi, (w, h))
+        (rw_, rh_) = new_size
+        cv2_flags = (cv2.INTER_LINEAR, cv2.INTER_NEAREST)[0]
+        cv2_borderMode  = cv2.BORDER_CONSTANT
+        cv2_warp_kwargs = {'flags': cv2_flags, 'borderMode': cv2_borderMode}
+        Aff = build_transform(rx, ry, rw, rh, rw_, rh_, theta)
+        raw_chip = cv2.warpAffine(img, Aff, (rw_, rh_), **cv2_warp_kwargs)
+
+        chip = Image.fromarray(raw_chip).convert('L')
+        # Save chip to disk
+        return chip
+else:
+    def __compute_chip2(img_path, chip_path, roi, new_size):
+        '''Crops chip from image ; Converts to grayscale ;
+        Resizes to standard size ; Equalizes the histogram
+        Saves as png'''
+        # Read image
+        img = Image.open(img_path)
+        (x1, y1, x2, y2) = xywh_to_tlbr(roi, img.size)
+        # http://docs.wand-py.org/en/0.3.3/guide/resizecrop.html#crop-images
+        # Crop out ROI: left, upper, right, lower
+        #img.transform(resize='x100') #img.transform(resize='640x480>')
+        raw_chip = img.crop((x1, y1, x2, y2))
+        # Scale chip, but do not rotate
+        chip = raw_chip.convert('L').resize(new_size, Image.ANTIALIAS)
+        # Save chip to disk
+        return chip
 
 
 def rotate_chip(chip_path, rchip_path, theta):
@@ -109,7 +182,7 @@ def rotate_chip(chip_path, rchip_path, theta):
 # Why doesn't this work?
 def make_compute_chip_func(preproc_func_list):
     def custom_compute_chip(img_path, chip_path, roi, new_size):
-        chip = __compute_chip(img_path, chip_path, roi, new_size)
+        chip = __compute_chip2(img_path, chip_path, roi, new_size)
         for preproc_func in iter(preproc_func_list):
             print('[cc2] ' + preproc_func.__name__)
             chip = preproc_func(chip)
@@ -126,15 +199,20 @@ def compute_grabcut_chip(img_path, chip_path, roi, new_size):
     chip.save(chip_path, 'PNG')
     return True
 
-
-def compute_bare_chip(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
-    chip.save(chip_path, 'PNG')
-    return True
+if NEW_ORIENT:
+    def compute_bare_chip(img_path, chip_path, roi, theta, new_size):
+        chip = __compute_chip(img_path, chip_path, roi, theta, new_size)
+        chip.save(chip_path, 'PNG')
+        return True
+else:
+    def compute_bare_chip(img_path, chip_path, roi, new_size):
+        chip = __compute_chip2(img_path, chip_path, roi, new_size)
+        chip.save(chip_path, 'PNG')
+        return True
 
 
 def compute_otsu_thresh_chip(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = __compute_chip2(img_path, chip_path, roi, new_size)
     chip = region_normalize_chip(chip)
     chip = histeq(chip)
     chip.save(chip_path, 'PNG')
@@ -142,7 +220,7 @@ def compute_otsu_thresh_chip(img_path, chip_path, roi, new_size):
 
 
 def compute_reg_norm_and_histeq_chip(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = __compute_chip2(img_path, chip_path, roi, new_size)
     chip = region_normalize_chip(chip)
     chip = histeq(chip)
     chip.save(chip_path, 'PNG')
@@ -150,35 +228,35 @@ def compute_reg_norm_and_histeq_chip(img_path, chip_path, roi, new_size):
 
 
 def compute_reg_norm_chip(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = __compute_chip2(img_path, chip_path, roi, new_size)
     chip = region_normalize_chip(chip)
     chip.save(chip_path, 'PNG')
     return True
 
 
 def compute_histeq_chip(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = __compute_chip2(img_path, chip_path, roi, new_size)
     chip = histeq(chip)
     chip.save(chip_path, 'PNG')
     return True
 
 
 def compute_contrast_stretch_chip(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = __compute_chip2(img_path, chip_path, roi, new_size)
     chip = contrast_strech(chip)
     chip.save(chip_path, 'PNG')
     return True
 
 
 def compute_localeq_contr_chip(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = __compute_chip2(img_path, chip_path, roi, new_size)
     chip = local_equalize(chip)
     chip.save(chip_path, 'PNG')
     return True
 
 
 def compute_localeq_chip(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = __compute_chip2(img_path, chip_path, roi, new_size)
     chip = local_equalize(chip)
     chip = contrast_strech(chip)
     chip.save(chip_path, 'PNG')
@@ -186,7 +264,7 @@ def compute_localeq_chip(img_path, chip_path, roi, new_size):
 
 
 def compute_rankeq_chip(img_path, chip_path, roi, new_size):
-    chip = __compute_chip(img_path, chip_path, roi, new_size)
+    chip = __compute_chip2(img_path, chip_path, roi, new_size)
     chip = rank_equalize(chip)
     chip.save(chip_path, 'PNG')
     return True
@@ -313,6 +391,7 @@ def get_normalized_chip_sizes(roi_list, sqrt_area=None):
 # =======================================
 # Main Script
 # =======================================
+@profile
 def load_chips(hs, cx_list=None, **kwargs):
     print('\n=============================')
     print('[cc2] Precomputing chips and loading chip paths: %r' % hs.get_db_name())
@@ -384,12 +463,12 @@ def load_chips(hs, cx_list=None, **kwargs):
     #____Rotated Chip Args____
     #-------------------------
     # Rotated Chp Paths: where to write rotated chips to
-    _rfname_fmt = 'cid%d' + chip_uid + '.rot.png'
-    _rfpath_fmt = join(hs.dirs.rchip_dir, _rfname_fmt)
-    rfpath_list_ = [_rfpath_fmt % cid for cid in iter(cid_list)]
+    #_rfname_fmt = 'cid%d' + chip_uid + '.rot.png'
+    #_rfpath_fmt = join(hs.dirs.rchip_dir, _rfname_fmt)
+    #rfpath_list_ = [_rfpath_fmt % cid for cid in iter(cid_list)]
     # If theta is 0 there is no need to rotate
-    _fn = lambda cfpath, rfpath, theta: cfpath if theta == 0 else rfpath
-    rfpath_list = [_fn(*tup) for tup in izip(cfpath_list, rfpath_list_, theta_list)]
+    #_fn = lambda cfpath, rfpath, theta: cfpath if theta == 0 else rfpath
+    #rfpath_list = [_fn(*tup) for tup in izip(cfpath_list, rfpath_list_, theta_list)]
 
     #--------------------------
     # EXTRACT AND RESIZE CHIPS
@@ -398,7 +477,7 @@ def load_chips(hs, cx_list=None, **kwargs):
     if len(cx_list) < num_procs / 2:
         num_procs = 1  # Hack for small amount of tasks
     pcc_kwargs = {
-        'arg_list': [gfpath_list, cfpath_list, roi_list, chipsz_list],
+        'arg_list': [gfpath_list, cfpath_list, roi_list, theta_list, chipsz_list],
         'lazy': not hs.args.nocache_chips,
         'num_procs': hs.args.num_procs, }
     # FIXME: Parallel Computations of different parameters. Not robust to all parameter settings
@@ -425,13 +504,13 @@ def load_chips(hs, cx_list=None, **kwargs):
     # ROTATE CHIPS
     #--------------------------
     # Get the computations that you need to do (i.e. theta != 0)
-    indexes2 = [lx for lx, theta in enumerate(theta_list) if theta != 0]
-    theta_list2  = [theta_list[lx] for lx in iter(indexes2)]
-    cfpath_list2 = [cfpath_list[lx] for lx in iter(indexes2)]
-    rfpath_list2 = [rfpath_list[lx] for lx in iter(indexes2)]
+    #indexes2 = [lx for lx, theta in enumerate(theta_list) if theta != 0]
+    #theta_list2  = [theta_list[lx] for lx in iter(indexes2)]
+    #cfpath_list2 = [cfpath_list[lx] for lx in iter(indexes2)]
+    #rfpath_list2 = [rfpath_list[lx] for lx in iter(indexes2)]
 
-    pcc_kwargs['arg_list'] = [cfpath_list2, rfpath_list2, theta_list2]
-    parallel_compute(rotate_chip, **pcc_kwargs)
+    #pcc_kwargs['arg_list'] = [cfpath_list2, rfpath_list2, theta_list2]
+    #parallel_compute(rotate_chip, **pcc_kwargs)
 
     # Read sizes
     try:
@@ -467,7 +546,7 @@ def load_chips(hs, cx_list=None, **kwargs):
     #for lx, cx in enumerate(cx_list):
         #hs.cpaths.cx2_chip_path[cx] = cfpath_list[lx]
     for lx, cx in enumerate(cx_list):
-        hs.cpaths.cx2_rchip_path[cx] = rfpath_list[lx]
+        hs.cpaths.cx2_rchip_path[cx] = cfpath_list[lx]
     for lx, cx in enumerate(cx_list):
         hs.cpaths.cx2_rchip_size[cx] = rsize_list[lx]
     #hs.load_cx2_rchip_size()  # TODO: Loading rchip size should be handled more robustly
@@ -479,15 +558,17 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     import main
     import HotSpotter
+    import argparse2
     import vizualizations as viz
     import chip_compute2 as cc2
+    import dev
     from chip_compute2 import *  # NOQA
     # Debugging vars
     chip_cfg = None
     cx_list = None
     kwargs = {}
     # --- LOAD TABLES --- #
-    args = main.parse_arguments(db='NAUTS')
+    args = argparse2.parse_arguments(db='NAUTS')
     hs = HotSpotter.HotSpotter(args)
     hs.load_tables()
     hs.update_samples()
@@ -498,4 +579,4 @@ if __name__ == '__main__':
         viz.show_chip(hs, cx, draw_kpts=False)
     else:
         print('usage: feature_compute.py --cx [cx]')
-    exec(viz.present())
+    exec(viz.df2.present())

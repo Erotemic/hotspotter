@@ -47,17 +47,6 @@ def print_off():
         pass
 
 
-def dev_reload():
-    print('[dev] performing dev_reload')
-    rrr()
-    ds.rrr()
-    mf.rrr()
-    mc3.rrr()
-    viz.rrr()
-    vr2.rrr()
-    helpers.rrr()
-
-
 def rrr():
     'Dynamic module reloading'
     import imp
@@ -65,6 +54,21 @@ def rrr():
     print('[dev] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
 
+
+def dev_reload():
+    print('[dev] performing dev_reload')
+    import chip_compute2 as cc2
+    import feature_compute2 as fc2
+    rrr()
+    ds.rrr()
+    mf.rrr()
+    mc3.rrr()
+    viz.rrr()
+    vr2.rrr()
+    helpers.rrr()
+    cc2.rrr()
+    fc2.rrr()
+    df2.rrr()
 
 def history_entry(database='', cid=-1, ocids=[], notes='', cx=-1):
     return (database, cid, ocids, notes)
@@ -494,7 +498,9 @@ def dev_main(**kwargs):
     import argparse2
     print('[dev] main()')
     args = argparse2.parse_arguments()
-
+    if args.db is None:
+        args.db == 'NAUTS'
+    args = argparse2.fix_args_shortnames(args)
     print('[dev] args.db=%r' % args.db)
     print('[dev] args.dbdir=%r' % args.dbdir)
 

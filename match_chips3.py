@@ -120,10 +120,12 @@ def simplify_test_uid(test_uid):
 #----------------------
 # Helper Functions
 #----------------------
+@profile
 def ensure_nn_index(hs, query_cfg, dcxs):
     dcxs_ = tuple(dcxs)
     if not dcxs_ in query_cfg._dcxs2_index:
         # Make sure the features are all computed first
+        # TODO: Separate query config and data
         hs.refresh_features(dcxs_)
         data_index = ds.NNIndex(hs, dcxs)
         query_cfg._dcxs2_index[dcxs_] = data_index

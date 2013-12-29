@@ -153,7 +153,7 @@ def run_process(args, silent=True):
     else:
         out_list = []
         for line in proc.stdout.readlines():
-            print(line)
+            sys.stdout.write(line)
             sys.stdout.flush()
             out_list.append(line)
         out = '\n'.join(out_list)
@@ -162,10 +162,28 @@ def run_process(args, silent=True):
     ret = proc.wait()
     return out, err, ret
 
+if sys.platform == 'win32':
+    buildscript_fmt = 'build_%s_mingw.bat'
+else:
+    buildscript_fmt = 'build_%s_unix.sh'
+
+
+def make_install_pyhesaff():
+    hesaff_dir = normpath(os.path.expanduser('~') + '/code/hesaff')
+    cmd = join(hesaff_dir, buildscript_fmt % 'hesaff')
+    run_process(cmd, silent=False)
+
 
 def make_install_pyflann():
     pyflann_dir = normpath(os.path.expanduser('~') + '/code/flann')
-    cmd = join(pyflann_dir, 'build_flann_mingw.bat')
+    cmd = join(pyflann_dir, buildscript_fmt % 'flann')
+    run_process(cmd, silent=False)
+    pass
+
+
+def make_install_opencv():
+    pyflann_dir = normpath(os.path.expanduser('~') + '/code/opencv')
+    cmd = join(pyflann_dir, buildscript_fmt % 'opencv')
     run_process(cmd, silent=False)
     pass
 
@@ -182,5 +200,9 @@ if __name__ == '__main__':
         if cmd in ['installer', 'pyinstaller', 'build_pyinstaller', 'build_installer']:
             build_pyinstaller()
             sys.exit(0)
-        if cmd in ['pyflann']:
+        if cmd in ['flann', 'pyflann']:
             make_install_pyflann()
+        if cmd in ['hesaff', 'pyhesaff']:
+            make_install_pyhesaff()
+        if cmd in ['opencv']:
+            make_install_opencv()

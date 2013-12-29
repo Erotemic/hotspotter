@@ -5,7 +5,7 @@ from hotspotter import helpers
 code_dir   = join(expanduser('~'), 'code')
 hsdir      = join(code_dir, 'hotspotter')
 extern_dir = join(hsdir, '_tpl', 'extern_feat')
-hesaffsrc_dir = join(code_dir, 'ell_desc')
+hesaffsrc_dir = join(code_dir, 'hesaff')
 
 hesaffbuild_dir = join(hesaffsrc_dir, 'build')
 filemap = {
@@ -21,9 +21,10 @@ for srcdir, fname_list in filemap.iteritems():
         src  = join(srcdir, fname)
         dest = join(extern_dir, fname)
         try:
+            print('--')
             helpers.copy(src, dest)
+            print('--')
         except Exception as ex:
             print(ex)
 
-
-raw_input('Press enter to continue')
+#raw_input('[_tpl/localize] Press enter to continue')

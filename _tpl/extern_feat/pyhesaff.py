@@ -4,6 +4,7 @@ import ctypes as C
 #from ctypes.util import find_library
 import numpy as np
 from os.path import join, exists, abspath, dirname, normpath
+import os
 import sys
 
 
@@ -50,13 +51,13 @@ def find_lib_fpath(libname, root_dir, recurse_down=True):
     raise ImportError('Cannot find dynamic library.')
 
 
-def load_library2(libname, rootdir):
+def load_library2(libname, root_dir):
     lib_fpath = find_lib_fpath(libname, root_dir)
     try:
         clib = C.cdll[lib_fpath]
     except Exception as ex:
         print('Caught exception: %r' % ex)
-        raise ImportError('Cannot load dynamic library. Did you compile FLANN?')
+        raise ImportError('Cannot load dynamic library. Did you compile HESAFF?')
     return clib
 
 #def load_hesaff_lib():
@@ -64,7 +65,7 @@ def load_library2(libname, rootdir):
 if '__file__' in vars():
     root_dir = abspath(dirname(__file__))
 else:
-    root_dir = abspath(dirname('.'))
+    root_dir = abspath(dirname(os.getcwd()))
 libname = 'hesaff'
 hesaff_lib = load_library2(libname, root_dir)
 

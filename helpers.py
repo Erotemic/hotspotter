@@ -906,7 +906,7 @@ def copy(src, dst):
         print('[helpers] !!! Overwriting ')
     else:
         print('[helpers] ... Copying ')
-    print('[helpers]    ' + src + ' -> \n    ' + dst)
+    print('[helpers]\n    ' + src + ' -> \n    ' + dst)
     shutil.copy(src, dst)
 
 

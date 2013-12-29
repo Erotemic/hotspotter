@@ -19,7 +19,6 @@ import fileio as io
 from _tpl.other import imtools
 
 import warnings
-from itertools import izip
 from os.path import join
 
 #import skimage
@@ -115,23 +114,23 @@ if NEW_ORIENT:
         T2 = np.array([[1, 0, (w_ / 2)],
                        [0, 1, (h_ / 2)],
                        [0, 0, 1]], np.float64)
-        M = T2.dot(S.dot(R.dot(T1)))
+        M = T2.dot(R.dot(S.dot(T1)))
         #.dot(R)#.dot(S).dot(T2)
         Aff = M[0:2, :] / M[2, 2]
         #helpers.horiz_print(S, T1, T2)
-        print('T1======')
-        print(T1)
-        print('R------')
-        print(R)
-        print('S------')
-        print(S)
-        print('T2------')
-        print(T2)
-        print('M------')
-        print(M)
-        print('Aff------')
-        print(Aff)
-        print('======')
+        #print('T1======')
+        #print(T1)
+        #print('R------')
+        #print(R)
+        #print('S------')
+        #print(S)
+        #print('T2------')
+        #print(T2)
+        #print('M------')
+        #print(M)
+        #print('Aff------')
+        #print(Aff)
+        #print('======')
         return Aff
 
     def __compute_chip(img_path, chip_path, roi, theta, new_size):

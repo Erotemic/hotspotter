@@ -270,7 +270,7 @@ def draw_roi(ax, roi, label=None, bbox_color=(1, 0, 0),
     trans_t = Affine2D([( 1,  0, rx + rw / 2),
                         ( 0,  1, ry + rh / 2),
                         ( 0,  0, 1)])
-    t_end = rot_t + scale_t + trans_t + t_start
+    t_end = scale_t + rot_t + trans_t + t_start
     bbox = matplotlib.patches.Rectangle((-.5, -.5), 1, 1, lw=2, transform=t_end)
     arw_x, arw_y   = (-.5, -.5)
     arw_dx, arw_dy = (1, 0)

@@ -125,6 +125,7 @@ class HotSpotter(DynStruct):
     def load(hs, load_all=False):
         '(current load function) Loads the appropriate database'
         print('[hs] load()')
+        hs.unload_all()
         hs.load_tables()
         hs.update_samples()
         if load_all:
@@ -318,6 +319,7 @@ class HotSpotter(DynStruct):
             return hs.tables.prop_dict[key][cx]
         except KeyError:
             return None
+
     # ---------------
     # Adding functions
     # ---------------
@@ -454,21 +456,47 @@ class HotSpotter(DynStruct):
         datatup_list = [tup for tup in izip(*unziped_tups)]
         return datatup_list
 
+    def format_theta_list(self, theta_list):
+        # Remove pi to put into a human readable format
+        # And use tau = 2*pi because tau seems to be more natural than pi
+        pi  = np.pi
+        tau = 2 * pi
+        UNICODE_GUI = False
+        pi_  = u'\u03C0' if UNICODE_GUI else 'pi'
+        tau_ = u'\u03C4' if UNICODE_GUI else 'tau'
+        LEGACY_NOTATION = False
+        if LEGACY_NOTATION:
+            _fmt = '%.2f * ' + pi_
+            _fix = lambda x: (x % tau) / pi
+        else:
+            SNEAKY = True
+            _fmt = '%.2f * 2' + pi_ if SNEAKY else '%.2f * ' + tau_
+            _fix = lambda x: (x % tau) / tau
+        theta_list = [_fix(theta) for theta in iter(theta_list)]
+        thetastr_list = [_fmt % theta for theta in iter(theta_list)]
+        return thetastr_list
+
     def get_chip_datatup_list(hs, cx_list,
                               header_order=['Chip ID', 'Name', 'Image', '#GT']):
         'Data for GUI Chip Table'
         prop_dict = hs.tables.prop_dict
         cx2_cid   = hs.tables.cx2_cid
+        cx2_roi   = hs.tables.cx2_roi
+        cx2_theta = hs.tables.cx2_theta
         cx2_nx    = hs.tables.cx2_nx
         cx2_gx    = hs.tables.cx2_gx
         nx2_name  = hs.tables.nx2_name
         gx2_gname = hs.tables.gx2_gname
+        theta_list = [cx2_theta[cx] for cx in iter(cx_list)]
+        thetastr_list = hs.format_theta_list(theta_list)
         gtcxs_list = hs.get_other_indexed_cxs(cx_list)
         cols = {
             'Chip ID': [cx2_cid[cx]           for cx in iter(cx_list)],
             'Name':    [nx2_name[cx2_nx[cx]]  for cx in iter(cx_list)],
             'Image':   [gx2_gname[cx2_gx[cx]] for cx in iter(cx_list)],
             '#GT':     [len(gtcxs) for gtcxs in iter(gtcxs_list)],
+            'Theta':   thetastr_list,
+            'ROI (x, y, w, h)':  [str(cx2_roi[cx]) for cx in iter(cx_list)],
         }
         for key, val in prop_dict.iteritems():
             cols[key] = [val[cx] for cx in iter(cx_list)]
@@ -700,7 +728,8 @@ class HotSpotter(DynStruct):
         ret = [cx2_var[cx] for cx in cx_input]
         # None is invalid in a cx2_var array
         if any([val is None for val in ret]):
-            raise IndexError()
+            none_index = ret.index(None)
+            raise IndexError('ret[%r] == None' % none_index)
         return ret
 
     def _onthefly_cxlist_get(hs, cx_input, cx2_var, load_fn):
@@ -709,8 +738,18 @@ class HotSpotter(DynStruct):
         try:
             ret = hs._try_cxlist_get(cx_input, cx2_var)
         except IndexError:
-            load_fn(cx_input)
-            ret = hs._try_cxlist_get(cx_input, cx2_var)
+            try:
+                load_fn(cx_input)
+                ret = hs._try_cxlist_get(cx_input, cx2_var)
+            except Exception as ex:
+                print('[hs] Caught Exception ex=%r' % ex)
+                msg = ['[hs] Data was not loaded/unloaded propertly']
+                msg += ['[hs] cx_input=%r' % cx_input]
+                msg += ['[hs] cx2_var=%r' % cx2_var]
+                msg += ['[hs] load_fn=%r' % load_fn]
+                msg_ = '\n'.join(msg)
+                print(msg_)
+                raise
         return ret
 
     def get_desc(hs, cx_input):

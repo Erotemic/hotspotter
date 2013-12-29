@@ -114,6 +114,7 @@ def behavior_argparse(parser2):
     parser2.add_int('--num-procs', num_cpus, num_proc_help)
     parser2.add_flag('--serial', help='Forces num_procs=1')
     parser2.add_flag('--strict', help='Force failure in iffy areas')
+    parser2.add_flag('--nosteal', help='GUI will not steal stdout')
 
 
 def cfg_argparse(parser2):
@@ -183,8 +184,8 @@ def args_postprocess(args):
 
 def fix_args_shortnames(args):
     import params
-    print('[argparse2] fix_args_shortnames(): %r' % args.db)
-    print('[argparse2] mapping %r to %r' % (args.db, args.dbdir))
+    #print('[argparse2] fix_args_shortnames(): %r' % args.db)
+    #print('[argparse2] mapping %r to %r' % (args.db, args.dbdir))
     # The shortname is specified
     if (args.dbdir is None) and (args.db is not None):
         try:
@@ -197,7 +198,7 @@ def fix_args_shortnames(args):
         args.db = inverse_dev_databases[args.dbdir]
     except KeyError:
         pass
-    print('[argparse2] mapped %r to %r' % (args.db, args.dbdir))
+    #print('[argparse2] mapped %r to %r' % (args.db, args.dbdir))
     return args
 
 

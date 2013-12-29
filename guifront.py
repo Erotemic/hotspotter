@@ -5,6 +5,8 @@ import guitools
 import tools
 from guitools import infoslot_ as slot_
 from guitools import frontblocking as blocking
+import sys
+from _frontend.MainSkel import Ui_mainSkel
 
 IS_INIT = False
 
@@ -12,7 +14,6 @@ IS_INIT = False
 def rrr():
     'Dynamic module reloading'
     import imp
-    import sys
     print('[*front] reloading %s' % __name__)
     imp.reload(sys.modules[__name__])
 
@@ -21,8 +22,10 @@ class StreamStealer(QtCore.QObject):
     message = QtCore.pyqtSignal(str)
     flush_ =  QtCore.pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, stolen_stream=None):
         super(StreamStealer, self).__init__(parent)
+        if stolen_stream is not None:
+            self.stolen_stream = stolen_stream
 
     def write(self, message):
         self.message.emit(str(message))
@@ -41,7 +44,6 @@ def init_plotWidget(front):
 
 
 def init_ui(front):
-    from _frontend.MainSkel import Ui_mainSkel
     ui = Ui_mainSkel()
     ui.setupUi(front)
     return ui
@@ -129,6 +131,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         super(MainWindowFrontend, front).__init__()
         #print('[*front] creating frontend')
         front.prev_tbl_item = None
+        front.ostream = None
         front.back = back
         front.ui = init_ui(front)
         if use_plot_widget:
@@ -139,14 +142,28 @@ class MainWindowFrontend(QtGui.QMainWindow):
         front.steal_stdout()
 
     def steal_stdout(front):
-        #import sys
         #front.ui.outputEdit.setPlainText(sys.stdout)
-        import sys
+        if front.back.hs.args.nosteal:
+            return
         print('[front] stealing standard out')
-        front.ostream = StreamStealer()
-        front.ostream.message.connect(front.on_write)
-        front.ostream.flush_.connect(front.on_flush)
-        sys.stdout = front.ostream
+        if front.ostream is None:
+            front.ostream = StreamStealer(stolen_stream=sys.stdout)
+            front.ostream.message.connect(front.on_write)
+            front.ostream.flush_.connect(front.on_flush)
+            sys.stdout = front.ostream
+        else:
+            print('[front] stream already stolen')
+
+    def return_stdout(front):
+        #front.ui.outputEdit.setPlainText(sys.stdout)
+        print('[front] returning standard out')
+        if front.ostream is not None:
+            sys.stdout = front.ostream.stolen_stream
+            front.ostream = None
+            return True
+        else:
+            print('[front] stream has not been stolen')
+            return False
 
     # TODO: this code is duplicated in back
     def user_info(front, *args, **kwargs):

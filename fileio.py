@@ -101,17 +101,17 @@ def load_pkl(fpath):
 
 
 ext2_load_func = {
-    '.npy' : load_npy,
-    '.npz' : load_npz,
+    '.npy': load_npy,
+    '.npz': load_npz,
     '.cPkl': load_cPkl,
-    '.pkl' : load_pkl}
+    '.pkl': load_pkl}
 
 
 ext2_save_func = {
-    '.npy' : save_npy,
-    '.npz' : save_npz,
+    '.npy': save_npy,
+    '.npz': save_npz,
     '.cPkl': save_cPkl,
-    '.pkl' : save_pkl}
+    '.pkl': save_pkl}
 
 
 def debug_smart_load(dpath='', fname='*', uid='*', ext='*'):
@@ -206,7 +206,7 @@ def __smart_load(fpath, verbose, allow_alternative=False, can_fail=True, **kwarg
             data = load_func(fpath)
         except Exception as ex:
             if verbose:
-                print('[io] ! Exception will loading %r' % fpath)
+                print('[io] ! Exception while loading %r' % fpath)
                 print('[io] caught ex=%r' % (ex,))
             data = None
             if not can_fail:
@@ -343,6 +343,7 @@ def global_cache_write(cache_id, newdir):
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
+    """
     data1 = (255 * np.random.rand(10000, 10000)).astype(np.uint8)
     data2 = np.random.rand(10000, 10000).astype(np.float64)
     data3 = (255 * np.random.rand(10000, 10000)).astype(np.int32)
@@ -457,3 +458,4 @@ if __name__ == '__main__':
             npz2 = np.load(file_, mmap_mode=None)
             data2 = npz['arr_0']
             npz2.close()
+    """

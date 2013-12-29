@@ -53,10 +53,10 @@ def _worker(input, output):
         output.put(result)
 
 
-def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None):
+def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None, common_args=[]):
     if args is not None and num_procs is None:
         num_procs = args.num_procs
-    task_list = make_task_list(func, arg_list, lazy=lazy)
+    task_list = make_task_list(func, arg_list, lazy=lazy, common_args=common_args)
     nTasks = len(task_list)
     if nTasks == 0:
         print('[parallel] ... No %s tasks left to compute!' % func.func_name)
@@ -82,7 +82,7 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None):
     return ret
 
 
-def make_task_list(func, arg_list, lazy=True):
+def make_task_list(func, arg_list, lazy=True, common_args=[]):
     '''
     The input should alawyas be argument 1
     The output should always be argument 2
@@ -91,7 +91,7 @@ def make_task_list(func, arg_list, lazy=True):
     if not (lazy and has_output):
         task_list = [(func, _args) for _args in izip(*arg_list)]
         return task_list
-    arg_list2 = [_args for _args in izip(*arg_list) if not exists(_args[1])]
+    arg_list2 = [list(_args) + common_args for _args in izip(*arg_list) if not exists(_args[1])]
     task_list = [(func, _args) for _args in iter(arg_list2)]
     nSkip = len(zip(*arg_list)) - len(arg_list2)
     print('[parallel] Already computed %d %s tasks' % (nSkip, func.func_name))

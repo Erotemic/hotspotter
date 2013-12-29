@@ -31,8 +31,12 @@ import match_chips3 as mc3
 import matching_functions as mf
 import voting_rules2 as vr2
 import vizualizations as viz
+from PIL import Image
+import segmentation
 
 if __name__ == 'main':
     exec(open('dbgimport.py').read())
 
-#img_fpath = helpers.get_img_fpath()
+img_fpath_ = helpers.get_img_fpath()
+np_img_ = io.imread(img_fpath_)
+pil_img_ = Image.open(img_fpath_)

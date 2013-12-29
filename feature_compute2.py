@@ -90,8 +90,8 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
     # Debug loading (seems to use lots of memory)
     print('\n')
     try:
-        make_fmt_str = helpers.make_progress_fmt_str
-        fmt_str = make_fmt_str(len(feat_fpath_list), lbl='[fc2] Loading feature: ')
+        #make_fmt_str = helpers.make_progress_fmt_str
+        #fmt_str = make_fmt_str(len(feat_fpath_list), lbl='[fc2] Loading feature: ')
         for count, feat_path in enumerate(feat_fpath_list):
             try:
                 npz = np.load(feat_path, mmap_mode=None)

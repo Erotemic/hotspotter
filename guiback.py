@@ -113,8 +113,8 @@ class MainWindowBackend(QtCore.QObject):
         # Define default table headers
         back.imgtbl_headers         =  ['Image Index', 'Image Name', '#Chips']
         back.imgtbl_editable_flags  =  [False,                False,    False]
-        back.chiptbl_headers        =  ['Chip ID', 'Name', 'Image', '#GT']
-        back.chiptbl_editable_flags =  [False,       True,   False, False]
+        back.chiptbl_headers        =  ['Chip ID', 'Name', 'Image', '#GT', 'Theta', 'ROI (x, y, w, h)']
+        back.chiptbl_editable_flags =  [False,       True,   False, False,   False, False]
         back.restbl_headers         =  ['Rank', 'Confidence', 'Matching Name', 'Chip ID']
         back.restbl_editable_flags  =  [False,         False,            True,     False]
         # connect signals
@@ -713,6 +713,7 @@ class MainWindowBackend(QtCore.QObject):
     @slot_()
     @blocking
     def dev_mode(back):
+        steal_again = back.front.return_stdout()
         hs = back.hs    # NOQA
         devmode = True  # NOQA
         print(helpers.indent(str(hs), '[*back.hs] '))
@@ -732,6 +733,8 @@ class MainWindowBackend(QtCore.QObject):
         #print(execstr)
         print('Debugging in IPython. IPython will break gui until you exit')
         exec(execstr)
+        if steal_again:
+            back.front.steal_stdout()
         #back.timer.start()
 
     # Help -> Developer Reload

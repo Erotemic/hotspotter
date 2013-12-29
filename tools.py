@@ -105,7 +105,6 @@ else:
         return var.dtype.type if isinstance(var, np.ndarray) else type(var)
 
 
-
 def is_type(var, valid_types):
     'Checks for types accounting for numpy'
     #printDBG('checking type var=%r' % (var,))
@@ -122,23 +121,24 @@ def is_int(var):
 
 
 def is_float(var):
-    return type(var) in VALID_FLOAT_TYPES
+    return is_type(var, VALID_FLOAT_TYPES)
 
 
 def is_str(var):
-    return type(var) in VALID_FLOAT_TYPES
+    return isinstance(var, str)
+    #return is_type(var, VALID_STRING_TYPES)
 
 
 def is_bool(var):
     return isinstance(var, bool)
-    #return type(var) in VALID_BOOLEAN_TYPES
+    #return is_type(var, VALID_BOOLEAN_TYPES)
 
 
 def is_dict(var):
     return isinstance(var, dict)
-    #return type(var) in VALID_BOOLEAN_TYPES
+    #return is_type(var, VALID_BOOLEAN_TYPES)
 
 
 def is_list(var):
     return isinstance(var, list)
-    #return type(num) in VALID_LIST_TYPES
+    #return is_type(var, VALID_LIST_TYPES)

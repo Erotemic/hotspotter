@@ -1483,8 +1483,14 @@ def unit_test(test_func):
         return ret
     return __unit_test_wraper
 
+try:
+    profile
+    print('[helpers] run with kernprof.py')
+except NameError:
+    profile = lambda func: func
 
-def profile(cmd, globals_=globals(), locals_=locals()):
+
+def runprofile(cmd, globals_=globals(), locals_=locals()):
     # Meliae # from meliae import loader # om = loader.load('filename.json') # s = om.summarize();
     import cProfile
     import sys
@@ -1506,6 +1512,10 @@ def profile(cmd, globals_=globals(), locals_=locals()):
 def profile_lines(fname):
     import __init__
     import shutil
+    script = 'dev.py'
+    args = '--db MOTHERS --nocache-feat'
+    runcmd = 'kernprof.py %s %s' % (script, args)
+    viewcmd = 'python -m line_profiler %s.lprof' % script
     hs_path = split(__init__.__file__)
     lineprofile_path = join(hs_path, '.lineprofile')
     ensurepath(lineprofile_path)

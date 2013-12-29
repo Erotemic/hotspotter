@@ -250,7 +250,7 @@ def vary_two_cfg(hs, qcx, cx, query_cfg, vary_cfg, fnum=1):
                 ax.set_ylabel(y_title, **ylabel_args)
     del print_lock_
     vary_title = '%s vary %s and %s' % (assign_alg, cfg1_name, cfg2_name)
-    figtitle =  '%s %s %s' % (vary_title, hs.vs_str(qcx, cx), notes)
+    figtitle =  '%s %s %s' % (vary_title, hs.vs_str(qcx, cx), str(hs.cx2_property(qcx, 'Notes')))
     subtitle = mc3.simplify_test_uid(query_cfg.get_uid())
     df2.set_figtitle(figtitle, subtitle)
     df2.adjust_subplots_xylabels()
@@ -272,6 +272,7 @@ def show_names(hs, qcx_list, fnum=1):
     helpers.ensuredir(names_dir)
     for (qcx) in qcx_list:
         print('Showing q%s - %r' % (hs.cidstr(qcx, notes=True)))
+        notes = hs.cx2_property(qcx, 'Notes')
         fnum = plot_name(hs, qcx, fnum, subtitle=notes, annote=not hs.args.noannote)
         if hs.args.save_figures:
             df2.save_figure(fpath=names_dir, usetitle=True)
@@ -563,42 +564,52 @@ def run_investigations(hs, qcx_list):
     xy_  = {'xy_thresh':     [None, .02, .002]}
     rat_ = {'ratio_thresh':  [None, 1.5, 1.7]}
     K_   = {'K':             [2, 5, 10]}
-    Kr_  = {'Krecip':        [0, 2, 5, 10]}
-    if '0' in args.tests or 'show-names' in args.tests:
+    #Kr_  = {'Krecip':        [0, 2, 5, 10]}
+
+    tests = args.tests[:]
+
+    if 'show-names' in tests:
         show_names(hs, qcx_list)
-    if '1' in args.tests or 'vary-vsone-rat-xy' in args.tests:
+        tests.remove('show-names')
+    if 'vary-vsone-rat-xy' in tests:
         fnum = vary_vsone_cfg(hs, qcx_list, fnum, [rat_, xy_])
-    if '2' in args.tests or 'vary-vsmany-k-xy' in args.tests:
+        tests.remove('vary-vsone-rat-xy')
+    if 'vary-vsmany-k-xy' in tests:
         fnum = vary_vsmany_cfg(hs, qcx_list, fnum, [K_, xy_])
-    if '3' in args.tests:
-        fnum = vary_query_cfg(hs, qcx_list, fnum, [K_, Kr_], sv_on=True)
-        fnum = vary_query_cfg(hs, qcx_list, fnum, [K_, Kr_], sv_on=False)
-    #if '8' in args.tests:
-        #mc3.compare_scoring(hs)
-    if '8' in args.tests or 'dbstats' in args.tests:
+        tests.remove('vary-vsmany-k-xy')
+    if 'dbstats' in tests:
         fnum = dbstats(hs)
-    if '9' in args.tests or 'kpts-scale' in args.tests or \
-       'scale' in args.tests:
+        tests.remove('dbstats')
+    if 'scale' in tests:
         fnum = plot_keypoint_scales(hs)
-    if '10' in args.tests or 'vsone-gt' in args.tests:
+        tests.remove('scale')
+    if 'vsone-gt' in tests:
         fnum = investigate_vsone_groundtruth(hs, qcx_list, fnum)
-    if '11' in args.tests or 'chip-info' in args.tests:
+        tests.remove('vsone-gt')
+    if 'chip-info' in tests:
         fnum = investigate_chip_info(hs, qcx_list, fnum)
-    if '12' in args.tests or 'kpts-interact' in args.tests:
+        tests.remove('chip-info')
+    if 'kpts-interact' in tests:
         fnum = intestigate_keypoint_interaction(hs, qcx_list)
-    if '13' in args.tests or 'interact' in args.tests:
+        tests.remove('kpts-interact')
+    if 'interact' in tests:
         import interaction
         fnum = interaction.interact1(hs, qcx_list, fnum)
-    if '14' in args.tests or 'list-cfg-tests' in args.tests or 'list' in args.tests:
+        tests.remove('interact')
+    if 'list' in tests:
         print(experiment_harness.get_valid_testcfg_names())
+        tests.remove('list')
     # Allow any testcfg to be in tests like:
     # vsone_1 or vsmany_3
     import experiment_configs as _testcfgs
     testcfg_keys = vars(_testcfgs).keys()
     testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
     for test_cfg_name in testcfg_locals:
-        if test_cfg_name in args.tests:
+        if test_cfg_name in tests:
             fnum = experiment_harness.test_configurations(hs, qcx_list, [test_cfg_name], fnum)
+            tests.remove(test_cfg_name)
+    if len(tests) > 0:
+        raise Exception('Unknown tests: %r ' % tests)
 
 
 def export_qon_list(hs, qcx_list):

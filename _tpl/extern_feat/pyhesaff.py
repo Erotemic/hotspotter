@@ -105,10 +105,9 @@ img_fpath = 'build/zebra.jpg'
 img_fpath = '../lena.png'
 
 try:
-    x = profile  # NoQA
-except Exception:
-    def profile(func):
-        return func
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
 
 
 @profile
@@ -121,16 +120,16 @@ def detect_hesaff_kpts(img_fpath, dict_args={}):
     # Allocate arrays
     kpts = np.empty((nKpts, 5), kpts_dtype)
     desc = np.empty((nKpts, 128), desc_dtype)
-    desc2 = np.empty((nKpts, 128), desc_dtype)
-    desc3 = np.empty((nKpts, 128), desc_dtype)
+    #desc2 = np.empty((nKpts, 128), desc_dtype)
+    #desc3 = np.empty((nKpts, 128), desc_dtype)
     #kpts = np.require(kpts, kpts_dtype, ['ALIGNED'])
     #desc = np.require(desc, desc_dtype, ['ALIGNED'])
     # Populate arrays
     hesaff_lib.exportArrays(hesaff_ptr, nKpts, kpts, desc)
     # TODO: Incorporate parameters
     # TODO: Scale Factor
-    hesaff_lib.extractDesc(hesaff_ptr, nKpts, kpts, desc2)
-    hesaff_lib.extractDesc(hesaff_ptr, nKpts, kpts, desc3)
+    #hesaff_lib.extractDesc(hesaff_ptr, nKpts, kpts, desc2)
+    #hesaff_lib.extractDesc(hesaff_ptr, nKpts, kpts, desc3)
     #print('[hesafflib] returned')
     return kpts, desc
 

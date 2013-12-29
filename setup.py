@@ -129,6 +129,9 @@ def clean():
     assert exists('_setup'), 'must be run in hotspotter directory'
     cwd = normpath(realpath(dirname(__file__)))
     print('Current working directory: %r' % cwd)
+    helpers.remove_files_in_dir(cwd, '*.pyc', recursive=True)
+    helpers.remove_files_in_dir(cwd, '*.prof', recursive=True)
+    helpers.remove_files_in_dir(cwd, '*.lprof', recursive=True)
     helpers.delete(join(cwd, 'dist'))
     helpers.delete(join(cwd, 'build'))
     helpers.delete(join(cwd, "'"))  # idk where this file comes from
@@ -137,6 +140,33 @@ def clean():
 def fix_tpl_permissions():
     os.system('chmod +x _tpl/extern_feat/*.mac')
     os.system('chmod +x _tpl/extern_feat/*.ln')
+
+
+def run_process(args, silent=True):
+    print('Running: %r' % args)
+    import subprocess
+    PIPE = subprocess.PIPE
+    proc = subprocess.Popen(args, stdout=PIPE, stderr=PIPE)
+    if silent:
+        (out, err) = proc.communicate()
+    else:
+        out_list = []
+        for line in proc.stdout.readlines():
+            print(line)
+            sys.stdout.flush()
+            out_list.append(line)
+        out = '\n'.join(out_list)
+        (_, err) = proc.communicate()
+        ret = proc.wait()
+    ret = proc.wait()
+    return out, err, ret
+
+
+def make_install_pyflann():
+    pyflann_dir = normpath(os.path.expanduser('~') + '/code/flann')
+    cmd = join(pyflann_dir, 'build_flann_mingw.bat')
+    run_process(cmd, silent=False)
+    pass
 
 
 if __name__ == '__main__':
@@ -148,6 +178,8 @@ if __name__ == '__main__':
         if cmd in ['buildui', 'ui', 'compile_ui']:
             compile_ui()
             sys.exit(0)
-        if cmd in ['build_pyinstaller', 'build_installer']:
+        if cmd in ['installer', 'pyinstaller', 'build_pyinstaller', 'build_installer']:
             build_pyinstaller()
             sys.exit(0)
+        if cmd in ['pyflann']:
+            make_install_pyflann()

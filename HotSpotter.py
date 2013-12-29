@@ -312,6 +312,12 @@ class HotSpotter(DynStruct):
     def get_property(hs, cx, key):
         return hs.tables.prop_dict[key][cx]
 
+    def cx2_property(hs, cx, key):
+        # TODO: property keys should be case insensitive
+        try:
+            return hs.tables.prop_dict[key][cx]
+        except KeyError:
+            return None
     # ---------------
     # Adding functions
     # ---------------
@@ -677,7 +683,8 @@ class HotSpotter(DynStruct):
         else:
             cid_str = 'cids=[%s]' % ', '.join(['%d' % cx2_cid[cx_] for cx_ in cx])
         if notes:
-            cid_str += ' todonotes'
+
+            cid_str += ' - ' + str(hs.cx2_property(cx, 'Notes'))
         return cid_str
 
     # Precomputed properties

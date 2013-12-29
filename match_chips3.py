@@ -11,6 +11,11 @@ import DataStructures as ds
 import Config
 import matching_functions as mf
 
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
+
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
@@ -149,6 +154,7 @@ def load_cached_query(hs, query_cfg, aug_list=['']):
 #----------------------
 # Main Query Logic
 #----------------------
+@profile
 def execute_query_safe(hs, query_cfg=None, qcxs=None, dcxs=None, use_cache=True, **kwargs):
     '''Executes a query, performs all checks, callable on-the-fly'''
     print('[mc3] Execute query safe: q%s' % hs.cidstr(qcxs))
@@ -182,6 +188,7 @@ def execute_query_safe(hs, query_cfg=None, qcxs=None, dcxs=None, use_cache=True,
     return result_list
 
 
+@profile
 def execute_query_fast(hs, query_cfg, qcxs, dcxs):
     '''Executes a query and assumes query_cfg has all precomputed information'''
     # Nearest neighbors

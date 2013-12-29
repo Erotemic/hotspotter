@@ -15,6 +15,12 @@ import argparse2
 args = argparse2.parse_arguments()
 
 
+def dependencies_for_myprogram():
+    # Let pyintaller find these modules
+    from scipy.sparse.csgraph import _validation  # NOQA
+    from scipy.special import _ufuncs_cxx  # NOQA
+
+
 def on_ctrl_c(signal, frame):
     import sys
     print('Caught ctrl+c')

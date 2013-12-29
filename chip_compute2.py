@@ -22,11 +22,11 @@ import warnings
 from itertools import izip
 from os.path import join
 
-import skimage
-import skimage.morphology
-import skimage.filter.rank
-import skimage.exposure
-import skimage.util
+#import skimage
+#import skimage.morphology
+#import skimage.filter.rank
+#import skimage.exposure
+#import skimage.util
 import cv2
 
 import segmentation
@@ -191,8 +191,8 @@ def make_compute_chip_func(preproc_func_list):
     return custom_compute_chip
 
 
-def compute_grabcut_chip(img_path, chip_path, roi, new_size):
-    seg_chip, img_mask = segmentation.segment(img_path, roi, new_size)
+def compute_grabcut_chip(img_path, chip_path, roi, theta, new_size):
+    seg_chip, img_mask = segmentation.segment(img_path, roi, theta, new_size)
     raw_chip = Image.fromarray(seg_chip)
     # Scale chip, but do not rotate
     chip = raw_chip.convert('L').resize(new_size, Image.ANTIALIAS)
@@ -279,46 +279,46 @@ def chip_decorator(func):
     wrapper.__name__ = 'chip_decorator_' + func.__name__
 
 
-def contrast_strech(chip):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        chip_ = pil2_float_img(chip)
+#def contrast_strech(chip):
+    #with warnings.catch_warnings():
+        #warnings.simplefilter("ignore")
+        #chip_ = pil2_float_img(chip)
+        ##p2 = np.percentile(chip_, 2)
+        ##p98 = np.percentile(chip_, 98)
+        #chip_ = skimage.exposure.equalize_hist(chip_)
+        #retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
+    #return retchip
+
+
+#def local_equalize(chip):
+    #with warnings.catch_warnings():
+        #warnings.simplefilter("ignore")
+        #chip_ = skimage.util.img_as_uint(chip)
+        #chip_ = skimage.exposure.equalize_adapthist(chip_, clip_limit=0.03)
+        #retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
+    #return retchip
+
+
+#def rank_equalize(chip):
+    ##chip_ = skimage.util.img_as_ubyte(chip)
+    #with warnings.catch_warnings():
+        #warnings.simplefilter("ignore")
+        #chip_ = pil2_float_img(chip)
+        #selem = skimage.morphology.disk(30)
+        #chip_ = skimage.filter.rank.equalize(chip_, selem=selem)
+        #retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
+        #return retchip
+
+
+#def skimage_historam_equalize(chip):
+    #with warnings.catch_warnings():
+        #warnings.simplefilter("ignore")
+        #chip_ = pil2_float_img(chip)
         #p2 = np.percentile(chip_, 2)
         #p98 = np.percentile(chip_, 98)
-        chip_ = skimage.exposure.equalize_hist(chip_)
-        retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
-    return retchip
-
-
-def local_equalize(chip):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        chip_ = skimage.util.img_as_uint(chip)
-        chip_ = skimage.exposure.equalize_adapthist(chip_, clip_limit=0.03)
-        retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
-    return retchip
-
-
-def rank_equalize(chip):
-    #chip_ = skimage.util.img_as_ubyte(chip)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        chip_ = pil2_float_img(chip)
-        selem = skimage.morphology.disk(30)
-        chip_ = skimage.filter.rank.equalize(chip_, selem=selem)
-        retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
-        return retchip
-
-
-def skimage_historam_equalize(chip):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        chip_ = pil2_float_img(chip)
-        p2 = np.percentile(chip_, 2)
-        p98 = np.percentile(chip_, 98)
-        chip_ = skimage.exposure.rescale_intensity(chip_, in_range=(p2, p98))
-        retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
-    return retchip
+        #chip_ = skimage.exposure.rescale_intensity(chip_, in_range=(p2, p98))
+        #retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
+    #return retchip
 
 
 def histeq(pil_img):
@@ -359,12 +359,12 @@ def region_normalize_chip(chip):
     return retchip
 
 
-def pil2_float_img(chip):
-    return skimage.util.img_as_float(chip)
-    #chip_ = np.asarray(chip, dtype=np.float)
-    #if chip_.max() > 1:
-        #chip_ /= 255.0
-    return chip_
+#def pil2_float_img(chip):
+    #return skimage.util.img_as_float(chip)
+    ##chip_ = np.asarray(chip, dtype=np.float)
+    ##if chip_.max() > 1:
+        ##chip_ /= 255.0
+    #return chip_
 
 
 def get_normalized_chip_sizes(roi_list, sqrt_area=None):
@@ -489,12 +489,12 @@ def load_chips(hs, cx_list=None, **kwargs):
         parallel_compute(compute_reg_norm_chip, **pcc_kwargs)
     elif histeq:
         parallel_compute(compute_histeq_chip, **pcc_kwargs)
-    elif rankeq:
-        parallel_compute(compute_rankeq_chip, **pcc_kwargs)
-    elif localeq and maxcontr:
-        parallel_compute(compute_localeq_contr_chip, **pcc_kwargs)
-    elif localeq:
-        parallel_compute(compute_localeq_chip, **pcc_kwargs)
+    #elif rankeq:
+        #parallel_compute(compute_rankeq_chip, **pcc_kwargs)
+    #elif localeq and maxcontr:
+        #parallel_compute(compute_localeq_contr_chip, **pcc_kwargs)
+    #elif localeq:
+        #parallel_compute(compute_localeq_chip, **pcc_kwargs)
     elif maxcontr:
         parallel_compute(compute_contrast_stretch_chip, **pcc_kwargs)
     else:
@@ -556,12 +556,10 @@ def load_chips(hs, cx_list=None, **kwargs):
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
-    import main
     import HotSpotter
     import argparse2
     import vizualizations as viz
     import chip_compute2 as cc2
-    import dev
     from chip_compute2 import *  # NOQA
     # Debugging vars
     chip_cfg = None

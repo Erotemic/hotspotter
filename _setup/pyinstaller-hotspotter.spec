@@ -58,13 +58,13 @@ def add_data(a, dst, src):
         path2 = fixwin32_shortname(path1)
         return path2
     src = platform_path(src)
-    dst = platform_path(dst)
-    helpers.ensurepath(dirname(src))
-    pretty_paths = tuple(map(lambda str: str.replace('\\', '/'), (dst, src)))
+    dst = dst
+    helpers.ensurepath(dirname(dst))
+    pretty_path = lambda str_: str_.replace('\\', '/')
     print(textwrap.dedent('''
     [setup] a.add_data(
     [setup]    dst=%r,
-    [setup]    src=%r)''').strip('\n') % pretty_paths)
+    [setup]    src=%r)''').strip('\n') % tuple(map(pretty_path, (dst, src))))
     a.datas.append((dst, src, 'DATA'))
 
 # ------
@@ -122,15 +122,15 @@ pyz = PYZ(a.pure)   # NOQA
 exe_kwargs = dict(exclude_binaries=True, name=exe_name,
                   debug=False, strip=None,
                   upx=True, console=True,
-                  onefile='HotSpotterApp',
+                  #onefile='HotSpotterApp',
                   icon=iconfile)
                   #console = PLATFORM != 'darwin',
 exe = EXE(pyz, a.scripts, **exe_kwargs)   # NOQA
 
-collect_kwargs = dict(strip=None, upx=True, name=join('dist', 'HotSpotter'))
+collect_kwargs = dict(strip=None, upx=True, name=join('dist', 'hotspotter'))
 coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, **collect_kwargs)  # NOQA
 
-bundle_name = 'HotSpotter'
+bundle_name = 'hotspotter'
 if PLATFORM == 'darwin':
     bundle_name += '.app'
 

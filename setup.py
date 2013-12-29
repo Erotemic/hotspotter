@@ -96,6 +96,7 @@ def build_pyinstaller():
     print('Current working directory: %r' % cwd)
     build_dir = join(cwd, 'build')
     dist_dir = join(cwd, 'dist')
+    helpers.delete(dist_dir)
     assert exists('setup.py'), 'must be run in hotspotter directory'
     assert exists('../hotspotter/setup.py'), 'must be run in hotspotter directory'
     assert exists('_setup'), 'must be run in hotspotter directory'

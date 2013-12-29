@@ -456,7 +456,7 @@ class Pref(PrefNode):
                             continue
                 new_val = cast_order(str(qvar.toString()))
             if isinstance(self._intern.value, bool):
-                new_val = bool(qvar.toBool()[0])
+                new_val = bool(qvar.toBool())
             elif isinstance(self._intern.value, int):
                 new_val = int(qvar.toInt()[0])
             elif isinstance(self._intern.value, float):

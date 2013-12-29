@@ -1,5 +1,8 @@
 #--- Annoyances ----
 
+* sklearn doesnt work with pyinstaller
+* skimage doesnt work with pyinstaller either
+
 * When there is one chip in the database it reports a weird error on query.
 * Make this error more descriptive. 
 

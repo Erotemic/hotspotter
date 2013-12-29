@@ -1879,9 +1879,8 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     print('[helpers] You ran helpers as main!')
     import algos  # NOQA
-    import sklearn  # NOQA
     module = sys.modules[__name__]
-    seen = set(['numpy', 'matplotlib', 'scipy', 'pyflann', 'sklearn', 'skimage', 'cv2'])
+    seen = set(['numpy', 'matplotlib', 'scipy', 'pyflann', 'skimage', 'cv2'])
 
     hs2_basic = set(['draw_func2', 'params', 'mc2'])
     python_basic = set(['os', 'sys', 'warnings', 'inspect', 'copy', 'imp', 'types'])

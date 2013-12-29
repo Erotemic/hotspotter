@@ -10,9 +10,9 @@ import textwrap
 import matplotlib.pyplot as plt
 # Scientific
 import pyflann
-import sklearn.decomposition
-import sklearn.preprocessing as sklpreproc
-import sklearn
+#import sklearn.decomposition
+#import sklearn.preprocessing as sklpreproc
+#import sklearn
 import numpy as np
 import scipy.sparse as spsparse
 # Hotspotter
@@ -223,11 +223,12 @@ def __tune():
 #pyflann.set_distance_type('hellinger', order=0)
 
 def whiten(data):
-    'wrapper around sklearn'
-    pca = sklearn.decomposition.PCA(copy=True, n_components=None, whiten=True)
-    pca.fit(data)
-    data_out = pca.transform(data)
-    return data_out
+    #'wrapper around sklearn'
+    #pca = sklearn.decomposition.PCA(copy=True, n_components=None, whiten=True)
+    #pca.fit(data)
+    #data_out = pca.transform(data)
+    #return data_out
+    return data
 
 
 def norm_zero_one(data):
@@ -245,8 +246,8 @@ def plot_clusters(data, datax2_clusterx, clusters, num_pca_dims=3,
     import draw_func2 as df2
     data_dims = data.shape[1]
     num_pca_dims = min(num_pca_dims, data_dims)
-    pca = sklearn.decomposition.PCA(copy=True, n_components=num_pca_dims,
-                                    whiten=whiten).fit(data)
+    #pca = sklearn.decomposition.PCA(copy=True, n_components=num_pca_dims,
+                                    #whiten=whiten).fit(data)
     pca_data = pca.transform(data)
     pca_clusters = pca.transform(clusters)
     K = len(clusters)

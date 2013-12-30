@@ -89,8 +89,6 @@ def main_argparse(parser2):
 
 def dev_argparse(parser2):
     parser2 = parser2.add_argument_group('Dev')
-    # Misc
-    parser2.add_flag('--export-qon')
     # Testing flags
     parser2.add_flag('--test-vsmany')
     parser2.add_flag('--test-vsone')

@@ -327,36 +327,32 @@ def plot_keypoint_scales(hs, fnum=1):
     return fnum
 
 
-# DEPRICATE THIS
-def get_qon_list(hs):
-    print('[dev] get_qon_list()')
-    # Get query ids
+def get_qcx_list(hs):
+    print('[dev] get_qcx_list()')
+    # Sample a large pool of query indexes
     histids = None if hs.args.histid is None else np.array(hs.args.histid)
     if hs.args.all_cases:
-        qon_all = zip(*get_cases(hs, with_gt=True, with_nogt=True))
+        qcx_all = get_cases(hs, with_gt=True, with_nogt=True)
     elif hs.args.all_gt_cases:
-        qon_all = zip(*get_cases(hs, with_hard=True, with_gt=True, with_nogt=False))
+        qcx_all = get_cases(hs, with_hard=True, with_gt=True, with_nogt=False)
     elif hs.args.qcid is None:
-        qon_all = zip(*get_cases(hs, with_hard=True, with_gt=False, with_nogt=False))
+        qcx_all = get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
     else:
         print('[dev] Chosen qcid=%r' % hs.args.qcid)
-        qcx_list =  helpers.ensure_iterable(hs.cid2_cx(hs.args.qcid))
-        ocid_list = [hs.get_other_indexed_cxs(cx) for cx in qcx_list]
-        note_list = ['user selected qcid'] * len(qcx_list)
-        qon_all = zip(*[qcx_list, ocid_list, note_list])
-
+        qcx_all =  helpers.ensure_iterable(hs.cid2_cx(hs.args.qcid))
+    # Filter only the ones you want from the large pool
     if histids is None:
-        qon_list = qon_all
-    elif not histids is None:
+        qcx_list = qcx_all
+    else:
         histids = helpers.ensure_iterable(histids)
         print('[dev] Chosen histids=%r' % histids)
-        qon_list = [qon_all[id_] for id_ in histids]
+        qcx_list = [qcx_list[id_] for id_ in histids]
 
-    if len(qon_list) == 0:
+    if len(qcx_list) == 0:
         if hs.args.strict:
-            raise Exception('no qon_list history')
-        qon_list = [(0, [], 'fallback_qon')]
-    return qon_list
+            raise Exception('no qcx_list history')
+        qcx_list = [0]
+    return qcx_list
 
 
 def investigate_vsone_groundtruth(hs, qcx_list, fnum=1):
@@ -482,16 +478,6 @@ def dbstats(hs):
 # exec(open('dev.py').read())
 
 
-def print_history_table(args):
-    print('------------')
-    print('[dev] Printing history table:')
-    count = 0
-    for histentry in HISTORY:
-        if args.db == histentry[0]:
-            print('%d: %r' % (count, histentry))
-            count += 1
-
-
 def dev_main(**kwargs):
     'Developer main script. Contains all you need to quickly start tests'
     import HotSpotter
@@ -511,48 +497,33 @@ def dev_main(**kwargs):
     # Get the query/others/notes list
     # this contains a list of cannonical test examples
     # FIXME: This is specific to one machine right now
-    qon_list = get_qon_list(hs)
-    if not args.noprinthist or True:
-        # Prints the cannonical chips
-        print('---')
-        print('[dev] print_history_table(hs.args)')
-        print_history_table(hs.args)
-    qcx_list, ocxs_list, notes_list = zip(*qon_list)
+    qcx_list = get_qcx_list(hs)
     qcx   = qcx_list[0]
-    notes = notes_list[0]
     print('========================')
     print('[dev] Loaded DB=%r' % args.db)
     return locals()
 #---end main script
 
 
-def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True):
-    cx2_cid = hs.tables.cx2_cid
-    qcid_list = []
-    ocid_list = []
-    note_list = []
+def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True, with_notes=False):
     qcx_list = []
-    db = hs.args.db
+    valid_cxs = hs.get_valid_cxs()
     if with_hard:
-        for (db_, qcid, ocids, notes) in HISTORY:
-            if db == db_:
-                qcid_list += [qcid]
-                ocid_list += [ocids]
-                note_list += [notes]
-        qcx_list = hs.cid2_cx(qcid_list)
-    for cx, cid in enumerate(cx2_cid):
-        if not cx in qcx_list and cid > 0:
+        if 'hard' in hs.tables.prop_dict:
+            for cx in iter(valid_cxs):
+                if hs.cx2_property(cx, 'hard') == 'True':
+                    qcx_list += [cx]
+    if with_hard:
+        if 'Notes' in hs.tables.prop_dict:
+            for cx in iter(valid_cxs):
+                if hs.cx2_property(cx, 'Notes') != '':
+                    qcx_list += [cx]
+    if with_gt and not with_nogt:
+        for cx in iter(valid_cxs):
             gt_cxs = hs.get_other_indexed_cxs(cx)
-            if with_nogt and len(gt_cxs) == 0:
-                pass
-            elif with_gt and len(gt_cxs) > 0:
-                pass
-            else:
-                continue
-            qcx_list += [cx]
-            ocid_list += [[gt_cxs]]
-            note_list += ['NA']
-    return qcx_list, ocid_list, note_list
+            if len(gt_cxs) > 0:
+                qcx_list += [cx]
+    return qcx_list
 
 
 # Driver Function
@@ -657,15 +628,11 @@ if __name__ == '__main__':
     # useful when copy and pasting into ipython
     main_locals = dev_main()
     hs = main_locals['hs']
-    qon_list = main_locals['qon_list']
     qcx_list = main_locals['qcx_list']
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
     print('[dev]====================')
     if hs.args.printoff:
         all_printoff()
-
-    if hs.args.export_qon:
-        export_qon_list(hs, qon_list)
     # Big test function. Should be replaced with something
     # not as ugly soon.
     run_investigations(hs, qcx_list)

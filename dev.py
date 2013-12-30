@@ -89,90 +89,90 @@ HISTORY = [
     history_entry('MOTHERS', 66, [63, 62, 64, 65], notes='occluded foal'),
 ]
 
-MANUAL_GZ_HISTORY = [
-    history_entry('GZ', 662,     [262],            notes='viewpoint / shadow (circle)'),
-    history_entry('GZ', 1046,    [],               notes='extreme viewpoint #gt=2'),
-    history_entry('GZ', 838,     [801, 980],       notes='viewpoint / quality'),
-    history_entry('GZ', 501,     [140],            notes='dark lighting'),
-    history_entry('GZ', 981,     [802],            notes='foal extreme viewpoint'),
-    history_entry('GZ', 306,     [112],            notes='occlusion'),
-    history_entry('GZ', 941,     [900],            notes='viewpoint / quality'),
-    history_entry('GZ', 311,     [289],            notes='quality'),
-    history_entry('GZ', 1047,    [],               notes='extreme viewpoint #gt=4'),
-    history_entry('GZ', 297,     [301],            notes='quality'),
-    history_entry('GZ', 786,     [787],            notes='foal #gt=11'),
-    history_entry('GZ', 534,     [411, 727],       notes='LNBNN failure'),
-    history_entry('GZ', 463,     [173],            notes='LNBNN failure'),
-    history_entry('GZ', 460,     [613, 460],       notes='background match'),
-    history_entry('GZ', 465,     [589, 460],       notes='background match'),
-    history_entry('GZ', 454,     [198, 447],       notes='forground match'),
-    history_entry('GZ', 445,     [702, 435],       notes='forground match'),
-    history_entry('GZ', 453,     [682, 453],       notes='forground match'),
-    history_entry('GZ', 550,     [551, 452],       notes='forground match'),
-    history_entry('GZ', 450,     [614],            notes='other zebra match'),
-]
+#MANUAL_GZ_HISTORY = [
+    #history_entry('GZ', 662,     [262],            notes='viewpoint / shadow (circle)'),
+    #history_entry('GZ', 1046,    [],               notes='extreme viewpoint #gt=2'),
+    #history_entry('GZ', 838,     [801, 980],       notes='viewpoint / quality'),
+    #history_entry('GZ', 501,     [140],            notes='dark lighting'),
+    #history_entry('GZ', 981,     [802],            notes='foal extreme viewpoint'),
+    #history_entry('GZ', 306,     [112],            notes='occlusion'),
+    #history_entry('GZ', 941,     [900],            notes='viewpoint / quality'),
+    #history_entry('GZ', 311,     [289],            notes='quality'),
+    #history_entry('GZ', 1047,    [],               notes='extreme viewpoint #gt=4'),
+    #history_entry('GZ', 297,     [301],            notes='quality'),
+    #history_entry('GZ', 786,     [787],            notes='foal #gt=11'),
+    #history_entry('GZ', 534,     [411, 727],       notes='LNBNN failure'),
+    #history_entry('GZ', 463,     [173],            notes='LNBNN failure'),
+    #history_entry('GZ', 460,     [613, 460],       notes='background match'),
+    #history_entry('GZ', 465,     [589, 460],       notes='background match'),
+    #history_entry('GZ', 454,     [198, 447],       notes='forground match'),
+    #history_entry('GZ', 445,     [702, 435],       notes='forground match'),
+    #history_entry('GZ', 453,     [682, 453],       notes='forground match'),
+    #history_entry('GZ', 550,     [551, 452],       notes='forground match'),
+    #history_entry('GZ', 450,     [614],            notes='other zebra match'),
+#]
 
-                                                                                #csum, pl, plw, borda
-AUTO_GZ_HISTORY = map(lambda tup: tuple(['GZ'] + list(tup)), [
-    (662,   [263],                              'viewpoint / shadow (circle) ranks = [16 20 20 20]'),
-    (1046,  [],                                 'extreme viewpoint #gt=2 ranks     = [592 592 592 592]'),
-    (838,   [802, 981],                         'viewpoint / quality ranks         = [607 607 607 607]'),
-    (501,   [141],                              'dark lighting ranks               = [483 483 483 483]'),
-    (802,   [981],                              'viewpoint / quality /no matches   = [722 722 722 722]'),
-    (907,   [828, 961],                         'occluded but (spatial verif)      = [645 645 645 645]'),
-    (1047,  [],                                 'extreme viewpoint #gt=4 ranks     = [582 582 582 582]'),
-    (16,    [635],                              'NA ranks                          = [839 839 839 839]'),
-    (140,   [501],                              'NA ranks                          = [194 194 194 194]'),
-    (981,   [803],                              'foal extreme viewpoint ranks      = [ 8  9  9 11]'),
-    (425,   [662],                              'NA ranks                          = [21 33 30 34]'),
-    (681,   [198, 454, 765],                    'NA ranks                          = [2 6 6 6]'),
-    (463,   [174],                              'LNBNN failure ranks               = [3 0 3 0]'),
-    (306,   [113],                              'occlusion ranks                   = [1 1 1 1]'),
-    (311,   [290],                              'quality ranks                     = [1 2 1 2]'),
-    (460,   [614, 461],                         'background match ranks            = [2 1 2 1]'),
-    (465,   [590, 461],                         'background match ranks            = [3 0 3 0]'),
-    (454,   [199, 448],                         'forground match ranks             = [5 3 3 2]'),
-    (445,   [703, 436],                         'forground match ranks             = [1 2 2 2]'),
-    (453,   [683, 454],                         'forground match ranks             = [2 3 4 0]'),
-    (550,   [552, 453],                         'forground match ranks             = [5 5 5 4]'),
-    (450,   [615],                              'other zebra match ranks           = [3 4 4 4]'),
-    (95,    [255],                              'NA ranks                          = [2 5 5 5]'),
-    (112,   [306],                              'NA ranks                          = [1 2 2 2]'),
-    (183,   [178],                              'NA ranks                          = [1 2 2 2]'),
-    (184,   [34, 39, 227, 619],                 'NA ranks                          = [1 1 1 1]'),
-    (253,   [343],                              'NA ranks                          = [1 1 1 1]'),
-    (276,   [45, 48],                           'NA ranks                          = [1 0 1 0]'),
-    (277,   [113, 124],                         'NA ranks                          = [1 0 1 0]'),
-    (289,   [311],                              'NA ranks                          = [2 1 2 1]'),
-    (339,   [315],                              'NA ranks                          = [1 1 1 1]'),
-    (340,   [317],                              'NA ranks                          = [1 0 1 0]'),
-    (415,   [408],                              'NA ranks                          = [1 3 2 4]'),
-    (430,   [675],                              'NA ranks                          = [1 0 1 0]'),
-    (436,   [60, 61, 548, 708, 760],            'NA ranks                          = [1 0 0 0]'),
-    (441,   [421],                              'NA ranks                          = [5 5 6 5]'),
-    (442,   [693, 777],                         'NA ranks                          = [1 0 1 0]'),
-    (443,   [420, 478],                         'NA ranks                          = [5 4 6 4]'),
-    (444,   [573],                              'NA ranks                          = [5 3 5 3]'),
-    (446,   [565, 678, 705],                    'NA ranks                          = [1 0 0 0]'),
-    (451,   [541, 549],                         'NA ranks                          = [2 0 1 0]'),
-    (456,   [172, 174, 219, 637],               'NA ranks                          = [3 1 2 0]'),
-    (661,   [59],                               'NA ranks                          = [0 4 4 4]'),
-    (720,   [556, 714],                         'NA ranks                          = [1 0 0 0]'),
-    (763,   [632],                              'NA ranks                          = [0 6 0 6]'),
-    (1044,  [845, 878, 927, 1024, 1025, 1042],  'NA ranks                          = [1 0 0 0]'),
-    (1045,  [846, 876],                         'NA ranks                          = [1 0 1 0]'),
-])
-HISTORY += AUTO_GZ_HISTORY
+                                                                                ##csum, pl, plw, borda
+#AUTO_GZ_HISTORY = map(lambda tup: tuple(['GZ'] + list(tup)), [
+    #(662,   [263],                              'viewpoint / shadow (circle) ranks = [16 20 20 20]'),
+    #(1046,  [],                                 'extreme viewpoint #gt=2 ranks     = [592 592 592 592]'),
+    #(838,   [802, 981],                         'viewpoint / quality ranks         = [607 607 607 607]'),
+    #(501,   [141],                              'dark lighting ranks               = [483 483 483 483]'),
+    #(802,   [981],                              'viewpoint / quality /no matches   = [722 722 722 722]'),
+    #(907,   [828, 961],                         'occluded but (spatial verif)      = [645 645 645 645]'),
+    #(1047,  [],                                 'extreme viewpoint #gt=4 ranks     = [582 582 582 582]'),
+    #(16,    [635],                              'NA ranks                          = [839 839 839 839]'),
+    #(140,   [501],                              'NA ranks                          = [194 194 194 194]'),
+    #(981,   [803],                              'foal extreme viewpoint ranks      = [ 8  9  9 11]'),
+    #(425,   [662],                              'NA ranks                          = [21 33 30 34]'),
+    #(681,   [198, 454, 765],                    'NA ranks                          = [2 6 6 6]'),
+    #(463,   [174],                              'LNBNN failure ranks               = [3 0 3 0]'),
+    #(306,   [113],                              'occlusion ranks                   = [1 1 1 1]'),
+    #(311,   [290],                              'quality ranks                     = [1 2 1 2]'),
+    #(460,   [614, 461],                         'background match ranks            = [2 1 2 1]'),
+    #(465,   [590, 461],                         'background match ranks            = [3 0 3 0]'),
+    #(454,   [199, 448],                         'forground match ranks             = [5 3 3 2]'),
+    #(445,   [703, 436],                         'forground match ranks             = [1 2 2 2]'),
+    #(453,   [683, 454],                         'forground match ranks             = [2 3 4 0]'),
+    #(550,   [552, 453],                         'forground match ranks             = [5 5 5 4]'),
+    #(450,   [615],                              'other zebra match ranks           = [3 4 4 4]'),
+    #(95,    [255],                              'NA ranks                          = [2 5 5 5]'),
+    #(112,   [306],                              'NA ranks                          = [1 2 2 2]'),
+    #(183,   [178],                              'NA ranks                          = [1 2 2 2]'),
+    #(184,   [34, 39, 227, 619],                 'NA ranks                          = [1 1 1 1]'),
+    #(253,   [343],                              'NA ranks                          = [1 1 1 1]'),
+    #(276,   [45, 48],                           'NA ranks                          = [1 0 1 0]'),
+    #(277,   [113, 124],                         'NA ranks                          = [1 0 1 0]'),
+    #(289,   [311],                              'NA ranks                          = [2 1 2 1]'),
+    #(339,   [315],                              'NA ranks                          = [1 1 1 1]'),
+    #(340,   [317],                              'NA ranks                          = [1 0 1 0]'),
+    #(415,   [408],                              'NA ranks                          = [1 3 2 4]'),
+    #(430,   [675],                              'NA ranks                          = [1 0 1 0]'),
+    #(436,   [60, 61, 548, 708, 760],            'NA ranks                          = [1 0 0 0]'),
+    #(441,   [421],                              'NA ranks                          = [5 5 6 5]'),
+    #(442,   [693, 777],                         'NA ranks                          = [1 0 1 0]'),
+    #(443,   [420, 478],                         'NA ranks                          = [5 4 6 4]'),
+    #(444,   [573],                              'NA ranks                          = [5 3 5 3]'),
+    #(446,   [565, 678, 705],                    'NA ranks                          = [1 0 0 0]'),
+    #(451,   [541, 549],                         'NA ranks                          = [2 0 1 0]'),
+    #(456,   [172, 174, 219, 637],               'NA ranks                          = [3 1 2 0]'),
+    #(661,   [59],                               'NA ranks                          = [0 4 4 4]'),
+    #(720,   [556, 714],                         'NA ranks                          = [1 0 0 0]'),
+    #(763,   [632],                              'NA ranks                          = [0 6 0 6]'),
+    #(1044,  [845, 878, 927, 1024, 1025, 1042],  'NA ranks                          = [1 0 0 0]'),
+    #(1045,  [846, 876],                         'NA ranks                          = [1 0 1 0]'),
+#])
+#HISTORY += AUTO_GZ_HISTORY
 
 
-def mothers_problem_pairs():
-    '''MOTHERS Dataset: difficult (qcx, cx) query/result pairs'''
-    viewpoint = [( 16, 17), (19, 20), (73, 71), (75, 78), (108, 112), (110, 108)]
-    quality = [(27, 26),  (52, 53), (67, 68), (73, 71), ]
-    lighting = [(105, 104), ( 49,  50), ( 93,  94), ]
-    confused = []
-    occluded = [(64, 65), ]
-    return locals()
+#def mothers_problem_pairs():
+    #'''MOTHERS Dataset: difficult (qcx, cx) query/result pairs'''
+    #viewpoint = [( 16, 17), (19, 20), (73, 71), (75, 78), (108, 112), (110, 108)]
+    #quality = [(27, 26),  (52, 53), (67, 68), (73, 71), ]
+    #lighting = [(105, 104), ( 49,  50), ( 93,  94), ]
+    #confused = []
+    #occluded = [(64, 65), ]
+    #return locals()
 
 
 # Just put in PL

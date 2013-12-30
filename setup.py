@@ -143,15 +143,23 @@ def fix_tpl_permissions():
     os.system('chmod +x _tpl/extern_feat/*.ln')
 
 
-def run_process(args, silent=True):
+def __cmd(args, silent=True):
     print('Running: %r' % args)
     import subprocess
+    #import shlex
+    #if isinstance(args, str):
+        #if os.name == 'posix':
+            #args = [args]
+        #else:
+            #args = shlex.split(args)
     PIPE = subprocess.PIPE
-    # DANGEROUS
+    # DANGEROUS: shell=True. Grats hackers.
     proc = subprocess.Popen(args, stdout=PIPE, stderr=PIPE, shell=True)
     if silent:
+        # Surpress output
         (out, err) = proc.communicate()
     else:
+        # Try writing output as we get it
         out_list = []
         for line in proc.stdout.readlines():
             sys.stdout.write(line)
@@ -160,6 +168,7 @@ def run_process(args, silent=True):
         out = '\n'.join(out_list)
         (_, err) = proc.communicate()
         ret = proc.wait()
+    # Make sure process if finished
     ret = proc.wait()
     return out, err, ret
 
@@ -168,24 +177,26 @@ if sys.platform == 'win32':
 else:
     buildscript_fmt = 'build_%s_unix.sh'
 
+HOME = os.path.expanduser('~')
+
 
 def make_install_pyhesaff():
-    hesaff_dir = normpath(os.path.expanduser('~') + '/code/hesaff')
+    hesaff_dir = normpath(HOME + '/code/hesaff')
     cmd = join(hesaff_dir, buildscript_fmt % 'hesaff')
-    run_process(cmd, silent=False)
+    __cmd(cmd, silent=False)
 
 
 def make_install_pyflann():
-    pyflann_dir = normpath(os.path.expanduser('~') + '/code/flann')
+    pyflann_dir = normpath(HOME + '/code/flann')
     cmd = join(pyflann_dir, buildscript_fmt % 'flann')
-    run_process(cmd, silent=False)
+    __cmd(cmd, silent=False)
     pass
 
 
 def make_install_opencv():
-    pyflann_dir = normpath(os.path.expanduser('~') + '/code/opencv')
+    pyflann_dir = normpath(HOME + '/code/opencv')
     cmd = join(pyflann_dir, buildscript_fmt % 'opencv')
-    run_process(cmd, silent=False)
+    __cmd(cmd, silent=False)
     pass
 
 

@@ -698,8 +698,8 @@ class MainWindowBackend(QtCore.QObject):
 
     # Help -> Delete Directory Slots
     @slot_()
-    def delete_computed_dir(back):
-        back.hs.delete_computed_dir()
+    def delete_cache(back):
+        back.hs.delete_cache()
 
     @slot_()
     def delete_global_prefs(back):

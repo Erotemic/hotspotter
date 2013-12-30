@@ -91,7 +91,7 @@ def connect_help_signals(front):
     ui.actionView_Global_Dir.triggered.connect(back.view_global_dir)
 
     ui.actionAbout.triggered.connect(msg_event('About', 'hotspotter'))
-    ui.actionDelete_computed_directory.triggered.connect(back.delete_computed_dir)
+    ui.actionDelete_computed_directory.triggered.connect(back.delete_cache)
     ui.actionDelete_global_preferences.triggered.connect(back.delete_global_prefs)
     ui.actionDelete_Precomputed_Results.triggered.connect(back.delete_queryresults_dir)
     ui.actionDev_Mode_IPython.triggered.connect(back.dev_mode)

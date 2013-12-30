@@ -3,29 +3,45 @@ import multiprocessing
 import argparse
 
 DEBUG = False
+#DEBUG = True
+
+
+def switch_sanataize(switch):
+    if isinstance(switch, str):
+        dest = switch.strip('-').replace('-', '_')
+    else:
+        if isinstance(switch, tuple):
+            switch = switch
+        elif isinstance(switch, list):
+            switch = tuple(switch)
+        dest = switch[0].strip('-').replace('-', '_')
+    return dest, switch
 
 
 class ArgumentParser2(object):
     'Wrapper around argparse.ArgumentParser with convinence functions'
     def __init__(self, parser):
         self.parser = parser
-        self.add_arg = parser.add_argument
+        self._add_arg = parser.add_argument
+
+    def add_arg(self, switch, *args, **kwargs):
+        #print('[argparse2] add_arg(%r) ' % (switch,))
+        if isinstance(switch, tuple):
+            args = tuple(list(switch) + list(args))
+            return self._add_arg(*args, **kwargs)
+        else:
+            return self._add_arg(switch, *args, **kwargs)
 
     def add_meta(self, switch, type, default=None, help='', **kwargs):
-        if isinstance(switch, tuple):
-            dest = switch[0].strip('-').replace('-', '_')
-            self.add_arg(*switch, metavar=dest, type=type, default=default, help=help, **kwargs)
-        else:
-            dest = switch.strip('-').replace('-', '_')
-            self.add_arg(switch, metavar=dest, type=type, default=default, help=help, **kwargs)
+        #print('[argparse2] add_meta()')
+        dest, switch = switch_sanataize(switch)
+        self.add_arg(switch, metavar=dest, type=type, default=default, help=help, **kwargs)
 
-    def add_flag(self, switch, default=False, *args, **kwargs):
+    def add_flag(self, switch, default=False, **kwargs):
+        #print('[argparse2] add_flag()')
         action = 'store_false' if default else 'store_true'
-        dest = switch.strip('-').replace('-', '_')
-        self.add_arg(switch, dest=dest, action=action, default=default, *args, **kwargs)
-
-    def add_var(self, switch, **kwargs):
-        self.add_meta(switch, None, *args, **kwargs)
+        dest, switch = switch_sanataize(switch)
+        self.add_arg(switch, dest=dest, action=action, default=default, **kwargs)
 
     def add_int(self, switch, *args, **kwargs):
         self.add_meta(switch, int,  *args, **kwargs)
@@ -154,6 +170,7 @@ def cfg_argparse(parser2):
 def cache_argparse(parser2):
     # Cache flags
     parser2 = parser2.add_argument_group('Cache')
+    parser2.add_flag(('--delete-cache', '--dc'))
     parser2.add_flag('--nocache-db', help='forces user to specify database directory')
     parser2.add_flag('--nocache-chips')
     parser2.add_flag('--nocache-query')

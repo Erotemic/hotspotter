@@ -94,7 +94,7 @@ def tryindex(list, *args):
     #print('[ld2] Unable to find args=%r in list=%r' % (args, list))
 
 
-@profile
+#@profile  # This is perfectly fast .2 seconds on GZ
 def load_csv_tables(db_dir, allow_new_dir=True):
     '''
     Big function which loads the csv tables from a datatabase directory

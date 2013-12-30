@@ -73,6 +73,14 @@ splash_src   = join(root_dir, '_frontend/splash.png')
 splash_dst  = join(hsbuild, '_frontend/splash.png')
 add_data(a, splash_dst, splash_src)
 
+src = join(root_dir, '_frontend/', 'hsicon.ico')
+dst = join(hsbuild, '_frontend/', 'hsicon.ico')
+add_data(a, dst, src)
+
+src = join(root_dir, '_frontend/' 'resources_MainSkel.qrc')
+dst = join(hsbuild, '_frontend/' 'resources_MainSkel.qrc')
+add_data(a, dst, src)
+
 # Add TPL Libs for current PLATFORM
 ROOT_DLLS = ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']
 

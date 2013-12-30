@@ -1,5 +1,8 @@
 #--- Annoyances ----
 
+I should have a way of getting each individual chip interaction side by side
+when I click on a query analaysis. (Oh, I sort of have it already...)
+
 * sklearn doesnt work with pyinstaller
 * skimage doesnt work with pyinstaller either
 

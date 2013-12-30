@@ -18,7 +18,7 @@ AppUpdatesURL=www.rpi.edu/~crallj/
 DefaultDirName={pf}\HotSpotter
 DefaultGroupName=HotSpotter
 OutputBaseFilename=hotspotter-win32-setup
-SetupIconFile=C:\Users\jon.crall\code\hotspotter\hs_setup\hsicon.ico
+SetupIconFile=C:\Users\joncrall\code\hotspotter\_setup\hsicon.ico
 Compression=lzma
 SolidCompression=yes
 
@@ -29,13 +29,13 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\jon.crall\code\hotspotter\dist\HotSpotter\HotSpotterApp.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\jon.crall\code\hotspotter\dist\HotSpotter\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\joncrall\code\hotspotter\dist\hotspotter\HotSpotterApp.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\joncrall\code\hotspotter\dist\hotspotter\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
-Name: "{group}\HotSpotter"; Filename: "{app}\HotSpotterApp.exe"
-Name: "{commondesktop}\HotSpotter"; Filename: "{app}\HotSpotterApp.exe"; Tasks: desktopicon
+Name: "{group}\hotspotter"; Filename: "{app}\HotSpotterApp.exe"
+Name: "{commondesktop}\hotspotter"; Filename: "{app}\HotSpotterApp.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\HotSpotterApp.exe"; Description: "{cm:LaunchProgram,HotSpotter}"; Flags: nowait postinstall skipifsilent

@@ -5,7 +5,6 @@ import sys
 import re
 # HotSpotter
 import helpers
-from helpers import tic, toc
 import dev
 import DataStructures as ds
 import Config
@@ -194,36 +193,19 @@ def execute_query_safe(hs, query_cfg=None, qcxs=None, dcxs=None, use_cache=True,
 def execute_query_fast(hs, query_cfg, qcxs, dcxs):
     '''Executes a query and assumes query_cfg has all precomputed information'''
     # Nearest neighbors
-    nn_tt = tic()
     neighbs = mf.nearest_neighbors(hs, qcxs, query_cfg)
-    nn_time = toc(nn_tt)
     # Nearest neighbors weighting and scoring
-    weight_tt = tic()
     weights  = mf.weight_neighbors(hs, neighbs, query_cfg)
-    weight_time = toc(weight_tt)
     # Thresholding and weighting
-    filt_tt = tic()
     nnfiltFILT = mf.filter_neighbors(hs, neighbs, weights, query_cfg)
-    filt_time = toc(filt_tt)
     # Nearest neighbors to chip matches
-    build_tt = tic()
     matchesFILT = mf.build_chipmatches(hs, neighbs, nnfiltFILT, query_cfg)
-    build_time = toc(build_tt)
     # Spatial verification
-    verify_tt = tic()
     matchesSVER = mf.spatial_verification(hs, matchesFILT, query_cfg)
-    verify_time = toc(verify_tt)
     # Query results format
     result_list = [
         mf.chipmatch_to_resdict(hs, matchesSVER, query_cfg),
     ]
-    # Add timings to the results
-    for res in result_list[0].itervalues():
-        res.nn_time     = nn_time
-        res.weight_time = weight_time
-        res.filt_time   = filt_time
-        res.build_time  = build_time
-        res.verify_time = verify_time
     return result_list
 
 

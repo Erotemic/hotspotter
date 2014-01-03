@@ -1,10 +1,12 @@
 from __future__ import division, print_function
 import __builtin__
-import sys
-import numpy.linalg as linalg
+# Science
 import numpy as np
+import numpy.linalg as linalg
 import scipy.sparse as sparse
 import scipy.sparse.linalg as sparse_linalg
+# Standard
+import sys
 # skimage.transform
 # http://stackoverflow.com/questions/11462781/fast-2d-rigid-body-transformations-in-numpy-scipy
 # skimage.transform.fast_homography(im, H)

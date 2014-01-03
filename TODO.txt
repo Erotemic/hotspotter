@@ -1,5 +1,12 @@
 #--- Annoyances ----
 
+* ODD BEHAVIOR: where if you click the result inspection, its
+* like clicking the result view. 
+
+* TO DOCUMENT: You have the ability to control-click results to see homographies
+
+* ODD BEHAVIOR: Sometimes matplotlib screw up capturing if you have control down or not
+
 I should have a way of getting each individual chip interaction side by side
 when I click on a query analaysis. (Oh, I sort of have it already...)
 
@@ -8,6 +15,8 @@ when I click on a query analaysis. (Oh, I sort of have it already...)
 
 * When there is one chip in the database it reports a weird error on query.
 * Make this error more descriptive. 
+
+* Color by score in result inspection
 
 FIXED ~~* When editing the name of an animal, it has to redraw the chip and image ~~
         ~~* before the name editing can happen. ~~
@@ -72,4 +81,6 @@ What is the right similarity measure
 Turning scores into probabilities
 
 # ---
+
+
 

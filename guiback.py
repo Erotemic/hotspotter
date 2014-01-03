@@ -699,14 +699,17 @@ class MainWindowBackend(QtCore.QObject):
     # Help -> Delete Directory Slots
     @slot_()
     def delete_cache(back):
+        df2.close_all_figures()
         back.hs.delete_cache()
 
     @slot_()
     def delete_global_prefs(back):
+        df2.close_all_figures()
         back.hs.delete_global_prefs()
 
     @slot_()
     def delete_queryresults_dir(back):
+        df2.close_all_figures()
         back.hs.delete_queryresults_dir()
 
     # Help -> Developer Help

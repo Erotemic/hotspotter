@@ -6,7 +6,7 @@ import itertools
 import re
 import sys
 import textwrap
-from os.path import join
+from os.path import dirname, realpath, join, exists, normpath
 from collections import OrderedDict
 # Scientific
 import numpy as np  # NOQA
@@ -37,6 +37,6 @@ import segmentation
 if __name__ == 'main':
     exec(open('dbgimport.py').read())
 
-img_fpath_ = helpers.get_img_fpath()
-np_img_ = io.imread(img_fpath_)
-pil_img_ = Image.open(img_fpath_)
+#img_fpath_ = helpers.get_img_fpath()
+#np_img_ = io.imread(img_fpath_)
+#pil_img_ = Image.open(img_fpath_)

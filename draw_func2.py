@@ -1403,7 +1403,8 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
     # Draw all keypoints in both chips as points
     if kwargs.get('all_kpts', False):
         all_args = dict(ell=False, pts=pts, pts_color=GREEN, pts_size=2,
-                        ell_alpha=ell_alpha, rect=rect, **kwargs)
+                        ell_alpha=ell_alpha, rect=rect)
+        all_args.update(kwargs)
         draw_kpts2(kpts1, **all_args)
         draw_kpts2(kpts2, offset=offset2, **all_args)
     # Draw Lines and Ellipses and Points oh my
@@ -1413,27 +1414,32 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
 
         # Helper functions
         def _drawkpts(**_kwargs):
+            _kwargs.update(kwargs)
             fxs1 = fm[:, 0]
             fxs2 = fm[:, 1]
             draw_kpts2(kpts1[fxs1], rect=rect, **_kwargs)
             draw_kpts2(kpts2[fxs2], offset=offset2, rect=rect, **_kwargs)
 
         def _drawlines(**_kwargs):
+            _kwargs.update(kwargs)
             draw_lines2(kpts1, kpts2, fm, fs, kpts2_offset=offset2, **_kwargs)
 
         # User helpers
         if ell:
-            _drawkpts(pts=False, ell=True, color_list=colors, **kwargs)
+            _drawkpts(pts=False, ell=True, color_list=colors)
         if pts:
-            _drawkpts(pts_size=8, pts=True, ell=False, pts_color=BLACK, **kwargs)
-            _drawkpts(pts_size=6, pts=True, ell=False, color_list=acols, **kwargs)
+            _drawkpts(pts_size=8, pts=True, ell=False, pts_color=BLACK)
+            _drawkpts(pts_size=6, pts=True, ell=False, color_list=acols)
         if lines:
-            _drawlines(color_list=colors, **kwargs)
+            _drawlines(color_list=colors)
     return None
 
 
-def disconnect_callback(fig, callback_type):
+def disconnect_callback(fig, callback_type, **kwargs):
     #print('[df2] disconnect %r callback' % callback_type)
+    axes = kwargs.get('axes', [])
+    for ax in axes:
+        ax._hs_viewtype = ''
     cbid_type = callback_type + '_cbid'
     cbfn_type = callback_type + '_func'
     cbid = fig.__dict__.get(cbid_type, None)

@@ -21,9 +21,7 @@ for srcdir, fname_list in filemap.iteritems():
         src  = join(srcdir, fname)
         dest = join(extern_dir, fname)
         try:
-            print('--')
             helpers.copy(src, dest)
-            print('--')
         except Exception as ex:
             print(ex)
 

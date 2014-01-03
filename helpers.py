@@ -10,26 +10,30 @@ Wow, pylint is nice for cleaning.
 '''
 from __future__ import division, print_function
 import __builtin__
-import warnings
-from Printable import printableVal
+# Scientific
+import numpy as np
+# Standard
+from collections import OrderedDict
+from itertools import product as iprod
 from os.path import join, relpath, normpath, split, isdir, isfile, exists, islink, ismount
 import cPickle
 import cStringIO
 import datetime
+import decimal
 import fnmatch
 import hashlib
 import inspect
-import numpy as np
 import os
-import os.path
-import sys
+import platform
 import shutil
-import decimal
+import sys
 import textwrap
 import time
 import types
+import warnings
+# HotSpotter
 import tools
-from itertools import product as iprod
+from Printable import printableVal
 #print('LOAD_MODULE: helpers.py')
 
 # Toggleable printing
@@ -88,6 +92,7 @@ def DEPRICATED(func):
 
 def get_img_fpath():
     return 'C:\\lena.png'
+
 
 def horiz_print(*args):
     toprint = horiz_string(args)
@@ -265,7 +270,6 @@ def printable_mystats(_list):
 
 
 def mystats(_list):
-    from collections import OrderedDict
     if len(_list) == 0:
         return {'empty_list': True}
     nparr = np.array(_list)
@@ -437,14 +441,6 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
 
 
 # --- Util ---
-def configure_matplotlib():
-    import matplotlib
-    if matplotlib.get_backend() != 'Qt4Agg':
-        print('[helpers] Configuring matplotlib for Qt4')
-        matplotlib.use('Qt4Agg', warn=True, force=True)
-        matplotlib.rcParams['toolbar'] = 'None'
-
-
 def alloc_lists(num_alloc):
     'allocates space for a numpy array of lists'
     return [[] for _ in xrange(num_alloc)]
@@ -509,7 +505,6 @@ def my_computer_names():
 
 
 def get_computer_name():
-    import platform
     return platform.node()
 
 
@@ -902,12 +897,22 @@ def copy_task(cp_list, test=False, nooverwrite=False, print_tasks=True):
 
 
 def copy(src, dst):
-    if exists(dst):
-        print('[helpers] !!! Overwriting ')
+    if exists(src):
+        if exists(dst):
+            prefix = 'C+O'
+            print('[helpers] [Copying + Overwrite]:')
+        else:
+            prefix = 'C'
+            print('[helpers] [Copying]: ')
+        print('[%s] | %s' % (prefix, src))
+        print('[%s] ->%s' % (prefix, dst))
+        shutil.copy(src, dst)
     else:
-        print('[helpers] ... Copying ')
-    print('[helpers]\n    ' + src + ' -> \n    ' + dst)
-    shutil.copy(src, dst)
+        prefix = 'Miss'
+        print('[helpers] [Cannot Copy]: ')
+        print('[%s] src=%s does not exist!' % (prefix, src))
+        print('[%s] dst=%s' % (prefix, dst))
+
 
 
 def copy_all(src_dir, dest_dir, glob_str_list):
@@ -1511,10 +1516,9 @@ def runprofile(cmd, globals_=globals(), locals_=locals()):
     os.system(view_cmd)
     return True
 
-
+'''
 def profile_lines(fname):
     import __init__
-    import shutil
     script = 'dev.py'
     args = '--db MOTHERS --nocache-feat'
     runcmd = 'kernprof.py %s %s' % (script, args)
@@ -1523,6 +1527,7 @@ def profile_lines(fname):
     lineprofile_path = join(hs_path, '.lineprofile')
     ensurepath(lineprofile_path)
     shutil.copy('*', lineprofile_path + '/*')
+    '''
 
 
 def memory_profile():
@@ -1613,7 +1618,7 @@ def printERR(msg, *args):
 
 
 def printWARN(warn_msg, category=UserWarning):
-    warn_msg = 'Warning: ' + warn_msg
+    warn_msg = 'Probably not a big issue, but you should know...: ' + warn_msg
     sys.stdout.write(warn_msg + '\n')
     sys.stdout.flush()
     warnings.warn(warn_msg, category=category)
@@ -1894,4 +1899,3 @@ if __name__ == '__main__':
     seen = set([])
     print('[helpers] seen=%r' % seen)
     explore_module(module, maxdepth=0, seen=seen, nonmodules=False)
-

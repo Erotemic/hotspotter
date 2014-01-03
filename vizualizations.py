@@ -142,7 +142,6 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
         cx = cx_list[dist.argsort()[0]]
         cx_clicked_func(cx)
 
-    df2.disconnect_callback(fig, 'button_press_event')
     if interact:
         df2.connect_callback(fig, 'button_press_event', _on_image_click)
 
@@ -157,6 +156,7 @@ def show_image(hs, gx, highlight_cxs=None, cx_clicked_func=None, draw_rois=True,
     img = hs.gx2_image(gx)
     fig, ax = df2.imshow(img, title=gname, fnum=fnum, **kwargs)
     ax = df2.gca()
+    df2.disconnect_callback(fig, 'button_press_event', axes=[ax])
     if draw_rois:
         if highlight_cxs is None:
             highlight_cxs = []
@@ -172,6 +172,8 @@ def show_splash(fnum=1, **kwargs):
     df2.imshow(img, fnum=fnum, **kwargs)
 
 
+# CHIP INTERACTION
+
 def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
 
     # Get chip info (make sure get_chip is called first)
@@ -179,8 +181,8 @@ def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
     #cidstr = hs.cidstr(cx)
     #name  = hs.cx2_name(cx)
     #gname = hs.cx2_gname(cx)
-
     fig = df2.figure(fnum=fnum)
+    df2.disconnect_callback(fig, 'button_press_event')
 
     def select_ith_keypoint(fx):
         print('-------------------------------------------')
@@ -257,7 +259,6 @@ def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
     show_chip(hs, cx=cx, draw_kpts=False)
     if figtitle is not None:
         df2.set_figtitle(figtitle)
-    df2.disconnect_callback(fig, 'button_press_event')
     df2.connect_callback(fig, 'button_press_event', _on_chip_click)
 
 
@@ -375,7 +376,9 @@ def show_top(res, hs, **kwargs):
     figtitle = kwargs.pop('figtitle', 'q%s -- TOP %r' % (cxstr, N))
     max_nCols = min(5, N)
     return _show_res(hs, res, topN_cxs=topN_cxs, figtitle=figtitle,
-                     max_nCols=max_nCols, all_kpts=False, **kwargs)
+                     max_nCols=max_nCols, draw_kpts=False,
+                     draw_ell=False, draw_pts=True,
+                     all_kpts=False, **kwargs)
 
 
 def res_show_analysis(res, hs, **kwargs):
@@ -499,6 +502,7 @@ def interact_chipres(hs, res, cx, fnum=4, **kwargs):
     # Initialize interaction by drawing matches
     qcx = res.qcx
     fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
+    df2.disconnect_callback(fig, 'button_press_event')
     ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=(1, 1, 1), **kwargs)
     rchip1, rchip2 = hs.get_chip([qcx, cx])
     kpts1, kpts2   = hs.get_kpts([qcx, cx])
@@ -593,7 +597,6 @@ def interact_chipres(hs, res, cx, fnum=4, **kwargs):
     printDBG('[viz] Drawing and starting interaction')
     fig = df2.gcf()
     df2.draw()
-    df2.disconnect_callback(fig, 'button_press_event')
     df2.connect_callback(fig, 'button_press_event', _on_chipres_clicked)
 
 
@@ -640,7 +643,12 @@ def _show_res(hs, res, **kwargs):
         plotx = plotx_shift + 1
         pnum = (rowcols[0], rowcols[1], plotx)
         #printDBG('[viz._show_res()] Plotting Query: pnum=%r' % (pnum,))
-        show_chip(hs, res=res, draw_kpts=annote, prefix='q', fnum=fnum, pnum=pnum)
+        _kwshow = dict(draw_kpts=annote)
+        _kwshow.update(kwargs)
+        _kwshow['prefix'] = 'q'
+        _kwshow['res'] = res
+        _kwshow['pnum'] = pnum
+        show_chip(hs, **_kwshow)
 
     def _show_matches_fn(cx, orank, pnum):
         'Helper function for drawing matches to one cx'
@@ -648,7 +656,11 @@ def _show_res(hs, res, **kwargs):
         #printDBG('[viz._show_res()] plotting: %r'  % (pnum,))
         _kwshow  = dict(draw_ell=annote, draw_pts=False, draw_lines=annote,
                         ell_alpha=.5, all_kpts=all_kpts)
-        res.show_chipres(hs, cx, title_aug=aug, fnum=fnum, pnum=pnum, **_kwshow)
+        _kwshow.update(kwargs)
+        _kwshow['fnum'] = fnum
+        _kwshow['pnum'] = pnum
+        _kwshow['title_aug'] = aug
+        res.show_chipres(hs, cx, **_kwshow)
 
     def _plot_matches_cxs(cx_list, plotx_shift, rowcols):
         'helper for viz._show_res to draw many cxs'
@@ -666,6 +678,7 @@ def _show_res(hs, res, **kwargs):
             _show_matches_fn(cx, orank, pnum)
 
     fig = df2.figure(fnum=fnum, pnum=(nRows, nGTCols, 1), doclf=True, trueclf=True)
+    df2.disconnect_callback(fig, 'button_press_event')
     df2.plt.subplot(nRows, nGTCols, 1)
     # Plot Query
     if show_query:
@@ -725,7 +738,6 @@ def _show_res(hs, res, **kwargs):
                     print('[viz] result clicked')
                     return _clicked_cx(cx)
 
-        df2.disconnect_callback(fig, 'button_press_event')
         df2.connect_callback(fig, 'button_press_event', _on_res_click)
     printDBG('[viz._show_res()] Finished')
     return fig

@@ -18,7 +18,7 @@ AppUpdatesURL=www.rpi.edu/~crallj/
 DefaultDirName={pf}\HotSpotter
 DefaultGroupName=HotSpotter
 OutputBaseFilename=hotspotter-win32-setup
-SetupIconFile=C:\Users\joncrall\code\hotspotter\_setup\hsicon.ico
+SetupIconFile=hsicon.ico
 Compression=lzma
 SolidCompression=yes
 
@@ -29,8 +29,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\joncrall\code\hotspotter\dist\hotspotter\HotSpotterApp.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\joncrall\code\hotspotter\dist\hotspotter\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\hotspotter\HotSpotterApp.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\hotspotter\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

@@ -43,6 +43,7 @@ from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle, Circle, FancyArrow
 from matplotlib.transforms import Affine2D
+from matplotlib.backends import backend_qt4
 import matplotlib.pyplot as plt
 # Qt
 from PyQt4 import QtCore, QtGui
@@ -372,7 +373,6 @@ def golden_wh(x):
 def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
                      row_first=True, no_tile=False):
     'Lays out all figures in a grid. if wh is a scalar, a golden ratio is used'
-    from matplotlib.backends import backend_qt4
     if no_tile:
         return
     if not np.iterable(wh):
@@ -673,14 +673,16 @@ def draw_text(text_str, rgb_textFG=(0, 0, 0), rgb_textBG=(1, 1, 1)):
             backgroundcolor=rgb_textBG)
 
 
-def set_figtitle(figtitle, subtitle=''):
+def set_figtitle(figtitle, subtitle='', forcefignum=True, incanvas=True):
     fig = gcf()
-    if subtitle != '':
-        subtitle = '\n' + subtitle
-    fig.suptitle(figtitle + subtitle, fontsize=14, fontweight='bold')
+    if incanvas:
+        if subtitle != '':
+            subtitle = '\n' + subtitle
+        fig.suptitle(figtitle + subtitle, fontsize=14, fontweight='bold')
     #fig.suptitle(figtitle, x=.5, y=.98, fontproperties=FONTS.figtitle)
     #fig_relative_text(.5, .96, subtitle, fontproperties=FONTS.subtitle)
-    fig.canvas.set_window_title(figtitle)
+    window_figtitle = ('fig(%d) ' % fig.number) + figtitle
+    fig.canvas.set_window_title(window_figtitle)
     adjust_subplots()
 
 
@@ -910,7 +912,7 @@ def figure(fnum=None, doclf=False, title=None, pnum=(1, 1, 1), figtitle=None,
         if figtitle is None and pnum == (1, 1, 1):
             figtitle = title
         if not figtitle is None:
-            fig.canvas.set_window_title('fig %r %s' % (fnum, figtitle))
+            set_figtitle(figtitle, incanvas=False)
     return fig
 
 
@@ -1389,8 +1391,8 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
     ell       = kwargs.get('draw_ell', True)
     lines     = kwargs.get('draw_lines', True)
     ell_alpha = kwargs.get('ell_alpha', .4)
-    num_match = len(fm)
-    #printDBG('[df2.draw_fnmatch] num_match=%r' % num_match)
+    nMatch = len(fm)
+    #printDBG('[df2.draw_fnmatch] nMatch=%r' % nMatch)
     x1, y1, w1, h1 = xywh1
     x2, y2, w2, h2 = xywh2
     offset2 = (x2, y2)
@@ -1401,7 +1403,7 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
         absolute_lbl(x2 + w2, y2, lbl2)
     # Plot the number of matches
     if kwargs.get('show_nMatches', False):
-        upperleft_text('#match=%d' % num_match)
+        upperleft_text('#match=%d' % nMatch)
     # Draw all keypoints in both chips as points
     if kwargs.get('all_kpts', False):
         all_args = dict(ell=False, pts=pts, pts_color=GREEN, pts_size=2,
@@ -1410,8 +1412,8 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
         draw_kpts2(kpts1, **all_args)
         draw_kpts2(kpts2, offset=offset2, **all_args)
     # Draw Lines and Ellipses and Points oh my
-    if num_match > 0:
-        colors = [kwargs['colors']] * num_match if 'colors' in kwargs else distinct_colors(num_match)
+    if nMatch > 0:
+        colors = [kwargs['colors']] * nMatch if 'colors' in kwargs else distinct_colors(nMatch)
         acols = add_alpha(colors)
 
         # Helper functions
@@ -1434,7 +1436,22 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
             _drawkpts(pts_size=6, pts=True, ell=False, color_list=acols)
         if lines:
             _drawlines(color_list=colors)
+    else:
+        draw_boxedX(xywh2)
     return None
+
+
+def draw_boxedX(xywh, color=RED, lw=2, alpha=.5):
+    'draws rectangle border around a subplot'
+    ax = gca()
+    x1, y1, w, h = xywh
+    x2, y2 = x1 + w, y1 + h
+    segments = [((x1, y1), (x2, y2)),
+                ((x1, y2), (x2, y1))]
+    width_list = [lw] * len(segments)
+    color_list = [color] * len(segments)
+    line_group = LineCollection(segments, width_list, color_list, alpha=alpha)
+    ax.add_collection(line_group)
 
 
 def disconnect_callback(fig, callback_type, **kwargs):

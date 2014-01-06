@@ -474,21 +474,74 @@ def get_timestamp(format_='filename', use_second=False):
     stamp = time_formats[format_] % time_tup
     return stamp
 
+VALID_PROGRESS_TYPES = ['none', 'dots', 'fmtstr', 'simple']
 
-def progress_func(max_val=None, lbl='Progress: ', mark_after=-1, simple=False):
+
+def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
+                  flush_after=4, spacing=0, line_len=80,
+                  progress_type='fmtstr'):
     '''Returns a function that marks progress taking the iteration count as a
     parameter. Prints if max_val > mark_at. Prints dots if max_val not
     specified or simple=True'''
-    if max_val is None or simple:
-        print(lbl)
+    # Tell the user we are about to make progress
+    print(lbl)
+    # none: nothing
+    if progress_type == 'none':
+        mark_progress =  lambda count: None
+    # simple: one dot per progress. no flush.
+    if progress_type == 'simple':
         mark_progress = lambda count: sys.stdout.write('.')
-    else:
-        if max_val > mark_after:
-            fmt_str = progress_str(max_val)
-            mark_progress = lambda count: sys.stdout.write(fmt_str % (count + 1))
+    # dots: spaced dots
+    if progress_type == 'dots':
+        indent_ = '    '
+        sys.stdout.write(indent_)
+
+        if spacing > 0:
+            # With spacing
+            newline_len = spacing * line_len // spacing
+
+            def mark_progress_sdot(count):
+                sys.stdout.write('.')
+                count_ = count + 1
+                if (count_) % newline_len == 0:
+                    sys.stdout.write('\n' + indent_)
+                    sys.stdout.flush()
+                elif (count_) % spacing == 0:
+                    sys.stdout.write(' ')
+                    sys.stdout.flush()
+                elif (count_) % flush_after == 0:
+                    sys.stdout.flush()
+            mark_progress = mark_progress_sdot
         else:
-            mark_progress = lambda count: None
+            # No spacing
+            newline_len = line_len
+
+            def mark_progress_dot(count):
+                sys.stdout.write('.')
+                count_ = count + 1
+                if (count_) % newline_len == 0:
+                    sys.stdout.write('\n' + indent_)
+                    sys.stdout.flush()
+                elif (count_) % flush_after == 0:
+                    sys.stdout.flush()
+            mark_progress = mark_progress_dot
+    # fmtstr: formated string progress
+    if progress_type == 'fmtstr' and max_val > mark_after:
+        fmt_str = progress_str(max_val)
+
+        def mark_progress_fmtstr(count):
+            count_ = count + 1
+            sys.stdout.write(fmt_str % (count_))
+            if (count_) % flush_after == 0:
+                sys.stdout.flush()
+        mark_progress = mark_progress_fmtstr
+    if '--aggroflush' in sys.argv:
+        def mark_progress_agressive(count):
+            mark_progress(count)
+            sys.stdout.flush()
+        return mark_progress_agressive
     return mark_progress
+    raise Exception('unkown progress type = %r' % progress_type)
 
 
 def progress_str(max_val, lbl='Progress: '):
@@ -928,7 +981,6 @@ def copy(src, dst):
         print('[helpers] [Cannot Copy]: ')
         print('[%s] src=%s does not exist!' % (prefix, src))
         print('[%s] dst=%s' % (prefix, dst))
-
 
 
 def copy_all(src_dir, dest_dir, glob_str_list):

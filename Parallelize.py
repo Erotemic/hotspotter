@@ -2,10 +2,10 @@
 from __future__ import print_function, division
 import __builtin__
 import multiprocessing as mp
-from helpers import Timer
 import sys
 from os.path import exists
 from itertools import izip
+import helpers
 
 # Toggleable printing
 print = __builtin__.print
@@ -65,19 +65,20 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None, commo
     if nTasks < num_procs / 2 or nTasks == 1:
         num_procs = 1
     num_procs = min(num_procs, nTasks)
-    if num_procs > 1:
-        msg = 'Distributing %d %s tasks to %d parallel processes' % (nTasks, func.func_name, num_procs)
-    else:
-        msg = 'Executing %d %s tasks in serial' % (nTasks, func.func_name)
+    task_lbl = func.func_name
     try:
-        ret = parallelize_tasks(task_list, num_procs, msg=msg)
+        ret = parallelize_tasks(task_list, num_procs, task_lbl)
     except Exception as ex:
-        print('Problem while parallelizing task: %r' % ex)
-        print('task_list: ')
+        sys.stdout.flush()
+        print('[parallel!] Problem while parallelizing task: %r' % ex)
+        print('[parallel!] task_list: ')
         for task in task_list:
             print('  %r' % (task,))
-        print('num_procs = %r ' % (num_procs,))
-        print('msg = %r ' % (msg,))
+            break
+        print('[parallel!] common_args = %r' % common_args)
+        print('[parallel! num_procs = %r ' % (num_procs,))
+        print('[parallel!] task_lbl = %r ' % (task_lbl,))
+        sys.stdout.flush()
         raise
     return ret
 
@@ -88,79 +89,82 @@ def make_task_list(func, arg_list, lazy=True, common_args=[]):
     The output should always be argument 2
     '''
     has_output = len(arg_list) >= 2
+    append_common = lambda _args: tuple(list(_args) + common_args)
     if not (lazy and has_output):
-        task_list = [(func, _args) for _args in izip(*arg_list)]
+        # does not check existance
+        task_list = [(func, append_common(_args)) for _args in izip(*arg_list)]
         return task_list
-    arg_list2 = [list(_args) + common_args for _args in izip(*arg_list) if not exists(_args[1])]
+    # checks existance
+    arg_list2 = [append_common(_args) for _args in izip(*arg_list) if not exists(_args[1])]
     task_list = [(func, _args) for _args in iter(arg_list2)]
     nSkip = len(zip(*arg_list)) - len(arg_list2)
     print('[parallel] Already computed %d %s tasks' % (nSkip, func.func_name))
     return task_list
 
 
-def parallelize_tasks(task_list, num_procs, msg=''):
+def parallelize_tasks(task_list, num_procs, task_lbl='', verbose=True):
     '''
     Used for embarissingly parallel tasks, which write output to disk
     '''
-    with Timer(msg=msg):
+    nTasks = len(task_list)
+    msg = ('Distributing %d %s tasks to %d processes' % (nTasks, task_lbl, num_procs)
+           if num_procs > 1 else
+           'Executing %d %s tasks in serial' % (nTasks, task_lbl))
+    with helpers.Timer(msg=msg):
         if num_procs > 1:
             # Parallelize tasks
-            if False:
-                print('[parallel] Computing in parallel process')
-            return _parallelize_tasks(task_list, num_procs, False)
+            return _compute_in_parallel(task_list, num_procs, task_lbl, verbose)
         else:
-            # Serialize Tasks
-            result_list = []
-            if False:
-                print('[parallel] Computing in serial process')
-            nTasks = len(task_list)
-            sys.stdout.write('    ')
-            for count, (fn, args) in enumerate(task_list):
-                if False:
-                    print('[parallel] computing %d / %d ' % (count, nTasks))
-                else:
-                    sys.stdout.write('.')
-                    if (count + 1) % 80 == 0:
-                        sys.stdout.write('\n    ')
-                    sys.stdout.flush()
-                result = fn(*args)
-                result_list.append(result)
-            sys.stdout.write('\n')
-            return result_list
+            return _compute_in_serial(task_list, task_lbl, verbose)
 
 
-def _parallelize_tasks(task_list, num_procs, verbose):
+def _compute_in_serial(task_list, task_lbl='', verbose=True):
+    # Serialize Tasks
+    result_list = []
+    nTasks = len(task_list)
+    if verbose:
+        mark_progress = helpers.progress_func(nTasks, lbl=task_lbl)
+        # Compute each task
+        for count, (fn, args) in enumerate(task_list):
+            mark_progress(count)
+            #sys.stdout.flush()
+            result = fn(*args)
+            result_list.append(result)
+        print('')
+    else:
+        # Compute each task
+        for (fn, args) in iter(task_list):
+            result = fn(*args)
+            result_list.append(result)
+        print('[parallel]  ... done')
+    return result_list
+
+
+def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     '''
     Input: task list: [ (fn, args), ... ]
     '''
     task_queue = mp.Queue()
     done_queue = mp.Queue()
-    if verbose:
-        print('[parallel] Submiting %d tasks:' % len(task_list))
+    nTasks = len(task_list)
     # queue tasks
     for task in iter(task_list):
         task_queue.put(task)
     # start processes
     for i in xrange(num_procs):
         mp.Process(target=_worker, args=(task_queue, done_queue)).start()
-    # Get and print results
+    # wait for results
     if verbose:
-        print('[parallel] Unordered results:')
-        for i in xrange(len(task_list)):
-            print(done_queue.get())
-    else:
-        sys.stdout.write('    ')
-        newln_len = num_procs * int(80 / num_procs)
-        for i in xrange(len(task_list)):
+        mark_progress = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
+        for count in xrange(len(task_list)):
             done_queue.get()
-            sys.stdout.write('.')
-            if (i + 1) % num_procs == 0:
-                sys.stdout.write(' ')
-            if (i + 1) % newln_len == 0:
-                sys.stdout.write('\n    ')
-            sys.stdout.flush()
-        print('\n[parallel]  ... done')
-    # Tell child processes to stop
+            mark_progress(count)
+        print('')
+    else:
+        for i in xrange(nTasks):
+            done_queue.get()
+        print('[parallel]  ... done')
+    # stop children processes
     for i in xrange(num_procs):
         task_queue.put('STOP')
     return done_queue
@@ -169,7 +173,6 @@ def _parallelize_tasks(task_list, num_procs, verbose):
 if __name__ == '__main__':
     print('test parallel')
     import multiprocessing
-    import helpers
     import numpy as np
 
     p = multiprocessing.Pool(processes=8)

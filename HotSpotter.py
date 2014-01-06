@@ -500,11 +500,18 @@ class HotSpotter(DynStruct):
         theta_list = [cx2_theta[cx] for cx in iter(cx_list)]
         thetastr_list = hs.format_theta_list(theta_list)
         gtcxs_list = hs.get_other_indexed_cxs(cx_list)
+        if '#kpts' in header_order:
+            cx2_kpts = hs.feats.cx2_kpts
+            nKpts_list = map(str, [tools.safe_listget(cx2_kpts, cx, len) for cx
+                                   in iter(cx_list)])
+        else:
+            nKpts_list = []
         cols = {
             'Chip ID': [cx2_cid[cx]           for cx in iter(cx_list)],
             'Name':    [nx2_name[cx2_nx[cx]]  for cx in iter(cx_list)],
             'Image':   [gx2_gname[cx2_gx[cx]] for cx in iter(cx_list)],
             '#GT':     [len(gtcxs) for gtcxs in iter(gtcxs_list)],
+            '#kpts':   nKpts_list,
             'Theta':   thetastr_list,
             'ROI (x, y, w, h)':  [str(cx2_roi[cx]) for cx in iter(cx_list)],
         }

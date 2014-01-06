@@ -29,6 +29,15 @@ def index_of(item, array):
     return np.where(array == item)[0][0]
 
 
+def safe_listget(list_, index, func=lambda x: x, default='?'):
+    if index >= len(list_):
+        return default
+    ret = list_[index]
+    if ret is None:
+        return default
+    return func(ret)
+
+
 def class_iter_input(func):
     def iter_wrapper(self, input_, *args, **kwargs):
         is_scalar = not np.iterable(input_) or is_str(input_)

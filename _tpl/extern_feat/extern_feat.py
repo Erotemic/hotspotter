@@ -1,15 +1,17 @@
 from __future__ import division, print_function
+# Standard
 import subprocess
-import warnings
-import numpy as np
+#import warnings
 import os
 import sys
 from os.path import dirname, realpath, join
+# Scientific
+import numpy as np
 from numpy import diag, sqrt, abs
-from numpy.linalg import det
+#from numpy.linalg import det
 import cv2
 
-DESC_FACTOR = 3.0 * np.sqrt(3.0)
+OLD_HESAFF = False or '--oldhesaff' in sys.argv
 
 
 def reload_module():
@@ -60,6 +62,7 @@ def precompute(rchip_fpath, feat_fpath, dict_args, compute_fn):
 def precompute_hesaff(rchip_fpath, feat_fpath, dict_args):
     return precompute(rchip_fpath, feat_fpath, dict_args, compute_hesaff)
 
+
 #---------------------------------------
 # Work functions which call the external feature detectors
 # Helper function to call commands
@@ -73,13 +76,17 @@ def execute_extern(cmd):
                                    '------------------', out, '------------------']))
 
 try:
+    if OLD_HESAFF:
+        raise ImportError
     import pyhesaff
-    print('using new pyhesaff')
+    print('using: new pyhesaff')
 
     def detect_kpts(rchip_fpath, dict_args):
-        return pyhesaff.detect_hesaff_kpts(rchip_fpath, dict_args)
+        kpts, desc = pyhesaff.detect_hesaff_kpts(rchip_fpath, dict_args)
+        kpts, desc = filter_kpts_scale(kpts, desc, **dict_args)
+        return kpts, desc
 except ImportError:
-    print('using old hessian affine')
+    print('using: old hessian affine')
 
     def detect_kpts(rchip_fpath, dict_args):
         'Runs external perdoch detector'
@@ -126,7 +133,9 @@ def read_text_feat_file(outname, be_clean=True):
 def filter_kpts_scale(kpts, desc, scale_max=None, scale_min=None, **kwargs):
     #max_scale=1E-3, min_scale=1E-7
     #from hotspotter import helpers
-    if scale_max is None or scale_min is None:
+    if scale_max is None or scale_min is None or\
+       scale_max < 0 or scale_min < 0 or\
+       scale_max < scale_min:
         return kpts, desc
     acd = kpts.T[2:5]
     det_ = acd[0] * acd[2]

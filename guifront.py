@@ -481,12 +481,15 @@ class MainWindowFrontend(QtGui.QMainWindow):
         pass
 
     @slot_(str)
-    def gui_write(front, msg):
+    def gui_write(front, msg_):
         app = front.back.app
         outputEdit = front.ui.outputEdit
         # Write msg to text area
         outputEdit.moveCursor(QtGui.QTextCursor.End)
-        msg = msg.replace('\b', '')
+        # TODO: Find out how to do backspaces in textEdit
+        msg = str(msg_)
+        if msg.find('\b') != -1:
+            msg = msg.replace('\b', '') + '\n'
         outputEdit.insertPlainText(msg)
         if app is not None:
             app.processEvents()

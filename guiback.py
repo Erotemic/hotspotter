@@ -15,6 +15,9 @@ import HotSpotter
 from guitools import drawing, slot_
 from guitools import backblocking as blocking
 
+FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5)
+viz.register_FNUMS(FNUMS)
+
 
 def rrr():
     'Dynamic module reloading'
@@ -117,7 +120,7 @@ class MainWindowBackend(QtCore.QObject):
             back.imgtbl_headers   = ['Image Index', 'Image Name', '#Chips']
         back.imgtbl_editable  = []
         #
-        back.chiptbl_headers  = ['Chip ID', 'Name', 'Image', '#GT', 'Theta', 'ROI (x, y, w, h)']
+        back.chiptbl_headers  = ['Chip ID', 'Name', 'Image', '#GT', 'Theta', 'ROI (x, y, w, h)', '#kpts']
         back.chiptbl_editable = ['Name']
         #
         back.restbl_headers   = ['Rank', 'Confidence', 'Matching Name', 'Chip ID']
@@ -131,46 +134,53 @@ class MainWindowBackend(QtCore.QObject):
     #------------------------
     # Draw Functions
     #------------------------
+
     @drawing
-    def show_splash(back, fnum=1, view='Nice', **kwargs):
+    def show_splash(back, fnum, view='Nice', **kwargs):
         df2.figure(fnum=fnum, doclf=True, trueclf=True)
         viz.show_splash(fnum=fnum)
         df2.set_figtitle('%s View' % view)
 
     @drawing
     def show_image(back, gx, sel_cxs=[], figtitle='Image View', **kwargs):
-        df2.figure(fnum=1, doclf=True, trueclf=True)
+        fnum = FNUMS['image']
+        df2.figure(fnum=fnum, doclf=True, trueclf=True)
         cx_clicked_func = lambda cx: back.select_gx(gx, cx)
         viz.show_image(back.hs, gx, sel_cxs, cx_clicked_func,
-                       fnum=1, figtitle=figtitle)
+                       fnum=fnum, figtitle=figtitle)
 
     @drawing
     def show_chip(back, cx, **kwargs):
-        df2.figure(fnum=2, doclf=True, trueclf=True)
+        fnum = FNUMS['chip']
+        df2.figure(fnum=fnum, doclf=True, trueclf=True)
         INTERACTIVE_CHIPS = True  # This should always be True
         if INTERACTIVE_CHIPS:
             interact_fn = viz.show_chip_interaction
-            interact_fn(back.hs, cx, fnum=2, figtitle='Chip View')
+            interact_fn(back.hs, cx, fnum=fnum, figtitle='Chip View')
         else:
-            viz.show_chip(back.hs, cx, fnum=2, figtitle='Chip View')
+            viz.show_chip(back.hs, cx, fnum=fnum, figtitle='Chip View')
 
     @drawing
     def show_query_result(back, res, tx=None, **kwargs):
-        df2.figure(fnum=3, doclf=True, trueclf=True)
         if tx is not None:
+            fnum = FNUMS['inspect']
             # Interact with the tx\th top index
             res.interact_top_chipres(back.hs, tx)
-        elif back.hs.prefs.display_cfg.showanalysis:
-            # Define callback for show_analysis
-            res.show_analysis(back.hs, fnum=3, figtitle=' Analysis View')
         else:
-            res.show_top(back.hs, fnum=3, figtitle='Query View ')
+            fnum = FNUMS['res']
+            df2.figure(fnum=fnum, doclf=True, trueclf=True)
+            if back.hs.prefs.display_cfg.showanalysis:
+                # Define callback for show_analysis
+                res.show_analysis(back.hs, fnum=fnum, figtitle=' Analysis View')
+            else:
+                res.show_top(back.hs, fnum=fnum, figtitle='Query View ')
 
     @drawing
     def show_single_query(back, res, cx, **kwargs):
         # Define callback for show_analysis
-        df2.figure(fnum=4, doclf=True, trueclf=True)
-        res.interact_chipres(back.hs, cx, fnum=4, figtitle=' Result Inspection View')
+        fnum = FNUMS['inspect']
+        df2.figure(fnum=fnum, doclf=True, trueclf=True)
+        res.interact_chipres(back.hs, cx, fnum=fnum)
 
     #----------------------
     # Work Functions
@@ -216,9 +226,9 @@ class MainWindowBackend(QtCore.QObject):
             back.populate_image_table()
             back.populate_chip_table()
             back.setEnabledSignal.emit(True)
-            #back.clear_selection()
+            back.clear_selection()
             back.update_window_title()
-            #back.layout_figures()
+            back.layout_figures()
         else:
             back.setEnabledSignal.emit(False)
         #back.database_loaded.emit()
@@ -315,9 +325,9 @@ class MainWindowBackend(QtCore.QObject):
     @slot_()
     def clear_selection(back, **kwargs):
         back.selection = None
-        back.show_splash(1, 'Image', dodraw=False)
-        back.show_splash(2, 'Chip', dodraw=False)
-        back.show_splash(3, 'Results', **kwargs)
+        back.show_splash(FNUMS['image'], 'Image', dodraw=False)
+        back.show_splash(FNUMS['chip'], 'Chip', dodraw=False)
+        back.show_splash(FNUMS['res'], 'Results', **kwargs)
 
     # Table Click -> Image Table
     @slot_(int)
@@ -626,6 +636,7 @@ class MainWindowBackend(QtCore.QObject):
         back.hs.update_samples()
         back.hs.refresh_features()
         #back.front.blockSignals(prevBlock)
+        back.populate_chip_table()
         print('')
 
     # Batch -> Precompute Queries
@@ -668,16 +679,18 @@ class MainWindowBackend(QtCore.QObject):
     @blocking
     def layout_figures(back):
         print('[back] layout_figures')
+        nCols = 3
+        nRows = 2
         if back.app is not None:
             app = back.app
             screen_rect = app.desktop().screenGeometry()
-            width = screen_rect.width()
+            width  = screen_rect.width()
             height = screen_rect.height()
-            dlen = np.sqrt(width ** 2 + height ** 2) / 1.618
+            dlen = np.sqrt(width ** 2 + height ** 2) / 2
         else:
             print('[*back] WARNING: cannot detect screen geometry')
             dlen = 1618
-        df2.present(num_rc=(2, 3), wh=dlen, wh_off=(0, 60))
+        df2.present(num_rc=(nRows, nCols), wh=dlen, wh_off=(0, 60))
 
     # Options -> Edit Preferences
     @slot_()

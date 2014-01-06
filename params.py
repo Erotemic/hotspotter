@@ -79,6 +79,7 @@ dev_databases = {
     'SEALS'          : WORK_DIR2 + '/Seals',
 
 }
+dev_databases['JAG'] = dev_databases['JAG_KELLY']
 #dev_databases['DEFAULT'] = dev_databases['NAUTS']
 dev_databases['DEFAULT'] = None
 # Add values from the database dict as global vars
@@ -139,7 +140,7 @@ AKMEANS_MAX_ITERS = 100
 VERBOSE_CACHE = False
 VERBOSE_LOAD_DATA = True
 VERBOSE_MATCHING = True
-VERBOSE_IO = 0#2
+VERBOSE_IO = 0  # 2
 
 
 CACHE_QUERY    = True

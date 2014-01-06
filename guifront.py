@@ -3,7 +3,7 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.Qt import (QAbstractItemView, pyqtSignal, Qt)
 import guitools
 import tools
-from guitools import infoslot_ as slot_
+from guitools import slot_
 from guitools import frontblocking as blocking
 import sys
 from _frontend.MainSkel import Ui_mainSkel
@@ -19,7 +19,7 @@ def rrr():
 
 
 class StreamStealer(QtCore.QObject):
-    message = QtCore.pyqtSignal(str)
+    write_ = QtCore.pyqtSignal(str)
     flush_ =  QtCore.pyqtSignal()
 
     def __init__(self, parent=None, stolen_stream=None):
@@ -27,9 +27,9 @@ class StreamStealer(QtCore.QObject):
         if stolen_stream is not None:
             self.stolen_stream = stolen_stream
 
-    def write(self, message):
-        self.stolen_stream.write(str(message) + '\n')
-        self.message.emit(str(message))
+    def write(self, msg):
+        self.stolen_stream.write(str(msg))
+        self.write_.emit(str(msg))
 
     def flush(self):
         self.flush_.emit()
@@ -149,8 +149,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
         print('[front] stealing standard out')
         if front.ostream is None:
             front.ostream = StreamStealer(stolen_stream=sys.stdout)
-            front.ostream.message.connect(front.on_write)
-            front.ostream.flush_.connect(front.on_flush)
+            front.ostream.write_.connect(front.gui_write)
+            front.ostream.flush_.connect(front.gui_flush)
             sys.stdout = front.ostream
         else:
             print('[front] stream already stolen')
@@ -473,16 +473,19 @@ class MainWindowFrontend(QtGui.QMainWindow):
         pass
 
     @slot_(str)
-    def on_write(front, message):
-        front.ui.outputEdit.moveCursor(QtGui.QTextCursor.End)
-        front.ui.outputEdit.insertPlainText(message)
-        if front.back.app is not None:
-            front.back.app.processEvents()
+    def gui_write(front, msg):
+        app = front.back.app
+        outputEdit = front.ui.outputEdit
+        # Write msg to text area
+        outputEdit.moveCursor(QtGui.QTextCursor.End)
+        outputEdit.insertPlainText(msg)
+        if app is not None:
+            app.processEvents()
 
     @slot_()
-    def on_flush(front):
-        if front.back.app is not None:
-            front.back.app.processEvents()
-        pass
+    def gui_flush(front):
+        app = front.back.app
+        if app is not None:
+            app.processEvents()
         #front.ui.outputEdit.moveCursor(QtGui.QTextCursor.End)
-        #front.ui.outputEdit.insertPlainText(message)
+        #front.ui.outputEdit.insertPlainText(msg)

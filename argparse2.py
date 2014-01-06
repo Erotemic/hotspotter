@@ -129,6 +129,7 @@ def behavior_argparse(parser2):
     parser2.add_flag('--serial', help='Forces num_procs=1')
     parser2.add_flag('--strict', help='Force failure in iffy areas')
     parser2.add_flag('--nosteal', help='GUI will not steal stdout')
+    parser2.add_flag('--nogui', help='Will not start the gui')
 
 
 def cfg_argparse(parser2):

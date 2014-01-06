@@ -38,6 +38,30 @@ def signal_set():
     signal.signal(signal.SIGINT, on_ctrl_c)
 
 
+def preload_args_process(args):
+    # Process relevant args
+    cids = args.query
+    if args.vdd:
+        helpers.vd(args.dbdir)
+        args.vdd = False
+    load_all = args.autoquery or len(cids) > 0
+    return load_all, cids
+
+
+def postload_args_process(hs):
+    # --- Run Startup Commands ---
+    # Autocompute all queries
+    if hs.args.autoquery:
+        back.precompute_queries()
+    # Run a query
+    cids = args.query
+    res = None
+    if len(cids) > 0:
+        qcid = cids[0]
+        res = back.query(qcid)
+    return res
+
+
 if __name__ == '__main__':
     # Necessary for windows parallelization
     multiprocessing.freeze_support()
@@ -46,21 +70,17 @@ if __name__ == '__main__':
     import guiback
     import helpers
     print('main.py')
+    # Listen for ctrl+c
     signal_set()
     # Run qt app
     app, is_root = guitools.init_qtapp()
     # Parse arguments
     args = argparse2.fix_args_with_cache(args)
-    # Process relevant args
-    cids = args.query
-    if args.vdd:
-        helpers.vd(args.dbdir)
-        args.vdd = False
+    load_all, cids = preload_args_process(args)
 
     # --- Build HotSpotter API ---
     hs = HotSpotter.HotSpotter(args)
     # Load all data if needed now, otherwise be lazy
-    load_all = hs.args.autoquery or len(cids) > 0
     try:
         hs.load(load_all=load_all)
     except ValueError as ex:
@@ -69,16 +89,10 @@ if __name__ == '__main__':
             raise
     # Create main window only after data is loaded
     back = guiback.make_main_window(hs, app)
-
     # --- Run Startup Commands ---
-    # Autocompute all queries
-    if hs.args.autoquery:
-        back.precompute_queries()
-    if len(cids) > 0:
-            qcid = cids[0]
-            res = back.query(qcid)
+    res = postload_args_process(hs)
     # Connect database to the back gui
-    app.setActiveWindow(back.front)
+    #app.setActiveWindow(back.front)
 
     # Allow for a IPython connection by passing the --cmd flag
     embedded = False

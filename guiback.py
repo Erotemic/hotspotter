@@ -210,8 +210,9 @@ class MainWindowBackend(QtCore.QObject):
             back.populate_image_table()
             back.populate_chip_table()
             back.setEnabledSignal.emit(True)
-            back.clear_selection()
+            #back.clear_selection()
             back.update_window_title()
+            #back.layout_figures()
         else:
             back.setEnabledSignal.emit(False)
         #back.database_loaded.emit()
@@ -420,7 +421,7 @@ class MainWindowBackend(QtCore.QObject):
             # Write to cache and connect if successful
             io.global_cache_write('db_dir', db_dir)
             back.connect_api(hs)
-            back.layout_figures()
+            #back.layout_figures()
         except Exception as ex:
             back.user_info('Aborting open database')
             print('aborting open database')
@@ -658,9 +659,10 @@ class MainWindowBackend(QtCore.QObject):
     # Option menu slots
     #--------------------------------------------------------------------------
     # Options -> Layout Figures
-    @slot_()
+    @slot_(rundbg=True)
     @blocking
     def layout_figures(back):
+        print('[back] layout_figures')
         if back.app is not None:
             app = back.app
             screen_rect = app.desktop().screenGeometry()
@@ -749,16 +751,20 @@ class MainWindowBackend(QtCore.QObject):
         import dev
         dev.dev_reload()
 
+    def show(back):
+        back.front.show()
+
 
 # Creation function
 def make_main_window(hs=None, app=None):
     #printDBG(r'[*back] make_main_window()')
     back = MainWindowBackend(hs=hs)
     back.app = app
-    back.front.show()
-    back.layout_figures()
-    if app is not None:
-        app.setActiveWindow(back.front)
+    if not hs.args.nogui:
+        back.show()
+        back.layout_figures()
+        if app is not None:
+            app.setActiveWindow(back.front)
     #print('[*back] Finished creating main front\n')
     return back
 

@@ -49,66 +49,46 @@ def configure_matplotlib():
 
 #---------------
 # SLOT DECORATORS
-def dbgslot_(*types):  # This is called at wrap time to get args
-    'wrapper around pyqtslot decorator'
+
+
+def slot_(*types, **kwargs_):  # This is called at wrap time to get args
+    '''
+    wrapper around pyqtslot decorator
+    *args = types
+    kwargs_['initdbg']
+    kwargs_['rundbg']
+    '''
+    initdbg = kwargs_.get('initdbg', False)
+    rundbg  = kwargs_.get('rundbg', False)
 
     # Wrap with debug statments
     def pyqtSlotWrapper(func):
         func_name = func.func_name
-        print('[@guitools] Wrapping %r with dbgslot_' % func.func_name)
+        if initdbg:
+            print('[@guitools] Wrapping %r with dbgslot_' % func.func_name)
 
-        @Qt.pyqtSlot(*types, name=func.func_name)
-        def slot_wrapper(self, *args, **kwargs):
-            argstr_list = map(str, args)
-            kwastr_list = ['%s=%s' % item for item in kwargs.iteritems()]
-            argstr = ', '.join(argstr_list + kwastr_list)
-            print('[**dbgslot_] %s(%s)' % (func_name, argstr))
-            #with helpers.Indenter():
-            result = func(self, *args, **kwargs)
-            print('[**dbgslot_] Finished %s(%s)' % (func_name, argstr))
-            return result
-
-        slot_wrapper.func_name = func_name
-        return slot_wrapper
-    return pyqtSlotWrapper
-
-
-def infoslot_(*types):  # This is called at wrap time to get args
-    'wrapper around pyqtslot decorator'
-
-    # Wrap with debug statments
-    def pyqtSlotWrapper(func):
-        func_name = func.func_name
-        #printDBG('[@guitools] Wrapping %r with infoslot_' % func.func_name)
-
-        @Qt.pyqtSlot(*types, name=func.func_name)
-        def slot_wrapper(self, *args, **kwargs):
-            #printDBG('[**infoslot_] %s()' % (func_name))
-            #with helpers.Indenter():
-            result = func(self, *args, **kwargs)
-            #printDBG('[**infoslot_] Finished %s()' % (func_name))
-            return result
+        if rundbg:
+            @Qt.pyqtSlot(*types, name=func.func_name)
+            def slot_wrapper(self, *args, **kwargs):
+                argstr_list = map(str, args)
+                kwastr_list = ['%s=%s' % item for item in kwargs.iteritems()]
+                argstr = ', '.join(argstr_list + kwastr_list)
+                print('[**dbgslot_] %s(%s)' % (func_name, argstr))
+                #with helpers.Indenter():
+                result = func(self, *args, **kwargs)
+                print('[**dbgslot_] Finished %s(%s)' % (func_name, argstr))
+                return result
+        else:
+            @Qt.pyqtSlot(*types, name=func.func_name)
+            def slot_wrapper(self, *args, **kwargs):
+                result = func(self, *args, **kwargs)
+                return result
 
         slot_wrapper.func_name = func_name
         return slot_wrapper
     return pyqtSlotWrapper
 
 
-def fastslot_(*types):
-    'wrapper around pyqtslot decorator'
-
-    # Wrap wihout any debugging
-    def pyqtSlotWrapper(func):
-        func_name = func.func_name
-
-        @Qt.pyqtSlot(*types, name=func.func_name)
-        def slot_wrapper(self, *args, **kwargs):
-            return func(self, *args, **kwargs)
-        slot_wrapper.func_name = func_name
-        return slot_wrapper
-    return pyqtSlotWrapper
-
-slot_ = dbgslot_ if DEBUG else fastslot_
 #/SLOT DECORATOR
 #---------------
 

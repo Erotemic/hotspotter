@@ -111,12 +111,14 @@ class MainWindowBackend(QtCore.QObject):
             df2.register_matplotlib_widget(back.front.plotWidget)
         df2.register_qt4_win(back.front)
         # Define default table headers
-        back.imgtbl_headers         =  ['Image Index', 'Image Name', '#Chips']
-        back.imgtbl_editable_flags  =  [False,                False,    False]
+        back.imgtbl_headers         =  ['Image Index', 'Image Name', '#Chips', 'EXIF']
+        back.imgtbl_editable_flags  =  [    False,            False,    False,  False]
+        #
         back.chiptbl_headers        =  ['Chip ID', 'Name', 'Image', '#GT', 'Theta', 'ROI (x, y, w, h)']
-        back.chiptbl_editable_flags =  [False,       True,   False, False,   False, False]
+        back.chiptbl_editable_flags =  [    False,   True,   False, False,   False, False]
+        #
         back.restbl_headers         =  ['Rank', 'Confidence', 'Matching Name', 'Chip ID']
-        back.restbl_editable_flags  =  [False,         False,            True,     False]
+        back.restbl_editable_flags  =  [ False,        False,            True,     False]
         # connect signals
         back.populateSignal.connect(back.front.populate_tbl)
         back.setEnabledSignal.connect(back.front.setEnabled)

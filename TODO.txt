@@ -40,7 +40,7 @@ Disallow clicks to other figures in an interaction mode.
 
 Fix depricated ginput
 
-HALF_FIXED: NEED TO REMOVE OLD CODE. 
+FIXED: NEED TO REMOVE OLD CODE. 
 ChipCompute recieved a divide by zero error when using target area. 
 It must not be getting the valid cx list correctly. 
 
@@ -50,8 +50,7 @@ FIXED: ~~* switch to atan2~~
 * add arrow widget 
 
 
-Change file doesn't exist to Cache Miss
-
+FIXED: Change file doesn't exist to Cache Miss
 
 Get rid of the qon_list in dev.py
 
@@ -84,3 +83,5 @@ Turning scores into probabilities
 
 
 
+
+Lets learn a threshold on bad matches. 

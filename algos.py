@@ -53,6 +53,73 @@ def rrr():
     imp.reload(sys.modules[__name__])
 
 
+def earth_movers_distance(sift1, sift2):
+    """
+    earth mover's distance by robjects(lpSovle::lp.transport)
+    sift1 = np.random.rand(128)
+    sift2 = np.random.rand(128)'
+    require: lpsolve55-5.5.0.9.win32-py2.7.exe
+    https://github.com/andreasjansson/python-emd
+    http://www.cs.huji.ac.il/~ofirpele/FastEMD/code/
+    http://www.cs.huji.ac.il/~ofirpele/publications/ECCV2008.pdf
+    """
+    # Setup R environment
+    if sys.platform == 'win32':
+        os.environ['RHOME'] = r'C:\Program Files\R'
+    import rpy2.robjects as robjects
+    #import rpy2.interactive as r
+    from rpy2.robjects.packages import importr
+    from rpy2.robjects import r
+    importr("utils")
+    r('install.packages("lpSolve")')
+    # Build pairwise difference matrix
+    len1 = len(sift1)
+    len2 = len(sift2)
+    dist = np.zeros(len1 * len2)
+    for i in xrange(len1):
+        for j in xrange(len2):
+            dist[i * len2 + j] = np.abs(sift1[i] - sift1[j])
+    # import lp.transport(R)
+    robjects.r['library']('lpSolve')
+    transport = robjects.r['lp.transport']
+    # distance vector to distance matrix
+    costs = robjects.r['matrix'](robjects.FloatVector(dist),
+                                 nrow=len(sift1), ncol=len(sift2), byrow=True)
+    row_signs = ["<"] * len1
+    row_rhs = robjects.FloatVector(sift1)
+    col_signs = [">"] * len2
+    col_rhs = robjects.FloatVector(sift2)
+
+    t = transport(costs, "min", row_signs, row_rhs, col_signs, col_rhs)
+    flow = t.rx2('solution')
+
+    dist = dist.reshape(len(sift1), len(sift2))
+    flow = np.array(flow)
+    work = np.sum(flow * dist)
+    emd = work / np.sum(flow)
+    return emd
+
+#def earthmovers(hist1, hist2, h_bins, s_bins):
+##Define number of rows
+#numRows = h_bins * s_bins
+#sig1 = cv.CreateMat(numRows, 3, cv.CV_32FC1)
+#sig2 = cv.CreateMat(numRows, 3, cv.CV_32FC1)
+#for h in xrange(h_bins):
+    #for s in xrange(s_bins):
+        #bin_val = cv.QueryHistValue_2D(hist1, h, s)
+        #cv.Set2D(sig1, h * s_bins + s, 0, cv.Scalar(bin_val))
+        #cv.Set2D(sig1, h * s_bins + s, 1, cv.Scalar(h))
+        #cv.Set2D(sig1, h * s_bins + s, 2, cv.Scalar(s))
+
+        #bin_val = cv.QueryHistValue_2D(hist2, h, s)
+        #cv.Set2D(sig2, h * s_bins + s, 0, cv.Scalar(bin_val))
+        #cv.Set2D(sig2, h * s_bins + s, 1, cv.Scalar(h))
+        #cv.Set2D(sig2, h * s_bins + s, 2, cv.Scalar(s))
+
+##This is the important line were the OpenCV EM algorithm is called
+#return cv.CalcEMD2(sig1,sig2,cv.CV_DIST_L2)
+
+
 def xywh_to_tlbr(roi, img_wh):
     (img_w, img_h) = img_wh
     if img_w == 0 or img_h == 0:

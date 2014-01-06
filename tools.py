@@ -44,8 +44,7 @@ def class_iter_input(func):
 def debug_exception(func):
     def ex_wrapper(*args, **kwargs):
         try:
-            result = func(*args, **kwargs)
-            return result
+            return func(*args, **kwargs)
         except Exception as ex:
             print('[tools] ERROR: %s(%r, %r)' % (func.func_name, args, kwargs))
             print('[tools] ERROR: %r' % ex)

@@ -497,7 +497,8 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk, **kwargs):
 
 
 def interact_chipres(hs, res, cx, fnum=4, **kwargs):
-    'Interacts with a single chipres'
+    'res = back.current_res'
+    'Interacts with a single chipres, '
     print('[viz] interact_chipres()')
     # Initialize interaction by drawing matches
     qcx = res.qcx
@@ -534,8 +535,9 @@ def interact_chipres(hs, res, cx, fnum=4, **kwargs):
         draw_patch = extract_patch.draw_keypoint_patch
         plot_siftsig = df2.plot_sift_signature
         pnum_ = lambda px: (nRows, 3, px)
+        import algos
 
-        def draw_feat_row(rchip, kp, sift, px):
+        def draw_feat_row(rchip, kp, sift, px, lastsift):
             #printDBG('[viz] draw_feat_row px=%r' % px)
             # Draw the unwarped selected feature
             ax = draw_patch(rchip, kp, sift, fnum=fnum, pnum=pnum_(px + 1))
@@ -548,10 +550,22 @@ def interact_chipres(hs, res, cx, fnum=4, **kwargs):
             sigtitle = '' if px != 3 else 'sift gradient orientation histogram'
             ax = plot_siftsig(sift, sigtitle, fnum=fnum, pnum=pnum_(px + 3))
             ax._hs_viewtype = 'histogram'
+            if lastsift is not None:
+                L1_dist = np.sum(np.abs(sift - lastsift))
+                L2_dist = np.sqrt(np.sum(np.abs(sift - lastsift) ** 2))
+                numer = (np.vstack([sift, lastsift])).min(0).sum()
+                denom = lastsift.sum()
+                hisect_dist = 1 - (numer / denom)
+                algos.earth_movers_distance(sift1, sift2, distance_type, distance_func=None, cost_matrix=None, flow=None, lower_bound=None, userdata=None)
+                dist_str = 'L1=%.1e\nL2=%.1e\nhisect=%.1e' % (L1_dist, L2_dist, hisect_dist)
+                df2.set_xlabel(dist_str)
             return px + 3
         px = 3  # plot offset
+        lastsift = None
         for (rchip, kp, sift) in extracted_list:
-            px = draw_feat_row(rchip, kp, sift, px)
+            px = draw_feat_row(rchip, kp, sift, px, lastsift)
+            lastsift = sift
+
         fig.canvas.draw()
 
     def _svviz(cx):

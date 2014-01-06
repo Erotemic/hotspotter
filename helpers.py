@@ -470,6 +470,17 @@ def get_timestamp(format_='filename', use_second=False):
     return stamp
 
 
+def progress_func(max_val, lbl='Progress: ', mark_after=16):
+    'prints if max_val > mark_at'
+    if max_val > mark_after:
+        progress_str_ = progress_str(max_val)
+        mark_progress = lambda count: sys.stdout.write(progress_str_ % count)
+        mark_progress = lambda count: None
+    else:
+        mark_progress = lambda count: None
+    return mark_progress
+
+
 def progress_str(max_val, lbl='Progress: '):
     return make_progress_fmt_str(max_val, lbl)
 

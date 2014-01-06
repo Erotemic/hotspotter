@@ -128,9 +128,11 @@ def backblocking(func):
             back.front.blockSignals(wasBlocked_)
             print('Block wrapper caugt exception in %r' % func.func_name)
             print('back = %r' % back)
-            print('*args = %r' % (args,))
-            print('**kwargs = %r' % (kwargs,))
-            print('ex = %r' % ex)
+            VERBOSE = False
+            if VERBOSE:
+                print('*args = %r' % (args,))
+                print('**kwargs = %r' % (kwargs,))
+            #print('ex = %r' % ex)
             back.user_info('Error in blocking ex=%r' % ex)
             raise
         back.front.blockSignals(wasBlocked_)
@@ -154,9 +156,11 @@ def frontblocking(func):
             front.blockSignals(wasBlocked_)
             print('Block wrapper caugt exception in %r' % func.func_name)
             print('front = %r' % front)
-            print('*args = %r' % (args,))
-            print('**kwargs = %r' % (kwargs,))
-            print('ex = %r' % ex)
+            VERBOSE = False
+            if VERBOSE:
+                print('*args = %r' % (args,))
+                print('**kwargs = %r' % (kwargs,))
+            #print('ex = %r' % ex)
             front.user_info('Error in blocking ex=%r' % ex)
             raise
         front.blockSignals(wasBlocked_)

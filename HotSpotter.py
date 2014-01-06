@@ -23,6 +23,11 @@ import tools
 from Printable import DynStruct
 from Preferences import Pref
 
+try:
+    profile
+except NameError:
+    profile = lambda func: func
+
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
@@ -446,14 +451,16 @@ class HotSpotter(DynStruct):
     def has_property(hs, key):
         return key in hs.tables.prop_dict
 
-    def get_img_datatupe_list(hs, gx_list, header_order=['Image Index', 'Image Name', '#Chips']):
+    def get_img_datatupe_list(hs, gx_list, header_order=['Image Index', 'Image Name', '#Chips', 'EXIF']):
         'Data for GUI Image Table'
         gx2_gname = hs.tables.gx2_gname
         gx2_cxs = hs.gx2_cxs
+        exif_list = hs.gx2_exif(gx_list) if 'EXIF' in header_order else []
         cols = {
             'Image Index': gx_list,
             'Image Name':  [gx2_gname[gx] for gx in iter(gx_list)],
             '#Chips':      [len(gx2_cxs(gx)) for gx in iter(gx_list)],
+            'EXIF': exif_list
         }
         unziped_tups = [cols[header] for header in header_order]
         datatup_list = [tup for tup in izip(*unziped_tups)]
@@ -606,12 +613,45 @@ class HotSpotter(DynStruct):
 
     #----
     # image index --> property
+    @tools.class_iter_input
+    def gx2_exif(hs, gx_list):
+        gname_list = hs.gx2_gname(gx_list, full=True)
 
+        def read_image_exif(gname_list):
+            # Exif generator
+            nGname = len(gname_list)
+            mark_progress = helpers.progress_func(nGname, 'Load Image EXIF')
+            for count, gname in enumerate(gname_list):
+                mark_progress(count)
+                pil_image = Image.open(gname)
+                exif_ = pil_image._getexif()
+                exif = {} if exif_ is None else exif_
+                del pil_image
+                yield exif
+        exif_list = [exif for exif in read_image_exif(gname_list)]
+        return exif_list
+
+    @profile
+    def get_exif(hs):
+        gx_list = hs.get_valid_gxs()
+        exif_list = hs.gx2_exif(gx_list)
+        return exif_list
+
+    '''
     def gx2_gname(hs, gx, full=False):
         gname = hs.tables.gx2_gname[gx]
         if full:
             gname = join(hs.dirs.img_dir, gname)
         return gname
+    '''
+
+    @tools.class_iter_input
+    def gx2_gname(hs, gx_input, full=False):
+        gx2_gname_ = hs.tables.gx2_gname
+        gname_list = [gx2_gname_[gx] for gx in iter(gx_input)]
+        if full:
+            gname_list = [join(hs.dirs.img_dir, gname) for gname in iter(gname_list)]
+        return gname_list
 
     @tools.lru_cache(max_size=7)
     def gx2_image(hs, gx):
@@ -723,8 +763,8 @@ class HotSpotter(DynStruct):
         return cid_str
 
     # Precomputed properties
+    #@tools.debug_exception
     @tools.class_iter_input
-    @tools.debug_exception
     def _try_cxlist_get(hs, cx_input, cx2_var):
         ''' Input: cx_input: a vector input, cx2_var: a array mapping cx to a
         variable Returns: list of values corresponding with cx_input '''

@@ -28,6 +28,7 @@ class StreamStealer(QtCore.QObject):
             self.stolen_stream = stolen_stream
 
     def write(self, message):
+        self.stolen_stream.write(str(message) + '\n')
         self.message.emit(str(message))
 
     def flush(self):

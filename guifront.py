@@ -22,13 +22,18 @@ class StreamStealer(QtCore.QObject):
     write_ = QtCore.pyqtSignal(str)
     flush_ =  QtCore.pyqtSignal()
 
-    def __init__(self, parent=None, stolen_stream=None):
+    def __init__(self, parent=None, stolen=None, share=False):
         super(StreamStealer, self).__init__(parent)
-        if stolen_stream is not None:
-            self.stolen_stream = stolen_stream
+        if stolen is not None:
+            self.stolen = stolen
+        self.write = self.write_both if share else self.write_gui
 
-    def write(self, msg):
-        self.stolen_stream.write(str(msg))
+    def write_both(self, msg):
+        msg_ = str(msg)
+        self.stolen.write(msg_)
+        self.write_.emit(msg_)
+
+    def write_gui(self, msg):
         self.write_.emit(str(msg))
 
     def flush(self):
@@ -144,11 +149,14 @@ class MainWindowFrontend(QtGui.QMainWindow):
 
     def steal_stdout(front):
         #front.ui.outputEdit.setPlainText(sys.stdout)
-        if front.back.hs.args.nosteal:
+        hs = front.back.hs
+        nosteal = hs.args.nosteal
+        share   = hs.args.sharestream
+        if nosteal and not share:
             return
         print('[front] stealing standard out')
         if front.ostream is None:
-            front.ostream = StreamStealer(stolen_stream=sys.stdout)
+            front.ostream = StreamStealer(stolen=sys.stdout, share=share)
             front.ostream.write_.connect(front.gui_write)
             front.ostream.flush_.connect(front.gui_flush)
             sys.stdout = front.ostream
@@ -159,7 +167,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         #front.ui.outputEdit.setPlainText(sys.stdout)
         print('[front] returning standard out')
         if front.ostream is not None:
-            sys.stdout = front.ostream.stolen_stream
+            sys.stdout = front.ostream.stolen
             front.ostream = None
             return True
         else:
@@ -478,6 +486,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         outputEdit = front.ui.outputEdit
         # Write msg to text area
         outputEdit.moveCursor(QtGui.QTextCursor.End)
+        msg = msg.replace('\b', '')
         outputEdit.insertPlainText(msg)
         if app is not None:
             app.processEvents()

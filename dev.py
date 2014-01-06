@@ -58,6 +58,7 @@ def rrr():
 def dev_reload():
     print('[dev] performing dev_reload')
     import chip_compute2 as cc2
+    import algos
     import feature_compute2 as fc2
     rrr()
     ds.rrr()
@@ -68,6 +69,7 @@ def dev_reload():
     helpers.rrr()
     cc2.rrr()
     fc2.rrr()
+    algos.rrr()
     df2.rrr()
     df2.reset()
 

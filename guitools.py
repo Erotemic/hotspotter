@@ -453,6 +453,14 @@ def popup_menu(widget, opt2_callback):
     return popup_slot
 
 
+def make_header_lists(tbl_headers, editable_list, prop_keys=[]):
+    col_headers = tbl_headers[:] + prop_keys
+    col_editable = [False] * len(tbl_headers) + [True] * len(prop_keys)
+    for header in editable_list:
+        col_editable[col_headers.index(header)] = True
+    return col_headers, col_editable
+
+
 if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()

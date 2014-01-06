@@ -111,14 +111,17 @@ class MainWindowBackend(QtCore.QObject):
             df2.register_matplotlib_widget(back.front.plotWidget)
         df2.register_qt4_win(back.front)
         # Define default table headers
-        back.imgtbl_headers         =  ['Image Index', 'Image Name', '#Chips', 'EXIF']
-        back.imgtbl_editable_flags  =  [    False,            False,    False,  False]
+        if hs.args.withexif:
+            back.imgtbl_headers   = ['Image Index', 'Image Name', '#Chips', 'EXIF']
+        else:
+            back.imgtbl_headers   = ['Image Index', 'Image Name', '#Chips']
+        back.imgtbl_editable  = []
         #
-        back.chiptbl_headers        =  ['Chip ID', 'Name', 'Image', '#GT', 'Theta', 'ROI (x, y, w, h)']
-        back.chiptbl_editable_flags =  [    False,   True,   False, False,   False, False]
+        back.chiptbl_headers  = ['Chip ID', 'Name', 'Image', '#GT', 'Theta', 'ROI (x, y, w, h)']
+        back.chiptbl_editable = ['Name']
         #
-        back.restbl_headers         =  ['Rank', 'Confidence', 'Matching Name', 'Chip ID']
-        back.restbl_editable_flags  =  [ False,        False,            True,     False]
+        back.restbl_headers   = ['Rank', 'Confidence', 'Matching Name', 'Chip ID']
+        back.restbl_editable  = ['Matching Name']
         # connect signals
         back.populateSignal.connect(back.front.populate_tbl)
         back.setEnabledSignal.connect(back.front.setEnabled)
@@ -152,9 +155,12 @@ class MainWindowBackend(QtCore.QObject):
             viz.show_chip(back.hs, cx, fnum=2, figtitle='Chip View')
 
     @drawing
-    def show_query_result(back, res, **kwargs):
+    def show_query_result(back, res, tx=None, **kwargs):
         df2.figure(fnum=3, doclf=True, trueclf=True)
-        if back.hs.prefs.display_cfg.showanalysis:
+        if tx is not None:
+            # Interact with the tx\th top index
+            res.interact_top_chipres(back.hs, tx)
+        elif back.hs.prefs.display_cfg.showanalysis:
             # Define callback for show_analysis
             res.show_analysis(back.hs, fnum=3, figtitle=' Analysis View')
         else:
@@ -218,24 +224,23 @@ class MainWindowBackend(QtCore.QObject):
         #back.database_loaded.emit()
 
     def populate_image_table(back):
-        #print('[*back] populate_image_table()')
-        col_headers  = back.imgtbl_headers
-        col_editable = back.imgtbl_editable_flags
+        print('[*back] populate_image_table()')
+        col_headers, col_editable = guitools.make_header_lists(back.imgtbl_headers,
+                                                               back.imgtbl_editable)
         # Populate table with valid image indexes
         gx_list = back.hs.get_valid_gxs()
-        datatup_list = back.hs.get_img_datatupe_list(gx_list)
+        datatup_list = back.hs.get_img_datatup_list(gx_list, header_order=col_headers)
         row_list = range(len(datatup_list))
         back.populateSignal.emit('image', col_headers, col_editable, row_list, datatup_list)
 
     def populate_chip_table(back):
-        #print('[*back] populate_chip_table()')
-        col_headers  = back.chiptbl_headers[:]
-        col_editable = back.chiptbl_editable_flags[:]
+        print('[*back] populate_chip_table()')
         # Add User Properties to headers
         prop_dict = back.hs.tables.prop_dict
         prop_keys = prop_dict.keys()
-        col_headers += prop_keys
-        col_editable += [True] * len(prop_keys)
+        col_headers, col_editable = guitools.make_header_lists(back.chiptbl_headers,
+                                                               back.chiptbl_editable,
+                                                               prop_keys)
         # Populate table with valid image indexes
         cx_list = back.hs.get_valid_cxs()
         # Build lists of column values
@@ -250,8 +255,8 @@ class MainWindowBackend(QtCore.QObject):
         if res is None:
             print('[*back] no results available')
             return
-        col_headers  = back.restbl_headers
-        col_editable = back.restbl_editable_flags
+        col_headers, col_editable = guitools.make_header_lists(back.restbl_headers,
+                                                               back.restbl_editable)
         top_cxs = res.topN_cxs(back.hs, N='all')
         hs = back.hs
         qcx = res.qcx
@@ -509,7 +514,7 @@ class MainWindowBackend(QtCore.QObject):
     # Action -> Query
     @slot_()
     @blocking
-    def query(back, cid=None):
+    def query(back, cid=None, tx=None):
         #prevBlock = back.front.blockSignals(True)
         print('[**back] query(cid=%r)' % cid)
         cx = back.get_selected_cx() if cid is None else back.hs.cid2_cx(cid)
@@ -530,7 +535,7 @@ class MainWindowBackend(QtCore.QObject):
         back.populate_result_table()
         print(r'[/back] finished query')
         print('')
-        back.show_query_result(res)
+        back.show_query_result(res, tx)
         return res
 
     # Action -> Reselect ROI

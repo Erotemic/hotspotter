@@ -53,7 +53,23 @@ def rrr():
     imp.reload(sys.modules[__name__])
 
 
-def earth_movers_distance(sift1, sift2):
+def L1(hist1, hist2):
+    return np.sum(np.abs(hist1 - hist2))
+
+
+def L2(hist1, hist2):
+    return np.sqrt(np.sum(np.abs(hist1 - hist2) ** 2))
+
+
+def hist_isect(hist1, hist2):
+    numer = (np.vstack([hist1, hist2])).min(0).sum()
+    denom = hist2.sum()
+    hisect_dist = 1 - (numer / denom)
+    return hisect_dist
+
+
+def emd(sift1, sift2):
+    return -1
     """
     earth mover's distance by robjects(lpSovle::lp.transport)
     sift1 = np.random.rand(128)

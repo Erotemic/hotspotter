@@ -90,8 +90,11 @@ def DEPRICATED(func):
     return __DEP_WRAPPER
 
 
-def get_img_fpath():
-    return 'C:\\lena.png'
+def dbg_get_imgfpath():
+    if sys.platform == 'win32':
+        return 'C:\\lena.png'
+    else:
+        return '/lena.png'
 
 
 def horiz_print(*args):
@@ -126,6 +129,8 @@ def horiz_string(str_list):
 
 
 # --- Images ----
+
+
 def num_images_in_dir(path):
     'returns the number of images in a directory'
     num_imgs = 0
@@ -470,23 +475,23 @@ def get_timestamp(format_='filename', use_second=False):
     return stamp
 
 
-def progress_func(max_val, lbl='Progress: ', mark_after=16):
-    'prints if max_val > mark_at'
-    if max_val > mark_after:
-        progress_str_ = progress_str(max_val)
-        mark_progress = lambda count: sys.stdout.write(progress_str_ % count)
-        mark_progress = lambda count: None
+def progress_func(max_val=None, lbl='Progress: ', mark_after=-1, simple=False):
+    '''Returns a function that marks progress taking the iteration count as a
+    parameter. Prints if max_val > mark_at. Prints dots if max_val not
+    specified or simple=True'''
+    if max_val is None or simple:
+        print(lbl)
+        mark_progress = lambda count: sys.stdout.write('.')
     else:
-        mark_progress = lambda count: None
+        if max_val > mark_after:
+            fmt_str = progress_str(max_val)
+            mark_progress = lambda count: sys.stdout.write(fmt_str % (count + 1))
+        else:
+            mark_progress = lambda count: None
     return mark_progress
 
 
 def progress_str(max_val, lbl='Progress: '):
-    return make_progress_fmt_str(max_val, lbl)
-
-
-# DEPRICATE
-def make_progress_fmt_str(max_val, lbl='Progress: '):
     r'makes format string that prints progress: %Xd/MAX_VAL with backspaces'
     max_str = str(max_val)
     dnumstr = str(len(max_str))

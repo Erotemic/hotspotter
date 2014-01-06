@@ -12,6 +12,7 @@ import warnings
 import numpy as np
 # Hotspotter
 import fileio as io
+import algos
 import helpers
 import extract_patch
 from os.path import realpath
@@ -485,7 +486,8 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk, **kwargs):
     # Draws the chips and keypoint matches
     scm2 = df2.show_chipmatch2
     kwargs_ = dict(fs=fs, lbl1=lbl1, lbl2=lbl2, title=title, fnum=fnum,
-                   pnum=pnum, vert=hs.prefs.display_cfg.vert, **kwargs)
+                   pnum=pnum, vert=hs.prefs.display_cfg.vert)
+    kwargs_.update(kwargs)
     ax, xywh1, xywh2 = scm2(rchip1, rchip2, kpts1, kpts2, fm, **kwargs_)
     x1, y1, w1, h1 = xywh1
     x2, y2, w2, h2 = xywh2
@@ -499,45 +501,55 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk, **kwargs):
 def interact_chipres(hs, res, cx, fnum=4, **kwargs):
     'res = back.current_res'
     'Interacts with a single chipres, '
-    print('[viz] interact_chipres()')
-    # Initialize interaction by drawing matches
+    # Get data
     qcx = res.qcx
-    fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
-    df2.disconnect_callback(fig, 'button_press_event')
-    ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=(1, 1, 1), **kwargs)
     rchip1, rchip2 = hs.get_chip([qcx, cx])
     kpts1, kpts2   = hs.get_kpts([qcx, cx])
     desc1, desc2   = hs.get_desc([qcx, cx])
     fm = res.cx2_fm[cx]
 
+    # Initialize interaction. Disconnect other signals and draw default
+    fig_ = df2.figure(fnum=fnum, doclf=True, trueclf=True)
+    df2.disconnect_callback(fig_, 'button_press_event')
+    ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=(1, 1, 1), **kwargs)
+
+    def _chipmatch_view():
+        print('[viz] interact_chipres(qcx=%r, cx=%r)' % (qcx, cx))
+        fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
+        ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=(1, 1, 1), **kwargs)
+        fig.canvas.draw()
+
     # Define interaction functions
-    def _select_fm(mx):
+    def _featurematch_view(mx):
         print('\n[viz] view feature match mx=%r' % mx)
+        # Helper functions and args
+        draw_patch = extract_patch.draw_keypoint_patch
+        plot_siftsig = df2.plot_sift_signature
         # Get the mx-th feature match
         fx1, fx2 = fm[mx]
         kp1, kp2     = kpts1[fx1], kpts2[fx2]
         sift1, sift2 = desc1[fx1], desc2[fx2]
         # Extracted keypoints to draw
         extracted_list = [(rchip1, kp1, sift1), (rchip2, kp2, sift2)]
-        nRows = len(extracted_list) + 1
+        chipres_rows = 1  # Number of rows for showing the chip result
+        nRows = len(extracted_list) + chipres_rows
+        nCols = 3
+        pnum_ = lambda px: (nRows, nCols, px)
+        #-----------------
         # Draw chips + feature matches
-        df2.figure(fnum=fnum, pnum=(nRows, 1, 1), doclf=True, trueclf=True)
         pnum1 = (nRows, 1, 1)
-        ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=pnum1,
-                                            draw_lines=False, ell_alpha=.4,
-                                            ell_linewidth=1.8, colors=df2.BLUE,
-                                            **kwargs)
+        _crargs = dict(fnum=fnum, pnum=pnum1, draw_lines=False, **kwargs)
+        _bmargs = dict(ell_alpha=.4, ell_linewidth=1.8, colors=df2.BLUE, **_crargs)
+        _smargs = dict(rect=True, colors=df2.ORANGE, **_crargs)
+        fig = df2.figure(fnum=fnum, pnum=pnum1, doclf=True, trueclf=True)
+        # Draw background matches
+        ax, xywh1, xywh2 = res.show_chipres(hs, cx, vert=False, **_bmargs)
         # Draw selected match
         sel_fm = np.array([(fx1, fx2)])
-        df2.draw_fmatch(xywh1, xywh2, kpts1, kpts2, sel_fm, fnum=fnum,
-                        pnum=pnum1, draw_lines=False, rect=True, colors=df2.ORANGE)
-        # Helper functions
-        draw_patch = extract_patch.draw_keypoint_patch
-        plot_siftsig = df2.plot_sift_signature
-        pnum_ = lambda px: (nRows, 3, px)
-        import algos
+        df2.draw_fmatch(xywh1, xywh2, kpts1, kpts2, sel_fm, **_smargs)
+        #-----------------
 
-        def draw_feat_row(rchip, kp, sift, px, lastsift):
+        def draw_feat_row(rchip, kp, sift, px, prevsift):
             #printDBG('[viz] draw_feat_row px=%r' % px)
             # Draw the unwarped selected feature
             ax = draw_patch(rchip, kp, sift, fnum=fnum, pnum=pnum_(px + 1))
@@ -547,50 +559,50 @@ def interact_chipres(hs, res, cx, fnum=4, **kwargs):
                             warped=True)
             ax._hs_viewtype = 'warped'
             # Draw the SIFT representation
-            sigtitle = '' if px != 3 else 'sift gradient orientation histogram'
+            sigtitle = '' if px != 3 else 'sift histogram'
             ax = plot_siftsig(sift, sigtitle, fnum=fnum, pnum=pnum_(px + 3))
             ax._hs_viewtype = 'histogram'
-            if lastsift is not None:
-                L1_dist = np.sum(np.abs(sift - lastsift))
-                L2_dist = np.sqrt(np.sum(np.abs(sift - lastsift) ** 2))
-                numer = (np.vstack([sift, lastsift])).min(0).sum()
-                denom = lastsift.sum()
-                hisect_dist = 1 - (numer / denom)
-                algos.earth_movers_distance(sift1, sift2, distance_type, distance_func=None, cost_matrix=None, flow=None, lower_bound=None, userdata=None)
-                dist_str = 'L1=%.1e\nL2=%.1e\nhisect=%.1e' % (L1_dist, L2_dist, hisect_dist)
+            if prevsift is not None:
+                L1_dist = algos.L1(sift, prevsift)
+                L2_dist = algos.L2(sift, prevsift)
+                emd_dist   = algos.emd(sift, prevsift)
+                hisct_dist = algos.hist_isect(sift, prevsift)
+                # make distance strings
+                dist_fmt = '{L1:%.1e, L2:%.1e\nhisct:%.1e, emd:%.1e}'
+                dist_tup = (L1_dist, L2_dist, hisct_dist, emd_dist)
+                dist_str = dist_fmt % dist_tup
                 df2.set_xlabel(dist_str)
-            return px + 3
-        px = 3  # plot offset
-        lastsift = None
+            return px + nCols
+        px = chipres_rows * nCols  # plot offset
+        prevsift = None
         for (rchip, kp, sift) in extracted_list:
-            px = draw_feat_row(rchip, kp, sift, px, lastsift)
-            lastsift = sift
-
+            px = draw_feat_row(rchip, kp, sift, px, prevsift)
+            prevsift = sift
         fig.canvas.draw()
 
-    def _svviz(cx):
+    def _sv_view(cx):
         printDBG('ctrl+clicked cx=%r' % cx)
         fig = df2.figure(fnum=4, doclf=True, trueclf=True)
         df2.disconnect_callback(fig, 'button_press_event')
         viz_spatial_verification(hs, res.qcx, cx2=cx, fnum=4)
         fig.canvas.draw()
 
-    def _on_chipres_clicked(event):
+    def _click_chipres_callback(event):
         printDBG('[viz] clicked chipres')
         (x, y) = (event.xdata, event.ydata)
         # Out of axes click
         if None in [x, y, event.inaxes]:
-            return interact_chipres(hs, res, fnum)
+            return _chipmatch_view()
         hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', '')
         printDBG('hs_viewtype=%r' % hs_viewtype)
         # Click in match axes
         if hs_viewtype.find('chipres') == 0:
             # Ctrl-Click
             key = '' if event.key is None else event.key
-            print('key = %r' % key)
+            print('[viz] key = %r' % key)
             if key.find('control') == 0:
                 print('[viz] result control clicked')
-                return _svviz(cx)
+                return _sv_view(cx)
             # Normal Click
             # Select nearest feature match to the click
             kpts1_m = kpts1[fm[:, 0]]
@@ -599,7 +611,7 @@ def interact_chipres(hs, res, cx, fnum=4, **kwargs):
             _mx1, _dist1 = nearest_kp(x, y, kpts1_m)
             _mx2, _dist2 = nearest_kp(x - x2, y - y2, kpts2_m)
             mx = _mx1 if _dist1 < _dist2 else _mx2
-            _select_fm(mx)
+            _featurematch_view(mx)
         elif hs_viewtype.find('warped') == 0:
             printDBG('[viz] clicked warped')
         elif hs_viewtype.find('unwarped') == 0:
@@ -608,10 +620,12 @@ def interact_chipres(hs, res, cx, fnum=4, **kwargs):
             printDBG('[viz] clicked hist')
         else:
             printDBG('[viz] what did you click?!')
+
+    # Initialize interaction by drawing matches using a single axis
+
+    df2.connect_callback(fig_, 'button_press_event', _click_chipres_callback)
     printDBG('[viz] Drawing and starting interaction')
-    fig = df2.gcf()
     df2.draw()
-    df2.connect_callback(fig, 'button_press_event', _on_chipres_clicked)
 
 
 def _show_res(hs, res, **kwargs):

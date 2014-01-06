@@ -1330,17 +1330,19 @@ def stack_images(img1, img2, vert=None):
     assert nChannels == nChannels2
     (h1, w1) = img1.shape[0: 2]  # get chip dimensions
     (h2, w2) = img2.shape[0: 2]
-    woff = 0
-    hoff = 0
-    if vert is None:  # Display match up/down or side/side
-        vert = False if h1 > w1 and h2 > w2 else True
+    woff, hoff = 0, 0
+    vert_wh  = max(w1, w2), h1 + h2
+    horiz_wh = w1 + w2, max(h1, h2)
+    if vert is None:
+        # Display the orientation with the better (closer to 1) aspect ratio
+        vert_ar  = max(vert_wh) / min(vert_wh)
+        horiz_ar = max(horiz_wh) / min(horiz_wh)
+        vert = vert_ar < horiz_ar
     if vert:
-        wB = max(w1, w2)
-        hB = h1 + h2
+        wB, hB = vert_wh
         hoff = h1
     else:
-        hB = max(h1, h2)
-        wB = w1 + w2
+        wB, hB = horiz_wh
         woff = w1
     # concatentate images
     if nChannels == 3:
@@ -1355,7 +1357,7 @@ def stack_images(img1, img2, vert=None):
 
 
 def show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm=None, title=None,
-                    vert=False, fnum=None, pnum=None, **kwargs):
+                    vert=None, fnum=None, pnum=None, **kwargs):
     '''Draws two chips and the feature matches between them. feature matches
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''

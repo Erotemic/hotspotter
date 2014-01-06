@@ -90,8 +90,9 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
     # Debug loading (seems to use lots of memory)
     print('\n')
     try:
-        #make_fmt_str = helpers.make_progress_fmt_str
-        #fmt_str = make_fmt_str(len(feat_fpath_list), lbl='[fc2] Loading feature: ')
+        nFeats = len(feat_fpath_list)
+        prog_label = '[fc2] Loading feature: '
+        mark_progress = helpers.progress_func(nFeats, prog_label)
         for count, feat_path in enumerate(feat_fpath_list):
             try:
                 npz = np.load(feat_path, mmap_mode=None)
@@ -105,8 +106,7 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
             npz.close()
             kpts_list.append(kpts)
             desc_list.append(desc)
-            sys.stdout.write('.')
-            #sys.stdout.write(fmt_str % (count + 1))
+            mark_progress(count)
         print('')
         print('[fc2] Finished load of individual kpts and desc')
     except MemoryError:

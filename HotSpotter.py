@@ -451,7 +451,7 @@ class HotSpotter(DynStruct):
     def has_property(hs, key):
         return key in hs.tables.prop_dict
 
-    def get_img_datatupe_list(hs, gx_list, header_order=['Image Index', 'Image Name', '#Chips', 'EXIF']):
+    def get_img_datatup_list(hs, gx_list, header_order=['Image Index', 'Image Name', '#Chips', 'EXIF']):
         'Data for GUI Image Table'
         gx2_gname = hs.tables.gx2_gname
         gx2_cxs = hs.gx2_cxs
@@ -616,19 +616,7 @@ class HotSpotter(DynStruct):
     @tools.class_iter_input
     def gx2_exif(hs, gx_list):
         gname_list = hs.gx2_gname(gx_list, full=True)
-
-        def read_image_exif(gname_list):
-            # Exif generator
-            nGname = len(gname_list)
-            mark_progress = helpers.progress_func(nGname, 'Load Image EXIF')
-            for count, gname in enumerate(gname_list):
-                mark_progress(count)
-                pil_image = Image.open(gname)
-                exif_ = pil_image._getexif()
-                exif = {} if exif_ is None else exif_
-                del pil_image
-                yield exif
-        exif_list = [exif for exif in read_image_exif(gname_list)]
+        exif_list = io.read_exif_list(gname_list)
         return exif_list
 
     @profile

@@ -39,12 +39,16 @@ def signal_set():
 
 
 def preload_args_process(args):
+    import helpers
+    import sys
     # Process relevant args
     cids = args.query
     if args.vdd:
         helpers.vd(args.dbdir)
         args.vdd = False
     load_all = args.autoquery or len(cids) > 0
+    if helpers.inIPython() or '--cmd' in sys.argv:
+        args.nosteal = True
     return load_all, cids
 
 
@@ -54,11 +58,13 @@ def postload_args_process(hs):
     if hs.args.autoquery:
         back.precompute_queries()
     # Run a query
-    cids = args.query
+    qcid_list = args.query
+    tx_list = args.txs
     res = None
-    if len(cids) > 0:
-        qcid = cids[0]
-        res = back.query(qcid)
+    if len(qcid_list) > 0:
+        qcid = qcid_list[0]
+        tx = tx_list[0] if len(tx_list) > 0 else None
+        res = back.query(qcid, tx)
     return res
 
 

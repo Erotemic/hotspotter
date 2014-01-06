@@ -190,3 +190,7 @@ class QueryResult(DynStruct):
 
     def interact_chipres(res, hs, cx, **kwargs):
         return viz.interact_chipres(hs, res, cx, **kwargs)
+
+    def interact_top_chipres(res, hs, tx, **kwargs):
+        cx = res.topN_cxs(hs, tx + 1)[tx]
+        return viz.interact_chipres(hs, res, cx, **kwargs)

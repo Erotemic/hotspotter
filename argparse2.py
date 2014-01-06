@@ -76,6 +76,7 @@ def main_argparse(parser2):
     parser2 = parser2.add_argument_group('Main')
     parser2.add_flag('--autoquery')
     parser2.add_intlist('--query', default=[], help='query chip-id to investigate')
+    parser2.add_intlist('--txs', default=[], help='investigate match to top x of querys')
     parser2.add_int('--qcid', help='query chip-id to investigate', nargs='*')
     parser2.add_intlist('--ocid', help='query chip-id to investigate')
     parser2.add_int('--histid', help='history id (hard cases)')
@@ -129,7 +130,9 @@ def behavior_argparse(parser2):
     parser2.add_flag('--serial', help='Forces num_procs=1')
     parser2.add_flag('--strict', help='Force failure in iffy areas')
     parser2.add_flag('--nosteal', help='GUI will not steal stdout')
+    parser2.add_flag('--sharestream', help='GUI will share stdout')
     parser2.add_flag('--nogui', help='Will not start the gui')
+    parser2.add_flag('--withexif', help='Reads EXIF data')
 
 
 def cfg_argparse(parser2):

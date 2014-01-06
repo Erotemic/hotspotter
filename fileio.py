@@ -14,6 +14,7 @@ import params
 import numpy as np
 import cv2
 from PIL import Image
+from PIL.ExifTags import TAGS
 #import skimage
 
 # Toggleable printing
@@ -279,6 +280,32 @@ def filesize_str(fpath):
     _, fname = os.path.split(fpath)
     mb_str = helpers.file_megabytes_str(fpath)
     return 'filesize(%r)=%s' % (fname, mb_str)
+
+
+def read_exif(fpath):
+    pil_image = Image.open(fpath)
+    if hasattr(pil_image, '_getexif'):
+        info_ = pil_image._getexif()
+        if info_ is None:
+            exif = {}
+        else:
+            exif = dict([(TAGS.get(key, key), val) for key, val in info_.iteritems()])
+    else:
+        exif = {}
+    del pil_image
+    return exif
+
+
+def read_exif_list(fpath_list):
+    def _gen(fpath_list):
+        # Exif generator
+        nGname = len(fpath_list)
+        mark_progress = helpers.progress_func(nGname, '[io] Load Image EXIF', 16)
+        for count, fpath in enumerate(fpath_list):
+            mark_progress(count)
+            yield read_exif(fpath)
+    exif_list = [exif for exif in _gen(fpath_list)]
+    return exif_list
 
 
 def imread_cv2(img_fpath):

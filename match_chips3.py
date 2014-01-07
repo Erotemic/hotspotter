@@ -119,16 +119,16 @@ def simplify_test_uid(test_uid):
 #----------------------
 # Helper Functions
 #----------------------
-@profile
-def ensure_nn_index(hs, query_cfg, dcxs):
-    dcxs_ = tuple(dcxs)
-    if not dcxs_ in query_cfg._dcxs2_index:
-        # Make sure the features are all computed first
-        # TODO: Separate query config and data
-        hs.refresh_features(dcxs_)
-        data_index = ds.NNIndex(hs, dcxs)
-        query_cfg._dcxs2_index[dcxs_] = data_index
-    query_cfg._data_index = query_cfg._dcxs2_index[dcxs_]
+def load_cached_query(hs, query_cfg, aug_list=['']):
+    qcxs = query_cfg._qcxs
+    result_list = []
+    for aug in aug_list:
+        qcx2_res = mf.load_resdict(hs, qcxs, query_cfg, aug)
+        if qcx2_res is None:
+            return None
+        result_list.append(qcx2_res)
+    print('[mc3] ... query result cache hit')
+    return result_list
 
 
 def prequery(hs, query_cfg=None, **kwargs):
@@ -140,16 +140,16 @@ def prequery(hs, query_cfg=None, **kwargs):
     return query_cfg
 
 
-def load_cached_query(hs, query_cfg, aug_list=['']):
-    qcxs = query_cfg._qcxs
-    result_list = []
-    for aug in aug_list:
-        qcx2_res = mf.load_resdict(hs, qcxs, query_cfg, aug)
-        if qcx2_res is None:
-            return None
-        result_list.append(qcx2_res)
-    print('[mc3] ... query result cache hit')
-    return result_list
+@profile
+def ensure_nn_index(hs, query_cfg, dcxs):
+    dcxs_ = tuple(dcxs)
+    if not dcxs_ in query_cfg._dcxs2_index:
+        # Make sure the features are all computed first
+        # TODO: Separate query config and data
+        hs.refresh_features(dcxs_)
+        data_index = ds.NNIndex(hs, dcxs)
+        query_cfg._dcxs2_index[dcxs_] = data_index
+    query_cfg._data_index = query_cfg._dcxs2_index[dcxs_]
 
 
 #----------------------

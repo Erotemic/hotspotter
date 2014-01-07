@@ -151,12 +151,12 @@ class MainWindowFrontend(QtGui.QMainWindow):
         #front.ui.outputEdit.setPlainText(sys.stdout)
         hs = front.back.hs
         nosteal = hs.args.nosteal
-        share   = hs.args.sharestream
-        if nosteal and not share:
+        noshare = hs.args.noshare
+        if nosteal and noshare:
             return
         print('[front] stealing standard out')
         if front.ostream is None:
-            front.ostream = StreamStealer(stolen=sys.stdout, share=share)
+            front.ostream = StreamStealer(stolen=sys.stdout, share=not noshare)
             front.ostream.write_.connect(front.gui_write)
             front.ostream.flush_.connect(front.gui_flush)
             sys.stdout = front.ostream

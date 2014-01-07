@@ -21,47 +21,35 @@ when I click on a query analaysis. (Oh, I sort of have it already...)
 FIXED ~~* When editing the name of an animal, it has to redraw the chip and image ~~
         ~~* before the name editing can happen. ~~
 
-
 #--- Issues ----
 
 Caching Issue: Query Result saves in cx format indead of cid format.
 
----
-
-# Add option to force computation of queries
-# Add option to delete all precomputed queries
-
 Add Option: save_database on query
-
-Prefs will load the old ChipConfig that belongs to FeatConfig instead of using
-the new loaded ChipConfig? Somthing is screwy with Frogs here. 
-
-FIXED: ~~Get the spatial verification demo working. Homography seems to be broken. ~~
-FIXED: ~~Try and fix these problems. ~~
 
 Disallow clicks to other figures in an interaction mode.
 
 Fix depricated ginput
 
-FIXED: NEED TO REMOVE OLD CODE. 
-ChipCompute recieved a divide by zero error when using target area. 
-It must not be getting the valid cx list correctly. 
-
-
-Tail to nose select orientation does not allow correct direction selection.
-FIXED: ~~* switch to atan2~~
-* add arrow widget 
-
-
-FIXED: Change file doesn't exist to Cache Miss
-
-Get rid of the qon_list in dev.py
-
-Utilize exif tags in images
-
+Enable editing of EXIF? At least properly display them
 
 Features seem to be loaded too often
 
+FIXED: ~~* Tail to nose select orientation does not allow correct direction selection.~
+FIXED: ~~* switch to atan2~~
+FIXED: ~~* add arrow widget ~~
+FIXED: ~~Change file doesn't exist to Cache Miss~~
+FIXED: ~~Get rid of the qon_list in dev.py~~
+FIXED: ~~Utilize exif tags in images~~
+FIXED: NEED TO REMOVE OLD CODE. 
+~~ChipCompute recieved a divide by zero error when using target area. ~~
+~~It must not be getting the valid cx list correctly. ~~
+FIXED: ~~Get the spatial verification demo working. Homography seems to be broken. ~~
+FIXED: ~~Try and fix these problems. ~~
+FIXED ~~Prefs will load the old ChipConfig that belongs to FeatConfig instead of using
+the new loaded ChipConfig? Somthing is screwy with Frogs here. ~~
+FIXED ~~# Add option to force computation of queries
+FIXED ~~# Add option to delete all precomputed queries
 #-----------
 # I need to get a paper this next semester
 # I need to get candidate

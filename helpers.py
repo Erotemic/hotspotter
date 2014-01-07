@@ -453,7 +453,7 @@ def alloc_lists(num_alloc):
 
 def ensure_list_size(list_, size_):
     'extend list to max_cx'
-    lendiff = (size_ + 1) - len(list_)
+    lendiff = (size_) - len(list_)
     if lendiff > 0:
         extension = [None for _ in xrange(lendiff)]
         list_.extend(extension)

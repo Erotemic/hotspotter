@@ -11,6 +11,7 @@ hesaffbuild_dir = join(hesaffsrc_dir, 'build')
 filemap = {
     hesaffbuild_dir: ['hesaffexe.exe',
                       'libhesaff.so',
+                      'libhesaff.dylib',
                       'hesaffexe.ln',
                       'libhesaff.dll'],
     hesaffsrc_dir: ['pyhesaff.py'],

@@ -9,6 +9,7 @@ import sys
 from _frontend.MainSkel import Ui_mainSkel
 
 IS_INIT = False
+NOSTEAL_OVERRIDE = True
 
 
 def rrr():
@@ -152,7 +153,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         hs = front.back.hs
         nosteal = hs.args.nosteal
         noshare = hs.args.noshare
-        if nosteal and noshare:
+        if NOSTEAL_OVERRIDE or (nosteal and noshare):
             return
         print('[front] stealing standard out')
         if front.ostream is None:

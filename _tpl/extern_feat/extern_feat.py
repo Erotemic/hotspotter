@@ -11,7 +11,10 @@ from numpy import diag, sqrt, abs
 #from numpy.linalg import det
 import cv2
 
-OLD_HESAFF = False or '--oldhesaff' in sys.argv
+# Set to use old hesaff for the time being
+OLD_HESAFF = True or '--oldhesaff' in sys.argv   # override for chuck
+if '--newhesaff' in sys.argv:
+    OLD_HESAFF = False
 
 
 def reload_module():
@@ -76,7 +79,9 @@ try:
         # TODO: Move this into C++
         kpts, desc = filter_kpts_scale(kpts, desc, **dict_args)
         return kpts, desc
+    print('[extern_feat] new hessaff is available')
 except ImportError:
+    print('[extern_feat] new hessaff is not available')
     if '--strict' in sys.argv:
         raise
 

@@ -76,7 +76,7 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None, commo
             print('  %r' % (task,))
             break
         print('[parallel!] common_args = %r' % common_args)
-        print('[parallel! num_procs = %r ' % (num_procs,))
+        print('[parallel!] num_procs = %r ' % (num_procs,))
         print('[parallel!] task_lbl = %r ' % (task_lbl,))
         sys.stdout.flush()
         raise

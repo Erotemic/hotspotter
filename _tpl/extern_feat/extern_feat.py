@@ -83,6 +83,7 @@ try:
 
     def detect_kpts(rchip_fpath, dict_args):
         kpts, desc = pyhesaff.detect_hesaff_kpts(rchip_fpath, dict_args)
+        # TODO: Move this into C++
         kpts, desc = filter_kpts_scale(kpts, desc, **dict_args)
         return kpts, desc
 except ImportError:
@@ -133,7 +134,8 @@ def read_text_feat_file(outname, be_clean=True):
 def filter_kpts_scale(kpts, desc, scale_max=None, scale_min=None, **kwargs):
     #max_scale=1E-3, min_scale=1E-7
     #from hotspotter import helpers
-    if scale_max is None or scale_min is None or\
+    if len(kpts) == 0 or \
+       scale_max is None or scale_min is None or\
        scale_max < 0 or scale_min < 0 or\
        scale_max < scale_min:
         return kpts, desc
@@ -143,7 +145,7 @@ def filter_kpts_scale(kpts, desc, scale_max=None, scale_min=None, **kwargs):
     #print('scale.stats()=%r' % helpers.printable_mystats(scale))
     #is_valid = np.bitwise_and(scale_min < scale, scale < scale_max).flatten()
     is_valid = np.logical_and(scale_min < scale, scale < scale_max).flatten()
-    scale = scale[is_valid]
+    #scale = scale[is_valid]
     kpts = kpts[is_valid]
     desc = desc[is_valid]
     #print('scale.stats() = %s' % str(helpers.printable_mystats(scale)))

@@ -110,6 +110,8 @@ class HotSpotter(DynStruct):
               ('Yes' if pref_load_success else 'No'))
         if not pref_load_success:
             hs.default_preferences()
+        else:
+            hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
         # Preferences will try to load the FLANN index. Undo this.
         hs.prefs.query_cfg.unload_data()
 

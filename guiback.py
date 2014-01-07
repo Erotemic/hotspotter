@@ -120,7 +120,7 @@ class MainWindowBackend(QtCore.QObject):
             back.imgtbl_headers   = ['Image Index', 'Image Name', '#Chips']
         back.imgtbl_editable  = []
         #
-        back.chiptbl_headers  = ['Chip ID', 'Name', 'Image', '#GT', 'Theta', 'ROI (x, y, w, h)', '#kpts']
+        back.chiptbl_headers  = ['Chip ID', 'Name', 'Image', '#GT', '#kpts', 'Theta', 'ROI (x, y, w, h)']
         back.chiptbl_editable = ['Name']
         #
         back.restbl_headers   = ['Rank', 'Confidence', 'Matching Name', 'Chip ID']

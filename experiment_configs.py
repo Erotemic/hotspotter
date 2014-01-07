@@ -129,6 +129,7 @@ vsmany_best = {
     'score_method' : ['csum'],# 'bordaw', 'topk', 'topkw'],#, 'nsum', 'borda', 'topk', 'nunique']
     'max_alts'     : [1000],
 }
+best = vsmany_best
 
 
 vsmany_kenya = vsmany_best.copy()

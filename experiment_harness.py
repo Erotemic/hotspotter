@@ -320,7 +320,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
 if __name__ == '__main__':
     import multiprocessing
-    np.set_printoptions(threshold=5000, linewidth=5000)
+    np.set_printoptions(threshold=5000, linewidth=5000, precision=5)
     multiprocessing.freeze_support()
     print('[harn]-----------')
     print('[harn] main()')

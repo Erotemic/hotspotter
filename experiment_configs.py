@@ -5,16 +5,16 @@ vsmany_2 = {
     'Knorm'          : [1], #2, 3],
     'Krecip'         : [0], #, 5, 10],
     'roidist_weight' : [0], # 1,]
-    'recip_weight'   : [0], # 1,] 
+    'recip_weight'   : [0], # 1,]
     'bursty_weight'  : [0], # 1,]
     'ratio_weight'   : [0,1], # 1,]
     'lnbnn_weight'   : [0,1], # 1,]
     'lnrat_weight'   : [0,1], # 1,]
-    'roidist_thresh' : [None], # .5,] 
+    'roidist_thresh' : [None], # .5,]
     'recip_thresh'   : [0], # 0
     'bursty_thresh'  : [None], #
     'ratio_thresh'   : [None], # 1.2, 1.6
-    'lnbnn_thresh'   : [None], # 
+    'lnbnn_thresh'   : [None], #
     'lnrat_thresh'   : [None], #
     'nShortlist'   : [1000],
     'sv_on'        : [True], #True, False],
@@ -29,16 +29,16 @@ vsmany_3456 = {
     'Knorm'          : [1, 3, 5], #2, 3],
     'Krecip'         : [0, 1, 5, 10], #, 5, 10],
     'roidist_weight' : [0], # 1,]
-    'recip_weight'   : [0], # 1,] 
+    'recip_weight'   : [0], # 1,]
     'bursty_weight'  : [0], # 1,]
     'ratio_weight'   : [0], # 1,]
     'lnbnn_weight'   : [0,1], # 1,]
     'lnrat_weight'   : [0,1], # 1,]
-    'roidist_thresh' : [None, .5], # .5,] 
+    'roidist_thresh' : [None, .5], # .5,]
     'recip_thresh'   : [0], # 0
     'bursty_thresh'  : [None], #
     'ratio_thresh'   : [None], # 1.2, 1.6
-    'lnbnn_thresh'   : [None], # 
+    'lnbnn_thresh'   : [None], #
     'lnrat_thresh'   : [None], #
     'nShortlist'   : [500],
     'sv_on'        : [True], #True, False],
@@ -53,16 +53,16 @@ vsone_1 = {
     'Knorm'          : [1], #2, 3],
     'Krecip'         : [0], #, 5, 10],
     'roidist_weight' : [0], # 1,]
-    'recip_weight'   : [0], # 1,] 
+    'recip_weight'   : [0], # 1,]
     'bursty_weight'  : [0], # 1,]
     'ratio_weight'   : [1], # 1,]
     'lnbnn_weight'   : [0], # 1,]
     'lnrat_weight'   : [0], # 1,]
-    'roidist_thresh' : [None], # .5,] 
+    'roidist_thresh' : [None], # .5,]
     'recip_thresh'   : [0], # 0
     'bursty_thresh'  : [None], #
     'ratio_thresh'   : [1.5], # 1.2, 1.6
-    'lnbnn_thresh'   : [None], # 
+    'lnbnn_thresh'   : [None], #
     'lnrat_thresh'   : [None], #
     'nShortlist'   : [1000],
     'sv_on'        : [True], #True, False],
@@ -73,12 +73,12 @@ vsone_1 = {
 vsone_std = {
     'query_type'     : 'vsone',
     'checks'         : 256,
-    'K'              : 1, 
-    'Knorm'          : 1, 
-    'Krecip'         : 0, 
-    'ratio_weight'   : 1, 
-    'lnbnn_weight'   : 0, 
-    'ratio_thresh'   : 1.5, 
+    'K'              : 1,
+    'Knorm'          : 1,
+    'Krecip'         : 0,
+    'ratio_weight'   : 1,
+    'lnbnn_weight'   : 0,
+    'ratio_thresh'   : 1.5,
 }
 
 vsmany_scoremethod = {
@@ -88,16 +88,16 @@ vsmany_scoremethod = {
     'Knorm'          : [1], #2, 3],
     'Krecip'         : [0], #, 5, 10],
     'roidist_weight' : [0], # 1,]
-    'recip_weight'   : [0], # 1,] 
+    'recip_weight'   : [0], # 1,]
     'bursty_weight'  : [0], # 1,]
     'ratio_weight'   : [0], # 1,]
     'lnbnn_weight'   : [1], # 1,]
     'lnrat_weight'   : [0], # 1,]
-    'roidist_thresh' : [None], # .5,] 
+    'roidist_thresh' : [None], # .5,]
     'recip_thresh'   : [0], # 0
     'bursty_thresh'  : [None], #
     'ratio_thresh'   : [None], # 1.2, 1.6
-    'lnbnn_thresh'   : [None], # 
+    'lnbnn_thresh'   : [None], #
     'lnrat_thresh'   : [None], #
     'nShortlist'   : [1000],
     'sv_on'        : [True], #True, False],
@@ -112,22 +112,31 @@ vsmany_best = {
     'Knorm'          : [1], #2, 3],
     'Krecip'         : [0], #, 5, 10],
     'roidist_weight' : [0], # 1,]
-    'recip_weight'   : [0], # 1,] 
+    'recip_weight'   : [0], # 1,]
     'bursty_weight'  : [0], # 1,]
     'ratio_weight'   : [0], # 1,]
     'lnbnn_weight'   : [1], # 1,]
     'lnrat_weight'   : [0], # 1,]
-    'roidist_thresh' : [None], # .5,] 
+    'roidist_thresh' : [None], # .5,]
     'recip_thresh'   : [0], # 0
     'bursty_thresh'  : [None], #
     'ratio_thresh'   : [None], # 1.2, 1.6
-    'lnbnn_thresh'   : [None], # 
+    'lnbnn_thresh'   : [None], #
     'lnrat_thresh'   : [None], #
+    'xy_thresh'      : [.002],
     'nShortlist'   : [1000],
     'sv_on'        : [True], #True, False],
     'score_method' : ['csum'],# 'bordaw', 'topk', 'topkw'],#, 'nsum', 'borda', 'topk', 'nunique']
     'max_alts'     : [1000],
 }
+
+
+vsmany_kenya = vsmany_best.copy()
+vsmany_kenya.update({
+    'K': [2, 3, 4, 5],
+    'xy_thresh': [.05, .01, .002, .001],
+})
+
 
 vsmany_score = vsmany_best.copy()
 vsmany_score.update({
@@ -146,7 +155,7 @@ vsmany_sv.update({
 
 vsmany_k = vsmany_best.copy()
 vsmany_k.update({
-    'K' : [1, 5, 10, 30]
+    'K' : [2, 5, 10, 30]
 })
 
 
@@ -156,7 +165,7 @@ vsmany_big_social.update({
     'Knorm'          : [1, 3], #2, 3],
     'Krecip'         : [0],#, 5], #, 5, 10],
     'lnbnn_weight'   : [1], # 1,]
-    #'roidist_thresh' : [None, .5], # .5,] 
+    #'roidist_thresh' : [None, .5], # .5,]
     'score_method' : ['pl', 'plw', 'csum', 'borda', 'bordaw'],#, 'pl'], #, 'nsum', 'borda', 'topk', 'nunique']
 })
 
@@ -168,16 +177,16 @@ vsmany_1 = {
     'Knorm'          : [1], #2, 3],
     'Krecip'         : [0], #, 5, 10],
     'roidist_weight' : [0], # 1,]
-    'recip_weight'   : [0], # 1,] 
+    'recip_weight'   : [0], # 1,]
     'bursty_weight'  : [0], # 1,]
     'ratio_weight'   : [0], # 1,]
     'lnbnn_weight'   : [1], # 1,]
     'lnrat_weight'   : [0], # 1,]
-    'roidist_thresh' : [None], # .5,] 
+    'roidist_thresh' : [None], # .5,]
     'recip_thresh'   : [0], # 0
     'bursty_thresh'  : [None], #
     'ratio_thresh'   : [None], # 1.2, 1.6
-    'lnbnn_thresh'   : [None], # 
+    'lnbnn_thresh'   : [None], #
     'lnrat_thresh'   : [None], #
     'nShortlist'   : [1000],
     'sv_on'        : [True], #True, False],

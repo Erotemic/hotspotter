@@ -5,7 +5,7 @@ from itertools import izip
 # Hotspotter
 import DataStructures as ds
 import QueryResult as qr
-import nn_filters  # NOQA
+import nn_filters
 import spatial_verification2 as sv2
 import voting_rules2 as vr2
 # Scientific
@@ -121,6 +121,20 @@ def nearest_neighbors(hs, qcxs, query_cfg):
 #============================
 # Nearest Neighbor weights
 #============================
+
+# TODO: Make a more elegant way of mapping weighting parameters to weighting
+# function. A dict is better than eval, but there may be a better way.
+nnfunc_dict = {
+    'scale':   nn_filters.nn_scale_weight,
+    'roidist': nn_filters.nn_roidist_weight,
+    'recip':   nn_filters.nn_recip_weight,
+    'bursty':  nn_filters.nn_bursty_weight,
+    'lnrat':   nn_filters.nn_lnrat_weight,
+    'lnbnn':   nn_filters.nn_lnbnn_weight,
+    'ratio':   nn_filters.nn_ratio_weight,
+}
+
+
 @profile
 def weight_neighbors(hs, qcx2_nns, query_cfg):
     filt_cfg = query_cfg.filt_cfg
@@ -131,7 +145,8 @@ def weight_neighbors(hs, qcx2_nns, query_cfg):
     filt2_weights = {}
     for nnfilter in nnfilter_list:
         #SPEEDprint('[mf] * computing %s weights' % nnfilter)
-        nnfilter_fn = eval('nn_filters.nn_' + nnfilter + '_weight')
+        #nnfilter_fn = eval('nn_filters.nn_' + nnfilter + '_weight')
+        nnfilter_fn = nnfunc_dict[nnfilter]
         filt2_weights[nnfilter] = nnfilter_fn(hs, qcx2_nns, query_cfg)
     return filt2_weights
 

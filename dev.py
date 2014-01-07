@@ -634,6 +634,7 @@ if __name__ == '__main__':
     print('[dev]====================')
     if hs.args.printoff:
         all_printoff()
+    mf.print_off()  # Make testing slightly faster
     # Big test function. Should be replaced with something
     # not as ugly soon.
     run_investigations(hs, qcx_list)

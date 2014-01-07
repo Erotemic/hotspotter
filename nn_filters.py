@@ -2,9 +2,20 @@ import numpy as np
 from itertools import izip
 
 eps = 1E-8
-def LNRAT_fn(vdist, ndist): return np.log(np.divide(ndist, vdist+eps)+1)
-def RATIO_fn(vdist, ndist): return np.divide(ndist, vdist+eps)
-def LNBNN_fn(vdist, ndist): return (ndist - vdist) / 1000.0
+
+
+def LNRAT_fn(vdist, ndist):
+    return np.log(np.divide(ndist, vdist + eps) + 1)
+
+
+def RATIO_fn(vdist, ndist):
+    return np.divide(ndist, vdist + eps)
+
+
+def LNBNN_fn(vdist, ndist):
+    return (ndist - vdist) / 1000.0
+
+
 # normweight_fn = LNBNN_fn
 ''''
 ndist = np.array([[0, 1, 2], [3, 4, 5], [3, 4, 5], [3, 4, 5],  [9, 7, 6] ])
@@ -18,6 +29,8 @@ print(LNBNN_fn(vdist2, ndist)) * 1000
 print(LNBNN_fn(vdist3, ndist)) * 1000
 print(LNBNN_fn(vdist4, ndist)) * 1000
 '''
+
+
 def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, query_cfg):
     # Only valid for vsone
     data_index = query_cfg._data_index
@@ -33,7 +46,7 @@ def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, query_cfg):
         #print(qfx2_dist)
         #print('2---------')
         qfx2_nndist = qfx2_dist[:, 0:K]
-        qfx2_normdist = qfx2_dist[:,-1:]
+        qfx2_normdist = qfx2_dist[:, -1:]
         #print('3---------')
         #print(qfx2_nndist)
         #print('4---------')
@@ -41,12 +54,19 @@ def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, query_cfg):
         qfx2_normweight = normweight_fn(qfx2_nndist, qfx2_normdist)
         qcx2_norm_weight[qcx] = qfx2_normweight
     return qcx2_norm_weight
+
+
 def nn_ratio_weight(*args):
     return _nn_normalized_weight(RATIO_fn, *args)
+
+
 def nn_lnbnn_weight(*args):
     return _nn_normalized_weight(LNBNN_fn, *args)
+
+
 def nn_lnrat_weight(*args):
     return _nn_normalized_weight(LNRAT_fn, *args)
+
 
 def nn_bursty_weight(hs, qcx2_nns, query_cfg):
     'Filters matches to a feature which is matched > burst_thresh #times'
@@ -69,6 +89,7 @@ query_cfg = mc3.prequery(hs)
 qcx2_nns = mf.nearest_neighbors(hs, qcxs, query_cfg)
 '''
 
+
 def nn_recip_weight(hs, qcx2_nns, query_cfg):
     'Filters a nearest neighbor to only reciprocals'
     data_index = query_cfg._data_index
@@ -87,7 +108,7 @@ def nn_recip_weight(hs, qcx2_nns, query_cfg):
         # Get the original K nearest features
         qx2_nndx = dx2_data[qfx2_dx[:, 0:K]]
         qx2_nndist = qfx2_dist[:, 0:K]
-        qx2_nndx.shape = (nQuery*K, dim)
+        qx2_nndx.shape = (nQuery * K, dim)
         # TODO: Have the option for this to be both indexes.
         (_nn2_rdx, _nn2_rdists) = data_flann.nn_index(qx2_nndx, Krecip, checks=checks)
         # Get the maximum distance of the Krecip reciprocal neighbors
@@ -97,6 +118,7 @@ def nn_recip_weight(hs, qcx2_nns, query_cfg):
         qfx2_reciprocalness = qfx2_recipmaxdist - qx2_nndist
         qcx2_recip_weight[qcx] = qfx2_reciprocalness
     return qcx2_recip_weight
+
 
 def nn_roidist_weight(hs, qcx2_nns, query_cfg):
     'Filters a matches to those within roughly the same spatial arangement'
@@ -109,7 +131,7 @@ def nn_roidist_weight(hs, qcx2_nns, query_cfg):
     cx2_roidist_weight = {}
     for qcx in qcx2_nns.iterkeys():
         (qfx2_dx, qfx2_dist) = qcx2_nns[qcx]
-        qfx2_nn = qfx2_dx[:,0:K]
+        qfx2_nn = qfx2_dx[:, 0:K]
         # Get matched chip sizes #.0300s
         qfx2_kpts = cx2_kpts[qcx]
         nQuery = len(qfx2_dx)
@@ -117,23 +139,24 @@ def nn_roidist_weight(hs, qcx2_nns, query_cfg):
         qfx2_fx = dx2_fx[qfx2_nn]
         qfx2_chipsize2 = np.array([cx2_rchip_size[cx] for cx in qfx2_cx.flat])
         qfx2_chipsize2.shape = (nQuery, K, 2)
-        qfx2_chipdiag2 = np.sqrt((qfx2_chipsize2**2).sum(2))
+        qfx2_chipdiag2 = np.sqrt((qfx2_chipsize2 ** 2).sum(2))
         # Get query relative xy keypoints #.0160s / #.0180s (+cast)
-        qdiag = np.sqrt((np.array(cx2_rchip_size[qcx])**2).sum())
+        qdiag = np.sqrt((np.array(cx2_rchip_size[qcx]) ** 2).sum())
         qfx2_xy1 = np.array(qfx2_kpts[:, 0:2], np.float)
-        qfx2_xy1[:,0] /= qdiag
-        qfx2_xy1[:,1] /= qdiag
+        qfx2_xy1[:, 0] /= qdiag
+        qfx2_xy1[:, 1] /= qdiag
         # Get database relative xy keypoints
         qfx2_xy2 = np.array([cx2_kpts[cx][fx, 0:2] for (cx, fx) in
                             izip(qfx2_cx.flat, qfx2_fx.flat)], np.float)
         qfx2_xy2.shape = (nQuery, K, 2)
-        qfx2_xy2[:,:,0] /= qfx2_chipdiag2
-        qfx2_xy2[:,:,1] /= qfx2_chipdiag2
+        qfx2_xy2[:, :, 0] /= qfx2_chipdiag2
+        qfx2_xy2[:, :, 1] /= qfx2_chipdiag2
         # Get the relative distance # .0010s
         qfx2_K_xy1 = np.rollaxis(np.tile(qfx2_xy1, (K, 1, 1)), 1)
-        qfx2_xydist = ((qfx2_K_xy1 - qfx2_xy2)**2).sum(2)
+        qfx2_xydist = ((qfx2_K_xy1 - qfx2_xy2) ** 2).sum(2)
         cx2_roidist_weight[qcx] = qfx2_xydist
     return cx2_roidist_weight
+
 
 def nn_scale_weight(hs, qcx2_nns, query_cfg):
     # Filter by scale for funzies
@@ -141,14 +164,14 @@ def nn_scale_weight(hs, qcx2_nns, query_cfg):
     cx2_scale_weight = {}
     for qcx in qcx2_nns.iterkeys():
         (qfx2_dx, qfx2_dist) = qcx2_nns[qcx]
-        qfx2_nn = qfx2_dx[:,0:K]
+        qfx2_nn = qfx2_dx[:, 0:K]
         nQuery = len(qfx2_dx)
         qfx2_cx = dx2_cx[qfx2_nn]
         qfx2_fx = dx2_fx[qfx2_nn]
-        qfx2_det1 = np.array(qfx2_kpts[:, [2,4]], np.float).prod(1)
+        qfx2_det1 = np.array(qfx2_kpts[:, [2, 4]], np.float).prod(1)
         qfx2_det1 = np.sqrt(1.0/qfx2_det1)
         qfx2_K_det1 = np.rollaxis(np.tile(qfx2_det1, (K, 1)), 1)
-        qfx2_det2 = np.array([cx2_kpts[cx][fx, [2,4]] for (cx, fx) in
+        qfx2_det2 = np.array([cx2_kpts[cx][fx, [2, 4]] for (cx, fx) in
                             izip(qfx2_cx.flat, qfx2_fx.flat)], np.float).prod(1)
         qfx2_det2.shape = (nQuery, K)
         qfx2_det2 = np.sqrt(1.0/qfx2_det2)

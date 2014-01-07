@@ -442,8 +442,8 @@ def dbstats(hs):
     tex_multi_stats = pytex.latex_mystats(r'\# multistats', multiton_nx2_nchips)
 
     tex_kpts_scale_thresh = pytex.latex_multicolumn('Scale Threshold (%d %d)' %
-                                                    (hs.feats.cfg.scale_min,
-                                                     hs.feats.cfg.scale_max)) + r'\\' + '\n'
+                                                    (hs.prefs.feat_cfg.scale_min,
+                                                     hs.prefs.feat_cfg.scale_max)) + r'\\' + '\n'
 
     (tex_nKpts, tex_kpts_stats, tex_scale_stats) = db_info.get_keypoint_stats(hs)
     tex_title = pytex.latex_multicolumn(db_name + ' database statistics') + r'\\' + '\n'

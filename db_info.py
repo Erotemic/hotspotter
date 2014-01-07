@@ -336,33 +336,36 @@ def db_info(hs):
     num_names = len(valid_nxs)
     # print
     info_str = '\n'.join([
-    (' DB Info: '+hs.get_db_name()),
-    (' * #Img   = %d' % num_images),
-    (' * #Chips = %d' % num_chips),
-    (' * #Names = %d' % len(valid_nxs)),
-    (' * #Unidentified Chips = %d' % len(uniden_cxs)),
-    (' * #Singleton Names    = %d' % len(singleton_nxs)),
-    (' * #Multiton Names     = %d' % len(multiton_nxs)),
-    (' * #Multiton Chips     = %d' % len(multiton_cxs)),
-    (' * Chips per Multiton Names = %s' % (multiton_stats,)),
-    (' * #Img in dir = %d' % len(img_list)),
-    (' * Image Size Stats = %s' % (img_size_stats,)),
-    (' * Chip Size Stats = %s' % (chip_size_stats,)),])
+        (' DB Info: ' + hs.get_db_name()),
+        (' * #Img   = %d' % num_images),
+        (' * #Chips = %d' % num_chips),
+        (' * #Names = %d' % len(valid_nxs)),
+        (' * #Unidentified Chips = %d' % len(uniden_cxs)),
+        (' * #Singleton Names    = %d' % len(singleton_nxs)),
+        (' * #Multiton Names     = %d' % len(multiton_nxs)),
+        (' * #Multiton Chips     = %d' % len(multiton_cxs)),
+        (' * Chips per Multiton Names = %s' % (multiton_stats,)),
+        (' * #Img in dir = %d' % len(img_list)),
+        (' * Image Size Stats = %s' % (img_size_stats,)),
+        (' * Chip Size Stats = %s' % (chip_size_stats,)), ])
     print(info_str)
     return locals()
 
+
 def get_keypoint_stats(hs):
+    import latex_formater as pytex
+    hs.dbg_cx2_kpts()
     # Keypoint stats
     cx2_kpts = hs.feats.cx2_kpts
+    # Check cx2_kpts
     cx2_nFeats = map(len, cx2_kpts)
     kpts = np.vstack(cx2_kpts)
     print('[dbinfo] --- LaTeX --- ')
     _printopts = np.get_printoptions()
     np.set_printoptions(precision=3)
-    acd = kpts[:,2:5].T
+    acd = kpts[:, 2:5].T
     scales = np.sqrt(acd[0] * acd[2])
     scales = np.array(sorted(scales))
-    import latex_formater as pytex
     tex_scale_stats = pytex.latex_mystats(r'kpt scale', scales)
     tex_nKpts       = pytex.latex_scalar(r'\# kpts', len(kpts))
     tex_kpts_stats  = pytex.latex_mystats(r'\# kpts/chip', cx2_nFeats)
@@ -397,13 +400,12 @@ if __name__ == '__main__':
             print_database_stats(db_stats)
         sys.exit(0)
 
-
     # Build list of directories with database in them
     root_dir_list = [
         params.WORK_DIR,
         params.WORK_DIR2
     ]
-    DO_EXTRA = True #False
+    DO_EXTRA = True  # False
     if sys.platform == 'linux2' and DO_EXTRA:
         root_dir_list += [
             #'/media/Store/data/raw',

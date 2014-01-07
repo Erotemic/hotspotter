@@ -872,3 +872,20 @@ class HotSpotter(DynStruct):
         result_dir = os.path.normpath(hs.dirs.result_dir)
         print('[hs] viewing result_dir: %r ' % result_dir)
         helpers.vd(result_dir)
+
+    #----------------------
+    # Debug Consistency Checks
+    def dbg_cx2_kpts(hs):
+        cx2_cid = hs.tables.cx2_cid
+        cx2_kpts = hs.feats.cx2_kpts
+        bad_cxs = [cx for cx, kpts in enumerate(cx2_kpts) if kpts is None]
+        passed = True
+        if len(bad_cxs) > 0:
+            print('[hs.dbg] cx2_kpts has %d None positions:' % len(bad_cxs))
+            print('[hs.dbg] bad_cxs = %r' % bad_cxs)
+            passed = False
+        if len(cx2_kpts) != len(cx2_cid):
+            print('[hs.dbg] len(cx2_kpts) != len(cx2_cid): %r != %r' % (len(cx2_kpts), len(cx2_cid)))
+            passed = False
+        if passed:
+            print('[hs.dbg] cx2_kpts is OK')

@@ -205,6 +205,8 @@ def __smart_load(fpath, verbose, allow_alternative=False, can_fail=True, **kwarg
             if verbose > 1:
                 print('[io] loading ' + filesize_str(fpath))
             data = load_func(fpath)
+            if verbose:
+                print('[io]... loaded data')
         except Exception as ex:
             if verbose:
                 print('[io] ! Exception while loading %r' % fpath)
@@ -212,7 +214,6 @@ def __smart_load(fpath, verbose, allow_alternative=False, can_fail=True, **kwarg
             data = None
             if not can_fail:
                 raise
-        print('[io]... loaded data')
     if data is None:
         if verbose:
             print('[io]... did not load %r' % fpath)

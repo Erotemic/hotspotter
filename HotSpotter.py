@@ -23,6 +23,11 @@ import tools
 from Printable import DynStruct
 from Preferences import Pref
 
+try:
+    profile
+except NameError:
+    profile = lambda func: func
+
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
@@ -105,6 +110,10 @@ class HotSpotter(DynStruct):
               ('Yes' if pref_load_success else 'No'))
         if not pref_load_success:
             hs.default_preferences()
+        else:
+            hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
+            hs.prefs.query_cfg._feat_cfg = hs.prefs.feat_cfg
+        hs.assert_prefs()
         # Preferences will try to load the FLANN index. Undo this.
         hs.prefs.query_cfg.unload_data()
 
@@ -125,8 +134,11 @@ class HotSpotter(DynStruct):
     def load(hs, load_all=False):
         '(current load function) Loads the appropriate database'
         print('[hs] load()')
+        hs.unload_all()
         hs.load_tables()
         hs.update_samples()
+        if hs.args.delete_cache:
+            hs.delete_cache()
         if load_all:
             #printDBG('[hs] load_all=True')
             hs.load_chips()
@@ -280,9 +292,10 @@ class HotSpotter(DynStruct):
     # Query Functions
     #---------------
     def query(hs, qcx, dochecks=True):
+        hs.assert_prefs()
         if hs.prefs.query_cfg is None and dochecks:
             hs.prefs.query_cfg = Config.default_vsmany_cfg(hs)
-            hs.refresh_data()
+            #hs.refresh_data()
         try:
             res = mc3.query_database(hs, qcx, hs.prefs.query_cfg, dochecks=dochecks)
         except mf.QueryException as ex:
@@ -311,6 +324,13 @@ class HotSpotter(DynStruct):
 
     def get_property(hs, cx, key):
         return hs.tables.prop_dict[key][cx]
+
+    def cx2_property(hs, cx, key):
+        # TODO: property keys should be case insensitive
+        try:
+            return hs.tables.prop_dict[key][cx]
+        except KeyError:
+            return None
 
     # ---------------
     # Adding functions
@@ -410,7 +430,8 @@ class HotSpotter(DynStruct):
         hs.tables.gx2_gname[gx] = ''
         hs.update_samples()
 
-    def delete_computed_dir(hs):
+    def delete_cache(hs):
+        print('[hs] DELETE CACHE')
         computed_dir = hs.dirs.computed_dir
         hs.unload_all()
         #[hs.unload_cxdata(cx) for cx in hs.get_valid_cxs()]
@@ -435,34 +456,69 @@ class HotSpotter(DynStruct):
     def has_property(hs, key):
         return key in hs.tables.prop_dict
 
-    def get_img_datatupe_list(hs, gx_list, header_order=['Image Index', 'Image Name', '#Chips']):
+    def get_img_datatup_list(hs, gx_list, header_order=['Image Index', 'Image Name', '#Chips', 'EXIF']):
         'Data for GUI Image Table'
         gx2_gname = hs.tables.gx2_gname
         gx2_cxs = hs.gx2_cxs
+        exif_list = hs.gx2_exif(gx_list) if 'EXIF' in header_order else []
         cols = {
             'Image Index': gx_list,
             'Image Name':  [gx2_gname[gx] for gx in iter(gx_list)],
             '#Chips':      [len(gx2_cxs(gx)) for gx in iter(gx_list)],
+            'EXIF': exif_list
         }
         unziped_tups = [cols[header] for header in header_order]
         datatup_list = [tup for tup in izip(*unziped_tups)]
         return datatup_list
+
+    def format_theta_list(self, theta_list):
+        # Remove pi to put into a human readable format
+        # And use tau = 2*pi because tau seems to be more natural than pi
+        pi  = np.pi
+        tau = 2 * pi
+        UNICODE_GUI = False
+        pi_  = u'\u03C0' if UNICODE_GUI else 'pi'
+        tau_ = u'\u03C4' if UNICODE_GUI else 'tau'
+        LEGACY_NOTATION = False
+        if LEGACY_NOTATION:
+            _fmt = '%.2f * ' + pi_
+            _fix = lambda x: (x % tau) / pi
+        else:
+            SNEAKY = True
+            _fmt = '%.2f * 2' + pi_ if SNEAKY else '%.2f * ' + tau_
+            _fix = lambda x: (x % tau) / tau
+        theta_list = [_fix(theta) for theta in iter(theta_list)]
+        thetastr_list = [_fmt % theta for theta in iter(theta_list)]
+        return thetastr_list
 
     def get_chip_datatup_list(hs, cx_list,
                               header_order=['Chip ID', 'Name', 'Image', '#GT']):
         'Data for GUI Chip Table'
         prop_dict = hs.tables.prop_dict
         cx2_cid   = hs.tables.cx2_cid
+        cx2_roi   = hs.tables.cx2_roi
+        cx2_theta = hs.tables.cx2_theta
         cx2_nx    = hs.tables.cx2_nx
         cx2_gx    = hs.tables.cx2_gx
         nx2_name  = hs.tables.nx2_name
         gx2_gname = hs.tables.gx2_gname
+        theta_list = [cx2_theta[cx] for cx in iter(cx_list)]
+        thetastr_list = hs.format_theta_list(theta_list)
         gtcxs_list = hs.get_other_indexed_cxs(cx_list)
+        if '#kpts' in header_order:
+            cx2_kpts = hs.feats.cx2_kpts
+            nKpts_list = map(str, [tools.safe_listget(cx2_kpts, cx, len) for cx
+                                   in iter(cx_list)])
+        else:
+            nKpts_list = []
         cols = {
             'Chip ID': [cx2_cid[cx]           for cx in iter(cx_list)],
             'Name':    [nx2_name[cx2_nx[cx]]  for cx in iter(cx_list)],
             'Image':   [gx2_gname[cx2_gx[cx]] for cx in iter(cx_list)],
             '#GT':     [len(gtcxs) for gtcxs in iter(gtcxs_list)],
+            '#kpts':   nKpts_list,
+            'Theta':   thetastr_list,
+            'ROI (x, y, w, h)':  [str(cx2_roi[cx]) for cx in iter(cx_list)],
         }
         for key, val in prop_dict.iteritems():
             cols[key] = [val[cx] for cx in iter(cx_list)]
@@ -547,6 +603,10 @@ class HotSpotter(DynStruct):
         roi = hs.tables.cx2_roi[cx]
         return roi
 
+    def cx2_theta(hs, cx):
+        theta = hs.tables.cx2_theta[cx]
+        return theta
+
     def cx2_cid(hs, cx):
         return hs.tables.cx2_cid[cx]
 
@@ -565,12 +625,33 @@ class HotSpotter(DynStruct):
 
     #----
     # image index --> property
+    @tools.class_iter_input
+    def gx2_exif(hs, gx_list):
+        gname_list = hs.gx2_gname(gx_list, full=True)
+        exif_list = io.read_exif_list(gname_list)
+        return exif_list
 
+    @profile
+    def get_exif(hs):
+        gx_list = hs.get_valid_gxs()
+        exif_list = hs.gx2_exif(gx_list)
+        return exif_list
+
+    '''
     def gx2_gname(hs, gx, full=False):
         gname = hs.tables.gx2_gname[gx]
         if full:
             gname = join(hs.dirs.img_dir, gname)
         return gname
+    '''
+
+    @tools.class_iter_input
+    def gx2_gname(hs, gx_input, full=False):
+        gx2_gname_ = hs.tables.gx2_gname
+        gname_list = [gx2_gname_[gx] for gx in iter(gx_input)]
+        if full:
+            gname_list = [join(hs.dirs.img_dir, gname) for gname in iter(gname_list)]
+        return gname_list
 
     @tools.lru_cache(max_size=7)
     def gx2_image(hs, gx):
@@ -669,25 +750,29 @@ class HotSpotter(DynStruct):
         num_gt = len(hs.get_other_indexed_cxs(cx))
         return '#gt=%r' % num_gt
 
-    def cidstr(hs, cx, digits=None):
+    def cidstr(hs, cx, digits=None, notes=False):
         cx2_cid = hs.tables.cx2_cid
         if not np.iterable(cx):
             int_fmt = '%d' if digits is None else ('%' + str(digits) + 'd')
-            return 'cid=' + int_fmt % cx2_cid[cx]
+            cid_str = 'cid=' + int_fmt % cx2_cid[cx]
         else:
-            return 'cids=[%s]' % ', '.join(['%d' % cx2_cid[cx_] for cx_ in cx])
+            cid_str = 'cids=[%s]' % ', '.join(['%d' % cx2_cid[cx_] for cx_ in cx])
+        if notes:
+
+            cid_str += ' - ' + str(hs.cx2_property(cx, 'Notes'))
+        return cid_str
 
     # Precomputed properties
-
+    #@tools.debug_exception
     @tools.class_iter_input
-    @tools.debug_exception
     def _try_cxlist_get(hs, cx_input, cx2_var):
         ''' Input: cx_input: a vector input, cx2_var: a array mapping cx to a
         variable Returns: list of values corresponding with cx_input '''
         ret = [cx2_var[cx] for cx in cx_input]
         # None is invalid in a cx2_var array
         if any([val is None for val in ret]):
-            raise IndexError()
+            none_index = ret.index(None)
+            raise IndexError('ret[%r] == None' % none_index)
         return ret
 
     def _onthefly_cxlist_get(hs, cx_input, cx2_var, load_fn):
@@ -696,8 +781,18 @@ class HotSpotter(DynStruct):
         try:
             ret = hs._try_cxlist_get(cx_input, cx2_var)
         except IndexError:
-            load_fn(cx_input)
-            ret = hs._try_cxlist_get(cx_input, cx2_var)
+            try:
+                load_fn(cx_input)
+                ret = hs._try_cxlist_get(cx_input, cx2_var)
+            except Exception as ex:
+                print('[hs] Caught Exception ex=%r' % ex)
+                msg = ['[hs] Data was not loaded/unloaded propertly']
+                msg += ['[hs] cx_input=%r' % cx_input]
+                msg += ['[hs] cx2_var=%r' % cx2_var]
+                msg += ['[hs] load_fn=%r' % load_fn]
+                msg_ = '\n'.join(msg)
+                print(msg_)
+                raise
         return ret
 
     def get_desc(hs, cx_input):
@@ -731,6 +826,15 @@ class HotSpotter(DynStruct):
         #cx_input = hs.get_valid_cxs()
         cx2_rchip_size = hs.cpaths.cx2_rchip_size
         return hs._onthefly_cxlist_get(cx_input, cx2_rchip_size, hs.load_chips)
+
+    def get_arg(hs, argname, default=None):
+        try:
+            val = eval('hs.args.' + argname)
+            result = default if val is None else val
+        except KeyError:
+            result = default
+        return result
+
     #---------------
     # Print Tables
 
@@ -764,3 +868,28 @@ class HotSpotter(DynStruct):
         result_dir = os.path.normpath(hs.dirs.result_dir)
         print('[hs] viewing result_dir: %r ' % result_dir)
         helpers.vd(result_dir)
+
+    #----------------------
+    # Debug Consistency Checks
+    def dbg_cx2_kpts(hs):
+        cx2_cid = hs.tables.cx2_cid
+        cx2_kpts = hs.feats.cx2_kpts
+        bad_cxs = [cx for cx, kpts in enumerate(cx2_kpts) if kpts is None]
+        passed = True
+        if len(bad_cxs) > 0:
+            print('[hs.dbg] cx2_kpts has %d None positions:' % len(bad_cxs))
+            print('[hs.dbg] bad_cxs = %r' % bad_cxs)
+            passed = False
+        if len(cx2_kpts) != len(cx2_cid):
+            print('[hs.dbg] len(cx2_kpts) != len(cx2_cid): %r != %r' % (len(cx2_kpts), len(cx2_cid)))
+            passed = False
+        if passed:
+            print('[hs.dbg] cx2_kpts is OK')
+
+    def assert_prefs(hs):
+        try:
+            assert hs.prefs.query_cfg._feat_cfg is hs.prefs.feat_cfg
+            assert hs.prefs.feat_cfg._chip_cfg is hs.prefs.chip_cfg
+        except AssertionError:
+            print('[hs] preferences dependency tree is broken')
+            raise

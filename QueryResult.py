@@ -77,7 +77,7 @@ class QueryResult(DynStruct):
     def load(res, hs):
         'Loads the result from the given database'
         fpath = res.get_fpath(hs)
-        print('[ds] res.load() fpath=%r' % (split(fpath)[1],))
+        print('[res] res.load() fpath=%r' % (split(fpath)[1],))
         qcx_good = res.qcx
         try:
             with open(fpath, 'rb') as file_:
@@ -89,23 +89,24 @@ class QueryResult(DynStruct):
             res.query_uid = str(res.query_uid)
             return True
         except IOError as ex:
-            print('[ds] encountered IOError: %r' % ex)
+            #print('[res] encountered IOError: %r' % ex)
             if not exists(fpath):
+                print('[res] cache miss')
                 #print(fpath)
-                #print('[ds] QueryResult(qcx=%d) does not exist' % res.qcx)
+                #print('[res] QueryResult(qcx=%d) does not exist' % res.qcx)
                 raise
             else:
-                msg = ['[ds] QueryResult(qcx=%d) is corrupted' % (res.qcx)]
+                msg = ['[res] QueryResult(qcx=%d) is corrupted' % (res.qcx)]
                 msg += ['\n%r' % (ex,)]
                 print(''.join(msg))
                 raise Exception(msg)
         except BadZipFile as ex:
-            print('[ds] Caught other BadZipFile: %r' % ex)
-            msg = ['[ds] Attribute Error: QueryResult(qcx=%d) is corrupted' % (res.qcx)]
+            print('[res] Caught other BadZipFile: %r' % ex)
+            msg = ['[res] Attribute Error: QueryResult(qcx=%d) is corrupted' % (res.qcx)]
             msg += ['\n%r' % (ex,)]
             print(''.join(msg))
             if exists(fpath):
-                print('[ds] Removing corrupted file: %r' % fpath)
+                print('[res] Removing corrupted file: %r' % fpath)
                 os.remove(fpath)
                 raise IOError(msg)
             else:
@@ -188,4 +189,8 @@ class QueryResult(DynStruct):
         return viz.res_show_chipres(res, hs, cx, **kwargs)
 
     def interact_chipres(res, hs, cx, **kwargs):
+        return viz.interact_chipres(hs, res, cx, **kwargs)
+
+    def interact_top_chipres(res, hs, tx, **kwargs):
+        cx = res.topN_cxs(hs, tx + 1)[tx]
         return viz.interact_chipres(hs, res, cx, **kwargs)

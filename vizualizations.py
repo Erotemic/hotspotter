@@ -6,12 +6,12 @@ import draw_func2 as df2
 # Python
 import multiprocessing
 #import re
-import sys
 import warnings
 # Scientific
 import numpy as np
 # Hotspotter
 import fileio as io
+import algos
 import helpers
 import extract_patch
 from os.path import realpath
@@ -19,22 +19,19 @@ from os.path import realpath
 
 # Toggleable printing
 print = __builtin__.print
-print_ = sys.stdout.write
+
+FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5)
 
 
 def print_on():
-    global print, print_
+    global print
     print  = __builtin__.print
-    print_ = sys.stdout.write
 
 
 def print_off():
-    global print, print_
+    global print
 
     def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
         pass
 
 
@@ -49,6 +46,11 @@ def rrr():
 def printDBG(msg):
     #print(msg)
     pass
+
+
+def register_FNUMS(FNUMS_):
+    global FNUMS
+    FNUMS = FNUMS_
 
 
 def plot_name_of_cx(hs, cx, **kwargs):
@@ -109,6 +111,7 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
     # Draw all chip indexes in the image
     for cx in cx_list:
         roi = hs.cx2_roi(cx)
+        theta = hs.cx2_theta(cx)
         # Draw the ROI
         roi_lbl = hs.cidstr(cx)
         if cx in highlight_cxs:
@@ -118,7 +121,7 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
             dark_alpha = np.array([1, 1, 1, .6])
             bbox_color = df2.DARK_ORANGE * dark_alpha
             lbl_color  = df2.BLACK       * dark_alpha
-        df2.draw_roi(ax, roi, roi_lbl, bbox_color, lbl_color)
+        df2.draw_roi(ax, roi, roi_lbl, bbox_color, lbl_color, theta=theta)
         # Index the roi centers (for interaction)
         (x, y, w, h) = roi
         xy_center = np.array([x + (w / 2), y + (h / 2)])
@@ -141,7 +144,6 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
         cx = cx_list[dist.argsort()[0]]
         cx_clicked_func(cx)
 
-    df2.disconnect_callback(fig, 'button_press_event')
     if interact:
         df2.connect_callback(fig, 'button_press_event', _on_image_click)
 
@@ -156,6 +158,7 @@ def show_image(hs, gx, highlight_cxs=None, cx_clicked_func=None, draw_rois=True,
     img = hs.gx2_image(gx)
     fig, ax = df2.imshow(img, title=gname, fnum=fnum, **kwargs)
     ax = df2.gca()
+    df2.disconnect_callback(fig, 'button_press_event', axes=[ax])
     if draw_rois:
         if highlight_cxs is None:
             highlight_cxs = []
@@ -171,6 +174,8 @@ def show_splash(fnum=1, **kwargs):
     df2.imshow(img, fnum=fnum, **kwargs)
 
 
+# CHIP INTERACTION
+
 def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
 
     # Get chip info (make sure get_chip is called first)
@@ -178,8 +183,8 @@ def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
     #cidstr = hs.cidstr(cx)
     #name  = hs.cx2_name(cx)
     #gname = hs.cx2_gname(cx)
-
     fig = df2.figure(fnum=fnum)
+    df2.disconnect_callback(fig, 'button_press_event')
 
     def select_ith_keypoint(fx):
         print('-------------------------------------------')
@@ -256,7 +261,6 @@ def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
     show_chip(hs, cx=cx, draw_kpts=False)
     if figtitle is not None:
         df2.set_figtitle(figtitle)
-    df2.disconnect_callback(fig, 'button_press_event')
     df2.connect_callback(fig, 'button_press_event', _on_chip_click)
 
 
@@ -374,7 +378,9 @@ def show_top(res, hs, **kwargs):
     figtitle = kwargs.pop('figtitle', 'q%s -- TOP %r' % (cxstr, N))
     max_nCols = min(5, N)
     return _show_res(hs, res, topN_cxs=topN_cxs, figtitle=figtitle,
-                     max_nCols=max_nCols, all_kpts=False, **kwargs)
+                     max_nCols=max_nCols, draw_kpts=False,
+                     draw_ell=False, draw_pts=True,
+                     all_kpts=False, **kwargs)
 
 
 def res_show_analysis(res, hs, **kwargs):
@@ -481,7 +487,8 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk, **kwargs):
     # Draws the chips and keypoint matches
     scm2 = df2.show_chipmatch2
     kwargs_ = dict(fs=fs, lbl1=lbl1, lbl2=lbl2, title=title, fnum=fnum,
-                   pnum=pnum, vert=hs.prefs.display_cfg.vert, **kwargs)
+                   pnum=pnum, vert=hs.prefs.display_cfg.vert)
+    kwargs_.update(kwargs)
     ax, xywh1, xywh2 = scm2(rchip1, rchip2, kpts1, kpts2, fm, **kwargs_)
     x1, y1, w1, h1 = xywh1
     x2, y2, w2, h2 = xywh2
@@ -492,45 +499,65 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk, **kwargs):
     return ax, xywh1, xywh2
 
 
-def interact_chipres(hs, res, cx, fnum=4, **kwargs):
-    'Interacts with a single chipres'
-    print('[viz] interact_chipres()')
-    # Initialize interaction by drawing matches
+def interact_chipres(hs, res, cx, fnum=4, figtitle='Inspect Query Result', **kwargs):
+    'res = back.current_res'
+    'Interacts with a single chipres, '
+    # Get data
     qcx = res.qcx
-    fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
-    ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=(1, 1, 1), **kwargs)
     rchip1, rchip2 = hs.get_chip([qcx, cx])
     kpts1, kpts2   = hs.get_kpts([qcx, cx])
     desc1, desc2   = hs.get_desc([qcx, cx])
     fm = res.cx2_fm[cx]
+    mx = kwargs.pop('mx', None)
+    xywh2_ptr = [None]
+    annote_ptr = [True]
 
-    # Define interaction functions
-    def _select_fm(mx):
+    # Draw default
+    def _chipmatch_view():
+        print('[viz] interact_chipres(qcx=%r, cx=%r)' % (qcx, cx))
+        fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
+        annote = annote_ptr[0]
+        ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=(1, 1, 1),
+                                            draw_lines=annote, draw_ell=annote, **kwargs)
+        df2.set_figtitle(figtitle)
+        xywh2_ptr[0] = xywh2
+        # Toggle annote
+        annote_ptr[0] = not annote
+        fig.canvas.draw()
+
+    # Draw clicked selection
+    def _featurematch_view(mx):
+        annote_ptr[0] = True
         print('\n[viz] view feature match mx=%r' % mx)
+        # Helper functions and args
+        draw_patch = extract_patch.draw_keypoint_patch
+        plot_siftsig = df2.plot_sift_signature
         # Get the mx-th feature match
         fx1, fx2 = fm[mx]
         kp1, kp2     = kpts1[fx1], kpts2[fx2]
         sift1, sift2 = desc1[fx1], desc2[fx2]
         # Extracted keypoints to draw
         extracted_list = [(rchip1, kp1, sift1), (rchip2, kp2, sift2)]
-        nRows = len(extracted_list) + 1
+        chipres_rows = 1  # Number of rows for showing the chip result
+        nRows = len(extracted_list) + chipres_rows
+        nCols = 3
+        pnum_ = lambda px: (nRows, nCols, px)
+        #-----------------
         # Draw chips + feature matches
-        df2.figure(fnum=fnum, pnum=(nRows, 1, 1), doclf=True, trueclf=True)
         pnum1 = (nRows, 1, 1)
-        ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=pnum1,
-                                            draw_lines=False, ell_alpha=.4,
-                                            ell_linewidth=1.8, colors=df2.BLUE,
-                                            **kwargs)
+        _crargs = dict(fnum=fnum, pnum=pnum1, draw_lines=False, **kwargs)
+        _bmargs = dict(ell_alpha=.4, ell_linewidth=1.8, colors=df2.BLUE, **_crargs)
+        _smargs = dict(rect=True, colors=df2.ORANGE, **_crargs)
+        fig = df2.figure(fnum=fnum, pnum=pnum1, doclf=True, trueclf=True)
+        # Draw background matches
+        ax, xywh1, xywh2 = res.show_chipres(hs, cx, vert=False, **_bmargs)
+        xywh2_ptr[0] = xywh2
         # Draw selected match
         sel_fm = np.array([(fx1, fx2)])
-        df2.draw_fmatch(xywh1, xywh2, kpts1, kpts2, sel_fm, fnum=fnum,
-                        pnum=pnum1, draw_lines=False, rect=True, colors=df2.ORANGE)
-        # Helper functions
-        draw_patch = extract_patch.draw_keypoint_patch
-        plot_siftsig = df2.plot_sift_signature
-        pnum_ = lambda px: (nRows, 3, px)
+        df2.draw_fmatch(xywh1, xywh2, kpts1, kpts2, sel_fm, **_smargs)
+        #-----------------
 
-        def draw_feat_row(rchip, kp, sift, px):
+        def draw_feat_row(rchip, kp, sift, px, prevsift):
             #printDBG('[viz] draw_feat_row px=%r' % px)
             # Draw the unwarped selected feature
             ax = draw_patch(rchip, kp, sift, fnum=fnum, pnum=pnum_(px + 1))
@@ -540,47 +567,67 @@ def interact_chipres(hs, res, cx, fnum=4, **kwargs):
                             warped=True)
             ax._hs_viewtype = 'warped'
             # Draw the SIFT representation
-            sigtitle = '' if px != 3 else 'sift gradient orientation histogram'
+            sigtitle = '' if px != 3 else 'sift histogram'
             ax = plot_siftsig(sift, sigtitle, fnum=fnum, pnum=pnum_(px + 3))
             ax._hs_viewtype = 'histogram'
-            return px + 3
-        px = 3  # plot offset
+            if prevsift is not None:
+                L1_dist = algos.L1(sift, prevsift)
+                L2_dist = algos.L2(sift, prevsift)
+                emd_dist   = algos.emd(sift, prevsift)
+                hisct_dist = algos.hist_isect(sift, prevsift)
+                # make distance strings
+                dist_fmt = '{L1:%.1e, L2:%.1e\nhisct:%.1e, emd:%.1e}'
+                dist_tup = (L1_dist, L2_dist, hisct_dist, emd_dist)
+                dist_str = dist_fmt % dist_tup
+                df2.set_xlabel(dist_str)
+            return px + nCols
+        px = chipres_rows * nCols  # plot offset
+        prevsift = None
         for (rchip, kp, sift) in extracted_list:
-            px = draw_feat_row(rchip, kp, sift, px)
+            px = draw_feat_row(rchip, kp, sift, px, prevsift)
+            prevsift = sift
+        df2.set_figtitle(figtitle)
+        df2.adjust_subplots_xlabels()
         fig.canvas.draw()
 
-    def _svviz(cx):
+    # Draw ctrl clicked selection
+    def _sv_view(cx):
         printDBG('ctrl+clicked cx=%r' % cx)
-        fig = df2.figure(fnum=4, doclf=True, trueclf=True)
+        fnum = FNUMS['special']
+        fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
         df2.disconnect_callback(fig, 'button_press_event')
-        viz_spatial_verification(hs, res.qcx, cx2=cx, fnum=4)
+        viz_spatial_verification(hs, res.qcx, cx2=cx, fnum=fnum)
         fig.canvas.draw()
 
-    def _on_chipres_clicked(event):
+    # Callback
+    def _click_chipres_callback(event):
         printDBG('[viz] clicked chipres')
         (x, y) = (event.xdata, event.ydata)
         # Out of axes click
         if None in [x, y, event.inaxes]:
-            return interact_chipres(hs, res, fnum)
+            return _chipmatch_view()
         hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', '')
         printDBG('hs_viewtype=%r' % hs_viewtype)
         # Click in match axes
         if hs_viewtype.find('chipres') == 0:
             # Ctrl-Click
             key = '' if event.key is None else event.key
-            print('key = %r' % key)
+            print('[viz] key = %r' % key)
             if key.find('control') == 0:
                 print('[viz] result control clicked')
-                return _svviz(cx)
+                return _sv_view(cx)
             # Normal Click
             # Select nearest feature match to the click
+            if len(fm) == 0:
+                print('[viz] no feature matches to click')
+                return
             kpts1_m = kpts1[fm[:, 0]]
             kpts2_m = kpts2[fm[:, 1]]
-            x2, y2, w2, h2 = xywh2
+            x2, y2, w2, h2 = xywh2_ptr[0]
             _mx1, _dist1 = nearest_kp(x, y, kpts1_m)
             _mx2, _dist2 = nearest_kp(x - x2, y - y2, kpts2_m)
             mx = _mx1 if _dist1 < _dist2 else _mx2
-            _select_fm(mx)
+            _featurematch_view(mx)
         elif hs_viewtype.find('warped') == 0:
             printDBG('[viz] clicked warped')
         elif hs_viewtype.find('unwarped') == 0:
@@ -589,11 +636,17 @@ def interact_chipres(hs, res, cx, fnum=4, **kwargs):
             printDBG('[viz] clicked hist')
         else:
             printDBG('[viz] what did you click?!')
+
+    # Disconnect other callbacks and initialize interaction.
+    fig_ = df2.figure(fnum=fnum, doclf=True, trueclf=True, **kwargs)
+    df2.disconnect_callback(fig_, 'button_press_event')
+    if mx is None:
+        _chipmatch_view()
+    else:
+        _featurematch_view(mx)
+    df2.connect_callback(fig_, 'button_press_event', _click_chipres_callback)
     printDBG('[viz] Drawing and starting interaction')
-    fig = df2.gcf()
     df2.draw()
-    df2.disconnect_callback(fig, 'button_press_event')
-    df2.connect_callback(fig, 'button_press_event', _on_chipres_clicked)
 
 
 def _show_res(hs, res, **kwargs):
@@ -639,7 +692,12 @@ def _show_res(hs, res, **kwargs):
         plotx = plotx_shift + 1
         pnum = (rowcols[0], rowcols[1], plotx)
         #printDBG('[viz._show_res()] Plotting Query: pnum=%r' % (pnum,))
-        show_chip(hs, res=res, draw_kpts=annote, prefix='q', fnum=fnum, pnum=pnum)
+        _kwshow = dict(draw_kpts=annote)
+        _kwshow.update(kwargs)
+        _kwshow['prefix'] = 'q'
+        _kwshow['res'] = res
+        _kwshow['pnum'] = pnum
+        show_chip(hs, **_kwshow)
 
     def _show_matches_fn(cx, orank, pnum):
         'Helper function for drawing matches to one cx'
@@ -647,7 +705,11 @@ def _show_res(hs, res, **kwargs):
         #printDBG('[viz._show_res()] plotting: %r'  % (pnum,))
         _kwshow  = dict(draw_ell=annote, draw_pts=False, draw_lines=annote,
                         ell_alpha=.5, all_kpts=all_kpts)
-        res.show_chipres(hs, cx, title_aug=aug, fnum=fnum, pnum=pnum, **_kwshow)
+        _kwshow.update(kwargs)
+        _kwshow['fnum'] = fnum
+        _kwshow['pnum'] = pnum
+        _kwshow['title_aug'] = aug
+        res.show_chipres(hs, cx, **_kwshow)
 
     def _plot_matches_cxs(cx_list, plotx_shift, rowcols):
         'helper for viz._show_res to draw many cxs'
@@ -665,6 +727,7 @@ def _show_res(hs, res, **kwargs):
             _show_matches_fn(cx, orank, pnum)
 
     fig = df2.figure(fnum=fnum, pnum=(nRows, nGTCols, 1), doclf=True, trueclf=True)
+    df2.disconnect_callback(fig, 'button_press_event')
     df2.plt.subplot(nRows, nGTCols, 1)
     # Plot Query
     if show_query:
@@ -681,15 +744,17 @@ def _show_res(hs, res, **kwargs):
 
         def _ctrlclicked_cx(cx):
             printDBG('ctrl+clicked cx=%r' % cx)
-            fig = df2.figure(fnum=4, doclf=True, trueclf=True)
+            fnum = FNUMS['special']
+            fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
             df2.disconnect_callback(fig, 'button_press_event')
-            viz_spatial_verification(hs, res.qcx, cx2=cx, fnum=4)
+            viz_spatial_verification(hs, res.qcx, cx2=cx, fnum=fnum)
             fig.canvas.draw()
             df2.bring_to_front(fig)
 
         def _clicked_cx(cx):
             printDBG('clicked cx=%r' % cx)
-            res.interact_chipres(hs, cx, fnum=4)
+            fnum = FNUMS['inspect']
+            res.interact_chipres(hs, cx, fnum=fnum)
             fig = df2.gcf()
             fig.canvas.draw()
             df2.bring_to_front(fig)
@@ -724,7 +789,6 @@ def _show_res(hs, res, **kwargs):
                     print('[viz] result clicked')
                     return _clicked_cx(cx)
 
-        df2.disconnect_callback(fig, 'button_press_event')
         df2.connect_callback(fig, 'button_press_event', _on_res_click)
     printDBG('[viz._show_res()] Finished')
     return fig
@@ -780,7 +844,7 @@ def ensure_cx2(hs, cx1, cx2=None):
     return cx2
 
 
-def viz_spatial_verification(hs, cx1, **kwargs):
+def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kwargs):
     #kwargs = {}
     import helpers
     import spatial_verification2 as sv2
@@ -856,6 +920,7 @@ def viz_spatial_verification(hs, cx1, **kwargs):
     _draw_chip('Homog', rchip1_Ht, 10)
     _draw_chip('Destination', rchip2, 11)
     _draw_chip('Homog Blend', rchip2_blendH, 12)
+    df2.set_figtitle(figtitle)
 
 
 if __name__ == '__main__':
@@ -879,6 +944,6 @@ if __name__ == '__main__':
         N = 5
         res.show_top(hs, N)
     if dochip:
-        show_chip_interaction(hs, qcx, fnum=2)
+        show_chip_interaction(hs, qcx, fnum=FNUMS['chip'])
     df2.update()
     exec(df2.present())

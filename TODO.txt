@@ -1,50 +1,56 @@
+#--- Feature ----
+Integrate scale threshold into libhesaff
+
 #--- Annoyances ----
+
+* ODD BEHAVIOR: where if you click the result inspection, its
+* like clicking the result view. 
+
+* TO DOCUMENT: You have the ability to control-click results to see homographies
+
+* ODD BEHAVIOR: Sometimes matplotlib screw up capturing if you have control down or not
+
+I should have a way of getting each individual chip interaction side by side
+when I click on a query analaysis. (Oh, I sort of have it already...)
+
+* sklearn doesnt work with pyinstaller
+* skimage doesnt work with pyinstaller either
 
 * When there is one chip in the database it reports a weird error on query.
 * Make this error more descriptive. 
 
-FIXED ~~* When editing the name of an animal, it has to redraw the chip and image ~~
-        ~~* before the name editing can happen. ~~
-
+* Color by score in result inspection
 
 #--- Issues ----
 
-Query Result saves query indexes instead of query-ids
-
----
-
-# Add option to force computation of queries
-# Add option to delete all precomputed queries
+Caching Issue: Query Result saves in cx format indead of cid format.
 
 Add Option: save_database on query
-
-FIXED: ~~Get the spatial verification demo working. Homography seems to be broken. ~~
-FIXED: ~~Try and fix these problems. ~~
 
 Disallow clicks to other figures in an interaction mode.
 
 Fix depricated ginput
 
-HALF_FIXED: NEED TO REMOVE OLD CODE. 
-ChipCompute recieved a divide by zero error when using target area. 
-It must not be getting the valid cx list correctly. 
+Enable editing of EXIF? At least properly display them
 
-
-Tail to nose select orientation does not allow correct direction selection.
+FIXED: ~~* Features seem to be loaded too often ~~
+FIXED: ~~* Tail to nose select orientation does not allow correct direction selection.~
 FIXED: ~~* switch to atan2~~
-* add arrow widget 
-
-
-Change file doesn't exist to Cache Miss
-
-
-Get rid of the qon_list in dev.py
-
-Utilize exif tags in images
-
-
-Features seem to be loaded too often
-
+FIXED: ~~* add arrow widget ~~
+FIXED: ~~Change file doesn't exist to Cache Miss~~
+FIXED: ~~Get rid of the qon_list in dev.py~~
+FIXED: ~~Utilize exif tags in images~~
+FIXED: NEED TO REMOVE OLD CODE. 
+~~ChipCompute recieved a divide by zero error when using target area. ~~
+~~It must not be getting the valid cx list correctly. ~~
+FIXED: ~~Get the spatial verification demo working. Homography seems to be broken. ~~
+FIXED: ~~Try and fix these problems. ~~
+FIXED ~~Prefs will load the old ChipConfig that belongs to FeatConfig instead of using
+the new loaded ChipConfig? Somthing is screwy with Frogs here. ~~
+FIXED ~~# Add option to force computation of queries
+FIXED ~~# Add option to delete all precomputed queries
+FIXED ~~* When editing the name of an animal, it has to redraw the chip and image ~~
+        ~~* before the name editing can happen. ~~
 #-----------
 # I need to get a paper this next semester
 # I need to get candidate
@@ -67,3 +73,7 @@ Turning scores into probabilities
 
 # ---
 
+
+
+
+Lets learn a threshold on bad matches. 

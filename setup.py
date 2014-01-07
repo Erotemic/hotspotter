@@ -2,9 +2,10 @@
 from __future__ import division, print_function
 from os.path import dirname, realpath, join, exists, normpath
 import os
-import shutil
 import helpers
 import sys
+
+HOME = os.path.expanduser('~')
 
 INSTALL_REQUIRES = [
     'numpy>=1.5.0',
@@ -91,22 +92,87 @@ ISRELEASED          = False
 VERSION             = '%d.%d.%d%s' % (MAJOR, MINOR, MICRO, SUFFIX)
 
 
+def __cmd(args, verbose=True):
+    print('[setup] Running: %r' % args)
+    sys.stdout.flush()
+    import subprocess
+    #import shlex
+    #if isinstance(args, str):
+        #if os.name == 'posix':
+            #args = [args]
+        #else:
+            #args = shlex.split(args)
+    PIPE = subprocess.PIPE
+    # DANGEROUS: shell=True. Grats hackers.
+    proc = subprocess.Popen(args, stdout=PIPE, stderr=PIPE, shell=True)
+    if verbose:
+        ''' KNOWN PYTHON 2.x BUG
+        #http://stackoverflow.com/questions/803265/
+        #getting-realtime-output-using-subprocess
+        for line in proc.stdout.readlines(): '''
+        logged_list = []
+        append = logged_list.append
+        write = sys.stdout.write
+        flush = sys.stdout.flush
+        while True:
+            line = proc.stdout.readline()
+            if not line:
+                break
+            write(line)
+            flush()
+            append(line)
+        out = '\n'.join(logged_list)
+        (out_, err) = proc.communicate()
+    else:
+        # Surpress output
+        (out, err) = proc.communicate()
+    # Make sure process if finished
+    ret = proc.wait()
+    return out, err, ret
+
+if sys.platform == 'win32':
+    buildscript_fmt = 'build_%s_mingw.bat'
+else:
+    buildscript_fmt = 'build_%s_unix.sh'
+
+
 def build_pyinstaller():
     cwd = normpath(realpath(dirname(__file__)))
-    print('Current working directory: %r' % cwd)
+    print('[setup] Current working directory: %r' % cwd)
     build_dir = join(cwd, 'build')
     dist_dir = join(cwd, 'dist')
+    helpers.delete(dist_dir)
     assert exists('setup.py'), 'must be run in hotspotter directory'
     assert exists('../hotspotter/setup.py'), 'must be run in hotspotter directory'
     assert exists('_setup'), 'must be run in hotspotter directory'
     for rmdir in [build_dir, dist_dir]:
         if exists(rmdir):
             helpers.remove_file(rmdir)
-    os.system('pyinstaller _setup/pyinstaller-hotspotter.spec')
-
+    __cmd('pyinstaller _setup/pyinstaller-hotspotter.spec')
     if sys.platform == 'darwin' and exists("dist/HotSpotter.app/Contents/"):
-        shutil.copyfile("_setup/hsicon.icns", "dist/HotSpotter.app/Contents/Resources/icon-windowed.icns")
-        shutil.copyfile("_setup/Info.plist", "dist/HotSpotter.app/Contents/Info.plist")
+        copy_list = [
+            'hsicon.icns',
+            'Info.plist'
+        ]
+        srcdir = '_setup'
+        dstdir = 'dist/HotSpotter.app/Contents/Resources/'
+        for srcname, dstname in copy_list:
+            src = join(srcdir, srcname)
+            dst = join(dstdir, dstname)
+            helpers.copy(src, dst)
+
+
+def build_win32_inno_installer():
+    inno_dir = r'C:\Program Files (x86)\Inno Setup 5'
+    inno_fname = 'ISCC.exe'
+    inno_fpath = join(inno_dir, inno_fname)
+    iss_script = join('_setup', 'wininstallerscript.iss')
+    if not exists(inno_fpath):
+        msg = '[setup] Inno not found and is needed for the win32 installer'
+        print(msg)
+        raise Exception(msg)
+    args = [inno_fpath, iss_script]
+    __cmd(args)
 
 
 def compile_ui():
@@ -115,11 +181,11 @@ def compile_ui():
                   'linux2': 'pyuic4',
                   'darwin': 'pyuic4'}[sys.platform]
     widget_dir = join(dirname(realpath(__file__)), '_frontend')
-    print('Compiling qt designer files in %r' % widget_dir)
+    print('[setup] Compiling qt designer files in %r' % widget_dir)
     for widget_ui in helpers.glob(widget_dir, '*.ui'):
         widget_py = os.path.splitext(widget_ui)[0] + '.py'
         cmd = ' '.join([pyuic4_cmd, '-x', widget_ui, '-o', widget_py])
-        print('compile_ui()>' + cmd)
+        print('[setup] compile_ui()>' + cmd)
         os.system(cmd)
 
 
@@ -128,7 +194,10 @@ def clean():
     assert exists('../hotspotter/setup.py'), 'must be run in hotspotter directory'
     assert exists('_setup'), 'must be run in hotspotter directory'
     cwd = normpath(realpath(dirname(__file__)))
-    print('Current working directory: %r' % cwd)
+    print('[setup] Current working directory: %r' % cwd)
+    helpers.remove_files_in_dir(cwd, '*.pyc', recursive=True)
+    helpers.remove_files_in_dir(cwd, '*.prof', recursive=True)
+    helpers.remove_files_in_dir(cwd, '*.lprof', recursive=True)
     helpers.delete(join(cwd, 'dist'))
     helpers.delete(join(cwd, 'build'))
     helpers.delete(join(cwd, "'"))  # idk where this file comes from
@@ -139,8 +208,28 @@ def fix_tpl_permissions():
     os.system('chmod +x _tpl/extern_feat/*.ln')
 
 
+def make_install_pyhesaff():
+    hesaff_dir = normpath(HOME + '/code/hesaff')
+    cmd = join(hesaff_dir, buildscript_fmt % 'hesaff')
+    __cmd(cmd)
+
+
+def make_install_pyflann():
+    pyflann_dir = normpath(HOME + '/code/flann')
+    cmd = join(pyflann_dir, buildscript_fmt % 'flann')
+    __cmd(cmd)
+    pass
+
+
+def make_install_opencv():
+    pyflann_dir = normpath(HOME + '/code/opencv')
+    cmd = join(pyflann_dir, buildscript_fmt % 'opencv')
+    __cmd(cmd)
+    pass
+
+
 if __name__ == '__main__':
-    print('Entering HotSpotter setup')
+    print('[setup] Entering HotSpotter setup')
     for cmd in iter(sys.argv[1:]):
         if cmd in ['clean']:
             clean()
@@ -148,6 +237,13 @@ if __name__ == '__main__':
         if cmd in ['buildui', 'ui', 'compile_ui']:
             compile_ui()
             sys.exit(0)
-        if cmd in ['build_pyinstaller', 'build_installer']:
+        if cmd in ['installer', 'pyinstaller', 'build_pyinstaller', 'build_installer']:
             build_pyinstaller()
-            sys.exit(0)
+        if cmd in ['inno', 'win32inno']:
+            build_win32_inno_installer()
+        if cmd in ['flann', 'pyflann']:
+            make_install_pyflann()
+        if cmd in ['hesaff', 'pyhesaff']:
+            make_install_pyhesaff()
+        if cmd in ['opencv']:
+            make_install_opencv()

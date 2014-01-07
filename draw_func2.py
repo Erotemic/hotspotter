@@ -43,6 +43,7 @@ from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle, Circle, FancyArrow
 from matplotlib.transforms import Affine2D
+from matplotlib.backends import backend_qt4
 import matplotlib.pyplot as plt
 # Qt
 from PyQt4 import QtCore, QtGui
@@ -62,29 +63,23 @@ def printDBG(msg):
 
 # Toggleable printing
 print = __builtin__.print
-print_ = sys.stdout.write
 
 
 def print_on():
-    global print, print_
+    global print
     print  = __builtin__.print
-    print_ = sys.stdout.write
 
 
 def print_off():
-    global print, print_
+    global print
 
     def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
         pass
 
 
 def rrr():
     'Dynamic module reloading'
     import imp
-    import sys
     print('[df2] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
 
@@ -192,6 +187,12 @@ def register_matplotlib_widget(plotWidget_):
     #plt.sca(ax)
 
 
+def unregister_qt4_win(win):
+    global QT4_WINS
+    if win == 'all':
+        QT4_WINS = []
+
+
 def register_qt4_win(win):
     global QT4_WINS
     QT4_WINS.append(win)
@@ -256,13 +257,36 @@ def draw_border(ax, color=GREEN, lw=2, offset=None):
 
 
 def draw_roi(ax, roi, label=None, bbox_color=(1, 0, 0),
-             lbl_bgcolor=(0, 0, 0), lbl_txtcolor=(1, 1, 1)):
+             lbl_bgcolor=(0, 0, 0), lbl_txtcolor=(1, 1, 1), theta=0):
     (rx, ry, rw, rh) = roi
-    rxy = (rx, ry)
-    bbox = matplotlib.patches.Rectangle(rxy, rw, rh, lw=2)
+    t_start = ax.transData
+    cos_ = np.cos(theta)
+    sin_ = np.sin(theta)
+    rot_t = Affine2D([( cos_, -sin_, 0),
+                      ( sin_,  cos_, 0),
+                      (  0,       0, 1)])
+    scale_t = Affine2D([( rw,  0, 0),
+                        ( 0,  rh, 0),
+                        ( 0,   0, 1)])
+    trans_t = Affine2D([( 1,  0, rx + rw / 2),
+                        ( 0,  1, ry + rh / 2),
+                        ( 0,  0, 1)])
+    t_end = scale_t + rot_t + trans_t + t_start
+    bbox = matplotlib.patches.Rectangle((-.5, -.5), 1, 1, lw=2, transform=t_end)
+    arw_x, arw_y   = (-.5, -.5)
+    arw_dx, arw_dy = (1, 0)
+    _args = [arw_x, arw_y, arw_dx, arw_dy]
+    _kwargs = dict(head_width=.1, transform=t_end, length_includes_head=True)
+    arrow = FancyArrow(*_args, **_kwargs)
+
     bbox.set_fill(False)
+    #bbox.set_transform(trans)
     bbox.set_edgecolor(bbox_color)
+    arrow.set_edgecolor(bbox_color)
+    arrow.set_facecolor(bbox_color * .9)
+
     ax.add_patch(bbox)
+    ax.add_patch(arrow)
     if label is not None:
         ax_absolute_text(rx, ry, label, ax=ax,
                          horizontalalignment='center',
@@ -349,7 +373,6 @@ def golden_wh(x):
 def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
                      row_first=True, no_tile=False):
     'Lays out all figures in a grid. if wh is a scalar, a golden ratio is used'
-    from matplotlib.backends import backend_qt4
     if no_tile:
         return
     if not np.iterable(wh):
@@ -541,6 +564,10 @@ def plot2(x_data, y_data, marker, x_label, y_label, title_pref, *args,
                  fontproperties=FONTS.axtitle)
 
 
+def adjust_subplots_xlabels():
+    adjust_subplots(left=.03, right=.97, bottom=.2, top=.9, hspace=.15)
+
+
 def adjust_subplots_xylabels():
     adjust_subplots(left=.03, right=1, bottom=.1, top=.9, hspace=.15)
 
@@ -650,14 +677,16 @@ def draw_text(text_str, rgb_textFG=(0, 0, 0), rgb_textBG=(1, 1, 1)):
             backgroundcolor=rgb_textBG)
 
 
-def set_figtitle(figtitle, subtitle=''):
+def set_figtitle(figtitle, subtitle='', forcefignum=True, incanvas=True):
     fig = gcf()
-    if subtitle != '':
-        subtitle = '\n' + subtitle
-    fig.suptitle(figtitle + subtitle, fontsize=14, fontweight='bold')
+    if incanvas:
+        if subtitle != '':
+            subtitle = '\n' + subtitle
+        fig.suptitle(figtitle + subtitle, fontsize=14, fontweight='bold')
     #fig.suptitle(figtitle, x=.5, y=.98, fontproperties=FONTS.figtitle)
     #fig_relative_text(.5, .96, subtitle, fontproperties=FONTS.subtitle)
-    fig.canvas.set_window_title(figtitle)
+    window_figtitle = ('fig(%d) ' % fig.number) + figtitle
+    fig.canvas.set_window_title(window_figtitle)
     adjust_subplots()
 
 
@@ -887,7 +916,7 @@ def figure(fnum=None, doclf=False, title=None, pnum=(1, 1, 1), figtitle=None,
         if figtitle is None and pnum == (1, 1, 1):
             figtitle = title
         if not figtitle is None:
-            fig.canvas.set_window_title('fig %r %s' % (fnum, figtitle))
+            set_figtitle(figtitle, incanvas=False)
     return fig
 
 
@@ -937,7 +966,7 @@ def estimate_pdf(data, bw_factor):
 
 
 def show_histogram(data, bins=None, **kwargs):
-    sys.stdout.write('[df2] show_histogram()\n')
+    print('[df2] show_histogram()')
     dmin = int(np.floor(data.min()))
     dmax = int(np.ceil(data.max()))
     if bins is None:
@@ -989,10 +1018,26 @@ def plot_sift_signature(sift, title='', fnum=None, pnum=None):
     rect.set_clip_on(False)
     rect.set_fill(True)
     rect.set_color(BLACK * .9)
-    ax.set_xticks(np.arange(9) * 16)
-    ax.set_yticks(np.arange(9) * 32)
+    space_xticks(9, 16)
+    space_yticks(5, 64)
     ax.set_title(title)
     return ax
+
+
+def space_xticks(nTicks=9, spacing=16, ax=None):
+    if ax is None:
+        ax = gca()
+    ax.set_xticks(np.arange(nTicks) * spacing)
+    for tick in ax.xaxis.get_major_ticks():
+        tick.label.set_fontsize(8)
+
+
+def space_yticks(nTicks=9, spacing=32, ax=None):
+    if ax is None:
+        ax = gca()
+    ax.set_yticks(np.arange(nTicks) * spacing)
+    for tick in ax.yaxis.get_major_ticks():
+        tick.label.set_fontsize(8)
 
 
 def plot_bars(y_data, nColorSplits=1):
@@ -1183,10 +1228,14 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
     ax.add_collection(line_group)
 
 
+def draw_kpts(kpts, *args, **kwargs):
+    draw_kpts2(kpts, *args, **kwargs)
+
+
 def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
                pts_size=POINT_SIZE, ell_alpha=ELL_ALPHA,
                ell_linewidth=ELL_LINEWIDTH, ell_color=ELL_COLOR,
-               color_list=None, wrong_way=False, rect=None, **kwargs):
+               color_list=None, rect=None, **kwargs):
     if not DISTINCT_COLORS:
         color_list = None
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
@@ -1209,33 +1258,13 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
             rect = False
     if ell or rect:
         printDBG('[df2] draw_kpts() drawing ell kptsT.shape=%r' % (kptsT.shape,))
+        # We have the transformation from unit circle to ellipse here. (inv(A))
         a = kptsT[2]
         b = np.zeros(len(a))
         c = kptsT[3]
         d = kptsT[4]
-        # Sympy Calculated sqrtm(inv(A) for A in kpts)
-        # inv(sqrtm([(a, 0), (c, d)]) =
-        #  [1/sqrt(a), c/(-sqrt(a)*d - a*sqrt(d))]
-        #  [        0,                  1/sqrt(d)]
-        if wrong_way:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                aIS = 1 / np.sqrt(a)
-                bIS = c / (-np.sqrt(a) * d - a * np.sqrt(d))
-                dIS = 1 / np.sqrt(d)
-                cIS = b
-                #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+1E-9)
-        else:
-            aIS = a
-            bIS = b
-            cIS = c
-            dIS = d
-            # Just inverse
-            #aIS = 1/a
-            #bIS = -c/(a*d)
-            #dIS = 1/d
 
-        kpts_iter = izip(x, y, aIS, bIS, cIS, dIS)
+        kpts_iter = izip(x, y, a, b, c, d)
         aff_list = [Affine2D([( a_, b_, x_),
                               ( c_, d_, y_),
                               (  0,  0,  1)])
@@ -1323,17 +1352,19 @@ def stack_images(img1, img2, vert=None):
     assert nChannels == nChannels2
     (h1, w1) = img1.shape[0: 2]  # get chip dimensions
     (h2, w2) = img2.shape[0: 2]
-    woff = 0
-    hoff = 0
-    if vert is None:  # Display match up/down or side/side
-        vert = False if h1 > w1 and h2 > w2 else True
+    woff, hoff = 0, 0
+    vert_wh  = max(w1, w2), h1 + h2
+    horiz_wh = w1 + w2, max(h1, h2)
+    if vert is None:
+        # Display the orientation with the better (closer to 1) aspect ratio
+        vert_ar  = max(vert_wh) / min(vert_wh)
+        horiz_ar = max(horiz_wh) / min(horiz_wh)
+        vert = vert_ar < horiz_ar
     if vert:
-        wB = max(w1, w2)
-        hB = h1 + h2
+        wB, hB = vert_wh
         hoff = h1
     else:
-        hB = max(h1, h2)
-        wB = w1 + w2
+        wB, hB = horiz_wh
         woff = w1
     # concatentate images
     if nChannels == 3:
@@ -1348,7 +1379,7 @@ def stack_images(img1, img2, vert=None):
 
 
 def show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm=None, title=None,
-                    vert=False, fnum=None, pnum=None, **kwargs):
+                    vert=None, fnum=None, pnum=None, **kwargs):
     '''Draws two chips and the feature matches between them. feature matches
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''
@@ -1380,8 +1411,8 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
     ell       = kwargs.get('draw_ell', True)
     lines     = kwargs.get('draw_lines', True)
     ell_alpha = kwargs.get('ell_alpha', .4)
-    num_match = len(fm)
-    #printDBG('[df2.draw_fnmatch] num_match=%r' % num_match)
+    nMatch = len(fm)
+    #printDBG('[df2.draw_fnmatch] nMatch=%r' % nMatch)
     x1, y1, w1, h1 = xywh1
     x2, y2, w2, h2 = xywh2
     offset2 = (x2, y2)
@@ -1392,41 +1423,62 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
         absolute_lbl(x2 + w2, y2, lbl2)
     # Plot the number of matches
     if kwargs.get('show_nMatches', False):
-        upperleft_text('#match=%d' % num_match)
+        upperleft_text('#match=%d' % nMatch)
     # Draw all keypoints in both chips as points
     if kwargs.get('all_kpts', False):
         all_args = dict(ell=False, pts=pts, pts_color=GREEN, pts_size=2,
-                        ell_alpha=ell_alpha, rect=rect, **kwargs)
+                        ell_alpha=ell_alpha, rect=rect)
+        all_args.update(kwargs)
         draw_kpts2(kpts1, **all_args)
         draw_kpts2(kpts2, offset=offset2, **all_args)
     # Draw Lines and Ellipses and Points oh my
-    if num_match > 0:
-        colors = [kwargs['colors']] * num_match if 'colors' in kwargs else distinct_colors(num_match)
+    if nMatch > 0:
+        colors = [kwargs['colors']] * nMatch if 'colors' in kwargs else distinct_colors(nMatch)
         acols = add_alpha(colors)
 
         # Helper functions
         def _drawkpts(**_kwargs):
+            _kwargs.update(kwargs)
             fxs1 = fm[:, 0]
             fxs2 = fm[:, 1]
             draw_kpts2(kpts1[fxs1], rect=rect, **_kwargs)
             draw_kpts2(kpts2[fxs2], offset=offset2, rect=rect, **_kwargs)
 
         def _drawlines(**_kwargs):
+            _kwargs.update(kwargs)
             draw_lines2(kpts1, kpts2, fm, fs, kpts2_offset=offset2, **_kwargs)
 
         # User helpers
         if ell:
-            _drawkpts(pts=False, ell=True, color_list=colors, **kwargs)
+            _drawkpts(pts=False, ell=True, color_list=colors)
         if pts:
-            _drawkpts(pts_size=8, pts=True, ell=False, pts_color=BLACK, **kwargs)
-            _drawkpts(pts_size=6, pts=True, ell=False, color_list=acols, **kwargs)
+            _drawkpts(pts_size=8, pts=True, ell=False, pts_color=BLACK)
+            _drawkpts(pts_size=6, pts=True, ell=False, color_list=acols)
         if lines:
-            _drawlines(color_list=colors, **kwargs)
+            _drawlines(color_list=colors)
+    else:
+        draw_boxedX(xywh2)
     return None
 
 
-def disconnect_callback(fig, callback_type):
+def draw_boxedX(xywh, color=RED, lw=2, alpha=.5):
+    'draws rectangle border around a subplot'
+    ax = gca()
+    x1, y1, w, h = xywh
+    x2, y2 = x1 + w, y1 + h
+    segments = [((x1, y1), (x2, y2)),
+                ((x1, y2), (x2, y1))]
+    width_list = [lw] * len(segments)
+    color_list = [color] * len(segments)
+    line_group = LineCollection(segments, width_list, color_list, alpha=alpha)
+    ax.add_collection(line_group)
+
+
+def disconnect_callback(fig, callback_type, **kwargs):
     #print('[df2] disconnect %r callback' % callback_type)
+    axes = kwargs.get('axes', [])
+    for ax in axes:
+        ax._hs_viewtype = ''
     cbid_type = callback_type + '_cbid'
     cbfn_type = callback_type + '_func'
     cbid = fig.__dict__.get(cbid_type, None)

@@ -10,26 +10,30 @@ Wow, pylint is nice for cleaning.
 '''
 from __future__ import division, print_function
 import __builtin__
-import warnings
-from Printable import printableVal
+# Scientific
+import numpy as np
+# Standard
+from collections import OrderedDict
+from itertools import product as iprod
 from os.path import join, relpath, normpath, split, isdir, isfile, exists, islink, ismount
 import cPickle
 import cStringIO
 import datetime
+import decimal
 import fnmatch
 import hashlib
 import inspect
-import numpy as np
 import os
-import os.path
-import sys
+import platform
 import shutil
-import decimal
+import sys
 import textwrap
 import time
 import types
+import warnings
+# HotSpotter
 import tools
-from itertools import product as iprod
+from Printable import printableVal
 #print('LOAD_MODULE: helpers.py')
 
 # Toggleable printing
@@ -86,6 +90,13 @@ def DEPRICATED(func):
     return __DEP_WRAPPER
 
 
+def dbg_get_imgfpath():
+    if sys.platform == 'win32':
+        return 'C:\\lena.png'
+    else:
+        return '/lena.png'
+
+
 def horiz_print(*args):
     toprint = horiz_string(args)
     print(toprint)
@@ -118,6 +129,8 @@ def horiz_string(str_list):
 
 
 # --- Images ----
+
+
 def num_images_in_dir(path):
     'returns the number of images in a directory'
     num_imgs = 0
@@ -262,7 +275,6 @@ def printable_mystats(_list):
 
 
 def mystats(_list):
-    from collections import OrderedDict
     if len(_list) == 0:
         return {'empty_list': True}
     nparr = np.array(_list)
@@ -434,14 +446,6 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
 
 
 # --- Util ---
-def configure_matplotlib():
-    import matplotlib
-    if matplotlib.get_backend() != 'Qt4Agg':
-        print('[helpers] Configuring matplotlib for Qt4')
-        matplotlib.use('Qt4Agg', warn=True, force=True)
-        matplotlib.rcParams['toolbar'] = 'None'
-
-
 def alloc_lists(num_alloc):
     'allocates space for a numpy array of lists'
     return [[] for _ in xrange(num_alloc)]
@@ -449,7 +453,7 @@ def alloc_lists(num_alloc):
 
 def ensure_list_size(list_, size_):
     'extend list to max_cx'
-    lendiff = (size_ + 1) - len(list_)
+    lendiff = (size_) - len(list_)
     if lendiff > 0:
         extension = [None for _ in xrange(lendiff)]
         list_.extend(extension)
@@ -470,13 +474,77 @@ def get_timestamp(format_='filename', use_second=False):
     stamp = time_formats[format_] % time_tup
     return stamp
 
+VALID_PROGRESS_TYPES = ['none', 'dots', 'fmtstr', 'simple']
+
+
+def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
+                  flush_after=4, spacing=0, line_len=80,
+                  progress_type='fmtstr'):
+    '''Returns a function that marks progress taking the iteration count as a
+    parameter. Prints if max_val > mark_at. Prints dots if max_val not
+    specified or simple=True'''
+    # Tell the user we are about to make progress
+    print(lbl)
+    # none: nothing
+    if progress_type == 'none':
+        mark_progress =  lambda count: None
+    # simple: one dot per progress. no flush.
+    if progress_type == 'simple':
+        mark_progress = lambda count: sys.stdout.write('.')
+    # dots: spaced dots
+    if progress_type == 'dots':
+        indent_ = '    '
+        sys.stdout.write(indent_)
+
+        if spacing > 0:
+            # With spacing
+            newline_len = spacing * line_len // spacing
+
+            def mark_progress_sdot(count):
+                sys.stdout.write('.')
+                count_ = count + 1
+                if (count_) % newline_len == 0:
+                    sys.stdout.write('\n' + indent_)
+                    sys.stdout.flush()
+                elif (count_) % spacing == 0:
+                    sys.stdout.write(' ')
+                    sys.stdout.flush()
+                elif (count_) % flush_after == 0:
+                    sys.stdout.flush()
+            mark_progress = mark_progress_sdot
+        else:
+            # No spacing
+            newline_len = line_len
+
+            def mark_progress_dot(count):
+                sys.stdout.write('.')
+                count_ = count + 1
+                if (count_) % newline_len == 0:
+                    sys.stdout.write('\n' + indent_)
+                    sys.stdout.flush()
+                elif (count_) % flush_after == 0:
+                    sys.stdout.flush()
+            mark_progress = mark_progress_dot
+    # fmtstr: formated string progress
+    if progress_type == 'fmtstr' and max_val > mark_after:
+        fmt_str = progress_str(max_val, lbl=lbl)
+
+        def mark_progress_fmtstr(count):
+            count_ = count + 1
+            sys.stdout.write(fmt_str % (count_))
+            if (count_) % flush_after == 0:
+                sys.stdout.flush()
+        mark_progress = mark_progress_fmtstr
+    if '--aggroflush' in sys.argv:
+        def mark_progress_agressive(count):
+            mark_progress(count)
+            sys.stdout.flush()
+        return mark_progress_agressive
+    return mark_progress
+    raise Exception('unkown progress type = %r' % progress_type)
+
 
 def progress_str(max_val, lbl='Progress: '):
-    return make_progress_fmt_str(max_val, lbl)
-
-
-# DEPRICATE
-def make_progress_fmt_str(max_val, lbl='Progress: '):
     r'makes format string that prints progress: %Xd/MAX_VAL with backspaces'
     max_str = str(max_val)
     dnumstr = str(len(max_str))
@@ -506,7 +574,6 @@ def my_computer_names():
 
 
 def get_computer_name():
-    import platform
     return platform.node()
 
 
@@ -899,12 +966,21 @@ def copy_task(cp_list, test=False, nooverwrite=False, print_tasks=True):
 
 
 def copy(src, dst):
-    if exists(dst):
-        print('[helpers] !!! Overwriting ')
+    if exists(src):
+        if exists(dst):
+            prefix = 'C+O'
+            print('[helpers] [Copying + Overwrite]:')
+        else:
+            prefix = 'C'
+            print('[helpers] [Copying]: ')
+        print('[%s] | %s' % (prefix, src))
+        print('[%s] ->%s' % (prefix, dst))
+        shutil.copy(src, dst)
     else:
-        print('[helpers] ... Copying ')
-    print('[helpers]    ' + src + ' -> \n    ' + dst)
-    shutil.copy(src, dst)
+        prefix = 'Miss'
+        print('[helpers] [Cannot Copy]: ')
+        print('[%s] src=%s does not exist!' % (prefix, src))
+        print('[%s] dst=%s' % (prefix, dst))
 
 
 def copy_all(src_dir, dest_dir, glob_str_list):
@@ -1047,6 +1123,8 @@ def dict_union(*args):
 
 
 def hashstr(data, trunc_pos=8):
+    if isinstance(data, tuple):
+        data = str(data)
     # Get a 128 character hex string
     hashstr = hashlib.sha512(data).hexdigest()
     # Convert to base 57
@@ -1483,8 +1561,14 @@ def unit_test(test_func):
         return ret
     return __unit_test_wraper
 
+try:
+    profile
+    print('[helpers] run with kernprof.py')
+except NameError:
+    profile = lambda func: func
 
-def profile(cmd, globals_=globals(), locals_=locals()):
+
+def runprofile(cmd, globals_=globals(), locals_=locals()):
     # Meliae # from meliae import loader # om = loader.load('filename.json') # s = om.summarize();
     import cProfile
     import sys
@@ -1502,14 +1586,18 @@ def profile(cmd, globals_=globals(), locals_=locals()):
     os.system(view_cmd)
     return True
 
-
+'''
 def profile_lines(fname):
     import __init__
-    import shutil
+    script = 'dev.py'
+    args = '--db MOTHERS --nocache-feat'
+    runcmd = 'kernprof.py %s %s' % (script, args)
+    viewcmd = 'python -m line_profiler %s.lprof' % script
     hs_path = split(__init__.__file__)
     lineprofile_path = join(hs_path, '.lineprofile')
     ensurepath(lineprofile_path)
     shutil.copy('*', lineprofile_path + '/*')
+    '''
 
 
 def memory_profile():
@@ -1600,7 +1688,7 @@ def printERR(msg, *args):
 
 
 def printWARN(warn_msg, category=UserWarning):
-    warn_msg = 'Warning: ' + warn_msg
+    warn_msg = 'Probably not a big issue, but you should know...: ' + warn_msg
     sys.stdout.write(warn_msg + '\n')
     sys.stdout.flush()
     warnings.warn(warn_msg, category=category)
@@ -1630,8 +1718,18 @@ def get_arg_after(arg, type_=None, default=None):
 
 
 def get_arg_flag(arg, default=False):
+    'Checks if the commandline has a flag or a corresponding noflag'
+    if arg.find('--') != 0:
+        raise Exception(arg)
+    if arg.find('--no') == 0:
+        arg = arg.replace('--no', '--')
+    noarg = arg.replace('--', '--no')
     if arg in sys.argv:
-        return not default
+        return True
+    elif noarg in sys.argv:
+        return False
+    else:
+        return default
     return default
 
 
@@ -1866,9 +1964,8 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     print('[helpers] You ran helpers as main!')
     import algos  # NOQA
-    import sklearn  # NOQA
     module = sys.modules[__name__]
-    seen = set(['numpy', 'matplotlib', 'scipy', 'pyflann', 'sklearn', 'skimage', 'cv2'])
+    seen = set(['numpy', 'matplotlib', 'scipy', 'pyflann', 'skimage', 'cv2'])
 
     hs2_basic = set(['draw_func2', 'params', 'mc2'])
     python_basic = set(['os', 'sys', 'warnings', 'inspect', 'copy', 'imp', 'types'])

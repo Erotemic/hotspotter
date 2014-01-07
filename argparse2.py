@@ -3,25 +3,45 @@ import multiprocessing
 import argparse
 
 DEBUG = False
+#DEBUG = True
+
+
+def switch_sanataize(switch):
+    if isinstance(switch, str):
+        dest = switch.strip('-').replace('-', '_')
+    else:
+        if isinstance(switch, tuple):
+            switch = switch
+        elif isinstance(switch, list):
+            switch = tuple(switch)
+        dest = switch[0].strip('-').replace('-', '_')
+    return dest, switch
 
 
 class ArgumentParser2(object):
     'Wrapper around argparse.ArgumentParser with convinence functions'
     def __init__(self, parser):
         self.parser = parser
-        self.add_arg = parser.add_argument
+        self._add_arg = parser.add_argument
+
+    def add_arg(self, switch, *args, **kwargs):
+        #print('[argparse2] add_arg(%r) ' % (switch,))
+        if isinstance(switch, tuple):
+            args = tuple(list(switch) + list(args))
+            return self._add_arg(*args, **kwargs)
+        else:
+            return self._add_arg(switch, *args, **kwargs)
 
     def add_meta(self, switch, type, default=None, help='', **kwargs):
-        dest = switch.strip('-').replace('-', '_')
+        #print('[argparse2] add_meta()')
+        dest, switch = switch_sanataize(switch)
         self.add_arg(switch, metavar=dest, type=type, default=default, help=help, **kwargs)
 
-    def add_flag(self, switch, default=False, *args, **kwargs):
+    def add_flag(self, switch, default=False, **kwargs):
+        #print('[argparse2] add_flag()')
         action = 'store_false' if default else 'store_true'
-        dest = switch.strip('-').replace('-', '_')
-        self.add_arg(switch, dest=dest, action=action, default=default, *args, **kwargs)
-
-    def add_var(self, switch, **kwargs):
-        self.add_meta(switch, None, *args, **kwargs)
+        dest, switch = switch_sanataize(switch)
+        self.add_arg(switch, dest=dest, action=action, default=default, **kwargs)
 
     def add_int(self, switch, *args, **kwargs):
         self.add_meta(switch, int,  *args, **kwargs)
@@ -56,11 +76,12 @@ def main_argparse(parser2):
     parser2 = parser2.add_argument_group('Main')
     parser2.add_flag('--autoquery')
     parser2.add_intlist('--query', default=[], help='query chip-id to investigate')
+    parser2.add_intlist('--txs', default=[], help='investigate match to top x of querys')
     parser2.add_int('--qcid', help='query chip-id to investigate', nargs='*')
     parser2.add_intlist('--ocid', help='query chip-id to investigate')
     parser2.add_int('--histid', help='history id (hard cases)')
-    parser2.add_intlist('--r', help='view row')
-    parser2.add_intlist('--c', help='view col')
+    parser2.add_intlist(('--rows', '-r'), help='view row')
+    parser2.add_intlist(('--cols', '-c'), help='view col')
     parser2.add_flag('--nopresent')
     parser2.add_flag('--save-figures')
     parser2.add_flag('--noannote')
@@ -69,8 +90,6 @@ def main_argparse(parser2):
 
 def dev_argparse(parser2):
     parser2 = parser2.add_argument_group('Dev')
-    # Misc
-    parser2.add_flag('--export-qon')
     # Testing flags
     parser2.add_flag('--test-vsmany')
     parser2.add_flag('--test-vsone')
@@ -82,7 +101,7 @@ def dev_argparse(parser2):
     parser2.add_flag('--printoff')
     parser2.add_flag('--horiz', True)
     parser2.add_flag('--darken')
-    parser2.add_str('--tests',  [], 'integer or test name', nargs='*')
+    parser2.add_str(('--tests', '--test', '-t'),  [], 'integer or test name', nargs='*')
     # View Directories
     parser2.add_flag('--vrd')
     parser2.add_flag('--vcd')
@@ -110,6 +129,10 @@ def behavior_argparse(parser2):
     parser2.add_int('--num-procs', num_cpus, num_proc_help)
     parser2.add_flag('--serial', help='Forces num_procs=1')
     parser2.add_flag('--strict', help='Force failure in iffy areas')
+    parser2.add_flag('--nosteal', help='GUI will not steal stdout')
+    parser2.add_flag('--noshare', help='GUI will not share stdout')
+    parser2.add_flag('--nogui', help='Will not start the gui')
+    parser2.add_flag('--withexif', help='Reads EXIF data')
 
 
 def cfg_argparse(parser2):
@@ -149,6 +172,7 @@ def cfg_argparse(parser2):
 def cache_argparse(parser2):
     # Cache flags
     parser2 = parser2.add_argument_group('Cache')
+    parser2.add_flag(('--delete-cache', '--dc'))
     parser2.add_flag('--nocache-db', help='forces user to specify database directory')
     parser2.add_flag('--nocache-chips')
     parser2.add_flag('--nocache-query')
@@ -179,8 +203,10 @@ def args_postprocess(args):
 
 def fix_args_shortnames(args):
     import params
-    if args.dbdir is None and args.db is not None:
-        # The shortname is specified
+    #print('[argparse2] fix_args_shortnames(): %r' % args.db)
+    #print('[argparse2] mapping %r to %r' % (args.db, args.dbdir))
+    # The shortname is specified
+    if (args.dbdir is None) and (args.db is not None):
         try:
             args.dbdir = params.dev_databases[args.db]
         except KeyError:
@@ -191,6 +217,7 @@ def fix_args_shortnames(args):
         args.db = inverse_dev_databases[args.dbdir]
     except KeyError:
         pass
+    #print('[argparse2] mapped %r to %r' % (args.db, args.dbdir))
     return args
 
 

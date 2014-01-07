@@ -14,6 +14,11 @@ import DataStructures as ds
 import _tpl.extern_feat as extern_feat
 from Parallelize import parallel_compute
 
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
+
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
@@ -85,8 +90,9 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
     # Debug loading (seems to use lots of memory)
     print('\n')
     try:
-        make_fmt_str = helpers.make_progress_fmt_str
-        fmt_str = make_fmt_str(len(feat_fpath_list), lbl='[fc2] Loading feature: ')
+        nFeats = len(feat_fpath_list)
+        prog_label = '[fc2] Loading feature: '
+        mark_progress = helpers.progress_func(nFeats, prog_label)
         for count, feat_path in enumerate(feat_fpath_list):
             try:
                 npz = np.load(feat_path, mmap_mode=None)
@@ -100,7 +106,7 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
             npz.close()
             kpts_list.append(kpts)
             desc_list.append(desc)
-            sys.stdout.write(fmt_str % (count + 1))
+            mark_progress(count)
         print('')
         print('[fc2] Finished load of individual kpts and desc')
     except MemoryError:
@@ -115,12 +121,13 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
     return kpts_list, desc_list
 
 
+# Maps a preference string into a function
 feat_type2_precompute = {
     'hesaff+sift': extern_feat.precompute_hesaff,
-    'harris+sift': extern_feat.precompute_harris,
-    'mser+sift': extern_feat.precompute_mser, }
+}
 
 
+@profile
 def _load_features_individualy(hs, cx_list):
     use_cache = not hs.args.nocache_feats
     feat_cfg = hs.prefs.feat_cfg
@@ -135,10 +142,7 @@ def _load_features_individualy(hs, cx_list):
     # Compute features in parallel, saving them to disk
     kwargs_list = [feat_cfg.get_dict_args()] * len(rchip_fpath_list)
     precompute_args = [rchip_fpath_list, feat_fpath_list, kwargs_list]
-    num_procs = hs.args.num_procs
-    if len(cx_list) < num_procs / 2:
-        num_procs = 1  # Hack for small amount of tasks
-    pfc_kwargs = {'num_procs': num_procs, 'lazy': use_cache}
+    pfc_kwargs = {'num_procs': hs.args.num_procs, 'lazy': use_cache}
     precompute_fn = feat_type2_precompute[feat_cfg.feat_type]
     parallel_compute(precompute_fn, precompute_args, **pfc_kwargs)
     # Load precomputed features sequentially
@@ -164,6 +168,7 @@ def _load_features_bigcache(hs, cx_list):
     return kpts_list, desc_list
 
 
+@profile
 def load_features(hs, cx_list=None, **kwargs):
     print('\n=============================')
     print('[fc2] Precomputing and loading features: %r' % hs.get_db_name())

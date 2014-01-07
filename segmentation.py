@@ -8,12 +8,13 @@ import fileio as io
 
 DEBUG_SEGM = False
 
-def reload_module():
-    import imp, sys
-    print('[seg] Reloading: '+__name__)
-    imp.reload(sys.modules[__name__])
+
 def rrr():
-    reload_module()
+    import imp
+    import sys
+    print('[seg] Reloading: ' + __name__)
+    imp.reload(sys.modules[__name__])
+
 
 def printDBG(msg):
     if DEBUG_SEGM:
@@ -40,7 +41,7 @@ def resize_img_and_roi(img_fpath, roi_, new_size=None, sqrt_area=400.0):
             return (int(round(wt)), int(round(ht)))
         new_size_ = _resz(rw_, rh_)
     else:
-        new_size_ = new_size 
+        new_size_ = new_size
     # Get Scale Factors
     fx = new_size_[0] / rw_
     fy = new_size_[1] / rh_
@@ -124,14 +125,51 @@ def test_clean_mask():
 # grabcut_mode = cv2.GC_EVAL
 # grabcut_mode = cv2.GC_INIT_WITH_RECT
 # cv2.GC_BGD, cv2.GC_PR_BGD, cv2.GC_PR_FGD, cv2.GC_FGD
+try:
+    profile
+except NameError:
+    profile = lambda func: func
+
+
+@profile
+def grabcut(rgb_chip):
+    (h, w) = rgb_chip.shape[0:2]
+    _mask = np.zeros((h, w), dtype=np.uint8)  # Initialize: mask
+    # Set inside to cv2.GC_PR_FGD (probably forground)
+    _mask[ :, :] = cv2.GC_PR_FGD
+    # Set border to cv2.GC_BGD (definitely background)
+    _mask[ 0, :] = cv2.GC_BGD
+    _mask[-1, :] = cv2.GC_BGD
+    _mask[:,  0] = cv2.GC_BGD
+    _mask[:, -1] = cv2.GC_BGD
+    # Grab Cut Parameters
+    rect = (0, 0, w, h)
+    num_iters = 5
+    mode = cv2.GC_INIT_WITH_MASK
+    bgd_model = np.zeros((1, 13 * 5), np.float64)
+    fgd_model = np.zeros((1, 13 * 5), np.float64)
+    # Grab Cut Execution
+    cv2.grabCut(rgb_chip, _mask, rect, bgd_model, fgd_model, num_iters, mode=mode)
+    is_forground = (_mask == cv2.GC_FGD) + (_mask == cv2.GC_PR_FGD)
+    chip_mask = np.where(is_forground, 255, 0).astype('uint8')
+    # Crop
+    chip_mask = clean_mask(chip_mask)
+    chip_mask = np.array(chip_mask, np.float) / 255.0
+    # Mask value component of HSV space
+    chip_hsv = cv2.cvtColor(rgb_chip, cv2.COLOR_RGB2HSV)
+    chip_hsv = np.array(chip_hsv, dtype=np.float) / 255.0
+    chip_hsv[:, :, 2] *= chip_mask
+    chip_hsv = np.array(np.round(chip_hsv * 255.0), dtype=np.uint8)
+    seg_chip = cv2.cvtColor(chip_hsv, cv2.COLOR_HSV2RGB)
+    return seg_chip
 
 
 def segment(img_fpath, roi_, new_size=None):
     'Runs grabcut'
     printDBG('[segm] segment(img_fpath=%r, roi=%r)>' % (img_fpath, roi_))
     num_iters = 5
-    bgd_model = np.zeros((1,13*5),np.float64)
-    fgd_model = np.zeros((1,13*5),np.float64)
+    bgd_model = np.zeros((1, 13 * 5), np.float64)
+    fgd_model = np.zeros((1, 13 * 5), np.float64)
     mode = cv2.GC_INIT_WITH_MASK
     # Initialize
     # !!! CV2 READS (H,W) !!!
@@ -143,18 +181,18 @@ def segment(img_fpath, roi_, new_size=None):
     # WH Safe
     tlbr = algos.xywh_to_tlbr(roi_resz, (img_w, img_h))  # Rectangle ROI
     (x1, y1, x2, y2) = tlbr
-    rect = tuple(roi_resz)                               # Initialize: rect 
+    rect = tuple(roi_resz)                               # Initialize: rect
     printDBG(' * rect=%r' % (rect,))
     printDBG(' * tlbr=%r' % (tlbr,))
     # WH Unsafe
     _mask = np.zeros((img_h,img_w), dtype=np.uint8) # Initialize: mask
-    _mask[y1:y2, x1:x2] = cv2.GC_PR_FGD             # Set ROI to cv2.GC_PR_FGD 
+    _mask[y1:y2, x1:x2] = cv2.GC_PR_FGD             # Set ROI to cv2.GC_PR_FGD
     # Grab Cut
     tt = helpers.Timer(' * cv2.grabCut()', verbose=DEBUG_SEGM)
-    cv2.grabCut(img_resz, _mask, rect, bgd_model, fgd_model, num_iters, mode=mode) 
+    cv2.grabCut(img_resz, _mask, rect, bgd_model, fgd_model, num_iters, mode=mode)
     tt.toc()
     img_mask = np.where((_mask==cv2.GC_FGD) + (_mask==cv2.GC_PR_FGD),255,0).astype('uint8')
-    # Crop 
+    # Crop
     chip      = img_resz[y1:y2, x1:x2]
     chip_mask = img_mask[y1:y2, x1:x2]
     chip_mask = clean_mask(chip_mask)

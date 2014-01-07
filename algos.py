@@ -10,9 +10,9 @@ import textwrap
 import matplotlib.pyplot as plt
 # Scientific
 import pyflann
-import sklearn.decomposition
-import sklearn.preprocessing as sklpreproc
-import sklearn
+#import sklearn.decomposition
+#import sklearn.preprocessing as sklpreproc
+#import sklearn
 import numpy as np
 import scipy.sparse as spsparse
 # Hotspotter
@@ -22,6 +22,12 @@ import helpers
 # Toggleable printing
 print = __builtin__.print
 print_ = sys.stdout.write
+
+
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
 
 
 def print_on():
@@ -45,6 +51,89 @@ def rrr():
     import imp
     print('[algos] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
+
+
+def L1(hist1, hist2):
+    return np.sum(np.abs(hist1 - hist2))
+
+
+def L2(hist1, hist2):
+    return np.sqrt(np.sum(np.abs(hist1 - hist2) ** 2))
+
+
+def hist_isect(hist1, hist2):
+    numer = (np.vstack([hist1, hist2])).min(0).sum()
+    denom = hist2.sum()
+    hisect_dist = 1 - (numer / denom)
+    return hisect_dist
+
+
+def emd(sift1, sift2):
+    return -1
+    """
+    earth mover's distance by robjects(lpSovle::lp.transport)
+    sift1 = np.random.rand(128)
+    sift2 = np.random.rand(128)'
+    require: lpsolve55-5.5.0.9.win32-py2.7.exe
+    https://github.com/andreasjansson/python-emd
+    http://www.cs.huji.ac.il/~ofirpele/FastEMD/code/
+    http://www.cs.huji.ac.il/~ofirpele/publications/ECCV2008.pdf
+    """
+    # Setup R environment
+    if sys.platform == 'win32':
+        os.environ['RHOME'] = r'C:\Program Files\R'
+    import rpy2.robjects as robjects
+    #import rpy2.interactive as r
+    from rpy2.robjects.packages import importr
+    from rpy2.robjects import r
+    importr("utils")
+    r('install.packages("lpSolve")')
+    # Build pairwise difference matrix
+    len1 = len(sift1)
+    len2 = len(sift2)
+    dist = np.zeros(len1 * len2)
+    for i in xrange(len1):
+        for j in xrange(len2):
+            dist[i * len2 + j] = np.abs(sift1[i] - sift1[j])
+    # import lp.transport(R)
+    robjects.r['library']('lpSolve')
+    transport = robjects.r['lp.transport']
+    # distance vector to distance matrix
+    costs = robjects.r['matrix'](robjects.FloatVector(dist),
+                                 nrow=len(sift1), ncol=len(sift2), byrow=True)
+    row_signs = ["<"] * len1
+    row_rhs = robjects.FloatVector(sift1)
+    col_signs = [">"] * len2
+    col_rhs = robjects.FloatVector(sift2)
+
+    t = transport(costs, "min", row_signs, row_rhs, col_signs, col_rhs)
+    flow = t.rx2('solution')
+
+    dist = dist.reshape(len(sift1), len(sift2))
+    flow = np.array(flow)
+    work = np.sum(flow * dist)
+    emd = work / np.sum(flow)
+    return emd
+
+#def earthmovers(hist1, hist2, h_bins, s_bins):
+##Define number of rows
+#numRows = h_bins * s_bins
+#sig1 = cv.CreateMat(numRows, 3, cv.CV_32FC1)
+#sig2 = cv.CreateMat(numRows, 3, cv.CV_32FC1)
+#for h in xrange(h_bins):
+    #for s in xrange(s_bins):
+        #bin_val = cv.QueryHistValue_2D(hist1, h, s)
+        #cv.Set2D(sig1, h * s_bins + s, 0, cv.Scalar(bin_val))
+        #cv.Set2D(sig1, h * s_bins + s, 1, cv.Scalar(h))
+        #cv.Set2D(sig1, h * s_bins + s, 2, cv.Scalar(s))
+
+        #bin_val = cv.QueryHistValue_2D(hist2, h, s)
+        #cv.Set2D(sig2, h * s_bins + s, 0, cv.Scalar(bin_val))
+        #cv.Set2D(sig2, h * s_bins + s, 1, cv.Scalar(h))
+        #cv.Set2D(sig2, h * s_bins + s, 2, cv.Scalar(s))
+
+##This is the important line were the OpenCV EM algorithm is called
+#return cv.CalcEMD2(sig1,sig2,cv.CV_DIST_L2)
 
 
 def xywh_to_tlbr(roi, img_wh):
@@ -217,11 +306,12 @@ def __tune():
 #pyflann.set_distance_type('hellinger', order=0)
 
 def whiten(data):
-    'wrapper around sklearn'
-    pca = sklearn.decomposition.PCA(copy=True, n_components=None, whiten=True)
-    pca.fit(data)
-    data_out = pca.transform(data)
-    return data_out
+    #'wrapper around sklearn'
+    #pca = sklearn.decomposition.PCA(copy=True, n_components=None, whiten=True)
+    #pca.fit(data)
+    #data_out = pca.transform(data)
+    #return data_out
+    return data
 
 
 def norm_zero_one(data):
@@ -239,8 +329,8 @@ def plot_clusters(data, datax2_clusterx, clusters, num_pca_dims=3,
     import draw_func2 as df2
     data_dims = data.shape[1]
     num_pca_dims = min(num_pca_dims, data_dims)
-    pca = sklearn.decomposition.PCA(copy=True, n_components=num_pca_dims,
-                                    whiten=whiten).fit(data)
+    #pca = sklearn.decomposition.PCA(copy=True, n_components=num_pca_dims,
+                                    #whiten=whiten).fit(data)
     pca_data = pca.transform(data)
     pca_clusters = pca.transform(clusters)
     K = len(clusters)
@@ -491,6 +581,7 @@ def precompute_akmeans(data, num_clusters, max_iters=100,
     return (datax2_clusterx, clusters)
 
 
+@profile
 def precompute_flann(data, cache_dir=None, uid='', flann_params=None,
                      force_recompute=False):
     ''' Tries to load a cached flann index before doing anything'''

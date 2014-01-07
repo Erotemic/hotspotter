@@ -5,11 +5,15 @@ import sys
 import re
 # HotSpotter
 import helpers
-from helpers import tic, toc
 import dev
 import DataStructures as ds
 import Config
 import matching_functions as mf
+
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
 
 # Toggleable printing
 print = __builtin__.print
@@ -49,20 +53,23 @@ def query_dcxs(hs, qcx, dcxs, query_cfg=None, dochecks=True, **kwargs):
     if dochecks and query_cfg is None:
         query_cfg = Config.default_vsmany_cfg(hs, **kwargs)
         #query_cfg = hs.prefs.query_cfg
-    query_uid = ''.join(query_cfg.get_uid('noCHIP'))
+    #query_uid = ''.join(query_cfg.get_uid('noCHIP'))
+    query_uid = ''.join(query_cfg.get_uid())
     feat_uid = ''.join(query_cfg._feat_cfg.get_uid())
-    query_hist_id = (query_uid, feat_uid)
+    query_hist_id = (feat_uid, query_uid)
     if dochecks:
         if hs.query_history[-1][0] != feat_uid:
-            print('[mc3] need to reload features')
+            print('[mc3] FEAT_UID is different. Need to reload features')
+            print('[mc3] Old: ' + str(hs.query_history[-1][0]))
+            print('[mc3] New: ' + str(feat_uid))
             hs.unload_cxdata('all')
             hs.refresh_features()
-            hs.query_history.append(query_hist_id)
         elif hs.query_history[-1][1] != query_uid:
-            print('[mc3] need to refresh features')
+            print('[mc3] QUERY_UID is different. Need to refresh features')
+            print('[mc3] Old: ' + str(hs.query_history[-1][1]))
+            print('[mc3] New: ' + str(query_uid))
             hs.refresh_features()
-            hs.query_history.append(query_hist_id)
-        query_uid = ''.join(query_cfg.get_uid())
+        hs.query_history.append(query_hist_id)
         print('[mc3] query_dcxs(): query_uid = %r ' % query_uid)
     result_list = execute_query_safe(hs, query_cfg, [qcx], dcxs, **kwargs)
     res = result_list[0].values()[0]
@@ -115,25 +122,6 @@ def simplify_test_uid(test_uid):
 #----------------------
 # Helper Functions
 #----------------------
-def ensure_nn_index(hs, query_cfg, dcxs):
-    dcxs_ = tuple(dcxs)
-    if not dcxs_ in query_cfg._dcxs2_index:
-        # Make sure the features are all computed first
-        hs.refresh_features(dcxs_)
-        data_index = ds.NNIndex(hs, dcxs)
-        query_cfg._dcxs2_index[dcxs_] = data_index
-    query_cfg._data_index = query_cfg._dcxs2_index[dcxs_]
-
-
-def prequery(hs, query_cfg=None, **kwargs):
-    if query_cfg is None:
-        query_cfg = ds.QueryConfig(hs, **kwargs)
-    if query_cfg.agg_cfg.query_type == 'vsmany':
-        dcxs = hs.indexed_sample_cx
-        ensure_nn_index(hs, query_cfg, dcxs)
-    return query_cfg
-
-
 def load_cached_query(hs, query_cfg, aug_list=['']):
     qcxs = query_cfg._qcxs
     result_list = []
@@ -146,9 +134,36 @@ def load_cached_query(hs, query_cfg, aug_list=['']):
     return result_list
 
 
+def prequery(hs, query_cfg=None, **kwargs):
+    if query_cfg is None:
+        query_cfg = ds.QueryConfig(hs, **kwargs)
+    if query_cfg.agg_cfg.query_type == 'vsmany':
+        dcxs = hs.indexed_sample_cx
+        ensure_nn_index(hs, query_cfg, dcxs)
+    return query_cfg
+
+
+@profile
+def ensure_nn_index(hs, query_cfg, dcxs):
+    dcxs_ = tuple(dcxs)
+    if not dcxs_ in query_cfg._dcxs2_index:
+        # Make sure the features are all computed first
+        # TODO: Separate query config and data
+        print('[mc3] dcxs_ is not in query_cfg cache')
+        print('[mc3] hashstr(dcxs_) = %r' % helpers.hashstr(dcxs_))
+        print('[mc3] REFRESHING FEATURES')
+        hs.refresh_features(dcxs_)
+        data_index = ds.NNIndex(hs, dcxs)
+        query_cfg._dcxs2_index[dcxs_] = data_index
+    else:
+        print('[mc3] dcxs_ is in query_cfg cache')
+    query_cfg._data_index = query_cfg._dcxs2_index[dcxs_]
+
+
 #----------------------
 # Main Query Logic
 #----------------------
+@profile
 def execute_query_safe(hs, query_cfg=None, qcxs=None, dcxs=None, use_cache=True, **kwargs):
     '''Executes a query, performs all checks, callable on-the-fly'''
     print('[mc3] Execute query safe: q%s' % hs.cidstr(qcxs))
@@ -182,39 +197,23 @@ def execute_query_safe(hs, query_cfg=None, qcxs=None, dcxs=None, use_cache=True,
     return result_list
 
 
+@profile
 def execute_query_fast(hs, query_cfg, qcxs, dcxs):
     '''Executes a query and assumes query_cfg has all precomputed information'''
     # Nearest neighbors
-    nn_tt = tic()
     neighbs = mf.nearest_neighbors(hs, qcxs, query_cfg)
-    nn_time = toc(nn_tt)
     # Nearest neighbors weighting and scoring
-    weight_tt = tic()
     weights  = mf.weight_neighbors(hs, neighbs, query_cfg)
-    weight_time = toc(weight_tt)
     # Thresholding and weighting
-    filt_tt = tic()
     nnfiltFILT = mf.filter_neighbors(hs, neighbs, weights, query_cfg)
-    filt_time = toc(filt_tt)
     # Nearest neighbors to chip matches
-    build_tt = tic()
     matchesFILT = mf.build_chipmatches(hs, neighbs, nnfiltFILT, query_cfg)
-    build_time = toc(build_tt)
     # Spatial verification
-    verify_tt = tic()
     matchesSVER = mf.spatial_verification(hs, matchesFILT, query_cfg)
-    verify_time = toc(verify_tt)
     # Query results format
     result_list = [
         mf.chipmatch_to_resdict(hs, matchesSVER, query_cfg),
     ]
-    # Add timings to the results
-    for res in result_list[0].itervalues():
-        res.nn_time     = nn_time
-        res.weight_time = weight_time
-        res.filt_time   = filt_time
-        res.build_time  = build_time
-        res.verify_time = verify_time
     return result_list
 
 

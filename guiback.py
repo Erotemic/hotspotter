@@ -15,6 +15,9 @@ import HotSpotter
 from guitools import drawing, slot_
 from guitools import backblocking as blocking
 
+FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5)
+viz.register_FNUMS(FNUMS)
+
 
 def rrr():
     'Dynamic module reloading'
@@ -107,16 +110,21 @@ class MainWindowBackend(QtCore.QObject):
         kwargs_ = {'use_plot_widget': False}
         back.front = guifront.MainWindowFrontend(back=back, **kwargs_)
         back.selection = None
-        if kwargs_['use_plot_widget']:
-            df2.register_matplotlib_widget(back.front.plotWidget)
+        #if kwargs_['use_plot_widget']:
+            #df2.register_matplotlib_widget(back.front.plotWidget)
         df2.register_qt4_win(back.front)
         # Define default table headers
-        back.imgtbl_headers         =  ['Image Index', 'Image Name', '#Chips']
-        back.imgtbl_editable_flags  =  [False,                False,    False]
-        back.chiptbl_headers        =  ['Chip ID', 'Name', 'Image', '#GT']
-        back.chiptbl_editable_flags =  [False,       True,   False, False]
-        back.restbl_headers         =  ['Rank', 'Confidence', 'Matching Name', 'Chip ID']
-        back.restbl_editable_flags  =  [False,         False,            True,     False]
+        if hs.args.withexif:
+            back.imgtbl_headers   = ['Image Index', 'Image Name', '#Chips', 'EXIF']
+        else:
+            back.imgtbl_headers   = ['Image Index', 'Image Name', '#Chips']
+        back.imgtbl_editable  = []
+        #
+        back.chiptbl_headers  = ['Chip ID', 'Name', 'Image', '#GT', '#kpts', 'Theta', 'ROI (x, y, w, h)']
+        back.chiptbl_editable = ['Name']
+        #
+        back.restbl_headers   = ['Rank', 'Confidence', 'Matching Name', 'Chip ID']
+        back.restbl_editable  = ['Matching Name']
         # connect signals
         back.populateSignal.connect(back.front.populate_tbl)
         back.setEnabledSignal.connect(back.front.setEnabled)
@@ -126,43 +134,53 @@ class MainWindowBackend(QtCore.QObject):
     #------------------------
     # Draw Functions
     #------------------------
+
     @drawing
-    def show_splash(back, fnum=1, view='Nice', **kwargs):
+    def show_splash(back, fnum, view='Nice', **kwargs):
         df2.figure(fnum=fnum, doclf=True, trueclf=True)
         viz.show_splash(fnum=fnum)
         df2.set_figtitle('%s View' % view)
 
     @drawing
     def show_image(back, gx, sel_cxs=[], figtitle='Image View', **kwargs):
-        df2.figure(fnum=1, doclf=True, trueclf=True)
+        fnum = FNUMS['image']
+        df2.figure(fnum=fnum, doclf=True, trueclf=True)
         cx_clicked_func = lambda cx: back.select_gx(gx, cx)
         viz.show_image(back.hs, gx, sel_cxs, cx_clicked_func,
-                       fnum=1, figtitle=figtitle)
+                       fnum=fnum, figtitle=figtitle)
 
     @drawing
     def show_chip(back, cx, **kwargs):
-        df2.figure(fnum=2, doclf=True, trueclf=True)
+        fnum = FNUMS['chip']
+        df2.figure(fnum=fnum, doclf=True, trueclf=True)
         INTERACTIVE_CHIPS = True  # This should always be True
         if INTERACTIVE_CHIPS:
             interact_fn = viz.show_chip_interaction
-            interact_fn(back.hs, cx, fnum=2, figtitle='Chip View')
+            interact_fn(back.hs, cx, fnum=fnum, figtitle='Chip View')
         else:
-            viz.show_chip(back.hs, cx, fnum=2, figtitle='Chip View')
+            viz.show_chip(back.hs, cx, fnum=fnum, figtitle='Chip View')
 
     @drawing
-    def show_query_result(back, res, **kwargs):
-        df2.figure(fnum=3, doclf=True, trueclf=True)
-        if back.hs.prefs.display_cfg.showanalysis:
-            # Define callback for show_analysis
-            res.show_analysis(back.hs, fnum=3, figtitle=' Analysis View')
+    def show_query_result(back, res, tx=None, **kwargs):
+        if tx is not None:
+            fnum = FNUMS['inspect']
+            # Interact with the tx\th top index
+            res.interact_top_chipres(back.hs, tx)
         else:
-            res.show_top(back.hs, fnum=3, figtitle='Query View ')
+            fnum = FNUMS['res']
+            df2.figure(fnum=fnum, doclf=True, trueclf=True)
+            if back.hs.prefs.display_cfg.showanalysis:
+                # Define callback for show_analysis
+                res.show_analysis(back.hs, fnum=fnum, figtitle=' Analysis View')
+            else:
+                res.show_top(back.hs, fnum=fnum, figtitle='Query View ')
 
     @drawing
     def show_single_query(back, res, cx, **kwargs):
         # Define callback for show_analysis
-        df2.figure(fnum=4, doclf=True, trueclf=True)
-        res.interact_chipres(back.hs, cx, fnum=4, figtitle=' Result Inspection View')
+        fnum = FNUMS['inspect']
+        df2.figure(fnum=fnum, doclf=True, trueclf=True)
+        res.interact_chipres(back.hs, cx, fnum=fnum)
 
     #----------------------
     # Work Functions
@@ -210,29 +228,29 @@ class MainWindowBackend(QtCore.QObject):
             back.setEnabledSignal.emit(True)
             back.clear_selection()
             back.update_window_title()
+            back.layout_figures()
         else:
             back.setEnabledSignal.emit(False)
         #back.database_loaded.emit()
 
     def populate_image_table(back):
-        #print('[*back] populate_image_table()')
-        col_headers  = back.imgtbl_headers
-        col_editable = back.imgtbl_editable_flags
+        print('[*back] populate_image_table()')
+        col_headers, col_editable = guitools.make_header_lists(back.imgtbl_headers,
+                                                               back.imgtbl_editable)
         # Populate table with valid image indexes
         gx_list = back.hs.get_valid_gxs()
-        datatup_list = back.hs.get_img_datatupe_list(gx_list)
+        datatup_list = back.hs.get_img_datatup_list(gx_list, header_order=col_headers)
         row_list = range(len(datatup_list))
         back.populateSignal.emit('image', col_headers, col_editable, row_list, datatup_list)
 
     def populate_chip_table(back):
-        #print('[*back] populate_chip_table()')
-        col_headers  = back.chiptbl_headers[:]
-        col_editable = back.chiptbl_editable_flags[:]
+        print('[*back] populate_chip_table()')
         # Add User Properties to headers
         prop_dict = back.hs.tables.prop_dict
         prop_keys = prop_dict.keys()
-        col_headers += prop_keys
-        col_editable += [True] * len(prop_keys)
+        col_headers, col_editable = guitools.make_header_lists(back.chiptbl_headers,
+                                                               back.chiptbl_editable,
+                                                               prop_keys)
         # Populate table with valid image indexes
         cx_list = back.hs.get_valid_cxs()
         # Build lists of column values
@@ -247,8 +265,8 @@ class MainWindowBackend(QtCore.QObject):
         if res is None:
             print('[*back] no results available')
             return
-        col_headers  = back.restbl_headers
-        col_editable = back.restbl_editable_flags
+        col_headers, col_editable = guitools.make_header_lists(back.restbl_headers,
+                                                               back.restbl_editable)
         top_cxs = res.topN_cxs(back.hs, N='all')
         hs = back.hs
         qcx = res.qcx
@@ -307,9 +325,9 @@ class MainWindowBackend(QtCore.QObject):
     @slot_()
     def clear_selection(back, **kwargs):
         back.selection = None
-        back.show_splash(1, 'Image', dodraw=False)
-        back.show_splash(2, 'Chip', dodraw=False)
-        back.show_splash(3, 'Results', **kwargs)
+        back.show_splash(FNUMS['image'], 'Image', dodraw=False)
+        back.show_splash(FNUMS['chip'], 'Chip', dodraw=False)
+        back.show_splash(FNUMS['res'], 'Results', **kwargs)
 
     # Table Click -> Image Table
     @slot_(int)
@@ -348,6 +366,7 @@ class MainWindowBackend(QtCore.QObject):
     def default_preferences(back):
         # TODO: Propogate changes back to back.edit_prefs.ui
         back.hs.default_preferences()
+        back.hs.prefs.save()
 
     # Table Edit -> Change Chip Property
     @slot_(int, str, str)
@@ -380,7 +399,7 @@ class MainWindowBackend(QtCore.QObject):
         elif reply == opt_put[0]:
             put_dir = guitools.select_directory('Select where to put the new database')
         elif reply is None:
-            back.user_info('Aborting new database')
+            back.user_info('No Reply. Aborting new database')
             print('[*back] abort new database()')
             return None
         else:
@@ -418,8 +437,10 @@ class MainWindowBackend(QtCore.QObject):
             # Write to cache and connect if successful
             io.global_cache_write('db_dir', db_dir)
             back.connect_api(hs)
-            back.layout_figures()
+            #back.layout_figures()
         except Exception as ex:
+            import traceback
+            print(traceback.format_exc())
             back.user_info('Aborting open database')
             print('aborting open database')
             print(ex)
@@ -506,7 +527,7 @@ class MainWindowBackend(QtCore.QObject):
     # Action -> Query
     @slot_()
     @blocking
-    def query(back, cid=None):
+    def query(back, cid=None, tx=None):
         #prevBlock = back.front.blockSignals(True)
         print('[**back] query(cid=%r)' % cid)
         cx = back.get_selected_cx() if cid is None else back.hs.cid2_cx(cid)
@@ -527,7 +548,7 @@ class MainWindowBackend(QtCore.QObject):
         back.populate_result_table()
         print(r'[/back] finished query')
         print('')
-        back.show_query_result(res)
+        back.show_query_result(res, tx)
         return res
 
     # Action -> Reselect ROI
@@ -618,6 +639,7 @@ class MainWindowBackend(QtCore.QObject):
         back.hs.update_samples()
         back.hs.refresh_features()
         #back.front.blockSignals(prevBlock)
+        back.populate_chip_table()
         print('')
 
     # Batch -> Precompute Queries
@@ -656,19 +678,22 @@ class MainWindowBackend(QtCore.QObject):
     # Option menu slots
     #--------------------------------------------------------------------------
     # Options -> Layout Figures
-    @slot_()
+    @slot_(rundbg=True)
     @blocking
     def layout_figures(back):
+        print('[back] layout_figures')
+        nCols = 3
+        nRows = 2
         if back.app is not None:
             app = back.app
             screen_rect = app.desktop().screenGeometry()
-            width = screen_rect.width()
+            width  = screen_rect.width()
             height = screen_rect.height()
             dlen = np.sqrt(width ** 2 + height ** 2) / 1.618
         else:
             print('[*back] WARNING: cannot detect screen geometry')
             dlen = 1618
-        df2.present(num_rc=(2, 3), wh=dlen, wh_off=(0, 60))
+        df2.present(num_rc=(nRows, nCols), wh=dlen, wh_off=(0, 60))
 
     # Options -> Edit Preferences
     @slot_()
@@ -698,21 +723,25 @@ class MainWindowBackend(QtCore.QObject):
 
     # Help -> Delete Directory Slots
     @slot_()
-    def delete_computed_dir(back):
-        back.hs.delete_computed_dir()
+    def delete_cache(back):
+        df2.close_all_figures()
+        back.hs.delete_cache()
 
     @slot_()
     def delete_global_prefs(back):
+        df2.close_all_figures()
         back.hs.delete_global_prefs()
 
     @slot_()
     def delete_queryresults_dir(back):
+        df2.close_all_figures()
         back.hs.delete_queryresults_dir()
 
     # Help -> Developer Help
     @slot_()
     @blocking
     def dev_mode(back):
+        steal_again = back.front.return_stdout()
         hs = back.hs    # NOQA
         devmode = True  # NOQA
         print(helpers.indent(str(hs), '[*back.hs] '))
@@ -732,6 +761,8 @@ class MainWindowBackend(QtCore.QObject):
         #print(execstr)
         print('Debugging in IPython. IPython will break gui until you exit')
         exec(execstr)
+        if steal_again:
+            back.front.steal_stdout()
         #back.timer.start()
 
     # Help -> Developer Reload
@@ -740,6 +771,11 @@ class MainWindowBackend(QtCore.QObject):
     def dev_reload(back):
         import dev
         dev.dev_reload()
+        df2.unregister_qt4_win('all')
+        df2.register_qt4_win(back.front)
+
+    def show(back):
+        back.front.show()
 
 
 # Creation function
@@ -747,10 +783,11 @@ def make_main_window(hs=None, app=None):
     #printDBG(r'[*back] make_main_window()')
     back = MainWindowBackend(hs=hs)
     back.app = app
-    back.front.show()
-    back.layout_figures()
-    if app is not None:
-        app.setActiveWindow(back.front)
+    if not hs.args.nogui:
+        back.show()
+        back.layout_figures()
+        if app is not None:
+            app.setActiveWindow(back.front)
     #print('[*back] Finished creating main front\n')
     return back
 

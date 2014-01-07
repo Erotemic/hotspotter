@@ -5,12 +5,16 @@ from itertools import izip
 # Hotspotter
 import DataStructures as ds
 import QueryResult as qr
-#import helpers
-import nn_filters  # NOQA
+import nn_filters
 import spatial_verification2 as sv2
 import voting_rules2 as vr2
 # Scientific
 import numpy as np
+
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
 
 MARK_AFTER = 40
 
@@ -67,6 +71,7 @@ class QueryException(Exception):
 #============================
 # Nearest Neighbors
 #============================
+@profile
 def nearest_neighbors(hs, qcxs, query_cfg):
     'Plain Nearest Neighbors'
     data_index = query_cfg._data_index
@@ -116,16 +121,32 @@ def nearest_neighbors(hs, qcxs, query_cfg):
 #============================
 # Nearest Neighbor weights
 #============================
+
+# TODO: Make a more elegant way of mapping weighting parameters to weighting
+# function. A dict is better than eval, but there may be a better way.
+nnfunc_dict = {
+    'scale':   nn_filters.nn_scale_weight,
+    'roidist': nn_filters.nn_roidist_weight,
+    'recip':   nn_filters.nn_recip_weight,
+    'bursty':  nn_filters.nn_bursty_weight,
+    'lnrat':   nn_filters.nn_lnrat_weight,
+    'lnbnn':   nn_filters.nn_lnbnn_weight,
+    'ratio':   nn_filters.nn_ratio_weight,
+}
+
+
+@profile
 def weight_neighbors(hs, qcx2_nns, query_cfg):
     filt_cfg = query_cfg.filt_cfg
     if not filt_cfg.filt_on:
         return  {}
-    print(''.join(['[mf] Step 2) Weight neighbors: '] + filt_cfg.get_uid()))
+    #SPEEDprint(''.join(['[mf] Step 2) Weight neighbors: '] + filt_cfg.get_uid()))
     nnfilter_list = filt_cfg._nnfilter_list
     filt2_weights = {}
     for nnfilter in nnfilter_list:
-        print('[mf] * computing %s weights' % nnfilter)
-        nnfilter_fn = eval('nn_filters.nn_' + nnfilter + '_weight')
+        #SPEEDprint('[mf] * computing %s weights' % nnfilter)
+        #nnfilter_fn = eval('nn_filters.nn_' + nnfilter + '_weight')
+        nnfilter_fn = nnfunc_dict[nnfilter]
         filt2_weights[nnfilter] = nnfilter_fn(hs, qcx2_nns, query_cfg)
     return filt2_weights
 
@@ -161,6 +182,7 @@ def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw):
     return qfx2_score, qfx2_valid
 
 
+@profile
 def filter_neighbors(hs, qcx2_nns, filt2_weights, query_cfg):
     qcx2_nnfilter = {}
     filt_cfg = query_cfg.filt_cfg
@@ -169,7 +191,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, query_cfg):
     dx2_cx = data_index.ax2_cx
     #printDBG('[mf] unique(dx2_cx) = %r ' % (np.unique(dx2_cx),))
     filt2_tw = filt_cfg._filt2_tw
-    print('[mf] Step 3) Filter neighbors: ' + ''.join(filt_cfg.get_uid()))
+    #SPEEDprint('[mf] Step 3) Filter neighbors: ' + ''.join(filt_cfg.get_uid()))
     mark_progress = mark_progress_quiet if len(qcx2_nns) > MARK_AFTER else mark_progress_silent
     for qcx in qcx2_nns.iterkeys():
         mark_progress()
@@ -197,9 +219,10 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, query_cfg):
 #-----
 #s2coring_func  = [LNBNN, PlacketLuce, TopK, Borda]
 #load_precomputed(cx, query_cfg)
+@profile
 def score_chipmatch(hs, qcx, chipmatch, score_method, query_cfg=None):
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
-    print('[mf] * Scoring chipmatch: %s cx=%r' % (score_method, qcx))
+    #SPEEDprint('[mf] * Scoring chipmatch: %s cx=%r' % (score_method, qcx))
     if score_method == 'csum':
         cx2_score = vr2.score_chipmatch_csum(chipmatch)
     #elif score_method == 'nsum':
@@ -226,6 +249,7 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, query_cfg=None):
 #============================
 # Conversion qfx2 -> cx2
 #============================
+@profile
 def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, query_cfg):
     '''vsmany/vsone counts here. also this is where the filter
     weights and thershold are applied to the matches. Essientally
@@ -287,6 +311,7 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, query_cfg):
 #============================
 # Conversion to cx2 -> qfx2
 #============================
+@profile
 def chipmatch2_neighbors(hs, qcx2_chipmatch, query_cfg):
     raise NotImplemented('almost')
     qcx2_nns = {}
@@ -369,6 +394,7 @@ def _precompute_topx2_dlen_sqrd(cx2_rchip_size, cx2_kpts, cx2_fm, topx2_cx,
 #else
 #if not USE_2_to_1:
 #if not use_chip_extent or USE_1_to_2:
+@profile
 def spatial_verification(hs, qcx2_chipmatch, query_cfg):
     sv_cfg = query_cfg.sv_cfg
     if not sv_cfg.sv_on or sv_cfg.xy_thresh is None:
@@ -501,6 +527,7 @@ def load_resdict(hs, qcxs, query_cfg, aug=''):
 
 
 # qcx2_chipmatch = matchesSVER
+@profile
 def chipmatch_to_resdict(hs, qcx2_chipmatch, query_cfg, aug=''):
     print('[mf] Step 6) Convert chipmatch -> res')
     real_uid, title_uid = special_uids(query_cfg, aug)

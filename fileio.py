@@ -14,6 +14,7 @@ import params
 import numpy as np
 import cv2
 from PIL import Image
+from PIL.ExifTags import TAGS
 #import skimage
 
 # Toggleable printing
@@ -101,17 +102,17 @@ def load_pkl(fpath):
 
 
 ext2_load_func = {
-    '.npy' : load_npy,
-    '.npz' : load_npz,
+    '.npy': load_npy,
+    '.npz': load_npz,
     '.cPkl': load_cPkl,
-    '.pkl' : load_pkl}
+    '.pkl': load_pkl}
 
 
 ext2_save_func = {
-    '.npy' : save_npy,
-    '.npz' : save_npz,
+    '.npy': save_npy,
+    '.npz': save_npz,
     '.cPkl': save_cPkl,
-    '.pkl' : save_pkl}
+    '.pkl': save_pkl}
 
 
 def debug_smart_load(dpath='', fname='*', uid='*', ext='*'):
@@ -204,14 +205,15 @@ def __smart_load(fpath, verbose, allow_alternative=False, can_fail=True, **kwarg
             if verbose > 1:
                 print('[io] loading ' + filesize_str(fpath))
             data = load_func(fpath)
+            if verbose:
+                print('[io]... loaded data')
         except Exception as ex:
             if verbose:
-                print('[io] ! Exception will loading %r' % fpath)
+                print('[io] ! Exception while loading %r' % fpath)
                 print('[io] caught ex=%r' % (ex,))
             data = None
             if not can_fail:
                 raise
-        print('[io]... loaded data')
     if data is None:
         if verbose:
             print('[io]... did not load %r' % fpath)
@@ -281,6 +283,32 @@ def filesize_str(fpath):
     return 'filesize(%r)=%s' % (fname, mb_str)
 
 
+def read_exif(fpath):
+    pil_image = Image.open(fpath)
+    if hasattr(pil_image, '_getexif'):
+        info_ = pil_image._getexif()
+        if info_ is None:
+            exif = {}
+        else:
+            exif = dict([(TAGS.get(key, key), val) for key, val in info_.iteritems()])
+    else:
+        exif = {}
+    del pil_image
+    return exif
+
+
+def read_exif_list(fpath_list):
+    def _gen(fpath_list):
+        # Exif generator
+        nGname = len(fpath_list)
+        mark_progress = helpers.progress_func(nGname, '[io] Load Image EXIF', 16)
+        for count, fpath in enumerate(fpath_list):
+            mark_progress(count)
+            yield read_exif(fpath)
+    exif_list = [exif for exif in _gen(fpath_list)]
+    return exif_list
+
+
 def imread_cv2(img_fpath):
     try:
         img = cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR)
@@ -343,6 +371,7 @@ def global_cache_write(cache_id, newdir):
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
+    """
     data1 = (255 * np.random.rand(10000, 10000)).astype(np.uint8)
     data2 = np.random.rand(10000, 10000).astype(np.float64)
     data3 = (255 * np.random.rand(10000, 10000)).astype(np.int32)
@@ -457,3 +486,4 @@ if __name__ == '__main__':
             npz2 = np.load(file_, mmap_mode=None)
             data2 = npz['arr_0']
             npz2.close()
+    """

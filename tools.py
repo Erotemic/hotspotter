@@ -29,6 +29,15 @@ def index_of(item, array):
     return np.where(array == item)[0][0]
 
 
+def safe_listget(list_, index, func=lambda x: x, default='?'):
+    if index >= len(list_):
+        return default
+    ret = list_[index]
+    if ret is None:
+        return default
+    return func(ret)
+
+
 def class_iter_input(func):
     def iter_wrapper(self, input_, *args, **kwargs):
         is_scalar = not np.iterable(input_) or is_str(input_)
@@ -44,8 +53,7 @@ def class_iter_input(func):
 def debug_exception(func):
     def ex_wrapper(*args, **kwargs):
         try:
-            result = func(*args, **kwargs)
-            return result
+            return func(*args, **kwargs)
         except Exception as ex:
             print('[tools] ERROR: %s(%r, %r)' % (func.func_name, args, kwargs))
             print('[tools] ERROR: %r' % ex)
@@ -105,7 +113,6 @@ else:
         return var.dtype.type if isinstance(var, np.ndarray) else type(var)
 
 
-
 def is_type(var, valid_types):
     'Checks for types accounting for numpy'
     #printDBG('checking type var=%r' % (var,))
@@ -122,23 +129,24 @@ def is_int(var):
 
 
 def is_float(var):
-    return type(var) in VALID_FLOAT_TYPES
+    return is_type(var, VALID_FLOAT_TYPES)
 
 
 def is_str(var):
-    return type(var) in VALID_FLOAT_TYPES
+    return isinstance(var, str)
+    #return is_type(var, VALID_STRING_TYPES)
 
 
 def is_bool(var):
     return isinstance(var, bool)
-    #return type(var) in VALID_BOOLEAN_TYPES
+    #return is_type(var, VALID_BOOLEAN_TYPES)
 
 
 def is_dict(var):
     return isinstance(var, dict)
-    #return type(var) in VALID_BOOLEAN_TYPES
+    #return is_type(var, VALID_BOOLEAN_TYPES)
 
 
 def is_list(var):
     return isinstance(var, list)
-    #return type(num) in VALID_LIST_TYPES
+    #return is_type(var, VALID_LIST_TYPES)

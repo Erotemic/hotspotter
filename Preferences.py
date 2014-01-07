@@ -154,7 +154,6 @@ class Pref(PrefNode):
 
     # -------------------
     # Attribute Setters
-
     def toggle(self, key):
         'Toggles a boolean key'
         val = self[key]
@@ -246,7 +245,6 @@ class Pref(PrefNode):
 
     # -------------------
     # Attribute Getters
-
     def value(self):
         # Return the wrapper in all its glory
         if self._intern.value == PrefNode:
@@ -286,7 +284,6 @@ class Pref(PrefNode):
 
     #----------------
     # Disk caching
-
     def to_dict(self, split_structs_bit=False):
         '''Converts prefeters to a dictionary.
         Children Pref can be optionally separated'''
@@ -302,7 +299,6 @@ class Pref(PrefNode):
         return pref_dict
 
     def save(self):
-        print('[pref.save()]')
         'Saves prefs to disk in dict format'
         if self._intern.fpath in ['', None]:
             if self._tree.parent is not None:
@@ -311,7 +307,7 @@ class Pref(PrefNode):
             printDBG('[save] I cannot be saved. I have no parents.')
             return False
         with open(self._intern.fpath, 'w') as f:
-            printDBG('[save] Saving to ' + self._intern.fpath)
+            print('[pref] Saving to ' + self._intern.fpath)
             pref_dict = self.to_dict()
             cPickle.dump(pref_dict, f)
         return True
@@ -337,7 +333,6 @@ class Pref(PrefNode):
 
     #----------------------
     # String representation
-
     def __str__(self):
         if self._intern.value != PrefNode:
             ret = super(PrefNode, self).__str__()
@@ -456,7 +451,7 @@ class Pref(PrefNode):
                             continue
                 new_val = cast_order(str(qvar.toString()))
             if isinstance(self._intern.value, bool):
-                new_val = bool(qvar.toBool()[0])
+                new_val = bool(qvar.toBool())
             elif isinstance(self._intern.value, int):
                 new_val = int(qvar.toInt()[0])
             elif isinstance(self._intern.value, float):
@@ -484,6 +479,8 @@ class Pref(PrefNode):
              # save to disk after modifying data
             print('[pref] qt_set_leaf_data: new_val=%r' % new_val)
             print('[pref] qt_set_leaf_data: type(new_val)=%r' % type(new_val))
+            # TODO Add ability to set a callback function when certain
+            # preferences are changed.
             return self._tree.parent.pref_update(self._intern.name, new_val)
         return 'PrefNotEditable'
 
@@ -642,10 +639,8 @@ class Ui_editPrefSkel(object):
         self.defaultPrefsBUT = QtGui.QPushButton(editPrefSkel)
         self.defaultPrefsBUT.setObjectName(_fromUtf8("defaultPrefsBUT"))
         self.horizontalLayout.addWidget(self.defaultPrefsBUT)
-
         # Buttons are a child of the View
         self.verticalLayout.addLayout(self.horizontalLayout)
-
         self.retranslateUi(editPrefSkel)
         QtCore.QMetaObject.connectSlotsByName(editPrefSkel)
 

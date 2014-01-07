@@ -184,7 +184,7 @@ class SpatialVerifyConfig(ConfigBase):
         super(SpatialVerifyConfig, sv_cfg).__init__(name='sv_cfg')
         sv_cfg.scale_thresh_low = .5
         sv_cfg.scale_thresh_high = 2
-        sv_cfg.xy_thresh = .002
+        sv_cfg.xy_thresh = .01
         sv_cfg.nShortlist = 1000
         sv_cfg.prescore_method = 'csum'
         sv_cfg.use_chip_extent = False
@@ -313,8 +313,8 @@ class FeatureConfig(ConfigBase):
         super(FeatureConfig, feat_cfg).__init__(name='feat_cfg')
         feat_cfg.feat_type = 'hesaff+sift'
         feat_cfg.whiten = False
-        feat_cfg.scale_min = 30  # 0    # 30
-        feat_cfg.scale_max = 80  # 9001 # 80
+        feat_cfg.scale_min = 0  # 0    # 30 # TODO: Put in pref types here
+        feat_cfg.scale_max = 90001  # 9001 # 80
         if hs is not None:
             feat_cfg._chip_cfg = hs.prefs.chip_cfg  # Features depend on chips
         else:
@@ -330,6 +330,10 @@ class FeatureConfig(ConfigBase):
     def get_uid(feat_cfg):
         if feat_cfg._chip_cfg is None:
             raise Exception('Chip config is required')
+        if feat_cfg.scale_min < 0:
+            feat_cfg.scale_min = None
+        if feat_cfg.scale_max < 0:
+            feat_cfg.scale_max = None
         feat_uids = ['_FEAT(']
         feat_uids += feat_cfg.feat_type
         feat_uids += [',white'] * feat_cfg.whiten

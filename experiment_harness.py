@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import itertools
 import textwrap
 import match_chips3 as mc3
-import DataStructures as ds
+import Config
 import dev
 import draw_func2 as df2
 import fileio as io
@@ -11,7 +11,7 @@ import helpers as helpers
 import numpy as np
 import sys
 from os.path import join
-import _test_configurations as _testcfgs
+import experiment_configs as _testcfgs
 
 # What are good ways we can divide up FLANN indexes instead of having one
 # monolithic index? Divide up in terms of properties of the database chips
@@ -71,24 +71,24 @@ def print_test_results(test_results):
 #---------------
 # Display Test Results
 #-----------
-# Run configuration for each qon
-def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
+# Run configuration for each query
+def get_test_results(hs, qcx_list, query_cfg, cfgx=0, nCfg=1,
                      force_load=False):
     print('[harn] get_test_results(): %r' % query_cfg.get_uid())
     query_uid = query_cfg.get_uid()
     hs_uid    = hs.get_db_name()
-    qon_uid   = helpers.hashstr(repr(tuple(qon_list)))
-    test_uid  = hs_uid + query_uid + qon_uid
-    cache_dir = join(hs.dirs.cache_dir, 'test_harness_results')
+    qcxs_uid   = helpers.hashstr(repr(tuple(qcx_list)))
+    test_uid  = hs_uid + query_uid + qcxs_uid
+    cache_dir = join(hs.dirs.cache_dir, 'experiment_harness_results')
     io_kwargs = dict(dpath=cache_dir, fname='test_results', uid=test_uid, ext='.cPkl')
     # High level caching
-    qonx2_bestranks = []
+    qx2_bestranks = []
     #nChips = hs.get_num_chip()
     #nNames = len(hs.tables.nx2_name) - 2
-    nQuery = len(qon_list)
+    nQuery = len(qcx_list)
     #NMultiNames =
     nPrevQ = nQuery * cfgx
-    qonx2_reslist = []
+    qx2_reslist = []
     if  not hs.args.nocache_query and (not force_load):
         test_results = io.smart_load(**io_kwargs)
         if test_results is None:
@@ -97,11 +97,11 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
             print('recaching test_results')
         elif not test_results is None:
             return test_results, [[{0: None}]] * nQuery
-    for qonx, (qcx, ocids, notes) in enumerate(qon_list):
+    for qx, qcx in enumerate(qcx_list):
         print(textwrap.dedent('''
         [harn]----------------
         [harn] TEST %d/%d
-        [harn]----------------''' % (qonx + nPrevQ + 1, nQuery * nCfg)))
+        [harn]----------------''' % (qx + nPrevQ + 1, nQuery * nCfg)))
         gt_cxs = hs.get_other_indexed_cxs(qcx)
         #title = 'q' + hs.cidstr(qcx) + ' - ' + notes
         #print('[harn] title=%r' % (title,))
@@ -109,7 +109,7 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
         res_list = mc3.execute_query_safe(hs, query_cfg, [qcx])
         bestranks = []
         algos = []
-        qonx2_reslist += [res_list]
+        qx2_reslist += [res_list]
         assert len(res_list) == 1
         for qcx2_res in res_list:
             assert len(qcx2_res) == 1
@@ -125,18 +125,18 @@ def get_test_results(hs, qon_list, query_cfg, cfgx=0, nCfg=1,
                 _bestrank = min(gt_ranks)
             bestranks += [_bestrank]
         # record metadata
-        qonx2_bestranks += [bestranks]
-    mat_vals = np.array(qonx2_bestranks)
+        qx2_bestranks += [bestranks]
+    mat_vals = np.array(qx2_bestranks)
     test_results = (mat_vals,)
     # High level caching
     helpers.ensuredir('results')
     io.smart_save(test_results, **io_kwargs)
-    return test_results, qonx2_reslist
+    return test_results, qx2_reslist
 
 
 #-----------
 # Test Each configuration
-def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
+def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     vary_dicts = get_vary_dicts(test_cfg_name_list)
     print('\n*********************\n')
     print('[harn]================')
@@ -144,34 +144,34 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     #vary_dicts = vary_dicts[0]
     varied_params_list = [_ for _dict in vary_dicts for _ in helpers.all_dict_combinations(_dict)]
     # query_cxs, other_cxs, notes
-    qon_list = dev.get_qon_list(hs)
-    cfg_list = [ds.QueryConfig(hs, **_dict) for _dict in varied_params_list]
+    cfg_list = [Config.QueryConfig(hs, **_dict) for _dict in varied_params_list]
     # __NEW_HACK__
     mc3.unify_cfgs(cfg_list)
     # __END_HACK__
     # Preallocate test result aggregation structures
     print('')
     print('[harn] Testing %d different parameters' % len(cfg_list))
-    print('[harn]         %d different chips' % len(qon_list))
+    print('[harn]         %d different chips' % len(qcx_list))
     nCfg = len(cfg_list)
-    nQuery = len(qon_list)
+    nQuery = len(qcx_list)
     rc2_res = np.empty((nQuery, nCfg), dtype=list)
     mat_list = []
+    c = hs.get_arg('cols', [])
     for cfgx, test_cfg in enumerate(cfg_list):
         print(textwrap.dedent('''
         [harn]---------------')
         [harn] TEST_CFG %d/%d'
         [harn]---------------'''  % (cfgx + 1, nCfg)))
-        force_load = cfgx in hs.args.c
-        (mat_vals, ), qonx2_reslist = get_test_results(hs, qon_list, test_cfg,
-                                                       cfgx, nCfg, force_load)
+        force_load = cfgx in c
+        (mat_vals, ), qx2_reslist = get_test_results(hs, qcx_list, test_cfg,
+                                                     cfgx, nCfg, force_load)
         mat_list.append(mat_vals)
-        for qonx, reslist in enumerate(qonx2_reslist):
+        for qx, reslist in enumerate(qx2_reslist):
             assert len(reslist) == 1
             qcx2_res = reslist[0]
             assert len(qcx2_res) == 1
             res = qcx2_res.values()[0]
-            rc2_res[qonx, cfgx] = res
+            rc2_res[qx, cfgx] = res
         # Keep the best results
     print('[harn] Finished testing parameters')
     print('')
@@ -185,12 +185,12 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     _rowxs = np.arange(nQuery + 1).reshape(nQuery + 1, 1) - 1
     lbld_mat = np.hstack([_rowxs, lbld_mat])
     # Build row labels
-    qonx2_lbl = []
-    for qonx in xrange(nQuery):
-        qcx, ocxs, notes = qon_list[qonx]
-        label = 'qonx %d) q%s -- notes=%s' % (qonx, hs.cidstr(qcx), notes)
-        qonx2_lbl.append(label)
-    qonx2_lbl = np.array(qonx2_lbl)
+    qx2_lbl = []
+    for qx in xrange(nQuery):
+        qcx = qcx_list[qx]
+        label = 'qx %d) q%s ' % (qx, hs.cidstr(qcx, notes=True))
+        qx2_lbl.append(label)
+    qx2_lbl = np.array(qx2_lbl)
     # Build col labels
     cfgx2_lbl = []
     for cfgx in xrange(nCfg):
@@ -203,45 +203,46 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     indent = helpers.indent
     print('')
     print('[harn]-------------')
-    print('[harn] queries:\n%s' % '\n'.join(qonx2_lbl))
+    print('[harn] queries:\n%s' % '\n'.join(qx2_lbl))
     #------------
     print('')
     print('[harn]-------------')
     print('[harn] configs:\n%s' % '\n'.join(cfgx2_lbl))
     #------------
-    PRINT_ROW_SCORES = True and (not '--noprintrow' in sys.argv)
+    PRINT_ROW_SCORES = helpers.get_arg_flag('--printrow', False)
     if PRINT_ROW_SCORES:
         print('')
         print('[harn]-------------')
         print('[harn] Scores per query')
         print('[harn]-------------')
-        qonx2_min_rank = []
-        qonx2_argmin_rank = []
+        qx2_min_rank = []
+        qx2_argmin_rank = []
         indent = helpers.indent
-        new_hard_qonx_list = []
-        for qonx in xrange(nQuery):
-            ranks = rank_mat[qonx]
+        new_hard_qx_list = []
+        for qx in xrange(nQuery):
+            ranks = rank_mat[qx]
             min_rank = ranks.min()
             bestCFG_X = np.where(ranks == min_rank)[0]
-            qonx2_min_rank.append(min_rank)
-            qonx2_argmin_rank.append(bestCFG_X)
-            print('[row_score] %3d) %s' % (qonx, qonx2_lbl[qonx]))
+            qx2_min_rank.append(min_rank)
+            qx2_argmin_rank.append(bestCFG_X)
+            print('[row_score] %3d) %s' % (qx, qx2_lbl[qx]))
             print('[row_score] best_rank = %d ' % min_rank)
             print('[row_score] minimizing_configs = %s ' %
                   indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    '))
             if ranks.max() > 0:
-                new_hard_qonx_list += [qonx]
-        print('--- hard qon_list (w.r.t these configs) ---')
-        new_hard_qon_list = []
-        for qonx in new_hard_qonx_list:
+                new_hard_qx_list += [qx]
+        print('--- hard qcx_list (w.r.t these configs) ---')
+        new_hard_qcx_list = []
+        for qx in new_hard_qx_list:
             # New list is in cid format instead of cx format
             # because you should be copying and pasting it
-            qcx, ocxs, notes = qon_list[qonx]
-            notes += ' ranks = ' + str(rank_mat[qonx])
+            notes = ' ranks = ' + str(rank_mat[qx])
+            qcx = qcx_list[qx]
             qcid = hs.tables.cx2_cid[qcx]
-            ocids = hs.tables.cx2_cid[ocxs]
-            new_hard_qon_list += [(qcid, list(ocids), notes)]
-        print('\n'.join(map(repr, new_hard_qon_list)))
+            new_hard_qcx_list += [(qcid, notes)]
+        print('\n'.join(map(repr, new_hard_qcx_list)))
+    else:
+        print('~~~~~~~~ --printrow')
 
     #------------
     def rankscore_str(thresh, nLess, total):
@@ -307,26 +308,27 @@ def test_configurations(hs, qon_list, test_cfg_name_list, fnum=1):
     print('[col_score] --- summary ---')
     print('\n'.join(best_rankscore_summary))
     # Draw results
-    print(hs.args.r)
-    for r, c in itertools.product(hs.args.r, hs.args.c):
+    rciter = itertools.product(hs.get_arg('rows', []),
+                               hs.get_arg('cols', []))
+    for r, c in rciter:
         #print('viewing (r,c)=(%r,%r)' % (r,c))
         res = rc2_res[r, c]
         #res.printme()
         res.show_topN(hs, fnum=fnum)
         fnum += 1
-    print('--remember you have --r and --c available to you')
+    print('--remember you have -r and -c available to you')
 
 if __name__ == '__main__':
     import multiprocessing
-    np.set_printoptions(threshold=5000, linewidth=5000)
+    np.set_printoptions(threshold=5000, linewidth=5000, precision=5)
     multiprocessing.freeze_support()
     print('[harn]-----------')
     print('[harn] main()')
     main_locals = dev.dev_main()
     hs = main_locals['hs']
-    qon_list = main_locals['qon_list']
+    qcx_list = main_locals['qcx_list']
     #test_cfg_name_list = ['vsone_1']
     #test_cfg_name_list = ['vsmany_3456']
     test_cfg_name_list = ['vsmany_srule']
-    test_configurations(hs, qon_list, test_cfg_name_list)
+    test_configurations(hs, qcx_list, test_cfg_name_list)
     exec(df2.present())

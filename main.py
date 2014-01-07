@@ -15,6 +15,12 @@ import argparse2
 args = argparse2.parse_arguments()
 
 
+def dependencies_for_myprogram():
+    # Let pyintaller find these modules
+    from scipy.sparse.csgraph import _validation  # NOQA
+    from scipy.special import _ufuncs_cxx  # NOQA
+
+
 def on_ctrl_c(signal, frame):
     import sys
     print('Caught ctrl+c')
@@ -32,6 +38,36 @@ def signal_set():
     signal.signal(signal.SIGINT, on_ctrl_c)
 
 
+def preload_args_process(args):
+    import helpers
+    import sys
+    # Process relevant args
+    cids = args.query
+    if args.vdd:
+        helpers.vd(args.dbdir)
+        args.vdd = False
+    load_all = args.autoquery or len(cids) > 0
+    if helpers.inIPython() or '--cmd' in sys.argv:
+        args.nosteal = True
+    return load_all, cids
+
+
+def postload_args_process(hs):
+    # --- Run Startup Commands ---
+    # Autocompute all queries
+    if hs.args.autoquery:
+        back.precompute_queries()
+    # Run a query
+    qcid_list = args.query
+    tx_list = args.txs
+    res = None
+    if len(qcid_list) > 0:
+        qcid = qcid_list[0]
+        tx = tx_list[0] if len(tx_list) > 0 else None
+        res = back.query(qcid, tx)
+    return res
+
+
 if __name__ == '__main__':
     # Necessary for windows parallelization
     multiprocessing.freeze_support()
@@ -40,21 +76,17 @@ if __name__ == '__main__':
     import guiback
     import helpers
     print('main.py')
+    # Listen for ctrl+c
     signal_set()
     # Run qt app
     app, is_root = guitools.init_qtapp()
     # Parse arguments
     args = argparse2.fix_args_with_cache(args)
-    # Process relevant args
-    cids = args.query
-    if args.vdd:
-        helpers.vd(args.dbdir)
-        args.vdd = False
+    load_all, cids = preload_args_process(args)
 
     # --- Build HotSpotter API ---
     hs = HotSpotter.HotSpotter(args)
     # Load all data if needed now, otherwise be lazy
-    load_all = hs.args.autoquery or len(cids) > 0
     try:
         hs.load(load_all=load_all)
     except ValueError as ex:
@@ -63,16 +95,10 @@ if __name__ == '__main__':
             raise
     # Create main window only after data is loaded
     back = guiback.make_main_window(hs, app)
-
     # --- Run Startup Commands ---
-    # Autocompute all queries
-    if hs.args.autoquery:
-        back.precompute_queries()
-    if len(cids) > 0:
-            qcid = cids[0]
-            res = back.query(qcid)
+    res = postload_args_process(hs)
     # Connect database to the back gui
-    app.setActiveWindow(back.front)
+    #app.setActiveWindow(back.front)
 
     # Allow for a IPython connection by passing the --cmd flag
     embedded = False

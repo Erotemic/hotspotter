@@ -89,7 +89,7 @@ def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
     ranked_list = []
     for gname in iter(top_gname):
         gname_ = gname.replace('.jpg','')
-        if not gname_ in seen: 
+        if not gname_ in seen:
             seen.add(gname_)
             ranked_list.append(gname_)
     ranked_list2 = [gname.replace('.jpg','') for gname in top_gname]
@@ -98,7 +98,7 @@ def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
     ranked_list_fname = 'ranked_list_' + cx_aug + ground_truth_query + '.txt'
     ranked_list_fpath = join(oxsty_qres_dpath, ranked_list_fname)
     helpers.write_to(ranked_list_fpath, '\n'.join(ranked_list))
-    # execute external mAP code: 
+    # execute external mAP code:
     # ./compute_ap [GROUND_TRUTH] [RANKED_LIST]
     os.chdir(oxford_gt_dir)
 
@@ -110,7 +110,7 @@ def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
                                 ground_truth_query,
                                 filename(ranked_list_fpath)))
         print('Executing: %r' % printable_cmd)
-    else: 
+    else:
         helpers.print_('.')
     args = (compute_ap_exe, ground_truth_query, ranked_list_fpath)
 
@@ -137,7 +137,7 @@ def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
 
 from Printable import DynStruct
 def run_process(args):
-    proc = subprocess.Popen(args, 
+    proc = subprocess.Popen(args,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     toret = DynStruct()
@@ -155,7 +155,7 @@ def execute(cmdstr):
     popen_kwargs = {
     'bufsize'            :     0,
     'executable'         :  None,
-    'stdin'              :  None, 
+    'stdin'              :  None,
     'stdout'             :  None,
     'stderr'             :  None,
     'preexec_fn'         :  None,

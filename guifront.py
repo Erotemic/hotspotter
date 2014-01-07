@@ -3,29 +3,39 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.Qt import (QAbstractItemView, pyqtSignal, Qt)
 import guitools
 import tools
-from guitools import infoslot_ as slot_
+from guitools import slot_
 from guitools import frontblocking as blocking
+import sys
+from _frontend.MainSkel import Ui_mainSkel
 
 IS_INIT = False
+NOSTEAL_OVERRIDE = True
 
 
 def rrr():
     'Dynamic module reloading'
     import imp
-    import sys
     print('[*front] reloading %s' % __name__)
     imp.reload(sys.modules[__name__])
 
 
 class StreamStealer(QtCore.QObject):
-    message = QtCore.pyqtSignal(str)
+    write_ = QtCore.pyqtSignal(str)
     flush_ =  QtCore.pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, stolen=None, share=False):
         super(StreamStealer, self).__init__(parent)
+        if stolen is not None:
+            self.stolen = stolen
+        self.write = self.write_both if share else self.write_gui
 
-    def write(self, message):
-        self.message.emit(str(message))
+    def write_both(self, msg):
+        msg_ = str(msg)
+        self.stolen.write(msg_)
+        self.write_.emit(msg_)
+
+    def write_gui(self, msg):
+        self.write_.emit(str(msg))
 
     def flush(self):
         self.flush_.emit()
@@ -41,7 +51,6 @@ def init_plotWidget(front):
 
 
 def init_ui(front):
-    from _frontend.MainSkel import Ui_mainSkel
     ui = Ui_mainSkel()
     ui.setupUi(front)
     return ui
@@ -89,7 +98,7 @@ def connect_help_signals(front):
     ui.actionView_Global_Dir.triggered.connect(back.view_global_dir)
 
     ui.actionAbout.triggered.connect(msg_event('About', 'hotspotter'))
-    ui.actionDelete_computed_directory.triggered.connect(back.delete_computed_dir)
+    ui.actionDelete_computed_directory.triggered.connect(back.delete_cache)
     ui.actionDelete_global_preferences.triggered.connect(back.delete_global_prefs)
     ui.actionDelete_Precomputed_Results.triggered.connect(back.delete_queryresults_dir)
     ui.actionDev_Mode_IPython.triggered.connect(back.dev_mode)
@@ -129,6 +138,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         super(MainWindowFrontend, front).__init__()
         #print('[*front] creating frontend')
         front.prev_tbl_item = None
+        front.ostream = None
         front.back = back
         front.ui = init_ui(front)
         if use_plot_widget:
@@ -139,14 +149,31 @@ class MainWindowFrontend(QtGui.QMainWindow):
         front.steal_stdout()
 
     def steal_stdout(front):
-        #import sys
         #front.ui.outputEdit.setPlainText(sys.stdout)
-        import sys
+        hs = front.back.hs
+        nosteal = hs.args.nosteal
+        noshare = hs.args.noshare
+        if NOSTEAL_OVERRIDE or (nosteal and noshare):
+            return
         print('[front] stealing standard out')
-        front.ostream = StreamStealer()
-        front.ostream.message.connect(front.on_write)
-        front.ostream.flush_.connect(front.on_flush)
-        sys.stdout = front.ostream
+        if front.ostream is None:
+            front.ostream = StreamStealer(stolen=sys.stdout, share=not noshare)
+            front.ostream.write_.connect(front.gui_write)
+            front.ostream.flush_.connect(front.gui_flush)
+            sys.stdout = front.ostream
+        else:
+            print('[front] stream already stolen')
+
+    def return_stdout(front):
+        #front.ui.outputEdit.setPlainText(sys.stdout)
+        print('[front] returning standard out')
+        if front.ostream is not None:
+            sys.stdout = front.ostream.stolen
+            front.ostream = None
+            return True
+        else:
+            print('[front] stream has not been stolen')
+            return False
 
     # TODO: this code is duplicated in back
     def user_info(front, *args, **kwargs):
@@ -457,16 +484,23 @@ class MainWindowFrontend(QtGui.QMainWindow):
         pass
 
     @slot_(str)
-    def on_write(front, message):
-        front.ui.outputEdit.moveCursor(QtGui.QTextCursor.End)
-        front.ui.outputEdit.insertPlainText(message)
-        if front.back.app is not None:
-            front.back.app.processEvents()
+    def gui_write(front, msg_):
+        app = front.back.app
+        outputEdit = front.ui.outputEdit
+        # Write msg to text area
+        outputEdit.moveCursor(QtGui.QTextCursor.End)
+        # TODO: Find out how to do backspaces in textEdit
+        msg = str(msg_)
+        if msg.find('\b') != -1:
+            msg = msg.replace('\b', '') + '\n'
+        outputEdit.insertPlainText(msg)
+        if app is not None:
+            app.processEvents()
 
     @slot_()
-    def on_flush(front):
-        if front.back.app is not None:
-            front.back.app.processEvents()
-        pass
+    def gui_flush(front):
+        app = front.back.app
+        if app is not None:
+            app.processEvents()
         #front.ui.outputEdit.moveCursor(QtGui.QTextCursor.End)
-        #front.ui.outputEdit.insertPlainText(message)
+        #front.ui.outputEdit.insertPlainText(msg)

@@ -25,6 +25,11 @@ import tools
 print = __builtin__.print
 print_ = sys.stdout.write
 
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
+
 
 def print_on():
     global print, print_
@@ -89,6 +94,7 @@ def tryindex(list, *args):
     #print('[ld2] Unable to find args=%r in list=%r' % (args, list))
 
 
+#@profile  # This is perfectly fast .2 seconds on GZ
 def load_csv_tables(db_dir, allow_new_dir=True):
     '''
     Big function which loads the csv tables from a datatabase directory
@@ -178,9 +184,9 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         else:
             try:
                 db_version = 'current'  # Well almost
-                chip_table   = assign_alternate(CHIP_TABLE_FNAME)
-                name_table   = assign_alternate(NAME_TABLE_FNAME)
-                image_table  = assign_alternate(IMAGE_TABLE_FNAME)
+                chip_table  = assign_alternate(CHIP_TABLE_FNAME)
+                name_table  = assign_alternate(NAME_TABLE_FNAME)
+                image_table = assign_alternate(IMAGE_TABLE_FNAME)
             except Exception:
                 if db_info.has_partial_gt(db_dir):
                     print('[ld2] detected incomplete database')
@@ -188,8 +194,10 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 elif allow_new_dir:
                     print('[ld2] detected new dir')
                     hs_dirs.ensure_dirs()
-                    return hs_dirs, hs_tables
+                    return hs_dirs, hs_tables, 'newdb'
                 else:
+                    import traceback
+                    print(traceback.format_exc())
                     print('[ld2] I AM IN A BAD STATE!')
                     errmsg  = ''
                     errmsg += ('\n\n!!!!!\n\n')
@@ -251,7 +259,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         # Load Image Table
         # <LEGACY CODE>
         if params.VERBOSE_LOAD_DATA:
-            print('[ld2] Loading image table: %r' % image_table)
+            print('[ld2] * Loading image table: %r' % image_table)
         gid2_gx = {}
         gid_lines = open(image_table, 'r').readlines()
         for line_num, csv_line in enumerate(gid_lines):
@@ -269,10 +277,10 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         nTableImgs = len(gx2_gname)
         fromTableNames = set(gx2_gname)
         if params.VERBOSE_LOAD_DATA:
-            print('[ld2] table specified %r images' % nTableImgs)
+            print('[ld2] * table specified %r images' % nTableImgs)
             # </LEGACY CODE>
             # Load Image Directory
-            print('[ld2] Loading image directory: %r' % img_dir)
+            print('[ld2] * Loading image directory: %r' % img_dir)
         nDirImgs = 0
         nDirImgsAlready = 0
         for fname in os.listdir(img_dir):
@@ -283,20 +291,20 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 gx2_gname.append(fname)
                 nDirImgs += 1
         if params.VERBOSE_LOAD_DATA:
-            print('[ld2] dir specified %r images' % nDirImgs)
-            print('[ld2] %r were already specified in the table' % nDirImgsAlready)
-            print('[ld2] Loaded %r images' % len(gx2_gname))
-            print('[ld2] Done loading images')
+            print('[ld2] * dir specified %r images' % nDirImgs)
+            print('[ld2] * %r were already specified in the table' % nDirImgsAlready)
+            print('[ld2] * Loaded %r images' % len(gx2_gname))
+            print('[ld2] * Done loading images')
     except IOError:
         print('IOError: %r' % ex)
-        print('[ld2.gname] loading without image table')
+        print('[ld2.img] loading without image table')
         #raise
     except Exception as ex:
-        print('[ld2.img] ERROR %r' % ex)
+        print('[ld2!.img] ERROR %r' % ex)
         #print('[ld2.img] ERROR image_tbl parsing: %s' % (''.join(cid_lines)))
-        print('[ld2.img] ERROR on line number:  %r' % (line_num))
-        print('[ld2.img] ERROR on line:         %r' % (csv_line))
-        print('[ld2.img] ERROR on fields:       %r' % (csv_fields))
+        print('[ld2!.img] ERROR on line number:  %r' % (line_num))
+        print('[ld2!.img] ERROR on line:         %r' % (csv_line))
+        print('[ld2!.img] ERROR on fields:       %r' % (csv_fields))
         raise
 
     try:
@@ -342,8 +350,8 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         if IS_VERSION_1_OR_2 and len(chip_csv_format) == 0:
             chip_csv_format = v12_csv_format
         if params.VERBOSE_LOAD_DATA:
-            print('[ld2] num_chips: %r' % num_data)
-            print('[ld2] chip_csv_format: %r ' % chip_csv_format)
+            print('[ld2] * num_chips: %r' % num_data)
+            print('[ld2] * chip_csv_format: %r ' % chip_csv_format)
         #print('[ld2.chip] Header Columns: %s\n    ' % '\n   '.join(chip_csv_format))
         cid_x   = tryindex(chip_csv_format, 'ChipID', 'imgindex', 'instance_id')
         gid_x   = tryindex(chip_csv_format, 'ImgID', 'image_id')
@@ -368,7 +376,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         for prop in iter(px2_prop_key):
             prop_dict[prop] = []
         if params.VERBOSE_LOAD_DATA:
-            print('[ld2] num_user_properties: %r' % (len(prop_dict.keys())))
+            print('[ld2] * num_user_properties: %r' % (len(prop_dict.keys())))
         # Parse Chip Table
         for line_num, csv_line in enumerate(cid_lines):
             csv_line = csv_line.strip('\n\r\t ')
@@ -380,9 +388,9 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             try:
                 cid = int(csv_fields[cid_x])
             except ValueError:
-                print('cid_x = %r' % cid_x)
-                print('csv_fields = %r' % csv_fields)
-                print('csv_fields[cid_x] = %r' % csv_fields[cid_x])
+                print('[ld2!] cid_x = %r' % cid_x)
+                print('[ld2!] csv_fields = %r' % csv_fields)
+                print('[ld2!] csv_fields[cid_x] = %r' % csv_fields[cid_x])
                 print(chip_csv_format)
                 raise
             #
@@ -449,8 +457,8 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         raise
 
     if params.VERBOSE_LOAD_DATA:
-        print('[ld2] Loaded: %r chips' % (len(cx2_cid)))
-        print('[ld2] Done loading chip table')
+        print('[ld2] * Loaded: %r chips' % (len(cx2_cid)))
+        print('[ld2] * Done loading chip table')
 
     # Return all information from load_tables
     #hs_tables.gid2_gx = gid2_gx

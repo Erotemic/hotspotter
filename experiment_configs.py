@@ -108,14 +108,14 @@ vsmany_scoremethod = {
 vsmany_best = {
     'query_type'     : ['vsmany'],
     'checks'         : [1024],#, 8192],
-    'K'              : [5], #5, 10],
+    'K'              : [4], #5, 10],
     'Knorm'          : [1], #2, 3],
     'Krecip'         : [0], #, 5, 10],
     'roidist_weight' : [0], # 1,]
     'recip_weight'   : [0], # 1,]
     'bursty_weight'  : [0], # 1,]
     'ratio_weight'   : [0], # 1,]
-    'lnbnn_weight'   : [1], # 1,]
+    'lnbnn_weight'   : [.01], # 1,]
     'lnrat_weight'   : [0], # 1,]
     'roidist_thresh' : [None], # .5,]
     'recip_thresh'   : [0], # 0
@@ -132,9 +132,12 @@ vsmany_best = {
 
 
 vsmany_kenya = vsmany_best.copy()
+#vsmany_kenya.update({
+    #'K': [2, 3, 4, 5],
+    #'xy_thresh': [.05, .01, .002, .001],
+#})
 vsmany_kenya.update({
-    'K': [2, 3, 4, 5],
-    'xy_thresh': [.05, .01, .002, .001],
+    'xy_thresh': [.01],
 })
 
 

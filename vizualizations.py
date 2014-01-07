@@ -6,7 +6,6 @@ import draw_func2 as df2
 # Python
 import multiprocessing
 #import re
-import sys
 import warnings
 # Scientific
 import numpy as np
@@ -20,24 +19,19 @@ from os.path import realpath
 
 # Toggleable printing
 print = __builtin__.print
-print_ = sys.stdout.write
 
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5)
 
 
 def print_on():
-    global print, print_
+    global print
     print  = __builtin__.print
-    print_ = sys.stdout.write
 
 
 def print_off():
-    global print, print_
+    global print
 
     def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
         pass
 
 

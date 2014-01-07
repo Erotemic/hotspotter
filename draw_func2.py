@@ -63,29 +63,23 @@ def printDBG(msg):
 
 # Toggleable printing
 print = __builtin__.print
-print_ = sys.stdout.write
 
 
 def print_on():
-    global print, print_
+    global print
     print  = __builtin__.print
-    print_ = sys.stdout.write
 
 
 def print_off():
-    global print, print_
+    global print
 
     def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
         pass
 
 
 def rrr():
     'Dynamic module reloading'
     import imp
-    import sys
     print('[df2] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
 
@@ -972,7 +966,7 @@ def estimate_pdf(data, bw_factor):
 
 
 def show_histogram(data, bins=None, **kwargs):
-    sys.stdout.write('[df2] show_histogram()\n')
+    print('[df2] show_histogram()')
     dmin = int(np.floor(data.min()))
     dmax = int(np.ceil(data.max()))
     if bins is None:

@@ -46,37 +46,37 @@ WORK_DIR = 'D:/data/work'
 WORK_DIR2 = 'D:/data/work'
 
 if sys.platform == 'linux2':
-    WORK_DIR  = '/media/SSD_Extra/work'
-    WORK_DIR2 = '/media/Store/data/work'
+    #WORK_DIR  = '/media/SSD_Extra/work'
+    WORK_DIR = '/media/Store/data/work'
 
 # Common databases I use
 dev_databases = {
-    'SONOGRAMS'      : WORK_DIR  + '/sonograms',
-    'NAUTS'          : WORK_DIR  + '/NAUT_Dan',
+    'SONOGRAMS'      : WORK_DIR + '/sonograms',
+    'NAUTS'          : WORK_DIR + '/NAUT_Dan',
 
-    'OXFORD'         : WORK_DIR  + '/Oxford_Buildings',
-    'PARIS'          : WORK_DIR  + '/Paris_Buildings',
+    'OXFORD'         : WORK_DIR + '/Oxford_Buildings',
+    'PARIS'          : WORK_DIR + '/Paris_Buildings',
 
-    'JAG_KELLY'      : WORK_DIR  + '/JAG_Kelly',
-    'JAG_KIERYN'     : WORK_DIR2 + '/JAG_Kieryn',
-    'WILDEBEAST'     : WORK_DIR2 + '/Wildebeast',
-    'WDOGS'          : WORK_DIR  + '/WD_Siva',
+    'JAG_KELLY'      : WORK_DIR + '/JAG_Kelly',
+    'JAG_KIERYN'     : WORK_DIR + '/JAG_Kieryn',
+    'WILDEBEAST'     : WORK_DIR + '/Wildebeast',
+    'WDOGS'          : WORK_DIR + '/WD_Siva',
 
-    'GZ'             : WORK_DIR  + '/GZ_ALL',
-    'MOTHERS'        : WORK_DIR  + '/HSDB_zebra_with_mothers',
+    'GZ'             : WORK_DIR + '/GZ_ALL',
+    'MOTHERS'        : WORK_DIR + '/HSDB_zebra_with_mothers',
 
-    'PZ'             : WORK_DIR  + '/PZ_FlankHack',
-    'PZ2'            : WORK_DIR  + '/PZ-Sweatwater',
-    'PZ_MARIANNE'    : WORK_DIR  + '/PZ_Marianne',
-    'PZ_DANEXT_TEST' : WORK_DIR  + '/PZ_DanExt_Test',
-    'PZ_DANEXT_ALL'  : WORK_DIR2 + '/PZ_DanExt_All',
+    'PZ'             : WORK_DIR + '/PZ_FlankHack',
+    'PZ2'            : WORK_DIR + '/PZ-Sweatwater',
+    'PZ_MARIANNE'    : WORK_DIR + '/PZ_Marianne',
+    'PZ_DANEXT_TEST' : WORK_DIR + '/PZ_DanExt_Test',
+    'PZ_DANEXT_ALL'  : WORK_DIR + '/PZ_DanExt_All',
 
-    'LF_ALL'         : WORK_DIR  + '/LF_all',
-    'WS_HARD'        : WORK_DIR  + '/WS_hard',
+    'LF_ALL'         : WORK_DIR + '/LF_all',
+    'WS_HARD'        : WORK_DIR + '/WS_hard',
 
-    'FROGS'          : WORK_DIR2 + '/Frogs',
-    'TOADS'          : WORK_DIR2 + '/WY_Toads',
-    'SEALS'          : WORK_DIR2 + '/Seals',
+    'FROGS'          : WORK_DIR + '/Frogs',
+    'TOADS'          : WORK_DIR + '/WY_Toads',
+    'SEALS'          : WORK_DIR + '/Seals',
 
 }
 dev_databases['JAG'] = dev_databases['JAG_KELLY']

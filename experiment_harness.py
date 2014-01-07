@@ -209,7 +209,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('[harn]-------------')
     print('[harn] configs:\n%s' % '\n'.join(cfgx2_lbl))
     #------------
-    PRINT_ROW_SCORES = True and (not '--noprintrow' in sys.argv)
+    PRINT_ROW_SCORES = helpers.get_arg_flag('--printrow', False)
     if PRINT_ROW_SCORES:
         print('')
         print('[harn]-------------')
@@ -241,6 +241,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             qcid = hs.tables.cx2_cid[qcx]
             new_hard_qcx_list += [(qcid, notes)]
         print('\n'.join(map(repr, new_hard_qcx_list)))
+    else:
+        print('~~~~~~~~ --printrow')
 
     #------------
     def rankscore_str(thresh, nLess, total):
@@ -318,7 +320,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
 if __name__ == '__main__':
     import multiprocessing
-    np.set_printoptions(threshold=5000, linewidth=5000)
+    np.set_printoptions(threshold=5000, linewidth=5000, precision=5)
     multiprocessing.freeze_support()
     print('[harn]-----------')
     print('[harn] main()')

@@ -1718,8 +1718,18 @@ def get_arg_after(arg, type_=None, default=None):
 
 
 def get_arg_flag(arg, default=False):
+    'Checks if the commandline has a flag or a corresponding noflag'
+    if arg.find('--') != 0:
+        raise Exception(arg)
+    if arg.find('--no') == 0:
+        arg = arg.replace('--no', '--')
+    noarg = arg.replace('--', '--no')
     if arg in sys.argv:
-        return not default
+        return True
+    elif noarg in sys.argv:
+        return False
+    else:
+        return default
     return default
 
 

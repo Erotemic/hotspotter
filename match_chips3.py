@@ -156,7 +156,7 @@ def ensure_nn_index(hs, query_cfg, dcxs):
         data_index = ds.NNIndex(hs, dcxs)
         query_cfg._dcxs2_index[dcxs_] = data_index
     else:
-        print('mc3] dcxs_ is in query_cfg cache')
+        print('[mc3] dcxs_ is in query_cfg cache')
     query_cfg._data_index = query_cfg._dcxs2_index[dcxs_]
 
 

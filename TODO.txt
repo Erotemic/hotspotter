@@ -1,3 +1,6 @@
+#--- Feature ----
+Integrate scale threshold into libhesaff
+
 #--- Annoyances ----
 
 * ODD BEHAVIOR: where if you click the result inspection, its

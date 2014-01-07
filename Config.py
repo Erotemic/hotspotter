@@ -184,7 +184,7 @@ class SpatialVerifyConfig(ConfigBase):
         super(SpatialVerifyConfig, sv_cfg).__init__(name='sv_cfg')
         sv_cfg.scale_thresh_low = .5
         sv_cfg.scale_thresh_high = 2
-        sv_cfg.xy_thresh = .002
+        sv_cfg.xy_thresh = .01
         sv_cfg.nShortlist = 1000
         sv_cfg.prescore_method = 'csum'
         sv_cfg.use_chip_extent = False

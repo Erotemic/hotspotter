@@ -142,10 +142,7 @@ def _load_features_individualy(hs, cx_list):
     # Compute features in parallel, saving them to disk
     kwargs_list = [feat_cfg.get_dict_args()] * len(rchip_fpath_list)
     precompute_args = [rchip_fpath_list, feat_fpath_list, kwargs_list]
-    num_procs = hs.args.num_procs
-    if len(cx_list) < num_procs / 2:
-        num_procs = 1  # Hack for small amount of tasks
-    pfc_kwargs = {'num_procs': num_procs, 'lazy': use_cache}
+    pfc_kwargs = {'num_procs': hs.args.num_procs, 'lazy': use_cache}
     precompute_fn = feat_type2_precompute[feat_cfg.feat_type]
     parallel_compute(precompute_fn, precompute_args, **pfc_kwargs)
     # Load precomputed features sequentially

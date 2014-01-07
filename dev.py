@@ -73,6 +73,7 @@ def dev_reload():
     df2.rrr()
     df2.reset()
 
+
 def history_entry(database='', cid=-1, ocids=[], notes='', cx=-1):
     return (database, cid, ocids, notes)
 

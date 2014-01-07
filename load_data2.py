@@ -194,8 +194,10 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 elif allow_new_dir:
                     print('[ld2] detected new dir')
                     hs_dirs.ensure_dirs()
-                    return hs_dirs, hs_tables
+                    return hs_dirs, hs_tables, 'newdb'
                 else:
+                    import traceback
+                    print(traceback.format_exc())
                     print('[ld2] I AM IN A BAD STATE!')
                     errmsg  = ''
                     errmsg += ('\n\n!!!!!\n\n')

@@ -527,7 +527,7 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
             mark_progress = mark_progress_dot
     # fmtstr: formated string progress
     if progress_type == 'fmtstr' and max_val > mark_after:
-        fmt_str = progress_str(max_val)
+        fmt_str = progress_str(max_val, lbl=lbl)
 
         def mark_progress_fmtstr(count):
             count_ = count + 1

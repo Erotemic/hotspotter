@@ -112,6 +112,13 @@ class HotSpotter(DynStruct):
             hs.default_preferences()
         else:
             hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
+            hs.prefs.query_cfg._feat_cfg = hs.prefs.feat_cfg
+        try:
+            assert hs.prefs.query_cfg._feat_cfg is hs.prefs.feat_cfg
+            assert hs.prefs.feat_cfg._chip_cfg is hs.prefs.chip_cfg
+        except AssertionError:
+            print('[hs] preferences dependency tree is broken')
+            raise
         # Preferences will try to load the FLANN index. Undo this.
         hs.prefs.query_cfg.unload_data()
 

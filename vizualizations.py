@@ -593,6 +593,7 @@ def interact_chipres(hs, res, cx, fnum=4, figtitle='Inspect Query Result', **kwa
             px = draw_feat_row(rchip, kp, sift, px, prevsift)
             prevsift = sift
         df2.set_figtitle(figtitle)
+        df2.adjust_subplots_xlabels()
         fig.canvas.draw()
 
     # Draw ctrl clicked selection

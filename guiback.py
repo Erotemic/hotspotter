@@ -110,8 +110,8 @@ class MainWindowBackend(QtCore.QObject):
         kwargs_ = {'use_plot_widget': False}
         back.front = guifront.MainWindowFrontend(back=back, **kwargs_)
         back.selection = None
-        if kwargs_['use_plot_widget']:
-            df2.register_matplotlib_widget(back.front.plotWidget)
+        #if kwargs_['use_plot_widget']:
+            #df2.register_matplotlib_widget(back.front.plotWidget)
         df2.register_qt4_win(back.front)
         # Define default table headers
         if hs.args.withexif:
@@ -366,6 +366,7 @@ class MainWindowBackend(QtCore.QObject):
     def default_preferences(back):
         # TODO: Propogate changes back to back.edit_prefs.ui
         back.hs.default_preferences()
+        back.hs.prefs.save()
 
     # Table Edit -> Change Chip Property
     @slot_(int, str, str)
@@ -398,7 +399,7 @@ class MainWindowBackend(QtCore.QObject):
         elif reply == opt_put[0]:
             put_dir = guitools.select_directory('Select where to put the new database')
         elif reply is None:
-            back.user_info('Aborting new database')
+            back.user_info('No Reply. Aborting new database')
             print('[*back] abort new database()')
             return None
         else:
@@ -438,6 +439,8 @@ class MainWindowBackend(QtCore.QObject):
             back.connect_api(hs)
             #back.layout_figures()
         except Exception as ex:
+            import traceback
+            print(traceback.format_exc())
             back.user_info('Aborting open database')
             print('aborting open database')
             print(ex)
@@ -768,6 +771,8 @@ class MainWindowBackend(QtCore.QObject):
     def dev_reload(back):
         import dev
         dev.dev_reload()
+        df2.unregister_qt4_win('all')
+        df2.register_qt4_win(back.front)
 
     def show(back):
         back.front.show()

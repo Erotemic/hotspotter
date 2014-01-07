@@ -65,7 +65,7 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None, commo
     if nTasks < num_procs / 2 or nTasks == 1:
         num_procs = 1
     num_procs = min(num_procs, nTasks)
-    task_lbl = func.func_name
+    task_lbl = func.func_name + ': '
     try:
         ret = parallelize_tasks(task_list, num_procs, task_lbl)
     except Exception as ex:

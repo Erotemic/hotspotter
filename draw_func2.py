@@ -193,6 +193,12 @@ def register_matplotlib_widget(plotWidget_):
     #plt.sca(ax)
 
 
+def unregister_qt4_win(win):
+    global QT4_WINS
+    if win == 'all':
+        QT4_WINS = []
+
+
 def register_qt4_win(win):
     global QT4_WINS
     QT4_WINS.append(win)
@@ -562,6 +568,10 @@ def plot2(x_data, y_data, marker, x_label, y_label, title_pref, *args,
     ax.set_ylabel(y_label, fontproperties=FONTS.xlabel)
     ax.set_title(title_pref + ' ' + x_label + ' vs ' + y_label,
                  fontproperties=FONTS.axtitle)
+
+
+def adjust_subplots_xlabels():
+    adjust_subplots(left=.03, right=.97, bottom=.2, top=.9, hspace=.15)
 
 
 def adjust_subplots_xylabels():
@@ -1014,10 +1024,26 @@ def plot_sift_signature(sift, title='', fnum=None, pnum=None):
     rect.set_clip_on(False)
     rect.set_fill(True)
     rect.set_color(BLACK * .9)
-    ax.set_xticks(np.arange(9) * 16)
-    ax.set_yticks(np.arange(9) * 32)
+    space_xticks(9, 16)
+    space_yticks(5, 64)
     ax.set_title(title)
     return ax
+
+
+def space_xticks(nTicks=9, spacing=16, ax=None):
+    if ax is None:
+        ax = gca()
+    ax.set_xticks(np.arange(nTicks) * spacing)
+    for tick in ax.xaxis.get_major_ticks():
+        tick.label.set_fontsize(8)
+
+
+def space_yticks(nTicks=9, spacing=32, ax=None):
+    if ax is None:
+        ax = gca()
+    ax.set_yticks(np.arange(nTicks) * spacing)
+    for tick in ax.yaxis.get_major_ticks():
+        tick.label.set_fontsize(8)
 
 
 def plot_bars(y_data, nColorSplits=1):

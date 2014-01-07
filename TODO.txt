@@ -18,9 +18,6 @@ when I click on a query analaysis. (Oh, I sort of have it already...)
 
 * Color by score in result inspection
 
-FIXED ~~* When editing the name of an animal, it has to redraw the chip and image ~~
-        ~~* before the name editing can happen. ~~
-
 #--- Issues ----
 
 Caching Issue: Query Result saves in cx format indead of cid format.
@@ -33,8 +30,7 @@ Fix depricated ginput
 
 Enable editing of EXIF? At least properly display them
 
-Features seem to be loaded too often
-
+FIXED: ~~* Features seem to be loaded too often ~~
 FIXED: ~~* Tail to nose select orientation does not allow correct direction selection.~
 FIXED: ~~* switch to atan2~~
 FIXED: ~~* add arrow widget ~~
@@ -50,6 +46,8 @@ FIXED ~~Prefs will load the old ChipConfig that belongs to FeatConfig instead of
 the new loaded ChipConfig? Somthing is screwy with Frogs here. ~~
 FIXED ~~# Add option to force computation of queries
 FIXED ~~# Add option to delete all precomputed queries
+FIXED ~~* When editing the name of an animal, it has to redraw the chip and image ~~
+        ~~* before the name editing can happen. ~~
 #-----------
 # I need to get a paper this next semester
 # I need to get candidate

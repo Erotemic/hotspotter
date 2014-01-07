@@ -138,6 +138,7 @@ vsmany_kenya = vsmany_best.copy()
 #})
 vsmany_kenya.update({
     'xy_thresh': [.01],
+    'lnbnn_weight': [1, .01],
 })
 
 

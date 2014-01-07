@@ -11,7 +11,7 @@ from numpy import diag, sqrt, abs
 #from numpy.linalg import det
 import cv2
 
-OLD_HESAFF = False or '--oldhesaff' in sys.argv
+OLD_HESAFF = True or '--oldhesaff' in sys.argv
 
 
 def reload_module():

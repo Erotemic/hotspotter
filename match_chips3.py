@@ -53,20 +53,23 @@ def query_dcxs(hs, qcx, dcxs, query_cfg=None, dochecks=True, **kwargs):
     if dochecks and query_cfg is None:
         query_cfg = Config.default_vsmany_cfg(hs, **kwargs)
         #query_cfg = hs.prefs.query_cfg
-    query_uid = ''.join(query_cfg.get_uid('noCHIP'))
+    #query_uid = ''.join(query_cfg.get_uid('noCHIP'))
+    query_uid = ''.join(query_cfg.get_uid())
     feat_uid = ''.join(query_cfg._feat_cfg.get_uid())
-    query_hist_id = (query_uid, feat_uid)
+    query_hist_id = (feat_uid, query_uid)
     if dochecks:
         if hs.query_history[-1][0] != feat_uid:
-            print('[mc3] need to reload features')
+            print('[mc3] FEAT_UID is different. Need to reload features')
+            print('[mc3] Old: ' + str(hs.query_history[-1][0]))
+            print('[mc3] New: ' + str(feat_uid))
             hs.unload_cxdata('all')
             hs.refresh_features()
-            hs.query_history.append(query_hist_id)
         elif hs.query_history[-1][1] != query_uid:
-            print('[mc3] need to refresh features')
+            print('[mc3] QUERY_UID is different. Need to refresh features')
+            print('[mc3] Old: ' + str(hs.query_history[-1][1]))
+            print('[mc3] New: ' + str(query_uid))
             hs.refresh_features()
-            hs.query_history.append(query_hist_id)
-        query_uid = ''.join(query_cfg.get_uid())
+        hs.query_history.append(query_hist_id)
         print('[mc3] query_dcxs(): query_uid = %r ' % query_uid)
     result_list = execute_query_safe(hs, query_cfg, [qcx], dcxs, **kwargs)
     res = result_list[0].values()[0]
@@ -146,9 +149,14 @@ def ensure_nn_index(hs, query_cfg, dcxs):
     if not dcxs_ in query_cfg._dcxs2_index:
         # Make sure the features are all computed first
         # TODO: Separate query config and data
+        print('[mc3] dcxs_ is not in query_cfg cache')
+        print('[mc3] hashstr(dcxs_) = %r' % helpers.hashstr(dcxs_))
+        print('[mc3] REFRESHING FEATURES')
         hs.refresh_features(dcxs_)
         data_index = ds.NNIndex(hs, dcxs)
         query_cfg._dcxs2_index[dcxs_] = data_index
+    else:
+        print('mc3] dcxs_ is in query_cfg cache')
     query_cfg._data_index = query_cfg._dcxs2_index[dcxs_]
 
 

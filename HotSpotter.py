@@ -113,12 +113,7 @@ class HotSpotter(DynStruct):
         else:
             hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
             hs.prefs.query_cfg._feat_cfg = hs.prefs.feat_cfg
-        try:
-            assert hs.prefs.query_cfg._feat_cfg is hs.prefs.feat_cfg
-            assert hs.prefs.feat_cfg._chip_cfg is hs.prefs.chip_cfg
-        except AssertionError:
-            print('[hs] preferences dependency tree is broken')
-            raise
+        hs.assert_prefs()
         # Preferences will try to load the FLANN index. Undo this.
         hs.prefs.query_cfg.unload_data()
 
@@ -297,6 +292,7 @@ class HotSpotter(DynStruct):
     # Query Functions
     #---------------
     def query(hs, qcx, dochecks=True):
+        hs.assert_prefs()
         if hs.prefs.query_cfg is None and dochecks:
             hs.prefs.query_cfg = Config.default_vsmany_cfg(hs)
             #hs.refresh_data()
@@ -889,3 +885,11 @@ class HotSpotter(DynStruct):
             passed = False
         if passed:
             print('[hs.dbg] cx2_kpts is OK')
+
+    def assert_prefs(hs):
+        try:
+            assert hs.prefs.query_cfg._feat_cfg is hs.prefs.feat_cfg
+            assert hs.prefs.feat_cfg._chip_cfg is hs.prefs.chip_cfg
+        except AssertionError:
+            print('[hs] preferences dependency tree is broken')
+            raise

@@ -1123,6 +1123,8 @@ def dict_union(*args):
 
 
 def hashstr(data, trunc_pos=8):
+    if isinstance(data, tuple):
+        data = str(data)
     # Get a 128 character hex string
     hashstr = hashlib.sha512(data).hexdigest()
     # Convert to base 57

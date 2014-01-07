@@ -549,46 +549,43 @@ def run_investigations(hs, qcx_list):
 
     tests = args.tests[:]
 
-    if 'show-names' in tests:
+    def intest(testname):
+        ret = testname in tests
+        if ret:
+            tests.remove(testname)
+        return ret
+
+    if intest('print-hs'):
+        print(hs)
+    if intest('show-names'):
         show_names(hs, qcx_list)
-        tests.remove('show-names')
-    if 'vary-vsone-rat-xy' in tests:
+    if intest('vary-vsone-rat-xy'):
         fnum = vary_vsone_cfg(hs, qcx_list, fnum, [rat_, xy_])
-        tests.remove('vary-vsone-rat-xy')
-    if 'vary-vsmany-k-xy' in tests:
+    if intest('vary-vsmany-k-xy'):
         fnum = vary_vsmany_cfg(hs, qcx_list, fnum, [K_, xy_])
-        tests.remove('vary-vsmany-k-xy')
-    if 'dbstats' in tests:
+    if intest('dbstats'):
         fnum = dbstats(hs)
-        tests.remove('dbstats')
-    if 'scale' in tests:
+    if intest('scale'):
         fnum = plot_keypoint_scales(hs)
-        tests.remove('scale')
-    if 'vsone-gt' in tests:
+    if intest('vsone-gt'):
         fnum = investigate_vsone_groundtruth(hs, qcx_list, fnum)
-        tests.remove('vsone-gt')
-    if 'chip-info' in tests:
+    if intest('chip-info'):
         fnum = investigate_chip_info(hs, qcx_list, fnum)
-        tests.remove('chip-info')
-    if 'kpts-interact' in tests:
+    if intest('kpts-interact'):
         fnum = intestigate_keypoint_interaction(hs, qcx_list)
-        tests.remove('kpts-interact')
-    if 'interact' in tests:
+    if intest('interact'):
         import interaction
         fnum = interaction.interact1(hs, qcx_list, fnum)
-        tests.remove('interact')
-    if 'list' in tests:
+    if intest('list'):
         print(experiment_harness.get_valid_testcfg_names())
-        tests.remove('list')
     # Allow any testcfg to be in tests like:
     # vsone_1 or vsmany_3
     import experiment_configs as _testcfgs
     testcfg_keys = vars(_testcfgs).keys()
     testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
     for test_cfg_name in testcfg_locals:
-        if test_cfg_name in tests:
+        if intest(test_cfg_name):
             fnum = experiment_harness.test_configurations(hs, qcx_list, [test_cfg_name], fnum)
-            tests.remove(test_cfg_name)
     if len(tests) > 0:
         raise Exception('Unknown tests: %r ' % tests)
 

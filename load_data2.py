@@ -184,9 +184,9 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         else:
             try:
                 db_version = 'current'  # Well almost
-                chip_table   = assign_alternate(CHIP_TABLE_FNAME)
-                name_table   = assign_alternate(NAME_TABLE_FNAME)
-                image_table  = assign_alternate(IMAGE_TABLE_FNAME)
+                chip_table  = assign_alternate(CHIP_TABLE_FNAME)
+                name_table  = assign_alternate(NAME_TABLE_FNAME)
+                image_table = assign_alternate(IMAGE_TABLE_FNAME)
             except Exception:
                 if db_info.has_partial_gt(db_dir):
                     print('[ld2] detected incomplete database')

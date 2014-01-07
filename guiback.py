@@ -689,7 +689,7 @@ class MainWindowBackend(QtCore.QObject):
             screen_rect = app.desktop().screenGeometry()
             width  = screen_rect.width()
             height = screen_rect.height()
-            dlen = np.sqrt(width ** 2 + height ** 2) / 2
+            dlen = np.sqrt(width ** 2 + height ** 2) / 1.618
         else:
             print('[*back] WARNING: cannot detect screen geometry')
             dlen = 1618

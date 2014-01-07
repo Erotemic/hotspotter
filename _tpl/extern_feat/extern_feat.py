@@ -87,6 +87,8 @@ try:
         kpts, desc = filter_kpts_scale(kpts, desc, **dict_args)
         return kpts, desc
 except ImportError:
+    if '--strict' in sys.argv and not OLD_HESAFF:
+        raise
     print('using: old hessian affine')
 
     def detect_kpts(rchip_fpath, dict_args):

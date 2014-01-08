@@ -4,7 +4,7 @@ import subprocess
 #import warnings
 import os
 import sys
-from os.path import dirname, realpath, join
+from os.path import dirname, realpath, join, expanduser, exists, split
 # Scientific
 import numpy as np
 from numpy import diag, sqrt, abs
@@ -223,52 +223,61 @@ def expand_invET(invET):
 
 if __name__ == '__main__':
     print('[TPL] Test Extern Features')
-    from os.path import expanduser, join, exists, split, realpath
     import multiprocessing
     multiprocessing.freeze_support()
 
-    def add_hotspotter_to_path():
+    def ensure_hotspotter():
+        import matplotlib
+        matplotlib.use('Qt4Agg', warn=True, force=True)
         # Look for hotspotter in ~/code
         hotspotter_dir = join(expanduser('~'), 'code', 'hotspotter')
         if not exists(hotspotter_dir):
-            print('[pyhesaff] hotspotter_dir=%r DOES NOT EXIST!' % (hotspotter_dir,))
+            print('[jon] hotspotter_dir=%r DOES NOT EXIST!' % (hotspotter_dir,))
         # Append hotspotter location (not dir) to PYTHON_PATH (i.e. sys.path)
         hotspotter_location = split(hotspotter_dir)[0]
         sys.path.append(hotspotter_location)
 
     # Import hotspotter io and drawing
-    add_hotspotter_to_path()
+    ensure_hotspotter()
     from hotspotter import draw_func2 as df2
+    from hotspotter import vizualizations as viz
     from hotspotter import fileio as io
 
     # Read Image
     img_fpath = realpath('lena.png')
     image = io.imread(img_fpath)
 
-    # Detect Keypoints
-    def draw_n_kpts(n=None, fnum=1, old=OLD_HESAFF):
-        np.set_printoptions(threshold=5000, linewidth=5000, precision=3)
-        print('----')
-        if old:
-            kpts, desc = detect_kpts_old(img_fpath, {})
-            print('OLD detected %d keypoints' % len(kpts))
-        else:
-            kpts, desc = detect_kpts_new(img_fpath, {})
-            print('NEW detected %d keypoints' % len(kpts))
-        if n is None:
-            kpts_ = kpts
-        else:
-            kxs = np.arange(len(kpts))
-            stride = len(kxs) // n
-            kpts_ = kpts[kxs[0:-1:stride]]
-        cols = df2.distinct_colors(len(kpts_))
-        print('drawing %d/%d kpts' % (len(kpts_), len(kpts)))
-        print(kpts_)
-        print('----')
-        df2.imshow(image, fnum=fnum)
-        df2.draw_kpts2(kpts_, ell_alpha=.6, ell_linewidth=2,
-                       ell_color=cols, rect=True)
+    def spaced_elements(list_, n):
+        indexes = np.arange(len(list_))
+        stride = len(indexes) // n
+        return list_[indexes[0:-1:stride]]
 
-    draw_n_kpts(n=10, fnum=1, old=True)
-    draw_n_kpts(n=10, fnum=2, old=False)
+    def test_detect(n=None, fnum=1, old=True):
+        try:
+            # Select kpts
+            detect_kpts_func = detect_kpts_old if old else detect_kpts_new
+            kpts, desc = detect_kpts_func(img_fpath, {})
+            kpts_ = kpts if n is None else spaced_elements(kpts, n)
+            desc_ = desc if n is None else spaced_elements(desc, n)
+            # Print info
+            np.set_printoptions(threshold=5000, linewidth=5000, precision=3)
+            print('----')
+            print('detected %d keypoints' % len(kpts))
+            print('drawing %d/%d kpts' % (len(kpts_), len(kpts)))
+            print(kpts_)
+            print('----')
+            # Draw kpts
+            viz.interact_keypoints(image, kpts_, desc_, fnum)
+            #df2.imshow(image, fnum=fnum)
+            #df2.draw_kpts2(kpts_, ell_alpha=.9, ell_linewidth=4,
+                           #ell_color='distinct', arrow=True, rect=True)
+            df2.set_figtitle('old' if old else 'new')
+        except Exception as ex:
+            import traceback
+            traceback.format_exc()
+            print(ex)
+        return locals()
+
+    test_detect(n=10, fnum=1, old=True)
+    test_detect(n=10, fnum=2, old=False)
     exec(df2.present())

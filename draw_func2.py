@@ -1235,7 +1235,7 @@ def draw_kpts(kpts, *args, **kwargs):
 def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
                pts_size=POINT_SIZE, ell_alpha=ELL_ALPHA,
                ell_linewidth=ELL_LINEWIDTH, ell_color=ELL_COLOR,
-               color_list=None, rect=None, **kwargs):
+               color_list=None, rect=None, arrow=False, **kwargs):
     if not DISTINCT_COLORS:
         color_list = None
     printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
@@ -1276,6 +1276,10 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
         if rect:
             rect_actors = [Rectangle( (-1, -1), 2, 2, transform=aff) for aff in aff_list]
             patch_list += rect_actors
+        if arrow:
+            _kwargs = dict(head_width=.01, length_includes_head=False)
+            arrow_actors = [FancyArrow(0, 0, 0, 1, transform=aff, **_kwargs) for aff in aff_list]
+            patch_list += arrow_actors
         ellipse_collection = matplotlib.collections.PatchCollection(patch_list)
         ellipse_collection.set_facecolor('none')
         ellipse_collection.set_transform(pltTrans)
@@ -1283,6 +1287,8 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
         ellipse_collection.set_linewidth(ell_linewidth)
         if not color_list is None:
             ell_color = color_list
+        if ell_color == 'distinct':
+            ell_color = distinct_colors(len(kpts))
         ellipse_collection.set_edgecolor(ell_color)
         ax.add_collection(ellipse_collection)
     if pts:

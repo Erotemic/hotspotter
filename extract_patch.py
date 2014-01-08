@@ -37,6 +37,9 @@ def draw_keypoint_patch(rchip, kp, sift=None, warped=False, **kwargs):
     #print('[extract] subkp = '+str(subkp))
     #print('[extract] patch.shape = %r' % (patch.shape,))
     color = (0, 0, 1)
+    # HACK: convert to gray
+    from PIL import Image
+    patch = np.asarray(Image.fromarray(patch).convert('L'))
     fig, ax = df2.imshow(patch, **kwargs)
     df2.draw_kpts2([subkp], ell_color=color, pts=True)
     if not sift is None:
@@ -55,7 +58,7 @@ def get_warped_patch(rchip, kp):
     # Translate to origin(0,0) = (x,y)
     T = np.array([[1, 0, -x],
                   [0, 1, -y],
-                  [0, 0,    1]])
+                  [0, 0,  1]])
     A = np.linalg.inv(
         np.array([[a, 0, 0],
                   [c, d, 0],

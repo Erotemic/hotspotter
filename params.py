@@ -42,12 +42,19 @@ print(' * sys.prefix = %r' % sys.prefix)
 # DEV DATABASE GLOBALS
 #=====================================================
 
-WORK_DIR = 'D:/data/work'
-WORK_DIR2 = 'D:/data/work'
+def find_workdir():
+    workdir_list = [
+        'D:/data/work',
+        '/media/Store/data/work', ]
+    for workdir in workdir_list:
+        if exists(workdir):
+            return workdir
+    return join(expanduser('~'),  'data/work/')
 
-if sys.platform == 'linux2':
-    #WORK_DIR  = '/media/SSD_Extra/work'
-    WORK_DIR = '/media/Store/data/work'
+WORK_DIR = find_workdir()
+
+#WORK_DIR2 = 'D:/data/work'
+#WORK_DIR  = '/media/SSD_Extra/work'
 
 # Common databases I use
 dev_databases = {

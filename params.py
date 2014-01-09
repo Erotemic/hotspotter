@@ -12,20 +12,24 @@ from os.path import exists, expanduser, join
 
 # Toggleable printing
 print = __builtin__.print
-print_ = sys.stdout.write
+
+
 def print_on():
     global print, print_
     print =  __builtin__.print
-    print_ = sys.stdout.write
+
+
 def print_off():
     global print, print_
-    def print(*args, **kwargs): pass
-    def print_(*args, **kwargs): pass
+
+    def print(*args, **kwargs):
+        pass
+
 
 # Dynamic module reloading
 def reload_module():
-    import imp, sys
-    print('[params] reloading '+__name__)
+    import imp
+    print('[params] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
 rrr = reload_module
 
@@ -39,10 +43,10 @@ print(' * sys.filesystemencoding = %r' % sys.getfilesystemencoding())
 print(' * sys.prefix = %r' % sys.prefix)
 '''
 
+
 #=====================================================
 # DEV DATABASE GLOBALS
 #=====================================================
-
 def find_workdir():
     workdir_list = [
         'D:/data/work',
@@ -50,7 +54,7 @@ def find_workdir():
     for workdir in workdir_list:
         if exists(workdir):
             return workdir
-    return join(expanduser('~'),  'data/work/')
+    return join(expanduser('~'),  'data/work')
 
 WORK_DIR = find_workdir()
 

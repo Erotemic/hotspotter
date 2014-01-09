@@ -8,6 +8,7 @@ import os.path
 import numpy as np
 import helpers
 import multiprocessing
+from os.path import exists, expanduser, join
 
 # Toggleable printing
 print = __builtin__.print

@@ -126,7 +126,7 @@ def read_text_feat_file(outname, be_clean=True):
     if be_clean:
         os.remove(outname)
     # Preallocate output
-    kpts = np.zeros((nkpts, 5), dtype=float)
+    kpts = np.zeros((nkpts, 5), dtype=KPTS_DTYPE)
     desc = np.zeros((nkpts, ndims), dtype=DESC_DTYPE)
     for kx, line in enumerate(lines):
         data = line.split(' ')

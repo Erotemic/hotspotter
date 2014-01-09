@@ -176,7 +176,7 @@ def show_splash(fnum=1, **kwargs):
 
 # CHIP INTERACTION
 
-def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, **kwargs):
+def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, nodraw=False, **kwargs):
     fig = df2.figure(fnum=fnum)
     df2.disconnect_callback(fig, 'button_press_event')
     draw_kpts_ptr = [False]
@@ -191,7 +191,7 @@ def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, **kwargs):
         # Draw the image with keypoint fx highlighted
         df2.figure(fnum=fnum)
         df2.cla()
-        ell_args = {'ell_alpha': .4, 'ell_linewidth': 4}
+        ell_args = {'ell_alpha': 1, 'ell_linewidth': 2}
         _viz_keypoints(fnum, (2, 1, 1), ell_color=df2.BLUE, ell_args=ell_args)
         # Draw highlighted point
         df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.ORANGE, arrow=True, rect=True, **ell_args)
@@ -249,12 +249,15 @@ def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, **kwargs):
                 x, y = event.xdata, event.ydata
                 fx = nearest_kp(x, y, kpts)[0]
                 _ith_keypoint_view(fx)
-        df2.draw()
+        if event is not None:
+            df2.draw()
     # Draw without keypoints the first time
     _on_keypoints_click(None)
     if figtitle is not None:
         df2.set_figtitle(figtitle)
     df2.connect_callback(fig, 'button_press_event', _on_keypoints_click)
+    if not nodraw:
+        df2.draw()
 
 
 def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):

@@ -24,14 +24,15 @@ extern_dir = join(hsdir, '_tpl', 'extern_feat')
 hesaffsrc_dir = join(code_dir, 'hesaff')
 
 hesaffbuild_dir = join(hesaffsrc_dir, 'build')
+
+built_files = {
+    'linux2': ['hesaffexe', 'hesaffexe.ln', 'libhesaff.so'],
+    'win32':  ['hesaffexe.exe', 'libhesaff.dll'],
+    'darwin': ['hesaffexe', 'hesaffexe.mac', 'libhesaff.dylib']}[sys.platform]
+
 filemap = {
-    hesaffbuild_dir: ['hesaffexe.exe',
-                      'libhesaff.so',
-                      'libhesaff.dylib',
-                      'hesaffexe.mac',
-                      'hesaffexe.ln',
-                      'libhesaff.dll'],
-    hesaffsrc_dir: ['pyhesaff.py'],
+    hesaffbuild_dir: built_files,
+    hesaffsrc_dir: ['pyhesaff.py', 'pyhesaffexe.py'],
 }
 
 for srcdir, fname_list in filemap.iteritems():

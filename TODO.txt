@@ -3,6 +3,8 @@ Integrate scale threshold into libhesaff
 
 #--- Annoyances ----
 
+* Some Preferences need to invalidate the cache: (like changing the scale thresholds)
+
 * ODD BEHAVIOR: where if you click the result inspection, its
 * like clicking the result view. 
 

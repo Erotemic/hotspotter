@@ -318,6 +318,7 @@ def plot_keypoint_scales(hs, fnum=1):
     #
     df2.figure(fnum=fnum, doclf=True, title='sorted scales')
     df2.plot(scales)
+    df2.adjust_subplots_safe()
     #ax = df2.gca()
     #ax.set_yscale('log')
     #ax.set_xscale('log')
@@ -325,6 +326,7 @@ def plot_keypoint_scales(hs, fnum=1):
     fnum += 1
     df2.figure(fnum=fnum, doclf=True, title='hist scales')
     df2.show_histogram(scales, bins=20)
+    df2.adjust_subplots_safe()
     #ax = df2.gca()
     #ax.set_yscale('log')
     #ax.set_xscale('log')
@@ -497,7 +499,8 @@ def dev_main(**kwargs):
     # Create Hotspotter API
     hs = HotSpotter.HotSpotter(args)
     # Load tables, chips, and features
-    hs.load(load_all=True)
+    load_all = helpers.get_arg_flag('--load-all', True)
+    hs.load(load_all=load_all)
     # Get the query/others/notes list
     # this contains a list of cannonical test examples
     # FIXME: This is specific to one machine right now

@@ -131,15 +131,21 @@ vsmany_best = {
 }
 best = vsmany_best
 
+vsmany_kenya = vsmany_best.copy()
 
 vsmany_kenya = vsmany_best.copy()
 #vsmany_kenya.update({
     #'K': [2, 3, 4, 5],
     #'xy_thresh': [.05, .01, .002, .001],
 #})
+#vsmany_kenya.update({
+    #'xy_thresh': [.01],
+    #'lnbnn_weight': [1, .01],
+#})
+
 vsmany_kenya.update({
-    'xy_thresh': [.01],
-    'lnbnn_weight': [1, .01],
+    'scale_min': [10, 20],
+    'scale_max': [30, 50],
 })
 
 

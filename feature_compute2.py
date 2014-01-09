@@ -11,7 +11,7 @@ from os.path import join
 import helpers
 import fileio as io
 import DataStructures as ds
-import _tpl.extern_feat as extern_feat
+import extern_feat
 from Parallelize import parallel_compute
 
 try:

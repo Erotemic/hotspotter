@@ -314,7 +314,7 @@ class FeatureConfig(ConfigBase):
         feat_cfg.feat_type = 'hesaff+sift'
         feat_cfg.whiten = False
         feat_cfg.scale_min = 0  # 0    # 30 # TODO: Put in pref types here
-        feat_cfg.scale_max = 90001  # 9001 # 80
+        feat_cfg.scale_max = 9001  # 9001 # 80
         if hs is not None:
             feat_cfg._chip_cfg = hs.prefs.chip_cfg  # Features depend on chips
         else:

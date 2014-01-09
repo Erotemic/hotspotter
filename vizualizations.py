@@ -308,15 +308,17 @@ def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
 
         df2.figure(fnum=fnum, pnum=(2, 3, 6))
         ax = df2.gca()
-        df2.plot_sift_signature(sift, 'sift gradient orientation histogram')
+        df2.plot_sift_signature(sift, 'sift histogram')
         ax._hs_viewtype = 'histogram'
         #fig.canvas.draw()
+        df2.adjust_subplots_safe()
         df2.draw()
 
     def default_chip_view():
         fig = df2.figure(fnum=fnum)
         fig.clf()
         show_chip(hs, cx=cx, draw_kpts=False)  # Toggle no keypoints view
+        df2.adjust_subplots_safe()
         fig.canvas.draw()
 
     def _on_chip_click(event):

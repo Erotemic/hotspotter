@@ -572,6 +572,10 @@ def adjust_subplots_xylabels():
     adjust_subplots(left=.03, right=1, bottom=.1, top=.9, hspace=.15)
 
 
+def adjust_subplots_safe():
+    adjust_subplots(left=.1, right=.9, bottom=.1, top=.9, hspace=.15)
+
+
 def adjust_subplots(left=0.02,  bottom=0.02,
                     right=0.98,     top=0.90,
                     wspace=0.1,   hspace=0.15):
@@ -1099,6 +1103,7 @@ def variation_trunctate(data):
 # ---- IMAGE CREATION FUNCTIONS ----
 @tools.debug_exception
 def draw_sift(desc, kp=None):
+    # TODO: There might be a divide by zero warning in here.
     ''' desc = np.random.rand(128)
         desc = desc / np.sqrt((desc**2).sum())
         desc = np.round(desc * 255) '''

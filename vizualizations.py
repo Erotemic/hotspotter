@@ -323,7 +323,7 @@ def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
 
     def _on_chip_click(event):
         #print('\n===========')
-        #print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
+        print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
         print('[viz] clicked chip')
         if event.xdata is None or event.inaxes is None:
             default_chip_view()
@@ -337,9 +337,19 @@ def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
         if len(kpts) == 0:
             print('This chip has no keypoints')
             return
-        x, y = event.xdata, event.ydata
-        fx = nearest_kp(x, y, kpts)[0]
-        select_ith_keypoint(fx)
+        if event.key == 'shift':
+            print('masking')
+            # TODO: Do better integration of masking
+            from _tpl import mask_creator
+            default_chip_view()
+            df2.disconnect_callback(fig, 'button_press_event')
+            ax = df2.gca()
+            mc = mask_creator.MaskCreator(ax)
+            fig.canvas.draw()
+        else:
+            x, y = event.xdata, event.ydata
+            fx = nearest_kp(x, y, kpts)[0]
+            select_ith_keypoint(fx)
     #fx = 1897
     #select_ith_keypoint(fx)
     # Draw without keypoints the first time

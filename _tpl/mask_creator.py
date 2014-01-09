@@ -59,7 +59,7 @@ class MaskCreator(object):
         #line_color = 'none'
         color = np.array(line_color) * .6
         marker_face_color = line_color
-        line_kwargs = {'lw': line_width, 'color':color, 'mfc': marker_face_color}
+        line_kwargs = {'lw': line_width, 'color': color, 'mfc': marker_face_color}
         self.line = plt.Line2D(x, y, marker='o', alpha=0.8, animated=True, **line_kwargs)
         self._update_line()
         self.ax.add_line(self.line)

@@ -109,7 +109,7 @@ FONTS.large     = FontProperties(weight='light', size=LARGE)
 FONTS.medbold   = FontProperties(weight='bold', size=MED)
 FONTS.largebold = FontProperties(weight='bold', size=LARGE)
 
-FONTS.legend   = FONTS.large
+FONTS.legend   = FONTS.small
 FONTS.figtitle = FONTS.med
 FONTS.axtitle  = FONTS.med
 FONTS.subtitle = FONTS.med
@@ -924,7 +924,8 @@ def figure(fnum=None, doclf=False, title=None, pnum=(1, 1, 1), figtitle=None,
     return fig
 
 
-def plot_pdf(data, draw_support=True, scale_to=None, label=None, colorx=0):
+def plot_pdf(data, draw_support=True, scale_to=None, label=None, color=0,
+             nYTicks=3):
     fig = gcf()
     ax = gca()
     data = np.array(data)
@@ -934,7 +935,12 @@ def plot_pdf(data, draw_support=True, scale_to=None, label=None, colorx=0):
         draw_text(warnstr)
         return
     bw_factor = .05
-    line_color = plt.get_cmap('gist_rainbow')(colorx)
+    if isinstance(color, (int, float)):
+        colorx = color
+        line_color = plt.get_cmap('gist_rainbow')(colorx)
+    else:
+        line_color = color
+
     # Estimate a pdf
     data_pdf = estimate_pdf(data, bw_factor)
     # Get probability of seen data
@@ -955,6 +961,9 @@ def plot_pdf(data, draw_support=True, scale_to=None, label=None, colorx=0):
         ax.plot(data, preb_y_data, 'o', color=line_color, figure=fig, alpha=.1)
     # Plot the pdf (unseen data)
     ax.plot(x_data, y_data, color=line_color, label=label)
+    if nYTicks is not None:
+        yticks = np.linspace(min(y_data), max(y_data), nYTicks)
+        ax.set_yticks(yticks)
 
 
 def estimate_pdf(data, bw_factor):
@@ -1015,31 +1024,43 @@ def plot_sift_signature(sift, title='', fnum=None, pnum=None):
     plot_bars(sift, 16)
     ax.set_xlim(0, 128)
     ax.set_ylim(0, 256)
-    xy, width, height = _axis_xy_width_height(ax)
-
-    rect = matplotlib.patches.Rectangle(xy, width, height, lw=0, zorder=0)
-    rect = ax.add_patch(rect)
-    rect.set_clip_on(False)
-    rect.set_fill(True)
-    rect.set_color(BLACK * .9)
     space_xticks(9, 16)
     space_yticks(5, 64)
     ax.set_title(title)
     return ax
 
 
+def dark_background(ax=None):
+    if ax is None:
+        ax = gca()
+    xy, width, height = _axis_xy_width_height(ax)
+    rect = matplotlib.patches.Rectangle(xy, width, height, lw=0, zorder=0)
+    rect.set_clip_on(False)
+    rect.set_fill(True)
+    rect.set_color(BLACK * .9)
+    rect = ax.add_patch(rect)
+
+
 def space_xticks(nTicks=9, spacing=16, ax=None):
     if ax is None:
         ax = gca()
     ax.set_xticks(np.arange(nTicks) * spacing)
-    for tick in ax.xaxis.get_major_ticks():
-        tick.label.set_fontsize(8)
+    small_xticks(ax)
 
 
 def space_yticks(nTicks=9, spacing=32, ax=None):
     if ax is None:
         ax = gca()
     ax.set_yticks(np.arange(nTicks) * spacing)
+    small_yticks(ax)
+
+
+def small_xticks(ax=None):
+    for tick in ax.xaxis.get_major_ticks():
+        tick.label.set_fontsize(8)
+
+
+def small_yticks(ax=None):
     for tick in ax.yaxis.get_major_ticks():
         tick.label.set_fontsize(8)
 

@@ -24,6 +24,7 @@ import match_chips3 as mc3
 import helpers
 import vizualizations as viz
 import voting_rules2 as vr2
+import report_results2 as rr2
 
 
 # Toggleable printing
@@ -551,6 +552,13 @@ def run_investigations(hs, qcx_list):
     #Kr_  = {'Krecip':        [0, 2, 5, 10]}
 
     tests = args.tests[:]
+    allres_ptr = [None]
+
+    def get_allres():
+        allres = allres_ptr[0]
+        if allres is None:
+            allres_ptr[0] = rr2.get_allres(hs)
+        return allres_ptr[0]
 
     def intest(testname):
         ret = testname in tests
@@ -581,6 +589,10 @@ def run_investigations(hs, qcx_list):
         fnum = interaction.interact1(hs, qcx_list, fnum)
     if intest('list'):
         print(experiment_harness.get_valid_testcfg_names())
+    if intest('dists'):
+        allres = get_allres()
+        rr2.viz_db_match_distances(allres)
+
     # Allow any testcfg to be in tests like:
     # vsone_1 or vsmany_3
     import experiment_configs as _testcfgs

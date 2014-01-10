@@ -52,18 +52,24 @@ def rrr():
     print('[algos] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
 
+DIST_LIST = ['L1', 'L2', 'hist_isect']
+
+
+def compute_distances(hist1, hist2, dist_list=DIST_LIST):
+    return {type_: globals()[type_](hist1, hist2) for type_ in dist_list}
+
 
 def L1(hist1, hist2):
-    return np.sum(np.abs(hist1 - hist2))
+    return (np.abs(hist1 - hist2)).sum(-1)
 
 
 def L2(hist1, hist2):
-    return np.sqrt(np.sum(np.abs(hist1 - hist2) ** 2))
+    return np.sqrt((np.abs(hist1 - hist2) ** 2).sum(-1))
 
 
 def hist_isect(hist1, hist2):
-    numer = (np.vstack([hist1, hist2])).min(0).sum()
-    denom = hist2.sum()
+    numer = (np.dstack([hist1, hist2])).min(-1).sum(-1)
+    denom = hist2.sum(-1)
     hisect_dist = 1 - (numer / denom)
     return hisect_dist
 

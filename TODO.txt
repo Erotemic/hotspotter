@@ -1,6 +1,20 @@
 #--- Feature ----
 Integrate scale threshold into libhesaff
 
+Hendrik/Jason TODO: 
+Finish the earth movers distance function in algos.py i.e.  Fix the linear
+program in algos.py to compute the earth movers distance
+
+
+Hendrik/Jason TODO: 
+I would like there to be a text area that selects a cid (chip-id) whenever 
+A) A user presses enter
+B) A user enters enough information such that there is only one possible
+chip-id he/she could select. (assuming they will not remove characters).
+C) A user has changed information and the mouse moves (only if invalid).
+
+Hendrik/Jason TODO: 
+Autosave
 #--- Annoyances ----
 
 * Some Preferences need to invalidate the cache: (like changing the scale thresholds)

@@ -1346,8 +1346,8 @@ class RedirectStdout(object):
 
 
 class Indenter(RedirectStdout):
-    def __init__(self):
-        super(Indenter, self).__init__(lbl='    ', autostart=True)
+    def __init__(self, lbl='    '):
+        super(Indenter, self).__init__(lbl=lbl, autostart=True)
 
 
 def choose(n, k):

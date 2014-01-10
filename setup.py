@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import division, print_function
-from os.path import dirname, realpath, join, exists, normpath
+from os.path import dirname, realpath, join, exists, normpath, expanduser
 import os
 import helpers
 import sys
@@ -90,6 +90,12 @@ MICRO               = 0
 SUFFIX              = ''  # Should be blank except for rc's, betas, etc.
 ISRELEASED          = False
 VERSION             = '%d.%d.%d%s' % (MAJOR, MINOR, MICRO, SUFFIX)
+
+
+def __cd(dpath, verbose=True):
+    if verbose:
+        print('[setup] change dir to: %r' % dpath)
+    os.chdir(dpath)
 
 
 def __cmd(args, verbose=True):
@@ -228,6 +234,43 @@ def make_install_opencv():
     pass
 
 
+def pull(repo):
+    repo_dpath = join(expanduser('~'), 'code', repo)
+    cwd = os.getcwd()
+    __cd(repo_dpath)
+    if repo == 'hotspotter':
+        __cmd('git pull origin')
+        __cmd('git pull github')
+    else:
+        __cmd('git pull')
+    __cd(cwd)
+
+
+def push(repo):
+    repo_dpath = join(expanduser('~'), 'code', repo)
+    cwd = os.getcwd()
+    __cd(repo_dpath)
+    if repo == 'hotspotter':
+        __cmd('git push origin')
+        __cmd('git push github')
+    else:
+        __cmd('git push')
+    __cd(cwd)
+
+
+def status(repo):
+    print('[helpers] ---- status(%r) ----' % repo)
+    repo_dpath = join(expanduser('~'), 'code', repo)
+    cwd = os.getcwd()
+    __cd(repo_dpath)
+    with helpers.Indenter('[%s]' % repo):
+        __cmd('git status')
+    __cd(cwd)
+    print('')
+
+
+
+
 if __name__ == '__main__':
     print('[setup] Entering HotSpotter setup')
     for cmd in iter(sys.argv[1:]):
@@ -247,3 +290,18 @@ if __name__ == '__main__':
             make_install_pyhesaff()
         if cmd in ['opencv']:
             make_install_opencv()
+        if cmd in ['pull']:
+            pull('opencv')
+            pull('hesaff')
+            pull('flann')
+            pull('hotspotter')
+        if cmd in ['status']:
+            status('opencv')
+            status('hesaff')
+            status('flann')
+            status('hotspotter')
+        if cmd in ['push']:
+            #push('opencv')
+            #push('hesaff')
+            #push('flann')
+            push('hotspotter')

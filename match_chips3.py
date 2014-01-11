@@ -7,7 +7,6 @@ import re
 import helpers
 import dev
 import DataStructures as ds
-import Config
 import matching_functions as mf
 
 try:

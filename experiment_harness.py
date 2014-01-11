@@ -7,6 +7,7 @@ import dev
 import draw_func2 as df2
 import fileio as io
 #from match_chips3 import *
+import DataStructures as ds
 import helpers as helpers
 import numpy as np
 import sys
@@ -72,10 +73,11 @@ def print_test_results(test_results):
 # Display Test Results
 #-----------
 # Run configuration for each query
-def get_test_results(hs, qcx_list, query_cfg, cfgx=0, nCfg=1,
+def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1,
                      force_load=False):
-    print('[harn] get_test_results(): %r' % query_cfg.get_uid())
-    query_uid = query_cfg.get_uid()
+    dcxs = hs.get_indexed_sample()
+    query_uid = qdat.get_uid()
+    print('[harn] get_test_results(): %r' % query_uid)
     hs_uid    = hs.get_db_name()
     qcxs_uid  = helpers.hashstr_arr(qcx_list)
     test_uid  = hs_uid + query_uid + qcxs_uid
@@ -106,7 +108,7 @@ def get_test_results(hs, qcx_list, query_cfg, cfgx=0, nCfg=1,
         #title = 'q' + hs.cidstr(qcx) + ' - ' + notes
         #print('[harn] title=%r' % (title,))
         #print('[harn] gt_' + hs.cidstr(gt_cxs))
-        res_list = mc3.execute_query_safe(hs, query_cfg, [qcx])
+        res_list = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
         bestranks = []
         algos = []
         qx2_reslist += [res_list]
@@ -145,9 +147,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     varied_params_list = [_ for _dict in vary_dicts for _ in helpers.all_dict_combinations(_dict)]
     # query_cxs, other_cxs, notes
     cfg_list = [Config.QueryConfig(hs, **_dict) for _dict in varied_params_list]
-    # __NEW_HACK__
-    mc3.unify_cfgs(cfg_list)
-    # __END_HACK__
+    qdat = ds.QueryData()
     # Preallocate test result aggregation structures
     print('')
     print('[harn] Testing %d different parameters' % len(cfg_list))
@@ -157,13 +157,14 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     rc2_res = np.empty((nQuery, nCfg), dtype=list)
     mat_list = []
     c = hs.get_arg('cols', [])
-    for cfgx, test_cfg in enumerate(cfg_list):
+    for cfgx, query_cfg in enumerate(cfg_list):
         print(textwrap.dedent('''
         [harn]---------------')
         [harn] TEST_CFG %d/%d'
         [harn]---------------'''  % (cfgx + 1, nCfg)))
+        qdat.set_cfg(query_cfg)
         force_load = cfgx in c
-        (mat_vals, ), qx2_reslist = get_test_results(hs, qcx_list, test_cfg,
+        (mat_vals, ), qx2_reslist = get_test_results(hs, qcx_list, qdat,
                                                      cfgx, nCfg, force_load)
         mat_list.append(mat_vals)
         for qx, reslist in enumerate(qx2_reslist):

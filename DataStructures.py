@@ -56,7 +56,7 @@ class QueryData(DynStruct):
         qdat._qcxs = []
         qdat._dcxs = []
         qdat._data_indexes = None  # current index
-        qdat._dcx2_index = {}      # cached indexes
+        qdat._dcxs2_index = {}     # cached indexes
 
     def set_cfg(qdat, query_cfg):
         qdat.cfg = query_cfg

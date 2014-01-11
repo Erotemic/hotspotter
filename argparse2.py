@@ -1,9 +1,13 @@
 from __future__ import division, print_function
+import cross_platform
 import multiprocessing
 import argparse
 
 DEBUG = False
 #DEBUG = True
+
+# seemlessly fix any path issues
+cross_platform.ensure_pythonpath()
 
 
 def switch_sanataize(switch):

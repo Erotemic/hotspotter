@@ -1,5 +1,6 @@
 from __future__ import division, print_function
 import __builtin__
+import __common__
 import sys
 from itertools import izip
 # Hotspotter
@@ -12,17 +13,9 @@ import helpers
 # Scientific
 import numpy as np
 
-try:
-    profile  # NoQA
-except NameError:
-    profile = lambda func: func
+print, print_, print_on, print_off, rrr, profile = __common__.init(__name__, '[mf]')
 
 MARK_AFTER = 40
-
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-
 
 DEBUG_MF = False
 if DEBUG_MF:
@@ -31,29 +24,6 @@ if DEBUG_MF:
 else:
     def printDBG(msg):
         pass
-
-
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-
-
-def print_off():
-    global print, print_
-
-    def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
-        pass
-
-
-def rrr():
-    'Dynamic module reloading'
-    import imp
-    print('[mf] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
 
 
 def mark_progress_silent():
@@ -362,12 +332,12 @@ def spatial_verification(hs, qcx2_chipmatch, qdat):
     cx2_rchip_size  = hs.cpaths.cx2_rchip_size
     cx2_kpts = hs.feats.cx2_kpts
     qcx2_chipmatchSV = {}
-    #print(qdat._dcxs)
+    #printDBG(qdat._dcxs)
     dcxs_ = set(qdat._dcxs)
     USE_1_to_2 = True
     # Find a transform from chip2 to chip1 (the old way was 1 to 2)
     for qcx in qcx2_chipmatch.iterkeys():
-        #print('[mf] verify qcx=%r' % qcx)
+        #printDBG('[mf] verify qcx=%r' % qcx)
         chipmatch = qcx2_chipmatch[qcx]
         cx2_prescore = score_chipmatch(hs, qcx, chipmatch, prescore_method, qdat)
         (cx2_fm, cx2_fs, cx2_fk) = chipmatch
@@ -385,17 +355,20 @@ def spatial_verification(hs, qcx2_chipmatch, qdat):
                                                       USE_1_to_2)
         # spatially verify the top __NUM_RERANK__ results
         for topx in xrange(nRerank):
-            #print('[mf] vs topcx=%r, score=%r' % (cx, cx2_prescore[cx]))
             cx = topx2_cx[topx]
             fm = cx2_fm[cx]
+            #printDBG('[mf] vs topcx=%r, score=%r' % (cx, cx2_prescore[cx]))
+            #printDBG('[mf] len(fm)=%r' % (len(fm)))
             if len(fm) >= min_nInliers:
                 dlen_sqrd = topx2_dlen_sqrd[topx]
                 kpts2 = cx2_kpts[cx]
                 fs    = cx2_fs[cx]
                 fk    = cx2_fk[cx]
+                #printDBG('[mf] computing homog')
                 sv_tup = sv2.homography_inliers(kpts1, kpts2, fm, xy_thresh,
                                                 max_scale, min_scale, dlen_sqrd,
                                                 min_nInliers, just_affine)
+                #printDBG('[mf] sv_tup = %r' % (sv_tup,))
                 if sv_tup is None:
                     print_('o')  # sv failure
                 else:

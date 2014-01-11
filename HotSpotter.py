@@ -904,12 +904,11 @@ class HotSpotter(DynStruct):
         query_cfg = hs.prefs.query_cfg
         # Build query big cache uid
         hs_uid    = 'HSDB(%s)' % hs.get_db_name()
-        query_uid = query_cfg.get_uid()
-        uid_list = [hs_uid, query_uid]
+        uid_list = [hs_uid] + query_cfg.get_uid_list()
         if cx_list is not None:
             cxs_uid = helpers.hashstr_arr(cx_list, 'cxs')
-            uid_list.append(cxs_uid)
-        cache_uid = '_'.join(uid_list)
+            uid_list.append('_' + cxs_uid)
+        cache_uid = ''.join(uid_list)
         return cache_uid
 
     #----------------------

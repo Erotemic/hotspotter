@@ -1,5 +1,4 @@
 from __future__ import division, print_function
-import __builtin__
 # Science
 import numpy as np
 import numpy.linalg as linalg
@@ -12,25 +11,6 @@ import sys
 # skimage.transform.fast_homography(im, H)
 # Toggleable printing
 
-print = __builtin__.print
-print_ = sys.stdout.write
-
-
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-
-
-def print_off():
-    global print, print_
-
-    def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
-        pass
-
 
 def rrr():
     'Dynamic module reloading'
@@ -41,10 +21,16 @@ def rrr():
 SV_DTYPE = np.float64
 
 
+def printDBG(msg):
+    pass
+    #print(msg)
+
+
 def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
     '''Generate 6 degrees of freedom homography transformation
     Computes homography from normalized (0 to 1) point correspondences
     from 2 --> 1 '''
+    #printDBG('[sv2] compute_homog')
     num_pts = len(x1_mn)
     Mbynine = np.zeros((2 * num_pts, 9), dtype=SV_DTYPE)
     for ix in xrange(num_pts):  # Loop over inliers
@@ -59,13 +45,20 @@ def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
         Mbynine[ix * 2 + 1] = (j, k, l, 0, 0, 0, p, q, r)
     # Solve for the nullspace of the Mbynine (solves least squares)
     try:
-        (u, s, v) = linalg.svd(Mbynine)
+        #printDBG('[sv2] svd(%r)' % (Mbynine.shape,))
+        (u, s, v) = linalg.svd(Mbynine, full_matrices=False)
+        #printDBG('[sv2] done')
     except MemoryError as ex:
         print('[sv2] Caught MemErr %r during full SVD. Trying sparse SVD.' % (ex))
         MbynineSparse = sparse.lil_matrix(Mbynine)
         (u, s, v) = sparse_linalg.svds(MbynineSparse)
-    except linalg.LinAlgError:
+    except linalg.LinAlgError as ex:
+        print('[sv2] svd did not converge: %r' % ex)
         return np.eye(3)
+    except Exception as ex:
+        print('[sv2] svd error: %r' % ex)
+        print('[sv2] Mbynine.shape = %r' % (Mbynine.shape,))
+        raise
     # Rearange the nullspace into a homography
     h = v[-1]  # v = V.H # (transposed in matlab)
     H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]))
@@ -188,6 +181,7 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
     REMEMBER our acd is actually inv(acd)
     We transform from 1 - >2
     '''
+    #printDBG('[sv2] affine_inliers')
     #print(repr((acd1_m.T[0:10]).T))
     #print(repr((acd2_m.T[0:10]).T))
     #with helpers.Timer('enume all'):
@@ -282,6 +276,7 @@ def homography_inliers(kpts1, kpts2, fm,
                        dlen_sqrd2=None,
                        min_num_inliers=4,
                        just_affine=False):
+    #printDBG('[sv2] homography_inliers')
     #if len(fm) < min_num_inliers:
         #return None
     # Not enough data
@@ -330,7 +325,7 @@ def homography_inliers(kpts1, kpts2, fm,
     z1_mt = H31 * (x1_m) + H32 * (y1_m) + H33
     # --- Find (Squared) Homography Distance Error ---
     #scale_err = np.abs(np.linalg.det(H)) * det2_m / det1_m
-    z1_mt[z1_mt == 0] = 1E-14  # Avoid divide by zero  # NOQA
+    z1_mt[z1_mt == 0] = 1E-14  # Avoid divide by zero
     xy_err = ((x1_mt / z1_mt) - x2_m) ** 2 + ((y1_mt / z1_mt) - y2_m) ** 2
     # Estimate final inliers
     inliers = np.where(xy_err < xy_thresh_sqrd)[0]
@@ -344,36 +339,6 @@ def test():
     hs  = main_locals['hs']        # hotspotter api
     qcx = main_locals['qcx']       # query chip index
     viz.viz_spatial_verification(hs, qcx)
-
-    #rchip1_invhom = cv2.warpPerspective(rchip1, np.linalg.inv(H), rchip2.shape[0:2])
-    #rchip1_invaff = cv2.warpAffine(rchip1, np.linalg.inv(Aff)[0:2, :], rchip2.shape[0:2])
-
-    # Resize chips
-    #resz_fn = lambda shape: tuple(map(int, (shape[1] / 4, shape[0] / 4)))
-    #new_sz1 = resz_fn(rchip1.shape)
-    #new_sz2 = resz_fn(rchip2.shape)
-    #rchip1_invhom = cv2.resize(rchip1_invhom, new_sz2)
-    #rchip1_homog  = cv2.resize(rchip1_homog, new_sz2)
-    #rchip1_aff = cv2.resize(rchip1_aff, new_sz2)
-    #rchip1_invaff = cv2.resize(rchip1_invaff, new_sz2)
-    #rchip1_ = cv2.resize(rchip1, new_sz1)
-    #rchip2_ = cv2.resize(rchip2, new_sz2)
-    #print(fm)
-    #print('Homography inliers')
-    #print(inliers)
-    #print(H)
-    #print(rchip1.shape, rchip2.shape)
-    #print('Affine inliers')
-    #print(aff_inliers)
-    #print('Aff')
-    #print(Aff[0:2, :])
-    #print (kpts1.shape, kpts2.shape)
-    #print (cv2.getAffineTransform(kpts1[aff_inliers], kpts2[aff_inliers]))
-
-    # Get chip index to feature score
-    # These are unused here
-    #fs = res.cx2_fs[cx]
-    #score = res.cx2_score[cx]
 
 
 if __name__ == '__main__':

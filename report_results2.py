@@ -294,9 +294,8 @@ def init_score_matrix(allres):
     allres.row_label_cx = row_label_cx
 
 
-def get_title_suffix(SV=True):
-    SV_aug = ['_SVOFF', '_SVon'][SV]
-    title_suffix = params.get_query_uid() + SV_aug
+def get_title_suffix(hs):
+    title_suffix = hs.get_cache_uid()
     return title_suffix
 
 
@@ -308,7 +307,7 @@ def init_allres(hs, qcx2_res, SV=True,
     # Make AllResults data containter
     allres = AllResults(hs, qcx2_res, SV)
     #SV_aug = ['_SVOFF','_SVon'][allres.SV]
-    allres.title_suffix = get_title_suffix(SV)
+    allres.title_suffix = get_title_suffix(hs)
     #helpers.ensurepath(allres.summary_dir)
     print('\n======================')
     print(' * Initializang all results')
@@ -674,7 +673,7 @@ def dump_analysis(allres):
 def dump_all_queries2(hs):
     import match_chips3 as mc3
     test_cxs = hs.test_sample_cx
-    title_suffix = get_title_suffix()
+    title_suffix = get_title_suffix(hs)
     print('[rr2] dumping all %r queries' % len(test_cxs))
     for qcx in test_cxs:
         res = mc3.QueryResult(qcx)
@@ -1058,12 +1057,12 @@ def get_orgres_match_distances(allres, orgtype_='false'):
     cxs  = allres[orgtype_].cxs
     match_list = zip(qcxs, cxs)
     print('[rr2] getting orgtype_=%r distances between sifts' % orgtype_)
-    aggdesc1, aggdesc2 = get_matching_descriptors(allres, match_list)
-    print('[rr2] aggdesc1.shape = %r' % (aggdesc1.shape,))
-    print('[rr2] aggdesc2.shape = %r' % (aggdesc2.shape,))
+    adesc1, adesc2 = get_matching_descriptors(allres, match_list)
+    print('[rr2]  * adesc1.shape = %r' % (adesc1.shape,))
+    print('[rr2]  * adesc2.shape = %r' % (adesc2.shape,))
     #dist_list = ['L1', 'L2', 'hist_isect', 'emd']
-    dist_list = ['L1', 'L2', 'hist_isect']
-    distances = algos.compute_distances(aggdesc1, aggdesc2, dist_list)
+    dist_list = ['L1', 'L2']
+    distances = algos.compute_distances(adesc1, adesc2, dist_list)
     return distances
 
 

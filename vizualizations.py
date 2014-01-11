@@ -61,7 +61,6 @@ def register_FNUMS(FNUMS_):
 @profile
 def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwargs):
     import draw_func2 as df2
-    from itertools import product as iprod
     disttype_list = orgres2_distance.itervalues().next().keys()
     orgtype_list = orgres2_distance.keys()
     (nRow, nCol) = len(orgtype_list), len(disttype_list)
@@ -89,16 +88,20 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
         df2.small_xticks(ax)
         df2.small_yticks(ax)
 
-    for px, (orgkey, distkey) in enumerate(iprod(orgtype_list, disttype_list)):
-        dists = orgres2_distance[orgkey][distkey]
-        df2.figure(fnum=fnum, pnum=pnum_(px))
-        color = color_list[px]
-        title = distkey + ' ' + orgkey
-        label = 'Pr(%s_dist | %s)' % (distkey, orgkey)
-        _distplot(dists, color, label, **kwargs)
-        ax = df2.gca()
-        ax.set_title(title)
-        df2.legend()
+    px = 0
+    for orgkey in orgtype_list:
+        for distkey in disttype_list:
+            print(((orgkey, distkey)))
+            dists = orgres2_distance[orgkey][distkey]
+            df2.figure(fnum=fnum, pnum=pnum_(px))
+            color = color_list[px]
+            title = distkey + ' ' + orgkey
+            label = 'P(%s | %s)' % (distkey, orgkey)
+            _distplot(dists, color, label, **kwargs)
+            ax = df2.gca()
+            ax.set_title(title)
+            df2.legend()
+            px += 1
 
     subtitle = 'the matching distances between sift descriptors'
     title = '(sift) matching distances'

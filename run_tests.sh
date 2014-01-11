@@ -5,6 +5,11 @@
 #python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --sthresh  0 9001   --printoff 
 #python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --printoff 
 
+simple_tests()
+{
+    python dev.py --db NAUTS -t best --all-gt-cases
+}
+
 ic --db GZ --tests vsmany_big_social --all-gt-cases | tail
 ic --db GZ --tests vsmany_score --all-gt-cases | tail
 ic --db GZ --tests vsmany_sv --all-gt-cases | tail

@@ -77,7 +77,7 @@ def get_test_results(hs, qcx_list, query_cfg, cfgx=0, nCfg=1,
     print('[harn] get_test_results(): %r' % query_cfg.get_uid())
     query_uid = query_cfg.get_uid()
     hs_uid    = hs.get_db_name()
-    qcxs_uid   = helpers.hashstr(repr(tuple(qcx_list)))
+    qcxs_uid  = helpers.hashstr_arr(qcx_list)
     test_uid  = hs_uid + query_uid + qcxs_uid
     cache_dir = join(hs.dirs.cache_dir, 'experiment_harness_results')
     io_kwargs = dict(dpath=cache_dir, fname='test_results', uid=test_uid, ext='.cPkl')
@@ -89,7 +89,7 @@ def get_test_results(hs, qcx_list, query_cfg, cfgx=0, nCfg=1,
     #NMultiNames =
     nPrevQ = nQuery * cfgx
     qx2_reslist = []
-    if  not hs.args.nocache_query and (not force_load):
+    if not hs.args.nocache_query and (not force_load):
         test_results = io.smart_load(**io_kwargs)
         if test_results is None:
             pass
@@ -129,7 +129,7 @@ def get_test_results(hs, qcx_list, query_cfg, cfgx=0, nCfg=1,
     mat_vals = np.array(qx2_bestranks)
     test_results = (mat_vals,)
     # High level caching
-    helpers.ensuredir('results')
+    helpers.ensuredir(cache_dir)
     io.smart_save(test_results, **io_kwargs)
     return test_results, qx2_reslist
 

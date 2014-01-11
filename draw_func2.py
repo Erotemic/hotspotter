@@ -573,7 +573,7 @@ def adjust_subplots_xylabels():
 
 
 def adjust_subplots_safe():
-    adjust_subplots(left=.1, right=.9, bottom=.1, top=.9, hspace=.15)
+    adjust_subplots(left=.1, right=.9, bottom=.1, top=.9, wspace=.3, hspace=.3)
 
 
 def adjust_subplots(left=0.02,  bottom=0.02,
@@ -1027,6 +1027,7 @@ def plot_sift_signature(sift, title='', fnum=None, pnum=None):
     space_xticks(9, 16)
     space_yticks(5, 64)
     ax.set_title(title)
+    dark_background(ax)
     return ax
 
 

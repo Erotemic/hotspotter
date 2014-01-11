@@ -22,6 +22,11 @@ print = __builtin__.print
 
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5)
 
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
+
 
 def print_on():
     global print
@@ -51,6 +56,56 @@ def printDBG(msg):
 def register_FNUMS(FNUMS_):
     global FNUMS
     FNUMS = FNUMS_
+
+
+@profile
+def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwargs):
+    import draw_func2 as df2
+    from itertools import product as iprod
+    disttype_list = orgres2_distance.itervalues().next().keys()
+    orgtype_list = orgres2_distance.keys()
+    (nRow, nCol) = len(orgtype_list), len(disttype_list)
+    nColors = nRow * nCol
+    color_list = df2.distinct_colors(nColors)
+    df2.figure(fnum=fnum, doclf=True, trueclf=True)
+    pnum_ = lambda px: (nRow, nCol, px + 1)
+
+    def _distplot(dists, color, label, plot_type='pdf'):
+        data = sorted(dists)
+        ax = df2.gca()
+        if plot_type == 'plot':
+            df2.plot(data, color=color, label=label)
+            #xticks = np.linspace(np.min(data), np.max(data), 3)
+            #yticks = np.linspace(0, len(data), 5)
+            #ax.set_xticks(xticks)
+            #ax.set_yticks(yticks)
+            ax.set_ylabel('distance')
+            ax.set_xlabel('matches indexes (sorted by distance)')
+        if plot_type == 'pdf':
+            df2.plot_pdf(data, color=color, label=label)
+            ax.set_ylabel('pr')
+            ax.set_xlabel('distance')
+        df2.dark_background(ax)
+        df2.small_xticks(ax)
+        df2.small_yticks(ax)
+
+    for px, (orgkey, distkey) in enumerate(iprod(orgtype_list, disttype_list)):
+        dists = orgres2_distance[orgkey][distkey]
+        df2.figure(fnum=fnum, pnum=pnum_(px))
+        color = color_list[px]
+        title = distkey + ' ' + orgkey
+        label = 'Pr(%s_dist | %s)' % (distkey, orgkey)
+        _distplot(dists, color, label, **kwargs)
+        ax = df2.gca()
+        ax.set_title(title)
+        df2.legend()
+
+    subtitle = 'the matching distances between sift descriptors'
+    title = '(sift) matching distances'
+    if db_name != '':
+        title = db_name + ' ' + title
+    df2.set_figtitle(title, subtitle)
+    df2.adjust_subplots_safe()
 
 
 def plot_name_of_cx(hs, cx, **kwargs):
@@ -344,7 +399,7 @@ def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
             default_chip_view()
             df2.disconnect_callback(fig, 'button_press_event')
             ax = df2.gca()
-            mc = mask_creator.MaskCreator(ax)
+            mc = mask_creator.MaskCreator(ax)  # NOQA
             fig.canvas.draw()
         else:
             x, y = event.xdata, event.ydata
@@ -899,7 +954,6 @@ def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
     if fm is not None:
         return fm
     print('[viz] ensure_fm()')
-    import match_chips3 as mc3
     import QueryResult as qr
     if res == 'db':
         query_args = hs.prefs.query_cfg.flat_dict()
@@ -907,7 +961,7 @@ def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
         query_args['use_cache'] = False
         # Query without spatial verification to get assigned matches
         print('query_args = %r' % (query_args))
-        res = mc3.query_database(hs, cx1, **query_args)
+        res = hs.query(hs, cx1, **query_args)
     elif res == 'gt':
         # For testing purposes query_groundtruth is a bit faster than
         # query_database. But there is no reason you cant query_database
@@ -915,7 +969,7 @@ def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
         query_args['sv_on'] = False
         query_args['use_cache'] = False
         print('query_args = %r' % (query_args))
-        res = mc3.query_groundtruth(hs, cx1, **query_args)
+        res = hs.query_groundtruth(cx1, **query_args)
     assert isinstance(res, qr.QueryResult)
     # Get chip index to feature match
     fm = res.cx2_fm[cx2]

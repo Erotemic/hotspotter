@@ -1,3 +1,4 @@
+#!/usr/bin/python
 from __future__ import division, print_function
 import matplotlib
 matplotlib.use('Qt4Agg')
@@ -24,6 +25,12 @@ import fnmatch
 import warnings
 from itertools import izip
 from os.path import join, exists
+import fileio as io
+
+try:
+    profile  # NoQA
+except NameError:
+    profile = lambda func: func
 
 REPORT_MATRIX  = True
 REPORT_MATRIX_VIZ = True
@@ -75,6 +82,9 @@ class AllResults(DynStruct):
         self.greater1_cxs = None
         self.greater5_cxs = None
         self.matrix_str          = None
+
+    def get_orgres2_distances(allres, *args, **kwargs):
+        return _get_orgres2_distances(allres, *args, **kwargs)
 
     def __str__(allres):
         #print = tores.append
@@ -142,6 +152,16 @@ class OrganizedResult(DynStruct):
     def printme3(self):
         for qcx, cx, score, rank in self.iter():
             print('%4d %4d %6.1f %4d' % (qcx, cx, score, rank))
+
+
+def get_false_match_distances(allres):
+    false_distances = get_orgres_match_distances(allres, 'false')
+    return false_distances
+
+
+def get_true_match_distances(allres):
+    true_distances = get_orgres_match_distances(allres, 'true')
+    return true_distances
 
 
 def res2_true_and_false(hs, res, SV):
@@ -1002,73 +1022,26 @@ def print_result_summaries_list(topnum=5):
     print('\n^(^_^)^\n')
 
 
-def get_false_match_distances(allres):
-    false_distances = get_orgres_match_distances(allres, 'false')
-    return false_distances
-
-
-def get_true_match_distances(allres):
-    true_distances = get_orgres_match_distances(allres, 'true')
-    return true_distances
-
-
-def _distplot(dists, color, label, plot_type='pdf'):
-    data = sorted(dists)
-    ax = df2.gca()
-    if plot_type == 'plot':
-        df2.plot(data, color=color, label=label)
-        #xticks = np.linspace(np.min(data), np.max(data), 3)
-        #yticks = np.linspace(0, len(data), 5)
-        #ax.set_xticks(xticks)
-        #ax.set_yticks(yticks)
-        ax.set_ylabel('distance')
-        ax.set_xlabel('matches indexes (sorted by distance)')
-    if plot_type == 'pdf':
-        df2.plot_pdf(data, color=color, label=label)
-        ax.set_ylabel('pr')
-        ax.set_xlabel('distance')
-    df2.dark_background(ax)
-    df2.small_xticks(ax)
-    df2.small_yticks(ax)
-
-
-def default_orgres2_distance(allres):
-    orgres_list = ['true', 'false']
+def _get_orgres2_distances(allres, orgres_list=None):
+    if orgres_list is None:
+        orgres_list = ['true', 'false', 'top_true', 'bot_true', 'top_false']
     dist_fn = lambda orgres: get_orgres_match_distances(allres, orgres)
-    orgres2_distance = {orgres: dist_fn(orgres) for orgres in orgres_list}
+    orgres2_distance = {}
+    for orgres in orgres_list:
+        try:
+            orgres2_distance[orgres] = dist_fn(orgres)
+        except Exception as ex:
+            print(ex)
+            print('failed dist orgres=%r' % orgres)
     return orgres2_distance
 
 
-def viz_db_match_distances(allres, **kwargs):
-    hs = allres.hs
-    orgres2_distance = default_orgres2_distance(allres)
-    plot_distances(orgres2_distance)
-    db_name = hs.get_db_name()
-    subtitle = 'the matching distances between sift descriptors'
-    df2.set_figtitle(db_name + ' (sift) matching distances', subtitle)
-    df2.adjust_subplots_safe()
-
-
-def plot_distances(orgres2_distance, fnum=1, **kwargs):
-    import draw_func2 as df2
-    disttype_list = orgres2_distance.itervalues().next().keys()
-    orgtype_list = orgres2_distance.keys()
-    (nRow, nCol) = len(orgtype_list), len(disttype_list)
-    nColors = nRow * nCol
-    color_list = df2.distinct_colors(nColors)
-    df2.figure(fnum=fnum, doclf=True, trueclf=True)
-    pnum_ = lambda px: (nRow, nCol, px + 1)
-    from itertools import product as iprod
-    for px, (orgkey, distkey) in enumerate(iprod(orgtype_list, disttype_list)):
-        dists = orgres2_distance[orgkey][distkey]
-        df2.figure(fnum=fnum, pnum=pnum_(px))
-        color = color_list[px]
-        title = distkey + ' ' + orgkey
-        label = 'Pr(%s_dist | %s)' % (distkey, orgkey)
-        _distplot(dists, color, label, **kwargs)
-        ax = df2.gca()
-        ax.set_title(title)
-        df2.legend()
+@profile
+def viz_db_match_distances(allres, orgres_list=None):
+    print('[rr2] viz_db_match_distances')
+    orgres2_distance = allres.get_orgres2_distances(orgres_list=orgres_list)
+    db_name = allres.hs.get_db_name()
+    viz.show_descriptors_match_distances(orgres2_distance, db_name=db_name)
 
 
 def get_true_matches():
@@ -1078,15 +1051,19 @@ def get_true_matches():
     return match_list
 
 
+@profile
 def get_orgres_match_distances(allres, orgtype_='false'):
     import algos
     qcxs = allres[orgtype_].qcxs
     cxs  = allres[orgtype_].cxs
     match_list = zip(qcxs, cxs)
+    print('[rr2] getting orgtype_=%r distances between sifts' % orgtype_)
     aggdesc1, aggdesc2 = get_matching_descriptors(allres, match_list)
-    hist1 = aggdesc1
-    hist2 = aggdesc2
-    distances = algos.compute_distances(aggdesc1, aggdesc2)
+    print('[rr2] aggdesc1.shape = %r' % (aggdesc1.shape,))
+    print('[rr2] aggdesc2.shape = %r' % (aggdesc2.shape,))
+    #dist_list = ['L1', 'L2', 'hist_isect', 'emd']
+    dist_list = ['L1', 'L2', 'hist_isect']
+    distances = algos.compute_distances(aggdesc1, aggdesc2, dist_list)
     return distances
 
 
@@ -1118,9 +1095,39 @@ def get_matching_descriptors(allres, match_list):
     return aggdesc1, aggdesc2
 
 
+def load_query_results(hs, qcx_list, force_load=False):
+    query_cfg = hs.prefs.query_cfg
+    # Build query big cache uid
+    query_uid = query_cfg.get_uid()
+    hs_uid    = hs.get_db_name()
+    qcxs_uid  = helpers.hashstr(tuple(qcx_list))
+    qres_uid  = hs_uid + query_uid + qcxs_uid
+    cache_dir = join(hs.dirs.cache_dir, 'query_results_bigcache')
+    print('\n===============')
+    print('\n[rr2] Load Query Results')
+    print('[rr2] load_query_results(): %r' % qres_uid)
+    io_kwargs = dict(dpath=cache_dir, fname='query_results', uid=qres_uid, ext='.cPkl')
+    # Return cache if available
+    if not hs.args.nocache_query and (not force_load):
+        qcx2_res = io.smart_load(**io_kwargs)
+        if qcx2_res is not None:
+            print('[rr2] load_query_results(): cache hit')
+            return qcx2_res
+        print('[rr2] load_query_results(): cache miss')
+    else:
+        print('[rr2] load_query_results(): cache off')
+    # Individually load / compute queries
+    qcx2_res = [hs.query(qcx) for qcx in qcx_list]
+    # Save to the cache
+    print('[rr2] Saving query_results to bigcache: %r' % qres_uid)
+    helpers.ensuredir(cache_dir)
+    io.smart_save(qcx2_res, **io_kwargs)
+    return qcx2_res
+
+
 def get_allres(hs):
     valid_cxs = hs.get_valid_cxs()
-    qcx2_res = [hs.query(cx) for cx in valid_cxs]
+    qcx2_res = load_query_results(hs, valid_cxs)
     allres = init_allres(hs, qcx2_res)
     return allres
 
@@ -1129,6 +1136,8 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
     freeze_support()
     import dev
+    import matching_functions as mf
+    mf.print_off()
     #import vizualizations as viz
     # Params
     print('[rr2] __main__ = report_results2.py')
@@ -1140,27 +1149,17 @@ if __name__ == '__main__':
         sys.exit(1)
 
     allres = helpers.search_stack_for_localvar('allres')
-    #if allres is None:
-        #hs = ld2.HotSpotter(ld2.DEFAULT)
-        #qcx2_res = mc3.run_matching(hs)
-        #SV = True
-        ## Initialize Results
-        #allres = init_allres(hs, qcx2_res, SV)
-    # Do something
-    SV = True
-    main_locals = dev.dev_main()
-    hs = main_locals['hs']
-    valid_cxs = hs.get_valid_cxs()
-    qcx2_res = [hs.query(cx) for cx in valid_cxs]
-    allres = init_allres(hs, qcx2_res, SV)
-    greater5_cxs = allres.greater5_cxs
+    if allres is None:
+        main_locals = dev.dev_main()
+        hs = main_locals['hs']
+        allres = get_allres(hs)
 
     #Helper drawing functions
     gt_matches = lambda cx: viz.show_chip(allres, cx, 'gt_matches')
     top5 = lambda cx: viz.show_chip(allres, cx, 'top5')
     selc = lambda cx: viz.show_chip(allres, cx, 'kpts')
+    matchd = lambda: viz_db_match_distances(allres)
 
     print(allres)
-
-    viz_db_match_distances(allres)
+    matchd()
     exec(df2.present())

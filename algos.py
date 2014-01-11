@@ -11,13 +11,14 @@ import matplotlib.pyplot as plt
 # Scientific
 import pyflann
 #import sklearn.decomposition
-#import sklearn.preprocessing as sklpreproc
+#import sklearn.preprocessing
 #import sklearn
 import numpy as np
 import scipy.sparse as spsparse
 # Hotspotter
 import fileio as io
 import helpers
+from itertools import izip
 
 # Toggleable printing
 print = __builtin__.print
@@ -52,21 +53,24 @@ def rrr():
     print('[algos] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
 
-DIST_LIST = ['L1', 'L2', 'hist_isect']
+DIST_LIST = ['L1', 'L2']
 
 
 def compute_distances(hist1, hist2, dist_list=DIST_LIST):
     return {type_: globals()[type_](hist1, hist2) for type_ in dist_list}
 
 
+@profile
 def L1(hist1, hist2):
     return (np.abs(hist1 - hist2)).sum(-1)
 
 
+@profile
 def L2(hist1, hist2):
     return np.sqrt((np.abs(hist1 - hist2) ** 2).sum(-1))
 
 
+@profile
 def hist_isect(hist1, hist2):
     numer = (np.dstack([hist1, hist2])).min(-1).sum(-1)
     denom = hist2.sum(-1)
@@ -74,72 +78,52 @@ def hist_isect(hist1, hist2):
     return hisect_dist
 
 
-def emd(sift1, sift2):
-    return -1
+@profile
+def emd(hist1, hist2):
     """
     earth mover's distance by robjects(lpSovle::lp.transport)
-    sift1 = np.random.rand(128)
-    sift2 = np.random.rand(128)'
+    import numpy as np
+    hist1 = np.random.rand(128)
+    hist2 = np.random.rand(128)
     require: lpsolve55-5.5.0.9.win32-py2.7.exe
     https://github.com/andreasjansson/python-emd
+    http://stackoverflow.com/questions/15706339/how-to-compute-emd-for-2-numpy-arrays-i-e-histogram-using-opencv
     http://www.cs.huji.ac.il/~ofirpele/FastEMD/code/
     http://www.cs.huji.ac.il/~ofirpele/publications/ECCV2008.pdf
     """
-    # Setup R environment
-    if sys.platform == 'win32':
-        os.environ['RHOME'] = r'C:\Program Files\R'
-    import rpy2.robjects as robjects
-    #import rpy2.interactive as r
-    from rpy2.robjects.packages import importr
-    from rpy2.robjects import r
-    importr("utils")
-    r('install.packages("lpSolve")')
-    # Build pairwise difference matrix
-    len1 = len(sift1)
-    len2 = len(sift2)
-    dist = np.zeros(len1 * len2)
-    for i in xrange(len1):
-        for j in xrange(len2):
-            dist[i * len2 + j] = np.abs(sift1[i] - sift1[j])
-    # import lp.transport(R)
-    robjects.r['library']('lpSolve')
-    transport = robjects.r['lp.transport']
-    # distance vector to distance matrix
-    costs = robjects.r['matrix'](robjects.FloatVector(dist),
-                                 nrow=len(sift1), ncol=len(sift2), byrow=True)
-    row_signs = ["<"] * len1
-    row_rhs = robjects.FloatVector(sift1)
-    col_signs = [">"] * len2
-    col_rhs = robjects.FloatVector(sift2)
+    try:
+        from cv2 import cv
+    except ImportError as ex:
+        print(repr(ex))
+        print('Cannot import cv. Is opencv 2.4.9?')
+        return -1
 
-    t = transport(costs, "min", row_signs, row_rhs, col_signs, col_rhs)
-    flow = t.rx2('solution')
+    # Stack weights into the first column
+    def add_weight(hist):
+        weights = np.ones(len(hist))
+        stacked = np.ascontiguousarray(np.vstack([weights, hist]).T)
+        return stacked
 
-    dist = dist.reshape(len(sift1), len(sift2))
-    flow = np.array(flow)
-    work = np.sum(flow * dist)
-    emd = work / np.sum(flow)
-    return emd
+    def convertCV32(stacked):
+        hist64 = cv.fromarray(stacked)
+        hist32 = cv.CreateMat(hist64.rows, hist64.cols, cv.CV_32FC1)
+        cv.Convert(hist64, hist32)
+        return hist32
 
-#def earthmovers(hist1, hist2, h_bins, s_bins):
-##Define number of rows
-#numRows = h_bins * s_bins
-#sig1 = cv.CreateMat(numRows, 3, cv.CV_32FC1)
-#sig2 = cv.CreateMat(numRows, 3, cv.CV_32FC1)
-#for h in xrange(h_bins):
-    #for s in xrange(s_bins):
-        #bin_val = cv.QueryHistValue_2D(hist1, h, s)
-        #cv.Set2D(sig1, h * s_bins + s, 0, cv.Scalar(bin_val))
-        #cv.Set2D(sig1, h * s_bins + s, 1, cv.Scalar(h))
-        #cv.Set2D(sig1, h * s_bins + s, 2, cv.Scalar(s))
+    def emd_(a32, b32):
+        return cv.CalcEMD2(a32, b32, cv.CV_DIST_L2)
 
-        #bin_val = cv.QueryHistValue_2D(hist2, h, s)
-        #cv.Set2D(sig2, h * s_bins + s, 0, cv.Scalar(bin_val))
-        #cv.Set2D(sig2, h * s_bins + s, 1, cv.Scalar(h))
-        #cv.Set2D(sig2, h * s_bins + s, 2, cv.Scalar(s))
-
-##This is the important line were the OpenCV EM algorithm is called
-#return cv.CalcEMD2(sig1,sig2,cv.CV_DIST_L2)
+    # HACK
+    if len(hist1.shape) == 1 and len(hist2.shape) == 1:
+        a, b = add_weight(hist1), add_weight(hist2)
+        a32, b32 = convertCV32(a), convertCV32(b)
+        emd_dist = emd_(a32, b32)
+        return emd_dist
+    else:
+        ab_list   = [(add_weight(a), add_weight(b)) for a, b in izip(hist1, hist2)]
+        ab32_list = [(convertCV32(a), convertCV32(b)) for a, b in ab_list]
+        emd_dists = [emd_(a32, b32) for a32, b32, in ab32_list]
+        return emd_dists
 
 
 def xywh_to_tlbr(roi, img_wh):
@@ -188,7 +172,8 @@ def viz_localmax(signal1d):
 
 
 def sparse_normalize_rows(csr_mat):
-    return sklpreproc.normalize(csr_mat, norm='l2', axis=1, copy=False)
+    pass
+    #return sklearn.preprocessing.normalize(csr_mat, norm='l2', axis=1, copy=False)
 
 
 def sparse_multiply_rows(csr_mat, vec):
@@ -335,6 +320,7 @@ def plot_clusters(data, datax2_clusterx, clusters, num_pca_dims=3,
     import draw_func2 as df2
     data_dims = data.shape[1]
     num_pca_dims = min(num_pca_dims, data_dims)
+    pca = None
     #pca = sklearn.decomposition.PCA(copy=True, n_components=num_pca_dims,
                                     #whiten=whiten).fit(data)
     pca_data = pca.transform(data)
@@ -527,9 +513,7 @@ def precompute_akmeans(data, num_clusters, max_iters=100,
         flann_params = {}
     print('[algos] pre_akmeans()')
     if same_data:
-        data_hash = helpers.hashstr(data,)
-        data_shape = str(data.shape).replace(' ', '')
-        data_uid = 'dID(' + data_shape + data_hash + ')'
+        data_uid = helpers.hashstr_arr(data, 'dID')
         uid += data_uid
     clusters_fname = 'akmeans_clusters'
     datax2cl_fname = 'akmeans_datax2cl'
@@ -587,7 +571,7 @@ def precompute_akmeans(data, num_clusters, max_iters=100,
     return (datax2_clusterx, clusters)
 
 
-@profile
+#@profile
 def precompute_flann(data, cache_dir=None, uid='', flann_params=None,
                      force_recompute=False):
     ''' Tries to load a cached flann index before doing anything'''
@@ -595,11 +579,10 @@ def precompute_flann(data, cache_dir=None, uid='', flann_params=None,
     cache_dir = '.' if cache_dir is None else cache_dir
     # Generate a unique filename for data and flann parameters
     fparams_uid = helpers.remove_chars(str(flann_params.values()), ', \'[]')
-    data_hash = helpers.hashstr(data)  # flann is dependent on the data
-    data_shape = helpers.remove_chars(str(data.shape), ' ')
-    flann_suffix = '_' + fparams_uid + '_dID(' + data_shape + data_hash + ').flann'
+    data_uid = helpers.hashstr_arr(data, 'dID')  # flann is dependent on the data
+    flann_suffix = '_' + fparams_uid + '_' + data_uid + '.flann'
     # Append any user labels
-    flann_fname = 'flann_index' + flann_suffix + uid
+    flann_fname = 'flann_index_' + uid + flann_suffix
     flann_fpath = os.path.normpath(join(cache_dir, flann_fname))
     # Load the index if it exists
     flann = pyflann.FLANN()

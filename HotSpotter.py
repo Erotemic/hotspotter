@@ -76,16 +76,14 @@ class HotSpotter(DynStruct):
         super(HotSpotter, hs).__init__()
         #printDBG('[\hs] Creating HotSpotter API')
         hs.args = args
-        #hs.num_cx = None
         hs.tables = None
-        hs.feats  = None
-        hs.cpaths = None
         hs.dirs   = None
+        hs.feats  = ds.HotspotterChipFeatures()
+        hs.cpaths = ds.HotspotterChipPaths()
         #
         hs.train_sample_cx   = None
         hs.test_sample_cx    = None
         hs.indexed_sample_cx = None
-        #hs.cx2_rchip_size    = None
         #
         pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')
         hs.prefs = Pref('root', fpath=pref_fpath)
@@ -98,24 +96,24 @@ class HotSpotter(DynStruct):
             #args_dict = vars(args)
             #hs.update_preferences(**args_dict)
         hs.query_history = [(None, None)]
+        hs.qdat = ds.QueryData()  # Query Data
         if db_dir is not None:
             hs.args.dbdir = db_dir
         #printDBG(r'[/hs] Created HotSpotter API')
 
+    # --------------
+    # Preferences functions
+    # --------------
     def load_preferences(hs):
         print('[hs] load preferences')
         hs.default_preferences()
-        pref_load_success = hs.prefs.load()
-        print('[hs] Able to load prefs? ...%s' %
-              ('Yes' if pref_load_success else 'No'))
-        if not pref_load_success:
-            hs.default_preferences()
+        was_loaded = hs.prefs.load()
+        print('[hs] Able to load prefs? ...%r' % was_loaded)
+        if was_loaded:
+            hs.fix_prefs()
         else:
-            hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
-            hs.prefs.query_cfg._feat_cfg = hs.prefs.feat_cfg
+            hs.default_preferences()
         hs.assert_prefs()
-        # Preferences will try to load the FLANN index. Undo this.
-        hs.prefs.query_cfg.unload_data()
 
     def default_preferences(hs):
         print('[hs] defaulting preferences')
@@ -124,9 +122,33 @@ class HotSpotter(DynStruct):
         hs.prefs.feat_cfg  = Config.default_feat_cfg(hs)
         hs.prefs.query_cfg = Config.default_vsmany_cfg(hs)
 
+    def fix_prefs(hs):
+        # When loading some pointers may become broken. Fix them.
+        hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
+        hs.prefs.query_cfg._feat_cfg = hs.prefs.feat_cfg
+
+    def assert_prefs(hs):
+        try:
+            query_cfg = hs.prefs.query_cfg
+            feat_cfg  = hs.prefs.feat_cfg
+            chip_cfg  = hs.prefs.chip_cfg
+            assert query_cfg._feat_cfg is feat_cfg
+            assert query_cfg._feat_cfg._chip_cfg is chip_cfg
+            assert feat_cfg._chip_cfg is chip_cfg
+        except AssertionError:
+            print('[hs] preferences dependency tree is broken')
+            raise
+
     def update_preferences(hs, **kwargs):
         print('[hs] updateing preferences')
         hs.prefs.query_cfg.update_cfg(**kwargs)
+
+    # --------------
+    # Saving functions
+    # --------------
+    def save_database(hs):
+        print('[hs] save_database')
+        ld2.write_csv_tables(hs)
 
     #---------------
     # Loading Functions
@@ -169,7 +191,7 @@ class HotSpotter(DynStruct):
         fc2.load_features(hs, cx_list=cx_list)
 
     def refresh_features(hs, cx_list=None):
-        hs.load_chips(cx_list)
+        hs.load_chips(cx_list=cx_list)
         hs.load_features(cx_list=cx_list)
 
     def update_samples_split_pos(hs, pos):
@@ -189,30 +211,20 @@ class HotSpotter(DynStruct):
         print('[hs] update_samples():')
         valid_cxs = hs.get_valid_cxs()
         if test_samp is None:
-            #print('[hs] * default: all chips in testing')
             test_samp = valid_cxs
-        #else:
-            #print('[hs] * given: testing chips')
         if train_samp is None:
             print('[hs] * default: all chips in training')
             train_samp = valid_cxs
-        #else:
-            #print('[hs] * given: training chips')
         if indx_samp is None:
-            #print('[hs] * default: training set as database set')
             indx_samp = train_samp
-        #else:
-            #print('[hs] * given: indexed chips')
 
         tools.assert_int(test_samp, 'test_samp')
         tools.assert_int(train_samp, 'train_samp')
         tools.assert_int(indx_samp, 'indx_samp')
-
         # Ensure samples are sorted
         test_samp  = sorted(test_samp)
         train_samp = sorted(train_samp)
         indx_samp  = sorted(indx_samp)
-
         # Debugging and Info
         DEBUG_SET_SAMPLE = False
         if DEBUG_SET_SAMPLE:
@@ -231,34 +243,23 @@ class HotSpotter(DynStruct):
         hs.train_sample_cx    = train_samp
         hs.test_sample_cx     = test_samp
 
-    # --------------
-    # Saving functions
-    # --------------
-    def save_database(hs):
-        print('[hs] save_database')
-        ld2.write_csv_tables(hs)
-
     #---------------
     # On Modification
     #---------------
     def unload_all(hs):
         print('[hs] Unloading all data')
-        #hs.cx2_rchip_size = None  # HACK this should be part of hs.cpaths
         hs.feats  = ds.HotspotterChipFeatures()
         hs.cpaths = ds.HotspotterChipPaths()
-        hs.prefs.query_cfg.unload_data()
-        hs._read_chip.clear_cache()
-        hs.gx2_image.clear_cache()
+        hs.qdat.unload_data()
+        hs.clear_lru_caches()
         print('[hs] finished unloading all data')
 
     def unload_cxdata(hs, cx):
         'unloads features and chips. not tables'
         print('[hs] unload_cxdata(cx=%r)' % cx)
         # HACK This should not really be removed EVERY time you unload any cx
-        #hs.cx2_rchip_size = None  # HACK, should detect lack of info in cpaths
-        hs.prefs.query_cfg.unload_data()  # TODO: Separate query data from cfg
-        hs._read_chip.clear_cache()
-        hs.gx2_image.clear_cache()
+        hs.qdat.unload_data()
+        hs.clear_lru_caches()
         lists = []
         if hs.cpaths is not None:
             lists += [hs.cpaths.cx2_rchip_path, hs.cpaths.cx2_rchip_size]
@@ -273,11 +274,12 @@ class HotSpotter(DynStruct):
 
     def delete_ciddata(hs, cid):
         cid_str_list = ['cid%d_' % cid, 'qcid=%d.npz' % cid, ]
-        hs._read_chip.clear_cache()
-        hs.gx2_image.clear_cache()
+        hs.clear_lru_caches()
         for cid_str in cid_str_list:
-            helpers.remove_files_in_dir(hs.dirs.computed_dir, '*' + cid_str + '*',
-                                        recursive=True, verbose=True, dryrun=False)
+            dpath = hs.dirs.computed_dir
+            pat = '*' + cid_str + '*'
+            helpers.remove_files_in_dir(dpath, pat, recursive=True,
+                                        verbose=True, dryrun=False)
 
     def delete_cxdata(hs, cx):
         'deletes features and chips. not tables'
@@ -285,23 +287,53 @@ class HotSpotter(DynStruct):
         print('[hs] delete_cxdata(cx=%r)' % cx)
         cid = hs.tables.cx2_cid[cx]
         hs.delete_ciddata(cid)
+        hs.clear_lru_caches()
+
+    def clear_lru_caches(hs):
         hs._read_chip.clear_cache()
         hs.gx2_image.clear_cache()
 
     #---------------
     # Query Functions
     #---------------
-    def query(hs, qcx, dochecks=True):
-        hs.assert_prefs()
-        if hs.prefs.query_cfg is None and dochecks:
-            hs.prefs.query_cfg = Config.default_vsmany_cfg(hs)
-            #hs.refresh_data()
+    def prequery(hs):
+        mc3.prequery(hs)
+
+    def query(hs, qcx, *args, **kwargs):
+        return hs.query_database(qcx, *args, **kwargs)
+
+    def query_database(hs, qcx, query_cfg=None, dochecks=True, **kwargs):
+        'queries the entire (sampled) database'
+        print('\n====================')
+        print('[hs] query database')
+        print('====================')
+        if query_cfg is None:
+            hs.assert_prefs()
+            query_cfg = hs.prefs.query_cfg
+        qdat = hs.qdat
+        qdat.set_cfg(query_cfg)
+        dcxs = hs.get_indexed_sample()
         try:
-            res = mc3.query_database(hs, qcx, hs.prefs.query_cfg, dochecks=dochecks)
+            res = mc3.query_dcxs(hs, qcx, dcxs, hs.qdat, dochecks=dochecks, **kwargs)
         except mf.QueryException as ex:
-            print(repr(ex))
-            return repr(ex)
+            msg = '[hs] Query Failure: %r' % ex
+            print(msg)
+            if hs.args.strict:
+                raise
+            return msg
         return res
+
+    def query_groundtruth(hs, qcx, query_cfg=None, **kwargs):
+        'wrapper that restricts query to only known groundtruth'
+        print('\n====================')
+        print('[hs] query groundtruth')
+        print('====================')
+        if query_cfg is None:
+            hs.assert_prefs()
+            query_cfg = hs.prefs.query_cfg
+        gt_cxs = hs.get_other_indexed_cxs(qcx)
+        print('[mc3] len(gt_cxs) = %r' % (gt_cxs,))
+        return mc3.query_dcxs(hs, qcx, gt_cxs, query_cfg, **kwargs)
 
     # ---------------
     # Change functions
@@ -439,9 +471,7 @@ class HotSpotter(DynStruct):
                                     dryrun=False)
 
     def delete_global_prefs(hs):
-        global_cache_dir = io.GLOBAL_CACHE_DIR
-        helpers.remove_files_in_dir(global_cache_dir, recursive=True, verbose=True,
-                                    dryrun=False)
+        io.delete_global_cache()
 
     def delete_queryresults_dir(hs):
         qres_dir = hs.dirs.qres_dir
@@ -869,6 +899,19 @@ class HotSpotter(DynStruct):
         print('[hs] viewing result_dir: %r ' % result_dir)
         helpers.vd(result_dir)
 
+    #
+    def get_cache_uid(hs, cx_list=None, lbl='cxs'):
+        query_cfg = hs.prefs.query_cfg
+        # Build query big cache uid
+        hs_uid    = 'HSDB(%s)' % hs.get_db_name()
+        query_uid = query_cfg.get_uid()
+        uid_list = [hs_uid, query_uid]
+        if cx_list is not None:
+            cxs_uid = helpers.hashstr_arr(cx_list, 'cxs')
+            uid_list.append(cxs_uid)
+        cache_uid = '_'.join(uid_list)
+        return cache_uid
+
     #----------------------
     # Debug Consistency Checks
     def dbg_cx2_kpts(hs):
@@ -885,11 +928,3 @@ class HotSpotter(DynStruct):
             passed = False
         if passed:
             print('[hs.dbg] cx2_kpts is OK')
-
-    def assert_prefs(hs):
-        try:
-            assert hs.prefs.query_cfg._feat_cfg is hs.prefs.feat_cfg
-            assert hs.prefs.feat_cfg._chip_cfg is hs.prefs.chip_cfg
-        except AssertionError:
-            print('[hs] preferences dependency tree is broken')
-            raise

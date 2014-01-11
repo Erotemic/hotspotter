@@ -30,3 +30,5 @@ OpenGLContext.profile
 *.so
 *.a
 *.dylib
+*.lprof
+*.prof

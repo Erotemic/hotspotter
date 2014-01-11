@@ -37,7 +37,7 @@ def start_interaction(hs, cx, notes):
       except Exception as ex:
           print(repr(ex))
           raise
-    
+
 
 def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
     chip_info_locals = dev.chip_info(hs, cx)
@@ -67,12 +67,12 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
 
     def update_valid(reset=False):
         print('[interact] updating valid')
-        if reset is True: 
+        if reset is True:
             state.reset()
             is_valid[:] = True
-        if state.scale_min: 
+        if state.scale_min:
             is_valid[:] = np.bitwise_and(scale >= state.scale_min, is_valid)
-        if state.scale_max: 
+        if state.scale_max:
             is_valid[:] = np.bitwise_and(scale <= state.scale_max, is_valid)
         print(state)
         print('%d valid keypoints' % sum(is_valid))
@@ -108,7 +108,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         np.set_printoptions(precision=1)
         ax.set_title(chip_title)
         ax.set_xlabel(chip_xlabel)
-        
+
         extract_patch.draw_keypoint_patch(rchip, kp, sift, pnum=(2,2,3))
         ax = df2.gca()
         ax.set_title('affine feature\nfx=%r scale=%.1f' % (fx, scale))
@@ -149,7 +149,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
             select_ith_keypoint(fx_ptr[0])
         print('>>>')
     callback_id = fig.canvas.mpl_connect('button_press_event', on_click)
-    
+
     select_ith_keypoint(fx_ptr[0])
     query_cfg = ds.QueryConfig(hs, **kwargs)
     while True:
@@ -167,7 +167,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
         elif cmd in ['q', 'query']:
             print(query_cfg)
             print(query_cfg.get_uid())
-            res = mc3.query_database(hs, cx, query_cfg=query_cfg, use_cache=False)
+            res = hs.query(cx, query_cfg=query_cfg, use_cache=False)
             state.res = res
             resfnum = state.fnum + state.fnum_offset
             res.show_topN(hs, fnum=resfnum)
@@ -188,7 +188,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
             print(mycmd)
             exec mycmd in locals(), globals()
             print(query_cfg)
-            res = mc3.query_database(hs, cx, query_cfg=query_cfg, use_cache=False)
+            res = hs.query(cx, query_cfg=query_cfg, use_cache=False)
             state.res = res
             resfnum = state.fnum + state.fnum_offset
             res.show_topN(hs, fnum=resfnum)

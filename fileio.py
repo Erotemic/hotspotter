@@ -357,6 +357,13 @@ def global_cache_write(cache_id, newdir):
     cache_fname = join(GLOBAL_CACHE_DIR, 'cached_dir_%s.txt' % cache_id)
     helpers.write_to(cache_fname, newdir)
 
+
+def delete_global_cache():
+    global_cache_dir = GLOBAL_CACHE_DIR
+    helpers.remove_files_in_dir(global_cache_dir, recursive=True, verbose=True,
+                                dryrun=False)
+
+
 # --- Shelve Caching ---
 #def read_cache(fpath):
     #pass

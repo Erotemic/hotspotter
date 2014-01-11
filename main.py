@@ -83,6 +83,7 @@ if __name__ == '__main__':
     # Parse arguments
     args = argparse2.fix_args_with_cache(args)
     load_all, cids = preload_args_process(args)
+    argparse2.execute_initial(args)
 
     # --- Build HotSpotter API ---
     hs = HotSpotter.HotSpotter(args)

@@ -477,6 +477,7 @@ def get_timestamp(format_='filename', use_second=False):
 VALID_PROGRESS_TYPES = ['none', 'dots', 'fmtstr', 'simple']
 
 
+# TODO: Return start_prog, make_prog, end_prog
 def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
                   flush_after=4, spacing=0, line_len=80,
                   progress_type='fmtstr'):
@@ -484,6 +485,8 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
     parameter. Prints if max_val > mark_at. Prints dots if max_val not
     specified or simple=True'''
     # Tell the user we are about to make progress
+    if progress_type == 'simple' and max_val < mark_after:
+        return lambda count: None
     print(lbl)
     # none: nothing
     if progress_type == 'none':
@@ -526,7 +529,7 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
                     sys.stdout.flush()
             mark_progress = mark_progress_dot
     # fmtstr: formated string progress
-    if progress_type == 'fmtstr' and max_val > mark_after:
+    if progress_type == 'fmtstr':
         fmt_str = progress_str(max_val, lbl=lbl)
 
         def mark_progress_fmtstr(count):
@@ -1122,9 +1125,21 @@ def dict_union(*args):
     return dict([item for dict_ in iter(args) for item in dict_.iteritems()])
 
 
+def hashstr_arr(arr, lbl='arr', **kwargs):
+    if isinstance(arr, list):
+        arr = tuple(arr)
+    if isinstance(arr, tuple):
+        arr_shape = '(' + str(len(arr)) + ')'
+    else:
+        arr_shape = str(arr.shape).replace(' ', '')
+    arr_hash = hashstr(arr, **kwargs)
+    arr_uid = ''.join((lbl, '(', arr_shape, arr_hash, ')'))
+    return arr_uid
+
+
 def hashstr(data, trunc_pos=8):
     if isinstance(data, tuple):
-        data = str(data)
+        data = repr(data)
     # Get a 128 character hex string
     hashstr = hashlib.sha512(data).hexdigest()
     # Convert to base 57
@@ -1157,17 +1172,6 @@ class ModulePrintLock():
     def __del__(self):
         for module in self.module_list:
             module.print_on()
-
-
-def make_sample_id(sample, lbl=None, withlen=True):
-    'Input: sample - a list of chip indexes, Output: hashstr'
-    hash_input = repr(tuple(sample))  # Full String Representation
-    sample_id = hashstr(hash_input)
-    if withlen:
-        sample_id = ','.join((str(len(sample)), sample_id))
-    if lbl is not None:
-        sample_id = ''.join((lbl, '(', sample_id, ')'))
-    return sample_id
 
 #def valid_filename_ascii_chars():
     ## Find invalid chars

@@ -17,6 +17,10 @@ Hendrik/Jason TODO:
 Autosave
 #--- Annoyances ----
 
+* Because we are using dcxs_ to make the uid for queries, there might be
+* issue. dcids would cause issues too. Need to find a good way of determining
+* uniqunes of a database. 
+
 * Some Preferences need to invalidate the cache: (like changing the scale thresholds)
 
 * ODD BEHAVIOR: where if you click the result inspection, its

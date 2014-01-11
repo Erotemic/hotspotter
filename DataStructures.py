@@ -50,15 +50,47 @@ def rrr():
     imp.reload(sys.modules[__name__])
 
 
+class QueryData(DynStruct):
+    def __init__(qdat):
+        qdat.cfg = None  # Query Config
+        qdat._qcxs = []
+        qdat._dcxs = []
+        qdat._data_indexes = None  # current index
+        qdat._dcx2_index = {}      # cached indexes
+
+    def set_cfg(qdat, query_cfg):
+        qdat.cfg = query_cfg
+
+    def unload_data(qdat):
+        # Data TODO: Separate this
+        printDBG('[qdat] unload_data()')
+        qdat._qcxs = []
+        qdat._dcxs = []
+        qdat._data_index  = None  # current index
+        qdat._dcxs2_index = {}  # cached indexes
+        printDBG('[qdat] unload_data(success)')
+
+    def get_uid_list(qdat, *args, **kwargs):
+        uid_list = qdat.cfg.get_uid_list(*args, **kwargs)
+        if not 'noDCXS' in args:
+            # In case you don't search the entire dataset
+            dcxs_uid = helpers.hashstr_arr(qdat._dcxs, 'dcxs')
+            uid_list += ['_', dcxs_uid]
+        return uid_list
+
+    def get_uid(qdat, *args, **kwargs):
+        return ''.join(qdat.get_uid_list(*args, **kwargs))
+
+
 class NNIndex(object):
     'Nearest Neighbor (FLANN) Index Class'
     def __init__(nn_index, hs, cx_list):
         import algos
         cx2_desc  = hs.feats.cx2_desc
         # Make unique id for indexed descriptors
-        feat_uid   = ''.join(hs.prefs.feat_cfg.get_uid())
-        sample_uid = helpers.make_sample_id(cx_list)
-        uid = '_cxs(' + sample_uid + ')' + feat_uid
+        feat_uid   = hs.prefs.feat_cfg.get_uid()
+        sample_uid = helpers.hashstr_arr(cx_list, 'dcxs')
+        uid = '_' + sample_uid + feat_uid
         # Number of features per sample chip
         sx2_nFeat = [len(cx2_desc[cx]) for cx in iter(cx_list)]
         # Inverted index from indexed descriptor to chipx and featx

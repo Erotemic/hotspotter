@@ -269,8 +269,6 @@ def status(repo):
     print('')
 
 
-
-
 if __name__ == '__main__':
     print('[setup] Entering HotSpotter setup')
     for cmd in iter(sys.argv[1:]):

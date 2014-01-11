@@ -25,20 +25,24 @@ def print_off():
 # Dynamic module reloading
 def reload_module():
     import imp, sys
-    print('[vr2] reloading '+__name__)
+    print('[vr2] reloading ' + __name__)
     imp.reload(sys.modules[__name__])
 rrr = reload_module
+
 
 def score_chipmatch_csum(chipmatch):
     (_, cx2_fs, _) = chipmatch
     cx2_score = np.array([np.sum(fs) for fs in cx2_fs])
     return cx2_score
 
-def score_chipmatch_nsum(hs, qcx, chipmatch, query_cfg):
+
+def score_chipmatch_nsum(hs, qcx, chipmatch, qdat):
     raise NotImplementedError('nsum')
 
-def score_chipmatch_nunique(hs, qcx, chipmatch, query_cfg):
+
+def score_chipmatch_nunique(hs, qcx, chipmatch, qdat):
     raise NotImplementedError('nunique')
+
 
 def enforce_one_name(hs, cx2_score, chipmatch=None, cx2_chipscore=None):
     'this is a hack to make the same name only show up once in the top ranked list'
@@ -56,10 +60,11 @@ def enforce_one_name(hs, cx2_score, chipmatch=None, cx2_chipscore=None):
         cx2_score[cxs_to_zero] = 0
     return cx2_score
 
-def score_chipmatch_pos(hs, qcx, chipmatch, query_cfg, rule='borda'):
+
+def score_chipmatch_pos(hs, qcx, chipmatch, qdat, rule='borda'):
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
-    K = query_cfg.nn_cfg.K
-    isWeighted = query_cfg.agg_cfg.isWeighted
+    K = qdat.cfg.nn_cfg.K
+    isWeighted = qdat.cfg.agg_cfg.isWeighted
     # Create voting vectors of top K utilities
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
     # Run Positional Scoring Rule
@@ -70,11 +75,12 @@ def score_chipmatch_pos(hs, qcx, chipmatch, query_cfg, rule='borda'):
     #cx2_score = enforce_one_name_per_cscore(hs, cx2_score, chipmatch)
     return cx2_score, nx2_score
 
+
 # chipmatch = qcx2_chipmatch[qcx]
-def score_chipmatch_PL(hs, qcx, chipmatch, query_cfg):
-    K = query_cfg.nn_cfg.K
-    max_alts = query_cfg.agg_cfg.max_alts
-    isWeighted = query_cfg.agg_cfg.isWeighted
+def score_chipmatch_PL(hs, qcx, chipmatch, qdat):
+    K = qdat.cfg.nn_cfg.K
+    max_alts = qdat.cfg.agg_cfg.max_alts
+    isWeighted = qdat.cfg.agg_cfg.isWeighted
     # Create voting vectors of top K utilities
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
     qfx2_utilities = _filter_utilities(qfx2_utilities, max_alts)
@@ -96,6 +102,7 @@ def score_chipmatch_PL(hs, qcx, chipmatch, query_cfg):
     #cx2_score = enforce_one_name_per_cscore(hs, cx2_score, chipmatch)
     return cx2_score, nx2_score
 
+
 TMP = []
 def _optimize(M):
     global TMP
@@ -114,6 +121,7 @@ def _optimize(M):
     #TMP  += [tmp1]
     return x
 
+
 def _PL_score(gamma):
     #print('[vote] computing probabilities')
     nAlts = len(gamma)
@@ -123,6 +131,7 @@ def _PL_score(gamma):
     #print('[vote] altx2_prob: '+str(altx2_prob))
     #print('[vote] sum(prob): '+str(sum(altx2_prob)))
     return altx2_prob
+
 
 def get_scores_from_altx2_score(hs, qcx, altx2_prob, altx2_tnx):
     nx2_score = np.zeros(len(hs.tables.nx2_name))
@@ -139,6 +148,7 @@ def get_scores_from_altx2_score(hs, qcx, altx2_prob, altx2_tnx):
                 if cx == qcx: continue
                 cx2_score[cx] = prob
     return cx2_score, nx2_score
+
 
 def _chipmatch2_utilities(hs, qcx, chipmatch, K):
     '''
@@ -173,6 +183,7 @@ def _chipmatch2_utilities(hs, qcx, chipmatch, K):
         qfx2_utilities[qfx] = utilities
     return qfx2_utilities
 
+
 def _filter_utilities(qfx2_utilities, max_alts=200):
     print('[vote] filtering utilities')
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
@@ -190,6 +201,7 @@ def _filter_utilities(qfx2_utilities, max_alts=200):
             utils = qfx2_utilities[qfx]
             qfx2_utilities[qfx] = [util for util in utils if util[1] in keep_tnxs]
     return qfx2_utilities
+
 
 def _utilities2_pairwise_breaking(qfx2_utilities):
     print('[vote] building pairwise matrix')
@@ -234,6 +246,7 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
     #print('CheckMat = %r ' % all(np.abs(PLmatrix.sum(0)) < 1E-9))
     return PLmatrix, altx2_tnx
 
+
 def _get_alts_from_utilities(qfx2_utilities):
     # get temp name indexes
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
@@ -243,6 +256,7 @@ def _get_alts_from_utilities(qfx2_utilities):
     nAlts   = len(altx2_tnx)
     altxs   = np.arange(nAlts)
     return tnxs, altx2_tnx, tnx2_altx, nUtilities, nAlts, altxs
+
 
 def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
     print('[vote] building pairwise matrix')
@@ -295,7 +309,6 @@ def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
     # M.sum(0) = 0
     #print('CheckMat = %r ' % all(np.abs(PLmatrix.sum(0)) < 1E-9))
     return PLmatrix, altx2_tnx
-
 # Positional Scoring Rules
 
 
@@ -339,6 +352,7 @@ def _positional_score(altxs, score_vec, qfx2_porder, qfx2_worder):
             #if altx == -1: continue
             altx2_score[altx] += weights[ix] * score_vec[ix]
     return altx2_score
+
 
 if __name__ == '__main__':
     pass

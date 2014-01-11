@@ -132,7 +132,7 @@ def _load_features_individualy(hs, cx_list):
     use_cache = not hs.args.nocache_feats
     feat_cfg = hs.prefs.feat_cfg
     feat_dir = hs.dirs.feat_dir
-    feat_uid = ''.join(feat_cfg.get_uid())
+    feat_uid = feat_cfg.get_uid()
     print('[fc2]  Loading ' + feat_uid + ' individually')
     # Build feature paths
     rchip_fpath_list = [hs.cpaths.cx2_rchip_path[cx] for cx in iter(cx_list)]
@@ -153,9 +153,9 @@ def _load_features_individualy(hs, cx_list):
 def _load_features_bigcache(hs, cx_list):
     # args for smart load/save
     feat_cfg = hs.prefs.feat_cfg
-    feat_uid = ''.join(feat_cfg.get_uid())
+    feat_uid = feat_cfg.get_uid()
     cache_dir  = hs.dirs.cache_dir
-    sample_uid = helpers.make_sample_id(cx_list, lbl='cids')
+    sample_uid = helpers.hashstr_arr(cx_list, 'cids')
     bigcache_uid = '_'.join((feat_uid, sample_uid))
     ext = '.npy'
     loaded = bigcache_feat_load(cache_dir, bigcache_uid, ext)
@@ -178,22 +178,16 @@ def load_features(hs, cx_list=None, **kwargs):
     #----------------
     use_cache = not hs.args.nocache_feats
     use_big_cache = use_cache and cx_list is None
-    # Get/Update FeatConfig and ChipFeatures object
-    if hs.feats is None:
-        hs.feats = ds.HotspotterChipFeatures()
-    if hs.prefs.feat_cfg is not None:
-        hs.prefs.feat_cfg.update(**kwargs)
-    else:
-        hs.prefs.feat_cfg = ds.FeatureConfig(hs, **kwargs)
-    feat_uid = ''.join(hs.prefs.feat_cfg.get_uid())
-    print('[fc2] feat_uid = %r' % feat_uid)
+    feat_cfg = hs.prefs.feat_cfg
+    feat_uid = feat_cfg.get_uid()
     if hs.feats.feat_uid != '' and hs.feats.feat_uid != feat_uid:
-        print('[fc2] Disagreement: feat_uid = %r' % hs.feats.feat_uid)
+        print('[fc2] Disagreement: OLD_feat_uid = %r' % hs.feats.feat_uid)
+        print('[fc2] Disagreement: NEW_feat_uid = %r' % feat_uid)
         print('[fc2] Unloading all chip information')
         hs.unload_all()
         hs.load_chips(cx_list=cx_list)
-        hs.feats  = ds.HotspotterChipFeatures()
-    # Get the list of chips to load
+    print('[fc2] feat_uid = %r' % feat_uid)
+    # Get the list of chip features to load
     cx_list = hs.get_valid_cxs() if cx_list is None else cx_list
     if not np.iterable(cx_list):
         cx_list = [cx_list]
@@ -221,7 +215,7 @@ def clear_feature_cache(hs):
     feat_cfg = hs.prefs.feat_cfg
     feat_dir = hs.dirs.feat_dir
     cache_dir = hs.dirs.cache_dir
-    feat_uid = ''.join(feat_cfg.get_uid())
+    feat_uid = feat_cfg.get_uid()
     print('[fc2] clearing feature cache: %r' % feat_dir)
     helpers.remove_files_in_dir(feat_dir, '*' + feat_uid + '*', verbose=True, dryrun=False)
     helpers.remove_files_in_dir(cache_dir, '*' + feat_uid + '*', verbose=True, dryrun=False)

@@ -7,7 +7,6 @@ import sys
 from PIL import Image
 from Parallelize import parallel_compute
 #from Printable import DynStruct
-import DataStructures as ds
 import helpers
 import algos
 #import load_data2 as ld2
@@ -326,7 +325,7 @@ def get_normalized_chip_sizes(roi_list, sqrt_area=None):
 # =======================================
 # Main Script
 # =======================================
-@profile
+#@profile
 def load_chips(hs, cx_list=None, **kwargs):
     print('\n=============================')
     print('[cc2] Precomputing chips and loading chip paths: %r' % hs.get_db_name())
@@ -334,23 +333,15 @@ def load_chips(hs, cx_list=None, **kwargs):
     #----------------
     # COMPUTE SETUP
     #----------------
-    # 1.1) Get/Update ChipConfig and ChipPaths objects
-    #print('[cc2] cx_list = %r' % (cx_list,))
-    if hs.prefs.chip_cfg is not None:
-        hs.prefs.chip_cfg.update(**kwargs)
-    else:
-        hs.prefs.chip_cfg = ds.ChipConfig(**kwargs)
     chip_cfg = hs.prefs.chip_cfg
-    if hs.cpaths is None:
-        hs.cpaths = ds.HotspotterChipPaths()
     chip_uid = chip_cfg.get_uid()
-    print('[cc2] chip_uid = %r' % chip_uid)
     if hs.cpaths.chip_uid != '' and hs.cpaths.chip_uid != chip_uid:
-        print('[cc2] Disagreement: chip_uid = %r' % hs.cpaths.chip_uid)
+        print('[cc2] Disagreement: OLD_chip_uid = %r' % hs.cpaths.chip_uid)
+        print('[cc2] Disagreement: NEW_chip_uid = %r' % chip_uid)
         print('[cc2] Unloading all chip information')
         hs.unload_all()
-        hs.cpaths = ds.HotspotterChipPaths()
-    # Get the list of chips to load
+    print('[cc2] chip_uid = %r' % chip_uid)
+    # Get the list of chips paths to load
     cx_list = hs.get_valid_cxs() if cx_list is None else cx_list
     if not np.iterable(cx_list):
         cx_list = [cx_list]

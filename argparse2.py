@@ -173,6 +173,7 @@ def cache_argparse(parser2):
     # Cache flags
     parser2 = parser2.add_argument_group('Cache')
     parser2.add_flag(('--delete-cache', '--dc'))
+    parser2.add_flag(('--delete-global'))
     parser2.add_flag('--nocache-db', help='forces user to specify database directory')
     parser2.add_flag('--nocache-chips')
     parser2.add_flag('--nocache-query')
@@ -254,6 +255,12 @@ def parse_arguments(**kwargs):
     args = args_postprocess(args)
     args = fix_args_shortnames(args)
     return args
+
+
+def execute_initial(args):
+    if args.delete_global:
+        import fileio as io
+        io.delete_global_cache()
 
 
 if __name__ == '__main__':

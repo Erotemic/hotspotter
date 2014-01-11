@@ -77,12 +77,14 @@ class NNConfig(ConfigBase):
         nn_cfg.checks  = 1024  # 512#128
         nn_cfg.update(**kwargs)
 
+    def get_uid_list(nn_cfg):
+        nn_uid  = ['_NN(', 'K', str(nn_cfg.K),
+                   '+', str(nn_cfg.Knorm),
+                   ',cks', str(nn_cfg.checks), ')']
+        return nn_uid
+
     def get_uid(nn_cfg):
-        uid  = ['_NN(']
-        uid += ['K', str(nn_cfg.K), '+', str(nn_cfg.Knorm)]
-        uid += [',cks', str(nn_cfg.checks)]
-        uid += [')']
-        return uid
+        return ''.join(nn_cfg.get_uid_list())
 
 
 class FilterConfig(ConfigBase):
@@ -162,21 +164,24 @@ class FilterConfig(ConfigBase):
                 # Find a way to make it independent.
                 nn_cfg.Knorm = 0
 
-    def get_uid(filt_cfg):
+    def get_uid_list(filt_cfg):
         if not filt_cfg.filt_on:
             return ['_FILT()']
         on_filters = dict_subset(filt_cfg._filt2_tw,
                                  filt_cfg._nnfilter_list)
-        uid = ['_FILT(']
+        filt_uid = ['_FILT(']
         twstr = signthreshweight_str(on_filters)
         if filt_cfg.Krecip != 0 and 'recip' in filt_cfg._nnfilter_list:
-            uid += ['Kr' + str(filt_cfg.Krecip)]
+            filt_uid += ['Kr' + str(filt_cfg.Krecip)]
             if len(twstr) > 0:
-                uid += [',']
+                filt_uid += [',']
         if len(twstr) > 0:
-            uid += [twstr]
-        uid += [')']
-        return uid
+            filt_uid += [twstr]
+        filt_uid += [')']
+        return filt_uid
+
+    def get_uid(filt_cfg):
+        return ''.join(filt_cfg.get_uid_list())
 
 
 class SpatialVerifyConfig(ConfigBase):
@@ -193,20 +198,23 @@ class SpatialVerifyConfig(ConfigBase):
         sv_cfg.sv_on = True
         sv_cfg.update(**kwargs)
 
-    def get_uid(sv_cfg):
+    def get_uid_list(sv_cfg):
         if not sv_cfg.sv_on or sv_cfg.xy_thresh is None:
             return ['_SV()']
-        uid = ['_SV(']
-        uid += [str(sv_cfg.nShortlist)]
-        uid += [',' + str(sv_cfg.xy_thresh)]
+        sv_uid = ['_SV(']
+        sv_uid += [str(sv_cfg.nShortlist)]
+        sv_uid += [',' + str(sv_cfg.xy_thresh)]
         scale_thresh = (sv_cfg.scale_thresh_low, sv_cfg.scale_thresh_high)
         scale_str = helpers.remove_chars(str(scale_thresh), ' ()')
-        uid += [',' + scale_str.replace(',', '_')]
-        uid += [',cdl' * sv_cfg.use_chip_extent]  # chip diag len
-        uid += [',aff' * sv_cfg.just_affine]  # chip diag len
-        uid += [',' + sv_cfg.prescore_method]
-        uid += [')']
-        return uid
+        sv_uid += [',' + scale_str.replace(',', '_')]
+        sv_uid += [',cdl' * sv_cfg.use_chip_extent]  # chip diag len
+        sv_uid += [',aff' * sv_cfg.just_affine]  # chip diag len
+        sv_uid += [',' + sv_cfg.prescore_method]
+        sv_uid += [')']
+        return sv_uid
+
+    def get_uid(sv_cfg):
+        return ''.join(sv_cfg.get_uid_list())
 
 
 class AggregateConfig(ConfigBase):
@@ -239,17 +247,20 @@ class AggregateConfig(ConfigBase):
         if key in alt_methods:
             agg_cfg.score_method = alt_methods[key]
 
-    def get_uid(agg_cfg):
-        uid = []
-        uid += ['_AGG(']
-        uid += [agg_cfg.query_type]
-        uid += [',', agg_cfg.score_method]
+    def get_uid_list(agg_cfg):
+        agg_uid = []
+        agg_uid += ['_AGG(']
+        agg_uid += [agg_cfg.query_type]
+        agg_uid += [',', agg_cfg.score_method]
         if agg_cfg.isWeighted:
-            uid += ['w']
+            agg_uid += ['w']
         if agg_cfg.score_method  == 'pl':
-            uid += [',%d' % (agg_cfg.max_alts,)]
-        uid += [') ']
-        return uid
+            agg_uid += [',%d' % (agg_cfg.max_alts,)]
+        agg_uid += [')']
+        return agg_uid
+
+    def get_uid(agg_cfg):
+        return ''.join(agg_cfg.get_uid_list())
 
 
 class QueryConfig(ConfigBase):
@@ -259,23 +270,11 @@ class QueryConfig(ConfigBase):
         query_cfg.filt_cfg  = FilterConfig(**kwargs)
         query_cfg.sv_cfg    = SpatialVerifyConfig(**kwargs)
         query_cfg.agg_cfg   = AggregateConfig(**kwargs)
-        if hs is not None:
-            query_cfg._feat_cfg = hs.prefs.feat_cfg  # Queries depend on features
-        else:
-            query_cfg._feat_cfg = None  # creating without hs delays crash
+        # Queries depend on features # creating without hs delays crash
+        query_cfg._feat_cfg = None if hs is None else hs.prefs.feat_cfg
         query_cfg.use_cache = False
-        query_cfg.unload_data()
         if hs is not None:
             query_cfg.update_cfg(**kwargs)
-
-    def unload_data(query_cfg):
-        # Data TODO: Separate this
-        printDBG('[query_cfg] unload_data()')
-        query_cfg._qcxs = []
-        query_cfg._dcxs = []
-        query_cfg._data_index  = None  # current index
-        query_cfg._dcxs2_index = {}  # cached indexes
-        printDBG('[query_cfg] unload_data(success)')
 
     def update_cfg(query_cfg, **kwargs):
         query_cfg._feat_cfg.update(**kwargs)
@@ -287,24 +286,25 @@ class QueryConfig(ConfigBase):
         query_cfg.update(**kwargs)
         query_cfg.filt_cfg.make_feasible(query_cfg)
 
-    def get_uid(query_cfg, *args, **kwargs):
+    def get_uid_list(query_cfg, *args, **kwargs):
         if query_cfg._feat_cfg is None:
-            raise Exception('Chip config is required')
-        dcxs_ = repr(tuple(query_cfg._dcxs))
-        uids = []
+            raise Exception('Feat / chip config is required')
+        uid_list = []
         if not 'noNN' in args:
-            uids += query_cfg.nn_cfg.get_uid(**kwargs)
+            uid_list += query_cfg.nn_cfg.get_uid_list(**kwargs)
         if not 'noFILT' in args:
-            uids += query_cfg.filt_cfg.get_uid(**kwargs)
+            uid_list += query_cfg.filt_cfg.get_uid_list(**kwargs)
         if not 'noSV' in args:
-            uids += query_cfg.sv_cfg.get_uid(**kwargs)
+            uid_list += query_cfg.sv_cfg.get_uid_list(**kwargs)
         if not 'noAGG' in args:
-            uids += query_cfg.agg_cfg.get_uid(**kwargs)
+            uid_list += query_cfg.agg_cfg.get_uid_list(**kwargs)
         if not 'noCHIP' in args:
-            uids += query_cfg._feat_cfg.get_uid()
-        # In case you don't search the entire dataset
-        uids += ['_dcxs(' + helpers.hashstr(dcxs_) + ')']
-        uid = ''.join(uids)
+            uid_list += query_cfg._feat_cfg.get_uid_list()
+        return uid_list
+
+    def get_uid(query_cfg, *args, **kwargs):
+        uid_list = query_cfg.get_uid_list(*args, **kwargs)
+        uid = ''.join(uid_list)
         return uid
 
 
@@ -313,7 +313,7 @@ class FeatureConfig(ConfigBase):
         super(FeatureConfig, feat_cfg).__init__(name='feat_cfg')
         feat_cfg.feat_type = 'hesaff+sift'
         feat_cfg.whiten = False
-        feat_cfg.scale_min = 0  # 0    # 30 # TODO: Put in pref types here
+        feat_cfg.scale_min = 0  # 0  # 30 # TODO: Put in pref types here
         feat_cfg.scale_max = 9001  # 9001 # 80
         if hs is not None:
             feat_cfg._chip_cfg = hs.prefs.chip_cfg  # Features depend on chips
@@ -327,7 +327,7 @@ class FeatureConfig(ConfigBase):
             'scale_max': feat_cfg.scale_max, }
         return dict_args
 
-    def get_uid(feat_cfg):
+    def get_uid_list(feat_cfg):
         if feat_cfg._chip_cfg is None:
             raise Exception('Chip config is required')
         if feat_cfg.scale_min < 0:
@@ -335,12 +335,15 @@ class FeatureConfig(ConfigBase):
         if feat_cfg.scale_max < 0:
             feat_cfg.scale_max = None
         feat_uids = ['_FEAT(']
-        feat_uids += feat_cfg.feat_type
+        feat_uids += [feat_cfg.feat_type]
         feat_uids += [',white'] * feat_cfg.whiten
         feat_uids += [',%r_%r' % (feat_cfg.scale_min, feat_cfg.scale_max)]
         feat_uids += [')']
-        feat_uids += [feat_cfg._chip_cfg.get_uid()]
-        return [''.join(feat_uids)]
+        feat_uids += feat_cfg._chip_cfg.get_uid_list()
+        return feat_uids
+
+    def get_uid(feat_cfg):
+        return ''.join(feat_cfg.get_uid_list())
 
 
 class ChipConfig(ConfigBase):
@@ -355,7 +358,7 @@ class ChipConfig(ConfigBase):
         cc_cfg.maxcontrast     = False
         cc_cfg.update(**kwargs)
 
-    def get_uid(cc_cfg):
+    def get_uid_list(cc_cfg):
         chip_uid = []
         chip_uid += ['histeq']  * cc_cfg.histeq
         chip_uid += ['grabcut'] * cc_cfg.grabcut
@@ -365,7 +368,10 @@ class ChipConfig(ConfigBase):
         chip_uid += ['maxcont'] * cc_cfg.maxcontrast
         isOrig = cc_cfg.chip_sqrt_area is None or cc_cfg.chip_sqrt_area  <= 0
         chip_uid += ['szorig'] if isOrig else ['sz%r' % cc_cfg.chip_sqrt_area]
-        return '_CHIP(' + (','.join(chip_uid)) + ')'
+        return ['_CHIP(', (','.join(chip_uid)), ')']
+
+    def get_uid(cc_cfg):
+        return ''.join(cc_cfg.get_uid_list())
 
 
 class DisplayConfig(ConfigBase):

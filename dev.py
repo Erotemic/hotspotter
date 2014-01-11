@@ -246,10 +246,10 @@ def vary_two_cfg(hs, qcx, cx, query_cfg, vary_cfg, fnum=1):
             #print(query_cfg)
             # query only the chips of interest (groundtruth) when doing vsone
             if assign_alg == 'vsone':
-                res = mc3.query_groundtruth(hs, qcx, query_cfg)
+                res = hs.query_groundtruth(qcx, query_cfg)
             # query the entire database in vsmany (just as fast as vgroundtruth)
             elif assign_alg == 'vsmany':
-                res = mc3.query_database(hs, qcx, query_cfg)
+                res = hs.query(qcx, query_cfg)
             res.plot_single_match(hs, cx, pnum=pnum, **plt_match_args)
             x_title = cfg2_name + '=' + helpers.format(cfg2_value, 3)  # helpers.commas(cfg2_value, 3)
             ax = df2.gca()
@@ -367,7 +367,7 @@ def investigate_vsone_groundtruth(hs, qcx_list, fnum=1):
     print('[dev] investigate_vsone_groundtruth')
     query_cfg = ds.get_vsone_cfg(sv_on=True, ratio_thresh=1.5)
     for qcx in qcx_list:
-        res = mc3.query_groundtruth(hs, qcx, query_cfg)
+        res = hs.query_groundtruth(hs, qcx, query_cfg)
         #print(query_cfg)
         #print(res)
         #res.show_query(hs, fnum=fnum)
@@ -494,6 +494,7 @@ def dev_main(**kwargs):
     if args.db is None:
         args.db == 'NAUTS'
     args = argparse2.fix_args_shortnames(args)
+    argparse2.execute_initial(args)
     print('[dev] args.db=%r' % args.db)
     print('[dev] args.dbdir=%r' % args.dbdir)
 
@@ -534,6 +535,17 @@ def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True, with_notes=False
     return qcx_list
 
 
+allres_ptr = [None]
+
+
+def get_allres(hs):
+    global allres_ptr
+    allres = allres_ptr[0]
+    if allres is None:
+        allres_ptr[0] = rr2.get_allres(hs)
+    return allres_ptr[0]
+
+
 # Driver Function
 def run_investigations(hs, qcx_list):
     import experiment_harness
@@ -552,13 +564,6 @@ def run_investigations(hs, qcx_list):
     #Kr_  = {'Krecip':        [0, 2, 5, 10]}
 
     tests = args.tests[:]
-    allres_ptr = [None]
-
-    def get_allres():
-        allres = allres_ptr[0]
-        if allres is None:
-            allres_ptr[0] = rr2.get_allres(hs)
-        return allres_ptr[0]
 
     def intest(testname):
         ret = testname in tests
@@ -590,7 +595,7 @@ def run_investigations(hs, qcx_list):
     if intest('list'):
         print(experiment_harness.get_valid_testcfg_names())
     if intest('dists'):
-        allres = get_allres()
+        allres = get_allres(hs)
         rr2.viz_db_match_distances(allres)
 
     # Allow any testcfg to be in tests like:
@@ -665,6 +670,7 @@ if __name__ == '__main__':
     if hs.args.nopresent:
         print('...not presenting')
         sys.exit(0)
+    allres = allres_ptr[0]
     exec(df2.present())  # **df2.OooScreen2()
 
 

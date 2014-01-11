@@ -44,52 +44,65 @@ def rrr():
     imp.reload(sys.modules[__name__])
 
 
+@profile
+def ensure_nn_index(hs, qdat, dcxs):
+    # NNIndexes depend on the data cxs AND feature / chip configs
+    feat_uid = qdat.cfg._feat_cfg.get_uid()
+    dcxs_uid = helpers.hashstr_arr(dcxs, 'dcxs') + feat_uid
+    if not dcxs_uid in qdat._dcxs2_index:
+        # Make sure the features are all computed first
+        print('[mc3] qdat._data_index[dcxs_uid]... cache miss')
+        print('[mc3] dcxs_ is not in qdat cache')
+        print('[mc3] hashstr(dcxs_) = %r' % dcxs_uid)
+        print('[mc3] REFRESHING FEATURES')
+        hs.refresh_features(dcxs)
+        # Compute the FLANN Index
+        data_index = ds.NNIndex(hs, dcxs)
+        qdat._dcxs2_index[dcxs_uid] = data_index
+    else:
+        print('[mc3] qdat._data_index[dcxs_uid]... cache hit')
+    qdat._data_index = qdat._dcxs2_index[dcxs_uid]
+
+
+def prequery_checks(hs, qdat):
+    query_uid = qdat.cfg.get_uid('noCHIP')
+    feat_uid = qdat.cfg._feat_cfg.get_uid()
+    query_hist_id = (feat_uid, query_uid)
+    if hs.query_history[-1][0] != feat_uid:
+        print('[mc3] FEAT_UID is different. Need to reload features')
+        print('[mc3] Old: ' + str(hs.query_history[-1][0]))
+        print('[mc3] New: ' + str(feat_uid))
+        hs.unload_cxdata('all')
+        hs.refresh_features()
+    elif hs.query_history[-1][1] != query_uid:
+        print('[mc3] QUERY_UID is different. Need to refresh features')
+        print('[mc3] Old: ' + str(hs.query_history[-1][1]))
+        print('[mc3] New: ' + str(query_uid))
+        hs.refresh_features()
+    hs.query_history.append(query_hist_id)
+    print('[mc3] query_dcxs(): query_uid = %r ' % query_uid)
+
+
+def prequery(hs):
+    query_cfg = hs.prefs.query_cfg
+    if hs.qdat is None:
+        hs.qdat = ds.QueryData()
+    hs.qdat.set_cfg(query_cfg)
+    if query_cfg.agg_cfg.query_type == 'vsmany':
+        dcxs = hs.get_indexed_sample()
+        ensure_nn_index(hs, hs.qdat, dcxs)
+
+
 #----------------------
 # Convinience Functions
 #----------------------
-
-def query_dcxs(hs, qcx, dcxs, query_cfg=None, dochecks=True, **kwargs):
+def query_dcxs(hs, qcx, dcxs, qdat, dochecks=True, **kwargs):
     'wrapper that bypasses all that "qcx2_ map" buisness'
-    if dochecks and query_cfg is None:
-        query_cfg = Config.default_vsmany_cfg(hs, **kwargs)
-        #query_cfg = hs.prefs.query_cfg
-    #query_uid = ''.join(query_cfg.get_uid('noCHIP'))
-    query_uid = ''.join(query_cfg.get_uid())
-    feat_uid = ''.join(query_cfg._feat_cfg.get_uid())
-    query_hist_id = (feat_uid, query_uid)
     if dochecks:
-        if hs.query_history[-1][0] != feat_uid:
-            print('[mc3] FEAT_UID is different. Need to reload features')
-            print('[mc3] Old: ' + str(hs.query_history[-1][0]))
-            print('[mc3] New: ' + str(feat_uid))
-            hs.unload_cxdata('all')
-            hs.refresh_features()
-        elif hs.query_history[-1][1] != query_uid:
-            print('[mc3] QUERY_UID is different. Need to refresh features')
-            print('[mc3] Old: ' + str(hs.query_history[-1][1]))
-            print('[mc3] New: ' + str(query_uid))
-            hs.refresh_features()
-        hs.query_history.append(query_hist_id)
-        print('[mc3] query_dcxs(): query_uid = %r ' % query_uid)
-    result_list = execute_query_safe(hs, query_cfg, [qcx], dcxs, **kwargs)
+        prequery_checks(hs, qdat)
+    result_list = execute_query_safe(hs, qdat, [qcx], dcxs, **kwargs)
     res = result_list[0].values()[0]
     return res
-
-
-def query_groundtruth(hs, qcx, query_cfg=None, **kwargs):
-    'wrapper that restricts query to only known groundtruth'
-    print('[mc3] query groundtruth')
-    gt_cxs = hs.get_other_indexed_cxs(qcx)
-    print('[mc3] len(gt_cxs) = %r' % (gt_cxs,))
-    return query_dcxs(hs, qcx, gt_cxs, query_cfg, **kwargs)
-
-
-def query_database(hs, qcx, query_cfg=None, **kwargs):
-    print('\n====================')
-    print('[mc3] query database')
-    print('====================')
-    dcxs = hs.get_indexed_sample()
-    return query_dcxs(hs, qcx, dcxs, query_cfg, **kwargs)
 
 
 def make_nn_index(hs, sx2_cx=None):
@@ -97,13 +110,6 @@ def make_nn_index(hs, sx2_cx=None):
         sx2_cx = hs.indexed_sample_cx
     data_index = ds.NNIndex(hs, sx2_cx)
     return data_index
-
-
-def unify_cfgs(cfg_list):
-    # Super HACK so all query configs share the same nearest neighbor indexes
-    GLOBAL_dcxs2_index = cfg_list[0]._dcxs2_index
-    for query_cfg in cfg_list:
-        query_cfg._dcxs2_index = GLOBAL_dcxs2_index
 
 
 def simplify_test_uid(test_uid):
@@ -119,14 +125,11 @@ def simplify_test_uid(test_uid):
     return test_uid
 
 
-#----------------------
-# Helper Functions
-#----------------------
-def load_cached_query(hs, query_cfg, aug_list=['']):
-    qcxs = query_cfg._qcxs
+def load_cached_query(hs, qdat, aug_list=['']):
+    qcxs = qdat._qcxs
     result_list = []
     for aug in aug_list:
-        qcx2_res = mf.load_resdict(hs, qcxs, query_cfg, aug)
+        qcx2_res = mf.load_resdict(hs, qcxs, qdat, aug)
         if qcx2_res is None:
             return None
         result_list.append(qcx2_res)
@@ -134,63 +137,39 @@ def load_cached_query(hs, query_cfg, aug_list=['']):
     return result_list
 
 
-def prequery(hs, query_cfg=None, **kwargs):
-    if query_cfg is None:
-        query_cfg = ds.QueryConfig(hs, **kwargs)
-    if query_cfg.agg_cfg.query_type == 'vsmany':
-        dcxs = hs.indexed_sample_cx
-        ensure_nn_index(hs, query_cfg, dcxs)
-    return query_cfg
-
-
-@profile
-def ensure_nn_index(hs, query_cfg, dcxs):
-    dcxs_ = tuple(dcxs)
-    if not dcxs_ in query_cfg._dcxs2_index:
-        # Make sure the features are all computed first
-        # TODO: Separate query config and data
-        print('[mc3] dcxs_ is not in query_cfg cache')
-        print('[mc3] hashstr(dcxs_) = %r' % helpers.hashstr(dcxs_))
-        print('[mc3] REFRESHING FEATURES')
-        hs.refresh_features(dcxs_)
-        data_index = ds.NNIndex(hs, dcxs)
-        query_cfg._dcxs2_index[dcxs_] = data_index
+def prepare_query(qdat, qcxs, dcxs):
+    qdat._qcxs = qcxs
+    qdat._dcxs = dcxs
+    #---------------
+    # Flip if needebe
+    query_type = qdat.cfg.agg_cfg.query_type
+    if query_type == 'vsone':
+        (dcxs, qcxs) = (qdat._qcxs, qdat._dcxs)
+    elif query_type == 'vsmany':
+        (dcxs, qcxs) = (qdat._dcxs, qdat._qcxs)
     else:
-        print('[mc3] dcxs_ is in query_cfg cache')
-    query_cfg._data_index = query_cfg._dcxs2_index[dcxs_]
+        raise Exception('Unknown query_type=%r' % query_type)
+    return qcxs, dcxs
 
 
 #----------------------
 # Main Query Logic
 #----------------------
 @profile
-def execute_query_safe(hs, query_cfg=None, qcxs=None, dcxs=None, use_cache=True, **kwargs):
+def execute_query_safe(hs, qdat, qcxs, dcxs, use_cache=True, **kwargs):
     '''Executes a query, performs all checks, callable on-the-fly'''
-    print('[mc3] Execute query safe: q%s' % hs.cidstr(qcxs))
-    if query_cfg is None:
-        query_cfg = ds.QueryConfig(hs, **kwargs)
-    if dcxs is None:
-        dcxs = hs.indexed_sample_cx
-    query_cfg._qcxs = qcxs
-    query_cfg._dcxs = dcxs
-    #---------------
-    # Flip if needebe
-    query_type = query_cfg.agg_cfg.query_type
-    if query_type == 'vsone':
-        (dcxs, qcxs) = (query_cfg._qcxs, query_cfg._dcxs)
-    elif query_type == 'vsmany':
-        (dcxs, qcxs) = (query_cfg._dcxs, query_cfg._qcxs)
-    else:
-        raise Exception('Unknown query_type=%r' % query_type)
+    print('[mc3] Execute query: q%s' % hs.cidstr(qcxs))
+    qcxs, dcxs = prepare_query(qdat, qcxs, dcxs)
     # caching
     if not hs.args.nocache_query and use_cache:
-        result_list = load_cached_query(hs, query_cfg)
+        result_list = load_cached_query(hs, qdat)
         if not result_list is None:
             return result_list
-    print('[mc3] qcxs=%r' % query_cfg._qcxs)
-    print('[mc3] len(dcxs)=%r' % len(query_cfg._dcxs))
-    ensure_nn_index(hs, query_cfg, dcxs)
-    result_list = execute_query_fast(hs, query_cfg, qcxs, dcxs)
+    print('[mc3] qcxs=%r' % qdat._qcxs)
+    print('[mc3] len(dcxs)=%r' % len(qdat._dcxs))
+    ensure_nn_index(hs, qdat, dcxs)
+    # Do the actually query
+    result_list = execute_query_fast(hs, qdat, qcxs, dcxs)
     for qcx2_res in result_list:
         for qcx, res in qcx2_res.iteritems():
             res.save(hs)
@@ -198,21 +177,21 @@ def execute_query_safe(hs, query_cfg=None, qcxs=None, dcxs=None, use_cache=True,
 
 
 @profile
-def execute_query_fast(hs, query_cfg, qcxs, dcxs):
-    '''Executes a query and assumes query_cfg has all precomputed information'''
+def execute_query_fast(hs, qdat, qcxs, dcxs):
+    '''Executes a query and assumes qdat has all precomputed information'''
     # Nearest neighbors
-    neighbs = mf.nearest_neighbors(hs, qcxs, query_cfg)
+    neighbs = mf.nearest_neighbors(hs, qcxs, qdat)
     # Nearest neighbors weighting and scoring
-    weights  = mf.weight_neighbors(hs, neighbs, query_cfg)
+    weights  = mf.weight_neighbors(hs, neighbs, qdat)
     # Thresholding and weighting
-    nnfiltFILT = mf.filter_neighbors(hs, neighbs, weights, query_cfg)
+    nnfiltFILT = mf.filter_neighbors(hs, neighbs, weights, qdat)
     # Nearest neighbors to chip matches
-    matchesFILT = mf.build_chipmatches(hs, neighbs, nnfiltFILT, query_cfg)
+    matchesFILT = mf.build_chipmatches(hs, neighbs, nnfiltFILT, qdat)
     # Spatial verification
-    matchesSVER = mf.spatial_verification(hs, matchesFILT, query_cfg)
+    matchesSVER = mf.spatial_verification(hs, matchesFILT, qdat)
     # Query results format
     result_list = [
-        mf.chipmatch_to_resdict(hs, matchesSVER, query_cfg),
+        mf.chipmatch_to_resdict(hs, matchesSVER, qdat),
     ]
     return result_list
 

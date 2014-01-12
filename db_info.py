@@ -1,23 +1,7 @@
 from __future__ import division, print_function
-import __builtin__
-import sys
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-def print_off():
-    global print, print_
-    def print(*args, **kwargs): pass
-    def print_(*args, **kwargs): pass
-# Dynamic module reloading
-def reload_module():
-    import imp, sys
-    print('[dbinfo] reloading '+__name__)
-    imp.reload(sys.modules[__name__])
-def rrr(): reload_module()
+import __common__
+(print, print_, print_on, print_off, rrr,
+ profile) = __common__.init(__name__, '[dbinfo]')
 import os
 import sys
 from os.path import isdir, islink, isfile, join, exists
@@ -27,18 +11,23 @@ import helpers
 import numpy as np
 from PIL import Image
 
+
 def dir_size(path):
     if sys.platform == 'win32':
         pass
     else:
         import commands
-        size = commands.getoutput('du -sh '+path).split()[0]
+        size = commands.getoutput('du -sh ' + path).split()[0]
     return size
+
 
 def is_dir2(path):
     return isdir(path) and not islink(path)
+
+
 def is_link2(path):
     return islink(path) and isdir(path)
+
 
 class DatabaseStats(object):
     def __init__(self, db_dir, version, root_dir):
@@ -55,7 +44,8 @@ class DatabaseStats(object):
 
     def print_name_info(self):
         hs = ld2.HotSpotter()
-        rss = helpers.RedirectStdout(); rss.start()
+        rss = helpers.RedirectStdout()
+        rss.start()
         hs.load_tables(self.db_dir)
         name_info_dict = get_db_names_info(hs)
         rss.stop()
@@ -75,6 +65,7 @@ KNOWN_DATA_DIRS = [
     'Oxford100k',
 ]
 
+
 class DirectoryStats(object):
     def __init__(self, root_dir):
         self.root_dir = root_dir
@@ -87,11 +78,10 @@ class DirectoryStats(object):
         self.build_self(root_dir)
         #---
 
-    def get_db_types():
+    def get_db_types(self):
         if 'db_types' in self.__dict__.keys():
             return self.db_types
         self.db_types = []
-
 
     def build_self(self, root_dir):
         print('root_dir=%r' % root_dir)
@@ -106,7 +96,8 @@ class DirectoryStats(object):
         self.non_leaves = []
         # Do not recurse into a base directory
         skip = any([skip_dir in root_dir for skip_dir in KNOWN_BASE_DIRS])
-        if skip: return
+        if skip:
+            return
         for branch in non_leaves:
             #continue
             self.build_self(branch)
@@ -144,17 +135,18 @@ class DirectoryStats(object):
 
     def print_nondbdirs(self):
         for dir_ in self.dir_list:
-            print(' * '+str(dir_))
+            print(' * ' + str(dir_))
 
     def print_databases(self, indent):
         for db_stats in self.db_stats_list:
-            print(indent+db_stats.name())
+            print(indent + db_stats.name())
         pass
 
     def print_db_stats(self):
         for db_stats in self.db_stats_list:
             print_database_stats(db_stats)
         pass
+
 
 def print_database_stats(db_stats):
     'Prints a single dbstats object'
@@ -273,8 +265,10 @@ def is_not_leaf(path):
             return True
     return False
 
+
 def get_db_names_info(hs):
     return db_info(hs)
+
 
 def db_info(hs):
     # Name Info
@@ -282,7 +276,7 @@ def db_info(hs):
     nx2_nChips = np.array(map(len, nx2_cxs))
     uniden_cxs = np.hstack(nx2_cxs[[0, 1]])
     num_uniden = nx2_nChips[0] + nx2_nChips[1]
-    nx2_nChips[0:2] = 0 # remove uniden names
+    nx2_nChips[0:2] = 0  # remove uniden names
     # Seperate singleton / multitons
     multiton_nxs,  = np.where(nx2_nChips > 1)
     singleton_nxs, = np.where(nx2_nChips == 1)
@@ -298,9 +292,10 @@ def db_info(hs):
     num_chips = len(valid_cxs)
     # Image info
     gx2_gname  = hs.tables.gx2_gname
-    cx2_gx     = hs.tables.cx2_gx
+    cx2_gx = hs.tables.cx2_gx
     num_images = len(gx2_gname)
     img_list = helpers.list_images(hs.dirs.img_dir, fullpath=True)
+
     def wh_print_stats(wh_list):
         from collections import OrderedDict
         if len(wh_list) == 0:
@@ -310,9 +305,10 @@ def db_info(hs):
              ( 'min', wh_list.min(0)),
              ('mean', wh_list.mean(0)),
              ( 'std', wh_list.std(0))])
-        arr2str = lambda var: '['+(', '.join(map(lambda x: '%.1f' % x, var)))+']'
+        arr2str = lambda var: '[' + (', '.join(map(lambda x: '%.1f' % x, var))) + ']'
         ret = (',\n    '.join(['%r:%s' % (key, arr2str(val)) for key, val in stat_dict.items()]))
-        return '{\n    ' + ret +'}'
+        return '{\n    ' + ret + '}'
+
     def get_img_size_list(img_list):
         ret = []
         for img_fpath in img_list:
@@ -320,6 +316,7 @@ def db_info(hs):
                 size = Image.open(img_fpath).size
                 ret.append(size)
             except Exception as ex:
+                print(repr(ex))
                 pass
         return ret
 
@@ -327,7 +324,7 @@ def db_info(hs):
     if len(cx2_roi) == 0:
         chip_size_list = []
     else:
-        chip_size_list = cx2_roi[:,2:4]
+        chip_size_list = cx2_roi[:, 2:4]
     img_size_list  = np.array(get_img_size_list(img_list))
     img_size_stats  = wh_print_stats(img_size_list)
     chip_size_stats = wh_print_stats(chip_size_list)
@@ -390,7 +387,6 @@ if __name__ == '__main__':
     freeze_support()
 
     if sys.argv > 1:
-        import params
         import sys
         path = params.DEFAULT
         db_version = get_database_version(path)
@@ -424,12 +420,12 @@ if __name__ == '__main__':
     # Print File Stats
     print('\n\n === All Info === ')
     for dir_stats in dir_stats_list:
-        print('--'+dir_stats.name())
+        print('--' + dir_stats.name())
         dir_stats.print_databases(' * ')
 
     print('\n\n === NonDB Dirs === ')
     for dir_stats in dir_stats_list:
-        print('--'+dir_stats.name())
+        print('--' + dir_stats.name())
         dir_stats.print_nondbdirs()
 
     # Print File Stats
@@ -437,5 +433,3 @@ if __name__ == '__main__':
     for dir_stats in dir_stats_list:
         print('--')
         print(dir_stats.num_files_stats())
-
-

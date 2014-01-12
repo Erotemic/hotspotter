@@ -4,7 +4,9 @@ Module: load_data
     This is the first script run in the loading pipeline.
 '''
 from __future__ import division, print_function
-import __builtin__
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[ld2]')
 import sys
 # Standard
 from os.path import join, exists, splitext
@@ -20,39 +22,6 @@ import DataStructures as ds
 import helpers
 import params
 import tools
-
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-
-try:
-    profile  # NoQA
-except NameError:
-    profile = lambda func: func
-
-
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-
-
-def print_off():
-    global print, print_
-
-    def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
-        pass
-
-
-def rrr():
-    'Dynamic module reloading'
-    import imp
-    import sys
-    print('[ld2] reloading %s'  % __name__)
-    imp.reload(sys.modules[__name__])
 
 
 def printDBG(msg, lbl=''):

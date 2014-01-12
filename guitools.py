@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[guitools]')
 from os.path import split
 import sys
 #import warnings
@@ -17,13 +20,6 @@ try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
     _fromUtf8 = lambda s: s
-
-
-# Dynamic module reloading
-def rrr():
-    import imp
-    print('[*guitools] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
 
 
 def configure_matplotlib():

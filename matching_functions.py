@@ -1,5 +1,6 @@
 from __future__ import division, print_function
 import __common__
+print, print_, print_on, print_off, rrr, profile = __common__.init(__name__, '[mf]')
 from itertools import izip
 # Hotspotter
 import DataStructures as ds
@@ -10,8 +11,6 @@ import voting_rules2 as vr2
 import helpers
 # Scientific
 import numpy as np
-
-print, print_, print_on, print_off, rrr, profile = __common__.init(__name__, '[mf]')
 
 MARK_AFTER = 40
 

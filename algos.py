@@ -1,6 +1,8 @@
 'hotspotter.algos contains algorithm poltpori'
 from __future__ import division, print_function
-import __builtin__
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[algos]')
 # Python
 import sys
 from os.path import join
@@ -20,38 +22,6 @@ import fileio as io
 import helpers
 from itertools import izip
 
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-
-
-try:
-    profile  # NoQA
-except NameError:
-    profile = lambda func: func
-
-
-def print_on():
-    global print, print_
-    print = __builtin__.print
-    print_ = sys.stdout.write
-
-
-def print_off():
-    global print, print_
-
-    def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
-        pass
-
-
-# Dynamic module reloading
-def rrr():
-    import imp
-    print('[algos] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
 
 DIST_LIST = ['L1', 'L2']
 

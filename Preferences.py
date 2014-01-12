@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[pref]')
 from Printable import DynStruct
 import cPickle
 import sys
@@ -25,13 +28,6 @@ def printDBG(msg):
 # ---
 # Functions
 # ---
-def rrr():
-    'Dynamic module reloading'
-    import imp
-    print('[pref] Reloading: ' + __name__)
-    imp.reload(sys.modules[__name__])
-
-
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:

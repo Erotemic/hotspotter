@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[front]')
 from PyQt4 import QtGui, QtCore
 from PyQt4.Qt import (QAbstractItemView, pyqtSignal, Qt)
 import guitools
@@ -10,13 +13,6 @@ from _frontend.MainSkel import Ui_mainSkel
 
 IS_INIT = False
 NOSTEAL_OVERRIDE = True
-
-
-def rrr():
-    'Dynamic module reloading'
-    import imp
-    print('[*front] reloading %s' % __name__)
-    imp.reload(sys.modules[__name__])
 
 
 class StreamStealer(QtCore.QObject):

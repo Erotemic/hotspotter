@@ -1,7 +1,8 @@
 from __future__ import division, print_function
-import __builtin__
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[vr2]')
 # Python
-import sys
 from itertools import izip
 # Scientific
 import pandas as pd
@@ -9,25 +10,6 @@ import numpy as np
 from numpy.linalg import svd
 import helpers
 #from numba import autojit
-
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-def print_off():
-    global print, print_
-    def print(*args, **kwargs): pass
-    def print_(*args, **kwargs): pass
-
-# Dynamic module reloading
-def reload_module():
-    import imp, sys
-    print('[vr2] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
-rrr = reload_module
 
 
 def score_chipmatch_csum(chipmatch):
@@ -52,7 +34,8 @@ def enforce_one_name(hs, cx2_score, chipmatch=None, cx2_chipscore=None):
     nx2_cxs = hs.get_nx2_cxs()
     cx2_score = np.array(cx2_score)
     for nx, cxs in enumerate(nx2_cxs):
-        if len(cxs) < 2 or nx <= 1: continue
+        if len(cxs) < 2 or nx <= 1:
+            continue
         #print(cxs)
         # zero the cxs with the lowest csum score
         sortx = cx2_chipscore[cxs].argsort()
@@ -104,6 +87,8 @@ def score_chipmatch_PL(hs, qcx, chipmatch, qdat):
 
 
 TMP = []
+
+
 def _optimize(M):
     global TMP
     #print('[vote] optimize')
@@ -139,13 +124,14 @@ def get_scores_from_altx2_score(hs, qcx, altx2_prob, altx2_tnx):
     nx2_cxs = hs.get_nx2_cxs()
     for altx, prob in enumerate(altx2_prob):
         tnx = altx2_tnx[altx]
-        if tnx < 0: # account for temporary names
+        if tnx < 0:  # account for temporary names
             cx2_score[-tnx] = prob
             nx2_score[1] += prob
         else:
             nx2_score[tnx] = prob
             for cx in nx2_cxs[tnx]:
-                if cx == qcx: continue
+                if cx == qcx:
+                    continue
                 cx2_score[cx] = prob
     return cx2_score, nx2_score
 
@@ -163,11 +149,11 @@ def _chipmatch2_utilities(hs, qcx, chipmatch, K):
     nQFeats = len(hs.feats.cx2_kpts[qcx])
     # Stack the feature matches
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
-    cxs = np.hstack([[cx]*len(cx2_fm[cx]) for cx in xrange(len(cx2_fm))])
+    cxs = np.hstack([[cx] * len(cx2_fm[cx]) for cx in xrange(len(cx2_fm))])
     cxs = np.array(cxs, np.int)
     fms = np.vstack(cx2_fm)
     # Get the individual feature match lists
-    qfxs = fms[:,0]
+    qfxs = fms[:, 0]
     fss  = np.hstack(cx2_fs)
     fks  = np.hstack(cx2_fk)
     qfx2_utilities = [[] for _ in xrange(nQFeats)]
@@ -179,7 +165,7 @@ def _chipmatch2_utilities(hs, qcx, chipmatch, K):
         qfx2_utilities[qfx].append(utility)
     for qfx in xrange(len(qfx2_utilities)):
         utilities = qfx2_utilities[qfx]
-        utilities = sorted(utilities, key=lambda tup:tup[3])
+        utilities = sorted(utilities, key=lambda tup: tup[3])
         qfx2_utilities[qfx] = utilities
     return qfx2_utilities
 
@@ -187,14 +173,15 @@ def _chipmatch2_utilities(hs, qcx, chipmatch, K):
 def _filter_utilities(qfx2_utilities, max_alts=200):
     print('[vote] filtering utilities')
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
-    if len(tnxs) == 0: return qfx2_utilities
+    if len(tnxs) == 0:
+        return qfx2_utilities
     tnxs = np.array(tnxs)
     tnxs_min = tnxs.min()
     tnx2_freq = np.bincount(tnxs - tnxs_min)
     nAlts = (tnx2_freq > 0).sum()
     nRemove = max(0, nAlts - max_alts)
     print(' * removing %r/%r alternatives' % (nRemove, nAlts))
-    if nRemove > 0: #remove least frequent names
+    if nRemove > 0:  # remove least frequent names
         most_freq_tnxs = tnx2_freq.argsort()[::-1] + tnxs_min
         keep_tnxs = set(most_freq_tnxs[0:max_alts].tolist())
         for qfx in xrange(len(qfx2_utilities)):
@@ -209,28 +196,31 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
     cartesian = helpers.cartesian
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
     altx2_tnx = pd.unique(tnxs)
-    tnx2_altx = {nx:altx for altx, nx in enumerate(altx2_tnx)}
+    tnx2_altx = {nx: altx for altx, nx in enumerate(altx2_tnx)}
     nUtilities = len(qfx2_utilities)
     nAlts   = len(altx2_tnx)
     altxs   = np.arange(nAlts)
     pairwise_mat = np.zeros((nAlts, nAlts))
     qfx2_porder = [np.array([tnx2_altx[util[1]] for util in utils])
                    for utils in qfx2_utilities]
+
     def sum_win(ij):  # pairiwse wins on off-diagonal
         pairwise_mat[ij[0], ij[1]] += 1
-    def sum_loss(ij): # pairiwse wins on off-diagonal
+
+    def sum_loss(ij):  # pairiwse wins on off-diagonal
         pairwise_mat[ij[1], ij[1]] -= 1
     nVoters = 0
     for qfx in xrange(nUtilities):
         # partial and compliment order over alternatives
         porder = pd.unique(qfx2_porder[qfx])
         nReport = len(porder)
-        if nReport == 0: continue
+        if nReport == 0:
+            continue
         #sys.stdout.write('.')
         corder = np.setdiff1d(altxs, porder)
         # pairwise winners and losers
-        pw_winners = [porder[r:r+1] for r in xrange(nReport)]
-        pw_losers = [hstack((corder, porder[r+1:])) for r in xrange(nReport)]
+        pw_winners = [porder[r:r + 1] for r in xrange(nReport)]
+        pw_losers = [hstack((corder, porder[r + 1:])) for r in xrange(nReport)]
         pw_iter = izip(pw_winners, pw_losers)
         pw_votes_ = [cartesian((winner, losers)) for winner, losers in pw_iter]
         pw_votes = np.vstack(pw_votes_)
@@ -251,7 +241,7 @@ def _get_alts_from_utilities(qfx2_utilities):
     # get temp name indexes
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
     altx2_tnx = pd.unique(tnxs)
-    tnx2_altx = {nx:altx for altx, nx in enumerate(altx2_tnx)}
+    tnx2_altx = {nx: altx for altx, nx in enumerate(altx2_tnx)}
     nUtilities = len(qfx2_utilities)
     nAlts   = len(altx2_tnx)
     altxs   = np.arange(nAlts)
@@ -276,7 +266,8 @@ def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
         porder = porder[idx]
         worder = worder[idx]
         nReport = len(porder)
-        if nReport == 0: continue
+        if nReport == 0:
+            continue
         #sys.stdout.write('.')
         corder = np.setdiff1d(altxs, porder)
         nUnreport = len(corder)
@@ -286,21 +277,21 @@ def _utilities2_weighted_pairwise_breaking(qfx2_utilities):
             i = porder[r_win]
             wi = worder[r_win]
             # count the reported victories: i > j
-            for r_lose in xrange(r_win+1, nReport):
+            for r_lose in xrange(r_win + 1, nReport):
                 j = porder[r_lose]
                 #wj = worder[r_lose]
                 #w = wi - wj
                 w = wi
-                pairwise_mat[i,j] += w
-                pairwise_mat[j,j] -= w
+                pairwise_mat[i, j] += w
+                pairwise_mat[j, j] -= w
             # count the un-reported victories: i > j
             for r_lose in xrange(nUnreport):
                 j = corder[r_lose]
                 #wj = 0
                 #w = wi - wj
                 w = wi
-                pairwise_mat[i,j] += w
-                pairwise_mat[j,j] -= w
+                pairwise_mat[i, j] += w
+                pairwise_mat[j, j] -= w
             nVoters += wi
     #print('')
     PLmatrix = pairwise_mat / nVoters
@@ -323,9 +314,10 @@ def positional_scoring_rule(qfx2_utilities, rule, isWeighted):
         qfx2_worder = [np.array([    1.0 for util in utils]) for utils in qfx2_utilities]
     K = max(map(len, qfx2_utilities))
     if rule == 'borda':
-        score_vec = np.arange(0,K)[::-1] + 1
+        score_vec = np.arange(0, K)[::-1] + 1
     if rule == 'plurality':
-        score_vec = np.zeros(K); score_vec[0] = 1
+        score_vec = np.zeros(K)
+        score_vec[0] = 1
     if rule == 'topk':
         score_vec = np.ones(K)
     score_vec = np.array(score_vec, dtype=np.int)
@@ -355,5 +347,5 @@ def _positional_score(altxs, score_vec, qfx2_porder, qfx2_worder):
 
 
 if __name__ == '__main__':
-    pass
-
+    import multiprocessing
+    multiprocessing.freeze_support()

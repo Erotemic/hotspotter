@@ -1,39 +1,12 @@
 from __future__ import division, print_function
-import __builtin__
-import sys
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[Printable]')
 import re
 import numpy as np
 
 MAX_VALSTR = -1
 #100000
-
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-
-
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-
-
-def print_off():
-    global print, print_
-
-    def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
-        pass
-
-
-# Dynamic module reloading
-def rrr():
-    import imp
-    import sys
-    print('[printable] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
 
 
 class AbstractPrintable(object):

@@ -1,8 +1,10 @@
 #!/usr/env python
 from __future__ import division, print_function
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[rr2]')
 import matplotlib
 matplotlib.use('Qt4Agg')
-import __builtin__
 # Hotspotter imports
 import draw_func2 as df2
 import helpers
@@ -26,36 +28,8 @@ from itertools import izip
 from os.path import join, exists
 import fileio as io
 
-try:
-    profile  # NoQA
-except NameError:
-    profile = lambda func: func
-
 REPORT_MATRIX  = True
 REPORT_MATRIX_VIZ = True
-
-# Toggleable printing
-print = __builtin__.print
-
-
-def print_on():
-    global print
-    print =  __builtin__.print
-
-
-def print_off():
-    global print
-
-    def print(*args, **kwargs):
-        pass
-
-
-# Dynamic module reloading
-def reload_module():
-    import imp
-    print('[rr2] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
-rrr = reload_module
 
 
 def printDBG(msg):

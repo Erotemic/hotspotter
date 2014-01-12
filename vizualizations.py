@@ -1,8 +1,9 @@
 from __future__ import division, print_function
-import __builtin__
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[viz]')
 import matplotlib
 matplotlib.use('Qt4Agg')
-import draw_func2 as df2
 # Python
 import multiprocessing
 #import re
@@ -10,6 +11,7 @@ import warnings
 # Scientific
 import numpy as np
 # Hotspotter
+import draw_func2 as df2
 import fileio as io
 import algos
 import helpers
@@ -17,35 +19,7 @@ import extract_patch
 from os.path import realpath
 
 
-# Toggleable printing
-print = __builtin__.print
-
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5)
-
-try:
-    profile  # NoQA
-except NameError:
-    profile = lambda func: func
-
-
-def print_on():
-    global print
-    print  = __builtin__.print
-
-
-def print_off():
-    global print
-
-    def print(*args, **kwargs):
-        pass
-
-
-def rrr():
-    'Dynamic module reloading'
-    import imp
-    import sys
-    print('[viz] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
 
 
 def printDBG(msg):

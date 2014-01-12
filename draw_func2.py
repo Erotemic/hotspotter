@@ -5,7 +5,9 @@
 # plot_<func_name> will not clear the axes or figure. More useful for graphs
 # draw_<func_name> same as plot for now. More useful for images
 from __future__ import division, print_function
-import __builtin__
+import __common__
+(print, print_, print_on, print_off, rrr,
+ profile) = __common__.init(__name__, '[dev]')
 # Python
 from itertools import izip
 from os.path import splitext, split, join, normpath
@@ -60,29 +62,6 @@ import helpers
 def printDBG(msg):
     #print(msg)
     pass
-
-# Toggleable printing
-print = __builtin__.print
-
-
-def print_on():
-    global print
-    print  = __builtin__.print
-
-
-def print_off():
-    global print
-
-    def print(*args, **kwargs):
-        pass
-
-
-def rrr():
-    'Dynamic module reloading'
-    import imp
-    print('[df2] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
-
 
 QT4_WINS = []
 plotWidget = None

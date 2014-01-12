@@ -2,36 +2,12 @@
     stores a bunch of global variables used by the other modules
     It also reads from sys.argv'''
 from __future__ import division, print_function
-import __builtin__
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[params]')
 import sys
-import os.path
-import numpy as np
 import helpers
-import multiprocessing
 from os.path import exists, expanduser, join
-
-# Toggleable printing
-print = __builtin__.print
-
-
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-
-
-def print_off():
-    global print, print_
-
-    def print(*args, **kwargs):
-        pass
-
-
-# Dynamic module reloading
-def reload_module():
-    import imp
-    print('[params] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
-rrr = reload_module
 
 
 '''
@@ -433,6 +409,8 @@ for argv in iter(sys.argv):
 
 
 if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
     print('[params] __main__ = params.py')
     print('[params] Param string:')
     print(helpers.indent(param_string()))

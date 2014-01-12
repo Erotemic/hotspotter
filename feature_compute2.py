@@ -1,6 +1,8 @@
 ''' Computes feature representations '''
 from __future__ import division, print_function
-import __builtin__
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[fc2]')
 # scientific
 import numpy as np
 # python
@@ -9,41 +11,8 @@ from os.path import join
 # hotspotter
 import helpers
 import fileio as io
-import DataStructures as ds
 import extern_feat
 from Parallelize import parallel_compute
-
-try:
-    profile  # NoQA
-except NameError:
-    profile = lambda func: func
-
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-
-
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-
-
-def print_off():
-    global print, print_
-
-    def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
-        pass
-
-
-# Dynamic module reloading
-def rrr():
-    import imp
-    print('[fc2] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
 
 
 def whiten_features(desc_list):

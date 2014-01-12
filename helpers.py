@@ -9,7 +9,9 @@ into a global set of helper functions.
 Wow, pylint is nice for cleaning.
 '''
 from __future__ import division, print_function
-import __builtin__
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[guitools]')
 # Scientific
 import numpy as np
 # Standard
@@ -35,34 +37,6 @@ import warnings
 import tools
 from Printable import printableVal
 #print('LOAD_MODULE: helpers.py')
-
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-
-
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-
-
-def print_off():
-    global print, print_
-
-    def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
-        pass
-
-
-def rrr():
-    'Dynamic module reloading'
-    import imp
-    import sys
-    print('[helpers] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
 
 # --- Globals ---
 
@@ -1152,17 +1126,6 @@ def hashstr(data, trunc_pos=8):
 class ModulePrintLock():
     '''Temporarily turns off printing while still in scope
     chosen modules must have a print_off function
-    from __future__ import print_function
-    import __builtin__
-    # Toggleable printing
-    print = __builtin__.print
-    print_ = sys.stdout.write
-    def print_on(): global print, print_
-        print =  __builtin__.print
-        print_ = sys.stdout.write
-    def print_off(): global print, print_
-        def print(*args, **kwargs): pass
-        def print_(*args, **kwargs): pass
     '''
     def __init__(self, *args):
         self.module_list = args

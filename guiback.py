@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[back]')
 from os.path import split, exists, join
 # Qt
 from PyQt4 import QtCore
@@ -17,14 +20,6 @@ from guitools import backblocking as blocking
 
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5)
 viz.register_FNUMS(FNUMS)
-
-
-def rrr():
-    'Dynamic module reloading'
-    import imp
-    import sys
-    print('[*back] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
 
 
 # Helper functions (should probably be moved into HotSpotter API)

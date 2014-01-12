@@ -1,5 +1,8 @@
 #exec(open('__init__.py').read())
 from __future__ import division, print_function
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[extract]')
 import numpy as np
 import draw_func2 as df2
 import cv2

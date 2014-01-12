@@ -1,5 +1,7 @@
 from __future__ import division, print_function
-import __builtin__
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[io]')
 import sys
 import os
 import fnmatch
@@ -16,33 +18,6 @@ import cv2
 from PIL import Image
 from PIL.ExifTags import TAGS
 #import skimage
-
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-
-
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-
-
-def print_off():
-    global print, print_
-
-    def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
-        pass
-
-
-def rrr():
-    'Dynamic module reloading'
-    import imp
-    print('[io] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
 
 
 # --- Saving ---

@@ -1,61 +1,72 @@
 from __future__ import division, print_function
 import re
-import types
 import helpers
 import textwrap
 import numpy as np
 
+
 def latex_multicolumn(data, ncol=2):
     return r'\multicolumn{%d}{|c|}{%s}' % (ncol, data)
+
+
 def latex_multirow(data, nrow=2):
     return r'\multirow{%d}{*}{|c|}{%s}' % (nrow, data)
+
+
 def latex_mystats(lbl, data):
-    stats_ = helpers.mystats(data);
+    stats_ = helpers.mystats(data)
     min_, max_, mean, std, shape = stats_.values()
     fmttup1 = (int(min_), int(max_), float(mean), float(std))
     fmttup = tuple(map(helpers.num_fmt, fmttup1))
-    lll = ' '*len(lbl)
+    lll = ' ' * len(lbl)
     #fmtstr = r'''
     #'''+lbl+r''' stats &{ max:%d, min:%d\\
     #'''+lll+r'''       & mean:%.1f, std:%.1f}\\'''
     fmtstr = r'''
-    '''+lbl+r''' stats & max ; min = %s ; %s\\
-    '''+lll+r'''       & mean; std = %s ; %s\\'''
-    latex_str = textwrap.dedent(fmtstr % fmttup).strip('\n')+'\n'
+    ''' + lbl + r''' stats & max ; min = %s ; %s\\
+    ''' + lll + r'''       & mean; std = %s ; %s\\'''
+    latex_str = textwrap.dedent(fmtstr % fmttup).strip('\n') + '\n'
     return latex_str
+
+
 def latex_scalar(lbl, data):
-    return (r'%s & %s\\' % (lbl, helpers.num_fmt(data)))+'\n'
+    return (r'%s & %s\\' % (lbl, helpers.num_fmt(data))) + '\n'
 
 
 def make_stats_tabular():
     'tabular for dipslaying statistics'
     pass
 
+
 def ensure_rowvec(arr):
     arr = np.array(arr)
     arr.shape = (1, arr.size)
     return arr
+
 
 def ensure_colvec(arr):
     arr = np.array(arr)
     arr.shape = (arr.size, 1)
     return arr
 
-def padvec(shape=(1,1)):
+
+def padvec(shape=(1, 1)):
     pad = np.array([[' ' for c in xrange(shape[1])] for r in xrange(shape[0])])
     return pad
 
+
 def escape_latex(unescaped_latex_str):
     ret = unescaped_latex_str
-    ret = ret.replace('#','\\#')
-    ret = ret.replace('%','\\%')
-    ret = ret.replace('_','\\_')
+    ret = ret.replace('#', '\\#')
+    ret = ret.replace('%', '\\%')
+    ret = ret.replace('_', '\\_')
     return ret
+
 
 def replace_all(str_, repltups):
     ret = str_
     for ser, rep in repltups:
-        ret = re.sub(ser, rep, ret) 
+        ret = re.sub(ser, rep, ret)
     return ret
 
 
@@ -66,7 +77,7 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
     bigger_is_better = True
     if flip:
         bigger_is_better = not bigger_is_better
-        flip_repltups = [('<','>'), ('score', 'error')]
+        flip_repltups = [('<', '>'), ('score', 'error')]
         col_lbls = [replace_all(lbl, flip_repltups) for lbl in col_lbls]
         if not title is None:
             title = replace_all(title, flip_repltups)
@@ -77,20 +88,21 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
         for ser, rep in replace_rowlbl:
             row_lbls = [re.sub(ser, rep, lbl) for lbl in row_lbls]
 
-
     # Abbreviate based on common substrings
     SHORTEN_ROW_LBLS = True
     common_rowlbl = None
     if SHORTEN_ROW_LBLS:
-        if type(row_lbls) is types.ListType: row_lbl_list = row_lbls
-        else: row_lbl_list = row_lbls.flatten().tolist()
+        if isinstance(row_lbls, list):
+            row_lbl_list = row_lbls
+        else:
+            row_lbl_list = row_lbls.flatten().tolist()
         # Split the rob labels into the alg components
         #algcomp_list = [lbl.split(')_') for lbl in row_lbl_list]
         longest = long_substr(row_lbl_list)
         common_strs = []
-        while len(longest) > 10: 
+        while len(longest) > 10:
             common_strs += [longest]
-            row_lbl_list = [row.replace(longest,'...') for row in row_lbl_list] 
+            row_lbl_list = [row.replace(longest, '...') for row in row_lbl_list]
             longest = long_substr(row_lbl_list)
         common_rowlbl = ('...'.join(common_strs)).replace(')_', ')_\n')
         row_lbls = row_lbl_list
@@ -112,9 +124,9 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
     for r in xrange(len(body)):
         for c in xrange(len(body[0])):
             # In data land
-            if r > 0 and c > 0: 
+            if r > 0 and c > 0:
                 # Force integer
-                if FORCE_INT: 
+                if FORCE_INT:
                     body[r][c] = str(int(float(body[r][c])))
             # Remove bad formatting;
             if AUTOFIX_LATEX:
@@ -123,33 +135,33 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
     # Bold the best scores
     if bold_best:
         best_col_scores = scores.max(0) if bigger_is_better else scores.min(0)
-        rows_to_bold = [ np.where(scores[:,colx] == best_col_scores[colx])[0] 
-                for colx in xrange(len(scores.T)) ]
+        rows_to_bold = [np.where(scores[:, colx] == best_col_scores[colx])[0]
+                        for colx in xrange(len(scores.T))]
         for colx, rowx_list in enumerate(rows_to_bold):
             for rowx in rowx_list:
-                body[rowx+1][colx+1] = '\\txtbf{'+body[rowx+1][colx+1]+'}'
-    
+                body[rowx + 1][colx + 1] = '\\txtbf{' + body[rowx + 1][colx + 1] + '}'
+
     # More fixing after the bold is in place
     for r in xrange(len(body)):
         for c in xrange(len(body[0])):
             # In data land
-            if r > 0 and c > 0: 
+            if r > 0 and c > 0:
                 if not out_of is None:
-                    body[r][c] = body[r][c]+'/'+str(out_of)
+                    body[r][c] = body[r][c] + '/' + str(out_of)
                     if DO_PERCENT:
-                        percent = ' = %.1f%%' % float(100*scores[r-1, c-1]/out_of)
+                        percent = ' = %.1f%%' % float(100 * scores[r - 1, c - 1] / out_of)
                         body[r][c] += escape_latex(percent)
 
     # Align columns for pretty printing
     body = np.array(body)
     ALIGN_BODY = True
-    if ALIGN_BODY: 
+    if ALIGN_BODY:
         new_body_cols = []
         for col in body.T:
             colstrs = map(str, col.tolist())
             collens = map(len, colstrs)
             maxlen = max(collens)
-            newcols = [str_ + (' '*(maxlen-len(str_))) for str_ in colstrs]
+            newcols = [str_ + (' ' * (maxlen - len(str_))) for str_ in colstrs]
             new_body_cols += [newcols]
         body = np.array(new_body_cols).T
 
@@ -161,11 +173,11 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
     hline = r'\hline'
     extra_rowsep_pos_list = [1]
     if HLINE_SEP:
-        rowsep = hline+'\n'
-    rowstr_list = [colsep.join(row)+endl for row in body]
+        rowsep = hline + '\n'
+    rowstr_list = [colsep.join(row) + endl for row in body]
     # Insert title
     if not title is None:
-        tex_title = latex_multicolumn(title, len(body[0]))+endl
+        tex_title = latex_multicolumn(title, len(body[0])) + endl
         rowstr_list = [tex_title] + rowstr_list
         extra_rowsep_pos_list += [2]
     # Apply an extra hline (for label)
@@ -175,35 +187,27 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
 
     # Build Column Layout
     col_layout_sep = '|'
-    col_layout_list = ['l']*len(body[0])
+    col_layout_list = ['l'] * len(body[0])
     extra_collayoutsep_pos_list = [1]
     for pos in  sorted(extra_collayoutsep_pos_list)[::-1]:
         col_layout_list.insert(pos, '')
     col_layout = col_layout_sep.join(col_layout_list)
 
-    tabular_head = (r'\begin{tabular}{|%s|}' % col_layout)+'\n'
+    tabular_head = (r'\begin{tabular}{|%s|}' % col_layout) + '\n'
     tabular_tail = r'\end{tabular}'
 
     tabular_str = rowsep.join([tabular_head, tabular_body, tabular_tail])
 
-    if not common_rowlbl is None: 
-        tabular_str += escape_latex('\n\nThe following parameters were held fixed:\n'+common_rowlbl)
+    if not common_rowlbl is None:
+        tabular_str += escape_latex('\n\nThe following parameters were held fixed:\n' + common_rowlbl)
     return tabular_str
 
 
 def _tabular_header_and_footer(col_layout):
-    tabular_head = dedent(r'\begin{tabular}{|%s|}' % col_layout)
-    tabular_tail = dedent(r'\end{tabular}')
+    tabular_head = textwrap.dedent(r'\begin{tabular}{|%s|}' % col_layout)
+    tabular_tail = textwrap.dedent(r'\end{tabular}')
     return tabular_head, tabular_tail
-    
-def _tabular_title():
-    pass
 
-def _make_data_cols(data):
-    pass
-
-def _make_rowlbl_col(rob_lbls):
-    col_layout_aug = 'l||'
 
 def long_substr(strlist):
     # Longest common substring
@@ -211,10 +215,11 @@ def long_substr(strlist):
     substr = ''
     if len(strlist) > 1 and len(strlist[0]) > 0:
         for i in range(len(strlist[0])):
-            for j in range(len(strlist[0])-i+1):
-                if j > len(substr) and is_substr(strlist[0][i:i+j], strlist):
-                    substr = strlist[0][i:i+j]
+            for j in range(len(strlist[0]) - i + 1):
+                if j > len(substr) and is_substr(strlist[0][i:i + j], strlist):
+                    substr = strlist[0][i:i + j]
     return substr
+
 
 def is_substr(find, strlist):
     if len(strlist) < 1 and len(find) < 1:
@@ -223,7 +228,3 @@ def is_substr(find, strlist):
         if find not in strlist[i]:
             return False
     return True
-
-
-
-

@@ -1,5 +1,7 @@
 from __future__ import division, print_function
-import __builtin__
+import __common__
+(print, print_, print_on, print_off, rrr,
+ profile) = __common__.init(__name__, '[ds]')
 # Standard
 import sys
 from itertools import izip, chain
@@ -20,34 +22,6 @@ if DEBUG:
 else:
     def printDBG(msg):
         pass
-
-# Toggleable printing
-print = __builtin__.print
-print_ = sys.stdout.write
-
-
-def print_on():
-    global print, print_
-    print =  __builtin__.print
-    print_ = sys.stdout.write
-
-
-def print_off():
-    global print, print_
-
-    def print(*args, **kwargs):
-        pass
-
-    def print_(*args, **kwargs):
-        pass
-
-
-def rrr():
-    'Dynamic module reloading'
-    import imp
-    import sys
-    print('[ds] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
 
 
 class QueryData(DynStruct):

@@ -1,22 +1,17 @@
 from __future__ import division, print_function
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[sv2]')
 # Science
 import numpy as np
 import numpy.linalg as linalg
 import scipy.sparse as sparse
 import scipy.sparse.linalg as sparse_linalg
 # Standard
-import sys
 # skimage.transform
 # http://stackoverflow.com/questions/11462781/fast-2d-rigid-body-transformations-in-numpy-scipy
 # skimage.transform.fast_homography(im, H)
-# Toggleable printing
 
-
-def rrr():
-    'Dynamic module reloading'
-    import imp
-    print('[sv2] reloading ' + __name__)
-    imp.reload(sys.modules[__name__])
 
 SV_DTYPE = np.float64
 
@@ -347,7 +342,6 @@ if __name__ == '__main__':
     import matplotlib
     matplotlib.use('Qt4Agg')
     import draw_func2 as df2
-    import sys
     print('[sc2] __main__ = spatial_verification2.py')
     test()
     exec(df2.present(num_rc=(1, 1), wh=2500))

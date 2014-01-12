@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/env python
 '''Hotspotter main script
 Runs hotspotter gui
 

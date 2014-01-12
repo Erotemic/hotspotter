@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 from selenium import webdriver
 import os
 import parse

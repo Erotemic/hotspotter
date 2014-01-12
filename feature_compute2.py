@@ -1,5 +1,4 @@
 ''' Computes feature representations '''
-#from __init__ import *
 from __future__ import division, print_function
 import __builtin__
 # scientific

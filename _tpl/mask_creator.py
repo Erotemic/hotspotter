@@ -4,6 +4,7 @@ Interactive tool to draw mask on an image or image-like array.
 Adapted from matplotlib/examples/event_handling/poly_editor.py
 Jan 9 2014: taken from: https://gist.github.com/tonysyu/3090704
 """
+from __future__ import division, print_function
 import matplotlib
 matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt

@@ -1,7 +1,5 @@
 from __future__ import division, print_function
-import __builtin__
 import __common__
-import sys
 from itertools import izip
 # Hotspotter
 import DataStructures as ds

@@ -573,7 +573,7 @@ def adjust_subplots_xylabels():
 
 
 def adjust_subplots_safe():
-    adjust_subplots(left=.1, right=.9, bottom=.1, top=.9, wspace=.3, hspace=.3)
+    adjust_subplots(left=.1, right=.9, bottom=.05, top=.9, wspace=.3, hspace=.4)
 
 
 def adjust_subplots(left=0.02,  bottom=0.02,
@@ -1081,9 +1081,9 @@ def plot_bars(y_data, nColorSplits=1):
         ax.bar(x_dat, y_dat, width, color=color, edgecolor=np.array(color) * .8)
 
 
-def legend():
+def legend(loc='upper right'):
     ax = gca()
-    ax.legend(prop=FONTS.legend)
+    ax.legend(prop=FONTS.legend, loc=loc)
 
 
 def plot_histpdf(data, label=None, draw_support=False, nbins=10):

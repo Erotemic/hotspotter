@@ -2,6 +2,7 @@
 #
 # Copyright © 2009 Pierre Raybaut
 # Licensed under the terms of the MIT License
+from __future__ import division, print_function
 
 """
 MatplotlibWidget
@@ -33,9 +34,9 @@ class MatplotlibWidget(Canvas):
     """
     MatplotlibWidget inherits PyQt4.QtGui.QWidget
     and matplotlib.backend_bases.FigureCanvasBase
-    
+
     Options: option_name (default_value)
-    -------    
+    -------
     parent (None): parent widget
     title (''): figure title
     xlabel (''): X-axis label
@@ -48,12 +49,12 @@ class MatplotlibWidget(Canvas):
     height (3): height in inches
     dpi (100): resolution in dpi
     hold (False): if False, figure will be cleared each time plot is called
-    
+
     Widget attributes:
     -----------------
     figure: instance of matplotlib.figure.Figure
     axes: figure axes
-    
+
     Example:
     -------
     self.widget = MatplotlibWidget(self, yscale='log', hold=True)
@@ -106,7 +107,7 @@ if __name__ == '__main__':
     import sys
     from PyQt4.QtGui import QMainWindow, QApplication
     from numpy import linspace
-    
+
     class ApplicationWindow(QMainWindow):
         def __init__(self):
             QMainWindow.__init__(self)
@@ -117,12 +118,12 @@ if __name__ == '__main__':
             self.mplwidget.setFocus()
             self.setCentralWidget(self.mplwidget)
             self.plot(self.mplwidget.axes)
-            
+
         def plot(self, axes):
             x = linspace(-10, 10)
             axes.plot(x, x**2)
             axes.plot(x, x**3)
-        
+
     app = QApplication(sys.argv)
     win = ApplicationWindow()
     win.show()

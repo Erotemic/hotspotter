@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/env python
 from __future__ import division, print_function
 import matplotlib
 matplotlib.use('Qt4Agg')
@@ -8,7 +8,6 @@ import draw_func2 as df2
 import helpers
 import load_data2 as ld2
 #import match_chips3 as mc3
-import oxsty_results
 import params
 import vizualizations as viz
 import spatial_verification2 as sv2
@@ -325,6 +324,7 @@ def init_allres(hs, qcx2_res, SV=True,
     if matrix:
         build_matrix_str(allres)
     if oxford is True:
+        import oxsty_results
         oxsty_map_csv, scalar_mAP_str = oxsty_results.oxsty_mAP_results(allres)
         allres.scalar_mAP_str = scalar_mAP_str
         allres.oxsty_map_csv = oxsty_map_csv
@@ -908,19 +908,6 @@ def possible_problems():
 #===============================
 # MAIN SCRIPT
 #===============================
-def dinspect(qcx, cx=None, SV=True, reset=True):
-    df2.reload_module()
-    fnum = 2
-    res = qcx2_res[qcx]
-    print('dinspect matches from qcx=%r' % qcx)
-    if reset:
-        print('reseting')
-        df2.reset()
-    if cx is None:
-        df2.show_gt_matches(hs, res, fnum)
-    else:
-        df2.show_matches_annote_res(res, hs, cx, fnum, SV=SV)
-    df2.present(wh=(900, 600))
 
 
 def report_all(hs, qcx2_res, SV=True, **kwargs):
@@ -1061,7 +1048,8 @@ def get_orgres_match_distances(allres, orgtype_='false'):
     print('[rr2]  * adesc1.shape = %r' % (adesc1.shape,))
     print('[rr2]  * adesc2.shape = %r' % (adesc2.shape,))
     #dist_list = ['L1', 'L2', 'hist_isect', 'emd']
-    dist_list = ['L1', 'L2']
+    #dist_list = ['L1', 'L2']
+    dist_list = ['L1', 'L2', 'hist_isect']
     distances = algos.compute_distances(adesc1, adesc2, dist_list)
     return distances
 

@@ -69,7 +69,7 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
     df2.figure(fnum=fnum, doclf=True, trueclf=True)
     pnum_ = lambda px: (nRow, nCol, px + 1)
 
-    def _distplot(dists, color, label, plot_type='pdf'):
+    def _distplot(dists, color, label, plot_type='plot'):
         data = sorted(dists)
         ax = df2.gca()
         if plot_type == 'plot':
@@ -80,10 +80,12 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
             #ax.set_yticks(yticks)
             ax.set_ylabel('distance')
             ax.set_xlabel('matches indexes (sorted by distance)')
+            df2.legend(loc='lower right')
         if plot_type == 'pdf':
             df2.plot_pdf(data, color=color, label=label)
             ax.set_ylabel('pr')
             ax.set_xlabel('distance')
+            df2.legend(loc='upper right')
         df2.dark_background(ax)
         df2.small_xticks(ax)
         df2.small_yticks(ax)
@@ -98,9 +100,8 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
             title = distkey + ' ' + orgkey
             label = 'P(%s | %s)' % (distkey, orgkey)
             _distplot(dists, color, label, **kwargs)
-            ax = df2.gca()
-            ax.set_title(title)
-            df2.legend()
+            #ax = df2.gca()
+            #ax.set_title(title)
             px += 1
 
     subtitle = 'the matching distances between sift descriptors'

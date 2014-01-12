@@ -1,3 +1,5 @@
+from __future__ import division, print_function
+
 vsmany_2 = {
     'query_type'     : ['vsmany'],
     'checks'         : [1024],#, 8192],

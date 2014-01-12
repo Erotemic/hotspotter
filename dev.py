@@ -1,4 +1,4 @@
-#!/usr/env python
+#!/usr/bin/env python
 #exec(open('__init__.py').read())
 #exec(open('_research/dev.py').read())
 from __future__ import division, print_function

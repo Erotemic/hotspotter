@@ -153,6 +153,9 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
         proc_list.append(proc_list)
     # wait for results
     printDBG('[parallel] waiting for results')
+    sys.stdout.flush()
+    import time
+    time.sleep(.01)
     result_list = []
     if verbose:
         mark_progress = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)

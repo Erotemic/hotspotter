@@ -56,7 +56,7 @@ def extract_chip(img_path, chip_path, roi, theta, new_size):
     # Build transformation
     (rx, ry, rw, rh) = roi
     (rw_, rh_) = new_size
-    Aff = array([[ 5.,  0.,  0.],
+    Aff = np.array([[ 5.,  0.,  0.],
                  [ 0.,  5.,  0.]])
     #Aff = cc2.build_transform(rx, ry, rw, rh, rw_, rh_, theta, affine=True)
     print('built transform Aff=\n%r' % Aff)

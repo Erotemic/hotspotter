@@ -27,6 +27,10 @@ from _tpl.other import imtools
 #import skimage.util
 
 
+def printDBG(msg):
+    print(msg)
+
+
 def xywh_to_tlbr(roi, img_wh):
     (img_w, img_h) = img_wh
     if img_w == 0 or img_h == 0:
@@ -160,12 +164,16 @@ def extract_chip(img_path, chip_path, roi, theta, new_size):
 
 def compute_chip(img_path, chip_path, roi, theta, new_size, filter_list):
     '''Extracts Chip; Applies Filters; Saves as png'''
+    printDBG('[cc2] extracting chip')
     chip = extract_chip(img_path, chip_path, roi, theta, new_size)
     for func in filter_list:
+        printDBG('[cc2] computing filter: %r' % func)
         chip = func(chip)
     # Convert to grayscale
     pil_chip = Image.fromarray(chip).convert('L')
+    printDBG('[cc2] saving chip: %r' % chip_path)
     pil_chip.save(chip_path, 'PNG')
+    printDBG('[cc2] returning')
     return True
 
 # ---------------

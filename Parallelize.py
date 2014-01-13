@@ -12,7 +12,7 @@ import sys
 import helpers
 
 
-DEBUG = False
+DEBUG = True
 
 if DEBUG:
     def printDBG(msg):

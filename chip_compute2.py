@@ -27,7 +27,7 @@ from _tpl.other import imtools
 #import skimage.util
 
 
-DEBUG = False
+DEBUG = True
 if DEBUG:
     def printDBG(msg):
         print(msg)

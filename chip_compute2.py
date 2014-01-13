@@ -387,9 +387,6 @@ def load_chips(hs, cx_list=None, **kwargs):
     #--------------------------
     # EXTRACT AND RESIZE CHIPS
     #--------------------------
-    num_procs = hs.args.num_procs
-    if len(cx_list) < num_procs / 2:
-        num_procs = 1  # Hack for small amount of tasks
     pcc_kwargs = {
         'arg_list': [gfpath_list, cfpath_list, roi_list, theta_list, chipsz_list],
         'lazy': not hs.args.nocache_chips,

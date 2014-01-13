@@ -1,17 +1,22 @@
 from __future__ import division, print_function
 # Python
-import itertools  # NOQA
-import textwrap  # NOQA
+from collections import OrderedDict
+from os.path import dirname, realpath, join, exists, normpath
+import imp
 import itertools
+import itertools  # NOQA
+import multiprocessing
+import os
 import re
 import sys
+import sys
 import textwrap
-from os.path import dirname, realpath, join, exists, normpath
-from collections import OrderedDict
+import textwrap  # NOQA
 # Scientific
 import numpy as np  # NOQA
 from PIL import Image
 from PIL.ExifTags import TAGS
+import cv2
 # Qt
 import PyQt4
 from PyQt4 import QtCore, QtGui
@@ -37,6 +42,7 @@ import vizualizations as viz
 import voting_rules2 as vr2
 
 if __name__ == 'main':
+    multiprocessing.freeze_support()
     #exec(open('dbgimport.py').read())
     if '--img' in sys.argv:
         img_fpath_ = helpers.dbg_get_imgfpath()

@@ -92,14 +92,13 @@ ISRELEASED          = False
 VERSION             = '%d.%d.%d%s' % (MAJOR, MINOR, MICRO, SUFFIX)
 
 
-def __cd(dpath, verbose=True):
+def _cd(dpath, verbose=True):
     if verbose:
         print('[setup] change dir to: %r' % dpath)
     os.chdir(dpath)
 
 
-def __cmd(args, verbose=True):
-    print('[setup] Running: %r' % args)
+def _cmd(args, verbose=True, sudo=False):
     sys.stdout.flush()
     import subprocess
     #import shlex
@@ -108,8 +107,11 @@ def __cmd(args, verbose=True):
             #args = [args]
         #else:
             #args = shlex.split(args)
+    if sudo is True and sys.platform != 'win32':
+        args = 'sudo ' + args
     PIPE = subprocess.PIPE
     # DANGEROUS: shell=True. Grats hackers.
+    print('[setup] Running: %r' % args)
     proc = subprocess.Popen(args, stdout=PIPE, stderr=PIPE, shell=True)
     if verbose:
         ''' KNOWN PYTHON 2.x BUG
@@ -154,7 +156,7 @@ def build_pyinstaller():
     for rmdir in [build_dir, dist_dir]:
         if exists(rmdir):
             helpers.remove_file(rmdir)
-    __cmd('pyinstaller _setup/pyinstaller-hotspotter.spec')
+    _cmd('pyinstaller _setup/pyinstaller-hotspotter.spec')
     if sys.platform == 'darwin' and exists("dist/HotSpotter.app/Contents/"):
         copy_list = [
             'hsicon.icns',
@@ -178,7 +180,7 @@ def build_win32_inno_installer():
         print(msg)
         raise Exception(msg)
     args = [inno_fpath, iss_script]
-    __cmd(args)
+    _cmd(args)
 
 
 def compile_ui():
@@ -215,58 +217,63 @@ def fix_tpl_permissions():
 
 
 def make_install_pyhesaff():
-    hesaff_dir = normpath(HOME + '/code/hesaff')
-    cmd = join(hesaff_dir, buildscript_fmt % 'hesaff')
-    __cmd(cmd)
+    dpath = normpath(HOME + '/code/hesaff')
+    cmd = join(dpath, buildscript_fmt % 'hesaff')
+    _cmd(cmd, sudo=True)
 
 
 def make_install_pyflann():
-    pyflann_dir = normpath(HOME + '/code/flann')
-    cmd = join(pyflann_dir, buildscript_fmt % 'flann')
-    __cmd(cmd)
+    dpath = normpath(HOME + '/code/flann')
+    cmd = join(dpath, buildscript_fmt % 'flann')
+    _cmd(cmd, sudo=True)
     pass
 
 
 def make_install_opencv():
-    pyflann_dir = normpath(HOME + '/code/opencv')
-    cmd = join(pyflann_dir, buildscript_fmt % 'opencv')
-    __cmd(cmd)
+    dpath = normpath(HOME + '/code/opencv')
+    cmd = join(dpath, buildscript_fmt % 'opencv')
+    _cmd(cmd, sudo=True)
     pass
 
 
-def pull(repo):
-    repo_dpath = join(expanduser('~'), 'code', repo)
-    cwd = os.getcwd()
-    __cd(repo_dpath)
+def inrepo(func):
+    def wrapper(repo, *args, **kwargs):
+        repo_dpath = join(expanduser('~'), 'code', repo)
+        cwd = os.getcwd()
+        _cd(repo_dpath, False)
+        result = func(repo, *args, **kwargs)
+        _cd(cwd, False)
+        print('')
+        return result
+    return wrapper
+
+
+@inrepo
+def pull(repo, branch=None):
     if repo == 'hotspotter':
-        __cmd('git pull origin')
-        __cmd('git pull github')
+        _cmd('git pull origin')
+        _cmd('git pull github')
     else:
-        __cmd('git pull')
-    __cd(cwd)
+        _cmd('git pull')
+    if branch is not None:
+        _cmd('git checkout ' + branch)
+        _cmd('git pull')
 
 
+@inrepo
 def push(repo):
-    repo_dpath = join(expanduser('~'), 'code', repo)
-    cwd = os.getcwd()
-    __cd(repo_dpath)
     if repo == 'hotspotter':
-        __cmd('git push origin')
-        __cmd('git push github')
+        _cmd('git push origin')
+        _cmd('git push github')
     else:
-        __cmd('git push')
-    __cd(cwd)
+        _cmd('git push')
 
 
+@inrepo
 def status(repo):
     print('[helpers] ---- status(%r) ----' % repo)
-    repo_dpath = join(expanduser('~'), 'code', repo)
-    cwd = os.getcwd()
-    __cd(repo_dpath)
     with helpers.Indenter('[%s]' % repo):
-        __cmd('git status')
-    __cd(cwd)
-    print('')
+        _cmd('git status')
 
 
 if __name__ == '__main__':
@@ -303,3 +310,9 @@ if __name__ == '__main__':
             #push('hesaff')
             #push('flann')
             push('hotspotter')
+
+        if cmd in ['update']:
+            pull('opencv', 'hsbranch248')
+            pull('hesaff', 'hotspotter_hesaff')
+            pull('flann', 'hotspotter_flann')
+            pull('hotspotter', 'jon')

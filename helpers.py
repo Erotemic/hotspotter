@@ -64,11 +64,18 @@ def DEPRICATED(func):
     return __DEP_WRAPPER
 
 
-def dbg_get_imgfpath():
-    if sys.platform == 'win32':
-        return 'C:\\lena.png'
-    else:
-        return '/lena.png'
+def try_get_path(path_list):
+    tried_list = []
+    for path in path_list:
+        tried_list.append(path)
+        if exists(path):
+            return path
+    return (False, tried_list)
+
+
+def get_lena_fpath():
+    return try_get_path(['lena.png', '~/local/lena.png', '../lena.png',
+                         '/lena.png', 'C:\\lena.png'])
 
 
 def horiz_print(*args):
@@ -1772,19 +1779,19 @@ def printvar(locals_, varname, attr='.shape'):
         var_ = locals_[varname_]  # NOQA
         var = eval('var_' + dotname_)
     # Print in format
-    typestr = tools.gettype(var)
+    typestr = tools.get_type(var)
     if isinstance(var, np.ndarray):
         varstr = eval('str(var' + attr + ')')
-        print('[printvar] %s %s = %s' % (typestr, varname + attr, varstr))
+        print('[var] %s %s = %s' % (typestr, varname + attr, varstr))
     elif isinstance(var, list):
         if attr == '.shape':
             func = 'len'
         else:
             func = ''
         varstr = eval('str(' + func + '(var))')
-        print('[printvar] %s len(%s) = %s' % (typestr, varname, varstr))
+        print('[var] %s len(%s) = %s' % (typestr, varname, varstr))
     else:
-        print('[printvar] %s %s = %r' % (typestr, varname, var))
+        print('[var] %s %s = %r' % (typestr, varname, var))
     np.set_printoptions(**npprintopts)
 
 

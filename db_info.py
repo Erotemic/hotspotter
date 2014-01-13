@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off, rrr,
  profile) = __common__.init(__name__, '[dbinfo]')
+import multiprocessing
 import os
 import sys
 from os.path import isdir, islink, isfile, join, exists
@@ -375,16 +376,14 @@ def get_keypoint_stats(hs):
 
 
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
     #import multiprocessing
     #np.set_printoptions(threshold=5000, linewidth=5000)
-    #multiprocessing.freeze_support()
     #print('[dev]-----------')
     #print('[dev] main()')
     #df2.DARKEN = .5
     #main_locals = dev.dev_main()
     #exec(helpers.execstr_dict(main_locals, 'main_locals'))
-    from multiprocessing import freeze_support
-    freeze_support()
 
     if sys.argv > 1:
         import sys

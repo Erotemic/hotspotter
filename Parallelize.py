@@ -43,6 +43,8 @@ def _worker(input, output):
 def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None, common_args=[]):
     if args is not None and num_procs is None:
         num_procs = args.num_procs
+    elif num_procs is None:
+        num_procs = max(1, int(multiprocessing.cpu_count() / 2))
     task_list = make_task_list(func, arg_list, lazy=lazy, common_args=common_args)
     nTasks = len(task_list)
     if nTasks == 0:
@@ -143,11 +145,12 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
         multiprocessing.Process(target=_worker, args=(task_queue, done_queue)).start()
     # wait for results
     printDBG('[parallel] waiting for results')
+    result_list = []
     if verbose:
         mark_progress = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
         for count in xrange(len(task_list)):
             printDBG('[parallel] done_queue.get()')
-            done_queue.get()
+            result_list.append(done_queue.get())
             mark_progress(count)
         print('')
     else:

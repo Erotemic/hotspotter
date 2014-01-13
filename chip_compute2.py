@@ -4,6 +4,7 @@ import __common__
  print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[cc2]')
 # Python
+import sys
 import warnings
 from os.path import join
 # Science
@@ -31,6 +32,7 @@ DEBUG = True
 if DEBUG:
     def printDBG(msg):
         print(msg)
+        sys.stdout.flush()
 else:
     def printDBG(msg):
         pass

@@ -17,6 +17,7 @@ DEBUG = True
 if DEBUG:
     def printDBG(msg):
         print(msg)
+        sys.stdout.flush()
 else:
     def printDBG(msg):
         pass

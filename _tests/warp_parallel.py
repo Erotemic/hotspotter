@@ -46,7 +46,9 @@ chipsz_list = [new_size] * nTasks
 
 printDBG = print
 
-
+'''
+python -c "import cv2; help(cv2.warpAffine)"
+'''
 def extract_chip(img_path, chip_path, roi, theta, new_size):
     'Crops chip from image ; Rotates and scales; Converts to grayscale'
     # Read parent image
@@ -54,11 +56,13 @@ def extract_chip(img_path, chip_path, roi, theta, new_size):
     # Build transformation
     (rx, ry, rw, rh) = roi
     (rw_, rh_) = new_size
-    Aff = cc2.build_transform(rx, ry, rw, rh, rw_, rh_, theta, affine=True)
+    Aff = array([[ 5.,  0.,  0.],
+                 [ 0.,  5.,  0.]])
+    #Aff = cc2.build_transform(rx, ry, rw, rh, rw_, rh_, theta, affine=True)
     print('built transform Aff=\n%r' % Aff)
     # Rotate and scale
     #chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
-    chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT)
+    chip = cv2.warpAffine(np_img, Aff, (rw_, rh_))
     print('warped')
     return chip
 

@@ -2,7 +2,7 @@
 from __future__ import print_function, division
 import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[[parallel]]')
+ rrr, profile) = __common__.init(__name__, '[parallel]')
 # Python
 from itertools import izip
 from os.path import exists
@@ -148,20 +148,18 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     # start processes
     proc_list = []
     for i in xrange(num_procs):
-        #printDBG('[parallel] creating process %r' % (i,))
+        printDBG('[parallel] creating process %r' % (i,))
         proc = multiprocessing.Process(target=_worker, args=(task_queue, done_queue))
         proc.start()
         proc_list.append(proc_list)
     # wait for results
-    #printDBG('[parallel] waiting for results')
+    printDBG('[parallel] waiting for results')
     sys.stdout.flush()
-    #import time
-    #time.sleep(.01)
     result_list = []
     if verbose:
         mark_progress = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
         for count in xrange(len(task_list)):
-            #printDBG('[parallel] done_queue.get()')
+            printDBG('[parallel] done_queue.get()')
             result_list.append(done_queue.get())
             mark_progress(count)
         print('')
@@ -169,11 +167,13 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
         for i in xrange(nTasks):
             done_queue.get()
         print('[parallel]  ... done')
-    #printDBG('[parallel] stopping children')
+    printDBG('[parallel] stopping children')
     # stop children processes
     for i in xrange(num_procs):
         task_queue.put('STOP')
     return done_queue
+    #import time
+    #time.sleep(.01)
 
 
 if __name__ == '__main__':

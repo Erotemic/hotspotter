@@ -17,7 +17,8 @@ import numpy as np
 # Standard
 from collections import OrderedDict
 from itertools import product as iprod
-from os.path import join, relpath, normpath, split, isdir, isfile, exists, islink, ismount
+from os.path import (join, relpath, normpath, split, isdir, isfile, exists,
+                     islink, ismount, expanduser)
 import cPickle
 import cStringIO
 import datetime
@@ -68,7 +69,7 @@ def try_get_path(path_list):
     tried_list = []
     for path in path_list:
         if path.find('~') != -1:
-            path = os.path.expanduser(path)
+            path = expanduser(path)
         tried_list.append(path)
         if exists(path):
             return path

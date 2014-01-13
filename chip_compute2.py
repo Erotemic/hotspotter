@@ -109,7 +109,7 @@ def ensure_rgb(img):
 # =======================================
 # Parallelizable Work Functions
 # =======================================
-def build_transform(x, y, w, h, w_, h_, theta, affine=True):
+def build_transform(x, y, w, h, w_, h_, theta, homogenous=False):
     sx = (w_ / w)  # ** 2
     sy = (h_ / h)  # ** 2
     cos_ = np.cos(-theta)
@@ -134,10 +134,10 @@ def build_transform(x, y, w, h, w_, h_, theta, affine=True):
     M = T2.dot(R.dot(S.dot(T1)))
     #.dot(R)#.dot(S).dot(T2)
 
-    if affine:
-        Aff = M[0:2, :] / M[2, 2]
+    if homogenous:
+        transform = M
     else:
-        Aff = M
+        transform = M[0:2, :] / M[2, 2]
 
     #helpers.horiz_print(S, T1, T2)
     #print('T1======')
@@ -153,14 +153,14 @@ def build_transform(x, y, w, h, w_, h_, theta, affine=True):
     #print('Aff------')
     #print(Aff)
     #print('======')
-    return Aff
+    return transform
 
 #cv2_flags = (cv2.INTER_LINEAR, cv2.INTER_NEAREST)[0]
 #cv2_borderMode  = cv2.BORDER_CONSTANT
 #cv2_warp_kwargs = {'flags': cv2_flags, 'borderMode': cv2_borderMode}
 
 
-def extract_chip(img_path, chip_path, roi, theta, new_size):
+def extract_chip(img_path, roi, theta, new_size):
     'Crops chip from image ; Rotates and scales; Converts to grayscale'
     # Read parent image
     #printDBG('[cc2] reading image')
@@ -172,12 +172,12 @@ def extract_chip(img_path, chip_path, roi, theta, new_size):
     Aff = build_transform(rx, ry, rw, rh, rw_, rh_, theta)
     #printDBG('[cc2] rotate and scale')
     # Rotate and scale
-    chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), **cv2_warp_kwargs)
     #printDBG('[cc2] return extracted')
     return chip
 
 
-def compute_chip(img_path, chip_path, roi, theta, new_size, filter_list):
+def compute_chip(img_path, roi, theta, new_size, filter_list):
     '''Extracts Chip; Applies Filters; Saves as png'''
     #printDBG('[cc2] extracting chip')
     chip = extract_chip(img_path, chip_path, roi, theta, new_size)

@@ -67,6 +67,8 @@ def DEPRICATED(func):
 def try_get_path(path_list):
     tried_list = []
     for path in path_list:
+        if path.find('~') != -1:
+            path = os.path.expanduser(path)
         tried_list.append(path)
         if exists(path):
             return path

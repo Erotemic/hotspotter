@@ -55,7 +55,7 @@ def extract_chip(img_path, chip_path, roi, theta, new_size):
     (rx, ry, rw, rh) = roi
     (rw_, rh_) = new_size
     Aff = cc2.build_transform(rx, ry, rw, rh, rw_, rh_, theta)
-    print('built transform')
+    print('built transform Aff=\n%r' % Aff)
     # Rotate and scale
     chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
     print('warped')

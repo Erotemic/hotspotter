@@ -291,8 +291,9 @@ def imread_cv2(img_fpath):
     try:
         img = cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    except Exception:
-        print('[io] ERROR reading: %r' % img_fpath)
+    except Exception as ex:
+        print('[io] Caught Exception: %r' % ex)
+        print('[io] ERROR reading: %r' % (img_fpath,))
         raise
     return img
 

@@ -76,8 +76,19 @@ def try_get_path(path_list):
 
 
 def get_lena_fpath():
-    return try_get_path(['lena.png', '~/local/lena.png', '../lena.png',
-                         '/lena.png', 'C:\\lena.png'])
+    possible_lena_locations = [
+        'lena.png',
+        '~/code/hotspotter/_tpl/extern_feat/lena.png',
+        '_tpl/extern_feat/lena.png',
+        '../_tpl/extern_feat/lena.png',
+        '~/local/lena.png',
+        '../lena.png',
+        '/lena.png',
+        'C:\\lena.png']
+    lena_fpath = try_get_path(possible_lena_locations)
+    if not isinstance(lena_fpath, str):
+        raise Exception('cannot find lena: tried: %r' % (lena_fpath,))
+    return lena_fpath
 
 
 def horiz_print(*args):

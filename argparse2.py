@@ -137,6 +137,9 @@ def behavior_argparse(parser2):
     parser2.add_flag('--noshare', help='GUI will not share stdout')
     parser2.add_flag('--nogui', help='Will not start the gui')
     parser2.add_flag('--withexif', help='Reads EXIF data')
+    parser2.add_flag('--verbose-cache')
+    parser2.add_flag('--verbose-load')
+
 
 
 def cfg_argparse(parser2):
@@ -177,7 +180,8 @@ def cache_argparse(parser2):
     # Cache flags
     parser2 = parser2.add_argument_group('Cache')
     parser2.add_flag(('--delete-cache', '--dc'))
-    parser2.add_flag(('--delete-global'))
+    parser2.add_flag('--quit')
+    parser2.add_flag('--delete-global')
     parser2.add_flag('--nocache-db', help='forces user to specify database directory')
     parser2.add_flag('--nocache-chips')
     parser2.add_flag('--nocache-query')

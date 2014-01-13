@@ -8,8 +8,9 @@ from itertools import izip
 import pandas as pd
 import numpy as np
 from numpy.linalg import svd
-import helpers
 #from numba import autojit
+# HotSpotter
+import helpers
 
 
 def score_chipmatch_csum(chipmatch):

@@ -31,8 +31,8 @@ import report_results2 as rr2
 
 def dev_reload():
     print('[dev] performing dev_reload')
-    import chip_compute2 as cc2
     import algos
+    import chip_compute2 as cc2
     import feature_compute2 as fc2
     rrr()
     ds.rrr()

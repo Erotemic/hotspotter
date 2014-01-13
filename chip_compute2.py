@@ -3,33 +3,28 @@ import __common__
 (print, print_,
  print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[cc2]')
-if __name__ == '__main__':
-    import matplotlib
-    matplotlib.use('Qt4Agg')
-from PIL import Image
-from Parallelize import parallel_compute
-#from Printable import DynStruct
-import helpers
-import algos
-#import load_data2 as ld2
+# Python
+import warnings
+from os.path import join
+# Science
 import numpy as np
+import cv2
+from PIL import Image
+# Hotspotter
+import helpers
 import fileio as io
+from Parallelize import parallel_compute
+from _tpl.other import imtools
+#from Printable import DynStruct
+#import load_data2 as ld2
 #import os
 #import scipy.signal
 #import scipy.ndimage.filters as filters
-from _tpl.other import imtools
-
-import warnings
-from os.path import join
-
 #import skimage
 #import skimage.morphology
 #import skimage.filter.rank
 #import skimage.exposure
 #import skimage.util
-import cv2
-
-import segmentation
 
 
 def xywh_to_tlbr(roi, img_wh):
@@ -174,10 +169,11 @@ def compute_chip(img_path, chip_path, roi, theta, new_size, filter_list):
     return True
 
 # ---------------
-# Preprocessing algos
+# Preprocessing funcs
 
 
 def grabcut_fn(chip):
+    import segmentation
     rgb_chip = ensure_rgb(chip)
     seg_chip = segmentation.grabcut(rgb_chip)
     return seg_chip
@@ -232,6 +228,7 @@ def histeq_fn(chip):
 
 
 def region_norm_fn(chip):
+    import algos
     chip  = ensure_gray(chip)
     chip_ = np.array(chip, dtype=np.float)
     chipw, chiph = chip_.shape

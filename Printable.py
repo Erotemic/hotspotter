@@ -2,7 +2,9 @@ from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[Printable]')
+# Standard
 import re
+# Scientific
 import numpy as np
 
 MAX_VALSTR = -1
@@ -243,6 +245,6 @@ def npArrInfo(arr):
     return info
 
 if __name__ == '__main__':
-    from multiprocessing import freeze_support
-    freeze_support()
+    import multiprocessing
+    multiprocessing.freeze_support()
     print('[???] __main__ = Printable.py')

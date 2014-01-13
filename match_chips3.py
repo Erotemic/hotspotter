@@ -6,7 +6,6 @@ import __common__
 import re
 # HotSpotter
 import helpers
-import dev
 import DataStructures as ds
 import matching_functions as mf
 
@@ -164,7 +163,10 @@ def execute_query_fast(hs, qdat, qcxs, dcxs):
 
 
 if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
     import draw_func2 as df2
+    import dev
     #exec(open('match_chips3.py').read())
     df2.rrr()
     df2.reset()

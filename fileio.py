@@ -2,22 +2,25 @@ from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[io]')
-import sys
+# Python
 import os
 import fnmatch
 import pickle
 import cPickle
-#import shelve
 from os.path import normpath, exists, realpath, join, expanduser
-#import datetime
-#import timeit
-import helpers
-import params
+# Science
 import numpy as np
 import cv2
 from PIL import Image
 from PIL.ExifTags import TAGS
+# Hotspotter
+import helpers
 #import skimage
+#import shelve
+#import datetime
+#import timeit
+
+VERBOSE_IO = 0  # 2
 
 
 # --- Saving ---
@@ -113,7 +116,7 @@ def __args2_fpath(dpath, fname, uid, ext):
     return fpath
 
 
-def smart_save(data, dpath='', fname='', uid='', ext='', verbose=params.VERBOSE_IO):
+def smart_save(data, dpath='', fname='', uid='', ext='', verbose=VERBOSE_IO):
     ''' Saves data to the direcotry speficied '''
     helpers.ensuredir(dpath)
     fpath = __args2_fpath(dpath, fname, uid, ext)
@@ -128,7 +131,7 @@ def smart_save(data, dpath='', fname='', uid='', ext='', verbose=params.VERBOSE_
     return ret
 
 
-def smart_load(dpath='', fname='', uid='', ext='', verbose=params.VERBOSE_IO, **kwargs):
+def smart_load(dpath='', fname='', uid='', ext='', verbose=VERBOSE_IO, **kwargs):
     ''' Loads data to the direcotry speficied '''
     fpath = __args2_fpath(dpath, fname, uid, ext)
     if verbose:

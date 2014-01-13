@@ -3,30 +3,30 @@ from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[rr2]')
+# Matplotlib
 import matplotlib
 matplotlib.use('Qt4Agg')
-# Hotspotter imports
-import draw_func2 as df2
-import helpers
-import load_data2 as ld2
-#import match_chips3 as mc3
-import params
-import vizualizations as viz
-import spatial_verification2 as sv2
-from Printable import DynStruct
-# Scientific imports
-import numpy as np
-# Standard library imports
-#import datetime
+# Python
 import os
-#import subprocess
 import sys
 import textwrap
 import fnmatch
 import warnings
 from itertools import izip
 from os.path import join, exists
+# Scientific imports
+import numpy as np
+# Hotspotter imports
+from Printable import DynStruct
+import draw_func2 as df2
 import fileio as io
+import helpers
+import load_data2 as ld2
+import spatial_verification2 as sv2
+import vizualizations as viz
+#import match_chips3 as mc3
+#import datetime
+#import subprocess
 
 REPORT_MATRIX  = True
 REPORT_MATRIX_VIZ = True
@@ -428,7 +428,7 @@ def build_rankres_str(allres):
     scalar_summary += '# OutTrain Ranks <= 1: %r/%r = %.1f%% (missed %r)\n\n' % (fmt1_out_tup)
     header += scalar_summary
     # Experiment parameters
-    header += '# Full Parameters: \n' + helpers.indent(params.param_string(), '#') + '\n\n'
+    #header += '# Full Parameters: \n' + helpers.indent(params.param_string(), '#') + '\n\n'
     # More Metadata
     header += textwrap.dedent('''
     # Rank Result Metadata:

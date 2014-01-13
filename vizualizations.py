@@ -13,7 +13,6 @@ import numpy as np
 # Hotspotter
 import draw_func2 as df2
 import fileio as io
-import algos
 import helpers
 import extract_patch
 from os.path import realpath
@@ -686,6 +685,7 @@ def interact_chipres(hs, res, cx, fnum=4, figtitle='Inspect Query Result', **kwa
         #-----------------
 
         def draw_feat_row(rchip, kp, sift, px, prevsift):
+            import algos
             #printDBG('[viz] draw_feat_row px=%r' % px)
             # Draw the unwarped selected feature
             ax = draw_patch(rchip, kp, sift, fnum=fnum, pnum=pnum_(px + 1))

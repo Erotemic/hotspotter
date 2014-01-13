@@ -1,7 +1,10 @@
 from __future__ import division, print_function
 import __common__
 print, print_, print_on, print_off, rrr, profile = __common__.init(__name__, '[mf]')
+# Python
 from itertools import izip
+# Scientific
+import numpy as np
 # Hotspotter
 import DataStructures as ds
 import QueryResult as qr
@@ -9,8 +12,6 @@ import nn_filters
 import spatial_verification2 as sv2
 import voting_rules2 as vr2
 import helpers
-# Scientific
-import numpy as np
 
 MARK_AFTER = 40
 

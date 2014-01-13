@@ -21,6 +21,7 @@ def printDBG(msg):
     #print(msg)
 
 
+@profile
 def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
     '''Generate 6 degrees of freedom homography transformation
     Computes homography from normalized (0 to 1) point correspondences
@@ -158,6 +159,7 @@ def dot_acd(acd1, acd2):
 
 
 # --------------------------------
+@profile
 def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
                    x2_m, y2_m, acd2_m, fx2_m,
                    xy_thresh_sqrd,
@@ -264,6 +266,7 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
     return best_Aff, best_inliers
 
 
+@profile
 def homography_inliers(kpts1, kpts2, fm,
                        xy_thresh,
                        max_scale,

@@ -3,10 +3,12 @@ from __future__ import print_function, division
 import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[[parallel]]')
-import multiprocessing as mp
-import sys
-from os.path import exists
+# Python
 from itertools import izip
+from os.path import exists
+import multiprocessing
+import sys
+# Hotspotter
 import helpers
 
 
@@ -16,7 +18,7 @@ def _calculate(func, args):
     #arg_list  = [n+'='+str(v) for n,v in izip(arg_names, args)]
     #arg_str = '\n    *** '+str('\n    *** '.join(arg_list))
     #print('[parallel]  * %s finished:\n    ** %s%s' % \
-            #(mp.current_process().name,
+            #(multiprocessing.current_process().name,
              #func.__name__,
              #arg_str))
     return result
@@ -119,15 +121,15 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     '''
     Input: task list: [ (fn, args), ... ]
     '''
-    task_queue = mp.Queue()
-    done_queue = mp.Queue()
+    task_queue = multiprocessing.Queue()
+    done_queue = multiprocessing.Queue()
     nTasks = len(task_list)
     # queue tasks
     for task in iter(task_list):
         task_queue.put(task)
     # start processes
     for i in xrange(num_procs):
-        mp.Process(target=_worker, args=(task_queue, done_queue)).start()
+        multiprocessing.Process(target=_worker, args=(task_queue, done_queue)).start()
     # wait for results
     if verbose:
         mark_progress = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
@@ -147,7 +149,7 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
 
 if __name__ == '__main__':
     print('test parallel')
-    import multiprocessing
+    multiprocessing.freeze_support()
     import numpy as np
 
     p = multiprocessing.Pool(processes=8)

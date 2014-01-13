@@ -20,8 +20,9 @@ from PIL import Image
 # Hotspotter
 import DataStructures as ds
 import helpers
-import params
 import tools
+
+VERBOSE_LOAD_DATA = True
 
 
 def printDBG(msg, lbl=''):
@@ -205,7 +206,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             nid2_nx[nid] = len(nx2_name)
             nx2_name.append(name)
         name_lines.close()
-        if params.VERBOSE_LOAD_DATA:
+        if VERBOSE_LOAD_DATA:
             print('[ld2] * Loaded %r names (excluding unknown names)' % (len(nx2_name) - 2))
             print('[ld2] * Done loading name table')
     except IOError as ex:
@@ -227,7 +228,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         print('[ld2] Loading images')
         # Load Image Table
         # <LEGACY CODE>
-        if params.VERBOSE_LOAD_DATA:
+        if VERBOSE_LOAD_DATA:
             print('[ld2] * Loading image table: %r' % image_table)
         gid2_gx = {}
         gid_lines = open(image_table, 'r').readlines()
@@ -245,7 +246,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             gx2_gname.append(gname)
         nTableImgs = len(gx2_gname)
         fromTableNames = set(gx2_gname)
-        if params.VERBOSE_LOAD_DATA:
+        if VERBOSE_LOAD_DATA:
             print('[ld2] * table specified %r images' % nTableImgs)
             # </LEGACY CODE>
             # Load Image Directory
@@ -259,7 +260,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                     continue
                 gx2_gname.append(fname)
                 nDirImgs += 1
-        if params.VERBOSE_LOAD_DATA:
+        if VERBOSE_LOAD_DATA:
             print('[ld2] * dir specified %r images' % nDirImgs)
             print('[ld2] * %r were already specified in the table' % nDirImgsAlready)
             print('[ld2] * Loaded %r images' % len(gx2_gname))
@@ -318,7 +319,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 num_data = int(csv_line.replace(header_numdata, ''))
         if IS_VERSION_1_OR_2 and len(chip_csv_format) == 0:
             chip_csv_format = v12_csv_format
-        if params.VERBOSE_LOAD_DATA:
+        if VERBOSE_LOAD_DATA:
             print('[ld2] * num_chips: %r' % num_data)
             print('[ld2] * chip_csv_format: %r ' % chip_csv_format)
         #print('[ld2.chip] Header Columns: %s\n    ' % '\n   '.join(chip_csv_format))
@@ -344,7 +345,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         prop_dict = {}
         for prop in iter(px2_prop_key):
             prop_dict[prop] = []
-        if params.VERBOSE_LOAD_DATA:
+        if VERBOSE_LOAD_DATA:
             print('[ld2] * num_user_properties: %r' % (len(prop_dict.keys())))
         # Parse Chip Table
         for line_num, csv_line in enumerate(cid_lines):
@@ -425,7 +426,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         print('[chip.ld2] ERROR on fields:       %r' % (csv_fields))
         raise
 
-    if params.VERBOSE_LOAD_DATA:
+    if VERBOSE_LOAD_DATA:
         print('[ld2] * Loaded: %r chips' % (len(cx2_cid)))
         print('[ld2] * Done loading chip table')
 
@@ -606,6 +607,7 @@ def write_csv_tables(hs):
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     import draw_func2 as df2
+    import params
     db_dir = params.DEFAULT
     hs_dirs, hs_tables, version = load_csv_tables(db_dir)
     exec(df2.present())

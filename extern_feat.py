@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[extern_feat]')
 # Standard
 import os
 import sys

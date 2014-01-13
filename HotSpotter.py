@@ -37,6 +37,11 @@ def _checkargs_onload(hs):
         hs.vcd()
         if args.vcdq:
             sys.exit(1)
+    if hs.args.delete_cache:
+        hs.delete_cache()
+    if hs.args.quit:
+        print('[hs] user requested quit.')
+        sys.exit(1)
 
 
 class HotSpotter(DynStruct):
@@ -128,8 +133,6 @@ class HotSpotter(DynStruct):
         hs.unload_all()
         hs.load_tables()
         hs.update_samples()
-        if hs.args.delete_cache:
-            hs.delete_cache()
         if load_all:
             #printDBG('[hs] load_all=True')
             hs.load_chips()

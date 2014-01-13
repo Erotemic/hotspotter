@@ -8,7 +8,6 @@ import numpy as np
 # HotSpotter
 import vizualizations as viz
 import helpers
-import params
 from Printable import DynStruct
 import voting_rules2 as vr2
 
@@ -68,7 +67,7 @@ class QueryResult(DynStruct):
 
     def save(res, hs):
         fpath = res.get_fpath(hs)
-        print('[qr] cache save: %r' % (fpath if params.VERBOSE_CACHE
+        print('[qr] cache save: %r' % (fpath if hs.args.verbose_cache
                                        else split(fpath)[1],))
         with open(fpath, 'wb') as file_:
             np.savez(file_, **res.__dict__.copy())

@@ -1528,12 +1528,6 @@ def unit_test(test_func):
         return ret
     return __unit_test_wraper
 
-try:
-    profile
-    print('[helpers] run with kernprof.py')
-except NameError:
-    profile = lambda func: func
-
 
 def runprofile(cmd, globals_=globals(), locals_=locals()):
     # Meliae # from meliae import loader # om = loader.load('filename.json') # s = om.summarize();
@@ -1930,7 +1924,6 @@ if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
     print('[helpers] You ran helpers as main!')
-    import algos  # NOQA
     module = sys.modules[__name__]
     seen = set(['numpy', 'matplotlib', 'scipy', 'pyflann', 'skimage', 'cv2'])
 

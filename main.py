@@ -8,11 +8,7 @@ the function level instead. The reason is multiprocesing will fork this module
 many times. Less imports means less parallel overhead.
 '''
 from __future__ import division, print_function
-import matplotlib
-matplotlib.use('Qt4Agg')
 import multiprocessing
-import argparse2
-args = argparse2.parse_arguments()
 
 
 def dependencies_for_myprogram():
@@ -71,6 +67,10 @@ def postload_args_process(hs):
 if __name__ == '__main__':
     # Necessary for windows parallelization
     multiprocessing.freeze_support()
+    import matplotlib
+    matplotlib.use('Qt4Agg')
+    import argparse2
+    args = argparse2.parse_arguments()
     import HotSpotter
     import guitools
     import guiback

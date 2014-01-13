@@ -18,6 +18,7 @@ def printDBG(msg):
 
 
 def _calculate(func, args):
+    printDBG('[parallel] * %s calculating...' % (multiprocessing.current_process().name,))
     result = func(*args)
     #arg_names = func.func_code.co_varnames[:func.func_code.co_argcount]
     #arg_list  = [n+'='+str(v) for n,v in izip(arg_names, args)]
@@ -145,6 +146,7 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     if verbose:
         mark_progress = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
         for count in xrange(len(task_list)):
+            printDBG('[parallel] done_queue.get()')
             done_queue.get()
             mark_progress(count)
         print('')

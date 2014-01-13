@@ -33,7 +33,9 @@ def _worker(input, output):
     for func, args in iter(input.get, 'STOP'):
         printDBG('[parallel] worker will calculate %r' % (func))
         result = _calculate(func, args)
+        printDBG('[parallel] worker has calculated %r' % (func))
         output.put(result)
+        printDBG('[parallel] worker put result in queue.')
     printDBG('[parallel] worker is done input=%r output=%r' % (input, output))
 
 

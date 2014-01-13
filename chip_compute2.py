@@ -105,51 +105,55 @@ def ensure_rgb(img):
         print(msg)
         raise Exception(msg)
 
+
 # =======================================
 # Parallelizable Work Functions
 # =======================================
-NEW_ORIENT = True
-if NEW_ORIENT:
-    def build_transform(x, y, w, h, w_, h_, theta):
-        sx = (w_ / w)  # ** 2
-        sy = (h_ / h)  # ** 2
-        cos_ = np.cos(-theta)
-        sin_ = np.sin(-theta)
-        tx = -(x + (w / 2))
-        ty = -(y + (h / 2))
-        T1 = np.array([[1, 0, tx],
-                       [0, 1, ty],
-                       [0, 0, 1]], np.float64)
+def build_transform(x, y, w, h, w_, h_, theta, affine=True):
+    sx = (w_ / w)  # ** 2
+    sy = (h_ / h)  # ** 2
+    cos_ = np.cos(-theta)
+    sin_ = np.sin(-theta)
+    tx = -(x + (w / 2))
+    ty = -(y + (h / 2))
+    T1 = np.array([[1, 0, tx],
+                   [0, 1, ty],
+                   [0, 0, 1]], np.float64)
 
-        S = np.array([[sx, 0,  0],
-                      [0, sy,  0],
-                      [0,  0,  1]], np.float64)
+    S = np.array([[sx, 0,  0],
+                  [0, sy,  0],
+                  [0,  0,  1]], np.float64)
 
-        R = np.array([[cos_, -sin_, 0],
-                      [sin_,  cos_, 0],
-                      [   0,     0, 1]], np.float64)
+    R = np.array([[cos_, -sin_, 0],
+                  [sin_,  cos_, 0],
+                  [   0,     0, 1]], np.float64)
 
-        T2 = np.array([[1, 0, (w_ / 2)],
-                       [0, 1, (h_ / 2)],
-                       [0, 0, 1]], np.float64)
-        M = T2.dot(R.dot(S.dot(T1)))
-        #.dot(R)#.dot(S).dot(T2)
+    T2 = np.array([[1, 0, (w_ / 2)],
+                   [0, 1, (h_ / 2)],
+                   [0, 0, 1]], np.float64)
+    M = T2.dot(R.dot(S.dot(T1)))
+    #.dot(R)#.dot(S).dot(T2)
+
+    if affine:
         Aff = M[0:2, :] / M[2, 2]
-        #helpers.horiz_print(S, T1, T2)
-        #print('T1======')
-        #print(T1)
-        #print('R------')
-        #print(R)
-        #print('S------')
-        #print(S)
-        #print('T2------')
-        #print(T2)
-        #print('M------')
-        #print(M)
-        #print('Aff------')
-        #print(Aff)
-        #print('======')
-        return Aff
+    else:
+        Aff = M
+
+    #helpers.horiz_print(S, T1, T2)
+    #print('T1======')
+    #print(T1)
+    #print('R------')
+    #print(R)
+    #print('S------')
+    #print(S)
+    #print('T2------')
+    #print(T2)
+    #print('M------')
+    #print(M)
+    #print('Aff------')
+    #print(Aff)
+    #print('======')
+    return Aff
 
 #cv2_flags = (cv2.INTER_LINEAR, cv2.INTER_NEAREST)[0]
 #cv2_borderMode  = cv2.BORDER_CONSTANT

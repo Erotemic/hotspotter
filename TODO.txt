@@ -97,3 +97,5 @@ Turning scores into probabilities
 
 
 Lets learn a threshold on bad matches. 
+
+NEED ZEBRANESS + COLOR DESCRIPTORS

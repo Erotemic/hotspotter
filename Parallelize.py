@@ -12,7 +12,7 @@ import sys
 import helpers
 
 
-DEBUG = True
+DEBUG = False
 
 if DEBUG:
     def printDBG(msg):
@@ -159,9 +159,10 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     if verbose:
         mark_progress = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
         for count in xrange(len(task_list)):
-            printDBG('[parallel] done_queue.get()')
-            result_list.append(done_queue.get())
             mark_progress(count)
+            printDBG('[parallel] done_queue.get()')
+            result = done_queue.get()
+            result_list.append(result)
         print('')
     else:
         for i in xrange(nTasks):
@@ -171,7 +172,7 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     # stop children processes
     for i in xrange(num_procs):
         task_queue.put('STOP')
-    return done_queue
+    return result_list
     #import time
     #time.sleep(.01)
 

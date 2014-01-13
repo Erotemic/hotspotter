@@ -155,9 +155,9 @@ def build_transform(x, y, w, h, w_, h_, theta, homogenous=False):
     #print('======')
     return transform
 
-#cv2_flags = (cv2.INTER_LINEAR, cv2.INTER_NEAREST)[0]
-#cv2_borderMode  = cv2.BORDER_CONSTANT
-#cv2_warp_kwargs = {'flags': cv2_flags, 'borderMode': cv2_borderMode}
+cv2_flags = (cv2.INTER_LINEAR, cv2.INTER_NEAREST)[0]
+cv2_borderMode  = cv2.BORDER_CONSTANT
+cv2_warp_kwargs = {'flags': cv2_flags, 'borderMode': cv2_borderMode}
 
 
 def extract_chip(img_path, roi, theta, new_size):
@@ -177,10 +177,10 @@ def extract_chip(img_path, roi, theta, new_size):
     return chip
 
 
-def compute_chip(img_path, roi, theta, new_size, filter_list):
+def compute_chip(img_path, chip_path, roi, theta, new_size, filter_list):
     '''Extracts Chip; Applies Filters; Saves as png'''
     #printDBG('[cc2] extracting chip')
-    chip = extract_chip(img_path, chip_path, roi, theta, new_size)
+    chip = extract_chip(img_path, roi, theta, new_size)
     #printDBG('[cc2] extracted chip')
     for func in filter_list:
         #printDBG('[cc2] computing filter: %r' % func)

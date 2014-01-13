@@ -168,9 +168,7 @@ def extract_chip(img_path, chip_path, roi, theta, new_size):
     Aff = build_transform(rx, ry, rw, rh, rw_, rh_, theta)
     #printDBG('[cc2] rotate and scale')
     # Rotate and scale
-    flags = cv2.INTER_LINEAR
-    borderMode = cv2.BORDER_CONSTANT
-    chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), flags=flags, borderMode=borderMode)
+    chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
     #printDBG('[cc2] return extracted')
     return chip
 

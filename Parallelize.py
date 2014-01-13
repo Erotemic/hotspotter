@@ -12,7 +12,7 @@ import sys
 import helpers
 
 
-DEBUG = False
+DEBUG = True
 
 if DEBUG:
     def printDBG(msg):
@@ -24,23 +24,23 @@ else:
 
 
 def _calculate(func, args):
-    #printDBG('[parallel] * %s calculating...' % (multiprocessing.current_process().name,))
+    printDBG('[parallel] * %s calculating...' % (multiprocessing.current_process().name,))
     result = func(*args)
     #arg_names = func.func_code.co_varnames[:func.func_code.co_argcount]
     #arg_list  = [n+'='+str(v) for n,v in izip(arg_names, args)]
     #arg_str = '\n    *** '+str('\n    *** '.join(arg_list))
-    #printDBG('[parallel]  * %s finished:\n    ** %s' %
-            #(multiprocessing.current_process().name,
-             #func.__name__))
+    printDBG('[parallel]  * %s finished:\n    ** %s' %
+            (multiprocessing.current_process().name,
+             func.__name__))
     return result
 
 
 def _worker(input, output):
-    #printDBG('[parallel] START WORKER input=%r output=%r' % (input, output))
+    printDBG('[parallel] START WORKER input=%r output=%r' % (input, output))
     for func, args in iter(input.get, 'STOP'):
-        #printDBG('[parallel] worker will calculate %r' % (func))
+        printDBG('[parallel] worker will calculate %r' % (func))
         result = _calculate(func, args)
-        #printDBG('[parallel] worker has calculated %r' % (func))
+        printDBG('[parallel] worker has calculated %r' % (func))
         output.put(result)
         #printDBG('[parallel] worker put result in queue.')
     #printDBG('[parallel] worker is done input=%r output=%r' % (input, output))

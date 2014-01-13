@@ -152,13 +152,17 @@ cv2_warp_kwargs = {'flags': cv2_flags, 'borderMode': cv2_borderMode}
 def extract_chip(img_path, chip_path, roi, theta, new_size):
     'Crops chip from image ; Rotates and scales; Converts to grayscale'
     # Read parent image
+    printDBG('[cc2] reading image')
     np_img = io.imread(img_path)
+    printDBG('[cc2] building transform')
     # Build transformation
     (rx, ry, rw, rh) = roi
     (rw_, rh_) = new_size
     Aff = build_transform(rx, ry, rw, rh, rw_, rh_, theta)
+    printDBG('[cc2] rotate and scale')
     # Rotate and scale
     chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), **cv2_warp_kwargs)
+    printDBG('[cc2] return extracted')
     return chip
 
 
@@ -166,6 +170,7 @@ def compute_chip(img_path, chip_path, roi, theta, new_size, filter_list):
     '''Extracts Chip; Applies Filters; Saves as png'''
     printDBG('[cc2] extracting chip')
     chip = extract_chip(img_path, chip_path, roi, theta, new_size)
+    printDBG('[cc2] extracted chip')
     for func in filter_list:
         printDBG('[cc2] computing filter: %r' % func)
         chip = func(chip)

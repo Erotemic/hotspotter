@@ -12,9 +12,14 @@ import sys
 import helpers
 
 
-def printDBG(msg):
-    print(msg)
-    pass
+DEBUG = False
+
+if DEBUG:
+    def printDBG(msg):
+        print(msg)
+else:
+    def printDBG(msg):
+        pass
 
 
 def _calculate(func, args):
@@ -140,9 +145,12 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     for task in iter(task_list):
         task_queue.put(task)
     # start processes
+    proc_list = []
     for i in xrange(num_procs):
         printDBG('[parallel] creating process %r' % (i,))
-        multiprocessing.Process(target=_worker, args=(task_queue, done_queue)).start()
+        proc = multiprocessing.Process(target=_worker, args=(task_queue, done_queue))
+        proc.start()
+        proc_list.append(proc_list)
     # wait for results
     printDBG('[parallel] waiting for results')
     result_list = []

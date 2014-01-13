@@ -27,8 +27,13 @@ from _tpl.other import imtools
 #import skimage.util
 
 
-def printDBG(msg):
-    print(msg)
+DEBUG = False
+if DEBUG:
+    def printDBG(msg):
+        print(msg)
+else:
+    def printDBG(msg):
+        pass
 
 
 def xywh_to_tlbr(roi, img_wh):
@@ -447,19 +452,21 @@ if __name__ == '__main__':
     from chip_compute2 import *  # NOQA
     # Debugging vars
     chip_cfg = None
+#l')=103.7900s
+
     cx_list = None
     kwargs = {}
     # --- LOAD TABLES --- #
-    args = argparse2.parse_arguments(db='NAUTS')
+    args = argparse2.parse_arguments(defaultdb='NAUTS')
     hs = HotSpotter.HotSpotter(args)
     hs.load_tables()
     hs.update_samples()
     # --- LOAD CHIPS --- #
     cc2.load_chips(hs)
     cx = helpers.get_arg_after('--cx', type_=int)
-    tau = np.pi * 2
-    hs.change_theta(cx, tau / 8)
     if not cx is None:
+        tau = np.pi * 2
+        hs.change_theta(cx, tau / 8)
         viz.show_chip(hs, cx, draw_kpts=False, fnum=1)
         viz.show_image(hs, hs.cx2_gx(cx), fnum=2)
     else:

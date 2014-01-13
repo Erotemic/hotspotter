@@ -243,7 +243,7 @@ def fix_args_with_cache(args):
     return args
 
 
-def parse_arguments(**kwargs):
+def parse_arguments(defaultdb=None, **kwargs):
     '''Defines the arguments for hotspotter'''
 
     parser2 = make_argparse2('HotSpotter - Individual Animal Recognition',
@@ -259,6 +259,8 @@ def parse_arguments(**kwargs):
     if DEBUG:
         print('[argparse2] args=%r' % args)
         print('[argparse2] unknown=%r' % unknown)
+    if args.db == 'DEFAULT' and args.dbdir is None:
+        args.db = defaultdb
     args.__dict__.update(**kwargs)
     args = args_postprocess(args)
     args = fix_args_shortnames(args)

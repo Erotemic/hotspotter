@@ -29,10 +29,12 @@ def _calculate(func, args):
 
 
 def _worker(input, output):
+    printDBG('[parallel] creating worker input=%r output=%r' % (input, output))
     for func, args in iter(input.get, 'STOP'):
-        printDBG('[parallel] passing data to worker')
+        printDBG('[parallel] worker will calculate %r' % (func))
         result = _calculate(func, args)
         output.put(result)
+    printDBG('[parallel] worker is done input=%r output=%r' % (input, output))
 
 
 def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None, common_args=[]):

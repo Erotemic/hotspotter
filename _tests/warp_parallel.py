@@ -56,8 +56,8 @@ def extract_chip(img_path, chip_path, roi, theta, new_size):
     (rw_, rh_) = new_size
     Aff = cc2.build_transform(rx, ry, rw, rh, rw_, rh_, theta)
     # Rotate and scale
-    chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), **cc2.cv2_warp_kwargs)
-    return chip
+    #chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), **cc2.cv2_warp_kwargs)
+    #return chip
 
 # Try one task
 cc2.extract_chip(gfpath, cfpath, roi, theta, new_size)
@@ -68,4 +68,4 @@ pcc_kwargs = {
     'lazy': True,
     'common_args': []
 }
-parallel_compute(cc2.extract_chip, **pcc_kwargs)
+parallel_compute(extract_chip, **pcc_kwargs)

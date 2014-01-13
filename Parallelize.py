@@ -12,20 +12,25 @@ import sys
 import helpers
 
 
+def printDBG(msg):
+    print(msg)
+    pass
+
+
 def _calculate(func, args):
     result = func(*args)
     #arg_names = func.func_code.co_varnames[:func.func_code.co_argcount]
     #arg_list  = [n+'='+str(v) for n,v in izip(arg_names, args)]
     #arg_str = '\n    *** '+str('\n    *** '.join(arg_list))
-    #print('[parallel]  * %s finished:\n    ** %s%s' % \
-            #(multiprocessing.current_process().name,
-             #func.__name__,
-             #arg_str))
+    printDBG('[parallel]  * %s finished:\n    ** %s' %
+            (multiprocessing.current_process().name,
+             func.__name__))
     return result
 
 
 def _worker(input, output):
     for func, args in iter(input.get, 'STOP'):
+        printDBG('[parallel] passing data to worker')
         result = _calculate(func, args)
         output.put(result)
 
@@ -129,8 +134,10 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
         task_queue.put(task)
     # start processes
     for i in xrange(num_procs):
+        printDBG('[parallel] creating process %r' % (i,))
         multiprocessing.Process(target=_worker, args=(task_queue, done_queue)).start()
     # wait for results
+    printDBG('[parallel] waiting for results')
     if verbose:
         mark_progress = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
         for count in xrange(len(task_list)):
@@ -141,6 +148,7 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
         for i in xrange(nTasks):
             done_queue.get()
         print('[parallel]  ... done')
+    printDBG('[parallel] stopping children')
     # stop children processes
     for i in xrange(num_procs):
         task_queue.put('STOP')

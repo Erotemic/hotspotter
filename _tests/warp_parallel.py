@@ -5,7 +5,7 @@ This is a test to further investigate the issue.
 from __future__ import division, print_function
 import os
 import sys
-from os.path import dirname, join, expanduser, exists
+from os.path import dirname, join, expanduser, exists, split
 
 
 def ensure_hotspotter():

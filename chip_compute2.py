@@ -28,7 +28,7 @@ from _tpl.other import imtools
 #import skimage.util
 
 
-DEBUG = True
+DEBUG = False
 if DEBUG:
     def printDBG(msg):
         print(msg)
@@ -151,43 +151,43 @@ if NEW_ORIENT:
         #print('======')
         return Aff
 
-cv2_flags = (cv2.INTER_LINEAR, cv2.INTER_NEAREST)[0]
-cv2_borderMode  = cv2.BORDER_CONSTANT
-cv2_warp_kwargs = {'flags': cv2_flags, 'borderMode': cv2_borderMode}
+#cv2_flags = (cv2.INTER_LINEAR, cv2.INTER_NEAREST)[0]
+#cv2_borderMode  = cv2.BORDER_CONSTANT
+#cv2_warp_kwargs = {'flags': cv2_flags, 'borderMode': cv2_borderMode}
 
 
 def extract_chip(img_path, chip_path, roi, theta, new_size):
     'Crops chip from image ; Rotates and scales; Converts to grayscale'
     # Read parent image
-    printDBG('[cc2] reading image')
+    #printDBG('[cc2] reading image')
     np_img = io.imread(img_path)
-    printDBG('[cc2] building transform')
+    #printDBG('[cc2] building transform')
     # Build transformation
     (rx, ry, rw, rh) = roi
     (rw_, rh_) = new_size
     Aff = build_transform(rx, ry, rw, rh, rw_, rh_, theta)
-    printDBG('[cc2] rotate and scale')
+    #printDBG('[cc2] rotate and scale')
     # Rotate and scale
     flags = cv2.INTER_LINEAR
     borderMode = cv2.BORDER_CONSTANT
     chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), flags=flags, borderMode=borderMode)
-    printDBG('[cc2] return extracted')
-    #return chip
+    #printDBG('[cc2] return extracted')
+    return chip
 
 
 def compute_chip(img_path, chip_path, roi, theta, new_size, filter_list):
     '''Extracts Chip; Applies Filters; Saves as png'''
-    printDBG('[cc2] extracting chip')
+    #printDBG('[cc2] extracting chip')
     chip = extract_chip(img_path, chip_path, roi, theta, new_size)
-    printDBG('[cc2] extracted chip')
+    #printDBG('[cc2] extracted chip')
     for func in filter_list:
-        printDBG('[cc2] computing filter: %r' % func)
+        #printDBG('[cc2] computing filter: %r' % func)
         chip = func(chip)
     # Convert to grayscale
     pil_chip = Image.fromarray(chip).convert('L')
-    printDBG('[cc2] saving chip: %r' % chip_path)
+    #printDBG('[cc2] saving chip: %r' % chip_path)
     pil_chip.save(chip_path, 'PNG')
-    printDBG('[cc2] returning')
+    #printDBG('[cc2] returning')
     return True
 
 # ---------------

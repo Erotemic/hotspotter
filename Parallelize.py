@@ -12,7 +12,7 @@ import sys
 import helpers
 
 
-DEBUG = True
+DEBUG = False
 
 if DEBUG:
     def printDBG(msg):
@@ -24,26 +24,26 @@ else:
 
 
 def _calculate(func, args):
-    printDBG('[parallel] * %s calculating...' % (multiprocessing.current_process().name,))
+    #printDBG('[parallel] * %s calculating...' % (multiprocessing.current_process().name,))
     result = func(*args)
     #arg_names = func.func_code.co_varnames[:func.func_code.co_argcount]
     #arg_list  = [n+'='+str(v) for n,v in izip(arg_names, args)]
     #arg_str = '\n    *** '+str('\n    *** '.join(arg_list))
-    printDBG('[parallel]  * %s finished:\n    ** %s' %
-            (multiprocessing.current_process().name,
-             func.__name__))
+    #printDBG('[parallel]  * %s finished:\n    ** %s' %
+            #(multiprocessing.current_process().name,
+             #func.__name__))
     return result
 
 
 def _worker(input, output):
-    printDBG('[parallel] START WORKER input=%r output=%r' % (input, output))
+    #printDBG('[parallel] START WORKER input=%r output=%r' % (input, output))
     for func, args in iter(input.get, 'STOP'):
-        printDBG('[parallel] worker will calculate %r' % (func))
+        #printDBG('[parallel] worker will calculate %r' % (func))
         result = _calculate(func, args)
-        printDBG('[parallel] worker has calculated %r' % (func))
+        #printDBG('[parallel] worker has calculated %r' % (func))
         output.put(result)
-        printDBG('[parallel] worker put result in queue.')
-    printDBG('[parallel] worker is done input=%r output=%r' % (input, output))
+        #printDBG('[parallel] worker put result in queue.')
+    #printDBG('[parallel] worker is done input=%r output=%r' % (input, output))
 
 
 def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None, common_args=[]):
@@ -148,20 +148,20 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     # start processes
     proc_list = []
     for i in xrange(num_procs):
-        printDBG('[parallel] creating process %r' % (i,))
+        #printDBG('[parallel] creating process %r' % (i,))
         proc = multiprocessing.Process(target=_worker, args=(task_queue, done_queue))
         proc.start()
         proc_list.append(proc_list)
     # wait for results
-    printDBG('[parallel] waiting for results')
+    #printDBG('[parallel] waiting for results')
     sys.stdout.flush()
-    import time
-    time.sleep(.01)
+    #import time
+    #time.sleep(.01)
     result_list = []
     if verbose:
         mark_progress = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
         for count in xrange(len(task_list)):
-            printDBG('[parallel] done_queue.get()')
+            #printDBG('[parallel] done_queue.get()')
             result_list.append(done_queue.get())
             mark_progress(count)
         print('')
@@ -169,7 +169,7 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
         for i in xrange(nTasks):
             done_queue.get()
         print('[parallel]  ... done')
-    printDBG('[parallel] stopping children')
+    #printDBG('[parallel] stopping children')
     # stop children processes
     for i in xrange(num_procs):
         task_queue.put('STOP')

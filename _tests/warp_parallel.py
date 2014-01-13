@@ -68,4 +68,4 @@ pcc_kwargs = {
     'lazy': True,
     'common_args': []
 }
-parallel_compute(extract_chip, **pcc_kwargs)
+parallel_compute(cc2.extract_chip, **pcc_kwargs)

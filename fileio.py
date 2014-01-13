@@ -303,8 +303,9 @@ def imread_PIL(img_fpath):
         img = Image.open(img_fpath)
         img = np.asarray(img)
         #img = skimage.util.img_as_uint(img)
-    except Exception:
-        print('[io] ERROR reading:: %r' % img_fpath)
+    except Exception as ex:
+        print('[io] Caught Exception: %r' % ex)
+        print('[io] ERROR reading: %r' % (img_fpath,))
         raise
     return img
 
@@ -314,8 +315,9 @@ def imread(img_fpath):
         img = Image.open(img_fpath)
         img = np.asarray(img)
         #img = skimage.util.img_as_uint(img)
-    except Exception:
-        print('[io] ERROR reading: %r' % img_fpath)
+    except Exception as ex:
+        print('[io] Caught Exception: %r' % ex)
+        print('[io] ERROR reading: %r' % (img_fpath,))
         raise
     return img
 

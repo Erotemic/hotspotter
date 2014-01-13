@@ -1,4 +1,5 @@
 from __future__ import division, print_function
+from os.path import dirname, join, expanduser, exists, split
 
 
 def ensure_hotspotter():

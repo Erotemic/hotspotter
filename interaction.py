@@ -46,75 +46,6 @@ def detect_keypress(fig):
     fig.canvas.mpl_connect('key_release_event', on_key_release)
 
 
-def draw_feat_row(rchip, kp, sift, px, prevsift):
-    import algos
-    #printDBG('[inter] draw_feat_row px=%r' % px)
-    # Draw the unwarped selected feature
-    ax = draw_patch(rchip, kp, sift, fnum=fnum, pnum=pnum_(px + 1))
-    ax._hs_viewtype = 'unwarped'
-    # Draw the warped selected feature
-    ax = draw_patch(rchip, kp, sift, fnum=fnum, pnum=pnum_(px + 2),
-                    warped=True)
-    ax._hs_viewtype = 'warped'
-    # Draw the SIFT representation
-    sigtitle = '' if px != 3 else 'sift histogram'
-    ax = plot_siftsig(sift, sigtitle, fnum=fnum, pnum=pnum_(px + 3))
-    ax._hs_viewtype = 'histogram'
-    if prevsift is not None:
-        L1_dist = algos.L1(sift, prevsift)
-        L2_dist = algos.L2(sift, prevsift)
-        emd_dist   = algos.emd(sift, prevsift)
-        hisct_dist = algos.hist_isect(sift, prevsift)
-        # make distance strings
-        dist_fmt = '{L1:%.1e, L2:%.1e\nhisct:%.1e, emd:%.1e}'
-        dist_tup = (L1_dist, L2_dist, hisct_dist, emd_dist)
-        dist_str = dist_fmt % dist_tup
-        df2.set_xlabel(dist_str)
-    return px + nCols
-
-
-class KeypointInteraction(object):
-    def __init__(self, rchip, kpts, desc, fnum, figtitle=None, dodraw=False, *kwargs):
-        self.fig = df2.figure(fnum=fnum)
-        df2.disconnect_callback(self.fig, 'button_press_event')
-        self.draw_kpts = False
-    def _ith_keypoint_view(fx):
-        print('-------------------------------------------')
-        print('[interact] viewing ith=%r keypoint' % fx)
-        # Get the fx-th keypiont
-        kp = kpts[fx]
-        scale = np.sqrt(kp[2] * kp[4])
-        sift = desc[fx]
-        # Draw the image with keypoint fx highlighted
-        df2.figure(fnum=fnum)
-        df2.cla()
-        ell_args = {'ell_alpha': 1, 'ell_linewidth': 2}
-        _viz_keypoints(fnum, (2, 1, 1), ell_color=df2.BLUE, ell_args=ell_args)
-        # Draw highlighted point
-        df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.ORANGE, arrow=True, rect=True, **ell_args)
-
-        # Feature strings
-        xy_str   = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
-        acd_str  = '[(%3.1f,  0.00),\n' % (kp[2],)
-        acd_str += ' (%3.1f, %3.1f)]' % (kp[3], kp[4],)
-
-        # Draw the unwarped selected feature
-        ax = extract_patch.draw_keypoint_patch(rchip, kp, sift, pnum=(2, 3, 4))
-        ax._hs_viewtype = 'unwarped'
-        ax.set_xlabel('affine feature inv(A) =\n' + acd_str)
-
-        # Draw the warped selected feature
-        ax = extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, pnum=(2, 3, 5))
-        ax._hs_viewtype = 'warped'
-        ax.set_xlabel(('warped feature\n' + 'fx=%r scale=%.1f\n' + '%s') % (fx, scale, xy_str))
-
-        df2.figure(fnum=fnum, pnum=(2, 3, 6))
-        ax = df2.gca()
-        df2.plot_sift_signature(sift, 'sift histogram')
-        ax._hs_viewtype = 'histogram'
-        #fig.canvas.draw()
-        df2.adjust_subplots_xlabels()
-
 # CHIP INTERACTION
 def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, nodraw=False, **kwargs):
     fig = df2.figure(fnum=fnum)
@@ -137,9 +68,7 @@ def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, nodraw=False, **k
         df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.ORANGE, arrow=True, rect=True, **ell_args)
 
         # Feature strings
-        xy_str   = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
-        acd_str  = '[(%3.1f,  0.00),\n' % (kp[2],)
-        acd_str += ' (%3.1f, %3.1f)]' % (kp[3], kp[4],)
+        xy_str, acd_str = kp_str(kp)
 
         # Draw the unwarped selected feature
         ax = extract_patch.draw_keypoint_patch(rchip, kp, sift, pnum=(2, 3, 4))
@@ -371,14 +300,9 @@ def interact_chipres(hs, res, cx, fnum=4, figtitle='Inspect Query Result', **kwa
             ax = plot_siftsig(sift, sigtitle, fnum=fnum, pnum=pnum_(px + 3))
             ax._hs_viewtype = 'histogram'
             if prevsift is not None:
-                L1_dist = algos.L1(sift, prevsift)
-                L2_dist = algos.L2(sift, prevsift)
-                emd_dist   = algos.emd(sift, prevsift)
-                hisct_dist = algos.hist_isect(sift, prevsift)
-                # make distance strings
-                dist_fmt = '{L1:%.1e, L2:%.1e\nhisct:%.1e, emd:%.1e}'
-                dist_tup = (L1_dist, L2_dist, hisct_dist, emd_dist)
-                dist_str = dist_fmt % dist_tup
+                dist_list = ['L1', 'L2', 'hist_isect', 'emd']
+                distances = algos.compute_distances(sift, prevsift, dist_list)
+                dist_str = ', '.join(['%s:%.1e' % (key, val) for key, val in distances])
                 df2.set_xlabel(dist_str)
             return px + nCols
         px = chipres_rows * nCols  # plot offset

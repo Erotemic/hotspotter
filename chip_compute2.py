@@ -155,7 +155,17 @@ def build_transform(x, y, w, h, w_, h_, theta, homogenous=False):
     #print('======')
     return transform
 
-cv2_flags = (cv2.INTER_LINEAR, cv2.INTER_NEAREST)[0]
+
+# RCOS TODO: Parametarize interpolation method
+INTERPOLATION_TYPES = {
+    'nearest': cv2.INTER_NEAREST,
+    'linear':  cv2.INTER_LINEAR,
+    'area':    cv2.INTER_AREA,
+    'cubic':   cv2.INTER_CUBIC,
+    'lanczos': cv2.INTER_LANCZOS4
+}
+
+cv2_flags = INTERPOLATION_TYPES['lanczos']
 cv2_borderMode  = cv2.BORDER_CONSTANT
 cv2_warp_kwargs = {'flags': cv2_flags, 'borderMode': cv2_borderMode}
 

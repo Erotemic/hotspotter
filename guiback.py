@@ -680,15 +680,15 @@ class MainWindowBackend(QtCore.QObject):
         print('[back] layout_figures')
         nCols = 3
         nRows = 2
-        if back.app is not None:
+        if back.app is None:
+            print('[*back] WARNING: cannot detect screen geometry')
+            dlen = 1618
+        else:
             app = back.app
             screen_rect = app.desktop().screenGeometry()
             width  = screen_rect.width()
             height = screen_rect.height()
             dlen = np.sqrt(width ** 2 + height ** 2) / 1.618
-        else:
-            print('[*back] WARNING: cannot detect screen geometry')
-            dlen = 1618
         df2.present(num_rc=(nRows, nCols), wh=dlen, wh_off=(0, 60))
 
     # Options -> Edit Preferences

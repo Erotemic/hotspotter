@@ -310,6 +310,21 @@ def get_geometry(fnum):
     return (x, y, w, h)
 
 
+def get_screen_info():
+    from PyQt4 import Qt, QtGui
+    desktop = QtGui.QDesktopWidget()
+    mask = desktop.mask()
+    layout_direction = desktop.layoutDirection()
+    screen_number = desktop.screenNumber()
+    normal_geometry = desktop.normalGeometry()
+    num_screens = desktop.screenCount()
+    avail_rect = desktop.availableGeometry()
+    screen_rect = desktop.screenGeometry()
+    QtGui.QDesktopWidget().availableGeometry().center()
+
+    normal_geometry = desktop.normalGeometry()
+
+
 def get_all_figures():
     all_figures_ = [manager.canvas.figure for manager in
                     matplotlib._pylab_helpers.Gcf.get_all_fig_managers()]
@@ -342,6 +357,14 @@ def all_figures_tight_layout():
         fig.tight_layout()
         #adjust_subplots()
         time.sleep(.1)
+
+
+def get_monitor_geom(monitor_num=0):
+    from PyQt4 import QtGui
+    desktop = QtGui.QDesktopWidget()
+    rect = desktop.availableGeometry()
+    geom = (rect.x(), rect.y(), rect.width(), rect.height())
+    return geom
 
 
 def golden_wh(x):

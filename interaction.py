@@ -194,9 +194,9 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
         fig.canvas.draw()
 
     def _on_chip_click(event):
-        #print('\n===========')
-        print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
+        print('\n===========')
         print('[inter] clicked chip')
+        print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
         if event.xdata is None or event.inaxes is None:
             default_chip_view()
             return  # The click is not in any axis
@@ -207,10 +207,10 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
             return  # The click is not in the chip axis
         kpts = hs.get_kpts(cx)
         if len(kpts) == 0:
-            print('This chip has no keypoints')
+            print('[inter] This chip has no keypoints')
             return
         if event.key == 'shift':
-            print('masking')
+            print('[inter] masking')
             # TODO: Do better integration of masking
             default_chip_view()
             df2.disconnect_callback(fig, 'button_press_event')
@@ -299,7 +299,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
 
     # Draw ctrl clicked selection
     def _sv_view(cx):
-        printDBG('ctrl+clicked cx=%r' % cx)
+        printDBG('[inter] ctrl+clicked cx=%r' % cx)
         fnum = viz.FNUMS['special']
         fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
         df2.disconnect_callback(fig, 'button_press_event')
@@ -315,7 +315,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
         if None in [x, y, event.inaxes]:
             return _chipmatch_view()
         hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', '')
-        printDBG('hs_viewtype=%r' % hs_viewtype)
+        printDBG('[inter] hs_viewtype=%r' % hs_viewtype)
         # Click in match axes
         if hs_viewtype.find('chipres') == 0:
             # Ctrl-Click

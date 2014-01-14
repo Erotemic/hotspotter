@@ -5,12 +5,20 @@
 import os
 import sys
 from os.path import join, exists
-import site
 import fnmatch
 
 # System Variables
 PLATFORM = sys.platform
-SITE_PACKAGES = site.getsitepackages()[1]
+
+
+def join_SITE_PACKAGES(*args):
+    import site
+    from os.path import join, exists
+    for dir_ in site.getsitepackages():
+        path = join(dir_, *args)
+        if exists(path):
+            return path
+    raise Exception('cannot find: %r' % (args,))
 
 # run from root
 root_dir = os.getcwd()
@@ -88,9 +96,10 @@ LIB_EXT = {'win32': 'dll',
            'darwin': 'dylib',
            'linux2': 'so'}[PLATFORM]
 
+#/usr/local/lib/python2.7/dist-packages/pyflann/lib/libflann.so
 # FLANN Library
 libflann_fname = 'libflann.' + LIB_EXT
-libflann_src = join(SITE_PACKAGES, 'pyflann', 'lib', libflann_fname)
+libflann_src = join_SITE_PACKAGES('pyflann', 'lib', libflann_fname)
 libflann_dst = join(hsbuild, libflann_fname)
 add_data(a, libflann_dst, libflann_src)
 
@@ -122,9 +131,9 @@ ICON_EXT = {'darwin': 'icns',
 iconfile = join(root_dir, '_setup', 'hsicon.' + ICON_EXT)
 
 # Executable name
-exe_name = {'win32': 'build/HotSpotterApp.exe',
-            'darwin:': 'build/pyi.darwin/HotSpotterApp/HotSpotterApp',
-            'linux2:': 'build/HotSpotterApp.ln'}[PLATFORM]
+exe_name = {'win32':   'build/HotSpotterApp.exe',
+            'darwin': 'build/pyi.darwin/HotSpotterApp/HotSpotterApp',
+            'linux2': 'build/HotSpotterApp.ln'}[PLATFORM]
 
 pyz = PYZ(a.pure)   # NOQA
 exe_kwargs = dict(exclude_binaries=True, name=exe_name,

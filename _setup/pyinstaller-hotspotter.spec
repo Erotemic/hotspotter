@@ -14,11 +14,16 @@ PLATFORM = sys.platform
 def join_SITE_PACKAGES(*args):
     import site
     from os.path import join, exists
+    tried_list = []
     for dir_ in site.getsitepackages():
         path = join(dir_, *args)
+        tried_list.append(path)
         if exists(path):
             return path
-    raise Exception('cannot find: %r' % (args,))
+    msg = ('Cannot find: join_SITE_PACKAGES(*%r)\n'  % (args,))
+    msg += 'Tried: \n    ' + '\n    '.join(tried_list)
+    print(msg)
+    raise Exception(msg)
 
 # run from root
 root_dir = os.getcwd()
@@ -98,10 +103,13 @@ LIB_EXT = {'win32': 'dll',
 
 #/usr/local/lib/python2.7/dist-packages/pyflann/lib/libflann.so
 # FLANN Library
-libflann_fname = 'libflann.' + LIB_EXT
-libflann_src = join_SITE_PACKAGES('pyflann', 'lib', libflann_fname)
-libflann_dst = join(hsbuild, libflann_fname)
-add_data(a, libflann_dst, libflann_src)
+try:
+    libflann_fname = 'libflann.' + LIB_EXT
+    libflann_src = join_SITE_PACKAGES('pyflann', 'lib', libflann_fname)
+    libflann_dst = join(hsbuild, libflann_fname)
+    add_data(a, libflann_dst, libflann_src)
+except Exception as ex:
+    print(repr(ex))
 
 
 lib_rpath = join('_tpl', 'extern_feat')

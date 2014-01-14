@@ -4,14 +4,11 @@ from collections import OrderedDict
 from os.path import dirname, realpath, join, exists, normpath
 import imp
 import itertools
-import itertools  # NOQA
 import multiprocessing
 import os
 import re
 import sys
-import sys
-import textwrap
-import textwrap  # NOQA
+import site
 # Scientific
 import numpy as np  # NOQA
 from PIL import Image

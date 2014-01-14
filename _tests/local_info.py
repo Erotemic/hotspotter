@@ -3,7 +3,6 @@ import sys
 import os
 from os.path import dirname, join, expanduser, exists, split
 
-
 def ensure_hotspotter():
     hotspotter_dir = join(expanduser('~'), 'code', 'hotspotter')
     if not exists(hotspotter_dir):
@@ -18,3 +17,5 @@ helpers.printvar2('cv2.__version__')
 helpers.printvar2('multiprocessing.cpu_count()')
 helpers.printvar2('sys.platform')
 helpers.printvar2('os.getcwd()')
+helpers.printvar2('site.getsitepackages()')
+helpers.printvar2('site.getusersitepackages()')

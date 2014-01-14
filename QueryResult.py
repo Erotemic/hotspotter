@@ -7,6 +7,7 @@ from zipfile import error as BadZipFile  # Screwy naming convention.
 import numpy as np
 # HotSpotter
 import vizualizations as viz
+import interaction
 import helpers
 from Printable import DynStruct
 import voting_rules2 as vr2
@@ -188,8 +189,8 @@ class QueryResult(DynStruct):
         return viz.res_show_chipres(res, hs, cx, **kwargs)
 
     def interact_chipres(res, hs, cx, **kwargs):
-        return viz.interact_chipres(hs, res, cx, **kwargs)
+        return interaction.interact_chipres(hs, res, cx, **kwargs)
 
     def interact_top_chipres(res, hs, tx, **kwargs):
         cx = res.topN_cxs(hs, tx + 1)[tx]
-        return viz.interact_chipres(hs, res, cx, **kwargs)
+        return interaction.interact_chipres(hs, res, cx, **kwargs)

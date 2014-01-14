@@ -121,6 +121,7 @@ if __name__ == '__main__':
         return list_[indexes[0:-1:stride]]
 
     def test_detect(n=None, fnum=1, old=True):
+        import interaction
         try:
             # Select kpts
             detect_kpts_func = detect_kpts_old if old else detect_kpts_new
@@ -135,7 +136,7 @@ if __name__ == '__main__':
             print(kpts_)
             print('----')
             # Draw kpts
-            viz.interact_keypoints(image, kpts_, desc_, fnum)
+            interaction.interact_keypoints(image, kpts_, desc_, fnum)
             #df2.imshow(image, fnum=fnum)
             #df2.draw_kpts2(kpts_, ell_alpha=.9, ell_linewidth=4,
                            #ell_color='distinct', arrow=True, rect=True)

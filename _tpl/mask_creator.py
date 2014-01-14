@@ -128,7 +128,7 @@ class MaskCreator(object):
             if ind is None:
                 return
             if ind == 0 or ind == self.last_vert_ind:
-                print "Cannot delete root node"
+                print('[mask] Cannot delete root node')
                 return
             self.poly.xy = [tup for i, tup in enumerate(self.poly.xy) if i != ind]
             self._update_line()

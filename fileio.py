@@ -322,6 +322,13 @@ def imread(img_fpath):
     return img
 
 
+# --- Standard Images ---
+
+def splash_img_fpath():
+    splash_fpath = realpath('_frontend/splash.png')
+    return splash_fpath
+
+
 # --- Global Cache ---
 HOME = expanduser('~')
 #GLOBAL_CACHE_DIR = realpath('.hotspotter/global_cache')

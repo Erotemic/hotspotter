@@ -14,6 +14,7 @@ import helpers
 import fileio as io
 import draw_func2 as df2
 import vizualizations as viz
+import interaction
 import HotSpotter
 from guitools import drawing, slot_
 from guitools import backblocking as blocking
@@ -150,7 +151,7 @@ class MainWindowBackend(QtCore.QObject):
         df2.figure(fnum=fnum, doclf=True, trueclf=True)
         INTERACTIVE_CHIPS = True  # This should always be True
         if INTERACTIVE_CHIPS:
-            interact_fn = viz.show_chip_interaction
+            interact_fn = interaction.interact_chip
             interact_fn(back.hs, cx, fnum=fnum, figtitle='Chip View')
         else:
             viz.show_chip(back.hs, cx, fnum=fnum, figtitle='Chip View')
@@ -175,7 +176,7 @@ class MainWindowBackend(QtCore.QObject):
         # Define callback for show_analysis
         fnum = FNUMS['inspect']
         df2.figure(fnum=fnum, doclf=True, trueclf=True)
-        res.interact_chipres(back.hs, cx, fnum=fnum)
+        interaction.interact_chipres(back.hs, cx, fnum=fnum)
 
     #----------------------
     # Work Functions

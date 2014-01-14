@@ -54,8 +54,8 @@ def postload_args_process(hs):
     if hs.args.autoquery:
         back.precompute_queries()
     # Run a query
-    qcid_list = args.query
-    tx_list = args.txs
+    qcid_list = hs.args.query
+    tx_list = hs.args.txs
     res = None
     if len(qcid_list) > 0:
         qcid = qcid_list[0]
@@ -64,26 +64,25 @@ def postload_args_process(hs):
     return res
 
 
-if __name__ == '__main__':
-    # Necessary for windows parallelization
-    multiprocessing.freeze_support()
+def main(defaultdb='NAUTS', usedbcache=False):
     import matplotlib
     matplotlib.use('Qt4Agg')
     import argparse2
-    args = argparse2.parse_arguments()
+    args = argparse2.parse_arguments(defaultdb=defaultdb)
     import HotSpotter
-    import guitools
-    import guiback
     import helpers
-    print('main.py')
-    # Listen for ctrl+c
-    signal_set()
-    # Run qt app
-    app, is_root = guitools.init_qtapp()
     # Parse arguments
     args = argparse2.fix_args_with_cache(args)
-    load_all, cids = preload_args_process(args)
-    argparse2.execute_initial(args)
+    if usedbcache:
+        load_all, cids = preload_args_process(args)
+    else:
+        args = argparse2.fix_args_shortnames(args)
+        load_all = helpers.get_arg_flag('--load-all', True)
+
+    # Preload process args
+    if args.delete_global:
+        import fileio as io
+        io.delete_global_cache()
 
     # --- Build HotSpotter API ---
     hs = HotSpotter.HotSpotter(args)
@@ -94,6 +93,21 @@ if __name__ == '__main__':
         print('[main] ValueError = %r' % (ex,))
         if hs.args.strict:
             raise
+    return hs
+
+
+if __name__ == '__main__':
+    # Necessary for windows parallelization
+    multiprocessing.freeze_support()
+    hs = main(defaultdb=None, usedbcache=True)
+    import guitools
+    import guiback
+    import helpers
+    print('main.py')
+    # Listen for ctrl+c
+    signal_set()
+    # Run qt app
+    app, is_root = guitools.init_qtapp()
     # Create main window only after data is loaded
     back = guiback.make_main_window(hs, app)
     # --- Run Startup Commands ---

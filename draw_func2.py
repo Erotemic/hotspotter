@@ -92,7 +92,7 @@ FONTS.legend   = FONTS.small
 FONTS.figtitle = FONTS.med
 FONTS.axtitle  = FONTS.med
 FONTS.subtitle = FONTS.med
-FONTS.xlabel   = FONTS.small
+FONTS.xlabel   = FONTS.smaller
 FONTS.ylabel   = FONTS.small
 FONTS.relative = FONTS.smaller
 
@@ -311,18 +311,17 @@ def get_geometry(fnum):
 
 
 def get_screen_info():
-    from PyQt4 import Qt, QtGui
+    from PyQt4 import Qt, QtGui  # NOQA
     desktop = QtGui.QDesktopWidget()
-    mask = desktop.mask()
-    layout_direction = desktop.layoutDirection()
-    screen_number = desktop.screenNumber()
-    normal_geometry = desktop.normalGeometry()
-    num_screens = desktop.screenCount()
-    avail_rect = desktop.availableGeometry()
-    screen_rect = desktop.screenGeometry()
-    QtGui.QDesktopWidget().availableGeometry().center()
-
-    normal_geometry = desktop.normalGeometry()
+    mask = desktop.mask()  # NOQA
+    layout_direction = desktop.layoutDirection()  # NOQA
+    screen_number = desktop.screenNumber()  # NOQA
+    normal_geometry = desktop.normalGeometry()  # NOQA
+    num_screens = desktop.screenCount()  # NOQA
+    avail_rect = desktop.availableGeometry()  # NOQA
+    screen_rect = desktop.screenGeometry()  # NOQA
+    QtGui.QDesktopWidget().availableGeometry().center()  # NOQA
+    normal_geometry = desktop.normalGeometry()  # NOQA
 
 
 def get_all_figures():
@@ -360,7 +359,7 @@ def all_figures_tight_layout():
 
 
 def get_monitor_geom(monitor_num=0):
-    from PyQt4 import QtGui
+    from PyQt4 import QtGui  # NOQA
     desktop = QtGui.QDesktopWidget()
     rect = desktop.availableGeometry()
     geom = (rect.x(), rect.y(), rect.width(), rect.height())
@@ -375,11 +374,23 @@ def golden_wh(x):
 def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
                      row_first=True, no_tile=False):
     'Lays out all figures in a grid. if wh is a scalar, a golden ratio is used'
+    # RCOS TODO:
+    # I want this function to layout all the figures and qt windows within the
+    # bounds of a rectangle. (taken from the get_monitor_geom, or specified by
+    # the user i.e. left half of monitor 0). It should lay them out
+    # rectangularly and choose figure sizes such that all of them will fit.
     if no_tile:
         return
     if not np.iterable(wh):
         wh = golden_wh(wh)
+
+    all_figures = get_all_figures()
+    all_qt4wins = get_all_qt4_wins()
+
+    #nFigs = len(all_figures) + len(all_qt4_wins)
+
     num_rows, num_cols = num_rc
+
     w, h = wh
     x_off, y_off = xy_off
     w_off, h_off = wh_off
@@ -396,8 +407,6 @@ def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
         y_off +=  40
         x_pad +=   0
         y_pad += 100
-    all_figures = get_all_figures()
-    all_qt4wins = get_all_qt4_wins()
 
     def position_window(i, win):
         isqt4_mpl = isinstance(win, backend_qt4.MainWindow)
@@ -530,8 +539,9 @@ def set_yticks(tick_set):
     ax.set_yticks(tick_set)
 
 
-def set_xlabel(lbl):
-    ax = gca()
+def set_xlabel(lbl, ax=None):
+    if ax is None:
+        ax = gca()
     ax.set_xlabel(lbl, fontproperties=FONTS.xlabel)
 
 
@@ -575,7 +585,7 @@ def adjust_subplots_xylabels():
 
 
 def adjust_subplots_safe():
-    adjust_subplots(left=.1, right=.9, bottom=.05, top=.9, wspace=.3, hspace=.4)
+    adjust_subplots(left=.1, right=.9, bottom=.1, top=.9, wspace=.3, hspace=.5)
 
 
 def adjust_subplots(left=0.02,  bottom=0.02,

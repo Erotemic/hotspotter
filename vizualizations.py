@@ -40,16 +40,25 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
     color_list = df2.distinct_colors(nColors)
     df2.figure(fnum=fnum, doclf=True, trueclf=True)
     pnum_ = lambda px: (nRow, nCol, px + 1)
+    plot_type = helpers.get_arg_after('--plot-type', default='plot')
 
-    def _distplot(dists, color, label, plot_type='plot'):
+    # Remember min and max val for each distance type (l1, emd...)
+    distkey2_min = {distkey: np.uint64(-1) for distkey in disttype_list}
+    distkey2_max = {distkey: 0 for distkey in disttype_list}
+
+    def _distplot(dists, color, label, distkey, plot_type=plot_type):
         data = sorted(dists)
         ax = df2.gca()
+        min_ = distkey2_min[distkey]
+        max_ = distkey2_max[distkey]
         if plot_type == 'plot':
             df2.plot(data, color=color, label=label)
             #xticks = np.linspace(np.min(data), np.max(data), 3)
             #yticks = np.linspace(0, len(data), 5)
             #ax.set_xticks(xticks)
             #ax.set_yticks(yticks)
+            ax.set_ylim(min_, max_)
+            ax.set_xlim(0, len(dists))
             ax.set_ylabel('distance')
             ax.set_xlabel('matches indexes (sorted by distance)')
             df2.legend(loc='lower right')
@@ -57,6 +66,7 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
             df2.plot_pdf(data, color=color, label=label)
             ax.set_ylabel('pr')
             ax.set_xlabel('distance')
+            ax.set_xlim(min_, max_)
             df2.legend(loc='upper right')
         df2.dark_background(ax)
         df2.small_xticks(ax)
@@ -65,13 +75,23 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
     px = 0
     for orgkey in orgtype_list:
         for distkey in disttype_list:
+            dists = orgres2_distance[orgkey][distkey]
+            if len(dists) == 0:
+                continue
+            min_ = dists.min()
+            max_ = dists.max()
+            distkey2_min[distkey] = min(distkey2_min[distkey], min_)
+            distkey2_max[distkey] = max(distkey2_max[distkey], max_)
+
+    for orgkey in orgtype_list:
+        for distkey in disttype_list:
             print(((orgkey, distkey)))
             dists = orgres2_distance[orgkey][distkey]
             df2.figure(fnum=fnum, pnum=pnum_(px))
             color = color_list[px]
             title = distkey + ' ' + orgkey
             label = 'P(%s | %s)' % (distkey, orgkey)
-            _distplot(dists, color, label, **kwargs)
+            _distplot(dists, color, label, distkey, **kwargs)
             #ax = df2.gca()
             #ax.set_title(title)
             px += 1

@@ -45,6 +45,8 @@ def hist_isect(hist1, hist2):
     numer = (np.dstack([hist1, hist2])).min(-1).sum(-1)
     denom = hist2.sum(-1)
     hisect_dist = 1 - (numer / denom)
+    if len(hisect_dist) == 1:
+        hisect_dist = hisect_dist[0]
     return hisect_dist
 
 

@@ -458,31 +458,17 @@ def dbstats(hs):
 # exec(open('dev.py').read())
 
 
-def dev_main(**kwargs):
+def dev_main(defaultdb='NAUTS', **kwargs):
     'Developer main script. Contains all you need to quickly start tests'
-    import HotSpotter
-    import argparse2
+    import main
     print('[dev] main()')
-    args = argparse2.parse_arguments()
-    if args.db is None:
-        args.db == 'NAUTS'
-    args = argparse2.fix_args_shortnames(args)
-    argparse2.execute_initial(args)
-    print('[dev] args.db=%r' % args.db)
-    print('[dev] args.dbdir=%r' % args.dbdir)
-
     # Create Hotspotter API
-    hs = HotSpotter.HotSpotter(args)
-    # Load tables, chips, and features
-    load_all = helpers.get_arg_flag('--load-all', True)
-    hs.load(load_all=load_all)
+    hs = main.main(defaultdb=defaultdb)
     # Get the query/others/notes list
     # this contains a list of cannonical test examples
     # FIXME: This is specific to one machine right now
     qcx_list = get_qcx_list(hs)
     qcx   = qcx_list[0]
-    print('========================')
-    print('[dev] Loaded DB=%r' % args.db)
     return locals()
 #---end main script
 

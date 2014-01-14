@@ -14,8 +14,8 @@ import numpy as np
 import draw_func2 as df2
 import fileio as io
 import helpers
-import extract_patch
-from os.path import realpath
+
+#from interaction import interact_keypoints, interact_chipres, interact_chip # NOQA
 
 
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5)
@@ -33,7 +33,6 @@ def register_FNUMS(FNUMS_):
 
 @profile
 def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwargs):
-    import draw_func2 as df2
     disttype_list = orgres2_distance.itervalues().next().keys()
     orgtype_list = orgres2_distance.keys()
     (nRow, nCol) = len(orgtype_list), len(disttype_list)
@@ -123,15 +122,9 @@ def plot_name(hs, nx, nx2_cxs=None, fnum=0, hl_cxs=[], subtitle='',
     #gs2.update(top=df2.TOP_SUBPLOT_ADJUST)
     #df2.set_figtitle(title, subtitle)
 
-# Moved to _inprogress/viz.py temporarilly
+# Moved to _broken/viz.py temporarilly
 #------------------------------
 #^^^ OLD
-
-
-def nearest_kp(x, y, kpts):
-    dist = (kpts.T[0] - x) ** 2 + (kpts.T[1] - y) ** 2
-    fx = dist.argmin()
-    return fx, dist[fx]
 
 
 def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
@@ -181,8 +174,6 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
 
 
 #def start_image_interaction(hs, gx, cx_clicked_func):
-
-
 def show_image(hs, gx, highlight_cxs=None, cx_clicked_func=None, draw_rois=True,
                fnum=1, figtitle='Img', **kwargs):
     '''Shows an image. cx_clicked_func(cx) is a callback function'''
@@ -201,194 +192,9 @@ def show_image(hs, gx, highlight_cxs=None, cx_clicked_func=None, draw_rois=True,
 
 def show_splash(fnum=1, **kwargs):
     #printDBG('[viz] show_splash()')
-    splash_fpath = realpath('_frontend/splash.png')
+    splash_fpath = io.splash_img_fpath()
     img = io.imread(splash_fpath)
     df2.imshow(img, fnum=fnum, **kwargs)
-
-
-# CHIP INTERACTION
-
-def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, nodraw=False, **kwargs):
-    fig = df2.figure(fnum=fnum)
-    df2.disconnect_callback(fig, 'button_press_event')
-    draw_kpts_ptr = [False]
-
-    def _ith_keypoint_view(fx):
-        print('-------------------------------------------')
-        print('[interact] viewing ith=%r keypoint' % fx)
-        # Get the fx-th keypiont
-        kp = kpts[fx]
-        scale = np.sqrt(kp[2] * kp[4])
-        sift = desc[fx]
-        # Draw the image with keypoint fx highlighted
-        df2.figure(fnum=fnum)
-        df2.cla()
-        ell_args = {'ell_alpha': 1, 'ell_linewidth': 2}
-        _viz_keypoints(fnum, (2, 1, 1), ell_color=df2.BLUE, ell_args=ell_args)
-        # Draw highlighted point
-        df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.ORANGE, arrow=True, rect=True, **ell_args)
-
-        # Feature strings
-        xy_str   = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
-        acd_str  = '[(%3.1f,  0.00),\n' % (kp[2],)
-        acd_str += ' (%3.1f, %3.1f)]' % (kp[3], kp[4],)
-
-        # Draw the unwarped selected feature
-        ax = extract_patch.draw_keypoint_patch(rchip, kp, sift, pnum=(2, 3, 4))
-        ax._hs_viewtype = 'unwarped'
-        ax.set_xlabel('affine feature inv(A) =\n' + acd_str)
-
-        # Draw the warped selected feature
-        ax = extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, pnum=(2, 3, 5))
-        ax._hs_viewtype = 'warped'
-        ax.set_xlabel(('warped feature\n' + 'fx=%r scale=%.1f\n' + '%s') % (fx, scale, xy_str))
-
-        df2.figure(fnum=fnum, pnum=(2, 3, 6))
-        ax = df2.gca()
-        df2.plot_sift_signature(sift, 'sift histogram')
-        ax._hs_viewtype = 'histogram'
-        #fig.canvas.draw()
-        df2.adjust_subplots_xlabels()
-
-    def _viz_keypoints(fnum, pnum, draw_kpts=True, **kwargs):
-        fig = df2.figure(fnum=fnum)
-        fig.clf()
-        # Draw chip
-        df2.imshow(rchip, pnum=pnum, fnum=fnum)
-        # Draw all keypoints
-        if draw_kpts:
-            df2.draw_kpts2(kpts, **kwargs)
-        ax = df2.gca()
-        ax._hs_viewtype = 'keypoints'
-
-    def _on_keypoints_click(event):
-        import sys
-        print_ = sys.stdout.write
-        print_('[viz] clicked keypoint view')
-        if event is None  or event.xdata is None or event.inaxes is None:
-            print('...default')
-            draw_kpts_ptr[0] = not draw_kpts_ptr[0]
-            _viz_keypoints(fnum, (1, 1, 1), draw_kpts=draw_kpts_ptr[0])
-        else:
-            hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', None)
-            print_(' %r' % hs_viewtype)
-            if hs_viewtype != 'keypoints':
-                print('...unhandled')
-            elif len(kpts) == 0:
-                print('...nokpts')
-            else:
-                print('...nearest')
-                x, y = event.xdata, event.ydata
-                fx = nearest_kp(x, y, kpts)[0]
-                _ith_keypoint_view(fx)
-        if event is not None:
-            df2.draw()
-    # Draw without keypoints the first time
-    _on_keypoints_click(None)
-    if figtitle is not None:
-        df2.set_figtitle(figtitle)
-    df2.connect_callback(fig, 'button_press_event', _on_keypoints_click)
-    if not nodraw:
-        df2.draw()
-
-
-def show_chip_interaction(hs, cx, fnum=2, figtitle=None, **kwargs):
-    # Get chip info (make sure get_chip is called first)
-    rchip = hs.get_chip(cx)
-    #cidstr = hs.cidstr(cx)
-    #name  = hs.cx2_name(cx)
-    #gname = hs.cx2_gname(cx)
-    fig = df2.figure(fnum=fnum)
-    df2.disconnect_callback(fig, 'button_press_event')
-
-    def select_ith_keypoint(fx):
-        print('-------------------------------------------')
-        print('[interact] viewing ith=%r keypoint' % fx)
-        # Get the fx-th keypiont
-        kpts = hs.get_kpts(cx)
-        desc = hs.get_desc(cx)
-
-        kp = kpts[fx]
-        scale = np.sqrt(kp[2] * kp[4])
-        sift = desc[fx]
-        # Draw the image with keypoint fx highlighted
-        df2.figure(fnum=fnum)
-        df2.cla()
-        ell_args = {'ell_alpha': .4, 'ell_linewidth': 1.8}
-        # Draw chip + keypoints
-        show_chip(hs, cx=cx, rchip=rchip, kpts=kpts, pnum=(2, 1, 1),
-                  fnum=fnum, ell_args=ell_args)
-        # Draw highlighted point
-        df2.draw_kpts2(kpts[fx:fx + 1], ell_color=df2.BLUE, rect=True, **ell_args)
-
-        # Feature strings
-        xy_str   = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
-        acd_str  = '[(%3.1f,  0.00),\n' % (kp[2],)
-        acd_str += ' (%3.1f, %3.1f)]' % (kp[3], kp[4],)
-
-        # Draw the unwarped selected feature
-        ax = extract_patch.draw_keypoint_patch(rchip, kp, sift, pnum=(2, 3, 4))
-        ax._hs_viewtype = 'unwarped'
-        ax.set_title('affine feature inv(A) =')
-        ax.set_xlabel(acd_str)
-
-        # Draw the warped selected feature
-        ax = extract_patch.draw_keypoint_patch(rchip, kp, sift, warped=True, pnum=(2, 3, 5))
-        ax._hs_viewtype = 'warped'
-        ax.set_title('warped feature')
-        ax.set_xlabel('fx=%r scale=%.1f\n%s' % (fx, scale, xy_str))
-
-        df2.figure(fnum=fnum, pnum=(2, 3, 6))
-        ax = df2.gca()
-        df2.plot_sift_signature(sift, 'sift histogram')
-        ax._hs_viewtype = 'histogram'
-        #fig.canvas.draw()
-        df2.adjust_subplots_safe()
-        df2.draw()
-
-    def default_chip_view():
-        fig = df2.figure(fnum=fnum)
-        fig.clf()
-        show_chip(hs, cx=cx, draw_kpts=False)  # Toggle no keypoints view
-        df2.adjust_subplots_safe()
-        fig.canvas.draw()
-
-    def _on_chip_click(event):
-        #print('\n===========')
-        print('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
-        print('[viz] clicked chip')
-        if event.xdata is None or event.inaxes is None:
-            default_chip_view()
-            return  # The click is not in any axis
-        #print('---')
-        hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', None)
-        #print('hs_viewtype=%r' % hs_viewtype)
-        if hs_viewtype != 'chip':
-            return  # The click is not in the chip axis
-        kpts = hs.get_kpts(cx)
-        if len(kpts) == 0:
-            print('This chip has no keypoints')
-            return
-        if event.key == 'shift':
-            print('masking')
-            # TODO: Do better integration of masking
-            from _tpl import mask_creator
-            default_chip_view()
-            df2.disconnect_callback(fig, 'button_press_event')
-            ax = df2.gca()
-            mc = mask_creator.MaskCreator(ax)  # NOQA
-            fig.canvas.draw()
-        else:
-            x, y = event.xdata, event.ydata
-            fx = nearest_kp(x, y, kpts)[0]
-            select_ith_keypoint(fx)
-    #fx = 1897
-    #select_ith_keypoint(fx)
-    # Draw without keypoints the first time
-    show_chip(hs, cx=cx, draw_kpts=False)
-    if figtitle is not None:
-        df2.set_figtitle(figtitle)
-    df2.connect_callback(fig, 'button_press_event', _on_chip_click)
 
 
 def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
@@ -498,7 +304,7 @@ def show_keypoints(rchip, kpts, fnum=0, title=None, **kwargs):
     df2.draw_kpts2(kpts)
 
 
-def show_top(res, hs, **kwargs):
+def show_top(res, hs, *args, **kwargs):
     topN_cxs = res.topN_cxs(hs)
     N = len(topN_cxs)
     cxstr = hs.cidstr(res.qcx)
@@ -624,157 +430,6 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk, **kwargs):
     df2.set_xlabel(xlabel)
     ax._hs_viewtype = 'chipres %s' % vs_str
     return ax, xywh1, xywh2
-
-
-def interact_chipres(hs, res, cx, fnum=4, figtitle='Inspect Query Result', **kwargs):
-    'res = back.current_res'
-    'Interacts with a single chipres, '
-    # Get data
-    qcx = res.qcx
-    rchip1, rchip2 = hs.get_chip([qcx, cx])
-    kpts1, kpts2   = hs.get_kpts([qcx, cx])
-    desc1, desc2   = hs.get_desc([qcx, cx])
-    fm = res.cx2_fm[cx]
-    mx = kwargs.pop('mx', None)
-    xywh2_ptr = [None]
-    annote_ptr = [True]
-
-    # Draw default
-    def _chipmatch_view():
-        print('[viz] interact_chipres(qcx=%r, cx=%r)' % (qcx, cx))
-        fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
-        annote = annote_ptr[0]
-        ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=(1, 1, 1),
-                                            draw_lines=annote, draw_ell=annote, **kwargs)
-        df2.set_figtitle(figtitle)
-        xywh2_ptr[0] = xywh2
-        # Toggle annote
-        annote_ptr[0] = not annote
-        fig.canvas.draw()
-
-    # Draw clicked selection
-    def _featurematch_view(mx):
-        annote_ptr[0] = True
-        print('\n[viz] view feature match mx=%r' % mx)
-        # Helper functions and args
-        draw_patch = extract_patch.draw_keypoint_patch
-        plot_siftsig = df2.plot_sift_signature
-        # Get the mx-th feature match
-        fx1, fx2 = fm[mx]
-        kp1, kp2     = kpts1[fx1], kpts2[fx2]
-        sift1, sift2 = desc1[fx1], desc2[fx2]
-        # Extracted keypoints to draw
-        extracted_list = [(rchip1, kp1, sift1), (rchip2, kp2, sift2)]
-        chipres_rows = 1  # Number of rows for showing the chip result
-        nRows = len(extracted_list) + chipres_rows
-        nCols = 3
-        pnum_ = lambda px: (nRows, nCols, px)
-        #-----------------
-        # Draw chips + feature matches
-        pnum1 = (nRows, 1, 1)
-        _crargs = dict(fnum=fnum, pnum=pnum1, draw_lines=False, **kwargs)
-        _bmargs = dict(ell_alpha=.4, ell_linewidth=1.8, colors=df2.BLUE, **_crargs)
-        _smargs = dict(rect=True, colors=df2.ORANGE, **_crargs)
-        fig = df2.figure(fnum=fnum, pnum=pnum1, doclf=True, trueclf=True)
-        # Draw background matches
-        ax, xywh1, xywh2 = res.show_chipres(hs, cx, vert=False, **_bmargs)
-        xywh2_ptr[0] = xywh2
-        # Draw selected match
-        sel_fm = np.array([(fx1, fx2)])
-        df2.draw_fmatch(xywh1, xywh2, kpts1, kpts2, sel_fm, **_smargs)
-        #-----------------
-
-        def draw_feat_row(rchip, kp, sift, px, prevsift):
-            import algos
-            #printDBG('[viz] draw_feat_row px=%r' % px)
-            # Draw the unwarped selected feature
-            ax = draw_patch(rchip, kp, sift, fnum=fnum, pnum=pnum_(px + 1))
-            ax._hs_viewtype = 'unwarped'
-            # Draw the warped selected feature
-            ax = draw_patch(rchip, kp, sift, fnum=fnum, pnum=pnum_(px + 2),
-                            warped=True)
-            ax._hs_viewtype = 'warped'
-            # Draw the SIFT representation
-            sigtitle = '' if px != 3 else 'sift histogram'
-            ax = plot_siftsig(sift, sigtitle, fnum=fnum, pnum=pnum_(px + 3))
-            ax._hs_viewtype = 'histogram'
-            if prevsift is not None:
-                L1_dist = algos.L1(sift, prevsift)
-                L2_dist = algos.L2(sift, prevsift)
-                emd_dist   = algos.emd(sift, prevsift)
-                hisct_dist = algos.hist_isect(sift, prevsift)
-                # make distance strings
-                dist_fmt = '{L1:%.1e, L2:%.1e\nhisct:%.1e, emd:%.1e}'
-                dist_tup = (L1_dist, L2_dist, hisct_dist, emd_dist)
-                dist_str = dist_fmt % dist_tup
-                df2.set_xlabel(dist_str)
-            return px + nCols
-        px = chipres_rows * nCols  # plot offset
-        prevsift = None
-        for (rchip, kp, sift) in extracted_list:
-            px = draw_feat_row(rchip, kp, sift, px, prevsift)
-            prevsift = sift
-        df2.set_figtitle(figtitle)
-        df2.adjust_subplots_xlabels()
-        fig.canvas.draw()
-
-    # Draw ctrl clicked selection
-    def _sv_view(cx):
-        printDBG('ctrl+clicked cx=%r' % cx)
-        fnum = FNUMS['special']
-        fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
-        df2.disconnect_callback(fig, 'button_press_event')
-        viz_spatial_verification(hs, res.qcx, cx2=cx, fnum=fnum)
-        fig.canvas.draw()
-
-    # Callback
-    def _click_chipres_callback(event):
-        printDBG('[viz] clicked chipres')
-        (x, y) = (event.xdata, event.ydata)
-        # Out of axes click
-        if None in [x, y, event.inaxes]:
-            return _chipmatch_view()
-        hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', '')
-        printDBG('hs_viewtype=%r' % hs_viewtype)
-        # Click in match axes
-        if hs_viewtype.find('chipres') == 0:
-            # Ctrl-Click
-            key = '' if event.key is None else event.key
-            print('[viz] key = %r' % key)
-            if key.find('control') == 0:
-                print('[viz] result control clicked')
-                return _sv_view(cx)
-            # Normal Click
-            # Select nearest feature match to the click
-            if len(fm) == 0:
-                print('[viz] no feature matches to click')
-                return
-            kpts1_m = kpts1[fm[:, 0]]
-            kpts2_m = kpts2[fm[:, 1]]
-            x2, y2, w2, h2 = xywh2_ptr[0]
-            _mx1, _dist1 = nearest_kp(x, y, kpts1_m)
-            _mx2, _dist2 = nearest_kp(x - x2, y - y2, kpts2_m)
-            mx = _mx1 if _dist1 < _dist2 else _mx2
-            _featurematch_view(mx)
-        elif hs_viewtype.find('warped') == 0:
-            printDBG('[viz] clicked warped')
-        elif hs_viewtype.find('unwarped') == 0:
-            printDBG('[viz] clicked unwarped')
-        elif hs_viewtype.find('histogram') == 0:
-            printDBG('[viz] clicked hist')
-        else:
-            printDBG('[viz] what did you click?!')
-
-    # Disconnect other callbacks and initialize interaction.
-    fig_ = df2.figure(fnum=fnum, doclf=True, trueclf=True, **kwargs)
-    df2.disconnect_callback(fig_, 'button_press_event')
-    if mx is None:
-        _chipmatch_view()
-    else:
-        _featurematch_view(mx)
-    df2.connect_callback(fig_, 'button_press_event', _click_chipres_callback)
-    printDBG('[viz] Drawing and starting interaction')
-    df2.draw()
 
 
 def _show_res(hs, res, **kwargs):
@@ -1056,21 +711,11 @@ if __name__ == '__main__':
     print('[viz] __main__ = vizualizations.py')
     print('=================================')
     import main
-    import HotSpotter
-    args = main.parse_arguments(db='MOTHERS')
-    hs = HotSpotter.HotSpotter(args)
-    hs.load(load_all=True)
+    hs = main.main()
     cx = helpers.get_arg_after('--cx', type_=int)
     qcx = hs.get_valid_cxs()[0]
-    doquery = False
-    dochip = True
-    if doquery:
-        if cx is not None:
-            qcx = cx
-        res = hs.query(qcx)
-        N = 5
-        res.show_top(hs, N)
-    if dochip:
-        show_chip_interaction(hs, qcx, fnum=FNUMS['chip'])
-    df2.update()
+    if cx is not None:
+        qcx = cx
+    res = hs.query(qcx)
+    res.show_top(hs)
     exec(df2.present())

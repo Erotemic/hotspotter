@@ -141,7 +141,6 @@ def behavior_argparse(parser2):
     parser2.add_flag('--verbose-load')
 
 
-
 def cfg_argparse(parser2):
     parser2 = parser2.add_argument_group('Config')
     import Config
@@ -265,12 +264,6 @@ def parse_arguments(defaultdb=None, **kwargs):
     args = args_postprocess(args)
     args = fix_args_shortnames(args)
     return args
-
-
-def execute_initial(args):
-    if args.delete_global:
-        import fileio as io
-        io.delete_global_cache()
 
 
 if __name__ == '__main__':

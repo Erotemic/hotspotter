@@ -198,8 +198,9 @@ def show_image(hs, gx, highlight_cxs=None, cx_clicked_func=None, draw_rois=True,
                fnum=1, figtitle='Img', **kwargs):
     '''Shows an image. cx_clicked_func(cx) is a callback function'''
     gname = hs.tables.gx2_gname[gx]
+    title = 'gx=%r gname=%r' % (gx, gname)
     img = hs.gx2_image(gx)
-    fig, ax = df2.imshow(img, title=gname, fnum=fnum, **kwargs)
+    fig, ax = df2.imshow(img, title=title, fnum=fnum, **kwargs)
     ax = df2.gca()
     df2.disconnect_callback(fig, 'button_press_event', axes=[ax])
     if draw_rois:

@@ -261,7 +261,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         ranks = rank_mat[:, cfgx]
         print('[col_score] %d) %s' % (cfgx, cfgx2_lbl[cfgx]))
         for X in iter(X_list):
-            nLessX_ = sum(np.bitwise_and(ranks < X, ranks >= 0))
+            #nLessX_ = sum(np.bitwise_and(ranks < X, ranks >= 0))
+            nLessX_ = sum(np.logical_and(ranks < X, ranks >= 0))
             print('[col_score] ' + rankscore_str(X, nLessX_, nQuery))
             nLessX_dict[int(X)][cfgx] = nLessX_
 

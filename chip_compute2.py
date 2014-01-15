@@ -187,7 +187,8 @@ def extract_chip(img_path, roi, theta, new_size):
     return chip
 
 
-def compute_chip(img_path, chip_path, roi, theta, new_size, filter_list):
+# TODO: Change the force_gray to work a little nicer
+def compute_chip(img_path, chip_path, roi, theta, new_size, filter_list, force_gray=True):
     '''Extracts Chip; Applies Filters; Saves as png'''
     #printDBG('[cc2] extracting chip')
     chip = extract_chip(img_path, roi, theta, new_size)
@@ -196,7 +197,10 @@ def compute_chip(img_path, chip_path, roi, theta, new_size, filter_list):
         #printDBG('[cc2] computing filter: %r' % func)
         chip = func(chip)
     # Convert to grayscale
-    pil_chip = Image.fromarray(chip).convert('L')
+    if force_gray:
+        pil_chip = Image.fromarray(chip).convert('L')
+    else:
+        pil_chip = Image.fromarray(chip)
     #printDBG('[cc2] saving chip: %r' % chip_path)
     pil_chip.save(chip_path, 'PNG')
     #printDBG('[cc2] returning')
@@ -302,7 +306,7 @@ def region_norm_fn(chip):
     #return chip_
 
 
-def get_normalized_chip_sizes(roi_list, sqrt_area=None):
+def compute_uniform_area_chip_sizes(roi_list, sqrt_area=None):
     'Computes a normalized chip size to rescale to'
     if not (sqrt_area is None or sqrt_area <= 0):
         target_area = sqrt_area ** 2
@@ -321,6 +325,37 @@ def get_normalized_chip_sizes(roi_list, sqrt_area=None):
     else:  # no rescaling
         chipsz_list = [(int(w), int(h)) for (x, y, w, h) in roi_list]
     return chipsz_list
+
+
+def batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
+                        uniform_size=None, uniform_sqrt_area=None,
+                        filter_list=[], num_procs=1, lazy=True, force_gray=False):
+    '''
+    cfpath_fmt - a string with a %d embedded where the cid will go.
+    '''
+    try:
+        list_size_list = map(len, (gfpath_list, cfpath_list, roi_list, theta_list))
+        assert all([list_size_list[0] == list_size for list_size in list_size_list])
+    except AssertionError as ex:
+        print(ex)
+        raise
+    # Normalized Chip Sizes: ensure chips have about sqrt_area squared pixels
+    if uniform_sqrt_area is not None:
+        chipsz_list = compute_uniform_area_chip_sizes(roi_list, uniform_sqrt_area)
+    elif uniform_size is not None:
+        chipsz_list = [uniform_size] * len(roi_list)
+    else:
+        chipsz_list = [(int(w), int(h)) for (x, y, w, h) in roi_list]
+
+    arg_list = [gfpath_list, cfpath_list, roi_list, theta_list, chipsz_list]
+    pcc_kwargs = {
+        'arg_list': arg_list,
+        'lazy': lazy,
+        'num_procs': num_procs,
+        'common_args': [filter_list, force_gray]
+    }
+    # Compute all chips with paramatarized filters
+    parallel_compute(compute_chip, **pcc_kwargs)
 
 
 # =======================================
@@ -358,7 +393,7 @@ def load_chips(hs, cx_list=None, **kwargs):
         cid_list   = hs.tables.cx2_cid[cx_list]
         theta_list = hs.tables.cx2_theta[cx_list]
         roi_list   = hs.tables.cx2_roi[cx_list]
-        gname_list = hs.tables.gx2_gname[gx_list]
+        #gname_list = hs.tables.gx2_gname[gx_list]
     except IndexError as ex:
         print(repr(ex))
         print(hs.tables)
@@ -385,25 +420,15 @@ def load_chips(hs, cx_list=None, **kwargs):
     # ___Normalized Chip Args___
     #---------------------------
     # Full Image Paths: where to extract the chips from
-    img_dir = hs.dirs.img_dir
-    gfpath_list = [join(img_dir, gname) for gname in iter(gname_list)]
+    gfpath_list = hs.gx2_gname(gx_list, full=True)
+    #img_dir = hs.dirs.img_dir
+    #gfpath_list = [join(img_dir, gname) for gname in iter(gname_list)]
     # Chip Paths: where to write extracted chips to
     _cfname_fmt = 'cid%d' + chip_uid + '.png'
     _cfpath_fmt = join(hs.dirs.chip_dir, _cfname_fmt)
     cfpath_list = [_cfpath_fmt  % cid for cid in iter(cid_list)]
     # Normalized Chip Sizes: ensure chips have about sqrt_area squared pixels
-    chipsz_list = get_normalized_chip_sizes(roi_list, sqrt_area)
-
-    #-------------------------
-    #____Rotated Chip Args____
-    #-------------------------
-    # Rotated Chp Paths: where to write rotated chips to
-    #_rfname_fmt = 'cid%d' + chip_uid + '.rot.png'
-    #_rfpath_fmt = join(hs.dirs.rchip_dir, _rfname_fmt)
-    #rfpath_list_ = [_rfpath_fmt % cid for cid in iter(cid_list)]
-    # If theta is 0 there is no need to rotate
-    #_fn = lambda cfpath, rfpath, theta: cfpath if theta == 0 else rfpath
-    #rfpath_list = [_fn(*tup) for tup in izip(cfpath_list, rfpath_list_, theta_list)]
+    chipsz_list = compute_uniform_area_chip_sizes(roi_list, sqrt_area)
 
     #--------------------------
     # EXTRACT AND RESIZE CHIPS

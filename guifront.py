@@ -128,6 +128,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
     selectCidSignal = pyqtSignal(int)
     selectResSignal = pyqtSignal(int)
     changeCidSignal = pyqtSignal(int, str, str)
+    changeGxSignal  = pyqtSignal(int, str, bool)
     querySignal = pyqtSignal()
 
     def __init__(front, back, use_plot_widget=True):
@@ -197,6 +198,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         front.selectGxSignal.connect(back.select_gx)
         front.selectCidSignal.connect(back.select_cid)
         front.changeCidSignal.connect(back.change_chip_property)
+        front.changeGxSignal.connect(back.change_image_property)
         front.selectResSignal.connect(back.select_res_cid)
         front.querySignal.connect(back.query)
 
@@ -312,8 +314,17 @@ class MainWindowFrontend(QtGui.QMainWindow):
             data_tup = row2_datatup[row]
             for col, data in enumerate(data_tup):
                 item = QtGui.QTableWidgetItem()
-
-                if tools.is_int(data):
+                #if col_headers[col] == 'AIF':
+                    #print('col=%r dat=%r, %r' % (col, data, type(data)))
+                if tools.is_bool(data) or data == 'True' or data == 'False':
+                    bit = bool(data)
+                    #print(bit)
+                    if bit:
+                        item.setCheckState(Qt.Checked)
+                    else:
+                        item.setCheckState(Qt.Unchecked)
+                    #item.setData(Qt.DisplayRole, bool(data))
+                elif tools.is_int(data):
                     item.setData(Qt.DisplayRole, int(data))
                 elif tools.is_float(data):
                     item.setData(Qt.DisplayRole, float(data))
@@ -395,7 +406,16 @@ class MainWindowFrontend(QtGui.QMainWindow):
     @slot_(QtGui.QTableWidgetItem)
     def img_tbl_changed(front, item):
         front.print('img_tbl_changed()')
-        raise NotImplementedError('img_tbl_changed()')
+        row, col = (item.row(), item.column())
+        sel_gx = front.get_imgtbl_gx(row)
+        #print(sel_gx)
+        #print(item)
+        #print(dir(item))
+        #print(item.__dict__)
+        header_lbl = front.get_imgtbl_header(col)
+        new_val = item.checkState() == Qt.Checked
+        front.changeGxSignal.emit(sel_gx, header_lbl, new_val)
+        #raise NotImplementedError('img_tbl_changed()')
 
     @slot_(QtGui.QTableWidgetItem)
     def chip_tbl_changed(front, item):
@@ -430,6 +450,9 @@ class MainWindowFrontend(QtGui.QMainWindow):
         'Image Table Clicked'
         row = item.row()
         front.print('img_tbl_clicked(%r)' % (row))
+        if front.isItemEditable(item):
+            front.print('[front] does not select when clicking editable column')
+            return
         if item == front.prev_tbl_item:
             return
         front.prev_tbl_item = item

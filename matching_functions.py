@@ -146,7 +146,8 @@ def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw):
         (sign, thresh), weight = filt2_tw[filt]
         if isinstance(thresh, (int, float)):
             qfx2_passed = sign * qfx2_weights <= sign * thresh
-            qfx2_valid  = np.bitwise_and(qfx2_valid, qfx2_passed)
+            #qfx2_valid  = np.bitwise_and(qfx2_valid, qfx2_passed)
+            qfx2_valid  = np.logical_and(qfx2_valid, qfx2_passed)
         if not weight == 0:
             qfx2_score  += weight * qfx2_weights
     return qfx2_score, qfx2_valid
@@ -186,7 +187,8 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
         qfx2_cx = dx2_cx[qfx2_nn]
         # dont vote for yourself
         qfx2_notself_vote = qfx2_cx != qcx
-        qfx2_valid = np.bitwise_and(qfx2_valid, qfx2_notself_vote)
+        #qfx2_valid = np.bitwise_and(qfx2_valid, qfx2_notself_vote)
+        qfx2_valid = np.logical_and(qfx2_valid, qfx2_notself_vote)
         qcx2_nnfilter[qcx] = (qfx2_score, qfx2_valid)
     end_progress()
     return qcx2_nnfilter

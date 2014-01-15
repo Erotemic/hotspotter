@@ -326,6 +326,9 @@ class HotSpotter(DynStruct):
     def change_property(hs, cx, key, val):
         hs.tables.prop_dict[key][cx] = val
 
+    def change_aif(hs, gx, val):
+        hs.tables.gx2_aif[gx] = np.bool_(val)
+
     def get_property(hs, cx, key):
         return hs.tables.prop_dict[key][cx]
 
@@ -394,17 +397,21 @@ class HotSpotter(DynStruct):
             nExist = len(fpath_list2) - len(copy_list)
             print('[hs] copying %d images' % len(copy_list))
             print('[hs] %d images already exist' % nExist)
-            for src, dst in copy_list:
+            mark_progress = helpers.progress_func(len(copy_list))
+            for count, (src, dst) in enumerate(copy_list):
                 shutil.copy(src, dst)
+                mark_progress(count)
         else:
             print('[hs.add_imgs] using original image paths')
             fpath_list2 = fpath_list
         # Get location of the new images relative to the image dir
         gx2_gname = hs.tables.gx2_gname.tolist()
+        gx2_aif   = hs.tables.gx2_aif.tolist()
         relpath_list = [relpath(fpath, img_dir) for fpath in fpath_list2]
         current_gname_set = set(gx2_gname)
         # Check to make sure the gnames are not currently indexed
         new_gnames = [gname for gname in relpath_list if not gname in current_gname_set]
+        new_aifs   = [False] * len(new_gnames)
         nNewImages = len(new_gnames)
         nIndexed = nImages - nNewImages
         print('[hs.add_imgs] new_gnames:\n' + '\n'.join(new_gnames))
@@ -412,6 +419,7 @@ class HotSpotter(DynStruct):
         print('[hs.add_imgs] Added %d new images.' % nIndexed)
         # Append the new gnames to the hotspotter table
         hs.tables.gx2_gname = np.array(gx2_gname + new_gnames)
+        hs.tables.gx2_aif   = np.array(gx2_aif   + new_aifs)
         hs.update_samples()
         return nNewImages
 
@@ -458,13 +466,20 @@ class HotSpotter(DynStruct):
     def has_property(hs, key):
         return key in hs.tables.prop_dict
 
-    def get_img_datatup_list(hs, gx_list, header_order=['Image Index', 'Image Name', '#Chips', 'EXIF']):
+    def get_img_datatup_list(hs, gx_list,
+                             header_order=['Image Index',
+                                           'Image Name',
+                                           '#Chips',
+                                           'EXIF',
+                                           'AIF']):
         'Data for GUI Image Table'
         gx2_gname = hs.tables.gx2_gname
+        gx2_aif   = hs.tables.gx2_aif
         gx2_cxs = hs.gx2_cxs
         exif_list = hs.gx2_exif(gx_list) if 'EXIF' in header_order else []
         cols = {
             'Image Index': gx_list,
+            'AIF':         [gx2_aif[gx] for gx in iter(gx_list)],
             'Image Name':  [gx2_gname[gx] for gx in iter(gx_list)],
             '#Chips':      [len(gx2_cxs(gx)) for gx in iter(gx_list)],
             'EXIF': exif_list
@@ -639,20 +654,13 @@ class HotSpotter(DynStruct):
         exif_list = hs.gx2_exif(gx_list)
         return exif_list
 
-    '''
-    def gx2_gname(hs, gx, full=False):
-        gname = hs.tables.gx2_gname[gx]
-        if full:
-            gname = join(hs.dirs.img_dir, gname)
-        return gname
-    '''
-
     @tools.class_iter_input
     def gx2_gname(hs, gx_input, full=False):
         gx2_gname_ = hs.tables.gx2_gname
         gname_list = [gx2_gname_[gx] for gx in iter(gx_input)]
         if full:
-            gname_list = [join(hs.dirs.img_dir, gname) for gname in iter(gname_list)]
+            img_dir = hs.dirs.img_dir
+            gname_list = [join(img_dir, gname) for gname in iter(gname_list)]
         return gname_list
 
     @tools.lru_cache(max_size=7)
@@ -661,9 +669,23 @@ class HotSpotter(DynStruct):
         img = io.imread(img_fpath)
         return img
 
-    def gx2_cxs(hs, gx):
-        cx_list = np.where(hs.tables.cx2_gx == gx)[0]
-        return cx_list
+    @tools.class_iter_input
+    def gx2_image_size(hs, gx_input):
+        gfpath_list = hs.gx2_gname(gx_input, full=True)
+        # RCOS TODO: Do you need to do a .close here? or does gc take care of it?
+        gsize_list = [Image.open(gfpath).size for gfpath in iter(gfpath_list)]
+        return gsize_list
+
+    @tools.class_iter_input
+    def gx2_aif(hs, gx_input):
+        gx2_aif_ = hs.tables.gx2_aif
+        aif_list = [gx2_aif_[gx] for gx in iter(gx_input)]
+        return aif_list
+
+    @tools.class_iter_input
+    def gx2_cxs(hs, gx_input):
+        cxs_list = [np.where(hs.tables.cx2_gx == gx)[0] for gx in gx_input]
+        return cxs_list
 
     # build metaproperty tables
     def cid2_gx(hs, cid):

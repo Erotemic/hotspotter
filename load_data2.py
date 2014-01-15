@@ -188,6 +188,10 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     line_num   = 0
     csv_line   = ''
     csv_fields = []
+
+    # RCOS TODO: We need a more general csv read function
+    # which can handle all of these little corner cases delt with here.
+
     try:
         # ------------------
         # --- READ NAMES ---
@@ -225,12 +229,22 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         # --- READ IMAGES ---
         # -------------------
         gx2_gname = []
+        gx2_aif   = []
+        gid2_gx = {}  # this is not used. It can probably be removed
+
+        def add_image(gname, aif, gid):
+            gx = len(gx2_gname)
+            gx2_gname.append(gname)
+            gx2_aif.append(aif)
+            if gid is not None:
+                # this is not used. It can probably be removed
+                gid2_gx[gid] = gx
+
         print('[ld2] Loading images')
         # Load Image Table
         # <LEGACY CODE>
         if VERBOSE_LOAD_DATA:
             print('[ld2] * Loading image table: %r' % image_table)
-        gid2_gx = {}
         gid_lines = open(image_table, 'r').readlines()
         for line_num, csv_line in enumerate(gid_lines):
             csv_line = csv_line.strip('\n\r\t ')
@@ -238,12 +252,15 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 continue
             csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
             gid = int(csv_fields[0])
+            # You have 3 csv files. Format == gid, gname.ext, aif
             if len(csv_fields) == 3:
                 gname = csv_fields[1]
+                aif   = csv_fields[2].lower() in ['true', '1']  # convert to bool correctly
+            # You have 4 csv fields. Format == gid, gname, ext, aif
             if len(csv_fields) == 4:
                 gname = '.'.join(csv_fields[1:3])
-            gid2_gx[gid] = len(gx2_gname)
-            gx2_gname.append(gname)
+                aif   =  csv_fields[3].lower() in ['true', '1']
+            add_image(gname, aif, gid)
         nTableImgs = len(gx2_gname)
         fromTableNames = set(gx2_gname)
         if VERBOSE_LOAD_DATA:
@@ -258,7 +275,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 if fname in fromTableNames:
                     nDirImgsAlready += 1
                     continue
-                gx2_gname.append(fname)
+                add_image(fname, False, None)
                 nDirImgs += 1
         if VERBOSE_LOAD_DATA:
             print('[ld2] * dir specified %r images' % nDirImgs)
@@ -433,7 +450,9 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     # Return all information from load_tables
     #hs_tables.gid2_gx = gid2_gx
     #hs_tables.nid2_nx  = nid2_nx
-    hs_tables.init(gx2_gname, nx2_name, cx2_cid, cx2_nx, cx2_gx,
+    hs_tables.init(gx2_gname, gx2_aif,
+                   nx2_name,
+                   cx2_cid, cx2_nx, cx2_gx,
                    cx2_roi, cx2_theta, prop_dict)
 
     print('[ld2] Done Loading hotspotter csv tables: %r' % (db_dir))
@@ -573,10 +592,14 @@ def make_image_csv(hs):
     valid_gx = hs.get_valid_gxs()
     gx2_gid   = valid_gx + 1  # FIXME
     gx2_gname = hs.tables.gx2_gname[valid_gx]
+    try:
+        gx2_aif   = hs.tables.gx2_aif[valid_gx]
+    except Exception as ex:
+        print(ex)
+        #gx2_aif = np.zeros(len(gx2_gid), dtype=np.uint32)
     # Make image_table.csv
     header = '# image table'
     column_labels = ['gid', 'gname', 'aif']  # do aif for backwards compatibility
-    gx2_aif = np.ones(len(gx2_gid), dtype=np.uint32)
     column_list   = [gx2_gid, gx2_gname, gx2_aif]
     image_table = make_csv_table(column_labels, column_list, header)
     return image_table

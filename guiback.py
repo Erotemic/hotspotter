@@ -82,6 +82,8 @@ def select_next_in_order(back):
         return
     return 'end of the list'
 
+aif_header = 'AIF'
+
 
 #------------------------
 # Backend MainWindow Class
@@ -110,11 +112,15 @@ class MainWindowBackend(QtCore.QObject):
             #df2.register_matplotlib_widget(back.front.plotWidget)
         df2.register_qt4_win(back.front)
         # Define default table headers
-        if hs.args.withexif:
-            back.imgtbl_headers   = ['Image Index', 'Image Name', '#Chips', 'EXIF']
-        else:
-            back.imgtbl_headers   = ['Image Index', 'Image Name', '#Chips']
+        back.imgtbl_headers   = ['Image Index', 'Image Name', '#Chips']
         back.imgtbl_editable  = []
+        with_aif = True
+        if with_aif:
+            back.imgtbl_headers += [aif_header]
+            back.imgtbl_editable += [aif_header]
+
+        if hs.args.withexif:
+            back.imgtbl_headers += ['EXIF']
         #
         back.chiptbl_headers  = ['Chip ID', 'Name', 'Image', '#GT', '#kpts', 'Theta', 'ROI (x, y, w, h)']
         back.chiptbl_editable = ['Name']
@@ -133,21 +139,26 @@ class MainWindowBackend(QtCore.QObject):
 
     @drawing
     def show_splash(back, fnum, view='Nice', **kwargs):
-        df2.figure(fnum=fnum, doclf=True, trueclf=True)
-        viz.show_splash(fnum=fnum)
-        df2.set_figtitle('%s View' % view)
+        if df2.plt.fignum_exists(fnum):
+            df2.figure(fnum=fnum, doclf=True, trueclf=True)
+            viz.show_splash(fnum=fnum)
+            df2.set_figtitle('%s View' % view)
 
     @drawing
     def show_image(back, gx, sel_cxs=[], figtitle='Image View', **kwargs):
         fnum = FNUMS['image']
+        did_exist = df2.plt.fignum_exists(fnum)
         df2.figure(fnum=fnum, doclf=True, trueclf=True)
         cx_clicked_func = lambda cx: back.select_gx(gx, cx)
         viz.show_image(back.hs, gx, sel_cxs, cx_clicked_func,
                        fnum=fnum, figtitle=figtitle)
+        if not did_exist:
+            back.layout_figures()
 
     @drawing
     def show_chip(back, cx, **kwargs):
         fnum = FNUMS['chip']
+        did_exist = df2.plt.fignum_exists(fnum)
         df2.figure(fnum=fnum, doclf=True, trueclf=True)
         INTERACTIVE_CHIPS = True  # This should always be True
         if INTERACTIVE_CHIPS:
@@ -155,28 +166,37 @@ class MainWindowBackend(QtCore.QObject):
             interact_fn(back.hs, cx, fnum=fnum, figtitle='Chip View')
         else:
             viz.show_chip(back.hs, cx, fnum=fnum, figtitle='Chip View')
+        if not did_exist:
+            back.layout_figures()
 
     @drawing
     def show_query_result(back, res, tx=None, **kwargs):
         if tx is not None:
             fnum = FNUMS['inspect']
+            did_exist = df2.plt.fignum_exists(fnum)
             # Interact with the tx\th top index
             res.interact_top_chipres(back.hs, tx)
         else:
             fnum = FNUMS['res']
+            did_exist = df2.plt.fignum_exists(fnum)
             df2.figure(fnum=fnum, doclf=True, trueclf=True)
             if back.hs.prefs.display_cfg.showanalysis:
                 # Define callback for show_analysis
                 res.show_analysis(back.hs, fnum=fnum, figtitle=' Analysis View')
             else:
                 res.show_top(back.hs, fnum=fnum, figtitle='Query View ')
+        if not did_exist:
+            back.layout_figures()
 
     @drawing
     def show_single_query(back, res, cx, **kwargs):
         # Define callback for show_analysis
         fnum = FNUMS['inspect']
+        did_exist = df2.plt.fignum_exists(fnum)
         df2.figure(fnum=fnum, doclf=True, trueclf=True)
         interaction.interact_chipres(back.hs, cx, fnum=fnum)
+        if not did_exist:
+            back.layout_figures()
 
     #----------------------
     # Work Functions
@@ -329,7 +349,8 @@ class MainWindowBackend(QtCore.QObject):
     @slot_(int)
     @blocking
     def select_gx(back, gx, cx=None, **kwargs):
-        if cx is None:
+        autoselect_chips = False
+        if autoselect_chips and cx is None:
             cxs = back.hs.gx2_cxs(gx)
             if len(cxs > 0):
                 cx = cxs[0]
@@ -364,6 +385,9 @@ class MainWindowBackend(QtCore.QObject):
         back.hs.default_preferences()
         back.hs.prefs.save()
 
+    # RCOS TODO: These function should take the type of the variable as an
+    # arugment as well
+
     # Table Edit -> Change Chip Property
     @slot_(int, str, str)
     @blocking
@@ -377,6 +401,17 @@ class MainWindowBackend(QtCore.QObject):
             back.hs.change_property(cx, key, val)
         back.populate_chip_table()
         back.populate_result_table()
+        print('')
+
+    # Table Edit -> Change Image Property
+    @slot_(int, str, bool)
+    @blocking
+    def change_image_property(back, gx, key, val):
+        key, val = str(key), bool(val)
+        print('[*back] change_img_property(%r, %r, %r)' % (gx, key, val))
+        if key in [aif_header]:
+            back.hs.change_aif(gx, val)
+        back.populate_image_table()
         print('')
 
     #--------------------------------------------------------------------------
@@ -597,6 +632,7 @@ class MainWindowBackend(QtCore.QObject):
     @slot_()
     @blocking
     def delete_chip(back):
+        # RCOS TODO: Are you sure?
         cx = back.get_selected_cx()
         if cx is None:
             back.user_info('Cannot delete chip. No chip selected')
@@ -720,16 +756,22 @@ class MainWindowBackend(QtCore.QObject):
     # Help -> Delete Directory Slots
     @slot_()
     def delete_cache(back):
+        # RCOS TODO: Are you sure?
+        ans = guitools.user_option(back, 'Are you sure you want to delete cache?')
+        if ans != 'Yes':
+            return
         df2.close_all_figures()
         back.hs.delete_cache()
 
     @slot_()
     def delete_global_prefs(back):
+        # RCOS TODO: Are you sure?
         df2.close_all_figures()
         back.hs.delete_global_prefs()
 
     @slot_()
     def delete_queryresults_dir(back):
+        # RCOS TODO: Are you sure?
         df2.close_all_figures()
         back.hs.delete_queryresults_dir()
 

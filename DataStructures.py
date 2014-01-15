@@ -25,6 +25,7 @@ else:
 
 class QueryData(DynStruct):
     def __init__(qdat):
+        super(QueryData, qdat).__init__()
         qdat.cfg = None  # Query Config
         qdat._qcxs = []
         qdat._dcxs = []
@@ -108,9 +109,11 @@ class HotspotterTables(DynStruct):
         self.init(*args, **kwargs)
 
     def init(self,
-             gx2_gname=[], nx2_name=['____', '____'],
+             gx2_gname=[], gx2_aif=[],
+             nx2_name=['____', '____'],
              cx2_cid=[], cx2_nx=[], cx2_gx=[],
              cx2_roi=[], cx2_theta=[], prop_dict={}):
+        self.gx2_aif      = np.array(gx2_aif, dtype=bool)
         self.gx2_gname    = np.array(gx2_gname, dtype=str)
         self.nx2_name     = np.array(nx2_name, dtype=str)
         self.cx2_cid      = np.array(cx2_cid, dtype=ID_DTYPE)

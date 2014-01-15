@@ -274,6 +274,7 @@ def user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=F
     'Prompts user with several options with ability to save decision'
     print('[*guitools] user_option:\n %r: %s' + title + ': ' + msg)
     # Recall decision
+    print('[*guitools] asking user: %r %r' % (msg, title))
     cache_id = helpers.hashstr(title + msg)
     if use_cache:
         reply = io.global_cache_read(cache_id, default=None)

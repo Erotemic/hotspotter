@@ -139,7 +139,7 @@ def is_str(var):
 
 
 def is_bool(var):
-    return isinstance(var, bool)
+    return isinstance(var, bool) or isinstance(var, np.bool_)
     #return is_type(var, VALID_BOOLEAN_TYPES)
 
 

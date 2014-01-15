@@ -41,7 +41,10 @@ from Printable import printableVal
 
 # --- Globals ---
 
-IMG_EXTENSIONS = set(['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm'])
+__IMG_EXTS = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.ppm']
+__LOWER_EXTS = [ext.lower() for ext in __IMG_EXTS]
+__UPPER_EXTS = [ext.upper() for ext in __IMG_EXTS]
+IMG_EXTENSIONS =  set(__LOWER_EXTS + __UPPER_EXTS)
 
 PRINT_CHECKS = False  # True
 __PRINT_WRITES__ = False
@@ -1697,6 +1700,10 @@ def get_arg_after(arg, type_=None, default=None):
     except Exception:
         pass
     return arg_after
+
+
+def argv_flag(arg, default=False):
+    return get_arg_flag(arg, default=default)
 
 
 def get_arg_flag(arg, default=False):

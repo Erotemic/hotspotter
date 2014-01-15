@@ -57,7 +57,7 @@ class QueryResult(DynStruct):
         # Assigned features matches
         res.cx2_fm = np.array([], dtype=FM_DTYPE)
         res.cx2_fs = np.array([], dtype=FS_DTYPE)
-        res.cx2_fk = np.array([], dtype=FM_DTYPE)
+        res.cx2_fk = np.array([], dtype=FK_DTYPE)
         res.cx2_score = np.array([])
 
     def has_cache(res, hs):

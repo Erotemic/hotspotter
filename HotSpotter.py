@@ -687,6 +687,11 @@ class HotSpotter(DynStruct):
         cxs_list = [np.where(hs.tables.cx2_gx == gx)[0] for gx in gx_input]
         return cxs_list
 
+    @tools.class_iter_input
+    def gx2_nChips(hs, gx_input):
+        nChips_list = [len(np.where(hs.tables.cx2_gx == gx)[0]) for gx in gx_input]
+        return nChips_list
+
     # build metaproperty tables
     def cid2_gx(hs, cid):
         'chip_id ==> image_index'

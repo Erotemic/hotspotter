@@ -4,6 +4,7 @@ RCOS: The chip/image you have selected should be highlighted in the QItemTable
 RCOS: Adding a chip should not draw the chip view. (by default. add option)
 RCOS: The up/down arrow in the table should select the next image/chip. 
 RCOS: Species selection of the chip.
+RCOS: Thumbnails.
 
 
 

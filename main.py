@@ -64,7 +64,7 @@ def postload_args_process(hs):
     return res
 
 
-def main(defaultdb='NAUTS', usedbcache=False):
+def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
     import matplotlib
     matplotlib.use('Qt4Agg')
     import argparse2
@@ -77,7 +77,7 @@ def main(defaultdb='NAUTS', usedbcache=False):
         load_all, cids = preload_args_process(args)
     else:
         args = argparse2.fix_args_shortnames(args)
-        load_all = helpers.get_arg_flag('--load-all', True)
+        load_all = helpers.get_arg_flag('--load-all', default_load_all)
 
     # Preload process args
     if args.delete_global:

@@ -147,8 +147,10 @@ def plot_name(hs, nx, nx2_cxs=None, fnum=0, hl_cxs=[], subtitle='',
 #^^^ OLD
 
 
+# TODO: Fix image annotation scheme to conform to other vizualizations (when they are fixed too)
 def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
-                    draw_roi=True, draw_roi_lbls=True, **kwargs):
+                    draw_rois=True, draw_roi_lbls=True,  fnum=-1, figtitle='',
+                    **kwargs):
     # draw chips in the image
     cx_list = hs.gx2_cxs(gx)
     centers = []
@@ -159,14 +161,21 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
         theta = hs.cx2_theta(cx)
         # Draw the ROI
         roi_lbl = hs.cidstr(cx)
-        if cx in highlight_cxs:
+        # OH SO BAD! FIXME
+        highlight_cxs_ = highlight_cxs
+        if highlight_cxs is None:
+            highlight_cxs_ = []
+        if cx in highlight_cxs_:
             bbox_color = df2.ORANGE * np.array([1, 1, 1, .95])
             lbl_color  = df2.BLACK * np.array([1, 1, 1, .75])
         else:
             dark_alpha = np.array([1, 1, 1, .6])
             bbox_color = df2.DARK_ORANGE * dark_alpha
             lbl_color  = df2.BLACK       * dark_alpha
-        df2.draw_roi(ax, roi, roi_lbl, bbox_color, lbl_color, theta=theta)
+        if draw_roi_lbls:
+            df2.draw_roi(ax, roi, roi_lbl, bbox_color, lbl_color, theta=theta)
+        else:
+            df2.draw_roi(ax, roi, None, bbox_color, lbl_color, theta=theta)
         # Index the roi centers (for interaction)
         (x, y, w, h) = roi
         xy_center = np.array([x + (w / 2), y + (h / 2)])
@@ -178,16 +187,28 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
     def _on_image_click(event):
         'Slot for matplotlib event'
         print('[viz] clicked image')
-        if event.xdata is None:
+        #print(event.__dict__)
+        if event is None or event.inaxes is None or event.xdata is None:
+            #print(kwargs)
+            #print(draw_rois)
+            #print(draw_roi_lbls)
+            df2.disconnect_callback(fig, 'button_press_event', axes=[ax])
+            show_image(hs, gx, highlight_cxs=highlight_cxs,
+                       cx_clicked_func=cx_clicked_func, draw_rois=draw_rois,
+                       fnum=fnum, figtitle=figtitle,
+                       draw_roi_lbls=not draw_roi_lbls, **kwargs)
+            df2.draw()
             return
-        if len(centers) == 0:
-            return
-        #printDBG('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
-        x, y = event.xdata, event.ydata
-        # Find ROI center nearest to the clicked point
-        dist = (centers.T[0] - x) ** 2 + (centers.T[1] - y) ** 2
-        cx = cx_list[dist.argsort()[0]]
-        cx_clicked_func(cx)
+        else:
+            if len(centers) == 0:
+                return
+            else:
+                #printDBG('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
+                x, y = event.xdata, event.ydata
+                # Find ROI center nearest to the clicked point
+                dist = (centers.T[0] - x) ** 2 + (centers.T[1] - y) ** 2
+                cx = cx_list[dist.argsort()[0]]
+                cx_clicked_func(cx)
 
     if interact:
         df2.connect_callback(fig, 'button_press_event', _on_image_click)
@@ -200,14 +221,14 @@ def show_image(hs, gx, highlight_cxs=None, cx_clicked_func=None, draw_rois=True,
     gname = hs.tables.gx2_gname[gx]
     title = 'gx=%r gname=%r' % (gx, gname)
     img = hs.gx2_image(gx)
+    fig = df2.figure(fnum=fnum, doclf=True)
     fig, ax = df2.imshow(img, title=title, fnum=fnum, **kwargs)
     ax = df2.gca()
     df2.disconnect_callback(fig, 'button_press_event', axes=[ax])
     if draw_rois:
-        if highlight_cxs is None:
-            highlight_cxs = []
         _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
-                        draw_rois, **kwargs)
+                        draw_rois,
+                        fnum=fnum, figtitle=figtitle, **kwargs)
     df2.set_figtitle(figtitle)
 
 

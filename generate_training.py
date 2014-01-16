@@ -25,10 +25,12 @@ def generate_detector_training_data(hs):
 
 def extract_detector_negatives(hs, output_dir, batch_extract_kwargs):
     from itertools import product as iprod
-    negoutput_dir = join(output_dir, 'negatives')
-    helpers.ensuredir(negoutput_dir)
-    negreg_fmt = join(negoutput_dir, 'regions', 'gx%d_wix%d_hix%d_neg.png')
-    negall_fmt = join(negoutput_dir, 'whole', 'gx%d_all_neg.png')
+    negreg_dir = join(output_dir, 'negatives', 'regions')
+    negall_dir = join(output_dir, 'negatives', 'whole')
+    negreg_fmt = join(negreg_dir, 'gx%d_wix%d_hix%d_neg.png')
+    negall_fmt = join(negall_dir, 'gx%d_all_neg.png')
+    helpers.ensuredir(negall_dir)
+    helpers.ensuredir(negreg_dir)
 
     print('[train] extract_negatives')
     gx_list = hs.get_valid_gxs()
@@ -73,7 +75,7 @@ def extract_detector_negatives(hs, output_dir, batch_extract_kwargs):
     theta_list = [0] * len(roi_list)
 
     if batch_extract_kwargs['lazy']:
-        helpers.vd(negoutput_dir)
+        helpers.vd(negreg_dir)
 
     cc2.batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
                             **batch_extract_kwargs)
@@ -99,7 +101,9 @@ def extract_detector_positives(hs, output_dir, batch_extract_kwargs):
     cc2.batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
                             **batch_extract_kwargs)
 
-
+'''
+python generate_training.py --dbdir /media/Store/data/work/MISC_Jan12
+'''
 if __name__ == '__main__':
     from hotspotter import main
     hs = main.main(defaultdb='MISC_Jan12', default_load_all=False)

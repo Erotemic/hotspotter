@@ -261,28 +261,85 @@ def filesize_str(fpath):
     return 'filesize(%r)=%s' % (fname, mb_str)
 
 
-def read_exif(fpath):
-    pil_image = Image.open(fpath)
-    if hasattr(pil_image, '_getexif'):
-        info_ = pil_image._getexif()
-        if info_ is None:
-            exif = {}
-        else:
-            exif = dict([(TAGS.get(key, key), val) for key, val in info_.iteritems()])
+def check_exif_keys(pil_image):
+    info_ = pil_image._getexif()
+    valid_keys = []
+    invalid_keys = []
+    for key, val in info_.iteritems():
+        try:
+            exif_keyval = TAGS[key]
+            valid_keys.append((key, exif_keyval))
+        except KeyError:
+            invalid_keys.append(key)
+    print('[io] valid_keys = ' + '\n'.join(valid_keys))
+    print('-----------')
+    #import draw_func2 as df2
+    #exec(df2.present())
+
+
+def read_all_exif_tags(pil_image):
+    info_ = pil_image._getexif()
+    info_iter = info_.iteritems()
+    tag_ = lambda key: TAGS.get(key, key)
+    exif = {} if info_ is None else {tag_(k): v for k, v in info_iter}
+    return exif
+
+
+def read_one_exif_tag(pil_image, tag):
+    try:
+        exif_key = TAGS.keys()[TAGS.values().index(tag)]
+    except ValueError:
+        return 'Invalid EXIF Tag'
+    info_ = pil_image._getexif()
+    exif_val = info_.get(exif_key, 'Invalid EXIF Key: exif_key=%r, tag=%r' % (exif_key, tag))
+    return exif_val
+    #try:
+        #exif_val = info_[exif_key]
+    #except KeyError:
+        #exif_val = 'Invalid EXIF Key: exif_key=%r, tag=%r' % (exif_key, tag)
+        #print('')
+        #print(exif_val)
+        #check_exif_keys(pil_image)
+
+
+def read_exif(fpath, tag=None):
+    try:
+        pil_image = Image.open(fpath)
+        if not hasattr(pil_image, '_getexif'):
+            return 'No EXIF Data'
+    except IOError as ex:
+        import argparse2
+        print('Caught IOError: %r' % (ex,))
+        print_image_checks(fpath)
+        if argparse2.ARGS_.strict:
+            raise
+        return {} if tag is None else None
+    if tag is None:
+        exif = read_all_exif_tags(pil_image)
     else:
-        exif = {}
+        exif = read_one_exif_tag(pil_image, tag)
     del pil_image
     return exif
 
 
-def read_exif_list(fpath_list):
+def print_image_checks(img_fpath):
+    hasimg = helpers.checkpath(img_fpath, verbose=True)
+    if hasimg:
+        _tup = (img_fpath, filesize_str(img_fpath))
+        print('[io] Image %r (%s) exists. Is it corrupted?' % _tup)
+    else:
+        print('[io] Image %r does not exists ' (img_fpath,))
+    return hasimg
+
+
+def read_exif_list(fpath_list, **kwargs):
     def _gen(fpath_list):
         # Exif generator
         nGname = len(fpath_list)
         mark_progress = helpers.progress_func(nGname, '[io] Load Image EXIF', 16)
         for count, fpath in enumerate(fpath_list):
             mark_progress(count)
-            yield read_exif(fpath)
+            yield read_exif(fpath, **kwargs)
     exif_list = [exif for exif in _gen(fpath_list)]
     return exif_list
 

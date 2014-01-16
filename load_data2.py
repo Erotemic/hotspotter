@@ -548,6 +548,59 @@ def backup_csv_tables(hs, force_backup=False):
         do_backup(IMAGE_TABLE_FNAME)
 
 
+def make_chip_csv2(hs, cx_list):
+    # Valid chip tables
+    cx2_cid   = hs.tables.cx2_cid[cx_list]
+    # Use the indexes as ids (FIXME: Just go back to g/n-ids)
+    cx2_gx   = hs.tables.cx2_gx[cx_list] + 1  # FIXME
+    cx2_nx   = hs.tables.cx2_nx[cx_list]   # FIXME
+    cx2_roi   = hs.tables.cx2_roi[cx_list]
+    cx2_theta = hs.tables.cx2_theta[cx_list]
+    prop_dict = {propkey: [cx2_propval[cx] for cx in iter(cx_list)]
+                 for (propkey, cx2_propval) in hs.tables.prop_dict.iteritems()}
+    # Turn the chip indexes into a DOCUMENTED csv table
+    header = '# chip table'
+    column_labels = ['ChipID', 'ImgID', 'NameID', 'roi[tl_x  tl_y  w  h]', 'theta']
+    column_list   = [cx2_cid, cx2_gx, cx2_nx, cx2_roi, cx2_theta]
+    column_type   = [int, int, int, list, float]
+    if not prop_dict is None:
+        for key, val in prop_dict.iteritems():
+            column_labels.append(key)
+            column_list.append(val)
+            column_type.append(str)
+
+    chip_table = make_csv_table(column_labels, column_list, header, column_type)
+    return chip_table
+
+
+def make_image_csv2(hs, gx_list):
+    'return an image table csv string'
+    gx2_gid   = np.array(gx_list) + 1  # FIXME
+    gx2_gname = hs.tables.gx2_gname[gx_list]
+    try:
+        gx2_aif   = hs.tables.gx2_aif[gx_list]
+    except Exception as ex:
+        print(ex)
+        #gx2_aif = np.zeros(len(gx2_gid), dtype=np.uint32)
+    # Make image_table.csv
+    header = '# image table'
+    column_labels = ['gid', 'gname', 'aif']  # do aif for backwards compatibility
+    column_list   = [gx2_gid, gx2_gname, gx2_aif]
+    image_table = make_csv_table(column_labels, column_list, header)
+    return image_table
+
+
+def make_name_csv2(hs, nx_list):
+    'returns an name table csv string'
+    nx2_name  = hs.tables.nx2_name[nx_list]
+    # Make name_table.csv
+    header = '# name table'
+    column_labels = ['nid', 'name']
+    column_list   = [nx_list[2:], nx2_name[2:]]  # dont write ____ for backcomp
+    name_table = make_csv_table(column_labels, column_list, header)
+    return name_table
+
+
 def make_chip_csv(hs):
     'returns an chip table csv string'
     valid_cx = hs.get_valid_cxs()

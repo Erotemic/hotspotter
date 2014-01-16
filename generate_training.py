@@ -24,9 +24,11 @@ def generate_detector_training_data(hs):
 
 
 def extract_detector_negatives(hs, output_dir, batch_extract_kwargs):
+    from itertools import product as iprod
     negoutput_dir = join(output_dir, 'negatives')
     helpers.ensuredir(negoutput_dir)
-    neg_fmt = join(negoutput_dir, 'gx%d_wix%d_hix%d_neg.png')
+    negreg_fmt = join(negoutput_dir, 'regions', 'gx%d_wix%d_hix%d_neg.png')
+    negall_fmt = join(negoutput_dir, 'whole', 'gx%d_all_neg.png')
 
     print('[train] extract_negatives')
     gx_list = hs.get_valid_gxs()
@@ -36,34 +38,37 @@ def extract_detector_negatives(hs, output_dir, batch_extract_kwargs):
     # Find images where there are completely negative. They have no animals.
     #is_negative = np.logical_and(aif_list, nChips_list)
     is_completely_negative = np.logical_and(aif_list, nChips_list == 0)
-    cneg_gxs = gx_list[np.where(is_completely_negative)[0]]
+    negall_gxs = gx_list[np.where(is_completely_negative)[0]]
 
     gfpath_list = []
     cfpath_list = []
     roi_list = []
 
-    width_split = 2
+    def add_neg_eg(roi, gfpath, cfpath):
+        roi_list.append(roi)
+        gfpath_list.append(gfpath)
+        cfpath_list.append(cfpath)
 
+    width_split = 2
     (uw, uh) = uniform_size
-    for gx in cneg_gxs:
+
+    for gx in negall_gxs:
         gfpath = hs.gx2_gname(gx, full=True)
+        # Add whole negative image
         (gw, gh) = hs.gx2_image_size(gx)
-        w_stride = gw // width_split
-        h_stride = int(round(gh * (w_stride / gw)))
-        num_heights = gh // h_stride
-        num_widths = gw // w_stride
-        if num_heights < 1 or num_widths < 2:
+        roi = (0, 0, gw, gh)
+        add_neg_eg(roi, gfpath, negall_fmt % (gx))
+        # Add negative regions
+        w_step = gw // width_split
+        h_step = int(round(gh * (w_step / gw)))
+        nHeights, nWidths  = gh // h_step, gw // w_step
+        if nWidths < 2 or nHeights < 1:
             continue
-        for wix in xrange(num_widths):
-            for hix in xrange(num_widths):
-                x = wix * w_stride
-                y = hix * h_stride
-                w = w_stride
-                h = h_stride
-                roi = (x, y, w, h)
-                roi_list += [roi]
-                gfpath_list += [gfpath]
-                cfpath_list += [neg_fmt % (gx, wix, hix)]
+        for wix, hix in iprod(xrange(nWidths), xrange(nHeights)):
+            x, y = wix * w_step, hix * h_step
+            w, h = w_step, h_step
+            roi = (x, y, w, h)
+            add_neg_eg(roi, gfpath, negreg_fmt % (gx, wix, hix))
 
     theta_list = [0] * len(roi_list)
 

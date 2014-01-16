@@ -120,7 +120,8 @@ class MainWindowBackend(QtCore.QObject):
             back.imgtbl_editable += [aif_header]
 
         if hs.args.withexif:
-            back.imgtbl_headers += ['EXIF']
+            back.imgtbl_headers += ['EXIF:DateTime']
+            #back.imgtbl_headers += ['EXIF']
         #
         back.chiptbl_headers  = ['Chip ID', 'Name', 'Image', '#GT', '#kpts', 'Theta', 'ROI (x, y, w, h)']
         back.chiptbl_editable = ['Name']
@@ -194,7 +195,7 @@ class MainWindowBackend(QtCore.QObject):
         fnum = FNUMS['inspect']
         did_exist = df2.plt.fignum_exists(fnum)
         df2.figure(fnum=fnum, doclf=True, trueclf=True)
-        interaction.interact_chipres(back.hs, cx, fnum=fnum)
+        interaction.interact_chipres(back.hs, res, cx=cx, fnum=fnum)
         if not did_exist:
             back.layout_figures()
 
@@ -249,13 +250,15 @@ class MainWindowBackend(QtCore.QObject):
             back.setEnabledSignal.emit(False)
         #back.database_loaded.emit()
 
-    def populate_image_table(back):
+    def populate_image_table(back, extra_cols={}):
         print('[*back] populate_image_table()')
         col_headers, col_editable = guitools.make_header_lists(back.imgtbl_headers,
                                                                back.imgtbl_editable)
         # Populate table with valid image indexes
         gx_list = back.hs.get_valid_gxs()
-        datatup_list = back.hs.get_img_datatup_list(gx_list, header_order=col_headers)
+        datatup_list = back.hs.get_img_datatup_list(gx_list,
+                                                    header_order=col_headers,
+                                                    extra_cols=extra_cols)
         row_list = range(len(datatup_list))
         back.populateSignal.emit('image', col_headers, col_editable, row_list, datatup_list)
 

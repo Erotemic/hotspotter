@@ -9,6 +9,8 @@ DEBUG = False
 # seemlessly fix any path issues
 cross_platform.ensure_pythonpath()
 
+ARGS_ = None
+
 
 def switch_sanataize(switch):
     if isinstance(switch, str):
@@ -191,6 +193,7 @@ def cache_argparse(parser2):
 
 def args_postprocess(args):
     from os.path import realpath, exists
+    global ARGS_
     # Postprocess args
     if args.serial:
         args.num_procs = 1
@@ -206,11 +209,13 @@ def args_postprocess(args):
         args.dbdir = realpath(args.dbdir)
     if args.dbdir is None or args.dbdir in ['', ' ', '.'] or not exists(args.dbdir):
         args.dbdir = None
+    ARGS_ = args
     return args
 
 
 def fix_args_shortnames(args):
     import params
+    global ARGS_
     #print('[argparse2] fix_args_shortnames(): %r' % args.db)
     #print('[argparse2] mapping %r to %r' % (args.db, args.dbdir))
     # The shortname is specified
@@ -226,12 +231,14 @@ def fix_args_shortnames(args):
     except KeyError:
         pass
     #print('[argparse2] mapped %r to %r' % (args.db, args.dbdir))
+    ARGS_ = args
     return args
 
 
 def fix_args_with_cache(args):
     'Returns the database directory based on cache'
     import fileio as io
+    global ARGS_
     if args.dbdir is None and not args.nocache_db:
         # Read from cache
         args.dbdir = io.global_cache_read('db_dir')
@@ -239,12 +246,13 @@ def fix_args_with_cache(args):
             args.dbdir = None
         print('[main] trying to read db_dir from cache: %r' % args.dbdir)
     args = fix_args_shortnames(args)
+    ARGS_ = args
     return args
 
 
 def parse_arguments(defaultdb=None, **kwargs):
     '''Defines the arguments for hotspotter'''
-
+    global ARGS_
     parser2 = make_argparse2('HotSpotter - Individual Animal Recognition',
                              version='???')
     main_argparse(parser2)
@@ -263,6 +271,7 @@ def parse_arguments(defaultdb=None, **kwargs):
     args.__dict__.update(**kwargs)
     args = args_postprocess(args)
     args = fix_args_shortnames(args)
+    ARGS_ = args
     return args
 
 

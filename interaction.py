@@ -235,6 +235,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
     'res = back.current_res'
     'Interacts with a single chipres, '
     # Get data
+    #print(res)
     qcx = res.qcx
     if cx is None:
         cx = res.topN_cxs(hs, 1)[0]

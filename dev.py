@@ -34,11 +34,13 @@ def dev_reload():
     import algos
     import chip_compute2 as cc2
     import feature_compute2 as fc2
+    import interaction
     rrr()
     ds.rrr()
     mf.rrr()
     mc3.rrr()
     viz.rrr()
+    interaction.rrr()
     vr2.rrr()
     helpers.rrr()
     cc2.rrr()

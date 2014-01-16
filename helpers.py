@@ -276,10 +276,16 @@ def mystats(_list):
     if len(_list) == 0:
         return {'empty_list': True}
     nparr = np.array(_list)
-    return OrderedDict([('max',   np.float32(nparr.max())),
-                        ('min',   np.float32(nparr.min())),
+    min_val = nparr.min()
+    max_val = nparr.max()
+    nMin = np.sum(nparr == min_val)  # number of entries with min val
+    nMax = np.sum(nparr == max_val)  # number of entries with min val
+    return OrderedDict([('max',   np.float32(max_val)),
+                        ('min',   np.float32(min_val)),
                         ('mean',  np.float32(nparr.mean())),
                         ('std',   np.float32(nparr.std())),
+                        ('nMin',  np.int32(nMin)),
+                        ('nMax',  np.int32(nMax)),
                         ('shape', repr(nparr.shape))])
 
 

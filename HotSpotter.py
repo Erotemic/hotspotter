@@ -397,6 +397,10 @@ class HotSpotter(DynStruct):
             nExist = len(fpath_list2) - len(copy_list)
             print('[hs] copying %d images' % len(copy_list))
             print('[hs] %d images already exist' % nExist)
+            # RCOS TODO: Copying like this should be a helper function.
+            # It appears in multiple places
+            # Also there should be the option of parallelization? IDK, these are
+            # disk writes, but it still might help.
             mark_progress = helpers.progress_func(len(copy_list))
             for count, (src, dst) in enumerate(copy_list):
                 shutil.copy(src, dst)
@@ -471,19 +475,29 @@ class HotSpotter(DynStruct):
                                            'Image Name',
                                            '#Chips',
                                            'EXIF',
-                                           'AIF']):
+                                           'EXIF:DateTime',
+                                           'AIF'],
+                             extra_cols={}):
         'Data for GUI Image Table'
         gx2_gname = hs.tables.gx2_gname
         gx2_aif   = hs.tables.gx2_aif
         gx2_cxs = hs.gx2_cxs
         exif_list = hs.gx2_exif(gx_list) if 'EXIF' in header_order else []
+        exif_datetime = (hs.gx2_exif(gx_list, tag='DateTime')
+                         if 'EXIF:DateTime' in header_order
+                         else [])
         cols = {
             'Image Index': gx_list,
             'AIF':         [gx2_aif[gx] for gx in iter(gx_list)],
             'Image Name':  [gx2_gname[gx] for gx in iter(gx_list)],
             '#Chips':      [len(gx2_cxs(gx)) for gx in iter(gx_list)],
-            'EXIF': exif_list
+            'EXIF': exif_list,
+            'EXIF:DateTime': exif_datetime,
         }
+        # FIXME: gx_list needs to be known when you create extra_cols.
+        # This should not be the case. All cols should dynamically respond to
+        # different gx_lists
+        cols.update(extra_cols)
         unziped_tups = [cols[header] for header in header_order]
         datatup_list = [tup for tup in izip(*unziped_tups)]
         return datatup_list
@@ -643,15 +657,15 @@ class HotSpotter(DynStruct):
     #----
     # image index --> property
     @tools.class_iter_input
-    def gx2_exif(hs, gx_list):
+    def gx2_exif(hs, gx_list, **kwargs):
         gname_list = hs.gx2_gname(gx_list, full=True)
-        exif_list = io.read_exif_list(gname_list)
+        exif_list = io.read_exif_list(gname_list, **kwargs)
         return exif_list
 
     @profile
-    def get_exif(hs):
+    def get_exif(hs, **kwargs):
         gx_list = hs.get_valid_gxs()
-        exif_list = hs.gx2_exif(gx_list)
+        exif_list = hs.gx2_exif(gx_list, **kwargs)
         return exif_list
 
     @tools.class_iter_input

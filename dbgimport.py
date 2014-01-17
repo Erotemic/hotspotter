@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 # Python
 from collections import OrderedDict
-from os.path import dirname, realpath, join, exists, normpath
+from os.path import dirname, realpath, join, exists, normpath, splitext
 import imp
 import itertools
 import multiprocessing
@@ -9,6 +9,7 @@ import os
 import re
 import sys
 import site
+import shutil
 # Scientific
 import numpy as np  # NOQA
 from PIL import Image

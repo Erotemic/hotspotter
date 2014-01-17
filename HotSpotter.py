@@ -44,6 +44,90 @@ def _checkargs_onload(hs):
         sys.exit(1)
 
 
+# Logic for hotspotter functions are module level functions for easy reloading.
+
+def _import_scripts(hs):
+    import scripts
+    scripts.rrr()
+
+
+def __get_datatup_list(index_list, header_order, cols, extra_cols):
+    cols.update(extra_cols)
+    unknown_header = lambda indexes: ['Error' for gx in indexes]
+    get_tup = lambda header: cols.get(header, unknown_header)(index_list)
+    unziped_tups = [get_tup(header) for header in header_order]
+    datatup_list = [tup for tup in izip(*unziped_tups)]
+    return datatup_list
+
+
+def _get_name_datatup_list(hs, nx_list, header_order=['Name'], extra_cols={}):
+    nx2_name = hs.tables.nx2_name
+    nx2_cxs = hs.get_nx2_cxs()  # RCOS TODO: This needs to be more robust
+    cols = {
+        'Name Index':   lambda nxs: nxs,
+        'Name':         lambda nxs: [nx2_name[nx] for nx in iter(nxs)],
+        '#Chips':       lambda nxs: [len(nx2_cxs[nx]) for nx in iter(nxs)],
+    }
+    return __get_datatup_list(nx_list, header_order, cols, extra_cols)
+
+
+def _get_img_datatup_list(hs, gx_list, header_order, extra_cols={}):
+    'Data for GUI Image Table'
+    gx2_gname = hs.tables.gx2_gname
+    gx2_aif   = hs.tables.gx2_aif
+    gx2_cxs = hs.gx2_cxs
+    # Lazy evaluation of column values
+    cols = {
+        'Image Index':   lambda gxs: gxs,
+        'AIF':           lambda gxs: [gx2_aif[gx] for gx in iter(gxs)],
+        'Image Name':    lambda gxs: [gx2_gname[gx] for gx in iter(gxs)],
+        '#Chips':        lambda gxs: [len(gx2_cxs(gx)) for gx in iter(gxs)],
+        'EXIF':          lambda gxs: hs.gx2_exif(gxs),
+        'EXIF:DateTime': lambda gxs: hs.gx2_exif(gxs, tag='DateTime'),
+    }
+    return __get_datatup_list(gx_list, header_order, cols, extra_cols)
+
+
+def _delete_image(hs, gx_list):
+    for gx in gx_list:
+        cx_list = hs.gx2_cxs(gx)
+        for cx in cx_list:
+            hs.delete_chip(cx, resample=False)
+        hs.tables.gx2_gname[gx] = ''
+
+    trash_dir = join(hs.dbdir, 'deleted-images')
+    src_list = hs.gx2_gname(gx_list, full=True)
+    dst_list = hs.gx2_gname(gx_list, prefix=trash_dir)
+    helpers.ensuredir(trash_dir)
+
+    # Move deleted images into the trash
+    move_list = zip(src_list, dst_list)
+    mark_progress = helpers.progress_func(len(move_list), lbl='Trashing Image')
+    for count, (src, dst) in enumerate(move_list):
+        shutil.move(src, dst)
+        mark_progress(count)
+    hs.update_samples()
+    hs.save_database()
+
+
+def _cx2_exif(hs, cx_list, **kwargs):
+    gx_list = hs.cx2_gx(cx_list)
+    exif_list = hs.gx2_exif(gx_list, **kwargs)
+    return exif_list
+
+
+def _cx2_unixtime(hs, cx_list):
+    gx_list = hs.cx2_gx(cx_list)
+    unixtime_list = _gx2_unixtime(hs, gx_list)
+    return unixtime_list
+
+
+def _gx2_unixtime(hs, gx_list):
+    datetime_list = hs.gx2_exif(gx_list, tag='DateTime')
+    unixtime_list = map(io.exiftime_to_unixtime, datetime_list)
+    return unixtime_list
+
+
 class HotSpotter(DynStruct):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
@@ -74,6 +158,13 @@ class HotSpotter(DynStruct):
         if db_dir is not None:
             hs.args.dbdir = db_dir
         #printDBG(r'[/hs] Created HotSpotter API')
+
+    def rrr(hs):
+        import HotSpotter
+        HotSpotter.rrr()
+
+    def import_scripts(hs):
+        return _import_scripts(hs)
 
     # --------------
     # Preferences functions
@@ -264,6 +355,7 @@ class HotSpotter(DynStruct):
     def clear_lru_caches(hs):
         hs._read_chip.clear_cache()
         hs.gx2_image.clear_cache()
+        hs.get_exif.clear_cache()
 
     #---------------
     # Query Functions
@@ -401,7 +493,7 @@ class HotSpotter(DynStruct):
             # It appears in multiple places
             # Also there should be the option of parallelization? IDK, these are
             # disk writes, but it still might help.
-            mark_progress = helpers.progress_func(len(copy_list))
+            mark_progress = helpers.progress_func(len(copy_list), lbl='Copying Image')
             for count, (src, dst) in enumerate(copy_list):
                 shutil.copy(src, dst)
                 mark_progress(count)
@@ -439,12 +531,9 @@ class HotSpotter(DynStruct):
         if resample:
             hs.update_samples()
 
-    def delete_image(hs, gx):
-        cx_list = hs.gx2_cxs(gx)
-        for cx in cx_list:
-            hs.delete_chip(cx, resample=False)
-        hs.tables.gx2_gname[gx] = ''
-        hs.update_samples()
+    @tools.class_iter_input
+    def delete_image(hs, gx_list):
+        return _delete_image(hs, gx_list)
 
     def delete_cache(hs):
         print('[hs] DELETE CACHE')
@@ -469,6 +558,9 @@ class HotSpotter(DynStruct):
     # ---------------
     def has_property(hs, key):
         return key in hs.tables.prop_dict
+    def get_name_datatup_list(hs, nx_list, **kwargs):
+        return _get_name_datatup_list(hs, nx_list, **kwargs)
+
 
     def get_img_datatup_list(hs, gx_list,
                              header_order=['Image Index',
@@ -478,29 +570,7 @@ class HotSpotter(DynStruct):
                                            'EXIF:DateTime',
                                            'AIF'],
                              extra_cols={}):
-        'Data for GUI Image Table'
-        gx2_gname = hs.tables.gx2_gname
-        gx2_aif   = hs.tables.gx2_aif
-        gx2_cxs = hs.gx2_cxs
-        exif_list = hs.gx2_exif(gx_list) if 'EXIF' in header_order else []
-        exif_datetime = (hs.gx2_exif(gx_list, tag='DateTime')
-                         if 'EXIF:DateTime' in header_order
-                         else [])
-        cols = {
-            'Image Index': gx_list,
-            'AIF':         [gx2_aif[gx] for gx in iter(gx_list)],
-            'Image Name':  [gx2_gname[gx] for gx in iter(gx_list)],
-            '#Chips':      [len(gx2_cxs(gx)) for gx in iter(gx_list)],
-            'EXIF': exif_list,
-            'EXIF:DateTime': exif_datetime,
-        }
-        # FIXME: gx_list needs to be known when you create extra_cols.
-        # This should not be the case. All cols should dynamically respond to
-        # different gx_lists
-        cols.update(extra_cols)
-        unziped_tups = [cols[header] for header in header_order]
-        datatup_list = [tup for tup in izip(*unziped_tups)]
-        return datatup_list
+        return _get_img_datatup_list(hs, gx_list, header_order, extra_cols)
 
     def format_theta_list(self, theta_list):
         # Remove pi to put into a human readable format
@@ -654,6 +724,18 @@ class HotSpotter(DynStruct):
         gx =  hs.tables.cx2_gx[cx]
         return hs.gx2_image(gx)
 
+    @tools.class_iter_input
+    def cx2_exif(hs, cx_list, **kwargs):
+        return _cx2_exif(hs, cx_list)
+
+    @tools.class_iter_input
+    def gx2_unixtime(hs, gx_list):
+        return _gx2_unixtime(hs, gx_list)
+
+    @tools.class_iter_input
+    def cx2_unixtime(hs, gx_list):
+        return _cx2_unixtime(hs, gx_list)
+
     #----
     # image index --> property
     @tools.class_iter_input
@@ -663,17 +745,18 @@ class HotSpotter(DynStruct):
         return exif_list
 
     @profile
+    @tools.lru_cache(max_size=100)
     def get_exif(hs, **kwargs):
         gx_list = hs.get_valid_gxs()
         exif_list = hs.gx2_exif(gx_list, **kwargs)
         return exif_list
 
     @tools.class_iter_input
-    def gx2_gname(hs, gx_input, full=False):
+    def gx2_gname(hs, gx_input, full=False, prefix=None):
         gx2_gname_ = hs.tables.gx2_gname
         gname_list = [gx2_gname_[gx] for gx in iter(gx_input)]
-        if full:
-            img_dir = hs.dirs.img_dir
+        if full or prefix is not None:
+            img_dir = hs.dirs.img_dir if prefix is None else prefix
             gname_list = [join(img_dir, gname) for gname in iter(gname_list)]
         return gname_list
 
@@ -738,6 +821,18 @@ class HotSpotter(DynStruct):
             if nx > 0:
                 nx2_cxs[nx].append(cx)
         return nx2_cxs
+
+    #def nx2_cxs(hs, nx_list):
+        #'returns mapping from name indexes to chip indexes'
+        #cx2_nx = hs.tables.cx2_nx
+        #if len(cx2_nx) == 0:
+            #nx2_cxs_ = [[], []]
+        #max_nx = cx2_nx.max()
+        #nx2_cxs = [[] for _ in xrange(max_nx + 1)]
+        #for cx, nx in enumerate(cx2_nx):
+            #if nx > 0:
+                #nx2_cxs[nx].append(cx)
+        #return nx2_cxs
 
     def get_gx2_cxs(hs):
         'returns mapping from image indexes to chip indexes'

@@ -84,6 +84,16 @@
          </item>
         </layout>
        </widget>
+       <widget class="QWidget" name="name_view">
+        <attribute name="title">
+         <string>Name View</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QTableWidget" name="name_TBL"/>
+         </item>
+        </layout>
+       </widget>
        <widget class="QWidget" name="result_view">
         <attribute name="title">
          <string>Query Results Table</string>

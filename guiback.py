@@ -19,7 +19,7 @@ import HotSpotter
 from guitools import drawing, slot_
 from guitools import backblocking as blocking
 
-FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5)
+FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5, name=6)
 viz.register_FNUMS(FNUMS)
 
 
@@ -126,6 +126,9 @@ class MainWindowBackend(QtCore.QObject):
         back.chiptbl_headers  = ['Chip ID', 'Name', 'Image', '#GT', '#kpts', 'Theta', 'ROI (x, y, w, h)']
         back.chiptbl_editable = ['Name']
         #
+        back.nametbl_headers  = ['Name Index', 'Name', '#Chips']
+        back.nametbl_editable = []
+        #
         back.restbl_headers   = ['Rank', 'Confidence', 'Matching Name', 'Chip ID']
         back.restbl_editable  = ['Matching Name']
         # connect signals
@@ -199,6 +202,13 @@ class MainWindowBackend(QtCore.QObject):
         if not did_exist:
             back.layout_figures()
 
+    @drawing
+    def show_nx(back, nx, **kwargs):
+        # Define callback for show_analysis
+        fnum = FNUMS['name']
+        df2.figure(fnum=fnum, doclf=True, trueclf=True)
+        viz.plot_name(back.hs, nx, fnum=fnum)
+
     #----------------------
     # Work Functions
     #----------------------
@@ -240,8 +250,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[*back] connect_api()')
         back.hs = hs
         if hs.tables is not None:
-            back.populate_image_table()
-            back.populate_chip_table()
+            back.populate_tables(res=False)
             back.setEnabledSignal.emit(True)
             back.clear_selection()
             back.update_window_title()
@@ -249,6 +258,20 @@ class MainWindowBackend(QtCore.QObject):
         else:
             back.setEnabledSignal.emit(False)
         #back.database_loaded.emit()
+
+    #--------------------------------------------------------------------------
+    # Populate functions
+    #--------------------------------------------------------------------------
+
+    def populate_tables(back, image=True, chip=True, name=True, res=True):
+        if image:
+            back.populate_image_table()
+        if chip:
+            back.populate_chip_table()
+        if name:
+            back.populate_name_table()
+        if res:
+            back.populate_result_table()
 
     def populate_image_table(back, extra_cols={}):
         print('[*back] populate_image_table()')
@@ -261,6 +284,15 @@ class MainWindowBackend(QtCore.QObject):
                                                     extra_cols=extra_cols)
         row_list = range(len(datatup_list))
         back.populateSignal.emit('image', col_headers, col_editable, row_list, datatup_list)
+
+    def populate_name_table(back):
+        print('[*back] populate_name_table()')
+        col_headers, col_editable = guitools.make_header_lists(back.nametbl_headers,
+                                                               back.nametbl_editable)
+        nx_list = back.hs.get_valid_nxs()
+        datatup_list = back.hs.get_name_datatup_list(nx_list, header_order=col_headers)
+        row_list = range(len(datatup_list))
+        back.populateSignal.emit('name', col_headers, col_editable, row_list, datatup_list)
 
     def populate_chip_table(back):
         print('[*back] populate_chip_table()')
@@ -372,6 +404,13 @@ class MainWindowBackend(QtCore.QObject):
         gx = back.hs.cx2_gx(cx)
         back.select_gx(gx, cx=cx, **kwargs)
 
+    @slot_(str)
+    def select_name(back, name, **kwargs):
+        name = str(name)
+        nx = np.where(back.hs.tables.nx2_name == name)[0]
+        back.show_nx(nx)
+        print(name)
+
     # Table Click -> Chip Table
     @slot_(int)
     def select_res_cid(back, cid, **kwargs):
@@ -402,8 +441,7 @@ class MainWindowBackend(QtCore.QObject):
             back.hs.change_name(cx, val)
         else:
             back.hs.change_property(cx, key, val)
-        back.populate_chip_table()
-        back.populate_result_table()
+        back.populate_tables(image=False)
         print('')
 
     # Table Edit -> Change Image Property
@@ -551,10 +589,8 @@ class MainWindowBackend(QtCore.QObject):
         if roi is None:
             print('[back*] roiselection failed. Not adding')
             return
-        cx = back.hs.add_chip(gx, roi)
-        back.populate_image_table()
-        back.populate_chip_table()
-        back.populate_result_table()
+        cx = back.hs.add_chip(gx, roi)  # NOQA
+        back.populate_tables()
         # RCOS TODO: Autoselect should be an option
         #back.select_gx(gx, cx)
         back.select_gx(gx)
@@ -603,9 +639,7 @@ class MainWindowBackend(QtCore.QObject):
             print('[back*] roiselection failed. Not adding')
             return
         back.hs.change_roi(cx, roi)
-        back.populate_image_table()
-        back.populate_chip_table()
-        back.populate_result_table()
+        back.populate_tables()
         back.select_gx(gx, cx, **kwargs)
         print(r'[/back] reselected ROI = %r' % roi)
         print('')
@@ -626,9 +660,7 @@ class MainWindowBackend(QtCore.QObject):
             print('[back*] theta selection failed. Not adding')
             return
         back.hs.change_theta(cx, theta)
-        back.populate_image_table()
-        back.populate_chip_table()
-        back.populate_result_table()
+        back.populate_tables()
         back.select_gx(gx, cx, **kwargs)
         print(r'[/back] reselected theta=%r' % theta)
         print('')
@@ -644,9 +676,7 @@ class MainWindowBackend(QtCore.QObject):
             return
         gx = back.hs.cx2_gx(cx)
         back.hs.delete_chip(cx)
-        back.populate_image_table()
-        back.populate_chip_table()
-        back.populate_result_table()
+        back.populate_tables()
         back.select_gx(gx)
         print('[back] deleted cx=%r\n' % cx)
         print('')

@@ -8,6 +8,8 @@ import fnmatch
 import pickle
 import cPickle
 from os.path import normpath, exists, realpath, join, expanduser
+import datetime
+import time
 # Science
 import numpy as np
 import cv2
@@ -259,6 +261,13 @@ def filesize_str(fpath):
     _, fname = os.path.split(fpath)
     mb_str = helpers.file_megabytes_str(fpath)
     return 'filesize(%r)=%s' % (fname, mb_str)
+
+
+def exiftime_to_unixtime(datetime_str):
+    if datetime_str is None:
+        return -1
+    dt = datetime.datetime.strptime(datetime_str, '%Y:%m:%d %H:%M:%S')
+    return time.mktime(dt.timetuple())
 
 
 def check_exif_keys(pil_image):

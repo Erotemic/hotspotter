@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/ChoiceDialog.ui'
 #
-# Created: Mon Jan  6 10:41:59 2014
+# Created: Fri Jan 17 14:59:34 2014
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!

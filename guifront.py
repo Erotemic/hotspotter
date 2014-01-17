@@ -121,12 +121,47 @@ def connect_experimental_signals(front):
     ui.actionName_Consistency_Experiment.triggered.connect(back.autoassign)
 
 
+def csv_sanatize(str_):
+    return str(str_).replace(',', ';;')
+
+
+def clicked(func):
+    def clicked_wrapper(front, item, *args, **kwargs):
+        if front.isItemEditable(item):
+            front.print('[front] does not select when clicking editable column')
+            return
+        if item == front.prev_tbl_item:
+            return
+        front.prev_tbl_item = item
+        return func(front, item, *args, **kwargs)
+    clicked_wrapper.func_name = func.func_name
+    # Hacky decorator
+    return clicked_wrapper
+
+#def popup(front, pos):
+    #for i in front.ui.image_TBL.selectionModel().selection().indexes():
+        #front.print(repr((i.row(), i.column())))
+    #menu = QtGui.QMenu()
+    #action1 = menu.addAction("action1")
+    #action2 = menu.addAction("action2")
+    #action3 = menu.addAction("action2")
+    #action = menu.exec_(front.ui.image_TBL.mapToGlobal(pos))
+    #front.print('action = %r ' % action)
+
+
+#@slot_(bool)
+#def setPlotWidgetEnabled(front, flag):
+    #flag = bool(flag)
+    ##front.printDBG('setPlotWidgetEnabled(%r)' % flag)
+    #front.plotWidget.setVisible(flag)
+
 class MainWindowFrontend(QtGui.QMainWindow):
     printSignal     = pyqtSignal(str)
     quitSignal      = pyqtSignal()
     selectGxSignal  = pyqtSignal(int)
     selectCidSignal = pyqtSignal(int)
     selectResSignal = pyqtSignal(int)
+    selectNameSignal = pyqtSignal(str)
     changeCidSignal = pyqtSignal(int, str, str)
     changeGxSignal  = pyqtSignal(int, str, bool)
     querySignal = pyqtSignal()
@@ -197,9 +232,10 @@ class MainWindowFrontend(QtGui.QMainWindow):
         front.quitSignal.connect(back.quit)
         front.selectGxSignal.connect(back.select_gx)
         front.selectCidSignal.connect(back.select_cid)
+        front.selectResSignal.connect(back.select_res_cid)
+        front.selectNameSignal.connect(back.select_name)
         front.changeCidSignal.connect(back.change_chip_property)
         front.changeGxSignal.connect(back.change_image_property)
-        front.selectResSignal.connect(back.select_res_cid)
         front.querySignal.connect(back.query)
 
         # Menubar signals
@@ -218,6 +254,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         ui.image_TBL.itemChanged.connect(front.img_tbl_changed)
         ui.res_TBL.itemClicked.connect(front.res_tbl_clicked)
         ui.res_TBL.itemChanged.connect(front.res_tbl_changed)
+        ui.name_TBL.itemClicked.connect(front.name_tbl_clicked)
         # Tab Widget
         ui.tablesTabWidget.currentChanged.connect(front.change_view)
         ui.chip_TBL.sortByColumn(0, Qt.AscendingOrder)
@@ -227,22 +264,6 @@ class MainWindowFrontend(QtGui.QMainWindow):
     def print(front, msg):
         print('[*front*] ' + msg)
         #front.printSignal.emit('[*front] ' + msg)
-
-    #def popup(front, pos):
-        #for i in front.ui.image_TBL.selectionModel().selection().indexes():
-            #front.print(repr((i.row(), i.column())))
-        #menu = QtGui.QMenu()
-        #action1 = menu.addAction("action1")
-        #action2 = menu.addAction("action2")
-        #action3 = menu.addAction("action2")
-        #action = menu.exec_(front.ui.image_TBL.mapToGlobal(pos))
-        #front.print('action = %r ' % action)
-
-    @slot_(bool)
-    def setPlotWidgetEnabled(front, flag):
-        flag = bool(flag)
-        #front.printDBG('setPlotWidgetEnabled(%r)' % flag)
-        front.plotWidget.setVisible(flag)
 
     @slot_(bool)
     def setEnabled(front, flag):
@@ -287,7 +308,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
 
         def set_table_context_menu(tbl):
             tbl.setContextMenuPolicy(Qt.CustomContextMenu)
-            # TODO: How do we get the clicked item on a right click?
+            # RCOS TODO: How do we get the clicked item on a right click?
             opt2_callback = [
                 ('Query', front.querySignal.emit), ]
                 #('item',  lambda: print('finishme')),
@@ -314,6 +335,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
             data_tup = row2_datatup[row]
             for col, data in enumerate(data_tup):
                 item = QtGui.QTableWidgetItem()
+                # RCOS TODO: Pass in datatype here.
                 #if col_headers[col] == 'AIF':
                     #print('col=%r dat=%r, %r' % (col, data, type(data)))
                 if tools.is_bool(data) or data == 'True' or data == 'False':
@@ -363,20 +385,30 @@ class MainWindowFrontend(QtGui.QMainWindow):
     def isItemEditable(self, item):
         return int(Qt.ItemIsEditable & item.flags()) == int(Qt.ItemIsEditable)
 
+    #=======================
+    # General Table Getters
+    #=======================
+
     def get_tbl_header(front, tbl, col):
         return str(tbl.horizontalHeaderItem(col).text())
 
-    def get_tbl_cid(front, tbl, row, cid_col):
-        cid_header = front.get_tbl_header(tbl, cid_col)
-        assert cid_header == 'Chip ID', 'Header is %s' % cid_header
-        cid = int(tbl.item(row, cid_col).text())
-        return cid
+    def get_tbl_int(front, tbl, row, col):
+        return int(tbl.item(row, col).text())
 
-    def get_tbl_gx(front, tbl, row, gid_col):
-        gid_header = front.get_tbl_header(tbl, gid_col)
-        assert gid_header == 'Image Index', 'Header is %s' % gid_header
-        gid = int(tbl.item(row, gid_col).text())
-        return gid
+    def get_tbl_str(front, tbl, row, col):
+        return str(tbl.item(row, col).text())
+
+    def get_header_val(front, tbl, header, row):
+        # RCOS TODO: This is hacky. These just need to be
+        # in dicts to begin with.
+        tblname = str(tbl.objectName()).replace('_TBL', '')
+        tblname = tblname.replace('image', 'img')  # Sooooo hack
+        col = front.back.__dict__[tblname + 'tbl_headers'].index(header)
+        return tbl.item(row, col).text()
+
+    #=======================
+    # Specific Item Getters
+    #=======================
 
     def get_chiptbl_header(front, col):
         return front.get_tbl_header(front.ui.chip_TBL, col)
@@ -387,108 +419,90 @@ class MainWindowFrontend(QtGui.QMainWindow):
     def get_restbl_header(front, col):
         return front.get_tbl_header(front.ui.res_TBL, col)
 
+    def get_nametbl_header(front, col):
+        return front.get_tbl_header(front.ui.name_TBL, col)
+
     def get_restbl_cid(front, row):
-        'Gets chip id from result table'
-        col = front.back.restbl_headers.index('Chip ID')
-        return front.get_tbl_cid(front.ui.res_TBL, row, col)
+        return int(front.get_header_val(front.ui.res_TBL, 'Chip ID', row))
 
     def get_chiptbl_cid(front, row):
-        'Gets chip id from chip table'
-        col = front.back.chiptbl_headers.index('Chip ID')
-        return front.get_tbl_cid(front.ui.chip_TBL, row, col)
+        return int(front.get_header_val(front.ui.chip_TBL, 'Chip ID', row))
+
+    def get_nametbl_name(front, row):
+        return str(front.get_header_val(front.ui.name_TBL, 'Name', row))
 
     def get_imgtbl_gx(front, row):
-        'Gets image index from image'
-        col = front.back.imgtbl_headers.index('Image Index')
-        return front.get_tbl_gx(front.ui.image_TBL, row, col)
+        return int(front.get_header_val(front.ui.image_TBL, 'Image Index', row))
 
+    #=======================
     # Table Changed Functions
+    #=======================
+
     @slot_(QtGui.QTableWidgetItem)
     def img_tbl_changed(front, item):
         front.print('img_tbl_changed()')
         row, col = (item.row(), item.column())
         sel_gx = front.get_imgtbl_gx(row)
-        #print(sel_gx)
-        #print(item)
-        #print(dir(item))
-        #print(item.__dict__)
         header_lbl = front.get_imgtbl_header(col)
         new_val = item.checkState() == Qt.Checked
         front.changeGxSignal.emit(sel_gx, header_lbl, new_val)
-        #raise NotImplementedError('img_tbl_changed()')
 
     @slot_(QtGui.QTableWidgetItem)
     def chip_tbl_changed(front, item):
-        'Chip Table Chip Changed'
         front.print('chip_tbl_changed()')
         row, col = (item.row(), item.column())
-        # Get selected chipid
-        sel_cid = front.get_chiptbl_cid(row)
-        # Get the changed property key and value
-        new_val = str(item.text()).replace(',', ';;')  # sanatize for csv
-        # Get which column is being changed
-        header_lbl = front.get_chiptbl_header(col)
-        # Tell the back about the change
+        sel_cid = front.get_chiptbl_cid(row)  # Get selected chipid
+        new_val = csv_sanatize(item.text())   # sanatize for csv
+        header_lbl = front.get_chiptbl_header(col)  # Get changed column
         front.changeCidSignal.emit(sel_cid, header_lbl, new_val)
 
     @slot_(QtGui.QTableWidgetItem)
     def res_tbl_changed(front, item):
-        'Result Table Chip Changed'
         front.print('res_tbl_changed()')
         row, col = (item.row(), item.column())
         sel_cid  = front.get_restbl_cid(row)  # The changed row's chip id
-        # Get which column is being changed
-        header_lbl = front.get_restbl_header(col)
-        # The changed items's value
-        new_val = str(item.text()).replace(',', ';;')  # sanatize for csv
-        # Tell the back about the change
+        new_val  = csv_sanatize(item.text())  # sanatize val for csv
+        header_lbl = front.get_restbl_header(col)  # Get changed column
         front.changeCidSignal.emit(sel_cid, header_lbl, new_val)
 
+    #=======================
     # Table Clicked Functions
+    #=======================
     @slot_(QtGui.QTableWidgetItem)
+    @clicked
     def img_tbl_clicked(front, item):
-        'Image Table Clicked'
         row = item.row()
         front.print('img_tbl_clicked(%r)' % (row))
-        if front.isItemEditable(item):
-            front.print('[front] does not select when clicking editable column')
-            return
-        if item == front.prev_tbl_item:
-            return
-        front.prev_tbl_item = item
-        # Get the clicked Image ID
         sel_gx = front.get_imgtbl_gx(row)
         front.selectGxSignal.emit(sel_gx)
 
     @slot_(QtGui.QTableWidgetItem)
+    @clicked
     def chip_tbl_clicked(front, item):
-        'Chip Table Clicked'
         row, col = (item.row(), item.column())
         front.print('chip_tbl_clicked(%r, %r)' % (row, col))
-        if front.isItemEditable(item):
-            front.print('[front] does not select when clicking editable column')
-            return
-        if item == front.prev_tbl_item:
-            return
-        front.prev_tbl_item = item
-        # Get the clicked Chip ID (from chip tbl)
         sel_cid = front.get_chiptbl_cid(row)
         front.selectCidSignal.emit(sel_cid)
 
     @slot_(QtGui.QTableWidgetItem)
+    @clicked
     def res_tbl_clicked(front, item):
-        'Result Table Clicked'
         row, col = (item.row(), item.column())
         front.print('res_tbl_clicked(%r, %r)' % (row, col))
-        if front.isItemEditable(item):
-            front.print('[front] does not select when clicking editable column')
-            return
-        if item == front.prev_tbl_item:
-            return
-        front.prev_tbl_item = item
-        # Get the clicked Chip ID (from res tbl)
         sel_cid = front.get_restbl_cid(row)
         front.selectResSignal.emit(sel_cid)
+
+    @slot_(QtGui.QTableWidgetItem)
+    @clicked
+    def name_tbl_clicked(front, item):
+        row, col = (item.row(), item.column())
+        front.print('name_tbl_clicked(%r, %r)' % (row, col))
+        sel_name = front.get_nametbl_name(row)
+        front.selectNameSignal.emit(sel_name)
+
+    #=======================
+    # Other
+    #=======================
 
     @slot_(int)
     def change_view(front, new_state):

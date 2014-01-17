@@ -353,8 +353,7 @@ def show_top(res, hs, *args, **kwargs):
     figtitle = kwargs.pop('figtitle', 'q%s -- TOP %r' % (cxstr, N))
     max_nCols = min(5, N)
     return _show_res(hs, res, topN_cxs=topN_cxs, figtitle=figtitle,
-                     max_nCols=max_nCols, draw_kpts=False,
-                     draw_ell=False, draw_pts=True,
+                     max_nCols=max_nCols, draw_kpts=False, draw_ell=False,
                      all_kpts=False, **kwargs)
 
 
@@ -457,14 +456,21 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk, **kwargs):
         xlabel_.append('gname=%r' % hs.cx2_gname(cx))
     if kwargs.get('show_name', True):
         xlabel_.append('name=%r' % hs.cx2_name(cx))
+    if kwargs.get('time_appart', True):
+        import datetime
+        unixtime1, unixtime2 = hs.cx2_unixtime([qcx, cx])
+        unixtime_diff = unixtime2 - unixtime1
+        sign = '+' if unixtime_diff > 0 else '-'
+        delta = datetime.timedelta(seconds=abs(unixtime_diff))
+        time_appart_str = 'timedelta(%s%s)' % (sign, str(delta))
+        xlabel_.append(time_appart_str)
     xlabel = ', '.join(xlabel_)
 
     # Draws the chips and keypoint matches
-    scm2 = df2.show_chipmatch2
     kwargs_ = dict(fs=fs, lbl1=lbl1, lbl2=lbl2, title=title, fnum=fnum,
                    pnum=pnum, vert=hs.prefs.display_cfg.vert)
     kwargs_.update(kwargs)
-    ax, xywh1, xywh2 = scm2(rchip1, rchip2, kpts1, kpts2, fm, **kwargs_)
+    ax, xywh1, xywh2 = df2.show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm, **kwargs_)
     x1, y1, w1, h1 = xywh1
     x2, y2, w2, h2 = xywh2
     offset2 = (x2, y2)
@@ -587,6 +593,7 @@ def _show_res(hs, res, **kwargs):
         def _clicked_none():
             # Toggle if the click is not in any axis
             printDBG('clicked none')
+            print(kwargs)
             _show_res(hs, res, annote=not annote, **kwargs)
             fig.canvas.draw()
 
@@ -594,7 +601,7 @@ def _show_res(hs, res, **kwargs):
             'result interaction mpl event callback slot'
             print('[viz] clicked result')
             if event.xdata is None or event.inaxes is None:
-                print('clicked outside axes')
+                #print('clicked outside axes')
                 return _clicked_none()
             hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', '')
             printDBG(event.__dict__)

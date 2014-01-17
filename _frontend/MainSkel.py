@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/MainSkel.ui'
 #
-# Created: Mon Jan  6 10:41:59 2014
+# Created: Fri Jan 17 14:59:33 2014
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -65,6 +65,16 @@ class Ui_mainSkel(object):
         self.verticalLayout_3.addWidget(self.chip_TBL)
         self.gridLayout_4.addLayout(self.verticalLayout_3, 0, 0, 1, 1)
         self.tablesTabWidget.addTab(self.chip_view, _fromUtf8(""))
+        self.name_view = QtGui.QWidget()
+        self.name_view.setObjectName(_fromUtf8("name_view"))
+        self.gridLayout = QtGui.QGridLayout(self.name_view)
+        self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
+        self.name_TBL = QtGui.QTableWidget(self.name_view)
+        self.name_TBL.setObjectName(_fromUtf8("name_TBL"))
+        self.name_TBL.setColumnCount(0)
+        self.name_TBL.setRowCount(0)
+        self.gridLayout.addWidget(self.name_TBL, 0, 0, 1, 1)
+        self.tablesTabWidget.addTab(self.name_view, _fromUtf8(""))
         self.result_view = QtGui.QWidget()
         self.result_view.setObjectName(_fromUtf8("result_view"))
         self.verticalLayout_5 = QtGui.QVBoxLayout(self.result_view)
@@ -306,6 +316,7 @@ class Ui_mainSkel(object):
         self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.image_view), QtGui.QApplication.translate("mainSkel", "Image Table", None, QtGui.QApplication.UnicodeUTF8))
         self.chip_TBL.setSortingEnabled(True)
         self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.chip_view), QtGui.QApplication.translate("mainSkel", "Chip Table", None, QtGui.QApplication.UnicodeUTF8))
+        self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.name_view), QtGui.QApplication.translate("mainSkel", "Name View", None, QtGui.QApplication.UnicodeUTF8))
         self.res_TBL.setSortingEnabled(True)
         self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.result_view), QtGui.QApplication.translate("mainSkel", "Query Results Table", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("mainSkel", "File", None, QtGui.QApplication.UnicodeUTF8))

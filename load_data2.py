@@ -592,11 +592,12 @@ def make_image_csv2(hs, gx_list):
 
 def make_name_csv2(hs, nx_list):
     'returns an name table csv string'
-    nx2_name  = hs.tables.nx2_name[nx_list]
+    nx_list_  = np.setdiff1d(nx_list, [0, 1])   # dont write ____ for backcomp
+    nx2_name  = hs.tables.nx2_name[nx_list_]
     # Make name_table.csv
     header = '# name table'
     column_labels = ['nid', 'name']
-    column_list   = [nx_list[2:], nx2_name[2:]]  # dont write ____ for backcomp
+    column_list   = [nx_list_, nx2_name]
     name_table = make_csv_table(column_labels, column_list, header)
     return name_table
 

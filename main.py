@@ -117,8 +117,37 @@ if __name__ == '__main__':
 
     # Allow for a IPython connection by passing the --cmd flag
     embedded = False
-    exec(helpers.ipython_execstr())
+    if helpers.argv_flag('--cmd'):
+        import scripts
+        import generate_training
+        import sys
+
+        def do_encounters(seconds=None):
+            if not 'seconds' in vars() or seconds is None:
+                seconds = 5
+            scripts.rrr()
+            do_enc_loc = scripts.compute_encounters(hs, back, seconds)
+            return do_enc_loc
+
+        def do_extract_encounter(eid=None):
+            if not 'eid' in vars() or eid is None:
+                eid = 'eid=1 nGxs=43'
+            scripts.rrr()
+            extr_enc_loc = scripts.extract_encounter(hs, eid)
+            export_subdb_locals = extr_enc_loc['export_subdb_locals']
+            return extr_enc_loc, export_subdb_locals
+
+        def do_generate_training():
+            generate_training.rrr()
+            return generate_training.generate_detector_training_data(hs, (512, 256))
+
+        def vgd():
+            return generate_training.vgd(hs)
+
+        exec(helpers.ipython_execstr())
+        sys.exit(1)
     if not embedded:
         # If not in IPython run the QT main loop
         guitools.run_main_loop(app, is_root, back, frequency=100)
+
     signal_reset()

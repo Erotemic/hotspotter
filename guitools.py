@@ -54,14 +54,14 @@ def slot_(*types, **kwargs_):  # This is called at wrap time to get args
     kwargs_['initdbg']
     kwargs_['rundbg']
     '''
-    initdbg = kwargs_.get('initdbg', False)
-    rundbg  = kwargs_.get('rundbg', False)
+    initdbg = kwargs_.get('initdbg', DEBUG)
+    rundbg  = kwargs_.get('rundbg', DEBUG)
 
     # Wrap with debug statments
     def pyqtSlotWrapper(func):
         func_name = func.func_name
         if initdbg:
-            print('[@guitools] Wrapping %r with dbgslot_' % func.func_name)
+            print('[@guitools] Wrapping %r with slot_' % func.func_name)
 
         if rundbg:
             @Qt.pyqtSlot(*types, name=func.func_name)
@@ -69,10 +69,10 @@ def slot_(*types, **kwargs_):  # This is called at wrap time to get args
                 argstr_list = map(str, args)
                 kwastr_list = ['%s=%s' % item for item in kwargs.iteritems()]
                 argstr = ', '.join(argstr_list + kwastr_list)
-                print('[**dbgslot_] %s(%s)' % (func_name, argstr))
+                print('[**slot_.Begining] %s(%s)' % (func_name, argstr))
                 #with helpers.Indenter():
                 result = func(self, *args, **kwargs)
-                print('[**dbgslot_] Finished %s(%s)' % (func_name, argstr))
+                print('[**slot_.Finished] %s(%s)' % (func_name, argstr))
                 return result
         else:
             @Qt.pyqtSlot(*types, name=func.func_name)
@@ -109,6 +109,8 @@ def backblocking(func):
                 print('*args = %r' % (args,))
                 print('**kwargs = %r' % (kwargs,))
             #print('ex = %r' % ex)
+            import traceback
+            print(traceback.format_exc())
             back.user_info('Error in blocking ex=%r' % ex)
             raise
         back.front.blockSignals(wasBlocked_)

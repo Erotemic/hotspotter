@@ -240,12 +240,10 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
     if cx is None:
         cx = res.topN_cxs(hs, 1)[0]
     rchip1, rchip2 = hs.get_chip([qcx, cx])
-    kpts1, kpts2   = hs.get_kpts([qcx, cx])
-    desc1, desc2   = hs.get_desc([qcx, cx])
     fm = res.cx2_fm[cx]
     mx = kwargs.pop('mx', None)
     xywh2_ptr = [None]
-    annote_ptr = [True]
+    annote_ptr = [False]
 
     # Draw default
     def _chipmatch_view():
@@ -268,6 +266,8 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
         # Helper functions and args
         # Get the mx-th feature match
         fx1, fx2 = fm[mx]
+        kpts1, kpts2 = hs.get_kpts([qcx, cx])
+        desc1, desc2 = hs.get_desc([qcx, cx])
         kp1, kp2     = kpts1[fx1], kpts2[fx2]
         sift1, sift2 = desc1[fx1], desc2[fx2]
         # Extracted keypoints to draw
@@ -330,6 +330,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
             if len(fm) == 0:
                 print('[inter] no feature matches to click')
                 return
+            kpts1, kpts2 = hs.get_kpts([qcx, cx])
             kpts1_m = kpts1[fm[:, 0]]
             kpts2_m = kpts2[fm[:, 1]]
             x2, y2, w2, h2 = xywh2_ptr[0]

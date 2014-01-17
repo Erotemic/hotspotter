@@ -1,25 +1,37 @@
 from __future__ import division, print_function
+import __common__
+(print, print_, print_on, print_off,
+ rrr, profile) = __common__.init(__name__, '[training]')
 import numpy as np
 from hotspotter import helpers
 from hotspotter import chip_compute2 as cc2
 from os.path import join
 
-uniform_size = (512, 256)
+
+def get_training_output_dir(hs):
+    output_dir = join(hs.dirs.computed_dir, 'training_examples')
+    return output_dir
 
 
-def generate_detector_training_data(hs):
+def vdg(hs):
+    output_dir = get_training_output_dir(hs)
+    helpers.vd(output_dir)
+
+
+def generate_detector_training_data(hs, uniform_size=(512, 256)):
     print('')
     print('===================')
     print('Generating training data')
     lazy = helpers.argv_flag('--lazy', True)
-    output_dir = join(hs.dirs.computed_dir, 'training_examples')
+    output_dir = get_training_output_dir(hs)
+
     batch_extract_kwargs = {
         'lazy': lazy,
         'num_procs': hs.args.num_procs,
         'force_gray': False,
         'uniform_size': uniform_size,
     }
-    #extract_detector_positives(hs, output_dir, batch_extract_kwargs)
+    extract_detector_positives(hs, output_dir, batch_extract_kwargs)
     extract_detector_negatives(hs, output_dir, batch_extract_kwargs)
 
 
@@ -52,7 +64,7 @@ def extract_detector_negatives(hs, output_dir, batch_extract_kwargs):
         cfpath_list.append(cfpath)
 
     width_split = 2
-    (uw, uh) = uniform_size
+    (uw, uh) = batch_extract_kwargs['uniform_size']
 
     for gx in negall_gxs:
         gfpath = hs.gx2_gname(gx, full=True)
@@ -74,9 +86,6 @@ def extract_detector_negatives(hs, output_dir, batch_extract_kwargs):
 
     theta_list = [0] * len(roi_list)
 
-    if batch_extract_kwargs['lazy']:
-        helpers.vd(negreg_dir)
-
     cc2.batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
                             **batch_extract_kwargs)
 
@@ -95,8 +104,6 @@ def extract_detector_positives(hs, output_dir, batch_extract_kwargs):
     pos_fmt = join(posoutput_dir, 'cid%d_gx%d_pos.png')
     cfpath_list = [pos_fmt  % (cid, gx)
                    for (cid, gx) in zip(cid_list, gx_list)]
-    if batch_extract_kwargs['lazy']:
-        helpers.vd(posoutput_dir)
 
     cc2.batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
                             **batch_extract_kwargs)

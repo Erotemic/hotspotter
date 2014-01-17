@@ -555,7 +555,9 @@ class MainWindowBackend(QtCore.QObject):
         back.populate_image_table()
         back.populate_chip_table()
         back.populate_result_table()
-        back.select_gx(gx, cx)
+        # RCOS TODO: Autoselect should be an option
+        #back.select_gx(gx, cx)
+        back.select_gx(gx)
         print('')
 
     # Action -> Query

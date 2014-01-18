@@ -251,15 +251,24 @@ def plot_name(hs, qcx, fnum=1, **kwargs):
 
 def show_names(hs, qcx_list, fnum=1):
     '''The most recent plot names function, works with qcx_list'''
+    print('[dev] show_names()')
     result_dir = hs.dirs.result_dir
     names_dir = join(result_dir, 'show_names')
     helpers.ensuredir(names_dir)
-    for (qcx) in qcx_list:
-        print('Showing q%s - %r' % (hs.cidstr(qcx, notes=True)))
-        notes = hs.cx2_property(qcx, 'Notes')
-        fnum = plot_name(hs, qcx, fnum, subtitle=notes, annote=not hs.args.noannote)
-        if hs.args.save_figures:
-            df2.save_figure(fpath=names_dir, usetitle=True)
+    # NEW:
+    print(qcx_list)
+    nx_list = np.unique(hs.tables.cx2_nx[qcx_list])
+    print(nx_list)
+    for nx in nx_list:
+        viz.plot_name(hs, nx, fnum=fnum)
+        df2.save_figure(fpath=names_dir, usetitle=True)
+    # OLD:
+    #for (qcx) in qcx_list:
+        #print('Showing q%s - %r' % (hs.cidstr(qcx, notes=True)))
+        #notes = hs.cx2_property(qcx, 'Notes')
+        #fnum = plot_name(hs, qcx, fnum, subtitle=notes, annote=not hs.args.noannote)
+        #if hs.args.save_figures:
+            #df2.save_figure(fpath=names_dir, usetitle=True)
     return fnum
 
 
@@ -314,8 +323,10 @@ def get_qcx_list(hs):
     # Sample a large pool of query indexes
     histids = None if hs.args.histid is None else np.array(hs.args.histid)
     if hs.args.all_cases:
+        print('[dev] all cases')
         qcx_all = get_cases(hs, with_gt=True, with_nogt=True)
     elif hs.args.all_gt_cases:
+        print('[dev] all gt cases')
         qcx_all = get_cases(hs, with_hard=True, with_gt=True, with_nogt=False)
     elif hs.args.qcid is None:
         qcx_all = get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
@@ -493,6 +504,8 @@ def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True, with_notes=False
             gt_cxs = hs.get_other_indexed_cxs(cx)
             if len(gt_cxs) > 0:
                 qcx_list += [cx]
+    if with_gt and with_nogt:
+        qcx_list = valid_cxs
     return qcx_list
 
 
@@ -590,11 +603,11 @@ def export_qon_list(hs, qcx_list):
 
 def all_printoff():
     import fileio as io
-    import HotSpotter
+    import HotSpotterAPI
     ds.print_off()
     mf.print_off()
     io.print_off()
-    HotSpotter.print_off()
+    HotSpotterAPI.print_off()
     mc3.print_off()
     vr2.print_off()
     #algos.print_off()

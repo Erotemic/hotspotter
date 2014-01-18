@@ -29,6 +29,8 @@ from Preferences import Pref
 def _checkargs_onload(hs):
     'checks relevant arguments after loading tables'
     args = hs.args
+    if args is None:
+        return
     if args.vrd or args.vrdq:
         hs.vrd()
         if args.vrdq:
@@ -95,7 +97,7 @@ def _delete_image(hs, gx_list):
             hs.delete_chip(cx, resample=False)
         hs.tables.gx2_gname[gx] = ''
 
-    trash_dir = join(hs.dbdir, 'deleted-images')
+    trash_dir = join(hs.dirs.db_dir, 'deleted-images')
     src_list = hs.gx2_gname(gx_list, full=True)
     dst_list = hs.gx2_gname(gx_list, prefix=trash_dir)
     helpers.ensuredir(trash_dir)
@@ -131,7 +133,7 @@ def _gx2_unixtime(hs, gx_list):
 class HotSpotter(DynStruct):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
-        super(HotSpotter, hs).__init__()
+        super(HotSpotter, hs).__init__(child_exclude_list=['prefs', 'args'])
         #printDBG('[\hs] Creating HotSpotter API')
         hs.args = args
         hs.tables = None
@@ -156,12 +158,12 @@ class HotSpotter(DynStruct):
         hs.query_history = [(None, None)]
         hs.qdat = ds.QueryData()  # Query Data
         if db_dir is not None:
-            hs.args.dbdir = db_dir
+            hs.load_tables(db_dir=db_dir)
         #printDBG(r'[/hs] Created HotSpotter API')
 
     def rrr(hs):
-        import HotSpotter
-        HotSpotter.rrr()
+        import HotSpotterAPI
+        HotSpotterAPI.rrr()
 
     def import_scripts(hs):
         return _import_scripts(hs)
@@ -234,12 +236,13 @@ class HotSpotter(DynStruct):
             hs.load_features([])
         return hs
 
-    def load_tables(hs):
-        # Check to make sure dbdir is specified correctly
-        if hs.args.dbdir is None or not exists(hs.args.dbdir):
-            raise ValueError('db_dir=%r does not exist!' % (hs.args.dbdir))
-        # convert_db.convert_if_needed(hs.args.dbdir)
-        hs_dirs, hs_tables, db_version = ld2.load_csv_tables(hs.args.dbdir)
+    def load_tables(hs, db_dir=None):
+        # Check to make sure db_dir is specified correctly
+        if db_dir is None:
+            db_dir = hs.args.dbdir
+        if db_dir is None or not exists(db_dir):
+            raise ValueError('db_dir=%r does not exist!' % (db_dir))
+        hs_dirs, hs_tables, db_version = ld2.load_csv_tables(db_dir)
         hs.tables = hs_tables
         hs.dirs = hs_dirs
         if db_version != 'current':
@@ -436,9 +439,9 @@ class HotSpotter(DynStruct):
     # ---------------
     def add_property(hs, key):
         if not isinstance(key, str):
-            raise UserWarning('New property %r is a %r, not a string.' % (key, type(key)))
+            raise ValueError('[hs] New property %r is a %r, not a string.' % (key, type(key)))
         if key in hs.tables.prop_dict:
-            raise UserWarning('Property add an already existing property')
+            raise UserWarning('[hs] WARNING: Property add an already existing property')
         hs.tables.prop_dict[key] = ['' for _ in xrange(hs.get_num_chips())]
 
     def add_name(hs, name):
@@ -449,7 +452,14 @@ class HotSpotter(DynStruct):
         nx = len(hs.tables.nx2_name) - 1
         return nx
 
-    def add_chip(hs, gx, roi):
+    # RCOS TODO: Rectify this with add_name and user iter_input
+    def add_names(hs, name_list):
+        # TODO Assert names are unique
+        nx2_name = hs.tables.nx2_name.tolist()
+        nx2_name.extend(name_list)
+        hs.tables.nx2_name = np.array(nx2_name)
+
+    def add_chip(hs, gx, roi, nx=0, theta=0, props={}, dochecks=True):
         # TODO: Restructure for faster adding (preallocate and double size)
         # OR just make all the tables python lists
         print('[hs] adding chip to gx=%r' % gx)
@@ -458,21 +468,23 @@ class HotSpotter(DynStruct):
         else:
             next_cid = 1
         # Remove any conflicts from disk
-        hs.delete_ciddata(next_cid)
+        if dochecks:
+            hs.delete_ciddata(next_cid)
         # Allocate space for a new chip
         hs.tables.cx2_cid   = np.concatenate((hs.tables.cx2_cid, [next_cid]))
-        hs.tables.cx2_nx    = np.concatenate((hs.tables.cx2_nx,  [0]))
+        hs.tables.cx2_nx    = np.concatenate((hs.tables.cx2_nx,  [nx]))
         hs.tables.cx2_gx    = np.concatenate((hs.tables.cx2_gx,  [gx]))
         hs.tables.cx2_roi   = np.vstack((hs.tables.cx2_roi, [roi]))
-        hs.tables.cx2_theta = np.concatenate((hs.tables.cx2_theta, [0]))
+        hs.tables.cx2_theta = np.concatenate((hs.tables.cx2_theta, [theta]))
         prop_dict = hs.tables.prop_dict
         for key in prop_dict.iterkeys():
-            prop_dict[key].append('')
+            prop_dict[key].append(props.get(key, ''))
         #hs.num_cx += 1
         cx = len(hs.tables.cx2_cid) - 1
-        hs.update_samples()
-        # Remove any conflicts from memory
-        hs.unload_cxdata(cx)
+        if dochecks:
+            hs.update_samples()
+            # Remove any conflicts from memory
+            hs.unload_cxdata(cx)
         return cx
 
     def add_images(hs, fpath_list, move_images=True):
@@ -558,9 +570,9 @@ class HotSpotter(DynStruct):
     # ---------------
     def has_property(hs, key):
         return key in hs.tables.prop_dict
+
     def get_name_datatup_list(hs, nx_list, **kwargs):
         return _get_name_datatup_list(hs, nx_list, **kwargs)
-
 
     def get_img_datatup_list(hs, gx_list,
                              header_order=['Image Index',

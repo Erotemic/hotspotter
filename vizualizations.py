@@ -110,7 +110,7 @@ def plot_name_of_cx(hs, cx, **kwargs):
 
 
 def plot_name(hs, nx, nx2_cxs=None, fnum=0, hl_cxs=[], subtitle='',
-              annote=True, **kwargs):
+              annote=False, **kwargs):
     print('[viz] plot_name nx=%r' % nx)
     nx2_name = hs.tables.nx2_name
     cx2_nx   = hs.tables.cx2_nx
@@ -130,14 +130,21 @@ def plot_name(hs, nx, nx2_cxs=None, fnum=0, hl_cxs=[], subtitle='',
     fig = df2.figure(fnum=fnum, pnum=pnum(0), **kwargs)
     fig.clf()
     for px, cx in enumerate(cxs):
-        show_chip(hs, cx=cx, pnum=pnum(px), draw_kpts=annote, kpts_alpha=.2)
+        show_chip(hs, cx=cx, pnum=pnum(px), draw_kpts=annote, kpts_alpha=.2,
+                  info=False, cid_info=True)
         if cx in hl_cxs:
             ax = df2.gca()
             df2.draw_border(ax, df2.GREEN, 4)
         #plot_cx3(hs, cx)
-    title = 'nx=%r -- name=%r' % (nx, name)
-    if not annote:
-        title += ' noannote'
+    if isinstance(nx, np.ndarray):
+        nx = nx[0]
+    if isinstance(name, np.ndarray):
+        name = name[0]
+
+    figtitle = 'nx=%r -- name=%r' % (nx, name)
+    df2.set_figtitle(figtitle)
+    #if not annote:
+        #title += ' noannote'
     #gs2.tight_layout(fig)
     #gs2.update(top=df2.TOP_SUBPLOT_ADJUST)
     #df2.set_figtitle(title, subtitle)
@@ -241,7 +248,8 @@ def show_splash(fnum=1, **kwargs):
 
 def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
               nRandKpts=None, kpts_alpha=None, kpts=None, rchip=None,
-              ell_alpha=None, ell_color=None, prefix='', ell_args=None, **kwargs):
+              ell_alpha=None, ell_color=None, prefix='', ell_args=None,
+              cid_info=False, **kwargs):
     if not res is None:
         cx = res.qcx
     if not allres is None:
@@ -250,12 +258,15 @@ def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
         rchip = hs.get_chip(cx)
     title_str = prefix
     # Add info to title
+    # TODO: CLEAN THIS UP. THIS IS REAL BAD
     if info:
         gname = hs.cx2_gname(cx)
         name = hs.cx2_name(cx)
         ngt_str = hs.num_indexed_gt_str(cx)
         title_str += ', '.join([hs.cidstr(cx), 'name=%r' % name,
                                'gname=%r' % gname, ngt_str, ])
+    elif cid_info:
+        title_str += hs.cidstr(cx)
     fig, ax = df2.imshow(rchip, title=title_str, **kwargs)
     ax._hs_viewtype = 'chip'  # Customize axis
     #if not res is None:

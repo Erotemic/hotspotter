@@ -40,6 +40,12 @@ def safe_listget(list_, index, func=lambda x: x, default='?'):
 
 
 def class_iter_input(func):
+    '''
+    class_iter_input is a decorator which expects to be used on class methods.
+    It lets the user pass either a vector or a scalar to a function, as long as
+    the function treats everything like a vector. Input and output is sanatized
+    to the user expected format on return.
+    '''
     def iter_wrapper(self, input_, *args, **kwargs):
         is_scalar = not np.iterable(input_) or is_str(input_)
         result = func(self, (input_,), *args, **kwargs) if is_scalar else \

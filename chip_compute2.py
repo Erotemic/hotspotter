@@ -486,7 +486,7 @@ def load_chips(hs, cx_list=None, **kwargs):
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
-    import HotSpotter
+    import HotSpotterAPI
     import argparse2
     import vizualizations as viz
     import chip_compute2 as cc2
@@ -499,7 +499,7 @@ if __name__ == '__main__':
     kwargs = {}
     # --- LOAD TABLES --- #
     args = argparse2.parse_arguments(defaultdb='NAUTS')
-    hs = HotSpotter.HotSpotter(args)
+    hs = HotSpotterAPI.HotSpotter(args)
     hs.load_tables()
     hs.update_samples()
     # --- LOAD CHIPS --- #

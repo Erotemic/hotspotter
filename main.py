@@ -69,7 +69,7 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
     matplotlib.use('Qt4Agg')
     import argparse2
     args = argparse2.parse_arguments(defaultdb=defaultdb)
-    import HotSpotter
+    import HotSpotterAPI
     import helpers
     # Parse arguments
     args = argparse2.fix_args_with_cache(args)
@@ -85,7 +85,7 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
         io.delete_global_cache()
 
     # --- Build HotSpotter API ---
-    hs = HotSpotter.HotSpotter(args)
+    hs = HotSpotterAPI.HotSpotter(args)
     # Load all data if needed now, otherwise be lazy
     try:
         hs.load(load_all=load_all)
@@ -140,6 +140,12 @@ if __name__ == '__main__':
         def do_generate_training():
             generate_training.rrr()
             return generate_training.generate_detector_training_data(hs, (512, 256))
+
+        def do_import_database():
+            scripts.rrr()
+            from os.path import expanduser, join
+            workdir = expanduser('~/data/work')
+            other_dbdir = join(workdir, 'hsdb_exported_138_185_encounter_eid=1 nGxs=43')
 
         def vgd():
             return generate_training.vgd(hs)

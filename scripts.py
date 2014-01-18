@@ -12,6 +12,7 @@ from scipy.cluster.hierarchy import fclusterdata
 import fileio as io
 import helpers
 import load_data2 as ld2
+from itertools import izip
 
 #from dbgimport import *  # NOQA
 
@@ -64,6 +65,172 @@ def export_subdatabase(hs, gx_list, new_dbdir):
     helpers.write_to(name_table_fpath, name_table)
     helpers.write_to(image_table_fpath, image_table)
     return locals()
+
+
+def import_database(hs, other_dbdir):
+    '''
+    %run dbgimport.py
+    workdir = expanduser('~/data/work')
+    other_dbdir = join(workdir, 'hsdb_exported_138_185_encounter_eid=1 nGxs=43')
+    '''
+    import HotSpotterAPI as api
+
+    dbdir1 = hs.dirs.db_dir
+    dbdir2 = other_dbdir
+
+    print('[scripts] Importing %r into %r' % (dbdir2, dbdir1))
+
+    hs1 = hs
+    hs2 = api.HotSpotter(hs1.args, db_dir=dbdir2)
+
+    names1 = hs1.tables.nx2_name[:]
+    names2 = hs2.tables.nx2_name[:]
+    print('num_names1 = %r' % len(names1))
+    print('num_names2 = %r' % len(names2))
+    common_names = np.setdiff1d(np.intersect1d(names1, names2), [ld2.UNKNOWN_NAME])
+    unique_names2 = np.setdiff1d(np.setdiff1d(names2, common_names), [ld2.UNKNOWN_NAME])
+    if len(common_names) > 0:
+        print('warning: the following names are used by both databases.')
+        print('         I hope they are consistent.')
+        print(common_names)
+
+    gnames1 = hs1.tables.gx2_gname[:]
+    gnames2 = hs2.tables.gx2_gname[:]
+    print('num_gnames1 = %r' % len(gnames1))
+    print('num_gnames2 = %r' % len(gnames2))
+    common_gnames = np.intersect1d(gnames1, gnames2)
+    unique_gnames2 = np.setdiff1d(gnames2, common_gnames)
+
+    if len(unique_gnames2) > 0:
+        msg = ('I havent been programmed to handle len(unique_gnames) > 0')
+        print(msg)
+        raise NotImplementedError(msg)
+
+    # RCOS TODO: Rectify this with add_name and user iter_input
+    def add_names(hs, name_list):
+        # TODO Assert names are unique
+        nx2_name = hs.tables.nx2_name.tolist()
+        nx2_name.extend(name_list)
+        hs.tables.nx2_name = np.array(nx2_name)
+
+    # Add new names to database1
+    add_names(hs1, unique_names2)
+
+    # Build mapings from database2 to database1 indexes
+    gx_map = {}
+    for gx2, gname in enumerate(gnames2):
+        gx1 = np.where(hs1.tables.gx2_gname == gname)[0][0]
+        gx_map[gx2] = gx1
+
+    nx_map = {}
+    for nx2, name in enumerate(names2):
+        nx1 = np.where(hs1.tables.nx2_name == name)[0][0]
+        nx_map[nx2] = nx1
+
+    for key in hs2.tables.prop_dict.keys():
+        try:
+            hs1.add_property(key)
+        except UserWarning as ex:
+            print(ex)
+            pass
+
+    # Build lists using database1 indexes
+    cx_list2   = hs2.get_valid_cxs()
+    change_cxs = []
+    add_cxs = []
+    # Find all chips which are in the same image and have the same roi
+    for cx2 in cx_list2:
+        gx2 = hs2.cx2_gx(cx2)
+        gx1 = gx_map[gx2]
+        cxs1 = hs1.gx2_cxs(gx1)
+        rois1 = hs1.cx2_roi(cxs1)
+        roi2 = hs2.cx2_roi(cx2)
+        found = np.where(map(np.all, roi2 == rois1))[0]
+        if len(found) == 1:
+            cx1 = cxs1[found[0]]
+            change_cxs.append((cx2, cx1))
+        else:
+            add_cxs.append(cx1)
+
+    for cx2, cx1 in change_cxs:
+        name2 = hs2.cx2_name(cx2)
+        name1 = hs1.cx2_name(cx1)
+        if name1 != name2:
+            if name1 != ld2.UNKNOWN_NAME:
+                print('conflict')
+            hs1.change_name(cx1, name2)
+            for key, vals in hs2.tables.prop_dict.iteritems():
+                hs1.change_property(cx1, key, vals[cx2])
+
+    gx_list2    = [gx_map[hs2.tables.cx2_gx[cx]] for cx in cx_list2]
+    nx_list2    = [nx_map[hs2.tables.cx2_nx[cx]] for cx in cx_list2]
+    roi_list2   = hs.tables.cx2_roi[cx_list2]
+    theta_list2 = hs.tables.cx2_theta[cx_list2]
+    prop_dict2  = {propkey: [cx2_propval[cx] for cx in iter(cx_list2)]
+                   for (propkey, cx2_propval) in hs2.tables.prop_dict.iteritems()}
+
+    for key in prop_dict2.keys():
+        try:
+            hs1.add_property(key)
+        except UserWarning as ex:
+            print(ex)
+            pass
+
+    # RCOS FIXME: This is a bad way of preallocing data.
+    # Need to do it better. Modify add_chip to do things correctly
+
+    def zip_dict(dict_):
+        return [{k: v for k, v in zip(dict_.keys(), tup)} for tup in izip(*dict_.values())]
+
+    # RCOS: FIXME: This script actually doesn't work correctly.
+    # It works when all you need to do is update names though.
+    #gx_list    = gx_list2
+    #roi_list   = roi_list2
+    #nx_list    = nx_list2
+    #theta_list = theta_list2
+    #props_dict = prop_dict2
+
+    # TODO: Replace add_chips with a better version of this
+    def add_chips(hs, gx_list, roi_list, nx_list, theta_list, props_dict, dochecks=True):
+        if len(hs.tables.cx2_cid) > 0:
+            next_cid = hs.tables.cx2_cid.max() + 1
+        else:
+            next_cid = 1
+        num_new = len(gx_list)
+        next_cids = np.arange(next_cid, next_cid + num_new)
+        # Check to make sure lengths are consitent
+        list_lens = map(len, [next_cids, gx_list, roi_list, nx_list, theta_list])
+        prop_lens = map(len, props_dict.values())
+        sizes_agree = all([len_ == num_new for len_ in list_lens + prop_lens])
+        assert sizes_agree, 'sizes do not agree'
+        # Remove any conflicts from disk
+        if dochecks:
+            for cid in next_cids:
+                hs.delete_ciddata(cid)
+        # Allocate space for a new chip
+        hs.tables.cx2_cid   = np.concatenate((hs.tables.cx2_cid, next_cids))
+        hs.tables.cx2_nx    = np.concatenate((hs.tables.cx2_nx,  nx_list))
+        hs.tables.cx2_gx    = np.concatenate((hs.tables.cx2_gx,  gx_list))
+        hs.tables.cx2_roi   = np.vstack((hs.tables.cx2_roi, roi_list))
+        hs.tables.cx2_theta = np.concatenate((hs.tables.cx2_theta, theta_list))
+        prop_dict = hs.tables.prop_dict
+        for key in prop_dict.iterkeys():
+            try:
+                prop_dict[key].extend(props_dict[key])
+            except KeyError:
+                default = ['' for _ in xrange(num_new)]
+                prop_dict[key].extend(default)
+        #hs.num_cx += 1
+        new_len = len(hs.tables.cx2_cid)
+        cxs = np.arange(new_len - num_new, new_len)
+        hs.update_samples()
+        # Remove any conflicts from memory
+        for cx in cxs:
+            hs.unload_cxdata(cx)
+        return cx
+
+    add_chips(hs1, gx_list2, roi_list2, nx_list2, theta_list2, prop_dict2, dochecks=False)
+    #back.populate_tables()
 
 
 def delete_suffixed_images(hs, back):

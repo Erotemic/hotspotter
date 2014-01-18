@@ -15,7 +15,7 @@ import fileio as io
 import draw_func2 as df2
 import vizualizations as viz
 import interaction
-import HotSpotter
+import HotSpotterAPI
 from guitools import drawing, slot_
 from guitools import backblocking as blocking
 
@@ -504,7 +504,7 @@ class MainWindowBackend(QtCore.QObject):
                 db_dir = guitools.select_directory('Select (or create) a database directory.')
             print('[*back] user selects database: ' + db_dir)
             # Try and load db
-            hs = HotSpotter.HotSpotter(args=args, db_dir=db_dir)
+            hs = HotSpotterAPI.HotSpotter(args=args, db_dir=db_dir)
             hs.load(load_all=False)
             # Write to cache and connect if successful
             io.global_cache_write('db_dir', db_dir)

@@ -589,10 +589,7 @@ if __name__ == '__main__':
     __REAL_DATA_MODE__ = True
     if __REAL_DATA_MODE__:
         import main
-        import HotSpotter
-        args = main.parse_arguments(db='NAUTS')
-        hs = HotSpotter.HotSpotter(args)
-        hs.load(load_all=True)
+        hs = main.main(defaultdb='NAUTS')
         cache_dir = hs.dirs.cache_dir
         cx2_desc = hs.feats.cx2_desc
         data = np.vstack(cx2_desc)

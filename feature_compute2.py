@@ -194,7 +194,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     print('[fc2] __main__ = feature_compute2.py')
     import main
-    import HotSpotter
+    import HotSpotterAPI
     import vizualizations as viz
     import feature_compute2 as fc2
     from feature_compute2 import *  # NOQA
@@ -204,7 +204,7 @@ if __name__ == '__main__':
     kwargs = {}
     # --- LOAD TABLES --- #
     args = main.parse_arguments(db='NAUTS')
-    hs = HotSpotter.HotSpotter(args)
+    hs = HotSpotterAPI.HotSpotter(args)
     hs.load_tables()
     hs.set_samples()
     # --- LOAD CHIPS --- #

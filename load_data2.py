@@ -49,6 +49,8 @@ RDIR_FEAT     = join(RDIR_COMPUTED, 'feats')
 RDIR_RESULTS  = join(RDIR_COMPUTED, 'results')
 RDIR_QRES     = join(RDIR_COMPUTED, 'query_results')
 
+UNKNOWN_NAME = '____'
+
 #========================================
 # DRIVER CODE
 #========================================
@@ -197,7 +199,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         # --- READ NAMES ---
         # ------------------
         print('[ld2] Loading name table: %r' % name_table)
-        nx2_name = ['____', '____']
+        nx2_name = [UNKNOWN_NAME, UNKNOWN_NAME]
         nid2_nx  = {0: 0, 1: 1}
         name_lines = open(name_table, 'r')
         for line_num, csv_line in enumerate(name_lines):

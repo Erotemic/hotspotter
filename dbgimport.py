@@ -1,9 +1,12 @@
 from __future__ import division, print_function
 # Python
 from collections import OrderedDict
-from os.path import dirname, realpath, join, exists, normpath, splitext
+from os.path import (dirname, realpath, join, exists, normpath, splitext,
+                     expanduser)
 import imp
 import itertools
+from itertools import izip
+from itertools import product as iprod
 import multiprocessing
 import os
 import re
@@ -22,7 +25,8 @@ from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
                       Qt, QObject, pyqtSlot, QKeyEvent)
 # HotSpotter
 import DataStructures as ds
-import HotSpotter
+import HotSpotterAPI
+import HotSpotterAPI as api
 import Parallelize as parallel
 import algos
 import chip_compute2 as cc2

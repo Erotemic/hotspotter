@@ -17,6 +17,9 @@ from _tpl import mask_creator
 # RCOS TODO: We should change the fnum, pnum figure layout into one managed by
 # gridspec.
 
+#================
+# HELPERS
+#================
 
 def printDBG(msg):
     pass
@@ -83,7 +86,12 @@ def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None):
     return px + nCols
 
 
-# CHIP INTERACTION
+# NAME INTERACTION
+def interact_name(hs, nx, sel_cx=None, fnum=5, **kwargs):
+    pass
+
+
+# CHIP INTERACTION 1
 def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, nodraw=False, **kwargs):
     fig = df2.figure(fnum=fnum)
     df2.disconnect_callback(fig, 'button_press_event')
@@ -152,6 +160,7 @@ def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, nodraw=False, **k
         df2.draw()
 
 
+# CHIP INTERACTION 2
 def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
     # Get chip info (make sure get_chip is called first)
     rchip = hs.get_chip(cx)
@@ -231,6 +240,7 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
     df2.connect_callback(fig, 'button_press_event', _on_chip_click)
 
 
+# CHIPRES INTERACTION
 def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', **kwargs):
     'res = back.current_res'
     'Interacts with a single chipres, '

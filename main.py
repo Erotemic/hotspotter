@@ -146,9 +146,9 @@ if __name__ == '__main__':
 
         def do_import_database():
             scripts.rrr()
-            from os.path import expanduser, join
-            workdir = expanduser('~/data/work')
-            other_dbdir = join(workdir, 'hsdb_exported_138_185_encounter_eid=1 nGxs=43')
+            #from os.path import expanduser, join
+            #workdir = expanduser('~/data/work')
+            #other_dbdir = join(workdir, 'hsdb_exported_138_185_encounter_eid=1 nGxs=43')
 
         def vgd():
             return generate_training.vgd(hs)

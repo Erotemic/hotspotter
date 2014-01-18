@@ -1,13 +1,14 @@
 ''' Lots of functions for drawing and plotting visiony things '''
 # TODO: New naming scheme
 # viz_<func_name> will clear everything. The current axes and fig: clf, cla.  # Will add annotations
+# interact_<func_name> will clear everything and start user interactions.
 # show_<func_name> will always clear the current axes, but not fig: cla # Might # add annotates?
 # plot_<func_name> will not clear the axes or figure. More useful for graphs
 # draw_<func_name> same as plot for now. More useful for images
 from __future__ import division, print_function
 import __common__
-(print, print_, print_on, print_off, rrr,
- profile) = __common__.init(__name__, '[dev]')
+(print, print_, print_on, print_off, rrr, profile,
+ printDBG) = __common__.init(__name__, '[df2]', DEBUG=False, initmpl=True)
 # Python
 from itertools import izip
 from os.path import splitext, split, join, normpath
@@ -21,26 +22,6 @@ import warnings
 import multiprocessing
 # Matplotlib / Qt
 import matplotlib
-backend = matplotlib.get_backend()
-if multiprocessing.current_process().name == 'MainProcess':
-    print('[df2] current backend is: %r' % backend)
-    print('[df2] matplotlib.use(Qt4Agg)')
-    matplotlib.rcParams['toolbar'] = 'toolbar2'
-    matplotlib.rc('text', usetex=False)
-    mpl_keypress_shortcuts = [key for key in matplotlib.rcParams.keys() if key.find('keymap') == 0]
-    #for key in mpl_keypress_shortcuts:
-        #print('%s = %s' % (key, matplotlib.rcParams[key]))
-    # Disable mpl shortcuts
-    for key in mpl_keypress_shortcuts:
-        matplotlib.rcParams[key] = ''
-    #matplotlib.rcParams['text'].usetex = False
-    if backend != 'Qt4Agg':
-        matplotlib.use('Qt4Agg', warn=True, force=True)
-        backend = matplotlib.get_backend()
-        if multiprocessing.current_process().name == 'MainProcess':
-            print('[*guitools] current backend is: %r' % backend)
-        #matplotlib.rcParams['toolbar'] = 'None'
-        #matplotlib.rcParams['interactive'] = True
 from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle, Circle, FancyArrow
@@ -58,14 +39,15 @@ import tools
 from Printable import DynStruct
 import helpers
 
+#================
+# GLOBALS
+#================
 
-def printDBG(msg):
-    #print(msg)
-    pass
-
+TMP_mevent = None
 QT4_WINS = []
 plotWidget = None
 
+# GENERAL FONTS
 
 SMALLER  = 6
 SMALL    = 12
@@ -80,6 +62,8 @@ FONTS.large     = FontProperties(weight='light', size=LARGE)
 FONTS.medbold   = FontProperties(weight='bold', size=MED)
 FONTS.largebold = FontProperties(weight='bold', size=LARGE)
 
+# SPECIFIC FONTS
+
 FONTS.legend   = FONTS.small
 FONTS.figtitle = FONTS.med
 FONTS.axtitle  = FONTS.med
@@ -87,6 +71,8 @@ FONTS.subtitle = FONTS.med
 FONTS.xlabel   = FONTS.smaller
 FONTS.ylabel   = FONTS.small
 FONTS.relative = FONTS.smaller
+
+# COLORS
 
 ORANGE = np.array((255, 127,   0, 255)) / 255.0
 RED    = np.array((255,   0,   0, 255)) / 255.0
@@ -101,6 +87,8 @@ TRUE_GREEN   = np.array((  0, 255,   0, 255)) / 255.0
 DARK_ORANGE  = np.array((127,  63,   0, 255)) / 255.0
 UNKNOWN_PURP = np.array((102,   0, 153, 255)) / 255.0
 
+# FIGURE GEOMETRY
+
 DPI = 80
 #FIGSIZE = (24) # default windows fullscreen
 FIGSIZE_MED = (12, 6)
@@ -111,6 +99,8 @@ FIGSIZE = FIGSIZE_MED
 tile_within = (-1, 30, 969, 1041)
 if helpers.get_computer_name() == 'Ooo':
     TILE_WITHIN = (-1912, 30, -969, 1071)
+
+# DEFAULTS. (TODO: Can these be cleaned up?)
 
 DISTINCT_COLORS = True  # and False
 DARKEN = None
@@ -595,8 +585,11 @@ def adjust_subplots(left=0.02,  bottom=0.02,
     plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
 
 
+#=======================
 # TEXT FUNCTIONS
 # TODO: I have too many of these. Need to consolidate
+#=======================
+
 
 def upperleft_text(txt):
     txtargs = dict(horizontalalignment='left',
@@ -696,9 +689,6 @@ def set_figtitle(figtitle, subtitle='', forcefignum=True, incanvas=True):
     window_figtitle = ('fig(%d) ' % fig.number) + figtitle
     fig.canvas.set_window_title(window_figtitle)
     adjust_subplots()
-
-
-TMP_mevent = None
 
 
 def convert_keypress_event_mpl_to_qt4(mevent):
@@ -1435,6 +1425,7 @@ def show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm=None, title=None,
     return ax, xywh1, xywh2
 
 
+# draw feature match
 def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
                 lbl2=None, fnum=None, pnum=None, rect=False, **kwargs):
     '''Draws the matching features. This is draw because it is an overlay
@@ -1536,3 +1527,6 @@ def connect_callback(fig, callback_type, callback_fn):
     cbfn_type = callback_type + '_func'
     fig.__dict__[cbid_type] = fig.canvas.mpl_connect(callback_type, callback_fn)
     fig.__dict__[cbfn_type] = callback_fn
+
+if __name__ == '__main__':
+    multiprocessing.freeze_support()

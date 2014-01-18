@@ -3,7 +3,7 @@ import __builtin__
 import sys
 
 
-def init(module_name, module_prefix='[???]'):
+def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
     module = sys.modules[module_name]
 
     try:
@@ -34,4 +34,37 @@ def init(module_name, module_prefix='[???]'):
         module.print = noprint
         module.print_ = noprint
 
-    return print, print_, print_on, print_off, rrr, profile
+    if DEBUG is None:
+        return print, print_, print_on, print_off, rrr, profile
+
+    if DEBUG:
+        def printDBG(msg):
+            print(module_prefix + ' DEBUG ' + msg)
+    else:
+        def printDBG(msg):
+            pass
+
+    if initmpl:
+        import matplotlib
+        import multiprocessing
+        backend = matplotlib.get_backend()
+        if multiprocessing.current_process().name == 'MainProcess':
+            print(module_prefix + ' current backend is: %r' % backend)
+            print(module_prefix + ' matplotlib.use(Qt4Agg)')
+            if backend != 'Qt4Agg':
+                matplotlib.use('Qt4Agg', warn=True, force=True)
+                backend = matplotlib.get_backend()
+                print(module_prefix + ' current backend is: %r' % backend)
+            matplotlib.rcParams['toolbar'] = 'toolbar2'
+            matplotlib.rc('text', usetex=False)
+            mpl_keypress_shortcuts = [key for key in matplotlib.rcParams.keys() if key.find('keymap') == 0]
+            for key in mpl_keypress_shortcuts:
+                matplotlib.rcParams[key] = ''
+            #matplotlib.rcParams['text'].usetex = False
+            #for key in mpl_keypress_shortcuts:
+                #print('%s = %s' % (key, matplotlib.rcParams[key]))
+            # Disable mpl shortcuts
+                #matplotlib.rcParams['toolbar'] = 'None'
+                #matplotlib.rcParams['interactive'] = True
+
+    return print, print_, print_on, print_off, rrr, profile, printDBG

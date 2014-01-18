@@ -149,10 +149,6 @@ def plot_name(hs, nx, nx2_cxs=None, fnum=0, hl_cxs=[], subtitle='',
     #gs2.update(top=df2.TOP_SUBPLOT_ADJUST)
     #df2.set_figtitle(title, subtitle)
 
-# Moved to _broken/viz.py temporarilly
-#------------------------------
-#^^^ OLD
-
 
 # TODO: Fix image annotation scheme to conform to other vizualizations (when they are fixed too)
 def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
@@ -223,7 +219,6 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
         df2.connect_callback(fig, 'button_press_event', _on_image_click)
 
 
-#def start_image_interaction(hs, gx, cx_clicked_func):
 def show_image(hs, gx, highlight_cxs=None, cx_clicked_func=None, draw_rois=True,
                fnum=1, figtitle='Img', **kwargs):
     '''Shows an image. cx_clicked_func(cx) is a callback function'''

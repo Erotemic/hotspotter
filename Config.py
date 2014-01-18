@@ -94,6 +94,8 @@ class FilterConfig(ConfigBase):
         filt_cfg = filt_cfg
         filt_cfg.filt_on = True
         filt_cfg.Krecip = 0  # 0 := off
+        filt_cfg.can_match_sameimg = False
+        filt_cfg.can_match_samename = True
         filt_cfg._nnfilter_list = []
         #
         #filt_cfg._nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio', 'lnrat']
@@ -121,7 +123,6 @@ class FilterConfig(ConfigBase):
         '''
         removes invalid parameter settings over all cfgs (move to QueryConfig)
         '''
-
         # Ensure the list of on filters is valid given the weight and thresh
         if filt_cfg.ratio_thresh <= 1:
             filt_cfg.ratio_thresh = None
@@ -129,17 +130,16 @@ class FilterConfig(ConfigBase):
             filt_cfg.roidist_thresh = None
         if filt_cfg.bursty_thresh   <= 1:
             filt_cfg.bursty_thresh = None
-
         # FIXME: Non-Independent parameters.
         # Need to explicitly model correlation somehow
         if filt_cfg.Krecip == 0:
             filt_cfg.recip_thresh = None
         elif filt_cfg.recip_thresh is None:
             filt_cfg.recip_thresh = 0
-
         #print('[cfg]----')
         #print(filt_cfg)
         #print('[cfg]----')
+
         def _ensure_filter(filt, sign):
             '''ensure filter in the list if valid else remove
             (also ensure the sign/thresh/weight dict)'''
@@ -153,7 +153,6 @@ class FilterConfig(ConfigBase):
                 filt_cfg._nnfilter_list += [filt]
         for (sign, filt) in filt_cfg._valid_filters:
             _ensure_filter(filt, sign)
-
         # Set Knorm to 0 if there is no normalizing filter on.
         if query_cfg is not None:
             nn_cfg = query_cfg.nn_cfg
@@ -177,6 +176,10 @@ class FilterConfig(ConfigBase):
                 filt_uid += [',']
         if len(twstr) > 0:
             filt_uid += [twstr]
+        if filt_cfg.can_match_sameimg:
+            filt_uid += 'same_img'
+        if not filt_cfg.can_match_samename:
+            filt_uid += 'notsame_name'
         filt_uid += [')']
         return filt_uid
 
@@ -381,7 +384,7 @@ class DisplayConfig(ConfigBase):
         display_cfg.name_scoring = False
         display_cfg.showanalysis = False
         display_cfg.annotations  = True
-        display_cfg.vert  = None
+        display_cfg.vert = True  # None
 
 
 # Convinience

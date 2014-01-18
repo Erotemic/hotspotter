@@ -167,7 +167,9 @@ def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
         roi = hs.cx2_roi(cx)
         theta = hs.cx2_theta(cx)
         # Draw the ROI
-        roi_lbl = hs.cidstr(cx)
+        roi_lbl = hs.cx2_name(cx)
+        if roi_lbl == '____':
+            roi_lbl = hs.cidstr(cx)
         # OH SO BAD! FIXME
         highlight_cxs_ = highlight_cxs
         if highlight_cxs is None:
@@ -551,6 +553,8 @@ def _show_res(hs, res, **kwargs):
         _kwshow['fnum'] = fnum
         _kwshow['pnum'] = pnum
         _kwshow['title_aug'] = aug
+        _kwshow['draw_ell'] = annote > 1
+        _kwshow['draw_lines'] = annote > 0
         res.show_chipres(hs, cx, **_kwshow)
 
     def _plot_matches_cxs(cx_list, plotx_shift, rowcols):
@@ -605,7 +609,7 @@ def _show_res(hs, res, **kwargs):
             # Toggle if the click is not in any axis
             printDBG('clicked none')
             print(kwargs)
-            _show_res(hs, res, annote=not annote, **kwargs)
+            _show_res(hs, res, annote=(annote + 1) % 3, **kwargs)
             fig.canvas.draw()
 
         def _on_res_click(event):

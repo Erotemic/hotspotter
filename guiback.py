@@ -105,14 +105,12 @@ class MainWindowBackend(QtCore.QObject):
         back.app = app
         back.current_res = None
         back.timer = None
-        kwargs_ = {'use_plot_widget': False}
-        back.front = guifront.MainWindowFrontend(back=back, **kwargs_)
+        back.front = guifront.MainWindowFrontend(back=back)
         back.selection = None
-        #if kwargs_['use_plot_widget']:
-            #df2.register_matplotlib_widget(back.front.plotWidget)
         df2.register_qt4_win(back.front)
+
         # Define default table headers
-        back.headers = {
+        back.fancy_headers = {
             'aif':        'AIF',
             'gx':         'Image Index',
             'gname':      'Image Name',
@@ -121,13 +119,14 @@ class MainWindowBackend(QtCore.QObject):
             'name':       'Name',
             'gname':      'Image',
             'nGt':        '#GT',
-            'nKpts':      '#kpts',
+            'nKpts':      '#Kpts',
             'theta':      'Theta',
             'roi':        'ROI (x, y, w, h)',
             'rank':       'Rank',
             'score':      'Confidence',
             'match_name': 'Matching Name',
         }
+        back.reverse_fancy = {val: key for (key, val) in back.fancy_headers.items()}
 
         back.table_headers = {
             'gxs':  ['gx', 'gname', 'nCxs', 'aif'],
@@ -138,35 +137,24 @@ class MainWindowBackend(QtCore.QObject):
 
         back.table_editable = {
             'gxs':  [],
-            'cxs': ['name'],
-            'nxs': [],
+            'cxs':  ['name'],
+            'nxs':  [],
             'res':  ['name'],
         }
 
-        #back.imgtbl_headers   =
-        #back.imgtbl_editable  = []
-        #with_aif = True
-        #if with_aif:
-            #back.imgtbl_headers += [aif_header]
-            #back.imgtbl_editable += [aif_header]
-
-        #if hs.args.withexif:
-            #back.imgtbl_headers += ['EXIF:DateTime']
-            #back.imgtbl_headers += ['EXIF']
-        #
-        #back.chiptbl_headers  =
-        #back.chiptbl_editable = ['Name']
-        #
-        #back.nametbl_headers  = ['Name Index', 'Name', '#Chips']
-        #back.nametbl_editable = []
-        ##
-        #back.restbl_headers   = ['Rank', 'Confidence', 'Matching Name', 'Chip ID']
-        #back.restbl_editable  = ['Matching Name']
         # connect signals
         back.populateSignal.connect(back.front.populate_tbl)
         back.setEnabledSignal.connect(back.front.setEnabled)
         if hs is not None:
             back.connect_api(hs)
+
+    def append_header(back, tblname, header, editable=False):
+        try:
+            pos = back.table_headers[tblname].index(header)
+            print('[back] %s_TBL already has header=%r at pos=%d' %
+                  (tblname, header, pos))
+        except ValueError:
+            back.table_headers[tblname].append(header)
 
     #------------------------
     # Draw Functions
@@ -464,7 +452,7 @@ class MainWindowBackend(QtCore.QObject):
         key, val = map(str, (key, val))
         print('[*back] change_chip_property(%r, %r, %r)' % (cid, key, val))
         cx = back.hs.cid2_cx(cid)
-        if key in ['Name', 'Matching Name']:
+        if key in ['name', 'matching_name']:
             back.hs.change_name(cx, val)
         else:
             back.hs.change_property(cx, key, val)

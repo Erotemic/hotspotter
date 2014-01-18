@@ -1,15 +1,20 @@
 from __future__ import division, print_function
-import cross_platform
 import multiprocessing
 import argparse
-
-DEBUG = False
-#DEBUG = True
-
+import cross_platform
 # seemlessly fix any path issues
 cross_platform.ensure_pythonpath()
 
+#======================
+# Globals
+#======================
+
+DEBUG = False  # True
 ARGS_ = None
+
+#======================
+# Helpers
+#======================
 
 
 def switch_sanataize(switch):
@@ -22,6 +27,10 @@ def switch_sanataize(switch):
             switch = tuple(switch)
         dest = switch[0].strip('-').replace('-', '_')
     return dest, switch
+
+#======================
+# Wrapper Class
+#======================
 
 
 class ArgumentParser2(object):
@@ -76,6 +85,11 @@ def make_argparse2(description, *args, **kwargs):
                                 prefix_chars='+-',
                                 formatter_class=formatter_classes[2], *args,
                                 **kwargs))
+
+
+#======================
+# Argument Definitions
+#======================
 
 
 def main_argparse(parser2):
@@ -191,6 +205,11 @@ def cache_argparse(parser2):
     parser2.add_flag('--nocache-prefs')
 
 
+#======================
+# Argument Postprocessing
+#======================
+
+
 def args_postprocess(args):
     from os.path import realpath, exists
     global ARGS_
@@ -250,6 +269,11 @@ def fix_args_with_cache(args):
     return args
 
 
+#======================
+# Parser Driver
+#======================
+
+
 def parse_arguments(defaultdb=None, **kwargs):
     '''Defines the arguments for hotspotter'''
     global ARGS_
@@ -274,6 +298,10 @@ def parse_arguments(defaultdb=None, **kwargs):
     ARGS_ = args
     return args
 
+
+#======================
+# Test Script
+#======================
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

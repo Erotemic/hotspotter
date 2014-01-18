@@ -336,22 +336,19 @@ def compute_encounters(hs, back, seconds_thresh=15):
             USE_STRING_ID = True
             if USE_STRING_ID:
                 # String ID
-                eid = 'eid=%r nGxs=%d' % (ex, nGx)
+                eid = 'ex=%r_nGxs=%d' % (ex, nGx)
             else:
                 # Float ID
                 eid = ex + (nGx / 10 ** np.ceil(np.log(nGx) / np.log(10)))
             gx2_eid[gx] = eid
             gx2_ex[gx] = ex
 
-    hs.tables.gx2_ex = gx2_ex
+    hs.tables.gx2_ex  = np.array(gx2_ex)
     hs.tables.gx2_eid = np.array(gx2_eid)
 
     # Give info to GUI
-    extra_cols = {'Encounter Id': lambda gx_list: [gx2_eid[gx] for gx in iter(gx_list)]}
-    try:
-        back.imgtbl_headers.index('Encounter Id')
-    except ValueError:
-        back.imgtbl_headers.append('Encounter Id')
+    extra_cols = {'eid': lambda gx_list: [gx2_eid[gx] for gx in iter(gx_list)]}
+    back.append_header('gxs', 'eid')
     back.populate_image_table(extra_cols=extra_cols)
     return locals()
 

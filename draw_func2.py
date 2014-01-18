@@ -67,18 +67,10 @@ QT4_WINS = []
 plotWidget = None
 
 
-SMALL_FONTS = False
-if SMALL_FONTS:
-    SMALLER  = 7
-    SMALL    = 7
-    MED      = 8  # 14
-    LARGE    = 8
-    LARGER   = 18
-else:
-    SMALLER  = 8
-    SMALL    = 12
-    MED      = 12
-    LARGE    = 14
+SMALLER  = 6
+SMALL    = 12
+MED      = 12
+LARGE    = 14
 #fpargs = dict(family=None, style=None, variant=None, stretch=None, fname=None)
 FONTS = DynStruct()
 FONTS.small     = FontProperties(weight='light', size=SMALL)

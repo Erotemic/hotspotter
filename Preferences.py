@@ -468,9 +468,9 @@ class Pref(PrefNode):
             if isinstance(new_val, str):
                 if new_val.upper() == 'NONE':
                     new_val = None
-                if new_val.upper() in 'TRUE':
+                elif new_val.upper() == 'TRUE':
                     new_val = True
-                if new_val.upper() == 'FALSE':
+                elif new_val.upper() == 'FALSE':
                     new_val = False
              # save to disk after modifying data
             print('[pref] qt_set_leaf_data: new_val=%r' % new_val)

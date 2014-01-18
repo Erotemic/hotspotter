@@ -95,6 +95,9 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
             raise
     return hs
 
+#==================
+# MAIN ENTRY POINT
+#==================
 
 if __name__ == '__main__':
     # Necessary for windows parallelization
@@ -130,8 +133,8 @@ if __name__ == '__main__':
             return do_enc_loc
 
         def do_extract_encounter(eid=None):
-            if not 'eid' in vars() or eid is None:
-                eid = 'eid=1 nGxs=43'
+            #if not 'eid' in vars() or eid is None:
+            eid = 'ex=269_nGxs=21'
             scripts.rrr()
             extr_enc_loc = scripts.extract_encounter(hs, eid)
             export_subdb_locals = extr_enc_loc['export_subdb_locals']

@@ -11,23 +11,62 @@ from guitools import frontblocking as blocking
 import sys
 from _frontend.MainSkel import Ui_mainSkel
 
+#=================
+# Globals
+#=================
+
 IS_INIT = False
 NOSTEAL_OVERRIDE = False  # Hard disable switch for stream stealer
+
+
+#=================
+# Decorators / Helpers
+#=================
+
+
+def clicked(func):
+    def clicked_wrapper(front, item, *args, **kwargs):
+        if front.isItemEditable(item):
+            front.print('[front] does not select when clicking editable column')
+            return
+        if item == front.prev_tbl_item:
+            return
+        front.prev_tbl_item = item
+        return func(front, item, *args, **kwargs)
+    clicked_wrapper.func_name = func.func_name
+    # Hacky decorator
+    return clicked_wrapper
+
+
+def csv_sanatize(str_):
+    return str(str_).replace(',', ';;')
+
+
+#=================
+# Stream Stealer
+#=================
 
 
 class StreamStealer(QtCore.QObject):
     write_ = QtCore.pyqtSignal(str)
     flush_ =  QtCore.pyqtSignal()
 
-    def __init__(self, parent=None, stolen=None, share=False):
+    def __init__(self, parent=None, iostream=None, share=False):
         super(StreamStealer, self).__init__(parent)
-        if stolen is not None:
-            self.stolen = stolen
-        self.write = self.write_both if share else self.write_gui
 
-    def write_both(self, msg):
+        # Remember which stream you've stolen
+        if iostream is not None:
+            self.iostream = iostream
+
+        # Define the Stream Stealer write function
+        if share:
+            self.write = self.write_shared
+        else:
+            self.write = self.write_gui
+
+    def write_shared(self, msg):
         msg_ = str(msg)
-        self.stolen.write(msg_)
+        self.iostream.write(msg_)
         self.write_.emit(msg_)
 
     def write_gui(self, msg):
@@ -37,13 +76,42 @@ class StreamStealer(QtCore.QObject):
         self.flush_.emit()
 
 
-def init_plotWidget(front):
-    from _tpl.other.matplotlibwidget import MatplotlibWidget
-    plotWidget = MatplotlibWidget(front.ui.centralwidget)
-    plotWidget.setObjectName(guitools._fromUtf8('plotWidget'))
-    plotWidget.setFocus()
-    front.ui.root_hlayout.addWidget(plotWidget)
-    return plotWidget
+def _steal_stdout(front):
+    #front.ui.outputEdit.setPlainText(sys.stdout)
+    nosteal = front.back.hs.args.nosteal
+    noshare = front.back.hs.args.noshare
+    #from IPython.utils import io
+    #with io.capture_output() as captured:
+        #%run my_script.py
+    if NOSTEAL_OVERRIDE or (nosteal and noshare):
+        return
+    print('[front] stealing standard out')
+    if front.ostream is None:
+        # Connect a StreamStealer object to the GUI output window
+        front.ostream = StreamStealer(iostream=sys.stdout, share=not noshare)
+        front.ostream.write_.connect(front.gui_write)
+        front.ostream.flush_.connect(front.gui_flush)
+        # Redirect standard out to the StreamStealer object
+        sys.stdout = front.ostream
+    else:
+        print('[front] stream already stolen')
+
+
+def _return_stdout(front):
+    #front.ui.outputEdit.setPlainText(sys.stdout)
+    print('[front] returning standard out')
+    if front.ostream is not None:
+        sys.stdout = front.ostream.iostream
+        front.ostream = None
+        return True
+    else:
+        print('[front] stream has not been stolen')
+        return False
+
+
+#=================
+# Initialization
+#=================
 
 
 def init_ui(front):
@@ -81,7 +149,6 @@ def connect_option_signals(front):
     ui.actionLayout_Figures.triggered.connect(back.layout_figures)
     ui.actionPreferences.triggered.connect(back.edit_preferences)
     #ui.actionTogPts.triggered.connect(back.toggle_points)
-    #ui.actionTogPlt.triggered.connect(back.toggle_plotWidget)
 
 
 def connect_help_signals(front):
@@ -121,23 +188,6 @@ def connect_experimental_signals(front):
     ui.actionName_Consistency_Experiment.triggered.connect(back.autoassign)
 
 
-def csv_sanatize(str_):
-    return str(str_).replace(',', ';;')
-
-
-def clicked(func):
-    def clicked_wrapper(front, item, *args, **kwargs):
-        if front.isItemEditable(item):
-            front.print('[front] does not select when clicking editable column')
-            return
-        if item == front.prev_tbl_item:
-            return
-        front.prev_tbl_item = item
-        return func(front, item, *args, **kwargs)
-    clicked_wrapper.func_name = func.func_name
-    # Hacky decorator
-    return clicked_wrapper
-
 #def popup(front, pos):
     #for i in front.ui.gxs_TBL.selectionModel().selection().indexes():
         #front.print(repr((i.row(), i.column())))
@@ -148,12 +198,6 @@ def clicked(func):
     #action = menu.exec_(front.ui.gxs_TBL.mapToGlobal(pos))
     #front.print('action = %r ' % action)
 
-
-#@slot_(bool)
-#def setPlotWidgetEnabled(front, flag):
-    #flag = bool(flag)
-    ##front.printDBG('setPlotWidgetEnabled(%r)' % flag)
-    #front.plotWidget.setVisible(flag)
 
 class MainWindowFrontend(QtGui.QMainWindow):
     printSignal     = pyqtSignal(str)
@@ -166,46 +210,22 @@ class MainWindowFrontend(QtGui.QMainWindow):
     changeGxSignal  = pyqtSignal(int, str, bool)
     querySignal = pyqtSignal()
 
-    def __init__(front, back, use_plot_widget=True):
+    def __init__(front, back):
         super(MainWindowFrontend, front).__init__()
         #print('[*front] creating frontend')
         front.prev_tbl_item = None
         front.ostream = None
         front.back = back
         front.ui = init_ui(front)
-        if use_plot_widget:
-            front.plotWidget = init_plotWidget(front)
         # Progress bar is not hooked up yet
         front.ui.progressBar.setVisible(False)
         front.connect_signals()
-        front.steal_stdout()
 
     def steal_stdout(front):
-        #front.ui.outputEdit.setPlainText(sys.stdout)
-        hs = front.back.hs
-        nosteal = hs.args.nosteal
-        noshare = hs.args.noshare
-        if NOSTEAL_OVERRIDE or (nosteal and noshare):
-            return
-        print('[front] stealing standard out')
-        if front.ostream is None:
-            front.ostream = StreamStealer(stolen=sys.stdout, share=not noshare)
-            front.ostream.write_.connect(front.gui_write)
-            front.ostream.flush_.connect(front.gui_flush)
-            sys.stdout = front.ostream
-        else:
-            print('[front] stream already stolen')
+        return _steal_stdout(front)
 
     def return_stdout(front):
-        #front.ui.outputEdit.setPlainText(sys.stdout)
-        print('[front] returning standard out')
-        if front.ostream is not None:
-            sys.stdout = front.ostream.stolen
-            front.ostream = None
-            return True
-        else:
-            print('[front] stream has not been stolen')
-            return False
+        return _return_stdout(front)
 
     # TODO: this code is duplicated in back
     def user_info(front, *args, **kwargs):

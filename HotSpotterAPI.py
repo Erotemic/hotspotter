@@ -111,7 +111,7 @@ def _datatup_cols(hs, tblname, cx2_score=None):
         cols.update(prop_cols)
     elif tblname == 'res':
         cols = {
-            'rank':   lambda cxs:  range(len(cxs)),
+            'rank':   lambda cxs:  range(1, len(cxs) + 1),
             'name':   lambda cxs:  [nx2_name[cx2_nx[cx]] for cx in iter(cxs)],
             'cid':    lambda cxs:  [cx2_cid[cx]   for cx in iter(cxs)],
         }

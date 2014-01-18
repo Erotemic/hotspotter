@@ -12,7 +12,7 @@ import sys
 from _frontend.MainSkel import Ui_mainSkel
 
 IS_INIT = False
-NOSTEAL_OVERRIDE = True
+NOSTEAL_OVERRIDE = False  # Hard disable switch for stream stealer
 
 
 class StreamStealer(QtCore.QObject):
@@ -139,13 +139,13 @@ def clicked(func):
     return clicked_wrapper
 
 #def popup(front, pos):
-    #for i in front.ui.image_TBL.selectionModel().selection().indexes():
+    #for i in front.ui.gxs_TBL.selectionModel().selection().indexes():
         #front.print(repr((i.row(), i.column())))
     #menu = QtGui.QMenu()
     #action1 = menu.addAction("action1")
     #action2 = menu.addAction("action2")
     #action3 = menu.addAction("action2")
-    #action = menu.exec_(front.ui.image_TBL.mapToGlobal(pos))
+    #action = menu.exec_(front.ui.gxs_TBL.mapToGlobal(pos))
     #front.print('action = %r ' % action)
 
 
@@ -248,18 +248,18 @@ class MainWindowFrontend(QtGui.QMainWindow):
         #
         # Gui Components
         # Tables Widgets
-        ui.chip_TBL.itemClicked.connect(front.chip_tbl_clicked)
-        ui.chip_TBL.itemChanged.connect(front.chip_tbl_changed)
-        ui.image_TBL.itemClicked.connect(front.img_tbl_clicked)
-        ui.image_TBL.itemChanged.connect(front.img_tbl_changed)
+        ui.cxs_TBL.itemClicked.connect(front.chip_tbl_clicked)
+        ui.cxs_TBL.itemChanged.connect(front.chip_tbl_changed)
+        ui.gxs_TBL.itemClicked.connect(front.img_tbl_clicked)
+        ui.gxs_TBL.itemChanged.connect(front.img_tbl_changed)
         ui.res_TBL.itemClicked.connect(front.res_tbl_clicked)
         ui.res_TBL.itemChanged.connect(front.res_tbl_changed)
-        ui.name_TBL.itemClicked.connect(front.name_tbl_clicked)
+        ui.nxs_TBL.itemClicked.connect(front.name_tbl_clicked)
         # Tab Widget
         ui.tablesTabWidget.currentChanged.connect(front.change_view)
-        ui.chip_TBL.sortByColumn(0, Qt.AscendingOrder)
+        ui.cxs_TBL.sortByColumn(0, Qt.AscendingOrder)
         ui.res_TBL.sortByColumn(0, Qt.AscendingOrder)
-        ui.image_TBL.sortByColumn(0, Qt.AscendingOrder)
+        ui.gxs_TBL.sortByColumn(0, Qt.AscendingOrder)
 
     def print(front, msg):
         print('[*front*] ' + msg)
@@ -403,7 +403,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
         # in dicts to begin with.
         tblname = str(tbl.objectName()).replace('_TBL', '')
         tblname = tblname.replace('image', 'img')  # Sooooo hack
-        col = front.back.__dict__[tblname + 'tbl_headers'].index(header)
+        # TODO: backmap from fancy headers to consise
+        col = front.back.table_headers[tblname].index(header)
         return tbl.item(row, col).text()
 
     #=======================
@@ -411,28 +412,28 @@ class MainWindowFrontend(QtGui.QMainWindow):
     #=======================
 
     def get_chiptbl_header(front, col):
-        return front.get_tbl_header(front.ui.chip_TBL, col)
+        return front.get_tbl_header(front.ui.cxs_TBL, col)
 
     def get_imgtbl_header(front, col):
-        return front.get_tbl_header(front.ui.image_TBL, col)
+        return front.get_tbl_header(front.ui.gxs_TBL, col)
 
     def get_restbl_header(front, col):
         return front.get_tbl_header(front.ui.res_TBL, col)
 
     def get_nametbl_header(front, col):
-        return front.get_tbl_header(front.ui.name_TBL, col)
+        return front.get_tbl_header(front.ui.nxs_TBL, col)
 
     def get_restbl_cid(front, row):
-        return int(front.get_header_val(front.ui.res_TBL, 'Chip ID', row))
+        return int(front.get_header_val(front.ui.res_TBL, 'cid', row))
 
     def get_chiptbl_cid(front, row):
-        return int(front.get_header_val(front.ui.chip_TBL, 'Chip ID', row))
+        return int(front.get_header_val(front.ui.cxs_TBL, 'cid', row))
 
     def get_nametbl_name(front, row):
-        return str(front.get_header_val(front.ui.name_TBL, 'Name', row))
+        return str(front.get_header_val(front.ui.nxs_TBL, 'name', row))
 
     def get_imgtbl_gx(front, row):
-        return int(front.get_header_val(front.ui.image_TBL, 'Image Index', row))
+        return int(front.get_header_val(front.ui.gxs_TBL, 'gx', row))
 
     #=======================
     # Table Changed Functions

@@ -50,7 +50,7 @@
          <item row="0" column="0">
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
-            <widget class="QTableWidget" name="image_TBL">
+            <widget class="QTableWidget" name="gxs_TBL">
              <property name="sortingEnabled">
               <bool>true</bool>
              </property>
@@ -68,7 +68,7 @@
          <item row="0" column="0">
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
-            <widget class="QTableWidget" name="chip_TBL">
+            <widget class="QTableWidget" name="cxs_TBL">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>
@@ -90,7 +90,7 @@
         </attribute>
         <layout class="QGridLayout" name="gridLayout">
          <item row="0" column="0">
-          <widget class="QTableWidget" name="name_TBL"/>
+          <widget class="QTableWidget" name="nxs_TBL"/>
          </item>
         </layout>
        </widget>
@@ -151,7 +151,7 @@
      <x>0</x>
      <y>0</y>
      <width>1013</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

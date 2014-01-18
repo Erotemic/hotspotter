@@ -272,9 +272,9 @@ def user_info(parent, msg, title='info'):
     msgBox.show()
 
 
-def user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=False):
+def _user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=False):
     'Prompts user with several options with ability to save decision'
-    print('[*guitools] user_option:\n %r: %s' + title + ': ' + msg)
+    print('[*guitools] _user_option:\n %r: %s' + title + ': ' + msg)
     # Recall decision
     print('[*guitools] asking user: %r %r' % (msg, title))
     cache_id = helpers.hashstr(title + msg)

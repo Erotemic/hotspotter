@@ -53,41 +53,71 @@ def _import_scripts(hs):
     scripts.rrr()
 
 
-def __get_datatup_list(index_list, header_order, cols, extra_cols):
+def _get_datatup_list(hs, tblname, index_list, header_order, extra_cols):
+    cols = _datatup_cols(hs, tblname)
     cols.update(extra_cols)
-    unknown_header = lambda indexes: ['Error' for gx in indexes]
+    unknown_header = lambda indexes: ['ERROR!' for gx in indexes]
     get_tup = lambda header: cols.get(header, unknown_header)(index_list)
     unziped_tups = [get_tup(header) for header in header_order]
     datatup_list = [tup for tup in izip(*unziped_tups)]
     return datatup_list
 
 
-def _get_name_datatup_list(hs, nx_list, header_order=['Name'], extra_cols={}):
-    nx2_name = hs.tables.nx2_name
-    nx2_cxs = hs.get_nx2_cxs()  # RCOS TODO: This needs to be more robust
-    cols = {
-        'Name Index':   lambda nxs: nxs,
-        'Name':         lambda nxs: [nx2_name[nx] for nx in iter(nxs)],
-        '#Chips':       lambda nxs: [len(nx2_cxs[nx]) for nx in iter(nxs)],
-    }
-    return __get_datatup_list(nx_list, header_order, cols, extra_cols)
-
-
-def _get_img_datatup_list(hs, gx_list, header_order, extra_cols={}):
-    'Data for GUI Image Table'
+def _datatup_cols(hs, tblname, cx2_score=None):
+    # Chips
+    cx2_cid   = hs.tables.cx2_cid
+    cx2_roi   = hs.tables.cx2_roi
+    cx2_theta = hs.tables.cx2_theta
+    cx2_nx    = hs.tables.cx2_nx
+    cx2_gx    = hs.tables.cx2_gx
+    prop_dict = hs.tables.prop_dict
+    # Name
+    nx2_name  = hs.tables.nx2_name
+    nx2_cxs   = hs.get_nx2_cxs()
+    # Image
     gx2_gname = hs.tables.gx2_gname
     gx2_aif   = hs.tables.gx2_aif
-    gx2_cxs = hs.gx2_cxs
-    # Lazy evaluation of column values
-    cols = {
-        'Image Index':   lambda gxs: gxs,
-        'AIF':           lambda gxs: [gx2_aif[gx] for gx in iter(gxs)],
-        'Image Name':    lambda gxs: [gx2_gname[gx] for gx in iter(gxs)],
-        '#Chips':        lambda gxs: [len(gx2_cxs(gx)) for gx in iter(gxs)],
-        'EXIF':          lambda gxs: hs.gx2_exif(gxs),
-        'EXIF:DateTime': lambda gxs: hs.gx2_exif(gxs, tag='DateTime'),
-    }
-    return __get_datatup_list(gx_list, header_order, cols, extra_cols)
+    # Features
+    cx2_kpts  = hs.feats.cx2_kpts
+    # Return requested columns
+    if tblname == 'nxs':
+        cols = {
+            'nx':    lambda nxs: nxs,
+            'name':  lambda nxs: [nx2_name[nx] for nx in iter(nxs)],
+            #'nCxs':  lambda nxs: hs.nx2_cxs(nxs),
+            'nCxs':  lambda nxs: [nx2_cxs[nx] for nx in iter(nxs)],
+        }
+    elif tblname == 'gxs':
+        cols = {
+            'gx':    lambda gxs: gxs,
+            'aif':   lambda gxs: [gx2_aif[gx] for gx in iter(gxs)],
+            'gname': lambda gxs: [gx2_gname[gx] for gx in iter(gxs)],
+            'nCxs':  lambda gxs: map(len, hs.gx2_cxs(gxs)),
+            'exif':  lambda gxs: hs.gx2_exif(gxs),
+            'exif.DateTime': lambda gxs: hs.gx2_exif(gxs, tag='DateTime'),
+        }
+    elif tblname == 'cxs':
+        cols = {
+            'cid':    lambda cxs: [cx2_cid[cx]           for cx in iter(cxs)],
+            'name':   lambda cxs: [nx2_name[cx2_nx[cx]]  for cx in iter(cxs)],
+            'gname':  lambda cxs: [gx2_gname[cx2_gx[cx]] for cx in iter(cxs)],
+            'nGt':    lambda cxs: [len(gtcxs) for gtcxs in iter(hs.get_gtcxs(cxs))],
+            'nKpts':  lambda cxs: [tools.safe_listget(cx2_kpts, cx, len) for cx in iter(cxs)],
+            'theta':  lambda cxs: [cx2_theta[cx] for cx in iter(cxs)],
+            'roi':    lambda cxs: [str(cx2_roi[cx]) for cx in iter(cxs)],
+        }
+        prop_iter = prop_dict.iteritems()
+        prop_cols = dict([(k, lambda cxs: [v[cx] for cx in iter(cxs)]) for (k, v) in prop_iter])
+        cols.update(prop_cols)
+    elif tblname == 'res':
+        cols = {
+            'rank':   lambda cxs:  range(len(cxs)),
+            'name':   lambda cxs:  [nx2_name[cx2_nx[cx]] for cx in iter(cxs)],
+            'cid':    lambda cxs:  [cx2_cid[cx]   for cx in iter(cxs)],
+        }
+    else:
+        cols = {}
+    return cols
 
 
 def _delete_image(hs, gx_list):
@@ -571,88 +601,15 @@ class HotSpotter(DynStruct):
     def has_property(hs, key):
         return key in hs.tables.prop_dict
 
-    def get_name_datatup_list(hs, nx_list, **kwargs):
-        return _get_name_datatup_list(hs, nx_list, **kwargs)
+    def get_valid_indexes(hs, tblname):
+        return {
+            'cxs': lambda: hs.get_valid_cxs(),
+            'nxs': lambda: hs.get_valid_nxs(unknown=False),
+            'gxs': lambda: hs.get_valid_gxs(),
+        }[tblname]()
 
-    def get_img_datatup_list(hs, gx_list,
-                             header_order=['Image Index',
-                                           'Image Name',
-                                           '#Chips',
-                                           'EXIF',
-                                           'EXIF:DateTime',
-                                           'AIF'],
-                             extra_cols={}):
-        return _get_img_datatup_list(hs, gx_list, header_order, extra_cols)
-
-    def format_theta_list(self, theta_list):
-        # Remove pi to put into a human readable format
-        # And use tau = 2*pi because tau seems to be more natural than pi
-        pi  = np.pi
-        tau = 2 * pi
-        UNICODE_GUI = False
-        pi_  = u'\u03C0' if UNICODE_GUI else 'pi'
-        tau_ = u'\u03C4' if UNICODE_GUI else 'tau'
-        LEGACY_NOTATION = False
-        if LEGACY_NOTATION:
-            _fmt = '%.2f * ' + pi_
-            _fix = lambda x: (x % tau) / pi
-        else:
-            SNEAKY = True
-            _fmt = '%.2f * 2' + pi_ if SNEAKY else '%.2f * ' + tau_
-            _fix = lambda x: (x % tau) / tau
-        theta_list = [_fix(theta) for theta in iter(theta_list)]
-        thetastr_list = [_fmt % theta for theta in iter(theta_list)]
-        return thetastr_list
-
-    def get_chip_datatup_list(hs, cx_list,
-                              header_order=['Chip ID', 'Name', 'Image', '#GT']):
-        'Data for GUI Chip Table'
-        prop_dict = hs.tables.prop_dict
-        cx2_cid   = hs.tables.cx2_cid
-        cx2_roi   = hs.tables.cx2_roi
-        cx2_theta = hs.tables.cx2_theta
-        cx2_nx    = hs.tables.cx2_nx
-        cx2_gx    = hs.tables.cx2_gx
-        nx2_name  = hs.tables.nx2_name
-        gx2_gname = hs.tables.gx2_gname
-        theta_list = [cx2_theta[cx] for cx in iter(cx_list)]
-        thetastr_list = hs.format_theta_list(theta_list)
-        gtcxs_list = hs.get_other_indexed_cxs(cx_list)
-        if '#kpts' in header_order:
-            cx2_kpts = hs.feats.cx2_kpts
-            nKpts_list = map(str, [tools.safe_listget(cx2_kpts, cx, len) for cx
-                                   in iter(cx_list)])
-        else:
-            nKpts_list = []
-        cols = {
-            'Chip ID': [cx2_cid[cx]           for cx in iter(cx_list)],
-            'Name':    [nx2_name[cx2_nx[cx]]  for cx in iter(cx_list)],
-            'Image':   [gx2_gname[cx2_gx[cx]] for cx in iter(cx_list)],
-            '#GT':     [len(gtcxs) for gtcxs in iter(gtcxs_list)],
-            '#kpts':   nKpts_list,
-            'Theta':   thetastr_list,
-            'ROI (x, y, w, h)':  [str(cx2_roi[cx]) for cx in iter(cx_list)],
-        }
-        for key, val in prop_dict.iteritems():
-            cols[key] = [val[cx] for cx in iter(cx_list)]
-        unziped_tups = [cols[header] for header in header_order]
-        datatup_list = [tup for tup in izip(*unziped_tups)]
-        return datatup_list
-
-    def get_res_datatup_list(hs, cx_list, cx2_score,
-                             header_order=['Rank', 'Confidence', 'Matching Name', 'Chip ID']):
-        'Data for GUI Results Table'
-        cx2_cid  = hs.tables.cx2_cid
-        cx2_nx   = hs.tables.cx2_nx
-        nx2_name = hs.tables.nx2_name
-        cols = {
-            'Rank':          range(len(cx_list)),
-            'Confidence':    [cx2_score[cx] for cx in iter(cx_list)],
-            'Matching Name': [nx2_name[cx2_nx[cx]] for cx in iter(cx_list)],
-            'Chip ID':       [cx2_cid[cx]   for cx in iter(cx_list)],
-        }
-        unziped_tups = [cols[header] for header in header_order]
-        datatup_list = [tup for tup in izip(*unziped_tups)]
+    def get_datatup_list(hs, tblname, index_list, header_order, extra_cols):
+        datatup_list = _get_datatup_list(hs, tblname, index_list, header_order, extra_cols)
         return datatup_list
 
     def get_db_name(hs, devmode=False):
@@ -698,8 +655,9 @@ class HotSpotter(DynStruct):
         valid_gxs = np.where(hs.tables.gx2_gname != '')[0]
         return valid_gxs
 
-    def get_valid_nxs(hs):
-        valid_nxs = np.where(hs.tables.nx2_name != '')[0]
+    def get_valid_nxs(hs, unknown=True):
+        x = 2 * (not unknown)
+        valid_nxs = np.where(hs.tables.nx2_name[x:] != '')[0] + x
         return valid_nxs
 
     def get_valid_cxs_with_indexed_groundtruth(hs):
@@ -878,6 +836,9 @@ class HotSpotter(DynStruct):
         other_list = [np.intersect1d(ocxs, indx_samp) for
                       ocxs in iter(other_list_)]
         return other_list
+
+    def get_gtcxs(hs, cx_input):
+        return hs.get_other_indexed_cxs(cx_input)
 
     # Strings
     def is_true_match(hs, qcx, cx):

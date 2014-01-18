@@ -251,7 +251,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
         fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
         annote = annote_ptr[0]
         ax, xywh1, xywh2 = res.show_chipres(hs, cx, fnum=fnum, pnum=(1, 1, 1),
-                                            draw_lines=annote, draw_ell=annote, **kwargs)
+                                            draw_lines=False, draw_ell=annote, **kwargs)
         df2.set_figtitle(figtitle)
         xywh2_ptr[0] = xywh2
         # Toggle annote

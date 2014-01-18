@@ -112,25 +112,56 @@ class MainWindowBackend(QtCore.QObject):
             #df2.register_matplotlib_widget(back.front.plotWidget)
         df2.register_qt4_win(back.front)
         # Define default table headers
-        back.imgtbl_headers   = ['Image Index', 'Image Name', '#Chips']
-        back.imgtbl_editable  = []
-        with_aif = True
-        if with_aif:
-            back.imgtbl_headers += [aif_header]
-            back.imgtbl_editable += [aif_header]
+        back.headers = {
+            'aif':        'AIF',
+            'gx':         'Image Index',
+            'gname':      'Image Name',
+            'nChips':     '#Chips',
+            'cid':        'Chip ID',
+            'name':       'Name',
+            'gname':      'Image',
+            'nGt':        '#GT',
+            'nKpts':      '#kpts',
+            'theta':      'Theta',
+            'roi':        'ROI (x, y, w, h)',
+            'rank':       'Rank',
+            'score':      'Confidence',
+            'match_name': 'Matching Name',
+        }
 
-        if hs.args.withexif:
-            back.imgtbl_headers += ['EXIF:DateTime']
+        back.table_headers = {
+            'gxs':  ['gx', 'gname', 'nCxs', 'aif'],
+            'cxs':  ['cid', 'name', 'gname', 'nGt', 'nKpts', 'theta'],
+            'nxs':  ['nx', 'name', 'nCxs'],
+            'res':  ['rank', 'score', 'name', 'cid']
+        }
+
+        back.table_editable = {
+            'gxs':  [],
+            'cxs': ['name'],
+            'nxs': [],
+            'res':  ['name'],
+        }
+
+        #back.imgtbl_headers   =
+        #back.imgtbl_editable  = []
+        #with_aif = True
+        #if with_aif:
+            #back.imgtbl_headers += [aif_header]
+            #back.imgtbl_editable += [aif_header]
+
+        #if hs.args.withexif:
+            #back.imgtbl_headers += ['EXIF:DateTime']
             #back.imgtbl_headers += ['EXIF']
         #
-        back.chiptbl_headers  = ['Chip ID', 'Name', 'Image', '#GT', '#kpts', 'Theta', 'ROI (x, y, w, h)']
-        back.chiptbl_editable = ['Name']
+        #back.chiptbl_headers  =
+        #back.chiptbl_editable = ['Name']
         #
-        back.nametbl_headers  = ['Name Index', 'Name', '#Chips']
-        back.nametbl_editable = []
-        #
-        back.restbl_headers   = ['Rank', 'Confidence', 'Matching Name', 'Chip ID']
-        back.restbl_editable  = ['Matching Name']
+        #back.nametbl_headers  = ['Name Index', 'Name', '#Chips']
+        #back.nametbl_editable = []
+        ##
+        #back.restbl_headers   = ['Rank', 'Confidence', 'Matching Name', 'Chip ID']
+        #back.restbl_editable  = ['Matching Name']
         # connect signals
         back.populateSignal.connect(back.front.populate_tbl)
         back.setEnabledSignal.connect(back.front.setEnabled)
@@ -273,67 +304,63 @@ class MainWindowBackend(QtCore.QObject):
         if res:
             back.populate_result_table()
 
-    def populate_image_table(back, extra_cols={}):
-        print('[*back] populate_image_table()')
-        col_headers, col_editable = guitools.make_header_lists(back.imgtbl_headers,
-                                                               back.imgtbl_editable)
-        # Populate table with valid image indexes
-        gx_list = back.hs.get_valid_gxs()
-        datatup_list = back.hs.get_img_datatup_list(gx_list,
-                                                    header_order=col_headers,
-                                                    extra_cols=extra_cols)
-        row_list = range(len(datatup_list))
-        back.populateSignal.emit('image', col_headers, col_editable, row_list, datatup_list)
-
-    def populate_name_table(back):
-        print('[*back] populate_name_table()')
-        col_headers, col_editable = guitools.make_header_lists(back.nametbl_headers,
-                                                               back.nametbl_editable)
-        nx_list = back.hs.get_valid_nxs()
-        datatup_list = back.hs.get_name_datatup_list(nx_list, header_order=col_headers)
-        row_list = range(len(datatup_list))
-        back.populateSignal.emit('name', col_headers, col_editable, row_list, datatup_list)
-
-    def populate_chip_table(back):
-        print('[*back] populate_chip_table()')
-        # Add User Properties to headers
-        prop_dict = back.hs.tables.prop_dict
-        prop_keys = prop_dict.keys()
-        col_headers, col_editable = guitools.make_header_lists(back.chiptbl_headers,
-                                                               back.chiptbl_editable,
+    def _populate_table(back, tblname,
+                        extra_cols={},
+                        index_list=None,
+                        prefix_cols=[]):
+        print('[*back] _populate_table(%r)' % tblname)
+        headers = back.table_headers[tblname]
+        editable = back.table_editable[tblname]
+        if tblname == 'cxs':
+            prop_keys = back.hs.tables.prop_dict.keys()
+        else:
+            prop_keys = []
+        col_headers, col_editable = guitools.make_header_lists(headers,
+                                                               editable,
                                                                prop_keys)
-        # Populate table with valid image indexes
-        cx_list = back.hs.get_valid_cxs()
-        # Build lists of column values
-        datatup_list = back.hs.get_chip_datatup_list(cx_list, header_order=col_headers)
-        # Define order of columns
+        if index_list is None:
+            index_list = back.hs.get_valid_indexes(tblname)
+        # Prefix datatup
+        prefix_datatup = [[prefix_col.get(header, 'error')
+                           for header in col_headers]
+                          for prefix_col in prefix_cols]
+        bpdy_datatup = back.hs.get_datatup_list(tblname, index_list, col_headers, extra_cols)
+        datatup_list = prefix_datatup + bpdy_datatup
         row_list = range(len(datatup_list))
-        back.populateSignal.emit('chip', col_headers, col_editable, row_list, datatup_list)
+        back.populateSignal.emit(tblname, col_headers, col_editable, row_list, datatup_list)
 
-    def populate_result_table(back):
+    def populate_image_table(back, **kwargs):
+        print('[*back] populate_image_table()')
+        back._populate_table('gxs', **kwargs)
+
+    def populate_name_table(back, **kwargs):
+        print('[*back] populate_name_table()')
+        back._populate_table('nxs', **kwargs)
+
+    def populate_chip_table(back, **kwargs):
+        print('[*back] populate_chip_table()')
+        back._populate_table('cxs', **kwargs)
+
+    def populate_result_table(back, **kwargs):
         print('[*back] populate_result_table()')
         res = back.current_res
         if res is None:
             print('[*back] no results available')
             return
-        col_headers, col_editable = guitools.make_header_lists(back.restbl_headers,
-                                                               back.restbl_editable)
         top_cxs = res.topN_cxs(back.hs, N='all')
-        hs = back.hs
         qcx = res.qcx
-        datatup_list = hs.get_res_datatup_list(top_cxs, res.cx2_score,
-                                               header_order=col_headers)
         # The ! mark is used for ascii sorting. TODO: can we work arround this?
-        query_cols = {
-            'Rank': '!Query',
-            'Confidence': '---',
-            'Matching Name': hs.cx2_name(qcx),
-            'Chip ID': hs.cx2_cid(qcx),
+        prefix_cols = [{'rank': '!Query',
+                        'score': '---',
+                        'name': back.hs.cx2_name(qcx),
+                        'cid': back.hs.cx2_cid(qcx), }]
+        extra_cols = {
+            'score':  lambda cxs:  [res.cx2_score[cx] for cx in iter(cxs)],
         }
-        querytup_list = [[query_cols[header] for header in col_headers]]
-        datatup_list  = querytup_list + datatup_list
-        row_list = range(len(datatup_list))
-        back.populateSignal.emit('res', col_headers, col_editable, row_list, datatup_list)
+        back._populate_table('res', index_list=top_cxs,
+                             prefix_cols=prefix_cols,
+                             extra_cols=extra_cols,
+                             **kwargs)
 
     #--------------------------------------------------------------------------
     # Helper functions
@@ -347,7 +374,7 @@ class MainWindowBackend(QtCore.QObject):
         return guitools.user_input(back.front, *args, **kwargs)
 
     def user_option(back, *args, **kwargs):
-        return guitools.user_option(back.front, *args, **kwargs)
+        return guitools._user_option(back.front, *args, **kwargs)
 
     def get_work_directory(back, use_cache=True):
         cache_id = 'work_directory_cache_id'
@@ -792,7 +819,7 @@ class MainWindowBackend(QtCore.QObject):
     @slot_()
     def delete_cache(back):
         # RCOS TODO: Are you sure?
-        ans = guitools.user_option(back, 'Are you sure you want to delete cache?')
+        ans = back.user_option('Are you sure you want to delete cache?')
         if ans != 'Yes':
             return
         df2.close_all_figures()

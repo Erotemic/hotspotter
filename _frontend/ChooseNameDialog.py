@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/_frontend/ChooseNameDialog.ui'
+# Form implementation generated from reading ui file 'C:\Users\joncrall\code\hotspotter\_frontend\ChooseNameDialog.ui'
 #
-# Created: Fri Jan 17 14:59:33 2014
-#      by: PyQt4 UI code generator 4.9.1
+# Created: Fri Jan 17 22:08:41 2014
+#      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,7 +12,16 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -43,11 +52,11 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Dialog", None, QtGui.QApplication.UnicodeUTF8))
-        self.label.setText(QtGui.QApplication.translate("Dialog", "Who is this? What is this animals name? ", None, QtGui.QApplication.UnicodeUTF8))
-        self.comboBox.setItemText(0, QtGui.QApplication.translate("Dialog", "* Choose from known names: (name,  score) *", None, QtGui.QApplication.UnicodeUTF8))
-        self.comboBox.setItemText(1, QtGui.QApplication.translate("Dialog", "New Item", None, QtGui.QApplication.UnicodeUTF8))
-        self.lineEdit.setText(QtGui.QApplication.translate("Dialog", "* enter new name (default: top match) *", None, QtGui.QApplication.UnicodeUTF8))
+        Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
+        self.label.setText(_translate("Dialog", "Who is this? What is this animals name? ", None))
+        self.comboBox.setItemText(0, _translate("Dialog", "* Choose from known names: (name,  score) *", None))
+        self.comboBox.setItemText(1, _translate("Dialog", "New Item", None))
+        self.lineEdit.setText(_translate("Dialog", "* enter new name (default: top match) *", None))
 
 
 if __name__ == "__main__":

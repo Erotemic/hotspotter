@@ -35,12 +35,14 @@ def dev_reload():
     import chip_compute2 as cc2
     import feature_compute2 as fc2
     import interaction
+    import scripts
     rrr()
     ds.rrr()
     mf.rrr()
     mc3.rrr()
     viz.rrr()
     interaction.rrr()
+    scripts.rrr()
     vr2.rrr()
     helpers.rrr()
     cc2.rrr()
@@ -243,9 +245,9 @@ def vary_two_cfg(hs, qcx, cx, query_cfg, vary_cfg, fnum=1):
     return fnum
 
 
-def plot_name(hs, qcx, fnum=1, **kwargs):
+def show_name(hs, qcx, fnum=1, **kwargs):
     print('[dev] Plotting name')
-    viz.plot_name_of_cx(hs, qcx, fnum=fnum, **kwargs)
+    viz.show_name_of(hs, qcx, fnum=fnum, **kwargs)
     return fnum + 1
 
 
@@ -260,13 +262,13 @@ def show_names(hs, qcx_list, fnum=1):
     nx_list = np.unique(hs.tables.cx2_nx[qcx_list])
     print(nx_list)
     for nx in nx_list:
-        viz.plot_name(hs, nx, fnum=fnum)
+        viz.show_name(hs, nx, fnum=fnum)
         df2.save_figure(fpath=names_dir, usetitle=True)
     # OLD:
     #for (qcx) in qcx_list:
         #print('Showing q%s - %r' % (hs.cidstr(qcx, notes=True)))
         #notes = hs.cx2_property(qcx, 'Notes')
-        #fnum = plot_name(hs, qcx, fnum, subtitle=notes, annote=not hs.args.noannote)
+        #fnum = show_name(hs, qcx, fnum, subtitle=notes, annote=not hs.args.noannote)
         #if hs.args.save_figures:
             #df2.save_figure(fpath=names_dir, usetitle=True)
     return fnum
@@ -301,7 +303,7 @@ def plot_keypoint_scales(hs, fnum=1):
     np.set_printoptions(**_printopts)
     print('[dev] ---/LaTeX --- ')
     #
-    df2.figure(fnum=fnum, doclf=True, title='sorted scales')
+    df2.figure(fnum=fnum, docla=True, title='sorted scales')
     df2.plot(scales)
     df2.adjust_subplots_safe()
     #ax = df2.gca()
@@ -309,7 +311,7 @@ def plot_keypoint_scales(hs, fnum=1):
     #ax.set_xscale('log')
     #
     fnum += 1
-    df2.figure(fnum=fnum, doclf=True, title='hist scales')
+    df2.figure(fnum=fnum, docla=True, title='hist scales')
     df2.show_histogram(scales, bins=20)
     df2.adjust_subplots_safe()
     #ax = df2.gca()

@@ -826,7 +826,7 @@ def dump_feature_pair_analysis(allres):
     title_suffix = allres.title_suffix
 
     # Entropy vs Score
-    df2.figure(fnum=1, doclf=True)
+    df2.figure(fnum=1, docla=True)
     df2.figure(fnum=1, plotnum=(2, 2, 1))
     df2.plot2(tt_entropy[:, 0], tt_scores, 'gx', 'entropy1', 'score', 'Top True')
     df2.figure(fnum=1, plotnum=(2, 2, 2))
@@ -839,7 +839,7 @@ def dump_feature_pair_analysis(allres):
     viz.__dump_or_browse(allres, 'pair_analysis')
 
     # Scale vs Score
-    df2.figure(fnum=2, plotnum=(2, 2, 1), doclf=True)
+    df2.figure(fnum=2, plotnum=(2, 2, 1), docla=True)
     df2.plot2(tt_scale[:, 0], tt_scores, 'gx', 'scale1', 'score', 'Top True')
     df2.figure(fnum=2, plotnum=(2, 2, 2))
     df2.plot2(tf_scale[:, 0], tf_scores, 'rx', 'scale1', 'score', 'Top False')
@@ -851,7 +851,7 @@ def dump_feature_pair_analysis(allres):
     viz.__dump_or_browse(allres, 'pair_analysis')
 
     # Entropy Ratio vs Score
-    df2.figure(fnum=3, plotnum=(1, 2, 1), doclf=True)
+    df2.figure(fnum=3, plotnum=(1, 2, 1), docla=True)
     df2.plot2(tt_entropy_ratio, tt_scores, 'gx', 'entropy-ratio', 'score', 'Top True')
     df2.figure(fnum=3, plotnum=(1, 2, 2))
     df2.plot2(tf_entropy_ratio, tf_scores, 'rx', 'entropy-ratio', 'score', 'Top False')
@@ -859,7 +859,7 @@ def dump_feature_pair_analysis(allres):
     viz.__dump_or_browse(allres, 'pair_analysis')
 
     # Scale Ratio vs Score
-    df2.figure(fnum=4, plotnum=(1, 2, 1), doclf=True)
+    df2.figure(fnum=4, plotnum=(1, 2, 1), docla=True)
     df2.plot2(tt_scale_ratio, tt_scores, 'gx', 'scale-ratio', 'score', 'Top True')
     df2.figure(fnum=4, plotnum=(1, 2, 2))
     df2.plot2(tf_scale_ratio, tf_scores, 'rx', 'scale-ratio', 'score', 'Top False')

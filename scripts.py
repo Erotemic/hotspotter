@@ -45,10 +45,11 @@ def export_subdatabase(hs, gx_list, new_dbdir):
 
     copy_list = [(src, dst) for (src, dst) in zip(src_gname_list, dst_gname_list)]
 
-    mark_progress = helpers.progress_func(len(copy_list), lbl='Copy Images')
+    mark_progress, end_prog = helpers.progress_func(len(copy_list), lbl='Copy Images')
     for count, (src, dst) in enumerate(copy_list):
         shutil.copy(src, dst)
         mark_progress(count)
+    end_prog()
 
     cx_list = [cx for cxs in hs.gx2_cxs(gx_list) for cx in cxs.tolist()]
     nx_list = np.unique(hs.tables.cx2_nx[cx_list])
@@ -275,10 +276,11 @@ def delete_suffixed_images(hs, back):
     helpers.ensuredir(trash_dir)
 
     move_list = zip(src_list, dst_list)
-    mark_progress = helpers.progress_func(len(move_list), lbl='Trashing Image')
+    mark_progress, end_prog = helpers.progress_func(len(move_list), lbl='Trashing Image')
     for count, (src, dst) in enumerate(move_list):
         shutil.move(src, dst)
         mark_progress(count)
+    end_prog()
 
     for gx in remove_gxs:
         print('[script] remove gx=%r' % (gx,))

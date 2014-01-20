@@ -43,12 +43,9 @@ else:
 
 
 def progress_func(maxval=0):
-    mark_progress = helpers.progress_func(maxval, mark_after=MARK_AFTER, progress_type='simple')
-
-    def end_progress():
-        print('')
-    if maxval > MARK_AFTER:
-        print('')
+    mark_progress, end_progress = helpers.progress_func(maxval, mark_after=MARK_AFTER, progress_type='simple')
+    #if maxval > MARK_AFTER:
+        #print('')
     return mark_progress, end_progress
 
 

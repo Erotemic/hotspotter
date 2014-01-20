@@ -11,7 +11,7 @@ Wow, pylint is nice for cleaning.
 from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[guitools]')
+ rrr, profile) = __common__.init(__name__, '[helpers]')
 # Scientific
 import numpy as np
 # Standard
@@ -37,6 +37,7 @@ import warnings
 # HotSpotter
 import tools
 from Printable import printableVal
+import argparse2
 #print('LOAD_MODULE: helpers.py')
 
 # --- Globals ---
@@ -489,8 +490,8 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
     parameter. Prints if max_val > mark_at. Prints dots if max_val not
     specified or simple=True'''
     # Tell the user we are about to make progress
-    if progress_type == 'simple' and max_val < mark_after:
-        return lambda count: None
+    if progress_type in ['simple', 'fmtstr'] and max_val < mark_after:
+        return lambda count: None, lambda : None
     print(lbl)
     # none: nothing
     if progress_type == 'none':
@@ -542,12 +543,14 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
             if (count_) % flush_after == 0:
                 sys.stdout.flush()
         mark_progress = mark_progress_fmtstr
-    if '--aggroflush' in sys.argv:
+    if argparse2.ARGS_.aggroflush:
         def mark_progress_agressive(count):
             mark_progress(count)
             sys.stdout.flush()
         return mark_progress_agressive
-    return mark_progress
+    def end_progress():
+        print('')
+    return mark_progress, end_progress
     raise Exception('unkown progress type = %r' % progress_type)
 
 

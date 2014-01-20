@@ -48,7 +48,7 @@ def preload_args_process(args):
     return load_all, cids
 
 
-def postload_args_process(hs):
+def postload_args_process(hs, back):
     # --- Run Startup Commands ---
     # Autocompute all queries
     if hs.args.autoquery:
@@ -61,6 +61,16 @@ def postload_args_process(hs):
         qcid = qcid_list[0]
         tx = tx_list[0] if len(tx_list) > 0 else None
         res = back.query(qcid, tx)
+    selgxs = hs.args.selgxs
+    if len(selgxs) > 0:
+        back.select_gx(selgxs[0])
+    selnxs = hs.args.selnxs
+    if len(selnxs) > 0:
+        name = hs.nx2_name(selnxs[0])
+        back.select_name(name)
+    selcxs = hs.args.selcxs
+    if len(selcxs) > 0:
+        back.select_cx(selcxs[0])
     return res
 
 
@@ -114,7 +124,7 @@ if __name__ == '__main__':
     # Create main window only after data is loaded
     back = guiback.make_main_window(hs, app)
     # --- Run Startup Commands ---
-    res = postload_args_process(hs)
+    res = postload_args_process(hs, back)
     # Connect database to the back gui
     #app.setActiveWindow(back.front)
 

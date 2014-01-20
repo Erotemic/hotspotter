@@ -62,11 +62,11 @@ def prequery(hs):
 #----------------------
 # Convinience Functions
 #----------------------
-def query_dcxs(hs, qcx, dcxs, qdat, dochecks=True, **kwargs):
+def query_dcxs(hs, qcx, dcxs, qdat, dochecks=True):
     'wrapper that bypasses all that "qcx2_ map" buisness'
     if dochecks:
         prequery_checks(hs, qdat)
-    result_list = execute_query_safe(hs, qdat, [qcx], dcxs, **kwargs)
+    result_list = execute_query_safe(hs, qdat, [qcx], dcxs)
     res = result_list[0].values()[0]
     return res
 
@@ -122,7 +122,7 @@ def prepare_query(qdat, qcxs, dcxs):
 # Main Query Logic
 #----------------------
 @profile
-def execute_query_safe(hs, qdat, qcxs, dcxs, use_cache=True, **kwargs):
+def execute_query_safe(hs, qdat, qcxs, dcxs, use_cache=True):
     '''Executes a query, performs all checks, callable on-the-fly'''
     print('[mc3] Execute query: q%s' % hs.cidstr(qcxs))
     qcxs, dcxs = prepare_query(qdat, qcxs, dcxs)

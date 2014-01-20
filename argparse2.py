@@ -96,6 +96,9 @@ def main_argparse(parser2):
     parser2 = parser2.add_argument_group('Main')
     parser2.add_flag('--autoquery')
     parser2.add_intlist('--query', default=[], help='query chip-id to investigate')
+    parser2.add_intlist('--selgxs', default=[], help='image indexes to view')
+    parser2.add_intlist('--selcxs', default=[], help='chip indexes to view')
+    parser2.add_intlist('--selnxs', default=[], help='name indexes to view')
     parser2.add_intlist('--txs', default=[], help='investigate match to top x of querys')
     parser2.add_int('--qcid', help='query chip-id to investigate', nargs='*')
     parser2.add_intlist('--ocid', help='query chip-id to investigate')
@@ -155,6 +158,7 @@ def behavior_argparse(parser2):
     parser2.add_flag('--withexif', help='Reads EXIF data')
     parser2.add_flag('--verbose-cache')
     parser2.add_flag('--verbose-load')
+    parser2.add_flag('--aggroflush', help='Agressively flushes')
 
 
 def cfg_argparse(parser2):

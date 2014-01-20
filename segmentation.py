@@ -72,7 +72,7 @@ def test(hs, cx=0):
     print('testing segment')
     seg_chip, img_mask = segment(img_fpath, roi_, new_size=None)
     import vizualizations as viz
-    viz.show_image(hs, gx, fnum=1, pnum=131, title='original', doclf=True)
+    viz.show_image(hs, gx, fnum=1, pnum=131, title='original', docla=True)
     df2.imshow(img_mask, fnum=1, pnum=132, title='mask')
     df2.imshow(seg_chip, fnum=1, pnum=133, title='segmented')
 

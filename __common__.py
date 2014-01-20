@@ -5,6 +5,7 @@ import sys
 
 def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
     module = sys.modules[module_name]
+    aggroflush = '--aggroflush' in sys.argv
 
     try:
         profile  # NoQA
@@ -17,11 +18,17 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
         print(module_prefix + ' reloading ' + module_name)
         imp.reload(module)
 
-    def print_(msg):
-        sys.stdout.write(msg)
+    if aggroflush:
+        def print_(msg):
+            sys.stdout.write(msg)
+            sys.stdout.flush()
+    else:
+        def print_(msg):
+            sys.stdout.write(msg)
 
     def print(msg):
         __builtin__.print(msg)
+        #__builtin__.print(module_prefix + msg)
 
     def noprint(msg):
         pass

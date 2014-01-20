@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import __common__
-(print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[viz]')
+(print, print_, print_on, print_off, rrr, profile, printDBG) = \
+__common__.init(__name__, '[viz]', DEBUG=False)
 import matplotlib
 matplotlib.use('Qt4Agg')
 # Python
@@ -18,12 +18,7 @@ import helpers
 #from interaction import interact_keypoints, interact_chipres, interact_chip # NOQA
 
 
-FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5)
-
-
-def printDBG(msg):
-    #print(msg)
-    pass
+FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5, name=6)
 
 
 def register_FNUMS(FNUMS_):
@@ -38,7 +33,7 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
     (nRow, nCol) = len(orgtype_list), len(disttype_list)
     nColors = nRow * nCol
     color_list = df2.distinct_colors(nColors)
-    df2.figure(fnum=fnum, doclf=True, trueclf=True)
+    df2.figure(fnum=fnum, docla=True, doclf=True)
     pnum_ = lambda px: (nRow, nCol, px + 1)
     plot_type = helpers.get_arg_after('--plot-type', default='plot')
 
@@ -103,15 +98,28 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
     df2.set_figtitle(title, subtitle)
     df2.adjust_subplots_safe()
 
+#=============
+# Splash Viz
+#=============
 
-def plot_name_of_cx(hs, cx, **kwargs):
+def show_splash(fnum=1, **kwargs):
+    #printDBG('[viz] show_splash()')
+    splash_fpath = io.splash_img_fpath()
+    img = io.imread(splash_fpath)
+    df2.imshow(img, fnum=fnum, **kwargs)
+
+#=============
+# Name Viz
+#=============
+
+def show_name_of(hs, cx, **kwargs):
     nx = hs.tables.cx2_nx[cx]
-    plot_name(hs, nx, hl_cxs=[cx], **kwargs)
+    show_name(hs, nx, sel_cxs=[cx], **kwargs)
 
 
-def plot_name(hs, nx, nx2_cxs=None, fnum=0, hl_cxs=[], subtitle='',
+def show_name(hs, nx, nx2_cxs=None, fnum=0, sel_cxs=[], subtitle='',
               annote=False, **kwargs):
-    print('[viz] plot_name nx=%r' % nx)
+    print('[viz] show_name nx=%r' % nx)
     nx2_name = hs.tables.nx2_name
     cx2_nx   = hs.tables.cx2_nx
     name = nx2_name[nx]
@@ -119,7 +127,7 @@ def plot_name(hs, nx, nx2_cxs=None, fnum=0, hl_cxs=[], subtitle='',
         cxs = nx2_cxs[nx]
     else:
         cxs = np.where(cx2_nx == nx)[0]
-    print('[viz] plot_name %r' % hs.cidstr(cxs))
+    print('[viz] show_name %r' % hs.cidstr(cxs))
     ncxs  = len(cxs)
     #nCols = int(min(np.ceil(np.sqrt(ncxs)), 5))
     nCols = int(min(ncxs, 5))
@@ -132,7 +140,7 @@ def plot_name(hs, nx, nx2_cxs=None, fnum=0, hl_cxs=[], subtitle='',
     for px, cx in enumerate(cxs):
         show_chip(hs, cx=cx, pnum=pnum(px), draw_kpts=annote, kpts_alpha=.2,
                   info=False, cid_info=True)
-        if cx in hl_cxs:
+        if cx in sel_cxs:
             ax = df2.gca()
             df2.draw_border(ax, df2.GREEN, 4)
         #plot_cx3(hs, cx)
@@ -150,208 +158,259 @@ def plot_name(hs, nx, nx2_cxs=None, fnum=0, hl_cxs=[], subtitle='',
     #df2.set_figtitle(title, subtitle)
 
 
-# TODO: Fix image annotation scheme to conform to other vizualizations (when they are fixed too)
-def _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
-                    draw_rois=True, draw_roi_lbls=True,  fnum=-1, figtitle='',
-                    **kwargs):
+#==========================
+# Image Viz
+#==========================
+
+
+def _annotate_roi(hs, ax, cx, sel_cxs, draw_lbls, annote):
+    # Draw an roi around a chip in the image
+    roi, theta = hs.cx2_roi(cx), hs.cx2_theta(cx)
+    if annote:
+        is_sel =  cx in sel_cxs
+        label = hs.cx2_name(cx)
+        label = hs.cidstr(cx) if label == '____' else label
+        label = label if draw_lbls else None
+        lbl_alpha  = .75 if is_sel else .6
+        bbox_alpha = .95 if is_sel else .6
+        lbl_color  = df2.BLACK * lbl_alpha
+        bbox_color = (df2.ORANGE if is_sel else df2.DARK_ORANGE) * bbox_alpha
+        df2.draw_roi(roi, label, bbox_color, lbl_color, theta=theta, ax=ax)
+    # Index the roi centers (for interaction)
+    (x, y, w, h) = roi
+    xy_center = np.array([x + (w / 2), y + (h / 2)])
+    return xy_center
+
+
+def _annotate_image(hs, ax, gx, sel_cxs, draw_lbls, annote):
     # draw chips in the image
     cx_list = hs.gx2_cxs(gx)
     centers = []
-    interact = cx_clicked_func is not None
     # Draw all chip indexes in the image
     for cx in cx_list:
-        roi = hs.cx2_roi(cx)
-        theta = hs.cx2_theta(cx)
-        # Draw the ROI
-        roi_lbl = hs.cx2_name(cx)
-        if roi_lbl == '____':
-            roi_lbl = hs.cidstr(cx)
-        # OH SO BAD! FIXME
-        highlight_cxs_ = highlight_cxs
-        if highlight_cxs is None:
-            highlight_cxs_ = []
-        if cx in highlight_cxs_:
-            bbox_color = df2.ORANGE * np.array([1, 1, 1, .95])
-            lbl_color  = df2.BLACK * np.array([1, 1, 1, .75])
-        else:
-            dark_alpha = np.array([1, 1, 1, .6])
-            bbox_color = df2.DARK_ORANGE * dark_alpha
-            lbl_color  = df2.BLACK       * dark_alpha
-        if draw_roi_lbls:
-            df2.draw_roi(ax, roi, roi_lbl, bbox_color, lbl_color, theta=theta)
-        else:
-            df2.draw_roi(ax, roi, None, bbox_color, lbl_color, theta=theta)
-        # Index the roi centers (for interaction)
-        (x, y, w, h) = roi
-        xy_center = np.array([x + (w / 2), y + (h / 2)])
+        xy_center = _annotate_roi(hs, ax, cx, sel_cxs, draw_lbls, annote)
         centers.append(xy_center)
-    # Put roi centers in numpy array
+    # Put roi centers in the axis
     centers = np.array(centers)
-
-    # Create callback wrapper
-    def _on_image_click(event):
-        'Slot for matplotlib event'
-        print('[viz] clicked image')
-        #print(event.__dict__)
-        if event is None or event.inaxes is None or event.xdata is None:
-            #print(kwargs)
-            #print(draw_rois)
-            #print(draw_roi_lbls)
-            df2.disconnect_callback(fig, 'button_press_event', axes=[ax])
-            show_image(hs, gx, highlight_cxs=highlight_cxs,
-                       cx_clicked_func=cx_clicked_func, draw_rois=draw_rois,
-                       fnum=fnum, figtitle=figtitle,
-                       draw_roi_lbls=not draw_roi_lbls, **kwargs)
-            df2.draw()
-            return
-        else:
-            if len(centers) == 0:
-                return
-            else:
-                #printDBG('\n'.join(['%r=%r' % tup for tup in event.__dict__.iteritems()]))
-                x, y = event.xdata, event.ydata
-                # Find ROI center nearest to the clicked point
-                dist = (centers.T[0] - x) ** 2 + (centers.T[1] - y) ** 2
-                cx = cx_list[dist.argsort()[0]]
-                cx_clicked_func(cx)
-
-    if interact:
-        df2.connect_callback(fig, 'button_press_event', _on_image_click)
+    ax._hs_centers = centers
+    ax._hs_cx_list = cx_list
 
 
-def show_image(hs, gx, highlight_cxs=None, cx_clicked_func=None, draw_rois=True,
-               fnum=1, figtitle='Img', **kwargs):
-    '''Shows an image. cx_clicked_func(cx) is a callback function'''
+def show_image(hs, gx, sel_cxs=[], fnum=1, figtitle='Img', annote=True,
+               draw_lbls=True, **kwargs):
+    # Shows an image with annotations
     gname = hs.tables.gx2_gname[gx]
     title = 'gx=%r gname=%r' % (gx, gname)
     img = hs.gx2_image(gx)
-    fig = df2.figure(fnum=fnum, doclf=True)
+    fig = df2.figure(fnum=fnum, docla=True)
     fig, ax = df2.imshow(img, title=title, fnum=fnum, **kwargs)
-    ax = df2.gca()
-    df2.disconnect_callback(fig, 'button_press_event', axes=[ax])
-    if draw_rois:
-        _annotate_image(hs, fig, ax, gx, highlight_cxs, cx_clicked_func,
-                        draw_rois,
-                        fnum=fnum, figtitle=figtitle, **kwargs)
+    ax._hs_viewtype = 'image'
+    _annotate_image(hs, ax, gx, sel_cxs, draw_lbls, annote)
     df2.set_figtitle(figtitle)
 
 
-def show_splash(fnum=1, **kwargs):
-    #printDBG('[viz] show_splash()')
-    splash_fpath = io.splash_img_fpath()
-    img = io.imread(splash_fpath)
-    df2.imshow(img, fnum=fnum, **kwargs)
+#==========================
+# Chip Viz
+#==========================
 
 
-def show_chip(hs, cx=None, allres=None, res=None, info=True, draw_kpts=True,
-              nRandKpts=None, kpts_alpha=None, kpts=None, rchip=None,
-              ell_alpha=None, ell_color=None, prefix='', ell_args=None,
-              cid_info=False, **kwargs):
-    if not res is None:
-        cx = res.qcx
-    if not allres is None:
-        res = allres.qcx2_res[cx]
-    if rchip is None:
-        rchip = hs.get_chip(cx)
-    title_str = prefix
-    # Add info to title
-    # TODO: CLEAN THIS UP. THIS IS REAL BAD
-    if info:
-        gname = hs.cx2_gname(cx)
-        name = hs.cx2_name(cx)
-        ngt_str = hs.num_indexed_gt_str(cx)
-        title_str += ', '.join([hs.cidstr(cx), 'name=%r' % name,
-                               'gname=%r' % gname, ngt_str, ])
-    elif cid_info:
-        title_str += hs.cidstr(cx)
-    fig, ax = df2.imshow(rchip, title=title_str, **kwargs)
-    ax._hs_viewtype = 'chip'  # Customize axis
-    #if not res is None:
-    if not draw_kpts:
-        return
-    kpts = kwargs.get('kpts', None)
-    if kpts is None:
-        kpts = hs.get_kpts(cx)
-    if ell_args is None:
-        ell_args = {'offset': (0, 0),
-                    'ell_linewidth': 1.5,
-                    'ell': True,
-                    'pts': False}
-    # Draw keypoints with groundtruth information
-    if not res is None:
-        gt_cxs = hs.get_other_indexed_cxs(cx)
-        # Get keypoint indexes
+def _annotate_qcx_match_results(hs, res, qcx, kpts):
+    '''Draws which keypoints successfully matched'''
+    def stack_unique(fx_list):
+        # concatenates variable length lists
+        try:
+            if len(fx_list) == 0:
+                return np.array([], dtype=int)
+            stack_list = np.hstack(fx_list)
+            stack_ints = np.array(stack_list, dtype=int)
+            unique_ints = np.unique(stack_ints)
+            return unique_ints
+        except Exception as ex:
+            print('Ex: %r' % ex)
+            print('fx_list = %r ' % fx_list)
+            print('stack_insts = %r' % stack_ints)
+            print('unique_ints = %r' % unique_ints)
+            print(unique_ints)
+            raise
 
-        def stack_unique(fx_list):
-            try:
-                if len(fx_list) == 0:
-                    return np.array([], dtype=int)
-                stack_list = np.hstack(fx_list)
-                stack_ints = np.array(stack_list, dtype=int)
-                unique_ints = np.unique(stack_ints)
-                return unique_ints
-            except Exception as ex:
-                print('Ex: %r' % ex)
-                print('fx_list = %r ' % fx_list)
-                print('stack_insts = %r' % stack_ints)
-                print('unique_ints = %r' % unique_ints)
-                print(unique_ints)
-                raise
-        all_fx = np.arange(len(kpts))
-        cx2_fm = res.get_cx2_fm()
-        fx_list1 = [fm[:, 0] for fm in cx2_fm]
-        fx_list2 = [fm[:, 0] for fm in cx2_fm[gt_cxs]] if len(gt_cxs) > 0 else np.array([])
-        matched_fx = stack_unique(fx_list1)
-        true_matched_fx = stack_unique(fx_list2)
-        noise_fx = np.setdiff1d(all_fx, matched_fx)
-        # Print info
-        print('[viz.show_chip()] %s has %d keypoints. %d true-matching. %d matching. %d noisy.' %
-             (hs.cidstr(cx), len(all_fx), len(true_matched_fx), len(matched_fx), len(noise_fx)))
-        # Get keypoints
-        kpts_true  = kpts[true_matched_fx]
-        kpts_match = kpts[matched_fx, :]
-        kpts_noise = kpts[noise_fx, :]
-        # Draw keypoints
-        legend_tups = []
-        ell_alpha = ell_args.pop('ell_alpha', ell_alpha)
-        ell_color = ell_args.pop('ell_color', ell_color)
-
+    def _kpts_helper(kpts_, color, alpha, label):
         # helper function taking into acount phantom labels
-        def _kpts_helper(kpts_, color, alpha, label):
-            df2.draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha, **ell_args)
-            phant_ = df2.Circle((0, 0), 1, fc=color)
-            legend_tups.append((phant_, label))
-        _kpts_helper(kpts_noise,  df2.RED, .1, 'Unverified')
-        _kpts_helper(kpts_match, df2.BLUE, .4, 'Verified')
-        _kpts_helper(kpts_true, df2.GREEN, .6, 'True Matches')
-        #plt.legend(*zip(*legend_tups), framealpha=.2)
-    # Just draw boring keypoints
-    else:
-        kpts_alpha = ell_args.pop('kpts_alpha', kpts_alpha)
-        ell_alpha = ell_args.pop('ell_alpha', ell_alpha)
-        ell_alpha = kpts_alpha
-        if ell_alpha is None:
-            ell_alpha = .4
-        if not nRandKpts is None:
-            nkpts1 = len(kpts)
-            fxs1 = np.arange(nkpts1)
-            size = nRandKpts
-            replace = False
-            p = np.ones(nkpts1)
-            p = p / p.sum()
-            fxs_randsamp = np.random.choice(fxs1, size, replace, p)
-            kpts = kpts[fxs_randsamp]
-            df2.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1))
-            # show a random sample of kpts
-        if ell_color is None:
-            ell_color = df2.RED
+        df2.draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha, **ell_args)
+        df2.phantom_legend_label(label, color)
 
-        df2.draw_kpts2(kpts, ell_color=ell_color, ell_alpha=ell_alpha, **ell_args)
+    gt_cxs = hs.get_other_indexed_cxs(qcx)
+    all_fx = np.arange(len(kpts))
+    cx2_fm = res.get_cx2_fm()
+    fx_list1 = [fm[:, 0] for fm in cx2_fm]
+    fx_list2 = [fm[:, 0] for fm in cx2_fm[gt_cxs]] if len(gt_cxs) > 0 else np.array([])
+    matched_fx = stack_unique(fx_list1)
+    true_matched_fx = stack_unique(fx_list2)
+    noise_fx = np.setdiff1d(all_fx, matched_fx)
+    # Print info
+    tup = (hs.cidstr(qcx), len(all_fx), len(matched_fx), len(true_matched_fx), len(noise_fx))
+    print('[viz.show_chip] %s has %d kpts. #Matches: %d, true=%d, noisy=%d.' % tup)
+    # Get keypoints
+    kpts_true  = kpts[true_matched_fx]
+    kpts_match = kpts[matched_fx, :]
+    kpts_noise = kpts[noise_fx, :]
+    # Draw keypoints
+    ell_alpha = ell_args.pop('ell_alpha', ell_alpha)
+    ell_color = ell_args.pop('ell_color', ell_color)
+    _kpts_helper(kpts_noise,  df2.RED, .1, 'Unverified')
+    _kpts_helper(kpts_match, df2.BLUE, .4, 'Verified')
+    _kpts_helper(kpts_true, df2.GREEN, .6, 'True Matches')
 
 
-def show_keypoints(rchip, kpts, fnum=0, title=None, **kwargs):
-    df2.imshow(rchip, fnum=fnum, title=title, **kwargs)
-    df2.draw_kpts2(kpts)
+def _annotate_kpts(kpts, sel_fx, draw_kpts, nRandKpts=None):
+    ell_args = {'ell_alpha': 1, 'ell_linewidth': 2}
+    if draw_kpts and nRandKpts is not None:
+        # show a random sample of kpts
+        nkpts1 = len(kpts)
+        fxs1 = np.arange(nkpts1)
+        size = nRandKpts
+        replace = False
+        p = np.ones(nkpts1)
+        p = p / p.sum()
+        fxs_randsamp = np.random.choice(fxs1, size, replace, p)
+        kpts = kpts[fxs_randsamp]
+        # TODO Fix this. This should not set the xlabel
+        df2.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1))
+    elif draw_kpts:
+        # Draw all keypoints
+        if sel_fx is not None:
+            ell_args['ell_color'] = df2.BLUE
+        else:
+            ell_args['ell_color'] = 'distinct'
+        df2.draw_kpts2(kpts, ell_args=ell_args)
+    if sel_fx is not None:
+        # Draw selected keypoint
+        sel_kpts = kpts[sel_fx:sel_fx + 1]
+        df2.draw_kpts2(sel_kpts, ell_color=df2.ORANGE, arrow=True, rect=True)
+
+
+def show_chip(hs, cx=None, allres=None, res=None, draw_kpts=True,
+              nRandKpts=None, prefix='', sel_fx=None, **kwargs):
+    if allres is not None:
+        res = allres.qcx2_res[cx]
+    if res is not None:
+        cx = res.qcx
+    rchip = kwargs['rchip'] if 'rchip' in kwargs else hs.get_chip(cx)
+    # Add info to title
+    title_list = []
+    title_list += [hs.cidstr(cx)]
+    # FIXME
+    #title_list += ['gname=%r' % hs.cx2_gname(cx)]
+    #title_list += ['name=%r'  % hs.cx2_name(cx)]
+    #title_list += [hs.num_indexed_gt_str(cx)]
+    title_str = prefix + ', '.join(title_list)
+    fig, ax = df2.imshow(rchip, title=title_str, **kwargs)
+    # Add user data to axis
+    ax._hs_viewtype = 'chip'
+    ax._hs_cx = cx
+    if draw_kpts:
+        # FIXME
+        kpts  = kwargs['kpts']  if 'kpts'  in kwargs else hs.get_kpts(cx)
+        if res is not None:
+            # Draw keypoints with groundtruth information
+            _annotate_qcx_match_results(hs, res, cx, kpts)
+        else:
+            # Just draw boring keypoints
+            _annotate_kpts(kpts, sel_fx, draw_kpts, nRandKpts)
+
+
+def show_keypoints(rchip, kpts, draw_kpts=True, sel_fx=None, fnum=0,
+                   pnum=None, **kwargs):
+    df2.imshow(rchip, fnum=fnum, pnum=pnum, **kwargs)
+    _annotate_kpts(kpts, sel_fx, draw_kpts)
+    ax = df2.gca()
+    ax._hs_viewtype = 'keypoints'
+    ax._hs_kpts = kpts
+
+#==========================
+# ChipRes Viz
+#==========================
+
+
+def res_show_chipres(res, hs, cx, **kwargs):
+    'Wrapper for show_chipres(show annotated chip match result) '
+    qcx = res.qcx
+    cx2_score = res.get_cx2_score()
+    cx2_fm    = res.get_cx2_fm()
+    cx2_fs    = res.get_cx2_fs()
+    cx2_fk    = res.get_cx2_fk()
+    return show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
+                        **kwargs)
+
+
+def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
+                 fnum=None, pnum=None, sel_fm=[], **kwargs):
+    'shows single annotated match result.'
+    #printDBG('[viz.show_chipres()] Showing matches from %s' % (vs_str))
+    #printDBG('[viz.show_chipres()] fnum=%r, pnum=%r' % (fnum, pnum))
+    # Test valid cx
+    if np.isnan(cx):
+        nan_img = np.zeros((32, 32), dtype=np.uint8)
+        title = '(q%s v %r)' % (hs.cidstr(qcx), cx)
+        df2.imshow(nan_img, fnum=fnum, pnum=pnum, title=title)
+        return
+    score = cx2_score[cx]
+    fm = cx2_fm[cx]
+    fs = cx2_fs[cx]
+    #fk = cx2_fk[cx]
+    vs_str = hs.vs_str(qcx, cx)
+    # Read query and result info (chips, names, ...)
+    rchip1, rchip2 = hs.get_chip([qcx, cx])
+    kpts1, kpts2   = hs.get_kpts([qcx, cx])
+    # Build annotation strings / colors
+    lbl1 = 'q' + hs.cidstr(qcx)
+    lbl2 = hs.cidstr(cx)
+    (truestr, falsestr, nonamestr) = ('TRUE', 'FALSE', '???')
+    is_true, is_unknown = hs.is_true_match(qcx, cx)
+    isgt_str = nonamestr if is_unknown else (truestr if is_true else falsestr)
+    match_color = {nonamestr: df2.UNKNOWN_PURP,
+                   truestr:   df2.TRUE_GREEN,
+                   falsestr:  df2.FALSE_RED,}[isgt_str]
+    # Build title
+    title = '*%s*' % isgt_str if kwargs.get('showTF', True) else ''
+    if kwargs.get('showScore', True):
+        score_str = (' score=' + helpers.num_fmt(score)) % (score)
+        title += score_str
+    if 'title_pref' in kwargs:
+        title = kwargs['title_pref'] + str(title)
+    if 'title_suff' in kwargs:
+        title = str(title) + kwargs['title_suff']
+    # Build xlabel
+    xlabel_ = []
+    if kwargs.get('show_gname', False):
+        xlabel_.append('gname=%r' % hs.cx2_gname(cx))
+    if kwargs.get('show_name', True):
+        xlabel_.append('name=%r' % hs.cx2_name(cx))
+    if kwargs.get('time_appart', True):
+        xlabel_.append(hs.get_timedelta_str(qcx, cx))
+    xlabel = ', '.join(xlabel_)
+    # Draws the chips and keypoint matches
+    kwargs_ = dict(fs=fs, lbl1=lbl1, lbl2=lbl2, title=title, fnum=fnum,
+                   pnum=pnum, vert=hs.prefs.display_cfg.vert)
+    kwargs_.update(kwargs)
+    ax, xywh1, xywh2 = df2.show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm, **kwargs_)
+    x1, y1, w1, h1 = xywh1
+    x2, y2, w2, h2 = xywh2
+    if len(sel_fm) > 0:
+        # Draw any selected matches
+        _smargs = dict(rect=True, colors=df2.ORANGE)
+        df2.draw_fmatch(xywh1, xywh2, kpts1, kpts2, sel_fm, **_smargs)
+    offset2 = (x2, y2)
+    df2.draw_border(ax, match_color, 4, offset=offset2)
+    df2.set_xlabel(xlabel)
+    ax._hs_viewtype = 'chipres'
+    ax._hs_qcx = qcx
+    ax._hs_cx = cx
+    return ax, xywh1, xywh2
+
+
+#==========================
+# Result Viz
+#==========================
 
 
 def show_top(res, hs, *args, **kwargs):
@@ -406,86 +465,6 @@ def res_show_analysis(res, hs, **kwargs):
         return _show_res(hs, res, gt_cxs=showgt_cxs, topN_cxs=topN_cxs,
                          figtitle=figtitle, max_nCols=max_nCols,
                          show_query=show_query, **kwargs)
-
-
-def res_show_chipres(res, hs, cx, **kwargs):
-    'Wrapper for show_chipres(show annotated chip match result) '
-    qcx = res.qcx
-    cx2_score = res.get_cx2_score()
-    cx2_fm    = res.get_cx2_fm()
-    cx2_fs    = res.get_cx2_fs()
-    cx2_fk    = res.get_cx2_fk()
-    return show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
-                        **kwargs)
-
-
-def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk, **kwargs):
-    'shows single annotated match result.'
-    fnum = kwargs.pop('fnum', None)
-    pnum = kwargs.pop('pnum', None)
-    #printDBG('[viz.show_chipres()] Showing matches from %s' % (vs_str))
-    #printDBG('[viz.show_chipres()] fnum=%r, pnum=%r' % (fnum, pnum))
-    # Test valid cx
-    if np.isnan(cx):
-        nan_img = np.zeros((32, 32), dtype=np.uint8)
-        title = '(q%s v %r)' % (hs.cidstr(qcx), cx)
-        df2.imshow(nan_img, fnum=fnum, pnum=pnum, title=title)
-        return
-    score = cx2_score[cx]
-    fm = cx2_fm[cx]
-    fs = cx2_fs[cx]
-    #fk = cx2_fk[cx]
-    vs_str = hs.vs_str(qcx, cx)
-    # Read query and result info (chips, names, ...)
-    rchip1, rchip2 = hs.get_chip([qcx, cx])
-    kpts1, kpts2   = hs.get_kpts([qcx, cx])
-    # Build annotation strings / colors
-    lbl1 = 'q' + hs.cidstr(qcx)
-    lbl2 = hs.cidstr(cx)
-    #(truestr, falsestr, nonamestr) = ('SameName', 'DiffName', 'NoName')
-    (truestr, falsestr, nonamestr) = ('TRUE', 'FALSE', '???')
-    is_true, is_unknown = hs.is_true_match(qcx, cx)
-    isgt_str = nonamestr if is_unknown else (truestr if is_true else falsestr)
-    match_color = {nonamestr: df2.UNKNOWN_PURP,
-                   truestr:   df2.TRUE_GREEN,
-                   falsestr:  df2.FALSE_RED}[isgt_str]
-    # Build title
-    title = '*%s*' % isgt_str if kwargs.get('showTF', True) else ''
-    if kwargs.get('showScore', True):
-        score_str = (' score=' + helpers.num_fmt(score)) % (score)
-        title += score_str
-    if 'title_pref' in kwargs:
-        title = kwargs['title_pref'] + str(title)
-    if 'title_suff' in kwargs:
-        title = str(title) + kwargs['title_suff']
-    # Build xlabel
-    xlabel_ = []
-    if kwargs.get('show_gname', False):
-        xlabel_.append('gname=%r' % hs.cx2_gname(cx))
-    if kwargs.get('show_name', True):
-        xlabel_.append('name=%r' % hs.cx2_name(cx))
-    if kwargs.get('time_appart', True):
-        import datetime
-        unixtime1, unixtime2 = hs.cx2_unixtime([qcx, cx])
-        unixtime_diff = unixtime2 - unixtime1
-        sign = '+' if unixtime_diff > 0 else '-'
-        delta = datetime.timedelta(seconds=abs(unixtime_diff))
-        time_appart_str = 'timedelta(%s%s)' % (sign, str(delta))
-        xlabel_.append(time_appart_str)
-    xlabel = ', '.join(xlabel_)
-
-    # Draws the chips and keypoint matches
-    kwargs_ = dict(fs=fs, lbl1=lbl1, lbl2=lbl2, title=title, fnum=fnum,
-                   pnum=pnum, vert=hs.prefs.display_cfg.vert)
-    kwargs_.update(kwargs)
-    ax, xywh1, xywh2 = df2.show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm, **kwargs_)
-    x1, y1, w1, h1 = xywh1
-    x2, y2, w2, h2 = xywh2
-    offset2 = (x2, y2)
-    df2.draw_border(ax, match_color, 4, offset=offset2)
-    df2.set_xlabel(xlabel)
-    ax._hs_viewtype = 'chipres %s' % vs_str
-    return ax, xywh1, xywh2
 
 
 def _show_res(hs, res, **kwargs):
@@ -567,7 +546,7 @@ def _show_res(hs, res, **kwargs):
             orank = oranks[0] + 1
             _show_matches_fn(cx, orank, pnum)
 
-    fig = df2.figure(fnum=fnum, pnum=(nRows, nGTCols, 1), doclf=True, trueclf=True)
+    fig = df2.figure(fnum=fnum, pnum=(nRows, nGTCols, 1), docla=True, doclf=True)
     df2.disconnect_callback(fig, 'button_press_event')
     df2.plt.subplot(nRows, nGTCols, 1)
     # Plot Query
@@ -586,7 +565,7 @@ def _show_res(hs, res, **kwargs):
         def _ctrlclicked_cx(cx):
             printDBG('ctrl+clicked cx=%r' % cx)
             fnum = FNUMS['special']
-            fig = df2.figure(fnum=fnum, doclf=True, trueclf=True)
+            fig = df2.figure(fnum=fnum, docla=True, doclf=True)
             df2.disconnect_callback(fig, 'button_press_event')
             viz_spatial_verification(hs, res.qcx, cx2=cx, fnum=fnum)
             fig.canvas.draw()
@@ -613,13 +592,13 @@ def _show_res(hs, res, **kwargs):
             if event.xdata is None or event.inaxes is None:
                 #print('clicked outside axes')
                 return _clicked_none()
-            hs_viewtype = event.inaxes.__dict__.get('_hs_viewtype', '')
+            ax = event.inaxes
+            hs_viewtype = ax.__dict__.get('_hs_viewtype', '')
             printDBG(event.__dict__)
             printDBG('hs_viewtype=%r' % hs_viewtype)
             # Clicked a specific chipres
             if hs_viewtype.find('chipres') == 0:
-                cid = int(hs_viewtype[hs_viewtype.find(' v ') + 3:-1])
-                cx  = hs.cid2_cx(cid)
+                cx = ax.__dict__.get('_hs_cx')
                 # Ctrl-Click
                 key = '' if event.key is None else event.key
                 print('key = %r' % key)
@@ -635,8 +614,10 @@ def _show_res(hs, res, **kwargs):
     printDBG('[viz._show_res()] Finished')
     return fig
 
+#==========================#
+#  --- TESTING FUNCS ---   #
+#==========================#
 
-# ---- TEST FUNCTIONS ---- #
 def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
     '''A feature match (fm) is a list of M 2-tuples.
     fm = [(0, 5), (3,2), (11, 12), (4,4)]
@@ -653,7 +634,7 @@ def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
         query_args['use_cache'] = False
         # Query without spatial verification to get assigned matches
         print('query_args = %r' % (query_args))
-        res = hs.query(hs, cx1, **query_args)
+        res = hs.query(cx1, **query_args)
     elif res == 'gt':
         # For testing purposes query_groundtruth is a bit faster than
         # query_database. But there is no reason you cant query_database
@@ -735,7 +716,7 @@ def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kw
     rchip2_blendA = rchip2 / 2 + rchip1_At / 2
     rchip2_blendH = rchip2 / 2 + rchip1_Ht / 2
 
-    df2.figure(fnum=fnum, pnum=(3, 4, 1), doclf=True, trueclf=True)
+    df2.figure(fnum=fnum, pnum=(3, 4, 1), docla=True, doclf=True)
 
     def _draw_chip(title, chip, px, *args, **kwargs):
         df2.imshow(chip, *args, title=title, fnum=fnum, pnum=(3, 4, px), **kwargs)
@@ -744,7 +725,7 @@ def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kw
     def _draw_matches(title, fm, px):
         # Helper with common arguments to df2.show_chipmatch2
         dmkwargs = dict(fs=None, title=title, all_kpts=False, draw_lines=True,
-                        doclf=True, fnum=fnum, pnum=(3, 3, px))
+                        docla=True, fnum=fnum, pnum=(3, 3, px))
         df2.show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm, show_nMatches=True, **dmkwargs)
 
     # Draw the Assigned -> Affine -> Homography matches

@@ -217,8 +217,10 @@ def draw_border(ax, color=GREEN, lw=2, offset=None):
     rect.set_edgecolor(color)
 
 
-def draw_roi(ax, roi, label=None, bbox_color=(1, 0, 0),
-             lbl_bgcolor=(0, 0, 0), lbl_txtcolor=(1, 1, 1), theta=0):
+def draw_roi(roi, label=None, bbox_color=(1, 0, 0),
+             lbl_bgcolor=(0, 0, 0), lbl_txtcolor=(1, 1, 1), theta=0, ax=None):
+    if ax is None:
+        ax = gca()
     (rx, ry, rw, rh) = roi
     t_start = ax.transData
     cos_ = np.cos(theta)
@@ -802,8 +804,8 @@ def on_key_press_event(event):
         #fig.canvas.manager.window.keyPressEvent()
 
 
-def customize_figure(fig, doclf):
-    if not 'user_stat_list' in fig.__dict__.keys() or doclf:
+def customize_figure(fig, docla):
+    if not 'user_stat_list' in fig.__dict__.keys() or docla:
         fig.user_stat_list = []
         fig.user_notes = []
     # We dont need to catch keypress events because you just need to set it as
@@ -870,8 +872,8 @@ def get_ax(fnum=None, pnum=None):
     return ax
 
 
-def figure(fnum=None, doclf=False, title=None, pnum=(1, 1, 1), figtitle=None,
-           trueclf=False, **kwargs):
+def figure(fnum=None, docla=False, title=None, pnum=(1, 1, 1), figtitle=None,
+           doclf=False, **kwargs):
     '''
     fnum = fignum = figure number
     pnum = plotnum = plot tuple
@@ -880,17 +882,17 @@ def figure(fnum=None, doclf=False, title=None, pnum=(1, 1, 1), figtitle=None,
     fig = get_fig(fnum)
     axes_list = fig.get_axes()
     # Ensure my customized settings
-    customize_figure(fig, doclf)
+    customize_figure(fig, docla)
     # Convert pnum to tuple format
     if tools.is_int(pnum):
         nr = pnum // 100
         nc = pnum // 10 - (nr * 10)
         px = pnum - (nr * 100) - (nc * 10)
         pnum = (nr, nc, px)
-    if trueclf:  # a bit hacky. Need to rectify doclf and trueclf
+    if doclf:  # a bit hacky. Need to rectify docla and doclf
         fig.clf()
     # Get the subplot
-    if doclf or len(axes_list) == 0:
+    if docla or len(axes_list) == 0:
         printDBG('[df2] *** NEW FIGURE %r.%r ***' % (fnum, pnum))
         if not pnum is None:
             #ax = plt.subplot(*pnum)
@@ -1073,6 +1075,15 @@ def plot_bars(y_data, nColorSplits=1):
         x_dat = x_data[xs]
         y_dat = y_data[xs]
         ax.bar(x_dat, y_dat, width, color=color, edgecolor=np.array(color) * .8)
+
+
+def phantom_legend_label(label, color, loc='upper right'):
+    'adds a legend label without displaying an actor'
+    phantom_actor = df2.Circle((0, 0), 1, fc=color, prop=FONTS.legend, loc=loc)
+    plt.legend(phant_actor, label, framealpha=.2)
+    #plt.legend(*zip(*legend_tups), framealpha=.2)
+    #legend_tups = []
+    #legend_tups.append((phantom_actor, label))
 
 
 def legend(loc='upper right'):

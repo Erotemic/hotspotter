@@ -118,14 +118,14 @@ def _compute_in_serial(task_list, task_lbl='', verbose=True):
     result_list = []
     nTasks = len(task_list)
     if verbose:
-        mark_progress = helpers.progress_func(nTasks, lbl=task_lbl)
+        mark_progress, end_prog = helpers.progress_func(nTasks, lbl=task_lbl)
         # Compute each task
         for count, (fn, args) in enumerate(task_list):
             mark_progress(count)
             #sys.stdout.flush()
             result = fn(*args)
             result_list.append(result)
-        print('')
+        end_prog()
     else:
         # Compute each task
         for (fn, args) in iter(task_list):
@@ -157,13 +157,13 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     sys.stdout.flush()
     result_list = []
     if verbose:
-        mark_progress = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
+        mark_progress, end_prog = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
         for count in xrange(len(task_list)):
             mark_progress(count)
             printDBG('[parallel] done_queue.get()')
             result = done_queue.get()
             result_list.append(result)
-        print('')
+        end_prog()
     else:
         for i in xrange(nTasks):
             done_queue.get()

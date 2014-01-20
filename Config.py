@@ -274,7 +274,7 @@ class QueryConfig(ConfigBase):
         query_cfg.sv_cfg    = SpatialVerifyConfig(**kwargs)
         query_cfg.agg_cfg   = AggregateConfig(**kwargs)
         # Queries depend on features # creating without hs delays crash
-        query_cfg._feat_cfg = None if hs is None else hs.prefs.feat_cfg
+        query_cfg._feat_cfg = FeatureConfig(**kwargs) if hs is None else hs.prefs.feat_cfg
         query_cfg.use_cache = False
         if hs is not None:
             query_cfg.update_cfg(**kwargs)
@@ -312,7 +312,7 @@ class QueryConfig(ConfigBase):
 
 
 class FeatureConfig(ConfigBase):
-    def __init__(feat_cfg, hs, **kwargs):
+    def __init__(feat_cfg, hs=None, **kwargs):
         super(FeatureConfig, feat_cfg).__init__(name='feat_cfg')
         feat_cfg.feat_type = 'hesaff+sift'
         feat_cfg.whiten = False
@@ -321,7 +321,7 @@ class FeatureConfig(ConfigBase):
         if hs is not None:
             feat_cfg._chip_cfg = hs.prefs.chip_cfg  # Features depend on chips
         else:
-            feat_cfg._chip_cfg = None  # creating without hs delays crash
+            feat_cfg._chip_cfg = ChipConfig(**kwargs)  # creating without hs delays crash
         feat_cfg.update(**kwargs)
 
     def get_dict_args(feat_cfg):

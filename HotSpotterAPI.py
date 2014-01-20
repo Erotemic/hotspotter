@@ -8,6 +8,7 @@ import os
 from os.path import exists, join, split, relpath
 from itertools import izip
 import shutil
+import datetime
 # Science
 import numpy as np
 from PIL import Image
@@ -85,7 +86,7 @@ def _datatup_cols(hs, tblname, cx2_score=None):
             'nx':    lambda nxs: nxs,
             'name':  lambda nxs: [nx2_name[nx] for nx in iter(nxs)],
             #'nCxs':  lambda nxs: hs.nx2_cxs(nxs),
-            'nCxs':  lambda nxs: [nx2_cxs[nx] for nx in iter(nxs)],
+            'nCxs':  lambda nxs: [len(nx2_cxs[nx]) for nx in iter(nxs)],
         }
     elif tblname == 'gxs':
         cols = {
@@ -134,10 +135,11 @@ def _delete_image(hs, gx_list):
 
     # Move deleted images into the trash
     move_list = zip(src_list, dst_list)
-    mark_progress = helpers.progress_func(len(move_list), lbl='Trashing Image')
+    mark_progress, end_progress = helpers.progress_func(len(move_list), lbl='Trashing Image')
     for count, (src, dst) in enumerate(move_list):
         shutil.move(src, dst)
         mark_progress(count)
+    end_progress()
     hs.update_samples()
     hs.save_database()
 
@@ -407,11 +409,13 @@ class HotSpotter(DynStruct):
         if query_cfg is None:
             hs.assert_prefs()
             query_cfg = hs.prefs.query_cfg
+        if len(kwargs) > 0:
+            query_cfg = query_cfg.deepcopy(**kwargs)
         qdat = hs.qdat
         qdat.set_cfg(query_cfg)
         dcxs = hs.get_indexed_sample()
         try:
-            res = mc3.query_dcxs(hs, qcx, dcxs, hs.qdat, dochecks=dochecks, **kwargs)
+            res = mc3.query_dcxs(hs, qcx, dcxs, hs.qdat, dochecks=dochecks)
         except mf.QueryException as ex:
             msg = '[hs] Query Failure: %r' % ex
             print(msg)
@@ -428,9 +432,13 @@ class HotSpotter(DynStruct):
         if query_cfg is None:
             hs.assert_prefs()
             query_cfg = hs.prefs.query_cfg
-        gt_cxs = hs.get_other_indexed_cxs(qcx)
+        if len(kwargs) > 0:
+            query_cfg = query_cfg.deepcopy(**kwargs)
+        qdat = hs.qdat
+        qdat.set_cfg(query_cfg)
+        qdat.dcxs = hs.get_other_indexed_cxs(qcx)
         print('[mc3] len(gt_cxs) = %r' % (gt_cxs,))
-        return mc3.query_dcxs(hs, qcx, gt_cxs, query_cfg, **kwargs)
+        return mc3.query_dcxs(hs, qcx, gt_cxs, query_cfg)
 
     # ---------------
     # Change functions
@@ -535,10 +543,11 @@ class HotSpotter(DynStruct):
             # It appears in multiple places
             # Also there should be the option of parallelization? IDK, these are
             # disk writes, but it still might help.
-            mark_progress = helpers.progress_func(len(copy_list), lbl='Copying Image')
+            mark_progress, end_progress = helpers.progress_func(len(copy_list), lbl='Copying Image')
             for count, (src, dst) in enumerate(copy_list):
                 shutil.copy(src, dst)
                 mark_progress(count)
+            end_progress()
         else:
             print('[hs.add_imgs] using original image paths')
             fpath_list2 = fpath_list
@@ -701,6 +710,18 @@ class HotSpotter(DynStruct):
     @tools.class_iter_input
     def gx2_unixtime(hs, gx_list):
         return _gx2_unixtime(hs, gx_list)
+
+    def get_unixtime_diff(hs, qcx, cx):
+        unixtime1, unixtime2 = hs.cx2_unixtime([qcx, cx])
+        unixtime_diff = unixtime2 - unixtime1
+        return unixtime_diff
+
+    def get_timedelta_str(hs, qcx, cx):
+        unixtime_diff = hs.get_unixtime_diff(qcx, cx)
+        sign = '+' if unixtime_diff >= 0 else '-'
+        delta = datetime.timedelta(seconds=abs(unixtime_diff))
+        timedelta_str = 'timedelta(%s%s)' % (sign, str(delta))
+        return timedelta_str
 
     @tools.class_iter_input
     def cx2_unixtime(hs, gx_list):

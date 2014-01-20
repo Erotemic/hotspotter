@@ -300,7 +300,11 @@ def read_one_exif_tag(pil_image, tag):
     except ValueError:
         return 'Invalid EXIF Tag'
     info_ = pil_image._getexif()
-    exif_val = info_.get(exif_key, 'Invalid EXIF Key: exif_key=%r, tag=%r' % (exif_key, tag))
+    if info_ is None:
+        return None
+    else:
+        invalid_str = 'Invalid EXIF Key: exif_key=%r, tag=%r' % (exif_key, tag)
+        exif_val = info_.get(exif_key, invalid_str)
     return exif_val
     #try:
         #exif_val = info_[exif_key]
@@ -345,10 +349,12 @@ def read_exif_list(fpath_list, **kwargs):
     def _gen(fpath_list):
         # Exif generator
         nGname = len(fpath_list)
-        mark_progress = helpers.progress_func(nGname, '[io] Load Image EXIF', 16)
+        lbl = '[io] Load Image EXIF'
+        mark_progress, end_progress = helpers.progress_func(nGname, lbl, 16)
         for count, fpath in enumerate(fpath_list):
             mark_progress(count)
             yield read_exif(fpath, **kwargs)
+        end_progress()
     exif_list = [exif for exif in _gen(fpath_list)]
     return exif_list
 

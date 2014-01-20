@@ -4,6 +4,7 @@ import __common__
  rrr, profile) = __common__.init(__name__, '[Printable]')
 # Standard
 import re
+import copy
 # Scientific
 import numpy as np
 
@@ -212,6 +213,11 @@ class DynStruct(AbstractPrintable):
             else:
                 dyn_dict[key] = val
         return dyn_dict
+
+    def deepcopy(self, **kwargs):
+        copy_ = copy.deepcopy(self)
+        copy_.update(**kwargs)
+        return copy_
 
     def execstr(self, local_name):
         '''returns a string which when evaluated will

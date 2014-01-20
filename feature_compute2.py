@@ -60,7 +60,7 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
     try:
         nFeats = len(feat_fpath_list)
         prog_label = '[fc2] Loading feature: '
-        mark_progress = helpers.progress_func(nFeats, prog_label)
+        mark_progress, end_progress = helpers.progress_func(nFeats, prog_label)
         for count, feat_path in enumerate(feat_fpath_list):
             try:
                 npz = np.load(feat_path, mmap_mode=None)
@@ -75,7 +75,7 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
             kpts_list.append(kpts)
             desc_list.append(desc)
             mark_progress(count)
-        print('')
+        end_progress()
         print('[fc2] Finished load of individual kpts and desc')
     except MemoryError:
         print('\n------------')

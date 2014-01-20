@@ -51,6 +51,29 @@ def draw_keypoint_patch(rchip, kp, sift=None, warped=False, **kwargs):
     #df2.draw_border(df2.gca(), color, 1)
 
 
+def get_aff_to_unit_circle(a, c, d):
+    invA = np.array([[a, 0, 0],
+                     [c, d, 0],
+                     [0, 0, 1]])
+    # kp is given in invA format. Convert to A
+    A = np.linalg.inv(invA)
+    return A
+
+
+def get_translation(x, y):
+    T = np.array([[1, 0,  x],
+                  [0, 1,  y],
+                  [0, 0,  1]])
+    return T
+
+
+def get_scale(ss):
+    S = np.array([[ss, 0, 0],
+                  [0, ss, 0],
+                  [0,  0, 1]])
+    return S
+
+
 def get_warped_patch(rchip, kp):
     'Returns warped patch around a keypoint'
     (x, y, a, c, d) = kp
@@ -59,29 +82,93 @@ def get_warped_patch(rchip, kp):
     ss = sqrt(s) * 3
     (h, w) = rchip.shape[0:2]
     # Translate to origin(0,0) = (x,y)
-    T = np.array([[1, 0, -x],
-                  [0, 1, -y],
-                  [0, 0,  1]])
-    A = np.linalg.inv(
-        np.array([[a, 0, 0],
-                  [c, d, 0],
-                  [0, 0, 1]]))
-    S2 = np.array([[ss, 0, 0],
-                   [0, ss, 0],
-                   [0,  0, 1]])
-    X = np.array([[1, 0, s / 2],
-                  [0, 1, s / 2],
-                  [0, 0,     1]])
+    T = get_translation(-x, -y)
+    A = get_aff_to_unit_circle(a, c, d)
+    S = get_scale(ss)
+    X = get_translation(s / 2, s / 2)
     rchip_h, rchip_w = rchip.shape[0:2]
     dsize = np.array(np.ceil(np.array([s, s])), dtype=int)
-    M = X.dot(S2).dot(A).dot(T)
-    cv2_flags = (cv2.INTER_LINEAR, cv2.INTER_NEAREST)[0]
+    M = X.dot(S).dot(A).dot(T)
+    cv2_flags = cv2.INTER_LANCZOS4
     cv2_borderMode = cv2.BORDER_CONSTANT
     cv2_warp_kwargs = {'flags': cv2_flags, 'borderMode': cv2_borderMode}
     warped_patch = cv2.warpAffine(rchip, M[0:2], tuple(dsize), **cv2_warp_kwargs)
     #warped_patch = cv2.warpPerspective(rchip, M, dsize, **__cv2_warp_kwargs())
     wkp = np.array([(s / 2, s / 2, ss, 0., ss)])
     return warped_patch, wkp
+
+
+def get_kp_border(rchip, kp):
+    (x, y, a, c, d) = kp
+
+    invA = np.array([[a, 0],
+                     [c, d]])
+
+    Ashape = np.linalg.inv(np.array([[a, 0],
+                                     [c, d]]))
+    Ashape /= np.sqrt(np.linalg.det(Ashape))
+
+    tau = 2 * np.pi
+    nSamples = 100
+    theta_list = np.linspace(0, tau, nSamples)
+
+    # Create unit circle sample
+    cicrle_pts  = np.array([(np.cos(t), np.sin(t)) for t in theta_list])
+    circle_hpts = np.hstack([cicrle_pts, np.ones((len(cicrle_pts), 1))])
+
+    # Transform as if the unit cirle was the warped patch
+    ashape_pts = Ashape.dot(cicrle_pts.T).T
+
+    inv = np.linalg.inv
+    svd = np.linalg.svd
+    U, S_, V = svd(Ashape)
+    S = np.diag(S_)
+    pxl_list3 = invA.dot(cicrle_pts[:, 0:2].T).T
+    pxl_list4 = invA.dot(ashape_pts[:, 0:2].T).T
+    pxl_list5 = invA.T.dot(cicrle_pts[:, 0:2].T).T
+    pxl_list6 = invA.T.dot(ashape_pts[:, 0:2].T).T
+    pxl_list7 = inv(V).dot(pxl_list2[:, 0:2].T).T
+    pxl_list8 = inv(U).dot(pxl_list2[:, 0:2].T).T
+    df2.draw()
+
+    from scipy.special import ellipeinc
+
+    nu = 1
+    #http://en.wikipedia.org/wiki/Conic_section
+    numer = 2 * np.sqrt((a - d) ** 2 + c ** 2)
+    denom  = nu * (a + d) + np.sqrt((a - d) ** 2 + b ** 2)
+    eccentricity = np.sqrt(numer / denom)
+
+    def _plot(data, px, title=''):
+        df2.figure(9003, docla=True, pnum=(2, 4, px))
+        df2.plot2(data.T[0], data.T[1], '.', title)
+
+    df2.figure(9003, doclf=True)
+    _plot(cicrle_pts, 1, 'unit circle')
+    _plot(ashape_pts, 2, 'A => circle shape')
+    _plot(pxl_list3, 3)
+    _plot(pxl_list4, 4)
+    _plot(pxl_list5, 5)
+    _plot(pxl_list6, 6)
+    _plot(pxl_list7, 7)
+    _plot(pxl_list8, 8)
+    df2.draw()
+
+
+    invA = np.array([[a, 0, x],
+                     [c, d, y],
+                     [0, 0, 1]])
+
+    pxl_list = invA.dot(circle_hpts.T).T[:, 0:2]
+
+    df2.figure(9002, doclf=True)
+    df2.imshow(rchip)
+    df2.plot2(pxl_list.T[0], pxl_list.T[1], '.')
+    df2.draw()
+
+    vals = [cv2.getRectSubPix(rchip, (1, 1), tuple(pxl)) for pxl in pxl_list]
+    return vals
+
 
 
 def get_patch(rchip, kp):

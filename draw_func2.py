@@ -237,19 +237,21 @@ def draw_roi(roi, label=None, bbox_color=(1, 0, 0),
     t_end = scale_t + rot_t + trans_t + t_start
     bbox = matplotlib.patches.Rectangle((-.5, -.5), 1, 1, lw=2, transform=t_end)
     arw_x, arw_y   = (-.5, -.5)
-    arw_dx, arw_dy = (1, 0)
-    _args = [arw_x, arw_y, arw_dx, arw_dy]
-    _kwargs = dict(head_width=.1, transform=t_end, length_includes_head=True)
-    arrow = FancyArrow(*_args, **_kwargs)
+    arw1_dx, arw1_dy = (1, 0)
+    arw2_dx, arw2_dy = (0, 1)
+    arrowargs = dict(head_width=.1, transform=t_end, length_includes_head=True)
+    arrow1 = FancyArrow(arw_x, arw_y, arw1_dx, arw1_dy, **arrowargs)
+    arrow2 = FancyArrow(arw_x, arw_y, arw2_dx, arw2_dy, **arrowargs)
 
     bbox.set_fill(False)
     #bbox.set_transform(trans)
     bbox.set_edgecolor(bbox_color)
-    arrow.set_edgecolor(bbox_color)
-    arrow.set_facecolor(bbox_color * .9)
+    arrow1.set_edgecolor(bbox_color)
+    arrow2.set_facecolor(bbox_color * .9)
 
     ax.add_patch(bbox)
-    ax.add_patch(arrow)
+    ax.add_patch(arrow1)
+    #ax.add_patch(arrow2)
     if label is not None:
         ax_absolute_text(rx, ry, label, ax=ax,
                          horizontalalignment='center',
@@ -538,7 +540,7 @@ def plot(*args, **kwargs):
     return plt.plot(*args, **kwargs)
 
 
-def plot2(x_data, y_data, marker, x_label, y_label, title_pref, *args,
+def plot2(x_data, y_data, marker='o', title_pref='', x_label='x', y_label='y', *args,
           **kwargs):
     do_plot = True
     ax = gca()
@@ -554,6 +556,13 @@ def plot2(x_data, y_data, marker, x_label, y_label, title_pref, *args,
         do_plot = False
     if do_plot:
         ax.plot(x_data, y_data, marker, *args, **kwargs)
+
+    min_ = min(x_data.min(), y_data.min())
+    max_ = max(x_data.max(), y_data.max())
+    # Equal aspect ratio
+    ax.set_xlim(min_, max_)
+    ax.set_ylim(min_, max_)
+    ax.set_aspect('equal')
     ax.set_xlabel(x_label, fontproperties=FONTS.xlabel)
     ax.set_ylabel(y_label, fontproperties=FONTS.xlabel)
     ax.set_title(title_pref + ' ' + x_label + ' vs ' + y_label,
@@ -1263,7 +1272,6 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
 def draw_kpts(kpts, *args, **kwargs):
     draw_kpts2(kpts, *args, **kwargs)
 
-
 def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
                pts_size=POINT_SIZE, ell_alpha=ELL_ALPHA,
                ell_linewidth=ELL_LINEWIDTH, ell_color=ELL_COLOR,
@@ -1310,8 +1318,10 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
             patch_list += rect_actors
         if arrow:
             _kwargs = dict(head_width=.01, length_includes_head=False)
-            arrow_actors = [FancyArrow(0, 0, 0, 1, transform=aff, **_kwargs) for aff in aff_list]
-            patch_list += arrow_actors
+            arrow_actors1 = [FancyArrow(0, 0, 0, 1, transform=aff, **_kwargs) for aff in aff_list]
+            arrow_actors2 = [FancyArrow(0, 0, 1, 0, transform=aff, **_kwargs) for aff in aff_list]
+            patch_list += arrow_actors1
+            patch_list += arrow_actors2
         ellipse_collection = matplotlib.collections.PatchCollection(patch_list)
         ellipse_collection.set_facecolor('none')
         ellipse_collection.set_transform(pltTrans)

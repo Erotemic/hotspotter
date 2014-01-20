@@ -6,25 +6,16 @@ RCOS: The up/down arrow in the table should select the next image/chip.
 RCOS: Species annotation of the chip.
 RCOS: Thumbnails.
 RCOS: Reading EXIF data takes a long time. We need to do some caching. (Also parallelize it)
-
-
-
-Integrate scale threshold into libhesaff
-
-Hendrik/Jason TODO: 
-Finish the earth movers distance function in algos.py i.e.  Fix the linear
-program in algos.py to compute the earth movers distance
-
-
-Hendrik/Jason TODO: 
+RCOS: The FNUMS should be able to be modified by the user so they can use more
+      than one interaction at a time. 
+RCOS: Autosave (with user checkbox)
+RCOS:
 I would like there to be a text area that selects a cid (chip-id) whenever 
 A) A user presses enter
 B) A user enters enough information such that there is only one possible
 chip-id he/she could select. (assuming they will not remove characters).
 C) A user has changed information and the mouse moves (only if invalid).
 
-Hendrik/Jason TODO: 
-Autosave
 #--- Annoyances ----
 
 * Because we are using dcxs_ to make the uid for queries, there might be
@@ -81,6 +72,9 @@ FIXED ~~# Add option to force computation of queries
 FIXED ~~# Add option to delete all precomputed queries
 FIXED ~~* When editing the name of an animal, it has to redraw the chip and image ~~
         ~~* before the name editing can happen. ~~
+FIXED ~~Integrate scale threshold into libhesaff~~
+FIXED ~~Finish the earth movers distance function in algos.py i.e.  Fix the linear
+        program in algos.py to compute the earth movers distance~~
 #-----------
 # I need to get a paper this next semester
 # I need to get candidate

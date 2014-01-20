@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import __common__
-(print, print_, print_on, print_off, rrr, profile, printDBG) = \
-__common__.init(__name__, '[inter]', DEBUG=False)
+(print, print_, print_on, print_off, rrr, profile, printDBG)\
+    = __common__.init(__name__, '[inter]', DEBUG=False)
 # Python
 import multiprocessing
 # Scientific
@@ -23,9 +23,14 @@ from _tpl import mask_creator
 
 
 def nearest_point(x, y, pts):
-    dist = (pts.T[0] - x) ** 2 + (pts.T[1] - y) ** 2
-    fx = dist.argmin()
-    return fx, dist[fx]
+    dists = (pts.T[0] - x) ** 2 + (pts.T[1] - y) ** 2
+    fx = dists.argmin()
+    mindist = dists[fx]
+    other_fx = np.where(mindist == dists)[0]
+    if len(other_fx > 0):
+        np.random.shuffle(other_fx)
+        fx = other_fx[0]
+    return fx, mindist
 
 
 def kp_info(kp):
@@ -90,11 +95,6 @@ def begin_interaction(type_, fnum):
     return fig
 
 
-def draw(fig):
-    df2.adjust_subplots_safe()
-    fig.canvas.draw()
-
-
 #==========================
 # Image Interaction
 #==========================
@@ -129,14 +129,11 @@ def interact_image(hs, gx, sel_cxs=[], select_cx_func=None, fnum=1, **kwargs):
             print(' ...clicked cx=%r' % cx)
             if select_cx_func is not None:
                 select_cx_func(cx)
-        df2.adjust_subplots_safe()
-        df2.draw()
+        viz.draw()
 
     viz.show_image(hs, gx, sel_cxs, **kwargs)
-    df2.adjust_subplots_safe()
-    df2.draw()
+    viz.draw()
     df2.connect_callback(fig, 'button_press_event', _on_image_click)
-
 
 
 #==========================
@@ -160,10 +157,10 @@ def interact_name(hs, nx, sel_cxs=[], select_cx_func=None, fnum=5, **kwargs):
             print('... cx=%r' % cx)
             viz.show_name(hs, nx, fnum=fnum, sel_cxs=[cx])
             select_cx_func(cx)
-        draw(fig)
+        viz.draw()
 
     viz.show_name(hs, nx, fnum=fnum, sel_cxs=sel_cxs)
-    draw(fig)
+    viz.draw()
     df2.connect_callback(fig, 'button_press_event', _on_name_click)
     pass
 
@@ -193,7 +190,7 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
         draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, None)
 
     def _chip_view(pnum=(1, 1, 1), draw_kpts=True, **kwargs):
-        fig = df2.figure(fnum=fnum, pnum=pnum, docla=True, doclf=True)
+        df2.figure(fnum=fnum, pnum=pnum, docla=True, doclf=True)
         # Toggle no keypoints view
         viz.show_chip(hs, cx=cx, rchip=rchip, fnum=fnum, pnum=pnum,
                       draw_kpts=draw_kpts, **kwargs)
@@ -224,22 +221,21 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
                     _select_ith_kpt(fx)
                 else:
                     print('... len(kpts) == 0')
-        draw(fig)
+        viz.draw()
 
     # Draw without keypoints the first time
     _chip_view(draw_kpts=draw_kpts_ptr[0])
-    draw(fig)
+    viz.draw()
     df2.connect_callback(fig, 'button_press_event', _on_chip_click)
 
 
 @profile
-def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, nodraw=False, **kwargs):
+def interact_keypoints(rchip, kpts, desc, fnum=0, figtitle=None, nodraw=False, **kwargs):
     fig = begin_interaction('keypoint', fnum)
-    draw_kpts_ptr = [False]
+    annote_ptr = [1]
 
     def _select_ith_kpt(fx):
-        print('-------------------------------------------')
-        print('[interact] viewing ith=%r keypoint' % fx)
+        print_('[interact] viewing ith=%r keypoint' % fx)
         # Get the fx-th keypiont
         kp, sift = kpts[fx], desc[fx]
         # Draw the image with keypoint fx highlighted
@@ -249,15 +245,20 @@ def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, nodraw=False, **k
         draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, None)
 
     def _viz_keypoints(fnum, pnum=(1, 1, 1), **kwargs):
-        fig = df2.figure(fnum=fnum, docla=True, doclf=True)
+        df2.figure(fnum=fnum, docla=True, doclf=True)
         viz.show_keypoints(rchip, kpts, fnum=fnum, pnum=pnum, **kwargs)
+        if figtitle is not None:
+            df2.set_figtitle(figtitle)
 
     def _on_keypoints_click(event):
         print_('[viz] clicked keypoint view')
         if event is None  or event.xdata is None or event.inaxes is None:
-            print_('... default kpts view')
-            draw_kpts_ptr[0] = not draw_kpts_ptr[0]
-            _viz_keypoints(fnum, draw_kpts=draw_kpts_ptr[0])
+            annote_ptr[0] = (annote_ptr[0] + 1) % 3
+            mode = annote_ptr[0]
+            draw_ell = mode == 1
+            draw_pts = mode == 2
+            print('... default kpts view mode=%r' % mode)
+            _viz_keypoints(fnum, draw_ell=draw_ell, draw_pts=draw_pts)
         else:
             ax = event.inaxes
             hs_viewtype = ax.__dict__.get('_hs_viewtype', None)
@@ -265,30 +266,26 @@ def interact_keypoints(rchip, kpts, desc, fnum, figtitle=None, nodraw=False, **k
             if hs_viewtype == 'keypoints':
                 kpts = ax.__dict__.get('_hs_kpts', [])
                 if len(kpts) == 0:
-                    print_('...nokpts')
+                    print('...nokpts')
                 else:
-                    print_('...nearest')
+                    print('...nearest')
                     x, y = event.xdata, event.ydata
                     fx = nearest_point(x, y, kpts)[0]
                     _select_ith_kpt(fx)
             else:
-                print_('...unhandled')
-        print('')
-        df2.adjust_subplots_safe()
-        df2.draw()
+                print('...unhandled')
+        viz.draw()
 
     # Draw without keypoints the first time
-    _viz_keypoints(fnum, draw_kpts=draw_kpts_ptr[0])
-    if figtitle is not None:
-        df2.set_figtitle(figtitle)
+    _viz_keypoints(fnum)
     df2.connect_callback(fig, 'button_press_event', _on_keypoints_click)
     if not nodraw:
-        df2.adjust_subplots_safe()
-        df2.draw()
+        viz.draw()
 
 #==========================
 # Chipres Interaction
 #==========================
+
 
 @profile
 def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', **kwargs):
@@ -306,12 +303,12 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
     # Draw default
     def _chipmatch_view(pnum=(1, 1, 1), **kwargs):
         annote = annote_ptr[0]
-        fig = df2.figure(fnum=fnum, docla=True, doclf=True)
+        df2.figure(fnum=fnum, docla=True, doclf=True)
         tup = viz.res_show_chipres(res, hs, cx, fnum=fnum, pnum=pnum,
                                    draw_lines=False, draw_ell=annote, **kwargs)
         ax, xywh1, xywh2 = tup
         xywh2_ptr[0] = xywh2
-        annote_ptr[0] = not annote # Toggle annote
+        annote_ptr[0] = not annote  # Toggle annote
         df2.set_figtitle(figtitle)
 
     # Draw clicked selection
@@ -345,7 +342,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
         fig = df2.figure(fnum=fnum, docla=True, doclf=True)
         df2.disconnect_callback(fig, 'button_press_event')
         viz.viz_spatial_verification(hs, res.qcx, cx2=cx, fnum=fnum)
-        draw(fig)
+        viz.draw()
 
     # Callback
     def _click_chipres_click(event):
@@ -355,7 +352,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
         if None in [x, y, ax]:
             print('... out of axis')
             _chipmatch_view()
-            draw(fig)
+            viz.draw()
             return
         hs_viewtype = ax.__dict__.get('_hs_viewtype', '')
         print_(' hs_viewtype=%r ' % hs_viewtype)
@@ -390,14 +387,14 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
             print('... clicked hist')
         else:
             print('... what did you click?!')
-        draw(fig)
+        viz.draw()
 
     if mx is None:
         _chipmatch_view()
     else:
         _select_ith_match(mx)
     df2.connect_callback(fig, 'button_press_event', _click_chipres_click)
-    draw(fig)
+    viz.draw()
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off, rrr, profile, printDBG) = \
-__common__.init(__name__, '[viz]', DEBUG=False)
+    __common__.init(__name__, '[viz]', DEBUG=False)
 import matplotlib
 matplotlib.use('Qt4Agg')
 # Python
@@ -19,6 +19,11 @@ import helpers
 
 
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5, name=6)
+
+
+def draw():
+    df2.adjust_subplots_safe()
+    df2.draw()
 
 
 def register_FNUMS(FNUMS_):
@@ -102,6 +107,7 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
 # Splash Viz
 #=============
 
+
 def show_splash(fnum=1, **kwargs):
     #printDBG('[viz] show_splash()')
     splash_fpath = io.splash_img_fpath()
@@ -111,6 +117,7 @@ def show_splash(fnum=1, **kwargs):
 #=============
 # Name Viz
 #=============
+
 
 def show_name_of(hs, cx, **kwargs):
     nx = hs.tables.cx2_nx[cx]
@@ -235,7 +242,7 @@ def _annotate_qcx_match_results(hs, res, qcx, kpts):
 
     def _kpts_helper(kpts_, color, alpha, label):
         # helper function taking into acount phantom labels
-        df2.draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha, **ell_args)
+        df2.draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha)
         df2.phantom_legend_label(label, color)
 
     gt_cxs = hs.get_other_indexed_cxs(qcx)
@@ -254,16 +261,16 @@ def _annotate_qcx_match_results(hs, res, qcx, kpts):
     kpts_match = kpts[matched_fx, :]
     kpts_noise = kpts[noise_fx, :]
     # Draw keypoints
-    ell_alpha = ell_args.pop('ell_alpha', ell_alpha)
-    ell_color = ell_args.pop('ell_color', ell_color)
+    #ell_alpha = ell_args.pop('ell_alpha', ell_alpha)
+    #ell_color = ell_args.pop('ell_color', ell_color)
     _kpts_helper(kpts_noise,  df2.RED, .1, 'Unverified')
     _kpts_helper(kpts_match, df2.BLUE, .4, 'Verified')
     _kpts_helper(kpts_true, df2.GREEN, .6, 'True Matches')
 
 
-def _annotate_kpts(kpts, sel_fx, draw_kpts, nRandKpts=None):
+def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, nRandKpts=None):
     ell_args = {'ell_alpha': 1, 'ell_linewidth': 2}
-    if draw_kpts and nRandKpts is not None:
+    if draw_ell and nRandKpts is not None:
         # show a random sample of kpts
         nkpts1 = len(kpts)
         fxs1 = np.arange(nkpts1)
@@ -275,21 +282,21 @@ def _annotate_kpts(kpts, sel_fx, draw_kpts, nRandKpts=None):
         kpts = kpts[fxs_randsamp]
         # TODO Fix this. This should not set the xlabel
         df2.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1))
-    elif draw_kpts:
-        # Draw all keypoints
+    elif draw_ell or draw_pts:
+        # draw all keypoints
         if sel_fx is not None:
             ell_args['ell_color'] = df2.BLUE
         else:
             ell_args['ell_color'] = 'distinct'
-        df2.draw_kpts2(kpts, ell_args=ell_args)
+        df2.draw_kpts2(kpts, ell=draw_ell, pts=draw_pts, ell_args=ell_args)
     if sel_fx is not None:
         # Draw selected keypoint
         sel_kpts = kpts[sel_fx:sel_fx + 1]
         df2.draw_kpts2(sel_kpts, ell_color=df2.ORANGE, arrow=True, rect=True)
 
 
-def show_chip(hs, cx=None, allres=None, res=None, draw_kpts=True,
-              nRandKpts=None, prefix='', sel_fx=None, **kwargs):
+def show_chip(hs, cx=None, allres=None, res=None, draw_ell=True,
+              draw_pts=False, nRandKpts=None, prefix='', sel_fx=None, **kwargs):
     if allres is not None:
         res = allres.qcx2_res[cx]
     if res is not None:
@@ -307,7 +314,7 @@ def show_chip(hs, cx=None, allres=None, res=None, draw_kpts=True,
     # Add user data to axis
     ax._hs_viewtype = 'chip'
     ax._hs_cx = cx
-    if draw_kpts:
+    if draw_ell or draw_pts:
         # FIXME
         kpts  = kwargs['kpts']  if 'kpts'  in kwargs else hs.get_kpts(cx)
         if res is not None:
@@ -315,13 +322,13 @@ def show_chip(hs, cx=None, allres=None, res=None, draw_kpts=True,
             _annotate_qcx_match_results(hs, res, cx, kpts)
         else:
             # Just draw boring keypoints
-            _annotate_kpts(kpts, sel_fx, draw_kpts, nRandKpts)
+            _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, nRandKpts)
 
 
-def show_keypoints(rchip, kpts, draw_kpts=True, sel_fx=None, fnum=0,
+def show_keypoints(rchip, kpts, draw_ell=True, draw_pts=False, sel_fx=None, fnum=0,
                    pnum=None, **kwargs):
     df2.imshow(rchip, fnum=fnum, pnum=pnum, **kwargs)
-    _annotate_kpts(kpts, sel_fx, draw_kpts)
+    _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts)
     ax = df2.gca()
     ax._hs_viewtype = 'keypoints'
     ax._hs_kpts = kpts
@@ -357,7 +364,7 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
     fm = cx2_fm[cx]
     fs = cx2_fs[cx]
     #fk = cx2_fk[cx]
-    vs_str = hs.vs_str(qcx, cx)
+    #vs_str = hs.vs_str(qcx, cx)
     # Read query and result info (chips, names, ...)
     rchip1, rchip2 = hs.get_chip([qcx, cx])
     kpts1, kpts2   = hs.get_kpts([qcx, cx])
@@ -369,7 +376,7 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
     isgt_str = nonamestr if is_unknown else (truestr if is_true else falsestr)
     match_color = {nonamestr: df2.UNKNOWN_PURP,
                    truestr:   df2.TRUE_GREEN,
-                   falsestr:  df2.FALSE_RED,}[isgt_str]
+                   falsestr:  df2.FALSE_RED}[isgt_str]
     # Build title
     title = '*%s*' % isgt_str if kwargs.get('showTF', True) else ''
     if kwargs.get('showScore', True):
@@ -617,6 +624,7 @@ def _show_res(hs, res, **kwargs):
 #==========================#
 #  --- TESTING FUNCS ---   #
 #==========================#
+
 
 def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
     '''A feature match (fm) is a list of M 2-tuples.

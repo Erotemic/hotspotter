@@ -54,6 +54,7 @@ def _import_scripts(hs):
     scripts.rrr()
 
 
+@profile
 def _get_datatup_list(hs, tblname, index_list, header_order, extra_cols):
     cols = _datatup_cols(hs, tblname)
     cols.update(extra_cols)

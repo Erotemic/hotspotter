@@ -2,15 +2,19 @@ from __future__ import division, print_function
 import __builtin__
 import sys
 
+try:
+    profile  # NoQA
+    __builtin__.print('[common] profiling with kernprof.')
+except NameError:
+    __builtin__.print('[common] not profiling.')
+    profile = lambda func: func
+
 
 def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
     module = sys.modules[module_name]
     aggroflush = '--aggroflush' in sys.argv
 
-    try:
-        profile  # NoQA
-    except NameError:
-        profile = lambda func: func
+    __builtin__.print('[common] import %s  # %s' % (module_name, module_prefix))
 
     def rrr():
         'Dynamic module reloading'
@@ -56,8 +60,8 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
         import multiprocessing
         backend = matplotlib.get_backend()
         if multiprocessing.current_process().name == 'MainProcess':
-            print(module_prefix + ' current backend is: %r' % backend)
-            print(module_prefix + ' matplotlib.use(Qt4Agg)')
+            print('[common] ' + module_prefix + ' current backend is: %r' % backend)
+            print('[common] ' + module_prefix + ' matplotlib.use(Qt4Agg)')
             if backend != 'Qt4Agg':
                 matplotlib.use('Qt4Agg', warn=True, force=True)
                 backend = matplotlib.get_backend()

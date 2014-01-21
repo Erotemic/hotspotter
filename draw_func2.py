@@ -236,21 +236,18 @@ def draw_roi(roi, label=None, bbox_color=(1, 0, 0),
                         ( 0,  0, 1)])
     t_end = scale_t + rot_t + trans_t + t_start
     bbox = matplotlib.patches.Rectangle((-.5, -.5), 1, 1, lw=2, transform=t_end)
-    arw_x, arw_y   = (-.5, -.5)
-    arw1_dx, arw1_dy = (1, 0)
-    arw2_dx, arw2_dy = (0, 1)
+    arw_x, arw_y, arw_dx, arw_dy   = (-0.5, -0.5, 1.0, 0.0)
     arrowargs = dict(head_width=.1, transform=t_end, length_includes_head=True)
-    arrow1 = FancyArrow(arw_x, arw_y, arw1_dx, arw1_dy, **arrowargs)
-    arrow2 = FancyArrow(arw_x, arw_y, arw2_dx, arw2_dy, **arrowargs)
+    arrow = FancyArrow(arw_x, arw_y, arw_dx, arw_dy, **arrowargs)
 
     bbox.set_fill(False)
     #bbox.set_transform(trans)
     bbox.set_edgecolor(bbox_color)
-    arrow1.set_edgecolor(bbox_color)
-    arrow2.set_facecolor(bbox_color * .9)
+    arrow.set_edgecolor(bbox_color)
+    arrow.set_facecolor(bbox_color)
 
     ax.add_patch(bbox)
-    ax.add_patch(arrow1)
+    ax.add_patch(arrow)
     #ax.add_patch(arrow2)
     if label is not None:
         ax_absolute_text(rx, ry, label, ax=ax,

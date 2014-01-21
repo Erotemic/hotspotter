@@ -287,6 +287,7 @@ class MainWindowBackend(QtCore.QObject):
     # Populate functions
     #--------------------------------------------------------------------------
 
+    @profile
     def _populate_table(back, tblname,
                         extra_cols={},
                         index_list=None,
@@ -399,6 +400,7 @@ class MainWindowBackend(QtCore.QObject):
     # Selection Functions
     #--------------------------------------------------------------------------
 
+    @profile
     @slot_(int)
     @blocking
     def select_gx(back, gx, cx=None, **kwargs):
@@ -422,7 +424,6 @@ class MainWindowBackend(QtCore.QObject):
         cx = back.hs.cid2_cx(cid)
         gx = back.hs.cx2_gx(cx)
         back.select_gx(gx, cx=cx, **kwargs)
-
 
     @slot_(int)
     def select_cx(back, cx, **kwargs):
@@ -470,6 +471,7 @@ class MainWindowBackend(QtCore.QObject):
         back.hs.default_preferences()
         back.hs.prefs.save()
 
+    @profile
     @slot_(int, str, str)
     @blocking
     def change_chip_property(back, cid, key, val):
@@ -624,6 +626,7 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] added newprop = %r' % newprop)
         print('')
 
+    @profile
     @slot_()
     @blocking
     def add_chip(back):
@@ -641,6 +644,7 @@ class MainWindowBackend(QtCore.QObject):
         back.select_gx(gx)
         print('')
 
+    @profile
     @slot_()
     @blocking
     def query(back, cid=None, tx=None):
@@ -668,6 +672,7 @@ class MainWindowBackend(QtCore.QObject):
         back.show_query_result(res, tx)
         return res
 
+    @profile
     @slot_()
     @blocking
     def reselect_roi(back, **kwargs):
@@ -690,6 +695,7 @@ class MainWindowBackend(QtCore.QObject):
         print('')
         pass
 
+    @profile
     @slot_()
     @blocking
     def reselect_ori(back, **kwargs):
@@ -710,6 +716,7 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] reselected theta=%r' % theta)
         print('')
 
+    @profile
     @slot_()
     @blocking
     def delete_chip(back):
@@ -726,6 +733,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[back] deleted cx=%r\n' % cx)
         print('')
 
+    @profile
     @slot_()
     @blocking
     def select_next(back):

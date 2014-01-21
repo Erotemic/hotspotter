@@ -32,3 +32,4 @@ OpenGLContext.profile
 *.dylib
 *.lprof
 *.prof
+*.profile.txt

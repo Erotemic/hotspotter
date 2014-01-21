@@ -16,7 +16,21 @@ B) A user enters enough information such that there is only one possible
 chip-id he/she could select. (assuming they will not remove characters).
 C) A user has changed information and the mouse moves (only if invalid).
 
+Add ability to trash images from the GUI
+
+* SPEED UP ADDING CHIPS TO IMAGES
+* Delay the computation of the chip as long as possible
+* Delay the computation of the features even further
+
+Need to have easier selection of ROIs. One click additions. 
+Easy modifications. 
+
+Add ability to orient an entire image. 
+
 #--- Annoyances ----
+
+* Images like ._MPALA_STEWART_0232.JPG do not seem to be images. Do not add
+* them as if they were
 
 * Because we are using dcxs_ to make the uid for queries, there might be
 * issue. dcids would cause issues too. Need to find a good way of determining

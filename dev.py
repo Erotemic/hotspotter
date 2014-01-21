@@ -30,15 +30,21 @@ import report_results2 as rr2
 
 
 def dev_reload():
+    print('===========================')
     print('[dev] performing dev_reload')
+    print('---------------------------')
     import algos
     import chip_compute2 as cc2
     import feature_compute2 as fc2
     import interaction
     import scripts
+    import fileio as io
+    import nn_filters
     rrr()
+    io.rrr()
     ds.rrr()
     mf.rrr()
+    nn_filters.rrr()
     mc3.rrr()
     viz.rrr()
     interaction.rrr()
@@ -49,7 +55,12 @@ def dev_reload():
     fc2.rrr()
     algos.rrr()
     df2.rrr()
+    print('---------------------------')
+    print('df2 reset')
     df2.reset()
+    print('---------------------------')
+    print('[dev] finished dev_reload()')
+    print('===========================')
 
 
 def history_entry(database='', cid=-1, ocids=[], notes='', cx=-1):

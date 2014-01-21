@@ -1269,6 +1269,7 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
 def draw_kpts(kpts, *args, **kwargs):
     draw_kpts2(kpts, *args, **kwargs)
 
+
 def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
                pts_size=POINT_SIZE, ell_alpha=ELL_ALPHA,
                ell_linewidth=ELL_LINEWIDTH, ell_color=ELL_COLOR,

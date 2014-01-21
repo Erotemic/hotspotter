@@ -10,17 +10,25 @@ except NameError:
     profile = lambda func: func
 
 
+__DEBUG__ = True
+
+
 def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
     module = sys.modules[module_name]
     aggroflush = '--aggroflush' in sys.argv
 
-    __builtin__.print('[common] import %s  # %s' % (module_name, module_prefix))
+    if __DEBUG__:
+        __builtin__.print('[common] import %s  # %s' % (module_name, module_prefix))
 
     def rrr():
         'Dynamic module reloading'
+        global __DEBUG__
         import imp
+        prev = __DEBUG__
+        __DEBUG__ = False
         print(module_prefix + ' reloading ' + module_name)
         imp.reload(module)
+        __DEBUG__ = prev
 
     if aggroflush:
         def print_(msg):

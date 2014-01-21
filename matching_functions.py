@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 import __common__
-print, print_, print_on, print_off, rrr, profile = __common__.init(__name__, '[mf]')
+print, print_, print_on, print_off, rrr, profile, printDBG =\
+    __common__.init(__name__, '[mf]', DEBUG=False)
 # Python
 from itertools import izip
 # Scientific
@@ -28,18 +29,10 @@ NN_FILTER_FUNC_DICT = {
     'ratio':   nn_filters.nn_ratio_weight,
 }
 MARK_AFTER = 40
-DEBUG_MF = False
 
 #=================
 # Helpers
 #=================
-
-if DEBUG_MF:
-    def printDBG(msg):
-        print('[MF.DBG]' + msg)
-else:
-    def printDBG(msg):
-        pass
 
 
 def progress_func(maxval=0):
@@ -109,7 +102,7 @@ def nearest_neighbors(hs, qcxs, qdat):
 @profile
 def weight_neighbors(hs, qcx2_nns, qdat):
     filt_cfg = qdat.cfg.filt_cfg
-    #SPEEDprint('[mf] Step 2) Weight neighbors: ' + filt_cfg.get_uid())
+    print('[mf] Step 2) Weight neighbors: ' + filt_cfg.get_uid())
     if not filt_cfg.filt_on:
         return  {}
     nnfilter_list = filt_cfg._nnfilter_list
@@ -135,7 +128,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
     cant_match_samename = not filt_cfg.can_match_samename
     K = qdat.cfg.nn_cfg.K
     filt2_tw = filt_cfg._filt2_tw
-    #SPEEDprint('[mf] Step 3) Filter neighbors: ' + filt_cfg.get_uid())
+    print('[mf] Step 3) Filter neighbors: ' + filt_cfg.get_uid())
     # NNIndex
     data_index = qdat._data_index
     dx2_cx = data_index.ax2_cx
@@ -148,16 +141,38 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
         # Get a numeric score score and valid flag for each feature match
         qfx2_score, qfx2_valid = _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw)
         qfx2_cx = dx2_cx[qfx2_nn]
+        print('[mf] * %d assignments are invalid by thresh' % ((True - qfx2_valid).sum()))
         # Remove Impossible Votes:
         # dont vote for yourself or another chip in the same image
         qfx2_notsamechip = qfx2_cx != qcx
-        qfx2_valid = np.logical_and(qfx2_valid, qfx2_notsamechip)
+        cant_match_self = True
+        if cant_match_self:
+            ####DBG
+            nChip_all_invalid = ((True - qfx2_notsamechip)).sum()
+            nChip_new_invalid = (qfx2_valid * (True - qfx2_notsamechip)).sum()
+            print('[mf] * %d assignments are invalid by self' % nChip_all_invalid)
+            print('[mf] * %d are newly invalided by self' % nChip_new_invalid)
+            ####
+            qfx2_valid = np.logical_and(qfx2_valid, qfx2_notsamechip)
         if cant_match_sameimg:
             qfx2_notsameimg  = hs.tables.cx2_gx[qfx2_cx] != hs.tables.cx2_gx[qcx]
+            ####DBG
+            nImg_all_invalid = ((True - qfx2_notsameimg)).sum()
+            nImg_new_invalid = (qfx2_valid * (True - qfx2_notsameimg)).sum()
+            print('[mf] * %d assignments are invalid by gx' % nImg_all_invalid)
+            print('[mf] * %d are newly invalided by gx' % nImg_new_invalid)
+            ####
             qfx2_valid = np.logical_and(qfx2_valid, qfx2_notsameimg)
         if cant_match_samename:
             qfx2_notsamename = hs.tables.cx2_nx[qfx2_cx] != hs.tables.cx2_nx[qcx]
+            ####DBG
+            nName_all_invalid = ((True - qfx2_notsamename)).sum()
+            nName_new_invalid = (qfx2_valid * (True - qfx2_notsamename)).sum()
+            print('[mf] * %d assignments are invalid by nx' % nName_all_invalid)
+            print('[mf] * %d are newly invalided by nx' % nName_new_invalid)
+            ####
             qfx2_valid = np.logical_and(qfx2_valid, qfx2_notsamename)
+        print('[mf] * Marking %d assignments as invalid' % ((True - qfx2_valid).sum()))
         qcx2_nnfilter[qcx] = (qfx2_score, qfx2_valid)
     end_progress()
     return qcx2_nnfilter

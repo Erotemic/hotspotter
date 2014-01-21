@@ -164,6 +164,7 @@ def drawing(func):
     return drawing_wrapper
 
 
+@profile
 def select_orientation():
     #from matplotlib.backend_bases import mplDeprecation
     print('[*guitools] Define an orientation angle by clicking two points')
@@ -188,6 +189,7 @@ def select_orientation():
         return None
 
 
+@profile
 def select_roi():
     #from matplotlib.backend_bases import mplDeprecation
     print('[*guitools] Define a Rectanglular ROI by clicking two points.')
@@ -243,6 +245,7 @@ def _newMsgBox(msg='', title='', parent=None, options=None, cache_reply=False):
     return msgBox
 
 
+@profile
 def msgbox(msg, title='msgbox'):
     'Make a non modal critical Qt.QMessageBox.'
     msgBox = Qt.QMessageBox(None)
@@ -272,6 +275,7 @@ def user_info(parent, msg, title='info'):
     msgBox.show()
 
 
+@profile
 def _user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=False):
     'Prompts user with several options with ability to save decision'
     print('[*guitools] _user_option:\n %r: %s' + title + ': ' + msg)
@@ -317,11 +321,13 @@ def getQtImageNameFilter():
     return imgNameFilter
 
 
+@profile
 def select_images(caption='Select images:', directory=None):
     name_filter = getQtImageNameFilter()
     return select_files(caption, directory, name_filter)
 
 
+@profile
 def select_files(caption='Select Files:', directory=None, name_filter=None):
     'Selects one or more files from disk using a qt dialog'
     print(caption)
@@ -335,6 +341,7 @@ def select_files(caption='Select Files:', directory=None, name_filter=None):
     return file_list
 
 
+@profile
 def select_directory(caption='Select Directory', directory=None):
     print(caption)
     if directory is None:
@@ -348,6 +355,7 @@ def select_directory(caption='Select Directory', directory=None):
     return dpath
 
 
+@profile
 def show_open_db_dlg(parent=None):
     # OLD
     from _frontend import OpenDatabaseDialog
@@ -366,6 +374,7 @@ def show_open_db_dlg(parent=None):
     return opendb_ui, parent
 
 
+@profile
 def init_qtapp():
     global IS_INIT
     app = Qt.QCoreApplication.instance()
@@ -383,11 +392,13 @@ def init_qtapp():
     return app, is_root
 
 
+@profile
 def exit_application():
     print('[*guitools] exiting application')
     QtGui.qApp.quit()
 
 
+@profile
 def run_main_loop(app, is_root=True, back=None, **kwargs):
     if back is not None:
         print('[*guitools] setting active window')
@@ -400,6 +411,7 @@ def run_main_loop(app, is_root=True, back=None, **kwargs):
         print('[*guitools] using roots main loop')
 
 
+@profile
 def exec_core_event_loop(app):
     # This works but does not allow IPython injection
     print('[*guitools] running core application loop.')
@@ -414,6 +426,7 @@ def exec_core_event_loop(app):
     app.exec_()
 
 
+@profile
 def exec_core_app_loop(app):
     # This works but does not allow IPython injection
     print('[*guitools] running core application loop.')
@@ -421,6 +434,7 @@ def exec_core_app_loop(app):
     #sys.exit(app.exec_())
 
 
+@profile
 def ping_python_interpreter(frequency=4200):  # 4200):
     'Create a QTimer which lets the python catch ctrl+c'
     timer = Qt.QTimer()
@@ -440,6 +454,7 @@ def make_dummy_main_window():
     return back
 
 
+@profile
 def popup_menu(widget, opt2_callback):
     def popup_slot(pos):
         print(pos)
@@ -452,6 +467,7 @@ def popup_menu(widget, opt2_callback):
     return popup_slot
 
 
+@profile
 def make_header_lists(tbl_headers, editable_list, prop_keys=[]):
     col_headers = tbl_headers[:] + prop_keys
     col_editable = [False] * len(tbl_headers) + [True] * len(prop_keys)

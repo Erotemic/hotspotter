@@ -65,6 +65,7 @@ def _get_datatup_list(hs, tblname, index_list, header_order, extra_cols):
     return datatup_list
 
 
+@profile
 def _datatup_cols(hs, tblname, cx2_score=None):
     # Chips
     cx2_cid   = hs.tables.cx2_cid
@@ -122,6 +123,7 @@ def _datatup_cols(hs, tblname, cx2_score=None):
     return cols
 
 
+@profile
 def _delete_image(hs, gx_list):
     for gx in gx_list:
         cx_list = hs.gx2_cxs(gx)
@@ -204,6 +206,7 @@ class HotSpotter(DynStruct):
     # --------------
     # Preferences functions
     # --------------
+    @profile
     def load_preferences(hs):
         print('[hs] load preferences')
         hs.default_preferences()
@@ -215,6 +218,7 @@ class HotSpotter(DynStruct):
             hs.default_preferences()
         hs.assert_prefs()
 
+    @profile
     def default_preferences(hs):
         print('[hs] defaulting preferences')
         hs.prefs.display_cfg = Config.default_display_cfg()
@@ -289,6 +293,7 @@ class HotSpotter(DynStruct):
     def load_features(hs, cx_list=None):
         fc2.load_features(hs, cx_list=cx_list)
 
+    @profile
     def refresh_features(hs, cx_list=None):
         hs.load_chips(cx_list=cx_list)
         hs.load_features(cx_list=cx_list)
@@ -305,6 +310,7 @@ class HotSpotter(DynStruct):
         train_samp = test_samp
         hs.update_samples(test_samp, train_samp)
 
+    @profile
     def update_samples(hs, test_samp=None, train_samp=None, indx_samp=None):
         ''' This is the correct function to use when setting samples '''
         print('[hs] update_samples():')
@@ -345,6 +351,7 @@ class HotSpotter(DynStruct):
     #---------------
     # On Modification
     #---------------
+    @profile
     def unload_all(hs):
         print('[hs] Unloading all data')
         hs.feats  = ds.HotspotterChipFeatures()
@@ -353,6 +360,7 @@ class HotSpotter(DynStruct):
         hs.clear_lru_caches()
         print('[hs] finished unloading all data')
 
+    @profile
     def unload_cxdata(hs, cx):
         'unloads features and chips. not tables'
         print('[hs] unload_cxdata(cx=%r)' % cx)
@@ -371,6 +379,7 @@ class HotSpotter(DynStruct):
             helpers.ensure_list_size(list_, cx + 1)
             list_[cx] = None
 
+    @profile
     def delete_ciddata(hs, cid):
         cid_str_list = ['cid%d_' % cid, 'qcid=%d.npz' % cid, ]
         hs.clear_lru_caches()
@@ -380,6 +389,7 @@ class HotSpotter(DynStruct):
             helpers.remove_files_in_dir(dpath, pat, recursive=True,
                                         verbose=True, dryrun=False)
 
+    @profile
     def delete_cxdata(hs, cx):
         'deletes features and chips. not tables'
         hs.unload_cxdata(cx)
@@ -396,12 +406,15 @@ class HotSpotter(DynStruct):
     #---------------
     # Query Functions
     #---------------
+    @profile
     def prequery(hs):
         mc3.prequery(hs)
 
+    @profile
     def query(hs, qcx, *args, **kwargs):
         return hs.query_database(qcx, *args, **kwargs)
 
+    @profile
     def query_database(hs, qcx, query_cfg=None, dochecks=True, **kwargs):
         'queries the entire (sampled) database'
         print('\n====================')
@@ -425,6 +438,7 @@ class HotSpotter(DynStruct):
             return msg
         return res
 
+    @profile
     def query_groundtruth(hs, qcx, query_cfg=None, **kwargs):
         'wrapper that restricts query to only known groundtruth'
         print('\n====================')
@@ -444,22 +458,27 @@ class HotSpotter(DynStruct):
     # ---------------
     # Change functions
     # ---------------
+    @profile
     def change_roi(hs, cx, new_roi):
         hs.delete_cxdata(cx)  # Delete old data
         hs.tables.cx2_roi[cx] = new_roi
 
+    @profile
     def change_theta(hs, cx, new_theta):
         hs.delete_cxdata(cx)  # Delete old data
         hs.tables.cx2_theta[cx] = new_theta
 
+    @profile
     def change_name(hs, cx, new_name):
         new_nx_ = np.where(hs.tables.nx2_name == new_name)[0]
         new_nx  = new_nx_[0] if len(new_nx_) > 0 else hs.add_name(new_name)
         hs.tables.cx2_nx[cx] = new_nx
 
+    @profile
     def change_property(hs, cx, key, val):
         hs.tables.prop_dict[key][cx] = val
 
+    @profile
     def change_aif(hs, gx, val):
         hs.tables.gx2_aif[gx] = np.bool_(val)
 
@@ -476,6 +495,7 @@ class HotSpotter(DynStruct):
     # ---------------
     # Adding functions
     # ---------------
+    @profile
     def add_property(hs, key):
         if not isinstance(key, str):
             raise ValueError('[hs] New property %r is a %r, not a string.' % (key, type(key)))
@@ -483,6 +503,7 @@ class HotSpotter(DynStruct):
             raise UserWarning('[hs] WARNING: Property add an already existing property')
         hs.tables.prop_dict[key] = ['' for _ in xrange(hs.get_num_chips())]
 
+    @profile
     def add_name(hs, name):
         # TODO: Allocate memory better (use python lists)
         nx2_name = hs.tables.nx2_name.tolist()
@@ -492,12 +513,14 @@ class HotSpotter(DynStruct):
         return nx
 
     # RCOS TODO: Rectify this with add_name and user iter_input
+    @profile
     def add_names(hs, name_list):
         # TODO Assert names are unique
         nx2_name = hs.tables.nx2_name.tolist()
         nx2_name.extend(name_list)
         hs.tables.nx2_name = np.array(nx2_name)
 
+    @profile
     def add_chip(hs, gx, roi, nx=0, theta=0, props={}, dochecks=True):
         # TODO: Restructure for faster adding (preallocate and double size)
         # OR just make all the tables python lists
@@ -526,6 +549,7 @@ class HotSpotter(DynStruct):
             hs.unload_cxdata(cx)
         return cx
 
+    @profile
     def add_images(hs, fpath_list, move_images=True):
         nImages = len(fpath_list)
         print('[hs.add_imgs] adding %d images' % nImages)
@@ -725,12 +749,14 @@ class HotSpotter(DynStruct):
         return timedelta_str
 
     @tools.class_iter_input
+    @profile
     def cx2_unixtime(hs, gx_list):
         return _cx2_unixtime(hs, gx_list)
 
     #----
     # image index --> property
     @tools.class_iter_input
+    @profile
     def gx2_exif(hs, gx_list, **kwargs):
         gname_list = hs.gx2_gname(gx_list, full=True)
         exif_list = io.read_exif_list(gname_list, **kwargs)
@@ -738,12 +764,14 @@ class HotSpotter(DynStruct):
 
     @profile
     @tools.lru_cache(max_size=100)
+    @profile
     def get_exif(hs, **kwargs):
         gx_list = hs.get_valid_gxs()
         exif_list = hs.gx2_exif(gx_list, **kwargs)
         return exif_list
 
     @tools.class_iter_input
+    @profile
     def gx2_gname(hs, gx_input, full=False, prefix=None):
         gx2_gname_ = hs.tables.gx2_gname
         gname_list = [gx2_gname_[gx] for gx in iter(gx_input)]
@@ -753,12 +781,14 @@ class HotSpotter(DynStruct):
         return gname_list
 
     @tools.lru_cache(max_size=7)
+    @profile
     def gx2_image(hs, gx):
         img_fpath = hs.gx2_gname(gx, full=True)
         img = io.imread(img_fpath)
         return img
 
     @tools.class_iter_input
+    @profile
     def gx2_image_size(hs, gx_input):
         gfpath_list = hs.gx2_gname(gx_input, full=True)
         # RCOS TODO: Do you need to do a .close here? or does gc take care of it?
@@ -766,22 +796,26 @@ class HotSpotter(DynStruct):
         return gsize_list
 
     @tools.class_iter_input
+    @profile
     def gx2_aif(hs, gx_input):
         gx2_aif_ = hs.tables.gx2_aif
         aif_list = [gx2_aif_[gx] for gx in iter(gx_input)]
         return aif_list
 
     @tools.class_iter_input
+    @profile
     def gx2_cxs(hs, gx_input):
         cxs_list = [np.where(hs.tables.cx2_gx == gx)[0] for gx in gx_input]
         return cxs_list
 
     @tools.class_iter_input
+    @profile
     def gx2_nChips(hs, gx_input):
         nChips_list = [len(np.where(hs.tables.cx2_gx == gx)[0]) for gx in gx_input]
         return nChips_list
 
     # build metaproperty tables
+    @profile
     def cid2_gx(hs, cid):
         'chip_id ==> image_index'
         cx = hs.tables.cid2_cx(cid)
@@ -898,6 +932,7 @@ class HotSpotter(DynStruct):
     # Precomputed properties
     #@tools.debug_exception
     @tools.class_iter_input
+    @profile
     def _try_cxlist_get(hs, cx_input, cx2_var):
         ''' Input: cx_input: a vector input, cx2_var: a array mapping cx to a
         variable Returns: list of values corresponding with cx_input '''
@@ -908,6 +943,7 @@ class HotSpotter(DynStruct):
             raise IndexError('ret[%r] == None' % none_index)
         return ret
 
+    @profile
     def _onthefly_cxlist_get(hs, cx_input, cx2_var, load_fn):
         '''tries to get from the cx_input indexed list and performs a cx load function
         if unable to get failure'''
@@ -928,26 +964,32 @@ class HotSpotter(DynStruct):
                 raise
         return ret
 
+    @profile
     def get_desc(hs, cx_input):
         cx2_desc = hs.feats.cx2_desc
         return hs._onthefly_cxlist_get(cx_input, cx2_desc, hs.load_features)
 
+    @profile
     def get_kpts(hs, cx_input):
         cx2_kpts = hs.feats.cx2_kpts
         return hs._onthefly_cxlist_get(cx_input, cx2_kpts, hs.load_features)
 
+    @profile
     def get_rchip_path(hs, cx_input):
         cx2_rchip_path = hs.cpaths.cx2_rchip_path
         return hs._onthefly_cxlist_get(cx_input, cx2_rchip_path, hs.load_chips)
 
+    @profile
     def get_chip_pil(hs, cx):
         chip = Image.open(hs.cpaths.cx2_rchip_path[cx])
         return chip
 
     @tools.lru_cache(max_size=7)
+    @profile
     def _read_chip(hs, fpath):
         return io.imread(fpath)
 
+    @profile
     def get_chip(hs, cx_input):
         rchip_path = hs.get_rchip_path(cx_input)
         if np.iterable(cx_input):
@@ -955,11 +997,13 @@ class HotSpotter(DynStruct):
         else:
             return hs._read_chip(rchip_path)
 
+    @profile
     def cx2_rchip_size(hs, cx_input):
         #cx_input = hs.get_valid_cxs()
         cx2_rchip_size = hs.cpaths.cx2_rchip_size
         return hs._onthefly_cxlist_get(cx_input, cx2_rchip_size, hs.load_chips)
 
+    @profile
     def get_arg(hs, argname, default=None):
         try:
             val = eval('hs.args.' + argname)

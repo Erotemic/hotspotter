@@ -104,6 +104,7 @@ def interact_image(hs, gx, sel_cxs=[], select_cx_func=None, fnum=1, **kwargs):
     fig = begin_interaction('image', fnum)
 
     # Create callback wrapper
+    @profile
     def _on_image_click(event):
         print_('[inter] clicked image')
         if event is None or event.inaxes is None or event.xdata is None:
@@ -176,7 +177,7 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
     fig = begin_interaction('chip', fnum)
     # Get chip info (make sure get_chip is called first)
     rchip = hs.get_chip(cx)
-    draw_kpts_ptr = [False]
+    annote_ptr = [False]
 
     def _select_ith_kpt(fx):
         # Get the fx-th keypiont
@@ -189,11 +190,10 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
         nRows, nCols, px = (2, 3, 3)
         draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, None)
 
-    def _chip_view(pnum=(1, 1, 1), draw_kpts=True, **kwargs):
+    def _chip_view(pnum=(1, 1, 1), **kwargs):
         df2.figure(fnum=fnum, pnum=pnum, docla=True, doclf=True)
         # Toggle no keypoints view
-        viz.show_chip(hs, cx=cx, rchip=rchip, fnum=fnum, pnum=pnum,
-                      draw_kpts=draw_kpts, **kwargs)
+        viz.show_chip(hs, cx=cx, rchip=rchip, fnum=fnum, pnum=pnum, **kwargs)
         df2.set_figtitle(figtitle)
 
     def _on_chip_click(event):
@@ -202,8 +202,12 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
         if ax is None or x is None:
             # The click is not in any axis
             print('... out of axis')
-            draw_kpts_ptr[0] = not draw_kpts_ptr[0]
-            _chip_view(draw_kpts=draw_kpts_ptr[0])
+            annote_ptr[0] = (annote_ptr[0] + 1) % 3
+            mode = annote_ptr[0]
+            draw_ell = mode == 1
+            draw_pts = mode == 2
+            print('... default kpts view mode=%r' % mode)
+            _chip_view(draw_ell=draw_ell, draw_pts=draw_pts)
         else:
             hs_viewtype = ax.__dict__.get('_hs_viewtype', '')
             print_(' hs_viewtype=%r' % hs_viewtype)
@@ -224,7 +228,7 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
         viz.draw()
 
     # Draw without keypoints the first time
-    _chip_view(draw_kpts=draw_kpts_ptr[0])
+    _chip_view(draw_ell=False, draw_pts=False)
     viz.draw()
     df2.connect_callback(fig, 'button_press_event', _on_chip_click)
 
@@ -298,22 +302,26 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
     fm = res.cx2_fm[cx]
     mx = kwargs.pop('mx', None)
     xywh2_ptr = [None]
-    annote_ptr = [False]
+    annote_ptr = [0]
 
     # Draw default
+    @profile
     def _chipmatch_view(pnum=(1, 1, 1), **kwargs):
-        annote = annote_ptr[0]
+        mode = annote_ptr[0]
+        draw_ell = mode >= 1
+        draw_lines = mode == 2
+        annote_ptr[0] = (annote_ptr[0] + 1) % 3
         df2.figure(fnum=fnum, docla=True, doclf=True)
         tup = viz.res_show_chipres(res, hs, cx, fnum=fnum, pnum=pnum,
-                                   draw_lines=False, draw_ell=annote, **kwargs)
+                                   draw_lines=draw_lines, draw_ell=draw_ell, **kwargs)
         ax, xywh1, xywh2 = tup
         xywh2_ptr[0] = xywh2
-        annote_ptr[0] = not annote  # Toggle annote
         df2.set_figtitle(figtitle)
 
     # Draw clicked selection
+    @profile
     def _select_ith_match(mx):
-        annote_ptr[0] = True
+        annote_ptr[0] = 1
         # Get the mx-th feature match
         fx1, fx2 = fm[mx]
         kpts1, kpts2 = hs.get_kpts([qcx, cx])
@@ -345,6 +353,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
         viz.draw()
 
     # Callback
+    @profile
     def _click_chipres_click(event):
         print_('[inter] clicked chipres')
         (x, y, ax) = (event.xdata, event.ydata, event.inaxes)

@@ -105,7 +105,6 @@ def debug_smart_load(dpath='', fname='*', uid='*', ext='*'):
 
 
 # --- Smart Load/Save ---
-#----
 def __args2_fpath(dpath, fname, uid, ext):
     if len(ext) > 0 and ext[0] != '.':
         raise Exception('Fatal Error: Please be explicit and use a dot in ext')
@@ -118,6 +117,7 @@ def __args2_fpath(dpath, fname, uid, ext):
     return fpath
 
 
+@profile
 def smart_save(data, dpath='', fname='', uid='', ext='', verbose=VERBOSE_IO):
     ''' Saves data to the direcotry speficied '''
     helpers.ensuredir(dpath)
@@ -133,6 +133,7 @@ def smart_save(data, dpath='', fname='', uid='', ext='', verbose=VERBOSE_IO):
     return ret
 
 
+@profile
 def smart_load(dpath='', fname='', uid='', ext='', verbose=VERBOSE_IO, **kwargs):
     ''' Loads data to the direcotry speficied '''
     fpath = __args2_fpath(dpath, fname, uid, ext)
@@ -147,6 +148,7 @@ def smart_load(dpath='', fname='', uid='', ext='', verbose=VERBOSE_IO, **kwargs)
     return data
 
 
+@profile
 def __smart_save(data, fpath, verbose):
     ' helper '
     dpath, fname = os.path.split(fpath)
@@ -164,6 +166,7 @@ def __smart_save(data, fpath, verbose):
         raise
 
 
+@profile
 def __smart_load(fpath, verbose, allow_alternative=False, can_fail=True, **kwargs):
     ' helper '
     # Get components of the filesname
@@ -257,19 +260,31 @@ def print_filesize(fpath):
     print(filesize_str(fpath))
 
 
+@profile
 def filesize_str(fpath):
     _, fname = os.path.split(fpath)
     mb_str = helpers.file_megabytes_str(fpath)
     return 'filesize(%r)=%s' % (fname, mb_str)
 
 
+@profile
 def exiftime_to_unixtime(datetime_str):
-    if datetime_str is None:
-        return -1
-    dt = datetime.datetime.strptime(datetime_str, '%Y:%m:%d %H:%M:%S')
-    return time.mktime(dt.timetuple())
+    try:
+        dt = datetime.datetime.strptime(datetime_str, '%Y:%m:%d %H:%M:%S')
+        return time.mktime(dt.timetuple())
+    except ValueError as ex:
+        if datetime_str is None:
+            return -1
+        if isinstance(datetime_str, str):
+            if datetime_str.find('Invalid') == 0:
+                return -1
+        print('!!!!!!!!!!!!!!!!!!')
+        print('Caught Error: ' + repr(ex))
+        print('datetime_str = %r' % datetime_str)
+        raise
 
 
+@profile
 def check_exif_keys(pil_image):
     info_ = pil_image._getexif()
     valid_keys = []
@@ -286,6 +301,7 @@ def check_exif_keys(pil_image):
     #exec(df2.present())
 
 
+@profile
 def read_all_exif_tags(pil_image):
     info_ = pil_image._getexif()
     info_iter = info_.iteritems()
@@ -294,6 +310,7 @@ def read_all_exif_tags(pil_image):
     return exif
 
 
+@profile
 def read_one_exif_tag(pil_image, tag):
     try:
         exif_key = TAGS.keys()[TAGS.values().index(tag)]
@@ -315,6 +332,7 @@ def read_one_exif_tag(pil_image, tag):
         #check_exif_keys(pil_image)
 
 
+@profile
 def read_exif(fpath, tag=None):
     try:
         pil_image = Image.open(fpath)
@@ -335,6 +353,7 @@ def read_exif(fpath, tag=None):
     return exif
 
 
+@profile
 def print_image_checks(img_fpath):
     hasimg = helpers.checkpath(img_fpath, verbose=True)
     if hasimg:
@@ -345,6 +364,7 @@ def print_image_checks(img_fpath):
     return hasimg
 
 
+@profile
 def read_exif_list(fpath_list, **kwargs):
     def _gen(fpath_list):
         # Exif generator
@@ -359,6 +379,7 @@ def read_exif_list(fpath_list, **kwargs):
     return exif_list
 
 
+@profile
 def imread_cv2(img_fpath):
     try:
         img = cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR)
@@ -370,6 +391,7 @@ def imread_cv2(img_fpath):
     return img
 
 
+@profile
 def imread_PIL(img_fpath):
     try:
         img = Image.open(img_fpath)
@@ -382,6 +404,7 @@ def imread_PIL(img_fpath):
     return img
 
 
+@profile
 def imread(img_fpath):
     try:
         img = Image.open(img_fpath)

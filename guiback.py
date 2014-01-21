@@ -167,6 +167,7 @@ class MainWindowBackend(QtCore.QObject):
         back.front.show()
 
     @drawing
+    @profile
     def show_splash(back, fnum, view='Nice', **kwargs):
         if df2.plt.fignum_exists(fnum):
             df2.figure(fnum=fnum, docla=True, doclf=True)
@@ -174,6 +175,7 @@ class MainWindowBackend(QtCore.QObject):
             df2.set_figtitle('%s View' % view)
 
     @drawing
+    @profile
     def show_image(back, gx, sel_cxs=[], figtitle='Image View', **kwargs):
         fnum = FNUMS['image']
         did_exist = df2.plt.fignum_exists(fnum)
@@ -183,6 +185,7 @@ class MainWindowBackend(QtCore.QObject):
             back.layout_figures()
 
     @drawing
+    @profile
     def show_chip(back, cx, **kwargs):
         fnum = FNUMS['chip']
         did_exist = df2.plt.fignum_exists(fnum)
@@ -197,6 +200,7 @@ class MainWindowBackend(QtCore.QObject):
             back.layout_figures()
 
     @drawing
+    @profile
     def show_query_result(back, res, tx=None, **kwargs):
         if tx is not None:
             fnum = FNUMS['inspect']
@@ -216,6 +220,7 @@ class MainWindowBackend(QtCore.QObject):
             back.layout_figures()
 
     @drawing
+    @profile
     def show_single_query(back, res, cx, **kwargs):
         # Define callback for show_analysis
         fnum = FNUMS['inspect']
@@ -226,6 +231,7 @@ class MainWindowBackend(QtCore.QObject):
             back.layout_figures()
 
     @drawing
+    @profile
     def show_nx(back, nx, sel_cxs=[], **kwargs):
         # Define callback for show_analysis
         fnum = FNUMS['name']
@@ -400,9 +406,9 @@ class MainWindowBackend(QtCore.QObject):
     # Selection Functions
     #--------------------------------------------------------------------------
 
-    @profile
     @slot_(int)
     @blocking
+    @profile
     def select_gx(back, gx, cx=None, **kwargs):
         # Table Click -> Image Table
         autoselect_chips = False
@@ -471,9 +477,9 @@ class MainWindowBackend(QtCore.QObject):
         back.hs.default_preferences()
         back.hs.prefs.save()
 
-    @profile
     @slot_(int, str, str)
     @blocking
+    @profile
     def change_chip_property(back, cid, key, val):
         # Table Edit -> Change Chip Property
         # RCOS TODO: These function should take the type of the variable as an
@@ -626,9 +632,9 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] added newprop = %r' % newprop)
         print('')
 
-    @profile
     @slot_()
     @blocking
+    @profile
     def add_chip(back):
         # Action -> Add ROI
         gx = back.get_selected_gx()
@@ -644,9 +650,9 @@ class MainWindowBackend(QtCore.QObject):
         back.select_gx(gx)
         print('')
 
-    @profile
     @slot_()
     @blocking
+    @profile
     def query(back, cid=None, tx=None):
         # Action -> Query
         #prevBlock = back.front.blockSignals(True)
@@ -672,9 +678,9 @@ class MainWindowBackend(QtCore.QObject):
         back.show_query_result(res, tx)
         return res
 
-    @profile
     @slot_()
     @blocking
+    @profile
     def reselect_roi(back, **kwargs):
         # Action -> Reselect ROI
         print(r'[\back] reselect_roi()')
@@ -695,9 +701,9 @@ class MainWindowBackend(QtCore.QObject):
         print('')
         pass
 
-    @profile
     @slot_()
     @blocking
+    @profile
     def reselect_ori(back, **kwargs):
         # Action -> Reselect ORI
         cx = back.get_selected_cx()
@@ -716,9 +722,9 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] reselected theta=%r' % theta)
         print('')
 
-    @profile
     @slot_()
     @blocking
+    @profile
     def delete_chip(back):
         # Action -> Delete Chip
         # RCOS TODO: Are you sure?
@@ -733,9 +739,9 @@ class MainWindowBackend(QtCore.QObject):
         print('[back] deleted cx=%r\n' % cx)
         print('')
 
-    @profile
     @slot_()
     @blocking
+    @profile
     def select_next(back):
         # Action -> Next
         select_mode = 'in_order'  # 'unannotated'

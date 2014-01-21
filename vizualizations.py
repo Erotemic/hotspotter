@@ -21,6 +21,7 @@ import helpers
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5, name=6)
 
 
+@profile
 def draw():
     df2.adjust_subplots_safe()
     df2.draw()
@@ -170,6 +171,7 @@ def show_name(hs, nx, nx2_cxs=None, fnum=0, sel_cxs=[], subtitle='',
 #==========================
 
 
+@profile
 def _annotate_roi(hs, ax, cx, sel_cxs, draw_lbls, annote):
     # Draw an roi around a chip in the image
     roi, theta = hs.cx2_roi(cx), hs.cx2_theta(cx)
@@ -189,6 +191,7 @@ def _annotate_roi(hs, ax, cx, sel_cxs, draw_lbls, annote):
     return xy_center
 
 
+@profile
 def _annotate_image(hs, ax, gx, sel_cxs, draw_lbls, annote):
     # draw chips in the image
     cx_list = hs.gx2_cxs(gx)
@@ -203,6 +206,7 @@ def _annotate_image(hs, ax, gx, sel_cxs, draw_lbls, annote):
     ax._hs_cx_list = cx_list
 
 
+@profile
 def show_image(hs, gx, sel_cxs=[], fnum=1, figtitle='Img', annote=True,
                draw_lbls=True, **kwargs):
     # Shows an image with annotations
@@ -221,6 +225,7 @@ def show_image(hs, gx, sel_cxs=[], fnum=1, figtitle='Img', annote=True,
 #==========================
 
 
+@profile
 def _annotate_qcx_match_results(hs, res, qcx, kpts):
     '''Draws which keypoints successfully matched'''
     def stack_unique(fx_list):
@@ -268,8 +273,15 @@ def _annotate_qcx_match_results(hs, res, qcx, kpts):
     _kpts_helper(kpts_true, df2.GREEN, .6, 'True Matches')
 
 
+@profile
 def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, nRandKpts=None):
-    ell_args = {'ell_alpha': 1, 'ell_linewidth': 2}
+    ell_args = {
+        'ell': draw_ell,
+        'pts': draw_pts,
+        'ell_alpha': .4,
+        'ell_linewidth': 2,
+        'ell_color': 'distinct',
+    }
     if draw_ell and nRandKpts is not None:
         # show a random sample of kpts
         nkpts1 = len(kpts)
@@ -286,15 +298,14 @@ def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, nRandKpts=None):
         # draw all keypoints
         if sel_fx is not None:
             ell_args['ell_color'] = df2.BLUE
-        else:
-            ell_args['ell_color'] = 'distinct'
-        df2.draw_kpts2(kpts, ell=draw_ell, pts=draw_pts, ell_args=ell_args)
+        df2.draw_kpts2(kpts, **ell_args)
     if sel_fx is not None:
         # Draw selected keypoint
         sel_kpts = kpts[sel_fx:sel_fx + 1]
         df2.draw_kpts2(sel_kpts, ell_color=df2.ORANGE, arrow=True, rect=True)
 
 
+@profile
 def show_chip(hs, cx=None, allres=None, res=None, draw_ell=True,
               draw_pts=False, nRandKpts=None, prefix='', sel_fx=None, **kwargs):
     if allres is not None:
@@ -325,6 +336,7 @@ def show_chip(hs, cx=None, allres=None, res=None, draw_ell=True,
             _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, nRandKpts)
 
 
+@profile
 def show_keypoints(rchip, kpts, draw_ell=True, draw_pts=False, sel_fx=None, fnum=0,
                    pnum=None, **kwargs):
     df2.imshow(rchip, fnum=fnum, pnum=pnum, **kwargs)
@@ -420,6 +432,7 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
 #==========================
 
 
+@profile
 def show_top(res, hs, *args, **kwargs):
     topN_cxs = res.topN_cxs(hs)
     N = len(topN_cxs)
@@ -431,6 +444,7 @@ def show_top(res, hs, *args, **kwargs):
                      all_kpts=False, **kwargs)
 
 
+@profile
 def res_show_analysis(res, hs, **kwargs):
         print('[viz] res.show_analysis()')
         # Parse arguments
@@ -474,6 +488,7 @@ def res_show_analysis(res, hs, **kwargs):
                          show_query=show_query, **kwargs)
 
 
+@profile
 def _show_res(hs, res, **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
     #printDBG('[viz._show_res()] %s ' % helpers.printableVal(locals()))
@@ -589,7 +604,7 @@ def _show_res(hs, res, **kwargs):
         def _clicked_none():
             # Toggle if the click is not in any axis
             printDBG('clicked none')
-            print(kwargs)
+            #print(kwargs)
             _show_res(hs, res, annote=(annote + 1) % 3, **kwargs)
             fig.canvas.draw()
 

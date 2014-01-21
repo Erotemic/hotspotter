@@ -34,12 +34,14 @@ def whiten_features(desc_list):
 # =======================================
 # Main Script
 # =======================================
+@profile
 def bigcache_feat_save(cache_dir, uid, ext, kpts_list, desc_list):
     print('[fc2] Caching desc_list and kpts_list')
     io.smart_save(kpts_list, cache_dir, 'kpts_list', uid, ext)
     io.smart_save(desc_list, cache_dir, 'desc_list', uid, ext)
 
 
+@profile
 def bigcache_feat_load(cache_dir, uid, ext):
     #io.debug_smart_load(cache_dir, fname='*', uid=uid, ext='.*')
     kpts_list = io.smart_load(cache_dir, 'kpts_list', uid, ext, can_fail=True)
@@ -52,6 +54,7 @@ def bigcache_feat_load(cache_dir, uid, ext):
     return kpts_list, desc_list
 
 
+@profile
 def sequential_feat_load(feat_cfg, feat_fpath_list):
     kpts_list = []
     desc_list = []
@@ -118,6 +121,7 @@ def _load_features_individualy(hs, cx_list):
     return kpts_list, desc_list
 
 
+@profile
 def _load_features_bigcache(hs, cx_list):
     # args for smart load/save
     feat_cfg = hs.prefs.feat_cfg

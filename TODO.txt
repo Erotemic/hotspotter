@@ -1,3 +1,24 @@
+OBSERVATION: 
+Descriptors with too little "energy" match too easilly
+Descriptors with too much "energy" match too randomly. 
+The descriptors where some of the components are 0 but a fair number 
+of other components are filled tend to be repeatable patterns. 
+
+
+OBSERVATION: 
+Lighting is a big deal. Histogram equalization can help, but it shouldn't be
+applied to every image. It needs to be applied adaptively depending on how
+dark the image is. Animals in shadows have no keypoints. 
+
+
+#--- ALGORITHM ---
+Changing the filter config is broken. Changing the LNBNN weight does nothing
+because the feasibility check is not run on a change. Fix this. 
+The whole filter config should just be fixed so it isn't stupid. 
+
+
+Vizualize the Knth feature. 
+
 #--- Feature ----
 
 RCOS: The chip/image you have selected should be highlighted in the QItemTable

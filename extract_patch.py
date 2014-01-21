@@ -127,16 +127,28 @@ def get_kp_border(rchip, kp):
     pxl_list4 = invA.dot(ashape_pts[:, 0:2].T).T
     pxl_list5 = invA.T.dot(cicrle_pts[:, 0:2].T).T
     pxl_list6 = invA.T.dot(ashape_pts[:, 0:2].T).T
-    pxl_list7 = inv(V).dot(pxl_list2[:, 0:2].T).T
-    pxl_list8 = inv(U).dot(pxl_list2[:, 0:2].T).T
+    pxl_list7 = inv(V).dot(ashape_pts[:, 0:2].T).T
+    pxl_list8 = inv(U).dot(ashape_pts[:, 0:2].T).T
     df2.draw()
 
     from scipy.special import ellipeinc
 
-    nu = 1
     #http://en.wikipedia.org/wiki/Conic_section
-    numer = 2 * np.sqrt((a - d) ** 2 + c ** 2)
-    denom  = nu * (a + d) + np.sqrt((a - d) ** 2 + b ** 2)
+    (a, b, c) = (a, c, d)
+    d = 0
+    e = 0
+    f = 1
+
+    conic = ((  a, b/2, d/2),
+             (b/2,   c, e/2),
+             (d/2, e/2,   f))
+
+    # Algebraic form of connic
+    #assert (a * (x ** 2)) + (b * (x * y)) + (c * (y ** 2)) + (d * x) + (e * y) + (f) == 0
+
+    nu = 1
+    numer  = 2 * np.sqrt((a - c) ** 2 + b ** 2)
+    denom  = nu * (a + c) + np.sqrt((a - c) ** 2 + b ** 2)
     eccentricity = np.sqrt(numer / denom)
 
     def _plot(data, px, title=''):
@@ -168,7 +180,6 @@ def get_kp_border(rchip, kp):
 
     vals = [cv2.getRectSubPix(rchip, (1, 1), tuple(pxl)) for pxl in pxl_list]
     return vals
-
 
 
 def get_patch(rchip, kp):

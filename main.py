@@ -144,7 +144,8 @@ if __name__ == '__main__':
 
         def do_extract_encounter(eid=None):
             #if not 'eid' in vars() or eid is None:
-            eid = 'ex=269_nGxs=21'
+            #eid = 'ex=269_nGxs=21'
+            eid = 'ex=61_nGxs=18'
             scripts.rrr()
             extr_enc_loc = scripts.extract_encounter(hs, eid)
             export_subdb_locals = extr_enc_loc['export_subdb_locals']

@@ -301,7 +301,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[*back] _populate_table(%r)' % tblname)
         headers = back.table_headers[tblname]
         editable = back.table_editable[tblname]
-        if tblname == 'cxs':
+        if tblname == 'cxs':  # in ['cxs', 'res']: TODO props in restable
             prop_keys = back.hs.tables.prop_dict.keys()
         else:
             prop_keys = []

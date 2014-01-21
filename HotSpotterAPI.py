@@ -118,6 +118,9 @@ def _datatup_cols(hs, tblname, cx2_score=None):
             'name':   lambda cxs:  [nx2_name[cx2_nx[cx]] for cx in iter(cxs)],
             'cid':    lambda cxs:  [cx2_cid[cx]   for cx in iter(cxs)],
         }
+        prop_iter = prop_dict.iteritems()
+        prop_cols = dict([(k, lambda cxs: [v[cx] for cx in iter(cxs)]) for (k, v) in prop_iter])
+        cols.update(prop_cols)
     else:
         cols = {}
     return cols

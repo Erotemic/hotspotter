@@ -151,13 +151,14 @@ def interact_name(hs, nx, sel_cxs=[], select_cx_func=None, fnum=5, **kwargs):
         if ax is None or x is None:
             # The click is not in any axis
             print('... out of axis')
-        hs_viewtype = ax.__dict__.get('_hs_viewtype', '')
-        print_(' hs_viewtype=%r' % hs_viewtype)
-        if hs_viewtype == 'chip':
-            cx = ax.__dict__.get('_hs_cx')
-            print('... cx=%r' % cx)
-            viz.show_name(hs, nx, fnum=fnum, sel_cxs=[cx])
-            select_cx_func(cx)
+        else:
+            hs_viewtype = ax.__dict__.get('_hs_viewtype', '')
+            print_(' hs_viewtype=%r' % hs_viewtype)
+            if hs_viewtype == 'chip':
+                cx = ax.__dict__.get('_hs_cx')
+                print('... cx=%r' % cx)
+                viz.show_name(hs, nx, fnum=fnum, sel_cxs=[cx])
+                select_cx_func(cx)
         viz.draw()
 
     viz.show_name(hs, nx, fnum=fnum, sel_cxs=sel_cxs)

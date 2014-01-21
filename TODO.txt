@@ -11,6 +11,7 @@ applied to every image. It needs to be applied adaptively depending on how
 dark the image is. Animals in shadows have no keypoints. 
 
 
+
 #--- ALGORITHM ---
 Changing the filter config is broken. Changing the LNBNN weight does nothing
 because the feasibility check is not run on a change. Fix this. 
@@ -20,6 +21,9 @@ The whole filter config should just be fixed so it isn't stupid.
 Vizualize the Knth feature. 
 
 #--- Feature ----
+
+Add a #matches column to the results table
+Let the user change chip properties from the results table. 
 
 RCOS: The chip/image you have selected should be highlighted in the QItemTable
 RCOS: Adding a chip should not draw the chip view. (by default. add option)

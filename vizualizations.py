@@ -145,9 +145,10 @@ def show_name(hs, nx, nx2_cxs=None, fnum=0, sel_cxs=[], subtitle='',
     pnum = lambda px: (nRows, nCols, px + 1)
     fig = df2.figure(fnum=fnum, pnum=pnum(0), **kwargs)
     fig.clf()
+    # Trigger computation of all chips in parallel
+    hs.refresh_features(cxs)
     for px, cx in enumerate(cxs):
-        show_chip(hs, cx=cx, pnum=pnum(px), draw_kpts=annote, kpts_alpha=.2,
-                  info=False, cid_info=True)
+        show_chip(hs, cx=cx, pnum=pnum(px), draw_ell=annote, kpts_alpha=.2)
         if cx in sel_cxs:
             ax = df2.gca()
             df2.draw_border(ax, df2.GREEN, 4)
@@ -501,7 +502,7 @@ def _show_res(hs, res, **kwargs):
     show_query = kwargs.get('show_query', False)
     max_nCols  = kwargs.get('max_nCols', 5)
     interact   = kwargs.get('interact', True)
-    annote     = kwargs.pop('annote', True)  # this is toggled
+    annote     = kwargs.pop('annote', 2)  # this is toggled
 
     printDBG('========================')
     printDBG('[viz._show_res()]----------------')
@@ -549,8 +550,8 @@ def _show_res(hs, res, **kwargs):
         _kwshow['fnum'] = fnum
         _kwshow['pnum'] = pnum
         _kwshow['title_aug'] = aug
-        _kwshow['draw_ell'] = annote > 1
-        _kwshow['draw_lines'] = annote > 0
+        _kwshow['draw_ell'] = annote == 1
+        _kwshow['draw_lines'] = annote >= 1
         res.show_chipres(hs, cx, **_kwshow)
 
     def _plot_matches_cxs(cx_list, plotx_shift, rowcols):

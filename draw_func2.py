@@ -38,6 +38,7 @@ import scipy.stats
 import tools
 from Printable import DynStruct
 import helpers
+import cv2
 
 #================
 # GLOBALS
@@ -1342,7 +1343,7 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
 
 
 # ---- CHIP DISPLAY COMMANDS ----
-def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
+def imshow(imgBGR, fnum=None, title=None, figtitle=None, pnum=None,
            interpolation='nearest', **kwargs):
     'other interpolations = nearest, bicubic, bilinear'
     #printDBG('[df2] ----- IMSHOW ------ ')
@@ -1358,12 +1359,13 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
 
     plt_imshow_kwargs = {
         'interpolation': interpolation,
-        'cmap': plt.get_cmap('gray'),
+        #'cmap': plt.get_cmap('gray'),
         'vmin': 0,
         'vmax': 255,
     }
     try:
-        ax.imshow(img, **plt_imshow_kwargs)
+        imgRGB = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
+        ax.imshow(imgRGB, **plt_imshow_kwargs)
     except TypeError as te:
         print('ERROR %r' % te)
     #plt.set_cmap('gray')

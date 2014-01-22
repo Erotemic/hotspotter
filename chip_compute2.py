@@ -170,11 +170,11 @@ cv2_borderMode  = cv2.BORDER_CONSTANT
 cv2_warp_kwargs = {'flags': cv2_flags, 'borderMode': cv2_borderMode}
 
 
-def extract_chip(img_path, roi, theta, new_size):
+def extract_chip(img_fpath, roi, theta, new_size):
     'Crops chip from image ; Rotates and scales; Converts to grayscale'
     # Read parent image
     #printDBG('[cc2] reading image')
-    np_img = io.imread(img_path)
+    imgBGR = io.imread(img_fpath)
     #printDBG('[cc2] building transform')
     # Build transformation
     (rx, ry, rw, rh) = roi
@@ -182,39 +182,50 @@ def extract_chip(img_path, roi, theta, new_size):
     Aff = build_transform(rx, ry, rw, rh, rw_, rh_, theta)
     #printDBG('[cc2] rotate and scale')
     # Rotate and scale
-    chip = cv2.warpAffine(np_img, Aff, (rw_, rh_), **cv2_warp_kwargs)
+    imgBGR = cv2.warpAffine(imgBGR, Aff, (rw_, rh_), **cv2_warp_kwargs)
     #printDBG('[cc2] return extracted')
-    return chip
+    return imgBGR
 
 
 # TODO: Change the force_gray to work a little nicer
-def compute_chip(img_path, chip_path, roi, theta, new_size, filter_list, force_gray=True):
+def compute_chip(img_fpath, chip_fpath, roi, theta, new_size, filter_list, force_gray=False):
     '''Extracts Chip; Applies Filters; Saves as png'''
     #printDBG('[cc2] extracting chip')
-    chip = extract_chip(img_path, roi, theta, new_size)
+    chipBGR = extract_chip(img_fpath, roi, theta, new_size)
     #printDBG('[cc2] extracted chip')
     for func in filter_list:
         #printDBG('[cc2] computing filter: %r' % func)
-        chip = func(chip)
-    # Convert to grayscale
-    if force_gray:
-        pil_chip = Image.fromarray(chip).convert('L')
-    else:
-        pil_chip = Image.fromarray(chip)
-    #printDBG('[cc2] saving chip: %r' % chip_path)
-    pil_chip.save(chip_path, 'PNG')
-    #printDBG('[cc2] returning')
+        chipBGR = func(chipBGR)
+    cv2.imwrite(chip_fpath, chipBGR)
     return True
 
 # ---------------
 # Preprocessing funcs
 
 
-def grabcut_fn(chip):
+def adapteq_fn(chipBGR):
+    # create a CLAHE object (Arguments are optional).
+    chipLAB = cv2.cvtColor(chipBGR, cv2.COLOR_BGR2LAB)
+    clahe_obj = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    chipLAB[:, :, 0] = clahe_obj.apply(chipLAB[:, :, 0])
+    chipBGR = cv2.cvtColor(chipLAB, cv2.COLOR_LAB2BGR)
+    return chipBGR
+
+
+def histeq_fn(chapBGR):
+    # Histogram equalization of a grayscale image. from  _tpl/other
+    chipLAB = cv2.cvtColor(chapBGR, cv2.COLOR_BGR2LAB)
+    chipLAB[:, :, 0] = cv2.equalizeHist(chipLAB[:, :, 0])
+    chapBGR = cv2.cvtColor(chipLAB, cv2.COLOR_LAB2BGR)
+    return chapBGR
+
+
+def grabcut_fn(chipBGR):
     import segmentation
-    rgb_chip = ensure_rgb(chip)
-    seg_chip = segmentation.grabcut(rgb_chip)
-    return seg_chip
+    chipRGB = cv2.cvtColor(chapBGR, cv2.COLOR_BGR2RGB)
+    chipRGB = segmentation.grabcut(chipRGB)
+    chapBGR = cv2.cvtColor(chipRGB, cv2.COLOR_RGB2BGR)
+    return chapBGR
 
 
 #def maxcontr_fn(chip):
@@ -257,12 +268,6 @@ def grabcut_fn(chip):
         #chip_ = skimage.exposure.rescale_intensity(chip_, in_range=(p2, p98))
         #retchip = Image.fromarray(skimage.util.img_as_ubyte(chip_)).convert('L')
     #return retchip
-
-
-def histeq_fn(chip):
-    chip = ensure_gray(chip)
-    chip = imtools.histeq(chip)
-    return chip
 
 
 def region_norm_fn(chip):
@@ -403,6 +408,8 @@ def load_chips(hs, cx_list=None, **kwargs):
     sqrt_area   = chip_cfg['chip_sqrt_area']
 
     filter_list = []
+    if chip_cfg['adapteq']:
+        filter_list.append(adapteq_fn)
     if chip_cfg['histeq']:
         filter_list.append(histeq_fn)
     if chip_cfg['region_norm']:

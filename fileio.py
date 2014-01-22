@@ -407,14 +407,21 @@ def imread_PIL(img_fpath):
 @profile
 def imread(img_fpath):
     try:
-        img = Image.open(img_fpath)
-        img = np.asarray(img)
+        flags = cv2.CV_LOAD_IMAGE_COLOR
+        imgBGR = cv2.imread(img_fpath, flags=flags)
+        return imgBGR
+        #imgBGR = cv2.imread(img_fpath, flags=cv2.CV_LOAD_IMAGE_COLOR)
+        #imgPIL = Image.open(img_fpath)
+        #print(imgPIL)
+        #imgRGB = np.asarray(imgPIL)
+        ##imgBGR = cv2.cvtColor(imgRGB, cv2.COLOR_RGB2BGR)
+        ##imgBGR = cv2.cvtColor(imgRGB, cv2.COLOR_BGR2RGB)
+        #imgBGR = imgRGB
         #img = skimage.util.img_as_uint(img)
     except Exception as ex:
         print('[io] Caught Exception: %r' % ex)
         print('[io] ERROR reading: %r' % (img_fpath,))
         raise
-    return img
 
 
 # --- Standard Images ---

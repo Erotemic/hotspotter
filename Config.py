@@ -355,6 +355,7 @@ class ChipConfig(ConfigBase):
         cc_cfg.chip_sqrt_area = 750
         cc_cfg.grabcut         = False
         cc_cfg.histeq          = False
+        cc_cfg.adapteq         = False
         cc_cfg.region_norm     = False
         cc_cfg.rank_eq         = False
         cc_cfg.local_eq        = False
@@ -364,6 +365,7 @@ class ChipConfig(ConfigBase):
     def get_uid_list(cc_cfg):
         chip_uid = []
         chip_uid += ['histeq']  * cc_cfg.histeq
+        chip_uid += ['adapteq'] * cc_cfg.adapteq
         chip_uid += ['grabcut'] * cc_cfg.grabcut
         chip_uid += ['regnorm'] * cc_cfg.region_norm
         chip_uid += ['rankeq']  * cc_cfg.rank_eq

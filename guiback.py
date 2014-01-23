@@ -127,7 +127,7 @@ class MainWindowBackend(QtCore.QObject):
             'gx':         'Image Index',
             'nx':         'Name Index',
             'cid':        'Chip ID',
-            'aif':        'AIF',
+            'aif':        'All Detected',
             'gname':      'Image Name',
             'nCxs':       '#Chips',
             'name':       'Name',
@@ -330,7 +330,9 @@ class MainWindowBackend(QtCore.QObject):
         datatup_list = prefix_datatup + bpdy_datatup
         row_list = range(len(datatup_list))
         # Populate with fancy headers.
-        col_fancyheaders = [back.fancy_headers[key] for key in col_headers]
+        col_fancyheaders = [back.fancy_headers[key]
+                            if key in back.fancy_headers else key
+                            for key in col_headers]
         back.populateSignal.emit(tblname, col_fancyheaders, col_editable,
                                  row_list, datatup_list)
 

@@ -1,3 +1,6 @@
+Change back.fancy_headers to a default dictionary (in case properties are not in it)
+
+
 OBSERVATION: 
 Descriptors with too little "energy" match too easilly
 Descriptors with too much "energy" match too randomly. 

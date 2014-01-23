@@ -412,7 +412,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
     def get_tbl_header(front, tbl, col):
         # Map the fancy header back to the internal one.
         fancy_header = str(tbl.horizontalHeaderItem(col).text())
-        header = front.back.reverse_fancy[fancy_header]
+        header = (front.back.reverse_fancy[fancy_header]
+                  if fancy_header in front.back.reverse_fancy else fancy_header)
         return header
 
     def get_tbl_int(front, tbl, row, col):

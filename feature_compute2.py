@@ -216,9 +216,9 @@ if __name__ == '__main__':
     hs.load_chips()
     # --- LOAD FEATURES --- #
     load_features(hs)
-    cx = helpers.get_arg_after('--cx', type_=int)
+    cx = helpers.get_arg('--cx', type_=int)
     delete_features = '--delete-features' in sys.argv
-    nRandKpts = helpers.get_arg_after('--nRandKpts', type_=int)
+    nRandKpts = helpers.get_arg('--nRandKpts', type_=int)
     if delete_features:
         fc2.clear_feature_cache(hs)
     if not cx is None:

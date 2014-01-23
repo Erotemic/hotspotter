@@ -411,7 +411,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     import main
     hs = main.main()
-    cx = helpers.get_arg_after('--cx', type_=int)
+    cx = helpers.get_arg('--cx', type_=int)
     qcx = hs.get_valid_cxs()[0]
     if cx is not None:
         qcx = cx

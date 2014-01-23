@@ -14,14 +14,13 @@ import numpy as np
 import draw_func2 as df2
 import fileio as io
 import helpers
-import sys
 
 #from interaction import interact_keypoints, interact_chipres, interact_chip # NOQA
 
 
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5, name=6)
 
-IN_IMAGE_OVERRIDE = helpers.get_arg_after('--in-image-override', type_=bool, default=None)
+IN_IMAGE_OVERRIDE = helpers.get_arg('--in-image-override', type_=bool, default=None)
 
 
 @profile
@@ -44,7 +43,7 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
     color_list = df2.distinct_colors(nColors)
     df2.figure(fnum=fnum, docla=True, doclf=True)
     pnum_ = lambda px: (nRow, nCol, px + 1)
-    plot_type = helpers.get_arg_after('--plot-type', default='plot')
+    plot_type = helpers.get_arg('--plot-type', default='plot')
 
     # Remember min and max val for each distance type (l1, emd...)
     distkey2_min = {distkey: np.uint64(-1) for distkey in disttype_list}
@@ -230,8 +229,10 @@ def show_image(hs, gx, sel_cxs=[], fnum=1, figtitle='Img', annote=True,
 
 
 @profile
-def _annotate_qcx_match_results(hs, res, qcx, kpts):
+def _annotate_qcx_match_results(hs, res, qcx, kpts, cx2_color):
     '''Draws which keypoints successfully matched'''
+    print('[viz] !!! ANNOTATE QCX MATCH RESULTS !!!')
+
     def stack_unique(fx_list):
         # concatenates variable length lists
         try:
@@ -254,37 +255,47 @@ def _annotate_qcx_match_results(hs, res, qcx, kpts):
         df2.draw_kpts2(kpts_, ell_color=color, ell_alpha=alpha)
         df2.phantom_legend_label(label, color)
 
-    gt_cxs = hs.get_other_indexed_cxs(qcx)
-    all_fx = np.arange(len(kpts))
-    cx2_fm = res.get_cx2_fm()
-    fx_list1 = [fm[:, 0] for fm in cx2_fm]
-    fx_list2 = [fm[:, 0] for fm in cx2_fm[gt_cxs]] if len(gt_cxs) > 0 else np.array([])
-    matched_fx = stack_unique(fx_list1)
-    true_matched_fx = stack_unique(fx_list2)
-    noise_fx = np.setdiff1d(all_fx, matched_fx)
-    # Print info
-    tup = (hs.cidstr(qcx), len(all_fx), len(matched_fx), len(true_matched_fx), len(noise_fx))
-    print('[viz.show_chip] %s has %d kpts. #Matches: %d, true=%d, noisy=%d.' % tup)
-    # Get keypoints
-    kpts_true  = kpts[true_matched_fx]
-    kpts_match = kpts[matched_fx, :]
-    kpts_noise = kpts[noise_fx, :]
-    # Draw keypoints
-    #ell_alpha = ell_args.pop('ell_alpha', ell_alpha)
-    #ell_color = ell_args.pop('ell_color', ell_color)
-    _kpts_helper(kpts_noise,  df2.RED, .1, 'Unverified')
-    _kpts_helper(kpts_match, df2.BLUE, .4, 'Verified')
-    _kpts_helper(kpts_true, df2.GREEN, .6, 'True Matches')
+    if cx2_color is not None:
+        # Show which keypoints match chosen chips with color
+        for cx, color in cx2_color.iteritems():
+            qfxs = res.cx2_fm[cx][:, 0]
+            _kpts_helper(kpts[qfxs], color, .4, hs.cidstr(cx))
+    else:
+        # Show which keypoints match groundtruth, etc...
+        gt_cxs = hs.get_other_indexed_cxs(qcx)
+        all_fx = np.arange(len(kpts))
+        cx2_fm = res.get_cx2_fm()
+        fx_list1 = [fm[:, 0] for fm in cx2_fm]
+        fx_list2 = [fm[:, 0] for fm in cx2_fm[gt_cxs]] if len(gt_cxs) > 0 else np.array([])
+        matched_fx = stack_unique(fx_list1)
+        true_matched_fx = stack_unique(fx_list2)
+        noise_fx = np.setdiff1d(all_fx, matched_fx)
+        # Print info
+        #tup = (hs.cidstr(qcx), len(all_fx), len(matched_fx), len(true_matched_fx), len(noise_fx))
+        #print('[viz] %s has %d kpts. #Matches: %d, true=%d, noisy=%d.' % tup)
+        # Get keypoints
+        kpts_true  = kpts[true_matched_fx]
+        kpts_match = kpts[matched_fx, :]
+        kpts_noise = kpts[noise_fx, :]
+        # Draw keypoints
+        #ell_alpha = ell_args.pop('ell_alpha', ell_alpha)
+        #ell_color = ell_args.pop('ell_color', ell_color)
+        _kpts_helper(kpts_noise,  df2.RED, .1, 'Unverified')
+        _kpts_helper(kpts_match, df2.BLUE, .4, 'Verified')
+        _kpts_helper(kpts_true, df2.GREEN, .6, 'True Matches')
 
 
 @profile
-def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, nRandKpts=None):
+def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=None, nRandKpts=None):
+    print('[viz] _annotate_kpts()')
+    if color is None:
+        color = 'distinct' if sel_fx is None else df2.BLUE
     ell_args = {
         'ell': draw_ell,
         'pts': draw_pts,
         'ell_alpha': .4,
         'ell_linewidth': 2,
-        'ell_color': 'distinct',
+        'ell_color': color,
     }
     if draw_ell and nRandKpts is not None:
         # show a random sample of kpts
@@ -300,8 +311,6 @@ def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, nRandKpts=None):
         df2.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1))
     elif draw_ell or draw_pts:
         # draw all keypoints
-        if sel_fx is not None:
-            ell_args['ell_color'] = df2.BLUE
         df2.draw_kpts2(kpts, **ell_args)
     if sel_fx is not None:
         # Draw selected keypoint
@@ -311,7 +320,9 @@ def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, nRandKpts=None):
 
 @profile
 def show_chip(hs, cx=None, allres=None, res=None, draw_ell=True,
-              draw_pts=False, nRandKpts=None, prefix='', sel_fx=None, **kwargs):
+              draw_pts=False, nRandKpts=None, prefix='', sel_fx=None,
+              color=None, **kwargs):
+    printDBG('[viz] show_chip()')
     if allres is not None:
         res = allres.qcx2_res[cx]
     if res is not None:
@@ -331,13 +342,14 @@ def show_chip(hs, cx=None, allres=None, res=None, draw_ell=True,
     ax._hs_cx = cx
     if draw_ell or draw_pts:
         # FIXME
-        kpts  = kwargs['kpts']  if 'kpts'  in kwargs else hs.get_kpts(cx)
+        kpts = kwargs['kpts'] if 'kpts' in kwargs else hs.get_kpts(cx)
         if res is not None:
             # Draw keypoints with groundtruth information
-            _annotate_qcx_match_results(hs, res, cx, kpts)
+            cx2_color = kwargs.get('cx2_color', None)
+            _annotate_qcx_match_results(hs, res, cx, kpts, cx2_color)
         else:
             # Just draw boring keypoints
-            _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, nRandKpts)
+            _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color, nRandKpts)
 
 
 @profile
@@ -371,6 +383,7 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
     #printDBG('[viz.show_chipres()] Showing matches from %s' % (vs_str))
     #printDBG('[viz.show_chipres()] fnum=%r, pnum=%r' % (fnum, pnum))
     # Test valid cx
+    print('[viz] show_chipres()')
     if np.isnan(cx):
         nan_img = np.zeros((32, 32), dtype=np.uint8)
         title = '(q%s v %r)' % (hs.cidstr(qcx), cx)
@@ -500,6 +513,40 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
     return ax, xywh1, xywh2
 
 
+def annotate_chipres(hs, res, cx, showTF=True, showScore=True, title_pref='',
+                     title_suff='', show_gname=False, show_name=True,
+                     time_appart=True):
+    print('[viz] annotate_chipres()')
+    qcx = res.qcx
+    score = res.cx2_score[cx]
+    # TODO Use this function when you clean show_chipres
+    (truestr, falsestr, nonamestr) = ('TRUE', 'FALSE', '???')
+    is_true, is_unknown = hs.is_true_match(qcx, cx)
+    isgt_str = nonamestr if is_unknown else (truestr if is_true else falsestr)
+    match_color = {nonamestr: df2.UNKNOWN_PURP,
+                   truestr:   df2.TRUE_GREEN,
+                   falsestr:  df2.FALSE_RED}[isgt_str]
+    # Build title
+    title = '*%s*' % isgt_str if showTF else ''
+    if showScore:
+        score_str = (' score=' + helpers.num_fmt(score)) % (score)
+        title += score_str
+    title = title_pref + str(title) + title_suff
+    # Build xlabel
+    xlabel_ = []
+    if 'show_gname':
+        xlabel_.append('gname=%r' % hs.cx2_gname(cx))
+    if 'show_name':
+        xlabel_.append('name=%r' % hs.cx2_name(cx))
+    if 'time_appart':
+        xlabel_.append(hs.get_timedelta_str(qcx, cx))
+    xlabel = ', '.join(xlabel_)
+    ax = df2.gca()
+    df2.set_title(title, ax)
+    df2.set_xlabel(xlabel, ax)
+    df2.draw_border(ax, match_color, 4)
+
+
 #==========================
 # Result Viz
 #==========================
@@ -566,21 +613,21 @@ def _show_res(hs, res, **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
     #printDBG('[viz._show_res()] %s ' % helpers.printableVal(locals()))
     #printDBG = print
+    annote     = kwargs.pop('annote', 2)  # this is toggled
     fnum       = kwargs.get('fnum', 3)
     figtitle   = kwargs.get('figtitle', '')
     topN_cxs   = kwargs.get('topN_cxs', [])
     gt_cxs     = kwargs.get('gt_cxs',   [])
     all_kpts   = kwargs.get('all_kpts', False)
-    show_query = kwargs.get('show_query', False)
     max_nCols  = kwargs.get('max_nCols', 5)
     interact   = kwargs.get('interact', True)
-    annote     = kwargs.pop('annote', 2)  # this is toggled
+    show_query = kwargs.get('show_query', True)
 
     printDBG('========================')
     printDBG('[viz._show_res()]----------------')
     all_gts = hs.get_other_indexed_cxs(res.qcx)
     _tup = tuple(map(len, (topN_cxs, gt_cxs, all_gts)))
-    print('[viz._show_res()] #topN=%r #missed_gts=%r/%r' % _tup)
+    printDBG('[viz._show_res()] #topN=%r #missed_gts=%r/%r' % _tup)
     printDBG('[viz._show_res()] * fnum=%r' % (fnum,))
     printDBG('[viz._show_res()] * figtitle=%r' % (figtitle,))
     printDBG('[viz._show_res()] * max_nCols=%r' % (max_nCols,))
@@ -599,34 +646,53 @@ def _show_res(hs, res, **kwargs):
     nGtCells      = nGtRows * nGTCols
     nRows         = nTopNRows + nGtRows
 
+    # HACK:
+    _color_list = df2.distinct_colors(len(topN_cxs))
+    cx2_color = {cx: _color_list[ox] for ox, cx in enumerate(topN_cxs)}
+
     # Helpers
     def _show_query_fn(plotx_shift, rowcols):
         'helper for viz._show_res'
         plotx = plotx_shift + 1
         pnum = (rowcols[0], rowcols[1], plotx)
-        #printDBG('[viz._show_res()] Plotting Query: pnum=%r' % (pnum,))
+        #print('[viz] Plotting Query: pnum=%r' % (pnum,))
         _kwshow = dict(draw_kpts=annote)
         _kwshow.update(kwargs)
         _kwshow['prefix'] = 'q'
         _kwshow['res'] = res
         _kwshow['pnum'] = pnum
+        _kwshow['cx2_color'] = cx2_color
+        _kwshow['draw_ell'] = annote >= 1
+        print(_kwshow)
         show_chip(hs, **_kwshow)
 
-    def _show_matches_fn(cx, orank, pnum):
-        'Helper function for drawing matches to one cx'
-        aug = 'rank=%r\n' % orank
-        #printDBG('[viz._show_res()] plotting: %r'  % (pnum,))
-        _kwshow  = dict(draw_ell=annote, draw_pts=False, draw_lines=annote,
-                        ell_alpha=.5, all_kpts=all_kpts)
-        _kwshow.update(kwargs)
-        _kwshow['fnum'] = fnum
-        _kwshow['pnum'] = pnum
-        _kwshow['title_aug'] = aug
-        _kwshow['draw_ell'] = annote == 1
-        _kwshow['draw_lines'] = annote >= 1
-        res.show_chipres(hs, cx, **_kwshow)
-
     def _plot_matches_cxs(cx_list, plotx_shift, rowcols):
+
+        def _show_matches_fn(cx, orank, pnum):
+            'Helper function for drawing matches to one cx'
+            aug = 'rank=%r\n' % orank
+            #printDBG('[viz._show_res()] plotting: %r'  % (pnum,))
+            _kwshow  = dict(draw_ell=annote, draw_pts=False, draw_lines=annote,
+                            ell_alpha=.5, all_kpts=all_kpts)
+            _kwshow.update(kwargs)
+            _kwshow['fnum'] = fnum
+            _kwshow['pnum'] = pnum
+            _kwshow['title_aug'] = aug
+            # If we already are showing the query dont show it here
+            if not show_query:
+                _kwshow['draw_ell'] = annote == 1
+                _kwshow['draw_lines'] = annote >= 1
+                res_show_chipres(res, hs, cx, **_kwshow)
+            else:
+                _kwshow['draw_ell'] = annote >= 1
+                if annote == 1:
+                    _kwshow['kpts'] = hs.get_kpts(cx)
+                elif annote == 2:
+                    _kwshow['kpts'] = hs.get_kpts(cx)[res.cx2_fm[cx][:, 1]]
+                    _kwshow['color'] = cx2_color[cx]
+                show_chip(hs, cx, **_kwshow)
+                annotate_chipres(hs, res, cx)
+
         'helper for viz._show_res to draw many cxs'
         #printDBG('[viz._show_res()] Plotting Chips %s:' % hs.cidstr(cx_list))
         if cx_list is None:
@@ -707,6 +773,7 @@ def _show_res(hs, res, **kwargs):
                     return _clicked_cx(cx)
 
         df2.connect_callback(fig, 'button_press_event', _on_res_click)
+    df2.adjust_subplots_safe()
     printDBG('[viz._show_res()] Finished')
     return fig
 
@@ -849,7 +916,7 @@ if __name__ == '__main__':
     print('=================================')
     import main
     hs = main.main()
-    cx = helpers.get_arg_after('--cx', type_=int)
+    cx = helpers.get_arg('--cx', type_=int)
     qcx = hs.get_valid_cxs()[0]
     if cx is not None:
         qcx = cx

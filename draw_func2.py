@@ -100,8 +100,8 @@ FIGSIZE_HUGE = (32, 16)
 
 FIGSIZE = FIGSIZE_MED
 # Quality drawings
-FIGSIZE = FIGSIZE_SQUARE
-DPI = 120
+#FIGSIZE = FIGSIZE_SQUARE
+#DPI = 120
 
 tile_within = (-1, 30, 969, 1041)
 if helpers.get_computer_name() == 'Ooo':
@@ -119,8 +119,8 @@ else:
     ELL_ALPHA  = .4
     LINE_ALPHA = .4
 
-LINE_ALPHA_OVERRIDE = helpers.get_arg_after('--line-alpha-override', type_=float, default=None)
-ELL_ALPHA_OVERRIDE = helpers.get_arg_after('--ell-alpha-override', type_=float, default=None)
+LINE_ALPHA_OVERRIDE = helpers.get_arg('--line-alpha-override', type_=float, default=None)
+ELL_ALPHA_OVERRIDE = helpers.get_arg('--ell-alpha-override', type_=float, default=None)
 #LINE_ALPHA_OVERRIDE = None
 #ELL_ALPHA_OVERRIDE = None
 ELL_COLOR  = BLUE
@@ -545,6 +545,13 @@ def set_xlabel(lbl, ax=None):
     if ax is None:
         ax = gca()
     ax.set_xlabel(lbl, fontproperties=FONTS.xlabel)
+
+
+def set_title(title, ax=None):
+    if ax is None:
+        ax = gca()
+    ax.set_title(title, fontproperties=FONTS.axtitle)
+
 
 
 def set_ylabel(lbl):
@@ -1104,8 +1111,9 @@ def plot_bars(y_data, nColorSplits=1):
 
 def phantom_legend_label(label, color, loc='upper right'):
     'adds a legend label without displaying an actor'
-    phantom_actor = df2.Circle((0, 0), 1, fc=color, prop=FONTS.legend, loc=loc)
-    plt.legend(phant_actor, label, framealpha=.2)
+    pass
+    #phantom_actor = plt.Circle((0, 0), 1, fc=color, prop=FONTS.legend, loc=loc)
+    #plt.legend(phant_actor, label, framealpha=.2)
     #plt.legend(*zip(*legend_tups), framealpha=.2)
     #legend_tups = []
     #legend_tups.append((phantom_actor, label))

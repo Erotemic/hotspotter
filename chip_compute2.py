@@ -517,7 +517,7 @@ if __name__ == '__main__':
     hs.update_samples()
     # --- LOAD CHIPS --- #
     cc2.load_chips(hs)
-    cx = helpers.get_arg_after('--cx', type_=int)
+    cx = helpers.get_arg('--cx', type_=int)
     if not cx is None:
         tau = np.pi * 2
         hs.change_theta(cx, tau / 8)

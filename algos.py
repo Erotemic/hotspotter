@@ -499,7 +499,7 @@ def precompute_akmeans(data, num_clusters, max_iters=100,
             raise Exception('forcing')
         # Hack to refine akmeans with a few more iterations
         if '--refine' in sys.argv or '--refine-exit' in sys.argv:
-            max_iters_override = helpers.get_arg_after('--refine', type_=int)
+            max_iters_override = helpers.get_arg('--refine', type_=int)
             print('Overriding max_iters=%r' % max_iters_override)
             if not max_iters_override is None:
                 max_iters = max_iters_override
@@ -582,9 +582,9 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     import draw_func2 as df2
     np.random.seed(seed=0)  # RANDOM SEED (for reproducibility)
-    is_whiten = helpers.get_arg_flag('--whiten')
-    dim = helpers.get_arg_after('--dim', type_=int, default=3)
-    K = helpers.get_arg_after('--K', type_=int, default=10)
+    is_whiten = helpers.get_flag('--whiten')
+    dim = helpers.get_arg('--dim', type_=int, default=3)
+    K = helpers.get_arg('--K', type_=int, default=10)
     num_clusters = K
     __REAL_DATA_MODE__ = True
     if __REAL_DATA_MODE__:

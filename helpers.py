@@ -1701,7 +1701,7 @@ def try_cast(var, type_):
         return None
 
 
-def get_arg_after(arg, type_=None, default=None):
+def get_arg(arg, type_=None, default=None):
     arg_after = default
     try:
         arg_index = sys.argv.index(arg)
@@ -1712,11 +1712,7 @@ def get_arg_after(arg, type_=None, default=None):
     return arg_after
 
 
-def argv_flag(arg, default=False):
-    return get_arg_flag(arg, default=default)
-
-
-def get_arg_flag(arg, default=False):
+def get_flag(arg, default=False):
     'Checks if the commandline has a flag or a corresponding noflag'
     if arg.find('--') != 0:
         raise Exception(arg)

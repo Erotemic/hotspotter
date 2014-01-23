@@ -210,7 +210,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('[harn]-------------')
     print('[harn] configs:\n%s' % '\n'.join(cfgx2_lbl))
     #------------
-    PRINT_ROW_SCORES = helpers.get_arg_flag('--printrow', False)
+    PRINT_ROW_SCORES = helpers.get_flag('--printrow', False)
     if PRINT_ROW_SCORES:
         print('')
         print('[harn]-------------')

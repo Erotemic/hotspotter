@@ -22,7 +22,7 @@ def generate_detector_training_data(hs, uniform_size=(512, 256)):
     print('')
     print('===================')
     print('Generating training data')
-    lazy = helpers.argv_flag('--lazy', True)
+    lazy = helpers.get_flag('--lazy', True)
     output_dir = get_training_output_dir(hs)
 
     batch_extract_kwargs = {

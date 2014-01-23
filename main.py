@@ -87,7 +87,7 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
         load_all, cids = preload_args_process(args)
     else:
         args = argparse2.fix_args_shortnames(args)
-        load_all = helpers.get_arg_flag('--load-all', default_load_all)
+        load_all = helpers.get_flag('--load-all', default_load_all)
 
     # Preload process args
     if args.delete_global:
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     # Allow for a IPython connection by passing the --cmd flag
     embedded = False
-    if helpers.argv_flag('--cmd'):
+    if helpers.get_flag('--cmd'):
         import scripts
         import generate_training
         import sys

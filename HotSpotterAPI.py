@@ -56,6 +56,9 @@ def _import_scripts(hs):
 
 @profile
 def _get_datatup_list(hs, tblname, index_list, header_order, extra_cols):
+    '''
+    Used by guiback to get lists of datatuples by internal column names.
+    '''
     cols = _datatup_cols(hs, tblname)
     cols.update(extra_cols)
     unknown_header = lambda indexes: ['ERROR!' for gx in indexes]
@@ -67,6 +70,10 @@ def _get_datatup_list(hs, tblname, index_list, header_order, extra_cols):
 
 @profile
 def _datatup_cols(hs, tblname, cx2_score=None):
+    '''
+    Returns maps which map which maps internal column names
+    to lazy evaluation functions which compute the data (hence the lambdas)
+    '''
     # Chips
     cx2_cid   = hs.tables.cx2_cid
     cx2_roi   = hs.tables.cx2_roi
@@ -99,28 +106,35 @@ def _datatup_cols(hs, tblname, cx2_score=None):
             'exif':  lambda gxs: hs.gx2_exif(gxs),
             'exif.DateTime': lambda gxs: hs.gx2_exif(gxs, tag='DateTime'),
         }
-    elif tblname == 'cxs':
+    elif tblname in ['cxs', 'res']:
+        # Tau is the future. Unfortunately society is often stuck in the past.
+        # (tauday.com)
+        FUTURE = False
+        tau = (2 * np.pi)
+        taustr = 'tau' if FUTURE else '2pi'
+
+        def theta_str(theta):
+            'Format theta so it is interpretable in base 10'
+            #coeff = (((tau - theta) % tau) / tau)
+            coeff = (theta / tau)
+            return ('%.2f * ' % coeff) + taustr
+
         cols = {
             'cid':    lambda cxs: [cx2_cid[cx]           for cx in iter(cxs)],
             'name':   lambda cxs: [nx2_name[cx2_nx[cx]]  for cx in iter(cxs)],
             'gname':  lambda cxs: [gx2_gname[cx2_gx[cx]] for cx in iter(cxs)],
             'nGt':    lambda cxs: [len(gtcxs) for gtcxs in iter(hs.get_gtcxs(cxs))],
             'nKpts':  lambda cxs: [tools.safe_listget(cx2_kpts, cx, len) for cx in iter(cxs)],
-            'theta':  lambda cxs: [cx2_theta[cx] for cx in iter(cxs)],
+            'theta':  lambda cxs: [theta_str(cx2_theta[cx]) for cx in iter(cxs)],
             'roi':    lambda cxs: [str(cx2_roi[cx]) for cx in iter(cxs)],
         }
         prop_iter = prop_dict.iteritems()
         prop_cols = dict([(k, lambda cxs: [v[cx] for cx in iter(cxs)]) for (k, v) in prop_iter])
         cols.update(prop_cols)
-    elif tblname == 'res':
-        cols = {
-            'rank':   lambda cxs:  range(1, len(cxs) + 1),
-            'name':   lambda cxs:  [nx2_name[cx2_nx[cx]] for cx in iter(cxs)],
-            'cid':    lambda cxs:  [cx2_cid[cx]   for cx in iter(cxs)],
-        }
-        prop_iter = prop_dict.iteritems()
-        prop_cols = dict([(k, lambda cxs: [v[cx] for cx in iter(cxs)]) for (k, v) in prop_iter])
-        cols.update(prop_cols)
+        if tblname == 'res':
+            cols.update({
+                'rank':   lambda cxs:  range(1, len(cxs) + 1),
+            })
     else:
         cols = {}
     return cols
@@ -173,7 +187,9 @@ class HotSpotter(DynStruct):
     def __init__(hs, args=None, db_dir=None):
         super(HotSpotter, hs).__init__(child_exclude_list=['prefs', 'args'])
         #printDBG('[\hs] Creating HotSpotter API')
+        # TODO Remove args / integrate into prefs
         hs.args = args
+        hs.callbacks = {}
         hs.tables = None
         hs.dirs   = None
         hs.feats  = ds.HotspotterChipFeatures()
@@ -402,6 +418,7 @@ class HotSpotter(DynStruct):
         hs.clear_lru_caches()
 
     def clear_lru_caches(hs):
+        'clears the least recently used caches'
         hs._read_chip.clear_cache()
         hs.gx2_image.clear_cache()
         hs.get_exif.clear_cache()
@@ -465,11 +482,13 @@ class HotSpotter(DynStruct):
     @profile
     def change_roi(hs, cx, new_roi):
         hs.delete_cxdata(cx)  # Delete old data
+        hs.delete_queryresults_dir()  # Query results are now invalid
         hs.tables.cx2_roi[cx] = new_roi
 
     @profile
     def change_theta(hs, cx, new_theta):
         hs.delete_cxdata(cx)  # Delete old data
+        hs.delete_queryresults_dir()  # Query results are now invalid
         hs.tables.cx2_theta[cx] = new_theta
 
     @profile
@@ -551,6 +570,7 @@ class HotSpotter(DynStruct):
             hs.update_samples()
             # Remove any conflicts from memory
             hs.unload_cxdata(cx)
+            hs.delete_queryresults_dir()  # Query results are now invalid
         return cx
 
     @profile
@@ -633,7 +653,7 @@ class HotSpotter(DynStruct):
         helpers.remove_files_in_dir(qres_dir, recursive=True, verbose=True,
                                     dryrun=False)
 
-    #---------------
+    # ---------------
     # Getting functions
     # ---------------
     def has_property(hs, key):
@@ -665,6 +685,8 @@ class HotSpotter(DynStruct):
     # -------
     # Get valid index functions
     # -------
+    # TODO: Many of these functions should be decorated with iter_input
+
     def get_indexed_sample(hs):
         dcxs = hs.indexed_sample_cx
         return dcxs
@@ -742,14 +764,19 @@ class HotSpotter(DynStruct):
 
     def get_unixtime_diff(hs, qcx, cx):
         unixtime1, unixtime2 = hs.cx2_unixtime([qcx, cx])
+        if -1 in [unixtime1, unixtime2]:
+            return None
         unixtime_diff = unixtime2 - unixtime1
         return unixtime_diff
 
     def get_timedelta_str(hs, qcx, cx):
         unixtime_diff = hs.get_unixtime_diff(qcx, cx)
-        sign = '+' if unixtime_diff >= 0 else '-'
-        delta = datetime.timedelta(seconds=abs(unixtime_diff))
-        timedelta_str = 'timedelta(%s%s)' % (sign, str(delta))
+        if unixtime_diff is None:
+            deltastr = 'NA'
+        else:
+            sign = '+' if unixtime_diff >= 0 else '-'
+            deltastr = sign + str(datetime.timedelta(seconds=abs(unixtime_diff)))
+        timedelta_str = 'timedelta(%s)' % (deltastr)
         return timedelta_str
 
     @tools.class_iter_input
@@ -1051,7 +1078,7 @@ class HotSpotter(DynStruct):
         print('[hs] viewing result_dir: %r ' % result_dir)
         helpers.vd(result_dir)
 
-    #
+    #---------------
     def get_cache_uid(hs, cx_list=None, lbl='cxs'):
         query_cfg = hs.prefs.query_cfg
         # Build query big cache uid
@@ -1062,6 +1089,24 @@ class HotSpotter(DynStruct):
             uid_list.append('_' + cxs_uid)
         cache_uid = ''.join(uid_list)
         return cache_uid
+
+    #---------------
+    # Callbacks
+
+    def select_nx(hs, nx):
+        hs.callbacks['select_nx'](nx)
+
+    def select_gx(hs, gx):
+        hs.callbacks['select_gx'](gx)
+
+    def select_cx(hs, cx):
+        hs.callbacks['select_cx'](cx)
+
+    def register_backend(hs, back):
+        hs.back = back
+        hs.callbacks['select_cx'] = back.select_cx
+        hs.callbacks['select_nx'] = back.select_nx
+        hs.callbacks['select_gx'] = back.select_gx
 
     #----------------------
     # Debug Consistency Checks

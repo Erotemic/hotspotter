@@ -27,8 +27,10 @@ viz.register_FNUMS(FNUMS)
 
 
 def select_next_unannotated(back):
+    # FIXME THIS FUNCTION IS STUPID MESSY (and probably broken)
     msg = 'err'
-    if back.selection is None or back.selection['type_'] == 'gx':
+    selection_exists = back.selection is None
+    if selection_exists or back.selection['type_'] == 'gx':
         valid_gxs = back.hs.get_valid_gxs()
         has_chips = lambda gx: len(back.hs.gx2_cxs(gx)) > 0
         hascxs_list = map(has_chips, iter(valid_gxs))
@@ -38,7 +40,10 @@ def select_next_unannotated(back):
             return
         except ValueError:
             msg = 'All images have detections. Excellent! '
-    if back.selection is None or msg is not None and back.selection['type_'] == 'cx':
+
+    was_err = msg is not None
+    cx_is_selected = selection_exists and back.selection['type_'] == 'cx'
+    if selection_exists or (was_err and cx_is_selected):
         valid_cxs = back.hs.get_valid_cxs()
         has_name = lambda cx: back.hs.cx2_name(cx) != '____'
         is_named = map(has_name, iter(valid_cxs))
@@ -113,23 +118,19 @@ class MainWindowBackend(QtCore.QObject):
     #------------------------
     def __init__(back, hs=None, app=None):
         super(MainWindowBackend, back).__init__()
-        back.hs  = hs
-        back.app = app
         back.current_res = None
         back.timer = None
-        back.front = guifront.MainWindowFrontend(back=back)
         back.selection = None
-        df2.register_qt4_win(back.front)
 
-        # Define default table headers
+        # A map from short internal headers to fancy headers seen by the user
         back.fancy_headers = {
-            'aif':        'AIF',
             'gx':         'Image Index',
-            'gname':      'Image Name',
-            'nChips':     '#Chips',
+            'nx':         'Name Index',
             'cid':        'Chip ID',
+            'aif':        'AIF',
+            'gname':      'Image Name',
+            'nCxs':       '#Chips',
             'name':       'Name',
-            'gname':      'Image',
             'nGt':        '#GT',
             'nKpts':      '#Kpts',
             'theta':      'Theta',
@@ -138,8 +139,9 @@ class MainWindowBackend(QtCore.QObject):
             'score':      'Confidence',
             'match_name': 'Matching Name',
         }
-        back.reverse_fancy = {val: key for (key, val) in back.fancy_headers.items()}
+        back.reverse_fancy = {v: k for (k, v) in back.fancy_headers.items()}
 
+        # A list of default internal headers to display
         back.table_headers = {
             'gxs':  ['gx', 'gname', 'nCxs', 'aif'],
             'cxs':  ['cid', 'name', 'gname', 'nGt', 'nKpts', 'theta'],
@@ -147,6 +149,7 @@ class MainWindowBackend(QtCore.QObject):
             'res':  ['rank', 'score', 'name', 'cid']
         }
 
+        # Lists internal headers whos items are editable
         back.table_editable = {
             'gxs':  [],
             'cxs':  ['name'],
@@ -154,7 +157,11 @@ class MainWindowBackend(QtCore.QObject):
             'res':  ['name'],
         }
 
-        # connect signals
+        # connect signals and other objects
+        back.hs  = hs
+        back.app = app
+        back.front = guifront.MainWindowFrontend(back=back)
+        df2.register_qt4_win(back.front)
         back.populateSignal.connect(back.front.populate_tbl)
         back.setEnabledSignal.connect(back.front.setEnabled)
         if hs is not None:
@@ -181,7 +188,8 @@ class MainWindowBackend(QtCore.QObject):
         fnum = FNUMS['image']
         did_exist = df2.plt.fignum_exists(fnum)
         df2.figure(fnum=fnum, docla=True, doclf=True)
-        interaction.interact_image(back.hs, gx, sel_cxs, back.select_cx, fnum=fnum, figtitle=figtitle)
+        interaction.interact_image(back.hs, gx, sel_cxs, back.select_cx,
+                                   fnum=fnum, figtitle=figtitle)
         if not did_exist:
             back.layout_figures()
 
@@ -237,7 +245,8 @@ class MainWindowBackend(QtCore.QObject):
         # Define callback for show_analysis
         fnum = FNUMS['name']
         df2.figure(fnum=fnum, docla=True, doclf=True)
-        interaction.interact_name(back.hs, nx, sel_cxs, back.select_cx, fnum=fnum)
+        interaction.interact_name(back.hs, nx, sel_cxs, back.select_cx,
+                                  fnum=fnum)
 
     #----------------------
     # Work Functions
@@ -281,6 +290,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[*back] connect_api()')
         back.hs = hs
         if hs.tables is not None:
+            hs.register_backend(back)
             back.populate_tables(res=False)
             back.setEnabledSignal.emit(True)
             back.clear_selection()
@@ -315,10 +325,14 @@ class MainWindowBackend(QtCore.QObject):
         prefix_datatup = [[prefix_col.get(header, 'error')
                            for header in col_headers]
                           for prefix_col in prefix_cols]
-        bpdy_datatup = back.hs.get_datatup_list(tblname, index_list, col_headers, extra_cols)
+        bpdy_datatup = back.hs.get_datatup_list(tblname, index_list,
+                                                col_headers, extra_cols)
         datatup_list = prefix_datatup + bpdy_datatup
         row_list = range(len(datatup_list))
-        back.populateSignal.emit(tblname, col_headers, col_editable, row_list, datatup_list)
+        # Populate with fancy headers.
+        col_fancyheaders = [back.fancy_headers[key] for key in col_headers]
+        back.populateSignal.emit(tblname, col_fancyheaders, col_editable,
+                                 row_list, datatup_list)
 
     def populate_image_table(back, **kwargs):
         back._populate_table('gxs', **kwargs)
@@ -393,7 +407,8 @@ class MainWindowBackend(QtCore.QObject):
         if not exists(work_dir):
             msg_try = 'Directory %r does not exist.' % work_dir
             opt_try = ['Try Again']
-            try_again = back.user_option(msg_try, 'get work dir failed', opt_try, False)
+            try_again = back.user_option(msg_try, 'get work dir failed',
+                                         opt_try, False)
             if try_again == 'Try Again':
                 return back.get_work_dir(use_cache)
         io.global_cache_write(cache_id, work_dir)
@@ -480,7 +495,9 @@ class MainWindowBackend(QtCore.QObject):
     def change_chip_property(back, cid, key, val):
         # Table Edit -> Change Chip Property
         # RCOS TODO: These function should take the type of the variable as an
-        # arugment as well
+        # arugment as well. (Guifront tries to automatically interpret the
+        # variable type by its value and it will get stuck on things like
+        # 'True'. Is that a string or a bool? I don't know. We should tell it.)
         key, val = map(str, (key, val))
         print('[*back] change_chip_property(%r, %r, %r)' % (cid, key, val))
         cx = back.hs.cid2_cx(cid)
@@ -517,7 +534,8 @@ class MainWindowBackend(QtCore.QObject):
         if reply == opt_put[1]:
             put_dir = back.get_work_directory()
         elif reply == opt_put[0]:
-            put_dir = guitools.select_directory('Select where to put the new database')
+            msg = 'Select where to put the new database'
+            put_dir = guitools.select_directory(msg)
         elif reply is None:
             back.user_info('No Reply. Aborting new database')
             print('[*back] abort new database()')
@@ -549,7 +567,8 @@ class MainWindowBackend(QtCore.QObject):
             # Use the same args in a new (opened) database
             args = back.hs.args
             if db_dir is None:
-                db_dir = guitools.select_directory('Select (or create) a database directory.')
+                msg = 'Select (or create) a database directory.'
+                db_dir = guitools.select_directory(msg)
             print('[*back] user selects database: ' + db_dir)
             # Try and load db
             args.dbdir = db_dir
@@ -602,7 +621,8 @@ class MainWindowBackend(QtCore.QObject):
     @blocking
     def import_images_from_dir(back):
         # File -> Import Images From Directory
-        img_dpath = guitools.select_directory('Select directory with images in it')
+        msg = 'Select directory with images in it'
+        img_dpath = guitools.select_directory(msg)
         print('[*back] selected %r' % img_dpath)
         fpath_list = helpers.list_images(img_dpath, fullpath=True)
         back.hs.add_images(fpath_list)
@@ -635,7 +655,8 @@ class MainWindowBackend(QtCore.QObject):
     def add_chip(back):
         # Action -> Add ROI
         gx = back.get_selected_gx()
-        back.show_image(gx, figtitle='Image View - Select ROI (click two points)')
+        figtitle = 'Image View - Select ROI (click two points)'
+        back.show_image(gx, figtitle=figtitle)
         roi = guitools.select_roi()
         if roi is None:
             print('[back*] roiselection failed. Not adding')
@@ -686,7 +707,8 @@ class MainWindowBackend(QtCore.QObject):
             back.user_info('Cannot reselect ROI. No chip selected')
             return
         gx = back.hs.tables.cx2_gx[cx]
-        back.show_image(gx, [cx], figtitle='Image View - ReSelect ROI (click two points)', **kwargs)
+        figtitle = 'Image View - ReSelect ROI (click two points)'
+        back.show_image(gx, [cx], figtitle=figtitle, **kwargs)
         roi = guitools.select_roi()
         if roi is None:
             print('[back*] roiselection failed. Not adding')
@@ -708,7 +730,8 @@ class MainWindowBackend(QtCore.QObject):
             back.user_info('Cannot reselect orientation. No chip selected')
             return
         gx = back.hs.tables.cx2_gx[cx]
-        back.show_image(gx, [cx], figtitle='Image View - Select Orientation (click two points)', **kwargs)
+        figtitle = 'Image View - Select Orientation (click two points)'
+        back.show_image(gx, [cx], figtitle=figtitle, **kwargs)
         theta = guitools.select_orientation()
         if theta is None:
             print('[back*] theta selection failed. Not adding')
@@ -855,7 +878,7 @@ class MainWindowBackend(QtCore.QObject):
         ans = back.user_option('Are you sure you want to delete cache?')
         if ans != 'Yes':
             return
-        back.current_res = None
+        back.invalidate_result()
         df2.close_all_figures()
         back.hs.delete_cache()
         back.populate_result_table()
@@ -870,9 +893,12 @@ class MainWindowBackend(QtCore.QObject):
     def delete_queryresults_dir(back):
         # RCOS TODO: Are you sure?
         df2.close_all_figures()
-        back.current_res = None
+        back.invalidate_result()
         back.hs.delete_queryresults_dir()
         back.populate_result_table()
+
+    def invalidate_result(back):
+        back.current_res = None
 
     @slot_()
     @blocking

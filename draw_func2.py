@@ -50,8 +50,8 @@ plotWidget = None
 
 # GENERAL FONTS
 
-SMALLER  = 6
-SMALL    = 12
+SMALLER  = 8
+SMALL    = 10
 MED      = 12
 LARGE    = 14
 #fpargs = dict(family=None, style=None, variant=None, stretch=None, fname=None)
@@ -234,19 +234,24 @@ def draw_roi(roi, label=None, bbox_color=(1, 0, 0),
     if ax is None:
         ax = gca()
     (rx, ry, rw, rh) = roi
-    t_start = ax.transData
-    cos_ = np.cos(theta)
-    sin_ = np.sin(theta)
-    rot_t = Affine2D([( cos_, -sin_, 0),
-                      ( sin_,  cos_, 0),
-                      (  0,       0, 1)])
-    scale_t = Affine2D([( rw,  0, 0),
-                        ( 0,  rh, 0),
-                        ( 0,   0, 1)])
-    trans_t = Affine2D([( 1,  0, rx + rw / 2),
-                        ( 0,  1, ry + rh / 2),
-                        ( 0,  0, 1)])
-    t_end = scale_t + rot_t + trans_t + t_start
+    #cos_ = np.cos(theta)
+    #sin_ = np.sin(theta)
+    #rot_t = Affine2D([( cos_, -sin_, 0),
+                      #( sin_,  cos_, 0),
+                      #(  0,       0, 1)])
+    #scale_t = Affine2D([( rw,  0, 0),
+                        #( 0,  rh, 0),
+                        #( 0,   0, 1)])
+    #trans_t = Affine2D([( 1,  0, rx + rw / 2),
+                        #( 0,  1, ry + rh / 2),
+                        #( 0,  0, 1)])
+    #t_end = scale_t + rot_t + trans_t + t_start
+    # Transformations are specified in backwards order.
+    trans_roi = Affine2D()
+    trans_roi.scale(rw, rh)
+    trans_roi.rotate(theta)
+    trans_roi.translate(rx + rw / 2, ry + rh / 2)
+    t_end = trans_roi + ax.transData
     bbox = matplotlib.patches.Rectangle((-.5, -.5), 1, 1, lw=2, transform=t_end)
     arw_x, arw_y, arw_dx, arw_dy   = (-0.5, -0.5, 1.0, 0.0)
     arrowargs = dict(head_width=.1, transform=t_end, length_includes_head=True)
@@ -718,12 +723,12 @@ def set_figtitle(figtitle, subtitle='', forcefignum=True, incanvas=True):
         if subtitle != '':
             subtitle = '\n' + subtitle
         fig.suptitle(figtitle + subtitle, fontsize=14, fontweight='bold')
-    #fig.suptitle(figtitle, x=.5, y=.98, fontproperties=FONTS.figtitle)
-    #fig_relative_text(.5, .96, subtitle, fontproperties=FONTS.subtitle)
+        #fig.suptitle(figtitle, x=.5, y=.98, fontproperties=FONTS.figtitle)
+        #fig_relative_text(.5, .96, subtitle, fontproperties=FONTS.subtitle)
+    else:
+        fig.suptitle('')
     window_figtitle = ('fig(%d) ' % fig.number) + figtitle
     fig.canvas.set_window_title(window_figtitle)
-    adjust_subplots()
-
 
 def convert_keypress_event_mpl_to_qt4(mevent):
     global TMP_mevent
@@ -1199,10 +1204,9 @@ def draw_sift(desc, kp=None):
     kp = np.array(kp)
     kpT = kp.T
     x, y, a, c, d = kpT[:, 0]
-    transMat = [( a, 0, x),
-                ( c, d, y),
-                ( 0, 0, 1)]
-    kpTrans = Affine2D(transMat)
+    kpTrans = Affine2D([( a, 0, x),
+                        ( c, d, y),
+                        ( 0, 0, 1)])
     axTrans = ax.transData
     # Draw 8 directional arms in each of the 4x4 grid cells
     arrow_patches = []
@@ -1545,16 +1549,20 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
     return None
 
 
-def draw_boxedX(xywh, color=RED, lw=2, alpha=.5):
-    'draws rectangle border around a subplot'
+def draw_boxedX(xywh, color=RED, lw=2, alpha=.5, theta=0):
+    'draws a big red x. redx'
     ax = gca()
     x1, y1, w, h = xywh
     x2, y2 = x1 + w, y1 + h
     segments = [((x1, y1), (x2, y2)),
                 ((x1, y2), (x2, y1))]
+    trans = Affine2D()
+    trans.rotate(theta)
+    trans = trans + ax.transData
     width_list = [lw] * len(segments)
     color_list = [color] * len(segments)
-    line_group = LineCollection(segments, width_list, color_list, alpha=alpha)
+    line_group = LineCollection(segments, width_list, color_list, alpha=alpha,
+                                transformation=trans)
     ax.add_collection(line_group)
 
 

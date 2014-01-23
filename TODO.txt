@@ -54,6 +54,9 @@ Add ability to orient an entire image.
 
 #--- Annoyances ----
 
+When drawing ROIs theta is not always specified when it should be in
+vizualizations. 
+
 * Images like ._MPALA_STEWART_0232.JPG do not seem to be images. Do not add
 * them as if they were
 

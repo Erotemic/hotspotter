@@ -272,9 +272,11 @@ def exiftime_to_unixtime(datetime_str):
     try:
         dt = datetime.datetime.strptime(datetime_str, '%Y:%m:%d %H:%M:%S')
         return time.mktime(dt.timetuple())
+    except TypeError:
+        #if datetime_str is None:
+            #return -1
+        return -1
     except ValueError as ex:
-        if datetime_str is None:
-            return -1
         if isinstance(datetime_str, str):
             if datetime_str.find('Invalid') == 0:
                 return -1
@@ -380,44 +382,10 @@ def read_exif_list(fpath_list, **kwargs):
 
 
 @profile
-def imread_cv2(img_fpath):
-    try:
-        img = cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    except Exception as ex:
-        print('[io] Caught Exception: %r' % ex)
-        print('[io] ERROR reading: %r' % (img_fpath,))
-        raise
-    return img
-
-
-@profile
-def imread_PIL(img_fpath):
-    try:
-        img = Image.open(img_fpath)
-        img = np.asarray(img)
-        #img = skimage.util.img_as_uint(img)
-    except Exception as ex:
-        print('[io] Caught Exception: %r' % ex)
-        print('[io] ERROR reading: %r' % (img_fpath,))
-        raise
-    return img
-
-
-@profile
 def imread(img_fpath):
     try:
-        flags = cv2.CV_LOAD_IMAGE_COLOR
-        imgBGR = cv2.imread(img_fpath, flags=flags)
+        imgBGR = cv2.imread(img_fpath, flags=cv2.CV_LOAD_IMAGE_COLOR)
         return imgBGR
-        #imgBGR = cv2.imread(img_fpath, flags=cv2.CV_LOAD_IMAGE_COLOR)
-        #imgPIL = Image.open(img_fpath)
-        #print(imgPIL)
-        #imgRGB = np.asarray(imgPIL)
-        ##imgBGR = cv2.cvtColor(imgRGB, cv2.COLOR_RGB2BGR)
-        ##imgBGR = cv2.cvtColor(imgRGB, cv2.COLOR_BGR2RGB)
-        #imgBGR = imgRGB
-        #img = skimage.util.img_as_uint(img)
     except Exception as ex:
         print('[io] Caught Exception: %r' % ex)
         print('[io] ERROR reading: %r' % (img_fpath,))

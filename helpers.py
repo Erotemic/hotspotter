@@ -37,7 +37,6 @@ import warnings
 # HotSpotter
 import tools
 from Printable import printableVal
-import argparse2
 #print('LOAD_MODULE: helpers.py')
 
 # --- Globals ---
@@ -491,7 +490,7 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
     specified or simple=True'''
     # Tell the user we are about to make progress
     if progress_type in ['simple', 'fmtstr'] and max_val < mark_after:
-        return lambda count: None, lambda : None
+        return lambda count: None, lambda: None
     print(lbl)
     # none: nothing
     if progress_type == 'none':
@@ -543,11 +542,13 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
             if (count_) % flush_after == 0:
                 sys.stdout.flush()
         mark_progress = mark_progress_fmtstr
-    if argparse2.ARGS_.aggroflush:
+    # FIXME idk why argparse2.ARGS_ is none here.
+    if '--aggroflush' in sys.argv:
         def mark_progress_agressive(count):
             mark_progress(count)
             sys.stdout.flush()
         return mark_progress_agressive
+
     def end_progress():
         print('')
     return mark_progress, end_progress

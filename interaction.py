@@ -317,7 +317,8 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
                                    draw_lines=draw_lines, draw_ell=draw_ell, **kwargs)
         ax, xywh1, xywh2 = tup
         xywh2_ptr[0] = xywh2
-        df2.set_figtitle(figtitle)
+
+        df2.set_figtitle(figtitle + hs.vs_str(qcx, cx))
 
     # Draw clicked selection
     @profile

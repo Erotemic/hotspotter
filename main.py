@@ -153,7 +153,7 @@ if __name__ == '__main__':
 
         def do_generate_training():
             generate_training.rrr()
-            return generate_training.generate_detector_training_data(hs, (512, 256))
+            return generate_training.generate_detector_training_data(hs, (256, 448))
 
         def do_import_database():
             scripts.rrr()

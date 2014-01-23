@@ -14,11 +14,14 @@ import numpy as np
 import draw_func2 as df2
 import fileio as io
 import helpers
+import sys
 
 #from interaction import interact_keypoints, interact_chipres, interact_chip # NOQA
 
 
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5, name=6)
+
+IN_IMAGE_OVERRIDE = helpers.get_arg_after('--in-image-override', type_=bool, default=None)
 
 
 @profile
@@ -158,7 +161,7 @@ def show_name(hs, nx, nx2_cxs=None, fnum=0, sel_cxs=[], subtitle='',
     if isinstance(name, np.ndarray):
         name = name[0]
 
-    figtitle = 'nx=%r -- name=%r' % (nx, name)
+    figtitle = 'Name View nx=%r name=%r' % (nx, name)
     df2.set_figtitle(figtitle)
     #if not annote:
         #title += ' noannote'
@@ -363,7 +366,7 @@ def res_show_chipres(res, hs, cx, **kwargs):
 
 
 def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
-                 fnum=None, pnum=None, sel_fm=[], **kwargs):
+                 fnum=None, pnum=None, sel_fm=[], in_image=False, **kwargs):
     'shows single annotated match result.'
     #printDBG('[viz.show_chipres()] Showing matches from %s' % (vs_str))
     #printDBG('[viz.show_chipres()] fnum=%r, pnum=%r' % (fnum, pnum))
@@ -379,11 +382,72 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
     #fk = cx2_fk[cx]
     #vs_str = hs.vs_str(qcx, cx)
     # Read query and result info (chips, names, ...)
-    rchip1, rchip2 = hs.get_chip([qcx, cx])
-    kpts1, kpts2   = hs.get_kpts([qcx, cx])
+    if IN_IMAGE_OVERRIDE is not None:
+        in_image = IN_IMAGE_OVERRIDE
+    if in_image:
+        # TODO: rectify build_transform2 with cc2
+        # clean up so its not abysmal
+        # HACK!
+        def build_transform2(roi, chipsz, theta):
+            (x, y, w, h) = roi
+            (w_, h_) = chipsz
+            sx = (w_ / w)  # ** 2
+            sy = (h_ / h)  # ** 2
+            cos_ = np.cos(-theta)
+            sin_ = np.sin(-theta)
+            tx = -(x + (w / 2))
+            ty = -(y + (h / 2))
+
+            T1 = np.array([[1, 0, tx],
+                           [0, 1, ty],
+                           [0, 0, 1]], np.float64)
+
+            S = np.array([[sx, 0,  0],
+                          [0, sy,  0],
+                          [0,  0,  1]], np.float64)
+
+            R = np.array([[cos_, -sin_, 0],
+                          [sin_,  cos_, 0],
+                          [   0,     0, 1]], np.float64)
+
+            T2 = np.array([[1, 0, (w_ / 2)],
+                           [0, 1, (h_ / 2)],
+                           [0, 0, 1]], np.float64)
+
+            M = T2.dot(R.dot(S.dot(T1)))
+            return M
+
+        def cx2_imgkpts(cx_list):
+            roi_list = hs.cx2_roi(cx_list)
+            theta_list = hs.cx2_theta(cx_list)
+            chipsz_list = hs.cx2_rchip_size(cx_list)
+            kpts_list = hs.get_kpts(cx_list)
+
+            imgkpts_list = []
+            flatten_xs = np.array([[0, 2], [1, 2], [0, 0], [1, 0], [1, 1]])
+            for roi, theta, chipsz, kpts in zip(roi_list, theta_list, chipsz_list, kpts_list):
+                # HOLY SHIT THIS IS JANKY
+                M = build_transform2(roi, chipsz, theta)
+                invA_list = [np.array([[a, 0, x], [c, d, y], [0, 0, 1]]) for (x, y, a, c, d) in kpts]
+                invM = np.linalg.inv(M)
+                invMinvA_list = [invM.dot(invA) for invA in invA_list]
+                flatten_xs = np.array([[0, 2], [1, 2], [0, 0], [1, 0], [1, 1]])
+                imgkpts = [[invMinvA[index[0], index[1]] for index in flatten_xs] for invMinvA in invMinvA_list]
+                imgkpts_list.append(np.array(imgkpts))
+            return imgkpts_list
+        rchip1, rchip2 = [hs.cx2_image(_) for _ in [qcx, cx]]
+        kpts1, kpts2   = cx2_imgkpts([qcx, cx])
+    else:
+        rchip1, rchip2 = hs.get_chip([qcx, cx])
+        kpts1, kpts2   = hs.get_kpts([qcx, cx])
+
     # Build annotation strings / colors
     lbl1 = 'q' + hs.cidstr(qcx)
     lbl2 = hs.cidstr(cx)
+    if in_image:
+        # HACK!
+        lbl1 = None
+        lbl2 = None
     (truestr, falsestr, nonamestr) = ('TRUE', 'FALSE', '???')
     is_true, is_unknown = hs.is_true_match(qcx, cx)
     isgt_str = nonamestr if is_unknown else (truestr if is_true else falsestr)
@@ -419,8 +483,16 @@ def show_chipres(hs, qcx, cx, cx2_score, cx2_fm, cx2_fs, cx2_fk,
         # Draw any selected matches
         _smargs = dict(rect=True, colors=df2.ORANGE)
         df2.draw_fmatch(xywh1, xywh2, kpts1, kpts2, sel_fm, **_smargs)
+    offset1 = (x1, y1)
     offset2 = (x2, y2)
-    df2.draw_border(ax, match_color, 4, offset=offset2)
+    if in_image:
+        # HACK!
+        roi1 = hs.cx2_roi(qcx) + np.array(list(offset1) + [0, 0])
+        roi2 = hs.cx2_roi(cx) + np.array(list(offset2) + [0, 0])
+        df2.draw_roi(roi1, bbox_color=df2.ORANGE, label='q' + hs.cidstr(qcx))
+        df2.draw_roi(roi2, bbox_color=match_color, label=hs.cidstr(cx))
+    else:
+        df2.draw_border(ax, match_color, 4, offset=offset2)
     df2.set_xlabel(xlabel)
     ax._hs_viewtype = 'chipres'
     ax._hs_qcx = qcx
@@ -579,6 +651,7 @@ def _show_res(hs, res, **kwargs):
     _plot_matches_cxs(gt_cxs, nQuerySubplts, (nRows, nGTCols))
     shift_topN = nGtCells
     _plot_matches_cxs(topN_cxs, shift_topN, (nRows, nTopNCols))
+    figtitle += ' q%s name=%s' % (hs.cidstr(res.qcx), hs.cx2_name(res.qcx))
     df2.set_figtitle(figtitle)
 
     # Result Interaction

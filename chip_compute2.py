@@ -15,7 +15,6 @@ from PIL import Image
 import helpers
 import fileio as io
 from Parallelize import parallel_compute
-from _tpl.other import imtools
 #from Printable import DynStruct
 #import load_data2 as ld2
 #import os
@@ -109,6 +108,11 @@ def ensure_rgb(img):
 # =======================================
 # Parallelizable Work Functions
 # =======================================
+def build_transform2(roi, chipsz, theta):
+    (x, y, w, h) = roi
+    (w_, h_) = chipsz
+
+
 def build_transform(x, y, w, h, w_, h_, theta, homogenous=False):
     sx = (w_ / w)  # ** 2
     sy = (h_ / h)  # ** 2
@@ -206,7 +210,9 @@ def compute_chip(img_fpath, chip_fpath, roi, theta, new_size, filter_list, force
 def adapteq_fn(chipBGR):
     # create a CLAHE object (Arguments are optional).
     chipLAB = cv2.cvtColor(chipBGR, cv2.COLOR_BGR2LAB)
-    clahe_obj = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    tileGridSize = (8, 8)
+    clipLimit = 2.0
+    clahe_obj = cv2.createCLAHE(clipLimit, tileGridSize)
     chipLAB[:, :, 0] = clahe_obj.apply(chipLAB[:, :, 0])
     chipBGR = cv2.cvtColor(chipLAB, cv2.COLOR_LAB2BGR)
     return chipBGR

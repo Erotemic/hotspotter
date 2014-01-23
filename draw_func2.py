@@ -11,7 +11,7 @@ import __common__
  printDBG) = __common__.init(__name__, '[df2]', DEBUG=False, initmpl=True)
 # Python
 from itertools import izip
-from os.path import splitext, split, join, normpath
+from os.path import splitext, split, join, normpath, exists
 import colorsys
 import itertools
 import pylab
@@ -91,11 +91,17 @@ UNKNOWN_PURP = np.array((102,   0, 153, 255)) / 255.0
 # FIGURE GEOMETRY
 
 DPI = 80
+#DPI = 160
 #FIGSIZE = (24) # default windows fullscreen
 FIGSIZE_MED = (12, 6)
-FIGSIZE_BIG = (24, 12)
+FIGSIZE_SQUARE = (12, 12)
+FIGSIZE_BIGGER = (24, 12)
+FIGSIZE_HUGE = (32, 16)
 
 FIGSIZE = FIGSIZE_MED
+# Quality drawings
+FIGSIZE = FIGSIZE_SQUARE
+DPI = 120
 
 tile_within = (-1, 30, 969, 1041)
 if helpers.get_computer_name() == 'Ooo':
@@ -112,6 +118,11 @@ if DISTINCT_COLORS:
 else:
     ELL_ALPHA  = .4
     LINE_ALPHA = .4
+
+LINE_ALPHA_OVERRIDE = helpers.get_arg_after('--line-alpha-override', type_=float, default=None)
+ELL_ALPHA_OVERRIDE = helpers.get_arg_after('--ell-alpha-override', type_=float, default=None)
+#LINE_ALPHA_OVERRIDE = None
+#ELL_ALPHA_OVERRIDE = None
 ELL_COLOR  = BLUE
 
 LINE_COLOR = RED
@@ -482,7 +493,7 @@ def present(*args, **kwargs):
     return execstr
 
 
-def save_figure(fnum=None, fpath=None, usetitle=False):
+def save_figure(fnum=None, fpath=None, usetitle=False, overwrite=True):
     #import warnings
     #warnings.simplefilter("error")
     # Find the figure
@@ -490,6 +501,8 @@ def save_figure(fnum=None, fpath=None, usetitle=False):
         fig = gcf()
     else:
         fig = plt.figure(fnum, figsize=FIGSIZE, dpi=DPI)
+    # Enforce inches and DPI
+    fig.set_size_inches(FIGSIZE[0], FIGSIZE[1])
     fnum = fig.number
     if fpath is None:
         # Find the title
@@ -497,6 +510,10 @@ def save_figure(fnum=None, fpath=None, usetitle=False):
     if usetitle:
         title = sanatize_img_fname(fig.canvas.get_window_title())
         fpath = join(fpath, title)
+    # Add in DPI information
+    fpath_noext, ext = splitext(fpath)
+    size_suffix = '_DPI=%r_FIGSIZE=%d,%d' % (DPI, FIGSIZE[0], FIGSIZE[1])
+    fpath = fpath_noext + size_suffix + ext
     # Sanatize the filename
     fpath_clean = sanatize_img_fpath(fpath)
     #fname_clean = split(fpath_clean)[1]
@@ -504,7 +521,8 @@ def save_figure(fnum=None, fpath=None, usetitle=False):
     #adjust_subplots()
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=DeprecationWarning)
-        fig.savefig(fpath_clean, dpi=DPI)
+        if not exists(fpath_clean) or overwrite:
+            fig.savefig(fpath_clean, dpi=DPI)
 
 
 def set_ticks(xticks, yticks):
@@ -1263,7 +1281,10 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
             color_list = feat_scores_to_color(fs)
     segments  = [((x1, y1), (x2, y2)) for (x1, x2, y1, y2) in xxyy_iter]
     linewidth = [LINE_WIDTH for fx in xrange(len(fm))]
-    line_group = LineCollection(segments, linewidth, color_list, alpha=LINE_ALPHA)
+    line_alpha = LINE_ALPHA
+    if LINE_ALPHA_OVERRIDE is not None:
+        line_alpha = LINE_ALPHA_OVERRIDE
+    line_group = LineCollection(segments, linewidth, color_list, alpha=line_alpha)
     ax.add_collection(line_group)
 
 
@@ -1324,6 +1345,8 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
         ellipse_collection = matplotlib.collections.PatchCollection(patch_list)
         ellipse_collection.set_facecolor('none')
         ellipse_collection.set_transform(pltTrans)
+        if ELL_ALPHA_OVERRIDE is not None:
+            ell_alpha = ELL_ALPHA_OVERRIDE
         ellipse_collection.set_alpha(ell_alpha)
         ellipse_collection.set_linewidth(ell_linewidth)
         if not color_list is None:
@@ -1367,7 +1390,11 @@ def imshow(imgBGR, fnum=None, title=None, figtitle=None, pnum=None,
         imgRGB = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
         ax.imshow(imgRGB, **plt_imshow_kwargs)
     except TypeError as te:
-        print('ERROR %r' % te)
+        print('[df2] imshow ERROR %r' % te)
+    except Exception as ex:
+        print('[df2] type(imgBGR) = %r' % (type(imgBGR),))
+        print('[df2] imgBGR.shape = %r' % (imgBGR.shape,))
+        print('[df2] imshow ERROR %r' % ex)
     #plt.set_cmap('gray')
     ax.set_xticks([])
     ax.set_yticks([])

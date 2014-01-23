@@ -82,6 +82,7 @@ def select_next_in_order(back):
         return
     return 'end of the list'
 
+
 # Creation function
 def make_main_window(hs=None, app=None):
     #printDBG(r'[*back] make_main_window()')
@@ -320,19 +321,15 @@ class MainWindowBackend(QtCore.QObject):
         back.populateSignal.emit(tblname, col_headers, col_editable, row_list, datatup_list)
 
     def populate_image_table(back, **kwargs):
-        print('[*back] populate_image_table()')
         back._populate_table('gxs', **kwargs)
 
     def populate_name_table(back, **kwargs):
-        print('[*back] populate_name_table()')
         back._populate_table('nxs', **kwargs)
 
     def populate_chip_table(back, **kwargs):
-        print('[*back] populate_chip_table()')
         back._populate_table('cxs', **kwargs)
 
     def populate_result_table(back, **kwargs):
-        print('[*back] populate_result_table()')
         res = back.current_res
         if res is None:
             print('[*back] no results available')
@@ -858,8 +855,10 @@ class MainWindowBackend(QtCore.QObject):
         ans = back.user_option('Are you sure you want to delete cache?')
         if ans != 'Yes':
             return
+        back.current_res = None
         df2.close_all_figures()
         back.hs.delete_cache()
+        back.populate_result_table()
 
     @slot_()
     def delete_global_prefs(back):
@@ -871,7 +870,9 @@ class MainWindowBackend(QtCore.QObject):
     def delete_queryresults_dir(back):
         # RCOS TODO: Are you sure?
         df2.close_all_figures()
+        back.current_res = None
         back.hs.delete_queryresults_dir()
+        back.populate_result_table()
 
     @slot_()
     @blocking

@@ -454,9 +454,10 @@ class HotSpotter(DynStruct):
             query_cfg = query_cfg.deepcopy(**kwargs)
         qdat = hs.qdat
         qdat.set_cfg(query_cfg)
-        qdat.dcxs = hs.get_other_indexed_cxs(qcx)
+        gt_cxs = hs.get_other_indexed_cxs(qcx)
+        qdat.dcxs = gt_cxs
         print('[mc3] len(gt_cxs) = %r' % (gt_cxs,))
-        return mc3.query_dcxs(hs, qcx, gt_cxs, query_cfg)
+        return mc3.query_dcxs(hs, qcx, gt_cxs, qdat)
 
     # ---------------
     # Change functions
@@ -972,6 +973,7 @@ class HotSpotter(DynStruct):
         cx2_desc = hs.feats.cx2_desc
         return hs._onthefly_cxlist_get(cx_input, cx2_desc, hs.load_features)
 
+    # cx2_kpts
     @profile
     def get_kpts(hs, cx_input):
         cx2_kpts = hs.feats.cx2_kpts

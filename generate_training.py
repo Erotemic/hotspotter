@@ -102,8 +102,7 @@ def extract_detector_positives(hs, output_dir, batch_extract_kwargs):
     posoutput_dir = join(output_dir, 'positives')
     helpers.ensuredir(posoutput_dir)
     pos_fmt = join(posoutput_dir, 'cid%d_gx%d_pos.png')
-    cfpath_list = [pos_fmt  % (cid, gx)
-                   for (cid, gx) in zip(cid_list, gx_list)]
+    cfpath_list = [pos_fmt  % (cid, gx) for (cid, gx) in zip(cid_list, gx_list)]
 
     cc2.batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
                             **batch_extract_kwargs)

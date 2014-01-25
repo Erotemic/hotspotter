@@ -83,10 +83,14 @@ YELLOW = np.array((255, 255,   0, 255)) / 255.0
 BLACK  = np.array((  0,   0,   0, 255)) / 255.0
 WHITE  = np.array((255, 255, 255, 255)) / 255.0
 GRAY   = np.array((127, 127, 127, 255)) / 255.0
+DEEP_PINK    = np.array((255,  20, 147, 255)) / 255.0
+PINK         = np.array((255,  100, 100, 255)) / 255.0
 FALSE_RED    = np.array((255,  51,   0, 255)) / 255.0
 TRUE_GREEN   = np.array((  0, 255,   0, 255)) / 255.0
 DARK_ORANGE  = np.array((127,  63,   0, 255)) / 255.0
-UNKNOWN_PURP = np.array((102,   0, 153, 255)) / 255.0
+DARK_YELLOW  = np.array((127,  127,   0, 255)) / 255.0
+PURPLE = np.array((102,   0, 153, 255)) / 255.0
+UNKNOWN_PURP = PURPLE
 
 # FIGURE GEOMETRY
 
@@ -227,6 +231,8 @@ def draw_border(ax, color=GREEN, lw=2, offset=None):
     rect.set_clip_on(False)
     rect.set_fill(False)
     rect.set_edgecolor(color)
+
+
 
 
 def draw_roi(roi, label=None, bbox_color=(1, 0, 0),
@@ -372,7 +378,7 @@ def golden_wh(x):
 
 
 def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
-                     row_first=True, no_tile=False):
+                     row_first=True, no_tile=False, override1=False):
     'Lays out all figures in a grid. if wh is a scalar, a golden ratio is used'
     # RCOS TODO:
     # I want this function to layout all the figures and qt windows within the
@@ -381,6 +387,14 @@ def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
     # rectangularly and choose figure sizes such that all of them will fit.
     if no_tile:
         return
+
+    if override1:
+        fig = gcf()
+        win = fig.canvas.manager.window
+        win.setGeometry(0, 0, 900, 900)
+        update()
+        return
+
     if not np.iterable(wh):
         wh = golden_wh(wh)
 
@@ -558,7 +572,6 @@ def set_title(title, ax=None):
     ax.set_title(title, fontproperties=FONTS.axtitle)
 
 
-
 def set_ylabel(lbl):
     ax = gca()
     ax.set_ylabel(lbl, fontproperties=FONTS.xlabel)
@@ -729,6 +742,7 @@ def set_figtitle(figtitle, subtitle='', forcefignum=True, incanvas=True):
         fig.suptitle('')
     window_figtitle = ('fig(%d) ' % fig.number) + figtitle
     fig.canvas.set_window_title(window_figtitle)
+
 
 def convert_keypress_event_mpl_to_qt4(mevent):
     global TMP_mevent
@@ -1064,12 +1078,18 @@ def plot_sift_signature(sift, title='', fnum=None, pnum=None):
     return ax
 
 
-def dark_background(ax=None):
+def dark_background(ax=None, doubleit=False):
     if ax is None:
         ax = gca()
     xy, width, height = _axis_xy_width_height(ax)
+    if doubleit:
+        halfw = (doubleit) * (width / 2)
+        halfh = (doubleit) * (height / 2)
+        xy = (xy[0] - halfw, xy[1] - height / 2)
+        width *= (doubleit + 1)
+        height *= (doubleit + 1)
     rect = matplotlib.patches.Rectangle(xy, width, height, lw=0, zorder=0)
-    rect.set_clip_on(False)
+    rect.set_clip_on(True)
     rect.set_fill(True)
     rect.set_color(BLACK * .9)
     rect = ax.add_patch(rect)
@@ -1378,7 +1398,7 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
 
 
 # ---- CHIP DISPLAY COMMANDS ----
-def imshow(imgBGR, fnum=None, title=None, figtitle=None, pnum=None,
+def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
            interpolation='nearest', **kwargs):
     'other interpolations = nearest, bicubic, bilinear'
     #printDBG('[df2] ----- IMSHOW ------ ')
@@ -1399,14 +1419,26 @@ def imshow(imgBGR, fnum=None, title=None, figtitle=None, pnum=None,
         'vmax': 255,
     }
     try:
-        imgRGB = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
-        ax.imshow(imgRGB, **plt_imshow_kwargs)
+        if len(img.shape) == 3 and img.shape[2] == 3:
+            # img is in a color format
+            imgBGR = img
+            imgRGB = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
+            ax.imshow(imgRGB, **plt_imshow_kwargs)
+        elif len(img.shape) == 2:
+            # img is in grayscale
+            imgGRAY = img
+            ax.imshow(imgGRAY, cmap=plt.get_cmap('gray'), **plt_imshow_kwargs)
+        else:
+            raise Exception('unknown image format')
     except TypeError as te:
         print('[df2] imshow ERROR %r' % te)
+        raise
     except Exception as ex:
-        print('[df2] type(imgBGR) = %r' % (type(imgBGR),))
-        print('[df2] imgBGR.shape = %r' % (imgBGR.shape,))
+        print('[df2] img.dtype = %r' % (img.dtype,))
+        print('[df2] type(img) = %r' % (type(img),))
+        print('[df2] img.shape = %r' % (img.shape,))
         print('[df2] imshow ERROR %r' % ex)
+        raise
     #plt.set_cmap('gray')
     ax.set_xticks([])
     ax.set_yticks([])

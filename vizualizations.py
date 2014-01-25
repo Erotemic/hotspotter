@@ -378,9 +378,9 @@ def show_chip(hs, cx=None, allres=None, res=None, draw_ell=True,
 
 @profile
 def show_keypoints(rchip, kpts, draw_ell=True, draw_pts=False, sel_fx=None, fnum=0,
-                   pnum=None, **kwargs):
+                   pnum=None, color=None, **kwargs):
     df2.imshow(rchip, fnum=fnum, pnum=pnum, **kwargs)
-    _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts)
+    _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=color)
     ax = df2.gca()
     ax._hs_viewtype = 'keypoints'
     ax._hs_kpts = kpts

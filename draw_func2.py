@@ -388,18 +388,19 @@ def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
     if no_tile:
         return
 
-    if override1:
-        fig = gcf()
-        win = fig.canvas.manager.window
-        win.setGeometry(0, 0, 900, 900)
-        update()
-        return
-
     if not np.iterable(wh):
         wh = golden_wh(wh)
 
     all_figures = get_all_figures()
     all_qt4wins = get_all_qt4_wins()
+
+    if override1:
+        if len(all_figures) == 1:
+            fig = all_figures[0]
+            win = fig.canvas.manager.window
+            win.setGeometry(0, 0, 900, 900)
+            update()
+            return
 
     #nFigs = len(all_figures) + len(all_qt4_wins)
 

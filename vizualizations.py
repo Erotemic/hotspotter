@@ -298,13 +298,14 @@ def _annotate_qcx_match_results(hs, res, qcx, kpts, cx2_color):
 
 
 @profile
-def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=None, nRandKpts=None):
+def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=None, nRandKpts=None, rect=False):
     #print('[viz] _annotate_kpts()')
     if color is None:
         color = 'distinct' if sel_fx is None else df2.BLUE
     ell_args = {
         'ell': draw_ell,
         'pts': draw_pts,
+        'rect': rect,
         'ell_alpha': .4,
         'ell_linewidth': 2,
         'ell_color': color,
@@ -378,9 +379,9 @@ def show_chip(hs, cx=None, allres=None, res=None, draw_ell=True,
 
 @profile
 def show_keypoints(rchip, kpts, draw_ell=True, draw_pts=False, sel_fx=None, fnum=0,
-                   pnum=None, color=None, **kwargs):
+                   pnum=None, color=None, rect=False, **kwargs):
     df2.imshow(rchip, fnum=fnum, pnum=pnum, **kwargs)
-    _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=color)
+    _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=color, rect=rect)
     ax = df2.gca()
     ax._hs_viewtype = 'keypoints'
     ax._hs_kpts = kpts

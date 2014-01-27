@@ -1,6 +1,8 @@
 #/usr/bin/env python
+'Removes profiled output of code that never ran'
 from __future__ import print_function, division
 import sys
+import operator
 
 if __name__ == '__main__':
     # Only profiled functions that are run are printed
@@ -30,7 +32,6 @@ if __name__ == '__main__':
                     timemap[total_time] = []
                 timemap[total_time].append(block)
 
-        import operator
         sorted_lists = sorted(timemap.iteritems(), key=operator.itemgetter(0))
         newlist = prefix_list[:]
         for key, val in sorted_lists:

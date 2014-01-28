@@ -7,7 +7,7 @@ import os
 import fnmatch
 import pickle
 import cPickle
-from os.path import normpath, exists, realpath, join, expanduser
+from os.path import normpath, exists, realpath, join, expanduser, dirname
 import datetime
 import time
 # Science
@@ -395,7 +395,8 @@ def imread(img_fpath):
 # --- Standard Images ---
 
 def splash_img_fpath():
-    splash_fpath = realpath('_frontend/splash.png')
+    hsdir = dirname(__file__)
+    splash_fpath = realpath(join(hsdir, '_frontend/splash.png'))
     return splash_fpath
 
 

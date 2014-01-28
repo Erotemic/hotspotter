@@ -937,8 +937,9 @@ class MainWindowBackend(QtCore.QObject):
     @blocking
     def dev_reload(back):
         # Help -> Developer Reload
-        import dev
-        dev.dev_reload()
+        #import dev
+        #dev.dev_reload()
+        # FIXME
         df2.unregister_qt4_win('all')
         df2.register_qt4_win(back.front)
 

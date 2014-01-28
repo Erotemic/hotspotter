@@ -2,7 +2,7 @@
 #exec(open('__init__.py').read())
 #exec(open('_research/dev.py').read())
 from __future__ import division, print_function
-import __common__
+from hotspotter import __common__
 (print, print_, print_on, print_off, rrr,
  profile) = __common__.init(__name__, '[dev]')
 # Matplotlib
@@ -17,29 +17,29 @@ import multiprocessing
 import numpy as np
 #import cv2
 # HotSpotter
-import draw_func2 as df2
-import latex_formater as pytex
-import DataStructures as ds
-import matching_functions as mf
-import match_chips3 as mc3
-#import spatial_verification2 as sv2
-import helpers
-import vizualizations as viz
-import voting_rules2 as vr2
-import report_results2 as rr2
+from hotspotter import draw_func2 as df2
+from hotspotter import latex_formater as pytex
+from hotspotter import DataStructures as ds
+from hotspotter import matching_functions as mf
+from hotspotter import match_chips3 as mc3
+#from hotspotter import spatial_verification2 as sv2
+from hotspotter import helpers
+from hotspotter import vizualizations as viz
+from hotspotter import voting_rules2 as vr2
+from hotspotter import report_results2 as rr2
 
 
 def dev_reload():
     print('===========================')
     print('[dev] performing dev_reload')
     print('---------------------------')
-    import algos
-    import chip_compute2 as cc2
-    import feature_compute2 as fc2
-    import interaction
-    import scripts
-    import fileio as io
-    import nn_filters
+    from hotspotter import algos
+    from hotspotter import chip_compute2 as cc2
+    from hotspotter import feature_compute2 as fc2
+    from hotspotter import interaction
+    from hotspotter import scripts
+    from hotspotter import fileio as io
+    from hotspotter import nn_filters
     rrr()
     io.rrr()
     ds.rrr()
@@ -412,7 +412,7 @@ def chip_info(hs, cx, notes=''):
 
 
 def intestigate_keypoint_interaction(hs, qcx_list, fnum=1, **kwargs):
-    import _tpl
+    from hotspotter import _tpl
     for qcx in qcx_list:
         rchip = hs.get_chip(qcx)
         kpts  = hs.feats.cx2_kpts[qcx]
@@ -533,9 +533,32 @@ def get_allres(hs):
     return allres_ptr[0]
 
 
+def report_results(hs):
+    from hotspotter import report_results2 as rr2
+    if '--list' in sys.argv:
+        #listpos = sys.argv.index('--list')
+        #if listpos < len(sys.argv) - 1:
+        rr2.print_result_summaries_list()
+        sys.exit(1)
+
+    #allres = helpers.search_stack_for_localvar('allres')
+    #if allres is None:
+    allres = get_allres(hs)
+
+    #Helper drawing functions
+    #gt_matches = lambda cx: viz.show_chip(allres, cx, 'gt_matches')
+    #top5 = lambda cx: viz.show_chip(allres, cx, 'top5')
+    #selc = lambda cx: viz.show_chip(allres, cx, 'kpts')
+    #matchd = lambda: rr2.viz_db_match_distances(allres)
+
+    print(allres)
+    #matchd()
+    #exec(df2.present())
+
+
 # Driver Function
 def run_investigations(hs, qcx_list):
-    import experiment_harness
+    from hotspotter import experiment_harness
     args = hs.args
     qcx = qcx_list[0]
     print('[dev] Running Investigation: ' + hs.cidstr(qcx))
@@ -577,17 +600,19 @@ def run_investigations(hs, qcx_list):
     if intest('kpts-interact'):
         fnum = intestigate_keypoint_interaction(hs, qcx_list)
     if intest('interact'):
-        import interaction
+        from hotspotter import interaction
         fnum = interaction.interact1(hs, qcx_list, fnum)
     if intest('list'):
         print(experiment_harness.get_valid_testcfg_names())
     if intest('dists'):
         allres = get_allres(hs)
         rr2.viz_db_match_distances(allres)
+    if intest('report_results'):
+        report_results(hs)
 
     # Allow any testcfg to be in tests like:
     # vsone_1 or vsmany_3
-    import experiment_configs as _testcfgs
+    from hotspotter import experiment_configs as _testcfgs
     testcfg_keys = vars(_testcfgs).keys()
     testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
     for test_cfg_name in testcfg_locals:
@@ -615,12 +640,12 @@ def export_qon_list(hs, qcx_list):
 
 
 def all_printoff():
-    import fileio as io
-    import HotSpotterAPI
+    from hotspotter import fileio as io
+    from hotspotter import HotSpotterAPI as api
     ds.print_off()
     mf.print_off()
     io.print_off()
-    HotSpotterAPI.print_off()
+    api.print_off()
     mc3.print_off()
     vr2.print_off()
     #algos.print_off()

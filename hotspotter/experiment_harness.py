@@ -3,8 +3,7 @@ import itertools
 import textwrap
 import match_chips3 as mc3
 import Config
-import dev
-import draw_func2 as df2
+#import draw_func2 as df2
 import fileio as io
 #from match_chips3 import *
 import DataStructures as ds
@@ -320,17 +319,17 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         fnum += 1
     print('--remember you have -r and -c available to you')
 
-if __name__ == '__main__':
-    import multiprocessing
-    np.set_printoptions(threshold=5000, linewidth=5000, precision=5)
-    multiprocessing.freeze_support()
-    print('[harn]-----------')
-    print('[harn] main()')
-    main_locals = dev.dev_main()
-    hs = main_locals['hs']
-    qcx_list = main_locals['qcx_list']
-    #test_cfg_name_list = ['vsone_1']
-    #test_cfg_name_list = ['vsmany_3456']
-    test_cfg_name_list = ['vsmany_srule']
-    test_configurations(hs, qcx_list, test_cfg_name_list)
-    exec(df2.present())
+#if __name__ == '__main__':
+    #import multiprocessing
+    #np.set_printoptions(threshold=5000, linewidth=5000, precision=5)
+    #multiprocessing.freeze_support()
+    #print('[harn]-----------')
+    #print('[harn] main()')
+    ##main_locals = dev.dev_main()
+    #hs = main_locals['hs']
+    #qcx_list = main_locals['qcx_list']
+    ##test_cfg_name_list = ['vsone_1']
+    ##test_cfg_name_list = ['vsmany_3456']
+    #test_cfg_name_list = ['vsmany_srule']
+    #test_configurations(hs, qcx_list, test_cfg_name_list)
+    #exec(df2.present())

@@ -235,16 +235,16 @@ def test2(chip, chip_mask):
     df2.present()
 
 
-if __name__ == '__main__':
-    from multiprocessing import freeze_support
-    freeze_support()
-    print('[segm] __main__ = segmentation.py')
-    import draw_func2 as df2
-    df2.reset()
-    import dev
-    main_locals = dev.dev_main()
-    hs = main_locals['hs']
-    cx = 0
-    test(hs, cx)
-    #cx = int(sys.argv[1])
-    exec(df2.present())
+#if __name__ == '__main__':
+    #from multiprocessing import freeze_support
+    #freeze_support()
+    #print('[segm] __main__ = segmentation.py')
+    #import draw_func2 as df2
+    #df2.reset()
+    #import dev
+    #main_locals = dev.dev_main()
+    #hs = main_locals['hs']
+    #cx = 0
+    #test(hs, cx)
+    ##cx = int(sys.argv[1])
+    #exec(df2.present())

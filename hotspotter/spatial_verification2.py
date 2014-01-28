@@ -159,9 +159,11 @@ def dot_acd(acd1, acd2):
 
 
 # --------------------------------
+#import numba
 @profile
+#@numba.autojit
 def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
-                   x2_m, y2_m, acd2_m, fx2_m,
+                   x2_m, y2_m, acd2_m,
                    xy_thresh_sqrd,
                    max_scale, min_scale):
     '''Estimates inliers deterministically using elliptical shapes
@@ -204,14 +206,10 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
     # Test all hypothesis
     for mx in xrange(len(x1_m)):
         # --- Get the mth hypothesis ---
-        Aa = Aff_list[0, mx]
-        Ac = Aff_list[1, mx]
-        Ad = Aff_list[2, mx]
+        Aa, Ac, Ad = Aff_list[:, mx]
         Adet = detAff_list[mx]
-        x1_hypo = x1_m[mx]
-        y1_hypo = y1_m[mx]
-        x2_hypo = x2_m[mx]
-        y2_hypo = y2_m[mx]
+        x1_hypo, y1_hypo = x1_m[mx], y1_m[mx]
+        x2_hypo, y2_hypo = x2_m[mx], y2_m[mx]
         # --- Transform from xy1 to xy2 ---
         x1_mt   = x2_hypo + Aa * (x1_m - x1_hypo)
         y1_mt   = y2_hypo + Ac * (x1_m - x1_hypo) + Ad * (y1_m - y1_hypo)
@@ -287,8 +285,10 @@ def homography_inliers(kpts1, kpts2, fm,
     # Get diagonal length
     dlen_sqrd2 = calc_diaglen_sqrd(x2_m, y2_m) if dlen_sqrd2 is None else dlen_sqrd2
     xy_thresh_sqrd = dlen_sqrd2 * xy_thresh
-    Aff, aff_inliers = affine_inliers(x1_m, y1_m, acd1_m, fm[:, 0],
-                                      x2_m, y2_m, acd2_m, fm[:, 1],
+    fx1_m = fm[:, 0]
+    #fx2_m = fm[:, 1]
+    Aff, aff_inliers = affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
+                                      x2_m, y2_m, acd2_m,
                                       xy_thresh_sqrd, max_scale, min_scale)
     # Cannot find good affine correspondence
     if just_affine:
@@ -339,12 +339,12 @@ def test():
     viz.viz_spatial_verification(hs, qcx)
 
 
-if __name__ == '__main__':
-    import multiprocessing
-    multiprocessing.freeze_support()
-    import matplotlib
-    matplotlib.use('Qt4Agg')
-    import draw_func2 as df2
-    print('[sc2] __main__ = spatial_verification2.py')
-    test()
-    exec(df2.present(num_rc=(1, 1), wh=2500))
+#if __name__ == '__main__':
+    #import multiprocessing
+    #multiprocessing.freeze_support()
+    #import matplotlib
+    #matplotlib.use('Qt4Agg')
+    #import draw_func2 as df2
+    #print('[sc2] __main__ = spatial_verification2.py')
+    #test()
+    #exec(df2.present(num_rc=(1, 1), wh=2500))

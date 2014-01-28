@@ -2,8 +2,8 @@
 from __future__ import division, print_function
 from os.path import dirname, realpath, join, exists, normpath, expanduser
 import os
-import helpers
 import sys
+from hotspotter import helpers
 
 HOME = os.path.expanduser('~')
 
@@ -150,13 +150,17 @@ def build_pyinstaller():
     build_dir = join(cwd, 'build')
     dist_dir = join(cwd, 'dist')
     helpers.delete(dist_dir)
-    assert exists('setup.py'), 'must be run in hotspotter directory'
-    assert exists('../hotspotter/setup.py'), 'must be run in hotspotter directory'
-    assert exists('_setup'), 'must be run in hotspotter directory'
+    assert exists('setup.py'), 'must be run in hotspotter source directory'
+    assert exists('../hotspotter/setup.py'), 'must be run in hotspotter source directory'
+    assert exists('../hotspotter/hotspotter'), 'must be run in hotspotter source directory'
+    assert exists('_setup'), 'must be run in hotspotter source directory'
+    # Remove old files
     for rmdir in [build_dir, dist_dir]:
         if exists(rmdir):
             helpers.remove_file(rmdir)
+    # Run the pyinstaller command (does all the work)
     _cmd('pyinstaller _setup/pyinstaller-hotspotter.spec')
+    # Perform some post processing steps on the mac
     if sys.platform == 'darwin' and exists("dist/HotSpotter.app/Contents/"):
         copy_list = [
             'hsicon.icns',
@@ -174,7 +178,7 @@ def build_win32_inno_installer():
     inno_dir = r'C:\Program Files (x86)\Inno Setup 5'
     inno_fname = 'ISCC.exe'
     inno_fpath = join(inno_dir, inno_fname)
-    iss_script = join('_setup', 'wininstallerscript.iss')
+    iss_script = join('hotspotter', '_setup', 'wininstallerscript.iss')
     if not exists(inno_fpath):
         msg = '[setup] Inno not found and is needed for the win32 installer'
         print(msg)
@@ -188,7 +192,7 @@ def compile_ui():
     pyuic4_cmd = {'win32':  'C:\Python27\Lib\site-packages\PyQt4\pyuic4',
                   'linux2': 'pyuic4',
                   'darwin': 'pyuic4'}[sys.platform]
-    widget_dir = join(dirname(realpath(__file__)), '_frontend')
+    widget_dir = join(dirname(realpath(__file__)), 'hotspotter/_frontend')
     print('[setup] Compiling qt designer files in %r' % widget_dir)
     for widget_ui in helpers.glob(widget_dir, '*.ui'):
         widget_py = os.path.splitext(widget_ui)[0] + '.py'
@@ -200,6 +204,7 @@ def compile_ui():
 def clean():
     assert exists('setup.py'), 'must be run in hotspotter directory'
     assert exists('../hotspotter/setup.py'), 'must be run in hotspotter directory'
+    assert exists('../hotspotter/hotspotter'), 'must be run in hotspotter directory'
     assert exists('_setup'), 'must be run in hotspotter directory'
     cwd = normpath(realpath(dirname(__file__)))
     print('[setup] Current working directory: %r' % cwd)
@@ -212,8 +217,8 @@ def clean():
 
 
 def fix_tpl_permissions():
-    os.system('chmod +x _tpl/extern_feat/*.mac')
-    os.system('chmod +x _tpl/extern_feat/*.ln')
+    os.system('chmod +x hotspotter/_tpl/extern_feat/*.mac')
+    os.system('chmod +x hotspotter/_tpl/extern_feat/*.ln')
 
 
 def make_install_pyhesaff():

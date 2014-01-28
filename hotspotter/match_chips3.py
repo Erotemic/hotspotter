@@ -162,19 +162,19 @@ def execute_query_fast(hs, qdat, qcxs, dcxs):
     return result_list
 
 
-if __name__ == '__main__':
-    import multiprocessing
-    multiprocessing.freeze_support()
-    import draw_func2 as df2
-    import dev
-    #exec(open('match_chips3.py').read())
-    df2.rrr()
-    df2.reset()
-    mf.rrr()
-    ds.rrr()
-    main_locals = dev.dev_main()
-    execstr = helpers.execstr_dict(main_locals, 'main_locals')
-    exec(execstr)
-    #df2.DARKEN = .5
-    df2.DISTINCT_COLORS = True
-    exec(df2.present())
+#if __name__ == '__main__':
+    #import multiprocessing
+    #multiprocessing.freeze_support()
+    #import draw_func2 as df2
+    #import dev
+    ##exec(open('match_chips3.py').read())
+    #df2.rrr()
+    #df2.reset()
+    #mf.rrr()
+    #ds.rrr()
+    #main_locals = dev.dev_main()
+    #execstr = helpers.execstr_dict(main_locals, 'main_locals')
+    #exec(execstr)
+    ##df2.DARKEN = .5
+    #df2.DISTINCT_COLORS = True
+    #exec(df2.present())

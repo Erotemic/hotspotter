@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\joncrall\code\hotspotter\_frontend\ImportImagesChoice.ui'
+# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hotspotter/_frontend/AddChipsChoiceDialog.ui'
 #
-# Created: Fri Jan 17 22:08:41 2014
-#      by: PyQt4 UI code generator 4.9.6
+# Created: Tue Jan 28 14:53:04 2014
+#      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,21 +12,12 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+    _fromUtf8 = lambda s: s
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName(_fromUtf8("Dialog"))
-        Dialog.resize(385, 208)
+        Dialog.resize(389, 200)
         self.verticalLayout_2 = QtGui.QVBoxLayout(Dialog)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.verticalLayout = QtGui.QVBoxLayout()
@@ -34,19 +25,20 @@ class Ui_Dialog(object):
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         self.pushButton = QtGui.QPushButton(Dialog)
-        self.pushButton.setMinimumSize(QtCore.QSize(0, 88))
+        self.pushButton.setMinimumSize(QtCore.QSize(0, 100))
         self.pushButton.setObjectName(_fromUtf8("pushButton"))
         self.horizontalLayout.addWidget(self.pushButton)
         self.pushButton_2 = QtGui.QPushButton(Dialog)
-        self.pushButton_2.setEnabled(False)
-        self.pushButton_2.setMinimumSize(QtCore.QSize(0, 88))
+        self.pushButton_2.setMinimumSize(QtCore.QSize(0, 100))
         self.pushButton_2.setObjectName(_fromUtf8("pushButton_2"))
         self.horizontalLayout.addWidget(self.pushButton_2)
+        self.pushButton_3 = QtGui.QPushButton(Dialog)
+        self.pushButton_3.setEnabled(False)
+        self.pushButton_3.setMinimumSize(QtCore.QSize(0, 100))
+        self.pushButton_3.setObjectName(_fromUtf8("pushButton_3"))
+        self.horizontalLayout.addWidget(self.pushButton_3)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.verticalLayout_2.addLayout(self.verticalLayout)
-        self.checkBox_3 = QtGui.QCheckBox(Dialog)
-        self.checkBox_3.setObjectName(_fromUtf8("checkBox_3"))
-        self.verticalLayout_2.addWidget(self.checkBox_3)
         self.checkBox = QtGui.QCheckBox(Dialog)
         self.checkBox.setEnabled(False)
         self.checkBox.setObjectName(_fromUtf8("checkBox"))
@@ -67,14 +59,16 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
-        self.pushButton.setText(_translate("Dialog", "Import Images and \n"
-"copy into the database.", None))
-        self.pushButton_2.setText(_translate("Dialog", "Import Images but\n"
-" leave them where they are.", None))
-        self.checkBox_3.setText(_translate("Dialog", "The images are the chips. ", None))
-        self.checkBox.setText(_translate("Dialog", "Rembember Until End of Run", None))
-        self.checkBox_2.setText(_translate("Dialog", "Remember In Preference File: %{pref_fname}", None))
+        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Dialog", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButton.setText(QtGui.QApplication.translate("Dialog", "The Images \n"
+"are the chips.", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButton_2.setText(QtGui.QApplication.translate("Dialog", "Add chips\n"
+" yourself, manually.", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButton_3.setText(QtGui.QApplication.translate("Dialog", "Let HotSpotter\n"
+" have a shot at it.\n"
+"(unimplemented)", None, QtGui.QApplication.UnicodeUTF8))
+        self.checkBox.setText(QtGui.QApplication.translate("Dialog", "Rembember Until End of Run", None, QtGui.QApplication.UnicodeUTF8))
+        self.checkBox_2.setText(QtGui.QApplication.translate("Dialog", "Remember In Preference File: %{pref_fname}", None, QtGui.QApplication.UnicodeUTF8))
 
 
 if __name__ == "__main__":

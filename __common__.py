@@ -10,7 +10,7 @@ except NameError:
     profile = lambda func: func
 
 
-__DEBUG__ = True
+__DEBUG__ = False
 
 
 def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):

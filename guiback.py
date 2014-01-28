@@ -908,6 +908,8 @@ class MainWindowBackend(QtCore.QObject):
         # Help -> Developer Help
         steal_again = back.front.return_stdout()
         hs = back.hs    # NOQA
+        front = back.front
+        wasBlocked = front.blockSignals(True)
         devmode = True  # NOQA
         print(helpers.indent(str(hs), '[*back.hs] '))
         rrr()
@@ -928,6 +930,7 @@ class MainWindowBackend(QtCore.QObject):
         exec(execstr)
         if steal_again:
             back.front.steal_stdout()
+        back.front.blockSignals(wasBlocked)
         #back.timer.start()
 
     @slot_()

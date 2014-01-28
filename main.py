@@ -74,9 +74,22 @@ def postload_args_process(hs, back):
     return res
 
 
+def imports():
+    # TODO: Rename this to something better
+    import load_data2 as ld2
+    import guiback
+    import guifront
+    import draw_func2 as df2
+    ld2.print_off()
+    guiback.print_off()
+    #guifront.print_off()
+    df2.print_off()
+
+
 def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
     import matplotlib
     matplotlib.use('Qt4Agg')
+    imports()
     import argparse2
     args = argparse2.parse_arguments(defaultdb=defaultdb)
     import HotSpotterAPI
@@ -164,6 +177,10 @@ if __name__ == '__main__':
         def vgd():
             return generate_training.vgd(hs)
 
+        from PyQt4.QtCore import pyqtRemoveInputHook
+        from IPython.lib.inputhook import enable_qt4
+        pyqtRemoveInputHook()
+        enable_qt4()
         exec(helpers.ipython_execstr())
         sys.exit(1)
     if not embedded:

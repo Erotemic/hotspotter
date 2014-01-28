@@ -84,6 +84,7 @@ def _steal_stdout(front):
     #with io.capture_output() as captured:
         #%run my_script.py
     if NOSTEAL_OVERRIDE or (nosteal and noshare):
+        print('[front] not stealing stdout.')
         return
     print('[front] stealing standard out')
     if front.ostream is None:
@@ -220,6 +221,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         # Progress bar is not hooked up yet
         front.ui.progressBar.setVisible(False)
         front.connect_signals()
+        front.steal_stdout()
 
     def steal_stdout(front):
         return _steal_stdout(front)

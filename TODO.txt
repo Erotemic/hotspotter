@@ -9,6 +9,7 @@ of other components are filled tend to be repeatable patterns.
 
 
 OBSERVATION: 
+* Raise to algorithmic issue *
 Lighting is a big deal. Histogram equalization can help, but it shouldn't be
 applied to every image. It needs to be applied adaptively depending on how
 dark the image is. Animals in shadows have no keypoints. 

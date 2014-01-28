@@ -33,3 +33,4 @@ OpenGLContext.profile
 *.lprof
 *.prof
 *.profile.txt
+hotspotter/*.c

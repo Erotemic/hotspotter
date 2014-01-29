@@ -229,11 +229,13 @@ class HotSpotter(DynStruct):
     def load_preferences(hs):
         print('[hs] load preferences')
         hs.default_preferences()
-        was_loaded = hs.prefs.load()
+        prefmsg = hs.prefs.load()
+        was_loaded = prefmsg is True
         print('[hs] Able to load prefs? ...%r' % was_loaded)
         if was_loaded:
             hs.fix_prefs()
         else:
+            print('[hs]' + prefmsg)
             hs.default_preferences()
         hs.assert_prefs()
 

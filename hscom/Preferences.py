@@ -316,13 +316,16 @@ class Pref(PrefNode):
         #printDBG('[pref.load()]')
         'Read pref dict stored on disk. Overwriting current values.'
         if not os.path.exists(self._intern.fpath):
-            return False
+            msg = '[pref] fpath=%r does not exist' % (self._intern.fpath)
+            printDBG(msg)
+            return msg
         with open(self._intern.fpath, 'r') as f:
             try:
                 printDBG('load: %r' % self._intern.fpath)
                 pref_dict = cPickle.load(f)
-            except EOFError:
-                msg = '[pref] WARNING: Preference file did not load correctly'
+            except EOFError as ex:
+                msg = ('[pref] WARN: fpath=%r did not load correctly.' +
+                       'ex=%r' % (self._intern.fpath, ex))
                 printDBG(msg)
                 warnings.warn(msg)
                 return False

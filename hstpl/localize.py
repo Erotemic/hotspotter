@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 import sys
-from os.path import expanduser, join, exists, split
+from os.path import expanduser, join, exists
 
 
 def add_hotspotter_to_path():
@@ -8,9 +8,8 @@ def add_hotspotter_to_path():
     hotspotter_dir = join(expanduser('~'), 'code', 'hotspotter')
     if not exists(hotspotter_dir):
         print('[pyhesaff] hotspotter_dir=%r DOES NOT EXIST!' % (hotspotter_dir,))
-    # Append hotspotter location (not dir) to PYTHON_PATH (i.e. sys.path)
-    hotspotter_location = split(hotspotter_dir)[0]
-    sys.path.append(hotspotter_location)
+    # Append hotspotter dir to PYTHON_PATH (i.e. sys.path)
+    sys.path.append(hotspotter_dir)
 
 # Ensure hotspotter is in path before importing it
 add_hotspotter_to_path()
@@ -32,8 +31,10 @@ built_files = {
 
 filemap = {
     hesaffbuild_dir: built_files,
-    hesaffsrc_dir: ['pyhesaff.py', 'pyhesaffexe.py', 'ctypes_interface.py'],
-}
+    hesaffsrc_dir: ['pyhesaff.py',
+                    'ellipse.py',
+                    'pyhesaffexe.py',
+                    'ctypes_interface.py'], }
 
 for srcdir, fname_list in filemap.iteritems():
     for fname in fname_list:

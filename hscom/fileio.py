@@ -401,6 +401,7 @@ def splash_img_fpath():
 
 
 # --- Global Cache ---
+# TODO: This doesnt belong here
 HOME = expanduser('~')
 #GLOBAL_CACHE_DIR = realpath('.hotspotter/global_cache')
 GLOBAL_CACHE_DIR = join(HOME, '.hotspotter/global_cache')

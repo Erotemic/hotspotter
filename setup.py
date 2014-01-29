@@ -7,6 +7,8 @@ import sys
 from hscom import helpers
 
 HOME = os.path.expanduser('~')
+# Allows other python modules (like hesaff) to find hotspotter modules
+sys.path.append(dirname(__file__))
 
 INSTALL_REQUIRES = [
     'numpy>=1.5.0',
@@ -141,9 +143,9 @@ def _cmd(args, verbose=True, sudo=False):
     return out, err, ret
 
 if sys.platform == 'win32':
-    buildscript_fmt = 'build_%s_mingw.bat'
+    buildscript_fmt = 'mingw_%s_build.bat'
 else:
-    buildscript_fmt = 'build_%s_unix.sh'
+    buildscript_fmt = 'unix_%s_build.sh'
 
 
 def build_pyinstaller():

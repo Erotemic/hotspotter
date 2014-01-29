@@ -3,7 +3,8 @@ from __future__ import division, print_function
 from os.path import dirname, realpath, join, exists, normpath, expanduser, splitext
 import os
 import sys
-from hotspotter import helpers
+# Hotspotter
+from hscom import helpers
 
 HOME = os.path.expanduser('~')
 

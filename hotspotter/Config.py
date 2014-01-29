@@ -1,6 +1,6 @@
 from __future__ import division, print_function
-from Preferences import Pref
-import helpers
+from hscom.Preferences import Pref
+from hscom import helpers
 
 ConfigBase = Pref
 #ConfigBase = DynStruct

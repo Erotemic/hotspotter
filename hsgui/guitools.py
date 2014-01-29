@@ -1,16 +1,20 @@
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[guitools]')
+# Python
 from os.path import split
 import sys
 #import warnings
+# Science
 import numpy as np
+# Qt
 import PyQt4
 from PyQt4 import Qt, QtCore, QtGui
-import fileio as io
-import helpers
-import draw_func2 as df2
+# HotSpotter
+from hscom import fileio as io
+from hscom import helpers
+from hsviz import draw_func2 as df2
 
 IS_INIT = False
 DISABLE_NODRAW = False
@@ -474,13 +478,3 @@ def make_header_lists(tbl_headers, editable_list, prop_keys=[]):
     for header in editable_list:
         col_editable[col_headers.index(header)] = True
     return col_headers, col_editable
-
-
-if __name__ == '__main__':
-    from multiprocessing import freeze_support
-    freeze_support()
-    print('__main__ = gui.py')
-    app, is_root = init_qtapp()
-    back = make_dummy_main_window()
-    front = back.front
-    run_main_loop(app, is_root, back)

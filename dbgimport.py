@@ -40,7 +40,7 @@ import load_data2 as ld2
 import match_chips3 as mc3
 import matching_functions as mf
 import segmentation
-import vizualizations as viz
+import viz
 import voting_rules2 as vr2
 
 if __name__ == 'main':

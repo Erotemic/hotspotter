@@ -1,10 +1,11 @@
-'''Parameters module:
+'''Parameters module: DEPRICATE THIS
     stores a bunch of global variables used by the other modules
     It also reads from sys.argv'''
 from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[params]')
+# Python
 import sys
 import helpers
 from os.path import exists, expanduser, join
@@ -275,11 +276,3 @@ for argv in iter(sys.argv):
             PZ_defaults()
         if argv_u == 'MOTHERS':
             MOTHERS_defaults()
-
-
-if __name__ == '__main__':
-    import multiprocessing
-    multiprocessing.freeze_support()
-    print('[params] __main__ = params.py')
-    print('[params] Param string:')
-    print(helpers.indent(param_string()))

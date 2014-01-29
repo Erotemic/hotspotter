@@ -1,16 +1,18 @@
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off, rrr,
  profile) = __common__.init(__name__, '[dbinfo]')
-import multiprocessing
+# Python
 import os
 import sys
 from os.path import isdir, islink, isfile, join, exists
-import params
-import load_data2 as ld2
-import helpers
+from collections import OrderedDict
+# Science
 import numpy as np
 from PIL import Image
+# Hotspotter
+import load_data2 as ld2
+from hscom import helpers
 
 
 def dir_size(path):
@@ -298,7 +300,6 @@ def db_info(hs):
     img_list = helpers.list_images(hs.dirs.img_dir, fullpath=True)
 
     def wh_print_stats(wh_list):
-        from collections import OrderedDict
         if len(wh_list) == 0:
             return '{empty}'
         stat_dict = OrderedDict(
@@ -351,7 +352,7 @@ def db_info(hs):
 
 
 def get_keypoint_stats(hs):
-    import latex_formater as pytex
+    from hscom import latex_formater as pytex
     hs.dbg_cx2_kpts()
     # Keypoint stats
     cx2_kpts = hs.feats.cx2_kpts
@@ -373,62 +374,3 @@ def get_keypoint_stats(hs):
     np.set_printoptions(**_printopts)
     print('[dbinfo] ---/LaTeX --- ')
     return (tex_nKpts, tex_kpts_stats, tex_scale_stats)
-
-
-if __name__ == '__main__':
-    multiprocessing.freeze_support()
-    #import multiprocessing
-    #np.set_printoptions(threshold=5000, linewidth=5000)
-    #print('[dev]-----------')
-    #print('[dev] main()')
-    #df2.DARKEN = .5
-    #main_locals = dev.dev_main()
-    #exec(helpers.execstr_dict(main_locals, 'main_locals'))
-
-    if sys.argv > 1:
-        import sys
-        path = params.DEFAULT
-        db_version = get_database_version(path)
-        print('db_version=%r' % db_version)
-        if not db_version is None:
-            db_stats = DatabaseStats(path, db_version, params.WORK_DIR)
-            print_database_stats(db_stats)
-        sys.exit(0)
-
-    # Build list of directories with database in them
-    root_dir_list = [
-        params.WORK_DIR,
-        params.WORK_DIR2
-    ]
-    DO_EXTRA = True  # False
-    if sys.platform == 'linux2' and DO_EXTRA:
-        root_dir_list += [
-            #'/media/Store/data/raw',
-            #'/media/Store/data/gold',
-            '/media/Store/data/downloads']
-
-    # Build directory statistics
-    dir_stats_list = [DirectoryStats(root_dir) for root_dir in root_dir_list]
-
-    # Print Name Stats
-    print('\n\n === Num File Stats === ')
-    for dir_stats in dir_stats_list:
-        print('--')
-        print(dir_stats.print_db_stats())
-
-    # Print File Stats
-    print('\n\n === All Info === ')
-    for dir_stats in dir_stats_list:
-        print('--' + dir_stats.name())
-        dir_stats.print_databases(' * ')
-
-    print('\n\n === NonDB Dirs === ')
-    for dir_stats in dir_stats_list:
-        print('--' + dir_stats.name())
-        dir_stats.print_nondbdirs()
-
-    # Print File Stats
-    print('\n\n === Num File Stats === ')
-    for dir_stats in dir_stats_list:
-        print('--')
-        print(dir_stats.num_files_stats())

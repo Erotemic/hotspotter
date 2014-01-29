@@ -1,18 +1,20 @@
 from __future__ import division, print_function
+# Python
 import itertools
 import textwrap
-import match_chips3 as mc3
-import Config
-#import draw_func2 as df2
-import fileio as io
-#from match_chips3 import *
-import DataStructures as ds
-import helpers as helpers
-import numpy as np
 import sys
 from os.path import join
+# Scientific
+import numpy as np
+# Hotspotter
 import experiment_configs as _testcfgs
-
+from hotspotter import Config
+from hotspotter import DataStructures as ds
+from hotspotter import match_chips3 as mc3
+from hscom import fileio as io
+from hscom import helpers as helpers
+#from match_chips3 import *
+#import draw_func2 as df2
 # What are good ways we can divide up FLANN indexes instead of having one
 # monolithic index? Divide up in terms of properties of the database chips
 

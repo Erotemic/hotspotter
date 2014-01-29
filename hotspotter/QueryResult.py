@@ -6,10 +6,8 @@ from zipfile import error as BadZipFile  # Screwy naming convention.
 # Scientific
 import numpy as np
 # HotSpotter
-import vizualizations as viz
-import interaction
-import helpers
-from Printable import DynStruct
+from hscom import helpers
+from hscom.Printable import DynStruct
 import voting_rules2 as vr2
 
 
@@ -170,27 +168,34 @@ class QueryResult(DynStruct):
         return topN_cxs
 
     def show_query(res, hs, **kwargs):
+        from hsviz import viz
         print('[res] show_query')
         viz.show_chip(hs, res=res, **kwargs)
 
     def show_analysis(res, hs, *args, **kwargs):
+        from hsviz import viz
         return viz.res_show_analysis(res, hs, *args, **kwargs)
 
     def show_top(res, hs, *args, **kwargs):
+        from hsviz import viz
         return viz.show_top(res, hs, *args, **kwargs)
 
     def show_gt_matches(res, hs, *args, **kwargs):
+        from hsviz import viz
         figtitle = ('q%s -- GroundTruth' % (hs.cidstr(res.qcx)))
         gt_cxs = hs.get_other_indexed_cxs(res.qcx)
         return viz._show_chip_matches(hs, res, gt_cxs=gt_cxs, figtitle=figtitle,
                                       all_kpts=True, *args, **kwargs)
 
     def show_chipres(res, hs, cx, **kwargs):
+        from hsviz import viz
         return viz.res_show_chipres(res, hs, cx, **kwargs)
 
     def interact_chipres(res, hs, cx, **kwargs):
-        return interaction.interact_chipres(hs, res, cx, **kwargs)
+        from hsviz import interact
+        return interact.interact_chipres(hs, res, cx, **kwargs)
 
     def interact_top_chipres(res, hs, tx, **kwargs):
+        from hsviz import interact
         cx = res.topN_cxs(hs, tx + 1)[tx]
-        return interaction.interact_chipres(hs, res, cx, **kwargs)
+        return interact.interact_chipres(hs, res, cx, **kwargs)

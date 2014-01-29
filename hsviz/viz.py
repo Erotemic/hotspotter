@@ -1,19 +1,17 @@
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off, rrr, profile, printDBG) = \
     __common__.init(__name__, '[viz]', DEBUG=False)
 import matplotlib
 matplotlib.use('Qt4Agg')
-# Python
-import multiprocessing
 #import re
 import warnings
 # Scientific
 import numpy as np
 # Hotspotter
 import draw_func2 as df2
-import fileio as io
-import helpers
+from hscom import fileio as io
+from hscom import helpers
 
 #from interaction import interact_keypoints, interact_chipres, interact_chip # NOQA
 
@@ -41,6 +39,7 @@ def get_square_row_cols(nSubplots, max_cols=5):
     #nCols = int(min(np.ceil(np.sqrt(ncxs)), 5))
     nRows = int(np.ceil(nSubplots / nCols))
     return nRows, nCols
+
 
 @profile
 def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwargs):
@@ -872,7 +871,7 @@ def ensure_cx2(hs, cx1, cx2=None):
 
 def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kwargs):
     #kwargs = {}
-    import helpers
+    from hscom import helpers
     import spatial_verification2 as sv2
     import cv2
     print('\n======================')
@@ -947,19 +946,3 @@ def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kw
     _draw_chip('Destination', rchip2, 11)
     _draw_chip('Homog Blend', rchip2_blendH, 12)
     df2.set_figtitle(figtitle)
-
-
-if __name__ == '__main__':
-    multiprocessing.freeze_support()
-    print('=================================')
-    print('[viz] __main__ = vizualizations.py')
-    print('=================================')
-    import main
-    hs = main.main()
-    cx = helpers.get_arg('--cx', type_=int)
-    qcx = hs.get_valid_cxs()[0]
-    if cx is not None:
-        qcx = cx
-    res = hs.query(qcx)
-    res.show_top(hs)
-    exec(df2.present())

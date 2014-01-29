@@ -249,8 +249,3 @@ def npArrInfo(arr):
         else:
             info.minmaxstr = '(None)'
     return info
-
-if __name__ == '__main__':
-    import multiprocessing
-    multiprocessing.freeze_support()
-    print('[???] __main__ = Printable.py')

@@ -1,11 +1,11 @@
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[mc3]')
 # Python
 import re
 # HotSpotter
-import helpers
+from hscom import helpers
 import DataStructures as ds
 import matching_functions as mf
 
@@ -165,7 +165,7 @@ def execute_query_fast(hs, qdat, qcxs, dcxs):
 #if __name__ == '__main__':
     #import multiprocessing
     #multiprocessing.freeze_support()
-    #import draw_func2 as df2
+    #from hsviz import draw_func2 as df2
     #import dev
     ##exec(open('match_chips3.py').read())
     #df2.rrr()

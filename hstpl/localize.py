@@ -15,12 +15,12 @@ def add_hotspotter_to_path():
 # Ensure hotspotter is in path before importing it
 add_hotspotter_to_path()
 
-from hotspotter import helpers
+from hscom import helpers
 
 # Localize hessian affine code
 code_dir   = join(expanduser('~'), 'code')
-hsdir      = join(code_dir, 'hotspotter', 'hotspotter')
-extern_dir = join(hsdir, '_tpl', 'extern_feat')
+hsdir      = join(code_dir, 'hotspotter')
+extern_dir = join(hsdir, 'hstpl', 'extern_feat')
 hesaffsrc_dir = join(code_dir, 'hesaff')
 
 hesaffbuild_dir = join(hesaffsrc_dir, 'build')

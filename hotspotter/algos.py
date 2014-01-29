@@ -1,15 +1,16 @@
 'hotspotter.algos contains algorithm poltpori'
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[algos]')
 # Python
-import sys
+from itertools import izip
 from os.path import join
 import os
+import sys
 import textwrap
 # Matplotlib
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 # Scientific
 import pyflann
 #import sklearn.decomposition
@@ -18,9 +19,8 @@ import pyflann
 import numpy as np
 import scipy.sparse as spsparse
 # Hotspotter
-import fileio as io
-import helpers
-from itertools import izip
+from hscom import fileio as io
+from hscom import helpers
 
 
 DIST_LIST = ['L1', 'L2']
@@ -132,7 +132,7 @@ def localmax(signal1d):
 
 def viz_localmax(signal1d):
     #signal1d = np.array(hist)
-    import draw_func2 as df2
+    from hsviz import draw_func2 as df2
     signal1d = np.array(signal1d)
     maxpos = np.array(localmax(signal1d))
     x_data = range(len(signal1d))
@@ -289,7 +289,7 @@ def plot_clusters(data, datax2_clusterx, clusters, num_pca_dims=3,
                   whiten=False):
     # http://www.janeriksolem.net/2012/03/isomap-with-scikit-learn.html
     print('[algos] Doing PCA')
-    import draw_func2 as df2
+    from hsviz import draw_func2 as df2
     data_dims = data.shape[1]
     num_pca_dims = min(num_pca_dims, data_dims)
     pca = None
@@ -299,7 +299,7 @@ def plot_clusters(data, datax2_clusterx, clusters, num_pca_dims=3,
     pca_clusters = pca.transform(clusters)
     K = len(clusters)
     print('[algos] ...Finished PCA')
-    fig = plt.figure(1)
+    fig = df2.plt.figure(1)
     fig.clf()
     #cmap = plt.get_cmap('hsv')
     data_x = pca_data[:, 0]
@@ -312,9 +312,9 @@ def plot_clusters(data, datax2_clusterx, clusters, num_pca_dims=3,
     clus_y = pca_clusters[:, 1]
     clus_colors = colors
     if num_pca_dims == 2:
-        ax = plt.gca()
-        plt.scatter(data_x, data_y, s=20,  c=data_colors, marker='o', alpha=.2)
-        plt.scatter(clus_x, clus_y, s=500, c=clus_colors, marker='*')
+        ax = df2.plt.gca()
+        df2.plt.scatter(data_x, data_y, s=20,  c=data_colors, marker='o', alpha=.2)
+        df2.plt.scatter(clus_x, clus_y, s=500, c=clus_colors, marker='*')
         ax.autoscale(enable=False)
         ax.set_aspect('equal')
     if num_pca_dims == 3:
@@ -326,7 +326,7 @@ def plot_clusters(data, datax2_clusterx, clusters, num_pca_dims=3,
         ax.scatter(clus_x, clus_y, clus_z, s=500, c=clus_colors, marker='*')
         ax.autoscale(enable=False)
         ax.set_aspect('equal')
-    ax = plt.gca()
+    ax = df2.plt.gca()
     ax.set_title('AKmeans clustering. K=%r. PCA projection %dD -> %dD%s' %
                  (K, data_dims, num_pca_dims, ' +whitening' * whiten))
     return fig
@@ -342,7 +342,7 @@ def force_quit_akmeans(signal, frame):
                               line_no: %r
                               ''') %
              (frame.f_code.co_name, frame.f_code.co_stacksize, frame.f_lineno))
-        exec(df2.present())
+        #exec(df2.present())
         target_frame = frame
         target_frame_coname = '__akmeans_iterate'
         while True:
@@ -576,37 +576,3 @@ def precompute_flann(data, cache_dir=None, uid='', flann_params=None,
         print('[algos] precompute_flann(): save_index(%r)' % flann_fname)
         flann.save_index(flann_fpath)
     return flann
-
-if __name__ == '__main__':
-    import multiprocessing
-    multiprocessing.freeze_support()
-    import draw_func2 as df2
-    np.random.seed(seed=0)  # RANDOM SEED (for reproducibility)
-    is_whiten = helpers.get_flag('--whiten')
-    dim = helpers.get_arg('--dim', type_=int, default=3)
-    K = helpers.get_arg('--K', type_=int, default=10)
-    num_clusters = K
-    __REAL_DATA_MODE__ = True
-    if __REAL_DATA_MODE__:
-        import main
-        hs = main.main(defaultdb='NAUTS')
-        cache_dir = hs.dirs.cache_dir
-        cx2_desc = hs.feats.cx2_desc
-        data = np.vstack(cx2_desc)
-    else:
-        cache_dir = 'akmeans_test'
-        data = np.random.rand(1000, 3)
-    datax2_clusterx, clusters = precompute_akmeans(data, num_clusters,
-                                                   force_recomp=False,
-                                                   cache_dir=cache_dir)
-    fig = plot_clusters(data, datax2_clusterx, clusters, num_pca_dims=dim,
-                        whiten=is_whiten)
-    fig.show()
-    exec(df2.present())
-#IDEA:
-#intead have each datapoint "pull" on one another. Maybe warp the space
-#in which they sit with a covariance matrix.  basically let gravity do
-#the clustering.  Check to see if any algos like this.
-
-#itertools.groupby
-#groups

@@ -1,5 +1,5 @@
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[vr2]')
 # Python
@@ -10,7 +10,7 @@ import numpy as np
 from numpy.linalg import svd
 #from numba import autojit
 # HotSpotter
-import helpers
+from hscom import helpers
 
 
 def score_chipmatch_csum(chipmatch):
@@ -345,8 +345,3 @@ def _positional_score(altxs, score_vec, qfx2_porder, qfx2_worder):
             #if altx == -1: continue
             altx2_score[altx] += weights[ix] * score_vec[ix]
     return altx2_score
-
-
-if __name__ == '__main__':
-    import multiprocessing
-    multiprocessing.freeze_support()

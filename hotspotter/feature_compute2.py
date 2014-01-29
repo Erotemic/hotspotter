@@ -1,18 +1,17 @@
 ''' Computes feature representations '''
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[fc2]')
 # scientific
 import numpy as np
 # python
-import sys
 from os.path import join
 # hotspotter
-import helpers
-import fileio as io
+from hscom import helpers
+from hscom import fileio as io
+from hscom.Parallelize import parallel_compute
 import extern_feat
-from Parallelize import parallel_compute
 
 
 def whiten_features(desc_list):
@@ -192,38 +191,3 @@ def clear_feature_cache(hs):
     helpers.remove_files_in_dir(feat_dir, '*' + feat_uid + '*', verbose=True, dryrun=False)
     helpers.remove_files_in_dir(cache_dir, '*' + feat_uid + '*', verbose=True, dryrun=False)
     pass
-
-if __name__ == '__main__':
-    import multiprocessing
-    multiprocessing.freeze_support()
-    print('[fc2] __main__ = feature_compute2.py')
-    import main
-    import HotSpotterAPI
-    import vizualizations as viz
-    import feature_compute2 as fc2
-    from feature_compute2 import *  # NOQA
-    # Debugging vars
-    feat_cfg = None
-    cx_list = None
-    kwargs = {}
-    # --- LOAD TABLES --- #
-    args = main.parse_arguments(db='NAUTS')
-    hs = HotSpotterAPI.HotSpotter(args)
-    hs.load_tables()
-    hs.set_samples()
-    # --- LOAD CHIPS --- #
-    hs.load_configs()
-    hs.load_chips()
-    # --- LOAD FEATURES --- #
-    load_features(hs)
-    cx = helpers.get_arg('--cx', type_=int)
-    delete_features = '--delete-features' in sys.argv
-    nRandKpts = helpers.get_arg('--nRandKpts', type_=int)
-    if delete_features:
-        fc2.clear_feature_cache(hs)
-    if not cx is None:
-        viz.show_chip(hs, cx, nRandKpts=nRandKpts)
-    else:
-        print('usage: feature_compute.py --cx [cx] --nRandKpts [num] [--delete-features]')
-
-    exec(viz.present())

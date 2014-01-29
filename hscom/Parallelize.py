@@ -2,7 +2,7 @@
 from __future__ import print_function, division
 import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[parallel]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[parallel]', DEBUG=False)
 # Python
 from itertools import izip
 from os.path import exists
@@ -10,17 +10,6 @@ import multiprocessing
 import sys
 # Hotspotter
 import helpers
-
-
-DEBUG = False
-
-if DEBUG:
-    def printDBG(msg):
-        print(msg)
-        sys.stdout.flush()
-else:
-    def printDBG(msg):
-        pass
 
 
 def _calculate(func, args):
@@ -175,32 +164,3 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     return result_list
     #import time
     #time.sleep(.01)
-
-
-if __name__ == '__main__':
-    print('test parallel')
-    multiprocessing.freeze_support()
-    import numpy as np
-
-    p = multiprocessing.Pool(processes=8)
-    data_list = [np.random.rand(1000, 9) for _ in xrange(1000)]
-    data = data_list[0]
-
-    def complex_func(data):
-        tmp = 0
-        for ix in xrange(0, 100):
-            _r = np.random.rand(10, 10)
-            u1, s1, v1 = np.linalg.svd(_r)
-            tmp += s1[0]
-        u, s, v = np.linalg.svd(data)
-        return s[0] + tmp
-
-    with helpers.Timer('ser'):
-        x2 = map(complex_func, data_list)
-    with helpers.Timer('par'):
-        x1 = p.map(complex_func, data_list)
-
-    '''
-    %timeit p.map(numpy.sqrt, x)
-    %timeit map(numpy.sqrt, x)
-    '''

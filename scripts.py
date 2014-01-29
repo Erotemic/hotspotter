@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[scripts]')
 # Python

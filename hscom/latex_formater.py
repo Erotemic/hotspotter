@@ -1,7 +1,9 @@
 from __future__ import division, print_function
+# Python
 import re
 import helpers
 import textwrap
+# Science
 import numpy as np
 
 

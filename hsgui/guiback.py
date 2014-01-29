@@ -1,23 +1,25 @@
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[back]')
+# Python
 from os.path import split, exists, join
 # Qt
 from PyQt4 import QtCore
 from PyQt4.Qt import pyqtSignal
+# Science
 import numpy as np
 # Hotspotter
 import guifront
 import guitools
-import helpers
-import fileio as io
-import draw_func2 as df2
-import vizualizations as viz
-import interaction
-import HotSpotterAPI
 from guitools import drawing, slot_
 from guitools import backblocking as blocking
+from hscom import helpers
+from hscom import fileio as io
+from hsviz import draw_func2 as df2
+from hsviz import viz
+from hsviz import interact
+from hotspotter import HotSpotterAPI
 
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5, name=6)
 viz.register_FNUMS(FNUMS)
@@ -100,6 +102,48 @@ def make_main_window(hs=None, app=None):
             app.setActiveWindow(back.front)
     #print('[*back] Finished creating main front\n')
     return back
+
+
+def _dev_reload():
+    # TODO Integrate this better
+    print('===========================')
+    print('[dev] performing dev_reload')
+    print('---------------------------')
+    from hotspotter import DataStructures as ds
+    from hotspotter import algos
+    from hotspotter import chip_compute2 as cc2
+    from hotspotter import feature_compute2 as fc2
+    from hotspotter import match_chips3 as mc3
+    from hotspotter import matching_functions as mf
+    from hotspotter import nn_filters
+    from hotspotter import report_results2 as rr2
+    from hotspotter import voting_rules2 as vr2
+    #from hscom import fileio as io
+    #from hscom import helpers
+    #from hsviz import draw_func2 as df2
+    #from hsviz import interact
+    from hsviz import viz
+    rrr()
+    io.rrr()
+    ds.rrr()
+    mf.rrr()
+    nn_filters.rrr()
+    mc3.rrr()
+    viz.rrr()
+    interact.rrr()
+    vr2.rrr()
+    helpers.rrr()
+    cc2.rrr()
+    rr2.rrr()
+    fc2.rrr()
+    algos.rrr()
+    df2.rrr()
+    print('---------------------------')
+    print('df2 reset')
+    df2.reset()
+    print('---------------------------')
+    print('[dev] finished dev_reload()')
+    print('===========================')
 
 
 #------------------------
@@ -188,8 +232,8 @@ class MainWindowBackend(QtCore.QObject):
         fnum = FNUMS['image']
         did_exist = df2.plt.fignum_exists(fnum)
         df2.figure(fnum=fnum, docla=True, doclf=True)
-        interaction.interact_image(back.hs, gx, sel_cxs, back.select_cx,
-                                   fnum=fnum, figtitle=figtitle)
+        interact.interact_image(back.hs, gx, sel_cxs, back.select_cx,
+                                fnum=fnum, figtitle=figtitle)
         if not did_exist:
             back.layout_figures()
 
@@ -201,7 +245,7 @@ class MainWindowBackend(QtCore.QObject):
         df2.figure(fnum=fnum, docla=True, doclf=True)
         INTERACTIVE_CHIPS = True  # This should always be True
         if INTERACTIVE_CHIPS:
-            interact_fn = interaction.interact_chip
+            interact_fn = interact.interact_chip
             interact_fn(back.hs, cx, fnum=fnum, figtitle='Chip View')
         else:
             viz.show_chip(back.hs, cx, fnum=fnum, figtitle='Chip View')
@@ -235,7 +279,7 @@ class MainWindowBackend(QtCore.QObject):
         fnum = FNUMS['inspect']
         did_exist = df2.plt.fignum_exists(fnum)
         df2.figure(fnum=fnum, docla=True, doclf=True)
-        interaction.interact_chipres(back.hs, res, cx=cx, fnum=fnum)
+        interact.interact_chipres(back.hs, res, cx=cx, fnum=fnum)
         if not did_exist:
             back.layout_figures()
 
@@ -245,8 +289,8 @@ class MainWindowBackend(QtCore.QObject):
         # Define callback for show_analysis
         fnum = FNUMS['name']
         df2.figure(fnum=fnum, docla=True, doclf=True)
-        interaction.interact_name(back.hs, nx, sel_cxs, back.select_cx,
-                                  fnum=fnum)
+        interact.interact_name(back.hs, nx, sel_cxs, back.select_cx,
+                               fnum=fnum)
 
     #----------------------
     # Work Functions
@@ -940,17 +984,6 @@ class MainWindowBackend(QtCore.QObject):
         #import dev
         #dev.dev_reload()
         # FIXME
+        _dev_reload()
         df2.unregister_qt4_win('all')
         df2.register_qt4_win(back.front)
-
-
-# Main Test Script
-if __name__ == '__main__':
-    from multiprocessing import freeze_support
-    freeze_support()
-    print('__main__ = gui.py')
-    app, is_root = guitools.init_qtapp()
-    back = guitools.make_main_window()
-    front = back.front
-    ui = front.ui
-    guitools.run_main_loop(app, is_root, back)

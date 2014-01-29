@@ -1,5 +1,5 @@
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 print, print_, print_on, print_off, rrr, profile, printDBG =\
     __common__.init(__name__, '[mf]', DEBUG=False)
 # Python
@@ -11,7 +11,7 @@ import QueryResult as qr
 import nn_filters
 import spatial_verification2 as sv2
 import voting_rules2 as vr2
-import helpers
+from hscom import helpers
 
 #=================
 # Globals

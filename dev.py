@@ -2,9 +2,9 @@
 #exec(open('__init__.py').read())
 #exec(open('_research/dev.py').read())
 from __future__ import division, print_function
-from hotspotter import __common__
+from hscom import __common__
 (print, print_, print_on, print_off, rrr,
- profile) = __common__.init(__name__, '[dev]')
+ profile, printDBG) = __common__.init(__name__, '[dev]', DEBUG=False)
 # Matplotlib
 import matplotlib
 matplotlib.use('Qt4Agg')
@@ -17,16 +17,16 @@ import multiprocessing
 import numpy as np
 #import cv2
 # HotSpotter
-from hotspotter import draw_func2 as df2
-from hotspotter import latex_formater as pytex
-from hotspotter import DataStructures as ds
-from hotspotter import matching_functions as mf
-from hotspotter import match_chips3 as mc3
 #from hotspotter import spatial_verification2 as sv2
-from hotspotter import helpers
-from hotspotter import vizualizations as viz
-from hotspotter import voting_rules2 as vr2
+from hotspotter import DataStructures as ds
+from hotspotter import match_chips3 as mc3
+from hotspotter import matching_functions as mf
 from hotspotter import report_results2 as rr2
+from hotspotter import voting_rules2 as vr2
+from hscom import helpers
+from hscom import latex_formater as pytex
+from hsviz import draw_func2 as df2
+from hsviz import viz
 
 
 def dev_reload():
@@ -36,9 +36,9 @@ def dev_reload():
     from hotspotter import algos
     from hotspotter import chip_compute2 as cc2
     from hotspotter import feature_compute2 as fc2
-    from hotspotter import interaction
-    from hotspotter import scripts
-    from hotspotter import fileio as io
+    from hsviz import interaction
+    #from scripts
+    from hscom import fileio as io
     from hotspotter import nn_filters
     rrr()
     io.rrr()
@@ -48,7 +48,7 @@ def dev_reload():
     mc3.rrr()
     viz.rrr()
     interaction.rrr()
-    scripts.rrr()
+    #scripts.rrr()
     vr2.rrr()
     helpers.rrr()
     cc2.rrr()
@@ -412,12 +412,12 @@ def chip_info(hs, cx, notes=''):
 
 
 def intestigate_keypoint_interaction(hs, qcx_list, fnum=1, **kwargs):
-    from hotspotter import _tpl
+    import hstpl
     for qcx in qcx_list:
         rchip = hs.get_chip(qcx)
         kpts  = hs.feats.cx2_kpts[qcx]
         desc  = hs.feats.cx2_desc[qcx]
-        _tpl.extern_feat.keypoint_interaction(rchip, kpts, desc, fnum=fnum, **kwargs)
+        hstpl.extern_feat.keypoint_interaction(rchip, kpts, desc, fnum=fnum, **kwargs)
         fnum += 1
     return fnum
 
@@ -558,7 +558,7 @@ def report_results(hs):
 
 # Driver Function
 def run_investigations(hs, qcx_list):
-    from hotspotter import experiment_harness
+    import experiment_harness
     args = hs.args
     qcx = qcx_list[0]
     print('[dev] Running Investigation: ' + hs.cidstr(qcx))
@@ -601,7 +601,7 @@ def run_investigations(hs, qcx_list):
     if intest('kpts-interact'):
         fnum = intestigate_keypoint_interaction(hs, qcx_list)
     if intest('interact'):
-        from hotspotter import interaction
+        from hsgui import interaction
         fnum = interaction.interact1(hs, qcx_list, fnum)
     if intest('list'):
         print(experiment_harness.get_valid_testcfg_names())
@@ -613,7 +613,7 @@ def run_investigations(hs, qcx_list):
 
     # Allow any testcfg to be in tests like:
     # vsone_1 or vsmany_3
-    from hotspotter import experiment_configs as _testcfgs
+    import experiment_configs as _testcfgs
     testcfg_keys = vars(_testcfgs).keys()
     testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
     for test_cfg_name in testcfg_locals:

@@ -1,8 +1,10 @@
 from __future__ import division, print_function
-import numpy as np
-import types
-import sys
+# Python
 import pylru  # because we dont have functools.lru_cache
+import sys
+import types
+# Science
+import numpy as np
 
 VALID_INT_TYPES = (types.IntType,
                    types.LongType,

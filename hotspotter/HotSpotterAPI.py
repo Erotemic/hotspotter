@@ -1,5 +1,5 @@
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[hs]')
 import sys
@@ -13,18 +13,18 @@ import datetime
 import numpy as np
 from PIL import Image
 # Hotspotter
+from hscom import fileio as io
+from hscom import helpers
+from hscom import tools
+from hscom.Printable import DynStruct
+from hscom.Preferences import Pref
 import DataStructures as ds
 import Config
 import chip_compute2 as cc2
 import feature_compute2 as fc2
-import fileio as io
-import helpers
 import load_data2 as ld2
 import match_chips3 as mc3
 import matching_functions as mf
-import tools
-from Printable import DynStruct
-from Preferences import Pref
 
 
 def _checkargs_onload(hs):

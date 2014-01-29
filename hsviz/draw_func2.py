@@ -6,7 +6,7 @@
 # plot_<func_name> will not clear the axes or figure. More useful for graphs
 # draw_<func_name> same as plot for now. More useful for images
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off, rrr, profile,
  printDBG) = __common__.init(__name__, '[df2]', DEBUG=False, initmpl=True)
 # Python
@@ -19,7 +19,6 @@ import sys
 import textwrap
 import time
 import warnings
-import multiprocessing
 # Matplotlib / Qt
 import matplotlib
 from matplotlib.collections import PatchCollection, LineCollection
@@ -34,11 +33,11 @@ from PyQt4.QtCore import Qt
 # Scientific
 import numpy as np
 import scipy.stats
-# HotSpotter
-import tools
-from Printable import DynStruct
-import helpers
 import cv2
+# HotSpotter
+from hscom import helpers
+from hscom import tools
+from hscom.Printable import DynStruct
 
 #================
 # GLOBALS
@@ -1595,7 +1594,7 @@ def draw_boxedX(xywh, color=RED, lw=2, alpha=.5, theta=0):
     width_list = [lw] * len(segments)
     color_list = [color] * len(segments)
     line_group = LineCollection(segments, width_list, color_list, alpha=alpha,
-                                transformation=trans)
+                                transOffset=trans)
     ax.add_collection(line_group)
 
 
@@ -1624,6 +1623,3 @@ def connect_callback(fig, callback_type, callback_fn):
     cbfn_type = callback_type + '_func'
     fig.__dict__[cbid_type] = fig.canvas.mpl_connect(callback_type, callback_fn)
     fig.__dict__[cbfn_type] = callback_fn
-
-if __name__ == '__main__':
-    multiprocessing.freeze_support()

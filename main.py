@@ -35,7 +35,7 @@ def signal_set():
 
 
 def preload_args_process(args):
-    from hotspotter import helpers
+    from hscom import helpers
     import sys
     # Process relevant args
     cids = args.query
@@ -75,25 +75,26 @@ def postload_args_process(hs, back):
 
 
 def imports():
+    pass
     # TODO: Rename this to something better
-    from hotspotter import load_data2 as ld2
-    from hotspotter import guiback
-    from hotspotter import guifront
-    from hotspotter import draw_func2 as df2
-    ld2.print_off()
-    guiback.print_off()
+    #from hotspotter import load_data2 as ld2
+    #from hsgui import guiback
+    #from hsgui import guifront
+    #from hsviz import draw_func2 as df2
+    #ld2.print_off()
+    #guiback.print_off()
     #guifront.print_off()
-    df2.print_off()
+    #df2.print_off()
 
 
 def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
     import matplotlib
     matplotlib.use('Qt4Agg')
     imports()
-    from hotspotter import argparse2
+    from hscom import argparse2
+    from hscom import helpers
+    from hotspotter import HotSpotterAPI as api
     args = argparse2.parse_arguments(defaultdb=defaultdb)
-    from hotspotter import HotSpotterAPI
-    from hotspotter import helpers
     # Parse arguments
     args = argparse2.fix_args_with_cache(args)
     if usedbcache:
@@ -104,11 +105,11 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
 
     # Preload process args
     if args.delete_global:
-        from hotspotter import fileio as io
+        from hscom import fileio as io
         io.delete_global_cache()
 
     # --- Build HotSpotter API ---
-    hs = HotSpotterAPI.HotSpotter(args)
+    hs = api.HotSpotter(args)
     # Load all data if needed now, otherwise be lazy
     try:
         hs.load(load_all=load_all)
@@ -126,9 +127,9 @@ if __name__ == '__main__':
     # Necessary for windows parallelization
     multiprocessing.freeze_support()
     hs = main(defaultdb=None, usedbcache=True)
-    from hotspotter import guitools
-    from hotspotter import guiback
-    from hotspotter import helpers
+    from hsgui import guitools
+    from hsgui import guiback
+    from hscom import helpers
     print('main.py')
     # Listen for ctrl+c
     signal_set()

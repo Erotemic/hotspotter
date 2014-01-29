@@ -1,13 +1,13 @@
 #from __init__ import *
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[seg]')
 import numpy as np
-import helpers
+from hscom import helpers
 import cv2
 import algos
-import fileio as io
+from hscom import fileio as io
 
 DEBUG_SEGM = False
 
@@ -19,7 +19,7 @@ def printDBG(msg):
 
 
 def im(img, fnum=0):
-    import draw_func2 as df2
+    from hsviz import draw_func2 as df2
     df2.imshow(img, fnum=fnum)
     df2.update()
 
@@ -55,7 +55,7 @@ def resize_img_and_roi(img_fpath, roi_, new_size=None, sqrt_area=400.0):
 
 
 def test(hs, cx=0):
-    import draw_func2 as df2
+    from hsviz import draw_func2 as df2
     import os
     if not 'cx' in vars():
         cx = 0
@@ -71,7 +71,7 @@ def test(hs, cx=0):
     #---
     print('testing segment')
     seg_chip, img_mask = segment(img_fpath, roi_, new_size=None)
-    import vizualizations as viz
+    from hsviz import viz
     viz.show_image(hs, gx, fnum=1, pnum=131, title='original', docla=True)
     df2.imshow(img_mask, fnum=1, pnum=132, title='mask')
     df2.imshow(seg_chip, fnum=1, pnum=133, title='segmented')
@@ -101,7 +101,7 @@ def fill_holes(mask):
 
 
 def test_clean_mask(chip_mask):
-    import draw_func2 as df2
+    from hsviz import draw_func2 as df2
     mask = chip_mask
     print('Cleaning')
     mask2 = clean_mask(mask, 0, 3, .020)
@@ -204,47 +204,3 @@ def segment(img_fpath, roi_, new_size=None):
     chip_hsv = np.array(np.round(chip_hsv * 255.0), dtype=np.uint8)
     seg_chip = cv2.cvtColor(chip_hsv, cv2.COLOR_HSV2RGB)
     return seg_chip, img_mask
-
-
-def test2(chip, chip_mask):
-    im(chip, 1)
-    im(chip_mask, 2)
-
-    chip_hsv = cv2.cvtColor(chip, cv2.COLOR_RGB2HSV)
-    chip_H = chip_hsv[:, :, 0]
-    chip_S = chip_hsv[:, :, 1]
-    chip_V = chip_hsv[:, :, 2]
-
-    im(chip_H, 3)
-    im(chip_S, 4)
-    im(chip_V, 5)
-
-    #chip_H *= chip_mask
-    #chip_S *= chip_mask
-    chip_V *= chip_mask
-
-    im(chip_V, 6)
-
-    chip_hsv[:, :, 0] = chip_H
-    chip_hsv[:, :, 1] = chip_S
-    chip_hsv[:, :, 2] = chip_V
-
-    seg_chip = cv2.cvtColor(chip_hsv, cv2.COLOR_HSV2RGB)
-
-    im(seg_chip, 8)
-    df2.present()
-
-
-#if __name__ == '__main__':
-    #from multiprocessing import freeze_support
-    #freeze_support()
-    #print('[segm] __main__ = segmentation.py')
-    #import draw_func2 as df2
-    #df2.reset()
-    #import dev
-    #main_locals = dev.dev_main()
-    #hs = main_locals['hs']
-    #cx = 0
-    #test(hs, cx)
-    ##cx = int(sys.argv[1])
-    #exec(df2.present())

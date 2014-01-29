@@ -1,19 +1,19 @@
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_,
  print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[convert]')
 import sys
-from PIL import Image
 from os.path import join, relpath, normpath, exists
 import collections
-import helpers
-import params
-import load_data2 as ld2
-import numpy as np
 import os
 import parse
-
+# Science
+from PIL import Image
+import numpy as np
+# Hotspotter
+from hscom import helpers
+import load_data2 as ld2
 import db_info
 
 
@@ -764,18 +764,3 @@ def write_image_table(internal_dir, gx2_gid, gx2_gname):
     image_table = ld2.make_csv_table(column_labels, column_list, header)
     image_table_fpath = join(internal_dir, ld2.IMAGE_TABLE_FNAME)
     write_to_wrapper(image_table_fpath, image_table)
-
-#----- Specific Databases ----
-
-if __name__ == '__main__':
-    from multiprocessing import freeze_support
-    freeze_support()
-    helpers.PRINT_CHECKS = True
-    if 'paris' in sys.argv:
-        convert_from_oxford_style(params.PARIS)
-    if 'oxford' in sys.argv:
-        convert_from_oxford_style(params.OXFORD)
-    if 'wildebeast' in sys.argv:
-        wildid_xlsx_to_tables(params.WILDEBEAST)
-    if 'toads' in sys.argv:
-        wildid_csv_to_tables(params.TOADS)

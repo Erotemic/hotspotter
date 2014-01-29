@@ -1,17 +1,14 @@
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off, rrr, profile, printDBG)\
     = __common__.init(__name__, '[inter]', DEBUG=False)
-# Python
-import multiprocessing
 # Scientific
 import numpy as np
 # Hotspotter
 import draw_func2 as df2
 import extract_patch
-import vizualizations as viz
-import helpers
-from _tpl import mask_creator
+import viz
+from hstpl import mask_creator
 
 
 # RCOS TODO: We should change the fnum, pnum figure layout into one managed by
@@ -79,7 +76,7 @@ def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None):
     ax = df2.plot_sift_signature(sift, sigtitle, fnum=fnum, pnum=pnum_(px + 3))
     ax._hs_viewtype = 'histogram'
     if prevsift is not None:
-        import algos
+        from hotspotter import algos
         dist_list = ['L1', 'L2', 'hist_isect', 'emd']
         distmap = algos.compute_distances(sift, prevsift, dist_list)
         dist_str = ', '.join(['%s:%.1e' % (key, val) for key, val in distmap.iteritems()])
@@ -406,18 +403,3 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
         _select_ith_match(mx)
     df2.connect_callback(fig, 'button_press_event', _click_chipres_click)
     viz.draw()
-
-if __name__ == '__main__':
-    multiprocessing.freeze_support()
-    import main
-    hs = main.main()
-    cx = helpers.get_arg('--cx', type_=int)
-    qcx = hs.get_valid_cxs()[0]
-    if cx is not None:
-        qcx = cx
-
-    res = hs.query(qcx)
-    interact_chip(hs, qcx, fnum=1)
-    interact_chipres(hs, res, fnum=2)
-    df2.update()
-    exec(df2.present())

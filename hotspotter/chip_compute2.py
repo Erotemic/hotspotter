@@ -1,5 +1,5 @@
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_,
  print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[cc2]')
@@ -12,10 +12,10 @@ import numpy as np
 import cv2
 from PIL import Image
 # Hotspotter
-import helpers
-import fileio as io
-from Parallelize import parallel_compute
-#from Printable import DynStruct
+from hscom import helpers
+from hscom import fileio as io
+from hscom.Parallelize import parallel_compute
+#from hscom.Printable import DynStruct
 #import load_data2 as ld2
 #import os
 #import scipy.signal
@@ -54,12 +54,13 @@ def xywh_to_tlbr(roi, img_wh):
     return (x1, y1, x2, y2)
 
 
-def rgb_to_gray(rgb_img):
-    pil_gray_img = Image.fromarray(rgb_img).convert('L')
-    gray_img = np.asarray(pil_gray_img)
-    return gray_img
+#def rgb_to_gray(rgb_img):
+    #pil_gray_img = Image.fromarray(rgb_img).convert('L')
+    #gray_img = np.asarray(pil_gray_img)
+    #return gray_img
 
 
+# DEPRICATE THIS
 def gray_to_rgb(gray_img):
     rgb_img = np.empty(list(gray_img.shape) + [3], gray_img.dtype)
     rgb_img[:, :, 0] = gray_img
@@ -68,6 +69,7 @@ def gray_to_rgb(gray_img):
     return rgb_img
 
 
+# DEPRICATE THIS
 def ensure_gray(img):
     'Ensures numpy format and 3 channels'
     if not isinstance(img, np.ndarray):
@@ -82,6 +84,7 @@ def ensure_gray(img):
     return img
 
 
+# DEPRICATE THIS
 def ensure_rgb(img):
     try:
         'Ensures numpy format and 3 channels'
@@ -228,7 +231,7 @@ def histeq_fn(chapBGR):
 
 def grabcut_fn(chipBGR):
     import segmentation
-    chipRGB = cv2.cvtColor(chapBGR, cv2.COLOR_BGR2RGB)
+    chipRGB = cv2.cvtColor(chipBGR, cv2.COLOR_BGR2RGB)
     chipRGB = segmentation.grabcut(chipRGB)
     chapBGR = cv2.cvtColor(chipRGB, cv2.COLOR_RGB2BGR)
     return chapBGR
@@ -420,12 +423,12 @@ def load_chips(hs, cx_list=None, **kwargs):
         filter_list.append(histeq_fn)
     if chip_cfg['region_norm']:
         filter_list.append(region_norm_fn)
-    if chip_cfg['maxcontrast']:
-        filter_list.append(maxcontr_fn)
-    if chip_cfg['rank_eq']:
-        filter_list.append(rankeq_fn)
-    if chip_cfg['local_eq']:
-        filter_list.append(localeq_fn)
+    #if chip_cfg['maxcontrast']:
+        #filter_list.append(maxcontr_fn)
+    #if chip_cfg['rank_eq']:
+        #filter_list.append(rankeq_fn)
+    #if chip_cfg['local_eq']:
+        #filter_list.append(localeq_fn)
     if chip_cfg['grabcut']:
         filter_list.append(grabcut_fn)
 
@@ -494,35 +497,3 @@ def load_chips(hs, cx_list=None, **kwargs):
         hs.cpaths.cx2_rchip_size[cx] = rsize_list[lx]
     #hs.load_cx2_rchip_size()  # TODO: Loading rchip size should be handled more robustly
     print('[cc2]=============================')
-
-
-if __name__ == '__main__':
-    import multiprocessing
-    multiprocessing.freeze_support()
-    import HotSpotterAPI
-    import argparse2
-    import vizualizations as viz
-    import chip_compute2 as cc2
-    from chip_compute2 import *  # NOQA
-    # Debugging vars
-    chip_cfg = None
-#l')=103.7900s
-
-    cx_list = None
-    kwargs = {}
-    # --- LOAD TABLES --- #
-    args = argparse2.parse_arguments(defaultdb='NAUTS')
-    hs = HotSpotterAPI.HotSpotter(args)
-    hs.load_tables()
-    hs.update_samples()
-    # --- LOAD CHIPS --- #
-    cc2.load_chips(hs)
-    cx = helpers.get_arg('--cx', type_=int)
-    if not cx is None:
-        tau = np.pi * 2
-        hs.change_theta(cx, tau / 8)
-        viz.show_chip(hs, cx, draw_kpts=False, fnum=1)
-        viz.show_image(hs, hs.cx2_gx(cx), fnum=2)
-    else:
-        print('usage: feature_compute.py --cx [cx]')
-    exec(viz.df2.present())

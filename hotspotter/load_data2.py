@@ -4,29 +4,24 @@ Module: load_data
     This is the first script run in the loading pipeline.
 '''
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[ld2]')
-import sys
+ rrr, profile, printDBG) = __common__.init(__name__, '[ld2]', DEBUG=False)
 # Standard
 from os.path import join, exists, splitext
 import os
-import shutil
 import re
-import multiprocessing
+import shutil
+import sys
 # Science
 import numpy as np
 from PIL import Image
 # Hotspotter
 import DataStructures as ds
-import helpers
-import tools
+from hscom import helpers
+from hscom import tools
 
 VERBOSE_LOAD_DATA = True
-
-
-def printDBG(msg, lbl=''):
-    print('DBG: ' + lbl + str(msg))
 
 
 CHIP_TABLE_FNAME = 'chip_table.csv'
@@ -680,13 +675,3 @@ def write_csv_tables(hs):
     helpers.write_to(chip_table_fpath, chip_table)
     helpers.write_to(name_table_fpath, name_table)
     helpers.write_to(image_table_fpath, image_table)
-
-
-# Test load csv tables
-if __name__ == '__main__':
-    multiprocessing.freeze_support()
-    import draw_func2 as df2
-    import params
-    db_dir = params.DEFAULT
-    hs_dirs, hs_tables, version = load_csv_tables(db_dir)
-    exec(df2.present())

@@ -351,8 +351,8 @@ def _precompute_topx2_dlen_sqrd(cx2_rchip_size, cx2_kpts, cx2_fm, topx2_cx,
             return dlen_sqrd
         if USE_1_to_2:
             topx2_dlen_sqrd = [cx2_chip_dlensqrd(cx) for cx in iter(topx2_cx[:nRerank])]
-        else:
-            topx2_dlen_sqrd = [cx2_chip_dlensqrd(cx)] * nRerank
+        #else:
+            #topx2_dlen_sqrd = [cx2_chip_dlensqrd(cx)] * nRerank
     else:
         if USE_1_to_2:
             def cx2_kpts2_dlensqrd(cx):
@@ -364,16 +364,16 @@ def _precompute_topx2_dlen_sqrd(cx2_rchip_size, cx2_kpts, cx2_fm, topx2_cx,
                 y_m = kpts2[fm[:, 1], 1].T
                 return (x_m.max() - x_m.min()) ** 2 + (y_m.max() - y_m.min()) ** 2
             topx2_dlen_sqrd = [cx2_kpts2_dlensqrd(cx) for cx in iter(topx2_cx[:nRerank])]
-        else:
-            def cx2_kpts1_dlensqrd(cx):
-                kpts2 = cx2_kpts[cx]
-                fm    = cx2_fm[cx]
-                if len(fm) == 0:
-                    return 1
-                x_m = kpts2[fm[:, 0], 0].T
-                y_m = kpts2[fm[:, 0], 1].T
-                return (x_m.max() - x_m.min()) ** 2 + (y_m.max() - y_m.min()) ** 2
-            topx2_dlen_sqrd = [cx2_kpts1_dlensqrd(cx) for cx in iter(topx2_cx[:nRerank])]
+        #else:
+            #def cx2_kpts1_dlensqrd(cx):
+                #kpts2 = cx2_kpts[cx]
+                #fm    = cx2_fm[cx]
+                #if len(fm) == 0:
+                    #return 1
+                #x_m = kpts2[fm[:, 0], 0].T
+                #y_m = kpts2[fm[:, 0], 1].T
+                #return (x_m.max() - x_m.min()) ** 2 + (y_m.max() - y_m.min()) ** 2
+            #topx2_dlen_sqrd = [cx2_kpts1_dlensqrd(cx) for cx in iter(topx2_cx[:nRerank])]
     return topx2_dlen_sqrd
 
 

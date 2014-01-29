@@ -5,20 +5,29 @@
 #python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --sthresh  0 9001   --printoff 
 #python investigate_chip.py --dbG --tests vsmany_srule --all-gt-cases --printoff 
 
+cython_vs_python()
+{
+    python setup.py clean
+    ./profiler.sh dev.py --db MOTHERS -t rr --nocache-query
+    python setup.py cython
+    ./profiler.sh dev.py --db MOTHERS -t rr --nocache-query
+}
+cython_vs_python
+
 simple_tests()
 {
     python dev.py --db NAUTS -t best --all-gt-cases
 }
 
-ic --db GZ --tests vsmany_big_social --all-gt-cases | tail
-ic --db GZ --tests vsmany_score --all-gt-cases | tail
-ic --db GZ --tests vsmany_sv --all-gt-cases | tail
-ic --db GZ --tests vsmany_k --all-gt-cases | tail
+#ic --db GZ --tests vsmany_big_social --all-gt-cases | tail
+#ic --db GZ --tests vsmany_score --all-gt-cases | tail
+#ic --db GZ --tests vsmany_sv --all-gt-cases | tail
+#ic --db GZ --tests vsmany_k --all-gt-cases | tail
 
-ic --db MOTHERS --tests vsmany_big_social --all-gt-cases | tail
-ic --db MOTHERS --tests vsmany_score --all-gt-cases | tail
-ic --db MOTHERS --tests vsmany_sv --all-gt-cases | tail
-ic --db MOTHERS --tests vsmany_k --all-gt-cases | tail
+#ic --db MOTHERS --tests vsmany_big_social --all-gt-cases | tail
+#ic --db MOTHERS --tests vsmany_score --all-gt-cases | tail
+#ic --db MOTHERS --tests vsmany_sv --all-gt-cases | tail
+#ic --db MOTHERS --tests vsmany_k --all-gt-cases | tail
 
 
 #python investigate_chip.py --dbG --tests test-cfg-vsmany-3 --all-gt-cases --printoff 

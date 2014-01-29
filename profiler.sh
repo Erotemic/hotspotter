@@ -9,8 +9,8 @@ export pyscript=$1
 # Output Stage 1
 export line_profile_output=$pyscript.lprof
 # Output Stage 2
-export raw_profile=$pyscript.$TIMESTAMP.$RAW_SUFFIX
-export clean_profile=$pyscript.$TIMESTAMP.$CLEAN_SUFFIX
+export raw_profile=raw_profile.$pyscript.$TIMESTAMP.$RAW_SUFFIX
+export clean_profile=clean_profile.$pyscript.$TIMESTAMP.$CLEAN_SUFFIX
 
 echo "Profiling $pyscript"
 # Line profile the python code w/ command line args

@@ -131,6 +131,7 @@ def _cmd(args, verbose=True, sudo=False):
             append(line)
         out = '\n'.join(logged_list)
         (out_, err) = proc.communicate()
+        print(err)
     else:
         # Surpress output
         (out, err) = proc.communicate()
@@ -212,6 +213,8 @@ def clean():
     helpers.remove_files_in_dir(cwd, '*.prof', recursive=True)
     helpers.remove_files_in_dir(cwd, '*.prof.txt', recursive=True)
     helpers.remove_files_in_dir(cwd, '*.lprof', recursive=True)
+    helpers.remove_files_in_dir(cwd + '/hotspotter', '*.so', recursive=False)
+    helpers.remove_files_in_dir(cwd + '/hotspotter', '*.c', recursive=False)
     helpers.delete(join(cwd, 'dist'))
     helpers.delete(join(cwd, 'build'))
     helpers.delete(join(cwd, "'"))  # idk where this file comes from
@@ -287,8 +290,8 @@ def compile_cython(fpath):
     gcc_flags = ' '.join(['-shared', '-pthread', '-fPIC', '-fwrapv', '-O2',
                           '-Wall', '-fno-strict-aliasing', pyinclude])
     fname, ext = splitext(fpath)
-    fname_so = 'fname' + '.so'
-    fname_c  = 'fname' + '.c'
+    fname_so = fname + '.so'
+    fname_c  = fname + '.c'
     _cmd('cython ' + fpath)
     _cmd('gcc ' + gcc_flags + ' -o ' + fname_so + ' ' + fname_c)
 

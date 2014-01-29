@@ -575,10 +575,11 @@ def run_investigations(hs, qcx_list):
 
     tests = args.tests[:]
 
-    def intest(testname):
-        ret = testname in tests
-        if ret:
-            tests.remove(testname)
+    def intest(*args):
+        for testname in args:
+            ret = testname in tests
+            if ret:
+                tests.remove(testname)
         return ret
 
     if intest('print-hs'):
@@ -607,7 +608,7 @@ def run_investigations(hs, qcx_list):
     if intest('dists'):
         allres = get_allres(hs)
         rr2.viz_db_match_distances(allres)
-    if intest('report_results'):
+    if intest('report_results', 'rr'):
         report_results(hs)
 
     # Allow any testcfg to be in tests like:

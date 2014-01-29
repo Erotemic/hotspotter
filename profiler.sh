@@ -18,7 +18,7 @@ kernprof.py -l $@
 # Dump the line profile output to a text file
 python -m line_profiler $line_profile_output >> $raw_profile
 # Clean the line profile output
-python __profiler_cleaner.py $raw_profile $clean_profile
+python _scripts/profiler_cleaner.py $raw_profile $clean_profile
 # Print the cleaned output
 cat $clean_profile
 

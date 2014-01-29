@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import division, print_function
-from os.path import dirname, realpath, join, exists, normpath, expanduser
+from os.path import dirname, realpath, join, exists, normpath, expanduser, splitext
 import os
 import sys
 from hotspotter import helpers
@@ -210,6 +210,7 @@ def clean():
     print('[setup] Current working directory: %r' % cwd)
     helpers.remove_files_in_dir(cwd, '*.pyc', recursive=True)
     helpers.remove_files_in_dir(cwd, '*.prof', recursive=True)
+    helpers.remove_files_in_dir(cwd, '*.prof.txt', recursive=True)
     helpers.remove_files_in_dir(cwd, '*.lprof', recursive=True)
     helpers.delete(join(cwd, 'dist'))
     helpers.delete(join(cwd, 'build'))
@@ -281,6 +282,22 @@ def status(repo):
         _cmd('git status')
 
 
+def compile_cython(fpath):
+    pyinclude = '-I/usr/include/python2.7'
+    gcc_flags = ' '.join(['-shared', '-pthread', '-fPIC', '-fwrapv', '-O2',
+                          '-Wall', '-fno-strict-aliasing', pyinclude])
+    fname, ext = splitext(fpath)
+    fname_so = 'fname' + '.so'
+    fname_c  = 'fname' + '.c'
+    _cmd('cython ' + fpath)
+    _cmd('gcc ' + gcc_flags + ' -o ' + fname_so + ' ' + fname_c)
+
+
+def build_cython():
+    compile_cython('hotspotter/spatial_verification2.py')
+    compile_cython('hotspotter/matching_functions.py')
+
+
 if __name__ == '__main__':
     print('[setup] Entering HotSpotter setup')
     for cmd in iter(sys.argv[1:]):
@@ -321,3 +338,6 @@ if __name__ == '__main__':
             pull('hesaff', 'hotspotter_hesaff')
             pull('flann', 'hotspotter_flann')
             pull('hotspotter', 'jon')
+
+        if cmd in ['cython']:
+            build_cython()

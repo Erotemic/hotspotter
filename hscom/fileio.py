@@ -396,7 +396,7 @@ def imread(img_fpath):
 
 def splash_img_fpath():
     hsdir = dirname(__file__)
-    splash_fpath = realpath(join(hsdir, '_frontend/splash.png'))
+    splash_fpath = realpath(join(hsdir, '../hsgui/_frontend/splash.png'))
     return splash_fpath
 
 

@@ -9,6 +9,9 @@ import fnmatch
 
 # System Variables
 PLATFORM = sys.platform
+APPLE = PLATFORM == 'darwin'
+WIN32 = PLATFORM == 'win32'
+LINUX = PLATFORM == 'linux2'
 
 
 def join_SITE_PACKAGES(*args):
@@ -30,24 +33,16 @@ root_dir = os.getcwd()
 try:
     assert exists(join(root_dir, 'setup.py'))
     assert exists('../hotspotter')
+    assert exists('../hotspotter/hotspotter')
     assert exists('../hotspotter/setup.py')
     assert exists(root_dir)
 except AssertionError:
-    raise Exception('Setup.py must be run from hotspotter/')
-
-# This needs to be relative to build directory. Leave as is.
-hsbuild = ''
-
-# ------
-# Build Analysis
-main_py = join(root_dir, 'main.py')
-scripts = [main_py]
-a = Analysis(scripts, hiddenimports=[], hookspath=None)  # NOQA
+    raise Exception('setup.py must be run from hotspotter root')
 
 
 def add_data(a, dst, src):
     import textwrap
-    from hotspotter import helpers
+    from hscom import helpers
     from os.path import dirname, normpath
 
     def fixwin32_shortname(path1):
@@ -68,8 +63,12 @@ def add_data(a, dst, src):
 
     def platform_path(path):
         path1 = normpath(path)
-        path2 = fixwin32_shortname(path1)
+        if sys.platform == 'win32':
+            path2 = fixwin32_shortname(path1)
+        else:
+            path2 = path1
         return path2
+
     src = platform_path(src)
     dst = dst
     helpers.ensurepath(dirname(dst))
@@ -80,18 +79,28 @@ def add_data(a, dst, src):
     [setup]    src=%r)''').strip('\n') % tuple(map(pretty_path, (dst, src))))
     a.datas.append((dst, src, 'DATA'))
 
+
+# This needs to be relative to build directory. Leave as is.
+hsbuild = ''
+
 # ------
-# Specify Data in TOC format (SRC, DEST, TYPE)
-splash_src   = join(root_dir, '_frontend/splash.png')
-splash_dst  = join(hsbuild, '_frontend/splash.png')
+# Build Analysis
+main_py = join(root_dir, 'main.py')
+scripts = [main_py]
+a = Analysis(scripts, hiddenimports=[], hookspath=None)  # NOQA
+
+# ------
+# Specify Data in TOC (table of contents) format (SRC, DEST, TYPE)
+splash_src   = join(root_dir, 'hsgui/_frontend/splash.png')
+splash_dst  = join(hsbuild, 'hsgui/_frontend/splash.png')
 add_data(a, splash_dst, splash_src)
 
-src = join(root_dir, '_frontend/', 'hsicon.ico')
-dst = join(hsbuild, '_frontend/', 'hsicon.ico')
+src = join(root_dir, 'hsgui/_frontend/hsicon.ico')
+dst = join(hsbuild, 'hsgui/_frontend/hsicon.ico')
 add_data(a, dst, src)
 
-src = join(root_dir, '_frontend/' 'resources_MainSkel.qrc')
-dst = join(hsbuild, '_frontend/' 'resources_MainSkel.qrc')
+src = join(root_dir, 'hsgui/_frontend/resources_MainSkel.qrc')
+dst = join(hsbuild, 'hsgui/_frontend/resources_MainSkel.qrc')
 add_data(a, dst, src)
 
 # Add TPL Libs for current PLATFORM
@@ -111,8 +120,7 @@ try:
 except Exception as ex:
     print(repr(ex))
 
-
-lib_rpath = join('_tpl', 'extern_feat')
+lib_rpath = join('hstpl', 'extern_feat')
 
 # Local dynamic Libraries
 walk_path = join(root_dir, lib_rpath)
@@ -129,7 +137,7 @@ for root, dirs, files in os.walk(walk_path):
 
 # Documentation
 userguide_dst = '_doc/HotSpotterUserGuide.pdf'
-userguide_src = join(root_dir, '_doc', 'HotSpotterUserGuide.pdf')
+userguide_src = join(root_dir, '_doc/HotSpotterUserGuide.pdf')
 add_data(a, userguide_dst, userguide_src)
 
 # Icon File
@@ -139,24 +147,48 @@ ICON_EXT = {'darwin': 'icns',
 iconfile = join(root_dir, '_setup', 'hsicon.' + ICON_EXT)
 
 # Executable name
-exe_name = {'win32':   'build/HotSpotterApp.exe',
+exe_name = {'win32':  'build/HotSpotterApp.exe',
             'darwin': 'build/pyi.darwin/HotSpotterApp/HotSpotterApp',
             'linux2': 'build/HotSpotterApp.ln'}[PLATFORM]
 
+# TODO:
+# http://www.pyinstaller.org/export/develop/project/doc/Manual.html?format=raw#accessing-data-files
+
+# http://www.pyinstaller.org/export/develop/project/doc/Manual.html?format=raw#exe
 pyz = PYZ(a.pure)   # NOQA
-exe_kwargs = dict(exclude_binaries=True, name=exe_name,
-                  debug=False, strip=None,
-                  upx=True, console=True,
-                  #onefile='HotSpotterApp',
-                  icon=iconfile)
-                  #console = PLATFORM != 'darwin',
+
+exe_kwargs = {
+    'console': True,
+    'debug': False,
+    'name': exe_name,
+    'exclude_binaries': True,
+    'append_pkg': False,
+}
+
+exe_kwargs['strip'] = None
+exe_kwargs['upx']   = True
+exe_kwargs['onedir'] = True
+exe_kwargs['onefile'] = False
+exe_kwargs['windowed'] = False
+exe_kwargs['strip'] = None
+#exe_kwargs['upx-dir'] = False
+#exe_kwargs['onefile'] = 'HotSpotterApp'
+
+# Windows only EXE options
+if WIN32:
+    exe_kwargs['icon'] = iconfile
+    exe_kwargs['version'] = 1.5
+
+if APPLE:
+    exe_kwargs['console'] = False
+
 exe = EXE(pyz, a.scripts, **exe_kwargs)   # NOQA
 
 collect_kwargs = dict(strip=None, upx=True, name=join('dist', 'hotspotter'))
 coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, **collect_kwargs)  # NOQA
 
 bundle_name = 'hotspotter'
-if PLATFORM == 'darwin':
+if APPLE:
     bundle_name += '.app'
 
 app = BUNDLE(coll, name=join('dist', bundle_name))  # NOQA

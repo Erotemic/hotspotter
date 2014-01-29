@@ -318,6 +318,7 @@ class FeatureConfig(ConfigBase):
         feat_cfg.whiten = False
         feat_cfg.scale_min = 0  # 0  # 30 # TODO: Put in pref types here
         feat_cfg.scale_max = 9001  # 9001 # 80
+        feat_cfg.use_adaptive_scale = False  # 9001 # 80
         if hs is not None:
             feat_cfg._chip_cfg = hs.prefs.chip_cfg  # Features depend on chips
         else:
@@ -327,7 +328,9 @@ class FeatureConfig(ConfigBase):
     def get_dict_args(feat_cfg):
         dict_args = {
             'scale_min': feat_cfg.scale_min,
-            'scale_max': feat_cfg.scale_max, }
+            'scale_max': feat_cfg.scale_max,
+            'use_adaptive_scale': feat_cfg.use_adaptive_scale
+        }
         return dict_args
 
     def get_uid_list(feat_cfg):
@@ -341,6 +344,7 @@ class FeatureConfig(ConfigBase):
         feat_uids += [feat_cfg.feat_type]
         feat_uids += [',white'] * feat_cfg.whiten
         feat_uids += [',%r_%r' % (feat_cfg.scale_min, feat_cfg.scale_max)]
+        feat_uids += [',adaptive'] * feat_cfg.use_adaptive_scale
         feat_uids += [')']
         feat_uids += feat_cfg._chip_cfg.get_uid_list()
         return feat_uids

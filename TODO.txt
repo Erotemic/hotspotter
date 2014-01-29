@@ -61,6 +61,9 @@ Add ability to orient an entire image.
 When drawing ROIs theta is not always specified when it should be in
 vizualizations. 
 
+* Changing preferences from adaptive_scale=false to adaptive_scale=true does
+* not do anything when a query has already been run. 
+
 * Images like ._MPALA_STEWART_0232.JPG do not seem to be images. Do not add
 * them as if they were
 

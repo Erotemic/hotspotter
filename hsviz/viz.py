@@ -300,7 +300,7 @@ def _annotate_qcx_match_results(hs, res, qcx, kpts, cx2_color):
 def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=None, nRandKpts=None, rect=False):
     #print('[viz] _annotate_kpts()')
     if color is None:
-        color = 'distinct' if sel_fx is None else df2.BLUE
+        color = 'distinct' if sel_fx is None else df2.ORANGE
     ell_args = {
         'ell': draw_ell,
         'pts': draw_pts,
@@ -327,7 +327,7 @@ def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=None, nRandKpts=None,
     if sel_fx is not None:
         # Draw selected keypoint
         sel_kpts = kpts[sel_fx:sel_fx + 1]
-        df2.draw_kpts2(sel_kpts, ell_color=df2.ORANGE, arrow=True, rect=True)
+        df2.draw_kpts2(sel_kpts, ell_color=df2.BLUE, arrow=True, rect=True)
 
 
 @profile
@@ -493,7 +493,7 @@ def show_chipres(hs, res, cx, fnum=None, pnum=None, sel_fm=[], in_image=False, *
     x2, y2, w2, h2 = xywh2
     if len(sel_fm) > 0:
         # Draw any selected matches
-        _smargs = dict(rect=True, colors=df2.ORANGE)
+        _smargs = dict(rect=True, colors=df2.BLUE)
         df2.draw_fmatch(xywh1, xywh2, kpts1, kpts2, sel_fm, **_smargs)
     offset1 = (x1, y1)
     offset2 = (x2, y2)

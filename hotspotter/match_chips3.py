@@ -148,7 +148,7 @@ def execute_query_fast(hs, qdat, qcxs, dcxs):
     # Nearest neighbors
     neighbs = mf.nearest_neighbors(hs, qcxs, qdat)
     # Nearest neighbors weighting and scoring
-    weights  = mf.weight_neighbors(hs, neighbs, qdat)
+    weights, filt2_meta = mf.weight_neighbors(hs, neighbs, qdat)
     # Thresholding and weighting
     nnfiltFILT = mf.filter_neighbors(hs, neighbs, weights, qdat)
     # Nearest neighbors to chip matches
@@ -157,7 +157,7 @@ def execute_query_fast(hs, qdat, qcxs, dcxs):
     matchesSVER = mf.spatial_verification(hs, matchesFILT, qdat)
     # Query results format
     result_list = [
-        mf.chipmatch_to_resdict(hs, matchesSVER, qdat),
+        mf.chipmatch_to_resdict(hs, matchesSVER, filt2_meta, qdat),
     ]
     return result_list
 

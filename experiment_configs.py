@@ -133,7 +133,10 @@ vsmany_best = {
 }
 best = vsmany_best
 
-vsmany_kenya = vsmany_best.copy()
+adaptive_test = vsmany_best.copy()
+adaptive_test.update({
+    'use_adaptive_scale': [True, False],
+})
 
 vsmany_kenya = vsmany_best.copy()
 #vsmany_kenya.update({

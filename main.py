@@ -178,10 +178,10 @@ if __name__ == '__main__':
         def vgd():
             return generate_training.vgd(hs)
 
-        from PyQt4.QtCore import pyqtRemoveInputHook
-        from IPython.lib.inputhook import enable_qt4
-        pyqtRemoveInputHook()
-        enable_qt4()
+        #from PyQt4.QtCore import pyqtRemoveInputHook
+        #from IPython.lib.inputhook import enable_qt4
+        #pyqtRemoveInputHook()
+        #enable_qt4()
         exec(helpers.ipython_execstr())
         sys.exit(1)
     if not embedded:

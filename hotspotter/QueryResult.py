@@ -39,9 +39,9 @@ class QueryResult(DynStruct):
     #__slots__ = ['true_uid', 'qcx', 'query_uid', 'uid', 'title', 'nn_time',
                  #'weight_time', 'filt_time', 'build_time', 'verify_time',
                  #'cx2_fm', 'cx2_fs', 'cx2_fk', 'cx2_score']
-    def __init__(res, qcx, uid, query_cfg=None):
+    def __init__(res, qcx, uid, qdat=None):
         super(QueryResult, res).__init__()
-        res.true_uid  = '' if query_cfg is None else query_cfg.get_uid()
+        res.true_uid  = '' if qdat is None else qdat.get_uid()
         res.qcx       = qcx
         res.query_uid = uid
         res.uid       = uid
@@ -57,6 +57,7 @@ class QueryResult(DynStruct):
         res.cx2_fs = np.array([], dtype=FS_DTYPE)
         res.cx2_fk = np.array([], dtype=FK_DTYPE)
         res.cx2_score = np.array([])
+        res.filt2_meta = {}  # messy
 
     def has_cache(res, hs):
         return query_result_exists(hs, res.qcx)

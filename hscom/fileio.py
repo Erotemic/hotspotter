@@ -278,6 +278,8 @@ def exiftime_to_unixtime(datetime_str):
         return -1
     except ValueError as ex:
         if isinstance(datetime_str, str):
+            if datetime_str.find('No EXIF Data') == 0:
+                return -1
             if datetime_str.find('Invalid') == 0:
                 return -1
         print('!!!!!!!!!!!!!!!!!!')

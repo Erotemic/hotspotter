@@ -5,14 +5,14 @@ from hscom import __common__
 # Python
 from os.path import dirname, join, splitext
 import shutil
+from itertools import izip
 # Science
 import numpy as np
 from scipy.cluster.hierarchy import fclusterdata
 # HotSpotter
-import fileio as io
-import helpers
-import load_data2 as ld2
-from itertools import izip
+from hscom import fileio as io
+from hscom import helpers
+from hotspotter import load_data2 as ld2
 
 #from dbgimport import *  # NOQA
 

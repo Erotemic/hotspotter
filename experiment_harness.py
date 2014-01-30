@@ -275,7 +275,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         db_name = hs.get_db_name(True)
         cfg_score_title = db_name + ' rank scores'
         cfgscores = np.array([nLessX_dict[int(X)] for X in X_list]).T
-        import latex_formater as latex
+        from hscom import latex_formater as latex
 
         replace_rowlbl = [(' *cfgx *', ' ')]
         tabular_kwargs = dict(title=cfg_score_title, out_of=nQuery,

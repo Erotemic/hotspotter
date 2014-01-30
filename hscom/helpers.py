@@ -1952,3 +1952,34 @@ def all_dict_combinations(varied_dict):
     tups_list = [[(key, val) for val in val_list] for (key, val_list) in viter]
     dict_list = [{key: val for (key, val) in tups} for tups in iprod(*tups_list)]
     return dict_list
+
+
+def stash_testdata(*args):
+    import shelve
+    shelf = shelve.open('test_data.shelf')
+    locals_ = get_parent_locals()
+    for key in args:
+        print('Stashing key=%r' % key)
+        shelf[key] = locals_[key]
+    shelf.close()
+
+
+def load_testdata(*args):
+    import shelve
+    shelf = shelve.open('test_data.shelf')
+    ret = [shelf[key] for key in args]
+    shelf.close()
+    if len(ret) == 1:
+        ret = ret[0]
+    return ret
+
+
+def import_testdata():
+    from hscom import helpers
+    import shelve
+    shelf = shelve.open('test_data.shelf')
+    print('importing\n * ' + '\n * '.join(shelf.keys()))
+    shelf_exec = helpers.execstr_dict(shelf, 'shelf')
+    exec(shelf_exec)
+    shelf.close()
+    return import_testdata.func_code.co_code

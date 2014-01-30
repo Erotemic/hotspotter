@@ -182,6 +182,27 @@ def _gx2_unixtime(hs, gx_list):
     return unixtime_list
 
 
+def _cx2_tnx(hs, cx_input):
+    'maps chip index to a name index (uses negative chip index if unnamed)'
+    cx2_nx = hs.tables.cx2_nx
+    tnx_output = cx2_nx[cx_input]
+    # Apply temporary labels to any unnamed chip
+    is_uniden = tnx_output <= 2
+    if isinstance(cx_input, np.ndarray):
+        tnx_output[is_uniden] = -cx_input[is_uniden]
+    elif is_uniden:
+        tnx_output = -cx_input
+    return tnx_output
+
+
+def __define_method(hs, method_name):
+    from hotspotter import HotSpotterAPI as api
+    api.rrr()
+    method_name = 'cx2_tnx'
+    hs.__dict__[method_name] = lambda *args: api.__dict__['_' + method_name](hs, *args)
+    #hs.cx2_tnx = lambda *args: api._cx2_tnx(hs, *args)
+
+
 class HotSpotter(DynStruct):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
@@ -676,7 +697,7 @@ class HotSpotter(DynStruct):
         db_name = split(hs.dirs.db_dir)[1]
         if devmode:
             # Grab the dev name insetad
-            import params
+            from hscom import params
             dev_databases = params.dev_databases
             db_tups = [(v, k) for k, v in dev_databases.iteritems() if v is not None]
             #print('  \n'.join(map(str,db_tups)))
@@ -747,6 +768,9 @@ class HotSpotter(DynStruct):
         cx2_nx = hs.tables.cx2_nx
         nx2_name = hs.tables.nx2_name
         return nx2_name[cx2_nx[cx]]
+
+    def cx2_tnx(hs, cx_input):
+        return _cx2_tnx(hs, cx_input)
 
     def cx2_gname(hs, cx, full=False):
         gx =  hs.tables.cx2_gx[cx]

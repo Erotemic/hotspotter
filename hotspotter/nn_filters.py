@@ -35,17 +35,83 @@ print(LNBNN_fn(vdist4, ndist)) * 1000
 '''
 
 
+def mark_name_valid_normalizers(qfx2_normnx, qfx2_topnx, qnx=None):
+    #columns = qfx2_topnx
+    #matrix = qfx2_normnx
+    Kn = qfx2_normnx.shape[1]
+    qfx2_valid = True - compare_matrix_columns(qfx2_normnx, qfx2_topnx)
+    if qnx is not None:
+        qfx2_valid = np.logical_and(qfx2_normnx != qnx, qfx2_valid)
+    qfx2_validlist = [np.where(normrow)[0] for normrow in qfx2_valid]
+    qfx2_selnorm = np.array([poslist[0] - Kn if len(poslist) != 0 else -1 for
+                            poslist in qfx2_validlist], np.int32)
+    return qfx2_selnorm
+
+
+def compare_matrix_columns(matrix, columns):
+    #row_matrix = matrix.T
+    #row_list   = columns.T
+    return compare_matrix_to_rows(matrix.T, columns.T).T
+
+
+def compare_matrix_to_rows(row_matrix, row_list, comp_op=np.equal, logic_op=np.logical_or):
+    '''
+    Compares each row in row_list to each row in row matrix using comp_op
+    Both must have the same number of columns.
+    Performs logic_op on the results of each individual row
+
+    compop   = np.equal
+    logic_op = np.logical_or
+    '''
+    row_result_list = [np.array([comp_op(matrow, row) for matrow in row_matrix]) for row in row_list]
+    output = row_result_list[0]
+    for row_result in row_result_list[1:]:
+        output = logic_op(output, row_result)
+    return output
+
+
 def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, qdat):
+    #from hscom import helpers
+    #helpers.stash_testdata('qcx2_nns')
     # Only valid for vsone
     K = qdat.cfg.nn_cfg.K
-    qcx2_norm_weight = {}
+    Knorm = qdat.cfg.nn_cfg.Knorm
+    rule  = qdat.cfg.nn_cfg.normalier_rule
+    qcx2_weight = {qcx: None for qcx in qcx2_nns.iterkeys()}
+    qcx2_selnorms = {qcx: None for qcx in qcx2_nns.iterkeys()}
+    # Database feature index to chip index
+    dx2_cx = qdat._data_index.ax2_cx
+    dx2_fx = qdat._data_index.ax2_fx
     for qcx in qcx2_nns.iterkeys():
-        (_, qfx2_dist) = qcx2_nns[qcx]
+        (qfx2_dx, qfx2_dist) = qcx2_nns[qcx]
         qfx2_nndist = qfx2_dist[:, 0:K]
-        qfx2_normdist = qfx2_dist[:, -1:]
+        if rule == 'last':
+            # Use the last normalizer
+            qfx2_selnorm = np.zeros(len(qfx2_dist), np.int32) + (K + Knorm - 1)
+        elif rule == 'name':
+            # Get the top names you do not want your normalizer to be from
+            qtnx = hs.cx2_tnx(qcx)
+            nTop = max(1, min(K, 3))
+            qfx2_topdx = qfx2_dx.T[0:nTop, :].T
+            qfx2_normdx = qfx2_dx.T[-Knorm:].T
+            # Apply temporary uniquish name
+            qfx2_toptnx = hs.cx2_tnx(dx2_cx[qfx2_topdx])
+            qfx2_normtnx = hs.cx2_tnx(dx2_cx[qfx2_normdx])
+            # Inspect the potential normalizers
+            qfx2_selnorm = mark_name_valid_normalizers(qfx2_normtnx, qfx2_toptnx, qtnx)
+            qfx2_selnorm += (K + Knorm)  # convert form negative to pos indexes
+        else:
+            raise NotImplementedError('[nn_filters] no rule=%r' % rule)
+        qfx2_normdist = np.array([dists[normx] for (dists, normx) in izip(qfx2_dist, qfx2_selnorm)])
+        qfx2_normdx = np.array([dxs[normx] for (dxs, normx) in izip(qfx2_dx, qfx2_selnorm)])
+        qfx2_normmeta = np.array([(dx2_cx[dx], dx2_fx[dx]) for dx in qfx2_normdx])
+        # Ensure shapes are valid
+        qfx2_normdist.shape = (len(qfx2_dx), 1)
         qfx2_normweight = normweight_fn(qfx2_nndist, qfx2_normdist)
-        qcx2_norm_weight[qcx] = qfx2_normweight
-    return qcx2_norm_weight
+        # Output
+        qcx2_weight[qcx]   = qfx2_normweight
+        qcx2_selnorms[qcx] = qfx2_normmeta
+    return qcx2_weight, qcx2_selnorms
     #print('K = %r' % K)
     #print('Knorm = %r' % Knorm)
     #print('---------')
@@ -70,19 +136,22 @@ def nn_lnrat_weight(*args):
     return _nn_normalized_weight(LNRAT_fn, *args)
 
 
+# TODO NON NORMALIZED WEIGHTS MUST NOW RESUTRN A QFX2_SELNORM
+
 def nn_bursty_weight(hs, qcx2_nns, qdat):
     'Filters matches to a feature which is matched > burst_thresh #times'
     # Half-generalized to vsmany
     # Assume the first nRows-1 rows are the matches (last row is normalizer)
     K = qdat.cfg.nn_cfg.K
-    qcx2_bursty_weight = {}
+    qcx2_bursty_weight = {qcx: None for qcx in qcx2_nns.iterkeys()}
+    qcx2_metaweight = {qcx: None for qcx in qcx2_nns.iterkeys()}
     for qcx in qcx2_nns.iterkeys():
         (qfx2_dx, qfx2_dist) = qcx2_nns[qcx]
         qfx2_nn = qfx2_dx[:, 0:K]
         dx2_frequency  = np.bincount(qfx2_nn.flatten())
         qfx2_bursty = dx2_frequency[qfx2_nn]
         qcx2_bursty_weight[qcx] = qfx2_bursty
-    return qcx2_bursty_weight
+    return qcx2_bursty_weight, qcx2_metaweight
 
 '''
 %run dev.py
@@ -99,7 +168,8 @@ def nn_recip_weight(hs, qcx2_nns, qdat):
     checks = qdat.cfg.nn_cfg.checks
     dx2_data = data_index.ax2_data
     data_flann = data_index.flann
-    qcx2_recip_weight = {}
+    qcx2_recip_weight = {qcx: None for qcx in qcx2_nns.iterkeys()}
+    qcx2_metaweight = {qcx: None for qcx in qcx2_nns.iterkeys()}
     for qcx in qcx2_nns.iterkeys():
         (qfx2_dx, qfx2_dist) = qcx2_nns[qcx]
         nQuery = len(qfx2_dx)
@@ -116,7 +186,7 @@ def nn_recip_weight(hs, qcx2_nns, qdat):
         # Test if nearest neighbor distance is less than reciprocal distance
         qfx2_reciprocalness = qfx2_recipmaxdist - qx2_nndist
         qcx2_recip_weight[qcx] = qfx2_reciprocalness
-    return qcx2_recip_weight
+    return qcx2_recip_weight, qcx2_metaweight
 
 
 def nn_roidist_weight(hs, qcx2_nns, qdat):
@@ -160,7 +230,8 @@ def nn_roidist_weight(hs, qcx2_nns, qdat):
 def nn_scale_weight(hs, qcx2_nns, qdat):
     # Filter by scale for funzies
     K = qdat.cfg.nn_cfg.K
-    cx2_scale_weight = {}
+    cx2_scale_weight = {qcx: None for qcx in qcx2_nns.iterkeys()}
+    qcx2_metaweight = {qcx: None for qcx in qcx2_nns.iterkeys()}
     data_index = qdat._data_index
     K = qdat.cfg.nn_cfg.K
     cx2_kpts = hs.feats.cx2_kpts
@@ -182,4 +253,4 @@ def nn_scale_weight(hs, qcx2_nns, qdat):
         qfx2_det2 = np.sqrt(1.0 / qfx2_det2)
         qfx2_scaledist = qfx2_det2 / qfx2_K_det1
         cx2_scale_weight[qcx] = qfx2_scaledist
-    return cx2_scale_weight
+    return cx2_scale_weight, qcx2_metaweight

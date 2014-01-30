@@ -13,6 +13,38 @@ import spatial_verification2 as sv2
 import voting_rules2 as vr2
 from hscom import helpers
 
+
+#=================
+# Module Concepts
+#=================
+'''
+PREFIXES:
+qcx2_XXX - prefix mapping query chip index to
+qfx2_XXX  - prefix mapping query chip feature index to
+
+TUPLES:
+ * nns    - a (qfx2_dx, qfx2_dist) tuple
+ * nnfilt - a (qfx2_fs, qfx2_valid) tuple
+
+SCALARS
+ * dx     - the index into the database of features
+ * dist   - the distance to a corresponding feature
+ * fs     - a score of a corresponding feature
+ * valid  - a valid bit for a corresponding feature
+
+REALIZATIONS:
+qcx2_nns - maping from query chip index to nns
+{
+  * qfx2_dx    - a ranked list of query feature indexes to database feature indexes
+  * qfx2_dist  - a ranked list of query feature indexes to database feature indexes
+}
+
+* qcx2_norm_weight - mapping from qcx to (qfx2_normweight, qfx2_selnorm)
+
+         = qcx2_nnfilt[qcx]
+
+
+'''
 #=================
 # Globals
 #=================
@@ -69,8 +101,7 @@ def nearest_neighbors(hs, qcxs, qdat):
     # Grab descriptors
     cx2_desc = hs.feats.cx2_desc
     # NNIndex
-    data_index = qdat._data_index
-    flann = data_index.flann
+    flann = qdat._data_index.flann
     # Output
     qcx2_nns = {}
     nNN, nDesc = 0, 0
@@ -107,11 +138,15 @@ def weight_neighbors(hs, qcx2_nns, qdat):
         return  {}
     nnfilter_list = filt_cfg._nnfilter_list
     filt2_weights = {}
+    filt2_meta = {}
     for nnfilter in nnfilter_list:
         nn_filter_fn = NN_FILTER_FUNC_DICT[nnfilter]
         # Apply [nnfilter] weight to each nearest neighbor
-        filt2_weights[nnfilter] = nn_filter_fn(hs, qcx2_nns, qdat)
-    return filt2_weights
+        # TODO FIX THIS!
+        qcx2_norm_weight, qcx2_selnorms = nn_filter_fn(hs, qcx2_nns, qdat)
+        filt2_weights[nnfilter] = qcx2_norm_weight
+        filt2_meta[nnfilter] = qcx2_selnorms
+    return filt2_weights, filt2_meta
 
 
 #==========================
@@ -130,8 +165,8 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
     filt2_tw = filt_cfg._filt2_tw
     print('[mf] Step 3) Filter neighbors: ' + filt_cfg.get_uid())
     # NNIndex
-    data_index = qdat._data_index
-    dx2_cx = data_index.ax2_cx
+    # Database feature index to chip index
+    dx2_cx = qdat._data_index.ax2_cx
     # Filter matches based on config and weights
     mark_progress, end_progress = progress_func(len(qcx2_nns))
     for count, qcx in enumerate(qcx2_nns.iterkeys()):
@@ -209,9 +244,8 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, qdat):
     K = qdat.cfg.nn_cfg.K
     is_vsone = query_type == 'vsone'
     # Data Index
-    data_index = qdat._data_index
-    dx2_cx = data_index.ax2_cx
-    dx2_fx = data_index.ax2_fx
+    dx2_cx = qdat._data_index.ax2_cx
+    dx2_fx = qdat._data_index.ax2_fx
     # Return var
     qcx2_chipmatch = {}
 
@@ -234,11 +268,12 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, qdat):
         qfx2_fx = dx2_fx[qfx2_nn]
         qfx2_qfx = np.tile(np.arange(nQuery), (K, 1)).T
         qfx2_k   = np.tile(np.arange(K), (nQuery, 1))
-        qfx2_tup = (qfx2_qfx, qfx2_cx, qfx2_fx, qfx2_fs, qfx2_k)
-        match_iter = izip(*[qfx2[qfx2_valid] for qfx2 in qfx2_tup])
+        # Pack feature matches into an interator
+        match_iter = izip(*[qfx2[qfx2_valid] for qfx2 in
+                            (qfx2_qfx, qfx2_cx, qfx2_fx, qfx2_fs, qfx2_k)])
         if not is_vsone:
             cx2_fm, cx2_fs, cx2_fk = new_fmfsfk(hs)
-            # Vsmany
+            # Vsmany - Iterate over feature matches
             for qfx, cx, fx, fs, fk in match_iter:
                 cx2_fm[cx].append((qfx, fx))
                 cx2_fs[cx].append(fs)
@@ -246,9 +281,9 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, qdat):
             chipmatch = _fix_fmfsfk(cx2_fm, cx2_fs, cx2_fk)
             qcx2_chipmatch[qcx] = chipmatch
         else:
-            # Vsone
+            # Vsone - Iterate over feature matches
             for qfx, cx, fx, fs, fk in match_iter:
-                cx2_fm[qcx].append((fx, qfx))
+                cx2_fm[qcx].append((fx, qfx))  # Note the difference
                 cx2_fs[qcx].append(fs)
                 cx2_fk[qcx].append(fk)
     #Vsone
@@ -397,9 +432,10 @@ def _fix_fmfsfk(cx2_fm, cx2_fs, cx2_fk):
 
 
 def new_fmfsfk(hs):
-    cx2_fm = [[] for _ in xrange(hs.get_num_chips())]
-    cx2_fs = [[] for _ in xrange(hs.get_num_chips())]
-    cx2_fk = [[] for _ in xrange(hs.get_num_chips())]
+    num_chips = hs.get_num_chips()
+    cx2_fm = [[] for _ in xrange(num_chips)]
+    cx2_fs = [[] for _ in xrange(num_chips)]
+    cx2_fk = [[] for _ in xrange(num_chips)]
     return cx2_fm, cx2_fs, cx2_fk
 
 
@@ -409,7 +445,7 @@ def new_fmfsfk(hs):
 
 
 @profile
-def chipmatch_to_resdict(hs, qcx2_chipmatch, qdat, aug=''):
+def chipmatch_to_resdict(hs, qcx2_chipmatch, filt2_meta, qdat, aug=''):
     print('[mf] Step 6) Convert chipmatch -> res')
     real_uid, title_uid = special_uids(qdat, aug)
     score_method = qdat.cfg.agg_cfg.score_method
@@ -422,6 +458,9 @@ def chipmatch_to_resdict(hs, qcx2_chipmatch, qdat, aug=''):
         res.cx2_score = cx2_score
         (res.cx2_fm, res.cx2_fs, res.cx2_fk) = chipmatch
         res.title = (title_uid + ' ' + aug).strip(' ')
+        res.filt2_meta = {}
+        for filt, qcx2_meta in filt2_meta.iteritems():
+            res.filt2_meta[filt] = qcx2_meta[qcx]
         qcx2_res[qcx] = res
     # Retain original score method
     return qcx2_res

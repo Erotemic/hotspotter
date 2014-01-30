@@ -73,6 +73,7 @@ class NNConfig(ConfigBase):
         # Core
         nn_cfg.K = 4
         nn_cfg.Knorm = 1
+        nn_cfg.normalier_rule = ['last', 'name'][0]
         # Filters
         nn_cfg.checks  = 1024  # 512#128
         nn_cfg.update(**kwargs)
@@ -269,10 +270,10 @@ class AggregateConfig(ConfigBase):
 class QueryConfig(ConfigBase):
     def __init__(query_cfg, hs=None, **kwargs):
         super(QueryConfig, query_cfg).__init__(name='query_cfg')
-        query_cfg.nn_cfg    = NNConfig(**kwargs)
-        query_cfg.filt_cfg  = FilterConfig(**kwargs)
-        query_cfg.sv_cfg    = SpatialVerifyConfig(**kwargs)
-        query_cfg.agg_cfg   = AggregateConfig(**kwargs)
+        query_cfg.nn_cfg   = NNConfig(**kwargs)
+        query_cfg.filt_cfg = FilterConfig(**kwargs)
+        query_cfg.sv_cfg   = SpatialVerifyConfig(**kwargs)
+        query_cfg.agg_cfg  = AggregateConfig(**kwargs)
         # Queries depend on features # creating without hs delays crash
         query_cfg._feat_cfg = FeatureConfig(**kwargs) if hs is None else hs.prefs.feat_cfg
         query_cfg.use_cache = False

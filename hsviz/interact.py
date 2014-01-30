@@ -329,6 +329,16 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
         sift1, sift2 = desc1[fx1], desc2[fx2]
         # Extracted keypoints to draw
         extracted_list = [(rchip1, kp1, sift1, fx1), (rchip2, kp2, sift2, fx2)]
+        if hasattr(res, 'filt2_meta'):
+            if 'lnbnn' in res.filt2_meta:
+                qfx2_norm = res.filt2_meta['lnbnn']
+                # Normalizing chip and feature
+                (cx3, fx3) = qfx2_norm[fx1]
+                rchip3 = hs.get_chip(cx3)
+                kp3 = hs.get_kpts(cx3)[fx3]
+                sift3 = hs.get_desc(cx3)[fx3]
+                extracted_list.append((rchip3, kp3, sift3, fx3))
+
         nRows, nCols = len(extracted_list) + 1, 3
         # Draw matching chips and features
         pnum1 = (nRows, 1, 1)

@@ -1497,7 +1497,7 @@ def stack_images(img1, img2, vert=None):
     return imgB, woff, hoff
 
 
-def show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm=None, title=None,
+def show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm=None, fs=None, title=None,
                     vert=None, fnum=None, pnum=None, **kwargs):
     '''Draws two chips and the feature matches between them. feature matches
     kpts1 and kpts2 use the (x,y,a,c,d)
@@ -1513,7 +1513,7 @@ def show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm=None, title=None,
     # Show the stacked chips
     fig, ax = imshow(match_img, title=title, fnum=fnum, pnum=pnum)
     # Overlay feature match nnotations
-    draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, **kwargs)
+    draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs, **kwargs)
     return ax, xywh1, xywh2
 
 
@@ -1554,6 +1554,9 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
     # Draw Lines and Ellipses and Points oh my
     if nMatch > 0:
         colors = [kwargs['colors']] * nMatch if 'colors' in kwargs else distinct_colors(nMatch)
+        if fs is not None:
+            colors = feat_scores_to_color(fs)
+
         acols = add_alpha(colors)
 
         # Helper functions

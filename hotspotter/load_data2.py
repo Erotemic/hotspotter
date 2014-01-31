@@ -602,12 +602,19 @@ def make_name_csv2(hs, nx_list):
 def make_chip_csv(hs):
     'returns an chip table csv string'
     valid_cx = hs.get_valid_cxs()
+    if len(valid_cx) == 0:
+        return ''
     # Valid chip tables
     cx2_cid   = hs.tables.cx2_cid[valid_cx]
     # Use the indexes as ids (FIXME: Just go back to g/n-ids)
     cx2_gx   = hs.tables.cx2_gx[valid_cx] + 1  # FIXME
     cx2_nx   = hs.tables.cx2_nx[valid_cx]   # FIXME
-    cx2_roi   = hs.tables.cx2_roi[valid_cx]
+    try:
+        cx2_roi = hs.tables.cx2_roi[valid_cx]
+    except IndexError as ex:
+        # THIS IS VERY WEIRD TO ME.
+        # I can use empty indexes in non-shaped arrays
+        cx2_roi = np.array([])
     cx2_theta = hs.tables.cx2_theta[valid_cx]
     prop_dict = {propkey: [cx2_propval[cx] for cx in iter(valid_cx)]
                  for (propkey, cx2_propval) in hs.tables.prop_dict.iteritems()}

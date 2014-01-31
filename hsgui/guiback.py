@@ -111,6 +111,7 @@ def _dev_reload():
     print('---------------------------')
     from hotspotter import DataStructures as ds
     from hotspotter import algos
+    from hotspotter import load_data2 as ld2
     from hotspotter import chip_compute2 as cc2
     from hotspotter import feature_compute2 as fc2
     from hotspotter import match_chips3 as mc3
@@ -135,6 +136,7 @@ def _dev_reload():
     helpers.rrr()
     io.rrr()
     # hotspotter
+    ld2.rrr()
     ds.rrr()
     mf.rrr()
     nn_filters.rrr()

@@ -54,21 +54,38 @@ class StreamStealer(QtCore.QObject):
     write_ = QtCore.pyqtSignal(str)
     flush_ =  QtCore.pyqtSignal()
 
-    def __init__(self, parent=None, iostream=None, share=False):
+    def __init__(self, front, parent=None, share=False):
         super(StreamStealer, self).__init__(parent)
-
-        # Remember which stream you've stolen
-        if iostream is not None:
-            self.iostream = iostream
-
         # Define the Stream Stealer write function
         if share:
             self.write = self.write_shared
         else:
             self.write = self.write_gui
+        self.write_.connect(front.gui_write)
+        self.flush_.connect(front.gui_flush)
+        # Do the stealing
+        #stream_holder = sys
+        #try:
+            #__IPYTHON__
+            #print('[front] detected __IPYTHON__')
+            #from IPython.utils import io as iio
+            #stream_holder = iio.IOTerm(None, self)
+            #return
+        #except NameError:
+            #print('[front] did not detect __IPYTHON__')
+            #pass
+        #except Exception as ex:
+            #print(ex)
+            #raise
+
+        # Remember which stream you've stolen
+        self.iostream = sys.stdout
+        # Redirect standard out to the StreamStealer object
+        sys.stdout = self
+        #steam_holder.stdout
 
     def write_shared(self, msg):
-        msg_ = str(msg)
+        msg_ = unicode(str(msg))
         self.iostream.write(msg_)
         self.write_.emit(msg_)
 
@@ -92,11 +109,7 @@ def _steal_stdout(front):
     print('[front] stealing standard out')
     if front.ostream is None:
         # Connect a StreamStealer object to the GUI output window
-        front.ostream = StreamStealer(iostream=sys.stdout, share=not noshare)
-        front.ostream.write_.connect(front.gui_write)
-        front.ostream.flush_.connect(front.gui_flush)
-        # Redirect standard out to the StreamStealer object
-        sys.stdout = front.ostream
+        front.ostream = StreamStealer(front, share=not noshare)
     else:
         print('[front] stream already stolen')
 

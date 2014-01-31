@@ -1296,35 +1296,25 @@ def feat_scores_to_color(fs, cmap_='hot'):
     return colors
 
 
-def colorbar(fs, colors):
-    sorted_scores = sorted(fs)
-    sorted_colors = [x for (y, x) in sorted(zip(fs, colors))]
-    #ax = gca()
+def colorbar(scalars, colors):
+    'adds a color bar next to the axes'
+    orientation = ['vertical', 'horizontal'][0]
+    TICK_FONTSIZE = 8
+    # Put colors and scalars in correct order
+    sorted_scalars = sorted(scalars)
+    sorted_colors = [x for (y, x) in sorted(zip(scalars, colors))]
+    # Make a listed colormap and mappable object
     listed_cmap = mpl.colors.ListedColormap(sorted_colors)
-    bounds = sorted_scores
-    #norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
     sm = plt.cm.ScalarMappable(cmap=listed_cmap)
-    sm.set_array(bounds)
-    #cb = mpl.colorbar.ColorbarBase(ax, cmap=cmap,
-                                   #norm=norm,
-                                   #ticks=bounds,  # optional
-                                   #spacing='proportional',
-                                   #orientation='horizontal')
-    orientation = 'vertical' # 'horizontal'
+    sm.set_array(sorted_scalars)
+    # Use mapable object to create the colorbar
     cb = plt.colorbar(sm, orientation=orientation)
-    if orientation == 'horizontal':
-        cb.ax.xaxis.set_ticks_position('bottom')
-        cb.ax.xaxis.set_ticks([0, .5, 1])
-    elif orientation == 'vertical':
-        cb.ax.yaxis.set_ticks_position('right')
-        cb.ax.yaxis.set_ticks([0, .5, 1])
-
-    #cb.ax.yaxis.set_ticks_position('left')
-    #cb.set_label('Discrete intervals, some other units')
-    #ax.invert_yaxis()
-    #cb.set_xticks(sorted_scores)
-    #cmap.set_over('0.25')
-    #cmap.set_under('0.75')
+    # Add the colorbar to the correct label
+    axis = cb.ax.xaxis if orientation == 'horizontal' else cb.ax.yaxis
+    position = 'bottom' if orientation == 'horizontal' else 'right'
+    axis.set_ticks_position(position)
+    axis.set_ticks([0, .5, 1])
+    cb.ax.tick_params(labelsize=TICK_FONTSIZE)
 
 
 def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),

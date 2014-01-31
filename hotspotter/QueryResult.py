@@ -82,7 +82,11 @@ class QueryResult(DynStruct):
             # tolist seems to convert them back to their original
             # python representation
             res.qcx = res.qcx.tolist()
-            res.filt2_meta = res.filt2_meta.tolist()
+            try:
+                res.filt2_meta = res.filt2_meta.tolist()
+            except AttributeError:
+                print('[qr] loading old result format')
+                res.filt2_meta = {}
             res.query_uid = str(res.query_uid)
             return True
         except IOError as ex:

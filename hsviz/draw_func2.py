@@ -21,6 +21,7 @@ import time
 import warnings
 # Matplotlib / Qt
 import matplotlib
+import matplotlib as mpl
 from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle, Circle, FancyArrow
@@ -230,8 +231,6 @@ def draw_border(ax, color=GREEN, lw=2, offset=None):
     rect.set_clip_on(False)
     rect.set_fill(False)
     rect.set_edgecolor(color)
-
-
 
 
 def draw_roi(roi, label=None, bbox_color=(1, 0, 0),
@@ -1317,7 +1316,10 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
     if LINE_ALPHA_OVERRIDE is not None:
         line_alpha = LINE_ALPHA_OVERRIDE
     line_group = LineCollection(segments, linewidth, color_list, alpha=line_alpha)
+    #plt.colorbar(line_group, ax=ax)
     ax.add_collection(line_group)
+    #figure(100)
+    #plt.hexbin(x,y, cmap=plt.cm.YlOrRd_r)
 
 
 def draw_kpts(kpts, *args, **kwargs):
@@ -1556,6 +1558,21 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
         colors = [kwargs['colors']] * nMatch if 'colors' in kwargs else distinct_colors(nMatch)
         if fs is not None:
             colors = feat_scores_to_color(fs)
+            #cmap = mpl.colors.ListedColormap(colors) #.cm.hot
+            #print('colors = %r ' % fs)
+            #print('colors = %r ' % colors)
+            #ax = gca()
+            #norm = mpl.colors.Normalize(vmin=fs.min(), vmax=fs.max())
+            # ColorbarBase derives from ScalarMappable and puts a colorbar
+            # in a specified axes, so it has everything needed for a
+            # standalone colorbar.  There are many more kwargs, but the
+            # following gives a basic continuous colorbar with ticks
+            # and labels.
+            #cb1 = mpl.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm,
+                                            #orientation='vertical')
+            #cb1.set_label('lnbnn matching score')
+            #ax.invert_yaxis()
+            #cb1.set_label('Some Units')
 
         acols = add_alpha(colors)
 
@@ -1581,6 +1598,7 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
             _drawlines(color_list=colors)
     else:
         draw_boxedX(xywh2)
+    legend()
     return None
 
 

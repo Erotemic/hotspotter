@@ -71,7 +71,7 @@ def interact_image(hs, gx, sel_cxs=[], select_cx_func=None, fnum=1, **kwargs):
             hs_viewtype = ax.__dict__.get('_hs_viewtype', '')
             print_(' hs_viewtype=%r' % hs_viewtype)
             centers = ax.__dict__.get('_hs_centers')
-            if len(centers) == 0:
+            if centers is None or len(centers) == 0:
                 print(' ...no chips to click')
                 return
             x, y = event.xdata, event.ydata

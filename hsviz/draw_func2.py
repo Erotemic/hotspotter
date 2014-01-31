@@ -1310,9 +1310,15 @@ def colorbar(fs, colors):
                                    #ticks=bounds,  # optional
                                    #spacing='proportional',
                                    #orientation='horizontal')
-    cb = plt.colorbar(sm)
-    cb.ax.yaxis.set_ticks_position('right')
-    cb.ax.yaxis.set_ticks([0, .5, 1])
+    orientation = 'vertical' # 'horizontal'
+    cb = plt.colorbar(sm, orientation=orientation)
+    if orientation == 'horizontal':
+        cb.ax.xaxis.set_ticks_position('bottom')
+        cb.ax.xaxis.set_ticks([0, .5, 1])
+    elif orientation == 'vertical':
+        cb.ax.yaxis.set_ticks_position('right')
+        cb.ax.yaxis.set_ticks([0, .5, 1])
+
     #cb.ax.yaxis.set_ticks_position('left')
     #cb.set_label('Discrete intervals, some other units')
     #ax.invert_yaxis()
@@ -1460,6 +1466,11 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
         if len(img.shape) == 3 and img.shape[2] == 3:
             # img is in a color format
             imgBGR = img
+            if imgBGR.dtype == np.float64:
+                if imgBGR.max() <= 1:
+                    imgBGR = np.array(imgBGR, dtype=np.float32)
+                else:
+                    imgBGR = np.array(imgBGR, dtype=np.uint8)
             imgRGB = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
             ax.imshow(imgRGB, **plt_imshow_kwargs)
         elif len(img.shape) == 2:

@@ -382,11 +382,11 @@ def show_open_db_dlg(parent=None):
 @profile
 def init_qtapp():
     global IS_INIT
-    app = Qt.QCoreApplication.instance()
+    app = PyQt4.Qt.QCoreApplication.instance()
     is_root = app is None
     if is_root:  # if not in qtconsole
         print('[*guitools] Initializing QApplication')
-        app = Qt.QApplication(sys.argv)
+        app = PyQt4.Qt.QApplication(sys.argv)
     try:
         __IPYTHON__
         is_root = False
@@ -442,7 +442,7 @@ def exec_core_app_loop(app):
 @profile
 def ping_python_interpreter(frequency=4200):  # 4200):
     'Create a QTimer which lets the python catch ctrl+c'
-    timer = Qt.QTimer()
+    timer = PyQt4.Qt.QTimer()
     timer.timeout.connect(lambda: None)
     timer.start(frequency)
     return timer

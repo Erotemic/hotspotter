@@ -952,7 +952,7 @@ def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
     if fm is not None:
         return fm
     print('[viz] ensure_fm()')
-    import QueryResult as qr
+    from hotspotter import QueryResult as qr
     if res == 'db':
         query_args = hs.prefs.query_cfg.flat_dict()
         query_args['sv_on'] = False
@@ -994,7 +994,7 @@ def ensure_cx2(hs, cx1, cx2=None):
 def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kwargs):
     #kwargs = {}
     from hscom import helpers
-    import spatial_verification2 as sv2
+    from hotspotter import spatial_verification2 as sv2
     import cv2
     print('\n======================')
     cx2 = ensure_cx2(hs, cx1, kwargs.pop('cx2', None))
@@ -1036,8 +1036,8 @@ def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kw
     print('warp affine')
     rchip1_At = cv2.warpAffine(rchip1, Aff[0:2, :], wh2)
 
-    rchip2_blendA = np.zeros((h2, w2), dtype=rchip2.dtype)
-    rchip2_blendH = np.zeros((h2, w2), dtype=rchip2.dtype)
+    rchip2_blendA = np.zeros(rchip2.shape, dtype=rchip2.dtype)
+    rchip2_blendH = np.zeros(rchip2.shape, dtype=rchip2.dtype)
     rchip2_blendA = rchip2 / 2 + rchip1_At / 2
     rchip2_blendH = rchip2 / 2 + rchip1_Ht / 2
 

@@ -10,6 +10,7 @@ import warnings
 import numpy as np
 # Hotspotter
 import draw_func2 as df2
+import extract_patch
 from hscom import fileio as io
 from hscom import helpers
 
@@ -348,7 +349,7 @@ def show_chip(hs, cx=None, allres=None, res=None, draw_ell=True,
     title_list += [hs.cidstr(cx)]
     # FIXME
     #title_list += ['gname=%r' % hs.cx2_gname(cx)]
-    #title_list += ['name=%r'  % hs.cx2_name(cx)]
+    title_list += ['name=%r'  % hs.cx2_name(cx)]
     #title_list += [hs.num_indexed_gt_str(cx)]
     if NO_LABEL_OVERRIDE:
         title_str = ''
@@ -820,6 +821,127 @@ def _show_res(hs, res, **kwargs):
 #  --- TESTING FUNCS ---   #
 #==========================#
 
+
+def kp_info(kp):
+    xy_str   = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
+    acd_str  = '[(%3.1f,  0.00),\n' % (kp[2],)
+    acd_str += ' (%3.1f, %3.1f)]' % (kp[3], kp[4],)
+    scale = np.sqrt(kp[2] * kp[4])
+    return xy_str, acd_str, scale
+
+
+def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None,
+                  cx=None, info='', type_=None):
+    pnum_ = lambda px: (nRows, nCols, px)
+
+    def _draw_patch(**kwargs):
+        return extract_patch.draw_keypoint_patch(rchip, kp, sift, **kwargs)
+
+    # Feature strings
+    xy_str, acd_str, scale = kp_info(kp)
+
+    # Draw the unwarped selected feature
+    ax = _draw_patch(fnum=fnum, pnum=pnum_(px + 1))
+    ax._hs_viewtype = 'unwarped'
+    ax._hs_cx = cx
+    ax._hs_fx = fx
+    unwarped_lbl = 'affine feature inv(A) =\n' + acd_str
+    df2.set_xlabel(unwarped_lbl, ax)
+
+    # Draw the warped selected feature
+    ax = _draw_patch(fnum=fnum, pnum=pnum_(px + 2), warped=True)
+    ax._hs_viewtype = 'warped'
+    ax._hs_cx = cx
+    ax._hs_fx = fx
+    warped_lbl = ('warped feature\n' +
+                  'fx=%r scale=%.1f\n' +
+                  '%s' + info) % (fx, scale, xy_str)
+    df2.set_xlabel(warped_lbl, ax)
+
+    border_color = {None: None,
+                    'query': None,
+                    'match': df2.BLUE,
+                    'norm': df2.ORANGE}[type_]
+    if border_color is not None:
+        df2.draw_border(ax, color=border_color)
+
+    # Draw the SIFT representation
+    sigtitle = '' if px != 3 else 'sift histogram'
+    ax = df2.plot_sift_signature(sift, sigtitle, fnum=fnum, pnum=pnum_(px + 3))
+    ax._hs_viewtype = 'histogram'
+    if prevsift is not None:
+        from hotspotter import algos
+        dist_list = ['L1', 'L2', 'hist_isect', 'emd']
+        distmap = algos.compute_distances(sift, prevsift, dist_list)
+        dist_str = ', '.join(['(%s, %.1E)' % (key, val) for key, val in distmap.iteritems()])
+        df2.set_xlabel(dist_str)
+    return px + nCols
+
+#----
+
+
+def show_nearest_descriptors(hs, qcx, qfx, fnum=None):
+    if fnum is None:
+        fnum = df2.next_fnum()
+    # Inspect the nearest neighbors of a descriptor
+    dx2_cx = hs.qdat._data_index.ax2_cx
+    dx2_fx = hs.qdat._data_index.ax2_fx
+    K      = hs.qdat.cfg.nn_cfg.K
+    Knorm  = hs.qdat.cfg.nn_cfg.Knorm
+    checks = hs.qdat.cfg.nn_cfg.checks
+    flann  = hs.qdat._data_index.flann
+    qfx2_desc = hs.get_desc(qcx)[qfx:qfx + 1]
+
+    try:
+        (qfx2_dx, qfx2_dist) = flann.nn_index(qfx2_desc, K + Knorm, checks=checks)
+        qfx2_cx = dx2_cx[qfx2_dx]
+        qfx2_fx = dx2_fx[qfx2_dx]
+
+        def get_extract_tuple(cx, fx, k=-1):
+            rchip = hs.get_chip(cx)
+            kp    = hs.get_kpts(cx)[fx]
+            sift  = hs.get_desc(cx)[fx]
+            if k == -1:
+                info = '\nquery %s, fx=%r' % (hs.cidstr(cx), fx)
+                type_ = 'query'
+            elif k < K:
+                type_ = 'match'
+                info = '\nmatch %s, fx=%r k=%r, dist=%r' % (hs.cidstr(cx), fx, k, qfx2_dist[0, k])
+            elif k < Knorm + K:
+                type_ = 'norm'
+                info = '\nnorm  %s, fx=%r k=%r, dist=%r' % (hs.cidstr(cx), fx, k, qfx2_dist[0, k])
+            else:
+                raise Exception('[viz] problem k=%r')
+            return (rchip, kp, sift, fx, cx, info, type_)
+
+        extracted_list = []
+        extracted_list.append(get_extract_tuple(qcx, qfx, -1))
+        for k in xrange(K + Knorm):
+            tup = get_extract_tuple(qfx2_cx[0, k], qfx2_fx[0, k], k)
+            extracted_list.append(tup)
+        #print('[viz] K + Knorm = %r' % (K + Knorm))
+
+        # Draw the _select_ith_match plot
+        nRows, nCols = len(extracted_list), 3
+        # Draw selected feature matches
+        prevsift = None
+        df2.figure(fnum=fnum, docla=True, doclf=True)
+        px = 0  # plot offset
+        for (rchip, kp, sift, fx, cx, info, type_) in extracted_list:
+            print('[viz] ' + info.replace('\n', ''))
+            px = draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px,
+                               prevsift=prevsift, cx=cx, info=info, type_=type_)
+            prevsift = sift
+
+        df2.adjust_subplots_safe(hspace=1)
+
+    except Exception as ex:
+        print('[viz] Error in show nearest descriptors')
+        print(ex)
+        raise
+
+
+#----
 
 def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
     '''A feature match (fm) is a list of M 2-tuples.

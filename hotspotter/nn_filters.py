@@ -3,6 +3,7 @@ from hscom import __common__
 print, print_, print_on, print_off, rrr, profile, printDBG =\
     __common__.init(__name__, '[nnfilt]', DEBUG=False)
 import numpy as np
+from numpy import array
 from itertools import izip
 
 eps = 1E-8
@@ -22,8 +23,8 @@ def LNBNN_fn(vdist, ndist):
 
 # normweight_fn = LNBNN_fn
 ''''
-ndist = np.array([[0, 1, 2], [3, 4, 5], [3, 4, 5], [3, 4, 5],  [9, 7, 6] ])
-vdist = np.array([[3, 2, 1, 5], [3, 2, 5, 6], [3, 4, 5, 3], [3, 4, 5, 8],  [9, 7, 6, 3] ])
+ndist = array([[0, 1, 2], [3, 4, 5], [3, 4, 5], [3, 4, 5],  [9, 7, 6] ])
+vdist = array([[3, 2, 1, 5], [3, 2, 5, 6], [3, 4, 5, 3], [3, 4, 5, 8],  [9, 7, 6, 3] ])
 vdist1 = vdist[:,0:1]
 vdist2 = vdist[:,0:2]
 vdist3 = vdist[:,0:3]
@@ -43,8 +44,8 @@ def mark_name_valid_normalizers(qfx2_normnx, qfx2_topnx, qnx=None):
     if qnx is not None:
         qfx2_valid = np.logical_and(qfx2_normnx != qnx, qfx2_valid)
     qfx2_validlist = [np.where(normrow)[0] for normrow in qfx2_valid]
-    qfx2_selnorm = np.array([poslist[0] - Kn if len(poslist) != 0 else -1 for
-                            poslist in qfx2_validlist], np.int32)
+    qfx2_selnorm = array([poslist[0] - Kn if len(poslist) != 0 else -1 for
+                          poslist in qfx2_validlist], np.int32)
     return qfx2_selnorm
 
 
@@ -63,7 +64,7 @@ def compare_matrix_to_rows(row_matrix, row_list, comp_op=np.equal, logic_op=np.l
     compop   = np.equal
     logic_op = np.logical_or
     '''
-    row_result_list = [np.array([comp_op(matrow, row) for matrow in row_matrix]) for row in row_list]
+    row_result_list = [array([comp_op(matrow, row) for matrow in row_matrix]) for row in row_list]
     output = row_result_list[0]
     for row_result in row_result_list[1:]:
         output = logic_op(output, row_result)
@@ -87,7 +88,7 @@ def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, qdat):
         qfx2_nndist = qfx2_dist[:, 0:K]
         if rule == 'last':
             # Use the last normalizer
-            qfx2_selnorm = np.zeros(len(qfx2_dist), np.int32) + (K + Knorm - 1)
+            qfx2_normk = np.zeros(len(qfx2_dist), np.int32) + (K + Knorm - 1)
         elif rule == 'name':
             # Get the top names you do not want your normalizer to be from
             qtnx = hs.cx2_tnx(qcx)
@@ -98,13 +99,19 @@ def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, qdat):
             qfx2_toptnx = hs.cx2_tnx(dx2_cx[qfx2_topdx])
             qfx2_normtnx = hs.cx2_tnx(dx2_cx[qfx2_normdx])
             # Inspect the potential normalizers
-            qfx2_selnorm = mark_name_valid_normalizers(qfx2_normtnx, qfx2_toptnx, qtnx)
-            qfx2_selnorm += (K + Knorm)  # convert form negative to pos indexes
+            qfx2_normk = mark_name_valid_normalizers(qfx2_normtnx, qfx2_toptnx, qtnx)
+            qfx2_normk += (K + Knorm)  # convert form negative to pos indexes
         else:
             raise NotImplementedError('[nn_filters] no rule=%r' % rule)
-        qfx2_normdist = np.array([dists[normx] for (dists, normx) in izip(qfx2_dist, qfx2_selnorm)])
-        qfx2_normdx = np.array([dxs[normx] for (dxs, normx) in izip(qfx2_dx, qfx2_selnorm)])
-        qfx2_normmeta = np.array([(dx2_cx[dx], dx2_fx[dx]) for dx in qfx2_normdx])
+        qfx2_normdist = [dists[normk]
+                         for (dists, normk) in izip(qfx2_dist, qfx2_normk)]
+        qfx2_normdx   = [dxs[normk]
+                         for (dxs, normk)   in izip(qfx2_dx, qfx2_normk)]
+        qfx2_normmeta = [(dx2_cx[dx], dx2_fx[dx], normk)
+                         for (normk, dx) in izip(qfx2_normk, qfx2_normdx)]
+        qfx2_normdist = array(qfx2_normdist)
+        qfx2_normdx   = array(qfx2_normdx)
+        qfx2_normmeta = array(qfx2_normmeta)
         # Ensure shapes are valid
         qfx2_normdist.shape = (len(qfx2_dx), 1)
         qfx2_normweight = normweight_fn(qfx2_nndist, qfx2_normdist)
@@ -135,8 +142,6 @@ def nn_lnbnn_weight(*args):
 def nn_lnrat_weight(*args):
     return _nn_normalized_weight(LNRAT_fn, *args)
 
-
-# TODO NON NORMALIZED WEIGHTS MUST NOW RESUTRN A QFX2_SELNORM
 
 def nn_bursty_weight(hs, qcx2_nns, qdat):
     'Filters matches to a feature which is matched > burst_thresh #times'
@@ -206,17 +211,17 @@ def nn_roidist_weight(hs, qcx2_nns, qdat):
         nQuery = len(qfx2_dx)
         qfx2_cx = dx2_cx[qfx2_nn]
         qfx2_fx = dx2_fx[qfx2_nn]
-        qfx2_chipsize2 = np.array([cx2_rchip_size[cx] for cx in qfx2_cx.flat])
+        qfx2_chipsize2 = array([cx2_rchip_size[cx] for cx in qfx2_cx.flat])
         qfx2_chipsize2.shape = (nQuery, K, 2)
         qfx2_chipdiag2 = np.sqrt((qfx2_chipsize2 ** 2).sum(2))
         # Get query relative xy keypoints #.0160s / #.0180s (+cast)
-        qdiag = np.sqrt((np.array(cx2_rchip_size[qcx]) ** 2).sum())
-        qfx2_xy1 = np.array(qfx2_kpts[:, 0:2], np.float)
+        qdiag = np.sqrt((array(cx2_rchip_size[qcx]) ** 2).sum())
+        qfx2_xy1 = array(qfx2_kpts[:, 0:2], np.float)
         qfx2_xy1[:, 0] /= qdiag
         qfx2_xy1[:, 1] /= qdiag
         # Get database relative xy keypoints
-        qfx2_xy2 = np.array([cx2_kpts[cx][fx, 0:2] for (cx, fx) in
-                            izip(qfx2_cx.flat, qfx2_fx.flat)], np.float)
+        qfx2_xy2 = array([cx2_kpts[cx][fx, 0:2] for (cx, fx) in
+                          izip(qfx2_cx.flat, qfx2_fx.flat)], np.float)
         qfx2_xy2.shape = (nQuery, K, 2)
         qfx2_xy2[:, :, 0] /= qfx2_chipdiag2
         qfx2_xy2[:, :, 1] /= qfx2_chipdiag2
@@ -244,11 +249,11 @@ def nn_scale_weight(hs, qcx2_nns, qdat):
         nQuery = len(qfx2_dx)
         qfx2_cx = dx2_cx[qfx2_nn]
         qfx2_fx = dx2_fx[qfx2_nn]
-        qfx2_det1 = np.array(qfx2_kpts[:, [2, 4]], np.float).prod(1)
+        qfx2_det1 = array(qfx2_kpts[:, [2, 4]], np.float).prod(1)
         qfx2_det1 = np.sqrt(1.0 / qfx2_det1)
         qfx2_K_det1 = np.rollaxis(np.tile(qfx2_det1, (K, 1)), 1)
-        qfx2_det2 = np.array([cx2_kpts[cx][fx, [2, 4]] for (cx, fx) in
-                              izip(qfx2_cx.flat, qfx2_fx.flat)], np.float).prod(1)
+        qfx2_det2 = array([cx2_kpts[cx][fx, [2, 4]] for (cx, fx) in
+                           izip(qfx2_cx.flat, qfx2_fx.flat)], np.float).prod(1)
         qfx2_det2.shape = (nQuery, K)
         qfx2_det2 = np.sqrt(1.0 / qfx2_det2)
         qfx2_scaledist = qfx2_det2 / qfx2_K_det1

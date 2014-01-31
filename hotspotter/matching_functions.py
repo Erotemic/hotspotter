@@ -97,7 +97,8 @@ def nearest_neighbors(hs, qcxs, qdat):
     K      = nn_cfg.K
     Knorm  = nn_cfg.Knorm
     checks = nn_cfg.checks
-    print('[mf] Step 1) Assign nearest neighbors: ' + nn_cfg.get_uid())
+    uid_   = nn_cfg.get_uid()
+    print('[mf] Step 1) Assign nearest neighbors: ' + uid_)
     # Grab descriptors
     cx2_desc = hs.feats.cx2_desc
     # NNIndex

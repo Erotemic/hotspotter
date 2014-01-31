@@ -10,7 +10,8 @@ import sys
 import numpy as np
 # Qt
 import PyQt4
-from PyQt4 import Qt, QtCore, QtGui
+from PyQt4 import QtCore, QtGui
+from PyQt4.Qt import Qt
 # HotSpotter
 from hscom import fileio as io
 from hscom import helpers
@@ -68,7 +69,7 @@ def slot_(*types, **kwargs_):  # This is called at wrap time to get args
             print('[@guitools] Wrapping %r with slot_' % func.func_name)
 
         if rundbg:
-            @Qt.pyqtSlot(*types, name=func.func_name)
+            @QtCore.pyqtSlot(*types, name=func.func_name)
             def slot_wrapper(self, *args, **kwargs):
                 argstr_list = map(str, args)
                 kwastr_list = ['%s=%s' % item for item in kwargs.iteritems()]
@@ -79,7 +80,7 @@ def slot_(*types, **kwargs_):  # This is called at wrap time to get args
                 print('[**slot_.Finished] %s(%s)' % (func_name, argstr))
                 return result
         else:
-            @Qt.pyqtSlot(*types, name=func.func_name)
+            @QtCore.pyqtSlot(*types, name=func.func_name)
             def slot_wrapper(self, *args, **kwargs):
                 result = func(self, *args, **kwargs)
                 return result
@@ -223,7 +224,7 @@ def select_roi():
 
 
 def _addOptions(msgBox, options):
-    #msgBox.addButton(Qt.QMessageBox.Close)
+    #msgBox.addButton(QtGui.QMessageBox.Close)
     for opt in options:
         role = QtGui.QMessageBox.ApplyRole
         msgBox.addButton(QtGui.QPushButton(opt), role)
@@ -232,16 +233,16 @@ def _addOptions(msgBox, options):
 def _cacheReply(msgBox):
     dontPrompt = QtGui.QCheckBox('dont ask me again', parent=msgBox)
     dontPrompt.blockSignals(True)
-    msgBox.addButton(dontPrompt, Qt.QMessageBox.ActionRole)
+    msgBox.addButton(dontPrompt, QtGui.QMessageBox.ActionRole)
     return dontPrompt
 
 
 def _newMsgBox(msg='', title='', parent=None, options=None, cache_reply=False):
     msgBox = QtGui.QMessageBox(parent)
     #msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-    #std_buts = Qt.QMessageBox.Close
-    #std_buts = Qt.QMessageBox.NoButton
-    std_buts = Qt.QMessageBox.Cancel
+    #std_buts = QtGui.QMessageBox.Close
+    #std_buts = QtGui.QMessageBox.NoButton
+    std_buts = QtGui.QMessageBox.Cancel
     msgBox.setStandardButtons(std_buts)
     msgBox.setWindowTitle(title)
     msgBox.setText(msg)
@@ -251,10 +252,10 @@ def _newMsgBox(msg='', title='', parent=None, options=None, cache_reply=False):
 
 @profile
 def msgbox(msg, title='msgbox'):
-    'Make a non modal critical Qt.QMessageBox.'
-    msgBox = Qt.QMessageBox(None)
+    'Make a non modal critical QtGui.QMessageBox.'
+    msgBox = QtGui.QMessageBox(None)
     msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-    msgBox.setStandardButtons(Qt.QMessageBox.Ok)
+    msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
     msgBox.setWindowTitle(title)
     msgBox.setText(msg)
     msgBox.setModal(False)
@@ -273,7 +274,7 @@ def user_input(parent, msg, title='input dialog'):
 def user_info(parent, msg, title='info'):
     msgBox = _newMsgBox(msg, title, parent)
     msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-    msgBox.setStandardButtons(Qt.QMessageBox.Ok)
+    msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
     msgBox.setModal(False)
     msgBox.open(msgBox.close)
     msgBox.show()
@@ -297,7 +298,7 @@ def _user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=
         dontPrompt = _cacheReply(msgBox)
     # Wait for output
     optx = msgBox.exec_()
-    if optx == Qt.QMessageBox.Cancel:
+    if optx == QtGui.QMessageBox.Cancel:
         return None
     try:
         reply = options[optx]
@@ -315,7 +316,7 @@ def _user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=
 
 
 def user_question(msg):
-    msgBox = Qt.QMessageBox.question(None, '', 'lovely day?')
+    msgBox = QtGui.QMessageBox.question(None, '', 'lovely day?')
     return msgBox
 
 
@@ -458,8 +459,22 @@ def make_dummy_main_window():
     return back
 
 
+def get_scope(qobj, scope_title='_scope_list'):
+    if not hasattr(qobj, scope_title):
+        setattr(qobj, scope_title, [])
+    return getattr(qobj, scope_title)
+
+
+def clear_scope(qobj, scope_title='_scope_list'):
+    setattr(qobj, scope_title, [])
+
+
+def enfore_scope(qobj, scoped_obj, scope_title='_scope_list'):
+    get_scope(qobj, scope_title).append(scoped_obj)
+
+
 @profile
-def popup_menu(widget, opt2_callback):
+def popup_menu(widget, opt2_callback, parent=None):
     def popup_slot(pos):
         print(pos)
         menu = QtGui.QMenu()
@@ -468,6 +483,14 @@ def popup_menu(widget, opt2_callback):
         #pos=QtGui.QCursor.pos()
         selection = menu.exec_(widget.mapToGlobal(pos))
         return selection, actions
+    if parent is not None:
+        # Make sure popup_slot does not lose scope.
+        for _slot in get_scope(parent, '_popup_scope'):
+            parent.customContextMenuRequested.disconnect(_slot)
+        clear_scope(parent, '_popup_scope')
+        parent.setContextMenuPolicy(Qt.CustomContextMenu)
+        parent.customContextMenuRequested.connect(popup_slot)
+        enfore_scope(parent, popup_slot, '_popup_scope')
     return popup_slot
 
 

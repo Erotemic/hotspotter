@@ -118,25 +118,39 @@ def _dev_reload():
     from hotspotter import nn_filters
     from hotspotter import report_results2 as rr2
     from hotspotter import voting_rules2 as vr2
-    #from hscom import fileio as io
-    #from hscom import helpers
-    #from hsviz import draw_func2 as df2
-    #from hsviz import interact
+    # Common
+    from hscom import fileio as io  # NOQA
+    from hscom import helpers  # NOQA
+    # Viz
+    from hsviz import draw_func2 as df2  # NOQA
+    from hsviz import interact  # NOQA
     from hsviz import viz
+    # GUI
+    from hsgui import guitools  # NOQA
+    from hsgui import guifront  # NOQA
+    from hsgui import guiback  # NOQA
+    # Self
     rrr()
+    # com
+    helpers.rrr()
     io.rrr()
+    # hotspotter
     ds.rrr()
     mf.rrr()
     nn_filters.rrr()
     mc3.rrr()
-    viz.rrr()
-    interact.rrr()
     vr2.rrr()
-    helpers.rrr()
     cc2.rrr()
     rr2.rrr()
     fc2.rrr()
     algos.rrr()
+    # gui
+    guitools.rrr()
+    guifront.rrr()
+    guiback.rrr()
+    # viz
+    viz.rrr()
+    interact.rrr()
     df2.rrr()
     print('---------------------------')
     print('df2 reset')

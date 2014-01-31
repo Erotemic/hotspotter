@@ -71,6 +71,11 @@ def postload_args_process(hs, back):
     selcxs = hs.args.selcxs
     if len(selcxs) > 0:
         back.select_cx(selcxs[0])
+    cids = hs.args.select_cid
+    if len(cids) > 0:
+        cxs = hs.cid2_cx(cids)
+        back.select_cx(cxs[0])
+
     return res
 
 

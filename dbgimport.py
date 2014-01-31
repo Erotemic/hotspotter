@@ -13,6 +13,10 @@ import re
 import sys
 import site
 import shutil
+# Matplotlib
+import matplotlib
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 # Scientific
 import numpy as np  # NOQA
 from PIL import Image
@@ -24,24 +28,24 @@ from PyQt4 import QtCore, QtGui
 from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
                       Qt, QObject, pyqtSlot, QKeyEvent)
 # HotSpotter
-import DataStructures as ds
-import HotSpotterAPI
-import HotSpotterAPI as api
-import Parallelize as parallel
-import algos
-import chip_compute2 as cc2
+from hotspotter import DataStructures as ds
+from hotspotter import HotSpotterAPI
+from hotspotter import HotSpotterAPI as api
+from hotspotter import algos
+from hotspotter import chip_compute2 as cc2
+from hotspotter import feature_compute2 as fc2
+from hotspotter import load_data2 as ld2
+from hotspotter import match_chips3 as mc3
+from hotspotter import matching_functions as mf
+from hotspotter import segmentation
+from hotspotter import voting_rules2 as vr2
+from hscom import Parallelize as parallel
+from hscom import fileio as io
+from hscom import helpers as helpers
+from hsviz import draw_func2 as df2
+from hsviz import extract_patch
+from hsviz import viz
 import dev
-import draw_func2 as df2
-import extract_patch
-import feature_compute2 as fc2
-import fileio as io
-import helpers as helpers
-import load_data2 as ld2
-import match_chips3 as mc3
-import matching_functions as mf
-import segmentation
-import viz
-import voting_rules2 as vr2
 
 if __name__ == 'main':
     multiprocessing.freeze_support()

@@ -6,7 +6,6 @@ from hscom import __common__
 import numpy as np
 # Hotspotter
 import draw_func2 as df2
-import extract_patch
 import viz
 from hstpl import mask_creator
 
@@ -17,7 +16,6 @@ from hstpl import mask_creator
 #==========================
 # HELPERS
 #==========================
-
 
 def nearest_point(x, y, pts):
     dists = (pts.T[0] - x) ** 2 + (pts.T[1] - y) ** 2
@@ -30,14 +28,6 @@ def nearest_point(x, y, pts):
     return fx, mindist
 
 
-def kp_info(kp):
-    xy_str   = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
-    acd_str  = '[(%3.1f,  0.00),\n' % (kp[2],)
-    acd_str += ' (%3.1f, %3.1f)]' % (kp[3], kp[4],)
-    scale = np.sqrt(kp[2] * kp[4])
-    return xy_str, acd_str, scale
-
-
 def detect_keypress(fig):
     def on_key_press(event):
         if event.key == 'shift':
@@ -48,40 +38,6 @@ def detect_keypress(fig):
             shift_is_held = False  # NOQA
     fig.canvas.mpl_connect('key_press_event', on_key_press)
     fig.canvas.mpl_connect('key_release_event', on_key_release)
-
-
-def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None):
-    pnum_ = lambda px: (nRows, nCols, px)
-
-    def _draw_patch(**kwargs):
-        return extract_patch.draw_keypoint_patch(rchip, kp, sift, **kwargs)
-
-    # Feature strings
-    xy_str, acd_str, scale = kp_info(kp)
-
-    # Draw the unwarped selected feature
-    ax = _draw_patch(fnum=fnum, pnum=pnum_(px + 1))
-    ax._hs_viewtype = 'unwarped'
-    unwarped_lbl = 'affine feature inv(A) =\n' + acd_str
-    df2.set_xlabel(unwarped_lbl, ax)
-
-    # Draw the warped selected feature
-    ax = _draw_patch(fnum=fnum, pnum=pnum_(px + 2), warped=True)
-    ax._hs_viewtype = 'warped'
-    warped_lbl = ('warped feature\n' + 'fx=%r scale=%.1f\n' + '%s') % (fx, scale, xy_str)
-    df2.set_xlabel(warped_lbl, ax)
-
-    # Draw the SIFT representation
-    sigtitle = '' if px != 3 else 'sift histogram'
-    ax = df2.plot_sift_signature(sift, sigtitle, fnum=fnum, pnum=pnum_(px + 3))
-    ax._hs_viewtype = 'histogram'
-    if prevsift is not None:
-        from hotspotter import algos
-        dist_list = ['L1', 'L2', 'hist_isect', 'emd']
-        distmap = algos.compute_distances(sift, prevsift, dist_list)
-        dist_str = ', '.join(['%s:%.1e' % (key, val) for key, val in distmap.iteritems()])
-        df2.set_xlabel(dist_str)
-    return px + nCols
 
 
 def begin_interaction(type_, fnum):
@@ -171,7 +127,7 @@ def interact_name(hs, nx, sel_cxs=[], select_cx_func=None, fnum=5, **kwargs):
 
 # CHIP INTERACTION 2
 @profile
-def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
+def interact_chip(hs, cx, fnum=2, figtitle=None, fx=None, **kwargs):
     fig = begin_interaction('chip', fnum)
     # Get chip info (make sure get_chip is called first)
     rchip = hs.get_chip(cx)
@@ -186,7 +142,7 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
         _chip_view(pnum=(2, 1, 1), sel_fx=fx)
         # Draw the selected feature plots
         nRows, nCols, px = (2, 3, 3)
-        draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, None)
+        viz.draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, None)
 
     def _chip_view(pnum=(1, 1, 1), **kwargs):
         df2.figure(fnum=fnum, pnum=pnum, docla=True, doclf=True)
@@ -223,10 +179,15 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, **kwargs):
                     _select_ith_kpt(fx)
                 else:
                     print('... len(kpts) == 0')
+            else:
+                print('...Unknown viewtype')
         viz.draw()
 
     # Draw without keypoints the first time
-    _chip_view(draw_ell=False, draw_pts=False)
+    if fx is not None:
+        _select_ith_kpt(fx)
+    else:
+        _chip_view(draw_ell=False, draw_pts=False)
     viz.draw()
     df2.connect_callback(fig, 'button_press_event', _on_chip_click)
 
@@ -244,7 +205,7 @@ def interact_keypoints(rchip, kpts, desc, fnum=0, figtitle=None, nodraw=False, *
         _viz_keypoints(fnum, (2, 1, 1), sel_fx=fx)
         # Draw the selected feature
         nRows, nCols, px = (2, 3, 3)
-        draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, None)
+        viz.draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, None)
 
     def _viz_keypoints(fnum, pnum=(1, 1, 1), **kwargs):
         df2.figure(fnum=fnum, docla=True, doclf=True)
@@ -290,7 +251,8 @@ def interact_keypoints(rchip, kpts, desc, fnum=0, figtitle=None, nodraw=False, *
 
 
 @profile
-def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', **kwargs):
+def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result',
+                     same_fig=False, **kwargs):
     'Interacts with a single chipres, '
     fig = begin_interaction('chipres', fnum)
     qcx = res.qcx
@@ -301,6 +263,10 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
     mx = kwargs.pop('mx', None)
     xywh2_ptr = [None]
     annote_ptr = [0]
+    from hscom.Printable import DynStruct
+    last_state = DynStruct()
+    last_state.same_fig = same_fig
+    last_state.last_fx = 0
 
     # Draw default
     @profile
@@ -310,8 +276,10 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
         draw_lines = mode == 2
         annote_ptr[0] = (annote_ptr[0] + 1) % 3
         df2.figure(fnum=fnum, docla=True, doclf=True)
+        # TODO RENAME This to remove res and rectify with show_chipres
         tup = viz.res_show_chipres(res, hs, cx, fnum=fnum, pnum=pnum,
-                                   draw_lines=draw_lines, draw_ell=draw_ell, **kwargs)
+                                   draw_lines=draw_lines, draw_ell=draw_ell,
+                                   colorbar_=True, **kwargs)
         ax, xywh1, xywh2 = tup
         xywh2_ptr[0] = xywh2
 
@@ -319,43 +287,62 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
 
     # Draw clicked selection
     @profile
-    def _select_ith_match(mx):
+    def _select_ith_match(mx, qcx, cx):
+        #----------------------
+        # Get info for the _select_ith_match plot
         annote_ptr[0] = 1
         # Get the mx-th feature match
+        cx1, cx2 = qcx, cx
         fx1, fx2 = fm[mx]
-        kpts1, kpts2 = hs.get_kpts([qcx, cx])
-        desc1, desc2 = hs.get_desc([qcx, cx])
+        fscore2  = res.cx2_fs[cx2][mx]
+        fk2      = res.cx2_fk[cx2][mx]
+        kpts1, kpts2 = hs.get_kpts([cx1, cx2])
+        desc1, desc2 = hs.get_desc([cx1, cx2])
         kp1, kp2     = kpts1[fx1], kpts2[fx2]
         sift1, sift2 = desc1[fx1], desc2[fx2]
-        # Extracted keypoints to draw
-        extracted_list = [(rchip1, kp1, sift1, fx1), (rchip2, kp2, sift2, fx2)]
-        if hasattr(res, 'filt2_meta'):
-            if 'lnbnn' in res.filt2_meta:
-                qfx2_norm = res.filt2_meta['lnbnn']
-                # Normalizing chip and feature
-                (cx3, fx3) = qfx2_norm[fx1]
-                rchip3 = hs.get_chip(cx3)
-                kp3 = hs.get_kpts(cx3)[fx3]
-                sift3 = hs.get_desc(cx3)[fx3]
-                extracted_list.append((rchip3, kp3, sift3, fx3))
-            else:
-                print('lnbnn doesnt exist. warning!!!!!!!!!!!!!!!!!!!!!!!!')
-        else:
-            print('meta doesnt exist warning!!!!!!!!!!!!!!!!!!!!!!!!')
+        info1 = '\nquery'
+        info2 = '\nk=%r fscore=%r' % (fk2, fscore2)
+        last_state.last_fx = fx1
 
-        nRows, nCols = len(extracted_list) + 1, 3
+        # Extracted keypoints to draw
+        extracted_list = [(rchip1, kp1, sift1, fx1, cx1, info1),
+                          (rchip2, kp2, sift2, fx2, cx2, info2)]
+        # Normalizng Keypoint
+        if hasattr(res, 'filt2_meta') and 'lnbnn' in res.filt2_meta:
+            qfx2_norm = res.filt2_meta['lnbnn']
+            # Normalizing chip and feature
+            (cx3, fx3, normk) = qfx2_norm[fx1]
+            rchip3 = hs.get_chip(cx3)
+            kp3 = hs.get_kpts(cx3)[fx3]
+            sift3 = hs.get_desc(cx3)[fx3]
+            info3 = '\nnorm %s k=%r' % (hs.cidstr(cx3), normk)
+            extracted_list.append((rchip3, kp3, sift3, fx3, cx3, info3))
+        else:
+            print('WARNING: meta doesnt exist')
+
+        #----------------------
+        # Draw the _select_ith_match plot
+        nRows, nCols = len(extracted_list) + same_fig, 3
         # Draw matching chips and features
-        pnum1 = (nRows, 1, 1)
         sel_fm = np.array([(fx1, fx2)])
-        _crargs = dict(ell_alpha=.4, ell_linewidth=1.8, colors=df2.BLUE,
-                       sel_fm=sel_fm, **kwargs)
-        _chipmatch_view(pnum1, vert=False, **_crargs)
+        pnum1 = (nRows, 1, 1) if same_fig else (1, 1, 1)
+        _chipmatch_view(pnum1, vert=False, ell_alpha=.4, ell_linewidth=1.8,
+                        colors=df2.BLUE, sel_fm=sel_fm, **kwargs)
         # Draw selected feature matches
-        px = 1 * nCols  # plot offset
+        px = nCols * same_fig  # plot offset
         prevsift = None
-        for (rchip, kp, sift, fx) in extracted_list:
-            px = draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift)
+        if not same_fig:
+            fnum2 = fnum + len(viz.FNUMS)
+            fig2 = df2.figure(fnum=fnum2, docla=True, doclf=True)
+        else:
+            fnum2 = fnum
+        for (rchip, kp, sift, fx, cx, info) in extracted_list:
+            px = viz.draw_feat_row(rchip, fx, kp, sift, fnum2, nRows, nCols, px,
+                                   prevsift=prevsift, cx=cx, info=info)
             prevsift = sift
+        if not same_fig:
+            df2.connect_callback(fig2, 'button_press_event', _click_chipres_click)
+            df2.set_figtitle(figtitle + hs.vs_str(qcx, cx))
 
     # Draw ctrl clicked selection
     def _sv_view(cx):
@@ -369,6 +356,12 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
     @profile
     def _click_chipres_click(event):
         print_('[inter] clicked chipres')
+        if event is None:
+            return
+        button = event.button
+        is_right_click = button == 3
+        if is_right_click:
+            return
         (x, y, ax) = (event.xdata, event.ydata, event.inaxes)
         # Out of axes click
         if None in [x, y, ax]:
@@ -400,20 +393,38 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
                 _mx2, _dist2 = nearest_point(x - x2, y - y2, kpts2_m)
                 mx = _mx1 if _dist1 < _dist2 else _mx2
                 print('... clicked mx=%r' % mx)
-                _select_ith_match(mx)
-        elif hs_viewtype == 'warped':
-            print('... clicked warped')
-        elif hs_viewtype == 'unwarped':
-            print('... clicked unwarped')
-        elif hs_viewtype == 'histogram':
-            print('... clicked hist')
+                _select_ith_match(mx, qcx, cx)
+        elif hs_viewtype in ['warped', 'unwarped']:
+            hs_cx = ax.__dict__.get('_hs_cx', None)
+            hs_fx = ax.__dict__.get('_hs_fx', None)
+            if hs_cx is not None:
+                interact_chip(hs, hs_cx, fx=hs_fx, fnum=df2.next_fnum())
         else:
-            print('... what did you click?!')
+            print('...Unknown viewtype')
         viz.draw()
 
     if mx is None:
         _chipmatch_view()
     else:
-        _select_ith_match(mx)
+        _select_ith_match(mx, qcx, cx)
+
+    from hsgui import guitools
+
+    def toggle_samefig():
+        interact_chipres(hs, res, cx=cx, fnum=fnum, figtitle=figtitle, same_fig=not same_fig, **kwargs)
+
+    def query_last_feature():
+        viz.show_nearest_descriptors(hs, qcx, last_state.last_fx, df2.next_fnum())
+        fig3 = df2.gca()
+        df2.connect_callback(fig3, 'button_press_event', _click_chipres_click)
+        df2.update()
+
+    toggle_samefig_key = 'Toggle same_fig (currently %r)' % same_fig
+
+    opt2_callback = [
+        (toggle_samefig_key, toggle_samefig),
+        ('query last feature', query_last_feature),
+        ('cancel', lambda: print('cancel')), ]
+    guitools.popup_menu(fig.canvas, opt2_callback, fig.canvas)
     df2.connect_callback(fig, 'button_press_event', _click_chipres_click)
     viz.draw()

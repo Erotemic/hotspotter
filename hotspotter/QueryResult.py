@@ -46,12 +46,6 @@ class QueryResult(DynStruct):
         res.query_uid = uid
         res.uid       = uid
         res.title     = uid
-        # Times
-        res.nn_time     = -1
-        res.weight_time = -1
-        res.filt_time = -1
-        res.build_time  = -1
-        res.verify_time = -1
         # Assigned features matches
         res.cx2_fm = np.array([], dtype=FM_DTYPE)
         res.cx2_fs = np.array([], dtype=FS_DTYPE)
@@ -84,7 +78,11 @@ class QueryResult(DynStruct):
                 for _key in npz.files:
                     res.__dict__[_key] = npz[_key]
                 npz.close()
+            # These are nonarray items even if they are not lists
+            # tolist seems to convert them back to their original
+            # python representation
             res.qcx = res.qcx.tolist()
+            res.filt2_meta = res.filt2_meta.tolist()
             res.query_uid = str(res.query_uid)
             return True
         except IOError as ex:

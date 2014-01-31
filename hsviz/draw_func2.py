@@ -21,7 +21,7 @@ import time
 import warnings
 # Matplotlib / Qt
 import matplotlib
-import matplotlib as mpl
+import matplotlib as mpl  # NOQA
 from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle, Circle, FancyArrow
@@ -136,6 +136,15 @@ SHOW_LINES = True  # True
 SHOW_ELLS  = True
 
 POINT_SIZE = 2
+
+
+base_fnum = 9001
+
+
+def next_fnum():
+    global base_fnum
+    base_fnum += 1
+    return base_fnum
 
 
 def my_prefs():
@@ -617,8 +626,8 @@ def adjust_subplots_xylabels():
     adjust_subplots(left=.03, right=1, bottom=.1, top=.9, hspace=.15)
 
 
-def adjust_subplots_safe():
-    adjust_subplots(left=.1, right=.9, bottom=.1, top=.9, wspace=.3, hspace=.5)
+def adjust_subplots_safe(left=.1, right=.9, bottom=.1, top=.9, wspace=.3, hspace=.5):
+    adjust_subplots(left, bottom, right, top, wspace, hspace)
 
 
 def adjust_subplots(left=0.02,  bottom=0.02,
@@ -730,6 +739,8 @@ def draw_text(text_str, rgb_textFG=(0, 0, 0), rgb_textBG=(1, 1, 1)):
 
 
 def set_figtitle(figtitle, subtitle='', forcefignum=True, incanvas=True):
+    if figtitle is None:
+        figtitle = ''
     fig = gcf()
     if incanvas:
         if subtitle != '':
@@ -1084,7 +1095,7 @@ def dark_background(ax=None, doubleit=False):
     if doubleit:
         halfw = (doubleit) * (width / 2)
         halfh = (doubleit) * (height / 2)
-        xy = (xy[0] - halfw, xy[1] - height / 2)
+        xy = (xy[0] - halfw, xy[1] - halfh)
         width *= (doubleit + 1)
         height *= (doubleit + 1)
     rect = matplotlib.patches.Rectangle(xy, width, height, lw=0, zorder=0)
@@ -1281,8 +1292,33 @@ def feat_scores_to_color(fs, cmap_='hot'):
     if rnge == 0:
         return [cmap(.5) for fx in xrange(len(fs))]
     score2_01 = lambda score: .1 + .9 * (float(score) - mins) / (rnge)
-    colors    = [cmap(score2_01(fs[fx])) for fx in xrange(len(fs))]
+    colors    = [cmap(score2_01(score)) for score in fs]
     return colors
+
+
+def colorbar(fs, colors):
+    sorted_scores = sorted(fs)
+    sorted_colors = [x for (y, x) in sorted(zip(fs, colors))]
+    #ax = gca()
+    listed_cmap = mpl.colors.ListedColormap(sorted_colors)
+    bounds = sorted_scores
+    #norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+    sm = plt.cm.ScalarMappable(cmap=listed_cmap)
+    sm.set_array(bounds)
+    #cb = mpl.colorbar.ColorbarBase(ax, cmap=cmap,
+                                   #norm=norm,
+                                   #ticks=bounds,  # optional
+                                   #spacing='proportional',
+                                   #orientation='horizontal')
+    cb = plt.colorbar(sm)
+    cb.ax.yaxis.set_ticks_position('right')
+    cb.ax.yaxis.set_ticks([0, .5, 1])
+    #cb.ax.yaxis.set_ticks_position('left')
+    #cb.set_label('Discrete intervals, some other units')
+    #ax.invert_yaxis()
+    #cb.set_xticks(sorted_scores)
+    #cmap.set_over('0.25')
+    #cmap.set_under('0.75')
 
 
 def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
@@ -1520,8 +1556,8 @@ def show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm=None, fs=None, title=None,
 
 
 # draw feature match
-def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
-                lbl2=None, fnum=None, pnum=None, rect=False, **kwargs):
+def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None, lbl2=None,
+                fnum=None, pnum=None, rect=False, colorbar_=True, **kwargs):
     '''Draws the matching features. This is draw because it is an overlay
     xywh1 - location of rchip1 in the axes
     xywh2 - location or rchip2 in the axes
@@ -1557,22 +1593,7 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
     if nMatch > 0:
         colors = [kwargs['colors']] * nMatch if 'colors' in kwargs else distinct_colors(nMatch)
         if fs is not None:
-            colors = feat_scores_to_color(fs)
-            #cmap = mpl.colors.ListedColormap(colors) #.cm.hot
-            #print('colors = %r ' % fs)
-            #print('colors = %r ' % colors)
-            #ax = gca()
-            #norm = mpl.colors.Normalize(vmin=fs.min(), vmax=fs.max())
-            # ColorbarBase derives from ScalarMappable and puts a colorbar
-            # in a specified axes, so it has everything needed for a
-            # standalone colorbar.  There are many more kwargs, but the
-            # following gives a basic continuous colorbar with ticks
-            # and labels.
-            #cb1 = mpl.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm,
-                                            #orientation='vertical')
-            #cb1.set_label('lnbnn matching score')
-            #ax.invert_yaxis()
-            #cb1.set_label('Some Units')
+            colors = feat_scores_to_color(fs, 'hot')
 
         acols = add_alpha(colors)
 
@@ -1598,7 +1619,9 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None,
             _drawlines(color_list=colors)
     else:
         draw_boxedX(xywh2)
-    legend()
+    if fs is not None and colorbar_:
+        colorbar(fs, colors)
+    #legend()
     return None
 
 

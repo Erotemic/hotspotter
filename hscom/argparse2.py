@@ -92,10 +92,11 @@ def make_argparse2(description, *args, **kwargs):
 #======================
 
 
-def main_argparse(parser2):
-    parser2 = parser2.add_argument_group('Main')
+def commands_argparse(parser2):
+    parser2 = parser2.add_argument_group('Commands')
     parser2.add_flag('--autoquery')
     parser2.add_intlist('--query', default=[], help='query chip-id to investigate')
+    parser2.add_intlist('--select-cid', default=[], help='chip indexes to view')
     parser2.add_intlist('--selgxs', default=[], help='image indexes to view')
     parser2.add_intlist('--selcxs', default=[], help='chip indexes to view')
     parser2.add_intlist('--selnxs', default=[], help='name indexes to view')
@@ -135,7 +136,7 @@ def dev_argparse(parser2):
     parser2.add_flag('--noprinthist', True)
 
 
-def database_argparase(parser2):
+def database_argparse(parser2):
     # Database selections
     parser2 = parser2.add_argument_group('Database')
     parser2.add_str('--db', 'DEFAULT', 'specifies the short name of the database to load')
@@ -285,8 +286,8 @@ def parse_arguments(defaultdb=None, **kwargs):
     global ARGS_
     parser2 = make_argparse2('HotSpotter - Individual Animal Recognition',
                              version='???')
-    main_argparse(parser2)
-    database_argparase(parser2)
+    commands_argparse(parser2)
+    database_argparse(parser2)
     dev_argparse(parser2)
     behavior_argparse(parser2)
     cfg_argparse(parser2)

@@ -338,6 +338,10 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result', 
                 kp3 = hs.get_kpts(cx3)[fx3]
                 sift3 = hs.get_desc(cx3)[fx3]
                 extracted_list.append((rchip3, kp3, sift3, fx3))
+            else:
+                print('lnbnn doesnt exist. warning!!!!!!!!!!!!!!!!!!!!!!!!')
+        else:
+            print('meta doesnt exist warning!!!!!!!!!!!!!!!!!!!!!!!!')
 
         nRows, nCols = len(extracted_list) + 1, 3
         # Draw matching chips and features

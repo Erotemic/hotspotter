@@ -73,15 +73,18 @@ class NNConfig(ConfigBase):
         # Core
         nn_cfg.K = 4
         nn_cfg.Knorm = 1
-        nn_cfg.normalier_rule = ['last', 'name'][0]
+        nn_cfg.normalizer_rule = ['last', 'name'][0]
         # Filters
         nn_cfg.checks  = 1024  # 512#128
         nn_cfg.update(**kwargs)
 
     def get_uid_list(nn_cfg):
-        nn_uid  = ['_NN(', 'K', str(nn_cfg.K),
-                   '+', str(nn_cfg.Knorm),
-                   ',cks', str(nn_cfg.checks), ')']
+        nn_uid  = ['_NN(']
+        nn_uid.extend(['K', str(nn_cfg.K)])
+        nn_uid.extend(['+', str(nn_cfg.Knorm)])
+        nn_uid.extend([',' + nn_cfg.normalizer_rule])
+        nn_uid.extend([',cks', str(nn_cfg.checks)])
+        nn_uid.extend([')'])
         return nn_uid
 
     def get_uid(nn_cfg):

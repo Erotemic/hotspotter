@@ -18,7 +18,7 @@ def RATIO_fn(vdist, ndist):
 
 
 def LNBNN_fn(vdist, ndist):
-    return (ndist - vdist) / 1000.0
+    return (ndist - vdist) #  / 1000.0
 
 
 # normweight_fn = LNBNN_fn
@@ -72,12 +72,12 @@ def compare_matrix_to_rows(row_matrix, row_list, comp_op=np.equal, logic_op=np.l
 
 
 def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, qdat):
-    #from hscom import helpers
-    #helpers.stash_testdata('qcx2_nns')
+    from hscom import helpers
+    helpers.stash_testdata('qcx2_nns')
     # Only valid for vsone
     K = qdat.cfg.nn_cfg.K
     Knorm = qdat.cfg.nn_cfg.Knorm
-    rule  = qdat.cfg.nn_cfg.normalier_rule
+    rule  = qdat.cfg.nn_cfg.normalizer_rule
     qcx2_weight = {qcx: None for qcx in qcx2_nns.iterkeys()}
     qcx2_selnorms = {qcx: None for qcx in qcx2_nns.iterkeys()}
     # Database feature index to chip index
@@ -92,7 +92,7 @@ def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, qdat):
         elif rule == 'name':
             # Get the top names you do not want your normalizer to be from
             qtnx = hs.cx2_tnx(qcx)
-            nTop = max(1, min(K, 3))
+            nTop = max(1, K)
             qfx2_topdx = qfx2_dx.T[0:nTop, :].T
             qfx2_normdx = qfx2_dx.T[-Knorm:].T
             # Apply temporary uniquish name
@@ -119,16 +119,6 @@ def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, qdat):
         qcx2_weight[qcx]   = qfx2_normweight
         qcx2_selnorms[qcx] = qfx2_normmeta
     return qcx2_weight, qcx2_selnorms
-    #print('K = %r' % K)
-    #print('Knorm = %r' % Knorm)
-    #print('---------')
-    #print('1---------')
-    #print(qfx2_dist)
-    #print('2---------')
-    #print('3---------')
-    #print(qfx2_nndist)
-    #print('4---------')
-    #print(np.hstack((qfx2_normdist, qfx2_nndist)))
 
 
 def nn_ratio_weight(*args):

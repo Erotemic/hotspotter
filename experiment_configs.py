@@ -133,9 +133,23 @@ vsmany_best = {
 }
 best = vsmany_best
 
+plains = vsmany_best
+plains.update({
+    'K': [5],
+    'Knorm': [5],
+})
+
 adaptive_test = vsmany_best.copy()
 adaptive_test.update({
     'use_adaptive_scale': [True, False],
+})
+
+
+normrule_test = vsmany_best.copy()
+normrule_test.update({
+    'K': [10, 5, 3],
+    'Knorm': [1, 3, 5, 10, 20],
+    'normalizer_rule': ['last', 'name'],
 })
 
 vsmany_kenya = vsmany_best.copy()

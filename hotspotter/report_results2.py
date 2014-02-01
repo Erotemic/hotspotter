@@ -1,8 +1,8 @@
 #!/usr/env python
 from __future__ import division, print_function
 from hscom import __common__
-(print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[rr2]')
+(print, print_, print_on, print_off, rrr, profile, printDBG) =\
+__common__.init(__name__, '[rr2]', DEBUG=False)
 # Matplotlib
 import matplotlib
 matplotlib.use('Qt4Agg')
@@ -17,13 +17,13 @@ from os.path import join, exists
 # Scientific imports
 import numpy as np
 # Hotspotter imports
-from hscom.Printable import DynStruct
-from hsviz import draw_func2 as df2
 from hscom import fileio as io
 from hscom import helpers
+from hscom.Printable import DynStruct
+from hsviz import draw_func2 as df2
+from hsviz import viz
 import load_data2 as ld2
 import spatial_verification2 as sv2
-from hsviz import viz
 #import match_chips3 as mc3
 #import datetime
 #import subprocess
@@ -31,14 +31,11 @@ from hsviz import viz
 REPORT_MATRIX  = True
 REPORT_MATRIX_VIZ = True
 
-
-def printDBG(msg):
-    pass
-
-
 # ========================================================
 # Report result initialization
 # ========================================================
+
+
 class AllResults(DynStruct):
     'Data container for all compiled results'
     def __init__(self, hs, qcx2_res, SV):
@@ -309,6 +306,8 @@ def init_allres(hs, qcx2_res, SV=True,
 # ========================================================
 # Build textfile result strings
 # ========================================================
+
+
 def build_matrix_str(allres):
     hs = allres.hs
     cx2_gx = hs.tables.cx2_gx
@@ -477,6 +476,8 @@ def build_rankres_str(allres):
 # ===========================
 # Helper Functions
 # ===========================
+
+
 def __dump_text_report(allres, report_type):
     if not 'report_type' in vars():
         report_type = 'rankres_str'
@@ -499,6 +500,8 @@ def __dump_text_report(allres, report_type):
 # ===========================
 # Driver functions
 # ===========================
+
+
 TMP = False
 SCORE_PDF  = TMP
 RANK_HIST  = TMP

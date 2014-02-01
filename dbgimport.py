@@ -39,6 +39,7 @@ from hotspotter import match_chips3 as mc3
 from hotspotter import matching_functions as mf
 from hotspotter import segmentation
 from hotspotter import voting_rules2 as vr2
+from hotspotter import nn_filters
 from hscom import Parallelize as parallel
 from hscom import fileio as io
 from hscom import helpers as helpers

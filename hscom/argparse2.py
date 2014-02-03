@@ -121,7 +121,6 @@ def dev_argparse(parser2):
     # Plotting Args
     parser2.add_flag('--noshow-query')
     parser2.add_flag('--noshow-gt')
-    parser2.add_flag('--printoff')
     parser2.add_flag('--horiz', True)
     parser2.add_flag('--darken')
     parser2.add_str(('--tests', '--test', '-t'),  [], 'integer or test name', nargs='*')

@@ -669,7 +669,8 @@ if __name__ == '__main__':
     qcx_list = main_locals['qcx_list']
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
     print('[dev]====================')
-    if hs.args.printoff:
+    printoff = helpers.get_flag('--printoff', True)
+    if printoff:
         all_printoff()
     mf.print_off()  # Make testing slightly faster
     # Big test function. Should be replaced with something

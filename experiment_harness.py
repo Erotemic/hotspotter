@@ -12,6 +12,7 @@ from hotspotter import DataStructures as ds
 from hotspotter import match_chips3 as mc3
 from hscom import fileio as io
 from hscom import helpers
+from hscom import latex_formater
 #from match_chips3 import *
 #import draw_func2 as df2
 # What are good ways we can divide up FLANN indexes instead of having one
@@ -58,14 +59,45 @@ def get_vary_dicts(test_cfg_name_list):
 # Helpers
 #---------------
 # Display Test Results
+
+
+def ArgGaurdFalse(func):
+    return __ArgGaurd(func, default=False)
+
+
+def ArgGaurdTrue(func):
+    return __ArgGaurd(func, default=True)
+
+
+def __ArgGaurd(func, default=False):
+    flag = func.func_name
+    if flag.find('no') == 0:
+        flag = flag[2:]
+    flag = '--' + flag.replace('_', '-')
+
+    def GaurdWrapper(*args, **kwargs):
+        if helpers.get_flag(flag, default):
+            return func(*args, **kwargs)
+        else:
+            print('\n~~~ %s ~~~\n' % flag)
+    GaurdWrapper.func_name = func.func_name
+    return GaurdWrapper
+
+
 def print_test_results(test_results):
     print('[harn] ---')
     (col_lbls, row_lbls, mat_vals, test_uid, nLeX) = test_results
-    test_uid = mc3.simplify_test_uid(test_uid)
+    #test_uid = test_uid
     print('[harn] test_uid=%r' % test_uid)
     #print('[harn] row_lbls=\n%s' % str(row_lbls))
     #print('[harn] col_lbls=\n%s' % str('\n  '.join(col_lbls)))
     print('[harn] lowest_gt_ranks(NN,FILT,SV)=\n%s' % str(mat_vals))
+
+
+def rankscore_str(thresh, nLess, total):
+    #helper to print rank scores of configs
+    percent = 100 * nLess / total
+    return '#ranks < %d = %d/%d = (%.1f%%) (err=%d)' % (thresh, nLess, total, percent, (total - nLess))
 
 
 #---------------
@@ -204,63 +236,61 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     lbld_mat = np.vstack([_colxs, rank_mat])
     _rowxs = np.arange(nQuery + 1).reshape(nQuery + 1, 1) - 1
     lbld_mat = np.hstack([_rowxs, lbld_mat])
+    #------------
     # Build row labels
     qx2_lbl = []
     for qx in xrange(nQuery):
         qcx = qcx_list[qx]
-        label = 'qx %d) q%s ' % (qx, hs.cidstr(qcx, notes=True))
+        label = 'qx=%d) q%s ' % (qx, hs.cidstr(qcx, notes=True))
         qx2_lbl.append(label)
     qx2_lbl = np.array(qx2_lbl)
+    #------------
     # Build col labels
     cfgx2_lbl = []
     for cfgx in xrange(nCfg):
-        test_uid  = mc3.simplify_test_uid(cfg_list[cfgx].get_uid())
-        test_uid  = mc3.simplify_test_uid(cfg_list[cfgx].get_uid())
+        test_uid  = cfg_list[cfgx].get_uid()
+        test_uid  = cfg_list[cfgx].get_uid()
         cfg_label = 'cfgx %3d) %s' % (cfgx, test_uid)
         cfgx2_lbl.append(cfg_label)
     cfgx2_lbl = np.array(cfgx2_lbl)
     #------------
     indent = helpers.indent
 
-    PRINT_QXLBL = helpers.get_flag('--printrowlbl', False)
-    if PRINT_QXLBL:
-        print('')
-        print('[harn]-------------')
+    @ArgGaurdFalse
+    def print_rowlbl():
+        print('=====================')
+        print('[harn] Row/Query Labels')
+        print('=====================')
         print('[harn] queries:\n%s' % '\n'.join(qx2_lbl))
-    else:
-        pass
+        print('--- /Row/Query Labels ---')
+    print_rowlbl()
+
     #------------
-    PRINT_CFGLBL = helpers.get_flag('--printcfglbl', False)
-    if PRINT_CFGLBL:
+
+    @ArgGaurdFalse
+    def print_collbl():
         print('')
-        print('[harn]-------------')
+        print('=====================')
+        print('[harn] Col/Config Labels')
+        print('=====================')
         print('[harn] configs:\n%s' % '\n'.join(cfgx2_lbl))
-    else:
-        pass
+        print('--- /Col/Config Labels ---')
+    print_collbl()
+
     #------------
-    PRINT_ROW_SCORES = helpers.get_flag('--printrow', False)
-    if PRINT_ROW_SCORES:
-        print('')
-        print('[harn]-------------')
-        print('[harn] Scores per query')
-        print('[harn]-------------')
-        qx2_min_rank = []
-        qx2_argmin_rank = []
-        indent = helpers.indent
-        new_hard_qx_list = []
-        for qx in xrange(nQuery):
-            ranks = rank_mat[qx]
-            min_rank = ranks.min()
-            bestCFG_X = np.where(ranks == min_rank)[0]
-            qx2_min_rank.append(min_rank)
-            qx2_argmin_rank.append(bestCFG_X)
-            print('[row_score] %3d) %s' % (qx, qx2_lbl[qx]))
-            print('[row_score] best_rank = %d ' % min_rank)
-            print('[row_score] minimizing_configs = %s ' %
-                  indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    '))
-            if ranks.max() > 0:
-                new_hard_qx_list += [qx]
-        print('--- hard qcx_list (w.r.t these configs) ---')
+    # Build Colscore
+    qx2_min_rank = []
+    qx2_argmin_rank = []
+    new_hard_qx_list = []
+    for qx in xrange(nQuery):
+        ranks = rank_mat[qx]
+        min_rank = ranks.min()
+        bestCFG_X = np.where(ranks == min_rank)[0]
+        qx2_min_rank.append(min_rank)
+        qx2_argmin_rank.append(bestCFG_X)
+        # Mark examples as hard
+        if ranks.max() > 0:
+            new_hard_qx_list += [qx]
         new_hard_qcx_list = []
         for qx in new_hard_qx_list:
             # New list is in cid format instead of cx format
@@ -269,73 +299,131 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             qcx = qcx_list[qx]
             qcid = hs.tables.cx2_cid[qcx]
             new_hard_qcx_list += [(qcid, notes)]
-        print('\n'.join(map(repr, new_hard_qcx_list)))
-    else:
-        print('\n~~~~~~~~ --printrow\n')
+
+    @ArgGaurdFalse
+    def print_rowscore():
+        print('')
+        print('=======================')
+        print('[harn] Scores per Query')
+        print('=======================')
+        for qx in xrange(nQuery):
+            bestCFG_X = qx2_argmin_rank[qx]
+            min_rank = qx2_min_rank[qx]
+            minimizing_cfg_str = indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    ')
+            #minimizing_cfg_str = str(bestCFG_X)
+
+            print(qx2_lbl[qx])
+            print(' best_rank = %d ' % min_rank)
+            if len(cfgx2_lbl) != 1:
+                print(' minimizing_cfg_x\'s = %s ' % minimizing_cfg_str)
+
+    print_rowscore()
 
     #------------
-    def rankscore_str(thresh, nLess, total):
-        #helper to print rank scores of configs
-        percent = 100 * nLess / total
-        return '#ranks < %d = %d/%d = (%.1f%%) (err=%d)' % (thresh, nLess, total, percent, (total - nLess))
-    print('')
-    print('[harn]-------------')
-    print('[harn] Scores per config')
-    print('[harn]-------------')
+
+    @ArgGaurdFalse
+    def print_hardcase():
+        print('===')
+        print('--- hard qcx_list (w.r.t these configs) ---')
+        print('\n'.join(map(repr, new_hard_qcx_list)))
+        print('--- /Scores per Query ---')
+    print_hardcase()
+
+    #------------
+    # Build Colscore
     X_list = [1, 5]
     # Build a dictionary mapping X (as in #ranks < X) to a list of cfg scores
     nLessX_dict = {int(X): np.zeros(nCfg) for X in iter(X_list)}
     for cfgx in xrange(nCfg):
         ranks = rank_mat[:, cfgx]
-        print('[col_score] %d) %s' % (cfgx, cfgx2_lbl[cfgx]))
         for X in iter(X_list):
             #nLessX_ = sum(np.bitwise_and(ranks < X, ranks >= 0))
             nLessX_ = sum(np.logical_and(ranks < X, ranks >= 0))
-            print('[col_score] ' + rankscore_str(X, nLessX_, nQuery))
             nLessX_dict[int(X)][cfgx] = nLessX_
 
-    LATEX_SUMMARY = helpers.get_flag('--latexsum', False)
-    if LATEX_SUMMARY:
-        print('--- LaTeX ---')
+    @ArgGaurdFalse
+    def print_colscore():
+        print('')
+        print('==================')
+        print('[harn] Scores per Config')
+        print('==================')
+        for cfgx in xrange(nCfg):
+            print('[col_score] %d) %s' % (cfgx, cfgx2_lbl[cfgx]))
+            for X in iter(X_list):
+                nLessX_ = nLessX_dict[int(X)][cfgx]
+                print('[col_score] ' + rankscore_str(X, nLessX_, nQuery))
+        print('--- /Scores per Config ---')
+    print_colscore()
+
+    #------------
+
+    @ArgGaurdFalse
+    def latexsum():
+        print('')
+        print('==========================')
+        print('[harn] LaTeX')
+        print('==========================')
         # Create configuration latex table
         criteria_lbls = ['#ranks < %d' % X for X in X_list]
         db_name = hs.get_db_name(True)
         cfg_score_title = db_name + ' rank scores'
         cfgscores = np.array([nLessX_dict[int(X)] for X in X_list]).T
-        from hscom import latex_formater as latex
 
         replace_rowlbl = [(' *cfgx *', ' ')]
         tabular_kwargs = dict(title=cfg_score_title, out_of=nQuery,
                               bold_best=True, replace_rowlbl=replace_rowlbl,
                               flip=True)
-        tabular_str = latex.make_score_tabular(cfgx2_lbl, criteria_lbls,
-                                               cfgscores, **tabular_kwargs)
+        tabular_str = latex_formater.make_score_tabular(cfgx2_lbl,
+                                                        criteria_lbls,
+                                                        cfgscores,
+                                                        **tabular_kwargs)
         print(tabular_str)
         print('--- /LaTeX ---')
+    latexsum()
+
     #------------
-    print('')
-    print('[harn]---------------')
-    print('[harn] Best configurations')
-    print('[harn]---------------')
     best_rankscore_summary = []
+    # print each configs scores less than X=thresh
     for X, cfgx2_nLessX in nLessX_dict.iteritems():
         max_LessX = cfgx2_nLessX.max()
         bestCFG_X = np.where(cfgx2_nLessX == max_LessX)[0]
         best_rankscore = '[best_cfg] %d config(s) scored ' % len(bestCFG_X)
         best_rankscore += rankscore_str(X, max_LessX, nQuery)
-        best_rankcfg = indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    ')
-        print(best_rankscore)
-        print(best_rankcfg)
         best_rankscore_summary += [best_rankscore]
+
+    @ArgGaurdFalse
+    def print_bestcfg():
+        print('')
+        print('==========================')
+        print('[harn] Best Configurations')
+        print('==========================')
+        # print each configs scores less than X=thresh
+        for X, cfgx2_nLessX in nLessX_dict.iteritems():
+            max_LessX = cfgx2_nLessX.max()
+            bestCFG_X = np.where(cfgx2_nLessX == max_LessX)[0]
+            best_rankscore = '[best_cfg] %d config(s) scored ' % len(bestCFG_X)
+            best_rankscore += rankscore_str(X, max_LessX, nQuery)
+            best_rankcfg = indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    ')
+            print(best_rankscore)
+            print(best_rankcfg)
+        print('--- /Best Configurations ---')
+    print_bestcfg()
+
     #------------
-    PRINT_MAT = helpers.get_flag('--printmat', False)
-    if PRINT_MAT:
+
+    @ArgGaurdFalse
+    def printmat():
         print('')
         print('[harn]-------------')
         print('[harn] labled rank matrix: rows=queries, cols=cfgs:\n%s' % lbld_mat)
         print('[harn]-------------')
+    printmat()
+
     #------------
-    print('[col_score] --- summary ---')
+    print('')
+    print('===========================')
+    print('[col_score] SUMMARY        ')
+    print('===========================')
     print('\n'.join(best_rankscore_summary))
     # Draw results
     rciter = itertools.product(hs.get_arg('rows', []),
@@ -346,6 +434,9 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         #res.printme()
         res.show_topN(hs, fnum=fnum)
         fnum += 1
+    print('--- /SUMMARY ---')
+
+    print('')
     print('--remember you have -r and -c available to you')
 
 #if __name__ == '__main__':

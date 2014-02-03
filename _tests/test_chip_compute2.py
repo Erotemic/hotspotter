@@ -1,12 +1,13 @@
-'''
+from hotspotter import HotSpotterAPI
+from hotspotter import chip_compute2 as cc2
+from hscom import argparse2
+from hscom import helpers
+from hsviz import viz
+import numpy as np
+import multiprocessing
+
 if __name__ == '__main__':
-    import multiprocessing
     multiprocessing.freeze_support()
-    import HotSpotterAPI
-    import argparse2
-    from hsviz import viz
-    import chip_compute2 as cc2
-    from chip_compute2 import *  # NOQA
     # Debugging vars
     chip_cfg = None
 #l')=103.7900s
@@ -29,4 +30,3 @@ if __name__ == '__main__':
     else:
         print('usage: feature_compute.py --cx [cx]')
     exec(viz.df2.present())
-'''

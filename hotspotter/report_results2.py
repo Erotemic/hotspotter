@@ -2,7 +2,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off, rrr, profile, printDBG) =\
-__common__.init(__name__, '[rr2]', DEBUG=False)
+    __common__.init(__name__, '[rr2]', DEBUG=False)
 # Matplotlib
 import matplotlib
 matplotlib.use('Qt4Agg')
@@ -1003,13 +1003,6 @@ def viz_db_match_distances(allres, orgres_list=None):
     orgres2_distance = allres.get_orgres2_distances(orgres_list=orgres_list)
     db_name = allres.hs.get_db_name()
     viz.show_descriptors_match_distances(orgres2_distance, db_name=db_name)
-
-
-def get_true_matches():
-    qcxs = allres['true'].qcxs
-    cxs  = allres['true'].cxs
-    match_list = zip(qcxs, cxs)
-    return match_list
 
 
 @profile

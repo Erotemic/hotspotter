@@ -258,8 +258,10 @@ def intersect2d(A, B):
 
 def unique_keep_order(arr):
     'pandas.unique preseves order and seems to be faster due to index overhead'
-    _, idx = np.unique(arr, return_index=True)
-    return arr[np.sort(idx)]
+    import pandas as pd
+    return pd.unique(arr)
+    #_, idx = np.unique(arr, return_index=True)
+    #return arr[np.sort(idx)]
 
 
 # --- Info Strings ---
@@ -1716,8 +1718,8 @@ def get_flag(arg, default=False):
     'Checks if the commandline has a flag or a corresponding noflag'
     if arg.find('--') != 0:
         raise Exception(arg)
-    if arg.find('--no') == 0:
-        arg = arg.replace('--no', '--')
+    #if arg.find('--no') == 0:
+        #arg = arg.replace('--no', '--')
     noarg = arg.replace('--', '--no')
     if arg in sys.argv:
         return True

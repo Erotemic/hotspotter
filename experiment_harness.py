@@ -84,16 +84,6 @@ def __ArgGaurd(func, default=False):
     return GaurdWrapper
 
 
-def print_test_results(test_results):
-    print('[harn] ---')
-    (col_lbls, row_lbls, mat_vals, test_uid, nLeX) = test_results
-    #test_uid = test_uid
-    print('[harn] test_uid=%r' % test_uid)
-    #print('[harn] row_lbls=\n%s' % str(row_lbls))
-    #print('[harn] col_lbls=\n%s' % str('\n  '.join(col_lbls)))
-    print('[harn] lowest_gt_ranks(NN,FILT,SV)=\n%s' % str(mat_vals))
-
-
 def rankscore_str(thresh, nLess, total):
     #helper to print rank scores of configs
     percent = 100 * nLess / total
@@ -104,8 +94,7 @@ def rankscore_str(thresh, nLess, total):
 # Display Test Results
 #-----------
 # Run configuration for each query
-def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1,
-                     force_load=False):
+def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False):
     dcxs = hs.get_indexed_sample()
     query_uid = qdat.get_uid()
     print('[harn] get_test_results(): %r' % query_uid)
@@ -117,52 +106,46 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1,
     nQuery = len(qcx_list)
 
     # High level caching
-    if not hs.args.nocache_query and (not force_load):
-        test_results = io.smart_load(**io_kwargs)
-        if test_results is None:
+    if not hs.args.nocache_query and (not nocache_testres):
+        qx2_bestranks = io.smart_load(**io_kwargs)
+        if qx2_bestranks is None:
             pass
-        elif len(test_results) != 1:
-            print('recaching test_results')
-        elif not test_results is None:
-            return test_results, [[{0: None}]] * nQuery
+        elif len(qx2_bestranks) != len(qcx_list):
+            print('[harn] Re-Caching qx2_bestranks')
+        elif not qx2_bestranks is None:
+            return qx2_bestranks, [[{0: None}]] * nQuery
+        #raise Exception('cannot be here')
 
     # Perform queries
     nPrevQ = nQuery * cfgx
     qx2_bestranks = []
     qx2_reslist = []
     for qx, qcx in enumerate(qcx_list):
+        print(nocache_testres)
         print(textwrap.dedent('''
         [harn]----------------
         [harn] TEST %d/%d
         [harn]----------------''' % (qx + nPrevQ + 1, nQuery * nCfg)))
-        gt_cxs = hs.get_other_indexed_cxs(qcx)
-        #title = 'q' + hs.cidstr(qcx) + ' - ' + notes
-        #print('[harn] title=%r' % (title,))
-        #print('[harn] gt_' + hs.cidstr(gt_cxs))
         res_list = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
-        bestranks = []
         qx2_reslist += [res_list]
         assert len(res_list) == 1
+        bestranks = []
         for qcx2_res in res_list:
             assert len(qcx2_res) == 1
             res = qcx2_res[qcx]
-            gt_ranks = res.get_gt_ranks(gt_cxs)
+            gt_ranks = res.get_gt_ranks(hs=hs)
             #print('[harn] cx_ranks(/%4r) = %r' % (nChips, gt_ranks))
             #print('[harn] cx_ranks(/%4r) = %r' % (NMultiNames, gt_ranks))
             #print('ns_ranks(/%4r) = %r' % (nNames, gt_ranks))
-            if len(gt_ranks) == 0:
-                _bestrank = -1
-            else:
-                _bestrank = min(gt_ranks)
+            _bestrank = -1 if len(gt_ranks) == 0 else min(gt_ranks)
             bestranks += [_bestrank]
         # record metadata
         qx2_bestranks += [bestranks]
     qx2_bestranks = np.array(qx2_bestranks)
-    test_results = (qx2_bestranks,)
     # High level caching
     helpers.ensuredir(cache_dir)
-    io.smart_save(test_results, **io_kwargs)
-    return test_results, qx2_reslist
+    io.smart_save(qx2_bestranks, **io_kwargs)
+    return qx2_bestranks, qx2_reslist
 
 
 def get_varried_params_list(test_cfg_name_list):
@@ -199,9 +182,11 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     c = hs.get_arg('cols', [])  # FIXME
     nCfg     = len(cfg_list)
     nQuery   = len(qcx_list)
-    rc2_res  = np.empty((nQuery, nCfg), dtype=list)
+    rc2_res  = np.empty((nQuery, nCfg), dtype=list)  # row/col -> result
     mat_list = []
     qdat     = ds.QueryData()
+
+    nocache_testres =  helpers.get_flag('--nocache-testres', False)
 
     # Run each test configuration
     for cfgx, query_cfg in enumerate(cfg_list):
@@ -212,12 +197,12 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
         # Set data to the current config
         qdat.set_cfg(query_cfg)
-        force_load = cfgx in c
+        _nocache_testres = nocache_testres or (cfgx in c)
         # Run the test / read cache
-        (mat_vals, ), qx2_reslist = get_test_results(hs, qcx_list, qdat,
-                                                     cfgx, nCfg, force_load)
+        qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,
+                                                      nCfg, _nocache_testres)
         # Store the results
-        mat_list.append(mat_vals)
+        mat_list.append(qx2_bestranks)
         for qx, reslist in enumerate(qx2_reslist):
             assert len(reslist) == 1
             qcx2_res = reslist[0]
@@ -291,14 +276,14 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         # Mark examples as hard
         if ranks.max() > 0:
             new_hard_qx_list += [qx]
-        new_hard_qcx_list = []
+        new_hard_qcid_list = []
         for qx in new_hard_qx_list:
             # New list is in cid format instead of cx format
             # because you should be copying and pasting it
             notes = ' ranks = ' + str(rank_mat[qx])
             qcx = qcx_list[qx]
             qcid = hs.tables.cx2_cid[qcx]
-            new_hard_qcx_list += [(qcid, notes)]
+            new_hard_qcid_list += [(qcid, notes)]
 
     @ArgGaurdFalse
     def print_rowscore():
@@ -324,8 +309,10 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     @ArgGaurdFalse
     def print_hardcase():
         print('===')
-        print('--- hard qcx_list (w.r.t these configs) ---')
-        print('\n'.join(map(repr, new_hard_qcx_list)))
+        print('--- hard new_hard_qcid_list (w.r.t these configs) ---')
+        print('\n'.join(map(repr, new_hard_qcid_list)))
+        print('There are %d hard cases ' % len(new_hard_qcid_list))
+        print(sorted([x[0] for x in new_hard_qcid_list]))
         print('--- /Scores per Query ---')
     print_hardcase()
 
@@ -358,7 +345,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     #------------
 
     @ArgGaurdFalse
-    def latexsum():
+    def print_latexsum():
         print('')
         print('==========================')
         print('[harn] LaTeX')
@@ -379,7 +366,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
                                                         **tabular_kwargs)
         print(tabular_str)
         print('--- /LaTeX ---')
-    latexsum()
+    print_latexsum()
 
     #------------
     best_rankscore_summary = []
@@ -412,12 +399,12 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     #------------
 
     @ArgGaurdFalse
-    def printmat():
+    def print_rankmat():
         print('')
         print('[harn]-------------')
         print('[harn] labled rank matrix: rows=queries, cols=cfgs:\n%s' % lbld_mat)
         print('[harn]-------------')
-    printmat()
+    print_rankmat()
 
     #------------
     print('')

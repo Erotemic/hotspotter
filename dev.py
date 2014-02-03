@@ -358,6 +358,7 @@ def get_qcx_list(hs):
         if hs.args.strict:
             raise Exception('no qcx_list history')
         qcx_list = [0]
+    qcx_list = helpers.unique_keep_order(qcx_list)
     return qcx_list
 
 

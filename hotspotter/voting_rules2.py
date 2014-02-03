@@ -5,7 +5,6 @@ from hscom import __common__
 # Python
 from itertools import izip
 # Scientific
-import pandas as pd
 import numpy as np
 from numpy.linalg import svd
 #from numba import autojit
@@ -196,7 +195,7 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
     hstack = np.hstack
     cartesian = helpers.cartesian
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
-    altx2_tnx = pd.unique(tnxs)
+    altx2_tnx = helpers.unique_keep_order(tnxs)
     tnx2_altx = {nx: altx for altx, nx in enumerate(altx2_tnx)}
     nUtilities = len(qfx2_utilities)
     nAlts   = len(altx2_tnx)
@@ -213,7 +212,7 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
     nVoters = 0
     for qfx in xrange(nUtilities):
         # partial and compliment order over alternatives
-        porder = pd.unique(qfx2_porder[qfx])
+        porder = helpers.unique_keep_order(qfx2_porder[qfx])
         nReport = len(porder)
         if nReport == 0:
             continue
@@ -241,7 +240,7 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
 def _get_alts_from_utilities(qfx2_utilities):
     # get temp name indexes
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
-    altx2_tnx = pd.unique(tnxs)
+    altx2_tnx = helpers.unique_keep_order(tnxs)
     tnx2_altx = {nx: altx for altx, nx in enumerate(altx2_tnx)}
     nUtilities = len(qfx2_utilities)
     nAlts   = len(altx2_tnx)

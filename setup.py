@@ -175,6 +175,10 @@ def build_pyinstaller():
             helpers.copy(src, dst)
 
 
+def build_mac_dmg():
+    _cmd("./_setup/mac_dmg_builder.sh")
+
+
 def build_win32_inno_installer():
     inno_dir = r'C:\Program Files (x86)\Inno Setup 5'
     inno_fname = 'ISCC.exe'
@@ -315,6 +319,8 @@ if __name__ == '__main__':
             build_pyinstaller()
         if cmd in ['inno', 'win32inno']:
             build_win32_inno_installer()
+        if cmd in ['dmg', 'macdmg']:
+            build_mac_dmg()
         if cmd in ['flann', 'pyflann']:
             make_install_pyflann()
         if cmd in ['hesaff', 'pyhesaff']:

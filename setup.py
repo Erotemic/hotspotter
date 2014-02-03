@@ -154,14 +154,11 @@ def build_pyinstaller():
     build_dir = join(cwd, 'build')
     dist_dir = join(cwd, 'dist')
     helpers.delete(dist_dir)
+    helpers.delete(build_dir)
     assert exists('setup.py'), 'must be run in hotspotter source directory'
     assert exists('../hotspotter/setup.py'), 'must be run in hotspotter source directory'
     assert exists('../hotspotter/hotspotter'), 'must be run in hotspotter source directory'
     assert exists('_setup'), 'must be run in hotspotter source directory'
-    # Remove old files
-    for rmdir in [build_dir, dist_dir]:
-        if exists(rmdir):
-            helpers.remove_file(rmdir)
     # Run the pyinstaller command (does all the work)
     _cmd('pyinstaller _setup/pyinstaller-hotspotter.spec')
     # Perform some post processing steps on the mac

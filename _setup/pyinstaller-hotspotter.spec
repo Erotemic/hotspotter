@@ -111,10 +111,12 @@ LIB_EXT = {'win32': 'dll',
            'linux2': 'so'}[PLATFORM]
 
 #/usr/local/lib/python2.7/dist-packages/pyflann/lib/libflann.so
+#libflann_src = join_SITE_PACKAGES('pyflann', 'lib', libflann_fname)
 # FLANN Library
 try:
     libflann_fname = 'libflann.' + LIB_EXT
-    libflann_src = join_SITE_PACKAGES('pyflann', 'lib', libflann_fname)
+    libflann_src = '/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/pyflann/lib/libflann.dylib'
+    
     libflann_dst = join(hsbuild, libflann_fname)
     add_data(a, libflann_dst, libflann_src)
 except Exception as ex:
@@ -134,6 +136,14 @@ for root, dirs, files in os.walk(walk_path):
             if lib_fname in ROOT_DLLS:
                 toc_dst = join(hsbuild, lib_fname)
             add_data(a, toc_dst, toc_src)
+
+# Qt GUI Libraries
+walk_path = '/opt/local/Library/Frameworks/QtGui.framework/Versions/4/Resources/qt_menu.nib'
+for root, dirs, files in os.walk(walk_path):
+    for lib_fname in files:
+        toc_src = join(walk_path, lib_fname)
+        toc_dst = join('qt_menu.nib', lib_fname)
+        add_data(a, toc_dst, toc_src)
 
 # Documentation
 userguide_dst = '_doc/HotSpotterUserGuide.pdf'

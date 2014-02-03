@@ -34,3 +34,4 @@ OpenGLContext.profile
 *.prof
 *.profile.txt
 hotspotter/*.c
+.DS_Store

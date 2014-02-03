@@ -1,36 +1,36 @@
-'''
+from hotspotter import HotSpotterAPI as api
+from hotspotter import feature_compute2 as fc2
+from hscom import helpers
+from hsviz import viz
+from hscom import argparse2
+import multiprocessing
+
 if __name__ == '__main__':
-    import multiprocessing
     multiprocessing.freeze_support()
     print('[fc2] __main__ = feature_compute2.py')
-    import main
-    import HotSpotterAPI
-    from hsviz import viz
-    import feature_compute2 as fc2
-    from feature_compute2 import *  # NOQA
+    # Read Args
+    cx = helpers.get_arg('--cx', type_=int)
+    delete_features = helpers.get_flag('--delete-features', default=False)
+    nRandKpts = helpers.get_arg('--nRandKpts', type_=int)
     # Debugging vars
     feat_cfg = None
     cx_list = None
     kwargs = {}
     # --- LOAD TABLES --- #
-    args = main.parse_arguments(db='NAUTS')
-    hs = HotSpotterAPI.HotSpotter(args)
+    args = argparse2.parse_arguments(db='NAUTS')
+    hs = api.HotSpotter(args)
     hs.load_tables()
-    hs.set_samples()
     # --- LOAD CHIPS --- #
-    hs.load_configs()
+    hs.update_samples()
     hs.load_chips()
-    # --- LOAD FEATURES --- #
-    load_features(hs)
-    cx = helpers.get_arg('--cx', type_=int)
-    delete_features = '--delete-features' in sys.argv
-    nRandKpts = helpers.get_arg('--nRandKpts', type_=int)
+    # Delete features if needed
     if delete_features:
         fc2.clear_feature_cache(hs)
+    # --- LOAD FEATURES --- #
+    fc2.load_features(hs)
     if not cx is None:
         viz.show_chip(hs, cx, nRandKpts=nRandKpts)
     else:
         print('usage: feature_compute.py --cx [cx] --nRandKpts [num] [--delete-features]')
 
-    exec(viz.present())
-'''
+    exec(viz.df2.present())

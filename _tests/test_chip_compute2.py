@@ -1,10 +1,10 @@
-from hotspotter import HotSpotterAPI
+from hotspotter import HotSpotterAPI as api
 from hotspotter import chip_compute2 as cc2
 from hscom import argparse2
 from hscom import helpers
 from hsviz import viz
-import numpy as np  # NOQA
 import multiprocessing
+import numpy as np  # NOQA
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
@@ -15,7 +15,7 @@ if __name__ == '__main__':
     kwargs = {}
     # --- LOAD TABLES --- #
     args = argparse2.parse_arguments(defaultdb='NAUTS')
-    hs = HotSpotterAPI.HotSpotter(args)
+    hs = api.HotSpotter(args)
     hs.load_tables()
     hs.update_samples()
     # --- LOAD CHIPS --- #

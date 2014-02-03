@@ -1,3 +1,8 @@
+Prereqs: 
+PyQt4
+opencv 2.4.8
+the hotspotter repos of hesaff and flann
+
 Quick Instructions: 
 
 If you encounter errors on a Linux or Mac system  before doing anything else
@@ -14,8 +19,3 @@ python main.py
 To Run HotSpotter from the command line with a command line interface 
 
 python main.py --cmd
-
-QtConsole Instructions
-
-1) ipython qtconsole --colors=Linux --autocall 2 --pylab=qt 
-2) in the console run %run main.py 

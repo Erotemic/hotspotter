@@ -25,7 +25,6 @@ from hscom import helpers
 #mc3.rrr(); mf.rrr(); dev.rrr(); ds.rrr(); vr2.rrr()
 #vr2.print_off()
 #mf.print_off()
-#algos.print_off()
 #io.print_off()
 #HotSpotter.print_off()
 #cc2.print_off()
@@ -83,14 +82,9 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1,
     test_uid  = hs_uid + query_uid + qcxs_uid
     cache_dir = join(hs.dirs.cache_dir, 'experiment_harness_results')
     io_kwargs = dict(dpath=cache_dir, fname='test_results', uid=test_uid, ext='.cPkl')
-    # High level caching
-    qx2_bestranks = []
-    #nChips = hs.get_num_chip()
-    #nNames = len(hs.tables.nx2_name) - 2
     nQuery = len(qcx_list)
-    #NMultiNames =
-    nPrevQ = nQuery * cfgx
-    qx2_reslist = []
+
+    # High level caching
     if not hs.args.nocache_query and (not force_load):
         test_results = io.smart_load(**io_kwargs)
         if test_results is None:
@@ -99,6 +93,11 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1,
             print('recaching test_results')
         elif not test_results is None:
             return test_results, [[{0: None}]] * nQuery
+
+    # Perform queries
+    nPrevQ = nQuery * cfgx
+    qx2_bestranks = []
+    qx2_reslist = []
     for qx, qcx in enumerate(qcx_list):
         print(textwrap.dedent('''
         [harn]----------------
@@ -110,13 +109,11 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1,
         #print('[harn] gt_' + hs.cidstr(gt_cxs))
         res_list = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
         bestranks = []
-        algos = []
         qx2_reslist += [res_list]
         assert len(res_list) == 1
         for qcx2_res in res_list:
             assert len(qcx2_res) == 1
             res = qcx2_res[qcx]
-            algos += [res.title]
             gt_ranks = res.get_gt_ranks(gt_cxs)
             #print('[harn] cx_ranks(/%4r) = %r' % (nChips, gt_ranks))
             #print('[harn] cx_ranks(/%4r) = %r' % (NMultiNames, gt_ranks))
@@ -128,8 +125,8 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1,
             bestranks += [_bestrank]
         # record metadata
         qx2_bestranks += [bestranks]
-    mat_vals = np.array(qx2_bestranks)
-    test_results = (mat_vals,)
+    qx2_bestranks = np.array(qx2_bestranks)
+    test_results = (qx2_bestranks,)
     # High level caching
     helpers.ensuredir(cache_dir)
     io.smart_save(test_results, **io_kwargs)

@@ -1,3 +1,4 @@
+#!/usr/env python
 from hotspotter import HotSpotterAPI as api
 from hotspotter import feature_compute2 as fc2
 from hscom import helpers

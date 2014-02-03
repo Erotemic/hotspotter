@@ -3,7 +3,7 @@ from hotspotter import chip_compute2 as cc2
 from hscom import argparse2
 from hscom import helpers
 from hsviz import viz
-import numpy as np
+import numpy as np  # NOQA
 import multiprocessing
 
 if __name__ == '__main__':
@@ -11,7 +11,6 @@ if __name__ == '__main__':
     # Debugging vars
     chip_cfg = None
 #l')=103.7900s
-
     cx_list = None
     kwargs = {}
     # --- LOAD TABLES --- #
@@ -23,8 +22,8 @@ if __name__ == '__main__':
     cc2.load_chips(hs)
     cx = helpers.get_arg('--cx', type_=int)
     if not cx is None:
-        tau = np.pi * 2
-        hs.change_theta(cx, tau / 8)
+        #tau = np.pi * 2
+        #hs.change_theta(cx, tau / 8)
         viz.show_chip(hs, cx, draw_kpts=False, fnum=1)
         viz.show_image(hs, hs.cx2_gx(cx), fnum=2)
     else:

@@ -35,3 +35,5 @@ OpenGLContext.profile
 *.profile.txt
 hotspotter/*.c
 .DS_Store
+HotSpotterApp.pkg
+*.shelf

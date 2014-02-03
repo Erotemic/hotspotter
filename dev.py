@@ -525,15 +525,15 @@ def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True, with_notes=False
 allres_ptr = [None]
 
 
-def get_allres(hs):
+def get_allres(hs, qcx_list):
     global allres_ptr
     allres = allres_ptr[0]
     if allres is None:
-        allres_ptr[0] = rr2.get_allres(hs)
+        allres_ptr[0] = rr2.get_allres(hs, qcx_list)
     return allres_ptr[0]
 
 
-def report_results(hs):
+def report_results(hs, qcx_list):
     from hotspotter import report_results2 as rr2
     if '--list' in sys.argv:
         #listpos = sys.argv.index('--list')
@@ -543,7 +543,7 @@ def report_results(hs):
 
     #allres = helpers.search_stack_for_localvar('allres')
     #if allres is None:
-    allres = get_allres(hs)
+    allres = get_allres(hs, qcx_list)
 
     #Helper drawing functions
     #gt_matches = lambda cx: viz.show_chip(allres, cx, 'gt_matches')
@@ -559,6 +559,7 @@ def report_results(hs):
 # Driver Function
 def run_investigations(hs, qcx_list):
     import experiment_harness
+    import experiment_configs
     args = hs.args
     qcx = qcx_list[0]
     print('[dev] Running Investigation: ' + hs.cidstr(qcx))
@@ -609,12 +610,13 @@ def run_investigations(hs, qcx_list):
         allres = get_allres(hs)
         rr2.viz_db_match_distances(allres)
     if intest('report_results', 'rr'):
-        report_results(hs)
+        report_results(hs, qcx_list)
+    if intest('custom'):
+        fnum = experiment_harness.test_configurations(hs, qcx_list, 'custom', fnum)
 
     # Allow any testcfg to be in tests like:
     # vsone_1 or vsmany_3
-    import experiment_configs as _testcfgs
-    testcfg_keys = vars(_testcfgs).keys()
+    testcfg_keys = vars(experiment_configs).keys()
     testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
     for test_cfg_name in testcfg_locals:
         if intest(test_cfg_name):
@@ -641,14 +643,16 @@ def export_qon_list(hs, qcx_list):
 
 
 def all_printoff():
-    from hotspotter import fileio as io
+    from hscom import fileio as io
     from hotspotter import HotSpotterAPI as api
+    from hotspotter import load_data2 as ld2
     ds.print_off()
     mf.print_off()
     io.print_off()
     api.print_off()
     mc3.print_off()
     vr2.print_off()
+    ld2.print_off()
     #algos.print_off()
     #cc2.print_off()
     #fc2.print_off()

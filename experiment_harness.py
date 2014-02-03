@@ -2,7 +2,6 @@ from __future__ import division, print_function
 # Python
 import itertools
 import textwrap
-import sys
 from os.path import join
 # Scientific
 import numpy as np
@@ -12,7 +11,7 @@ from hotspotter import Config
 from hotspotter import DataStructures as ds
 from hotspotter import match_chips3 as mc3
 from hscom import fileio as io
-from hscom import helpers as helpers
+from hscom import helpers
 #from match_chips3 import *
 #import draw_func2 as df2
 # What are good ways we can divide up FLANN indexes instead of having one
@@ -142,35 +141,53 @@ def get_varried_params_list(test_cfg_name_list):
     varied_params_list = [_ for _dict in vary_dicts for _ in helpers.all_dict_combinations(_dict)]
     return varied_params_list
 
-#-----------
-# Test Each configuration
-def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
-    print('\n*********************\n')
-    print('[harn]================')
-    print('[harn]test_scoring(hs)')
+
+def get_cfg_list(hs, test_cfg_name_list):
+    if 'custom' == test_cfg_name_list:
+        cfg_list = [hs.prefs.query_cfg]
+        return cfg_list
     varied_params_list = get_varried_params_list(test_cfg_name_list)
-    #vary_dicts = vary_dicts[0]
-    # query_cxs, other_cxs, notes
     cfg_list = [Config.QueryConfig(hs, **_dict) for _dict in varied_params_list]
-    qdat = ds.QueryData()
-    # Preallocate test result aggregation structures
+    return cfg_list
+
+
+#-----------
+def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
+
+    # Test Each configuration
+    print(textwrap.dedent('''
+    *********************
+    [harn]================
+    [harn]test_scoring(hs)'''))
+
+    # Grab list of algorithm configurations to test
+    cfg_list = get_cfg_list(hs, test_cfg_name_list)
     print('')
     print('[harn] Testing %d different parameters' % len(cfg_list))
     print('[harn]         %d different chips' % len(qcx_list))
-    nCfg = len(cfg_list)
-    nQuery = len(qcx_list)
-    rc2_res = np.empty((nQuery, nCfg), dtype=list)
+
+    # Preallocate test result aggregation structures
+    c = hs.get_arg('cols', [])  # FIXME
+    nCfg     = len(cfg_list)
+    nQuery   = len(qcx_list)
+    rc2_res  = np.empty((nQuery, nCfg), dtype=list)
     mat_list = []
-    c = hs.get_arg('cols', [])
+    qdat     = ds.QueryData()
+
+    # Run each test configuration
     for cfgx, query_cfg in enumerate(cfg_list):
         print(textwrap.dedent('''
         [harn]---------------')
         [harn] TEST_CFG %d/%d'
         [harn]---------------'''  % (cfgx + 1, nCfg)))
+
+        # Set data to the current config
         qdat.set_cfg(query_cfg)
         force_load = cfgx in c
+        # Run the test / read cache
         (mat_vals, ), qx2_reslist = get_test_results(hs, qcx_list, qdat,
                                                      cfgx, nCfg, force_load)
+        # Store the results
         mat_list.append(mat_vals)
         for qx, reslist in enumerate(qx2_reslist):
             assert len(reslist) == 1
@@ -178,9 +195,9 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             assert len(qcx2_res) == 1
             res = qcx2_res.values()[0]
             rc2_res[qx, cfgx] = res
-        # Keep the best results
+
+    print('------')
     print('[harn] Finished testing parameters')
-    print('')
     print('---------------------------------')
     #--------------------
     # Print Best Results
@@ -207,13 +224,22 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     cfgx2_lbl = np.array(cfgx2_lbl)
     #------------
     indent = helpers.indent
-    print('')
-    print('[harn]-------------')
-    print('[harn] queries:\n%s' % '\n'.join(qx2_lbl))
+
+    PRINT_QXLBL = helpers.get_flag('--printrowlbl', False)
+    if PRINT_QXLBL:
+        print('')
+        print('[harn]-------------')
+        print('[harn] queries:\n%s' % '\n'.join(qx2_lbl))
+    else:
+        pass
     #------------
-    print('')
-    print('[harn]-------------')
-    print('[harn] configs:\n%s' % '\n'.join(cfgx2_lbl))
+    PRINT_CFGLBL = helpers.get_flag('--printcfglbl', False)
+    if PRINT_CFGLBL:
+        print('')
+        print('[harn]-------------')
+        print('[harn] configs:\n%s' % '\n'.join(cfgx2_lbl))
+    else:
+        pass
     #------------
     PRINT_ROW_SCORES = helpers.get_flag('--printrow', False)
     if PRINT_ROW_SCORES:
@@ -248,7 +274,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             new_hard_qcx_list += [(qcid, notes)]
         print('\n'.join(map(repr, new_hard_qcx_list)))
     else:
-        print('~~~~~~~~ --printrow')
+        print('\n~~~~~~~~ --printrow\n')
 
     #------------
     def rankscore_str(thresh, nLess, total):
@@ -271,7 +297,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             print('[col_score] ' + rankscore_str(X, nLessX_, nQuery))
             nLessX_dict[int(X)][cfgx] = nLessX_
 
-    LATEX_SUMMARY = True
+    LATEX_SUMMARY = helpers.get_flag('--latexsum', False)
     if LATEX_SUMMARY:
         print('--- LaTeX ---')
         # Create configuration latex table
@@ -305,7 +331,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print(best_rankcfg)
         best_rankscore_summary += [best_rankscore]
     #------------
-    PRINT_MAT = True and (not '--noprintmat' in sys.argv)
+    PRINT_MAT = helpers.get_flag('--printmat', False)
     if PRINT_MAT:
         print('')
         print('[harn]-------------')

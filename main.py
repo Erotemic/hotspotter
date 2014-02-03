@@ -98,6 +98,7 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
     imports()
     from hscom import argparse2
     from hscom import helpers
+    from hscom import fileio as io
     from hotspotter import HotSpotterAPI as api
     args = argparse2.parse_arguments(defaultdb=defaultdb)
     # Parse arguments
@@ -110,7 +111,6 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
 
     # Preload process args
     if args.delete_global:
-        from hscom import fileio as io
         io.delete_global_cache()
 
     # --- Build HotSpotter API ---
@@ -124,13 +124,12 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
         #print(cfg_dict)
         hs.prefs.query_cfg.update_cfg(**cfg_dict)
         hs.prefs.save()
-        #hs.prefs.printme()
+        hs.prefs.printme()
         #hs.default_preferences()
 
     # Load all data if needed now, otherwise be lazy
     try:
         hs.load(load_all=load_all)
-        from hscom import fileio as io
         db_dir = hs.dirs.db_dir
         io.global_cache_write('db_dir', db_dir)
     except ValueError as ex:

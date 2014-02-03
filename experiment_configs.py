@@ -147,9 +147,9 @@ adaptive_test.update({
 
 normrule = vsmany_best.copy()
 normrule.update({
-    'K': [10, 5, 3],
-    'Knorm': [1, 3, 5, 10, 20],
-    'normalizer_rule': ['last', 'name'],
+    'K': [5, 10, 3],
+    'Knorm': [5, 3, 1, 10, 20],
+    'normalizer_rule': ['name', 'last'],
 })
 
 vsmany_kenya = vsmany_best.copy()

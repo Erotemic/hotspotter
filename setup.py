@@ -164,11 +164,11 @@ def build_pyinstaller():
     # Perform some post processing steps on the mac
     if sys.platform == 'darwin' and exists("dist/HotSpotter.app/Contents/"):
         copy_list = [
-            'hsicon.icns',
-            'Info.plist'
+            ('hsicon.icns', 'Resources/icon-windowed.icns'),
+            ('Info.plist', 'Info.plist'),
         ]
         srcdir = '_setup'
-        dstdir = 'dist/HotSpotter.app/Contents/Resources/'
+        dstdir = 'dist/HotSpotter.app/Contents/'
         for srcname, dstname in copy_list:
             src = join(srcdir, srcname)
             dst = join(dstdir, dstname)

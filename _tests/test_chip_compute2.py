@@ -19,7 +19,8 @@ if __name__ == '__main__':
     hs.load_tables()
     hs.update_samples()
     # --- LOAD CHIPS --- #
-    cc2.load_chips(hs)
+    force_compute = helpers.get_flag('--force', default=False)
+    cc2.load_chips(hs, force_compute=force_compute)
     cx = helpers.get_arg('--cx', type_=int)
     if not cx is None:
         #tau = np.pi * 2

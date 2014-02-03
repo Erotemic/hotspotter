@@ -376,7 +376,7 @@ def batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
 # Main Script
 # =======================================
 #@profile
-def load_chips(hs, cx_list=None, **kwargs):
+def load_chips(hs, cx_list=None, force_compute=False, **kwargs):
     print('\n=============================')
     print('[cc2] Precomputing chips and loading chip paths: %r' % hs.get_db_name())
     print('=============================')
@@ -451,7 +451,7 @@ def load_chips(hs, cx_list=None, **kwargs):
     #--------------------------
     pcc_kwargs = {
         'arg_list': [gfpath_list, cfpath_list, roi_list, theta_list, chipsz_list],
-        'lazy': not hs.args.nocache_chips,
+        'lazy': not hs.args.nocache_chips and (not force_compute),
         'num_procs': hs.args.num_procs,
         'common_args': [filter_list]
     }

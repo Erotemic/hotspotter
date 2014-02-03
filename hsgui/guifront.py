@@ -347,6 +347,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
         def set_table_context_menu(tbl):
             tbl.setContextMenuPolicy(Qt.CustomContextMenu)
             # RCOS TODO: How do we get the clicked item on a right click?
+            # tbl.selectedItems
+            # tbl.selectedIndexes
             opt2_callback = [
                 ('Query', front.querySignal.emit), ]
                 #('item',  lambda: print('finishme')),

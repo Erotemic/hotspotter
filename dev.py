@@ -685,26 +685,3 @@ if __name__ == '__main__':
         sys.exit(0)
     allres = allres_ptr[0]
     exec(df2.present())  # **df2.OooScreen2()
-
-
-'''
-python dev.py --db GZ --score-method borda --query 451 --K 5 --noshow-query --nocache-query --noshow-gt
-python dev.py --db GZ --score-method bordaw --query 451 --K 5 --noshow-query --nocache-query --noshow-gt
-python dev.py --db GZ --score-method pl --query 451 --K 5 --noshow-query --nocache-query --noshow-gt
-python dev.py --db GZ --score-method plw --query 451 --K 5 --noshow-query --nocache-query --noshow-gt
-python dev.py --db GZ --score-method csum --query 451 --K 5 --noshow-query --nocache-query --noshow-gt
-
-
-python dev.py --db GZ --tests kpts-interact  --histid 0
-python dev.py --db GZ --tests test-cfg-vsmany-1 --all-gt-cases
-python dev.py --db GZ --tests test-cfg-vsmany-1 --sthresh 30 250
---all-gt-cases
-python dev.py --dbM --tests 15 chip-info --histid 0 --sthresh 30 250
-
-python dev.py --dbM --tests test-cfg-vsmany-3 --all-gt-cases
-python dev.py --dbM --tests test-cfg-vsmany-3 --sthresh 30 80
-python dev.py --dbG --tests test-cfg-vsmany-3 --sthresh 30 80
-
-# Database information
-python dev.py --dbG  --tests dbinfo
-'''

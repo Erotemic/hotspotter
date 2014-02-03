@@ -7,7 +7,7 @@ from os.path import join
 # Scientific
 import numpy as np
 # Hotspotter
-import experiment_configs as _testcfgs
+import experiment_configs
 from hotspotter import Config
 from hotspotter import DataStructures as ds
 from hotspotter import match_chips3 as mc3
@@ -38,7 +38,7 @@ from hscom import helpers as helpers
 
 
 def get_valid_testcfg_names():
-    testcfg_keys = vars(_testcfgs).keys()
+    testcfg_keys = vars(experiment_configs).keys()
     testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
     valid_cfg_names = helpers.indent('\n'.join(testcfg_locals), '  * ')
     return valid_cfg_names
@@ -47,7 +47,7 @@ def get_valid_testcfg_names():
 def get_vary_dicts(test_cfg_name_list):
     vary_dicts = []
     for cfg_name in test_cfg_name_list:
-        evalstr = '_testcfgs.' + cfg_name
+        evalstr = 'experiment_configs.' + cfg_name
         test_cfg = eval(evalstr)
         vary_dicts.append(test_cfg)
     if len(vary_dicts) == 0:
@@ -137,15 +137,19 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1,
     return test_results, qx2_reslist
 
 
+def get_varried_params_list(test_cfg_name_list):
+    vary_dicts = get_vary_dicts(test_cfg_name_list)
+    varied_params_list = [_ for _dict in vary_dicts for _ in helpers.all_dict_combinations(_dict)]
+    return varied_params_list
+
 #-----------
 # Test Each configuration
 def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
-    vary_dicts = get_vary_dicts(test_cfg_name_list)
     print('\n*********************\n')
     print('[harn]================')
     print('[harn]test_scoring(hs)')
+    varied_params_list = get_varried_params_list(test_cfg_name_list)
     #vary_dicts = vary_dicts[0]
-    varied_params_list = [_ for _dict in vary_dicts for _ in helpers.all_dict_combinations(_dict)]
     # query_cxs, other_cxs, notes
     cfg_list = [Config.QueryConfig(hs, **_dict) for _dict in varied_params_list]
     qdat = ds.QueryData()

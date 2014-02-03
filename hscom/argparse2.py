@@ -94,6 +94,7 @@ def make_argparse2(description, *args, **kwargs):
 
 def commands_argparse(parser2):
     parser2 = parser2.add_argument_group('Commands')
+    parser2.add_str('--setcfg', help='standard config name')
     parser2.add_flag('--autoquery')
     parser2.add_intlist('--query', default=[], help='query chip-id to investigate')
     parser2.add_intlist('--select-cid', default=[], help='chip indexes to view')
@@ -115,8 +116,6 @@ def commands_argparse(parser2):
 def dev_argparse(parser2):
     parser2 = parser2.add_argument_group('Dev')
     # Testing flags
-    parser2.add_flag('--test-vsmany')
-    parser2.add_flag('--test-vsone')
     parser2.add_flag('--all-cases')
     parser2.add_flag('--all-gt-cases')
     # Plotting Args
@@ -189,13 +188,6 @@ def cfg_argparse(parser2):
             elif isinstance(val, str):
                 parser2.add_str('--' + key, default=val)
     # TODO: pass in default hs.prefs to auto populate this
-    #parser.add_float('--xy-thresh', None, '')
-    #parser.add_float('--ratio-thresh', None, '')
-    #parser.add_int('--K', help='for K-nearest-neighbors')
-    #parser.add_int('--N', help='num neighbors to show')
-    #parser.add_int('--feat_min_scale')
-    #parser.add_int('--feat_max_scale')
-    #parser.add_str('--score-method', help='aggregation method')
 
 
 def cache_argparse(parser2):
@@ -290,7 +282,7 @@ def parse_arguments(defaultdb=None, **kwargs):
     database_argparse(parser2)
     dev_argparse(parser2)
     behavior_argparse(parser2)
-    cfg_argparse(parser2)
+    #cfg_argparse(parser2)
     cache_argparse(parser2)
     args, unknown = parser2.parser.parse_known_args()
     #args, unknown = parser.parse_args()

@@ -115,6 +115,18 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
 
     # --- Build HotSpotter API ---
     hs = api.HotSpotter(args)
+    setcfg = args.setcfg
+    if setcfg is not None:
+        import experiment_harness
+        print('[main] setting cfg to %r' % setcfg)
+        varried_list = experiment_harness.get_varried_params_list([setcfg])
+        cfg_dict = varried_list[0]
+        #print(cfg_dict)
+        hs.prefs.query_cfg.update_cfg(**cfg_dict)
+        hs.prefs.save()
+        #hs.prefs.printme()
+        #hs.default_preferences()
+
     # Load all data if needed now, otherwise be lazy
     try:
         hs.load(load_all=load_all)

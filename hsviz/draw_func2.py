@@ -1620,7 +1620,7 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None, lbl2=None,
             _drawlines(color_list=colors)
     else:
         draw_boxedX(xywh2)
-    if fs is not None and colorbar_ and colors is not None:
+    if fs is not None and colorbar_ and 'colors' in vars() and colors is not None:
         colorbar(fs, colors)
     #legend()
     return None

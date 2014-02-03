@@ -12,12 +12,18 @@ cython_vs_python()
     python setup.py cython
     ./profiler.sh dev.py --db MOTHERS -t rr --nocache-query
 }
-cython_vs_python
+#cython_vs_python
 
 simple_tests()
 {
     python dev.py --db NAUTS -t best --all-gt-cases
 }
+
+normrule_test()
+{
+    python dev.py --db MOTHERS -t normrule_test --all-gt-cases
+}
+normrule_test
 
 #ic --db GZ --tests vsmany_big_social --all-gt-cases | tail
 #ic --db GZ --tests vsmany_score --all-gt-cases | tail

@@ -197,7 +197,7 @@ exe = EXE(pyz, a.scripts, **exe_kwargs)   # NOQA
 collect_kwargs = dict(strip=None, upx=True, name=join('dist', 'hotspotter'))
 coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, **collect_kwargs)  # NOQA
 
-bundle_name = 'hotspotter'
+bundle_name = 'HotSpotter'
 if APPLE:
     bundle_name += '.app'
 

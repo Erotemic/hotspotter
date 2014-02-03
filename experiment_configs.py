@@ -145,8 +145,8 @@ adaptive_test.update({
 })
 
 
-normrule_test = vsmany_best.copy()
-normrule_test.update({
+normrule = vsmany_best.copy()
+normrule.update({
     'K': [10, 5, 3],
     'Knorm': [1, 3, 5, 10, 20],
     'normalizer_rule': ['last', 'name'],

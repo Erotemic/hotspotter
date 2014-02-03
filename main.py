@@ -130,7 +130,7 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
     # Load all data if needed now, otherwise be lazy
     try:
         hs.load(load_all=load_all)
-        from hotspotter import fileio as io
+        from hscom import fileio as io
         db_dir = hs.dirs.db_dir
         io.global_cache_write('db_dir', db_dir)
     except ValueError as ex:

@@ -140,7 +140,8 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
         printDBG('[parallel] creating process %r' % (i,))
         proc = multiprocessing.Process(target=_worker, args=(task_queue, done_queue))
         proc.start()
-        proc_list.append(proc_list)
+        #proc.daemon = True
+        proc_list.append(proc)
     # wait for results
     printDBG('[parallel] waiting for results')
     sys.stdout.flush()
@@ -161,6 +162,8 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     # stop children processes
     for i in xrange(num_procs):
         task_queue.put('STOP')
+    for proc in proc_list:
+        proc.join()
     return result_list
     #import time
     #time.sleep(.01)

@@ -1,3 +1,10 @@
+Hotspotter is a work in progress, and getting setup on a new system
+has not fully been hashed out yet. Its doable. Best of luck. 
+Message me on github if you need help. 
+
+This will be open source we have not completely settled on a licence yet. 
+
+
 Prereqs: 
 PyQt4
 opencv 2.4.8

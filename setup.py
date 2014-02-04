@@ -257,9 +257,10 @@ def clean():
     helpers.remove_files_in_dir(cwd, '*.prof', recursive=True)
     helpers.remove_files_in_dir(cwd, '*.prof.txt', recursive=True)
     helpers.remove_files_in_dir(cwd, '*.lprof', recursive=True)
-    helpers.remove_files_in_dir(cwd, 'HotSpotterApp.*.pkg', recursive=False)
+    helpers.remove_files_in_dir(cwd, 'HotSpotterApp.pkg', recursive=False)
     helpers.remove_files_in_dir(cwd + '/hotspotter', '*.so', recursive=False)
     helpers.remove_files_in_dir(cwd + '/hotspotter', '*.c', recursive=False)
+    helpers.remove_files_in_dir(cwd + '/hstpl/extern_feat', 'libopencv_*.dylib', recursive=False)
     helpers.delete(join(cwd, 'dist'))
     helpers.delete(join(cwd, 'build'))
     helpers.delete(join(cwd, "'"))  # idk where this file comes from

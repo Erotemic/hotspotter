@@ -203,6 +203,18 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('[harn] Testing %d different parameters' % len(cfg_list))
     print('[harn]         %d different chips' % len(qcx_list))
 
+    if helpers.get_flag('--quit1'):
+        print('Triggered --quit1')
+        for cfg in cfg_list:
+            print(cfg._feat_cfg)
+        #print(test_configurations.func_code.co_freevars)
+        from IPython import embed
+        embed()
+        #exec(helpers.ipython_execstr())
+        #print(sel_cols)
+        #print(sel_rows)
+        sys.exit(1)
+
     # Preallocate test result aggregation structures
     sel_cols = hs.get_arg('sel_cols', [])  # FIXME
     sel_rows = hs.get_arg('sel_rows', [])  # FIXME
@@ -213,12 +225,6 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     qdat     = ds.QueryData()
 
     nocache_testres =  helpers.get_flag('--nocache-testres', False)
-
-    if helpers.get_flag('--quit1'):
-        print('Triggered --quit1')
-        print(sel_cols)
-        print(sel_rows)
-        sys.exit(1)
 
     test_results_verbosity = 2
     test_cfg_verbosity = 2
@@ -233,6 +239,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     for cfgx, query_cfg in enumerate(cfg_list):
         mark_progress(cfgx + 1, nCfg)
         # Set data to the current config
+        print(query_cfg.get_printable())
         qdat.set_cfg(query_cfg)
         _nocache_testres = nocache_testres or (cfgx in sel_cols)
         # Run the test / read cache

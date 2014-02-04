@@ -27,6 +27,9 @@ class AbstractPrintable(object):
     def printme(self):
         print(str(self))
 
+    def printme3(self):
+        print(self.get_printable())
+
     def printme2(self,
                  type_bit=True,
                  print_exclude_aug=[],

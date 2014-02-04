@@ -53,6 +53,8 @@ def make_distributable_dylib(dylib_fpath):
     copy_list = []
     instname_list = []
     for fpath_src in depends_list:
+        if not exists(fpath_src):
+            continue
         fpath_dst = join(output_dir, split(fpath_src)[1])
         copy_list.append((fpath_src, fpath_dst))
         instname_list.append(get_localize_name_cmd(dylib_fpath, fpath_src))

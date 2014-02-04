@@ -3,7 +3,7 @@ import subprocess
 import re
 import shutil
 import os
-from os.path import exists, expanduser, join, split, splitext
+from os.path import exists, join, split, splitext, normpath, abspath
 
 
 def ensuredir(path):
@@ -50,7 +50,7 @@ def make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/'):
     'removes absolute paths from dylibs on mac using otool'
     print('[otool] making distributable: %r' % dylib_fpath)
     assert exists(dylib_fpath), 'does not exist dylib_fpath=%r' % dylib_fpath
-    output_dir = split(dylib_fpath)[0]
+    loader_path = split(dylib_fpath)[0]
     depends_list = extract_dependent_dylibs(dylib_fpath, filter_regex=filter_regex)
 
     dependency_moved = False
@@ -63,7 +63,7 @@ def make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/'):
         # they have probably already been fixed
         if not exists(fpath_src):
             continue
-        fpath_dst = join(output_dir, split(fpath_src)[1])
+        fpath_dst = join(loader_path, split(fpath_src)[1])
         # Only copy if the file doesnt already exist
         if not exists(fpath_dst):
             if re.search(filter_regex, fpath_src):
@@ -82,7 +82,47 @@ def make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/'):
         _cmd(*instname_cmd)
     return dependency_moved
 
+
+def check_depends_dylib(dylib_fpath, filter_regex='/opt/local/lib/'):
+    print('[otool] checking dependencies: %r' % dylib_fpath)
+    assert exists(dylib_fpath), 'does not exist dylib_fpath=%r' % dylib_fpath
+    depends_list = extract_dependent_dylibs(dylib_fpath, filter_regex=filter_regex)
+    loader_path = split(dylib_fpath)[0]
+    exists_list = []
+    missing_list = []
+    for fpath in depends_list:
+        fpath = normpath(fpath.replace('@loader_path', loader_path))
+        absfpath = abspath(fpath)
+        if not exists(absfpath):
+            missing_list.append(absfpath)
+        else:
+            exists_list.append(absfpath)
+
+    if len(exists_list) > 0:
+        print('Verified Dependencies: ')
+        print('\n'.join(missing_list))
+        print('----')
+    else:
+        print('Nothing exists')
+
+    if len(missing_list) > 0:
+        print('Missing Dependencies: ')
+        print('\n'.join(missing_list))
+        print('----')
+    else:
+        print('Nothing missing')
+
+
+
+
 if __name__ == '__main__':
-    # input dylib
-    dylib_fpath  = expanduser('~/code/hotspotter/hstpl/extern_feat/libhesaff.dylib')
-    make_distributable_dylib(dylib_fpath)
+    #from os.path import expanduser
+    #dylib_fpath  = expanduser('~/code/hotspotter/hstpl/extern_feat/libhesaff.dylib')
+    import sys
+    if len(sys.argv) == 3:
+        if sys.argv[1] == 'make_distributable':
+            dylib_fpath = sys.argv[1]
+            make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/')
+        if sys.argv[1] == 'check_depends':
+            dylib_fpath = sys.argv[1]
+            make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/')

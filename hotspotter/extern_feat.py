@@ -51,37 +51,38 @@ def precompute_hesaff(rchip_fpath, feat_fpath, dict_args):
 #---------------------------------------
 # Work functions which call the external feature detectors
 # Helper function to call commands
-try:
-    from hstpl.extern_feat import pyhesaff
-
-    def detect_kpts_new(rchip_fpath, dict_args):
-        kpts, desc = pyhesaff.detect_kpts(rchip_fpath, **dict_args)
-        return kpts, desc
-    print('[extern_feat] new hessaff is available')
-except ImportError as ex:
-    print('[extern_feat] new hessaff is not available: %r' % ex)
-    if '--strict' in sys.argv:
-        raise
-
-try:
-    from hstpl.extern_feat import pyhesaffexe
-
-    def detect_kpts_old(rchip_fpath, dict_args):
-        kpts, desc = pyhesaffexe.detect_kpts(rchip_fpath, **dict_args)
-        return kpts, desc
-    print('[extern_feat] old hessaff is available')
-except ImportError as ex:
-    print('[extern_feat] old hessaff is not available: %r' % ex)
-    if '--strict' in sys.argv:
-        raise
+#try:
+from hstpl.extern_feat import pyhesaff
 
 
-if OLD_HESAFF:
-    detect_kpts = detect_kpts_old
-    print('[extern_feat] using: old hessian affine')
-else:
-    detect_kpts = detect_kpts_new
-    print('[extern_feat] using: new pyhesaff')
+def detect_kpts(rchip_fpath, dict_args):
+    kpts, desc = pyhesaff.detect_kpts(rchip_fpath, **dict_args)
+    return kpts, desc
+#print('[extern_feat] new hessaff is available')
+#except ImportError as ex:
+    #print('[extern_feat] new hessaff is not available: %r' % ex)
+    #if '--strict' in sys.argv:
+        #raise
+
+#try:
+    #from hstpl.extern_feat import pyhesaffexe
+
+    #def detect_kpts_old(rchip_fpath, dict_args):
+        #kpts, desc = pyhesaffexe.detect_kpts(rchip_fpath, **dict_args)
+        #return kpts, desc
+    #print('[extern_feat] old hessaff is available')
+#except ImportError as ex:
+    #print('[extern_feat] old hessaff is not available: %r' % ex)
+    #if '--strict' in sys.argv:
+        #raise
+
+
+#if OLD_HESAFF:
+    #detect_kpts = detect_kpts_old
+    #print('[extern_feat] using: old hessian affine')
+#else:
+    #detect_kpts = detect_kpts_new
+    #print('[extern_feat] using: new pyhesaff')
 
 
 #----

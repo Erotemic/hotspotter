@@ -59,7 +59,7 @@ def make_distributable_dylib(dylib_fpath):
 
     # Change the dependencies in the dylib
     for instname_cmd in instname_list:
-        _cmd(instname_cmd)
+        _cmd(*instname_cmd)
 
 if __name__ == '__main__':
     # input dylib

@@ -115,8 +115,7 @@ LIB_EXT = {'win32': 'dll',
 # FLANN Library
 try:
     libflann_fname = 'libflann.' + LIB_EXT
-    libflann_src = '/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/pyflann/lib/libflann.dylib'
-    
+    libflann_src = '/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/pyflann/lib/libflann.dylib'
     libflann_dst = join(hsbuild, libflann_fname)
     add_data(a, libflann_dst, libflann_src)
 except Exception as ex:

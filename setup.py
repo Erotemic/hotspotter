@@ -213,10 +213,14 @@ def fix_mac_otool():
     filt_dylib = lambda path: fnmatch.fnmatch(path, '*.dylib')
     join_dylib = lambda path: join(dpath, path)
     dylib_list = map(join_dylib, filter(filt_dylib, os.listdir(dpath)))
+    needs_recurse = False
     for fpath in dylib_list:
         print('-----')
-        _setup.fix_lib_otool.make_distributable_dylib(fpath)
+        if _setup.fix_lib_otool.make_distributable_dylib(fpath):
+            needs_recurse = True
         print('\n')
+    if needs_recurse:
+        fix_mac_otool()
 
 
 def build_win32_inno_installer():

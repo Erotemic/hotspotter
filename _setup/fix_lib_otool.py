@@ -53,6 +53,8 @@ def make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/'):
     output_dir = split(dylib_fpath)[0]
     depends_list = extract_dependent_dylibs(dylib_fpath, filter_regex=filter_regex)
 
+    dependency_moved = False
+
     # Build task list
     copy_list = []
     instname_list = []
@@ -64,6 +66,8 @@ def make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/'):
         fpath_dst = join(output_dir, split(fpath_src)[1])
         # Only copy if the file doesnt already exist
         if not exists(fpath_dst):
+            if re.search(filter_regex, fpath_src):
+                dependency_moved = True
             copy_list.append((fpath_src, fpath_dst))
         instname_list.append(get_localize_name_cmd(dylib_fpath, fpath_src))
     # Change input name as well
@@ -76,6 +80,7 @@ def make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/'):
     # Change the dependencies in the dylib
     for instname_cmd in instname_list:
         _cmd(*instname_cmd)
+    return dependency_moved
 
 if __name__ == '__main__':
     # input dylib

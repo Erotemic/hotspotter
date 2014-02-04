@@ -53,6 +53,8 @@ def make_distributable_dylib(dylib_fpath):
     copy_list = []
     instname_list = []
     for fpath_src in depends_list:
+        # Skip depenencies which are relative paths
+        # they have probably already been fixed
         if not exists(fpath_src):
             continue
         fpath_dst = join(output_dir, split(fpath_src)[1])

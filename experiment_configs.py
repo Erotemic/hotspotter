@@ -112,11 +112,11 @@ best = vsmany_best
 
 overnight = vsmany_best
 overnight.update({
-    'K':                   [5, 10, 3],
-    'Knorm':               [5, 3, 1],
-    'normalizer_rule':     ['name', 'last'],
+    #'K':                   [5, 10, 3],
+    #'Knorm':               [5, 3, 1],
+    #'normalizer_rule':     ['name', 'last'],
     'use_adaptive_scale':  [True, False],
-    'score_method':        ['pl', 'csum'],  # , 'pl'],  #, 'nsum', 'borda', 'topk', 'nunique']
+    #'score_method':        ['pl', 'csum'],  # , 'pl'],  #, 'nsum', 'borda', 'topk', 'nunique']
 })
 
 

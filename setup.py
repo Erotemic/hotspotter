@@ -196,10 +196,14 @@ def dbg_mac_otool():
     filt_dylib = lambda path: fnmatch.fnmatch(path, '*.dylib')
     join_dylib = lambda path: join(dpath, path)
     dylib_list = map(join_dylib, filter(filt_dylib, os.listdir(dpath)))
+    print('\n')
+    for fpath in dylib_list:
+        print('-----')
+        _setup.fix_lib_otool.inspect_dylib(fpath)
+        print('\n')
+    print('\n')
     print('[setup] dylib_list: ')
     print(' * ' + '\n * '.join(dylib_list))
-    for fpath in dylib_list:
-        _setup.fix_lib_otool.inspect_dylib(fpath)
 
 
 def fix_mac_otool():

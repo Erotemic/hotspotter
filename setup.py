@@ -207,6 +207,7 @@ def dbg_mac_otool():
 
 
 def fix_mac_otool():
+    raise Exception('Error: do not use this. pyinstaller should take care of otool now')
     print('[setup] fix_mac_otool()')
     import _setup.fix_lib_otool
     dpath = join(get_setup_dpath(), 'hstpl', 'extern_feat')

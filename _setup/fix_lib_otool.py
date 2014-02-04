@@ -121,6 +121,10 @@ if __name__ == '__main__':
         if sys.argv[1] == 'make_distributable':
             dylib_fpath = sys.argv[1]
             make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/')
-        if sys.argv[1] == 'check_depends':
+        elif sys.argv[1] == 'check_depends':
             dylib_fpath = sys.argv[1]
             check_depends_dylib(dylib_fpath, filter_regex='')
+        else:
+            print('[otool] unknown command')
+    else:
+        print('[otool] not enough arguments')

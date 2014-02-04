@@ -116,7 +116,7 @@ overnight.update({
     'Knorm':               [5, 3, 1],
     'normalizer_rule':     ['name', 'last'],
     'use_adaptive_scale':  [True, False],
-    'score_method':        ['pl', 'plw', 'csum', 'borda', 'bordaw'],  # , 'pl'],  #, 'nsum', 'borda', 'topk', 'nunique']
+    'score_method':        ['pl', 'csum'],  # , 'pl'],  #, 'nsum', 'borda', 'topk', 'nunique']
 })
 
 

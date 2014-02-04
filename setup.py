@@ -3,6 +3,7 @@ from __future__ import division, print_function
 from os.path import dirname, realpath, join, exists, normpath, expanduser, splitext
 import os
 import sys
+import fnmatch
 # Hotspotter
 from hscom import helpers
 
@@ -178,10 +179,22 @@ def build_pyinstaller():
 def build_mac_dmg():
     _cmd("./_setup/mac_dmg_builder.sh")
 
+
+def get_setup_dpath():
+    assert exists('setup.py'), 'must be run in hotspotter directory'
+    assert exists('../hotspotter/setup.py'), 'must be run in hotspotter directory'
+    assert exists('../hotspotter/hotspotter'), 'must be run in hotspotter directory'
+    assert exists('_setup'), 'must be run in hotspotter directory'
+    cwd = normpath(realpath(dirname(__file__)))
+    return cwd
+
+
 def fix_mac_otool():
     import _setup.fix_lib_otool
-    hesaff_dylib  = expanduser('~/code/hotspotter/hstpl/extern_feat/libhesaff.dylib')
-    _setup.fix_lib_otool.make_distributable_dylib(hesaff_dylib)
+    dpath = join(get_setup_dpath(), 'hstpl', 'extern_feat')
+    dylib_list = filter(fnmatch.fnmatch('*.dylib'), os.listdir(dpath))
+    for fpath in dylib_list:
+        _setup.fix_lib_otool.make_distributable_dylib(fpath)
 
 
 def build_win32_inno_installer():
@@ -212,11 +225,7 @@ def compile_ui():
 
 
 def clean():
-    assert exists('setup.py'), 'must be run in hotspotter directory'
-    assert exists('../hotspotter/setup.py'), 'must be run in hotspotter directory'
-    assert exists('../hotspotter/hotspotter'), 'must be run in hotspotter directory'
-    assert exists('_setup'), 'must be run in hotspotter directory'
-    cwd = normpath(realpath(dirname(__file__)))
+    cwd = get_setup_dpath()
     print('[setup] Current working directory: %r' % cwd)
     helpers.remove_files_in_dir(cwd, '*.pyc', recursive=True)
     helpers.remove_files_in_dir(cwd, '*.prof', recursive=True)

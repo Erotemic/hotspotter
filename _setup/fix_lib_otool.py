@@ -38,7 +38,7 @@ def append_suffix(fpath, suffix):
 def make_distributable_dylib(dylib_fpath):
     'removes absolute paths from dylibs on mac using otool'
     print('[otool] making distributable: %r' % dylib_fpath)
-    assert exists(dylib_fpath)
+    assert exists(dylib_fpath), 'the input dylib does not exist'
     output_dir = split(dylib_fpath)[0]
     depends_list = extract_dependent_dylibs(dylib_fpath, filter_regex='opencv')
 

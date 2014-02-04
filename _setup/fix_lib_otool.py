@@ -93,14 +93,14 @@ def check_depends_dylib(dylib_fpath, filter_regex='/opt/local/lib/'):
     for fpath in depends_list:
         fpath = normpath(fpath.replace('@loader_path', loader_path))
         absfpath = abspath(fpath)
-        if not exists(absfpath):
-            missing_list.append(absfpath)
-        else:
+        if exists(absfpath):
             exists_list.append(absfpath)
+        else:
+            missing_list.append(absfpath)
 
     if len(exists_list) > 0:
         print('Verified Dependencies: ')
-        print('\n'.join(missing_list))
+        print('\n'.join(exists_list))
         print('----')
     else:
         print('Nothing exists')

@@ -120,7 +120,7 @@ def _PL_score(gamma):
 
 def get_scores_from_altx2_score(hs, qcx, altx2_prob, altx2_tnx):
     nx2_score = np.zeros(len(hs.tables.nx2_name))
-    cx2_score = np.zeros(len(hs.tables.cx2_cid) + 1)
+    cx2_score = np.zeros(len(hs.tables.cx2_cid))
     nx2_cxs = hs.get_nx2_cxs()
     for altx, prob in enumerate(altx2_prob):
         tnx = altx2_tnx[altx]

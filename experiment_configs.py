@@ -133,11 +133,15 @@ vsmany_best = {
 }
 best = vsmany_best
 
-plains = vsmany_best
-plains.update({
-    'K': [5],
-    'Knorm': [5],
+overnight = vsmany_best
+overnight.update({
+    'K': [5, 10, 3],
+    'Knorm': [5, 3, 1],
+    'normalizer_rule': ['name', 'last'],
+    'use_adaptive_scale': [True, False],
+    'score_method' : ['pl', 'plw', 'csum', 'borda', 'bordaw'],#, 'pl'], #, 'nsum', 'borda', 'topk', 'nunique']
 })
+
 
 adaptive_test = vsmany_best.copy()
 adaptive_test.update({

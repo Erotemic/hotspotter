@@ -483,6 +483,25 @@ def get_timestamp(format_='filename', use_second=False):
 VALID_PROGRESS_TYPES = ['none', 'dots', 'fmtstr', 'simple']
 
 
+def simple_progres_func(verbosity, msg, progchar='.'):
+    def mark_progress0(*args):
+        pass
+
+    def mark_progress1(*args):
+        sys.stdout.write(progchar)
+
+    def mark_progress2(*args):
+        print(msg % args)
+
+    if verbosity == 0:
+        mark_progress = mark_progress0
+    elif verbosity == 1:
+        mark_progress = mark_progress1
+    elif verbosity == 2:
+        mark_progress = mark_progress2
+    return mark_progress
+
+
 # TODO: Return start_prog, make_prog, end_prog
 def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
                   flush_after=4, spacing=0, line_len=80,
@@ -1985,3 +2004,7 @@ def import_testdata():
     exec(shelf_exec)
     shelf.close()
     return import_testdata.func_code.co_code
+
+
+def num2_sigfig(num):
+    return int(np.ceil(np.log10(num)))

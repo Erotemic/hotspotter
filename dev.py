@@ -647,6 +647,11 @@ def all_printoff():
     from hscom import fileio as io
     from hotspotter import HotSpotterAPI as api
     from hotspotter import load_data2 as ld2
+    from hotspotter import QueryResult as qr
+    from hotspotter import chip_compute2 as cc2
+    from hotspotter import feature_compute2 as fc2
+    cc2.print_off()
+    fc2.print_off()
     ds.print_off()
     mf.print_off()
     io.print_off()
@@ -654,6 +659,7 @@ def all_printoff():
     mc3.print_off()
     vr2.print_off()
     ld2.print_off()
+    qr.print_off()
     #algos.print_off()
     #cc2.print_off()
     #fc2.print_off()
@@ -664,21 +670,22 @@ def all_printoff():
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     print('[dev] __main__ ')
+    printoff = helpers.get_flag('--quiet', False)
+    if printoff:
+        all_printoff()
     # useful when copy and pasting into ipython
     main_locals = dev_main()
     hs = main_locals['hs']
     qcx_list = main_locals['qcx_list']
     exec(helpers.execstr_dict(main_locals, 'main_locals'))
     print('[dev]====================')
-    printoff = helpers.get_flag('--printoff', True)
-    if printoff:
-        all_printoff()
     mf.print_off()  # Make testing slightly faster
     # Big test function. Should be replaced with something
     # not as ugly soon.
     run_investigations(hs, qcx_list)
     # A redundant query argument. Again, needs to be replaced.
     if hs.args.query is not None and len(hs.args.query) > 0:
+        hs.prefs.display_cfg.showanalysis = True
         qcx = hs.cid2_cx(hs.args.query[0])
         res = hs.query(qcx)
         res.show_top(hs)

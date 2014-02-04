@@ -1,5 +1,6 @@
 from __future__ import division, print_function
 # Python
+import sys
 import itertools
 import textwrap
 from os.path import join
@@ -87,45 +88,59 @@ def __ArgGaurd(func, default=False):
 def rankscore_str(thresh, nLess, total):
     #helper to print rank scores of configs
     percent = 100 * nLess / total
-    return '#ranks < %d = %d/%d = (%.1f%%) (err=%d)' % (thresh, nLess, total, percent, (total - nLess))
+    fmtsf = '%' + str(helpers.num2_sigfig(total)) + 'd'
+    fmtstr = '#ranks < %d = ' + fmtsf + '/%d = (%.1f%%) (err=' + fmtsf + ')'
+    rankscore_str = fmtstr % (thresh, nLess, total, percent, (total - nLess))
+    return rankscore_str
 
 
 #---------------
 # Display Test Results
 #-----------
 # Run configuration for each query
-def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False):
+def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
+                     test_results_verbosity=2):
+    nQuery = len(qcx_list)
     dcxs = hs.get_indexed_sample()
+    mc3.prepare_query(qdat, None, dcxs)
     query_uid = qdat.get_uid()
-    print('[harn] get_test_results(): %r' % query_uid)
     hs_uid    = hs.get_db_name()
-    qcxs_uid  = helpers.hashstr_arr(qcx_list)
+    qcxs_uid  = helpers.hashstr_arr(qcx_list, lbl='_qcxs')
     test_uid  = hs_uid + query_uid + qcxs_uid
     cache_dir = join(hs.dirs.cache_dir, 'experiment_harness_results')
-    io_kwargs = dict(dpath=cache_dir, fname='test_results', uid=test_uid, ext='.cPkl')
-    nQuery = len(qcx_list)
+    io_kwargs = dict(dpath=cache_dir, fname='test_results', uid=test_uid,
+                     ext='.cPkl')
+
+    if test_results_verbosity == 2:
+        print('[harn] get_test_results(): %r' % query_uid)
+    #io.print_on()
 
     # High level caching
     if not hs.args.nocache_query and (not nocache_testres):
         qx2_bestranks = io.smart_load(**io_kwargs)
         if qx2_bestranks is None:
-            pass
+            print('[harn] Cache returned None!')
         elif len(qx2_bestranks) != len(qcx_list):
             print('[harn] Re-Caching qx2_bestranks')
         elif not qx2_bestranks is None:
             return qx2_bestranks, [[{0: None}]] * nQuery
         #raise Exception('cannot be here')
 
-    # Perform queries
     nPrevQ = nQuery * cfgx
     qx2_bestranks = []
     qx2_reslist = []
+
+    # Make progress message
+    msg = textwrap.dedent('''
+    ---------------------
+    [harn] TEST %d/%d
+    ---------------------''')
+    mark_progress = helpers.simple_progres_func(test_results_verbosity, msg, '.')
+    total = nQuery * nCfg
+    # Perform queries
     for qx, qcx in enumerate(qcx_list):
-        print(nocache_testres)
-        print(textwrap.dedent('''
-        [harn]----------------
-        [harn] TEST %d/%d
-        [harn]----------------''' % (qx + nPrevQ + 1, nQuery * nCfg)))
+        count = qx + nPrevQ + 1
+        mark_progress(count, total)
         res_list = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
         qx2_reslist += [res_list]
         assert len(res_list) == 1
@@ -141,10 +156,18 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False):
             bestranks += [_bestrank]
         # record metadata
         qx2_bestranks += [bestranks]
+        if qcx % 4 == 0:
+            sys.stdout.flush()
+    print('')
     qx2_bestranks = np.array(qx2_bestranks)
     # High level caching
     helpers.ensuredir(cache_dir)
     io.smart_save(qx2_bestranks, **io_kwargs)
+
+    if helpers.get_flag('--quit2'):
+        print('Triggered --quit2')
+        sys.exit(1)
+
     return qx2_bestranks, qx2_reslist
 
 
@@ -167,10 +190,12 @@ def get_cfg_list(hs, test_cfg_name_list):
 def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     # Test Each configuration
-    print(textwrap.dedent('''
+    print(textwrap.dedent("""
     *********************
     [harn]================
-    [harn]test_scoring(hs)'''))
+    [harn]test_scoring(hs)"""))
+
+    hs.update_samples()
 
     # Grab list of algorithm configurations to test
     cfg_list = get_cfg_list(hs, test_cfg_name_list)
@@ -179,7 +204,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('[harn]         %d different chips' % len(qcx_list))
 
     # Preallocate test result aggregation structures
-    c = hs.get_arg('cols', [])  # FIXME
+    sel_cols = hs.get_arg('sel_cols', [])  # FIXME
+    sel_rows = hs.get_arg('sel_rows', [])  # FIXME
     nCfg     = len(cfg_list)
     nQuery   = len(qcx_list)
     rc2_res  = np.empty((nQuery, nCfg), dtype=list)  # row/col -> result
@@ -188,19 +214,31 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     nocache_testres =  helpers.get_flag('--nocache-testres', False)
 
+    if helpers.get_flag('--quit1'):
+        print('Triggered --quit1')
+        print(sel_cols)
+        print(sel_rows)
+        sys.exit(1)
+
+    test_results_verbosity = 2
+    test_cfg_verbosity = 2
+
+    msg = textwrap.dedent('''
+    ---------------------')
+    [harn] TEST_CFG %d/%d'
+    ---------------------''')
+    mark_progress = helpers.simple_progres_func(test_cfg_verbosity, msg, '+')
+
     # Run each test configuration
     for cfgx, query_cfg in enumerate(cfg_list):
-        print(textwrap.dedent('''
-        [harn]---------------')
-        [harn] TEST_CFG %d/%d'
-        [harn]---------------'''  % (cfgx + 1, nCfg)))
-
+        mark_progress(cfgx + 1, nCfg)
         # Set data to the current config
         qdat.set_cfg(query_cfg)
-        _nocache_testres = nocache_testres or (cfgx in c)
+        _nocache_testres = nocache_testres or (cfgx in sel_cols)
         # Run the test / read cache
         qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,
-                                                      nCfg, _nocache_testres)
+                                                      nCfg, _nocache_testres,
+                                                      test_results_verbosity)
         # Store the results
         mat_list.append(qx2_bestranks)
         for qx, reslist in enumerate(qx2_reslist):
@@ -210,6 +248,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             res = qcx2_res.values()[0]
             rc2_res[qx, cfgx] = res
 
+    print('')
     print('------')
     print('[harn] Finished testing parameters')
     print('---------------------------------')
@@ -235,7 +274,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     for cfgx in xrange(nCfg):
         test_uid  = cfg_list[cfgx].get_uid()
         test_uid  = cfg_list[cfgx].get_uid()
-        cfg_label = 'cfgx %3d) %s' % (cfgx, test_uid)
+        cfg_label = 'cfgx=(%3d) %s' % (cfgx, test_uid)
         cfgx2_lbl.append(cfg_label)
     cfgx2_lbl = np.array(cfgx2_lbl)
     #------------
@@ -335,10 +374,10 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print('[harn] Scores per Config')
         print('==================')
         for cfgx in xrange(nCfg):
-            print('[col_score] %d) %s' % (cfgx, cfgx2_lbl[cfgx]))
+            print('[score] %s' % (cfgx2_lbl[cfgx]))
             for X in iter(X_list):
                 nLessX_ = nLessX_dict[int(X)][cfgx]
-                print('[col_score] ' + rankscore_str(X, nLessX_, nQuery))
+                print('        ' + rankscore_str(X, nLessX_, nQuery))
         print('--- /Scores per Config ---')
     print_colscore()
 
@@ -364,12 +403,14 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
                                                         criteria_lbls,
                                                         cfgscores,
                                                         **tabular_kwargs)
+        #latex_formater.render(tabular_str)
         print(tabular_str)
         print('--- /LaTeX ---')
     print_latexsum()
 
     #------------
     best_rankscore_summary = []
+    to_intersect_list = []
     # print each configs scores less than X=thresh
     for X, cfgx2_nLessX in nLessX_dict.iteritems():
         max_LessX = cfgx2_nLessX.max()
@@ -377,6 +418,11 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         best_rankscore = '[best_cfg] %d config(s) scored ' % len(bestCFG_X)
         best_rankscore += rankscore_str(X, max_LessX, nQuery)
         best_rankscore_summary += [best_rankscore]
+        to_intersect_list += [cfgx2_lbl[bestCFG_X]]
+
+    intersected = to_intersect_list[0] if len(to_intersect_list) > 0 else []
+    for ix in xrange(1, len(to_intersect_list)):
+        intersected = np.intersect1d(intersected, to_intersect_list[ix])
 
     @ArgGaurdFalse
     def print_bestcfg():
@@ -393,6 +439,10 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             best_rankcfg = indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    ')
             print(best_rankscore)
             print(best_rankcfg)
+
+        print('[best_cfg]  %d config(s) are the best of %d total configs' % (len(intersected), nCfg))
+        print(indent('\n'.join(intersected), '    '))
+
         print('--- /Best Configurations ---')
     print_bestcfg()
 
@@ -413,8 +463,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('===========================')
     print('\n'.join(best_rankscore_summary))
     # Draw results
-    rciter = itertools.product(hs.get_arg('rows', []),
-                               hs.get_arg('cols', []))
+    rciter = itertools.product(sel_rows, sel_cols)
     for r, c in rciter:
         #print('viewing (r,c)=(%r,%r)' % (r,c))
         res = rc2_res[r, c]
@@ -424,7 +473,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('--- /SUMMARY ---')
 
     print('')
-    print('--remember you have -r and -c available to you')
+    print('--remember you have --sel_rows and --sel_cols available to you')
 
 #if __name__ == '__main__':
     #import multiprocessing

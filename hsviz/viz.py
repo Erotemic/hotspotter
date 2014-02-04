@@ -502,7 +502,7 @@ def show_chipres(hs, res, cx, fnum=None, pnum=None, sel_fm=[], in_image=False, *
     return ax, xywh1, xywh2
 
 
-def annotate_chipres(hs, res, cx, showTF=True, showScore=True, title_pref='',
+def annotate_chipres(hs, res, cx, showTF=True, showScore=True, showRank=True, title_pref='',
                      title_suff='', show_gname=False, show_name=True,
                      time_appart=True, in_image=False, offset1=(0, 0),
                      offset2=(0, 0), show_query=True, xywh2=None, **kwargs):
@@ -519,9 +519,13 @@ def annotate_chipres(hs, res, cx, showTF=True, showScore=True, title_pref='',
                    falsestr:  df2.FALSE_RED}[isgt_str]
     # Build title
     title = '*%s*' % isgt_str if showTF else ''
+    if showRank:
+        rank_str = ' rank=' + str(res.get_cx_ranks([cx])[0])
+        title += rank_str
     if showScore:
         score_str = (' score=' + helpers.num_fmt(score)) % (score)
         title += score_str
+
     title = title_pref + str(title) + title_suff
     # Build xlabel
     xlabel_ = []

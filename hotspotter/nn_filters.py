@@ -18,7 +18,7 @@ def RATIO_fn(vdist, ndist):
 
 
 def LNBNN_fn(vdist, ndist):
-    return (ndist - vdist) #  / 1000.0
+    return (ndist - vdist)  # / 1000.0
 
 
 # normweight_fn = LNBNN_fn

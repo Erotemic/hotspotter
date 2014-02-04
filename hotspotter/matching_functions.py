@@ -503,6 +503,10 @@ def load_resdict(hs, qcxs, qdat, aug=''):
 @profile
 def score_chipmatch(hs, qcx, chipmatch, score_method, qdat=None):
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
+    # HACK: Im not even sure if the 'w' suffix is correctly handled anymore
+    if score_method.find('w') == len(score_method) - 1:
+        score_method = score_method[:-1]
+    # Choose the appropriate scoring mechanism
     if score_method == 'csum':
         cx2_score = vr2.score_chipmatch_csum(chipmatch)
     elif score_method == 'pl':

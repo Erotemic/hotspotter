@@ -104,17 +104,40 @@ def debug_smart_load(dpath='', fname='*', uid='*', ext='*'):
             print(fname_)
 
 
+#DEBUG_HASH_TABLE = {}
+
+
 # --- Smart Load/Save ---
 def __args2_fpath(dpath, fname, uid, ext):
+    #global DEBUG_HASH_TABLE
     if len(ext) > 0 and ext[0] != '.':
         raise Exception('Fatal Error: Please be explicit and use a dot in ext')
     fname_uid = fname + uid
     if len(fname_uid) > 128:
-        fname_uid = helpers.hashstr(fname_uid)
-    fpath = join(dpath, fname_uid + ext)
+        fname_uid = '_' + helpers.hashstr(fname_uid, 8)
+        #DEBUG_HASH_TABLE[fname + uid] = fname_uid
+        #keys = DEBUG_HASH_TABLE.keys()
+        #values = DEBUG_HASH_TABLE.values()
+        #len_val = np.unique(values)
+        #len_key = np.unique(keys)
+        #if len(len_val) < len(len_key):
+            #print('!!! IO HASH COLLISION !!!')
+        #else:
+            #print(str(len_key) + ' ' + str(len_key))
+    fpath = join(dpath, fname + fname_uid + ext)
     fpath = realpath(fpath)
     fpath = normpath(fpath)
     return fpath
+
+
+def smart_fname_info(func_name, dpath, fname, uid, ext):
+    info_list = [
+        'dpath=%r' % dpath,
+        'uid=%r' % (uid),
+        'fname=%r, ext=%r' % (fname, ext),
+    ]
+    indent = '\n' + (' ' * 11)
+    return ('[io] ' + func_name + '(' + indent + indent.join(info_list) + ')')
 
 
 @profile
@@ -125,8 +148,7 @@ def smart_save(data, dpath='', fname='', uid='', ext='', verbose=VERBOSE_IO):
     if verbose:
         if verbose > 1:
             print('[io]')
-        print(('[io] smart_save(dpath=%r,\n' + (' ' * 11) + 'fname=%r, uid=%r, ext=%r)')
-              % (dpath, fname, uid, ext))
+        print(smart_fname_info('smart_save', dpath, fname, uid, ext))
     ret = __smart_save(data, fpath, verbose)
     if verbose > 1:
         print('[io]')
@@ -140,8 +162,7 @@ def smart_load(dpath='', fname='', uid='', ext='', verbose=VERBOSE_IO, **kwargs)
     if verbose:
         if verbose > 1:
             print('[io]')
-        print(('[io] smart_load(dpath=%r,\n' + (' ' * 11) + 'fname=%r, uid=%r, ext=%r)')
-              % (dpath, fname, uid, ext))
+        print(smart_fname_info('smart_save', dpath, fname, uid, ext))
     data = __smart_load(fpath, verbose, **kwargs)
     if verbose > 1:
         print('[io]')

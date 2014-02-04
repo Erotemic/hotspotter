@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+from hscom import __common__
+(print, print_, print_on, print_off,
+ rrr, profile, printDBG) = __common__.init(__name__, '[qr]', DEBUG=False)
 # Python
 from os.path import exists, split, join
 import os
@@ -128,13 +131,16 @@ class QueryResult(DynStruct):
             raise Exception('[res] error')
         if gt_cxs is None:
             gt_cxs = hs.get_other_indexed_cxs(res.qcx)
+        return res.get_cx_ranks(gt_cxs)
+
+    def get_cx_ranks(res, cx_list):
         cx2_score = res.get_cx2_score()
         top_cxs  = cx2_score.argsort()[::-1]
-        foundpos = [np.where(top_cxs == cx)[0] for cx in gt_cxs]
+        foundpos = [np.where(top_cxs == cx)[0] for cx in cx_list]
         ranks_   = [r if len(r) > 0 else [-1] for r in foundpos]
         assert all([len(r) == 1 for r in ranks_])
-        gt_ranks = [r[0] for r in ranks_]
-        return gt_ranks
+        rank_list = [r[0] for r in ranks_]
+        return rank_list
 
     def get_cx2_score(res):
         return res.cx2_score

@@ -118,13 +118,13 @@ if __name__ == '__main__':
     #dylib_fpath  = expanduser('~/code/hotspotter/hstpl/extern_feat/libhesaff.dylib')
     import sys
     if len(sys.argv) == 3:
+        dylib_fpath = sys.argv[2]
         if sys.argv[1] == 'make_distributable':
-            dylib_fpath = sys.argv[1]
             make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/')
         elif sys.argv[1] == 'check_depends':
-            dylib_fpath = sys.argv[1]
             check_depends_dylib(dylib_fpath, filter_regex='')
         else:
             print('[otool] unknown command')
     else:
         print('[otool] not enough arguments')
+        print(sys.argv)

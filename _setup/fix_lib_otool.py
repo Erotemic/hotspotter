@@ -35,6 +35,13 @@ def append_suffix(fpath, suffix):
     return new_fpath
 
 
+def get_localize_name_cmd(dylib_fpath, fpath_src):
+    fname = split(fpath_src)[1]
+    loader_dst = join('@loader_path', fname)
+    instname_cmd = ['install_name_tool', '-change', fpath_src, loader_dst, dylib_fpath]
+    return instname_cmd
+
+
 def make_distributable_dylib(dylib_fpath):
     'removes absolute paths from dylibs on mac using otool'
     print('[otool] making distributable: %r' % dylib_fpath)
@@ -46,12 +53,11 @@ def make_distributable_dylib(dylib_fpath):
     copy_list = []
     instname_list = []
     for fpath_src in depends_list:
-        fname = split(fpath_src)[1]
-        fpath_dst = join(output_dir, fname)
+        fpath_dst = join(output_dir, split(fpath_src)[1])
         copy_list.append((fpath_src, fpath_dst))
-        loader_dst = join('@loader_path', fname)
-        instname_cmd = ['install_name_tool', '-change', fpath_src, loader_dst, dylib_fpath]
-        instname_list.append(instname_cmd)
+        instname_list.append(get_localize_name_cmd(dylib_fpath, fpath_src))
+    # Change input name as well
+    instname_list.append(get_localize_name_cmd(dylib_fpath, dylib_fpath))
 
     # Copy the dependencies to the dylib location
     for (fpath_src, fpath_dst) in copy_list:

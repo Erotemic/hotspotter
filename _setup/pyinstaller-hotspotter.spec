@@ -13,9 +13,9 @@ APPLE = PLATFORM == 'darwin'
 WIN32 = PLATFORM == 'win32'
 LINUX = PLATFORM == 'linux2'
 
-LIB_EXT = {'win32': 'dll',
-           'darwin': 'dylib',
-           'linux2': 'so'}[PLATFORM]
+LIB_EXT = {'win32': '.dll',
+           'darwin': '.dylib',
+           'linux2': '.so'}[PLATFORM]
 
 
 def join_SITE_PACKAGES(*args):
@@ -125,14 +125,14 @@ ROOT_DLLS = ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']
 # FLANN Library
 if APPLE:
     try:
-        libflann_fname = 'libflann.' + LIB_EXT
+        libflann_fname = 'libflann' + LIB_EXT
         libflann_src = '/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/pyflann/lib/libflann.dylib'
         libflann_dst = join(hsbuild, libflann_fname)
         add_data(a, libflann_dst, libflann_src)
     except Exception as ex:
         print(repr(ex))
 
-    libhesaff_fname = 'libhesaff.' + LIB_EXT
+    libhesaff_fname = 'libhesaff' + LIB_EXT
     libhesaff_src = join(root_dir, 'hstpl', 'extern_feat', libhesaff_fname)
     libhesaff_dst = join(hsbuild, 'hstpl', 'extern_feat', libhesaff_fname)
     add_data(a, libhesaff_dst, libhesaff_src)
@@ -143,7 +143,7 @@ lib_rpath = join('hstpl', 'extern_feat')
 walk_path = join(root_dir, lib_rpath)
 for root, dirs, files in os.walk(walk_path):
     for lib_fname in files:
-        if fnmatch.fnmatch(lib_fname, '*.' + LIB_EXT):
+        if fnmatch.fnmatch(lib_fname, '*' + LIB_EXT):
             # tpl libs should be relative to hotspotter
             toc_src  = join(root_dir, lib_rpath, lib_fname)
             toc_dst = join(hsbuild, lib_rpath, lib_fname)

@@ -92,8 +92,8 @@ def check_depends_dylib(dylib_fpath, filter_regex='/opt/local/lib/'):
     missing_list = []
     missing_abs_list = []
     for fpath in depends_list:
-        fpath = normpath(fpath.replace('@loader_path', loader_path))
-        absfpath = abspath(fpath)
+        fixed_fpath = normpath(fpath.replace('@loader_path', loader_path))
+        absfpath = abspath(fixed_fpath)
         if exists(absfpath):
             exists_list.append(fpath)
         else:

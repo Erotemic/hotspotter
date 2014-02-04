@@ -18,6 +18,8 @@ install_name_tool -change @loader_path/libopencv_videostab.2.4.dylib @loader_pat
 install_name_tool -change @loader_path/libopencv_videostab.2.4.dylib @loader_path/../libopencv_videostab.2.4.dylib $HESDYLIB
 
 
+python _setup/fix_lib_otool.py check_depends
+
 /opt/local/lib/libopencv_videostab.2.4.dylib
 
 

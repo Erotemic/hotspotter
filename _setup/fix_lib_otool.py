@@ -113,8 +113,6 @@ def check_depends_dylib(dylib_fpath, filter_regex='/opt/local/lib/'):
         print('Nothing missing')
 
 
-
-
 if __name__ == '__main__':
     #from os.path import expanduser
     #dylib_fpath  = expanduser('~/code/hotspotter/hstpl/extern_feat/libhesaff.dylib')
@@ -125,4 +123,4 @@ if __name__ == '__main__':
             make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/')
         if sys.argv[1] == 'check_depends':
             dylib_fpath = sys.argv[1]
-            make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/')
+            check_depends_dylib(dylib_fpath, filter_regex='')

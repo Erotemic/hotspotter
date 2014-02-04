@@ -145,7 +145,7 @@ if APPLE:
     ]
     for name in missing_cv_name_list:
         fname = name + LIB_EXT
-        src = join('opt', 'local', 'lib', fname)
+        src = join('/opt/local/lib', fname)
         dst = join(hsbuild, fname)
         add_data(a, dst, src)
 

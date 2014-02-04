@@ -46,12 +46,12 @@ def inspect_dylib(dylib_fpath):
     print(_cmd('otool', '-L', dylib_fpath))
 
 
-def make_distributable_dylib(dylib_fpath):
+def make_distributable_dylib(dylib_fpath, filter_regex='/opt/local/lib/'):
     'removes absolute paths from dylibs on mac using otool'
     print('[otool] making distributable: %r' % dylib_fpath)
     assert exists(dylib_fpath), 'does not exist dylib_fpath=%r' % dylib_fpath
     output_dir = split(dylib_fpath)[0]
-    depends_list = extract_dependent_dylibs(dylib_fpath, filter_regex='opencv')
+    depends_list = extract_dependent_dylibs(dylib_fpath, filter_regex=filter_regex)
 
     # Build task list
     copy_list = []

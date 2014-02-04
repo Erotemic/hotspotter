@@ -48,6 +48,7 @@ def add_data(a, dst, src):
     import textwrap
     from hscom import helpers
     from os.path import dirname, normpath, splitext
+    global LIB_EXT
 
     def fixwin32_shortname(path1):
         import ctypes

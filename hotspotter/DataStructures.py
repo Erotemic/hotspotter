@@ -24,6 +24,8 @@ else:
 
 
 class QueryData(DynStruct):
+    # TODO: Rename to QueryRequest.
+    # This will allow for a pipelining structure of requests and results
     def __init__(qdat):
         super(QueryData, qdat).__init__()
         qdat.cfg = None  # Query Config

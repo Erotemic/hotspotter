@@ -113,13 +113,19 @@ LIB_EXT = {'win32': 'dll',
 #/usr/local/lib/python2.7/dist-packages/pyflann/lib/libflann.so
 #libflann_src = join_SITE_PACKAGES('pyflann', 'lib', libflann_fname)
 # FLANN Library
-try:
-    libflann_fname = 'libflann.' + LIB_EXT
-    libflann_src = '/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/pyflann/lib/libflann.dylib'
-    libflann_dst = join(hsbuild, libflann_fname)
-    add_data(a, libflann_dst, libflann_src)
-except Exception as ex:
-    print(repr(ex))
+if APPLE:
+    try:
+        libflann_fname = 'libflann.' + LIB_EXT
+        libflann_src = '/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/pyflann/lib/libflann.dylib'
+        libflann_dst = join(hsbuild, libflann_fname)
+        add_data(a, libflann_dst, libflann_src)
+    except Exception as ex:
+        print(repr(ex))
+
+    libhesaff_fname = 'libhesaff.' + LIB_EXT
+    libhesaff_src = join(root_dir, 'hstpl', 'extern_feat', libhesaff_fname)
+    libhesaff_dst = join(hsbuild, 'hstpl', 'extern_feat', libhesaff_fname)
+    add_data(a, libhesaff_dst, libhesaff_src)
 
 lib_rpath = join('hstpl', 'extern_feat')
 

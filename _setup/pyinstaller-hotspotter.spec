@@ -81,15 +81,15 @@ def add_data(a, dst, src):
     # Default datatype is DATA
     dtype = 'DATA'
     # Infer datatype from extension
-    extension = splitext(dst)[1]
-    if extension == LIB_EXT:
+    extension = splitext(dst)[1].lower()
+    if extension == LIB_EXT.lower():
         dtype = 'BINARY'
-    tup = (pretty_path(dst), pretty_path(src), dtype)
     print(textwrap.dedent('''
     [setup] a.add_data(
     [setup]    dst=%r,
     [setup]    src=%r,
-    [setup]    dtype=%s)''').strip('\n') % tup)
+    [setup]    dtype=%s)''').strip('\n') %
+          (pretty_path(dst), pretty_path(src), dtype))
     a.datas.append((dst, src, dtype))
 
 

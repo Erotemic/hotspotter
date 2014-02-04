@@ -137,6 +137,18 @@ if APPLE:
     libhesaff_dst = join(hsbuild, 'hstpl', 'extern_feat', libhesaff_fname)
     add_data(a, libhesaff_dst, libhesaff_src)
 
+    # We need to add these 4 opencv libraries because pyinstaller does not find them.
+    missing_cv_name_list = [
+        'libopencv_videostab.2.4',
+        'libopencv_superres.2.4',
+        'libopencv_stitching.2.4',
+    ]
+    for name in missing_cv_name_list:
+        fname = name + LIB_EXT
+        src = join('opt', 'local', 'lib', fname)
+        dst = join(hsbuild, fname)
+        add_data(a, dst, src)
+
 lib_rpath = join('hstpl', 'extern_feat')
 
 # Local dynamic Libraries

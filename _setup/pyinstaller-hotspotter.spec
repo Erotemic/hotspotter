@@ -13,6 +13,10 @@ APPLE = PLATFORM == 'darwin'
 WIN32 = PLATFORM == 'win32'
 LINUX = PLATFORM == 'linux2'
 
+LIB_EXT = {'win32': 'dll',
+           'darwin': 'dylib',
+           'linux2': 'so'}[PLATFORM]
+
 
 def join_SITE_PACKAGES(*args):
     import site
@@ -43,7 +47,7 @@ except AssertionError:
 def add_data(a, dst, src):
     import textwrap
     from hscom import helpers
-    from os.path import dirname, normpath
+    from os.path import dirname, normpath, splitext
 
     def fixwin32_shortname(path1):
         import ctypes
@@ -73,11 +77,18 @@ def add_data(a, dst, src):
     dst = dst
     helpers.ensurepath(dirname(dst))
     pretty_path = lambda str_: str_.replace('\\', '/')
+    # Default datatype is DATA
+    dtype = 'DATA'
+    # Infer datatype from extension
+    extension = splitext(dst)[1]
+    if extension == LIB_EXT:
+        dtype = 'BINARY'
     print(textwrap.dedent('''
     [setup] a.add_data(
     [setup]    dst=%r,
-    [setup]    src=%r)''').strip('\n') % tuple(map(pretty_path, (dst, src))))
-    a.datas.append((dst, src, 'DATA'))
+    [setup]    src=%r,
+    [setup]    dtype=%s)''').strip('\n') % tuple(map(pretty_path, (dst, src))))
+    a.datas.append((dst, src, dtype))
 
 
 # This needs to be relative to build directory. Leave as is.
@@ -106,9 +117,6 @@ add_data(a, dst, src)
 # Add TPL Libs for current PLATFORM
 ROOT_DLLS = ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']
 
-LIB_EXT = {'win32': 'dll',
-           'darwin': 'dylib',
-           'linux2': 'so'}[PLATFORM]
 
 #/usr/local/lib/python2.7/dist-packages/pyflann/lib/libflann.so
 #libflann_src = join_SITE_PACKAGES('pyflann', 'lib', libflann_fname)
@@ -180,14 +188,16 @@ exe_kwargs = {
     'append_pkg': False,
 }
 
-exe_kwargs['strip'] = None
-exe_kwargs['upx']   = True
-exe_kwargs['onedir'] = True
-exe_kwargs['onefile'] = False
-exe_kwargs['windowed'] = False
-exe_kwargs['strip'] = None
-#exe_kwargs['upx-dir'] = False
-#exe_kwargs['onefile'] = 'HotSpotterApp'
+collect_kwargs = {
+    'strip': None,
+    'upx': True,
+    'name': join('dist', 'hotspotter')
+}
+
+#exe_kwargs['upx']   = True
+#exe_kwargs['onedir'] = True
+#exe_kwargs['onefile'] = False
+#exe_kwargs['windowed'] = False
 
 # Windows only EXE options
 if WIN32:
@@ -199,7 +209,6 @@ if APPLE:
 
 exe = EXE(pyz, a.scripts, **exe_kwargs)   # NOQA
 
-collect_kwargs = dict(strip=None, upx=True, name=join('dist', 'hotspotter'))
 coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, **collect_kwargs)  # NOQA
 
 bundle_name = 'HotSpotter'

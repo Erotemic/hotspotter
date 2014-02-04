@@ -194,9 +194,12 @@ def fix_mac_otool():
     import _setup.fix_lib_otool
     dpath = join(get_setup_dpath(), 'hstpl', 'extern_feat')
     filt_dylib = lambda path: fnmatch.fnmatch(path, '*.dylib')
-    dylib_list = filter(filt_dylib, os.listdir(dpath))
+    join_dylib = lambda path: join(dpath, path)
+    dylib_list = map(join_dylib, filter(filt_dylib, os.listdir(dpath)))
     for fpath in dylib_list:
+        print('-----')
         _setup.fix_lib_otool.make_distributable_dylib(fpath)
+        print('\n')
 
 
 def build_win32_inno_installer():

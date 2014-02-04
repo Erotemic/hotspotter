@@ -13,12 +13,12 @@ def ensuredir(path):
 
 def _cmd(*args):
     print(' '.join(args))
-    subprocess.check_output(args)
+    return subprocess.check_output(args)
 
 
 def extract_dependent_dylibs(dylib_fpath, filter_regex=None):
     'Extracts the dependent libraries of the input dylib'
-    out = subprocess.check_output(['otool', '-L', dylib_fpath])
+    out = _cmd('otool', '-L', dylib_fpath)
     out = [line.strip() for line in out.split('\n')]
     if filter_regex is not None:
         out = filter(lambda line: re.search(filter_regex, line), out)
@@ -42,10 +42,14 @@ def get_localize_name_cmd(dylib_fpath, fpath_src):
     return instname_cmd
 
 
+def inspect_dylib(dylib_fpath):
+    print(_cmd('otool', '-L', dylib_fpath))
+
+
 def make_distributable_dylib(dylib_fpath):
     'removes absolute paths from dylibs on mac using otool'
     print('[otool] making distributable: %r' % dylib_fpath)
-    assert exists(dylib_fpath), 'the input dylib does not exist'
+    assert exists(dylib_fpath), 'does not exist dylib_fpath=%r' % dylib_fpath
     output_dir = split(dylib_fpath)[0]
     depends_list = extract_dependent_dylibs(dylib_fpath, filter_regex='opencv')
 
@@ -58,7 +62,9 @@ def make_distributable_dylib(dylib_fpath):
         if not exists(fpath_src):
             continue
         fpath_dst = join(output_dir, split(fpath_src)[1])
-        copy_list.append((fpath_src, fpath_dst))
+        # Only copy if the file doesnt already exist
+        if not exists(fpath_dst):
+            copy_list.append((fpath_src, fpath_dst))
         instname_list.append(get_localize_name_cmd(dylib_fpath, fpath_src))
     # Change input name as well
     instname_list.append(get_localize_name_cmd(dylib_fpath, dylib_fpath))

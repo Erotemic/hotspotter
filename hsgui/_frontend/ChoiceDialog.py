@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hotspotter/_frontend/ChoiceDialog.ui'
+# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hsgui/_frontend/ChoiceDialog.ui'
 #
-# Created: Tue Jan 28 14:53:04 2014
+# Created: Tue Feb  4 15:57:04 2014
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!

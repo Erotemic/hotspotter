@@ -242,7 +242,7 @@ def compile_ui():
     pyuic4_cmd = {'win32':  'C:\Python27\Lib\site-packages\PyQt4\pyuic4',
                   'linux2': 'pyuic4',
                   'darwin': 'pyuic4'}[sys.platform]
-    widget_dir = join(dirname(realpath(__file__)), 'hotspotter/_frontend')
+    widget_dir = join(dirname(realpath(__file__)), 'hsgui/_frontend')
     print('[setup] Compiling qt designer files in %r' % widget_dir)
     for widget_ui in helpers.glob(widget_dir, '*.ui'):
         widget_py = os.path.splitext(widget_ui)[0] + '.py'

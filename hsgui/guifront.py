@@ -157,6 +157,7 @@ def connect_action_signals(front):
     ui.actionReselect_Ori.triggered.connect(back.reselect_ori)
     ui.actionReselect_ROI.triggered.connect(back.reselect_roi)
     ui.actionDelete_Chip.triggered.connect(back.delete_chip)
+    ui.actionDelete_Image.triggered.connect(back.delete_image)
     ui.actionNext.triggered.connect(back.select_next)
 
 

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hotspotter/_frontend/MainSkel.ui'
+# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hsgui/_frontend/MainSkel.ui'
 #
-# Created: Tue Jan 28 14:53:04 2014
+# Created: Tue Feb  4 15:57:04 2014
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -256,6 +256,8 @@ class Ui_mainSkel(object):
         self.actionDelete_Precomputed_Results.setObjectName(_fromUtf8("actionDelete_Precomputed_Results"))
         self.actionDeveloper_Reload = QtGui.QAction(mainSkel)
         self.actionDeveloper_Reload.setObjectName(_fromUtf8("actionDeveloper_Reload"))
+        self.actionDelete_Image = QtGui.QAction(mainSkel)
+        self.actionDelete_Image.setObjectName(_fromUtf8("actionDelete_Image"))
         self.menuFile.addAction(self.actionNew_Database)
         self.menuFile.addAction(self.actionOpen_Database)
         self.menuFile.addSeparator()
@@ -294,6 +296,7 @@ class Ui_mainSkel(object):
         self.menuActions.addAction(self.actionNext)
         self.menuActions.addSeparator()
         self.menuActions.addAction(self.actionDelete_Chip)
+        self.menuActions.addAction(self.actionDelete_Image)
         self.menuBatch.addAction(self.actionPrecomputeChipsFeatures)
         self.menuBatch.addAction(self.actionPrecompute_Queries)
         self.menuBatch.addSeparator()
@@ -415,6 +418,7 @@ class Ui_mainSkel(object):
         self.actionDelete_Precomputed_Results.setToolTip(QtGui.QApplication.translate("mainSkel", "Removes all precomputed results. Use if you expect that your results may be corrupted.", None, QtGui.QApplication.UnicodeUTF8))
         self.actionDeveloper_Reload.setText(QtGui.QApplication.translate("mainSkel", "Developer Reload", None, QtGui.QApplication.UnicodeUTF8))
         self.actionDeveloper_Reload.setShortcut(QtGui.QApplication.translate("mainSkel", "Ctrl+Shift+R", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionDelete_Image.setText(QtGui.QApplication.translate("mainSkel", "Delete Image", None, QtGui.QApplication.UnicodeUTF8))
 
 
 if __name__ == "__main__":

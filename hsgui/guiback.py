@@ -824,6 +824,19 @@ class MainWindowBackend(QtCore.QObject):
     @slot_()
     @blocking
     @profile
+    def delete_image(back):
+        gx = back.get_selected_gx()
+        if gx is None:
+            back.user_info('Cannot delete image. No image selected')
+            return
+        back.hs.delete_image(gx)
+        back.populate_tables()
+        print('[back] deleted gx=%r\n' % gx)
+        print('')
+
+    @slot_()
+    @blocking
+    @profile
     def select_next(back):
         # Action -> Next
         select_mode = 'in_order'  # 'unannotated'

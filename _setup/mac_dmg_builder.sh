@@ -13,9 +13,9 @@ hs_finalDMGName=HotSpotter.dmg
 
 # Unmount if it already exists
 if [ -d /Volumes/"${hs_title}" ]; then
-    cd /Volumes
-    umount "${hs_title}"
-    cd ~/code/hotspotter/build
+	echo "HotSpotter Already Mounted! Unmounting..."
+    hdiutil unmount /Volumes/"${hs_title}"
+    sleep 10
 fi
 
 mkdir "${hs_source}"

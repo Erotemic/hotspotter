@@ -178,6 +178,11 @@ def build_pyinstaller():
 def build_mac_dmg():
     _cmd("./_setup/mac_dmg_builder.sh")
 
+def fix_mac_otool():
+    import _setup.fix_lib_otool
+    hesaff_dylib  = expanduser('~/code/hotspotter/hstpl/extern_feat/libhesaff.dylib')
+    _setup.fix_lib_otool.make_distributable_dylib(hesaff_dylib)
+
 
 def build_win32_inno_installer():
     inno_dir = r'C:\Program Files (x86)\Inno Setup 5'
@@ -319,6 +324,8 @@ if __name__ == '__main__':
             build_pyinstaller()
         if cmd in ['inno', 'win32inno']:
             build_win32_inno_installer()
+        if cmd in ['otool']:
+            fix_mac_otool()
         if cmd in ['dmg', 'macdmg']:
             build_mac_dmg()
         if cmd in ['flann', 'pyflann']:

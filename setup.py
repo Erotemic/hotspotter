@@ -190,6 +190,7 @@ def get_setup_dpath():
 
 
 def fix_mac_otool():
+    print('[setup] fix_mac_otool()')
     import _setup.fix_lib_otool
     dpath = join(get_setup_dpath(), 'hstpl', 'extern_feat')
     filt_dylib = lambda path: fnmatch.fnmatch(path, '*.dylib')

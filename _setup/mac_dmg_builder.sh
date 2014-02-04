@@ -11,6 +11,13 @@ hs_size=256000
 hs_backgroundPictureName=background.png
 hs_finalDMGName=HotSpotter.dmg
 
+# Unmount if it already exists
+if [ -d /Volumes/"${hs_title}" ]; then
+    cd /Volumes
+    umount "${hs_title}"
+    cd ~/code/hotspotter/build
+fi
+
 mkdir "${hs_source}"
 echo "Copying Application"
 cp -r ../dist/"${hs_applicationName}" "${hs_source}"/"${hs_applicationName}"

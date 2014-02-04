@@ -177,7 +177,7 @@ def build_pyinstaller():
 
 
 def build_mac_dmg():
-    _cmd("./_setup/mac_dmg_builder.sh")
+    _cmd('./_setup/mac_dmg_builder.sh')
 
 
 def get_setup_dpath():

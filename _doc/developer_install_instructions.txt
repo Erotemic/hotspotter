@@ -2,16 +2,162 @@ The purpose of this guide is to guide the setup of the development environment.
 
 Prereqs: 
 
------------------
-Windows
+# -----------------
+# Windows
 
-Python 2.7
-
-Msys / MinGW
-
-CMake
-
------------------
+# Python 2.7.6
+# The 2.7 python branch is currently the most stable python version.
+# Unfortunately we cannot switch to 3.3 until full support for scientific 
+# libraries is ported as well. 
+http://www.python.org/download/releases/2.7.6/
 
 
-Linux
+# Msys / MinGW
+# Puts linux like utilities on windows without being invasive like cygwin
+# Most importantly msys gives you gcc
+# You can try MSYS2, which is new. I have not looked into it yet.
+http://sourceforge.net/projects/mingw/files/MSYS/Base/msys-core/msys-1.0.11/MSYS-1.0.11.exe/download?use_mirror=softlayer-ams
+
+
+# Git
+# I forget if MSYS comes with git, but at the time I installed it it didn't. 
+# We will use git for all of our version control.
+https://code.google.com/p/msysgit/downloads/detail?name=Git-1.8.5.2-preview20131230.exe&can=2&q=full+installer+official+git
+
+
+# CMake
+# Used to generate cross platform makefiles for C++
+# All C++ extensions we use and will create will use CMake. 
+http://www.cmake.org/cmake/resources/software.html
+
+# OpenCV 2.4.8
+# Used for all the computationally intensive image processing
+# I use my own version of opencv which I build, so I'm not entirely 
+# sure on the quality of this installer
+http://sourceforge.net/projects/opencvlibrary/files/opencv-win/2.4.8/opencv-2.4.8.exe/download
+
+#NOTE: 
+Ensure that the correct directories are in your PATH. Usually these paths are:
+C:\Python27
+C:\Python27\Scripts
+C:\MinGW\msys\1.0
+C:\MinGW\msys\1.0\bin
+C:\MinGW\msys\1.0\lib
+C:\MinGW\libexec\gcc\mingw32\4.8.1
+C:\Python27\Lib\site-packages\PyQt4
+C:\MinGW\bin
+C:\MinGW\lib
+C:\Program Files (x86)\CMake 2.8\bin
+# or wherever the opencv bin/lib/include directory actually is
+C:\Program Files (x86)\OpenCV\x86\mingw\bin
+C:\Program Files (x86)\OpenCV\x86\mingw\lib
+C:\Program Files (x86)\OpenCV\include
+
+#-----------------
+# Linux
+# Things are a bit easier on linux
+
+sudo apt-get install build-essential
+sudo apt-get install libjpeg62-dev
+sudo apt-get install libtiff4-dev
+sudo apt-get install libjasper-dev
+sudo apt-get install cmake
+sudo apt-get install pkg-config
+sudo apt-get install python2.7
+sudo apt-get install git
+sudo apt-get install libqt4-dev
+
+
+#-----------------
+# Python libraries
+# These instructions are for linux. For windows users go to
+# http://www.lfd.uci.edu/~gohlke/pythonlibs/ for unofficial installers 
+# for these files. Make sure you get the win32 2.7 versions. 
+# You will need special numpy and qt libs:
+# numpy-MKL-1.8.0.win32-py2.7.exe
+# PyQt-Py2.7-x32-gpl-4.9.6-1.exe
+# If a package is not listed in the unofficial binaries
+# windows users can still use pip commands to install packages
+# (but you have to install pip first)
+
+# A Better Package Manager
+sudo easy_install pip
+
+# Core libs
+sudo pip install Pygments
+sudo pip install argparse
+sudo pip install openpyxl
+sudo pip install parse
+sudo pip install pyreadline
+sudo pip install python-dateutil
+sudo pip install six
+
+# Speed Libs
+sudo pip install Cython
+sudo pip install pylru
+
+# Interactive libs
+sudo pip install ipython
+sudo pip install matplotlib
+sudo pip install python-qt
+
+# Scientific libs
+sudo pip install pillow
+sudo pip install numpy
+sudo pip install opencv-python
+sudo pip install pandas
+sudo pip install scipy
+
+# Dev Tools
+sudo pip install setuptools
+sudo pip install pyinstaller
+sudo pip install flake8
+sudo pip install pep8
+sudo pip install pyflakes
+sudo pip install pylint
+
+#----------------------------------------
+# Checkout development repositories
+
+# To make development easier and for good practice we will use a consistent
+# directory structure. Severeal scripts expect your git code repos to be in 
+# ~/code
+cd ~
+mkdir code
+cd code
+
+# FLANN (Fast Library for Approximate Nearest Neighbors)
+git clone git@github.com:Erotemic/flann.git
+
+# Hessian Affine Keypoint Detector
+git clone git@github.com:Erotemic/hesaff.git
+
+# The main HotSpotter code repo
+git clone git@github.com:Erotemic/hotspotter.git
+
+
+#------------------------------------------
+# Build development libraries
+
+# Build HesAff
+cd ~/code/hesaff
+# on mac/linux
+./unix_hesaff_build.sh
+#On windows
+mingw_hesaff_build.bat
+
+# Build FLANN
+cd ~/code/flann
+# on mac/linux
+./unix_flann_build.sh
+#On windows
+mingw_flann_build.bat
+
+
+# On Linux you may need to build opencv from source
+cd ~/code
+git clone git@github.com:Erotemic/opencv.git
+cd opencv
+./unix_flann_build.sh
+# Note there is also a mingw_opencv_build.bat for windows
+# If you'd rather build opencv from source

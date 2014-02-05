@@ -45,7 +45,8 @@ interface = [
 ]
 
 science = [
-    'PIL>=1.1.7',
+    #'PIL>=1.1.7',
+    'Pillow'
     'flann>=1.8.4',
     'numpy>=1.7.1',
     'opencv-python>=2.4.6',

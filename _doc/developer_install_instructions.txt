@@ -1,0 +1,17 @@
+The purpose of this guide is to guide the setup of the development environment. 
+
+Prereqs: 
+
+-----------------
+Windows
+
+Python 2.7
+
+Msys / MinGW
+
+CMake
+
+-----------------
+
+
+Linux

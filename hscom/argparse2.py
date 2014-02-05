@@ -139,8 +139,6 @@ def database_argparse(parser2):
     parser2 = parser2.add_argument_group('Database')
     parser2.add_str('--db', 'DEFAULT', 'specifies the short name of the database to load')
     parser2.add_str('--dbdir', None, 'specifies the full path of the database to load')
-    parser2.add_flag('--dbM')
-    parser2.add_flag('--dbG')
 
 
 def behavior_argparse(parser2):
@@ -217,10 +215,6 @@ def args_postprocess(args):
     if args.darken:
         import draw_func2 as df2
         df2.DARKEN = .5
-    if args.dbM:
-        args.db = 'MOTHERS'
-    if args.dbG:
-        args.db = 'GZ'
     if args.dbdir is not None:
         # The full path is specified
         args.dbdir = realpath(args.dbdir)

@@ -400,10 +400,8 @@ class MainWindowBackend(QtCore.QObject):
     #--------------------------------------------------------------------------
 
     @profile
-    def _populate_table(back, tblname,
-                        extra_cols={},
-                        index_list=None,
-                        prefix_cols=[]):
+    def _populate_table(back, tblname, extra_cols={},
+                        index_list=None, prefix_cols=[]):
         print('[*back] _populate_table(%r)' % tblname)
         headers = back.table_headers[tblname]
         editable = back.table_editable[tblname]

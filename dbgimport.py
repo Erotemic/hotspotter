@@ -5,7 +5,7 @@ from os.path import (dirname, realpath, join, exists, normpath, splitext,
                      expanduser)
 import imp
 import itertools
-from itertools import izip
+from itertools import izip, chain
 from itertools import product as iprod
 import multiprocessing
 import os
@@ -40,6 +40,7 @@ from hotspotter import matching_functions as mf
 from hotspotter import segmentation
 from hotspotter import voting_rules2 as vr2
 from hotspotter import nn_filters
+from hscom import tools
 from hscom import Parallelize as parallel
 from hscom import fileio as io
 from hscom import helpers as helpers

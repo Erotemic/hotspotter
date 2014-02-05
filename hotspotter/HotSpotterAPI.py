@@ -6,7 +6,7 @@ import sys
 # Standard
 import os
 from os.path import exists, join, split, relpath
-from itertools import izip
+from itertools import izip, chain
 import shutil
 import datetime
 # Science
@@ -142,6 +142,7 @@ def _datatup_cols(hs, tblname, cx2_score=None):
 
 @profile
 def _delete_image(hs, gx_list):
+
     # GATHER INFO
     # Ensure a trash directory
     trash_dir = join(hs.dirs.db_dir, 'deleted-images')
@@ -151,13 +152,13 @@ def _delete_image(hs, gx_list):
     dst_list = hs.gx2_gname(gx_list, prefix=trash_dir)
     move_list = zip(src_list, dst_list)
     # Get chips which will also be deleted
-    cx_list = [cx for cx_list in hs.gx2_cxs(gx_list) for cx in cx_list]
+    cx_iter = chain.from_iterable(hs.gx2_cxs(gx_list))  # very fast flatten
     # DO REMOVAL
     # Remove images from hotspotter tables
     for gx in gx_list:
         hs.tables.gx2_gname[gx] = ''
     # Delete chips in those images
-    for cx in cx_list:
+    for cx in cx_iter:
         hs.delete_chip(cx, resample=False)
     # Move deleted images into the trash
     lbl = 'Trashing Image'

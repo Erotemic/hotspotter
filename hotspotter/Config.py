@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+from hscom import __common__
+print, print_, print_on, print_off, rrr, profile, printDBG =\
+    __common__.init(__name__, '[Config]', DEBUG=False)
 from hscom.Preferences import Pref
 from hscom import helpers
 
@@ -13,58 +16,50 @@ ConfigBase = Pref
     #if key, val in dict2.iteritems():
         #if key in dict1_keys:
             #dict1[key] = val
-DEBUG = False
-
-if DEBUG:
-    def printDBG(msg):
-        print('[DS.DBG] ' + msg)
-else:
-    def printDBG(msg):
-        pass
 
 
-def dict_subset(dict_, keys):
-    'Returns the a subset of the dictionary'
-    keys_ = set(keys)
-    return {key: val for (key, val)
-            in dict_.iteritems() if key in keys_}
+#def dict_subset(dict_, keys):
+    #'Returns the a subset of the dictionary'
+    #keys_ = set(keys)
+    #return {key: val for (key, val)
+            #in dict_.iteritems() if key in keys_}
 
 
-def listrm(list_, item):
-    'Returns item from list_ if item exists'
-    try:
-        list_.remove(item)
-    except Exception:
-        pass
+#def listrm(list_, item):
+    #'Returns item from list_ if item exists'
+    #try:
+        #list_.remove(item)
+    #except Exception:
+        #pass
 
 
-def listrm_list(list_, items):
-    'Returns all items in item from list_ if item exists'
-    for item in items:
-        listrm(list_, item)
+#def listrm_list(list_, items):
+    #'Returns all items in item from list_ if item exists'
+    #for item in items:
+        #listrm(list_, item)
 
 
 #valid_filters = ['recip', 'roidist', 'frexquency', 'ratio', 'bursty', 'lnbnn']
-def any_inlist(list_, search_list):
-    set_ = set(list_)
-    return any([search in set_ for search in search_list])
+#def any_inlist(list_, search_list):
+    #set_ = set(list_)
+    #return any([search in set_ for search in search_list])
 
 
-def signthreshweight_str(on_filters):
-    stw_list = []
-    for key, val in on_filters.iteritems():
-        ((sign, thresh), weight) = val
-        stw_str = key
-        if thresh is None and weight == 0:
-            continue
-        if thresh is not None:
-            sstr = ['<', '>'][sign == -1]  # actually <=, >=
-            stw_str += sstr + str(thresh)
-        if weight != 0:
-            stw_str += '_' + str(weight)
-        stw_list.append(stw_str)
-    return ','.join(stw_list)
-    #return helpers.remove_chars(str(dict_), [' ','\'','}','{',':'])
+#def signthreshweight_str(on_filters):
+    #stw_list = []
+    #for key, val in on_filters.iteritems():
+        #((sign, thresh), weight) = val
+        #stw_str = key
+        #if thresh is None and weight == 0:
+            #continue
+        #if thresh is not None:
+            #sstr = ['<', '>'][sign == -1]  # actually <=, >=
+            #stw_str += sstr + str(thresh)
+        #if weight != 0:
+            #stw_str += '_' + str(weight)
+        #stw_list.append(stw_str)
+    #return ','.join(stw_list)
+    ##return helpers.remove_chars(str(dict_), [' ','\'','}','{',':'])
 
 
 class NNConfig(ConfigBase):
@@ -141,6 +136,7 @@ class FilterConfig(ConfigBase):
             # RCOS TODO FIXME: Possible security flaw.
             # This eval needs to be removed.
             # Need to find a better way of encoding dependencies
+            assert depends.find('(') == -1, 'unsafe dependency'
             depends_ok = depends is None or eval(depends)
             conditions_ok = thresh is not None or weight != 0
             if conditions_ok and depends_ok:

@@ -24,12 +24,12 @@ def ensure_pythonpath():
 
 def _cmd(*args, **kwargs):
     import shlex
+    sys.stdout.flush()
     verbose = kwargs.get('verbose', True)
     detatch = kwargs.get('detatch', False)
     sudo = kwargs.get('sudo', False)
     if len(args) == 1 and isinstance(args[0], list):
         args = args[0]
-    sys.stdout.flush()
     if isinstance(args, str):
         if os.name == 'posix':
             args = shlex.split(args)

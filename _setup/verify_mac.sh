@@ -25,5 +25,6 @@ install_name_tool -change @loader_path/libopencv_videostab.2.4.dylib @loader_pat
 
 -add_rpath
 
-cd dist 
-open HotSpotter.app
+cp dist/HotSpotter.dmg ~/Desktop/HotSpotter.dmg
+#cd dist 
+#open HotSpotter.app

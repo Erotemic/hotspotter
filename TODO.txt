@@ -58,6 +58,13 @@ Add ability to orient an entire image.
 
 #--- Annoyances ----
 
+
+* When adding a new ROI, the program goes through and deletes data that
+* belongs to this new chip. It needs to do this in case a user made a bunch of
+* chips and then deleted them and then added a bunch more. But it should be
+* able to figure out when it doesnt need to do this to make the interface
+* faster. 
+
 When drawing ROIs theta is not always specified when it should be in
 vizualizations. 
 

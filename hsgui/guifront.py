@@ -100,6 +100,8 @@ def _steal_stdout(front):
     #front.ui.outputEdit.setPlainText(sys.stdout)
     nosteal = front.back.hs.args.nosteal
     noshare = front.back.hs.args.noshare
+    if '--cmd' in sys.argv:
+        NOSTEAL_OVERRIDE = True
     #from IPython.utils import io
     #with io.capture_output() as captured:
         #%run my_script.py
@@ -370,13 +372,13 @@ class MainWindowFrontend(QtGui.QMainWindow):
         tbl.setSelectionMode(QAbstractItemView.SingleSelection)
         tbl.setSelectionBehavior(QAbstractItemView.SelectRows)
         tbl.setSortingEnabled(False)
-        dbg_col2_dtype = {}
-        def DEBUG_COL_DTYPE(col, dtype):
-            if not dtype in dbg_col2_dtype:
-                dbg_col2_dtype[dtype] = [col]
-            else:
-                if not col in dbg_col2_dtype[dtype]:
-                    dbg_col2_dtype[dtype].append(col)
+        #dbg_col2_dtype = {}
+        #def DEBUG_COL_DTYPE(col, dtype):
+            #if not dtype in dbg_col2_dtype:
+                #dbg_col2_dtype[dtype] = [col]
+            #else:
+                #if not col in dbg_col2_dtype[dtype]:
+                    #dbg_col2_dtype[dtype].append(col)
         # Add items for each row and column
         for row in iter(row_list):
             data_tup = datatup_list[row]
@@ -387,20 +389,20 @@ class MainWindowFrontend(QtGui.QMainWindow):
                 if tools.is_bool(data) or data == 'True' or data == 'False':
                     check_state = Qt.Checked if bool(data) else Qt.Unchecked
                     item.setCheckState(check_state)
-                    DEBUG_COL_DTYPE(col, 'bool')
+                    #DEBUG_COL_DTYPE(col, 'bool')
                     #item.setData(Qt.DisplayRole, bool(data))
                 # INTEGER DATA
                 elif tools.is_int(data):
                     item.setData(Qt.DisplayRole, int(data))
-                    DEBUG_COL_DTYPE(col, 'int')
+                    #DEBUG_COL_DTYPE(col, 'int')
                 # FLOAT DATA
                 elif tools.is_float(data):
                     item.setData(Qt.DisplayRole, float(data))
-                    DEBUG_COL_DTYPE(col, 'float')
+                    #DEBUG_COL_DTYPE(col, 'float')
                 # STRING DATA
                 else:
                     item.setText(str(data))
-                    DEBUG_COL_DTYPE(col, 'string')
+                    #DEBUG_COL_DTYPE(col, 'string')
                 # Mark as editable or not
                 if col_editable[col]:
                     item.setFlags(item.flags() | Qt.ItemIsEditable)
@@ -410,7 +412,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
                 item.setTextAlignment(Qt.AlignHCenter)
                 tbl.setItem(row, col, item)
 
-        print(dbg_col2_dtype)
+        #print(dbg_col2_dtype)
         tbl.setSortingEnabled(True)
         tbl.sortByColumn(sort_col, sort_ord)  # Move back to old sorting
         tbl.show()
@@ -425,10 +427,10 @@ class MainWindowFrontend(QtGui.QMainWindow):
         try:
             tbl = front.ui.__dict__['%s_TBL' % table_name]
         except KeyError:
-            valid_table_names = [key for key in front.ui.__dict__.keys()
-                                 if key.find('_TBL') >= 0]
+            ui_keys = front.ui.__dict__.keys()
+            tblname_list = [key for key in ui_keys if key.find('_TBL') >= 0]
             msg = '\n'.join(['Invalid table_name = %s_TBL' % table_name,
-                             'valid names:\n  ' + '\n  '.join(valid_table_names)])
+                             'valid names:\n  ' + '\n  '.join(tblname_list)])
             raise Exception(msg)
         front._populate_table(tbl, col_fancyheaders, col_editable, row_list, datatup_list)
 

@@ -17,6 +17,7 @@ import numpy as np
 # Standard
 from collections import OrderedDict
 from itertools import product as iprod
+from itertools import izip
 from os.path import (join, relpath, normpath, split, isdir, isfile, exists,
                      islink, ismount, expanduser)
 import cPickle
@@ -1025,6 +1026,38 @@ def copy_all(src_dir, dest_dir, glob_str_list):
                 dst = normpath(join(dest_dir, _fname))
                 copy(src, dst)
                 break
+
+
+def copy_list(src_list, dst_list, lbl='Copying'):
+    # Feb - 6 - 2014 Copy function
+    def domove(src, dst, count):
+        try:
+            shutil.copy(src, dst)
+        except OSError:
+            return False
+        mark_progress(count)
+        return True
+    task_iter = izip(src_list, dst_list)
+    mark_progress, end_progress = progress_func(len(src_list), lbl=lbl)
+    success_list = [domove(src, dst, count) for count, (src, dst) in enumerate(task_iter)]
+    end_progress()
+    return success_list
+
+
+def move_list(src_list, dst_list, lbl='Moving'):
+    # Feb - 6 - 2014 Move function
+    def domove(src, dst, count):
+        try:
+            shutil.move(src, dst)
+        except OSError:
+            return False
+        mark_progress(count)
+        return True
+    task_iter = izip(src_list, dst_list)
+    mark_progress, end_progress = progress_func(len(src_list), lbl=lbl)
+    success_list = [domove(src, dst, count) for count, (src, dst) in enumerate(task_iter)]
+    end_progress()
+    return success_list
 
 
 # ---File / String Search----

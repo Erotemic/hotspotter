@@ -83,7 +83,6 @@ def _datatup_cols(hs, tblname, cx2_score=None):
     prop_dict = hs.tables.prop_dict
     # Name
     nx2_name  = hs.tables.nx2_name
-    nx2_cxs   = hs.get_nx2_cxs()
     # Image
     gx2_gname = hs.tables.gx2_gname
     gx2_aif   = hs.tables.gx2_aif
@@ -94,8 +93,7 @@ def _datatup_cols(hs, tblname, cx2_score=None):
         cols = {
             'nx':    lambda nxs: nxs,
             'name':  lambda nxs: [nx2_name[nx] for nx in iter(nxs)],
-            #'nCxs':  lambda nxs: hs.nx2_cxs(nxs),
-            'nCxs':  lambda nxs: [len(nx2_cxs[nx]) for nx in iter(nxs)],
+            'nCxs':  lambda nxs: map(len, hs.nx2_cxs(nxs)),
         }
     elif tblname == 'gxs':
         cols = {
@@ -142,7 +140,6 @@ def _datatup_cols(hs, tblname, cx2_score=None):
 
 @profile
 def _delete_image(hs, gx_list):
-
     # GATHER INFO
     # Ensure a trash directory
     trash_dir = join(hs.dirs.db_dir, 'deleted-images')
@@ -150,7 +147,6 @@ def _delete_image(hs, gx_list):
     # Get image paths to move into trash
     src_list = hs.gx2_gname(gx_list, full=True)
     dst_list = hs.gx2_gname(gx_list, prefix=trash_dir)
-    move_list = zip(src_list, dst_list)
     # Get chips which will also be deleted
     cx_iter = chain.from_iterable(hs.gx2_cxs(gx_list))  # very fast flatten
     # DO REMOVAL
@@ -162,20 +158,10 @@ def _delete_image(hs, gx_list):
         hs.delete_chip(cx, resample=False)
     # Move deleted images into the trash
     lbl = 'Trashing Image'
-    mark_progress, end_progress = helpers.progress_func(len(move_list), lbl=lbl)
-
-    def domove(src, dst, count):
-        try:
-            shutil.move(src, dst)
-        except OSError:
-            return False
-        mark_progress(count)
-        return True
-    # Need to return something
-    success_list = [domove(src, dst, count) for count, (src, dst) in enumerate(move_list)]
-    end_progress()
+    success_list = helpers.move(src_list, dst_list, lbl)
     hs.update_samples()
     hs.save_database()
+    # Need to return something
     return success_list
 
 
@@ -208,6 +194,29 @@ def _cx2_tnx(hs, cx_input):
     elif is_uniden:
         tnx_output = -cx_input
     return tnx_output
+
+
+def _nx2_cxs(hs, nx_list):
+    cxs_list = [np.where(hs.tables.cx2_nx == nx)[0] for nx in nx_list]
+    return cxs_list
+
+
+def _export_name(hs, nx, change_gname=True):
+    # Get images belonging to name
+    name = hs.tables.nx2_name[nx]
+    cxs_list = hs.nx2_cxs(nx)
+    cids_list = hs.cx2_cid(cxs_list)
+    gname_list = hs.cx2_gname(cxs_list, full=False)
+    gname_src_list = hs.cx2_gname(cxs_list, full=True)
+    # Change imagenames to show the groundtruth
+    dstdir = join(hs.dirs.db_dir, 'exported_images')
+    gname_dst_list = [join(dstdir, 'name=%s_cid=%d_%s') % (name, cid, gname)
+                      for cid, gname in zip(cids_list, gname_list)]
+    # Copy images
+    lbl = 'Exporting Image'
+    helpers.ensuredir(dstdir)
+    success_list = helpers.copy_list(gname_src_list, gname_dst_list, lbl)
+    return success_list
 
 
 def __define_method(hs, method_name):
@@ -310,6 +319,10 @@ class HotSpotter(DynStruct):
     def save_database(hs):
         print('[hs] save_database')
         ld2.write_csv_tables(hs)
+
+    def export_name(hs, nx):
+        'exports all images belonging to a name'
+        _export_name(hs, nx)
 
     #---------------
     # Loading Functions
@@ -920,17 +933,10 @@ class HotSpotter(DynStruct):
                 nx2_cxs[nx].append(cx)
         return nx2_cxs
 
-    #def nx2_cxs(hs, nx_list):
-        #'returns mapping from name indexes to chip indexes'
-        #cx2_nx = hs.tables.cx2_nx
-        #if len(cx2_nx) == 0:
-            #nx2_cxs_ = [[], []]
-        #max_nx = cx2_nx.max()
-        #nx2_cxs = [[] for _ in xrange(max_nx + 1)]
-        #for cx, nx in enumerate(cx2_nx):
-            #if nx > 0:
-                #nx2_cxs[nx].append(cx)
-        #return nx2_cxs
+    @tools.class_iter_input
+    def nx2_cxs(hs, nx_list):
+        'returns mapping from name indexes to chip indexes'
+        return _nx2_cxs(hs, nx_list)
 
     def get_gx2_cxs(hs):
         'returns mapping from image indexes to chip indexes'

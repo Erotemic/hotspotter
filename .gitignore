@@ -34,3 +34,8 @@ hotspotter/*.c
 *.swo
 *.swp
 *.un
+*.aux
+*.out
+*.log
+*.synctex
+_doc/user-guide-latex/HotSpotterUserGuide.pdf

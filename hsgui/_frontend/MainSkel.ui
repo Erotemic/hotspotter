@@ -151,7 +151,7 @@
      <x>0</x>
      <y>0</y>
      <width>1013</width>
-     <height>21</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -282,17 +282,6 @@
     <string>View Source Directory</string>
    </property>
   </action>
-  <action name="actionTogEll">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Toggle Ellipses</string>
-   </property>
-   <property name="shortcut">
-    <string>E</string>
-   </property>
-  </action>
   <action name="actionUndockDisplay">
    <property name="text">
     <string>Undock Display</string>
@@ -327,14 +316,6 @@
   <action name="actionHelpWorkflow">
    <property name="text">
     <string>Workflow Help</string>
-   </property>
-  </action>
-  <action name="actionTogPts">
-   <property name="text">
-    <string>Toggle Points</string>
-   </property>
-   <property name="shortcut">
-    <string>P</string>
    </property>
   </action>
   <action name="actionAdd_Chip">
@@ -708,6 +689,9 @@
    <property name="shortcut">
     <string>Ctrl+Shift+R</string>
    </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionDelete_Image">
    <property name="text">
@@ -715,6 +699,9 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+Del</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
  </widget>

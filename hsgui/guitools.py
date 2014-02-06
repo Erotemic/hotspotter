@@ -116,7 +116,8 @@ def backblocking(func):
             #print('ex = %r' % ex)
             import traceback
             print(traceback.format_exc())
-            back.user_info('Error in blocking ex=%r' % ex)
+            #back.user_info('Error in blocking ex=%r' % ex)
+            back.user_info('Error while blocking gui:\nex=%r' % ex)
             raise
         back.front.blockSignals(wasBlocked_)
         #print('[guitools] UNBLOCKING')

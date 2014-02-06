@@ -104,62 +104,12 @@ def make_main_window(hs=None, app=None):
     return back
 
 
-def _dev_reload():
-    # TODO Integrate this better
-    print('===========================')
-    print('[dev] performing dev_reload')
-    print('---------------------------')
-    from hotspotter import DataStructures as ds
-    from hotspotter import algos
-    from hotspotter import load_data2 as ld2
-    from hotspotter import chip_compute2 as cc2
-    from hotspotter import feature_compute2 as fc2
-    from hotspotter import match_chips3 as mc3
-    from hotspotter import matching_functions as mf
-    from hotspotter import nn_filters
-    from hotspotter import report_results2 as rr2
-    from hotspotter import voting_rules2 as vr2
-    # Common
-    from hscom import fileio as io  # NOQA
-    from hscom import helpers  # NOQA
-    # Viz
-    from hsviz import draw_func2 as df2  # NOQA
-    from hsviz import interact  # NOQA
-    from hsviz import viz
-    # GUI
-    from hsgui import guitools  # NOQA
-    from hsgui import guifront  # NOQA
-    from hsgui import guiback  # NOQA
-    # Self
-    rrr()
-    # com
-    helpers.rrr()
-    io.rrr()
-    # hotspotter
-    ld2.rrr()
-    ds.rrr()
-    mf.rrr()
-    nn_filters.rrr()
-    mc3.rrr()
-    vr2.rrr()
-    cc2.rrr()
-    rr2.rrr()
-    fc2.rrr()
-    algos.rrr()
-    # gui
-    guitools.rrr()
-    guifront.rrr()
-    guiback.rrr()
-    # viz
-    viz.rrr()
-    interact.rrr()
-    df2.rrr()
-    print('---------------------------')
-    print('df2 reset')
-    df2.reset()
-    print('---------------------------')
-    print('[dev] finished dev_reload()')
-    print('===========================')
+def _dev_reload(back):
+    import debug_gui
+    debug_gui.reload_all_modules()
+    df2.unregister_qt4_win('all')
+    df2.register_qt4_win(back.front)
+    back.populate_tables()
 
 
 def _user_select_new_dbdir(back):
@@ -196,6 +146,7 @@ def _user_select_new_dbdir(back):
     except StopIteration as ex:
         pass
     return None
+
 
 #------------------------
 # Backend MainWindow Class
@@ -441,7 +392,9 @@ class MainWindowBackend(QtCore.QObject):
     def populate_result_table(back, **kwargs):
         res = back.current_res
         if res is None:
+            # Clear the table instead
             print('[*back] no results available')
+            back._populate_table('res', index_list=[])
             return
         top_cxs = res.topN_cxs(back.hs, N='all')
         qcx = res.qcx
@@ -1024,9 +977,4 @@ class MainWindowBackend(QtCore.QObject):
     @blocking
     def dev_reload(back):
         # Help -> Developer Reload
-        #import dev
-        #dev.dev_reload()
-        # FIXME
-        _dev_reload()
-        df2.unregister_qt4_win('all')
-        df2.register_qt4_win(back.front)
+        _dev_reload(back)

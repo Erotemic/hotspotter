@@ -227,10 +227,14 @@ if WIN32:
     exe_kwargs['icon'] = iconfile
     exe_kwargs['version'] = 1.5
 
+
 if APPLE:
     exe_kwargs['console'] = False
 
-exe = EXE(pyz, a.scripts, **exe_kwargs)   # NOQA
+# Pyinstaller will gather .pyos
+OPTIMIZE = True
+optimize_flags = [('O', '', 'OPTION')] * OPTIMIZE
+exe = EXE(pyz, a.scripts + optimize_flags, **exe_kwargs)   # NOQA
 
 coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, **collect_kwargs)  # NOQA
 

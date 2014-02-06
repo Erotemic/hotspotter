@@ -415,7 +415,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result',
 
     def query_last_feature():
         viz.show_nearest_descriptors(hs, qcx, last_state.last_fx, df2.next_fnum())
-        fig3 = df2.gca()
+        fig3 = df2.gcf()
         df2.connect_callback(fig3, 'button_press_event', _click_chipres_click)
         df2.update()
 

@@ -254,9 +254,12 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 gname = csv_fields[1]
                 aif   = csv_fields[2].lower() in ['true', '1']  # convert to bool correctly
             # You have 4 csv fields. Format == gid, gname, ext, aif
-            if len(csv_fields) == 4:
+            elif len(csv_fields) == 4:
                 gname = '.'.join(csv_fields[1:3])
                 aif   =  csv_fields[3].lower() in ['true', '1']
+            else:
+                gname = 'ERROR'
+                aif = False
             add_image(gname, aif, gid)
         nTableImgs = len(gx2_gname)
         fromTableNames = set(gx2_gname)

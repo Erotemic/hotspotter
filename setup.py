@@ -293,6 +293,8 @@ def make_install_opencv():
 
 
 def inrepo(func):
+    # Decorator. I forgot what it does. Something with
+    # repository paths.
     def wrapper(repo, *args, **kwargs):
         repo_dpath = join(expanduser('~'), 'code', repo)
         cwd = os.getcwd()
@@ -305,15 +307,12 @@ def inrepo(func):
 
 
 @inrepo
-def pull(repo, branch=None):
+def pull(repo, branch=''):
     if repo == 'hotspotter':
-        _cmd('git pull origin')
-        _cmd('git pull github')
+        _cmd('git pull hyrule ' + branch)
+        _cmd('git pull github ' + branch)
     else:
-        _cmd('git pull')
-    if branch is not None:
-        _cmd('git checkout ' + branch)
-        _cmd('git pull')
+        _cmd('git pull ' + branch)
 
 
 @inrepo

@@ -329,77 +329,88 @@ class MainWindowFrontend(QtGui.QMainWindow):
         ui.actionAbout.setEnabled(False)
         ui.actionView_Docs.setEnabled(False)
 
-    def _populate_table(front, tbl, col_headers, col_editable, row_list, row2_datatup):
-        #front.printDBG('_populate_table()')
-        hheader = tbl.horizontalHeader()
-
+    def _populate_table(front, tbl, col_fancyheaders, col_editable, row_list, datatup_list):
+        # TODO: for chip table: delete metedata column
+        # RCOS TODO:
+        # I have a small right-click context menu working
+        # Maybe one of you can put some useful functions in these?
+        # RCOS TODO: How do we get the clicked item on a right click?
+        # RCOS TODO:
+        # The data tables should not use the item model
+        # Instead they should use the more efficient and powerful
+        # QAbstractItemModel / QAbstractTreeModel
         def set_header_context_menu(hheader):
             hheader.setContextMenuPolicy(Qt.CustomContextMenu)
-            # TODO: for chip table: delete metedata column
             opt2_callback = [
                 ('header', lambda: print('finishme')),
                 ('cancel', lambda: print('cancel')), ]
-            # HENDRIK / JASON TODO:
-            # I have a small right-click context menu working
-            # Maybe one of you can put some useful functions in these?
             popup_slot = guitools.popup_menu(tbl, opt2_callback)
             hheader.customContextMenuRequested.connect(popup_slot)
 
         def set_table_context_menu(tbl):
             tbl.setContextMenuPolicy(Qt.CustomContextMenu)
-            # RCOS TODO: How do we get the clicked item on a right click?
             opt2_callback = [
                 ('Query', front.querySignal.emit), ]
-                #('item',  lambda: print('finishme')),
-                #('cancel', lambda: print('cancel')), ]
-
             popup_slot = guitools.popup_menu(tbl, opt2_callback)
             tbl.customContextMenuRequested.connect(popup_slot)
+
+        hheader = tbl.horizontalHeader()
         #set_header_context_menu(hheader)
-        set_table_context_menu(tbl)
+        #set_table_context_menu(tbl)
 
         sort_col = hheader.sortIndicatorSection()
         sort_ord = hheader.sortIndicatorOrder()
         tbl.sortByColumn(0, Qt.AscendingOrder)  # Basic Sorting
         tblWasBlocked = tbl.blockSignals(True)
         tbl.clear()
-        tbl.setColumnCount(len(col_headers))
+        tbl.setColumnCount(len(col_fancyheaders))
         tbl.setRowCount(len(row_list))
         tbl.verticalHeader().hide()
-        tbl.setHorizontalHeaderLabels(col_headers)
-        tbl.setSelectionMode( QAbstractItemView.SingleSelection)
-        tbl.setSelectionBehavior( QAbstractItemView.SelectRows)
+        tbl.setHorizontalHeaderLabels(col_fancyheaders)
+        tbl.setSelectionMode(QAbstractItemView.SingleSelection)
+        tbl.setSelectionBehavior(QAbstractItemView.SelectRows)
         tbl.setSortingEnabled(False)
+        dbg_col2_dtype = {}
+        def DEBUG_COL_DTYPE(col, dtype):
+            if not dtype in dbg_col2_dtype:
+                dbg_col2_dtype[dtype] = [col]
+            else:
+                if not col in dbg_col2_dtype[dtype]:
+                    dbg_col2_dtype[dtype].append(col)
+        # Add items for each row and column
         for row in iter(row_list):
-            data_tup = row2_datatup[row]
+            data_tup = datatup_list[row]
             for col, data in enumerate(data_tup):
                 item = QtGui.QTableWidgetItem()
                 # RCOS TODO: Pass in datatype here.
-                #if col_headers[col] == 'AIF':
-                    #print('col=%r dat=%r, %r' % (col, data, type(data)))
+                # BOOLEAN DATA
                 if tools.is_bool(data) or data == 'True' or data == 'False':
-                    bit = bool(data)
-                    #print(bit)
-                    if bit:
-                        item.setCheckState(Qt.Checked)
-                    else:
-                        item.setCheckState(Qt.Unchecked)
+                    check_state = Qt.Checked if bool(data) else Qt.Unchecked
+                    item.setCheckState(check_state)
+                    DEBUG_COL_DTYPE(col, 'bool')
                     #item.setData(Qt.DisplayRole, bool(data))
+                # INTEGER DATA
                 elif tools.is_int(data):
                     item.setData(Qt.DisplayRole, int(data))
+                    DEBUG_COL_DTYPE(col, 'int')
+                # FLOAT DATA
                 elif tools.is_float(data):
                     item.setData(Qt.DisplayRole, float(data))
+                    DEBUG_COL_DTYPE(col, 'float')
+                # STRING DATA
                 else:
                     item.setText(str(data))
-
-                item.setTextAlignment(Qt.AlignHCenter)
+                    DEBUG_COL_DTYPE(col, 'string')
+                # Mark as editable or not
                 if col_editable[col]:
                     item.setFlags(item.flags() | Qt.ItemIsEditable)
-                    #print(item.getBackground())
                     item.setBackground(QtGui.QColor(250, 240, 240))
                 else:
                     item.setFlags(item.flags() ^ Qt.ItemIsEditable)
+                item.setTextAlignment(Qt.AlignHCenter)
                 tbl.setItem(row, col, item)
+
+        print(dbg_col2_dtype)
         tbl.setSortingEnabled(True)
         tbl.sortByColumn(sort_col, sort_ord)  # Move back to old sorting
         tbl.show()
@@ -407,8 +418,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
 
     @slot_(str, list, list, list, list)
     @blocking
-    def populate_tbl(front, table_name, col_headers, col_editable,
-                     row_list, row2_datatup):
+    def populate_tbl(front, table_name, col_fancyheaders, col_editable,
+                     row_list, datatup_list):
         table_name = str(table_name)
         #front.printDBG('populate_tbl(%s)' % table_name)
         try:
@@ -419,7 +430,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
             msg = '\n'.join(['Invalid table_name = %s_TBL' % table_name,
                              'valid names:\n  ' + '\n  '.join(valid_table_names)])
             raise Exception(msg)
-        front._populate_table(tbl, col_headers, col_editable, row_list, row2_datatup)
+        front._populate_table(tbl, col_fancyheaders, col_editable, row_list, datatup_list)
 
     def isItemEditable(self, item):
         return int(Qt.ItemIsEditable & item.flags()) == int(Qt.ItemIsEditable)

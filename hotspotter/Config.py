@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+from hscom import __common__
+print, print_, print_on, print_off, rrr, profile, printDBG =\
+    __common__.init(__name__, '[Config]', DEBUG=False)
 from hscom.Preferences import Pref
 from hscom import helpers
 
@@ -13,58 +16,50 @@ ConfigBase = Pref
     #if key, val in dict2.iteritems():
         #if key in dict1_keys:
             #dict1[key] = val
-DEBUG = False
-
-if DEBUG:
-    def printDBG(msg):
-        print('[DS.DBG] ' + msg)
-else:
-    def printDBG(msg):
-        pass
 
 
-def dict_subset(dict_, keys):
-    'Returns the a subset of the dictionary'
-    keys_ = set(keys)
-    return {key: val for (key, val)
-            in dict_.iteritems() if key in keys_}
+#def dict_subset(dict_, keys):
+    #'Returns the a subset of the dictionary'
+    #keys_ = set(keys)
+    #return {key: val for (key, val)
+            #in dict_.iteritems() if key in keys_}
 
 
-def listrm(list_, item):
-    'Returns item from list_ if item exists'
-    try:
-        list_.remove(item)
-    except Exception:
-        pass
+#def listrm(list_, item):
+    #'Returns item from list_ if item exists'
+    #try:
+        #list_.remove(item)
+    #except Exception:
+        #pass
 
 
-def listrm_list(list_, items):
-    'Returns all items in item from list_ if item exists'
-    for item in items:
-        listrm(list_, item)
+#def listrm_list(list_, items):
+    #'Returns all items in item from list_ if item exists'
+    #for item in items:
+        #listrm(list_, item)
 
 
 #valid_filters = ['recip', 'roidist', 'frexquency', 'ratio', 'bursty', 'lnbnn']
-def any_inlist(list_, search_list):
-    set_ = set(list_)
-    return any([search in set_ for search in search_list])
+#def any_inlist(list_, search_list):
+    #set_ = set(list_)
+    #return any([search in set_ for search in search_list])
 
 
-def signthreshweight_str(on_filters):
-    stw_list = []
-    for key, val in on_filters.iteritems():
-        ((sign, thresh), weight) = val
-        stw_str = key
-        if thresh is None and weight == 0:
-            continue
-        if thresh is not None:
-            sstr = ['<', '>'][sign == -1]  # actually <=, >=
-            stw_str += sstr + str(thresh)
-        if weight != 0:
-            stw_str += '_' + str(weight)
-        stw_list.append(stw_str)
-    return ','.join(stw_list)
-    #return helpers.remove_chars(str(dict_), [' ','\'','}','{',':'])
+#def signthreshweight_str(on_filters):
+    #stw_list = []
+    #for key, val in on_filters.iteritems():
+        #((sign, thresh), weight) = val
+        #stw_str = key
+        #if thresh is None and weight == 0:
+            #continue
+        #if thresh is not None:
+            #sstr = ['<', '>'][sign == -1]  # actually <=, >=
+            #stw_str += sstr + str(thresh)
+        #if weight != 0:
+            #stw_str += '_' + str(weight)
+        #stw_list.append(stw_str)
+    #return ','.join(stw_list)
+    ##return helpers.remove_chars(str(dict_), [' ','\'','}','{',':'])
 
 
 class NNConfig(ConfigBase):
@@ -100,28 +95,53 @@ class FilterConfig(ConfigBase):
         filt_cfg.Krecip = 0  # 0 := off
         filt_cfg.can_match_sameimg = False
         filt_cfg.can_match_samename = True
-        filt_cfg._nnfilter_list = []
+        #filt_cfg._nnfilter_list = []
         #
         #filt_cfg._nnfilter_list = ['recip', 'roidist', 'lnbnn', 'ratio', 'lnrat']
         filt_cfg._valid_filters = []
 
-        def addfilt(sign, filt, thresh, weight):
+        def addfilt(sign, filt, thresh, weight, depends=None):
             printDBG('[addfilt] %r %r %r %r' % (sign, filt, thresh, weight))
-            filt_cfg._nnfilter_list.append(filt)
-            filt_cfg._valid_filters.append((sign, filt))
+            #filt_cfg._nnfilter_list.append(filt)
+            filt_cfg._valid_filters.append(filt)
             filt_cfg[filt + '_thresh'] = thresh
             filt_cfg[filt + '_weight'] = weight
+            filt_cfg['_' + filt + '_depends'] = depends
+            filt_cfg['_' + filt + '_sign'] = sign
         #tuple(Sign, Filt, ValidSignThresh, ScoreMetaWeight)
         # thresh test is: sign * score <= sign * thresh
         addfilt(+1, 'roidist', None, 0)  # Lower  scores are better
-        addfilt(-1, 'recip',     0, 0)  # Higher scores are better
+        addfilt(-1, 'recip',     0, 0, 'filt_cfg.Krecip > 0')  # Higher scores are better
         addfilt(+1, 'bursty', None, 0)  # Lower  scores are better
         addfilt(-1, 'ratio',  None, 0)  # Higher scores are better
         addfilt(-1, 'lnbnn',  None, .01)  # Higher scores are better
         addfilt(-1, 'lnrat',  None, 0)  # Higher scores are better
         #addfilt(+1, 'scale' )
-        filt_cfg._filt2_tw = {}
+        #filt_cfg._filt2_tw = {}
         filt_cfg.update(**kwargs)
+
+    def get_stw(filt_cfg, filt):
+        # stw = sign, thresh, weight
+        sign   = filt_cfg['_' + filt + '_sign']
+        thresh = filt_cfg[filt + '_thresh']
+        weight = filt_cfg[filt + '_weight']
+        return sign, thresh, weight
+
+    def get_active_filters(filt_cfg):
+        active_filters = []
+        for filt in filt_cfg._valid_filters:
+            sign, thresh, weight = filt_cfg.get_stw(filt)
+            depends = filt_cfg['_' + filt + '_depends']
+            # Check to make sure dependencies are satisfied
+            # RCOS TODO FIXME: Possible security flaw.
+            # This eval needs to be removed.
+            # Need to find a better way of encoding dependencies
+            assert depends is None or depends.find('(') == -1, 'unsafe dependency'
+            depends_ok = depends is None or eval(depends)
+            conditions_ok = thresh is not None or weight != 0
+            if conditions_ok and depends_ok:
+                active_filters.append(filt)
+        return active_filters
 
     def make_feasible(filt_cfg, query_cfg):
         '''
@@ -136,50 +156,61 @@ class FilterConfig(ConfigBase):
             filt_cfg.bursty_thresh = None
         # FIXME: Non-Independent parameters.
         # Need to explicitly model correlation somehow
-        if filt_cfg.Krecip == 0:
-            filt_cfg.recip_thresh = None
-        elif filt_cfg.recip_thresh is None:
-            filt_cfg.recip_thresh = 0
+        #if filt_cfg.Krecip == 0:
+            #filt_cfg.recip_thresh = None
+        #elif filt_cfg.recip_thresh is None:
+            #filt_cfg.recip_thresh = 0
         #print('[cfg]----')
         #print(filt_cfg)
         #print('[cfg]----')
-
-        def _ensure_filter(filt, sign):
-            '''ensure filter in the list if valid else remove
-            (also ensure the sign/thresh/weight dict)'''
-            thresh = filt_cfg[filt + '_thresh']
-            weight = filt_cfg[filt + '_weight']
-            stw = ((sign, thresh), weight)
-            filt_cfg._filt2_tw[filt] = stw
-            if thresh is None and weight == 0:
-                listrm(filt_cfg._nnfilter_list, filt)
-            elif not filt in filt_cfg._nnfilter_list:
-                filt_cfg._nnfilter_list += [filt]
-        for (sign, filt) in filt_cfg._valid_filters:
-            _ensure_filter(filt, sign)
+        #def _ensure_filter(filt, sign):
+            #'''ensure filter in the list if valid else remove
+            #(also ensure the sign/thresh/weight dict)'''
+            #thresh = filt_cfg[filt + '_thresh']
+            #weight = filt_cfg[filt + '_weight']
+            #stw = ((sign, thresh), weight)
+            #filt_cfg._filt2_tw[filt] = stw
+            #if thresh is None and weight == 0:
+                #listrm(filt_cfg._nnfilter_list, filt)
+            #elif not filt in filt_cfg._nnfilter_list:
+                #filt_cfg._nnfilter_list += [filt]
+        #for (sign, filt) in filt_cfg._valid_filters:
+            #_ensure_filter(filt, sign)
         # Set Knorm to 0 if there is no normalizing filter on.
-        if query_cfg is not None:
-            nn_cfg = query_cfg.nn_cfg
-            norm_depends = ['lnbnn', 'ratio', 'lnrat']
-            if nn_cfg.Knorm <= 0 and not any_inlist(filt_cfg._nnfilter_list, norm_depends):
+        #if query_cfg is not None:
+            #nn_cfg = query_cfg.nn_cfg
+            #norm_depends = ['lnbnn', 'ratio', 'lnrat']
+            #if nn_cfg.Knorm <= 0 and not any_inlist(filt_cfg._nnfilter_list, norm_depends):
                 #listrm_list(filt_cfg._nnfilter_list , norm_depends)
                 # FIXME: Knorm is not independent of the other parameters.
                 # Find a way to make it independent.
-                nn_cfg.Knorm = 0
+                #nn_cfg.Knorm = 0
 
     def get_uid_list(filt_cfg):
         if not filt_cfg.filt_on:
             return ['_FILT()']
-        on_filters = dict_subset(filt_cfg._filt2_tw,
-                                 filt_cfg._nnfilter_list)
+        on_filters = filt_cfg.get_active_filters()
         filt_uid = ['_FILT(']
-        twstr = signthreshweight_str(on_filters)
-        if filt_cfg.Krecip != 0 and 'recip' in filt_cfg._nnfilter_list:
+        stw_list = []
+        # Create a uid for each filter
+        for filt in on_filters:
+            sign, thresh, weight = filt_cfg.get_stw(filt)
+            stw_str = filt
+            if thresh is None and weight == 0:
+                continue
+            if thresh is not None:
+                sstr = '>' if sign == -1 else '<'  # actually <=, >=
+                stw_str += sstr + str(thresh)
+            if weight != 0:
+                stw_str += '_' + str(weight)
+            stw_list.append(stw_str)
+        stw_str = ','.join(stw_list)
+        if filt_cfg.Krecip != 0 and 'recip' in on_filters:
             filt_uid += ['Kr' + str(filt_cfg.Krecip)]
-            if len(twstr) > 0:
+            if len(stw_str) > 0:
                 filt_uid += [',']
-        if len(twstr) > 0:
-            filt_uid += [twstr]
+        if len(stw_str) > 0:
+            filt_uid += [stw_str]
         if filt_cfg.can_match_sameimg:
             filt_uid += 'same_img'
         if not filt_cfg.can_match_samename:

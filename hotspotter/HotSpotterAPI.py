@@ -6,7 +6,7 @@ import sys
 # Standard
 import os
 from os.path import exists, join, split, relpath
-from itertools import izip
+from itertools import izip, chain
 import shutil
 import datetime
 # Science
@@ -142,26 +142,41 @@ def _datatup_cols(hs, tblname, cx2_score=None):
 
 @profile
 def _delete_image(hs, gx_list):
-    for gx in gx_list:
-        cx_list = hs.gx2_cxs(gx)
-        for cx in cx_list:
-            hs.delete_chip(cx, resample=False)
-        hs.tables.gx2_gname[gx] = ''
 
+    # GATHER INFO
+    # Ensure a trash directory
     trash_dir = join(hs.dirs.db_dir, 'deleted-images')
+    helpers.ensuredir(trash_dir)
+    # Get image paths to move into trash
     src_list = hs.gx2_gname(gx_list, full=True)
     dst_list = hs.gx2_gname(gx_list, prefix=trash_dir)
-    helpers.ensuredir(trash_dir)
-
-    # Move deleted images into the trash
     move_list = zip(src_list, dst_list)
-    mark_progress, end_progress = helpers.progress_func(len(move_list), lbl='Trashing Image')
-    for count, (src, dst) in enumerate(move_list):
-        shutil.move(src, dst)
+    # Get chips which will also be deleted
+    cx_iter = chain.from_iterable(hs.gx2_cxs(gx_list))  # very fast flatten
+    # DO REMOVAL
+    # Remove images from hotspotter tables
+    for gx in gx_list:
+        hs.tables.gx2_gname[gx] = ''
+    # Delete chips in those images
+    for cx in cx_iter:
+        hs.delete_chip(cx, resample=False)
+    # Move deleted images into the trash
+    lbl = 'Trashing Image'
+    mark_progress, end_progress = helpers.progress_func(len(move_list), lbl=lbl)
+
+    def domove(src, dst, count):
+        try:
+            shutil.move(src, dst)
+        except OSError:
+            return False
         mark_progress(count)
+        return True
+    # Need to return something
+    success_list = [domove(src, dst, count) for count, (src, dst) in enumerate(move_list)]
     end_progress()
     hs.update_samples()
     hs.save_database()
+    return success_list
 
 
 def _cx2_exif(hs, cx_list, **kwargs):

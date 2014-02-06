@@ -162,6 +162,41 @@ def _dev_reload():
     print('===========================')
 
 
+def _user_select_new_dbdir(back):
+    'script for new database user interaction'
+    try:
+        # Ask the user what to call the new database
+        new_db = back.user_input('Enter the new database name')
+        # Return on cancel
+        if new_db is None:
+            raise StopIteration('Canceled')
+        # Ask the user where to put the new database
+        msg_put = 'Where should I put %r?' % new_db
+        opt_put = ['Choose Directory', 'My Work Dir']
+        reply = back.user_option(msg_put, 'options', opt_put, True)
+        if reply == opt_put[1]:
+            put_dir = back.get_work_directory()
+        elif reply == opt_put[0]:
+            put_dir = guitools.select_directory(
+                'Select where to put the new database')
+        else:
+            raise StopIteration('Canceled')
+        new_dbdir = join(put_dir, new_db)
+        if not exists(put_dir):
+            raise ValueError('Directory %r does not exist.' % put_dir)
+        elif exists(new_dbdir):
+            raise ValueError('New DB %r already exists.' % new_dbdir)
+        return new_dbdir
+    except ValueError as ex:
+        opt_try = ['Try Again']
+        title_try = 'New Database Failed'
+        try_again = back.user_option(str(ex), title_try, opt_try, False)
+        if try_again == 'Try Again':
+            return _user_select_new_dbdir(back)
+    except StopIteration as ex:
+        pass
+    return None
+
 #------------------------
 # Backend MainWindow Class
 #------------------------
@@ -365,10 +400,8 @@ class MainWindowBackend(QtCore.QObject):
     #--------------------------------------------------------------------------
 
     @profile
-    def _populate_table(back, tblname,
-                        extra_cols={},
-                        index_list=None,
-                        prefix_cols=[]):
+    def _populate_table(back, tblname, extra_cols={},
+                        index_list=None, prefix_cols=[]):
         print('[*back] _populate_table(%r)' % tblname)
         headers = back.table_headers[tblname]
         editable = back.table_editable[tblname]
@@ -475,6 +508,9 @@ class MainWindowBackend(QtCore.QObject):
                 return back.get_work_dir(use_cache)
         io.global_cache_write(cache_id, work_dir)
         return work_dir
+
+    def user_select_new_dbdir(back):
+        return _user_select_new_dbdir(back)
 
     #--------------------------------------------------------------------------
     # Selection Functions
@@ -587,39 +623,16 @@ class MainWindowBackend(QtCore.QObject):
 
     @slot_()
     @blocking
-    def new_database(back):
+    def new_database(back, new_dbdir=None):
         # File -> New Database
-        new_db = back.user_input('Enter the new database name')
-        msg_put = 'Where should I put %r?' % new_db
-        opt_put = ['Choose Directory', 'My Work Dir']
-        reply = back.user_option(msg_put, 'options', opt_put, True)
-        if reply == opt_put[1]:
-            put_dir = back.get_work_directory()
-        elif reply == opt_put[0]:
-            msg = 'Select where to put the new database'
-            put_dir = guitools.select_directory(msg)
-        elif reply is None:
-            back.user_info('No Reply. Aborting new database')
-            print('[*back] abort new database()')
-            return None
+        if new_dbdir is None:
+            new_dbdir = back.user_select_new_dbdir()
+        if new_dbdir is not None:
+            print('[*back] valid new_dbdir = %r' % new_dbdir)
+            helpers.ensurepath(new_dbdir)
+            back.open_database(new_dbdir)
         else:
-            raise Exception('Unknown reply=%r' % reply)
-        new_db_dir = join(put_dir, new_db)
-        # Check the put directory exists and the new database does not exist
-        msg_try = None
-        if not exists(put_dir):
-            msg_try = 'Directory %r does not exist.' % put_dir
-        elif exists(new_db_dir):
-            msg_try = 'New Database %r already exists.' % new_db_dir
-        if msg_try is not None:
-            opt_try = ['Try Again']
-            title_try = 'New Database Failed'
-            try_again = back.user_option(msg_try, title_try, opt_try, False)
-            if try_again == 'Try Again':
-                return back.new_database()
-        print('[*back] valid new_db_dir = %r' % new_db_dir)
-        helpers.ensurepath(new_db_dir)
-        back.open_database(new_db_dir)
+            print('[*back] abort new database()')
 
     @slot_()
     @blocking
@@ -829,6 +842,7 @@ class MainWindowBackend(QtCore.QObject):
         if gx is None:
             back.user_info('Cannot delete image. No image selected')
             return
+        back.clear_selection()
         back.hs.delete_image(gx)
         back.populate_tables()
         print('[back] deleted gx=%r\n' % gx)

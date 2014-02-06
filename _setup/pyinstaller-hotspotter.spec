@@ -208,6 +208,15 @@ collect_kwargs = {
     'name': join('dist', 'hotspotter')
 }
 
+# PYINSTALLER DOC:
+# Only the following command-line options have an effect when
+# building from a spec file:
+# --upx-dir=
+# --distpath=
+# --workpath=
+# --noconfirm
+# --ascii
+
 #exe_kwargs['upx']   = True
 #exe_kwargs['onedir'] = True
 #exe_kwargs['onefile'] = False

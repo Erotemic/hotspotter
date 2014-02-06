@@ -6,16 +6,25 @@ import types
 # Science
 import numpy as np
 
+# Very odd that I have to put in dtypes in two different ways.
 VALID_INT_TYPES = (types.IntType,
                    types.LongType,
                    np.typeDict['int64'],
                    np.typeDict['int32'],
-                   np.typeDict['uint8'],)
+                   np.typeDict['uint8'],
+                   np.dtype('int32'),
+                   np.dtype('uint8'),
+                   np.dtype('int64'),
+                  )
 
 VALID_FLOAT_TYPES = (types.FloatType,
                      np.typeDict['float64'],
                      np.typeDict['float32'],
-                     np.typeDict['float16'],)
+                     np.typeDict['float16'],
+                     np.dtype('float64'),
+                     np.dtype('float32'),
+                     np.dtype('float16'),
+                    )
 
 DEBUG = False
 

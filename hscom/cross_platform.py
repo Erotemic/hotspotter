@@ -66,6 +66,7 @@ def _cmd(*args, **kwargs):
 
 
 def startfile(fpath):
+    print('[cplat] startfile(%r)' % fpath)
     if not exists(fpath):
         raise Exception('Cannot start nonexistant file: %r' % fpath)
     if sys.platform.startswith('linux'):

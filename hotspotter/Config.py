@@ -136,7 +136,7 @@ class FilterConfig(ConfigBase):
             # RCOS TODO FIXME: Possible security flaw.
             # This eval needs to be removed.
             # Need to find a better way of encoding dependencies
-            assert depends.find('(') == -1, 'unsafe dependency'
+            assert depends is None or depends.find('(') == -1, 'unsafe dependency'
             depends_ok = depends is None or eval(depends)
             conditions_ok = thresh is not None or weight != 0
             if conditions_ok and depends_ok:

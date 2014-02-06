@@ -548,13 +548,50 @@ def backup_csv_tables(hs, force_backup=False):
         do_backup(IMAGE_TABLE_FNAME)
 
 
+def make_flat_table(hs, cx_list):
+    # Valid chip tables
+    if len(cx_list) == 0:
+        return ''
+    cx2_cid   = hs.tables.cx2_cid[cx_list]
+    # Use the indexes as ids (FIXME: Just go back to g/n-ids)
+    cx2_gname = hs.cx2_gname(cx_list)
+    cx2_name  = hs.cx2_name(cx_list)
+    try:
+        cx2_roi   = hs.tables.cx2_roi[cx_list]
+    except IndexError as ex:
+        print(ex)
+        cx2_roi = np.array([])
+    cx2_theta = hs.tables.cx2_theta[cx_list]
+    prop_dict = {propkey: [cx2_propval[cx] for cx in iter(cx_list)]
+                 for (propkey, cx2_propval) in hs.tables.prop_dict.iteritems()}
+    # Turn the chip indexes into a DOCUMENTED csv table
+    header = '# flat table'
+    column_labels = ['ChipID', 'Image', 'Name', 'roi[tl_x  tl_y  w  h]', 'theta']
+    column_list   = [cx2_cid, cx2_gname, cx2_name, cx2_roi, cx2_theta]
+    column_type   = [int, int, int, list, float]
+    if not prop_dict is None:
+        for key, val in prop_dict.iteritems():
+            column_labels.append(key)
+            column_list.append(val)
+            column_type.append(str)
+
+    chip_table = make_csv_table(column_labels, column_list, header, column_type)
+    return chip_table
+
+
 def make_chip_csv2(hs, cx_list):
     # Valid chip tables
+    if len(cx_list) == 0:
+        return ''
     cx2_cid   = hs.tables.cx2_cid[cx_list]
     # Use the indexes as ids (FIXME: Just go back to g/n-ids)
     cx2_gx   = hs.tables.cx2_gx[cx_list] + 1  # FIXME
     cx2_nx   = hs.tables.cx2_nx[cx_list]   # FIXME
-    cx2_roi   = hs.tables.cx2_roi[cx_list]
+    try:
+        cx2_roi   = hs.tables.cx2_roi[cx_list]
+    except IndexError as ex:
+        print(ex)
+        cx2_roi = np.array([])
     cx2_theta = hs.tables.cx2_theta[cx_list]
     prop_dict = {propkey: [cx2_propval[cx] for cx in iter(cx_list)]
                  for (propkey, cx2_propval) in hs.tables.prop_dict.iteritems()}
@@ -575,6 +612,8 @@ def make_chip_csv2(hs, cx_list):
 
 def make_image_csv2(hs, gx_list):
     'return an image table csv string'
+    if len(gx_list) == 0:
+        return ''
     gx2_gid   = np.array(gx_list) + 1  # FIXME
     gx2_gname = hs.tables.gx2_gname[gx_list]
     try:
@@ -590,18 +629,7 @@ def make_image_csv2(hs, gx_list):
     return image_table
 
 
-def make_name_csv2(hs, nx_list):
-    'returns an name table csv string'
-    nx_list_  = np.setdiff1d(nx_list, [0, 1])   # dont write ____ for backcomp
-    nx2_name  = hs.tables.nx2_name[nx_list_]
-    # Make name_table.csv
-    header = '# name table'
-    column_labels = ['nid', 'name']
-    column_list   = [nx_list_, nx2_name]
-    name_table = make_csv_table(column_labels, column_list, header)
-    return name_table
-
-
+# TODO REMOVE:
 def make_chip_csv(hs):
     'returns an chip table csv string'
     valid_cx = hs.get_valid_cxs()
@@ -615,6 +643,7 @@ def make_chip_csv(hs):
     try:
         cx2_roi = hs.tables.cx2_roi[valid_cx]
     except IndexError as ex:
+        print(ex)
         # THIS IS VERY WEIRD TO ME.
         # I can use empty indexes in non-shaped arrays
         cx2_roi = np.array([])
@@ -636,6 +665,7 @@ def make_chip_csv(hs):
     return chip_table
 
 
+# TODO REMOVE:
 def make_name_csv(hs):
     'returns an name table csv string'
     valid_nx = hs.get_valid_nxs()
@@ -648,6 +678,21 @@ def make_name_csv(hs):
     return name_table
 
 
+def make_name_csv2(hs, nx_list):
+    'returns an name table csv string'
+    if len(nx_list) == 0:
+        return ''
+    nx_list_  = np.setdiff1d(nx_list, [0, 1])   # dont write ____ for backcomp
+    nx2_name  = hs.tables.nx2_name[nx_list_]
+    # Make name_table.csv
+    header = '# name table'
+    column_labels = ['nid', 'name']
+    column_list   = [nx_list_, nx2_name]
+    name_table = make_csv_table(column_labels, column_list, header)
+    return name_table
+
+
+# TODO REMOVE:
 def make_image_csv(hs):
     'return an image table csv string'
     valid_gx = hs.get_valid_gxs()
@@ -669,19 +714,39 @@ def make_image_csv(hs):
 def write_csv_tables(hs):
     'Saves the tables to disk'
     print('[ld2] Writing csv tables')
+    # Output directories
     internal_dir = hs.dirs.internal_dir
-    CREATE_BACKUP = True  # TODO: Should be a preference
+    # Create backup # RCOS TODO: Should be a preference
+    CREATE_BACKUP = True
     if CREATE_BACKUP:
         backup_csv_tables(hs, force_backup=True)
-    # csv strings
-    chip_table  = make_chip_csv(hs)
-    image_table = make_image_csv(hs)
-    name_table  = make_name_csv(hs)
-    # csv filenames
+    # Get valid indexes
+    valid_cx = hs.get_valid_cxs()
+    valid_gx = hs.get_valid_gxs()
+    valid_nx = hs.get_valid_nxs()
+    # Make table from indexes
+    chip_table  = make_chip_csv2(hs, valid_cx)
+    image_table = make_image_csv2(hs, valid_gx)
+    name_table  = make_name_csv2(hs, valid_nx)
+    # Make csv filenames
     chip_table_fpath  = join(internal_dir, CHIP_TABLE_FNAME)
     name_table_fpath  = join(internal_dir, NAME_TABLE_FNAME)
     image_table_fpath = join(internal_dir, IMAGE_TABLE_FNAME)
     # write csv files
+    print('[ld2] Writing chip table')
     helpers.write_to(chip_table_fpath, chip_table)
+    print('[ld2] Writing name table')
     helpers.write_to(name_table_fpath, name_table)
+    print('[ld2] Writing image table')
     helpers.write_to(image_table_fpath, image_table)
+
+
+def write_flat_table(hs):
+    dbdir = hs.dirs.db_dir
+    # Make flat table
+    valid_cx = hs.get_valid_cxs()
+    flat_table  = make_flat_table(hs, valid_cx)
+    flat_table_fpath  = join(dbdir, 'flat_table.csv')
+    # Write flat table
+    print('[ld2] Writing flat table')
+    helpers.write_to(flat_table_fpath, flat_table)

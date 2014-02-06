@@ -320,6 +320,7 @@ class HotSpotter(DynStruct):
     def save_database(hs):
         print('[hs] save_database')
         ld2.write_csv_tables(hs)
+        ld2.write_flat_table(hs)
 
     def export_name(hs, nx):
         'exports all images belonging to a name'

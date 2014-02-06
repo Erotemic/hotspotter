@@ -2,23 +2,24 @@ from __future__ import print_function, division
 import sys
 from os.path import expanduser, join, exists
 
-
-def add_hotspotter_to_path():
-    # Look for hotspotter in ~/code
-    hotspotter_dir = join(expanduser('~'), 'code', 'hotspotter')
-    if not exists(hotspotter_dir):
-        print('[pyhesaff] hotspotter_dir=%r DOES NOT EXIST!' % (hotspotter_dir,))
-    # Append hotspotter dir to PYTHON_PATH (i.e. sys.path)
-    sys.path.append(hotspotter_dir)
-
-# Ensure hotspotter is in path before importing it
-add_hotspotter_to_path()
-
-from hscom import helpers
-
 # Localize hessian affine code
 code_dir   = join(expanduser('~'), 'code')
 hsdir      = join(code_dir, 'hotspotter')
+if not exists(hsdir):
+    # For advisors computer
+    code_dir = join(expanduser('~'), 'Code-RPI')
+    hsdir      = join(code_dir, 'hotspotter')
+    if not exists(hsdir):
+        print('[pyhesaff] hsdir=%r DOES NOT EXIST!' % (hsdir,))
+        raise Exception('Expected that hesaff and hotspotter to be in ~/code')
+
+# Ensure hotspotter is in path before importing it
+if not hsdir in sys.path:
+    # Append hotspotter dir to PYTHON_PATH (i.e. sys.path)
+    sys.path.append(hsdir)
+
+from hscom import helpers
+
 extern_dir = join(hsdir, 'hstpl', 'extern_feat')
 hesaffsrc_dir = join(code_dir, 'hesaff')
 

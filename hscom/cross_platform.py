@@ -80,7 +80,7 @@ def startfile(fpath):
 
 def view_directory(dname=None):
     'view directory'
-    print('[helpers] view_dir(%r) ' % dname)
+    print('[cplat] view_directory(%r) ' % dname)
     dname = os.getcwd() if dname is None else dname
     open_prog = {'win32': 'explorer.exe',
                  'linux2': 'nautilus',

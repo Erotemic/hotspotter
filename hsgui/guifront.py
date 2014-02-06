@@ -80,7 +80,9 @@ class StreamStealer(QtCore.QObject):
 
         # Remember which stream you've stolen
         self.iostream = sys.stdout
+        self.iostream2 = sys.stderr
         # Redirect standard out to the StreamStealer object
+        sys.stderr = self
         sys.stdout = self
         #steam_holder.stdout
 
@@ -121,6 +123,7 @@ def _return_stdout(front):
     print('[front] returning standard out')
     if front.ostream is not None:
         sys.stdout = front.ostream.iostream
+        sys.stderr = front.ostream.iostream2
         front.ostream = None
         return True
     else:
@@ -175,7 +178,7 @@ def connect_help_signals(front):
     ui = front.ui
     back = front.back
     msg_event = lambda title, msg: lambda: guitools.msgbox(title, msg)
-    #ui.actionView_Docs.triggered.connect(back.view_docs)
+    ui.actionView_Docs.triggered.connect(back.view_docs)
     ui.actionView_DBDir.triggered.connect(back.view_database_dir)
     ui.actionView_Computed_Dir.triggered.connect(back.view_computed_dir)
     ui.actionView_Global_Dir.triggered.connect(back.view_global_dir)
@@ -329,7 +332,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         ui.actionScale_all_ROIS.setEnabled(False)
         ui.actionWriteLogs.setEnabled(False)
         ui.actionAbout.setEnabled(False)
-        ui.actionView_Docs.setEnabled(False)
+        #ui.actionView_Docs.setEnabled(False)
 
     def _populate_table(front, tbl, col_fancyheaders, col_editable, row_list, datatup_list):
         # TODO: for chip table: delete metedata column

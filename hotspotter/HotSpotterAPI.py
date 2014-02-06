@@ -13,6 +13,7 @@ import datetime
 import numpy as np
 from PIL import Image
 # Hotspotter
+from hscom import cross_platform as cplat
 from hscom import fileio as io
 from hscom import helpers
 from hscom import tools
@@ -1108,22 +1109,22 @@ class HotSpotter(DynStruct):
     def vdd(hs):
         db_dir = os.path.normpath(hs.dirs.db_dir)
         print('[hs] viewing db_dir: %r ' % db_dir)
-        helpers.vd(db_dir)
+        cplat.view_directory(db_dir)
 
     def vcd(hs):
         computed_dir = os.path.normpath(hs.dirs.computed_dir)
         print('[hs] viewing computed_dir: %r ' % computed_dir)
-        helpers.vd(computed_dir)
+        cplat.view_directory(computed_dir)
 
     def vgd(hs):
         global_dir = io.GLOBAL_CACHE_DIR
         print('[hs] viewing global_dir: %r ' % global_dir)
-        helpers.vd(global_dir)
+        cplat.view_directory(global_dir)
 
     def vrd(hs):
         result_dir = os.path.normpath(hs.dirs.result_dir)
         print('[hs] viewing result_dir: %r ' % result_dir)
-        helpers.vd(result_dir)
+        cplat.view_directory(result_dir)
 
     #---------------
     def get_cache_uid(hs, cx_list=None, lbl='cxs'):

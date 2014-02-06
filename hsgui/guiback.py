@@ -901,6 +901,14 @@ class MainWindowBackend(QtCore.QObject):
     #--------------------------------------------------------------------------
 
     @slot_()
+    def view_docs(back):
+        from hscom import cross_platform as cplat
+        hsdir = io.get_hsdir()
+        pdf_dpath = join(hsdir, '_doc')
+        pdf_fpath = join(pdf_dpath, 'HotSpotterUserGuide.pdf')
+        cplat.startfile(pdf_fpath)
+
+    @slot_()
     def view_database_dir(back):
         # Help -> View Directory Slots
         back.hs.vdd()

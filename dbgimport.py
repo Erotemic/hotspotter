@@ -43,6 +43,7 @@ from hotspotter import voting_rules2 as vr2
 from hotspotter import nn_filters
 from hscom import tools
 from hscom import Parallelize as parallel
+from hscom import cross_platform as cplat
 from hscom import fileio as io
 from hscom import helpers as helpers
 from hsviz import draw_func2 as df2

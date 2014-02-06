@@ -737,12 +737,8 @@ def get_caller_locals():
 # --- Convinience ----
 def vd(dname=None):
     'view directory'
-    print('[helpers] view_dir(%r) ' % dname)
-    dname = os.getcwd() if dname is None else dname
-    open_prog = {'win32': 'explorer.exe',
-                 'linux2': 'nautilus',
-                 'darwin': 'open'}[sys.platform]
-    os.system(open_prog + ' ' + normpath(dname))
+    import cross_platform
+    cross_platform.view_directory(dname)
 
 
 def str2(obj):

@@ -417,6 +417,15 @@ def imread(img_fpath):
 
 # --- Standard Images ---
 
+def get_hsdir():
+    import sys
+    if getattr(sys, 'frozen', False):
+        hsdir = dirname(sys.executable)
+    elif __file__:
+        hsdir = dirname((dirname(__file__)))
+    return hsdir
+
+
 def splash_img_fpath():
     hsdir = dirname(__file__)
     splash_fpath = realpath(join(hsdir, '../hsgui/_frontend/splash.png'))

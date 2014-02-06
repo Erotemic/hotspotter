@@ -121,11 +121,15 @@ ROOT_DLLS = ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']
 
 
 #/usr/local/lib/python2.7/dist-packages/pyflann/lib/libflann.so
-#libflann_src = join_SITE_PACKAGES('pyflann', 'lib', libflann_fname)
 # FLANN Library
+libflann_fname = 'libflann' + LIB_EXT
+if WIN32:
+    libflann_src = join_SITE_PACKAGES('pyflann', 'lib', libflann_fname)
+    libflann_dst = join(hsbuild, libflann_fname)
+    add_data(a, libflann_dst, libflann_src)
+
 if APPLE:
     try:
-        libflann_fname = 'libflann' + LIB_EXT
         libflann_src = '/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/pyflann/lib/libflann.dylib'
         libflann_dst = join(hsbuild, libflann_fname)
         add_data(a, libflann_dst, libflann_src)
@@ -225,16 +229,15 @@ collect_kwargs = {
 # Windows only EXE options
 if WIN32:
     exe_kwargs['icon'] = iconfile
-    exe_kwargs['version'] = 1.5
+    #exe_kwargs['version'] = 1.5
 
 
 if APPLE:
     exe_kwargs['console'] = False
 
 # Pyinstaller will gather .pyos
-OPTIMIZE = True
-optimize_flags = [('O', '', 'OPTION')] * OPTIMIZE
-exe = EXE(pyz, a.scripts + optimize_flags, **exe_kwargs)   # NOQA
+opt_flags = [('O', '', 'OPTION')]
+exe = EXE(pyz, a.scripts + opt_flags, **exe_kwargs)   # NOQA
 
 coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, **collect_kwargs)  # NOQA
 

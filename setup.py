@@ -149,17 +149,42 @@ else:
     buildscript_fmt = 'unix_%s_build.sh'
 
 
-def build_pyinstaller():
-    cwd = normpath(realpath(dirname(__file__)))
+def clean():
+    cwd = get_setup_dpath()
     print('[setup] Current working directory: %r' % cwd)
-    build_dir = join(cwd, 'build')
-    dist_dir = join(cwd, 'dist')
-    helpers.delete(dist_dir)
-    helpers.delete(build_dir)
-    assert exists('setup.py'), 'must be run in hotspotter source directory'
-    assert exists('../hotspotter/setup.py'), 'must be run in hotspotter source directory'
-    assert exists('../hotspotter/hotspotter'), 'must be run in hotspotter source directory'
-    assert exists('_setup'), 'must be run in hotspotter source directory'
+    # Remove python compiled files
+    helpers.remove_files_in_dir(cwd, '*.pyc', recursive=True)
+    helpers.remove_files_in_dir(cwd, '*.pyo', recursive=True)
+    # Remove profile outputs
+    helpers.remove_files_in_dir(cwd, '*.prof', recursive=True)
+    helpers.remove_files_in_dir(cwd, '*.prof.txt', recursive=True)
+    helpers.remove_files_in_dir(cwd, '*.lprof', recursive=True)
+    # Remove cython generated c files carefully
+    hsmod_list = ['hotspotter', 'hsgui', 'hsviz', 'hscom']
+    for hsmod in hsmod_list:
+        helpers.remove_files_in_dir(join(cwd, hsmod), '*.so', recursive=False)
+        helpers.remove_files_in_dir(join(cwd, hsmod), '*.c', recursive=False)
+    # Remove pyinstaller temp files
+    clean_pyinstaller()
+    # Remove latex temp files
+    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.synctex')
+    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.log')
+    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.out')
+    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.aux')
+    # Remove misc
+    helpers.delete(join(cwd, "'"))  # idk where this file comes from
+    helpers.remove_files_in_dir(cwd + '/hstpl/extern_feat', 'libopencv_*.dylib', recursive=False)
+
+
+def clean_pyinstaller():
+    cwd = get_setup_dpath()
+    helpers.remove_files_in_dir(cwd, 'HotSpotterApp.pkg', recursive=False)
+    helpers.delete(join(cwd, 'dist'))
+    helpers.delete(join(cwd, 'build'))
+
+
+def build_pyinstaller():
+    clean_pyinstaller()
     # Run the pyinstaller command (does all the work)
     _cmd('pyinstaller _setup/pyinstaller-hotspotter.spec')
     # Perform some post processing steps on the mac
@@ -228,13 +253,18 @@ def build_win32_inno_installer():
     inno_dir = r'C:\Program Files (x86)\Inno Setup 5'
     inno_fname = 'ISCC.exe'
     inno_fpath = join(inno_dir, inno_fname)
-    iss_script = join('hotspotter', '_setup', 'wininstallerscript.iss')
+    hsdir = get_setup_dpath()
+    iss_script = join(hsdir, '_setup', 'wininstallerscript.iss')
     if not exists(inno_fpath):
         msg = '[setup] Inno not found and is needed for the win32 installer'
         print(msg)
         raise Exception(msg)
     args = [inno_fpath, iss_script]
     _cmd(args)
+    import shutil
+    installer_src = join(hsdir, '_setup', 'Output', 'hotspotter-win32-setup.exe')
+    installer_dst = join(hsdir, 'dist', 'hotspotter-win32-setup.exe')
+    shutil.move(installer_src, installer_dst)
 
 
 def compile_ui():
@@ -249,35 +279,6 @@ def compile_ui():
         cmd = ' '.join([pyuic4_cmd, '-x', widget_ui, '-o', widget_py])
         print('[setup] compile_ui()>' + cmd)
         os.system(cmd)
-
-
-def clean():
-    cwd = get_setup_dpath()
-    print('[setup] Current working directory: %r' % cwd)
-    # Remove python compiled files
-    helpers.remove_files_in_dir(cwd, '*.pyc', recursive=True)
-    helpers.remove_files_in_dir(cwd, '*.pyo', recursive=True)
-    # Remove profile outputs
-    helpers.remove_files_in_dir(cwd, '*.prof', recursive=True)
-    helpers.remove_files_in_dir(cwd, '*.prof.txt', recursive=True)
-    helpers.remove_files_in_dir(cwd, '*.lprof', recursive=True)
-    # Remove cython generated c files carefully
-    hsmod_list = ['hotspotter', 'hsgui', 'hsviz', 'hscom']
-    for hsmod in hsmod_list:
-        helpers.remove_files_in_dir(join(cwd, hsmod), '*.so', recursive=False)
-        helpers.remove_files_in_dir(join(cwd, hsmod), '*.c', recursive=False)
-    # Remove pyinstaller temp files
-    helpers.remove_files_in_dir(cwd, 'HotSpotterApp.pkg', recursive=False)
-    helpers.delete(join(cwd, 'dist'))
-    helpers.delete(join(cwd, 'build'))
-    # Remove latex temp files
-    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.synctex')
-    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.log')
-    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.out')
-    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.aux')
-    # Remove misc
-    helpers.delete(join(cwd, "'"))  # idk where this file comes from
-    helpers.remove_files_in_dir(cwd + '/hstpl/extern_feat', 'libopencv_*.dylib', recursive=False)
 
 
 def fix_tpl_permissions():

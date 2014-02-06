@@ -101,7 +101,7 @@ def _steal_stdout(front):
     nosteal = front.back.hs.args.nosteal
     noshare = front.back.hs.args.noshare
     if '--cmd' in sys.argv:
-        NOSTEAL_OVERRIDE = True
+        nosteal = noshare = True
     #from IPython.utils import io
     #with io.capture_output() as captured:
         #%run my_script.py

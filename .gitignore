@@ -38,4 +38,3 @@ hotspotter/*.c
 *.out
 *.log
 *.synctex
-_doc/user-guide-latex/HotSpotterUserGuide.pdf

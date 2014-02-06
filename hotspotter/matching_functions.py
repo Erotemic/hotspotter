@@ -137,7 +137,7 @@ def weight_neighbors(hs, qcx2_nns, qdat):
     print('[mf] Step 2) Weight neighbors: ' + filt_cfg.get_uid())
     if not filt_cfg.filt_on:
         return  {}
-    nnfilter_list = filt_cfg._nnfilter_list
+    nnfilter_list = filt_cfg.get_active_filters()
     filt2_weights = {}
     filt2_meta = {}
     for nnfilter in nnfilter_list:
@@ -163,8 +163,8 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
     cant_match_sameimg = not filt_cfg.can_match_sameimg
     cant_match_samename = not filt_cfg.can_match_samename
     K = qdat.cfg.nn_cfg.K
-    filt2_tw = filt_cfg._filt2_tw
-    print('[mf] Step 3) Filter neighbors: ' + filt_cfg.get_uid())
+    print('[mf] Step 3) Filter neighbors: ')
+    #+ filt_cfg.get_uid())
     # NNIndex
     # Database feature index to chip index
     dx2_cx = qdat._data_index.ax2_cx
@@ -175,7 +175,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
         (qfx2_dx, _) = qcx2_nns[qcx]
         qfx2_nn = qfx2_dx[:, 0:K]
         # Get a numeric score score and valid flag for each feature match
-        qfx2_score, qfx2_valid = _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw)
+        qfx2_score, qfx2_valid = _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt_cfg)
         qfx2_cx = dx2_cx[qfx2_nn]
         print('[mf] * %d assignments are invalid by thresh' % ((True - qfx2_valid).sum()))
         # Remove Impossible Votes:
@@ -214,13 +214,13 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
     return qcx2_nnfilter
 
 
-def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt2_tw):
+def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt_cfg):
     qfx2_score = np.ones(qfx2_nn.shape, dtype=qr.FS_DTYPE)
     qfx2_valid = np.ones(qfx2_nn.shape, dtype=np.bool)
     # Apply the filter weightings to determine feature validity and scores
     for filt, cx2_weights in filt2_weights.iteritems():
         qfx2_weights = cx2_weights[qcx]
-        (sign, thresh), weight = filt2_tw[filt]
+        sign, thresh, weight = filt_cfg.get_stw(filt)
         if isinstance(thresh, (int, float)):
             qfx2_passed = sign * qfx2_weights <= sign * thresh
             qfx2_valid  = np.logical_and(qfx2_valid, qfx2_passed)

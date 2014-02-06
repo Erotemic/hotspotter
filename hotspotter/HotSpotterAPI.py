@@ -163,6 +163,7 @@ def _delete_image(hs, gx_list):
     # Move deleted images into the trash
     lbl = 'Trashing Image'
     mark_progress, end_progress = helpers.progress_func(len(move_list), lbl=lbl)
+
     def domove(src, dst, count):
         try:
             shutil.move(src, dst)

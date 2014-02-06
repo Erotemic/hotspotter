@@ -28,6 +28,7 @@ from PyQt4 import QtCore, QtGui
 from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
                       Qt, QObject, pyqtSlot, QKeyEvent)
 # HotSpotter
+from hotspotter import Config
 from hotspotter import DataStructures as ds
 from hotspotter import HotSpotterAPI
 from hotspotter import HotSpotterAPI as api

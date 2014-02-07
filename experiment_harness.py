@@ -91,7 +91,6 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
                      test_results_verbosity=2):
     nQuery = len(qcx_list)
     dcxs = hs.get_indexed_sample()
-    mc3.prepare_query(qdat, None, dcxs)
     query_uid = qdat.get_uid()
     hs_uid    = hs.get_db_name()
     qcxs_uid  = helpers.hashstr_arr(qcx_list, lbl='_qcxs')
@@ -224,8 +223,10 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         # Set data to the current config
         #print(query_cfg.get_printable())
         qdat.set_cfg(query_cfg, hs=hs)
-        uid2_query_cfg[qdat.get_uid()] = query_cfg
         _nocache_testres = nocache_testres or (cfgx in sel_cols)
+        dcxs = hs.get_indexed_sample()
+        mc3.prepare_query(qdat, None, dcxs)
+        uid2_query_cfg[qdat.get_uid()] = query_cfg
         # Run the test / read cache
         qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,
                                                       nCfg, _nocache_testres,

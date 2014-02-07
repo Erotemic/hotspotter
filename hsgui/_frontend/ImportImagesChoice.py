@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hsgui/_frontend/ImportImagesChoice.ui'
+# Form implementation generated from reading ui file 'C:\Users\joncrall\code\hotspotter\hsgui/_frontend\ImportImagesChoice.ui'
 #
-# Created: Thu Feb  6 11:14:33 2014
-#      by: PyQt4 UI code generator 4.9.1
+# Created: Thu Feb 06 19:54:15 2014
+#      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,7 +12,16 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -58,14 +67,14 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Dialog", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton.setText(QtGui.QApplication.translate("Dialog", "Import Images and \n"
-"copy into the database.", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton_2.setText(QtGui.QApplication.translate("Dialog", "Import Images but\n"
-" leave them where they are.", None, QtGui.QApplication.UnicodeUTF8))
-        self.checkBox_3.setText(QtGui.QApplication.translate("Dialog", "The images are the chips. ", None, QtGui.QApplication.UnicodeUTF8))
-        self.checkBox.setText(QtGui.QApplication.translate("Dialog", "Rembember Until End of Run", None, QtGui.QApplication.UnicodeUTF8))
-        self.checkBox_2.setText(QtGui.QApplication.translate("Dialog", "Remember In Preference File: %{pref_fname}", None, QtGui.QApplication.UnicodeUTF8))
+        Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
+        self.pushButton.setText(_translate("Dialog", "Import Images and \n"
+"copy into the database.", None))
+        self.pushButton_2.setText(_translate("Dialog", "Import Images but\n"
+" leave them where they are.", None))
+        self.checkBox_3.setText(_translate("Dialog", "The images are the chips. ", None))
+        self.checkBox.setText(_translate("Dialog", "Rembember Until End of Run", None))
+        self.checkBox_2.setText(_translate("Dialog", "Remember In Preference File: %{pref_fname}", None))
 
 
 if __name__ == "__main__":

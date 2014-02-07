@@ -73,6 +73,10 @@ def startfile(fpath):
         out, err, ret = _cmd(['xdg-open', fpath], detatch=True)
         if not ret:
             raise Exception(out + ' -- ' + err)
+    elif sys.platform.startswith('darwin'):
+        out, err, ret = _cmd(['open', fpath], detatch=True)
+        if not ret:
+            raise Exception(out + ' -- ' + err)
     else:
         os.startfile(fpath)
     pass

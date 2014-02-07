@@ -4,6 +4,7 @@ import sys
 import itertools
 import textwrap
 from os.path import join
+from itertools import imap, cycle
 # Scientific
 import numpy as np
 # Hotspotter
@@ -23,18 +24,6 @@ from hscom import latex_formater
 
 # What happens when we take all other possible ground truth matches out
 # of the database index?
-
-#mc3.rrr(); mf.rrr(); dev.rrr(); ds.rrr(); vr2.rrr()
-#vr2.print_off()
-#mf.print_off()
-#io.print_off()
-#HotSpotter.print_off()
-#cc2.print_off()
-#fc2.print_off()
-#ld2.print_off()
-#helpers.print_off()
-#parallel.print_off()
-#mc3.print_off()
 
 
 def get_valid_testcfg_names():
@@ -138,9 +127,12 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
     mark_progress = helpers.simple_progres_func(test_results_verbosity, msg, '.')
     total = nQuery * nCfg
     # Perform queries
+    TEST_INFO = True
     for qx, qcx in enumerate(qcx_list):
         count = qx + nPrevQ + 1
         mark_progress(count, total)
+        if TEST_INFO:
+            print('qcx=%r. quid=%r' % (qcx, qdat.get_uid()))
         res_list = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
         qx2_reslist += [res_list]
         assert len(res_list) == 1
@@ -164,16 +156,15 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
     helpers.ensuredir(cache_dir)
     io.smart_save(qx2_bestranks, **io_kwargs)
 
-    if helpers.get_flag('--quit2'):
-        print('Triggered --quit2')
-        sys.exit(1)
-
     return qx2_bestranks, qx2_reslist
 
 
-def get_varried_params_list(test_cfg_name_list):
+def get_varied_params_list(test_cfg_name_list):
     vary_dicts = get_vary_dicts(test_cfg_name_list)
-    varied_params_list = [_ for _dict in vary_dicts for _ in helpers.all_dict_combinations(_dict)]
+    get_all_dict_comb = helpers.all_dict_combinations
+    dict_comb_list = [get_all_dict_comb(_dict) for _dict in vary_dicts]
+    varied_params_list = [comb for dict_comb in dict_comb_list for comb in dict_comb]
+    #map(lambda x: print('\n' + str(x)), varied_params_list)
     return varied_params_list
 
 
@@ -181,7 +172,7 @@ def get_cfg_list(hs, test_cfg_name_list):
     if 'custom' == test_cfg_name_list:
         cfg_list = [hs.prefs.query_cfg]
         return cfg_list
-    varied_params_list = get_varried_params_list(test_cfg_name_list)
+    varied_params_list = get_varied_params_list(test_cfg_name_list)
     cfg_list = [Config.QueryConfig(hs, **_dict) for _dict in varied_params_list]
     return cfg_list
 
@@ -202,18 +193,6 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('')
     print('[harn] Testing %d different parameters' % len(cfg_list))
     print('[harn]         %d different chips' % len(qcx_list))
-
-    if helpers.get_flag('--quit1'):
-        print('Triggered --quit1')
-        for cfg in cfg_list:
-            print(cfg._feat_cfg)
-        #print(test_configurations.func_code.co_freevars)
-        from IPython import embed
-        embed()
-        #exec(helpers.ipython_execstr())
-        #print(sel_cols)
-        #print(sel_rows)
-        sys.exit(1)
 
     # Preallocate test result aggregation structures
     sel_cols = hs.get_arg('sel_cols', [])  # FIXME
@@ -239,7 +218,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     for cfgx, query_cfg in enumerate(cfg_list):
         mark_progress(cfgx + 1, nCfg)
         # Set data to the current config
-        print(query_cfg.get_printable())
+        #print(query_cfg.get_printable())
         qdat.set_cfg(query_cfg)
         _nocache_testres = nocache_testres or (cfgx in sel_cols)
         # Run the test / read cache
@@ -313,6 +292,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     qx2_min_rank = []
     qx2_argmin_rank = []
     new_hard_qx_list = []
+    new_qcid_list = []
+    new_hardtup_list = []
     for qx in xrange(nQuery):
         ranks = rank_mat[qx]
         min_rank = ranks.min()
@@ -322,14 +303,15 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         # Mark examples as hard
         if ranks.max() > 0:
             new_hard_qx_list += [qx]
-        new_hard_qcid_list = []
-        for qx in new_hard_qx_list:
-            # New list is in cid format instead of cx format
-            # because you should be copying and pasting it
-            notes = ' ranks = ' + str(rank_mat[qx])
-            qcx = qcx_list[qx]
-            qcid = hs.tables.cx2_cid[qcx]
-            new_hard_qcid_list += [(qcid, notes)]
+    for qx in new_hard_qx_list:
+        # New list is in cid format instead of cx format
+        # because you should be copying and pasting it
+        notes = ' ranks = ' + str(rank_mat[qx])
+        qcx = qcx_list[qx]
+        qcid = hs.tables.cx2_cid[qcx]
+        new_hardtup_list += [(qcid, notes)]
+        new_qcid_list += [qcid]
+
 
     @ArgGaurdFalse
     def print_rowscore():
@@ -355,12 +337,22 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     @ArgGaurdFalse
     def print_hardcase():
         print('===')
-        print('--- hard new_hard_qcid_list (w.r.t these configs) ---')
-        print('\n'.join(map(repr, new_hard_qcid_list)))
-        print('There are %d hard cases ' % len(new_hard_qcid_list))
-        print(sorted([x[0] for x in new_hard_qcid_list]))
-        print('--- /Scores per Query ---')
+        print('--- hard new_hardtup_list (w.r.t these configs) ---')
+        print('\n'.join(map(repr, new_hardtup_list)))
+        print('There are %d hard cases ' % len(new_hardtup_list))
+        print(sorted([x[0] for x in new_hardtup_list]))
+        print('--- /Print Hardcase ---')
     print_hardcase()
+
+
+    @ArgGaurdFalse
+    def echo_hardcase():
+        print('====')
+        print('--- hardcase commandline ---')
+        hardcids_str = ' '.join(map(str, ['    ', '--qcid'] + new_qcid_list))
+        print(hardcids_str)
+        print('--- /Echo Hardcase ---')
+    echo_hardcase()
 
     #------------
     # Build Colscore
@@ -443,7 +435,36 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             bestCFG_X = np.where(cfgx2_nLessX == max_LessX)[0]
             best_rankscore = '[best_cfg] %d config(s) scored ' % len(bestCFG_X)
             best_rankscore += rankscore_str(X, max_LessX, nQuery)
-            best_rankcfg = indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    ')
+            uid_list = cfgx2_lbl[bestCFG_X]
+            def interleave(args):
+                from itertools import cycle, imap
+                arg_iters = map(iter, args)
+                cycle_iter = cycle(arg_iters)
+                for iter_ in cycle_iter:
+                    yield iter_.next()
+            def wrap_uid(uid):
+                import re
+                cfg_regex = r'[ \)]_[A-Z][A-Z]*\('
+                uidmarker_list = re.findall(cfg_regex, uid)
+                uidconfig_list = re.split(cfg_regex, uid)
+                args = [uidconfig_list, uidmarker_list]
+                interleave_iter = interleave(args)
+                new_uid_list = []
+                total_len = 0
+                for frag in interleave_iter:
+                    total_len += len(frag)
+                    # Put parens on previous line
+                    #if frag[0] == ')':
+                        #frag[0] = frag[1:]
+                        #new_uid_list += ')'
+                    new_uid_list += [frag]
+                    if total_len > 80:
+                        total_len = 0
+                        new_uid_list += ['\n                     ']
+                wrapped_uid = ''.join(new_uid_list)
+                return wrapped_uid
+            uid_list = [wrap_uid(uid) for uid in uid_list]
+            best_rankcfg = indent('\n'.join(uid_list), '    ')
             print(best_rankscore)
             print(best_rankcfg)
 

@@ -94,7 +94,7 @@ vsmany_best = {
     'recip_weight':    [0],  # 1,]
     'bursty_weight':   [0],  # 1,]
     'ratio_weight':    [0],  # 1,]
-    'lnbnn_weight':    [.01],  # 1,]
+    'lnbnn_weight':    [1],  # 1,]
     'lnrat_weight':    [0],  # 1,]
     'roidist_thresh':  [None],  # .5,]
     'recip_thresh':    [0],  # 0
@@ -110,7 +110,7 @@ vsmany_best = {
 }
 best = vsmany_best
 
-overnight = vsmany_best
+overnight = vsmany_best.copy()
 overnight.update({
     #'K':                   [5, 10, 3],
     #'Knorm':               [5, 3, 1],
@@ -120,10 +120,23 @@ overnight.update({
 })
 
 
-k_test = vsmany_best.copy()
-k_test.update({
+overnight_k = vsmany_best.copy()
+overnight_k.update({
     'K': [1, 3, 5, 7, 10, 20],
     'Knorm': [1, 3, 5, 7, 10],
+})
+
+
+k_small = vsmany_best.copy()
+k_small.update({
+    'K': [2, 5],
+    'Knorm': [1],
+})
+
+k_big = vsmany_best.copy()
+k_big.update({
+    'K': [2, 5, 10, 20, 50],
+    'Knorm': [1, 3, 5, 10],
 })
 
 

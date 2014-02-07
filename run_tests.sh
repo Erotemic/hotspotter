@@ -17,13 +17,24 @@ cython_vs_python()
 simple_tests()
 {
     python dev.py --db NAUTS -t best --all-gt-cases
+    
+}
+
+dev_test()
+{
+    python dev.py --db MOTHERS -t k_small --print-rowlbl --print-colscore  --print-collbl --print-hardcase --all-gt-cases --print-hardcase --echo-hardcase
+
+
+     --print-colscore  --print-collbl
+    python dev.py --db MOTHERS -t k_big --qcid 28 44 49 50 51 53 54 60 66 68 69 97 110
 }
 
 normrule_test()
 {
     python dev.py --db MOTHERS -t normrule_test --all-gt-cases
 }
-normrule_test
+#normrule_test
+dev_test
 
 #ic --db GZ --tests vsmany_big_social --all-gt-cases | tail
 #ic --db GZ --tests vsmany_score --all-gt-cases | tail

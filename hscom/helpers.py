@@ -2037,3 +2037,17 @@ def import_testdata():
 
 def num2_sigfig(num):
     return int(np.ceil(np.log10(num)))
+
+def quitflag(num, embed=False, parent_locals=None):
+    if parent_locals is None:
+        parent_locals = get_parent_locals()
+    exec(execstr_dict(parent_locals, 'parent_locals'))
+    if embed:
+        print('Triggered --quit' + str(num))
+        from IPython import embed; embed()
+    if get_flag('--quit' + str(num)):
+        print('Triggered --quit' + str(num))
+        sys.exit(1)
+
+def qflag(num, embed=True):
+    return quitflag(num, embed=embed, parent_locals=get_parent_locals())

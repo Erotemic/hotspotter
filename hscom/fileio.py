@@ -404,6 +404,7 @@ def read_exif_list(fpath_list, **kwargs):
     return exif_list
 
 
+
 @profile
 def imread(img_fpath):
     try:

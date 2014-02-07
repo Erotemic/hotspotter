@@ -20,13 +20,19 @@ simple_tests()
     
 }
 
+mother_hard()
+{
+python dev.py --db MOTHERS -t k_small --print-rowlbl --print-colscore  --print-collbl --print-hardcase --all-gt-cases --print-hardcase --echo-hardcase
+    
+python dev.py --db MOTHERS -t k_big --qcid 28 44 49 50 51 53 54 60 66 68 69 97 110
+}
+
 dev_test()
 {
-    python dev.py --db MOTHERS -t k_small --print-rowlbl --print-colscore  --print-collbl --print-hardcase --all-gt-cases --print-hardcase --echo-hardcase
+python dev.py --db GZ -t k_small --al-gt-cases --echo-hardcase
 
 
-     --print-colscore  --print-collbl
-    python dev.py --db MOTHERS -t k_big --qcid 28 44 49 50 51 53 54 60 66 68 69 97 110
+python dev.py --db MOTHERS -t k_big --qcid 28 44 49 50 51 53 54 60 66 68 69 97 110
 }
 
 normrule_test()

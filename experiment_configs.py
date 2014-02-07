@@ -120,6 +120,14 @@ overnight.update({
 })
 
 
+k_test = vsmany_best.copy()
+k_test.update({
+    'K': [1, 3, 5, 7, 10, 20],
+    'Knorm': [1, 3, 5, 7, 10],
+})
+
+
+
 adaptive_test = vsmany_best.copy()
 adaptive_test.update({
     'use_adaptive_scale': [True, False],

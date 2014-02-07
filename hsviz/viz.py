@@ -520,7 +520,7 @@ def annotate_chipres(hs, res, cx, showTF=True, showScore=True, showRank=True, ti
     # Build title
     title = '*%s*' % isgt_str if showTF else ''
     if showRank:
-        rank_str = ' rank=' + str(res.get_cx_ranks([cx])[0])
+        rank_str = ' rank=' + str(res.get_cx_ranks([cx])[0] + 1)
         title += rank_str
     if showScore:
         score_str = (' score=' + helpers.num_fmt(score)) % (score)

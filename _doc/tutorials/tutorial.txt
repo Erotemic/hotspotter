@@ -1,0 +1,18 @@
+NOTES: 
+
+Put this in the video
+Caveats: help -> delete global preferences
+# you may have to delete your ~/.hotspotter directory
+
+
+2) New database tutorial
+
+
+3) Existing Database
+ tutorial should have images w/out rois that we can tell them to import
+
+
+
+Explicit preferences settings for plains and grevys zebras
+
+

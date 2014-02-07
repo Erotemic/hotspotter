@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off, rrr,
- profile) = __common__.init(__name__, '[ds]')
+ profile, printDBG) = __common__.init(__name__, '[ds]', DEBUG=False)
 # Standard
 from itertools import izip, chain
 # Scientific
@@ -12,15 +12,6 @@ from hscom.Printable import DynStruct
 
 ID_DTYPE = np.int32  # id datatype
 X_DTYPE  = np.int32  # indeX datatype
-
-DEBUG = False  # Debug flag
-
-if DEBUG:
-    def printDBG(msg):
-        print('[DS.DBG] ' + msg)
-else:
-    def printDBG(msg):
-        pass
 
 
 class QueryData(DynStruct):
@@ -34,8 +25,10 @@ class QueryData(DynStruct):
         qdat._data_indexes = None  # current index
         qdat._dcxs2_index = {}     # cached indexes
 
-    def set_cfg(qdat, query_cfg):
+    def set_cfg(qdat, query_cfg, hs=None):
         qdat.cfg = query_cfg
+        if hs is not None:
+            hs.fix_prefs2(query_cfg=query_cfg)
 
     def unload_data(qdat):
         # Data TODO: Separate this

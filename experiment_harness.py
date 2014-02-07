@@ -128,6 +128,7 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
     total = nQuery * nCfg
     # Perform queries
     TEST_INFO = True
+    # Query Chip / Row Loop
     for qx, qcx in enumerate(qcx_list):
         count = qx + nPrevQ + 1
         mark_progress(count, total)
@@ -173,7 +174,7 @@ def get_cfg_list(hs, test_cfg_name_list):
         cfg_list = [hs.prefs.query_cfg]
         return cfg_list
     varied_params_list = get_varied_params_list(test_cfg_name_list)
-    cfg_list = [Config.QueryConfig(hs, **_dict) for _dict in varied_params_list]
+    cfg_list = [Config.QueryConfig(**_dict) for _dict in varied_params_list]
     return cfg_list
 
 
@@ -215,11 +216,12 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     mark_progress = helpers.simple_progres_func(test_cfg_verbosity, msg, '+')
 
     # Run each test configuration
+    # Query Config / Col Loop
     for cfgx, query_cfg in enumerate(cfg_list):
         mark_progress(cfgx + 1, nCfg)
         # Set data to the current config
         #print(query_cfg.get_printable())
-        qdat.set_cfg(query_cfg)
+        qdat.set_cfg(query_cfg, hs=hs)
         _nocache_testres = nocache_testres or (cfgx in sel_cols)
         # Run the test / read cache
         qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,

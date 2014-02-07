@@ -132,8 +132,8 @@ k_small.update({
 
 k_big = vsmany_best.copy()
 k_big.update({
-    'K': [2, 5, 10, 20, 50],
-    'Knorm': [1, 3, 5, 10],
+    'K': [3, 4, 5, 6, 10, 15],
+    'Knorm': [1, 2, 3],
 })
 
 adaptive_test = vsmany_best.copy()
@@ -144,7 +144,7 @@ adaptive_test.update({
 normrule = vsmany_best.copy()
 normrule.update({
     'K': [5, 10, 3],
-    'Knorm': [5, 3, 1, 10, 20],
+    'Knorm': [1, 3, 5, 10, 20],
     'normalizer_rule': ['name', 'last'],
 })
 

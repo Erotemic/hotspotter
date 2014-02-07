@@ -356,10 +356,10 @@ class FeatureConfig(ConfigBase):
         feat_cfg.scale_min = 0  # 0  # 30 # TODO: Put in pref types here
         feat_cfg.scale_max = 9001  # 9001 # 80
         feat_cfg.use_adaptive_scale = False  # 9001 # 80
-        if hs is not None:
-            feat_cfg._chip_cfg = hs.prefs.chip_cfg  # Features depend on chips
-        else:
+        if hs is None:
             feat_cfg._chip_cfg = ChipConfig(**kwargs)  # creating without hs delays crash
+        else:
+            feat_cfg._chip_cfg = hs.prefs.chip_cfg  # Features depend on chips
         feat_cfg.update(**kwargs)
 
     def get_dict_args(feat_cfg):

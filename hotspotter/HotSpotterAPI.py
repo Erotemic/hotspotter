@@ -298,6 +298,13 @@ class HotSpotter(DynStruct):
         hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
         hs.prefs.query_cfg._feat_cfg = hs.prefs.feat_cfg
 
+    def fix_prefs2(hs, query_cfg=None):
+        # Fix pointers in the correct direction
+        if query_cfg is not None:
+            hs.prefs.query_cfg = query_cfg
+        hs.prefs.feat_cfg = hs.prefs.query_cfg._feat_cfg
+        hs.prefs.chip_cfg = hs.prefs.feat_cfg._chip_cfg
+
     def assert_prefs(hs):
         try:
             query_cfg = hs.prefs.query_cfg

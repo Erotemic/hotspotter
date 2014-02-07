@@ -5,13 +5,15 @@ import __common__
  rrr, profile, printDBG) = __common__.init(__name__, '[parallel]', DEBUG=False)
 # Python
 from itertools import izip
-from os.path import exists
+from os.path import exists, dirname, split
 import multiprocessing
+import os
 import sys
 # Hotspotter
 import helpers
 
 
+@profile
 def _calculate(func, args):
     printDBG('[parallel] * %s calculating...' % (multiprocessing.current_process().name,))
     result = func(*args)
@@ -24,6 +26,7 @@ def _calculate(func, args):
     return result
 
 
+@profile
 def _worker(input, output):
     printDBG('[parallel] START WORKER input=%r output=%r' % (input, output))
     for func, args in iter(input.get, 'STOP'):
@@ -35,6 +38,7 @@ def _worker(input, output):
     #printDBG('[parallel] worker is done input=%r output=%r' % (input, output))
 
 
+@profile
 def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None, common_args=[]):
     if args is not None and num_procs is None:
         num_procs = args.num_procs
@@ -67,6 +71,7 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None, commo
     return ret
 
 
+@profile
 def make_task_list(func, arg_list, lazy=True, common_args=[]):
     '''
     The input should alawyas be argument 1
@@ -78,14 +83,29 @@ def make_task_list(func, arg_list, lazy=True, common_args=[]):
         # does not check existance
         task_list = [(func, append_common(_args)) for _args in izip(*arg_list)]
         return task_list
-    # checks existance
-    arg_list2 = [append_common(_args) for _args in izip(*arg_list) if not exists(_args[1])]
+    # Hackish: Try to check existence quicker:
+    output_path_list = arg_list[1]
+    dir_list = [dirname(fpath) for fpath in output_path_list]
+    fname_list = [split(fpath)[1] for fpath in output_path_list]
+    unique_dirs = list(set(dir_list))
+    if len(unique_dirs) == 1:
+        # this checks exists quickly, but only works if everything is in the
+        # same directory. It would be better if an output directory was
+        # specified instead. Then this can be even faster as well as elegant.
+        fname_set = set(os.listdir(unique_dirs[0]))
+        exist_list = [fname in fname_set for fname in fname_list]
+        argiter = izip(exist_list, izip(*arg_list))
+        arg_list2 = [append_common(_args) for bit, _args in argiter if not bit]
+    else:
+        # check existance individually
+        arg_list2 = [append_common(_args) for _args in izip(*arg_list) if not exists(_args[1])]
     task_list = [(func, _args) for _args in iter(arg_list2)]
     nSkip = len(zip(*arg_list)) - len(arg_list2)
     print('[parallel] Already computed %d %s tasks' % (nSkip, func.func_name))
     return task_list
 
 
+@profile
 def parallelize_tasks(task_list, num_procs, task_lbl='', verbose=True):
     '''
     Used for embarissingly parallel tasks, which write output to disk
@@ -102,6 +122,7 @@ def parallelize_tasks(task_list, num_procs, task_lbl='', verbose=True):
             return _compute_in_serial(task_list, task_lbl, verbose)
 
 
+@profile
 def _compute_in_serial(task_list, task_lbl='', verbose=True):
     # Serialize Tasks
     result_list = []
@@ -124,6 +145,7 @@ def _compute_in_serial(task_list, task_lbl='', verbose=True):
     return result_list
 
 
+@profile
 def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     '''
     Input: task list: [ (fn, args), ... ]

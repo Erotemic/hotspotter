@@ -45,6 +45,14 @@ python dev.py --db GZ -t adaptive_test --qcid 140 183 184 253 276 277 289 306 31
 python dev.py --db GZ -t adaptive_test --all-gt-cases --print-bestcfg
 
 
+python dev.py --db GZ -t k_big --qcid 140 183 184 253 276 277 289 306 311 339 340 425 430 436 441 442 443 444 445 446 450 451 453 454 456 460 463 465 501 550 661 662 681 720 802 838 981 1044 1045 1046 1047 255 329 435 694 786 803 812 817 941 1014 1021 1043
+
+}
+
+
+run_overnight()
+{
+    python dev.py --db GZ -t overnight_huge --all-gt-cases
 }
 
 dev_test()

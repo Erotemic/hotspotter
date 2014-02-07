@@ -375,7 +375,7 @@ def batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
 # =======================================
 # Main Script
 # =======================================
-#@profile
+@profile
 def load_chips(hs, cx_list=None, force_compute=False, **kwargs):
     print('\n=============================')
     print('[cc2] Precomputing chips and loading chip paths: %r' % hs.get_db_name())
@@ -459,9 +459,17 @@ def load_chips(hs, cx_list=None, force_compute=False, **kwargs):
     parallel_compute(compute_chip, **pcc_kwargs)
 
     # Read sizes
+    # RCOS TODO: This is slow. We need to cache this data.
     try:
+        # Hackish way to read images sizes a little faster.
+        # change the directory so the os doesnt have to do as much work
+        import os
+        cwd = os.getcwd()
+        os.chdir(hs.dirs.chip_dir)
+        cfname_list = [_cfname_fmt  % cid for cid in iter(cid_list)]
         rsize_list = [(None, None) if path is None else Image.open(path).size
-                      for path in iter(cfpath_list)]
+                      for path in iter(cfname_list)]
+        os.chdir(cwd)
     except IOError as ex:
         import gc
         gc.collect()

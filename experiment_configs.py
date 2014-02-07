@@ -111,12 +111,23 @@ best = vsmany_best
 
 overnight = vsmany_best.copy()
 overnight.update({
-    #'K':                   [5, 10, 3],
-    #'Knorm':               [5, 3, 1],
+    #'K':                   [5, 7, 10, 20],
+    #'Knorm':               [1, 3, 5, 10],
     #'normalizer_rule':     ['name', 'last'],
-    'use_adaptive_scale':  [True, False],
+    #'use_adaptive_scale':  [True, False],
     #'score_method':        ['pl', 'csum'],  # , 'pl'],  #, 'nsum', 'borda', 'topk', 'nunique']
 })
+
+overnight_huge = vsmany_best.copy()
+overnight_huge.update({
+    'K':                   [5, 7, 10, 20],
+    'Knorm':               [1, 3, 5, 10],
+    'normalizer_rule':     ['name', 'last'],
+    'use_adaptive_scale':  [True, False],
+    'scale_min': [0, 10, 20],
+    #'score_method':        ['pl', 'csum'],  # , 'pl'],  #, 'nsum', 'borda', 'topk', 'nunique']
+})
+
 
 overnight_k = vsmany_best.copy()
 overnight_k.update({
@@ -138,6 +149,7 @@ k_big.update({
 
 adaptive_test = vsmany_best.copy()
 adaptive_test.update({
+    'K': [4, 5],
     'use_adaptive_scale': [True, False],
 })
 

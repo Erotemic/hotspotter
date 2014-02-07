@@ -108,6 +108,7 @@ def debug_smart_load(dpath='', fname='*', uid='*', ext='*'):
 
 
 # --- Smart Load/Save ---
+@profile
 def __args2_fpath(dpath, fname, uid, ext):
     #global DEBUG_HASH_TABLE
     if len(ext) > 0 and ext[0] != '.':
@@ -125,11 +126,12 @@ def __args2_fpath(dpath, fname, uid, ext):
         #else:
             #print(str(len_key) + ' ' + str(len_key))
     fpath = join(dpath, fname + fname_uid + ext)
-    fpath = realpath(fpath)
+    #fpath = realpath(fpath)
     fpath = normpath(fpath)
     return fpath
 
 
+@profile
 def smart_fname_info(func_name, dpath, fname, uid, ext):
     info_list = [
         'dpath=%r' % dpath,
@@ -226,6 +228,7 @@ def __smart_load(fpath, verbose, allow_alternative=False, can_fail=True, **kwarg
 
 
 # --- Util ---
+@profile
 def convert_alternative(fpath, verbose, can_fail):
     # check for an alternative (maybe old style or ext) file
     alternatives = find_alternatives(fpath, verbose)
@@ -248,6 +251,7 @@ def convert_alternative(fpath, verbose, can_fail):
         return data
 
 
+@profile
 def find_alternatives(fpath, verbose):
     # Check if file is in another format
     dpath, fname = os.path.split(fpath)

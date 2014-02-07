@@ -496,12 +496,12 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         #print('viewing (r,c)=(%r,%r)' % (r,c))
         res = rc2_res[r, c]
         #res.printme()
-        res.show_topN(hs, fnum=fnum)
+        res.show_top(hs, fnum=fnum)
         fnum += 1
     print('--- /SUMMARY ---')
 
     print('')
-    print('--remember you have --sel_rows and --sel_cols available to you')
+    print('--remember you have --sel-rows and --sel-cols available to you')
 
 #if __name__ == '__main__':
     #import multiprocessing

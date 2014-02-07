@@ -26,6 +26,7 @@ Vizualize the Knth feature.
 
 #--- Feature ----
 
+
 Add a #matches column to the results table
 Let the user change chip properties from the results table. 
 
@@ -55,6 +56,13 @@ Need to have easier selection of ROIs. One click additions.
 Easy modifications. 
 
 Add ability to orient an entire image. 
+
+
+#--- Dev Testing Features ---
+
+RCOS: I want a flag which sets the "work dir" for a user. Then I want a nice
+way of getting that work dir from any place in the program. This will be a
+developer tool.
 
 #--- Annoyances ----
 

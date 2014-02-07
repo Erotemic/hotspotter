@@ -27,9 +27,17 @@ python dev.py --db MOTHERS -t k_small --print-rowlbl --print-colscore  --print-c
 python dev.py --db MOTHERS -t k_big --qcid 28 44 49 50 51 53 54 60 66 68 69 97 110
 }
 
+gz_hard()
+{
+python dev.py --db GZ -t k_small --print-rowlbl --print-colscore  --print-collbl --print-hardcase --all-gt-cases --print-hardcase --echo-hardcase
+
+python dev.py --db GZ -t k_big --qcid 140 183 184 253 276 277 289 306 311 339 340 425 430 436 441 442 443 444 445 446 450 451 453 454 456 460 463 465 501 550 661 662 681 720 802 838 981 1044 1045 1046 1047 231 287 316 329 435 553 589 694 786 803 812 815 817 908 941 1043
+
+}
+
 dev_test()
 {
-python dev.py --db GZ -t k_small --al-gt-cases --echo-hardcase
+python dev.py --db GZ -t k_small --all-gt-cases --echo-hardcase
 
 
 python dev.py --db MOTHERS -t k_big --qcid 28 44 49 50 51 53 54 60 66 68 69 97 110

@@ -24,7 +24,6 @@ vsmany_2 = {
     'max_alts':        [1000],
 }
 
-
 vsone_1 = {
     'query_type':      ['vsone'],
     'checks':          [256],  # , 8192],
@@ -119,13 +118,11 @@ overnight.update({
     #'score_method':        ['pl', 'csum'],  # , 'pl'],  #, 'nsum', 'borda', 'topk', 'nunique']
 })
 
-
 overnight_k = vsmany_best.copy()
 overnight_k.update({
     'K': [1, 3, 5, 7, 10, 20],
     'Knorm': [1, 3, 5, 7, 10],
 })
-
 
 k_small = vsmany_best.copy()
 k_small.update({
@@ -139,13 +136,10 @@ k_big.update({
     'Knorm': [1, 3, 5, 10],
 })
 
-
-
 adaptive_test = vsmany_best.copy()
 adaptive_test.update({
     'use_adaptive_scale': [True, False],
 })
-
 
 normrule = vsmany_best.copy()
 normrule.update({

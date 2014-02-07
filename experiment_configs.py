@@ -132,7 +132,7 @@ k_small.update({
 
 k_big = vsmany_best.copy()
 k_big.update({
-    'K': [3, 4, 5, 6, 10, 15],
+    'K': [3, 4, 5, 7, 10, 15],
     'Knorm': [1, 2, 3],
 })
 

@@ -24,7 +24,10 @@ mother_hard()
 {
 python dev.py --db MOTHERS -t k_small --print-rowlbl --print-colscore  --print-collbl --print-hardcase --all-gt-cases --print-hardcase --echo-hardcase
     
-python dev.py --db MOTHERS -t k_big --qcid 28 44 49 50 51 53 54 60 66 68 69 97 110
+python dev.py --db MOTHERS -t k_big --qcid 28 44 49 50 51 53 54 60 66 68 69 97 106 110 --print-bestcfg
+
+python dev.py --db MOTHERS -t k_big --qcid 28 50 51 54 68 --print-bestcfg
+
 }
 
 gz_hard()

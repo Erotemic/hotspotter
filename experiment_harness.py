@@ -4,7 +4,7 @@ import sys
 import itertools
 import textwrap
 from os.path import join
-from itertools import imap, cycle
+#from itertools import imap, cycle
 # Scientific
 import numpy as np
 # Hotspotter
@@ -215,6 +215,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     ---------------------''')
     mark_progress = helpers.simple_progres_func(test_cfg_verbosity, msg, '+')
 
+    uid2_query_cfg = {}
+
     # Run each test configuration
     # Query Config / Col Loop
     for cfgx, query_cfg in enumerate(cfg_list):
@@ -222,6 +224,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         # Set data to the current config
         #print(query_cfg.get_printable())
         qdat.set_cfg(query_cfg, hs=hs)
+        uid2_query_cfg[qdat.get_uid()] = query_cfg
         _nocache_testres = nocache_testres or (cfgx in sel_cols)
         # Run the test / read cache
         qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,
@@ -314,7 +317,6 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         new_hardtup_list += [(qcid, notes)]
         new_qcid_list += [qcid]
 
-
     @ArgGaurdFalse
     def print_rowscore():
         print('')
@@ -345,7 +347,6 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print(sorted([x[0] for x in new_hardtup_list]))
         print('--- /Print Hardcase ---')
     print_hardcase()
-
 
     @ArgGaurdFalse
     def echo_hardcase():
@@ -438,12 +439,14 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             best_rankscore = '[best_cfg] %d config(s) scored ' % len(bestCFG_X)
             best_rankscore += rankscore_str(X, max_LessX, nQuery)
             uid_list = cfgx2_lbl[bestCFG_X]
+
             def interleave(args):
-                from itertools import cycle, imap
+                from itertools import cycle
                 arg_iters = map(iter, args)
                 cycle_iter = cycle(arg_iters)
                 for iter_ in cycle_iter:
                     yield iter_.next()
+
             def wrap_uid(uid):
                 import re
                 cfg_regex = r'[ \)]_[A-Z][A-Z]*\('
@@ -494,9 +497,20 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('\n'.join(best_rankscore_summary))
     # Draw results
     rciter = itertools.product(sel_rows, sel_cols)
+    #print(rc2_res)
     for r, c in rciter:
-        #print('viewing (r,c)=(%r,%r)' % (r,c))
+        print('--------')
+        print('viewing (r,c)=(%r,%r)' % (r, c))
         res = rc2_res[r, c]
+        print(res.uid)
+        print(res.true_uid)
+        print(type(res.true_uid))
+        for key in uid2_query_cfg.keys():
+            print(key)
+            print(key == res.true_uid)
+            print(type(key))
+        query_cfg = uid2_query_cfg[res.true_uid]
+        print(query_cfg)
         #res.printme()
         res.show_top(hs, fnum=fnum)
         fnum += 1

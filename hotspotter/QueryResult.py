@@ -4,8 +4,8 @@ from hscom import __common__
  rrr, profile, printDBG) = __common__.init(__name__, '[qr]', DEBUG=False)
 # Python
 from os.path import exists, split, join
-import os
 from zipfile import error as BadZipFile  # Screwy naming convention.
+import os
 # Scientific
 import numpy as np
 # HotSpotter
@@ -91,6 +91,7 @@ class QueryResult(DynStruct):
                 print('[qr] loading old result format')
                 res.filt2_meta = {}
             res.query_uid = str(res.query_uid)
+            res.true_uid = res.true_uid.tolist()
             return True
         except IOError as ex:
             #print('[res] encountered IOError: %r' % ex)

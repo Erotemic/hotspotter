@@ -52,7 +52,10 @@ python dev.py --db GZ -t k_big --qcid 140 183 184 253 276 277 289 306 311 339 34
 
 run_overnight()
 {
-    python dev.py --db GZ -t overnight_huge --all-gt-cases
+    python dev.py --dbdir ~/data/work/PZ_FlankHack
+    python dev.py --dbdir ~/data/work/PZ_Marianne
+    python dev.py --dbdir ~/data/work/PZ_FlankHack
+    python dev.py --db GZ -t overnight_huge --all-gt-cases && python dev.py --db MOTHERS -t overnight_huge --all-gt-cases && 
 }
 
 dev_test()

@@ -221,22 +221,21 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         print('[ld2.name] ERROR on line:         %r' % (csv_line))
         print('[ld2.name] ERROR on fields:       %r' % (csv_fields))
 
+    # -------------------
+    # --- READ IMAGES ---
+    # -------------------
+    gx2_gname = []
+    gx2_aif   = []
+    gid2_gx = {}  # this is not used. It can probably be removed
+
+    def add_image(gname, aif, gid):
+        gx = len(gx2_gname)
+        gx2_gname.append(gname)
+        gx2_aif.append(aif)
+        if gid is not None:
+            # this is not used. It can probably be removed
+            gid2_gx[gid] = gx
     try:
-        # -------------------
-        # --- READ IMAGES ---
-        # -------------------
-        gx2_gname = []
-        gx2_aif   = []
-        gid2_gx = {}  # this is not used. It can probably be removed
-
-        def add_image(gname, aif, gid):
-            gx = len(gx2_gname)
-            gx2_gname.append(gname)
-            gx2_aif.append(aif)
-            if gid is not None:
-                # this is not used. It can probably be removed
-                gid2_gx[gid] = gx
-
         print('[ld2] Loading images')
         # Load Image Table
         # <LEGACY CODE>
@@ -282,10 +281,11 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             print('[ld2] * %r were already specified in the table' % nDirImgsAlready)
             print('[ld2] * Loaded %r images' % len(gx2_gname))
             print('[ld2] * Done loading images')
-    except IOError:
+    except IOError as ex:
         print('IOError: %r' % ex)
         print('[ld2.img] loading without image table')
-        #raise
+        #if '--strict' in sys.argv:
+            #raise
     except Exception as ex:
         print('[ld2!.img] ERROR %r' % ex)
         #print('[ld2.img] ERROR image_tbl parsing: %s' % (''.join(cid_lines)))
@@ -408,7 +408,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                     gx = gx2_gname.index(gname)
                 except ValueError:
                     gx = len(gx2_gname)
-                    gx2_gname.append(gname)
+                    add_image(gname, False, None)
             #
             # Load Name ID/X
             if nid_x != -1:
@@ -620,7 +620,7 @@ def make_image_csv2(hs, gx_list):
         gx2_aif   = hs.tables.gx2_aif[gx_list]
     except Exception as ex:
         print(ex)
-        #gx2_aif = np.zeros(len(gx2_gid), dtype=np.uint32)
+        gx2_aif = np.zeros(len(gx2_gid), dtype=np.uint32)
     # Make image_table.csv
     header = '# image table'
     column_labels = ['gid', 'gname', 'aif']  # do aif for backwards compatibility

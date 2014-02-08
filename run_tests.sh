@@ -17,35 +17,42 @@ cython_vs_python()
 simple_tests()
 {
     python dev.py --db NAUTS -t best --all-gt-cases
-    
+
 }
 
 mother_hard()
 {
-python dev.py --db MOTHERS -t k_small --print-rowlbl --print-colscore  --print-collbl --print-hardcase --all-gt-cases --print-hardcase --echo-hardcase
-    
-python dev.py --db MOTHERS -t k_big --qcid 28 44 49 50 51 53 54 60 66 68 69 97 106 110 --print-bestcfg
 
-python dev.py --db MOTHERS -t k_big --qcid 28 50 51 54 68 --print-bestcfg
+    export MOTHERS_HARD=--qcid 28 44 49 50 51 53 54 60 66 68 69 97 106 110
+
+    --print-rowlbl --print-colscore  --print-collbl --print-hardcase --all-gt-cases --print-hardcase --echo-hardcase
+
+    python dev.py --db MOTHERS -t k_small --qcid 28 44 49 50 51 53 54 60 66 68 69 97 106 110
+
+    python dev.py --db MOTHERS -t k_big $MOTHERS_HARD --print-bestcfg
+
+    python dev.py --db MOTHERS -t k_big --qcid 28 50 51 54 68 --print-bestcfg
 
 }
 
 gz_hard()
 {
+    export GZ_HARD=--qcid 140 183 184 231 253 276 277 287 289 306 311 316 329 339 340 425 430 435 436 441 442 443 444 445 446 450 451 453 454 456 460 463 465 501 550 553 589 661 662 681 694 720 786 802 803 812 815 817 838 908 941 981 1043 1044 1045 1046 1047
 
-python dev.py --db GZ -t adaptive_test
-    
-python dev.py --db GZ -t k_small --print-rowlbl --print-colscore  --print-collbl --print-hardcase --all-gt-cases --print-hardcase --echo-hardcase
+    python dev.py --db GZ -t adaptive_test
 
-python dev.py --db GZ -t k_big --qcid 140 183 184 253 276 277 289 306 311 339 340 425 430 436 441 442 443 444 445 446 450 451 453 454 456 460 463 465 501 550 661 662 681 720 802 838 981 1044 1045 1046 1047 231 287 316 329 435 553 589 694 786 803 812 815 817 908 941 1043 --print-bestcfg
+    python dev.py --db GZ -t k_small --print-rowlbl --print-colscore  --print-collbl --print-hardcase --all-gt-cases --print-hardcase --echo-hardcase
 
-
-python dev.py --db GZ -t adaptive_test --qcid 140 183 184 253 276 277 289 306 311 339 340 425 430 436 441 442 443 444 445 446 450 451 453 454 456 460 463 465 501 550 661 662 681 720 802 838 981 1044 1045 1046 1047 231 287 316 329 435 553 589 694 786 803 812 815 817 908 941 1043 --print-bestcfg
-
-python dev.py --db GZ -t adaptive_test --all-gt-cases --print-bestcfg
+    python dev.py --db GZ -t k_big $GZ_HARD --print-bestcfg
 
 
-python dev.py --db GZ -t k_big --qcid 140 183 184 253 276 277 289 306 311 339 340 425 430 436 441 442 443 444 445 446 450 451 453 454 456 460 463 465 501 550 661 662 681 720 802 838 981 1044 1045 1046 1047 255 329 435 694 786 803 812 817 941 1014 1021 1043
+
+    python dev.py --db GZ -t adaptive_test --qcid 140 183 184 231 253 276 277 287 289 306 311 316 329 339 340 425 430 435 436 441 442 443 444 445 446 450 451 453 454 456 460 463 465 501 550 553 589 661 662 681 694 720 786 802 803 812 815 817 838 908 941 981 1043 1044 1045 1046 1047 --print-bestcfg
+
+    python dev.py --db GZ -t adaptive_test --all-gt-cases --print-bestcfg
+
+
+    python dev.py --db GZ -t k_big --qcid 140 183 184 253 276 277 289 306 311 339 340 425 430 436 441 442 443 444 445 446 450 451 453 454 456 460 463 465 501 550 661 662 681 720 802 838 981 1044 1045 1046 1047 255 329 435 694 786 803 812 817 941 1014 1021 1043
 
 }
 
@@ -60,10 +67,10 @@ run_overnight()
 
 dev_test()
 {
-python dev.py --db GZ -t k_small --all-gt-cases --echo-hardcase
+    python dev.py --db GZ -t k_small --all-gt-cases --echo-hardcase
 
 
-python dev.py --db MOTHERS -t k_big --qcid 28 44 49 50 51 53 54 60 66 68 69 97 110
+    python dev.py --db MOTHERS -t k_big --qcid 28 44 49 50 51 53 54 60 66 68 69 97 110
 }
 
 normrule_test()

@@ -107,16 +107,31 @@ class HotspotterTables(DynStruct):
              gx2_gname=[], gx2_aif=[],
              nx2_name=['____', '____'],
              cx2_cid=[], cx2_nx=[], cx2_gx=[],
-             cx2_roi=[], cx2_theta=[], prop_dict={}):
+             cx2_roi=[], cx2_theta=[], prop_dict={}, cx2_size=[]):
+        #----
+        # Image Info
+        #----
         self.gx2_aif      = np.array(gx2_aif, dtype=bool)
         self.gx2_gname    = np.array(gx2_gname, dtype=str)
+
+        #----
+        # Name Info
+        #----
         self.nx2_name     = np.array(nx2_name, dtype=str)
+
+        #----
+        # Chip Info
+        #----
+        # Chip membership info
         self.cx2_cid      = np.array(cx2_cid, dtype=ID_DTYPE)
         self.cx2_nx       = np.array(cx2_nx, dtype=X_DTYPE)
         self.cx2_gx       = np.array(cx2_gx, dtype=X_DTYPE)
+        # Chip ROI (in image space)
         self.cx2_roi      = np.array(cx2_roi, dtype=np.int32)
         self.cx2_roi.shape = (self.cx2_roi.size // 4, 4)
         self.cx2_theta    = np.array(cx2_theta, dtype=np.float32)
+        # Chip size (in chip space)
+        self.cx2_size     = np.array(cx2_size, dtype=np.int32)
         self.prop_dict    = prop_dict
 
 

@@ -579,7 +579,7 @@ def make_flat_table(hs, cx_list):
     return chip_table
 
 
-def make_chip_csv2(hs, cx_list):
+def make_chip_csv(hs, cx_list):
     # Valid chip tables
     if len(cx_list) == 0:
         return ''
@@ -610,7 +610,7 @@ def make_chip_csv2(hs, cx_list):
     return chip_table
 
 
-def make_image_csv2(hs, gx_list):
+def make_image_csv(hs, gx_list):
     'return an image table csv string'
     if len(gx_list) == 0:
         return ''
@@ -629,56 +629,7 @@ def make_image_csv2(hs, gx_list):
     return image_table
 
 
-# TODO REMOVE:
-def make_chip_csv(hs):
-    'returns an chip table csv string'
-    valid_cx = hs.get_valid_cxs()
-    if len(valid_cx) == 0:
-        return ''
-    # Valid chip tables
-    cx2_cid   = hs.tables.cx2_cid[valid_cx]
-    # Use the indexes as ids (FIXME: Just go back to g/n-ids)
-    cx2_gx   = hs.tables.cx2_gx[valid_cx] + 1  # FIXME
-    cx2_nx   = hs.tables.cx2_nx[valid_cx]   # FIXME
-    try:
-        cx2_roi = hs.tables.cx2_roi[valid_cx]
-    except IndexError as ex:
-        print(ex)
-        # THIS IS VERY WEIRD TO ME.
-        # I can use empty indexes in non-shaped arrays
-        cx2_roi = np.array([])
-    cx2_theta = hs.tables.cx2_theta[valid_cx]
-    prop_dict = {propkey: [cx2_propval[cx] for cx in iter(valid_cx)]
-                 for (propkey, cx2_propval) in hs.tables.prop_dict.iteritems()}
-    # Turn the chip indexes into a DOCUMENTED csv table
-    header = '# chip table'
-    column_labels = ['ChipID', 'ImgID', 'NameID', 'roi[tl_x  tl_y  w  h]', 'theta']
-    column_list   = [cx2_cid, cx2_gx, cx2_nx, cx2_roi, cx2_theta]
-    column_type   = [int, int, int, list, float]
-    if not prop_dict is None:
-        for key, val in prop_dict.iteritems():
-            column_labels.append(key)
-            column_list.append(val)
-            column_type.append(str)
-
-    chip_table = make_csv_table(column_labels, column_list, header, column_type)
-    return chip_table
-
-
-# TODO REMOVE:
-def make_name_csv(hs):
-    'returns an name table csv string'
-    valid_nx = hs.get_valid_nxs()
-    nx2_name  = hs.tables.nx2_name[valid_nx]
-    # Make name_table.csv
-    header = '# name table'
-    column_labels = ['nid', 'name']
-    column_list   = [valid_nx[2:], nx2_name[2:]]  # dont write ____ for backcomp
-    name_table = make_csv_table(column_labels, column_list, header)
-    return name_table
-
-
-def make_name_csv2(hs, nx_list):
+def make_name_csv(hs, nx_list):
     'returns an name table csv string'
     if len(nx_list) == 0:
         return ''
@@ -690,25 +641,6 @@ def make_name_csv2(hs, nx_list):
     column_list   = [nx_list_, nx2_name]
     name_table = make_csv_table(column_labels, column_list, header)
     return name_table
-
-
-# TODO REMOVE:
-def make_image_csv(hs):
-    'return an image table csv string'
-    valid_gx = hs.get_valid_gxs()
-    gx2_gid   = valid_gx + 1  # FIXME
-    gx2_gname = hs.tables.gx2_gname[valid_gx]
-    try:
-        gx2_aif   = hs.tables.gx2_aif[valid_gx]
-    except Exception as ex:
-        print(ex)
-        #gx2_aif = np.zeros(len(gx2_gid), dtype=np.uint32)
-    # Make image_table.csv
-    header = '# image table'
-    column_labels = ['gid', 'gname', 'aif']  # do aif for backwards compatibility
-    column_list   = [gx2_gid, gx2_gname, gx2_aif]
-    image_table = make_csv_table(column_labels, column_list, header)
-    return image_table
 
 
 def write_csv_tables(hs):
@@ -725,9 +657,9 @@ def write_csv_tables(hs):
     valid_gx = hs.get_valid_gxs()
     valid_nx = hs.get_valid_nxs()
     # Make table from indexes
-    chip_table  = make_chip_csv2(hs, valid_cx)
-    image_table = make_image_csv2(hs, valid_gx)
-    name_table  = make_name_csv2(hs, valid_nx)
+    chip_table  = make_chip_csv(hs, valid_cx)
+    image_table = make_image_csv(hs, valid_gx)
+    name_table  = make_name_csv(hs, valid_nx)
     # Make csv filenames
     chip_table_fpath  = join(internal_dir, CHIP_TABLE_FNAME)
     name_table_fpath  = join(internal_dir, NAME_TABLE_FNAME)

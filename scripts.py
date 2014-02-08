@@ -54,9 +54,9 @@ def export_subdatabase(hs, gx_list, new_dbdir):
     cx_list = [cx for cxs in hs.gx2_cxs(gx_list) for cx in cxs.tolist()]
     nx_list = np.unique(hs.tables.cx2_nx[cx_list])
 
-    image_table = ld2.make_image_csv2(hs, gx_list)
-    chip_table  = ld2.make_chip_csv2(hs, cx_list)
-    name_table  = ld2.make_name_csv2(hs, nx_list)
+    image_table = ld2.make_image_csv(hs, gx_list)
+    chip_table  = ld2.make_chip_csv(hs, cx_list)
+    name_table  = ld2.make_name_csv(hs, nx_list)
     # csv filenames
     chip_table_fpath  = join(new_internal, ld2.CHIP_TABLE_FNAME)
     name_table_fpath  = join(new_internal, ld2.NAME_TABLE_FNAME)

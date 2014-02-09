@@ -131,7 +131,9 @@ class HotspotterTables(DynStruct):
         self.cx2_roi.shape = (self.cx2_roi.size // 4, 4)
         self.cx2_theta    = np.array(cx2_theta, dtype=np.float32)
         # Chip size (in chip space)
-        self.cx2_size     = np.array(cx2_size, dtype=np.int32)
+        # This cant belong here because it changes based on the
+        # algorithm.
+        #self.cx2_size     = np.array(cx2_size, dtype=np.int32)
         self.prop_dict    = prop_dict
 
 

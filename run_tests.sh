@@ -59,10 +59,16 @@ gz_hard()
 
 run_overnight()
 {
-    python dev.py --dbdir ~/data/work/PZ_FlankHack
-    python dev.py --dbdir ~/data/work/PZ_Marianne
-    python dev.py --dbdir ~/data/work/PZ_FlankHack
-    python dev.py --db GZ -t overnight_huge --all-gt-cases && python dev.py --db MOTHERS -t overnight_huge --all-gt-cases && 
+    overnight_huge_fn()
+    {
+        python dev.py -t overnight_huge --all-gt-cases --dbdir $1
+    }
+    overnight_huge_fn ~/data/work/PZ_Marianne
+
+    #python dev.py --dbdir ~/data/work/PZ_FlankHack
+    #python dev.py --dbdir ~/data/work/PZ_Marianne
+    #python dev.py --dbdir ~/data/work/PZ_FlankHack
+    #python dev.py --db GZ -t overnight_huge --all-gt-cases && python dev.py --db MOTHERS -t overnight_huge --all-gt-cases && 
 }
 
 dev_test()
@@ -78,7 +84,7 @@ normrule_test()
     python dev.py --db MOTHERS -t normrule_test --all-gt-cases
 }
 #normrule_test
-dev_test
+run_overnight
 
 #ic --db GZ --tests vsmany_big_social --all-gt-cases | tail
 #ic --db GZ --tests vsmany_score --all-gt-cases | tail

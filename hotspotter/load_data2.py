@@ -51,16 +51,6 @@ UNKNOWN_NAME = '____'
 #========================================
 
 
-def tryindex(list, *args):
-    for val in args:
-        try:
-            return list.index(val)
-        except ValueError:
-            pass
-    return -1
-    #print('[ld2] Unable to find args=%r in list=%r' % (args, list))
-
-
 #@profile  # This is perfectly fast .2 seconds on GZ
 def load_csv_tables(db_dir, allow_new_dir=True):
     '''
@@ -235,6 +225,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         if gid is not None:
             # this is not used. It can probably be removed
             gid2_gx[gid] = gx
+        return gx
     try:
         print('[ld2] Loading images')
         # Load Image Table
@@ -340,84 +331,118 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             print('[ld2] * num_chips: %r' % num_data)
             print('[ld2] * chip_csv_format: %r ' % chip_csv_format)
         #print('[ld2.chip] Header Columns: %s\n    ' % '\n   '.join(chip_csv_format))
-        cid_x   = tryindex(chip_csv_format, 'ChipID', 'imgindex', 'instance_id')
-        gid_x   = tryindex(chip_csv_format, 'ImgID', 'image_id')
-        nid_x   = tryindex(chip_csv_format, 'NameID', 'name_id')
-        roi_x   = tryindex(chip_csv_format, 'roi[tl_x  tl_y  w  h]', 'roi')
-        theta_x = tryindex(chip_csv_format, 'theta')
-        # new fields
-        gname_x = tryindex(chip_csv_format, 'Image', 'original_filepath')
-        name_x  = tryindex(chip_csv_format, 'Name', 'animal_name')
-        required_x = [cid_x, gid_x, gname_x, nid_x, name_x, roi_x, theta_x]
+
+        def tryindex(list, valid_items):
+            # Return the index of the first valid item
+            for item in valid_items:
+                try:
+                    return list.index(item)
+                except ValueError:
+                    pass
+            return None
+
+        #class AllocedList(object):
+            #def __init__(self, list_=[], nAlloc=0):
+                #self._len = 0
+
+            #def __add__(self, other):
+                #pass
+
         # Hotspotter Chip Tables
         cx2_cid   = []
         cx2_nx    = []
         cx2_gx    = []
         cx2_roi   = []
         cx2_theta = []
-        # x is a csv field index in this context
+
+        # Define standard properties
+        # The following variables specify the column index of the property
+        # if it exists in the CSV table.
+        cid_x   = tryindex(chip_csv_format, ['ChipID', 'imgindex', 'instance_id'])
+        gid_x   = tryindex(chip_csv_format, ['ImgID', 'image_id'])
+        nid_x   = tryindex(chip_csv_format, ['NameID', 'name_id'])
+        roi_x   = tryindex(chip_csv_format, ['roi[tl_x  tl_y  w  h]', 'roi'])
+        theta_x = tryindex(chip_csv_format, ['theta'])
+        # new fields
+        gname_x = tryindex(chip_csv_format, ['Image', 'original_filepath'])
+        name_x  = tryindex(chip_csv_format, ['Name', 'animal_name'])
+        # A list of the standard
+        standard_xs_ = [cid_x, gid_x, gname_x, nid_x, name_x, roi_x, theta_x]
+        standard_xs = [x for x in standard_xs_ if x is not None]
+
+        # All nonstandard properties are unknown and belong in the prop_dict
         # get csv indexes which are unknown properties
-        prop_x_list  = np.setdiff1d(range(len(chip_csv_format)), required_x).tolist()
+        prop_x_list  = np.setdiff1d(range(len(chip_csv_format)), standard_xs).tolist()
         px2_prop_key = [chip_csv_format[x] for x in prop_x_list]
         prop_dict = {}
         for prop in iter(px2_prop_key):
             prop_dict[prop] = []
+
+        # Print header parsing status
         if VERBOSE_LOAD_DATA:
-            print('[ld2] * num_user_properties: %r' % (len(prop_dict.keys())))
-        # Parse Chip Table
+            print('[ld2] * num_user_properties: %d' % (len(prop_dict.keys())))
+            print('[ld2] * num_standard_properties: %d / %d' %
+                  (len(standard_xs), len(standard_xs_)))
+
+        #def parse_integer(csv_fields, field_x):
+            #try:
+                #int_ = int(csv_fields[field_x])
+                #return int_
+            #except ValueError:
+                #print('[ld2!] field_x = %r' % field_x)
+                #print('[ld2!] csv_fields = %r' % csv_fields)
+                #print('[ld2!] csv_fields[field_x] = %r' % csv_fields[field_x])
+                #print(chip_csv_format)
+                #raise
+
+        def parse_intlist_field(csv_field):
+            list_str = csv_field.strip('[').strip(']')
+            list_ = [int(round(float(_))) for _ in list_str.split()]
+            return list_
+
+        # Read each noncommnted line in the chip table
         for line_num, csv_line in enumerate(cid_lines):
             csv_line = csv_line.strip('\n\r\t ')
             if len(csv_line) == 0 or csv_line.find('#') == 0:
                 continue
+            # Split each line into a list of fields
             csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
-            #
-            # Load Chip ID
-            try:
-                cid = int(csv_fields[cid_x])
-            except ValueError:
-                print('[ld2!] cid_x = %r' % cid_x)
-                print('[ld2!] csv_fields = %r' % csv_fields)
-                print('[ld2!] csv_fields[cid_x] = %r' % csv_fields[cid_x])
-                print(chip_csv_format)
-                raise
-            #
-            # Load Chip ROI Info
-            if roi_x != -1:
-                roi_str = csv_fields[roi_x].strip('[').strip(']')
-                roi = [int(round(float(_))) for _ in roi_str.split()]
-            #
-            # Load Chip theta Info
-            if theta_x != -1:
+            # Parse Chip ID
+            cid = int(csv_fields[cid_x])
+            # Parse Chip ROI
+            if roi_x is not None:
+                roi = parse_intlist_field(csv_fields[roi_x])
+            else:
+                assert gname_x is not None, 'roi_x AND gname_x cannot be None'
+            # Parse Chip theta
+            if theta_x is not None:
                 theta = float(csv_fields[theta_x])
             else:
                 theta = 0
-            #
-            # Load Image ID/X
-            if gid_x != -1:
+            # Parse Image ID/X
+            if gid_x is not None:
                 gid = int(csv_fields[gid_x])
                 gx  = gid2_gx[gid]
-            elif gname_x != -1:
+            elif gname_x is not None:
                 gname = csv_fields[gname_x]
+                # LEGACY HACK
                 if db_version == 'stripespotter':
                     if not exists(gname):
                         gname = 'img-%07d.jpg' % cid
                         gpath = join(db_dir, 'images', gname)
+                        print('[ld2] Converting stripespotter database')
                         w, h = Image.open(gpath).size
                         roi = [1, 1, w, h]
+                # /LEGACY HACK
                 try:
                     gx = gx2_gname.index(gname)
                 except ValueError:
-                    gx = len(gx2_gname)
-                    add_image(gname, False, None)
-            #
-            # Load Name ID/X
-            if nid_x != -1:
-                #print('namedbg csv_fields=%r' % csv_fields)
-                #print('namedbg nid_x = %r' % nid_x)
+                    gx = add_image(gname, False, None)
+            # Parse Name ID/X
+            if nid_x is not None:
                 nid = int(csv_fields[nid_x])
-                #print('namedbg %r' % nid)
                 nx = nid2_nx[nid]
-            elif name_x != -1:
+            elif name_x is not None:
                 name = csv_fields[name_x]
                 try:
                     nx = nx2_name.index(name)
@@ -459,6 +484,12 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     if 'vcd' in sys.argv:
         helpers.vd(hs_dirs.computed_dir)
     return hs_dirs, hs_tables, db_version
+
+
+#========================================
+# Make Table Functions
+# Returns the formated csv table text
+#========================================
 
 
 def make_csv_table(column_labels=None, column_list=[], header='', column_type=None):
@@ -528,24 +559,6 @@ def make_csv_table(column_labels=None, column_list=[], header='', column_type=No
 
     csv_text = '\n'.join(csv_rows)
     return csv_text
-
-
-def backup_csv_tables(hs, force_backup=False):
-    internal_dir = hs.dirs.internal_dir
-    backup_dir = join(internal_dir, 'backup_v0.1.0')
-    if not exists(backup_dir) or force_backup:
-        helpers.ensuredir(backup_dir)
-        timestamp = helpers.get_timestamp(use_second=True)
-
-        def do_backup(fname):
-            src = join(internal_dir, fname)
-            dst_fname = ('%s_bak-' + timestamp + '%s') % splitext(fname)
-            dst = join(backup_dir, dst_fname)
-            if exists(src):
-                shutil.copy(src, dst)
-        do_backup(CHIP_TABLE_FNAME)
-        do_backup(NAME_TABLE_FNAME)
-        do_backup(IMAGE_TABLE_FNAME)
 
 
 def make_flat_table(hs, cx_list):
@@ -643,6 +656,11 @@ def make_name_csv(hs, nx_list):
     return name_table
 
 
+#========================================
+# Write Table Functions
+# Makes and writes csv files to disk
+#========================================
+
 def write_csv_tables(hs):
     'Saves the tables to disk'
     print('[ld2] Writing csv tables')
@@ -682,3 +700,21 @@ def write_flat_table(hs):
     # Write flat table
     print('[ld2] Writing flat table')
     helpers.write_to(flat_table_fpath, flat_table)
+
+
+def backup_csv_tables(hs, force_backup=False):
+    internal_dir = hs.dirs.internal_dir
+    backup_dir = join(internal_dir, 'backup_v0.1.0')
+    if not exists(backup_dir) or force_backup:
+        helpers.ensuredir(backup_dir)
+        timestamp = helpers.get_timestamp(use_second=True)
+
+        def do_backup(fname):
+            src = join(internal_dir, fname)
+            dst_fname = ('%s_bak-' + timestamp + '%s') % splitext(fname)
+            dst = join(backup_dir, dst_fname)
+            if exists(src):
+                shutil.copy(src, dst)
+        do_backup(CHIP_TABLE_FNAME)
+        do_backup(NAME_TABLE_FNAME)
+        do_backup(IMAGE_TABLE_FNAME)

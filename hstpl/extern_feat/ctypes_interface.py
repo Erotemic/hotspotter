@@ -91,17 +91,8 @@ def load_clib(libname, root_dir):
             cfunc = getattr(clib, func_name)
             cfunc.restype = return_type
             cfunc.argtypes = arg_type_list
-        return clib, def_cfunc
-    except OSError as ex:
-        print('[C!] Caught OSError:\n%s' % ex)
-        errsuffix = 'Is there a missing dependency?'
     except Exception as ex:
-        print('[C!] Caught Exception:\n%s' % ex)
-        errsuffix = 'Was the library correctly compiled?'
-    import os
-    print('[C!] cwd=%r' % os.getcwd())
-    print('[C!] load_clib(libname=%r root_dir=%r)' % (libname, root_dir))
-    print('[C!] lib_fpath = %r' % lib_fpath)
-    errmsg = '[C] Cannot LOAD dynamic library. ' + errsuffix
-    print(errmsg)
-    raise ImportError(errmsg)
+        print('[C!] Caught exception: %r' % ex)
+        print('[C!] load_clib(libname=%r root_dir=%r)' % (libname, root_dir))
+        raise ImportError('[C] Cannot LOAD dynamic library. Did you compile HESAFF?')
+    return clib, def_cfunc

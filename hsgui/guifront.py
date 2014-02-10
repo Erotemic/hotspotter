@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[front]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[front]', DEBUG=False)
 # Python
 import sys
 # Qt
@@ -26,6 +26,10 @@ NOSTEAL_OVERRIDE = False  # Hard disable switch for stream stealer
 # Decorators / Helpers
 #=================
 
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    _fromUtf8 = lambda s: s
 
 def clicked(func):
     def clicked_wrapper(front, item, *args, **kwargs):
@@ -99,9 +103,10 @@ class StreamStealer(QtCore.QObject):
 
 
 def _steal_stdout(front):
+    from hscom import params
     #front.ui.outputEdit.setPlainText(sys.stdout)
-    nosteal = front.back.hs.args.nosteal
-    noshare = front.back.hs.args.noshare
+    nosteal = params.args.nosteal
+    noshare = params.args.noshare
     if '--cmd' in sys.argv:
         nosteal = noshare = True
     #from IPython.utils import io
@@ -189,6 +194,7 @@ def connect_help_signals(front):
     ui.actionDelete_Precomputed_Results.triggered.connect(back.delete_queryresults_dir)
     ui.actionDev_Mode_IPython.triggered.connect(back.dev_mode)
     ui.actionDeveloper_Reload.triggered.connect(back.dev_reload)
+    #Taken care of by add_action ui.actionDetect_Duplicate_Images.triggered.connect(back.detect_dupimg)
     #ui.actionWriteLogs.triggered.connect(back.write_logs)
 
 
@@ -221,6 +227,53 @@ def connect_experimental_signals(front):
     #action = menu.exec_(front.ui.gxs_TBL.mapToGlobal(pos))
     #front.print('action = %r ' % action)
 
+def new_menu_action(front, menu_name, name, text=None, shortcut=None, slot_fn=None):
+    # Dynamically add new menu actions programatically
+    action_name = name
+    action_text = text
+    action_shortcut = shortcut
+    ui = front.ui
+    if hasattr(ui, action_name):
+        raise Exception('menu action already defined')
+    action = QtGui.QAction(front)
+    setattr(ui, action_name, action)
+    action.setShortcutContext(QtCore.Qt.ApplicationShortcut)
+    action.setObjectName(_fromUtf8(action_name))
+    menu = getattr(ui, menu_name)
+    menu.addAction(action)
+    if action_text is None:
+        action_text = action_name
+    # TODO: Have ui.retranslate call this
+    def retranslate_fn():
+        printDBG('retranslating %s' % name)
+        action.setText(QtGui.QApplication.translate("mainSkel", action_text, None, QtGui.QApplication.UnicodeUTF8))
+        if action_shortcut is not None:
+            action.setShortcut(QtGui.QApplication.translate("mainSkel", action_shortcut, None, QtGui.QApplication.UnicodeUTF8))
+    def connect_fn():
+        printDBG('connecting %s' % name)
+        action.triggered.connect(slot_fn)
+    connect_fn.func_name = name + '_' + connect_fn.func_name
+    retranslate_fn.func_name = name + '_' + retranslate_fn.func_name
+    front.connect_fns.append(connect_fn)
+    front.retranslatable_fns.append(retranslate_fn)
+    retranslate_fn()
+
+
+def set_tabwidget_text(front, tblname, text):
+    print('[front] set_tabwidget_text(%s, %s)' % (tblname, text))
+    tablename2_tabwidget = {
+        'gxs': front.ui.image_view,
+        'cxs': front.ui.chip_view,
+        'nxs': front.ui.name_view,
+        'res': front.ui.result_view,
+    }
+    ui = front.ui
+    tab_widget = tablename2_tabwidget[tblname]
+    tab_index = ui.tablesTabWidget.indexOf(tab_widget)
+    tab_text = QtGui.QApplication.translate("mainSkel", text, None,
+                                            QtGui.QApplication.UnicodeUTF8)
+    ui.tablesTabWidget.setTabText(tab_index, tab_text)
+
 
 class MainWindowFrontend(QtGui.QMainWindow):
     printSignal     = pyqtSignal(str)
@@ -240,6 +293,11 @@ class MainWindowFrontend(QtGui.QMainWindow):
         front.ostream = None
         front.back = back
         front.ui = init_ui(front)
+        # Programatially Defined Actions
+        front.retranslatable_fns = []
+        front.connect_fns = []
+        new_menu_action(front, 'menuHelp', 'actionDetect_Duplicate_Images',
+                        text='Detect Duplicate Images', slot_fn=back.detect_dupimg)
         # Progress bar is not hooked up yet
         front.ui.progressBar.setVisible(False)
         front.connect_signals()
@@ -289,6 +347,8 @@ class MainWindowFrontend(QtGui.QMainWindow):
         connect_batch_signals(front)
         #connect_experimental_signals(front)
         connect_help_signals(front)
+        for func in front.connect_fns:
+            func()
         #
         # Gui Components
         # Tables Widgets
@@ -333,6 +393,38 @@ class MainWindowFrontend(QtGui.QMainWindow):
         ui.actionWriteLogs.setEnabled(False)
         ui.actionAbout.setEnabled(False)
         #ui.actionView_Docs.setEnabled(False)
+
+    @slot_(str, list, list, list, list)
+    @blocking
+    def populate_tbl(front, tblname, col_fancyheaders, col_editable,
+                     row_list, datatup_list):
+        #front.printDBG('populate_tbl(%s)' % table_name)
+        tblname = str(tblname)
+        fancytab_dict = {
+            'gxs': 'Image Table',
+            'cxs': 'Chip Table',
+            'nxs': 'Name Table',
+            'res': 'Query Results Table',
+        }
+        tbl_dict = {
+            'gxs': front.ui.gxs_TBL,
+            'cxs': front.ui.cxs_TBL,
+            'nxs': front.ui.nxs_TBL,
+            'res': front.ui.res_TBL,
+        }
+        tbl = tbl_dict[tblname]
+        #try:
+            #tbl = front.ui.__dict__['%s_TBL' % tblname]
+        #except KeyError:
+            #ui_keys = front.ui.__dict__.keys()
+            #tblname_list = [key for key in ui_keys if key.find('_TBL') >= 0]
+            #msg = '\n'.join(['Invalid tblname = %s_TBL' % tblname,
+                             #'valid names:\n  ' + '\n  '.join(tblname_list)])
+            #raise Exception(msg)
+        front._populate_table(tbl, col_fancyheaders, col_editable, row_list, datatup_list)
+        # Set the tab text to show the number of items listed
+        text = fancytab_dict[tblname] + ' : %d' % len(row_list)
+        set_tabwidget_text(front, tblname, text)
 
     def _populate_table(front, tbl, col_fancyheaders, col_editable, row_list, datatup_list):
         # TODO: for chip table: delete metedata column
@@ -420,22 +512,6 @@ class MainWindowFrontend(QtGui.QMainWindow):
         tbl.sortByColumn(sort_col, sort_ord)  # Move back to old sorting
         tbl.show()
         tbl.blockSignals(tblWasBlocked)
-
-    @slot_(str, list, list, list, list)
-    @blocking
-    def populate_tbl(front, table_name, col_fancyheaders, col_editable,
-                     row_list, datatup_list):
-        table_name = str(table_name)
-        #front.printDBG('populate_tbl(%s)' % table_name)
-        try:
-            tbl = front.ui.__dict__['%s_TBL' % table_name]
-        except KeyError:
-            ui_keys = front.ui.__dict__.keys()
-            tblname_list = [key for key in ui_keys if key.find('_TBL') >= 0]
-            msg = '\n'.join(['Invalid table_name = %s_TBL' % table_name,
-                             'valid names:\n  ' + '\n  '.join(tblname_list)])
-            raise Exception(msg)
-        front._populate_table(tbl, col_fancyheaders, col_editable, row_list, datatup_list)
 
     def isItemEditable(self, item):
         return int(Qt.ItemIsEditable & item.flags()) == int(Qt.ItemIsEditable)
@@ -566,7 +642,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
 
     @slot_(int)
     def change_view(front, new_state):
-        front.print('change_view()')
+        front.print('change_view(%r)' % new_state)
         prevBlock = front.ui.tablesTabWidget.blockSignals(True)
         front.ui.tablesTabWidget.blockSignals(prevBlock)
 

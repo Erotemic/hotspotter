@@ -26,11 +26,12 @@ import feature_compute2 as fc2
 import load_data2 as ld2
 import match_chips3 as mc3
 import matching_functions as mf
+from hscom import params  # NOQA
 
 
 def _checkargs_onload(hs):
     'checks relevant arguments after loading tables'
-    args = hs.args
+    args = params.args
     if args is None:
         return
     if args.vrd or args.vrdq:
@@ -41,9 +42,9 @@ def _checkargs_onload(hs):
         hs.vcd()
         if args.vcdq:
             sys.exit(1)
-    if hs.args.delete_cache:
+    if params.args.delete_cache:
         hs.delete_cache()
-    if hs.args.quit:
+    if params.args.quit:
         print('[hs] user requested quit.')
         sys.exit(1)
 
@@ -234,7 +235,6 @@ class HotSpotter(DynStruct):
         super(HotSpotter, hs).__init__(child_exclude_list=['prefs', 'args'])
         #printDBG('[\hs] Creating HotSpotter API')
         # TODO Remove args / integrate into prefs
-        hs.args = args
         hs.callbacks = {}
         hs.tables = None
         hs.dirs   = None
@@ -247,7 +247,7 @@ class HotSpotter(DynStruct):
         #
         pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')
         hs.prefs = Pref('root', fpath=pref_fpath)
-        if hs.args.nocache_prefs:
+        if params.args.nocache_prefs:
             hs.default_preferences()
         else:
             hs.load_preferences()
@@ -355,7 +355,7 @@ class HotSpotter(DynStruct):
     def load_tables(hs, db_dir=None):
         # Check to make sure db_dir is specified correctly
         if db_dir is None:
-            db_dir = hs.args.dbdir
+            db_dir = params.args.dbdir
         if db_dir is None or not exists(db_dir):
             raise ValueError('db_dir=%r does not exist!' % (db_dir))
         hs_dirs, hs_tables, db_version = ld2.load_csv_tables(db_dir)
@@ -513,7 +513,7 @@ class HotSpotter(DynStruct):
         except mf.QueryException as ex:
             msg = '[hs] Query Failure: %r' % ex
             print(msg)
-            if hs.args.strict:
+            if params.args.strict:
                 raise
             return msg
         return res
@@ -734,7 +734,6 @@ class HotSpotter(DynStruct):
         db_name = split(hs.dirs.db_dir)[1]
         if devmode:
             # Grab the dev name insetad
-            from hscom import params
             dev_databases = params.dev_databases
             db_tups = [(v, k) for k, v in dev_databases.iteritems() if v is not None]
             #print('  \n'.join(map(str,db_tups)))
@@ -1105,15 +1104,6 @@ class HotSpotter(DynStruct):
         cx2_rchip_size = hs.cpaths.cx2_rchip_size
         return hs._onthefly_cxlist_get(cx_input, cx2_rchip_size, hs.load_chips)
 
-    @profile
-    def get_arg(hs, argname, default=None):
-        try:
-            val = eval('hs.args.' + argname)
-            result = default if val is None else val
-        except KeyError:
-            result = default
-        return result
-
     #---------------
     # Print Tables
 
@@ -1196,12 +1186,14 @@ class HotSpotter(DynStruct):
             print('[hs.dbg] cx2_kpts is OK')
 
     def dbg_duplicate_images(hs):
+        # TODO: Finish this function
         img_dir = hs.dirs.img_dir
         valid_gxs = hs.get_valid_gxs()
         gx2_gpath = hs.gx2_gname(valid_gxs, full=True)
+        imgpath_list = gx2_gpath
 
         # Find which images are duplicates using hashing
-        duplicates = io.detect_duplicate_images(gx2_gpath)
+        duplicates = io.detect_duplicate_images(imgpath_list)
 
         # Convert output paths to indexes
         nDuplicates = 0

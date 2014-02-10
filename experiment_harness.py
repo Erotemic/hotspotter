@@ -15,6 +15,7 @@ from hotspotter import match_chips3 as mc3
 from hscom import fileio as io
 from hscom import helpers
 from hscom import latex_formater
+from hscom import params
 #from match_chips3 import *
 #import draw_func2 as df2
 # What are good ways we can divide up FLANN indexes instead of having one
@@ -104,7 +105,7 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
     #io.print_on()
 
     # High level caching
-    if not hs.args.nocache_query and (not nocache_testres):
+    if not params.args.nocache_query and (not nocache_testres):
         qx2_bestranks = io.smart_load(**io_kwargs)
         if qx2_bestranks is None:
             print('[harn] Cache returned None!')
@@ -195,8 +196,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('[harn]         %d different chips' % len(qcx_list))
 
     # Preallocate test result aggregation structures
-    sel_cols = hs.get_arg('sel_cols', [])  # FIXME
-    sel_rows = hs.get_arg('sel_rows', [])  # FIXME
+    sel_cols = params.args.sel_cols  # FIXME
+    sel_rows = params.args.sel_rows  # FIXME
     nCfg     = len(cfg_list)
     nQuery   = len(qcx_list)
     rc2_res  = np.empty((nQuery, nCfg), dtype=list)  # row/col -> result

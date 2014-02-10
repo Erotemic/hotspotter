@@ -83,7 +83,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     # ChipTable Header Markers
     header_numdata = '# NumData '
     header_csvformat_re = '# *ChipID,'
-    v12_csvformat_re = r'#[0-9]*\) '
+    v12_csvformat_re = r'#[ 0-9]*\) '
     # Default ChipTable Header Variables
     chip_csv_format = ['ChipID', 'ImgID',  'NameID',   'roi[tl_x  tl_y  w  h]',  'theta']
     v12_csv_format = ['instance_id', 'image_id', 'name_id', 'roi']
@@ -102,18 +102,21 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         helpers.checkpath(image_table, verbose=True)
         import db_info
 
-        def assign_alternate(tblname):
+        def assign_alternate(tblname, optional=False):
             path = join(db_dir, tblname)
             if helpers.checkpath(path, verbose=True):
                 return path
             path = join(db_dir, '.hs_internals', tblname)
             if helpers.checkpath(path, verbose=True):
                 return path
-            raise Exception('bad state=%r' % tblname)
+            if optional:
+                return None
+            else:
+                raise Exception('bad state=%r' % tblname)
         #
         if db_info.has_v2_gt(db_dir):
             IS_VERSION_1_OR_2 = True
-            db_version = 'hotspotter-v2'
+            print('[ld2] has %s database format' % db_version)
             chip_csv_format = []
             header_csvformat_re = v12_csvformat_re
             chip_table  = assign_alternate('instance_table.csv')
@@ -123,14 +126,16 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         elif db_info.has_v1_gt(db_dir):
             IS_VERSION_1_OR_2 = True
             db_version = 'hotspotter-v1'
+            print('[ld2] has %s database format' % db_version)
             chip_csv_format = []
             header_csvformat_re = v12_csvformat_re
             chip_table  = assign_alternate('animal_info_table.csv')
-            name_table  = assign_alternate('name_table.csv')
-            image_table = assign_alternate('image_table.csv')
+            name_table  = assign_alternate('name_table.csv', optional=True)
+            image_table = assign_alternate('image_table.csv', optional=True)
         #
         elif db_info.has_ss_gt(db_dir):
             db_version = 'stripespotter'
+            print('[ld2] has %s database format' % db_version)
             chip_table = join(db_dir, 'SightingData.csv')
 
             chip_csv_format = ['imgindex', 'original_filepath', 'roi', 'animal_name']
@@ -178,14 +183,22 @@ def load_csv_tables(db_dir, allow_new_dir=True):
 
     # RCOS TODO: We need a more general csv read function
     # which can handle all of these little corner cases delt with here.
+    # ------------------
+    # --- READ NAMES ---
+    # ------------------
+    nx2_name = [UNKNOWN_NAME, UNKNOWN_NAME]
+    nid2_nx  = {0: 0, 1: 1}
 
+    def add_name(name, nid=None):
+        nx = len(nx2_name)
+        nx2_name.append(name)
+        if nid is not None:
+            nid2_nx[nid] = nx
+        return nx
     try:
-        # ------------------
-        # --- READ NAMES ---
-        # ------------------
+        if name_table is None:
+            raise IOError('name_table will be given in chip table.')
         print('[ld2] Loading name table: %r' % name_table)
-        nx2_name = [UNKNOWN_NAME, UNKNOWN_NAME]
-        nid2_nx  = {0: 0, 1: 1}
         name_lines = open(name_table, 'r')
         for line_num, csv_line in enumerate(name_lines):
             csv_line = csv_line.strip('\n\r\t ')
@@ -194,8 +207,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
             nid = int(csv_fields[0])
             name = csv_fields[1]
-            nid2_nx[nid] = len(nx2_name)
-            nx2_name.append(name)
+            add_name(name, nid)
         name_lines.close()
         if VERBOSE_LOAD_DATA:
             print('[ld2] * Loaded %r names (excluding unknown names)' % (len(nx2_name) - 2))
@@ -230,6 +242,8 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         print('[ld2] Loading images')
         # Load Image Table
         # <LEGACY CODE>
+        if image_table is None:
+            raise IOError('image_table will be given in chip table')
         if VERBOSE_LOAD_DATA:
             print('[ld2] * Loading image table: %r' % image_table)
         gid_lines = open(image_table, 'r').readlines()
@@ -317,6 +331,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                     else:
                         fieldname = csv_line[5:]
                     #print(fieldname)
+                    fieldname = fieldname.strip(' ')
                     chip_csv_format += [fieldname]
 
                 else:
@@ -364,11 +379,19 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         roi_x   = tryindex(chip_csv_format, ['roi[tl_x  tl_y  w  h]', 'roi'])
         theta_x = tryindex(chip_csv_format, ['theta'])
         # new fields
-        gname_x = tryindex(chip_csv_format, ['Image', 'original_filepath'])
+        gname_x = tryindex(chip_csv_format, ['Image', 'image_name', 'original_filepath'])
         name_x  = tryindex(chip_csv_format, ['Name', 'animal_name'])
         # A list of the standard
         standard_xs_ = [cid_x, gid_x, gname_x, nid_x, name_x, roi_x, theta_x]
         standard_xs = [x for x in standard_xs_ if x is not None]
+
+        # Make sure all required fields are there
+        if cid_x is None:
+            raise Exception('Improper format. Cannot find cid_x')
+        if gid_x is None and gname_x is None:
+            raise Exception('Improper format. Cannot find gid_x or gname_x')
+        if nid_x is None and name_x is None:
+            raise Exception('Improper format. Cannot find nid_x or name_x')
 
         # All nonstandard properties are unknown and belong in the prop_dict
         # get csv indexes which are unknown properties
@@ -407,18 +430,28 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 continue
             # Split each line into a list of fields
             csv_fields = [_.strip(' ') for _ in csv_line.strip('\n\r ').split(',')]
+
+            # Parse nonstandard properties first
+            for px, x in enumerate(prop_x_list):
+                prop = px2_prop_key[px]
+                prop_val = csv_fields[x]
+                prop_dict[prop].append(prop_val)
+
             # Parse Chip ID
             cid = int(csv_fields[cid_x])
+
             # Parse Chip ROI
             if roi_x is not None:
                 roi = parse_intlist_field(csv_fields[roi_x])
             else:
                 assert gname_x is not None, 'roi_x AND gname_x cannot be None'
+
             # Parse Chip theta
             if theta_x is not None:
                 theta = float(csv_fields[theta_x])
             else:
                 theta = 0
+
             # Parse Image ID/X
             if gid_x is not None:
                 gid = int(csv_fields[gid_x])
@@ -426,18 +459,32 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             elif gname_x is not None:
                 gname = csv_fields[gname_x]
                 # LEGACY HACK
-                if db_version == 'stripespotter':
-                    if not exists(gname):
-                        gname = 'img-%07d.jpg' % cid
-                        gpath = join(db_dir, 'images', gname)
-                        print('[ld2] Converting stripespotter database')
-                        w, h = Image.open(gpath).size
-                        roi = [1, 1, w, h]
+                if db_version != 'current':
+                    if db_version == 'stripespotter':
+                        if not exists(gname):
+                            gname = 'img-%07d.jpg' % cid
+                    else:
+                        # This is so hacky. The gpath in hospotter-v2 doesnt have
+                        # extensions
+                        name, ext = splitext(gname)
+                        if ext not in helpers.IMG_EXTENSIONS:
+                            if 'img_extension' in prop_dict:
+                                gname = gname + '.' + prop_dict['img_extension'][-1]
                 # /LEGACY HACK
                 try:
                     gx = gx2_gname.index(gname)
                 except ValueError:
                     gx = add_image(gname, False, None)
+
+            # LEGACY HACK
+            if len(roi) == 0:
+                # Entire image is the roi
+                print('[ld2] Converting %s database' % db_version)
+                gpath = join(db_dir, RDIR_IMG, gname)
+                w, h = Image.open(gpath).size
+                roi = [1, 1, w, h]
+            # /LEGACY HACK
+
             # Parse Name ID/X
             if nid_x is not None:
                 nid = int(csv_fields[nid_x])
@@ -447,18 +494,13 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 try:
                     nx = nx2_name.index(name)
                 except ValueError:
-                    nx = len(nx2_name)
-                    nx2_name.append(name)
+                    nx = add_name(name)
             # Append info to cid lists
             cx2_cid.append(cid)
             cx2_gx.append(gx)
             cx2_nx.append(nx)
             cx2_roi.append(roi)
             cx2_theta.append(theta)
-            for px, x in enumerate(prop_x_list):
-                prop = px2_prop_key[px]
-                prop_val = csv_fields[x]
-                prop_dict[prop].append(prop_val)
     except Exception as ex:
         print('[chip.ld2] ERROR %r' % ex)
         #print('[chip.ld2] ERROR parsing: %s' % (''.join(cid_lines)))

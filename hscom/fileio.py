@@ -408,7 +408,6 @@ def read_exif_list(fpath_list, **kwargs):
     return exif_list
 
 
-
 @profile
 def imread(img_fpath):
     try:
@@ -420,7 +419,12 @@ def imread(img_fpath):
         raise
 
 
+DUPLICATE_HASH_PRECISION = 32
+
+
 def detect_duplicate_images(imgpath_list):
+    import sys
+    global DUPLICATE_HASH_PRECISION
     nImg = len(imgpath_list)
     lbl = 'checking duplicate'
     duplicates = {}
@@ -428,14 +432,26 @@ def detect_duplicate_images(imgpath_list):
     for count, gpath in enumerate(imgpath_list):
         mark_progress(count)
         img = imread(gpath)
-        img_hash = helpers.hashstr(img, 32)
+        img_hash = helpers.hashstr(img, DUPLICATE_HASH_PRECISION)
         if not img_hash in duplicates:
             duplicates[img_hash] = []
         duplicates[img_hash].append(gpath)
+
+    if '--strict' in sys.argv:
+        # Be very safe: Check for collisions
+        for hashstr, gpath_list in duplicates.iteritems():
+            img1 = imread(gpath_list[0])
+            for gpath in gpath_list:
+                img2 = imread(gpath)
+                if not np.all(img1 == img2):
+                    DUPLICATE_HASH_PRECISION += 8
+                    raise Exception("hash collision. try again")
     end_progress()
     return duplicates
 
+
 # --- Standard Images ---
+
 
 def get_hsdir():
     import sys

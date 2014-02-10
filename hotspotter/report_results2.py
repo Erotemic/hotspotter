@@ -19,6 +19,7 @@ import numpy as np
 # Hotspotter imports
 from hscom import fileio as io
 from hscom import helpers
+from hscom import params
 from hscom.Printable import DynStruct
 from hsviz import draw_func2 as df2
 from hsviz import viz
@@ -1064,7 +1065,7 @@ def load_query_results(hs, qcx_list, nocache=True):
     print('[rr2] load_query_results(): %r' % qres_uid)
     io_kwargs = dict(dpath=cache_dir, fname='query_results', uid=qres_uid, ext='.cPkl')
     # Return cache if available
-    if not hs.args.nocache_query and (not nocache):
+    if not params.args.nocache_query and (not nocache):
         qcx2_res = io.smart_load(**io_kwargs)
         if qcx2_res is not None:
             print('[rr2] load_query_results(): cache hit')

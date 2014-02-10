@@ -23,6 +23,7 @@ from hotspotter import match_chips3 as mc3
 from hotspotter import matching_functions as mf
 from hotspotter import report_results2 as rr2
 from hotspotter import voting_rules2 as vr2
+from hscom import params
 from hscom import helpers
 from hscom import latex_formater as pytex
 from hsviz import draw_func2 as df2
@@ -220,7 +221,7 @@ def vary_two_cfg(hs, qcx, cx, query_cfg, vary_cfg, fnum=1):
     #df2..gcf().clf()
     print_lock_ = helpers.ModulePrintLock(mc3, df2)
     assign_alg = query_cfg.agg_cfg.query_type
-    vert = not hs.args.horiz
+    vert = not params.args.horiz
     plt_match_args = dict(fnum=fnum, show_gname=False, showTF=False, vert=vert)
     for rowx, cfg1_value in enumerate(cfg1_steps):
         query_cfg.update_cfg(**{cfg1_name: cfg1_value})
@@ -279,8 +280,8 @@ def show_names(hs, qcx_list, fnum=1):
     #for (qcx) in qcx_list:
         #print('Showing q%s - %r' % (hs.cidstr(qcx, notes=True)))
         #notes = hs.cx2_property(qcx, 'Notes')
-        #fnum = show_name(hs, qcx, fnum, subtitle=notes, annote=not hs.args.noannote)
-        #if hs.args.save_figures:
+        #fnum = show_name(hs, qcx, fnum, subtitle=notes, annote=not params.args.noannote)
+        #if params.args.save_figures:
             #df2.save_figure(fpath=names_dir, usetitle=True)
     return fnum
 
@@ -334,18 +335,18 @@ def plot_keypoint_scales(hs, fnum=1):
 def get_qcx_list(hs):
     print('[dev] get_qcx_list()')
     # Sample a large pool of query indexes
-    histids = None if hs.args.histid is None else np.array(hs.args.histid)
-    if hs.args.all_cases:
+    histids = None if params.args.histid is None else np.array(params.args.histid)
+    if params.args.all_cases:
         print('[dev] all cases')
         qcx_all = get_cases(hs, with_gt=True, with_nogt=True)
-    elif hs.args.all_gt_cases:
+    elif params.args.all_gt_cases:
         print('[dev] all gt cases')
         qcx_all = get_cases(hs, with_hard=True, with_gt=True, with_nogt=False)
-    elif hs.args.qcid is None:
+    elif params.args.qcid is None:
         qcx_all = get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
     else:
-        print('[dev] Chosen qcid=%r' % hs.args.qcid)
-        qcx_all =  helpers.ensure_iterable(hs.cid2_cx(hs.args.qcid))
+        print('[dev] Chosen qcid=%r' % params.args.qcid)
+        qcx_all =  helpers.ensure_iterable(hs.cid2_cx(params.args.qcid))
     # Filter only the ones you want from the large pool
     if histids is None:
         qcx_list = qcx_all
@@ -355,7 +356,7 @@ def get_qcx_list(hs):
         qcx_list = [qcx_list[id_] for id_ in histids]
 
     if len(qcx_list) == 0:
-        if hs.args.strict:
+        if params.args.strict:
             raise Exception('no qcx_list history')
         qcx_list = [0]
     qcx_list = helpers.unique_keep_order(qcx_list)
@@ -561,7 +562,7 @@ def report_results(hs, qcx_list):
 def run_investigations(hs, qcx_list):
     import experiment_harness
     import experiment_configs
-    args = hs.args
+    args = params.args
     qcx = qcx_list[0]
     print('[dev] Running Investigation: ' + hs.cidstr(qcx))
     fnum = 1
@@ -684,16 +685,16 @@ if __name__ == '__main__':
     # not as ugly soon.
     run_investigations(hs, qcx_list)
     # A redundant query argument. Again, needs to be replaced.
-    if hs.args.query is not None and len(hs.args.query) > 0:
+    if params.args.query is not None and len(params.args.query) > 0:
         hs.prefs.display_cfg.showanalysis = True
-        qcx = hs.cid2_cx(hs.args.query[0])
+        qcx = hs.cid2_cx(params.args.query[0])
         res = hs.query(qcx)
         res.show_top(hs)
     print('[dev]====================')
     kwargs = {}
     dcxs = None
     query_cfg = None
-    if hs.args.nopresent:
+    if params.args.nopresent:
         print('...not presenting')
         sys.exit(0)
     allres = allres_ptr[0]

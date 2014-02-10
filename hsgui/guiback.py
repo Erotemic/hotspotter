@@ -16,6 +16,7 @@ from guitools import drawing, slot_
 from guitools import backblocking as blocking
 from hscom import helpers
 from hscom import fileio as io
+from hscom import params
 from hsviz import draw_func2 as df2
 from hsviz import viz
 from hsviz import interact
@@ -91,11 +92,10 @@ def select_next_in_order(back):
 
 
 # Creation function
-def make_main_window(hs=None, app=None):
+def make_main_window(app=None, hs=None):
     #printDBG(r'[*back] make_main_window()')
-    back = MainWindowBackend(hs=hs)
-    back.app = app
-    if not hs.args.nogui:
+    back = MainWindowBackend(app=app, hs=hs)
+    if hs is None or not params.args.nogui:
         back.show()
         back.layout_figures()
         if app is not None:
@@ -162,7 +162,7 @@ class MainWindowBackend(QtCore.QObject):
     #------------------------
     # Constructor
     #------------------------
-    def __init__(back, hs=None, app=None):
+    def __init__(back, app=None, hs=None):
         super(MainWindowBackend, back).__init__()
         back.current_res = None
         back.timer = None
@@ -593,13 +593,15 @@ class MainWindowBackend(QtCore.QObject):
         # File -> Open Database
         try:
             # Use the same args in a new (opened) database
-            args = back.hs.args
+            args = params.args
+            #args = back.params.args
             if db_dir is None:
                 msg = 'Select (or create) a database directory.'
                 db_dir = guitools.select_directory(msg)
             print('[*back] user selects database: ' + db_dir)
             # Try and load db
-            args.dbdir = db_dir
+            if args is not None:
+                args.dbdir = db_dir
             hs = HotSpotterAPI.HotSpotter(args=args, db_dir=db_dir)
             hs.load(load_all=False)
             # Write to cache and connect if successful
@@ -608,13 +610,15 @@ class MainWindowBackend(QtCore.QObject):
             #back.layout_figures()
         except Exception as ex:
             import traceback
+            import sys
             print(traceback.format_exc())
             back.user_info('Aborting open database')
             print('aborting open database')
             print(ex)
-            if back.hs.args.strict:
+            if '--strict' in sys.argv:
                 raise
         print('')
+        return hs
 
     @slot_()
     @blocking
@@ -840,16 +844,16 @@ class MainWindowBackend(QtCore.QObject):
         # pyqt-how-to-capture-output-of-pythons-interpreter-
         # and-display-it-in-qedittext
         #prevBlock = back.front.blockSignals(True)
-        import matching_functions as mf
-        import DataStructures as ds
-        import match_chips3 as mc3
+        #import matching_functions as mf
+        #import DataStructures as ds
+        #import match_chips3 as mc3
         import sys
         back.precompute_feats()
         valid_cx = back.hs.get_valid_cxs()
-        if back.hs.args.quiet:
-            mc3.print_off()
-            ds.print_off()
-            mf.print_off()
+        #if back.params.args.quiet:
+            #mc3.print_off()
+            #ds.print_off()
+            #mf.print_off()
         fmtstr = helpers.progress_str(len(valid_cx), '[back*] Query qcx=%r: ')
         for count, qcx in enumerate(valid_cx):
             sys.stdout.write(fmtstr % (qcx, count))
@@ -857,9 +861,9 @@ class MainWindowBackend(QtCore.QObject):
             if count % 100 == 0:
                 sys.stdout.write('\n ...')
         sys.stdout.write('\n ...')
-        mc3.print_on()
-        ds.print_on()
-        mf.print_on()
+        #mc3.print_on()
+        #ds.print_on()
+        #mf.print_on()
         print('')
         #back.front.blockSignals(prevBlock)
 
@@ -986,3 +990,8 @@ class MainWindowBackend(QtCore.QObject):
     def dev_reload(back):
         # Help -> Developer Reload
         _dev_reload(back)
+
+    @slot_()
+    @blocking
+    def detect_dupimg(back):
+        back.hs.dbg_duplicate_images()

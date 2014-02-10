@@ -49,29 +49,30 @@ def preload_args_process(args):
 
 
 def postload_args_process(hs, back):
+    from hscom import params
     # --- Run Startup Commands ---
     # Autocompute all queries
-    if hs.args.autoquery:
+    if params.args.autoquery:
         back.precompute_queries()
     # Run a query
-    qcid_list = hs.args.query
-    tx_list = hs.args.txs
+    qcid_list = params.args.query
+    tx_list = params.args.txs
     res = None
     if len(qcid_list) > 0:
         qcid = qcid_list[0]
         tx = tx_list[0] if len(tx_list) > 0 else None
         res = back.query(qcid, tx)
-    selgxs = hs.args.selgxs
+    selgxs = params.args.selgxs
     if len(selgxs) > 0:
         back.select_gx(selgxs[0])
-    selnxs = hs.args.selnxs
+    selnxs = params.args.selnxs
     if len(selnxs) > 0:
         name = hs.nx2_name(selnxs[0])
         back.select_name(name)
-    selcxs = hs.args.selcxs
+    selcxs = params.args.selcxs
     if len(selcxs) > 0:
         back.select_cx(selcxs[0])
-    cids = hs.args.select_cid
+    cids = params.args.select_cid
     if len(cids) > 0:
         cxs = hs.cid2_cx(cids)
         back.select_cx(cxs[0])
@@ -92,7 +93,7 @@ def imports():
     #df2.print_off()
 
 
-def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
+def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True, app=None):
     import matplotlib
     matplotlib.use('Qt4Agg')
     imports()
@@ -108,13 +109,21 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
     else:
         args = argparse2.fix_args_shortnames(args)
         load_all = helpers.get_flag('--load-all', default_load_all)
+    # FIXME: HACK. But later we can make params the module that you use if you
+    # want an arg like strict or whatever
+    from hscom import params
+    params.args = args
 
     # Preload process args
     if args.delete_global:
         io.delete_global_cache()
 
     # --- Build HotSpotter API ---
-    hs = api.HotSpotter(args)
+    if app is None:
+        hs = api.HotSpotter(args)
+    else:
+        back = guiback.make_main_window(app)
+        hs = back.open_database(args.dbdir)
     setcfg = args.setcfg
     if setcfg is not None:
         import experiment_harness
@@ -134,8 +143,10 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
         io.global_cache_write('db_dir', db_dir)
     except ValueError as ex:
         print('[main] ValueError = %r' % (ex,))
-        if hs.args.strict:
+        if params.args.strict:
             raise
+    if app is not None:
+        return hs, back
     return hs
 
 #==================
@@ -145,7 +156,7 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True):
 if __name__ == '__main__':
     # Necessary for windows parallelization
     multiprocessing.freeze_support()
-    hs = main(defaultdb=None, usedbcache=True)
+    # Run Main Function
     from hsgui import guitools
     from hsgui import guiback
     from hscom import helpers
@@ -154,8 +165,8 @@ if __name__ == '__main__':
     signal_set()
     # Run qt app
     app, is_root = guitools.init_qtapp()
-    # Create main window only after data is loaded
-    back = guiback.make_main_window(hs, app)
+    # Run main script with backend
+    hs, back = main(defaultdb=None, usedbcache=True, app=app)
     # --- Run Startup Commands ---
     res = postload_args_process(hs, back)
     # Connect database to the back gui

@@ -14,6 +14,7 @@ from PIL import Image
 # Hotspotter
 from hscom import helpers
 from hscom import fileio as io
+from hscom import params
 from hscom.Parallelize import parallel_compute
 #from hscom.Printable import DynStruct
 #import load_data2 as ld2
@@ -453,8 +454,8 @@ def load_chips(hs, cx_list=None, force_compute=False, **kwargs):
     pcc_kwargs = {
         'func': compute_chip,
         'arg_list': [gfpath_list, cfpath_list, roi_list, theta_list, chipsz_list],
-        'lazy': not hs.args.nocache_chips and (not force_compute),
-        'num_procs': hs.args.num_procs,
+        'lazy': not params.args.nocache_chips and (not force_compute),
+        'num_procs': params.args.num_procs,
         'common_args': [filter_list],
     }
     parallel_compute(**pcc_kwargs)

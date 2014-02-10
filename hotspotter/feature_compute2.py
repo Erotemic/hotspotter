@@ -9,6 +9,7 @@ import numpy as np
 from os.path import join
 # hotspotter
 from hscom import helpers
+from hscom import params
 from hscom import fileio as io
 from hscom.Parallelize import parallel_compute
 import extern_feat
@@ -99,7 +100,7 @@ feat_type2_precompute = {
 
 @profile
 def _load_features_individualy(hs, cx_list):
-    use_cache = not hs.args.nocache_feats
+    use_cache = not params.args.nocache_feats
     feat_cfg = hs.prefs.feat_cfg
     feat_dir = hs.dirs.feat_dir
     feat_uid = feat_cfg.get_uid()
@@ -116,7 +117,7 @@ def _load_features_individualy(hs, cx_list):
     pfc_kwargs = {
         'func': feat_type2_precompute[feat_cfg.feat_type],
         'arg_list': [rchip_fpath_list, feat_fpath_list, kwargs_list],
-        'num_procs': hs.args.num_procs,
+        'num_procs': params.args.num_procs,
         'lazy': use_cache,
     }
     parallel_compute(**pfc_kwargs)
@@ -154,7 +155,7 @@ def load_features(hs, cx_list=None, **kwargs):
     #----------------
     # COMPUTE SETUP
     #----------------
-    use_cache = not hs.args.nocache_feats
+    use_cache = not params.args.nocache_feats
     use_big_cache = use_cache and cx_list is None
     feat_cfg = hs.prefs.feat_cfg
     feat_uid = feat_cfg.get_uid()

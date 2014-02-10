@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hsgui/_frontend/MainSkel.ui'
 #
-# Created: Mon Feb 10 09:52:00 2014
+# Created: Mon Feb 10 11:39:53 2014
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -311,7 +311,7 @@ class Ui_mainSkel(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(mainSkel)
-        self.tablesTabWidget.setCurrentIndex(3)
+        self.tablesTabWidget.setCurrentIndex(2)
         QtCore.QMetaObject.connectSlotsByName(mainSkel)
 
     def retranslateUi(self, mainSkel):
@@ -320,7 +320,7 @@ class Ui_mainSkel(object):
         self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.image_view), QtGui.QApplication.translate("mainSkel", "Image Table", None, QtGui.QApplication.UnicodeUTF8))
         self.cxs_TBL.setSortingEnabled(True)
         self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.chip_view), QtGui.QApplication.translate("mainSkel", "Chip Table", None, QtGui.QApplication.UnicodeUTF8))
-        self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.name_view), QtGui.QApplication.translate("mainSkel", "Name View", None, QtGui.QApplication.UnicodeUTF8))
+        self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.name_view), QtGui.QApplication.translate("mainSkel", "Name Table", None, QtGui.QApplication.UnicodeUTF8))
         self.res_TBL.setSortingEnabled(True)
         self.tablesTabWidget.setTabText(self.tablesTabWidget.indexOf(self.result_view), QtGui.QApplication.translate("mainSkel", "Query Results Table", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("mainSkel", "File", None, QtGui.QApplication.UnicodeUTF8))

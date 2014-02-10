@@ -4,6 +4,7 @@ from hscom import __common__
  rrr, profile) = __common__.init(__name__, '[training]')
 import numpy as np
 from hscom import helpers
+from hscom import params
 from hotspotter import chip_compute2 as cc2
 from os.path import join
 
@@ -27,7 +28,7 @@ def generate_detector_training_data(hs, uniform_size=(512, 256)):
 
     batch_extract_kwargs = {
         'lazy': lazy,
-        'num_procs': hs.args.num_procs,
+        'num_procs': params.args.num_procs,
         'force_gray': False,
         'uniform_size': uniform_size,
     }

@@ -37,7 +37,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>3</number>
+        <number>2</number>
        </property>
        <widget class="QWidget" name="image_view">
         <property name="minimumSize">
@@ -89,7 +89,7 @@
        </widget>
        <widget class="QWidget" name="name_view">
         <attribute name="title">
-         <string>Name View</string>
+         <string>Name Table</string>
         </attribute>
         <layout class="QGridLayout" name="gridLayout">
          <item row="0" column="0">

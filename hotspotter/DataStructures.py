@@ -7,6 +7,7 @@ from itertools import izip, chain
 # Scientific
 import numpy as np
 # HotSpotter
+from hscom import params
 from hscom import helpers
 from hscom.Printable import DynStruct
 
@@ -74,7 +75,7 @@ class NNIndex(object):
         precomp_kwargs = {'cache_dir': hs.dirs.cache_dir,
                           'uid': uid,
                           'flann_params': flann_params,
-                          'force_recompute': hs.args.nocache_flann}
+                          'force_recompute': params.args.nocache_flann}
         flann = algos.precompute_flann(ax2_desc, **precomp_kwargs)
         #----
         # Agg Data

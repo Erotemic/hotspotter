@@ -5,6 +5,7 @@ from hscom import __common__
 # Python
 import re
 # HotSpotter
+from hscom import params
 from hscom import helpers
 import DataStructures as ds
 import matching_functions as mf
@@ -127,7 +128,7 @@ def execute_query_safe(hs, qdat, qcxs, dcxs, use_cache=True):
     print('[mc3] Execute query: q%s' % hs.cidstr(qcxs))
     qcxs, dcxs = prepare_query(qdat, qcxs, dcxs)
     # caching
-    if not hs.args.nocache_query and use_cache:
+    if not params.args.nocache_query and use_cache:
         result_list = load_cached_query(hs, qdat)
         if not result_list is None:
             return result_list

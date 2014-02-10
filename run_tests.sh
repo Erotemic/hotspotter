@@ -61,9 +61,18 @@ run_overnight()
 {
     overnight_huge_fn()
     {
+        echo "!!!!!!!!!!!!!!!!!!!"
+        echo "!!!!!!!!!!!!!!!!!!!"
+        echo "==================="
+        echo "OVERNIGHT HUGE TEST"
+        echo "-------------------"
+        echo "$1"
+        echo "==================="
+        echo "!!!!!!!!!!!!!!!!!!!"
+        echo "!!!!!!!!!!!!!!!!!!!"
         python dev.py -t overnight_huge --all-gt-cases --dbdir $1
     }
-    overnight_huge_fn ~/data/work/PZ_Marianne
+    overnight_huge_fn ~/data/work/PZ_Marianne $@
 
     #python dev.py --dbdir ~/data/work/PZ_FlankHack
     #python dev.py --dbdir ~/data/work/PZ_Marianne
@@ -83,8 +92,9 @@ normrule_test()
 {
     python dev.py --db MOTHERS -t normrule_test --all-gt-cases
 }
+
 #normrule_test
-run_overnight
+run_overnight $@
 
 #ic --db GZ --tests vsmany_big_social --all-gt-cases | tail
 #ic --db GZ --tests vsmany_score --all-gt-cases | tail

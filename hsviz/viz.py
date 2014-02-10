@@ -11,6 +11,7 @@ import numpy as np
 # Hotspotter
 import draw_func2 as df2
 import extract_patch
+from hscom import params
 from hscom import fileio as io
 from hscom import helpers
 
@@ -589,8 +590,8 @@ def show_top(res, hs, *args, **kwargs):
 def res_show_analysis(res, hs, **kwargs):
         print('[viz] res.show_analysis()')
         # Parse arguments
-        noshow_gt  = kwargs.pop('noshow_gt', hs.args.noshow_gt)
-        show_query = kwargs.pop('show_query', hs.args.noshow_query)
+        noshow_gt  = kwargs.pop('noshow_gt', params.args.noshow_gt)
+        show_query = kwargs.pop('show_query', params.args.noshow_query)
         cx_list    = kwargs.pop('cx_list', None)
         figtitle   = kwargs.pop('figtitle', None)
 

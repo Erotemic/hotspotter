@@ -449,14 +449,15 @@ def load_chips(hs, cx_list=None, force_compute=False, **kwargs):
     #--------------------------
     # EXTRACT AND RESIZE CHIPS
     #--------------------------
+    # Compute all chips with paramatarized filters
     pcc_kwargs = {
+        'func': compute_chip,
         'arg_list': [gfpath_list, cfpath_list, roi_list, theta_list, chipsz_list],
         'lazy': not hs.args.nocache_chips and (not force_compute),
         'num_procs': hs.args.num_procs,
-        'common_args': [filter_list]
+        'common_args': [filter_list],
     }
-    # Compute all chips with paramatarized filters
-    parallel_compute(compute_chip, **pcc_kwargs)
+    parallel_compute(**pcc_kwargs)
 
     # Read sizes
     # RCOS TODO: This is slow. We need to cache this data.

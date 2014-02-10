@@ -39,12 +39,15 @@ def _worker(input, output):
 
 
 @profile
-def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None, common_args=[]):
+def parallel_compute(func=None, arg_list=[], num_procs=None, lazy=True, args=None,
+                     common_args=[], output_dir=None):
     if args is not None and num_procs is None:
         num_procs = args.num_procs
     elif num_procs is None:
         num_procs = max(1, int(multiprocessing.cpu_count() / 2))
-    task_list = make_task_list(func, arg_list, lazy=lazy, common_args=common_args)
+    # Generate a list of tasks to send to the parallel processes
+    task_list = make_task_list(func, arg_list, lazy=lazy,
+                               common_args=common_args, output_dir=output_dir)
     nTasks = len(task_list)
     if nTasks == 0:
         print('[parallel] ... No %s tasks left to compute!' % func.func_name)
@@ -71,8 +74,16 @@ def parallel_compute(func, arg_list, num_procs=None, lazy=True, args=None, commo
     return ret
 
 
+def get_common_paths(output_fpath_list):
+    # Takes a list of paths and extracts the common relative paths
+    dir_list = [dirname(fpath) for fpath in output_fpath_list]
+    fname_list = [split(fpath)[1] for fpath in output_fpath_list]
+    unique_dirs = list(set(dir_list))
+    return unique_dirs, fname_list
+
+
 @profile
-def make_task_list(func, arg_list, lazy=True, common_args=[]):
+def make_task_list(func, arg_list, lazy=True, common_args=[], output_dir=None):
     '''
     The input should alawyas be argument 1
     The output should always be argument 2
@@ -83,17 +94,22 @@ def make_task_list(func, arg_list, lazy=True, common_args=[]):
         # does not check existance
         task_list = [(func, append_common(_args)) for _args in izip(*arg_list)]
         return task_list
-    # Hackish: Try to check existence quicker:
-    output_path_list = arg_list[1]
-    dir_list = [dirname(fpath) for fpath in output_path_list]
-    fname_list = [split(fpath)[1] for fpath in output_path_list]
-    unique_dirs = list(set(dir_list))
-    if len(unique_dirs) == 1:
-        # this checks exists quickly, but only works if everything is in the
-        # same directory. It would be better if an output directory was
-        # specified instead. Then this can be even faster as well as elegant.
-        fname_set = set(os.listdir(unique_dirs[0]))
-        exist_list = [fname in fname_set for fname in fname_list]
+
+    if output_dir is None:
+        # Hackish way of getting an output dir for faster exists computation
+        output_fpath_list = arg_list[1]
+        unique_dirs, output_fname_list = get_common_paths(output_fpath_list)
+        if len(unique_dirs) == 1:
+            output_dir = unique_dirs[0]
+    else:
+        # Less hackish
+        output_fname_list = arg_list[1]
+
+    if output_dir is not None:
+        # This is a faster than checkign for existance individually
+        # But all the files need to be in the same directory
+        fname_set = set(os.listdir(output_dir))
+        exist_list = [fname in fname_set for fname in output_fname_list]
         argiter = izip(exist_list, izip(*arg_list))
         arg_list2 = [append_common(_args) for bit, _args in argiter if not bit]
     else:

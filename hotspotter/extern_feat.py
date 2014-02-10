@@ -39,7 +39,9 @@ DESC_DTYPE = np.uint8
 #---------------------------------------
 # Define precompute functions
 def precompute(rchip_fpath, feat_fpath, dict_args, compute_fn):
+    # Calls the function which reads the chip and computes features
     kpts, desc = compute_fn(rchip_fpath, dict_args)
+    # Saves the features to the feature cache dir
     np.savez(feat_fpath, kpts, desc)
     return kpts, desc
 

@@ -108,13 +108,18 @@ def _load_features_individualy(hs, cx_list):
     rchip_fpath_list = [hs.cpaths.cx2_rchip_path[cx] for cx in iter(cx_list)]
     cid_list = hs.tables.cx2_cid[cx_list]
     feat_fname_fmt = ''.join(('cid%d', feat_uid, '.npz'))
-    feat_fpath_list = [join(feat_dir, feat_fname_fmt % cid) for cid in cid_list]
+    feat_fpath_fmt = join(feat_dir, feat_fname_fmt)
+    feat_fpath_list = [feat_fpath_fmt % cid for cid in cid_list]
+    #feat_fname_list = [feat_fname_fmt % cid for cid in cid_list]
     # Compute features in parallel, saving them to disk
     kwargs_list = [feat_cfg.get_dict_args()] * len(rchip_fpath_list)
-    precompute_args = [rchip_fpath_list, feat_fpath_list, kwargs_list]
-    pfc_kwargs = {'num_procs': hs.args.num_procs, 'lazy': use_cache}
-    precompute_fn = feat_type2_precompute[feat_cfg.feat_type]
-    parallel_compute(precompute_fn, precompute_args, **pfc_kwargs)
+    pfc_kwargs = {
+        'func': feat_type2_precompute[feat_cfg.feat_type],
+        'arg_list': [rchip_fpath_list, feat_fpath_list, kwargs_list],
+        'num_procs': hs.args.num_procs,
+        'lazy': use_cache,
+    }
+    parallel_compute(**pfc_kwargs)
     # Load precomputed features sequentially
     kpts_list, desc_list = sequential_feat_load(feat_cfg, feat_fpath_list)
     return kpts_list, desc_list
@@ -141,6 +146,8 @@ def _load_features_bigcache(hs, cx_list):
 
 @profile
 def load_features(hs, cx_list=None, **kwargs):
+    # TODO: There needs to be a fast way to ensure that everything is
+    # already loaded. Same for cc2.
     print('\n=============================')
     print('[fc2] Precomputing and loading features: %r' % hs.get_db_name())
     print('=============================')

@@ -198,6 +198,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     # Preallocate test result aggregation structures
     sel_cols = params.args.sel_cols  # FIXME
     sel_rows = params.args.sel_rows  # FIXME
+    sel_cols = [] if sel_cols is None else sel_cols
+    sel_rows = [] if sel_rows is None else sel_rows
     nCfg     = len(cfg_list)
     nQuery   = len(qcx_list)
     rc2_res  = np.empty((nQuery, nCfg), dtype=list)  # row/col -> result

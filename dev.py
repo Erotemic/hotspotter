@@ -604,12 +604,12 @@ def run_investigations(hs, qcx_list):
     if intest('kpts-interact'):
         fnum = intestigate_keypoint_interaction(hs, qcx_list)
     if intest('interact'):
-        from hsgui import interaction
-        fnum = interaction.interact1(hs, qcx_list, fnum)
+        from hsviz import interact
+        fnum = interact.interact1(hs, qcx_list, fnum)
     if intest('list'):
         print(experiment_harness.get_valid_testcfg_names())
     if intest('dists'):
-        allres = get_allres(hs)
+        allres = get_allres(hs, qcx_list)
         rr2.viz_db_match_distances(allres)
     if intest('report_results', 'rr'):
         report_results(hs, qcx_list)

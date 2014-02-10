@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hsgui/_frontend/MainSkel.ui'
 #
-# Created: Mon Feb 10 09:42:45 2014
+# Created: Mon Feb 10 09:52:00 2014
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -18,6 +18,7 @@ class Ui_mainSkel(object):
     def setupUi(self, mainSkel):
         mainSkel.setObjectName(_fromUtf8("mainSkel"))
         mainSkel.resize(1013, 672)
+        mainSkel.setUnifiedTitleAndToolBarOnMac(False)
         self.centralwidget = QtGui.QWidget(mainSkel)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.verticalLayout = QtGui.QVBoxLayout(self.centralwidget)
@@ -110,7 +111,9 @@ class Ui_mainSkel(object):
         mainSkel.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(mainSkel)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1013, 23))
-        self.menubar.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        self.menubar.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
+        self.menubar.setDefaultUp(False)
+        self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -308,7 +311,7 @@ class Ui_mainSkel(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(mainSkel)
-        self.tablesTabWidget.setCurrentIndex(1)
+        self.tablesTabWidget.setCurrentIndex(3)
         QtCore.QMetaObject.connectSlotsByName(mainSkel)
 
     def retranslateUi(self, mainSkel):

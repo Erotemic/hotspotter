@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\joncrall\code\hotspotter\hsgui/_frontend\ChooseNameDialog.ui'
+# Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hsgui/_frontend/ChooseNameDialog.ui'
 #
-# Created: Thu Feb 06 19:54:15 2014
-#      by: PyQt4 UI code generator 4.9.6
+# Created: Mon Feb 10 09:39:00 2014
+#      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,16 +12,7 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+    _fromUtf8 = lambda s: s
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -52,11 +43,11 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
-        self.label.setText(_translate("Dialog", "Who is this? What is this animals name? ", None))
-        self.comboBox.setItemText(0, _translate("Dialog", "* Choose from known names: (name,  score) *", None))
-        self.comboBox.setItemText(1, _translate("Dialog", "New Item", None))
-        self.lineEdit.setText(_translate("Dialog", "* enter new name (default: top match) *", None))
+        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Dialog", None, QtGui.QApplication.UnicodeUTF8))
+        self.label.setText(QtGui.QApplication.translate("Dialog", "Who is this? What is this animals name? ", None, QtGui.QApplication.UnicodeUTF8))
+        self.comboBox.setItemText(0, QtGui.QApplication.translate("Dialog", "* Choose from known names: (name,  score) *", None, QtGui.QApplication.UnicodeUTF8))
+        self.comboBox.setItemText(1, QtGui.QApplication.translate("Dialog", "New Item", None, QtGui.QApplication.UnicodeUTF8))
+        self.lineEdit.setText(QtGui.QApplication.translate("Dialog", "* enter new name (default: top match) *", None, QtGui.QApplication.UnicodeUTF8))
 
 
 if __name__ == "__main__":

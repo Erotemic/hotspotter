@@ -420,6 +420,21 @@ def imread(img_fpath):
         raise
 
 
+def detect_duplicate_images(imgpath_list):
+    nImg = len(imgpath_list)
+    lbl = 'checking duplicate'
+    duplicates = {}
+    mark_progress, end_progress = helpers.progress_func(nImg, lbl=lbl)
+    for count, gpath in enumerate(imgpath_list):
+        mark_progress(count)
+        img = imread(gpath)
+        img_hash = helpers.hashstr(img, 32)
+        if not img_hash in duplicates:
+            duplicates[img_hash] = []
+        duplicates[img_hash].append(gpath)
+    end_progress()
+    return duplicates
+
 # --- Standard Images ---
 
 def get_hsdir():

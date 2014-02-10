@@ -1196,33 +1196,25 @@ class HotSpotter(DynStruct):
             print('[hs.dbg] cx2_kpts is OK')
 
     def dbg_duplicate_images(hs):
-        # Find which images are duplicates using hashing
-        duplicates = {}
+        img_dir = hs.dirs.img_dir
         valid_gxs = hs.get_valid_gxs()
         gx2_gpath = hs.gx2_gname(valid_gxs, full=True)
-        mark_progress, end_progress = helpers.progress_func(len(gx2_gpath), lbl='checking duplicate')
-        for count, gpath in enumerate(gx2_gpath):
-            mark_progress(count)
-            img = io.imread(gpath)
-            img_hash = helpers.hashstr(img, 32)
-            if not img_hash in duplicates:
-                duplicates[img_hash] = []
-            duplicates[img_hash].append(gpath)
-        end_progress()
 
-        # Format the output
-        dup_set = set([])
+        # Find which images are duplicates using hashing
+        duplicates = io.detect_duplicate_images(gx2_gpath)
+
+        # Convert output paths to indexes
+        nDuplicates = 0
         dup_gxs = []
         for hashstr, gpath_list in duplicates.iteritems():
-            if len(gpath_list) == 1:
-                continue
-            gname_list = [relpath(gpath, hs.dirs.img_dir) for gpath in gpath_list]
-            dup_gxs.append(np.array(hs.gname2_gx(gname_list)))
-            for gname in gname_list:
-                dup_set.add(gname)
+            if len(gpath_list) != 1:
+                gname_list = [relpath(gpath, img_dir) for gpath in gpath_list]
+                gx_list = np.array(hs.gname2_gx(gname_list))
+                dup_gxs.append(gx_list)
+                nDuplicates += len(dup_gxs)
+        print('[hs] There are %d duplicate sets, and %d duplicate images' % (len(dup_gxs), nDuplicates))
 
-        print('[hs] There are %d duplicates, and %d duplicate images' % (len(dup_gxs), len(dup_set)))
-
+        # Detect which images can be autotrashed
         keep_gxs = []
         conflict_gxs = []
         remove_gxs = []

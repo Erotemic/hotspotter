@@ -159,7 +159,7 @@ def _delete_image(hs, gx_list):
         hs.delete_chip(cx, resample=False)
     # Move deleted images into the trash
     lbl = 'Trashing Image'
-    success_list = helpers.move(src_list, dst_list, lbl)
+    success_list = helpers.move_list(src_list, dst_list, lbl)
     hs.update_samples()
     hs.save_database()
     # Need to return something
@@ -908,6 +908,20 @@ class HotSpotter(DynStruct):
         nChips_list = [len(np.where(hs.tables.cx2_gx == gx)[0]) for gx in gx_input]
         return nChips_list
 
+    @tools.class_iter_input
+    def gname2_gx(hs, gname_input):
+        'returns chipids belonging to a chip index(s)'
+        'chip_id ==> chip_index'
+        index_of = tools.index_of
+        gx2_gname = hs.tables.gx2_gname
+        try:
+            gx_output = [index_of(gname, gx2_gname) for gname in gname_input]
+        except IndexError as ex:
+            print('[hs] ERROR %r ' % ex)
+            print('[hs] ERROR a gname in %r does not exist.' % (gname_input,))
+            raise
+        return gx_output
+
     # build metaproperty tables
     @profile
     def cid2_gx(hs, cid):
@@ -1180,3 +1194,80 @@ class HotSpotter(DynStruct):
             passed = False
         if passed:
             print('[hs.dbg] cx2_kpts is OK')
+
+    def dbg_duplicate_images(hs):
+        # Find which images are duplicates using hashing
+        duplicates = {}
+        valid_gxs = hs.get_valid_gxs()
+        gx2_gpath = hs.gx2_gname(valid_gxs, full=True)
+        mark_progress, end_progress = helpers.progress_func(len(gx2_gpath), lbl='checking duplicate')
+        for count, gpath in enumerate(gx2_gpath):
+            mark_progress(count)
+            img = io.imread(gpath)
+            img_hash = helpers.hashstr(img, 32)
+            if not img_hash in duplicates:
+                duplicates[img_hash] = []
+            duplicates[img_hash].append(gpath)
+        end_progress()
+
+        # Format the output
+        dup_set = set([])
+        dup_gxs = []
+        for hashstr, gpath_list in duplicates.iteritems():
+            if len(gpath_list) == 1:
+                continue
+            gname_list = [relpath(gpath, hs.dirs.img_dir) for gpath in gpath_list]
+            dup_gxs.append(np.array(hs.gname2_gx(gname_list)))
+            for gname in gname_list:
+                dup_set.add(gname)
+
+        print('[hs] There are %d duplicates, and %d duplicate images' % (len(dup_gxs), len(dup_set)))
+
+        keep_gxs = []
+        conflict_gxs = []
+        remove_gxs = []
+        for gx_list in dup_gxs:
+            cxs_list = np.array(hs.gx2_cxs(gx_list))
+            nCxs_list = np.array(map(len, cxs_list))
+            nonzeros = nCxs_list != 0
+            # Check to see if no image was populated
+            populated_gxs = gx_list[nonzeros]
+            nonpopulated_gxs = gx_list[True - nonzeros]
+            print('-----')
+            print('[hs] Nonpopulated gxs = %r'  % (nonpopulated_gxs.tolist(),))
+            print('[hs] Populated gxs = %r ' % (populated_gxs.tolist(),))
+            if not np.any(nonzeros):
+                # There are no chips in these duplicates
+                keep = gx_list[0]
+                remove = np.setdiff1d(gx_list, [keep])
+                keep_gxs.append(keep)
+                remove_gxs.append(remove)
+                print('[hs] No chips. Can safely remove: %r' % (gx_list,))
+                continue
+            sorted_nCxs_list = nCxs_list[nonzeros]
+            # Check to see if we only one image was populated
+            if len(sorted_nCxs_list) == 1:
+                print('[hs] Only one image populated. Can remove others')
+                keep = gx_list[nonzeros][0]
+                remove = np.setdiff1d(gx_list, [keep])
+                keep_gxs.append(keep)
+                remove_gxs.append(remove)
+                continue
+            # Check to see if they are all the same
+            if np.all(sorted_nCxs_list[0] == sorted_nCxs_list):
+                # These might have all the same chip info
+                rois_list = [hs.cx2_roi(cxs) for cxs in cxs_list[nonzeros]]
+                name_list  = [hs.cx2_name(cxs) for cxs in cxs_list[nonzeros]]
+
+                props_list = [rois_list, name_list]
+                num_unique = lambda list_: len(set(map(repr, _list)))
+                if all([num_unique(_list) == 1 for _list in props_list]):
+                    print('[hs] all chips appear to be the same')
+                    keep = gx_list[nonzeros][0]
+                    remove = np.setdiff1d(gx_list, [keep])
+                    keep_gxs.append(keep)
+                    remove_gxs.append(remove)
+                else:
+                    conflict_gxs.append(gx_list)
+
+        print('[hs] %d can be kept. %d can be removed. %d conflicting sets' % (len(keep_gxs), len(remove_gxs), len(conflict_gxs),))

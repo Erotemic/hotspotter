@@ -2,7 +2,7 @@ from __future__ import division, print_function
 # Python
 from collections import OrderedDict
 from os.path import (dirname, realpath, join, exists, normpath, splitext,
-                     expanduser)
+                     expanduser, relpath)
 import imp
 import itertools
 from itertools import izip, chain

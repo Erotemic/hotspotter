@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hsgui/_frontend/MainSkel.ui'
 #
-# Created: Mon Feb 10 09:39:00 2014
+# Created: Mon Feb 10 09:42:45 2014
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -110,7 +110,7 @@ class Ui_mainSkel(object):
         mainSkel.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(mainSkel)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1013, 23))
-        self.menubar.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.menubar.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))

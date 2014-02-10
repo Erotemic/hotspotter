@@ -155,7 +155,7 @@
     </rect>
    </property>
    <property name="contextMenuPolicy">
-    <enum>Qt::CustomContextMenu</enum>
+    <enum>Qt::ActionsContextMenu</enum>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">

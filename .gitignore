@@ -38,3 +38,4 @@ hotspotter/*.c
 *.out
 *.log
 *.synctex
+*.pyo

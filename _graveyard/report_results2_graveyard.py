@@ -19,7 +19,7 @@
     #nonipython_exec = textwrap.dedent(r"""
     #help_ = textwrap.dedent(r'''
     #Enter a command.
-        #q (or space) : quit 
+        #q (or space) : quit
         #h            : help
         #cx [cx]    : shows a chip
     #''')
@@ -59,4 +59,22 @@
     #exec(df2.present(wh=(900,600)))
     #viz.DUMP = False
     #""")
+
+
+
+    #cx2_nx = hs.tables.cx2_nx
+    # Build name-to-chips dict
+    #nx2_cxs = {}
+    #for cx, nx in enumerate(cx2_nx):
+        #if not nx in nx2_cxs.keys():
+            #nx2_cxs[nx] = []
+        #nx2_cxs[nx].append(cx)
+    #nx_list = nx2_cxs.keys()
+    #nx_size = [len(nx2_cxs[nx]) for nx in nx_list]
+
+    #cx_sorted = hs.nx2_cxs(nx_list)
+    #for nx in iter(nx_sorted):
+        #cxs = nx2_cxs[nx]
+        #cx_sorted.extend(sorted(cxs))
+    # get matrix data rows
 

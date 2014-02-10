@@ -63,6 +63,7 @@ class QueryResult(DynStruct):
     def get_fpath(res, hs):
         return query_result_fpath(hs, res.qcx, res.query_uid)
 
+    @profile
     def save(res, hs):
         fpath = res.get_fpath(hs)
         print('[qr] cache save: %r' % (fpath if params.args.verbose_cache
@@ -71,6 +72,7 @@ class QueryResult(DynStruct):
             np.savez(file_, **res.__dict__.copy())
         return True
 
+    @profile
     def load(res, hs):
         'Loads the result from the given database'
         fpath = res.get_fpath(hs)

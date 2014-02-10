@@ -202,8 +202,11 @@ def _cx2_tnx(hs, cx_input):
     return tnx_output
 
 
-def _nx2_cxs(hs, nx_list):
-    cxs_list = [np.where(hs.tables.cx2_nx == nx)[0] for nx in nx_list]
+def _nx2_cxs(hs, nx_list, aslist=False):
+    if aslist:
+        cxs_list = [np.where(hs.tables.cx2_nx == nx)[0].tolist() for nx in nx_list]
+    else:
+        cxs_list = [np.where(hs.tables.cx2_nx == nx)[0] for nx in nx_list]
     return cxs_list
 
 
@@ -960,9 +963,9 @@ class HotSpotter(DynStruct):
         return nx2_cxs
 
     @tools.class_iter_input
-    def nx2_cxs(hs, nx_list):
+    def nx2_cxs(hs, nx_list, aslist=False):
         'returns mapping from name indexes to chip indexes'
-        return _nx2_cxs(hs, nx_list)
+        return _nx2_cxs(hs, nx_list, aslist=aslist)
 
     def get_gx2_cxs(hs):
         'returns mapping from image indexes to chip indexes'

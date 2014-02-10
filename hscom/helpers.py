@@ -2040,14 +2040,14 @@ def num2_sigfig(num):
 
 
 def quitflag(num, embed=False, parent_locals=None):
-    if parent_locals is None:
-        parent_locals = get_parent_locals()
-    exec(execstr_dict(parent_locals, 'parent_locals'))
-    if embed:
-        print('Triggered --quit' + str(num))
-        from IPython import embed
-        embed()
     if get_flag('--quit' + str(num)):
+        if parent_locals is None:
+            parent_locals = get_parent_locals()
+        exec(execstr_dict(parent_locals, 'parent_locals'))
+        if embed:
+            print('Triggered --quit' + str(num))
+            from IPython import embed
+            embed()
         print('Triggered --quit' + str(num))
         sys.exit(1)
 

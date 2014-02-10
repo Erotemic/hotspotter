@@ -1284,27 +1284,47 @@ def draw_sift(desc, kp=None):
     ax.add_collection(arw_collection)
 
 
-def feat_scores_to_color(fs, cmap_='hot'):
-    assert len(fs.shape) == 1, 'score must be 1d'
+def scores_to_color(score_list, cmap_='hot', logscale=False):
+    assert len(score_list.shape) == 1, 'score must be 1d'
+    if logscale:
+        score_list = np.log2(np.log2(score_list + 2) + 1)
     cmap = plt.get_cmap(cmap_)
-    mins = fs.min()
-    rnge = fs.max() - mins
+    mins = score_list.min()
+    rnge = score_list.max() - mins
     if rnge == 0:
-        return [cmap(.5) for fx in xrange(len(fs))]
-    score2_01 = lambda score: .1 + .9 * (float(score) - mins) / (rnge)
-    colors    = [cmap(score2_01(score)) for score in fs]
-    return colors
+        return [cmap(.5) for fx in xrange(len(score_list))]
+    else:
+        if logscale:
+            score2_01 = lambda score: np.log2(1.1 + .9 * (float(score) - mins) / (rnge))
+            score_list = np.array(score_list)
+            #rank_multiplier = score_list.argsort() / len(score_list)
+            #normscore = np.array(map(score2_01, score_list)) * rank_multiplier
+            normscore = np.array(map(score2_01, score_list))
+            colors =  map(cmap, normscore)
+        else:
+            score2_01 = lambda score: .1 + .9 * (float(score) - mins) / (rnge)
+        colors    = [cmap(score2_01(score)) for score in score_list]
+        return colors
+
+
+def scores_to_cmap(scores, colors=None, cmap_='hot'):
+    if colors is None:
+        colors = scores_to_color(scores, cmap_=cmap_)
+    sorted_colors = [x for (y, x) in sorted(zip(scores, colors))]
+    # Make a listed colormap and mappable object
+    listed_cmap = mpl.colors.ListedColormap(sorted_colors)
+    return listed_cmap
 
 
 def colorbar(scalars, colors):
     'adds a color bar next to the axes'
+    # Parameters
     orientation = ['vertical', 'horizontal'][0]
     TICK_FONTSIZE = 8
-    # Put colors and scalars in correct order
+    #
+    listed_cmap = scores_to_cmap(scalars, colors)
+    # Create scalar mappable with cmap
     sorted_scalars = sorted(scalars)
-    sorted_colors = [x for (y, x) in sorted(zip(scalars, colors))]
-    # Make a listed colormap and mappable object
-    listed_cmap = mpl.colors.ListedColormap(sorted_colors)
     sm = plt.cm.ScalarMappable(cmap=listed_cmap)
     sm.set_array(sorted_scalars)
     # Use mapable object to create the colorbar
@@ -1341,7 +1361,7 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
         if fs is None:  # Draw with solid color
             color_list    = [ LINE_COLOR for fx in xrange(len(fm))]
         else:  # Draw with colors proportional to score difference
-            color_list = feat_scores_to_color(fs)
+            color_list = scores_to_color(fs)
     segments  = [((x1, y1), (x2, y2)) for (x1, x2, y1, y2) in xxyy_iter]
     linewidth = [LINE_WIDTH for fx in xrange(len(fm))]
     line_alpha = LINE_ALPHA
@@ -1433,7 +1453,9 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
 
 # ---- CHIP DISPLAY COMMANDS ----
 def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
-           interpolation='nearest', **kwargs):
+           interpolation='nearest',
+           cmap=None,
+           **kwargs):
     'other interpolations = nearest, bicubic, bilinear'
     #printDBG('[df2] ----- IMSHOW ------ ')
     #printDBG('[***df2.imshow] fnum=%r pnum=%r title=%r *** ' % (fnum, pnum, title))
@@ -1449,9 +1471,12 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
     plt_imshow_kwargs = {
         'interpolation': interpolation,
         #'cmap': plt.get_cmap('gray'),
-        'vmin': 0,
-        'vmax': 255,
     }
+    if cmap is None:
+        plt_imshow_kwargs.update({
+            'vmin': 0,
+            'vmax': 255,
+        })
     try:
         if len(img.shape) == 3 and img.shape[2] == 3:
             # img is in a color format
@@ -1466,7 +1491,12 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
         elif len(img.shape) == 2:
             # img is in grayscale
             imgGRAY = img
-            ax.imshow(imgGRAY, cmap=plt.get_cmap('gray'), **plt_imshow_kwargs)
+            if cmap is None:
+                cmap = plt.get_cmap('gray')
+            if isinstance(cmap, str):
+                cmap = plt.get_cmap(cmap)
+            print(cmap)
+            ax.imshow(imgGRAY, cmap=cmap, **plt_imshow_kwargs)
         else:
             raise Exception('unknown image format')
     except TypeError as te:
@@ -1594,7 +1624,7 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None, lbl2=None,
     if nMatch > 0:
         colors = [kwargs['colors']] * nMatch if 'colors' in kwargs else distinct_colors(nMatch)
         if fs is not None:
-            colors = feat_scores_to_color(fs, 'hot')
+            colors = scores_to_color(fs, 'hot')
 
         acols = add_alpha(colors)
 

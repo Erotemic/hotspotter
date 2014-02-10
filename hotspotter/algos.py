@@ -27,15 +27,21 @@ DIST_LIST = ['L1', 'L2']
 
 
 def compute_distances(hist1, hist2, dist_list=DIST_LIST):
+    dtype_ = np.float64
+    dtype_ = np.float64
+    hist1 = np.array(hist1, dtype=dtype_)
+    hist2 = np.array(hist2, dtype=dtype_)
     return {type_: globals()[type_](hist1, hist2) for type_ in dist_list}
 
 
-@profile
 def L1(hist1, hist2):
     return (np.abs(hist1 - hist2)).sum(-1)
 
 
-@profile
+def L2_sqrd(hist1, hist2):
+    return (np.abs(hist1 - hist2) ** 2).sum(-1)
+
+
 def L2(hist1, hist2):
     return np.sqrt((np.abs(hist1 - hist2) ** 2).sum(-1))
 

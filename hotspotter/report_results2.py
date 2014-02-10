@@ -23,6 +23,7 @@ from hscom import params
 from hscom.Printable import DynStruct
 from hsviz import draw_func2 as df2
 from hsviz import viz
+from hsviz import allres_viz
 import load_data2 as ld2
 import spatial_verification2 as sv2
 #import match_chips3 as mc3
@@ -39,10 +40,11 @@ REPORT_MATRIX_VIZ = True
 
 class AllResults(DynStruct):
     'Data container for all compiled results'
-    def __init__(self, hs, qcx2_res):
+    def __init__(self, hs, qcx2_res, qcx_list):
         super(DynStruct, self).__init__()
         self.hs       = hs
         self.qcx2_res = qcx2_res
+        self.qcx_list = hs.test_sample_cx if qcx_list is None else qcx_list
         self.rankres_str         = None
         self.title_suffix        = None
         self.scalar_mAP_str      = '# mAP score = NA\n'
@@ -77,6 +79,11 @@ class AllResults(DynStruct):
 
 
 class OrganizedResult(DynStruct):
+    '''
+    Maintains an organized list of query chip indexes, their top matching
+    result, the score, and the rank. What chips are populated depends on the
+    type of organization
+    '''
     def __init__(self):
         super(DynStruct, self).__init__()
         self.qcxs   = []
@@ -135,7 +142,10 @@ def get_true_match_distances(allres):
 
 
 def res2_true_and_false(hs, res):
-    'Organizes results into true positive and false positive sets'
+    '''
+    Organizes results into true positive and false positive sets
+    a set is a query, its best match, and a score
+    '''
     #if not 'res' in vars():
         #res = qcx2_res[qcx]
     indx_samp = hs.indexed_sample_cx
@@ -206,7 +216,7 @@ def init_organized_results(allres):
                 allres.top_false.append(qcx, cx, rank, score)
             topx += 1
 
-    for qcx in hs.test_sample_cx:
+    for qcx in allres.qcx_list:
         res = qcx2_res[qcx]
         if res is not None:
             _organize_result(res)
@@ -227,35 +237,40 @@ def init_score_matrix(allres):
     print(' * init score matrix')
     hs = allres.hs
     qcx2_res = allres.qcx2_res
-    cx2_nx = hs.tables.cx2_nx
-    # Build name-to-chips dict
-    nx2_cxs = {}
-    for cx, nx in enumerate(cx2_nx):
-        if not nx in nx2_cxs.keys():
-            nx2_cxs[nx] = []
-        nx2_cxs[nx].append(cx)
+    qcx_list = allres.qcx_list
+    nx_list = np.unique(hs.tables.cx2_nx[qcx_list])
+    #nx_list = hs.get_valid_nxs(unknown=False)
+    cxs_list = hs.nx2_cxs(nx_list, aslist=True)
     # Sort names by number of chips
-    nx_list = nx2_cxs.keys()
-    nx_size = [len(nx2_cxs[nx]) for nx in nx_list]
-    nx_sorted = [x for (y, x) in sorted(zip(nx_size, nx_list))]
+    nx_size = map(len, cxs_list)
     # Build sorted chip list
-    cx_sorted = []
-    test_cx_set = set(hs.test_sample_cx)
-    for nx in iter(nx_sorted):
-        cxs = nx2_cxs[nx]
-        cx_sorted.extend(sorted(cxs))
-    # get matrix data rows
+    nx_cxs_tuples = zip(nx_size, cxs_list)
+    # Sort by name
+    cx_sorted = [x for (y, x) in sorted(nx_cxs_tuples)]
+    # Subsort by chip
+    cx_sorted = map(sorted, cx_sorted)
+    # Flattten
+    from itertools import chain
+    cx_sorted = list(chain.from_iterable(cx_sorted))  # very fast flatten
     row_label_cx = []
     row_scores = []
+    qcx_set = set(qcx_list)
+    # Build each row in the score matrix
     for qcx in iter(cx_sorted):
-        if not qcx in test_cx_set:
+        if not qcx in qcx_set:
             continue
-        res = qcx2_res[qcx]
+        try:
+            res = qcx2_res[qcx]
+        except IndexError:
+            print('qcx = %r' % qcx)
+            print('len(qcx2_res) = %r' % len(qcx2_res))
+            raise
         if res is None:
             continue
-        cx2_score = res.cx2_score
+        # Append a label to score matrix
         row_label_cx.append(qcx)
-        row_scores.append(cx2_score[cx_sorted])
+        # Append a column to score matrix
+        row_scores.append(res.cx2_score[cx_sorted])
     col_label_cx = cx_sorted
     # convert to numpy matrix array
     score_matrix = np.array(row_scores, dtype=np.float64)
@@ -273,12 +288,13 @@ def get_title_suffix(hs):
 
 
 def init_allres(hs, qcx2_res,
+                qcx_list=None,
                 matrix=(REPORT_MATRIX or REPORT_MATRIX_VIZ),
                 oxford=False,
                 **kwargs):
     'Organizes results into a visualizable data structure'
     # Make AllResults data containter
-    allres = AllResults(hs, qcx2_res)
+    allres = AllResults(hs, qcx2_res, qcx_list)
     allres.title_suffix = get_title_suffix(hs)
     #helpers.ensurepath(allres.summary_dir)
     print('\n======================')
@@ -343,7 +359,7 @@ def build_rankres_str(allres):
     #qcx2_res = allres.qcx2_res
     cx2_cid = hs.tables.cx2_cid
     #cx2_nx = hs.tables.cx2_nx
-    test_samp = hs.test_sample_cx
+    test_samp = allres.qcx_list
     train_samp = hs.train_sample_cx
     indx_samp = hs.indexed_sample_cx
     # Get organized data for csv file
@@ -596,7 +612,7 @@ def dump_problem_matches(allres):
 def dump_score_matrixes(allres):
     #print('\n---DUMPING SCORE MATRIX---')
     try:
-        viz.plot_score_matrix(allres)
+        allres_viz.plot_score_matrix(allres)
     except Exception as ex:
         print('[dump_score_matixes] IMPLEMENTME: %r ' % ex)
     pass
@@ -683,7 +699,7 @@ def dump_all_queries2(hs):
 
 
 def dump_all_queries(allres):
-    test_cxs = allres.hs.test_sample_cx
+    test_cxs = allres.qcx_list
     print('[rr2] dumping all %r queries' % len(test_cxs))
     for qcx in test_cxs:
         viz.show_chip(allres, qcx, 'analysis', subdir='allqueries',
@@ -887,8 +903,8 @@ def possible_problems():
 #===============================
 
 
-def report_all(hs, qcx2_res, **kwargs):
-    allres = init_allres(hs, qcx2_res, **kwargs)
+def report_all(hs, qcx2_res, qcx_list, **kwargs):
+    allres = init_allres(hs, qcx2_res, qcx_list=qcx_list, **kwargs)
     #if not 'kwargs' in vars():
         #kwargs = dict(rankres=True, stem=False, matrix=False, pdf=False,
                       #hist=False, oxford=False, ttbttf=False, problems=False,
@@ -1003,7 +1019,7 @@ def viz_db_match_distances(allres, orgres_list=None):
     print('[rr2] viz_db_match_distances')
     orgres2_distance = allres.get_orgres2_distances(orgres_list=orgres_list)
     db_name = allres.hs.get_db_name()
-    viz.show_descriptors_match_distances(orgres2_distance, db_name=db_name)
+    allres_viz.show_descriptors_match_distances(orgres2_distance, db_name=db_name)
 
 
 @profile
@@ -1017,9 +1033,11 @@ def get_orgres_match_distances(allres, orgtype_='false'):
     print('[rr2]  * adesc1.shape = %r' % (adesc1.shape,))
     print('[rr2]  * adesc2.shape = %r' % (adesc2.shape,))
     #dist_list = ['L1', 'L2', 'hist_isect', 'emd']
-    #dist_list = ['L1', 'L2']
     dist_list = ['L1', 'L2', 'hist_isect']
-    distances = algos.compute_distances(adesc1, adesc2, dist_list)
+    #dist_list = ['L1', 'L2']
+    hist1 = np.array(adesc1, dtype=np.float64)
+    hist2 = np.array(adesc2, dtype=np.float64)
+    distances = algos.compute_distances(hist1, hist2, dist_list)
     return distances
 
 
@@ -1051,7 +1069,7 @@ def get_matching_descriptors(allres, match_list):
     return aggdesc1, aggdesc2
 
 
-def load_query_results(hs, qcx_list, nocache=True):
+def load_query_results(hs, qcx_list, nocache=False):
     'Prefrosm / loads all queries'
     query_cfg = hs.prefs.query_cfg
     # Build query big cache uid
@@ -1090,8 +1108,7 @@ def load_query_results(hs, qcx_list, nocache=True):
 def get_allres(hs, qcx_list):
     'Performs / Loads all queries and build allres structure'
     print('[rr2] get_allres()')
-    print('[rr2] qcx_list = %r ' % (qcx_list,))
     #valid_cxs = hs.get_valid_cxs()
     qcx2_res = load_query_results(hs, qcx_list)
-    allres = init_allres(hs, qcx2_res)
+    allres = init_allres(hs, qcx2_res, qcx_list=qcx_list)
     return allres

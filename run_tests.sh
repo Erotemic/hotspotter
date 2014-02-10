@@ -72,7 +72,7 @@ run_overnight()
         echo "!!!!!!!!!!!!!!!!!!!"
         python dev.py -t overnight_huge --all-gt-cases --dbdir $1
     }
-    overnight_huge_fn ~/data/work/PZ_Marianne $@
+    overnight_huge_fn ~/data/work/GZ_ALL $@
 
     #python dev.py --dbdir ~/data/work/PZ_FlankHack
     #python dev.py --dbdir ~/data/work/PZ_Marianne

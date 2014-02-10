@@ -28,7 +28,7 @@ from hscom import helpers
 from hscom import latex_formater as pytex
 from hsviz import draw_func2 as df2
 from hsviz import viz
-
+from hsviz import allres_viz
 
 def dev_reload():
     print('===========================')
@@ -343,6 +343,7 @@ def get_qcx_list(hs):
         print('[dev] all gt cases')
         qcx_all = get_cases(hs, with_hard=True, with_gt=True, with_nogt=False)
     elif params.args.qcid is None:
+        print('[dev] did not select cases')
         qcx_all = get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
     else:
         print('[dev] Chosen qcid=%r' % params.args.qcid)
@@ -359,6 +360,7 @@ def get_qcx_list(hs):
         if params.args.strict:
             raise Exception('no qcx_list history')
         qcx_list = [0]
+    print('[dev] len(qcx_list) = %d' % len(qcx_list))
     qcx_list = helpers.unique_keep_order(qcx_list)
     return qcx_list
 
@@ -492,6 +494,13 @@ def dev_main(defaultdb='NAUTS', **kwargs):
     print('[dev] main()')
     # Create Hotspotter API
     hs = main.main(defaultdb=defaultdb)
+    print('')
+    print('==========================')
+    print('   **** DEV SCRIPT ***    ')
+    print('==========================')
+    print('[dev] dev_main()')
+    print('==========================')
+
     # Get the query/others/notes list
     # this contains a list of cannonical test examples
     # FIXME: This is specific to one machine right now
@@ -611,6 +620,9 @@ def run_investigations(hs, qcx_list):
     if intest('dists'):
         allres = get_allres(hs, qcx_list)
         rr2.viz_db_match_distances(allres)
+    if intest('matrix'):
+        allres = get_allres(hs, qcx_list)
+        allres_viz.plot_score_matrix(allres)
     if intest('report_results', 'rr'):
         report_results(hs, qcx_list)
     if intest('custom'):

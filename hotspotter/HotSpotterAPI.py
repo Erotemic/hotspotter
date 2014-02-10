@@ -108,7 +108,7 @@ def _datatup_cols(hs, tblname, cx2_score=None):
         }
     elif tblname in ['cxs', 'res']:
         # Tau is the future. Unfortunately society is often stuck in the past.
-        # (tauday.com)
+        # (tauday.com) ~half sarcasm~
         FUTURE = False
         tau = (2 * np.pi)
         taustr = 'tau' if FUTURE else '2pi'
@@ -128,9 +128,12 @@ def _datatup_cols(hs, tblname, cx2_score=None):
             'theta':  lambda cxs: [theta_str(cx2_theta[cx]) for cx in iter(cxs)],
             'roi':    lambda cxs: [str(cx2_roi[cx]) for cx in iter(cxs)],
         }
-        prop_iter = prop_dict.iteritems()
-        prop_cols = dict([(k, lambda cxs: [v[cx] for cx in iter(cxs)]) for (k, v) in prop_iter])
-        cols.update(prop_cols)
+        import functools
+        def _lazy_prop(cxs, key=None):
+            dict_ = prop_dict[key]
+            return [dict_[cx] for cx in iter(cxs)]
+        for key in prop_dict.iterkeys():
+            cols[key] = functools.partial(_lazy_prop, key=key)
         if tblname == 'res':
             cols.update({
                 'rank':   lambda cxs:  range(1, len(cxs) + 1),

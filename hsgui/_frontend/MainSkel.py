@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/home/joncrall/code/hotspotter/hsgui/_frontend/MainSkel.ui'
 #
-# Created: Mon Feb 10 11:39:53 2014
+# Created: Mon Feb 10 13:40:41 2014
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -42,6 +42,7 @@ class Ui_mainSkel(object):
         self.verticalLayout_2 = QtGui.QVBoxLayout()
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.gxs_TBL = QtGui.QTableWidget(self.image_view)
+        self.gxs_TBL.setDragEnabled(False)
         self.gxs_TBL.setObjectName(_fromUtf8("gxs_TBL"))
         self.gxs_TBL.setColumnCount(0)
         self.gxs_TBL.setRowCount(0)
@@ -311,7 +312,7 @@ class Ui_mainSkel(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(mainSkel)
-        self.tablesTabWidget.setCurrentIndex(2)
+        self.tablesTabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(mainSkel)
 
     def retranslateUi(self, mainSkel):

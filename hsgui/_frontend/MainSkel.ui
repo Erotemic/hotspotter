@@ -37,7 +37,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>2</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="image_view">
         <property name="minimumSize">
@@ -54,6 +54,9 @@
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
             <widget class="QTableWidget" name="gxs_TBL">
+             <property name="dragEnabled">
+              <bool>false</bool>
+             </property>
              <property name="sortingEnabled">
               <bool>true</bool>
              </property>

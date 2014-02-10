@@ -369,9 +369,9 @@ class MainWindowBackend(QtCore.QObject):
         prefix_datatup = [[prefix_col.get(header, 'error')
                            for header in col_headers]
                           for prefix_col in prefix_cols]
-        bpdy_datatup = back.hs.get_datatup_list(tblname, index_list,
+        body_datatup = back.hs.get_datatup_list(tblname, index_list,
                                                 col_headers, extra_cols)
-        datatup_list = prefix_datatup + bpdy_datatup
+        datatup_list = prefix_datatup + body_datatup
         row_list = range(len(datatup_list))
         # Populate with fancy headers.
         col_fancyheaders = [back.fancy_headers[key]

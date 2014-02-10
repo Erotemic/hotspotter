@@ -9,6 +9,7 @@ from os.path import exists, join, split, relpath
 from itertools import izip, chain
 import shutil
 import datetime
+import functools
 # Science
 import numpy as np
 from PIL import Image
@@ -128,7 +129,7 @@ def _datatup_cols(hs, tblname, cx2_score=None):
             'theta':  lambda cxs: [theta_str(cx2_theta[cx]) for cx in iter(cxs)],
             'roi':    lambda cxs: [str(cx2_roi[cx]) for cx in iter(cxs)],
         }
-        import functools
+        # Create a partial function to wrap a property for lazy evaluation
         def _lazy_prop(cxs, key=None):
             dict_ = prop_dict[key]
             return [dict_[cx] for cx in iter(cxs)]

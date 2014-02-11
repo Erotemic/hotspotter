@@ -564,6 +564,13 @@ class HotSpotter(DynStruct):
         new_nx  = new_nx_[0] if len(new_nx_) > 0 else hs.add_name(new_name)
         hs.tables.cx2_nx[cx] = new_nx
 
+    def alias_name(hs, nx, new_name):
+        conflict_nxs = np.where(hs.tables.nx2_name == new_name)[0]
+        if len(conflict_nxs) > 0:
+            raise AssertionError('Cannot alias new_name=%r. Already exists!' %
+                                 new_name)
+        hs.tables.nx2_name[nx] = new_name
+
     @profile
     def change_property(hs, cx, key, val):
         hs.tables.prop_dict[key][cx] = val

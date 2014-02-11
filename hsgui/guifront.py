@@ -283,6 +283,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
     selectResSignal = pyqtSignal(int)
     selectNameSignal = pyqtSignal(str)
     changeCidSignal = pyqtSignal(int, str, str)
+    aliasNameSignal = pyqtSignal(int, str, str)
     changeGxSignal  = pyqtSignal(int, str, bool)
     querySignal = pyqtSignal()
 
@@ -337,6 +338,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         front.selectResSignal.connect(back.select_res_cid)
         front.selectNameSignal.connect(back.select_name)
         front.changeCidSignal.connect(back.change_chip_property)
+        front.aliasNameSignal.connect(back.alias_name)
         front.changeGxSignal.connect(back.change_image_property)
         front.querySignal.connect(back.query)
 
@@ -359,6 +361,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         ui.res_TBL.itemClicked.connect(front.res_tbl_clicked)
         ui.res_TBL.itemChanged.connect(front.res_tbl_changed)
         ui.nxs_TBL.itemClicked.connect(front.name_tbl_clicked)
+        ui.nxs_TBL.itemChanged.connect(front.name_tbl_changed)
         # Tab Widget
         ui.tablesTabWidget.currentChanged.connect(front.change_view)
         ui.cxs_TBL.sortByColumn(0, Qt.AscendingOrder)
@@ -567,6 +570,9 @@ class MainWindowFrontend(QtGui.QMainWindow):
     def get_nametbl_name(front, row):
         return str(front.get_header_val(front.ui.nxs_TBL, 'name', row))
 
+    def get_nametbl_nx(front, row):
+        return int(front.get_header_val(front.ui.nxs_TBL, 'nx', row))
+
     def get_imgtbl_gx(front, row):
         return int(front.get_header_val(front.ui.gxs_TBL, 'gx', row))
 
@@ -600,6 +606,15 @@ class MainWindowFrontend(QtGui.QMainWindow):
         new_val  = csv_sanatize(item.text())  # sanatize val for csv
         header_lbl = front.get_restbl_header(col)  # Get changed column
         front.changeCidSignal.emit(sel_cid, header_lbl, new_val)
+
+    @slot_(QtGui.QTableWidgetItem)
+    def name_tbl_changed(front, item):
+        front.print('name_tbl_changed()')
+        row, col = (item.row(), item.column())
+        sel_nx = front.get_nametbl_nx(row)    # The changed row's name index
+        new_val  = csv_sanatize(item.text())  # sanatize val for csv
+        header_lbl = front.get_nametbl_header(col)  # Get changed column
+        front.aliasNameSignal.emit(sel_nx, header_lbl, new_val)
 
     #=======================
     # Table Clicked Functions

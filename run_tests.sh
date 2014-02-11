@@ -70,7 +70,7 @@ run_overnight()
         echo "==================="
         echo "!!!!!!!!!!!!!!!!!!!"
         echo "!!!!!!!!!!!!!!!!!!!"
-        python dev.py -t overnight_huge --all-gt-cases --dbdir $1
+        python dev.py -t overnight_huge --all-gt-cases --dbdir $@
     }
     overnight_huge_fn ~/data/work/GZ_ALL $@
 

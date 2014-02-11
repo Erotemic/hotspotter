@@ -18,7 +18,7 @@ def ensure_nn_index(hs, qdat, dcxs):
     dcxs_uid = helpers.hashstr_arr(dcxs, 'dcxs') + feat_uid
     if not dcxs_uid in qdat._dcxs2_index:
         # Make sure the features are all computed first
-        print('[mc3] qdat._data_index[dcxs_uid]... cache miss')
+        print('[mc3] qdat._data_index[dcxs_uid]... nn_index cache miss')
         print('[mc3] dcxs_ is not in qdat cache')
         print('[mc3] hashstr(dcxs_) = %r' % dcxs_uid)
         print('[mc3] REFRESHING FEATURES')
@@ -27,7 +27,7 @@ def ensure_nn_index(hs, qdat, dcxs):
         data_index = ds.NNIndex(hs, dcxs)
         qdat._dcxs2_index[dcxs_uid] = data_index
     else:
-        print('[mc3] qdat._data_index[dcxs_uid]... cache hit')
+        print('[mc3] qdat._data_index[dcxs_uid]... nn_index cache hit')
     qdat._data_index = qdat._dcxs2_index[dcxs_uid]
 
 

@@ -76,7 +76,6 @@ class QueryResult(DynStruct):
     def load(res, hs):
         'Loads the result from the given database'
         fpath = res.get_fpath(hs)
-        print('[res] res.load() fpath=%r' % (split(fpath)[1],))
         qcx_good = res.qcx
         try:
             with open(fpath, 'rb') as file_:
@@ -84,6 +83,7 @@ class QueryResult(DynStruct):
                 for _key in npz.files:
                     res.__dict__[_key] = npz[_key]
                 npz.close()
+            print('[res] res.load() fpath=%r' % (split(fpath)[1],))
             # These are nonarray items even if they are not lists
             # tolist seems to convert them back to their original
             # python representation
@@ -99,7 +99,7 @@ class QueryResult(DynStruct):
         except IOError as ex:
             #print('[res] encountered IOError: %r' % ex)
             if not exists(fpath):
-                print('[res] cache miss')
+                print('[res] query result cache miss')
                 #print(fpath)
                 #print('[res] QueryResult(qcx=%d) does not exist' % res.qcx)
                 raise

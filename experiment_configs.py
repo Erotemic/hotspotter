@@ -123,7 +123,7 @@ overnight_huge.update({
     'K':                   [5, 7, 10],
     'Knorm':               [1, 3, 5],
     'normalizer_rule':     ['name', 'last'],
-    'use_adaptive_scale':  [False],
+    'use_adaptive_scale':  [False, True],
     #'scale_min': [0, 10, 20],
     #'score_method':        ['pl', 'csum'],  # , 'pl'],  #, 'nsum', 'borda', 'topk', 'nunique']
 })

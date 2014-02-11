@@ -7,6 +7,7 @@ import os
 import sys
 from os.path import isdir, islink, isfile, join, exists
 from collections import OrderedDict
+import fnmatch
 # Science
 import numpy as np
 from PIL import Image
@@ -194,14 +195,12 @@ def is_imgdir(path):
 
 def has_ss_gt(path):
     ss_data = join(path, 'SightingData.csv')
-    print(ss_data)
-    return helpers.checkpath(ss_data, verbose=True)
+    return helpers.checkpath(ss_data, verbose=False)
 
 
 def has_v1_gt(path):
     info_table = join(path, 'animal_info_table.csv')
-    print(info_table)
-    return helpers.checkpath(info_table, verbose=True)
+    return helpers.checkpath(info_table, verbose=False)
 
 
 def has_v2_gt(path):
@@ -230,6 +229,12 @@ def has_tables(path):
         join(path, '/chip_table.csv'),
         join(path, '/image_table.csv')]
     return all([exists(path_) for path_ in tables])
+
+
+def has_xlsx_gt(path):
+    fpath_list = os.listdir(path)
+    xlsx_files = [fpath for fpath in fpath_list if fnmatch.fnmatch(fpath, '*.xlsx')]
+    return len(xlsx_files) > 0
 #--------------------
 
 

@@ -199,7 +199,7 @@ class MainWindowBackend(QtCore.QObject):
         back.table_editable = {
             'gxs':  [],
             'cxs':  ['name'],
-            'nxs':  [],
+            'nxs':  ['name'],
             'res':  ['name'],
         }
 
@@ -556,6 +556,18 @@ class MainWindowBackend(QtCore.QObject):
             back.hs.change_name(cx, val)
         else:
             back.hs.change_property(cx, key, val)
+        back.populate_tables(image=False)
+        print('')
+
+    @slot_(int, str, str)
+    @blocking
+    @profile
+    def alias_name(back, nx, key, val):
+        key, val = map(str, (key, val))
+        print('[*back] alias_name(%r, %r, %r)' % (nx, key, val))
+        if key in ['name']:
+            # TODO: Add option to change name if alias fails
+            back.hs.alias_name(nx, val)
         back.populate_tables(image=False)
         print('')
 

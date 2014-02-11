@@ -21,6 +21,10 @@ import DataStructures as ds
 from hscom import helpers
 from hscom import tools
 
+#========================================
+# GLOBALS
+#========================================
+
 VERBOSE_LOAD_DATA = True
 
 
@@ -116,6 +120,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         #
         if db_info.has_v2_gt(db_dir):
             IS_VERSION_1_OR_2 = True
+            db_version = 'hotspotter-v2'
             print('[ld2] has %s database format' % db_version)
             chip_csv_format = []
             header_csvformat_re = v12_csvformat_re

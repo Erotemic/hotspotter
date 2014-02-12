@@ -2039,8 +2039,8 @@ def num2_sigfig(num):
     return int(np.ceil(np.log10(num)))
 
 
-def quitflag(num, embed=False, parent_locals=None):
-    if get_flag('--quit' + str(num)):
+def quitflag(num=None, embed=False, parent_locals=None):
+    if num is None or get_flag('--quit' + str(num)):
         if parent_locals is None:
             parent_locals = get_parent_locals()
         exec(execstr_dict(parent_locals, 'parent_locals'))
@@ -2052,5 +2052,9 @@ def quitflag(num, embed=False, parent_locals=None):
         sys.exit(1)
 
 
-def qflag(num, embed=True):
+def qflag(num=None, embed=True):
+    return quitflag(num, embed=embed, parent_locals=get_parent_locals())
+
+
+def quit(num=None, embed=True):
     return quitflag(num, embed=embed, parent_locals=get_parent_locals())

@@ -174,7 +174,14 @@ def get_cfg_list(hs, test_cfg_name_list):
         cfg_list = [hs.prefs.query_cfg]
         return cfg_list
     varied_params_list = get_varied_params_list(test_cfg_name_list)
-    cfg_list = [Config.QueryConfig(**_dict) for _dict in varied_params_list]
+    # Add unique configs to the list
+    cfg_list = []
+    cfg_set = set([])
+    for _dict in varied_params_list:
+        cfg = Config.QueryConfig(**_dict)
+        if not cfg in cfg_set:
+            cfg_list.append(cfg)
+            cfg_set.add(cfg)
     return cfg_list
 
 

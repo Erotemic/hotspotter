@@ -427,7 +427,7 @@ def intestigate_keypoint_interaction(hs, qcx_list, fnum=1, **kwargs):
 
 
 def dbstats(hs):
-    import db_info
+    from hotspotter import db_info
     # Chip / Name / Image stats
     dbinfo_locals = db_info.db_info(hs)
     db_name = hs.get_db_name(True)

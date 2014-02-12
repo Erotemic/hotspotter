@@ -12,7 +12,15 @@ import scipy.sparse.linalg as sparse_linalg
 # http://stackoverflow.com/questions/11462781/fast-2d-rigid-body-transformations-in-numpy-scipy
 # skimage.transform.fast_homography(im, H)
 
-
+#PYX START
+"""
+// These are cython style comments for maintaining python compatibility
+cimport numpy as np
+ctypedef np.float64_t FLOAT64
+"""
+#PYX MAP FLOAT_2D np.ndarray[FLOAT64, ndim=2]
+#PYX MAP FLOAT_1D np.ndarray[FLOAT64, ndim=1]
+#PYX END
 SV_DTYPE = np.float64
 
 
@@ -92,76 +100,53 @@ def normalize_xy_points(x_m, y_m):
     return x_norm, y_norm, T
 
 
-'''
-fx1_m  = np.array( (1, 2, 3, 4, 5))
-x1_m   = np.array( (1, 2, 1, 4, 5))
-y1_m   = np.array( (1, 2, 1, 4, 5))
-acd1_m = np.array(((1, 1, 1, 1, 1),
-                   (0, 0, 0, 0, 0),
-                   (1, 1, 1, 1, 1)))
-
-fx2_m  = np.array( (1, 2, 3, 2, 5))
-x2_m   = np.array( (1, 2, 1, 4, 5))
-y2_m   = np.array( (1, 2, 1, 4, 5))
-acd2_m = np.array(((1, 1, 1, 1, 1),
-                   (0, 0, 0, 0, 0),
-                   (1, 1, 1, 1, 1)))
-
-acd1_m = array([[ 105.65855929,   69.88258445,   50.26711542,   47.0972872, 37.77338979,
-                  80.37862456,   65.7670833 ,   52.42491175, 47.73791486,  47.73791486],
-                  [  40.25470409,   33.37290799,  -14.38396778,    5.09841855, 8.36304015,
-                  9.40799471,   -0.22772558,   21.09104681, 33.6183116 ,   33.6183116 ],
-                  [  85.21461723,   38.1541563 ,   49.27567372,   19.63477339, 24.12673413,
-                  34.08558994,   35.23499677,   19.37915367, 29.8612585 ,   29.8612585 ]])
-
-acd2_m = array([[ 27.18315876,  40.44774347,  18.83472822,  46.03951988, 25.48597903,
-                42.33150267,  34.53070584,  45.37374314, 42.9485725 ,  53.62149774],
-                [ 11.08605802,  -7.47303884,  -9.39089399,  -6.87968738, 0.61334048,
-                15.89417442, -38.28506581,   5.9434218 , 25.10330357,  28.30194991],
-                [ 14.73551714,  16.44658993,  33.51034403,  19.36112975, 39.17426044,
-                31.73842067,  27.55071888,  21.49176377, 21.40969283,  23.89992898]])
-
-ai = acd1_m[0][0]
-ci = acd1_m[1][0]
-di = acd1_m[2][0]
-
-aj = acd2_m[0][0]
-cj = acd2_m[1][0]
-dj = acd2_m[2][0]
-
-Ai = np.array([[ai,0],[ci,di]])
-Aj = np.array([[aj,0],[cj,dj]])
-
-Ah = np.array([(ai, 0, 0),(ci, di, 0), (0,0,1)])
-'''
-
-
 #---
 # Ensure that a feature doesn't have multiple assignments
 # --------------------------------
 # Linear algebra functions on lower triangular matrices
+
+#PYX DEFINE
+#cdef det_acd(FLOAT_2D acd):
 def det_acd(acd):
     'Lower triangular determinant'
-    return acd[0] * acd[2]
+    #PYX CDEF FLOAT_1D
+    det = acd[0] * acd[2]
+    return det
 
 
+#PYX DEFINE
+#cdef inv_acd(FLOAT_2D acd, FLOAT_1D det):
 def inv_acd(acd, det):
     'Lower triangular inverse'
-    return np.array((acd[2], -acd[1], acd[0])) / det
+    #PYX CDEF FLOAT_2D
+    inv_acd = np.array((acd[2], -acd[1], acd[0])) / det
+    return inv_acd
 
 
+#PYX DEFINE
+#cdef dot_acd(FLOAT_2D acd1, FLOAT_2D acd2):
 def dot_acd(acd1, acd2):
     'Lower triangular dot product'
+    #PYX CDEF FLOAT_1D
     a = (acd1[0] * acd2[0])
+    #PYX CDEF FLOAT_1D
     c = (acd1[1] * acd2[0]) + (acd1[2] * acd2[1])
+    #PYX CDEF FLOAT_1D
     d = (acd1[2] * acd2[2])
-    return np.array((a, c, d))
+    #PYX CDEF FLOAT_2D
+    acd3 = np.array((a, c, d))
+    return acd3
 
 
 # --------------------------------
 #import numba
 @profile
 #@numba.autojit
+#PYX DEFINE
+#def affine_inliers(FLOAT_2D x1_m, FLOAT_2D y1_m, FLOAT_2D acd1_m,  FLOAT_2D fx1_m,
+#                   FLOAT_2D x2_m, FLOAT_2D y2_m, FLOAT_2D acd2_m,
+#                   float xy_thresh_sqrd,
+#                   float max_scale, float min_scale):
 def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
                    x2_m, y2_m, acd2_m,
                    xy_thresh_sqrd,
@@ -190,7 +175,9 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
     num_best_inliers = 0
     best_mx  = None
     # Get keypoint scales (determinant)
+    #PYX CDEF FLOAT_1D
     det1_m = det_acd(acd1_m)
+    #PYX CDEF FLOAT_1D
     det2_m = det_acd(acd2_m)
     # Compute all transforms from kpts1 to kpts2 (enumerate all hypothesis)
     # HACK: Because what I thought was A is actually invA,  need to invert calculation

@@ -73,6 +73,8 @@ run_overnight()
         python dev.py -t overnight_huge --all-gt-cases --dbdir $@
     }
     overnight_huge_fn ~/data/work/GZ_ALL $@
+    overnight_huge_fn ~/data/work/HSDB_zebra_with_mothers $@
+    overnight_huge_fn ~/data/work/PZ_SweatwaterSmall $@
 
     #python dev.py --dbdir ~/data/work/PZ_FlankHack
     #python dev.py --dbdir ~/data/work/PZ_Marianne

@@ -11,6 +11,9 @@ desktop.ini
 dist
 hesaffexe
 hotspotter/*.c
+hotspotter/*.html
+hscom/*.c
+hsviz/*.c
 *.a
 *.a.*
 *.dll

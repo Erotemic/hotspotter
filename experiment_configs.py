@@ -120,8 +120,8 @@ overnight.update({
 
 overnight_huge = vsmany_best.copy()
 overnight_huge.update({
-    'K':                   [5, 7, 10],
-    'Knorm':               [1, 3, 5],
+    'K':                   [2, 5, 7, 10],
+    'Knorm':               [1, 3, 5, 10],
     'normalizer_rule':     ['name', 'last'],
     'use_adaptive_scale':  [False, True],
     #'scale_min': [0, 10, 20],

@@ -14,8 +14,7 @@ VALID_INT_TYPES = (types.IntType,
                    np.typeDict['uint8'],
                    np.dtype('int32'),
                    np.dtype('uint8'),
-                   np.dtype('int64'),
-                  )
+                   np.dtype('int64'),)
 
 VALID_FLOAT_TYPES = (types.FloatType,
                      np.typeDict['float64'],
@@ -23,8 +22,7 @@ VALID_FLOAT_TYPES = (types.FloatType,
                      np.typeDict['float16'],
                      np.dtype('float64'),
                      np.dtype('float32'),
-                     np.dtype('float16'),
-                    )
+                     np.dtype('float16'),)
 
 DEBUG = False
 
@@ -39,6 +37,15 @@ else:
 def index_of(item, array):
     'index of [item] in [array]'
     return np.where(array == item)[0][0]
+
+
+def override_comparison(func):
+    def cmp_wrapper(self, other):
+        if not isinstance(other, self.__class__):
+            return super(self.__class__, self) == other
+
+    cmp_wrapper.func_name = func.func_name
+    return cmp_wrapper
 
 
 def safe_listget(list_, index, func=lambda x: x, default='?'):

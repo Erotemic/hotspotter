@@ -276,22 +276,22 @@ class QueryConfig(ConfigBase):
 
     # Comparison operators for sorting and uniqueness
     def __lt__(self, other):
-        return self.get_uid().__lt__(other.get_uid())
+        return self.__hash__() < (other.__hash__())
 
     def __le__(self, other):
-        return self.get_uid().__le__(other.get_uid())
+        return self.__hash__() <= (other.__hash__())
 
     def __eq__(self, other):
-        return self.get_uid().__eq__(other.get_uid())
+        return self.__hash__() == (other.__hash__())
 
     def __ne__(self, other):
-        return self.get_uid().__ne__(other.get_uid())
+        return self.__hash__() != (other.__hash__())
 
     def __gt__(self, other):
-        return self.get_uid().__gt__(other.get_uid())
+        return self.__hash__() > (other.__hash__())
 
     def __ge__(self, other):
-        return self.get_uid().__ge__(other.get_uid())
+        return self.__hash__() >= (other.__hash__())
 
     def __hash__(self):
         return hash(self.get_uid())

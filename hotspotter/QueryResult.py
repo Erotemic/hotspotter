@@ -212,3 +212,24 @@ class QueryResult(DynStruct):
         from hsviz import interact
         cx = res.topN_cxs(hs, tx + 1)[tx]
         return interact.interact_chipres(hs, res, cx, **kwargs)
+
+    def show_nearest_descriptors(res, hs, qfx, dodraw=True):
+        from hsviz import viz
+        qcx = res.qcx
+        viz.show_nearest_descriptors(hs, qcx, qfx, fnum=None)
+        if dodraw:
+            viz.draw()
+
+    def get_match_index(res, hs, cx, qfx, strict=True):
+        qcx = res.qcx
+        fm = res.cx2_fm[cx]
+        mx_list = np.where(fm[:, 0] == qfx)[0]
+        if len(mx_list) != 1:
+            if strict:
+                raise IndexError('qfx=%r not found in query %s' %
+                                 (qfx, hs.vs_str(qcx, cx)))
+            else:
+                return None
+        else:
+            mx = mx_list[0]
+            return mx

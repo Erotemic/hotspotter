@@ -156,6 +156,8 @@ def behavior_argparse(parser2):
     parser2.add_flag('--verbose-cache')
     parser2.add_flag('--verbose-load')
     parser2.add_flag('--aggroflush', help='Agressively flushes')
+    parser2.add_flag(('--nomemory', '--nomem'), help='runs tests without' +
+                     'keeping results in memory')
 
 
 def cfg_argparse(parser2):

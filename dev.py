@@ -30,6 +30,7 @@ from hsviz import draw_func2 as df2
 from hsviz import viz
 from hsviz import allres_viz
 
+
 def dev_reload():
     print('===========================')
     print('[dev] performing dev_reload')
@@ -62,6 +63,31 @@ def dev_reload():
     print('---------------------------')
     print('[dev] finished dev_reload()')
     print('===========================')
+
+
+def all_printoff():
+    from hscom import fileio as io
+    from hotspotter import HotSpotterAPI as api
+    from hotspotter import load_data2 as ld2
+    from hotspotter import QueryResult as qr
+    from hotspotter import chip_compute2 as cc2
+    from hotspotter import feature_compute2 as fc2
+    cc2.print_off()
+    fc2.print_off()
+    ds.print_off()
+    mf.print_off()
+    io.print_off()
+    api.print_off()
+    mc3.print_off()
+    vr2.print_off()
+    ld2.print_off()
+    qr.print_off()
+    #algos.print_off()
+    #cc2.print_off()
+    #fc2.print_off()
+    #ld2.print_off()
+    #helpers.print_off()
+    #parallel.print_off()
 
 
 def history_entry(database='', cid=-1, ocids=[], notes='', cx=-1):
@@ -167,6 +193,24 @@ HISTORY = [
     #confused = []
     #occluded = [(64, 65), ]
     #return locals()
+
+
+def export_qon_list(hs, qcx_list):
+    " Populates the Notes field with test results "
+    print('[dev] Exporting query-object-notes to property tables')
+    if not hs.has_property('Notes'):
+        hs.add_property('Notes')
+    for qcx, ocxs, notes in qcx_list:
+        print('----')
+        old_prop = hs.get_property(qcx, 'Notes')
+        print('old = ' + old_prop)
+        print(notes)
+        if old_prop.find(notes) == -1:
+            new_prop = notes if old_prop == '' else old_prop + '; ' + notes
+            print('new: ' + new_prop)
+            hs.change_property(qcx, 'Notes', new_prop)
+        print(hs.get_property(qcx, 'Notes'))
+    hs.save_database()
 
 
 # Just put in PL
@@ -333,6 +377,7 @@ def plot_keypoint_scales(hs, fnum=1):
 
 
 def get_qcx_list(hs):
+    ''' Function for getting the list of queries to test '''
     print('[dev] get_qcx_list()')
     # Sample a large pool of query indexes
     histids = None if params.args.histid is None else np.array(params.args.histid)
@@ -638,47 +683,6 @@ def run_investigations(hs, qcx_list):
     if len(tests) > 0:
         raise Exception('Unknown tests: %r ' % tests)
 
-
-def export_qon_list(hs, qcx_list):
-    print('[dev] Exporting query-object-notes to property tables')
-    if not hs.has_property('Notes'):
-        hs.add_property('Notes')
-    for qcx, ocxs, notes in qcx_list:
-        print('----')
-        old_prop = hs.get_property(qcx, 'Notes')
-        print('old = ' + old_prop)
-        print(notes)
-        if old_prop.find(notes) == -1:
-            new_prop = notes if old_prop == '' else old_prop + '; ' + notes
-            print('new: ' + new_prop)
-            hs.change_property(qcx, 'Notes', new_prop)
-        print(hs.get_property(qcx, 'Notes'))
-    hs.save_database()
-
-
-def all_printoff():
-    from hscom import fileio as io
-    from hotspotter import HotSpotterAPI as api
-    from hotspotter import load_data2 as ld2
-    from hotspotter import QueryResult as qr
-    from hotspotter import chip_compute2 as cc2
-    from hotspotter import feature_compute2 as fc2
-    cc2.print_off()
-    fc2.print_off()
-    ds.print_off()
-    mf.print_off()
-    io.print_off()
-    api.print_off()
-    mc3.print_off()
-    vr2.print_off()
-    ld2.print_off()
-    qr.print_off()
-    #algos.print_off()
-    #cc2.print_off()
-    #fc2.print_off()
-    #ld2.print_off()
-    #helpers.print_off()
-    #parallel.print_off()
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

@@ -27,7 +27,7 @@ def ensure_nn_index(hs, qdat, dcxs):
         data_index = ds.NNIndex(hs, dcxs)
         qdat._dcxs2_index[dcxs_uid] = data_index
     else:
-        print('[mc3] qdat._data_index[dcxs_uid]... nn_index cache hit')
+        print('[mc3] qdat._data_index[dcxs_uid]... cache hit')
     qdat._data_index = qdat._dcxs2_index[dcxs_uid]
 
 
@@ -125,7 +125,6 @@ def prepare_query(qdat, qcxs, dcxs):
 @profile
 def execute_query_safe(hs, qdat, qcxs, dcxs, use_cache=True):
     '''Executes a query, performs all checks, callable on-the-fly'''
-    print('[mc3] Execute query: q%s' % hs.cidstr(qcxs))
     qcxs, dcxs = prepare_query(qdat, qcxs, dcxs)
     # caching
     if not params.args.nocache_query and use_cache:

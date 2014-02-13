@@ -226,6 +226,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     uid2_query_cfg = {}
 
+    nomemory = params.args.nomemory
+
     # Run each test configuration
     # Query Config / Col Loop
     for cfgx, query_cfg in enumerate(cfg_list):
@@ -241,6 +243,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,
                                                       nCfg, _nocache_testres,
                                                       test_results_verbosity)
+        if nomemory:
+            continue
         # Store the results
         mat_list.append(qx2_bestranks)
         for qx, reslist in enumerate(qx2_reslist):
@@ -254,6 +258,9 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('------')
     print('[harn] Finished testing parameters')
     print('---------------------------------')
+    if nomemory:
+        print('ran tests in memory savings mode. exiting')
+        return
     #--------------------
     # Print Best Results
     rank_mat = np.hstack(mat_list)
@@ -340,6 +347,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             minimizing_cfg_str = indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    ')
             #minimizing_cfg_str = str(bestCFG_X)
 
+            print('-------')
             print(qx2_lbl[qx])
             print(' best_rank = %d ' % min_rank)
             if len(cfgx2_lbl) != 1:
@@ -496,7 +504,11 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     def print_rankmat():
         print('')
         print('[harn]-------------')
-        print('[harn] labled rank matrix: rows=queries, cols=cfgs:\n%s' % lbld_mat)
+        print('[harn] nRows=%r, nCols=%r' % lbld_mat.shape)
+        print('[harn] labled rank matrix: rows=queries, cols=cfgs:')
+        #np.set_printoptions(threshold=5000, linewidth=5000, precision=5)
+        with helpers.NpPrintOpts(threshold=5000, linewidth=5000, precision=5):
+            print(lbld_mat)
         print('[harn]-------------')
     print_rankmat()
 
@@ -528,7 +540,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('--- /SUMMARY ---')
 
     print('')
-    print('--remember you have --sel-rows and --sel-cols available to you')
+    print('--remember to inspect with --sel-rows (-r) and --sel-cols (-c) ')
 
 #if __name__ == '__main__':
     #import multiprocessing

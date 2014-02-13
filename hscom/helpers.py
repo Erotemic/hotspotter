@@ -1842,6 +1842,16 @@ def printvar2(varstr, attr=''):
     printvar(locals_, varstr, attr)
 
 
+class NpPrintOpts(object):
+    def __init__(self, **kwargs):
+        self.orig_opts = np.get_printoptions()
+        self.new_opts = kwargs
+    def __enter__(self):
+        np.set_printoptions(**self.new_opts)
+    def __exit__(self, type, value, trace):
+        np.set_printoptions(**self.orig_opts)
+
+
 def printvar(locals_, varname, attr='.shape'):
     import tools
     npprintopts = np.get_printoptions()

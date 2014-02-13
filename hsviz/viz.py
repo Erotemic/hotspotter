@@ -538,7 +538,7 @@ def res_show_analysis(res, hs, **kwargs):
                     figtitle = 'WARNING: no top scores!' + hs.cidstr(res.qcx)
                 else:
                     topscore = res.get_cx2_score()[topN_cxs][0]
-                    figtitle = ('topscore=%r -- q%s' % (topscore, hs.cidstr(res.qcx)))
+                    figtitle = ('q%s -- topscore=%r' % (hs.cidstr(res.qcx), topscore))
         else:
             print('[viz.analysis] showing a given list of cxs')
             topN_cxs = cx_list
@@ -564,6 +564,7 @@ def _show_res(hs, res, **kwargs):
     annote     = kwargs.pop('annote', 2)  # this is toggled
     fnum       = kwargs.get('fnum', 3)
     figtitle   = kwargs.get('figtitle', '')
+    aug        = kwargs.get('aug', '')
     topN_cxs   = kwargs.get('topN_cxs', [])
     gt_cxs     = kwargs.get('gt_cxs',   [])
     all_kpts   = kwargs.get('all_kpts', False)
@@ -690,7 +691,8 @@ def _show_res(hs, res, **kwargs):
     # Plot Ground Truth
     _plot_matches_cxs(gt_cxs, nQuerySubplts, (nRows, nGTCols))
     _plot_matches_cxs(topN_cxs, shift_topN, (nRows, nTopNCols))
-    figtitle += ' q%s name=%s' % (hs.cidstr(res.qcx), hs.cx2_name(res.qcx))
+    #figtitle += ' q%s name=%s' % (hs.cidstr(res.qcx), hs.cx2_name(res.qcx))
+    figtitle += aug
     df2.set_figtitle(figtitle, incanvas=not NO_LABEL_OVERRIDE)
 
     # Result Interaction
@@ -804,9 +806,10 @@ def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None,
     ax._hs_viewtype = 'histogram'
     if prevsift is not None:
         from hotspotter import algos
-        dist_list = ['L1', 'L2', 'hist_isect', 'emd']
+        #dist_list = ['L1', 'L2', 'hist_isect', 'emd']
+        dist_list = ['L2', 'hist_isect']
         distmap = algos.compute_distances(sift, prevsift, dist_list)
-        dist_str = ', '.join(['(%s, %.1E)' % (key, val) for key, val in distmap.iteritems()])
+        dist_str = ', '.join(['(%s, %.2E)' % (key, val) for key, val in distmap.iteritems()])
         df2.set_xlabel(dist_str)
     return px + nCols
 
@@ -817,12 +820,19 @@ def show_nearest_descriptors(hs, qcx, qfx, fnum=None):
     if fnum is None:
         fnum = df2.next_fnum()
     # Inspect the nearest neighbors of a descriptor
-    dx2_cx = hs.qdat._data_index.ax2_cx
-    dx2_fx = hs.qdat._data_index.ax2_fx
+    dcxs = hs.get_indexed_sample()
+    qdat = hs.qdat
+    from hotspotter import match_chips3 as mc3
+    mc3.ensure_nn_index(hs, qdat, dcxs)
+    data_index = hs.qdat._data_index
+    if data_index is None:
+        pass
+    dx2_cx = data_index.ax2_cx
+    dx2_fx = data_index.ax2_fx
+    flann  = data_index.flann
     K      = hs.qdat.cfg.nn_cfg.K
     Knorm  = hs.qdat.cfg.nn_cfg.Knorm
     checks = hs.qdat.cfg.nn_cfg.checks
-    flann  = hs.qdat._data_index.flann
     qfx2_desc = hs.get_desc(qcx)[qfx:qfx + 1]
 
     try:

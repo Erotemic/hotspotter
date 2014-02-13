@@ -102,13 +102,16 @@ def commands_argparse(parser2):
     parser2.add_intlist('--selcxs', default=[], help='chip indexes to view')
     parser2.add_intlist('--selnxs', default=[], help='name indexes to view')
     parser2.add_intlist('--txs', default=[], help='investigate match to top x of querys')
+    parser2.add_intlist('--cxs', default=[], help='investigate match cx')
+    parser2.add_intlist('--qfxs', default=[], help='investigate match to cx via qfxs')
     parser2.add_int('--qcid', help='query chip-id to investigate', nargs='*')
     parser2.add_intlist('--ocid', help='query chip-id to investigate')
     parser2.add_int('--histid', help='history id (hard cases)')
     parser2.add_intlist(('--sel-rows', '-r'), help='view row')
     parser2.add_intlist(('--sel-cols', '-c'), help='view col')
+    parser2.add_flag('--view-all', help='view all')
     parser2.add_flag('--nopresent')
-    parser2.add_flag('--save-figures')
+    parser2.add_flag(('--save-figures', '--dump'))
     parser2.add_flag('--noannote')
     parser2.add_flag('--quiet')
 
@@ -156,6 +159,8 @@ def behavior_argparse(parser2):
     parser2.add_flag('--verbose-cache')
     parser2.add_flag('--verbose-load')
     parser2.add_flag('--aggroflush', help='Agressively flushes')
+    parser2.add_flag(('--nomemory', '--nomem'), help='runs tests without' +
+                     'keeping results in memory')
 
 
 def cfg_argparse(parser2):

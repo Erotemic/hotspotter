@@ -9,6 +9,26 @@ ConfigBase = Pref
 #ConfigBase = DynStruct
 
 
+def make_feasible(query_cfg):
+    '''
+    removes invalid parameter settings over all cfgs (move to QueryConfig)
+    '''
+    filt_cfg = query_cfg.filt_cfg
+    nn_cfg   = query_cfg.nn_cfg
+
+    # Ensure the list of on filters is valid given the weight and thresh
+    if filt_cfg.ratio_thresh <= 1:
+        filt_cfg.ratio_thresh = None
+    if filt_cfg.roidist_thresh >= 1:
+        filt_cfg.roidist_thresh = None
+    if filt_cfg.bursty_thresh   <= 1:
+        filt_cfg.bursty_thresh = None
+
+    # normalizer rule depends on Knorm
+    if nn_cfg.Knorm == 1:
+        nn_cfg.normalizer_rule = 'last'
+
+
 class NNConfig(ConfigBase):
     def __init__(nn_cfg, **kwargs):
         super(NNConfig, nn_cfg).__init__()
@@ -86,18 +106,6 @@ class FilterConfig(ConfigBase):
             if conditions_ok and depends_ok:
                 active_filters.append(filt)
         return active_filters
-
-    def make_feasible(filt_cfg, query_cfg):
-        '''
-        removes invalid parameter settings over all cfgs (move to QueryConfig)
-        '''
-        # Ensure the list of on filters is valid given the weight and thresh
-        if filt_cfg.ratio_thresh <= 1:
-            filt_cfg.ratio_thresh = None
-        if filt_cfg.roidist_thresh >= 1:
-            filt_cfg.roidist_thresh = None
-        if filt_cfg.bursty_thresh   <= 1:
-            filt_cfg.bursty_thresh = None
 
     def get_uid_list(filt_cfg):
         if not filt_cfg.filt_on:
@@ -228,6 +236,8 @@ class QueryConfig(ConfigBase):
             query_cfg.update_cfg(**kwargs)
 
     def update_cfg(query_cfg, **kwargs):
+        # Each config paramater should be unique
+        # So updating them all should not cause conflicts
         query_cfg._feat_cfg.update(**kwargs)
         query_cfg._feat_cfg._chip_cfg.update(**kwargs)
         query_cfg.nn_cfg.update(**kwargs)
@@ -235,11 +245,17 @@ class QueryConfig(ConfigBase):
         query_cfg.sv_cfg.update(**kwargs)
         query_cfg.agg_cfg.update(**kwargs)
         query_cfg.update(**kwargs)
-        query_cfg.filt_cfg.make_feasible(query_cfg)
+        # Ensure feasibility of the configuration
+        make_feasible(query_cfg)
 
     def get_uid_list(query_cfg, *args, **kwargs):
         if query_cfg._feat_cfg is None:
             raise Exception('Feat / chip config is required')
+
+        # Ensure feasibility of the configuration
+        make_feasible(query_cfg)
+
+        # Build uid
         uid_list = []
         if not 'noNN' in args:
             uid_list += query_cfg.nn_cfg.get_uid_list(**kwargs)
@@ -257,6 +273,28 @@ class QueryConfig(ConfigBase):
         uid_list = query_cfg.get_uid_list(*args, **kwargs)
         uid = ''.join(uid_list)
         return uid
+
+    # Comparison operators for sorting and uniqueness
+    def __lt__(self, other):
+        return self.__hash__() < (other.__hash__())
+
+    def __le__(self, other):
+        return self.__hash__() <= (other.__hash__())
+
+    def __eq__(self, other):
+        return self.__hash__() == (other.__hash__())
+
+    def __ne__(self, other):
+        return self.__hash__() != (other.__hash__())
+
+    def __gt__(self, other):
+        return self.__hash__() > (other.__hash__())
+
+    def __ge__(self, other):
+        return self.__hash__() >= (other.__hash__())
+
+    def __hash__(self):
+        return hash(self.get_uid())
 
 
 class FeatureConfig(ConfigBase):

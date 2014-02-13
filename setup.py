@@ -164,6 +164,7 @@ def clean():
     for hsmod in hsmod_list:
         helpers.remove_files_in_dir(join(cwd, hsmod), '*.so', recursive=False)
         helpers.remove_files_in_dir(join(cwd, hsmod), '*.c', recursive=False)
+        helpers.remove_files_in_dir(join(cwd, hsmod), '*.pyx', recursive=False)
     # Remove pyinstaller temp files
     clean_pyinstaller()
     # Remove latex temp files
@@ -350,27 +351,39 @@ def compile_cython(fpath):
     gcc_flags = ' '.join(['-shared', '-pthread', '-fPIC', '-fwrapv', '-O2',
                           '-Wall', '-fno-strict-aliasing', pyinclude])
     fname, ext = splitext(fpath)
+    # Prefer pyx over py
+    if exists(fname + '.pyx'):
+        fpath = fname + '.pyx'
     fname_so = fname + '.so'
     fname_c  = fname + '.c'
-    _cmd('cython ' + fpath)
-    _cmd('gcc ' + gcc_flags + ' -o ' + fname_so + ' ' + fname_c)
+    out, err, ret = _cmd('cython ' + fpath)
+    if ret == 0:
+        out, err, ret = _cmd('gcc ' + gcc_flags + ' -o ' + fname_so + ' ' + fname_c)
+    return ret
+
+
+def inspect_cython_typness(fpath):
+    from hscom import cross_platform as cplat
+    _cmd('cython -a ' + fpath)
+    html_fpath = splitext(fpath)[0] + '.html'
+    cplat.startfile(html_fpath)
 
 
 def build_cython():
     # Sorted roughly by importance (how slow the module is)
     # Critical Section
     compile_cython('hotspotter/spatial_verification2.py')
-    compile_cython('hotspotter/matching_functions.py')
+    #compile_cython('hotspotter/matching_functions.py')
     compile_cython('hotspotter/nn_filters.py')
     compile_cython('hotspotter/algos.py')
-    compile_cython('hotspotter/match_chips3.py')
+    #compile_cython('hotspotter/match_chips3.py')
 
     # Cannot cython this file
     #compile_cython('hstpl/extern_feat/pyhesaff.py')
 
-    compile_cython('hsviz/draw_func2.py')
-    compile_cython('hsviz/viz.py')
-    compile_cython('hsviz/interact.py')
+    #compile_cython('hsviz/draw_func2.py')
+    #compile_cython('hsviz/viz.py')
+    #compile_cython('hsviz/interact.py')
 
     #
     compile_cython('hscom/__common__.py')

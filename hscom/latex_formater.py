@@ -33,7 +33,7 @@ def latex_multirow(data, nrow=2):
 
 def latex_mystats(lbl, data):
     stats_ = helpers.mystats(data)
-    min_, max_, mean, std, shape = stats_.values()
+    min_, max_, mean, std, nMin, nMax, shape = stats_.values()
     fmttup1 = (int(min_), int(max_), float(mean), float(std))
     fmttup = tuple(map(helpers.num_fmt, fmttup1))
     lll = ' ' * len(lbl)

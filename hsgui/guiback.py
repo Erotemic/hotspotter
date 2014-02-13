@@ -472,20 +472,21 @@ class MainWindowBackend(QtCore.QObject):
     @slot_(int)
     @blocking
     @profile
-    def select_gx(back, gx, cx=None, **kwargs):
+    def select_gx(back, gx, cx=None, show=True, **kwargs):
         # Table Click -> Image Table
         autoselect_chips = False
         if autoselect_chips and cx is None:
             cxs = back.hs.gx2_cxs(gx)
             if len(cxs > 0):
                 cx = cxs[0]
-        if cx is None:
-            back.show_splash(2, 'Chip', dodraw=False)
-        else:
-            back.show_chip(cx, dodraw=False)
         sel_cxs = [] if cx is None else [cx]
         back.selection = {'type_': 'gx', 'index': gx, 'sub': cx}
-        back.show_image(gx, sel_cxs, **kwargs)
+        if show:
+            if cx is None:
+                back.show_splash(2, 'Chip', dodraw=False)
+            else:
+                back.show_chip(cx, dodraw=False)
+            back.show_image(gx, sel_cxs, **kwargs)
 
     @slot_(int)
     def select_cid(back, cid, **kwargs):
@@ -975,8 +976,8 @@ class MainWindowBackend(QtCore.QObject):
         front = back.front
         wasBlocked = front.blockSignals(True)
         devmode = True  # NOQA
-        print(helpers.indent(str(hs), '[*back.hs] '))
-        rrr()
+        #print(helpers.indent(str(hs), '[*back.hs] '))
+        #rrr()
         print(r'[\back] finished dev_help')
         #app = back.app
         #from PyQt4 import QtGui

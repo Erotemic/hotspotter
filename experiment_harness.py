@@ -174,7 +174,14 @@ def get_cfg_list(hs, test_cfg_name_list):
         cfg_list = [hs.prefs.query_cfg]
         return cfg_list
     varied_params_list = get_varied_params_list(test_cfg_name_list)
-    cfg_list = [Config.QueryConfig(**_dict) for _dict in varied_params_list]
+    # Add unique configs to the list
+    cfg_list = []
+    cfg_set = set([])
+    for _dict in varied_params_list:
+        cfg = Config.QueryConfig(**_dict)
+        if not cfg in cfg_set:
+            cfg_list.append(cfg)
+            cfg_set.add(cfg)
     return cfg_list
 
 
@@ -202,7 +209,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     sel_rows = [] if sel_rows is None else sel_rows
     nCfg     = len(cfg_list)
     nQuery   = len(qcx_list)
-    rc2_res  = np.empty((nQuery, nCfg), dtype=list)  # row/col -> result
+    #rc2_res  = np.empty((nQuery, nCfg), dtype=list)  # row/col -> result
     mat_list = []
     qdat     = ds.QueryData()
 
@@ -219,6 +226,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     uid2_query_cfg = {}
 
+    nomemory = params.args.nomemory
+
     # Run each test configuration
     # Query Config / Col Loop
     for cfgx, query_cfg in enumerate(cfg_list):
@@ -226,27 +235,32 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         # Set data to the current config
         #print(query_cfg.get_printable())
         qdat.set_cfg(query_cfg, hs=hs)
-        _nocache_testres = nocache_testres or (cfgx in sel_cols)
+        #_nocache_testres = nocache_testres or (cfgx in sel_cols)
         dcxs = hs.get_indexed_sample()
         mc3.prepare_query(qdat, None, dcxs)
         uid2_query_cfg[qdat.get_uid()] = query_cfg
         # Run the test / read cache
         qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,
-                                                      nCfg, _nocache_testres,
+                                                      nCfg, nocache_testres,
                                                       test_results_verbosity)
+        if nomemory:
+            continue
         # Store the results
         mat_list.append(qx2_bestranks)
-        for qx, reslist in enumerate(qx2_reslist):
-            assert len(reslist) == 1
-            qcx2_res = reslist[0]
-            assert len(qcx2_res) == 1
-            res = qcx2_res.values()[0]
-            rc2_res[qx, cfgx] = res
+        #for qx, reslist in enumerate(qx2_reslist):
+            #assert len(reslist) == 1
+            #qcx2_res = reslist[0]
+            #assert len(qcx2_res) == 1
+            #res = qcx2_res.values()[0]
+            #rc2_res[qx, cfgx] = res
 
     print('')
     print('------')
     print('[harn] Finished testing parameters')
     print('---------------------------------')
+    if nomemory:
+        print('ran tests in memory savings mode. exiting')
+        return
     #--------------------
     # Print Best Results
     rank_mat = np.hstack(mat_list)
@@ -333,6 +347,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             minimizing_cfg_str = indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    ')
             #minimizing_cfg_str = str(bestCFG_X)
 
+            print('-------')
             print(qx2_lbl[qx])
             print(' best_rank = %d ' % min_rank)
             if len(cfgx2_lbl) != 1:
@@ -489,7 +504,11 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     def print_rankmat():
         print('')
         print('[harn]-------------')
-        print('[harn] labled rank matrix: rows=queries, cols=cfgs:\n%s' % lbld_mat)
+        print('[harn] nRows=%r, nCols=%r' % lbld_mat.shape)
+        print('[harn] labled rank matrix: rows=queries, cols=cfgs:')
+        #np.set_printoptions(threshold=5000, linewidth=5000, precision=5)
+        with helpers.NpPrintOpts(threshold=5000, linewidth=5000, precision=5):
+            print(lbld_mat)
         print('[harn]-------------')
     print_rankmat()
 
@@ -499,29 +518,42 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('[col_score] SUMMARY        ')
     print('===========================')
     print('\n'.join(best_rankscore_summary))
-    # Draw results
-    rciter = itertools.product(sel_rows, sel_cols)
-    #print(rc2_res)
-    for r, c in rciter:
-        print('--------')
-        print('viewing (r,c)=(%r,%r)' % (r, c))
-        res = rc2_res[r, c]
-        print(res.uid)
-        print(res.true_uid)
-        print(type(res.true_uid))
-        for key in uid2_query_cfg.keys():
-            print(key)
-            print(key == res.true_uid)
-            print(type(key))
-        query_cfg = uid2_query_cfg[res.true_uid]
-        print(query_cfg)
-        #res.printme()
-        res.show_top(hs, fnum=fnum)
-        fnum += 1
     print('--- /SUMMARY ---')
 
-    print('')
-    print('--remember you have --sel-rows and --sel-cols available to you')
+    # Draw results
+    print('remember to inspect with --sel-rows (-r) and --sel-cols (-c) ')
+    if len(sel_rows) > 0 and len(sel_cols) == 0:
+        sel_cols = range(len(cfg_list))
+    if params.args.view_all:
+        sel_rows = range(len(qcx_list))
+        sel_cols = range(len(cfg_list))
+    sel_cols = list(sel_cols)
+    sel_rows = list(sel_rows)
+    total = len(sel_cols) * len(sel_rows)
+    rciter = itertools.product(sel_rows, sel_cols)
+
+    for count, (r, c) in enumerate(rciter):
+        # Get row and column index
+        qcx       = qcx_list[r]
+        query_cfg = cfg_list[c]
+        print('--------')
+        print('viewing %d / %d' % (count + 1, total))
+        print('viewing (r, c) = (%r, %r)' % (r, c))
+        # Load / Execute the query
+        qdat.set_cfg(query_cfg, hs=hs)
+        mc3.prepare_query(qdat, None, dcxs)
+        res_list = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
+        res = res_list[0][qcx]
+        # Print Query UID
+        print(res.true_uid)
+        # Draw Result
+        #res.show_top(hs, fnum=fnum)
+        res.show_analysis(hs, fnum=fnum, aug='\n' + res.true_uid, annote=1)
+        if params.args.save_figures:
+            from hsviz import allres_viz
+            allres_viz.dump(hs, 'analysis', quality=True, overwrite=True)
+        fnum += 1
+
 
 #if __name__ == '__main__':
     #import multiprocessing

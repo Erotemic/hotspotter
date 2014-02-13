@@ -57,11 +57,24 @@ def postload_args_process(hs, back):
     # Run a query
     qcid_list = params.args.query
     tx_list = params.args.txs
+    qfx_list = params.args.qfxs
+    cx_list = params.args.cxs
     res = None
     if len(qcid_list) > 0:
         qcid = qcid_list[0]
         tx = tx_list[0] if len(tx_list) > 0 else None
         res = back.query(qcid, tx)
+        back.select_cid(qcid, show=False)
+        if len(cx_list) > 0:
+            cx = cx_list[0]
+            if len(qfx_list) > 0:
+                qfx = qfx_list[0]
+                mx = res.get_match_index(hs, cx, qfx)
+                res.interact_chipres(hs, cx, fnum=4, mx=mx)
+                res.show_nearest_descriptors(hs, qfx)
+            else:
+                res.interact_chipres(hs, cx, fnum=4)
+
     selgxs = params.args.selgxs
     if len(selgxs) > 0:
         back.select_gx(selgxs[0])

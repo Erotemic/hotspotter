@@ -95,12 +95,24 @@ def __browse():
 
 
 def __dump(hs, subdir):
+    dump(hs, subdir)
+
+
+def dump(hs, subdir=None, quality=False, overwrite=False):
+    if quality is True:
+        df2.FIGSIZE = df2.FIGSIZE_GOLD
+        df2.DPI = 120
+        df2.FONTS.figtitle = df2.FONTS.small
+    if quality is False:
+        df2.FIGSIZE = df2.golden_wh2(8)
+        df2.DPI = 90
+        df2.FONTS.figtitle = df2.FONTS.smaller
     #print('[viz] Dumping Image')
     fpath = hs.dirs.result_dir
-    if not subdir is None:
+    if subdir is not None:
         fpath = join(fpath, subdir)
         helpers.ensurepath(fpath)
-    df2.save_figure(fpath=fpath, usetitle=True)
+    df2.save_figure(fpath=fpath, usetitle=True, overwrite=overwrite)
     df2.reset()
 
 

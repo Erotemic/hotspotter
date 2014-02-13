@@ -69,7 +69,8 @@ FONTS.legend   = FONTS.small
 FONTS.figtitle = FONTS.med
 FONTS.axtitle  = FONTS.med
 FONTS.subtitle = FONTS.med
-FONTS.xlabel   = FONTS.smaller
+#FONTS.xlabel   = FONTS.smaller
+FONTS.xlabel   = FONTS.small
 FONTS.ylabel   = FONTS.small
 FONTS.relative = FONTS.smaller
 
@@ -92,13 +93,29 @@ DARK_YELLOW  = np.array((127,  127,   0, 255)) / 255.0
 PURPLE = np.array((102,   0, 153, 255)) / 255.0
 UNKNOWN_PURP = PURPLE
 
-# FIGURE GEOMETRY
 
+# GOLDEN RATIOS
+PHI_numer = 1 + np.sqrt(5)
+PHI_denom = 2.0
+PHI = PHI_numer / PHI_denom
+
+
+def golden_wh2(sz):
+    return (PHI * sz, sz)
+
+
+def golden_wh(x):
+    'returns a width / height with a golden aspect ratio'
+    return map(int, map(round, (x * .618, x * .312)))
+
+
+# FIGURE GEOMETRY
 DPI = 80
 #DPI = 160
 #FIGSIZE = (24) # default windows fullscreen
 FIGSIZE_MED = (12, 6)
 FIGSIZE_SQUARE = (12, 12)
+FIGSIZE_GOLD = golden_wh2(8)
 FIGSIZE_BIGGER = (24, 12)
 FIGSIZE_HUGE = (32, 16)
 
@@ -288,25 +305,6 @@ def draw_roi(roi, label=None, bbox_color=(1, 0, 0),
 
 
 # ---- GENERAL FIGURE COMMANDS ----
-def sanatize_img_fname(fname):
-    fname_clean = fname
-    search_replace_list = [(' ', '_'), ('\n', '--'), ('\\', ''), ('/', '')]
-    for old, new in search_replace_list:
-        fname_clean = fname_clean.replace(old, new)
-    fname_noext, ext = splitext(fname_clean)
-    fname_clean = fname_noext + ext.lower()
-    # Check for correct extensions
-    if not ext.lower() in helpers.IMG_EXTENSIONS:
-        fname_clean += '.png'
-    return fname_clean
-
-
-def sanatize_img_fpath(fpath):
-    [dpath, fname] = split(fpath)
-    fname_clean = sanatize_img_fname(fname)
-    fpath_clean = join(dpath, fname_clean)
-    fpath_clean = normpath(fpath_clean)
-    return fpath_clean
 
 
 def set_geometry(fnum, x, y, w, h):
@@ -377,11 +375,6 @@ def get_monitor_geom(monitor_num=0):
     rect = desktop.availableGeometry()
     geom = (rect.x(), rect.y(), rect.width(), rect.height())
     return geom
-
-
-def golden_wh(x):
-    'returns a width / height with a golden aspect ratio'
-    return map(int, map(round, (x * .618, x * .312)))
 
 
 def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
@@ -520,10 +513,8 @@ def present(*args, **kwargs):
     return execstr
 
 
-def save_figure(fnum=None, fpath=None, usetitle=False, overwrite=True):
-    #import warnings
-    #warnings.simplefilter("error")
-    # Find the figure
+def prepare_figure_for_save(fnum):
+    # Resizes the figure for quality saving
     if fnum is None:
         fig = gcf()
     else:
@@ -531,6 +522,31 @@ def save_figure(fnum=None, fpath=None, usetitle=False, overwrite=True):
     # Enforce inches and DPI
     fig.set_size_inches(FIGSIZE[0], FIGSIZE[1])
     fnum = fig.number
+    return fig, fnum
+
+
+def sanatize_img_fname(fname, defaultext='.jpg'):
+    fname_clean = fname
+    search_replace_list = [(' ', '_'), ('\n', '--'), ('\\', ''), ('/', '')]
+    for old, new in search_replace_list:
+        fname_clean = fname_clean.replace(old, new)
+    fname_noext, ext = splitext(fname_clean)
+    fname_clean = fname_noext + ext.lower()
+    # Check for correct extensions
+    if not ext.lower() in helpers.IMG_EXTENSIONS:
+        fname_clean += defaultext
+    return fname_clean
+
+
+def sanatize_img_fpath(fpath, defaultext):
+    [dpath, fname] = split(fpath)
+    fname_clean = sanatize_img_fname(fname, defaultext)
+    fpath_clean = join(dpath, fname_clean)
+    fpath_clean = normpath(fpath_clean)
+    return fpath_clean
+
+
+def prepare_figure_fpath(fig, fpath, fnum, usetitle, defaultext):
     if fpath is None:
         # Find the title
         fpath = sanatize_img_fname(fig.canvas.get_window_title())
@@ -542,14 +558,23 @@ def save_figure(fnum=None, fpath=None, usetitle=False, overwrite=True):
     size_suffix = '_DPI=%r_FIGSIZE=%d,%d' % (DPI, FIGSIZE[0], FIGSIZE[1])
     fpath = fpath_noext + size_suffix + ext
     # Sanatize the filename
-    fpath_clean = sanatize_img_fpath(fpath)
+    fpath_clean = sanatize_img_fpath(fpath, defaultext)
+    return fpath_clean
+
+
+def save_figure(fnum=None, fpath=None, usetitle=False, overwrite=True,
+                defaultext='.jpg'):
+    fig, fnum = prepare_figure_for_save(fnum)
+    fpath_clean = prepare_figure_fpath(fig, fpath, fnum, usetitle, defaultext)
     #fname_clean = split(fpath_clean)[1]
-    print('[df2] save_figure() %r' % (fpath_clean,))
     #adjust_subplots()
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=DeprecationWarning)
-        if not exists(fpath_clean) or overwrite:
+        if overwrite or not exists(fpath_clean):
+            print('[df2] save_figure() %r' % (fpath_clean,))
             fig.savefig(fpath_clean, dpi=DPI)
+        else:
+            print('[df2] not overwriteing')
 
 
 def set_ticks(xticks, yticks):
@@ -745,12 +770,13 @@ def set_figtitle(figtitle, subtitle='', forcefignum=True, incanvas=True):
     if incanvas:
         if subtitle != '':
             subtitle = '\n' + subtitle
-        fig.suptitle(figtitle + subtitle, fontsize=14, fontweight='bold')
-        #fig.suptitle(figtitle, x=.5, y=.98, fontproperties=FONTS.figtitle)
+        #fig.suptitle(figtitle + subtitle, fontsize=14, fontweight='bold')
+        fig.suptitle(figtitle + subtitle, fontproperties=FONTS.figtitle)
         #fig_relative_text(.5, .96, subtitle, fontproperties=FONTS.subtitle)
     else:
         fig.suptitle('')
     window_figtitle = ('fig(%d) ' % fig.number) + figtitle
+    window_figtitle = window_figtitle.replace('\n', ' ')
     fig.canvas.set_window_title(window_figtitle)
 
 

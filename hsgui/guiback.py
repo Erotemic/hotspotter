@@ -105,8 +105,8 @@ def make_main_window(app=None, hs=None):
 
 
 def _dev_reload(back):
-    import debug_gui
-    debug_gui.reload_all_modules()
+    from hsdev import dev_reload
+    dev_reload.reload_all_modules()
     df2.unregister_qt4_win('all')
     df2.register_qt4_win(back.front)
     back.populate_tables()

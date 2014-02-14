@@ -9,7 +9,6 @@ from hscom import __common__
 import matplotlib
 matplotlib.use('Qt4Agg')
 # Standard
-import textwrap
 import sys
 from os.path import join
 import multiprocessing
@@ -25,7 +24,7 @@ from hotspotter import report_results2 as rr2
 from hotspotter import voting_rules2 as vr2
 from hscom import params
 from hscom import helpers
-from hscom import latex_formater as pytex
+from hscom import latex_formater
 from hsviz import draw_func2 as df2
 from hsviz import viz
 from hsviz import allres_viz
@@ -350,12 +349,12 @@ def plot_keypoint_scales(hs, fnum=1):
     print('[dev] --- LaTeX --- ')
     _printopts = np.get_printoptions()
     np.set_printoptions(precision=3)
-    print(pytex.latex_scalar(r'\# keypoints, ', len(kpts)))
-    print(pytex.latex_mystats(r'\# keypoints per image', cx2_nFeats))
+    print(latex_formater.latex_scalar(r'\# keypoints, ', len(kpts)))
+    print(latex_formater.latex_mystats(r'\# keypoints per image', cx2_nFeats))
     acd = kpts[:, 2:5].T
     scales = np.sqrt(acd[0] * acd[2])
     scales = np.array(sorted(scales))
-    print(pytex.latex_mystats(r'keypoint scale', scales))
+    print(latex_formater.latex_mystats(r'keypoint scale', scales))
     np.set_printoptions(**_printopts)
     print('[dev] ---/LaTeX --- ')
     #
@@ -471,68 +470,12 @@ def intestigate_keypoint_interaction(hs, qcx_list, fnum=1, **kwargs):
     return fnum
 
 
-def dbstats(hs):
-    from hotspotter import db_info
-    # Chip / Name / Image stats
-    dbinfo_locals = db_info.db_info(hs)
-    db_name = hs.get_db_name(True)
-    #num_images = dbinfo_locals['num_images']
-    num_chips = dbinfo_locals['num_chips']
-    num_names = len(dbinfo_locals['valid_nxs'])
-    num_singlenames = len(dbinfo_locals['singleton_nxs'])
-    num_multinames = len(dbinfo_locals['multiton_nxs'])
-    num_multichips = len(dbinfo_locals['multiton_cxs'])
-    multiton_nx2_nchips = dbinfo_locals['multiton_nx2_nchips']
-
-    #tex_nImage = pytex.latex_scalar(r'\# images', num_images)
-    tex_nChip = pytex.latex_scalar(r'\# chips', num_chips)
-    tex_nName = pytex.latex_scalar(r'\# names', num_names)
-    tex_nSingleName = pytex.latex_scalar(r'\# singlenames', num_singlenames)
-    tex_nMultiName  = pytex.latex_scalar(r'\# multinames', num_multinames)
-    tex_nMultiChip  = pytex.latex_scalar(r'\# multichips', num_multichips)
-    tex_multi_stats = pytex.latex_mystats(r'\# multistats', multiton_nx2_nchips)
-
-    tex_kpts_scale_thresh = pytex.latex_multicolumn('Scale Threshold (%d %d)' %
-                                                    (hs.prefs.feat_cfg.scale_min,
-                                                     hs.prefs.feat_cfg.scale_max)) + r'\\' + '\n'
-
-    (tex_nKpts, tex_kpts_stats, tex_scale_stats) = db_info.get_keypoint_stats(hs)
-    tex_title = pytex.latex_multicolumn(db_name + ' database statistics') + r'\\' + '\n'
-    dedent = textwrap.dedent
-
-    tabular_head = dedent(r'''
-    \begin{tabular}{|l|l|}
-    ''')
-    tabular_tail = dedent(r'''
-    \end{tabular}
-    ''')
-    hline = ''.join([r'\hline', '\n'])
-    tabular_body_list = [
-        tex_title,
-        tex_nChip,
-        tex_nName,
-        tex_nSingleName,
-        tex_nMultiName,
-        tex_nMultiChip,
-        tex_multi_stats,
-        '',
-        tex_kpts_scale_thresh,
-        tex_nKpts,
-        tex_kpts_stats,
-        tex_scale_stats,
-    ]
-    tabular_body = hline.join(tabular_body_list)
-    tabular = hline.join([tabular_head, tabular_body, tabular_tail])
-    print(tabular)
-
 # ^^^^^^^^^^^^^^^^^
 # Tests
 
 #===========
 # Main Script
 # exec(open('dev.py').read())
-
-
 def dev_main(defaultdb='NAUTS', **kwargs):
     'Developer main script. Contains all you need to quickly start tests'
     import main
@@ -648,7 +591,8 @@ def run_investigations(hs, qcx_list):
     if intest('vary-vsmany-k-xy'):
         fnum = vary_vsmany_cfg(hs, qcx_list, fnum, [K_, xy_])
     if intest('dbstats'):
-        fnum = dbstats(hs)
+        from hsdev import dev_stats
+        fnum = dev_stats.dbstats(hs)
     if intest('scale'):
         fnum = plot_keypoint_scales(hs)
     if intest('vsone-gt'):

@@ -89,6 +89,8 @@ class FilterConfig(ConfigBase):
         sign   = filt_cfg['_' + filt + '_sign']
         thresh = filt_cfg[filt + '_thresh']
         weight = filt_cfg[filt + '_weight']
+        if weight == 1.0:
+            weight = 1
         return sign, thresh, weight
 
     def get_active_filters(filt_cfg):

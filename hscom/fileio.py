@@ -115,7 +115,7 @@ def __args2_fpath(dpath, fname, uid, ext):
         raise Exception('Fatal Error: Please be explicit and use a dot in ext')
     fname_uid = fname + uid
     if len(fname_uid) > 128:
-        fname_uid = '_' + helpers.hashstr(fname_uid, 8)
+        fname_uid = fname + '_' + helpers.hashstr(fname_uid, 8)
         #DEBUG_HASH_TABLE[fname + uid] = fname_uid
         #keys = DEBUG_HASH_TABLE.keys()
         #values = DEBUG_HASH_TABLE.values()
@@ -125,7 +125,7 @@ def __args2_fpath(dpath, fname, uid, ext):
             #print('!!! IO HASH COLLISION !!!')
         #else:
             #print(str(len_key) + ' ' + str(len_key))
-    fpath = join(dpath, fname + fname_uid + ext)
+    fpath = join(dpath, fname_uid + ext)
     #fpath = realpath(fpath)
     fpath = normpath(fpath)
     return fpath

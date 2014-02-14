@@ -3,6 +3,7 @@ from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[qr]', DEBUG=False)
 # Python
+from itertools import izip
 from os.path import exists, split, join
 from zipfile import error as BadZipFile  # Screwy naming convention.
 import os
@@ -19,16 +20,60 @@ FM_DTYPE  = np.uint32   # Feature Match datatype
 FS_DTYPE  = np.float32  # Feature Score datatype
 FK_DTYPE  = np.int16    # Feature Position datatype
 
+HASH_LEN = 16
 
 #=========================
 # Query Result Class
 #=========================
+
+
+def remove_corrupted_queries(hs, res, dryrun=True):
+    # This res must be corrupted!
+    query_uid = res.query_uid
+    hash_id = helpers.hashstr(query_uid, HASH_LEN)
+    qres_dir  = hs.dirs.qres_dir
+    testres_dir = join(hs.dirs.cache_dir, 'experiment_harness_results')
+    helpers.remove_files_in_dir(testres_dir, dryrun=dryrun)
+    helpers.remove_files_in_dir(qres_dir, '*' + query_uid + '*', dryrun=dryrun)
+    helpers.remove_files_in_dir(qres_dir, '*' + hash_id + '*', dryrun=dryrun)
+
+
+def dbg_check_query_result(hs, res, strict=False):
+    print('[qr] Debugging result')
+    fpath = res.get_fpath(hs)
+    print(res)
+    print('fpath=%r' % fpath)
+
+    res.true_uid
+    qcx = res.qcx
+    chip_str = 'q%s' % hs.cidstr(qcx)
+    kpts = hs.get_kpts(qcx)
+    #
+    # Check K are all in bounds
+    fk_maxmin = np.array([(fk.max(), fk.min())
+                          for fk in res.cx2_fk if len(fk) > 0])
+    K = hs.prefs.query_cfg.nn_cfg.K
+    assert fk_maxmin.max() < K
+    assert fk_maxmin.min() >= 0
+    #
+    # Check feature indexes are in boundsS
+    fx_maxmin = np.array([(fm[:, 0].max(), fm[:, 0].min())
+                          for fm in res.cx2_fm if len(fm) > 0])
+    nKpts = len(kpts)
+    if fx_maxmin.max() >= nKpts:
+        msg = ('DBG ERROR: ' + chip_str + ' nKpts=%d max_kpts=%d' % (nKpts, fx_maxmin.max()))
+        print(msg)
+        if strict:
+            raise AssertionError(msg)
+    assert fx_maxmin.min() >= 0
+
+
 def query_result_fpath(hs, qcx, query_uid):
     qres_dir  = hs.dirs.qres_dir
     qcid  = hs.tables.cx2_cid[qcx]
     fname = 'res_%s_qcid=%d.npz' % (query_uid, qcid)
     if len(fname) > 64:
-        hash_id = helpers.hashstr(query_uid, 16)
+        hash_id = helpers.hashstr(query_uid, HASH_LEN)
         fname = 'res_%s_qcid=%d.npz' % (hash_id, qcid)
     fpath = join(qres_dir, fname)
     return fpath
@@ -157,6 +202,13 @@ class QueryResult(DynStruct):
 
     def get_cx2_fk(res):
         return res.cx2_fk
+
+    def get_fmatch_iter(res):
+        fmfsfk_enum = enumerate(izip(res.cx2_fm, res.cx2_fs, res.cx2_fk))
+        fmatch_iter = ((cx, fx_tup, score, rank)
+                       for cx, (fm, fs, fk) in fmfsfk_enum
+                       for (fx_tup, score, rank) in izip(fm, fs, fk))
+        return fmatch_iter
 
     def topN_cxs(res, hs, N=None):
         cx2_score = np.array(res.get_cx2_score())

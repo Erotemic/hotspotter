@@ -109,6 +109,12 @@ vsmany_best = {
 }
 best = vsmany_best
 
+adaptive_test = vsmany_best.copy()
+adaptive_test.update({
+    'K': [2, 5, 10],
+    'use_adaptive_scale': [True, False],
+})
+
 overnight = vsmany_best.copy()
 overnight.update({
     #'K':                   [5, 7, 10, 20],
@@ -145,12 +151,6 @@ k_big = vsmany_best.copy()
 k_big.update({
     'K': [3, 4, 5, 7, 10, 15],
     'Knorm': [1, 2, 3],
-})
-
-adaptive_test = vsmany_best.copy()
-adaptive_test.update({
-    'K': [4, 5],
-    'use_adaptive_scale': [True, False],
 })
 
 normrule = vsmany_best.copy()

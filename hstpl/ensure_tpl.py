@@ -90,6 +90,7 @@ other = [
     'mccabe',  # plugin for flake8
     'logilab-common',  # low level functions
     'nose',  # unit tester
+    'networkx'
 ]
 
 allpkgs = core + speed + interface + science + devtools
@@ -257,3 +258,75 @@ if __name__ == '__main__':
     cmd_list = ['pip install %s --upgrade' % info[0]['pkg'] for info in outdated]
     write_installer_script(cmd_list, scriptname='pip_upgrade')
     print('\n'.join(cmd_list))
+
+
+# Py-graph-tool
+#
+'''
+sudo apt-get install libboost-all-dev
+sudo apt-get install libtool
+sudo apt-get install libcgal-dev
+sudo apt-get install libcgal-demo
+sudo apt-get install libcairomm-1.0-dev
+sudo apt-get install python-cairo-dev
+
+sudo aptitude install python-cairo
+sudo aptitude install python-gi-cairo
+
+sudo apt-get install libcairo2
+sudo apt-get install libcairo2-dev
+sudo apt-get install python-dev
+
+sudo apt-get install python-gobject
+sudo apt-get install python-gobject-dev
+
+# WINDOWS GCAL: http://www.cgal.org/download.html
+
+cd ~/code
+git clone git://git.skewed.de/graph-tool
+cd graph-tool
+git checkout -b release-2.2.9 release-2.2.9
+rm *; git checkout *
+libtoolize --force
+./autogen.sh
+./configure
+
+#rm *; git checkout *
+#libtoolize --force
+#aclocal ; autoheader; automake ; autoconf
+#./configure
+#make -j9
+#autoreconf -f -i -Wall,no-obsolete
+######
+#autoreconf -vif
+#####
+#rm *; git checkout *
+#libtoolize --force
+#aclocal
+#autoheader
+#automake --force-missing --add-missing
+#autoconf
+#autoreconf -f -i -Wall,no-obsolete
+'''
+# UBUNTU:
+# apt-get install python-graph-tool
+# ARCH:
+#yaourt -S python2-graph-tool
+#
+# MACPORTS:
+#port install py-graph-tool
+
+# PYTHON-Graph
+# sudo pip install python-graph-core
+# sudo pip install python-graph-dot
+
+# Python-igraph
+#sudo pip install python-igraph
+
+'''
+
+sudo apt-get install gcal
+sudo apt-get install sparsehash
+sudo apt-get install python-gi-cairo
+sudo apt-get install graphviz
+'''

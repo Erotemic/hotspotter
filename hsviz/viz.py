@@ -14,6 +14,7 @@ import extract_patch
 from hscom import params
 from hscom import fileio as io
 from hscom import helpers
+from hotspotter import QueryResult as qr
 
 #from interaction import interact_keypoints, interact_chipres, interact_chip # NOQA
 
@@ -418,7 +419,16 @@ def show_chipres(hs, res, cx, fnum=None, pnum=None, sel_fm=[], in_image=False, *
     kwargs_ = dict(fs=fs, lbl1=lbl1, lbl2=lbl2, fnum=fnum,
                    pnum=pnum, vert=hs.prefs.display_cfg.vert)
     kwargs_.update(kwargs)
-    ax, xywh1, xywh2 = df2.show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm, **kwargs_)
+    try:
+        ax, xywh1, xywh2 = df2.show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm, **kwargs_)
+    except Exception as ex:
+        print('!!!!!!!!!!!!!!!')
+        print('[viz] %s: %s' % (type(ex), ex))
+        print('[viz] vsstr = %s' % hs.vs_str(qcx, cx))
+        qr.dbg_check_query_result(hs, res)
+        print('consider qr.remove_corrupted_queries(hs, res, dryrun=False)')
+        helpers.qflag()
+        raise
     x1, y1, w1, h1 = xywh1
     x2, y2, w2, h2 = xywh2
     if len(sel_fm) > 0:
@@ -895,7 +905,6 @@ def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
     if fm is not None:
         return fm
     print('[viz] ensure_fm()')
-    from hotspotter import QueryResult as qr
     if res == 'db':
         query_args = hs.prefs.query_cfg.flat_dict()
         query_args['sv_on'] = False

@@ -100,7 +100,7 @@ def __dump(hs, subdir):
 
 def dump(hs, subdir=None, quality=False, overwrite=False):
     if quality is True:
-        df2.FIGSIZE = df2.FIGSIZE_GOLD
+        df2.FIGSIZE = df2.golden_wh2(12)
         df2.DPI = 120
         df2.FONTS.figtitle = df2.FONTS.small
     if quality is False:

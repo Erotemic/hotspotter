@@ -532,12 +532,26 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     total = len(sel_cols) * len(sel_rows)
     rciter = itertools.product(sel_rows, sel_cols)
 
+    prev_cfg = None
+
+    skip_to = None
+    skip_to = 240
+
+    skip_list = []
+
     for count, (r, c) in enumerate(rciter):
+        if skip_to is not None:
+            if count < skip_to:
+                continue
+        if count in skip_list:
+            continue
         # Get row and column index
         qcx       = qcx_list[r]
         query_cfg = cfg_list[c]
-        print('--------')
-        print('viewing %d / %d' % (count + 1, total))
+        print('\n\n___________________________________')
+        print('      --- VIEW %d / %d ---        '
+              % (count + 1, total))
+        print('--------------------------------------')
         print('viewing (r, c) = (%r, %r)' % (r, c))
         # Load / Execute the query
         qdat.set_cfg(query_cfg, hs=hs)
@@ -548,11 +562,16 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print(res.true_uid)
         # Draw Result
         #res.show_top(hs, fnum=fnum)
+        if prev_cfg != query_cfg:
+            # This is way too aggro. Needs to be a bit lazier
+            hs.refresh_features()
+        prev_cfg = query_cfg
+        fnum = count
         res.show_analysis(hs, fnum=fnum, aug='\n' + res.true_uid, annote=1)
         if params.args.save_figures:
             from hsviz import allres_viz
-            allres_viz.dump(hs, 'analysis', quality=True, overwrite=True)
-        fnum += 1
+            allres_viz.dump(hs, 'analysis', quality=True, overwrite=False)
+        #fnum += 1
 
 
 #if __name__ == '__main__':

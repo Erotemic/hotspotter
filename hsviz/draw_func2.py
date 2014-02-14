@@ -1560,6 +1560,43 @@ def get_num_channels(img):
     return nChannels
 
 
+def stack_image_list(img_list, **kwargs):
+    if len(img_list) == 0:
+        return None
+    imgB = img_list[0]
+    offset_list = []
+    for count, img2 in enumerate(img_list):
+        if count == 0:
+            continue
+        imgB, woff, hoff = stack_images(imgB, img2, **kwargs)
+        offset_list.append((woff, hoff))
+    return imgB
+
+
+def stack_image_recurse(img_list1, img_list2=None, vert=True):
+    if img_list2 is None:
+        # Initialization and error checking
+        if len(img_list1) == 0:
+            return None
+        if len(img_list1) == 1:
+            return img_list1[0]
+        return stack_image_recurse(img_list1[0::2], img_list1[1::2], vert=vert)
+    if len(img_list1) == 1:
+        # Left base case
+        img1 = img_list1[0]
+    else:
+        # Left recurse
+        img1 = stack_image_recurse(img_list1[0::2], img_list1[1::2], vert=not vert)
+    if len(img_list2) == 1:
+        # Right base case
+        img2 = img_list2[0]
+    else:
+        # Right Recurse
+        img2 = stack_image_recurse(img_list2[0::2], img_list2[1::2], vert=not vert)
+    imgB, woff, hoff = stack_images(img1, img2, vert=vert)
+    return imgB
+
+
 def stack_images(img1, img2, vert=None):
     nChannels = get_num_channels(img1)
     nChannels2 = get_num_channels(img2)

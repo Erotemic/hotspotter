@@ -17,7 +17,7 @@ import numpy as np
 # Standard
 from collections import OrderedDict
 from itertools import product as iprod
-from itertools import izip
+from itertools import izip, chain
 from os.path import (join, relpath, normpath, split, isdir, isfile, exists,
                      islink, ismount, expanduser)
 import cPickle
@@ -266,10 +266,25 @@ def unique_keep_order(arr):
 
 
 # --- Info Strings ---
-def printable_mystats(_list):
+
+def pstats(*args, **kwargs):
+    # wrapper for printable_mystats
+    return printable_mystats(*args, **kwargs)
+
+
+def printable_mystats(_list, newlines=False):
     stat_dict = mystats(_list)
-    stat_strs = ['%r:%s' % (key, val) for key, val in stat_dict.iteritems()]
-    ret = '{' + ', '.join(stat_strs) + '}'
+    stat_strs = ['%r: %s' % (key, val) for key, val in stat_dict.iteritems()]
+    if newlines:
+        indent = '    '
+        head = '{\n' + indent
+        sep  = ',\n' + indent
+        tail = '\n}'
+    else:
+        head = '{'
+        sep = ', '
+        tail = '}'
+    ret = head + sep.join(stat_strs) + tail
     return ret
 #def mystats2_latex(mystats):
     #statdict_ = eval(mystats)
@@ -572,6 +587,7 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
         return mark_progress_agressive
 
     def end_progress():
+        sys.stdout.flush()
         print('')
     return mark_progress, end_progress
     raise Exception('unkown progress type = %r' % progress_type)
@@ -2014,9 +2030,11 @@ def all_dict_combinations(varied_dict):
     return dict_list
 
 
-def stash_testdata(*args):
+def stash_testdata(*args, **kwargs):
     import shelve
-    shelf = shelve.open('test_data.shelf')
+    uid = kwargs.get('uid', '')
+    shelf_fname = 'test_data_%s.shelf' % uid
+    shelf = shelve.open(shelf_fname)
     locals_ = get_parent_locals()
     for key in args:
         print('Stashing key=%r' % key)
@@ -2024,9 +2042,11 @@ def stash_testdata(*args):
     shelf.close()
 
 
-def load_testdata(*args):
+def load_testdata(*args, **kwargs):
     import shelve
-    shelf = shelve.open('test_data.shelf')
+    uid = kwargs.get('uid', '')
+    shelf_fname = 'test_data_%s.shelf' % uid
+    shelf = shelve.open(shelf_fname)
     ret = [shelf[key] for key in args]
     shelf.close()
     if len(ret) == 1:
@@ -2049,22 +2069,39 @@ def num2_sigfig(num):
     return int(np.ceil(np.log10(num)))
 
 
-def quitflag(num=None, embed=False, parent_locals=None):
+def embed(parent_locals=None):
+    if parent_locals is None:
+        parent_locals = get_parent_locals()
+    exec(execstr_dict(parent_locals, 'parent_locals'))
+    print('[helpers] embedding')
+    import IPython
+    IPython.embed()
+
+
+def quitflag(num=None, embed_=False, parent_locals=None):
     if num is None or get_flag('--quit' + str(num)):
         if parent_locals is None:
             parent_locals = get_parent_locals()
         exec(execstr_dict(parent_locals, 'parent_locals'))
-        if embed:
+        if embed_:
             print('Triggered --quit' + str(num))
-            from IPython import embed
-            embed()
+            embed(parent_locals=parent_locals)
         print('Triggered --quit' + str(num))
         sys.exit(1)
 
 
-def qflag(num=None, embed=True):
-    return quitflag(num, embed=embed, parent_locals=get_parent_locals())
+def qflag(num=None, embed_=True):
+    return quitflag(num, embed_=embed_, parent_locals=get_parent_locals())
 
 
-def quit(num=None, embed=True):
-    return quitflag(num, embed=embed, parent_locals=get_parent_locals())
+def quit(num=None, embed_=True):
+    return quitflag(num, embed_=embed_, parent_locals=get_parent_locals())
+
+
+def iflatten(list_):
+    flat_iter = chain.from_iterable(list_)  # very fast flatten
+    return flat_iter
+
+
+def flatten(list_):
+    return list(iflatten(list_))

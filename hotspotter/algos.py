@@ -395,7 +395,6 @@ def __akmeans_iterate(data,
     print('[algos] Running akmeans: data.shape=%r ; num_clusters=%r' %
           (data.shape, num_clusters))
     print('[algos] * max_iters = %r ' % max_iters)
-    #print('  * dtype = %r ' % params.__BOW_DTYPE__)
     print('[algos] * ave_unchanged_iterwin=%r ; ave_unchanged_thresh=%r' %
           (ave_unchanged_thresh, ave_unchanged_iterwin))
     print('[algos] Printing akmeans info in format:' +
@@ -427,9 +426,9 @@ def __akmeans_iterate(data,
                 continue  # ON EMPTY CLUSTER
             (_L, _R) = dataLRx
             clusters[clusterx] = np.mean(data[datax_sort[_L:_R]], axis=0)
-            #if params.__BOW_DTYPE__ == np.uint8:
+            #if __BOW_DTYPE__ == np.uint8:
             #clusters[clusterx] = np.array(np.round(clusters[clusterx]),
-            # dtype=params.__BOW_DTYPE__)
+            # dtype=__BOW_DTYPE__)
             clusters[clusterx] = np.array(np.round(clusters[clusterx]),
                                           dtype=np.uint8)
         # 4) Check for convergence (no change of cluster id)
@@ -464,7 +463,7 @@ def akmeans(data, num_clusters, max_iters=5, flann_params=None,
     Repeat until convergence.'''
 
     # Setup iterations
-    #data   = np.array(data, params.__BOW_DTYPE__)
+    #data   = np.array(data, __BOW_DTYPE__)
     num_data = data.shape[0]
     # Initialize to random cluster clusters
     datax_rand = np.arange(0, num_data)

@@ -113,6 +113,7 @@ def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True, app=None):
     from hscom import argparse2
     from hscom import helpers
     from hscom import fileio as io
+    from hsgui import guiback
     from hotspotter import HotSpotterAPI as api
     args = argparse2.parse_arguments(defaultdb=defaultdb)
     # Parse arguments
@@ -171,7 +172,6 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     # Run Main Function
     from hsgui import guitools
-    from hsgui import guiback
     from hscom import helpers
     print('main.py')
     # Listen for ctrl+c

@@ -326,6 +326,7 @@ libtoolize --force
 '''
 
 sudo apt-get install gcal
+sudo apt-get install libsparsehash-dev
 sudo apt-get install sparsehash
 sudo apt-get install python-gi-cairo
 sudo apt-get install graphviz

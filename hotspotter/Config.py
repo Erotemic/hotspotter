@@ -191,6 +191,7 @@ class AggregateConfig(ConfigBase):
             'placketluce': 'pl',
             'chipsum': 'csum',
             'namesum': 'nsum',
+            'coverage': 'coverage',
         }
         # For Placket-Luce
         agg_cfg.max_alts = 1000

@@ -37,8 +37,7 @@ def get_valid_testcfg_names():
 def get_vary_dicts(test_cfg_name_list):
     vary_dicts = []
     for cfg_name in test_cfg_name_list:
-        evalstr = 'experiment_configs.' + cfg_name
-        test_cfg = eval(evalstr)
+        test_cfg = experiment_configs.__dict__[cfg_name]
         vary_dicts.append(test_cfg)
     if len(vary_dicts) == 0:
         valid_cfg_names = get_valid_testcfg_names()
@@ -170,7 +169,9 @@ def get_varied_params_list(test_cfg_name_list):
 
 
 def get_cfg_list(hs, test_cfg_name_list):
+    print('[harn] building cfg_list: %s' % test_cfg_name_list)
     if 'custom' == test_cfg_name_list:
+        print('   * custom cfg_list')
         cfg_list = [hs.prefs.query_cfg]
         return cfg_list
     varied_params_list = get_varied_params_list(test_cfg_name_list)
@@ -182,6 +183,9 @@ def get_cfg_list(hs, test_cfg_name_list):
         if not cfg in cfg_set:
             cfg_list.append(cfg)
             cfg_set.add(cfg)
+    print('[harn] reduced equivilent cfgs %d / %d cfgs' % (len(cfg_list),
+                                                           len(varied_params_list)))
+
     return cfg_list
 
 

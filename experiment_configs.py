@@ -109,6 +109,11 @@ vsmany_best = {
 }
 best = vsmany_best
 
+coverage = vsmany_best.copy()
+coverage.update({
+    'score_method': ['csum', 'coverage'],
+})
+
 adaptive_test = vsmany_best.copy()
 adaptive_test.update({
     'K': [2, 5, 10],

@@ -108,8 +108,43 @@ normrule_test()
     python dev.py --db MOTHERS -t normrule_test --all-gt-cases
 }
 
+verbose_test()
+{
+    echo $@
+    $@ > nightly_output.txt
+}
+
+nightly_tests()
+{
+    #verbose_test python dev.py --all-gt-cases -t adaptive_test $@
+    verbose_test python dev.py --all-gt-cases -t coverage $@
+}
+
+run_nightly()
+{
+    echo "Starting Nightly"
+    nightly_tests --db MOTHERS
+    echo "Finished Nightly"
+}
+
+export TEST_TYPE="overnight"
+# Check to see if nightly specified
+if [[ $# -gt 0 ]] ; then
+    if [[ "$1" = "nightly" ]] ; then
+        export TEST_TYPE="nightly"
+    fi
+fi
+
+echo "TEST_TYPE=$TEST_TYPE"
+
 #normrule_test
-run_overnight $@
+if [[ "$TEST_TYPE" = "overnight" ]] ; then
+    run_overnight $@
+fi
+
+if [[ "$TEST_TYPE" = "nightly" ]] ; then
+    run_nightly
+fi
 
 #ic --db GZ --tests vsmany_big_social --all-gt-cases | tail
 #ic --db GZ --tests vsmany_score --all-gt-cases | tail

@@ -369,8 +369,14 @@ def all_figures_tight_layout():
         time.sleep(.1)
 
 
+def ensure_app_is_running():
+    from hsgui import guitools
+    app, is_root = guitools.init_qtapp()
+
+
 def get_monitor_geom(monitor_num=0):
     from PyQt4 import QtGui  # NOQA
+    ensure_app_is_running()
     desktop = QtGui.QDesktopWidget()
     rect = desktop.availableGeometry(screen=monitor_num)
     geom = (rect.x(), rect.y(), rect.width(), rect.height())
@@ -379,6 +385,7 @@ def get_monitor_geom(monitor_num=0):
 
 def get_monitor_geometries():
     from PyQt4 import QtGui  # NOQA
+    ensure_app_is_running()
     monitor_geometries = {}
     desktop = QtGui.QDesktopWidget()
     for screenx in xrange(desktop.numScreens()):

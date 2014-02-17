@@ -742,6 +742,15 @@ def get_parent_locals():
     return parent_frame.f_locals
 
 
+def get_parent_globals():
+    this_frame = inspect.currentframe()
+    call_frame = this_frame.f_back
+    parent_frame = call_frame.f_back
+    if parent_frame is None:
+        return None
+    return parent_frame.f_globals
+
+
 def get_caller_locals():
     this_frame = inspect.currentframe()
     call_frame = this_frame.f_back
@@ -2073,6 +2082,7 @@ def embed(parent_locals=None):
     if parent_locals is None:
         parent_locals = get_parent_locals()
     exec(execstr_dict(parent_locals, 'parent_locals'))
+    print('')
     print('[helpers] embedding')
     import IPython
     IPython.embed()
@@ -2094,7 +2104,7 @@ def qflag(num=None, embed_=True):
     return quitflag(num, embed_=embed_, parent_locals=get_parent_locals())
 
 
-def quit(num=None, embed_=True):
+def quit(num=None, embed_=False):
     return quitflag(num, embed_=embed_, parent_locals=get_parent_locals())
 
 

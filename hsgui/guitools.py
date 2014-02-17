@@ -18,6 +18,8 @@ from hscom import helpers
 from hsviz import draw_func2 as df2
 
 IS_INIT = False
+QAPP = None
+IS_ROOT = False
 DISABLE_NODRAW = False
 DEBUG = False
 
@@ -383,11 +385,16 @@ def show_open_db_dlg(parent=None):
 @profile
 def init_qtapp():
     global IS_INIT
+    global IS_ROOT
+    global QAPP
+    if QAPP is not None:
+        return QAPP, IS_ROOT
     app = PyQt4.Qt.QCoreApplication.instance()
     is_root = app is None
     if is_root:  # if not in qtconsole
         print('[*guitools] Initializing QApplication')
         app = PyQt4.Qt.QApplication(sys.argv)
+        QAPP = app
     try:
         __IPYTHON__
         is_root = False

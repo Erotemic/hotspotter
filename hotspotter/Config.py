@@ -77,7 +77,7 @@ class FilterConfig(ConfigBase):
         addfilt(-1,   'recip',     0,   0, 'filt_cfg.Krecip > 0')
         addfilt(+1,  'bursty',  None,   0)
         addfilt(-1,   'ratio',  None,   0)
-        addfilt(-1,   'lnbnn',  None, .01)
+        addfilt(-1,   'lnbnn',  None,   1)
         addfilt(-1,   'lnrat',  None,   0)
         #addfilt(+1, 'scale' )
         filt_cfg.update(**kwargs)

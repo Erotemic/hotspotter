@@ -58,15 +58,15 @@ def postload_args_process(hs, back):
     qcid_list = params.args.query
     tx_list = params.args.txs
     qfx_list = params.args.qfxs
-    cx_list = params.args.cxs
+    cid_list = params.args.cids
     res = None
     if len(qcid_list) > 0:
         qcid = qcid_list[0]
         tx = tx_list[0] if len(tx_list) > 0 else None
         res = back.query(qcid, tx)
         back.select_cid(qcid, show=False)
-        if len(cx_list) > 0:
-            cx = cx_list[0]
+        if len(cid_list) > 0:
+            cx = hs.cid2_cx(cid_list[0])
             if len(qfx_list) > 0:
                 qfx = qfx_list[0]
                 mx = res.get_match_index(hs, cx, qfx)
@@ -82,14 +82,10 @@ def postload_args_process(hs, back):
     if len(selnxs) > 0:
         name = hs.nx2_name(selnxs[0])
         back.select_name(name)
-    selcxs = params.args.selcxs
-    if len(selcxs) > 0:
+    selcids = params.args.selcids
+    if len(selcids) > 0:
+        selcxs = hs.cid2_cx(selcids)
         back.select_cx(selcxs[0])
-    cids = params.args.select_cid
-    if len(cids) > 0:
-        cxs = hs.cid2_cx(cids)
-        back.select_cx(cxs[0])
-
     return res
 
 

@@ -712,8 +712,21 @@ def adjust_subplots_xylabels():
     adjust_subplots(left=.03, right=1, bottom=.1, top=.9, hspace=.15)
 
 
-def adjust_subplots_safe(left=.1, right=.9, bottom=.1, top=.9, wspace=.3, hspace=.5):
-    adjust_subplots(left, bottom, right, top, wspace, hspace)
+SAFE_POS = {
+    'left': .1,
+    'right': .9,
+    'top': .9,
+    'bottom': .1,
+    'wspace': .3,
+    'hspace': .5,
+}
+
+
+def adjust_subplots_safe(**kwargs):
+    for key in SAFE_POS.iterkeys():
+        if not key in kwargs:
+            kwargs[key] = SAFE_POS[key]
+    adjust_subplots(**kwargs)
 
 
 def adjust_subplots(left=0.02,  bottom=0.02,

@@ -16,6 +16,7 @@ from hscom import fileio as io
 from hscom import helpers
 from hscom import latex_formater
 from hscom import params
+from hsviz import draw_func2 as df2
 #from match_chips3 import *
 #import draw_func2 as df2
 # What are good ways we can divide up FLANN indexes instead of having one
@@ -528,6 +529,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print('remember to inspect with --sel-rows (-r) and --sel-cols (-c) ')
     if len(sel_rows) > 0 and len(sel_cols) == 0:
         sel_cols = range(len(cfg_list))
+    if len(sel_cols) > 0 and len(sel_rows) == 0:
+        sel_rows = range(len(qcx_list))
     if params.args.view_all:
         sel_rows = range(len(qcx_list))
         sel_cols = range(len(cfg_list))
@@ -538,10 +541,17 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     prev_cfg = None
 
-    skip_to = None
-    skip_to = 240
+    skip_to = helpers.get_arg('--skip-to', default=None)
 
+    dev_mode = helpers.get_arg('--devmode', default=False)
     skip_list = []
+    if dev_mode:
+        hs.prefs.display_cfg.N = 3
+        df2.FONTS.axtitle = df2.FONTS.smaller
+        df2.FONTS.xlabel = df2.FONTS.smaller
+        df2.FONTS.figtitle = df2.FONTS.smaller
+        df2.SAFE_POS['top']    = .8
+        df2.SAFE_POS['bottom'] = .01
 
     for count, (r, c) in enumerate(rciter):
         if skip_to is not None:
@@ -571,11 +581,15 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             hs.refresh_features()
         prev_cfg = query_cfg
         fnum = count
-        res.show_analysis(hs, fnum=fnum, aug='\n' + res.true_uid, annote=1)
+        title_uid = res.true_uid
+        title_uid = title_uid.replace('_FEAT', '\n_FEAT')
+        res.show_analysis(hs, fnum=fnum, aug='\n' + title_uid, annote=1,
+                          show_name=False, show_gname=False, time_appart=False)
+        df2.adjust_subplots_safe()
         if params.args.save_figures:
             from hsviz import allres_viz
             allres_viz.dump(hs, 'analysis', quality=True, overwrite=False)
-        #fnum += 1
+    print('[harn] EXIT EXPERIMENT HARNESS')
 
 
 #if __name__ == '__main__':

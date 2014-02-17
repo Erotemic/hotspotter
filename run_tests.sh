@@ -111,19 +111,23 @@ normrule_test()
 verbose_test()
 {
     echo $@
-    $@ > nightly_output.txt
+    $@ #> nightly_output.txt
 }
 
 nightly_tests()
 {
     #verbose_test python dev.py --all-gt-cases -t adaptive_test $@
     verbose_test python dev.py --all-gt-cases -t coverage $@
+    verbose_test python dev.py --all-gt-cases -t adaptive_test $@
+    verbose_test python dev.py --all-gt-cases -t overnight_k $@
 }
 
 run_nightly()
 {
     echo "Starting Nightly"
     nightly_tests --db MOTHERS
+    nightly_tests --db GZ
+    nightly_tests --db LF_ALL
     echo "Finished Nightly"
 }
 

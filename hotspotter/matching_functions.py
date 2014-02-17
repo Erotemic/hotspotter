@@ -522,8 +522,10 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, qdat=None):
         cx2_score, nx2_score = vr2.score_chipmatch_pos(hs, qcx, chipmatch, qdat, 'borda')
     elif score_method == 'topk':
         cx2_score, nx2_score = vr2.score_chipmatch_pos(hs, qcx, chipmatch, qdat, 'topk')
-    elif score_method == 'coverage':
-        cx2_score = coverage.score_chipmatch_coverage(hs, qcx, chipmatch, qdat)
+    elif score_method.startswith('coverage'):
+        # Method num is at the end of coverage
+        method = int(score_method.replace('coverage', '0'))
+        cx2_score = coverage.score_chipmatch_coverage(hs, qcx, chipmatch, qdat, method=method)
     else:
         raise Exception('[mf] unknown scoring method:' + score_method)
     cx2_nMatch = np.array(map(len, cx2_fm))

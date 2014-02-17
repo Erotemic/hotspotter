@@ -635,6 +635,8 @@ if __name__ == '__main__':
     if printoff:
         all_printoff()
     # useful when copy and pasting into ipython
+    from hsgui import guitools
+    guitools.init_qtapp()
     main_locals = dev_main()
     hs = main_locals['hs']
     qcx_list = main_locals['qcx_list']
@@ -658,4 +660,4 @@ if __name__ == '__main__':
         print('...not presenting')
         sys.exit(0)
     allres = allres_ptr[0]
-    exec(df2.present())  # **df2.OooScreen2()
+    exec(df2.present(wh=1000))  # **df2.OooScreen2()

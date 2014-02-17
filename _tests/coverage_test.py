@@ -19,14 +19,14 @@ def test_find_coverage_score(hs, res):
     #qcx2_chipmatch = {qcx: chipmatch}
     cx2_score = coverage.score_chipmatch_coverage(hs, qcx, chipmatch, qdat)
     res.cx2_score
-    print('=========')
-    print('')
-    print('new score')
-    print(cx2_score)
-    print('')
-    print('old score')
-    print(res.cx2_score)
-    print('=========')
+    #print('=========')
+    #print('')
+    #print('new score')
+    #print(cx2_score)
+    #print('')
+    #print('old score')
+    #print(res.cx2_score)
+    #print('=========')
     return cx2_score
 
 
@@ -60,6 +60,8 @@ if __name__ == '__main__':
     hs = test_api.main(preload=True)
     # Test variables
     cx = test_api.get_test_cxs(hs, 1)[0]
+    if hs.get_db_name() == 'HSDB_zebra_with_mothers':
+        cx = hs.cid2_cx(13)
     kpts = hs.get_kpts(cx)
     chip = hs.get_chip(cx)
     chip_shape = chip.shape[0:2]
@@ -69,7 +71,7 @@ if __name__ == '__main__':
     test_api.reload_all()
     coverage.rrr()
 
-    scale_factor = .2
+    scale_factor = .1
 
     # Get source gaussian
     srcimg = coverage.get_gaussimg()
@@ -79,17 +81,23 @@ if __name__ == '__main__':
                                           scale_factor=scale_factor)
     dstimg_thresh = dstimg.copy()
     dstimg_thresh[dstimg_thresh > 0] = 1
-    percent = coverage.get_keypoint_coverage(kpts, chip_shape, dstimg=dstimg,
-                                             scale_factor=scale_factor)
 
     # Get matching coverage
+    hs.prefs.query_cfg.agg_cfg.score_method = 'coverage'
+    print(hs.get_cache_uid())
     res = hs.query(cx)
-    cx2 = res.topN_cxs(hs)[0]
-    dstimg1, dstimg2, args_, kwargs_ = test_result_coverage(hs, res, cx2, scale_factor)
-    test_find_coverage_score(hs, res)
+    nTop = 2
+    for tx in xrange(nTop):
+        cx2 = res.topN_cxs(hs)[tx]
+        dstimg1, dstimg2, args_, kwargs_ = test_result_coverage(hs, res, cx2, scale_factor)
+        test_find_coverage_score(hs, res)
+        res.show_chipres(hs, cx2, fnum=fnum)
+        df2.set_figtitle('matching viz' + str(tx), incanvas=False)
+        fnum += 1
 
-    # Show Test Images
-    print('coverage = %r%%' % percent)
+        df2.show_chipmatch2(dstimg1, dstimg2, *args_, fnum=fnum, **kwargs_)
+        df2.set_figtitle('matching coverage' + str(tx))
+        fnum += 1
 
     df2.imshow(srcimg, fnum=fnum, heatmap=True)
     df2.set_figtitle('gaussian weights')
@@ -101,14 +109,6 @@ if __name__ == '__main__':
 
     df2.imshow(dstimg_thresh, fnum=fnum, heatmap=True)
     df2.set_figtitle('thresholded chip coverage map')
-    fnum += 1
-
-    res.show_chipres(hs, cx2, fnum=fnum)
-    df2.set_figtitle('matching viz', incanvas=False)
-    fnum += 1
-
-    df2.show_chipmatch2(dstimg1, dstimg2, *args_, fnum=fnum, **kwargs_)
-    df2.set_figtitle('matching coverage')
     fnum += 1
 
     viz.show_chip(hs, cx, fnum=fnum)

@@ -468,11 +468,11 @@ def annotate_chipres(hs, res, cx, showTF=True, showScore=True, showRank=True, ti
     title = title_pref + str(title) + title_suff
     # Build xlabel
     xlabel_ = []
-    if 'show_gname':
+    if show_gname:
         xlabel_.append('gname=%r' % hs.cx2_gname(cx))
-    if 'show_name':
+    if show_name:
         xlabel_.append('name=%r' % hs.cx2_name(cx))
-    if 'time_appart':
+    if time_appart:
         xlabel_.append('\n' + hs.get_timedelta_str(qcx, cx))
     xlabel = ', '.join(xlabel_)
     ax = df2.gca()

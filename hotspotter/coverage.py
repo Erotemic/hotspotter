@@ -2,13 +2,14 @@ from __future__ import division, print_function
 from hscom import __common__
 print, print_, print_on, print_off, rrr, profile, printDBG =\
     __common__.init(__name__, '[cov]', DEBUG=False)
-import numpy as np
-from numpy import array
-import math
-import scipy.stats as stats
-from hscom import helpers
-from itertools import izip, cycle
+# Standard
 from itertools import product as iprod
+import math
+# Science
+import cv2
+import numpy as np
+# HotSpotter
+from hscom import helpers
 
 
 def get_coverage(kpts, chip_size):
@@ -33,105 +34,66 @@ def pdf_norm2d(x_, y_):
     return norm_const * result
 
 
-def get_coverage_map(kpts, chip_size):
-    np.set_printoptions(threshold=2)
-    #kpts = kpts[::10]
-    #mean = [0, 0]
-    #cov = [[1, 0], [0, 1]]
-    #var = stats.norm(loc=0, scale=1)
-    #gauss_pxls = np.ones([2, 2])
+def get_gaussimg(width, resolution):
+    half_width = width / 2
+    gauss_xs = np.linspace(-half_width, half_width, resolution)
+    gauss_ys = np.linspace(-half_width, half_width, resolution)
+
+    gaussspace_xys = np.array(list(iprod(gauss_xs, gauss_ys)))
+    gausspace_score = np.array([pdf_norm2d(x, y) for (x, y) in gaussspace_xys])
+    gausspace_score -= gausspace_score.min()
+    gausspace_score /= gausspace_score.max()
+
+    size = (resolution, resolution)
+    gaussimg = gausspace_score.reshape(size).T
+    gaussimg = np.array(gaussimg, dtype=np.float32)
+    return gaussimg
+
+
+def build_transforms(kpts, chip_size, src_size):
     (h, w) = chip_size
-    print('chip_size=%r' % ((w, h),))
-    gauss_xs = np.linspace(-3.14, 3.14, 55)
-    gauss_ys = np.linspace(-3.14, 3.14, 55)
-    #gauss_xs = np.ones(11)
-    #gauss_ys = np.ones(11)
+    (h_, w_) = src_size
+    T1 = np.array(((1, 0, -w_ / 2),
+                   (0, 1, -h_ / 2),
+                   (0, 0,       1),))
+    S1 = np.array(((1 / w_,      0,  0),
+                   (0,      1 / h_,  0),
+                   (0,           0,  1),))
+    aff_list = [np.array(((a, 0, x),
+                          (c, d, y),
+                          (0, 0, 1),)) for (x, y, a, c, d) in kpts]
+    perspective_list = [A.dot(S1).dot(T1) for A in aff_list]
+    transform_list = [M[0:2] for M in perspective_list]
+    return transform_list
 
-    print('len(kpts)) = %r' % len(kpts))
-    print('len(gauss_xs) = %r' % len(gauss_xs))
 
-    try:
-        raise KeyError
-        #biglist = helpers.load_testdata('biglist')
-        #gausspace_score = helpers.load_testdata('gausspace_score')
-        #chipspace_xys = helpers.load_testdata('chipspace_xys')
-        #gaussimg = helpers.load('gaussimg')
-    except KeyError:
-        gaussspace_xys = np.array(list(iprod(gauss_xs, gauss_ys)))
-        #gausspace_score = np.ones(len(gaussspace_xys))
-        gausspace_score = np.array([pdf_norm2d(x, y) for (x, y) in gaussspace_xys])
-        #gausspace_score = np.sqrt(gausspace_score)
-        #gausspace_score = gausspace_score / gausspace_score.sum()
-        gausspace_score -= gausspace_score.min()
-        gausspace_score /= gausspace_score.max()
-        #gausspace_score = gausspace_score / (gausspace_score.max() - gausspace_score.min())
-        #gausspace_score[gausspace_score < 0] = 0
-        #gausspace_score = gausspace_score - gausspace_score.min()
-        #gausspace_score /= gausspace_score.sum()
-        print('gausspace_score')
-        print(gausspace_score)
-
-        #gausspace_score = np.sqrt(var.pdf(gaussspace_xys ** 2).sum(1))
-        #gausspace_score = 1 - var.pdf(gaussspace_xys)[:, 0]
-        w_, h_ = (len(gauss_xs), len(gauss_ys))
-        gaussimg = gausspace_score.reshape((w_, h_)).T
-        gaussimg = np.array(gaussimg, dtype=np.float32)
-        np.set_printoptions(precision=3, threshold=1000000, linewidth=180)
-        #from hsviz import draw_func2 as df2
-        #df2.imshow(gaussimg, fnum=432)
-
-        #biglist = np.array([(x1, y1, x, y, a, c, d)
-                            #for x1, y1 in gaussspace_xys
-                            #for x, y, a, c, d in kpts])
-        #x1s, y1s, xs, ys, as_, cs, ds = biglist.T
-
-        #chipspace_xys = np.array(((as_ * x1s) + xs,
-                                  #(cs  * x1s) + (ds * y1s) + ys)).T
-        #chipspace_xys = np.vstack([gausspace_xys] * len(kpts))
-        #helpers.save_testdata('biglist')
-        #helpers.save_testdata('chipspace_xys')
-        #helpers.save_testdata('gausspace_score')
-        #helpers.save_testdata('gaussimg')
-
-    import cv2
-    area_matrix = np.zeros((h, w), dtype=np.float32)
-    area_matrix_copy = area_matrix.copy().T
-    (h_, w_) = gaussimg.shape
-    for count, (x, y, a, c, d) in enumerate(kpts):
-        T1 = np.array(((1, 0, -(w_ / 2)),
-                       (0, 1, -(h_ / 2)),
-                       (0, 0, 1)))
-
-        S1 = np.array([[1 / (w_), 0,  0],
-                       [0,  1 / (h_),  0],
-                       [0,  0,  1]], np.float64)
-
-        aff = np.array(((a, 0, x),
-                        (c, d, y),
-                        (0, 0, 1),))
-
-        M = aff.dot(S1).dot(T1)
-        M = M[0:2]
-        flags = cv2.INTER_NEAREST  # cv2.INTER_LANCZOS4
-        #dsize = area_matrix_copy.shape[::-1]
-        dsize = area_matrix_copy.shape[::1]  # shape[::-1]
-        boderMode = cv2.BORDER_CONSTANT
-        warped = cv2.warpAffine(gaussimg, M, dsize,
+def warp_srcimg_to_kpts(kpts, srcimg, chip_size):
+    (h, w) = chip_size
+    dst_img = np.zeros((h, w), dtype=np.float32)
+    dst_copy = dst_img.copy()
+    src_size = srcimg.shape
+    transform_list = build_transforms(kpts, (h, w), src_size)
+    flags = cv2.INTER_LINEAR  # cv2.INTER_LANCZOS4
+    dsize = (w, h)
+    boderMode = cv2.BORDER_CONSTANT
+    mark_progress, end_progress = helpers.progress_func(len(transform_list))
+    for count, M in enumerate(transform_list):
+        if count % 10 == 0:
+            mark_progress(count)
+        warped = cv2.warpAffine(srcimg, M, dsize,
+                                dst=dst_copy,
                                 flags=flags, borderMode=boderMode,
                                 borderValue=0).T
-        catmat = np.dstack((warped.T, area_matrix))
-        newmat = catmat.max(-1)
-        area_matrix = newmat
-        from hsviz import draw_func2 as df2
-        if count % 80 == 79:
-            #print(area_matrix)
-            area_img = np.array(np.round(area_matrix * 255), dtype=np.uint8)
-            df2.imshow(warped, fnum=count + 10)
-            df2.draw()
-    print('area_matrix.max()')
+        catmat = np.dstack((warped.T, dst_img))
+        dst_img = catmat.max(axis=2)
+    mark_progress(count)
+    end_progress()
+    return dst_img
 
-    print(area_matrix.max())
-    print(area_matrix.min())
-    area_matrix = area_img
 
-    return area_img
+def get_coverage_map(kpts, chip_size):
+    # Create gaussian image to warp
+    np.tau = 2 * np.pi
+    srcimg = get_gaussimg(np.tau, 55)
+    dst_img = warp_srcimg_to_kpts(kpts, srcimg, chip_size)
+    return dst_img

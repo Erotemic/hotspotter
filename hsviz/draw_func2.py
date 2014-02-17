@@ -380,6 +380,7 @@ def get_monitor_geom(monitor_num=0):
 def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
                      row_first=True, no_tile=False, override1=False):
     'Lays out all figures in a grid. if wh is a scalar, a golden ratio is used'
+    print('[df2] all_figures_tile()')
     # RCOS TODO:
     # I want this function to layout all the figures and qt windows within the
     # bounds of a rectangle. (taken from the get_monitor_geom, or specified by
@@ -437,7 +438,7 @@ def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
         x += x_off
         y += y_off
         try:
-            (x, y, w1, h1) = win.getGeometry()
+            #(x, y, w1, h1) = win.getGeometry()
             win.setGeometry(x, y, w, h)
         except Exception as ex:
             print(ex)

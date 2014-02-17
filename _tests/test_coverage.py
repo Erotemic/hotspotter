@@ -10,9 +10,11 @@ from hsdev import test_api
 from hotspotter import coverage
 from hsviz import draw_func2 as df2
 
+
 if __name__ == '__main__':
     exec_str = 'exec(open("_tests/test_coverage.py").read())'
     multiprocessing.freeze_support()
+    np.set_printoptions(precision=2, threshold=1000000, linewidth=180)
     #from hsdev import dev_api
     #dev_api.rrr()
     #dev_api._reload()
@@ -26,11 +28,16 @@ if __name__ == '__main__':
     chip_size = chip.shape[0:2]
 
     coverage.rrr()
-    # Run Test
-    area_img = coverage.get_coverage_map(kpts, chip_size)
-    #area_img = np.round(area_matrix * 255)
+
+    np.tau = 2 * np.pi
     fnum = 2
-    df2.imshow(area_img, fnum=fnum)
+
+    srcimg = coverage.get_gaussimg(2, 5)
+    print(srcimg)
+    dstimg = coverage.warp_srcimg_to_kpts(kpts, srcimg, chip_size)
+    df2.imshow(srcimg * 255, fnum=fnum)
+    fnum += 1
+    df2.imshow(dstimg * 255, fnum=fnum)
     fnum += 1
     df2.update()
 

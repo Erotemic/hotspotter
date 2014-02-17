@@ -57,6 +57,16 @@ def train_classifier(hs):
     train_lbl = np.vstack((pos_lbl, neg_lbl))
 
 
+def test_classifier(classifier, pos_test, neg_test):
+    pos_output = classifier.predict(pos_test)
+    neg_output = classifier.predict(neg_test)
+
+    tp_rate = pos_output.sum() / len(pos_output)
+    fp_rate = neg_output.sum() / len(neg_output)
+    print('tp_rate = %r' % tp_rate)
+    print('fp_rate = %r' % fp_rate)
+
+
 def train_random_forest(hs, train_data, train_lbl, pos_test, neg_test):
     from sklearn.ensemble import RandomForestClassifier
     forest_parms = {
@@ -68,19 +78,24 @@ def train_random_forest(hs, train_data, train_lbl, pos_test, neg_test):
         'random_state': None,
         'verbose': True,
     }
-    forest = RandomForestClassifier(**forest_parms)
-    forest = forest.fit(train_data, train_lbl)
-
-    pos_output = forest.predict(pos_test)
-    neg_output = forest.predict(neg_test)
-
-    tp_rate = pos_output.sum() / len(pos_output)
-    fp_rate = neg_output.sum() / len(neg_output)
-    print('tp_rate = %r' % tp_rate)
-    print('fp_rate = %r' % fp_rate)
+    classifier = RandomForestClassifier(**forest_parms)
+    classifier = classifier.fit(train_data, train_lbl)
+    test_classifier(classifier, pos_test, neg_test)
 
 
 def train_svm(hs, train_data, train_lbl, pos_test, neg_test):
     from sklearn import svm
-    classifier = svm.SVC()
+    classifier = svm.SVC(C=1.0,
+                         cache_size=200,
+                         class_weight=None,
+                         coef0=0.0,
+                         degree=3,
+                         gamma=0.0,
+                         kernel='rbf',
+                         max_iter=-1,
+                         probability=False,
+                         shrinking=True,
+                         tol=0.001,
+                         verbose=True)
     classifier.fit(train_data, train_lbl)
+    test_classifier(classifier, pos_test, neg_test)

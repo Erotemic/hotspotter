@@ -260,6 +260,40 @@ if __name__ == '__main__':
     print('\n'.join(cmd_list))
 
 
+# sparesehash
+'''
+sudo add-apt-repository "http://downloads.skewed.de/apt/precise precise universe"
+sudo apt-key adv --keyserver http://pgp.skewed.de --recv-keys 98507F25
+
+sudo apt-get update
+deb http://downloads.skewed.de/apt/DISTRIBUTION DISTRIBUTION universe
+deb-src http://downloads.skewed.de/apt/DISTRIBUTION DISTRIBUTION universe
+
+cd ~/tmp
+
+alias untargz='tar xvzf '
+alias untarbz='tar xvjf '
+alias untar='tar xvf '
+
+wget https://code.google.com/p/sparsehash/downloads/sparsehash-2.0.2.tar.gz
+untargz sparsehash-2.0.2.tar.gz
+mv ~/tmp/sparsehash-2.0.2 ~/code/sparsehash-2.0.2
+cd ~/code/sparsehash-2.0.2
+make -j9 && sudo make install
+
+
+'''
+
+
+# Gephi
+'''
+update-alternatives --config java
+update-alternatives --config javac
+sudo apt-add-repository ppa:rockclimb/gephi-daily
+sudo apt-get install gephi
+'''
+
+
 # Py-graph-tool
 #
 '''

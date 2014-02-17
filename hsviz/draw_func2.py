@@ -372,12 +372,23 @@ def all_figures_tight_layout():
 def get_monitor_geom(monitor_num=0):
     from PyQt4 import QtGui  # NOQA
     desktop = QtGui.QDesktopWidget()
-    rect = desktop.availableGeometry()
+    rect = desktop.availableGeometry(screen=monitor_num)
     geom = (rect.x(), rect.y(), rect.width(), rect.height())
     return geom
 
 
-def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
+def get_monitor_geometries():
+    from PyQt4 import QtGui  # NOQA
+    monitor_geometries = {}
+    desktop = QtGui.QDesktopWidget()
+    for screenx in xrange(desktop.numScreens()):
+        rect = desktop.availableGeometry(screen=screenx)
+        geom = (rect.x(), rect.y(), rect.width(), rect.height())
+        monitor_geometries[screenx] = geom
+    return monitor_geometries
+
+
+def all_figures_tile(num_rc=(3, 4), wh=700, xy_off=(0, 0), wh_off=(0, 0),
                      row_first=True, no_tile=False, override1=False):
     'Lays out all figures in a grid. if wh is a scalar, a golden ratio is used'
     print('[df2] all_figures_tile()')
@@ -405,41 +416,79 @@ def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
 
     #nFigs = len(all_figures) + len(all_qt4_wins)
 
-    num_rows, num_cols = num_rc
+    nRows, nCols = num_rc
+
+    standard_sizes = {
+        'gnome3_menubar_h': 80,
+        'gnome3_win_xborder': 5,
+        'gnome3_win_yborder': 5,
+        'mpl_menubar_y': 30,
+    }
 
     w, h = wh
     x_off, y_off = xy_off
     w_off, h_off = wh_off
     x_pad, y_pad = (0, 0)
-    printDBG('[df2] Tile all figures: ')
-    printDBG('[df2]     wh = %r' % ((w, h),))
-    printDBG('[df2]     xy_offsets = %r' % ((x_off, y_off),))
-    printDBG('[df2]     wh_offsets = %r' % ((w_off, h_off),))
-    printDBG('[df2]     xy_pads = %r' % ((x_pad, y_pad),))
-    if sys.platform == 'win32':
+    # Good offset measurements for...
+    #Windows 7
+    if sys.platform.startswith('win32'):
+        printDBG('win32')
         h_off +=   0
         w_off +=  40
         x_off +=  40
         y_off +=  40
         x_pad +=   0
         y_pad += 100
+    # Ubuntu (Medeterrainian Dark)
+    if sys.platform.startswith('linux2'):
+        printDBG('linux')
+        h_off +=  30
+        w_off +=  standard_sizes['gnome3_win_xborder']
+        x_off +=  0
+        y_off +=  standard_sizes['gnome3_win_yborder'] + standard_sizes['mpl_menubar_y']
+        x_pad +=  0
+        y_pad +=  standard_sizes['gnome3_menubar_h']  # for gnome3 title bar
 
-    def position_window(i, win):
+    effective_w = w + w_off
+    effective_h = h + h_off
+
+    if True or num_rc is None:
+        monitor_geometries = get_monitor_geometries()
+        geom = monitor_geometries[0]
+        # Use all of monitor 0
+        available_geom = (geom[0], geom[1], geom[2], geom[3])
+        avail_width = available_geom[2] - available_geom[0]
+        avail_height = available_geom[3] - available_geom[1]
+        nRows = int(avail_width // (effective_w))
+        nCols = int(avail_height // (effective_h))
+
+    printDBG('[df2] Tile all figures: ')
+    printDBG('[df2]     wh = %r' % ((w, h),))
+    printDBG('[df2]     xy_offsets = %r' % ((x_off, y_off),))
+    printDBG('[df2]     wh_offsets = %r' % ((w_off, h_off),))
+    printDBG('[df2]     wh_effective = %r' % ((effective_h, effective_h),))
+    printDBG('[df2]     xy_pads = %r' % ((x_pad, y_pad),))
+    printDBG('[df2]     nRows, nCols = %r' % ((nRows, nCols),))
+
+    def position_window(ix, win):
         isqt4_mpl = isinstance(win, backend_qt4.MainWindow)
         isqt4_back = isinstance(win, QtGui.QMainWindow)
         if not isqt4_mpl and not isqt4_back:
-            raise NotImplementedError('%r-th Backend %r is not a Qt Window' % (i, win))
+            raise NotImplementedError('%r-th Backend %r is not a Qt Window' %
+                                      (ix, win))
         if row_first:
-            y = (i % num_rows) * (h + h_off) + 40
-            x = (int(i / num_rows)) * (w + w_off) + x_pad
+            rowx = ix % nRows
+            colx = int(ix // nRows)
         else:
-            x = (i % num_cols) * (w + w_off) + 40
-            y = (int(i / num_cols)) * (h + h_off) + y_pad
-        x += x_off
-        y += y_off
+            colx = (ix % nCols)
+            rowx = int(ix // nCols)
+        x = colx * (effective_w)
+        y = rowx * (effective_h)
+        printDBG('ix=%r) rowx=%r colx=%r, x=%r y=%r, w=%r, h=%r' %
+                 (ix, rowx, colx, x, y, w, h))
         try:
             #(x, y, w1, h1) = win.getGeometry()
-            win.setGeometry(x, y, w, h)
+            win.setGeometry(x + x_pad, y + y_pad, w, h)
         except Exception as ex:
             print(ex)
     ioff = 0

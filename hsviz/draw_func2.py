@@ -388,7 +388,7 @@ def get_monitor_geometries():
     return monitor_geometries
 
 
-def all_figures_tile(num_rc=(3, 4), wh=700, xy_off=(0, 0), wh_off=(0, 0),
+def all_figures_tile(num_rc=(3, 4), wh=750, xy_off=(0, 0), wh_off=(0, 0),
                      row_first=True, no_tile=False, override1=False):
     'Lays out all figures in a grid. if wh is a scalar, a golden ratio is used'
     print('[df2] all_figures_tile()')
@@ -1418,7 +1418,11 @@ def colorbar(scalars, colors):
 
 
 def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
-                color_list=None, **kwargs):
+                color_list=None, scale_factor=1, **kwargs):
+    printDBG('-------------')
+    printDBG('draw_lines2()')
+    printDBG(' * len(fm) = %r' % len(fm))
+    printDBG(' * scale_factor = %r' % scale_factor)
     if not DISTINCT_COLORS:
         color_list = None
     # input data
@@ -1433,10 +1437,10 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
     # Draw line collection
     kpts1_m = kpts1[fm[:, 0]].T
     kpts2_m = kpts2[fm[:, 1]].T
-    xxyy_iter = iter(zip(kpts1_m[0],
-                         kpts2_m[0] + woff,
-                         kpts1_m[1],
-                         kpts2_m[1] + hoff))
+    xxyy_iter = iter(zip(kpts1_m[0] * scale_factor,
+                         kpts2_m[0] * scale_factor + woff,
+                         kpts1_m[1] * scale_factor,
+                         kpts2_m[1] * scale_factor + hoff))
     if color_list is None:
         if fs is None:  # Draw with solid color
             color_list    = [ LINE_COLOR for fx in xrange(len(fm))]
@@ -1461,10 +1465,14 @@ def draw_kpts(kpts, *args, **kwargs):
 def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
                pts_size=POINT_SIZE, ell_alpha=ELL_ALPHA,
                ell_linewidth=ELL_LINEWIDTH, ell_color=ELL_COLOR,
-               color_list=None, rect=None, arrow=False, **kwargs):
+               color_list=None, rect=None, arrow=False, scale_factor=1, **kwargs):
     if not DISTINCT_COLORS:
         color_list = None
-    printDBG('drawkpts2: Drawing Keypoints! ell=%r pts=%r' % (ell, pts))
+    printDBG('-------------')
+    printDBG('draw_kpts2():')
+    printDBG(' * ell=%r pts=%r' % (ell, pts))
+    printDBG(' * scale_factor=%r' % (scale_factor,))
+    printDBG(' * offset=%r' % (offset,))
     # get matplotlib info
     ax = gca()
     pltTrans = ax.transData
@@ -1472,23 +1480,20 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
     # data
     kpts = np.array(kpts)
     kptsT = kpts.T
-    x = kptsT[0, :] + offset[0]
-    y = kptsT[1, :] + offset[1]
-    printDBG('[df2] draw_kpts()----------')
-    printDBG('[df2] draw_kpts() ell=%r pts=%r' % (ell, pts))
-    printDBG('[df2] draw_kpts() drawing kpts.shape=%r' % (kpts.shape,))
+    x = kptsT[0, :] * scale_factor + offset[0]
+    y = kptsT[1, :] * scale_factor + offset[1]
+    printDBG(' * drawing kpts.shape=%r' % (kpts.shape,))
     if rect is None:
         rect = ell
         rect = False
         if pts is True:
             rect = False
     if ell or rect:
-        printDBG('[df2] draw_kpts() drawing ell kptsT.shape=%r' % (kptsT.shape,))
         # We have the transformation from unit circle to ellipse here. (inv(A))
-        a = kptsT[2]
+        a = kptsT[2] * scale_factor
         b = np.zeros(len(a))
-        c = kptsT[3]
-        d = kptsT[4]
+        c = kptsT[3] * scale_factor
+        d = kptsT[4] * scale_factor
 
         kpts_iter = izip(x, y, a, b, c, d)
         aff_list = [Affine2D([( a_, b_, x_),
@@ -1522,7 +1527,6 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
         ellipse_collection.set_edgecolor(ell_color)
         ax.add_collection(ellipse_collection)
     if pts:
-        printDBG('[df2] draw_kpts() drawing pts x.shape=%r y.shape=%r' % (x.shape, y.shape))
         if color_list is None:
             color_list = [pts_color for _ in xrange(len(x))]
         ax.autoscale(enable=False)
@@ -1533,9 +1537,7 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
 
 # ---- CHIP DISPLAY COMMANDS ----
 def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
-           interpolation='nearest',
-           cmap=None,
-           **kwargs):
+           interpolation='nearest', cmap=None, heatmap=False, **kwargs):
     'other interpolations = nearest, bicubic, bilinear'
     #printDBG('[df2] ----- IMSHOW ------ ')
     #printDBG('[***df2.imshow] fnum=%r pnum=%r title=%r *** ' % (fnum, pnum, title))
@@ -1552,19 +1554,21 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
         'interpolation': interpolation,
         #'cmap': plt.get_cmap('gray'),
     }
-    if cmap is None:
-        plt_imshow_kwargs.update({
-            'vmin': 0,
-            'vmax': 255,
-        })
+    if cmap is None and not heatmap:
+        plt_imshow_kwargs['vmin'] = 0
+        plt_imshow_kwargs['vmax'] = 255
+    if heatmap:
+        cmap = 'hot'
     try:
         if len(img.shape) == 3 and img.shape[2] == 3:
             # img is in a color format
             imgBGR = img
             if imgBGR.dtype == np.float64:
                 if imgBGR.max() <= 1:
+                    printDBG('Drawing Float Color Image < 1')
                     imgBGR = np.array(imgBGR, dtype=np.float32)
                 else:
+                    printDBG('Drawing Float Color Image > 1')
                     imgBGR = np.array(imgBGR, dtype=np.uint8)
             imgRGB = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
             ax.imshow(imgRGB, **plt_imshow_kwargs)
@@ -1575,17 +1579,26 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
                 cmap = plt.get_cmap('gray')
             if isinstance(cmap, str):
                 cmap = plt.get_cmap(cmap)
-            print(cmap)
+            if imgGRAY.dtype == np.float32 and False:
+                if imgGRAY.max() <= 1:
+                    printDBG('Drawing Float Grey Image < 1')
+                    imgGRAY = np.array(np.round(imgGRAY * 255), dtype=np.uint8)
+                else:
+                    printDBG('Drawing Float Grey Image > 1')
+                    imgGRAY = np.array(np.round(imgGRAY), dtype=np.uint8)
             ax.imshow(imgGRAY, cmap=cmap, **plt_imshow_kwargs)
         else:
             raise Exception('unknown image format')
     except TypeError as te:
-        print('[df2] imshow ERROR %r' % te)
+        print('[df2] imshow ERROR %r' % (te,))
         raise
     except Exception as ex:
+        print('!!!!!!!!!!!!!!WARNING!!!!!!!!!!!')
         print('[df2] type(img) = %r' % type(img))
         if not isinstance(img, np.ndarray):
-            print('img = %r' % img)
+            print('!!!!!!!!!!!!!!ERRROR!!!!!!!!!!!')
+            pass
+            #print('img = %r' % (img,))
         print('[df2] img.dtype = %r' % (img.dtype,))
         print('[df2] type(img) = %r' % (type(img),))
         print('[df2] img.shape = %r' % (img.shape,))
@@ -1675,19 +1688,21 @@ def stack_images(img1, img2, vert=None):
         wB, hB = horiz_wh
         woff = w1
     # concatentate images
+    dtype = img1.dtype
+    assert img1.dtype == img2.dtype
     if nChannels == 3:
-        imgB = np.zeros((hB, wB, 3), np.uint8)
+        imgB = np.zeros((hB, wB, 3), dtype)
         imgB[0:h1, 0:w1, :] = img1
         imgB[hoff:(hoff + h2), woff:(woff + w2), :] = img2
     elif nChannels == 1:
-        imgB = np.zeros((hB, wB), np.uint8)
+        imgB = np.zeros((hB, wB), dtype)
         imgB[0:h1, 0:w1] = img1
         imgB[hoff:(hoff + h2), woff:(woff + w2)] = img2
     return imgB, woff, hoff
 
 
 def show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm=None, fs=None, title=None,
-                    vert=None, fnum=None, pnum=None, **kwargs):
+                    vert=None, fnum=None, pnum=None, heatmap=False, **kwargs):
     '''Draws two chips and the feature matches between them. feature matches
     kpts1 and kpts2 use the (x,y,a,c,d)
     '''
@@ -1700,7 +1715,7 @@ def show_chipmatch2(rchip1, rchip2, kpts1, kpts2, fm=None, fs=None, title=None,
     xywh1 = (0, 0, w1, h1)
     xywh2 = (woff, hoff, w2, h2)
     # Show the stacked chips
-    fig, ax = imshow(match_img, title=title, fnum=fnum, pnum=pnum)
+    fig, ax = imshow(match_img, title=title, fnum=fnum, pnum=pnum, heatmap=heatmap)
     # Overlay feature match nnotations
     draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs, **kwargs)
     return ax, xywh1, xywh2

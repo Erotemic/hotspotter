@@ -528,7 +528,6 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
     # Tell the user we are about to make progress
     if progress_type in ['simple', 'fmtstr'] and max_val < mark_after:
         return lambda count: None, lambda: None
-    print(lbl)
     # none: nothing
     if progress_type == 'none':
         mark_progress =  lambda count: None
@@ -589,6 +588,7 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
     def end_progress():
         sys.stdout.flush()
         print('')
+    mark_progress(0)
     return mark_progress, end_progress
     raise Exception('unkown progress type = %r' % progress_type)
 

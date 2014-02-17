@@ -324,6 +324,7 @@ rm *; git checkout *
 libtoolize --force
 ./autogen.sh
 ./configure
+make -j9 && sudo make install
 
 #rm *; git checkout *
 #libtoolize --force

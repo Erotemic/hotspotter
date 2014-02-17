@@ -657,9 +657,12 @@ class MainWindowFrontend(QtGui.QMainWindow):
 
     @slot_(int)
     def change_view(front, new_state):
+        tab_name = str(front.ui.tablesTabWidget.tabText(new_state))
         front.print('change_view(%r)' % new_state)
         prevBlock = front.ui.tablesTabWidget.blockSignals(True)
         front.ui.tablesTabWidget.blockSignals(prevBlock)
+        if tab_name.startswith('Query Results Table'):
+            print(front.back.hs.get_cache_uid())
 
     @slot_(str, str, list)
     def modal_useroption(front, msg, title, options):

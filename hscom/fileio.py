@@ -302,13 +302,16 @@ def exiftime_to_unixtime(datetime_str):
             #return -1
         return -1
     except ValueError as ex:
-        if isinstance(datetime_str, str):
+        if isinstance(datetime_str, str) or isinstance(datetime_str, unicode):
             if datetime_str.find('No EXIF Data') == 0:
                 return -1
             if datetime_str.find('Invalid') == 0:
                 return -1
+            if datetime_str == '0000:00:00 00:00:00':
+                return -1
         print('!!!!!!!!!!!!!!!!!!')
         print('Caught Error: ' + repr(ex))
+        print('type(datetime_str) = %r' % type(datetime_str))
         print('datetime_str = %r' % datetime_str)
         raise
 

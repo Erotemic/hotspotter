@@ -20,8 +20,8 @@ def reload_all_modules():
     from hotspotter import voting_rules2 as vr2
     # Common
     from hscom import Parallelize as parallel
-    from hscom import Preferences as prefs
-    from hscom import Printable
+    #from hscom import Preferences as prefs
+    #from hscom import Printable
     #from hscom import argparse2
     from hscom import cross_platform as cplat
     from hscom import fileio as io
@@ -51,8 +51,8 @@ def reload_all_modules():
     io.rrr()
     cplat.rrr()
     parallel.rrr()
-    prefs.rrr()
-    Printable.rrr()
+    #prefs.rrr()
+    #Printable.rrr()
     #argparse2.rrr()
     latex_formater.rrr()
     params.rrr()

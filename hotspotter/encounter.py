@@ -115,7 +115,7 @@ def get_cxfx_enum(qdat):
     return cxfx_enum
 
 
-def make_feature_graph(qdat, qcx2_res):
+def make_feature_graph(qdat, qcx2_res, use_networkx=True):
     # Make a graph between the chips
     cxfx2_ax = {(cx, fx): ax for ax, (cx, fx) in get_cxfx_enum(qdat)}
     def w_edge(cx1, cx2, fx1, fx2, score, rank):
@@ -128,9 +128,43 @@ def make_feature_graph(qdat, qcx2_res):
                       for (cx1, res) in qcx2_res.iteritems()
                       for (cx2, (fx1, fx2), score, rank) in get_fmatch_iter(res)
                       if score > 0]
-    graph = netx.DiGraph()
-    graph.add_nodes_from(nodes)
-    graph.add_edges_from(weighted_edges)
+    if use_networkx:
+        graph = netx.DiGraph()
+        graph.add_nodes_from(nodes)
+        graph.add_edges_from(weighted_edges)
+    else:
+        vx2_ax = cxfx2_ax.values()
+        import graph_tool
+        graph = graph_tool.Graph(g=None, directed=True, prune=False, vorder=None)
+        vertex_list = graph.add_vertex(n=len(nodes))
+
+        v_fx = graph.new_vertex_property("int")
+        v_cx = graph.new_vertex_property("int")
+
+        e_score = graph.new_edge_property("float")
+        e_rank = graph.new_edge_property("int")
+
+        for v, (ax, vprops) in zip(vertex_list, nodes):
+            v_cx[v] = int(vprops['cx'])
+            v_fx[v] = int(vprops['fx'])
+
+        mark_prog, end_prog = helpers.progress_func(len(weighted_edges))
+        count = 0
+        for ax1, ax2, prop_dict in weighted_edges:
+            mark_prog(count)
+            count += 1
+            vx1 = vx2_ax.index(ax1)
+            vx2 = vx2_ax.index(ax2)
+            v1 = graph.vertex(vx1)
+            v2 = graph.vertex(vx2)
+            e = graph.add_edge(v1, v2)
+            e_score[e] = float(prop_dict['score'])
+            e_rank[e] = int(prop_dict['rank'])
+        mark_prog(count)
+        end_prog()
+        import graph_tool.draw
+
+        graph.save('test_graph.dot')
     return graph
 
 
@@ -193,7 +227,6 @@ def draw_images_at_positions(img_list, pos_list):
         img_ax.set_aspect('equal')
         img_ax.axis('off')
     end_progress()
-
 
 
 def intra_query_cxs(hs, cxs):

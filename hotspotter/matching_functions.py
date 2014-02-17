@@ -4,10 +4,12 @@ print, print_, print_on, print_off, rrr, profile, printDBG =\
     __common__.init(__name__, '[mf]', DEBUG=False)
 # Python
 from itertools import izip
+import sys
 # Scientific
 import numpy as np
 # Hotspotter
 import QueryResult as qr
+import coverage
 import nn_filters
 import spatial_verification2 as sv2
 import voting_rules2 as vr2
@@ -342,7 +344,6 @@ def spatial_verification(hs, qcx2_chipmatch, qdat):
                                                       use_chip_extent,
                                                       USE_1_to_2)
         # Override print function temporarilly
-        import sys
         def print_(msg, count=0):
             if count % 50 == 0:
                 sys.stdout.write(msg)
@@ -521,6 +522,8 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, qdat=None):
         cx2_score, nx2_score = vr2.score_chipmatch_pos(hs, qcx, chipmatch, qdat, 'borda')
     elif score_method == 'topk':
         cx2_score, nx2_score = vr2.score_chipmatch_pos(hs, qcx, chipmatch, qdat, 'topk')
+    elif score_method == 'coverage':
+        cx2_score = coverage.score_chipmatch_coverage(hs, qcx, chipmatch, qdat)
     else:
         raise Exception('[mf] unknown scoring method:' + score_method)
     cx2_nMatch = np.array(map(len, cx2_fm))

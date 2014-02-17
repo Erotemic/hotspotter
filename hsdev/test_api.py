@@ -68,4 +68,22 @@ def main(defaultdb='cache', preload=False, app=None):
             raise
     if app is not None:
         return hs, back
+    else:
+        from hsgui import guitools
+        app, is_root = guitools.init_qtapp()
+        hs.app = app
     return hs
+
+
+def get_test_cxs(hs, max_testcases=None):
+    valid_cxs = hs.get_valid_cxs()
+    if max_testcases is not None:
+        max_ = max(max_testcases, len(valid_cxs) - 1)
+        valid_cxs = valid_cxs[0:max_]
+    return valid_cxs
+
+
+def reload_all():
+    import dev_reload
+    dev_reload.rrr()
+    dev_reload.reload_all_modules()

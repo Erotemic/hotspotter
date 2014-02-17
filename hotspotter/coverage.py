@@ -12,9 +12,11 @@ import numpy as np
 from hscom import helpers
 
 
-def get_coverage(kpts, chip_size):
-    area_matrix = get_coverage_map(kpts, chip_size)
-    return 0
+def get_keypoint_coverage(kpts, chip_size, dstimg=None):
+    if dstimg is None:
+        dstimg = get_coverage_map(kpts, chip_size)
+    percent = dstimg.sum() / dstimg.size
+    return percent
 
 
 def pdf_norm2d(x_, y_):
@@ -50,7 +52,7 @@ def get_gaussimg(width, resolution):
     return gaussimg
 
 
-def build_transforms(kpts, chip_size, src_size):
+def build_transforms(kpts, chip_size, src_size, scale_factor):
     (h, w) = chip_size
     (h_, w_) = src_size
     T1 = np.array(((1, 0, -w_ / 2),
@@ -62,38 +64,41 @@ def build_transforms(kpts, chip_size, src_size):
     aff_list = [np.array(((a, 0, x),
                           (c, d, y),
                           (0, 0, 1),)) for (x, y, a, c, d) in kpts]
-    perspective_list = [A.dot(S1).dot(T1) for A in aff_list]
+    S2 = np.array(((scale_factor,      0,  0),
+                   (0,      scale_factor,  0),
+                   (0,           0,  1),))
+    perspective_list = [S2.dot(A).dot(S1).dot(T1) for A in aff_list]
     transform_list = [M[0:2] for M in perspective_list]
     return transform_list
 
 
-def warp_srcimg_to_kpts(kpts, srcimg, chip_size):
-    (h, w) = chip_size
-    dst_img = np.zeros((h, w), dtype=np.float32)
-    dst_copy = dst_img.copy()
+def warp_srcimg_to_kpts(kpts, srcimg, chip_size, scale_factor=0.2):
+    (h, w) = map(int, (chip_size[0] * scale_factor, chip_size[1] * scale_factor))
+    dstimg = np.zeros((h, w), dtype=np.float32)
+    dst_copy = dstimg.copy()
     src_size = srcimg.shape
-    transform_list = build_transforms(kpts, (h, w), src_size)
+    transform_list = build_transforms(kpts, (h, w), src_size, scale_factor)
     flags = cv2.INTER_LINEAR  # cv2.INTER_LANCZOS4
     dsize = (w, h)
     boderMode = cv2.BORDER_CONSTANT
     mark_progress, end_progress = helpers.progress_func(len(transform_list))
     for count, M in enumerate(transform_list):
-        if count % 10 == 0:
+        if count % 20 == 0:
             mark_progress(count)
         warped = cv2.warpAffine(srcimg, M, dsize,
                                 dst=dst_copy,
                                 flags=flags, borderMode=boderMode,
                                 borderValue=0).T
-        catmat = np.dstack((warped.T, dst_img))
-        dst_img = catmat.max(axis=2)
+        catmat = np.dstack((warped.T, dstimg))
+        dstimg = catmat.max(axis=2)
     mark_progress(count)
     end_progress()
-    return dst_img
+    return dstimg
 
 
 def get_coverage_map(kpts, chip_size):
     # Create gaussian image to warp
     np.tau = 2 * np.pi
     srcimg = get_gaussimg(np.tau, 55)
-    dst_img = warp_srcimg_to_kpts(kpts, srcimg, chip_size)
-    return dst_img
+    dstimg = warp_srcimg_to_kpts(kpts, srcimg, chip_size, 0.2)
+    return dstimg

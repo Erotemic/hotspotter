@@ -34,17 +34,21 @@ if __name__ == '__main__':
 
     srcimg = coverage.get_gaussimg(2, 5)
     print(srcimg)
-    dstimg = coverage.warp_srcimg_to_kpts(kpts, srcimg, chip_size)
+    dstimg = coverage.warp_srcimg_to_kpts(kpts, srcimg, chip_size, 0.5)
     df2.imshow(srcimg * 255, fnum=fnum)
     fnum += 1
     df2.imshow(dstimg * 255, fnum=fnum)
     fnum += 1
+    dstimg2 = dstimg.copy()
+    dstimg2[dstimg2 > 0] = 1
+    df2.imshow(dstimg2 * 255, fnum=fnum)
+    fnum += 1
     df2.update()
 
-    #percent = coverage.get_coverage(kpts, chip_size)
+    percent = coverage.get_keypoint_coverage(kpts, chip_size, dstimg=dstimg)
 
     # Show Result
-    #print('coverage = %r' % percent)
+    print('coverage = %r%%' % percent)
     viz.show_chip(hs, cx, fnum=fnum)
     fnum += 1
     exec(viz.df2.present())

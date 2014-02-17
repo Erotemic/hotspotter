@@ -2030,7 +2030,7 @@ def all_dict_combinations(varied_dict):
     return dict_list
 
 
-def stash_testdata(*args, **kwargs):
+def save_testdata(*args, **kwargs):
     import shelve
     uid = kwargs.get('uid', '')
     shelf_fname = 'test_data_%s.shelf' % uid

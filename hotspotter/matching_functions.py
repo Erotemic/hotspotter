@@ -341,6 +341,12 @@ def spatial_verification(hs, qcx2_chipmatch, qdat):
                                                       cx2_fm, topx2_cx, nRerank,
                                                       use_chip_extent,
                                                       USE_1_to_2)
+        # Override print function temporarilly
+        import sys
+        def print_(msg, count=0):
+            if count % 50 == 0:
+                sys.stdout.write(msg)
+            count += 1
         # spatially verify the top __NUM_RERANK__ results
         for topx in xrange(nRerank):
             cx = topx2_cx[topx]

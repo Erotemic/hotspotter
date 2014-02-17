@@ -19,7 +19,7 @@ from hscom import cross_platform as cplat
 from hscom import fileio as io
 from hscom import helpers
 from hscom import tools
-from hscom.Printable import DynStruct
+#from hscom.Printable import DynStruct
 from hscom.Preferences import Pref
 import DataStructures as ds
 import Config
@@ -246,10 +246,11 @@ def __define_method(hs, method_name, func=None):
     #hs.cx2_tnx = lambda *args: api._cx2_tnx(hs, *args)
 
 
-class HotSpotter(DynStruct):
+class HotSpotter(object):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
-        super(HotSpotter, hs).__init__(child_exclude_list=['prefs', 'args'])
+        #super(HotSpotter, hs).__init__(child_exclude_list=['prefs', 'args'])
+        super(HotSpotter, hs).__init__()
         #printDBG('[\hs] Creating HotSpotter API')
         # TODO Remove args / integrate into prefs
         hs.callbacks = {}

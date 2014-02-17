@@ -23,10 +23,14 @@ class DebugAPI(DynStruct):
         return dev_consistency.check_keypoint_consistency(dbg.hs)
 
     def reload(dbg):
-        dev_reload.reload_all_modules()
+        _reload()
 
 
 def augment_api(hs):
     dbg = DebugAPI(hs)
     hs.dbg = dbg
     return hs
+
+
+def _reload():
+    dev_reload.reload_all_modules()

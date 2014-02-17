@@ -436,7 +436,11 @@ def all_figures_tile(num_rc=(3, 4), wh=1000, xy_off=(0, 0), wh_off=(0, 10),
             y = (int(i / num_cols)) * (h + h_off) + y_pad
         x += x_off
         y += y_off
-        win.setGeometry(x, y, w, h)
+        try:
+            (x, y, w1, h1) = win.getGeometry()
+            win.setGeometry(x, y, w, h)
+        except Exception as ex:
+            print(ex)
     ioff = 0
     for i, win in enumerate(all_qt4wins):
         position_window(i, win)
@@ -1529,6 +1533,9 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
         print('[df2] imshow ERROR %r' % te)
         raise
     except Exception as ex:
+        print('[df2] type(img) = %r' % type(img))
+        if not isinstance(img, np.ndarray):
+            print('img = %r' % img)
         print('[df2] img.dtype = %r' % (img.dtype,))
         print('[df2] type(img) = %r' % (type(img),))
         print('[df2] img.shape = %r' % (img.shape,))

@@ -63,6 +63,17 @@ def prequery(hs):
 #----------------------
 # Convinience Functions
 #----------------------
+
+
+def query_list(hs, qcxs, dcxs=None):
+    prequery(hs)
+    if dcxs is None:
+        dcxs = hs.get_indexed_sample()
+    qdat = hs.qdat
+    qcx2_res = execute_query_safe(hs, qdat, qcxs, dcxs)[0]
+    return qcx2_res
+
+
 def query_dcxs(hs, qcx, dcxs, qdat, dochecks=True):
     'wrapper that bypasses all that "qcx2_ map" buisness'
     if dochecks:

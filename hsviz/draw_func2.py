@@ -1091,6 +1091,11 @@ def plot_pdf(data, draw_support=True, scale_to=None, label=None, color=0,
         warnings.warn(warnstr)
         draw_text(warnstr)
         return
+    if len(data) == 1:
+        warnstr = '[df2] ! Warning: len(data) = 1. Cannot visualize pdf'
+        warnings.warn(warnstr)
+        draw_text(warnstr)
+        return
     bw_factor = .05
     if isinstance(color, (int, float)):
         colorx = color

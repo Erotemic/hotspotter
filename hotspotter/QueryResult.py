@@ -210,7 +210,7 @@ class QueryResult(DynStruct):
                        for (fx_tup, score, rank) in izip(fm, fs, fk))
         return fmatch_iter
 
-    def topN_cxs(res, hs, N=None):
+    def topN_cxs(res, hs, N=None, only_gt=False, only_nongt=False):
         cx2_score = np.array(res.get_cx2_score())
         if hs.prefs.display_cfg.name_scoring:
             cx2_chipscore = np.array(cx2_score)
@@ -220,6 +220,12 @@ class QueryResult(DynStruct):
         dcxs_ = set(hs.get_indexed_sample()) - set([res.qcx])
         top_cxs = [cx for cx in iter(top_cxs) if cx in dcxs_]
         #top_cxs = np.intersect1d(top_cxs, hs.get_indexed_sample())
+        if only_gt:
+            gt_cxs = set(hs.get_other_indexed_cxs(res.qcx))
+            top_cxs = [cx for cx in iter(top_cxs) if cx in gt_cxs]
+        if only_nongt:
+            gt_cxs = set(hs.get_other_indexed_cxs(res.qcx))
+            top_cxs = [cx for cx in iter(top_cxs) if not cx in gt_cxs]
         nIndexed = len(top_cxs)
         if N is None:
             N = hs.prefs.display_cfg.N
@@ -231,6 +237,16 @@ class QueryResult(DynStruct):
         #print('[res] returning nTop = %r' % (nTop,))
         topN_cxs = top_cxs[0:nTop]
         return topN_cxs
+
+    def compute_seperability(res, hs):
+        top_gt = res.topN_cxs(hs, N=1, only_gt=True)
+        top_nongt = res.topN_cxs(hs, N=1, only_nongt=True)
+        if len(top_gt) == 0:
+            return None
+        score_true = res.cx2_score[top_gt[0]]
+        score_false = res.cx2_score[top_nongt[0]]
+        seperatiblity = score_true - score_false
+        return seperatiblity
 
     def show_query(res, hs, **kwargs):
         from hsviz import viz

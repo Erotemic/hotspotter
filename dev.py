@@ -555,6 +555,34 @@ def report_results(hs, qcx_list):
     #exec(df2.present())
 
 
+def plot_seperability(hs, qcx_list, fnum=1):
+    hs.prefs.qfg
+    qcx2_res = mc3.query_list(hs, qcx_list)
+    qcx2_separability = get_seperatbility(hs, qcx2_res)
+    sep_score_list = qcx2_separability.values()
+    all_score_list = []
+    for res in qcx2_res.itervalues():
+        cx2_score = res.cx2_score
+        cx2_score = cx2_score.max() - cx2_score
+        all_score_list.extend(cx2_score.tolist())
+    df2.figure(fnum=fnum, doclf=True, docla=True)
+    color1, color2 = df2.distinct_colors(2)
+    #df2.plot_pdf(all_score_list, color=color1, label='all scores')
+    df2.plot_pdf(sep_score_list, color=color2, label='seperable scores')
+    df2.dark_background()
+    df2.set_figtitle('seperability')
+    df2.legend()
+    df2.update()
+    fnum += 1
+    return fnum
+
+
+def get_seperatbility(hs, qcx2_res):
+    qcx2_separability = {qcx: res.compute_seperability(hs) for qcx, res in qcx2_res.iteritems()}
+    qcx2_separability = {qcx: sepscore for qcx, sepscore in qcx2_separability.iteritems() if sepscore is not None}
+    return qcx2_separability
+
+
 # Driver Function
 def run_investigations(hs, qcx_list):
     import experiment_harness
@@ -616,6 +644,8 @@ def run_investigations(hs, qcx_list):
         report_results(hs, qcx_list)
     if intest('custom'):
         fnum = experiment_harness.test_configurations(hs, qcx_list, 'custom', fnum)
+    if intest('seperability', 'sep'):
+        fnum = plot_seperability(hs, qcx_list, fnum)
 
     # Allow any testcfg to be in tests like:
     # vsone_1 or vsmany_3

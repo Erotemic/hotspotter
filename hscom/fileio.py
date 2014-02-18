@@ -412,9 +412,20 @@ def read_exif_list(fpath_list, **kwargs):
 
 
 @profile
-def imread(img_fpath):
+def imread(img_fpath, mode=None):
     try:
+        # opencv always reads in BGR mode (fastest load time)
         imgBGR = cv2.imread(img_fpath, flags=cv2.CV_LOAD_IMAGE_COLOR)
+        if mode is not None and mode != 'BRG':
+            # RGB is a good standard and makes physical sense
+            if mode == 'RGB':
+                return cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
+            # LAB simulates human perception. Great for color comparisons
+            if mode == 'LAB':
+                return cv2.cvtColor(imgBGR, cv2.COLOR_BGR2LAB)
+            # HSV is also good for perception and more intuitive than LAB
+            if mode == 'HSV':
+                return cv2.cvtColor(imgBGR, cv2.COLOR_BGR2HSV)
         return imgBGR
     except Exception as ex:
         print('[io] Caught Exception: %r' % ex)

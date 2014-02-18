@@ -22,6 +22,16 @@ def _nxutils_points_inside_poly(points, verts):
     return path.contains_points(points)
 
 
+def verts_to_mask(shape, verts):
+    print(verts)
+    h, w = shape[0:2]
+    y, x = np.mgrid[:h, :w]
+    points = np.transpose((x.ravel(), y.ravel()))
+    #mask = nxutils.points_inside_poly(points, verts)
+    mask = _nxutils_points_inside_poly(points, verts)
+    return mask.reshape(h, w)
+
+
 class MaskCreator(object):
     """An interactive polygon editor.
 
@@ -78,13 +88,8 @@ class MaskCreator(object):
 
     def get_mask(self, shape):
         """Return image mask given by mask creator"""
-        h, w = shape[0:2]
-        y, x = np.mgrid[:h, :w]
-        points = np.transpose((x.ravel(), y.ravel()))
-
-        mask = _nxutils_points_inside_poly(points, self.verts)
-        #mask = nxutils.points_inside_poly(points, self.verts)
-        return mask.reshape(h, w)
+        mask = verts_to_mask(shape, self.verts)
+        return mask
 
     def poly_changed(self, poly):
         'this method is called whenever the polygon object is called'
@@ -205,26 +210,67 @@ def apply_mask(img, mask):
     return masked_img
 
 
-def mask_creator_demo():
+def roi_to_verts(roi):
+    (x, y, w, h) = roi
+    verts = np.array([(x + 0, y + h),
+                      (x + 0, y + 0),
+                      (x + w, y + 0),
+                      (x + w, y + h),
+                      (x + 0, y + h)], dtype=np.float32)
+    return verts
+
+
+def roi_to_mask(shape, roi):
+    verts = roi_to_verts(roi)
+    mask = verts_to_mask(shape, verts)
+    return mask
+
+
+def mask_creator_demo(mode=0):
+    print('*** START DEMO ***')
+    print('mode = %r' % mode)
     try:
-        from hotspotter import fileio as io
-        img = io.imread('/lena.png')
-    except ImportError:
+        from hscom import fileio as io
+        img = io.imread('/lena.png', 'RGB')
+    except ImportError as ex:
+        print('cant read lena: %r' % ex)
         img = np.random.uniform(0, 255, size=(100, 100))
 
     ax = plt.subplot(111)
     ax.imshow(img)
 
-    mc = MaskCreator(ax)
-    plt.show()
+    if mode == 0:
+        mc = MaskCreator(ax)
+        # Do interaction
+        plt.show()
+        # Make mask from selection
+        mask = mc.get_mask(img.shape)
+        # User must close previous figure
+    elif mode == 1:
+        from hsgui import guitools
+        from hsviz import draw_func2 as df2
+        ax.set_title('Click two points to select an ROI (old mode)')
+        # Do selection
+        roi = guitools.select_roi()
+        # Make mask from selection
+        mask = roi_to_mask(img.shape, roi)
+        # Close previous figure
+        df2.close_all_figures()
 
-    mask = mc.get_mask(img.shape)
+    # Modify the image with the mask
     masked_img = apply_mask(img, mask)
-
+    # show the modified image
     plt.imshow(masked_img)
     plt.title('Region outside of mask is darkened')
+    print('show2')
     plt.show()
 
 
 if __name__ == '__main__':
-    mask_creator_demo()
+    import sys
+    print(sys.argv)
+    if len(sys.argv) == 1:
+        mode = 0
+    else:
+        mode = 1
+    mask_creator_demo(mode)

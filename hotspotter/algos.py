@@ -21,6 +21,7 @@ import scipy.sparse as spsparse
 # Hotspotter
 from hscom import fileio as io
 from hscom import helpers
+from hscom import helpers as util
 
 
 DIST_LIST = ['L1', 'L2']

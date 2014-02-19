@@ -42,7 +42,7 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
 
     def print(msg):
         __builtin__.print(msg)
-        #__builtin__.print(module_prefix + msg)
+        #__builtin__.print(module_prefix + str(msg).replace(module_prefix, ''))
 
     def noprint(msg):
         pass

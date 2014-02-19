@@ -97,7 +97,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     # Run Main Function
     from hsgui import guitools
-    from hscom import helpers
+    from hscom import helpers as util
     from hsdev import test_api
     print('main.py')
     # Listen for ctrl+c
@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
     # Allow for a IPython connection by passing the --cmd flag
     embedded = False
-    if helpers.get_flag('--cmd'):
+    if util.get_flag('--cmd'):
         import scripts
         import generate_training
         import sys
@@ -152,7 +152,7 @@ if __name__ == '__main__':
         #from IPython.lib.inputhook import enable_qt4
         #pyqtRemoveInputHook()
         #enable_qt4()
-        exec(helpers.ipython_execstr())
+        exec(util.ipython_execstr())
         sys.exit(1)
     if not embedded:
         # If not in IPython run the QT main loop

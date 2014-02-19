@@ -18,6 +18,7 @@ from PIL import Image
 from hscom import cross_platform as cplat
 from hscom import fileio as io
 from hscom import helpers
+from hscom import helpers as util
 from hscom import tools
 #from hscom.Printable import DynStruct
 from hscom.Preferences import Pref

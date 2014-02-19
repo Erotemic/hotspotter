@@ -2,6 +2,7 @@ from hotspotter import HotSpotterAPI as api
 from hotspotter import chip_compute2 as cc2
 from hscom import argparse2
 from hscom import helpers
+from hscom import helpers as util
 from hsviz import viz
 import multiprocessing
 import numpy as np  # NOQA

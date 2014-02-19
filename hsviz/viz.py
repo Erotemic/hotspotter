@@ -13,7 +13,7 @@ import draw_func2 as df2
 import extract_patch
 from hscom import params
 from hscom import fileio as io
-from hscom import helpers
+from hscom import helpers as util
 from hotspotter import QueryResult as qr
 
 #from interaction import interact_keypoints, interact_chipres, interact_chip # NOQA
@@ -21,9 +21,9 @@ from hotspotter import QueryResult as qr
 
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5, name=6)
 
-IN_IMAGE_OVERRIDE = helpers.get_arg('--in-image-override', type_=bool, default=None)
-SHOW_QUERY_OVERRIDE = helpers.get_arg('--show-query-override', type_=bool, default=None)
-NO_LABEL_OVERRIDE = helpers.get_arg('--no-label-override', type_=bool, default=None)
+IN_IMAGE_OVERRIDE = util.get_arg('--in-image-override', type_=bool, default=None)
+SHOW_QUERY_OVERRIDE = util.get_arg('--show-query-override', type_=bool, default=None)
+NO_LABEL_OVERRIDE = util.get_arg('--no-label-override', type_=bool, default=None)
 
 
 @profile
@@ -427,7 +427,7 @@ def show_chipres(hs, res, cx, fnum=None, pnum=None, sel_fm=[], in_image=False, *
         print('[viz] vsstr = %s' % hs.vs_str(qcx, cx))
         qr.dbg_check_query_result(hs, res)
         print('consider qr.remove_corrupted_queries(hs, res, dryrun=False)')
-        helpers.qflag()
+        util.qflag()
         raise
     x1, y1, w1, h1 = xywh1
     x2, y2, w2, h2 = xywh2
@@ -462,7 +462,7 @@ def annotate_chipres(hs, res, cx, showTF=True, showScore=True, showRank=True, ti
         rank_str = ' rank=' + str(res.get_cx_ranks([cx])[0] + 1)
         title += rank_str
     if showScore:
-        score_str = (' score=' + helpers.num_fmt(score)) % (score)
+        score_str = (' score=' + util.num_fmt(score)) % (score)
         title += score_str
 
     title = title_pref + str(title) + title_suff
@@ -568,7 +568,7 @@ def res_show_analysis(res, hs, **kwargs):
 @profile
 def _show_res(hs, res, **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
-    #printDBG('[viz._show_res()] %s ' % helpers.printableVal(locals()))
+    #printDBG('[viz._show_res()] %s ' % util.printableVal(locals()))
     #printDBG = print
     in_image = hs.prefs.display_cfg.show_results_in_image
     annote     = kwargs.pop('annote', 2)  # this is toggled
@@ -945,7 +945,6 @@ def ensure_cx2(hs, cx1, cx2=None):
 
 def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kwargs):
     #kwargs = {}
-    from hscom import helpers
     from hotspotter import spatial_verification2 as sv2
     import cv2
     print('\n======================')
@@ -979,8 +978,8 @@ def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kw
         print('[viz] homog_args = %r' % (homog_args))
         print('[viz] ex = %r' % (ex,))
         raise
-    print(helpers.horiz_string(['H = ', str(H)]))
-    print(helpers.horiz_string(['Aff = ', str(Aff)]))
+    print(util.horiz_string(['H = ', str(H)]))
+    print(util.horiz_string(['Aff = ', str(Aff)]))
 
     # Transform the chips
     print('warp homog')

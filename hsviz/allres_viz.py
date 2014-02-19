@@ -5,6 +5,7 @@ from hscom import __common__
 from os.path import join
 import numpy as np
 from hscom import helpers
+from hscom import helpers as util
 import draw_func2 as df2
 import os
 # Global variables

@@ -5,6 +5,7 @@ from hscom import __common__
  rrr, profile) = __common__.init(__name__, '[seg]')
 import numpy as np
 from hscom import helpers
+from hscom import helpers as util
 import cv2
 import algos
 from hscom import fileio as io

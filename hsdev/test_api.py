@@ -4,7 +4,7 @@ from __future__ import division, print_function
 def parse_arguments(defaultdb, usedbcache):
     from hscom import argparse2
     from hscom import params
-    from hscom import helpers
+    from hscom import helpers as util
     from hscom import fileio as io
     import sys
     args = argparse2.parse_arguments(defaultdb=defaultdb)
@@ -24,9 +24,9 @@ def parse_arguments(defaultdb, usedbcache):
         pass
     if usedbcache:
         if args.vdd:
-            helpers.vd(args.dbdir)
+            util.vd(args.dbdir)
             args.vdd = False
-        if helpers.inIPython() or '--cmd' in sys.argv:
+        if util.inIPython() or '--cmd' in sys.argv:
             args.nosteal = True
     params.args = args
     # Preload process args

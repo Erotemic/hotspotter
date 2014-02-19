@@ -36,7 +36,6 @@ import numpy as np
 import scipy.stats
 import cv2
 # HotSpotter
-from hscom import helpers
 from hscom import helpers as util
 from hscom import tools
 from hscom.Printable import DynStruct
@@ -126,7 +125,7 @@ FIGSIZE = FIGSIZE_MED
 #DPI = 120
 
 tile_within = (-1, 30, 969, 1041)
-if helpers.get_computer_name() == 'Ooo':
+if util.get_computer_name() == 'Ooo':
     TILE_WITHIN = (-1912, 30, -969, 1071)
 
 # DEFAULTS. (TODO: Can these be cleaned up?)
@@ -141,8 +140,8 @@ else:
     ELL_ALPHA  = .4
     LINE_ALPHA = .4
 
-LINE_ALPHA_OVERRIDE = helpers.get_arg('--line-alpha-override', type_=float, default=None)
-ELL_ALPHA_OVERRIDE = helpers.get_arg('--ell-alpha-override', type_=float, default=None)
+LINE_ALPHA_OVERRIDE = util.get_arg('--line-alpha-override', type_=float, default=None)
+ELL_ALPHA_OVERRIDE = util.get_arg('--ell-alpha-override', type_=float, default=None)
 #LINE_ALPHA_OVERRIDE = None
 #ELL_ALPHA_OVERRIDE = None
 ELL_COLOR  = BLUE
@@ -567,7 +566,7 @@ def present(*args, **kwargs):
         all_figures_show()
         all_figures_bring_to_front()
     # Return an exec string
-    execstr = helpers.ipython_execstr()
+    execstr = util.ipython_execstr()
     execstr += textwrap.dedent('''
     if not embedded:
         if not '--quiet' in sys.argv:
@@ -598,7 +597,7 @@ def sanatize_img_fname(fname, defaultext='.jpg'):
     fname_noext, ext = splitext(fname_clean)
     fname_clean = fname_noext + ext.lower()
     # Check for correct extensions
-    if not ext.lower() in helpers.IMG_EXTENSIONS:
+    if not ext.lower() in util.IMG_EXTENSIONS:
         fname_clean += defaultext
     return fname_clean
 
@@ -719,7 +718,7 @@ def get_good_logyscale_kwargs(y_data):
         'linscalex': 1,
         'linscaley': linscaley,
     }
-    print(logscale_kwargs)
+    #print(logscale_kwargs)
     return logscale_kwargs
 
 
@@ -1520,7 +1519,7 @@ def colorbar(scalars, colors):
     COLORBAR_SHRINK = .42  # 1
     COLORBAR_PAD = .01  # 1
     COLORBAR_ASPECT = np.abs(20 * height / (width))  # 1
-    print(COLORBAR_ASPECT)
+    printDBG('[df] COLORBAR_ASPECT = %r' % COLORBAR_ASPECT)
 
     cb = plt.colorbar(sm, orientation=orientation, shrink=COLORBAR_SHRINK,
                       pad=COLORBAR_PAD, aspect=COLORBAR_ASPECT)
@@ -1657,7 +1656,7 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
     #printDBG('[df2] ----- IMSHOW ------ ')
     #printDBG('[***df2.imshow] fnum=%r pnum=%r title=%r *** ' % (fnum, pnum, title))
     #printDBG('[***df2.imshow] img.shape = %r ' % (img.shape,))
-    #printDBG('[***df2.imshow] img.stats = %r ' % (helpers.printable_mystats(img),))
+    #printDBG('[***df2.imshow] img.stats = %r ' % (util.printable_mystats(img),))
     fig = figure(fnum=fnum, pnum=pnum, title=title, figtitle=figtitle, **kwargs)
     ax = gca()
     if not DARKEN is None:
@@ -1890,7 +1889,7 @@ def draw_fmatch(xywh1, xywh2, kpts1, kpts2, fm, fs=None, lbl1=None, lbl2=None,
             _kwargs.update(kwargs)
             draw_lines2(kpts1, kpts2, fm, fs, kpts2_offset=offset2, **_kwargs)
 
-        # User helpers
+        # User util
         if ell:
             _drawkpts(pts=False, ell=True, color_list=colors)
         if pts:

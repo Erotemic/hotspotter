@@ -14,8 +14,6 @@ from hotspotter import DataStructures as ds
 from hotspotter import match_chips3 as mc3
 from hscom import fileio as io
 from hscom import helpers as util
- from hscom import helpers
-from hscom import helpers as util
 from hscom import latex_formater
 from hscom import params
 from hsviz import draw_func2 as df2
@@ -33,7 +31,7 @@ from hsviz import draw_func2 as df2
 def get_valid_testcfg_names():
     testcfg_keys = vars(experiment_configs).keys()
     testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
-    valid_cfg_names = helpers.indent('\n'.join(testcfg_locals), '  * ')
+    valid_cfg_names = util.indent('\n'.join(testcfg_locals), '  * ')
     return valid_cfg_names
 
 
@@ -71,7 +69,7 @@ def __ArgGaurd(func, default=False):
     flag = '--' + flag.replace('_', '-')
 
     def GaurdWrapper(*args, **kwargs):
-        if helpers.get_flag(flag, default):
+        if util.get_flag(flag, default):
             return func(*args, **kwargs)
         else:
             if not __QUIET__:
@@ -83,7 +81,7 @@ def __ArgGaurd(func, default=False):
 def rankscore_str(thresh, nLess, total):
     #helper to print rank scores of configs
     percent = 100 * nLess / total
-    fmtsf = '%' + str(helpers.num2_sigfig(total)) + 'd'
+    fmtsf = '%' + str(util.num2_sigfig(total)) + 'd'
     fmtstr = '#ranks < %d = ' + fmtsf + '/%d = (%.1f%%) (err=' + fmtsf + ')'
     rankscore_str = fmtstr % (thresh, nLess, total, percent, (total - nLess))
     return rankscore_str
@@ -140,7 +138,7 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
     dcxs = hs.get_indexed_sample()
     query_uid = qdat.get_uid()
     hs_uid    = hs.get_db_name()
-    qcxs_uid  = helpers.hashstr_arr(qcx_list, lbl='_qcxs')
+    qcxs_uid  = util.hashstr_arr(qcx_list, lbl='_qcxs')
     test_uid  = hs_uid + query_uid + qcxs_uid
     cache_dir = join(hs.dirs.cache_dir, 'experiment_harness_results')
     io_kwargs = dict(dpath=cache_dir, fname='test_results', uid=test_uid,
@@ -170,7 +168,7 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
     ---------------------
     [harn] TEST %d/%d
     ---------------------''')
-    mark_progress = helpers.simple_progres_func(test_results_verbosity, msg, '.')
+    mark_progress = util.simple_progres_func(test_results_verbosity, msg, '.')
     total = nQuery * nCfg
     # Perform queries
     TEST_INFO = True
@@ -200,7 +198,7 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
     print('')
     qx2_bestranks = np.array(qx2_bestranks)
     # High level caching
-    helpers.ensuredir(cache_dir)
+    util.ensuredir(cache_dir)
     io.smart_save(qx2_bestranks, **io_kwargs)
 
     return qx2_bestranks, qx2_reslist
@@ -208,7 +206,7 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
 
 def get_varied_params_list(test_cfg_name_list):
     vary_dicts = get_vary_dicts(test_cfg_name_list)
-    get_all_dict_comb = helpers.all_dict_combinations
+    get_all_dict_comb = util.all_dict_combinations
     dict_comb_list = [get_all_dict_comb(_dict) for _dict in vary_dicts]
     varied_params_list = [comb for dict_comb in dict_comb_list for comb in dict_comb]
     #map(lambda x: print('\n' + str(x)), varied_params_list)
@@ -265,7 +263,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     mat_list = []
     qdat     = ds.QueryData()
 
-    nocache_testres =  helpers.get_flag('--nocache-testres', False)
+    nocache_testres =  util.get_flag('--nocache-testres', False)
 
     test_results_verbosity = 2 - __QUIET__
     test_cfg_verbosity = 2
@@ -274,7 +272,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     ---------------------')
     [harn] TEST_CFG %d/%d'
     ---------------------''')
-    mark_progress = helpers.simple_progres_func(test_cfg_verbosity, msg, '+')
+    mark_progress = util.simple_progres_func(test_cfg_verbosity, msg, '+')
 
     uid2_query_cfg = {}
 
@@ -337,7 +335,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         cfgx2_lbl.append(cfg_label)
     cfgx2_lbl = np.array(cfgx2_lbl)
     #------------
-    indent = helpers.indent
+    indent = util.indent
 
     @ArgGaurdFalse
     def print_rowlbl():
@@ -530,7 +528,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print('[harn] nRows=%r, nCols=%r' % lbld_mat.shape)
         print('[harn] labled rank matrix: rows=queries, cols=cfgs:')
         #np.set_printoptions(threshold=5000, linewidth=5000, precision=5)
-        with helpers.NpPrintOpts(threshold=5000, linewidth=5000, precision=5):
+        with util.NpPrintOpts(threshold=5000, linewidth=5000, precision=5):
             print(lbld_mat)
         print('[harn]-------------')
     print_rankmat()
@@ -561,9 +559,9 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     prev_cfg = None
 
-    skip_to = helpers.get_arg('--skip-to', default=None)
+    skip_to = util.get_arg('--skip-to', default=None)
 
-    dev_mode = helpers.get_arg('--devmode', default=False)
+    dev_mode = util.get_arg('--devmode', default=False)
     skip_list = []
     if dev_mode:
         hs.prefs.display_cfg.N = 3

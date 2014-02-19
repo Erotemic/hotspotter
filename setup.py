@@ -6,7 +6,6 @@ import sys
 import fnmatch
 # Hotspotter
 from hscom import helpers as util
- from hscom import helpers
 
 HOME = os.path.expanduser('~')
 # Allows other python modules (like hesaff) to find hotspotter modules
@@ -154,35 +153,35 @@ def clean():
     cwd = get_setup_dpath()
     print('[setup] Current working directory: %r' % cwd)
     # Remove python compiled files
-    helpers.remove_files_in_dir(cwd, '*.pyc', recursive=True)
-    helpers.remove_files_in_dir(cwd, '*.pyo', recursive=True)
+    util.remove_files_in_dir(cwd, '*.pyc', recursive=True)
+    util.remove_files_in_dir(cwd, '*.pyo', recursive=True)
     # Remove profile outputs
-    helpers.remove_files_in_dir(cwd, '*.prof', recursive=True)
-    helpers.remove_files_in_dir(cwd, '*.prof.txt', recursive=True)
-    helpers.remove_files_in_dir(cwd, '*.lprof', recursive=True)
+    util.remove_files_in_dir(cwd, '*.prof', recursive=True)
+    util.remove_files_in_dir(cwd, '*.prof.txt', recursive=True)
+    util.remove_files_in_dir(cwd, '*.lprof', recursive=True)
     # Remove cython generated c files carefully
     hsmod_list = ['hotspotter', 'hsgui', 'hsviz', 'hscom']
     for hsmod in hsmod_list:
-        helpers.remove_files_in_dir(join(cwd, hsmod), '*.so', recursive=False)
-        helpers.remove_files_in_dir(join(cwd, hsmod), '*.c', recursive=False)
-        helpers.remove_files_in_dir(join(cwd, hsmod), '*.pyx', recursive=False)
+        util.remove_files_in_dir(join(cwd, hsmod), '*.so', recursive=False)
+        util.remove_files_in_dir(join(cwd, hsmod), '*.c', recursive=False)
+        util.remove_files_in_dir(join(cwd, hsmod), '*.pyx', recursive=False)
     # Remove pyinstaller temp files
     clean_pyinstaller()
     # Remove latex temp files
-    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.synctex')
-    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.log')
-    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.out')
-    helpers.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.aux')
+    util.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.synctex')
+    util.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.log')
+    util.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.out')
+    util.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.aux')
     # Remove misc
-    helpers.delete(join(cwd, "'"))  # idk where this file comes from
-    helpers.remove_files_in_dir(cwd + '/hstpl/extern_feat', 'libopencv_*.dylib', recursive=False)
+    util.delete(join(cwd, "'"))  # idk where this file comes from
+    util.remove_files_in_dir(cwd + '/hstpl/extern_feat', 'libopencv_*.dylib', recursive=False)
 
 
 def clean_pyinstaller():
     cwd = get_setup_dpath()
-    helpers.remove_files_in_dir(cwd, 'HotSpotterApp.pkg', recursive=False)
-    helpers.delete(join(cwd, 'dist'))
-    helpers.delete(join(cwd, 'build'))
+    util.remove_files_in_dir(cwd, 'HotSpotterApp.pkg', recursive=False)
+    util.delete(join(cwd, 'dist'))
+    util.delete(join(cwd, 'build'))
 
 
 def build_pyinstaller():
@@ -200,7 +199,7 @@ def build_pyinstaller():
         for srcname, dstname in copy_list:
             src = join(srcdir, srcname)
             dst = join(dstdir, dstname)
-            helpers.copy(src, dst)
+            util.copy(src, dst)
 
 
 def build_mac_dmg():
@@ -276,7 +275,7 @@ def compile_ui():
                   'darwin': 'pyuic4'}[sys.platform]
     widget_dir = join(dirname(realpath(__file__)), 'hsgui/_frontend')
     print('[setup] Compiling qt designer files in %r' % widget_dir)
-    for widget_ui in helpers.glob(widget_dir, '*.ui'):
+    for widget_ui in util.glob(widget_dir, '*.ui'):
         widget_py = os.path.splitext(widget_ui)[0] + '.py'
         cmd = ' '.join([pyuic4_cmd, '-x', widget_ui, '-o', widget_py])
         print('[setup] compile_ui()>' + cmd)
@@ -342,8 +341,8 @@ def push(repo):
 
 @inrepo
 def status(repo):
-    print('[helpers] ---- status(%r) ----' % repo)
-    with helpers.Indenter('[%s]' % repo):
+    print('[setup] ---- status(%r) ----' % repo)
+    with util.Indenter('[%s]' % repo):
         _cmd('git status')
 
 

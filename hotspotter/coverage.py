@@ -10,7 +10,7 @@ import math
 import cv2
 import numpy as np
 # HotSpotter
-from hscom import helpers
+from hscom import helpers as util
 import matching_functions as mf
 
 SCALE_FACTOR_DEFAULT = .05
@@ -27,7 +27,7 @@ def score_chipmatch_coverage(hs, qcx, chipmatch, qdat, method=0):
     topx2_cx = [cx for cx in iter(topx2_cx) if cx in dcxs_]
     nRerank = min(len(topx2_cx), nShortlist)
     cx2_score = [0 for _ in xrange(len(cx2_fm))]
-    mark_progress, end_progress = helpers.progress_func(nRerank,
+    mark_progress, end_progress = util.progress_func(nRerank,
                                                         flush_after=10,
                                                         lbl='[cov] Compute coverage ')
     for topx in xrange(nRerank):
@@ -109,7 +109,7 @@ def warp_srcimg_to_kpts(fx2_kp, srcimg, chip_shape, fx2_score=None, **kwargs):
     flags = cv2.INTER_LINEAR  # cv2.INTER_LANCZOS4
     boderMode = cv2.BORDER_CONSTANT
     # mark prooress
-    mark_progress, end_progress = helpers.progress_func(len(fx2_M),
+    mark_progress, end_progress = util.progress_func(len(fx2_M),
                                                         flush_after=20,
                                                         mark_after=1000,
                                                         lbl='coverage warp ')

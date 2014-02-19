@@ -24,8 +24,6 @@ from hotspotter import report_results2 as rr2
 from hotspotter import voting_rules2 as vr2
 from hscom import params
 from hscom import helpers as util
- from hscom import helpers
-from hscom import helpers as util
 from hscom import latex_formater
 from hsgui import guitools
 from hsviz import draw_func2 as df2
@@ -53,13 +51,13 @@ def all_printoff():
     vr2.print_off()
     ld2.print_off()
     qr.print_off()
-    helpers.print_off()
+    util.print_off()
     df2.print_off()
     #algos.print_off()
     #cc2.print_off()
     #fc2.print_off()
     #ld2.print_off()
-    #helpers.print_off()
+    #util.print_off()
     #parallel.print_off()
 
 
@@ -131,13 +129,13 @@ def vary_two_cfg(hs, qcx, cx, query_cfg, vary_cfg, fnum=1):
     #ax = df2.gca()
     # Vary cfg1
     #df2..gcf().clf()
-    print_lock_ = helpers.ModulePrintLock(mc3, df2)
+    print_lock_ = util.ModulePrintLock(mc3, df2)
     assign_alg = query_cfg.agg_cfg.query_type
     vert = not params.args.horiz
     plt_match_args = dict(fnum=fnum, show_gname=False, showTF=False, vert=vert)
     for rowx, cfg1_value in enumerate(cfg1_steps):
         query_cfg.update_cfg(**{cfg1_name: cfg1_value})
-        y_title = cfg1_name + '=' + helpers.format(cfg1_value, 3)
+        y_title = cfg1_name + '=' + util.format(cfg1_value, 3)
         # Vary cfg2
         for colx, cfg2_value in enumerate(cfg2_steps):
             query_cfg.update_cfg(**{cfg2_name: cfg2_value})
@@ -152,7 +150,7 @@ def vary_two_cfg(hs, qcx, cx, query_cfg, vary_cfg, fnum=1):
             elif assign_alg == 'vsmany':
                 res = hs.query(qcx, query_cfg)
             res.plot_single_match(hs, cx, pnum=pnum, **plt_match_args)
-            x_title = cfg2_name + '=' + helpers.format(cfg2_value, 3)  # helpers.commas(cfg2_value, 3)
+            x_title = cfg2_name + '=' + util.format(cfg2_value, 3)  # util.commas(cfg2_value, 3)
             ax = df2.gca()
             if rowx == len(cfg1_steps) - 1:
                 ax.set_xlabel(x_title, **xlabel_args)
@@ -180,7 +178,7 @@ def show_names(hs, qcx_list, fnum=1):
     print('[dev] show_names()')
     result_dir = hs.dirs.result_dir
     names_dir = join(result_dir, 'show_names')
-    helpers.ensuredir(names_dir)
+    util.ensuredir(names_dir)
     # NEW:
     print(qcx_list)
     nx_list = np.unique(hs.tables.cx2_nx[qcx_list])
@@ -199,13 +197,13 @@ def show_names(hs, qcx_list, fnum=1):
 
 
 def vary_vsone_cfg(hs, qcx_list, fnum, vary_dicts, **kwargs):
-    vary_cfg = helpers.dict_union(*vary_dicts)
+    vary_cfg = util.dict_union(*vary_dicts)
     query_cfg = ds.get_vsone_cfg(hs, **kwargs)
     return vary_query_cfg(hs, qcx_list, query_cfg, vary_cfg, fnum)
 
 
 def vary_vsmany_cfg(hs, qcx_list, vary_dicts, fnum, **kwargs):
-    vary_cfg = helpers.dict_union(*vary_dicts)
+    vary_cfg = util.dict_union(*vary_dicts)
     query_cfg = ds.get_vsmany_cfg(hs, **kwargs)
     return vary_query_cfg(hs, qcx_list, query_cfg, vary_cfg, fnum)
 
@@ -260,12 +258,12 @@ def get_qcx_list(hs):
         qcx_all = get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
     else:
         print('[dev] Chosen qcid=%r' % params.args.qcid)
-        qcx_all =  helpers.ensure_iterable(hs.cid2_cx(params.args.qcid))
+        qcx_all =  util.ensure_iterable(hs.cid2_cx(params.args.qcid))
     # Filter only the ones you want from the large pool
     if histids is None:
         qcx_list = qcx_all
     else:
-        histids = helpers.ensure_iterable(histids)
+        histids = util.ensure_iterable(histids)
         print('[dev] Chosen histids=%r' % histids)
         qcx_list = [qcx_list[id_] for id_ in histids]
 
@@ -274,7 +272,7 @@ def get_qcx_list(hs):
             raise Exception('no qcx_list history')
         qcx_list = [0]
     print('[dev] len(qcx_list) = %d' % len(qcx_list))
-    qcx_list = helpers.unique_keep_order(qcx_list)
+    qcx_list = util.unique_keep_order(qcx_list)
     return qcx_list
 
 
@@ -324,7 +322,7 @@ def chip_info(hs, cx, notes=''):
         'Ground Truth: %s' % (hs.cidstr(gt_cxs),),
         'IndexedGroundTruth = %s' % (hs.cidstr(indexed_gt_cxs),),
     ]
-    print(helpers.indent('\n'.join(infostr_list), '    '))
+    print(util.indent('\n'.join(infostr_list), '    '))
     return locals()
 
 
@@ -440,7 +438,7 @@ def plot_seperability(hs, qcx_list, fnum=1):
     qcx2_separability = get_seperatbility(hs, qcx2_res)
     sep_score_list = qcx2_separability.values()
     df2.figure(fnum=fnum, doclf=True, docla=True)
-    print('[dev] seperability stats: ' + helpers.pstats(sep_score_list))
+    print('[dev] seperability stats: ' + util.pstats(sep_score_list))
     sorted_sepscores = sorted(sep_score_list)
     df2.plot(sorted_sepscores, color=df2.DEEP_PINK, label='seperation score',
              yscale=YSCALE)
@@ -507,7 +505,7 @@ def plot_scores(hs, qcx_list, fnum=1):
         df2.UNKNOWN_PURP,
         df2.FALSE_RED
     ]
-    print('[dev] matching chipscore stats: ' + helpers.pstats(all_score_list))
+    print('[dev] matching chipscore stats: ' + util.pstats(all_score_list))
     df2.figure(fnum=fnum, doclf=True, docla=True)
     # Finds the knee
     df2.plot(allscores_sorted, color=df2.ORANGE, label='all scores')
@@ -626,7 +624,7 @@ def run_investigations(hs, qcx_list):
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     print('[dev] __main__ ')
-    QUIET = helpers.get_flag('--quiet', False)
+    QUIET = util.get_flag('--quiet', False)
     if QUIET:
         print_off()
         all_printoff()
@@ -641,7 +639,7 @@ if __name__ == '__main__':
     main_locals = dev_main()
     hs = main_locals['hs']
     qcx_list = main_locals['qcx_list']
-    exec(helpers.execstr_dict(main_locals, 'main_locals'))
+    exec(util.execstr_dict(main_locals, 'main_locals'))
     print('[dev]====================')
     #mf.print_off()  # Make testing slightly faster
     # Big test function. Should be replaced with something

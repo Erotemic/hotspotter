@@ -2085,11 +2085,11 @@ def load_testdata(*args, **kwargs):
 
 
 def import_testdata():
-    from hscom import helpers
+    from hscom import helpers as util
     import shelve
     shelf = shelve.open('test_data.shelf')
     print('importing\n * ' + '\n * '.join(shelf.keys()))
-    shelf_exec = helpers.execstr_dict(shelf, 'shelf')
+    shelf_exec = util.execstr_dict(shelf, 'shelf')
     exec(shelf_exec)
     shelf.close()
     return import_testdata.func_code.co_code

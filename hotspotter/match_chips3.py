@@ -6,7 +6,6 @@ from hscom import __common__
 import re
 # HotSpotter
 from hscom import params
-from hscom import helpers
 from hscom import helpers as util
 import DataStructures as ds
 import matching_functions as mf
@@ -20,14 +19,14 @@ def ensure_nn_index(hs, qdat, dcxs, force_refresh=False):
     printDBG('force_refresh=%r' % (force_refresh,))
 
     feat_uid = qdat.cfg._feat_cfg.get_uid()
-    dcxs_uid = helpers.hashstr_arr(dcxs, 'dcxs') + feat_uid
+    dcxs_uid = util.hashstr_arr(dcxs, 'dcxs') + feat_uid
     if not dcxs_uid in qdat._dcxs2_index:
         # Make sure the features are all computed first
         print('[mc3] qdat._data_index[dcxs_uid]... nn_index cache miss')
         print('[mc3] dcxs_ is not in qdat cache')
         print('[mc3] hashstr(dcxs_) = %r' % dcxs_uid)
         print('[mc3] REFRESHING FEATURES')
-        with helpers.Indenter('    [ensure_nn_index]'):
+        with util.Indenter('    [ensure_nn_index]'):
             hs.refresh_features(dcxs)
             # Compute the FLANN Index
             data_index = ds.NNIndex(hs, dcxs)
@@ -47,11 +46,11 @@ def prequery_checks(hs, qdat):
     def _refresh(hs, qdat, unload=True):
         if unload:
             #print('[mc3] qdat._dcxs = %r' % qdat._dcxs)
-            with helpers.Indenter('    [prequery_checks]'):
+            with util.Indenter('    [prequery_checks]'):
                 hs.unload_cxdata('all')
             # Reload
             qdat = prep_query_request(hs, query_cfg=query_cfg, qcxs=qcxs, dcxs=dcxs)
-        with helpers.Indenter('    [prequery_checks]'):
+        with util.Indenter('    [prequery_checks]'):
             ensure_nn_index(hs, qdat, qdat._dcxs, force_refresh=True)
 
     if hs.query_history[-1][0] is None:
@@ -240,7 +239,7 @@ def execute_query_fast(hs, qdat, qcxs, dcxs):
     #mf.rrr()
     #ds.rrr()
     #main_locals = dev.dev_main()
-    #execstr = helpers.execstr_dict(main_locals, 'main_locals')
+    #execstr = util.execstr_dict(main_locals, 'main_locals')
     #exec(execstr)
     ##df2.DARKEN = .5
     #df2.DISTINCT_COLORS = True

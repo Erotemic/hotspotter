@@ -168,7 +168,7 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
     #printDBG('[sv2] affine_inliers')
     #print(repr((acd1_m.T[0:10]).T))
     #print(repr((acd2_m.T[0:10]).T))
-    #with helpers.Timer('enume all'):
+    #with util.Timer('enume all'):
     #fx1_uq, fx1_ui = np.unique(fx1_m, return_inverse=True)
     #fx2_uq, fx2_ui = np.unique(fx2_m, return_inverse=True)
     best_inliers = []

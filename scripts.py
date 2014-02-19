@@ -12,7 +12,6 @@ from scipy.cluster.hierarchy import fclusterdata
 # HotSpotter
 from hscom import fileio as io
 from hscom import helpers as util
- from hscom import helpers
 from hotspotter import load_data2 as ld2
 
 #from dbgimport import *  # NOQA
@@ -36,9 +35,9 @@ def export_subdatabase(hs, gx_list, new_dbdir):
     print('[scripts] Exporting into %r' % new_dbdir)
 
     # Ensure new database
-    helpers.ensuredir(new_dbdir)
-    helpers.ensuredir(new_imgdir)
-    helpers.ensuredir(new_internal)
+    util.ensuredir(new_dbdir)
+    util.ensuredir(new_imgdir)
+    util.ensuredir(new_internal)
 
     gname_list = hs.gx2_gname(gx_list)
     src_gname_list = hs.gx2_gname(gx_list, full=True)
@@ -46,7 +45,7 @@ def export_subdatabase(hs, gx_list, new_dbdir):
 
     copy_list = [(src, dst) for (src, dst) in zip(src_gname_list, dst_gname_list)]
 
-    mark_progress, end_prog = helpers.progress_func(len(copy_list), lbl='Copy Images')
+    mark_progress, end_prog = util.progress_func(len(copy_list), lbl='Copy Images')
     for count, (src, dst) in enumerate(copy_list):
         shutil.copy(src, dst)
         mark_progress(count)
@@ -63,9 +62,9 @@ def export_subdatabase(hs, gx_list, new_dbdir):
     name_table_fpath  = join(new_internal, ld2.NAME_TABLE_FNAME)
     image_table_fpath = join(new_internal, ld2.IMAGE_TABLE_FNAME)
     # write csv files
-    helpers.write_to(chip_table_fpath, chip_table)
-    helpers.write_to(name_table_fpath, name_table)
-    helpers.write_to(image_table_fpath, image_table)
+    util.write_to(chip_table_fpath, chip_table)
+    util.write_to(name_table_fpath, name_table)
+    util.write_to(image_table_fpath, image_table)
     return locals()
 
 
@@ -274,10 +273,10 @@ def delete_suffixed_images(hs, back):
     trash_dir = join(hs.dirs.db_dir, 'deleted-images')
     src_list = hs.gx2_gname(remove_gxs, full=True)
     dst_list = hs.gx2_gname(remove_gxs, prefix=trash_dir)
-    helpers.ensuredir(trash_dir)
+    util.ensuredir(trash_dir)
 
     move_list = zip(src_list, dst_list)
-    mark_progress, end_prog = helpers.progress_func(len(move_list), lbl='Trashing Image')
+    mark_progress, end_prog = util.progress_func(len(move_list), lbl='Trashing Image')
     for count, (src, dst) in enumerate(move_list):
         shutil.move(src, dst)
         mark_progress(count)
@@ -323,7 +322,7 @@ def compute_encounters(hs, back, seconds_thresh=15):
         clusterx2_gxs[clusterx - 1].append(gx)  # IDS are 1 based
 
     clusterx2_nGxs = np.array(map(len, clusterx2_gxs))
-    print('cluster size stats: %s' % helpers.printable_mystats(clusterx2_nGxs))
+    print('cluster size stats: %s' % util.printable_mystats(clusterx2_nGxs))
 
     # Change IDs such that higher number = more gxs
     gx2_ex = [None] * len(gx2_clusterid)

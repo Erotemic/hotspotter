@@ -3,6 +3,7 @@ from __future__ import division, print_function
 from hotspotter import HotSpotterAPI as api
 from hotspotter import feature_compute2 as fc2
 from hscom import helpers
+from hscom import helpers as util
 from hsviz import viz
 from hscom import argparse2
 import multiprocessing

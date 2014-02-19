@@ -4,7 +4,6 @@ from hscom import __common__
  rrr, profile) = __common__.init(__name__, '[training]')
 import numpy as np
 from hscom import helpers as util
- from hscom import helpers
 from hscom import params
 from hotspotter import chip_compute2 as cc2
 from os.path import join
@@ -17,14 +16,14 @@ def get_training_output_dir(hs):
 
 def vdg(hs):
     output_dir = get_training_output_dir(hs)
-    helpers.vd(output_dir)
+    util.vd(output_dir)
 
 
 def generate_detector_training_data(hs, uniform_size=(512, 256)):
     print('')
     print('===================')
     print('Generating training data')
-    lazy = helpers.get_flag('--lazy', True)
+    lazy = util.get_flag('--lazy', True)
     output_dir = get_training_output_dir(hs)
 
     batch_extract_kwargs = {
@@ -43,8 +42,8 @@ def extract_detector_negatives(hs, output_dir, batch_extract_kwargs):
     negall_dir = join(output_dir, 'negatives', 'whole')
     negreg_fmt = join(negreg_dir, 'gx%d_wix%d_hix%d_neg.png')
     negall_fmt = join(negall_dir, 'gx%d_all_neg.png')
-    helpers.ensuredir(negall_dir)
-    helpers.ensuredir(negreg_dir)
+    util.ensuredir(negall_dir)
+    util.ensuredir(negreg_dir)
 
     print('[train] extract_negatives')
     gx_list = hs.get_valid_gxs()
@@ -102,7 +101,7 @@ def extract_detector_positives(hs, output_dir, batch_extract_kwargs):
     gfpath_list = hs.gx2_gname(gx_list, full=True)
 
     posoutput_dir = join(output_dir, 'positives')
-    helpers.ensuredir(posoutput_dir)
+    util.ensuredir(posoutput_dir)
     pos_fmt = join(posoutput_dir, 'cid%d_gx%d_pos.png')
     cfpath_list = [pos_fmt  % (cid, gx) for (cid, gx) in zip(cid_list, gx_list)]
 

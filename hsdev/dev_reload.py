@@ -25,7 +25,7 @@ def reload_all_modules():
     #from hscom import argparse2
     from hscom import cross_platform as cplat
     from hscom import fileio as io
-    from hscom import helpers
+    from hscom import helpers as util
     from hscom import latex_formater
     from hscom import params
     from hscom import tools
@@ -47,7 +47,7 @@ def reload_all_modules():
     # Self
     rrr()
     # com
-    helpers.rrr()
+    util.rrr()
     io.rrr()
     cplat.rrr()
     parallel.rrr()

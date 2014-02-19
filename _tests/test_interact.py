@@ -1,6 +1,7 @@
 '''
 if __name__ == '__main__':
     from hscom import helpers
+from hscom import helpers as util
     multiprocessing.freeze_support()
     import main
     hs = main.main()

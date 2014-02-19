@@ -14,6 +14,7 @@ from PyQt4.QtCore import Qt
 # HotSpotter
 from hscom import fileio as io
 from hscom import helpers
+from hscom import helpers as util
 from hsviz import draw_func2 as df2
 
 IS_INIT = False

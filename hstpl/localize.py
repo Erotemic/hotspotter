@@ -19,6 +19,7 @@ if not hsdir in sys.path:
     sys.path.append(hsdir)
 
 from hscom import helpers
+from hscom import helpers as util
 
 extern_dir = join(hsdir, 'hstpl', 'extern_feat')
 hesaffsrc_dir = join(code_dir, 'hesaff')

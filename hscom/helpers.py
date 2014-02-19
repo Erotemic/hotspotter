@@ -17,7 +17,7 @@ import numpy as np
 # Standard
 from collections import OrderedDict
 from itertools import product as iprod
-from itertools import izip, chain
+from itertools import izip, chain, imap, cycle
 from os.path import (join, relpath, normpath, split, isdir, isfile, exists,
                      islink, ismount, expanduser)
 import cPickle
@@ -231,6 +231,27 @@ def array_index(array, item):
 def index_of(item, array):
     'index of [item] in [array]'
     return np.where(array == item)[0][0]
+
+
+def list_index(search_list, to_find):
+    try:
+        toret = [np.where(search_list == item)[0][0] for item in to_find]
+    except IndexError as ex1:
+        print(ex1)
+        try:
+            print('item = %r' % (item,))
+        except Exception as ex2:
+            print(ex2)
+        raise
+    return toret
+
+
+def list_eq(list_):
+    # checks to see if list is equal everywhere
+    if len(list_) == 0:
+        return True
+    item0 = list_[0]
+    return all([item == item0 for item in list_])
 
 
 def intersect2d_numpy(A, B):
@@ -914,7 +935,7 @@ def checkpath(path_, verbose=PRINT_CHECKS):
     'returns true if path_ exists on the filesystem'
     path_ = normpath(path_)
     if verbose:
-        print = sys.stdout.write
+        print = print_
         pretty_path = path_ndir_split(path_, 2)
         caller_name = get_caller_name()
         print_('[%s] checkpath(%r)' % (caller_name, pretty_path))
@@ -2115,3 +2136,22 @@ def iflatten(list_):
 
 def flatten(list_):
     return list(iflatten(list_))
+
+
+def joins(string, list_, with_head=True, with_tail=False, tostrip='\n'):
+    head = string if with_head else ''
+    tail = string if with_tail else ''
+    to_return = head + string.join(map(str, list_)) + tail
+    to_return = to_return.strip(tostrip)
+    return to_return
+
+
+def interleave(args):
+    arg_iters = map(iter, args)
+    cycle_iter = cycle(arg_iters)
+    for iter_ in cycle_iter:
+        yield iter_.next()
+
+
+def indent_list(indent, list_):
+    return imap(lambda item: indent + str(item), list_)

@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 # Python
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from os.path import (dirname, realpath, join, exists, normpath, splitext,
                      expanduser, relpath)
 import imp
@@ -62,6 +62,7 @@ from hscom import argparse2
 from hscom import cross_platform as cplat
 from hscom import fileio as io
 from hscom import helpers
+from hscom import helpers as util
 from hscom import latex_formater
 from hscom import params
 from hscom import tools

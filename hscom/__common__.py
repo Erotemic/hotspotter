@@ -2,15 +2,17 @@ from __future__ import division, print_function
 import __builtin__
 import sys
 
+__QUIET__ = '--quiet' in sys.argv
+__DEBUG__ = False
+
 try:
     profile  # NoQA
-    __builtin__.print('[common] profiling with kernprof.')
+    if not __QUIET__:
+        __builtin__.print('[common] profiling with kernprof.')
 except NameError:
-    __builtin__.print('[common] not profiling.')
+    if not __QUIET__:
+        __builtin__.print('[common] not profiling.')
     profile = lambda func: func
-
-
-__DEBUG__ = False
 
 
 def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
@@ -68,8 +70,9 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
         import multiprocessing
         backend = matplotlib.get_backend()
         if multiprocessing.current_process().name == 'MainProcess':
-            print('[common] ' + module_prefix + ' current backend is: %r' % backend)
-            print('[common] ' + module_prefix + ' matplotlib.use(Qt4Agg)')
+            if not __QUIET__:
+                print('[common] ' + module_prefix + ' current backend is: %r' % backend)
+                print('[common] ' + module_prefix + ' matplotlib.use(Qt4Agg)')
             if backend != 'Qt4Agg':
                 matplotlib.use('Qt4Agg', warn=True, force=True)
                 backend = matplotlib.get_backend()

@@ -116,7 +116,7 @@ coverage.update({
 
 adaptive_test = vsmany_best.copy()
 adaptive_test.update({
-    'K': [2, 5, 10],
+    'K': [2, 5],
     'use_adaptive_scale': [True, False],
 })
 

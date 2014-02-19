@@ -8,6 +8,7 @@ from os.path import relpath
 import numpy as np
 # Hotspotter
 from hscom import fileio as io
+from hscom import helpers as util
 
 
 #----------------------
@@ -98,3 +99,59 @@ def detect_duplicate_images(hs):
                 conflict_gxs.append(gx_list)
 
     print('[dev_consist] %d can be kept. %d can be removed. %d conflicting sets' % (len(keep_gxs), len(remove_gxs), len(conflict_gxs),))
+
+
+def check_qcx2_res(hs, qcx2_res):
+    from collections import defaultdict
+    if isinstance(qcx2_res, dict):
+        print('[consist] qcx2_res is in dict format')
+        for qcx, res in qcx2_res.iteritems():
+            assert qcx == res.qcx
+        res_list = qcx2_res.values()
+    elif isinstance(qcx2_res, list):
+        print('[consist] qcx2_res is in list format')
+        for qcx, res in enumerate(qcx2_res):
+            assert res is None or qcx == res.qcx
+        res_list = [res for res in qcx2_res if res is not None]
+    else:
+        msg = ('[consist] UNKNOWN TYPE type(qcx2_res) = %r' % type(qcx2_res))
+        print(msg)
+        raise AssertionError(msg)
+    print('[consist] structure is consistent')
+
+    nUniqueRes = len(np.unique(map(id, res_list)))
+    assert nUniqueRes == len(res_list)
+    print('[consist] results are unique objects')
+
+    test_vars = defaultdict(list)
+
+    for res in res_list:
+        assert res.true_uid.startswith(res.uid)
+        test_vars['res.true_uid'].append(res.true_uid)
+        test_vars['res.uid'].append(res.uid)
+        test_vars['fmlen'].append(len(res.cx2_fm))
+        test_vars['fslen'].append(len(res.cx2_fs))
+        test_vars['fklen'].append(len(res.cx2_fk))
+        test_vars['scorelen'].append(len(res.cx2_score))
+
+    assert util.list_eq(test_vars['fmlen'])
+    assert util.list_eq(test_vars['fslen'])
+    assert util.list_eq(test_vars['fklen'])
+    assert util.list_eq(test_vars['scorelen'])
+    assert util.list_eq(test_vars['res.true_uid'])
+    assert util.list_eq(test_vars['res.uid'])
+
+    print('[consist] passed length tests')
+
+    for res in res_list:
+        test_vars['qcx_list'].append(res.qcx)
+        test_vars['score_list'].append(res.cx2_score)
+        test_vars['score_sum'].append(res.cx2_score.sum())
+        test_vars['nMatches'].append(sum(map(len, res.cx2_fm)))
+
+    assert len(np.unique(test_vars['qcx_list'])) == len(test_vars['qcx_list'])
+
+    if len(np.unique(test_vars['nMatches'])) < len(test_vars['nMatches']) / 10:
+        print('[consist] nMatches = %r' % (test_vars['nMatches'],))
+
+    print('[consist] passed entropy test')

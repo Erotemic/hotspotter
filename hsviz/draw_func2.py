@@ -37,6 +37,7 @@ import scipy.stats
 import cv2
 # HotSpotter
 from hscom import helpers
+from hscom import helpers as util
 from hscom import tools
 from hscom.Printable import DynStruct
 
@@ -567,8 +568,9 @@ def present(*args, **kwargs):
     execstr = helpers.ipython_execstr()
     execstr += textwrap.dedent('''
     if not embedded:
-        print('[df2] Presenting in normal shell.')
-        print('[df2] ... plt.show()')
+        if not '--quiet' in sys.argv:
+            print('[df2] Presenting in normal shell.')
+            print('[df2] ... plt.show()')
         plt.show()
     ''')
     return execstr
@@ -671,8 +673,73 @@ def set_ylabel(lbl):
     ax.set_ylabel(lbl, fontproperties=FONTS.xlabel)
 
 
+def get_good_logyscale_kwargs(y_data):
+    # Attempts to detect knee points by looking for
+    # log derivatives way past the normal standard deviations
+    # The input data is assumed to be sorted and y_data
+    basey = 10
+    nStdDevs_thresh = 10
+    # Take the log of the data
+    logy = np.log(y_data)
+    logy[np.isnan(logy)] = 0
+    logy[np.isinf(logy)] = 0
+    # Find the derivative of data
+    dy = np.diff(logy)
+    dy_sortx = dy.argsort()
+    # Get mean and standard deviation
+    dy_stats = util.mystats(dy)
+    dy_sorted = dy[dy_sortx]
+    # Find the number of standard deveations past the mean each datapoint is
+    nStdDevs = np.abs(dy_sorted - dy_stats['mean']) / dy_stats['std']
+    # Mark any above a threshold as knee points
+    knee_indexes = np.where(nStdDevs > nStdDevs_thresh)[0]
+    knee_mag = nStdDevs[knee_indexes]
+    knee_points = dy_sortx[knee_indexes]
+    print('[df2] knee_points = %r' % (knee_points,))
+    # Check to see that we have found a knee
+    if len(knee_points) > 0:
+        # Use linear scaling up the the knee points and
+        # scale it by the magnitude of the knee
+        kneex = knee_points.argmin()
+        linthreshx = knee_points[kneex] + 1
+        linthreshy = y_data[linthreshx] * basey
+        linscaley = min(2, max(1, (knee_mag[kneex] / (basey * 2))))
+    else:
+        linthreshx = 1E-15
+        linthreshy = 1E-15
+        linscaley = 1
+    logscale_kwargs = {
+        'basey': basey,
+        'nonposx': 'clip',
+        'nonposy': 'clip',
+        'linthreshy': linthreshy,
+        'linthreshx': linthreshx,
+        'linscalex': 1,
+        'linscaley': linscaley,
+    }
+    print(logscale_kwargs)
+    return logscale_kwargs
+
+
+def set_logyscale_from_data(y_data):
+    logscale_kwargs = get_good_logyscale_kwargs(y_data)
+    ax = gca()
+    ax.set_yscale('symlog', **logscale_kwargs)
+
+
 def plot(*args, **kwargs):
-    return plt.plot(*args, **kwargs)
+    yscale = kwargs.pop('yscale', 'linear')
+    xscale = kwargs.pop('xscale', 'linear')
+    logscale_kwargs = kwargs.pop('logscale_kwargs', {'nonposx': 'clip'})
+    plot = plt.plot(*args, **kwargs)
+    ax = plt.gca()
+
+    yscale_kwargs = logscale_kwargs if yscale in ['log', 'symlog'] else {}
+    xscale_kwargs = logscale_kwargs if xscale in ['log', 'symlog'] else {}
+
+    ax.set_yscale(yscale, **yscale_kwargs)
+    ax.set_xscale(xscale, **xscale_kwargs)
+    return plot
 
 
 def plot2(x_data, y_data, marker='o', title_pref='', x_label='x', y_label='y', *args,
@@ -1257,6 +1324,20 @@ def phantom_legend_label(label, color, loc='upper right'):
     #plt.legend(*zip(*legend_tups), framealpha=.2)
     #legend_tups = []
     #legend_tups.append((phantom_actor, label))
+
+
+LEGEND_LOCATION = {
+    'upper right':  1,
+    'upper left':   2,
+    'lower left':   3,
+    'lower right':  4,
+    'right':        5,
+    'center left':  6,
+    'center right': 7,
+    'lower center': 8,
+    'upper center': 9,
+    'center':      10,
+}
 
 
 def legend(loc='upper right'):

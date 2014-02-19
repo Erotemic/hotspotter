@@ -47,7 +47,7 @@ def prequery_checks(hs, qdat):
         print('[mc3] New: ' + str(query_uid))
         hs.refresh_features()
     hs.query_history.append(query_hist_id)
-    print('[mc3] query_dcxs(): query_uid = %r ' % query_uid)
+    print('[mc3] prequery_checks(): query_uid = %r ' % query_uid)
 
 
 def prequery(hs):
@@ -64,12 +64,41 @@ def prequery(hs):
 # Convinience Functions
 #----------------------
 
+# QUERY PREP FUNCTIONS
 
-def query_list(hs, qcxs, dcxs=None):
-    prequery(hs)
+def prepare_qdat_cfg(hs, qdat=None, query_cfg=None, **kwargs):
+    if query_cfg is None:
+        hs.assert_prefs()
+        query_cfg = hs.prefs.query_cfg
+    if len(kwargs) > 0:
+        query_cfg = query_cfg.deepcopy(**kwargs)
+    if qdat is None:
+        qdat = hs.qdat
+    qdat.set_cfg(query_cfg, hs=hs)
+    return qdat
+
+
+def prepare_qdat_indexes(qdat, qcxs, dcxs):
+    qdat._qcxs = qcxs
+    qdat._dcxs = dcxs
+    #---------------
+    # Flip if needebe
+    query_type = qdat.cfg.agg_cfg.query_type
+    if query_type == 'vsone':
+        (dcxs, qcxs) = (qdat._qcxs, qdat._dcxs)
+    elif query_type == 'vsmany':
+        (dcxs, qcxs) = (qdat._dcxs, qdat._qcxs)
+    else:
+        raise Exception('Unknown query_type=%r' % query_type)
+    return qcxs, dcxs
+
+
+# QUERY EXEC FUNCTIONS
+
+def query_list(hs, qcxs, dcxs=None, **kwargs):
+    qdat = prepare_qdat_cfg(hs, **kwargs)
     if dcxs is None:
         dcxs = hs.get_indexed_sample()
-    qdat = hs.qdat
     qcx2_res = execute_query_safe(hs, qdat, qcxs, dcxs)[0]
     return qcx2_res
 
@@ -82,6 +111,8 @@ def query_dcxs(hs, qcx, dcxs, qdat, dochecks=True):
     res = result_list[0].values()[0]
     return res
 
+
+# OTHER
 
 def make_nn_index(hs, sx2_cx=None):
     if sx2_cx is None:
@@ -115,28 +146,13 @@ def load_cached_query(hs, qdat, aug_list=['']):
     return result_list
 
 
-def prepare_query(qdat, qcxs, dcxs):
-    qdat._qcxs = qcxs
-    qdat._dcxs = dcxs
-    #---------------
-    # Flip if needebe
-    query_type = qdat.cfg.agg_cfg.query_type
-    if query_type == 'vsone':
-        (dcxs, qcxs) = (qdat._qcxs, qdat._dcxs)
-    elif query_type == 'vsmany':
-        (dcxs, qcxs) = (qdat._dcxs, qdat._qcxs)
-    else:
-        raise Exception('Unknown query_type=%r' % query_type)
-    return qcxs, dcxs
-
-
 #----------------------
 # Main Query Logic
 #----------------------
 @profile
 def execute_query_safe(hs, qdat, qcxs, dcxs, use_cache=True):
     '''Executes a query, performs all checks, callable on-the-fly'''
-    qcxs, dcxs = prepare_query(qdat, qcxs, dcxs)
+    qcxs, dcxs = prepare_qdat_indexes(qdat, qcxs, dcxs)
     # caching
     if not params.args.nocache_query and use_cache:
         result_list = load_cached_query(hs, qdat)

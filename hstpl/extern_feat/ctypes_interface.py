@@ -49,7 +49,8 @@ def find_lib_fpath(libname, root_dir, recurse_down=True, verbose=False):
                 if exists(lib_fpath):
                     if verbose:
                         print('\n[c] Checked: '.join(tried_fpaths))
-                    print('using: %r' % lib_fpath)
+                    if not '--quiet' in sys.argv:
+                        print('using: %r' % lib_fpath)
                     return lib_fpath
                 else:
                     # Remember which candiate library fpaths did not exist
@@ -91,8 +92,17 @@ def load_clib(libname, root_dir):
             cfunc = getattr(clib, func_name)
             cfunc.restype = return_type
             cfunc.argtypes = arg_type_list
+        return clib, def_cfunc
+    except OSError as ex:
+        print('[C!] Caught OSError:\n%s' % ex)
+        errsuffix = 'Is there a missing dependency?'
     except Exception as ex:
-        print('[C!] Caught exception: %r' % ex)
-        print('[C!] load_clib(libname=%r root_dir=%r)' % (libname, root_dir))
-        raise ImportError('[C] Cannot LOAD dynamic library. Did you compile HESAFF?')
-    return clib, def_cfunc
+        print('[C!] Caught Exception:\n%s' % ex)
+        errsuffix = 'Was the library correctly compiled?'
+    import os
+    print('[C!] cwd=%r' % os.getcwd())
+    print('[C!] load_clib(libname=%r root_dir=%r)' % (libname, root_dir))
+    print('[C!] lib_fpath = %r' % lib_fpath)
+    errmsg = '[C] Cannot LOAD dynamic library. ' + errsuffix
+    print(errmsg)
+    raise ImportError(errmsg)

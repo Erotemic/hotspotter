@@ -10,6 +10,7 @@ import cPickle
 from os.path import normpath, exists, realpath, join, expanduser, dirname
 import datetime
 import time
+import sys
 # Science
 import numpy as np
 import cv2
@@ -17,12 +18,13 @@ from PIL import Image
 from PIL.ExifTags import TAGS
 # Hotspotter
 import helpers
-#import skimage
-#import shelve
-#import datetime
-#import timeit
 
 VERBOSE_IO = 0  # 2
+
+ENABLE_SMART_FNAME_HASHING = False
+
+if sys.platform.startswith('win32'):
+    ENABLE_SMART_FNAME_HASHING = True
 
 
 # --- Saving ---
@@ -104,29 +106,15 @@ def debug_smart_load(dpath='', fname='*', uid='*', ext='*'):
             print(fname_)
 
 
-#DEBUG_HASH_TABLE = {}
-
-
 # --- Smart Load/Save ---
 @profile
 def __args2_fpath(dpath, fname, uid, ext):
-    #global DEBUG_HASH_TABLE
     if len(ext) > 0 and ext[0] != '.':
         raise Exception('Fatal Error: Please be explicit and use a dot in ext')
     fname_uid = fname + uid
     if len(fname_uid) > 128:
         fname_uid = fname + '_' + helpers.hashstr(fname_uid, 8)
-        #DEBUG_HASH_TABLE[fname + uid] = fname_uid
-        #keys = DEBUG_HASH_TABLE.keys()
-        #values = DEBUG_HASH_TABLE.values()
-        #len_val = np.unique(values)
-        #len_key = np.unique(keys)
-        #if len(len_val) < len(len_key):
-            #print('!!! IO HASH COLLISION !!!')
-        #else:
-            #print(str(len_key) + ' ' + str(len_key))
     fpath = join(dpath, fname_uid + ext)
-    #fpath = realpath(fpath)
     fpath = normpath(fpath)
     return fpath
 

@@ -212,7 +212,7 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
         min_ = distkey2_min[distkey]
         max_ = distkey2_max[distkey]
         if plot_type == 'plot':
-            df2.plot(data, color=color, label=label)
+            df2.plot(data, color=color, label=label, yscale='linear')
             #xticks = np.linspace(np.min(data), np.max(data), 3)
             #yticks = np.linspace(0, len(data), 5)
             #ax.set_xticks(xticks)
@@ -227,7 +227,7 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
             ax.set_ylabel('pr')
             ax.set_xlabel('distance')
             ax.set_xlim(min_, max_)
-            df2.legend(loc='upper right')
+            df2.legend(loc='upper left')
         df2.dark_background(ax)
         df2.small_xticks(ax)
         df2.small_yticks(ax)
@@ -245,7 +245,7 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
 
     for count, orgkey in enumerate(orgtype_list):
         for distkey in disttype_list:
-            print(((orgkey, distkey)))
+            printDBG('[allres-viz] plotting: %r' % ((orgkey, distkey),))
             dists = orgres2_distance[orgkey][distkey]
             df2.figure(fnum=fnum, pnum=pnum_(px))
             color = color_list[px]

@@ -34,20 +34,6 @@ def signal_set():
     signal.signal(signal.SIGINT, on_ctrl_c)
 
 
-def preload_args_process(args):
-    from hscom import helpers
-    import sys
-    # Process relevant args
-    cids = args.query
-    if args.vdd:
-        helpers.vd(args.dbdir)
-        args.vdd = False
-    load_all = args.autoquery or len(cids) > 0
-    if helpers.inIPython() or '--cmd' in sys.argv:
-        args.nosteal = True
-    return load_all, cids
-
-
 def postload_args_process(hs, back):
     from hscom import params
     # --- Run Startup Commands ---
@@ -102,63 +88,6 @@ def imports():
     #df2.print_off()
 
 
-def main(defaultdb='NAUTS', usedbcache=False, default_load_all=True, app=None):
-    import matplotlib
-    matplotlib.use('Qt4Agg')
-    imports()
-    from hscom import argparse2
-    from hscom import helpers
-    from hscom import fileio as io
-    from hsgui import guiback
-    from hotspotter import HotSpotterAPI as api
-    args = argparse2.parse_arguments(defaultdb=defaultdb)
-    # Parse arguments
-    args = argparse2.fix_args_with_cache(args)
-    if usedbcache:
-        load_all, cids = preload_args_process(args)
-    else:
-        args = argparse2.fix_args_shortnames(args)
-        load_all = helpers.get_flag('--load-all', default_load_all)
-    # FIXME: HACK. But later we can make params the module that you use if you
-    # want an arg like strict or whatever
-    from hscom import params
-    params.args = args
-
-    # Preload process args
-    if args.delete_global:
-        io.delete_global_cache()
-
-    # --- Build HotSpotter API ---
-    if app is None:
-        hs = api.HotSpotter(args)
-    else:
-        back = guiback.make_main_window(app)
-        hs = back.open_database(args.dbdir)
-    setcfg = args.setcfg
-    if setcfg is not None:
-        import experiment_harness
-        print('[main] setting cfg to %r' % setcfg)
-        varied_list = experiment_harness.get_varied_params_list([setcfg])
-        cfg_dict = varied_list[0]
-        #print(cfg_dict)
-        hs.prefs.query_cfg.update_cfg(**cfg_dict)
-        hs.prefs.save()
-        hs.prefs.printme()
-        #hs.default_preferences()
-
-    # Load all data if needed now, otherwise be lazy
-    try:
-        hs.load(load_all=load_all)
-        db_dir = hs.dirs.db_dir
-        io.global_cache_write('db_dir', db_dir)
-    except ValueError as ex:
-        print('[main] ValueError = %r' % (ex,))
-        if params.args.strict:
-            raise
-    if app is not None:
-        return hs, back
-    return hs
-
 #==================
 # MAIN ENTRY POINT
 #==================
@@ -169,13 +98,15 @@ if __name__ == '__main__':
     # Run Main Function
     from hsgui import guitools
     from hscom import helpers
+    from hsdev import test_api
     print('main.py')
     # Listen for ctrl+c
     signal_set()
     # Run qt app
     app, is_root = guitools.init_qtapp()
     # Run main script with backend
-    hs, back = main(defaultdb=None, usedbcache=True, app=app)
+
+    hs, back = test_api.main(defaultdb=None, preload=False, app=app)
     # --- Run Startup Commands ---
     res = postload_args_process(hs, back)
     # Connect database to the back gui

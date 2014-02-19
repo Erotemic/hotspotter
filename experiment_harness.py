@@ -4,7 +4,7 @@ import sys
 import itertools
 import textwrap
 from os.path import join
-#from itertools import imap, cycle
+from itertools import imap
 # Scientific
 import numpy as np
 # Hotspotter
@@ -14,6 +14,7 @@ from hotspotter import DataStructures as ds
 from hotspotter import match_chips3 as mc3
 from hscom import fileio as io
 from hscom import helpers
+from hscom import helpers as util
 from hscom import latex_formater
 from hscom import params
 from hsviz import draw_func2 as df2
@@ -46,6 +47,8 @@ def get_vary_dicts(test_cfg_name_list):
     return vary_dicts
 
 
+__QUIET__ = '--quiet' in sys.argv
+
 #---------
 # Helpers
 #---------------
@@ -70,7 +73,8 @@ def __ArgGaurd(func, default=False):
         if helpers.get_flag(flag, default):
             return func(*args, **kwargs)
         else:
-            print('\n~~~ %s ~~~\n' % flag)
+            if not __QUIET__:
+                print('\n~~~ %s ~~~\n' % flag)
     GaurdWrapper.func_name = func.func_name
     return GaurdWrapper
 
@@ -82,6 +86,47 @@ def rankscore_str(thresh, nLess, total):
     fmtstr = '#ranks < %d = ' + fmtsf + '/%d = (%.1f%%) (err=' + fmtsf + ')'
     rankscore_str = fmtstr % (thresh, nLess, total, percent, (total - nLess))
     return rankscore_str
+
+
+def wrap_uid(uid):
+    import re
+    # REGEX to locate _XXXX(
+    cfg_regex = r'_[A-Z][A-Z]*\('
+    uidmarker_list = re.findall(cfg_regex, uid)
+    uidconfig_list = re.split(cfg_regex, uid)
+    args = [uidconfig_list, uidmarker_list]
+    interleave_iter = util.interleave(args)
+    new_uid_list = []
+    total_len = 0
+    prefix_str = ''
+    # If unbalanced there is a prefix before a marker
+    if len(uidmarker_list) < len(uidconfig_list):
+        frag = interleave_iter.next()
+        new_uid_list += [frag]
+        total_len = len(frag)
+        prefix_str = ' ' * len(frag)
+    # Iterate through markers and config strings
+    while True:
+        try:
+            marker_str = interleave_iter.next()
+            config_str = interleave_iter.next()
+            frag = marker_str + config_str
+        except StopIteration:
+            break
+        total_len += len(frag)
+        new_uid_list += [frag]
+        # Go to newline if past 80 chars
+        if total_len > 80:
+            total_len = 0
+            new_uid_list += ['\n' + prefix_str]
+    wrapped_uid = ''.join(new_uid_list)
+    return wrapped_uid
+
+
+def format_uid_list(uid_list):
+    indented_list = util.indent_list('    ', uid_list)
+    wrapped_list = imap(wrap_uid, indented_list)
+    return util.joins('\n', wrapped_list)
 
 
 #---------------
@@ -184,8 +229,9 @@ def get_cfg_list(hs, test_cfg_name_list):
         if not cfg in cfg_set:
             cfg_list.append(cfg)
             cfg_set.add(cfg)
-    print('[harn] reduced equivilent cfgs %d / %d cfgs' % (len(cfg_list),
-                                                           len(varied_params_list)))
+    if not __QUIET__:
+        print('[harn] reduced equivilent cfgs %d / %d cfgs' % (len(cfg_list),
+                                                               len(varied_params_list)))
 
     return cfg_list
 
@@ -194,18 +240,18 @@ def get_cfg_list(hs, test_cfg_name_list):
 def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     # Test Each configuration
-    print(textwrap.dedent("""
-    *********************
-    [harn]================
-    [harn]test_scoring(hs)"""))
+    if not __QUIET__:
+        print(textwrap.dedent("""
+        [harn]================
+        [harn] experiment_harness.test_configurations()""").strip())
 
     hs.update_samples()
 
     # Grab list of algorithm configurations to test
     cfg_list = get_cfg_list(hs, test_cfg_name_list)
-    print('')
-    print('[harn] Testing %d different parameters' % len(cfg_list))
-    print('[harn]         %d different chips' % len(qcx_list))
+    if not __QUIET__:
+        print('[harn] Testing %d different parameters' % len(cfg_list))
+        print('[harn]         %d different chips' % len(qcx_list))
 
     # Preallocate test result aggregation structures
     sel_cols = params.args.sel_cols  # FIXME
@@ -220,7 +266,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     nocache_testres =  helpers.get_flag('--nocache-testres', False)
 
-    test_results_verbosity = 2
+    test_results_verbosity = 2 - __QUIET__
     test_cfg_verbosity = 2
 
     msg = textwrap.dedent('''
@@ -242,7 +288,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         qdat.set_cfg(query_cfg, hs=hs)
         #_nocache_testres = nocache_testres or (cfgx in sel_cols)
         dcxs = hs.get_indexed_sample()
-        mc3.prepare_query(qdat, None, dcxs)
+        mc3.prepare_qdat_indexes(qdat, None, dcxs)
         uid2_query_cfg[qdat.get_uid()] = query_cfg
         # Run the test / read cache
         qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,
@@ -259,10 +305,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             #res = qcx2_res.values()[0]
             #rc2_res[qx, cfgx] = res
 
-    print('')
-    print('------')
-    print('[harn] Finished testing parameters')
-    print('---------------------------------')
+    if not __QUIET__:
+        print('[harn] Finished testing parameters')
     if nomemory:
         print('ran tests in memory savings mode. exiting')
         return
@@ -441,7 +485,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     for X, cfgx2_nLessX in nLessX_dict.iteritems():
         max_LessX = cfgx2_nLessX.max()
         bestCFG_X = np.where(cfgx2_nLessX == max_LessX)[0]
-        best_rankscore = '[best_cfg] %d config(s) scored ' % len(bestCFG_X)
+        best_rankscore = '[cfg*] %d cfg(s) scored ' % len(bestCFG_X)
         best_rankscore += rankscore_str(X, max_LessX, nQuery)
         best_rankscore_summary += [best_rankscore]
         to_intersect_list += [cfgx2_lbl[bestCFG_X]]
@@ -460,45 +504,18 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         for X, cfgx2_nLessX in nLessX_dict.iteritems():
             max_LessX = cfgx2_nLessX.max()
             bestCFG_X = np.where(cfgx2_nLessX == max_LessX)[0]
-            best_rankscore = '[best_cfg] %d config(s) scored ' % len(bestCFG_X)
+            best_rankscore = '[cfg*] %d cfg(s) scored ' % len(bestCFG_X)
             best_rankscore += rankscore_str(X, max_LessX, nQuery)
             uid_list = cfgx2_lbl[bestCFG_X]
 
-            def interleave(args):
-                from itertools import cycle
-                arg_iters = map(iter, args)
-                cycle_iter = cycle(arg_iters)
-                for iter_ in cycle_iter:
-                    yield iter_.next()
-
-            def wrap_uid(uid):
-                import re
-                cfg_regex = r'[ \)]_[A-Z][A-Z]*\('
-                uidmarker_list = re.findall(cfg_regex, uid)
-                uidconfig_list = re.split(cfg_regex, uid)
-                args = [uidconfig_list, uidmarker_list]
-                interleave_iter = interleave(args)
-                new_uid_list = []
-                total_len = 0
-                for frag in interleave_iter:
-                    total_len += len(frag)
-                    # Put parens on previous line
-                    #if frag[0] == ')':
-                        #frag[0] = frag[1:]
-                        #new_uid_list += ')'
-                    new_uid_list += [frag]
-                    if total_len > 80:
-                        total_len = 0
-                        new_uid_list += ['\n                     ']
-                wrapped_uid = ''.join(new_uid_list)
-                return wrapped_uid
-            uid_list = [wrap_uid(uid) for uid in uid_list]
-            best_rankcfg = indent('\n'.join(uid_list), '    ')
+            #best_rankcfg = ''.join(map(wrap_uid, uid_list))
+            best_rankcfg = format_uid_list(uid_list)
+            #indent('\n'.join(uid_list), '    ')
             print(best_rankscore)
             print(best_rankcfg)
 
-        print('[best_cfg]  %d config(s) are the best of %d total configs' % (len(intersected), nCfg))
-        print(indent('\n'.join(intersected), '    '))
+        print('[cfg*]  %d cfg(s) are the best of %d total cfgs' % (len(intersected), nCfg))
+        print(format_uid_list(intersected))
 
         print('--- /Best Configurations ---')
     print_bestcfg()
@@ -519,14 +536,16 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     #------------
     print('')
-    print('===========================')
-    print('[col_score] SUMMARY        ')
-    print('===========================')
-    print('\n'.join(best_rankscore_summary))
-    print('--- /SUMMARY ---')
+    print('+===========================')
+    print('| [cfg*] SUMMARY       ')
+    print('|---------------------------')
+    print(util.joins('\n| ', best_rankscore_summary))
+    print('+===========================')
+    #print('--- /SUMMARY ---')
 
     # Draw results
-    print('remember to inspect with --sel-rows (-r) and --sel-cols (-c) ')
+    if not __QUIET__:
+        print('remember to inspect with --sel-rows (-r) and --sel-cols (-c) ')
     if len(sel_rows) > 0 and len(sel_cols) == 0:
         sel_cols = range(len(cfg_list))
     if len(sel_cols) > 0 and len(sel_rows) == 0:
@@ -568,8 +587,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print('--------------------------------------')
         print('viewing (r, c) = (%r, %r)' % (r, c))
         # Load / Execute the query
-        qdat.set_cfg(query_cfg, hs=hs)
-        mc3.prepare_query(qdat, None, dcxs)
+        qdat = mc3.prepare_qdat_cfg(hs, qdat, query_cfg)
+        mc3.prepare_qdat_indexes(qdat, None, dcxs)
         res_list = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
         res = res_list[0][qcx]
         # Print Query UID
@@ -589,20 +608,5 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         if params.args.save_figures:
             from hsviz import allres_viz
             allres_viz.dump(hs, 'analysis', quality=True, overwrite=False)
-    print('[harn] EXIT EXPERIMENT HARNESS')
-
-
-#if __name__ == '__main__':
-    #import multiprocessing
-    #np.set_printoptions(threshold=5000, linewidth=5000, precision=5)
-    #multiprocessing.freeze_support()
-    #print('[harn]-----------')
-    #print('[harn] main()')
-    ##main_locals = dev.dev_main()
-    #hs = main_locals['hs']
-    #qcx_list = main_locals['qcx_list']
-    ##test_cfg_name_list = ['vsone_1']
-    ##test_cfg_name_list = ['vsmany_3456']
-    #test_cfg_name_list = ['vsmany_srule']
-    #test_configurations(hs, qcx_list, test_cfg_name_list)
-    #exec(df2.present())
+    if not __QUIET__:
+        print('[harn] EXIT EXPERIMENT HARNESS')

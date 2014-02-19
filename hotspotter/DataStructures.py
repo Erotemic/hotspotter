@@ -43,9 +43,11 @@ class QueryData(DynStruct):
     def get_uid_list(qdat, *args, **kwargs):
         uid_list = qdat.cfg.get_uid_list(*args, **kwargs)
         if not 'noDCXS' in args:
+            if len(qdat._dcxs) == 0:
+                raise Exception('QueryData has not been populated. len(dcxs)=0')
             # In case you don't search the entire dataset
-            dcxs_uid = helpers.hashstr_arr(qdat._dcxs, 'dcxs')
-            uid_list += ['_', dcxs_uid]
+            dcxs_uid = helpers.hashstr_arr(qdat._dcxs, '_dcxs')
+            uid_list += [dcxs_uid]
         return uid_list
 
     def get_uid(qdat, *args, **kwargs):

@@ -175,7 +175,7 @@ def res2_true_and_false(hs, res):
 
 
 def init_organized_results(allres):
-    print('[rr2] Initialize organized results')
+    print('[rr2] init_organized_results()')
     hs = allres.hs
     qcx2_res = allres.qcx2_res
     allres.true          = OrganizedResult()
@@ -220,13 +220,13 @@ def init_organized_results(allres):
         res = qcx2_res[qcx]
         if res is not None:
             _organize_result(res)
-    print('[rr2] len(allres.true)          = %r' % len(allres.true))
-    print('[rr2] len(allres.false)         = %r' % len(allres.false))
-    print('[rr2] len(allres.top_true)      = %r' % len(allres.top_true))
-    print('[rr2] len(allres.top_false)     = %r' % len(allres.top_false))
-    print('[rr2] len(allres.bot_true)      = %r' % len(allres.bot_true))
-    print('[rr2] len(allres.problem_true)  = %r' % len(allres.problem_true))
-    print('[rr2] len(allres.problem_false) = %r' % len(allres.problem_false))
+    #print('[rr2] len(allres.true)          = %r' % len(allres.true))
+    #print('[rr2] len(allres.false)         = %r' % len(allres.false))
+    #print('[rr2] len(allres.top_true)      = %r' % len(allres.top_true))
+    #print('[rr2] len(allres.top_false)     = %r' % len(allres.top_false))
+    #print('[rr2] len(allres.bot_true)      = %r' % len(allres.bot_true))
+    #print('[rr2] len(allres.problem_true)  = %r' % len(allres.problem_true))
+    #print('[rr2] len(allres.problem_false) = %r' % len(allres.problem_false))
     # qcx arrays for ttbttf
     allres.top_true_qcx_arrays  = allres.top_true.qcx_arrays(hs)
     allres.bot_true_qcx_arrays  = allres.bot_true.qcx_arrays(hs)
@@ -234,7 +234,7 @@ def init_organized_results(allres):
 
 
 def init_score_matrix(allres):
-    print(' * init score matrix')
+    print('[rr2] init score matrix')
     hs = allres.hs
     qcx2_res = allres.qcx2_res
     qcx_list = allres.qcx_list
@@ -297,9 +297,7 @@ def init_allres(hs, qcx2_res,
     allres = AllResults(hs, qcx2_res, qcx_list)
     allres.title_suffix = get_title_suffix(hs)
     #helpers.ensurepath(allres.summary_dir)
-    print('\n======================')
-    print(' * Initializang all results')
-    print(' * Title suffix: ' + allres.title_suffix)
+    print('[rr2] init_allres()')
     #---
     hs = allres.hs
     qcx2_res = allres.qcx2_res
@@ -317,7 +315,7 @@ def init_allres(hs, qcx2_res,
         oxsty_map_csv, scalar_mAP_str = oxsty_results.oxsty_mAP_results(allres)
         allres.scalar_mAP_str = scalar_mAP_str
         allres.oxsty_map_csv = oxsty_map_csv
-    print(allres)
+    #print(allres)
     return allres
 
 
@@ -1002,7 +1000,9 @@ def print_result_summaries_list(topnum=5):
 
 def _get_orgres2_distances(allres, orgres_list=None):
     if orgres_list is None:
-        orgres_list = ['true', 'false', 'top_true', 'bot_true', 'top_false']
+        #orgres_list = ['true', 'false', 'top_true', 'bot_true', 'top_false']
+        orgres_list = ['true', 'false']
+    #print(allres)
     dist_fn = lambda orgres: get_orgres_match_distances(allres, orgres)
     orgres2_distance = {}
     for orgres in orgres_list:
@@ -1015,26 +1015,18 @@ def _get_orgres2_distances(allres, orgres_list=None):
 
 
 @profile
-def viz_db_match_distances(allres, orgres_list=None):
-    print('[rr2] viz_db_match_distances')
-    orgres2_distance = allres.get_orgres2_distances(orgres_list=orgres_list)
-    db_name = allres.hs.get_db_name()
-    allres_viz.show_descriptors_match_distances(orgres2_distance, db_name=db_name)
-
-
-@profile
 def get_orgres_match_distances(allres, orgtype_='false'):
     import algos
     qcxs = allres[orgtype_].qcxs
     cxs  = allres[orgtype_].cxs
     match_list = zip(qcxs, cxs)
-    print('[rr2] getting orgtype_=%r distances between sifts' % orgtype_)
+    printDBG('[rr2] getting orgtype_=%r distances between sifts' % orgtype_)
     adesc1, adesc2 = get_matching_descriptors(allres, match_list)
-    print('[rr2]  * adesc1.shape = %r' % (adesc1.shape,))
-    print('[rr2]  * adesc2.shape = %r' % (adesc2.shape,))
+    printDBG('[rr2]  * adesc1.shape = %r' % (adesc1.shape,))
+    printDBG('[rr2]  * adesc2.shape = %r' % (adesc2.shape,))
     #dist_list = ['L1', 'L2', 'hist_isect', 'emd']
-    dist_list = ['L1', 'L2', 'hist_isect']
-    #dist_list = ['L1', 'L2']
+    #dist_list = ['L1', 'L2', 'hist_isect']
+    dist_list = ['L2', 'hist_isect']
     hist1 = np.array(adesc1, dtype=np.float64)
     hist2 = np.array(adesc2, dtype=np.float64)
     distances = algos.compute_distances(hist1, hist2, dist_list)
@@ -1044,6 +1036,9 @@ def get_orgres_match_distances(allres, orgtype_='false'):
 def get_matching_descriptors(allres, match_list):
     hs = allres.hs
     qcx2_res = allres.qcx2_res
+    # FIXME: More intelligent feature loading
+    if len(hs.feats.cx2_desc) == 0:
+        hs.refresh_features()
     cx2_desc = hs.feats.cx2_desc
     desc1_list = []
     desc2_list = []
@@ -1069,28 +1064,28 @@ def get_matching_descriptors(allres, match_list):
     return aggdesc1, aggdesc2
 
 
-def load_query_results(hs, qcx_list, nocache=False):
+def load_qcx2_res(hs, qcx_list, nocache=False):
     'Prefrosm / loads all queries'
-    query_cfg = hs.prefs.query_cfg
+    import match_chips3 as mc3
+    qdat = mc3.prepare_qdat_cfg(hs)
+    qdat._dcxs = hs.get_indexed_sample()  # HACK MAKE BETTER PREP QDAT
     # Build query big cache uid
-    query_uid = query_cfg.get_uid()
+    query_uid = qdat.get_uid()
     hs_uid    = hs.get_db_name()
-    qcxs_uid  = helpers.hashstr(tuple(qcx_list))
+    qcxs_uid  = helpers.hashstr_arr(qcx_list, lbl='_qcxs')
     qres_uid  = hs_uid + query_uid + qcxs_uid
     cache_dir = join(hs.dirs.cache_dir, 'query_results_bigcache')
-    print('\n===============')
-    print('\n[rr2] Load Query Results')
-    print('[rr2] load_query_results(): %r' % qres_uid)
+    print('[rr2] load_qcx2_res(): %r' % qres_uid)
     io_kwargs = dict(dpath=cache_dir, fname='query_results', uid=qres_uid, ext='.cPkl')
     # Return cache if available
     if not params.args.nocache_query and (not nocache):
         qcx2_res = io.smart_load(**io_kwargs)
         if qcx2_res is not None:
-            print('[rr2] load_query_results(): cache hit')
+            print('[rr2]  *  cache hit')
             return qcx2_res
-        print('[rr2] load_query_results(): cache miss')
+        print('[rr2]  *  cache miss')
     else:
-        print('[rr2] load_query_results(): cache off')
+        print('[rr2]  *  cache off')
     # Individually load / compute queries
     if isinstance(qcx_list, list):
         qcx_set = set(qcx_list)
@@ -1109,6 +1104,6 @@ def get_allres(hs, qcx_list):
     'Performs / Loads all queries and build allres structure'
     print('[rr2] get_allres()')
     #valid_cxs = hs.get_valid_cxs()
-    qcx2_res = load_query_results(hs, qcx_list)
+    qcx2_res = load_qcx2_res(hs, qcx_list)
     allres = init_allres(hs, qcx2_res, qcx_list=qcx_list)
     return allres

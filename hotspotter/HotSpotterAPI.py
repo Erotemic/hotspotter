@@ -529,16 +529,10 @@ class HotSpotter(object):
         print('\n====================')
         print('[hs] query database')
         print('====================')
-        if query_cfg is None:
-            hs.assert_prefs()
-            query_cfg = hs.prefs.query_cfg
-        if len(kwargs) > 0:
-            query_cfg = query_cfg.deepcopy(**kwargs)
-        qdat = hs.qdat
-        qdat.set_cfg(query_cfg)
+        qdat = mc3.prepare_qdat_cfg(hs, query_cfg=query_cfg, **kwargs)
         dcxs = hs.get_indexed_sample()
         try:
-            res = mc3.query_dcxs(hs, qcx, dcxs, hs.qdat, dochecks=dochecks)
+            res = mc3.query_dcxs(hs, qcx, dcxs, qdat, dochecks=dochecks)
         except mf.QueryException as ex:
             msg = '[hs] Query Failure: %r' % ex
             print(msg)
@@ -553,16 +547,8 @@ class HotSpotter(object):
         print('\n====================')
         print('[hs] query groundtruth')
         print('====================')
-        if query_cfg is None:
-            hs.assert_prefs()
-            query_cfg = hs.prefs.query_cfg
-        if len(kwargs) > 0:
-            query_cfg = query_cfg.deepcopy(**kwargs)
-        qdat = hs.qdat
-        qdat.set_cfg(query_cfg)
         gt_cxs = hs.get_other_indexed_cxs(qcx)
-        qdat.dcxs = gt_cxs
-        print('[mc3] len(gt_cxs) = %r' % (gt_cxs,))
+        qdat = mc3.prepare_qdat_cfg(hs, query_cfg=query_cfg, dcxs=gt_cxs, **kwargs)
         return mc3.query_dcxs(hs, qcx, gt_cxs, qdat)
 
     # ---------------

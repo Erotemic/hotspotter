@@ -2,7 +2,6 @@
 # TODO: ADD COPYRIGHT TAG
 from __future__ import print_function, division
 from hsdev import test_api
-from hsgui import guitools
 from hsviz import viz
 import multiprocessing
 
@@ -10,10 +9,8 @@ if __name__ == '__main__':
     # INITIALIZATION CODE
     # For windows
     multiprocessing.freeze_support()
-    # Initialize a qt app (or get parent's)
-    app, is_root = guitools.init_qtapp()
     # Create a HotSpotter API (hs) and GUI backend (back)
-    hs, back = test_api.main(defaultdb='NAUTS', preload=True, app=app)
+    hs = test_api.main(defaultdb='NAUTS', preload=True, app=None)
     # The test api returns a list of interesting chip indexes
     qcx = test_api.get_test_cxs(hs, 1)[0]
     # Convert chip-index in to chip-id

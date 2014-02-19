@@ -29,6 +29,11 @@ import load_data2 as ld2
 import match_chips3 as mc3
 import matching_functions as mf
 from hscom import params  # NOQA
+try:
+    from hsdev import dev_api
+except ImportError:
+    pass
+
 
 
 def _checkargs_onload(hs):
@@ -250,43 +255,43 @@ class HotSpotter(object):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
         #super(HotSpotter, hs).__init__(child_exclude_list=['prefs', 'args'])
-        print('[hs] creating HotSpotter()')
-        super(HotSpotter, hs).__init__()
-        #printDBG('[\hs] Creating HotSpotter API')
-        # TODO Remove args / integrate into prefs
-        hs.callbacks = {}
-        hs.tables = None
-        hs.dirs   = None
-        hs.feats  = ds.HotspotterChipFeatures()
-        hs.cpaths = ds.HotspotterChipPaths()
-        #
-        hs.train_sample_cx   = None
-        hs.test_sample_cx    = None
-        hs.indexed_sample_cx = None
-        #
-        pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')
-        hs.prefs = Pref('root', fpath=pref_fpath)
-        if params.args.nocache_prefs:
-            hs.default_preferences()
-        else:
-            hs.load_preferences()
-        #if args is not None:
-            #hs.prefs.N = args.N if args is not None
-            #args_dict = vars(args)
-            #hs.update_preferences(**args_dict)
-        hs.query_history = [(None, None)]
-        hs.qdat = ds.QueryData()  # Query Data
-        if db_dir is not None:
-            hs.load_tables(db_dir=db_dir)
-        hs.augment_api()
+        with util.Indenter2('[hs.__init__]'):
+            print('[hs] creating HotSpotter()')
+            super(HotSpotter, hs).__init__()
+            #printDBG('[\hs] Creating HotSpotter API')
+            # TODO Remove args / integrate into prefs
+            hs.callbacks = {}
+            hs.tables = None
+            hs.dirs   = None
+            hs.feats  = ds.HotspotterChipFeatures()
+            hs.cpaths = ds.HotspotterChipPaths()
+            #
+            hs.train_sample_cx   = None
+            hs.test_sample_cx    = None
+            hs.indexed_sample_cx = None
+            #
+            pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')
+            hs.prefs = Pref('root', fpath=pref_fpath)
+            if params.args.nocache_prefs:
+                hs.default_preferences()
+            else:
+                hs.load_preferences()
+            #if args is not None:
+                #hs.prefs.N = args.N if args is not None
+                #args_dict = vars(args)
+                #hs.update_preferences(**args_dict)
+            hs.query_history = [(None, None)]
+            hs.qdat = ds.QueryData()  # Query Data
+            if db_dir is not None:
+                hs.load_tables(db_dir=db_dir)
+            hs.augment_api()
 
     def augment_api(hs):
         'Adds debugging functions'
         try:
-            from hsdev import dev_api
             dev_api.augment_api(hs)
             print('[hs] created debug api')
-        except ImportError as ex:
+        except NameError as ex:
             print('[hs] created release api: %s' % ex)
 
         #printDBG(r'[/hs] Created HotSpotter API')
@@ -386,8 +391,8 @@ class HotSpotter(object):
     #---------------
     def load(hs, load_all=False):
         '(current load function) Loads the appropriate database'
-        print('[hs] load()')
         with util.Indenter2('[hs.load]'):
+            print('[hs] load()')
             hs.unload_all()
             hs.load_tables()
             hs.update_samples()

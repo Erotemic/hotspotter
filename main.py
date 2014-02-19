@@ -49,9 +49,11 @@ def postload_args_process(hs, back):
     if len(qcid_list) > 0:
         qcid = qcid_list[0]
         tx = tx_list[0] if len(tx_list) > 0 else None
+        # Run a query
         res = back.query(qcid, tx)
         back.select_cid(qcid, show=False)
         if len(cid_list) > 0:
+            # Interact with the query
             cx = hs.cid2_cx(cid_list[0])
             if len(qfx_list) > 0:
                 qfx = qfx_list[0]
@@ -61,6 +63,7 @@ def postload_args_process(hs, back):
             else:
                 res.interact_chipres(hs, cx, fnum=4)
 
+    # Select on startup commands
     selgxs = params.args.selgxs
     if len(selgxs) > 0:
         back.select_gx(selgxs[0])

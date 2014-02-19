@@ -410,86 +410,6 @@ def numpy_list_num_bits(nparr_list, expected_type, expected_dims):
     return num_bits,  num_items, num_elemt
 
 
-def public_attributes(input):
-    public_attr_list = []
-    all_attr_list = dir(input)
-    for attr in all_attr_list:
-        if attr.find('__') == 0:
-            continue
-        public_attr_list.append(attr)
-    return public_attr_list
-
-
-def explore_stack():
-    stack = inspect.stack()
-    tup = stack[0]
-    for ix, tup in reversed(list(enumerate(stack))):
-        frame = tup[0]
-        print('--- Frame %2d: ---' % (ix))
-        print_frame(frame)
-        print('\n')
-        #next_frame = curr_frame.f_back
-
-
-def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
-    def __childiter(module):
-        for aname in iter(dir(module)):
-            if aname.find('_') == 0:
-                continue
-            try:
-                yield module.__dict__[aname], aname
-            except KeyError as ex:
-                print(repr(ex))
-                pass
-
-    def __explore_module(module, indent, seen, depth, maxdepth, nonmodules):
-        valid_children = []
-        ret = u''
-        modname = str(module.__name__)
-        #modname = repr(module)
-        for child, aname in __childiter(module):
-            try:
-                childtype = type(child)
-                if not isinstance(childtype, types.ModuleType):
-                    if nonmodules:
-                        #print_(depth)
-                        fullstr = indent + '    ' + str(aname) + ' = ' + repr(child)
-                        truncstr = truncate_str(fullstr) + '\n'
-                        ret +=  truncstr
-                    continue
-                childname = str(child.__name__)
-                if not seen is None:
-                    if childname in seen:
-                        continue
-                    elif maxdepth is None:
-                        seen.add(childname)
-                if childname.find('_') == 0:
-                    continue
-                valid_children.append(child)
-            except Exception as ex:
-                print(repr(ex))
-                pass
-        # Print
-        # print_(depth)
-        ret += indent + modname + '\n'
-        # Recurse
-        if not maxdepth is None and depth >= maxdepth:
-            return ret
-        ret += ''.join([__explore_module(child,
-                                         indent + '    ',
-                                         seen, depth + 1,
-                                         maxdepth,
-                                         nonmodules)
-                       for child in iter(valid_children)])
-        return ret
-    #ret +=
-    #print('#module = ' + str(module_))
-    ret = __explore_module(module_, '     ', seen, 0, maxdepth, nonmodules)
-    #print(ret)
-    sys.stdout.flush()
-    return ret
-
-
 # --- Util ---
 def alloc_lists(num_alloc):
     'allocates space for a numpy array of lists'
@@ -683,105 +603,6 @@ def symlink(source, link_name, noraise=False):
         checkpath(source, True)
         if not noraise:
             raise
-
-
-# --- Context ---
-def inIPython():
-    try:
-        __IPYTHON__
-        return True
-    except NameError:
-        return False
-
-
-def haveIPython():
-    try:
-        import IPython  # NOQA
-        return True
-    except NameError:
-        return False
-
-
-def keyboard(banner=None):
-    ''' Function that mimics the matlab keyboard command '''
-    # use exception trick to pick up the current frame
-    print('*** keyboard> INTERACTING WITH IPYTHON ***')
-    try:
-        raise None
-    except:
-        frame = sys.exc_info()[2].tb_frame.f_back
-    print("# Ctrl-D  Use quit() to exit :) Happy debugging!")
-    # evaluate commands in current namespace
-    namespace = frame.f_globals.copy()
-    namespace.update(frame.f_locals)
-    try:
-        import IPython
-        IPython.embed_kernel(module=None, local_ns=namespace)
-    except SystemExit:
-        pass
-    except Exception as ex:
-        print(repr(ex))
-        print('*** keyboard> FAILED TO INTERACT WITH IPYTHON ***')
-        print('probably want to up up')
-        import pdb
-        pdb.set_trace()
-
-
-def print_frame(frame):
-    frame = frame if 'frame' in vars() else inspect.currentframe()
-    attr_list = ['f_code.co_name', 'f_back', 'f_lineno',
-                 'f_code.co_names', 'f_code.co_filename']
-    obj_name = 'frame'
-    execstr_print_list = ['print("%r=%%r" %% (%s,))' % (_execstr, _execstr)
-                          for _execstr in execstr_attr_list(obj_name, attr_list)]
-    execstr = '\n'.join(execstr_print_list)
-    exec(execstr)
-    local_varnames = pack_into('; '.join(frame.f_locals.keys()))
-    print(local_varnames)
-    #if len(local_varnames) > 360:
-        #print(local_varnames[0:360] + '...')#hack
-    #else:
-    print('--- End Frame ---')
-
-
-def search_stack_for_localvar(varname):
-    curr_frame = inspect.currentframe()
-    print(' * Searching parent frames for: ' + str(varname))
-    frame_no = 0
-    while not curr_frame.f_back is None:
-        if varname in curr_frame.f_locals.keys():
-            print(' * Found in frame: ' + str(frame_no))
-            return curr_frame.f_locals[varname]
-        frame_no += 1
-        curr_frame = curr_frame.f_back
-    print('... Found nothing in all ' + str(frame_no) + ' frames.')
-    return None
-
-
-def get_parent_locals():
-    this_frame = inspect.currentframe()
-    call_frame = this_frame.f_back
-    parent_frame = call_frame.f_back
-    if parent_frame is None:
-        return None
-    return parent_frame.f_locals
-
-
-def get_parent_globals():
-    this_frame = inspect.currentframe()
-    call_frame = this_frame.f_back
-    parent_frame = call_frame.f_back
-    if parent_frame is None:
-        return None
-    return parent_frame.f_globals
-
-
-def get_caller_locals():
-    this_frame = inspect.currentframe()
-    call_frame = this_frame.f_back
-    if call_frame is None:
-        return None
-    return call_frame.f_locals
 
 
 # --- Convinience ----
@@ -1460,7 +1281,6 @@ class Indenter2(object):
         self.lbl = lbl
 
     def start(self):
-        import __builtin__
         def indent_msg(msg):
             return self.lbl + str(msg).replace('\n', '\n' + self.lbl)
 
@@ -1486,6 +1306,21 @@ class Indenter2(object):
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.stop()
+
+
+def rectify_wrapped_func(wrapper, func):
+    wrapper.func_name = func.func_name
+
+
+def indent_decor(lbl):
+    def indent_decor2(func):
+        def indent_wrapper(*args, **kwargs):
+            with Indenter2(lbl):
+                ret = func(*args, **kwargs)
+                return ret
+        rectify_wrapped_func(indent_wrapper, func)
+        return indent_wrapper
+    return indent_decor2
 
 
 def choose(n, k):
@@ -2193,12 +2028,162 @@ def indent_list(indent, list_):
     return imap(lambda item: indent + str(item), list_)
 
 
+# --- Context ---
+
+def inIPython():
+    try:
+        __IPYTHON__
+        return True
+    except NameError:
+        return False
+
+
+def haveIPython():
+    try:
+        import IPython  # NOQA
+        return True
+    except NameError:
+        return False
+
+
+def print_frame(frame):
+    frame = frame if 'frame' in vars() else inspect.currentframe()
+    attr_list = ['f_code.co_name', 'f_back', 'f_lineno',
+                 'f_code.co_names', 'f_code.co_filename']
+    obj_name = 'frame'
+    execstr_print_list = ['print("%r=%%r" %% (%s,))' % (_execstr, _execstr)
+                          for _execstr in execstr_attr_list(obj_name, attr_list)]
+    execstr = '\n'.join(execstr_print_list)
+    exec(execstr)
+    local_varnames = pack_into('; '.join(frame.f_locals.keys()))
+    print(local_varnames)
+    print('--- End Frame ---')
+
+
+def search_stack_for_localvar(varname):
+    curr_frame = inspect.currentframe()
+    print(' * Searching parent frames for: ' + str(varname))
+    frame_no = 0
+    while not curr_frame.f_back is None:
+        if varname in curr_frame.f_locals.keys():
+            print(' * Found in frame: ' + str(frame_no))
+            return curr_frame.f_locals[varname]
+        frame_no += 1
+        curr_frame = curr_frame.f_back
+    print('... Found nothing in all ' + str(frame_no) + ' frames.')
+    return None
+
+
+def get_parent_locals():
+    this_frame = inspect.currentframe()
+    call_frame = this_frame.f_back
+    parent_frame = call_frame.f_back
+    if parent_frame is None:
+        return None
+    return parent_frame.f_locals
+
+
+def get_parent_globals():
+    this_frame = inspect.currentframe()
+    call_frame = this_frame.f_back
+    parent_frame = call_frame.f_back
+    if parent_frame is None:
+        return None
+    return parent_frame.f_globals
+
+
+def get_caller_locals():
+    this_frame = inspect.currentframe()
+    call_frame = this_frame.f_back
+    if call_frame is None:
+        return None
+    return call_frame.f_locals
+
+
 def module_functions(module):
-    import inspect
     module_members = inspect.getmembers(module)
     function_list = []
     for key, val in module_members:
-        if isinstance(val, types.FunctionType):
-            print(key)
+        if inspect.isfunction(val) and inspect.getmodule(val) == module:
             function_list.append((key, val))
     return function_list
+
+
+def public_attributes(input):
+    public_attr_list = []
+    all_attr_list = dir(input)
+    for attr in all_attr_list:
+        if attr.find('__') == 0:
+            continue
+        public_attr_list.append(attr)
+    return public_attr_list
+
+
+def explore_stack():
+    stack = inspect.stack()
+    tup = stack[0]
+    for ix, tup in reversed(list(enumerate(stack))):
+        frame = tup[0]
+        print('--- Frame %2d: ---' % (ix))
+        print_frame(frame)
+        print('\n')
+        #next_frame = curr_frame.f_back
+
+
+def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
+    def __childiter(module):
+        for aname in iter(dir(module)):
+            if aname.find('_') == 0:
+                continue
+            try:
+                yield module.__dict__[aname], aname
+            except KeyError as ex:
+                print(repr(ex))
+                pass
+
+    def __explore_module(module, indent, seen, depth, maxdepth, nonmodules):
+        valid_children = []
+        ret = u''
+        modname = str(module.__name__)
+        #modname = repr(module)
+        for child, aname in __childiter(module):
+            try:
+                childtype = type(child)
+                if not isinstance(childtype, types.ModuleType):
+                    if nonmodules:
+                        #print_(depth)
+                        fullstr = indent + '    ' + str(aname) + ' = ' + repr(child)
+                        truncstr = truncate_str(fullstr) + '\n'
+                        ret +=  truncstr
+                    continue
+                childname = str(child.__name__)
+                if not seen is None:
+                    if childname in seen:
+                        continue
+                    elif maxdepth is None:
+                        seen.add(childname)
+                if childname.find('_') == 0:
+                    continue
+                valid_children.append(child)
+            except Exception as ex:
+                print(repr(ex))
+                pass
+        # Print
+        # print_(depth)
+        ret += indent + modname + '\n'
+        # Recurse
+        if not maxdepth is None and depth >= maxdepth:
+            return ret
+        ret += ''.join([__explore_module(child,
+                                         indent + '    ',
+                                         seen, depth + 1,
+                                         maxdepth,
+                                         nonmodules)
+                       for child in iter(valid_children)])
+        return ret
+    #ret +=
+    #print('#module = ' + str(module_))
+    ret = __explore_module(module_, '     ', seen, 0, maxdepth, nonmodules)
+    #print(ret)
+    sys.stdout.flush()
+    return ret

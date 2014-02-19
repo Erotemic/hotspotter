@@ -943,6 +943,7 @@ def ensure_cx2(hs, cx1, cx2=None):
     return cx2
 
 
+@util.indent_decor('[viz.sv]')
 def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kwargs):
     #kwargs = {}
     from hotspotter import spatial_verification2 as sv2

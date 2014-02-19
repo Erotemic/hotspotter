@@ -14,6 +14,7 @@ class DebugAPI(DynStruct):
         super(DebugAPI, dbg).__init__(child_exclude_list=['hs'])
         dbg.hs = hs
         for key, val in util.module_functions(dev_consistency):
+            printDBG('[devapi] augmenting: ' + str(val))
             dbg.__dict__[key] = val
 
     def dbstats(dbg):

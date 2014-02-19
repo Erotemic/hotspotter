@@ -39,19 +39,20 @@ def main(defaultdb='cache', preload=False, app=None):
     from hscom import fileio as io
     from hscom import params
     from hotspotter import HotSpotterAPI as api
+    from hsgui import guitools
+    from hsgui import guiback
     if app is True:
-        from hsgui import guitools
         app, is_root = guitools.init_qtapp()
     args = parse_arguments(defaultdb, defaultdb == 'cache')
     # --- Build HotSpotter API ---
     if app is None:
         hs = api.HotSpotter(args)
     else:
-        from hsgui import guiback
         back = guiback.make_main_window(app)
         hs = back.open_database(args.dbdir)
     setcfg = args.setcfg
     if setcfg is not None:
+        # FIXME move experiment harness to hsdev
         import experiment_harness
         print('[main] setting cfg to %r' % setcfg)
         varied_list = experiment_harness.get_varied_params_list([setcfg])

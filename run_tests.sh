@@ -121,7 +121,8 @@ verbose_test()
 nightly_tests()
 {
     export NIGHTLY_ARGS="--all-gt-cases --print-bestcfg --quiet $@"
-    verbose_test dev.py $NIGHTLY_ARGS -t coverage adaptive_test
+    export TEST_LIST='coverage adaptive_test k_big normrule overnight_k'
+    verbose_test dev.py $NIGHTLY_ARGS -t $TEST_LIST
     #verbose_test python dev.py $NIGHTLY_ARGS -t adaptive_test
     #verbose_test dev.py $NIGHTLY_ARGS -t adaptive_test 
     #verbose_test python dev.py $NIGHTLY_ARGS -t overnight_k

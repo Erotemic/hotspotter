@@ -67,7 +67,7 @@ FONTS.largebold = FontProperties(weight='bold', size=LARGE)
 
 FONTS.legend   = FONTS.small
 FONTS.figtitle = FONTS.med
-FONTS.axtitle  = FONTS.med
+FONTS.axtitle  = FONTS.small
 FONTS.subtitle = FONTS.med
 #FONTS.xlabel   = FONTS.smaller
 FONTS.xlabel   = FONTS.small

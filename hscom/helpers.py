@@ -2155,3 +2155,14 @@ def interleave(args):
 
 def indent_list(indent, list_):
     return imap(lambda item: indent + str(item), list_)
+
+
+def module_functions(module):
+    import inspect
+    module_members = inspect.getmembers(module)
+    function_list = []
+    for key, val in module_members:
+        if isinstance(val, types.FunctionType):
+            print(key)
+            function_list.append((key, val))
+    return function_list

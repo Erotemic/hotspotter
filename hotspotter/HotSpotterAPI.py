@@ -524,15 +524,29 @@ class HotSpotter(object):
         return hs.query_database(qcx, *args, **kwargs)
 
     @profile
-    def query_database(hs, qcx, query_cfg=None, dochecks=True, **kwargs):
-        'queries the entire (sampled) database'
-        print('\n====================')
-        print('[hs] query database')
-        print('====================')
-        qdat = mc3.prepare_qdat_cfg(hs, query_cfg=query_cfg, **kwargs)
+    def query_database(hs, qcx, **kwargs):
+        'wrapper that queries the entire database'
         dcxs = hs.get_indexed_sample()
+        return hs.query_cxs(qcx, dcxs, **kwargs)
+
+    @profile
+    def query_groundtruth(hs, qcx, **kwargs):
+        'wrapper that restricts query to only known groundtruth'
+        gt_cxs = hs.get_other_indexed_cxs(qcx)
+        return hs.query_cxs(qcx, gt_cxs, **kwargs)
+
+    @profile
+    def query_cxs(hs, qcx, cxs, query_cfg=None, **kwargs):
+        'wrapper that restricts query to only known groundtruth'
+        print('\n====================')
+        print('[hs] query cxs')
+        print('====================')
+        if query_cfg is None:
+            query_cfg = hs.prefs.query_cfg
+        qdat = mc3.prep_query_request(hs, query_cfg=query_cfg, qcxs=[qcx], dcxs=cxs, **kwargs)
+        # Ensure that we can process a query like this
         try:
-            res = mc3.query_dcxs(hs, qcx, dcxs, qdat, dochecks=dochecks)
+            res = mc3.process_query_request(hs, qdat)[qcx]
         except mf.QueryException as ex:
             msg = '[hs] Query Failure: %r' % ex
             print(msg)
@@ -540,17 +554,6 @@ class HotSpotter(object):
                 raise
             return msg
         return res
-
-    @profile
-    def query_groundtruth(hs, qcx, query_cfg=None, **kwargs):
-        'wrapper that restricts query to only known groundtruth'
-        print('\n====================')
-        print('[hs] query groundtruth')
-        print('====================')
-        gt_cxs = hs.get_other_indexed_cxs(qcx)
-        qdat = mc3.prepare_qdat_cfg(hs, query_cfg=query_cfg, dcxs=gt_cxs, **kwargs)
-        return mc3.query_dcxs(hs, qcx, gt_cxs, qdat)
-
     # ---------------
     # Change functions
     # ---------------

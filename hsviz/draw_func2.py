@@ -236,7 +236,9 @@ def add_alpha(colors):
     return [list(color) + [1] for color in colors]
 
 
-def _axis_xy_width_height(ax, xaug=0, yaug=0, waug=0, haug=0):
+def _axis_xy_width_height(ax=None, xaug=0, yaug=0, waug=0, haug=0):
+    if ax is None:
+        ax = gca()
     'gets geometry of a subplot'
     autoAxis = ax.axis()
     xy     = (autoAxis[0] + xaug, autoAxis[2] + yaug)
@@ -1505,6 +1507,7 @@ def scores_to_cmap(scores, colors=None, cmap_='hot'):
 def colorbar(scalars, colors):
     'adds a color bar next to the axes'
     # Parameters
+    xy, width, height = _axis_xy_width_height()
     orientation = ['vertical', 'horizontal'][0]
     TICK_FONTSIZE = 8
     #
@@ -1514,7 +1517,13 @@ def colorbar(scalars, colors):
     sm = plt.cm.ScalarMappable(cmap=listed_cmap)
     sm.set_array(sorted_scalars)
     # Use mapable object to create the colorbar
-    cb = plt.colorbar(sm, orientation=orientation)
+    COLORBAR_SHRINK = .42  # 1
+    COLORBAR_PAD = .01  # 1
+    COLORBAR_ASPECT = np.abs(20 * height / (width))  # 1
+    print(COLORBAR_ASPECT)
+
+    cb = plt.colorbar(sm, orientation=orientation, shrink=COLORBAR_SHRINK,
+                      pad=COLORBAR_PAD, aspect=COLORBAR_ASPECT)
     # Add the colorbar to the correct label
     axis = cb.ax.xaxis if orientation == 'horizontal' else cb.ax.yaxis
     position = 'bottom' if orientation == 'horizontal' else 'right'

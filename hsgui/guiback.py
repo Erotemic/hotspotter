@@ -228,6 +228,10 @@ class MainWindowBackend(QtCore.QObject):
             viz.show_splash(fnum=fnum)
             df2.set_figtitle('%s View' % view)
 
+    def _layout_figures_if(back, did_exist):
+        #back._layout_figures_if(did_exist)
+        pass
+
     @drawing
     @profile
     def show_image(back, gx, sel_cxs=[], figtitle='Image View', **kwargs):
@@ -236,8 +240,7 @@ class MainWindowBackend(QtCore.QObject):
         df2.figure(fnum=fnum, docla=True, doclf=True)
         interact.interact_image(back.hs, gx, sel_cxs, back.select_cx,
                                 fnum=fnum, figtitle=figtitle)
-        if not did_exist:
-            back.layout_figures()
+        back._layout_figures_if(did_exist)
 
     @drawing
     @profile
@@ -251,8 +254,8 @@ class MainWindowBackend(QtCore.QObject):
             interact_fn(back.hs, cx, fnum=fnum, figtitle='Chip View')
         else:
             viz.show_chip(back.hs, cx, fnum=fnum, figtitle='Chip View')
-        if not did_exist:
-            back.layout_figures()
+        back._layout_figures_if(did_exist)
+
 
     @drawing
     @profile
@@ -271,8 +274,8 @@ class MainWindowBackend(QtCore.QObject):
                 res.show_analysis(back.hs, fnum=fnum, figtitle=' Analysis View')
             else:
                 res.show_top(back.hs, fnum=fnum, figtitle='Query View ')
-        if not did_exist:
-            back.layout_figures()
+        back._layout_figures_if(did_exist)
+
 
     @drawing
     @profile
@@ -282,8 +285,8 @@ class MainWindowBackend(QtCore.QObject):
         did_exist = df2.plt.fignum_exists(fnum)
         df2.figure(fnum=fnum, docla=True, doclf=True)
         interact.interact_chipres(back.hs, res, cx=cx, fnum=fnum)
-        if not did_exist:
-            back.layout_figures()
+        back._layout_figures_if(did_exist)
+
 
     @drawing
     @profile

@@ -13,7 +13,8 @@ from hotspotter import Config
 from hotspotter import DataStructures as ds
 from hotspotter import match_chips3 as mc3
 from hscom import fileio as io
-from hscom import helpers
+from hscom import helpers as util
+ from hscom import helpers
 from hscom import helpers as util
 from hscom import latex_formater
 from hscom import params

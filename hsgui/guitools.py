@@ -9,9 +9,8 @@ import sys
 # Science
 import numpy as np
 # Qt
-import PyQt4
 from PyQt4 import QtCore, QtGui
-from PyQt4.Qt import Qt
+from PyQt4.QtCore import Qt
 # HotSpotter
 from hscom import fileio as io
 from hscom import helpers
@@ -341,7 +340,7 @@ def select_files(caption='Select Files:', directory=None, name_filter=None):
     print(caption)
     if directory is None:
         directory = io.global_cache_read('select_directory')
-    qdlg = PyQt4.Qt.QFileDialog()
+    qdlg = QtGui.QFileDialog()
     qfile_list = qdlg.getOpenFileNames(caption=caption, directory=directory, filter=name_filter)
     file_list = map(str, qfile_list)
     print('Selected %d files' % len(file_list))
@@ -354,8 +353,8 @@ def select_directory(caption='Select Directory', directory=None):
     print(caption)
     if directory is None:
         directory = io.global_cache_read('select_directory')
-    qdlg = PyQt4.Qt.QFileDialog()
-    qopt = PyQt4.Qt.QFileDialog.ShowDirsOnly
+    qdlg = QtGui.QFileDialog()
+    qopt = QtGui.QFileDialog.ShowDirsOnly
     qdlg_kwargs = dict(caption=caption, options=qopt, directory=directory)
     dpath = str(qdlg.getExistingDirectory(**qdlg_kwargs))
     print('Selected Directory: %r' % dpath)
@@ -373,7 +372,7 @@ def show_open_db_dlg(parent=None):
             db_dir = None
     print('[*guitools] cached db_dir=%r' % db_dir)
     if parent is None:
-        parent = PyQt4.QtGui.QDialog()
+        parent = QtGui.QDialog()
     opendb_ui = OpenDatabaseDialog.Ui_Dialog()
     opendb_ui.setupUi(parent)
     #opendb_ui.new_db_but.clicked.connect(create_new_database)
@@ -389,11 +388,11 @@ def init_qtapp():
     global QAPP
     if QAPP is not None:
         return QAPP, IS_ROOT
-    app = PyQt4.Qt.QCoreApplication.instance()
+    app = QtCore.QCoreApplication.instance()
     is_root = app is None
     if is_root:  # if not in qtconsole
         print('[*guitools] Initializing QApplication')
-        app = PyQt4.Qt.QApplication(sys.argv)
+        app = QtGui.QApplication(sys.argv)
         QAPP = app
     try:
         __IPYTHON__
@@ -450,17 +449,17 @@ def exec_core_app_loop(app):
 @profile
 def ping_python_interpreter(frequency=4200):  # 4200):
     'Create a QTimer which lets the python catch ctrl+c'
-    timer = PyQt4.Qt.QTimer()
+    timer = QtCore.QTimer()
     timer.timeout.connect(lambda: None)
     timer.start(frequency)
     return timer
 
 
 def make_dummy_main_window():
-    class DummyBackend(Qt.QObject):
+    class DummyBackend(QtCore.QObject):
         def __init__(self):
             super(DummyBackend,  self).__init__()
-            self.front = PyQt4.Qt.QMainWindow()
+            self.front = QtGui.QMainWindow()
             self.front.setWindowTitle('Dummy Main Window')
             self.front.show()
     back = DummyBackend()

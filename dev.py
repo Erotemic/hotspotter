@@ -23,7 +23,8 @@ from hotspotter import matching_functions as mf
 from hotspotter import report_results2 as rr2
 from hotspotter import voting_rules2 as vr2
 from hscom import params
-from hscom import helpers
+from hscom import helpers as util
+ from hscom import helpers
 from hscom import helpers as util
 from hscom import latex_formater
 from hsgui import guitools

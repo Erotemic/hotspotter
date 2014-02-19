@@ -1289,15 +1289,18 @@ class Indenter2(object):
                 self.old_prints[mod] = mod.print
                 self.old_prints_[mod] = mod.print_
             except KeyError as ex:
+                print('WARNING')
                 print(ex)
-                print('Warning: module=%r was loaded durring indent session' % mod)
+                print('WARNING: module=%r was loaded durring indent session' % mod)
+
+        for mod in self.old_prints.keys():
             indent_print = lambda msg: self.old_prints[mod](indent_msg(msg))
             indent_print_ = lambda msg: self.old_prints_[mod](indent_msg(msg))
             mod.print = indent_print
             mod.print_ = indent_print_
 
     def stop(self):
-        for mod in self.modules:
+        for mod in self.old_prints.iterkeys():
             mod.print =  self.old_prints[mod]
 
     def __enter__(self):

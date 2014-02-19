@@ -79,11 +79,73 @@ def main(defaultdb='cache', preload=False, app=None):
 
 
 def get_test_cxs(hs, max_testcases=None):
-    valid_cxs = hs.get_valid_cxs()
+    valid_cxs = get_qcx_list(hs)
     if max_testcases is not None:
         max_ = max(max_testcases, len(valid_cxs) - 1)
+        if max_ == 0:
+            raise ValueError('[test_api] Database does not have test cxs')
         valid_cxs = valid_cxs[0:max_]
     return valid_cxs
+
+
+def get_qcx_list(hs):
+    ''' Function for getting the list of queries to test '''
+    import numpy as np
+    from hscom import params
+    from hscom import helpers as util
+    print('[dev] get_qcx_list()')
+
+    def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True, with_notes=False):
+        qcx_list = []
+        valid_cxs = hs.get_valid_cxs()
+        if with_hard:
+            if 'hard' in hs.tables.prop_dict:
+                for cx in iter(valid_cxs):
+                    if hs.cx2_property(cx, 'hard') == 'True':
+                        qcx_list += [cx]
+        if with_hard:
+            if 'Notes' in hs.tables.prop_dict:
+                for cx in iter(valid_cxs):
+                    if hs.cx2_property(cx, 'Notes') != '':
+                        qcx_list += [cx]
+        if with_gt and not with_nogt:
+            for cx in iter(valid_cxs):
+                gt_cxs = hs.get_other_indexed_cxs(cx)
+                if len(gt_cxs) > 0:
+                    qcx_list += [cx]
+        if with_gt and with_nogt:
+            qcx_list = valid_cxs
+        return qcx_list
+
+    # Sample a large pool of query indexes
+    histids = None if params.args.histid is None else np.array(params.args.histid)
+    if params.args.all_cases:
+        print('[dev] all cases')
+        qcx_all = get_cases(hs, with_gt=True, with_nogt=True)
+    elif params.args.all_gt_cases:
+        print('[dev] all gt cases')
+        qcx_all = get_cases(hs, with_hard=True, with_gt=True, with_nogt=False)
+    elif params.args.qcid is None:
+        print('[dev] did not select cases')
+        qcx_all = get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
+    else:
+        print('[dev] Chosen qcid=%r' % params.args.qcid)
+        qcx_all =  util.ensure_iterable(hs.cid2_cx(params.args.qcid))
+    # Filter only the ones you want from the large pool
+    if histids is None:
+        qcx_list = qcx_all
+    else:
+        histids = util.ensure_iterable(histids)
+        print('[dev] Chosen histids=%r' % histids)
+        qcx_list = [qcx_list[id_] for id_ in histids]
+
+    if len(qcx_list) == 0:
+        if params.args.strict:
+            raise Exception('no qcx_list history')
+        qcx_list = [0]
+    print('[dev] len(qcx_list) = %d' % len(qcx_list))
+    qcx_list = util.unique_keep_order(qcx_list)
+    return qcx_list
 
 
 def reload_all():

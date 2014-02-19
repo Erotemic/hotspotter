@@ -590,7 +590,7 @@ def _show_res(hs, res, **kwargs):
     if len(topN_cxs) in [8]:
         max_nCols = 4
 
-    printDBG('========================')
+    printDBG('[viz]========================')
     printDBG('[viz._show_res()]----------------')
     all_gts = hs.get_other_indexed_cxs(res.qcx)
     _tup = tuple(map(len, (topN_cxs, gt_cxs, all_gts)))
@@ -904,13 +904,13 @@ def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
     '''
     if fm is not None:
         return fm
-    print('[viz] ensure_fm()')
+    print('[viz.sv] ensure_fm()')
     if res == 'db':
         query_args = hs.prefs.query_cfg.flat_dict()
         query_args['sv_on'] = False
         query_args['use_cache'] = False
         # Query without spatial verification to get assigned matches
-        print('query_args = %r' % (query_args))
+        print('[viz.sv] query_args = %r' % (query_args))
         res = hs.query(cx1, **query_args)
     elif res == 'gt':
         # For testing purposes query_groundtruth is a bit faster than
@@ -918,7 +918,7 @@ def ensure_fm(hs, cx1, cx2, fm=None, res='db'):
         query_args = hs.prefs.query_cfg.flat_dict()
         query_args['sv_on'] = False
         query_args['use_cache'] = False
-        print('query_args = %r' % (query_args))
+        print('[viz.sv] query_args = %r' % (query_args))
         res = hs.query_groundtruth(cx1, **query_args)
     assert isinstance(res, qr.QueryResult)
     # Get chip index to feature match
@@ -947,7 +947,7 @@ def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kw
     #kwargs = {}
     from hotspotter import spatial_verification2 as sv2
     import cv2
-    print('\n======================')
+    print('\n[viz] ======================')
     cx2 = ensure_cx2(hs, cx1, kwargs.pop('cx2', None))
     print('[viz] viz_spatial_verification  %s' % hs.vs_str(cx1, cx2))
     fnum = kwargs.get('fnum', 4)
@@ -975,8 +975,9 @@ def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kw
         Aff, aff_inliers = sv2.homography_inliers(*homog_args, just_affine=True)
         H, inliers = sv2.homography_inliers(*homog_args, just_affine=False)
     except Exception as ex:
-        print('[viz] homog_args = %r' % (homog_args))
-        print('[viz] ex = %r' % (ex,))
+        print(ex)
+        #print('[viz] homog_args = %r' % (homog_args))
+        #print('[viz] ex = %r' % (ex,))
         raise
     print(util.horiz_string(['H = ', str(H)]))
     print(util.horiz_string(['Aff = ', str(Aff)]))

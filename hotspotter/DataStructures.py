@@ -7,8 +7,8 @@ from itertools import izip, chain
 # Scientific
 import numpy as np
 # HotSpotter
+import algos
 from hscom import params
-from hscom import helpers
 from hscom import helpers as util
 from hscom.Printable import DynStruct
 
@@ -47,7 +47,7 @@ class QueryData(DynStruct):
             if len(qdat._dcxs) == 0:
                 raise Exception('QueryData has not been populated. len(dcxs)=0')
             # In case you don't search the entire dataset
-            dcxs_uid = helpers.hashstr_arr(qdat._dcxs, '_dcxs')
+            dcxs_uid = util.hashstr_arr(qdat._dcxs, '_dcxs')
             uid_list += [dcxs_uid]
         return uid_list
 
@@ -58,11 +58,10 @@ class QueryData(DynStruct):
 class NNIndex(object):
     'Nearest Neighbor (FLANN) Index Class'
     def __init__(nn_index, hs, cx_list):
-        import algos
         cx2_desc  = hs.feats.cx2_desc
         # Make unique id for indexed descriptors
         feat_uid   = hs.prefs.feat_cfg.get_uid()
-        sample_uid = helpers.hashstr_arr(cx_list, 'dcxs')
+        sample_uid = util.hashstr_arr(cx_list, 'dcxs')
         uid = '_' + sample_uid + feat_uid
         # Number of features per sample chip
         sx2_nFeat = [len(cx2_desc[cx]) for cx in iter(cx_list)]
@@ -161,22 +160,22 @@ class HotspotterDirs(DynStruct):
 
     def ensure_dirs(self):
         # Make directories if needbe
-        helpers.ensure_path(self.internal_dir)
-        helpers.ensure_path(self.computed_dir)
-        helpers.ensure_path(self.chip_dir)
-        helpers.ensure_path(self.rchip_dir)
-        helpers.ensure_path(self.feat_dir)
-        helpers.ensure_path(self.result_dir)
-        helpers.ensure_path(self.rchip_dir)
-        helpers.ensure_path(self.qres_dir)
-        helpers.ensure_path(self.cache_dir)
+        util.ensure_path(self.internal_dir)
+        util.ensure_path(self.computed_dir)
+        util.ensure_path(self.chip_dir)
+        util.ensure_path(self.rchip_dir)
+        util.ensure_path(self.feat_dir)
+        util.ensure_path(self.result_dir)
+        util.ensure_path(self.rchip_dir)
+        util.ensure_path(self.qres_dir)
+        util.ensure_path(self.cache_dir)
         # Shortcut to internals
         #internal_sym = db_dir + '/Shortcut-to-hs_internals'
         #computed_sym = db_dir + '/Shortcut-to-computed'
         #results_sym  = db_dir + '/Shortcut-to-results'
-        #helpers.symlink(self.internal_dir, internal_sym, noraise=False)
-        #helpers.symlink(self.computed_dir, computed_sym, noraise=False)
-        #helpers.symlink(self.result_dir, results_sym, noraise=False)
+        #util.symlink(self.internal_dir, internal_sym, noraise=False)
+        #util.symlink(self.computed_dir, computed_sym, noraise=False)
+        #util.symlink(self.result_dir, results_sym, noraise=False)
 
 
 class HotspotterChipPaths(DynStruct):

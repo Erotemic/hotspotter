@@ -10,6 +10,11 @@ from hscom import helpers as util
 import DataStructures as ds
 import matching_functions as mf
 
+# TODO INTEGRATE INDENTER 2 better
+import HotSpotterAPI as api
+from hscom import Parallelize as parallel
+modules = [api, api.fc2, api.cc2, parallel, mf, ds]
+
 
 @profile
 def ensure_nn_index(hs, qdat, dcxs, force_refresh=False):
@@ -26,14 +31,79 @@ def ensure_nn_index(hs, qdat, dcxs, force_refresh=False):
         print('[mc3] dcxs_ is not in qdat cache')
         print('[mc3] hashstr(dcxs_) = %r' % dcxs_uid)
         print('[mc3] REFRESHING FEATURES')
-        with util.Indenter('    [ensure_nn_index]'):
+        with util.Indenter2('[nn_index]'):
             hs.refresh_features(dcxs)
-            # Compute the FLANN Index
-            data_index = ds.NNIndex(hs, dcxs)
+        # Compute the FLANN Index
+        data_index = ds.NNIndex(hs, dcxs)
         qdat._dcxs2_index[dcxs_uid] = data_index
     else:
         print('[mc3] qdat._data_index[dcxs_uid]... cache hit')
     qdat._data_index = qdat._dcxs2_index[dcxs_uid]
+
+
+#----------------------
+# Convinience Functions
+#----------------------
+
+# QUERY PREP FUNCTIONS
+
+def prep_query_request(hs, qdat=None, query_cfg=None, qcxs=None, dcxs=None, **kwargs):
+    printDBG('prep_query_request ---------------')
+    printDBG('hs=%r' % hs)
+    printDBG('query_cfg=%r' % query_cfg)
+    printDBG('qdat=%r' % qdat)
+    printDBG('dcxs=%r' % dcxs)
+    printDBG('qcxs=%r' % qcxs)
+    printDBG('[mc3]---------------')
+    if dcxs is None:
+        # Use all database indexes if not specified
+        dcxs = hs.get_indexed_sample()
+    if qdat is None:
+        # Use the hotspotter query data if the user does not provide one
+        qdat = hs.qdat
+        qdat._dcxs = dcxs
+    if query_cfg is None:
+        # Use the hotspotter query_cfg if the user does not provide one
+        #hs.assert_prefs()
+        query_cfg = hs.prefs.query_cfg
+    if len(kwargs) > 0:
+        # Update any arguments in the query config based on kwargs
+        query_cfg = query_cfg.deepcopy(**kwargs)
+    assert not isinstance(query_cfg, list)
+    qdat.set_cfg(query_cfg, hs=hs)
+    if qcxs is None:
+        raise AssertionError('please query an index')
+    if len(dcxs) == 0:
+        raise AssertionError('please select database indexes')
+    printDBG('qcxs=%r' % qcxs)
+    printDBG('dcxs=%r' % dcxs)
+    qdat._qcxs = qcxs
+    qdat._dcxs = dcxs
+    #---------------
+    # Flip if needebe
+    query_type = qdat.cfg.agg_cfg.query_type
+    if query_type == 'vsone':
+        (dcxs, qcxs) = (qdat._qcxs, qdat._dcxs)
+    elif query_type == 'vsmany':
+        (dcxs, qcxs) = (qdat._dcxs, qdat._qcxs)
+    else:
+        raise AssertionError('Unknown query_type=%r' % query_type)
+    return qdat
+
+
+# QUERY EXEC FUNCTIONS
+
+def query_list(hs, qcxs, dcxs=None, **kwargs):
+    qdat = prep_query_request(hs, qcxs=qcxs, dcxs=dcxs, **kwargs)
+    qcx2_res = execute_query_lazy(hs, qdat, qcxs, dcxs)[0]
+    return qcx2_res
+
+
+def query_dcxs(hs, qcx, dcxs, qdat, dochecks=True):
+    'wrapper that bypasses all that "qcx2_ map" buisness'
+    result_list = execute_query_safe(hs, qdat, [qcx], dcxs)
+    res = result_list[0].values()[0]
+    return res
 
 
 def prequery_checks(hs, qdat):
@@ -43,14 +113,15 @@ def prequery_checks(hs, qdat):
     query_uid = qdat.cfg.get_uid('noCHIP')
     feat_uid = qdat.cfg._feat_cfg.get_uid()
     query_hist_id = (feat_uid, query_uid)
+
     def _refresh(hs, qdat, unload=True):
         if unload:
             #print('[mc3] qdat._dcxs = %r' % qdat._dcxs)
-            with util.Indenter('    [prequery_checks]'):
+            with util.Indenter2('[prequery]'):
                 hs.unload_cxdata('all')
             # Reload
             qdat = prep_query_request(hs, query_cfg=query_cfg, qcxs=qcxs, dcxs=dcxs)
-        with util.Indenter('    [prequery_checks]'):
+        with util.Indenter2('[prequery]'):
             ensure_nn_index(hs, qdat, qdat._dcxs, force_refresh=True)
 
     if hs.query_history[-1][0] is None:
@@ -70,68 +141,7 @@ def prequery_checks(hs, qdat):
         print('[mc3] New: ' + str(query_uid))
         _refresh(hs, False)
     hs.query_history.append(query_hist_id)
-    print('[mc3] prequery_checks(): query_uid = %r ' % query_uid)
-
-
-#----------------------
-# Convinience Functions
-#----------------------
-
-# QUERY PREP FUNCTIONS
-
-def prep_query_request(hs, qdat=None, query_cfg=None, qcxs=None, dcxs=None, **kwargs):
-    printDBG('[mc3]  prep_query_request ---------------')
-    printDBG('hs=%r' % hs)
-    printDBG('query_cfg=%r' % query_cfg)
-    printDBG('qdat=%r' % qdat)
-    printDBG('dcxs=%r' % dcxs)
-    printDBG('qcxs=%r' % qcxs)
-    printDBG('[mc3]---------------')
-    if dcxs is None:
-        dcxs = hs.get_indexed_sample()
-    if qdat is None:
-        qdat = hs.qdat
-        qdat._dcxs = dcxs
-    if query_cfg is None:
-        hs.assert_prefs()
-        query_cfg = hs.prefs.query_cfg
-    if len(kwargs) > 0:
-        query_cfg = query_cfg.deepcopy(**kwargs)
-    assert not isinstance(query_cfg, list)
-    qdat.set_cfg(query_cfg, hs=hs)
-    if qcxs is None:
-        raise Exception('please query an index')
-    if len(dcxs) == 0:
-        raise Exception('please select database indexes')
-    printDBG('qcxs=%r' % qcxs)
-    printDBG('dcxs=%r' % dcxs)
-    qdat._qcxs = qcxs
-    qdat._dcxs = dcxs
-    #---------------
-    # Flip if needebe
-    query_type = qdat.cfg.agg_cfg.query_type
-    if query_type == 'vsone':
-        (dcxs, qcxs) = (qdat._qcxs, qdat._dcxs)
-    elif query_type == 'vsmany':
-        (dcxs, qcxs) = (qdat._dcxs, qdat._qcxs)
-    else:
-        raise Exception('Unknown query_type=%r' % query_type)
-    return qdat
-
-
-# QUERY EXEC FUNCTIONS
-
-def query_list(hs, qcxs, dcxs=None, **kwargs):
-    qdat = prep_query_request(hs, qcxs=qcxs, dcxs=dcxs, **kwargs)
-    qcx2_res = execute_query_lazy(hs, qdat, qcxs, dcxs)[0]
-    return qcx2_res
-
-
-def query_dcxs(hs, qcx, dcxs, qdat, dochecks=True):
-    'wrapper that bypasses all that "qcx2_ map" buisness'
-    result_list = execute_query_safe(hs, qdat, [qcx], dcxs)
-    res = result_list[0].values()[0]
-    return res
+    print('[mc3] prequery(): query_uid = %r ' % query_uid)
 
 
 def process_query_request(hs, qdat, dochecks=True):

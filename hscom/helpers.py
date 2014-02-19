@@ -1,4 +1,6 @@
 '''
+This module will be renamed to util.py
+
 This is less of a helper function file and more of a pile of things
 where I wasn't sure of where to put.
 A lot of things could probably be consolidated or removed. There are many
@@ -11,7 +13,7 @@ Wow, pylint is nice for cleaning.
 from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[helpers]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[util]', DEBUG=False)
 # Scientific
 import numpy as np
 # Standard
@@ -333,18 +335,18 @@ def myprint(input=None, prefix='', indent='', lbl=''):
         prefix = lbl
     if len(prefix) > 0:
         prefix += ' '
-    _print(indent + prefix + str(type(input)) + ' ')
+    print_(indent + prefix + str(type(input)) + ' ')
     if isinstance(input, list):
-        _println(indent + '[')
+        print(indent + '[')
         for item in iter(input):
             myprint(item, indent=indent + '  ')
-        _println(indent + ']')
+        print(indent + ']')
     elif isinstance(input, str):
-        _println(input)
+        print(input)
     elif isinstance(input, dict):
-        _println(printableVal(input))
+        print(printableVal(input))
     else:
-        _println(indent + '{')
+        print(indent + '{')
         attribute_list = dir(input)
         for attr in attribute_list:
             if attr.find('__') == 0:
@@ -354,8 +356,8 @@ def myprint(input=None, prefix='', indent='', lbl=''):
             # Format methods nicer
             #if val.find('built-in method'):
                 #val = '<built-in method>'
-            _println(indent + '  ' + attr + ' : ' + val)
-        _println(indent + '}')
+            print(indent + '  ' + attr + ' : ' + val)
+        print(indent + '}')
 
 
 def info(var, lbl):
@@ -481,10 +483,10 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
                        for child in iter(valid_children)])
         return ret
     #ret +=
-    #println('#module = ' + str(module_))
+    #print('#module = ' + str(module_))
     ret = __explore_module(module_, '     ', seen, 0, maxdepth, nonmodules)
     #print(ret)
-    flush()
+    sys.stdout.flush()
     return ret
 
 
@@ -546,6 +548,8 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
     '''Returns a function that marks progress taking the iteration count as a
     parameter. Prints if max_val > mark_at. Prints dots if max_val not
     specified or simple=True'''
+    write_fn = sys.stdout.write
+    #write_fn = print_
     # Tell the user we are about to make progress
     if progress_type in ['simple', 'fmtstr'] and max_val < mark_after:
         return lambda count: None, lambda: None
@@ -554,24 +558,24 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
         mark_progress =  lambda count: None
     # simple: one dot per progress. no flush.
     if progress_type == 'simple':
-        mark_progress = lambda count: sys.stdout.write('.')
+        mark_progress = lambda count: write_fn('.')
     # dots: spaced dots
     if progress_type == 'dots':
         indent_ = '    '
-        sys.stdout.write(indent_)
+        write_fn(indent_)
 
         if spacing > 0:
             # With spacing
             newline_len = spacing * line_len // spacing
 
             def mark_progress_sdot(count):
-                sys.stdout.write('.')
+                write_fn('.')
                 count_ = count + 1
                 if (count_) % newline_len == 0:
-                    sys.stdout.write('\n' + indent_)
+                    write_fn('\n' + indent_)
                     sys.stdout.flush()
                 elif (count_) % spacing == 0:
-                    sys.stdout.write(' ')
+                    write_fn(' ')
                     sys.stdout.flush()
                 elif (count_) % flush_after == 0:
                     sys.stdout.flush()
@@ -581,10 +585,10 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
             newline_len = line_len
 
             def mark_progress_dot(count):
-                sys.stdout.write('.')
+                write_fn('.')
                 count_ = count + 1
                 if (count_) % newline_len == 0:
-                    sys.stdout.write('\n' + indent_)
+                    write_fn('\n' + indent_)
                     sys.stdout.flush()
                 elif (count_) % flush_after == 0:
                     sys.stdout.flush()
@@ -595,7 +599,7 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
 
         def mark_progress_fmtstr(count):
             count_ = count + 1
-            sys.stdout.write(fmt_str % (count_))
+            write_fn(fmt_str % (count_))
             if (count_) % flush_after == 0:
                 sys.stdout.flush()
         mark_progress = mark_progress_fmtstr
@@ -607,8 +611,8 @@ def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
         return mark_progress_agressive
 
     def end_progress():
+        write_fn('\n')
         sys.stdout.flush()
-        print('')
     mark_progress(0)
     return mark_progress, end_progress
     raise Exception('unkown progress type = %r' % progress_type)
@@ -950,7 +954,7 @@ def checkpath(path_, verbose=PRINT_CHECKS):
             if ismount(path_):
                 path_type += 'mount'
             path_type = 'file' if isfile(path_) else 'directory'
-            println('...(%s) exists' % (path_type,))
+            print('...(%s) exists' % (path_type,))
         else:
             print('... does not exist\n')
             if __CHECKPATH_VERBOSE__:
@@ -1174,7 +1178,7 @@ def eval_from(fpath, err_onread=True):
 
 def read_from(fpath):
     if not checkpath(fpath):
-        println('[helpers] * FILE DOES NOT EXIST!')
+        print('[helpers] * FILE DOES NOT EXIST!')
         return None
     print('[helpers] * Reading text file: %r ' % split(fpath)[1])
     try:
@@ -1189,7 +1193,7 @@ def read_from(fpath):
 
 def write_to(fpath, to_write):
     if __PRINT_WRITES__:
-        println('[helpers] * Writing to text file: %r ' % fpath)
+        print('[helpers] * Writing to text file: %r ' % fpath)
     with open(fpath, 'w') as file:
         file.write(to_write)
 
@@ -1206,7 +1210,7 @@ def load_pkl(fpath):
 
 def save_npz(fpath, *args, **kwargs):
     print_(' * save_npz: %r ' % fpath)
-    flush()
+    sys.stdout.flush()
     np.savez(fpath, *args, **kwargs)
     print('... success')
 
@@ -1327,7 +1331,7 @@ def load_cache_npz(input_data, uid='', cache_dir='.', is_sparse=False):
         try:
             print('helpers.load_cache> Trying to load cached data: %r' % split(data_fpath)[1])
             print('helpers.load_cache> Cache filesize: ' + file_megabytes_str(data_fpath))
-            flush()
+            sys.stdout.flush()
             if is_sparse:
                 with open(data_fpath, 'rb') as file_:
                     data = cPickle.load(file_)
@@ -1350,7 +1354,7 @@ def load_cache_npz(input_data, uid='', cache_dir='.', is_sparse=False):
 def save_cache_npz(input_data, data, uid='', cache_dir='.', is_sparse=False):
     data_fpath = __cache_data_fpath(input_data, uid, cache_dir)
     print('[helpers] caching data: %r' % split(data_fpath)[1])
-    flush()
+    sys.stdout.flush()
     if is_sparse:
         with open(data_fpath, 'wb') as outfile:
             cPickle.dump(data, outfile, cPickle.HIGHEST_PROTOCOL)
@@ -1445,6 +1449,43 @@ class RedirectStdout(object):
 class Indenter(RedirectStdout):
     def __init__(self, lbl='    '):
         super(Indenter, self).__init__(lbl=lbl, autostart=True)
+
+
+class Indenter2(object):
+    def __init__(self, lbl='    '):
+        #self.modules = modules
+        self.modules = __common__.get_modules()
+        self.old_prints = {}
+        self.old_prints_ = {}
+        self.lbl = lbl
+
+    def start(self):
+        import __builtin__
+        def indent_msg(msg):
+            return self.lbl + str(msg).replace('\n', '\n' + self.lbl)
+
+        for mod in self.modules:
+            try:
+                self.old_prints[mod] = mod.print
+                self.old_prints_[mod] = mod.print_
+            except KeyError as ex:
+                print(ex)
+                print('Warning: module=%r was loaded durring indent session' % mod)
+            indent_print = lambda msg: self.old_prints[mod](indent_msg(msg))
+            indent_print_ = lambda msg: self.old_prints_[mod](indent_msg(msg))
+            mod.print = indent_print
+            mod.print_ = indent_print_
+
+    def stop(self):
+        for mod in self.modules:
+            mod.print =  self.old_prints[mod]
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop()
 
 
 def choose(n, k):
@@ -1738,44 +1779,39 @@ def print_list(list):
     return msg
 
 
-def _print(msg):
-    sys.stdout.write(msg)
+#def _print(msg):
+    #sys.stdout.write(msg)
 
 
-def _println(msg):
-    sys.stdout.write(msg + '\n')
+#def _println(msg):
+    #sys.stdout.write(msg + '\n')
 
 
-def println(msg, *args):
-    args = args + tuple('\n',)
-    return print_(msg + ''.join(args))
+#def println(msg, *args):
+    #args = args + tuple('\n',)
+    #return print_(msg + ''.join(args))
 
 
-def flush():
-    sys.stdout.flush()
-    return ''
+#def flush():
+    #sys.stdout.flush()
+    #return ''
 
 
-def endl():
-    print_('\n')
-    sys.stdout.flush()
-    return '\n'
+#def endl():
+    #print_('\n')
+    #sys.stdout.flush()
+    #return '\n'
 
 
-def printINFO(msg, *args):
-    msg = 'INFO: ' + str(msg) + ''.join(map(str, args))
-    return println(msg, *args)
+#def printINFO(msg, *args):
+    #msg = 'INFO: ' + str(msg) + ''.join(map(str, args))
+    #return println(msg, *args)
 
 
-def printDBG(msg, *args):
-    msg = 'DEBUG: ' + str(msg) + ''.join(map(str, args))
-    return println(msg, *args)
-
-
-def printERR(msg, *args):
-    msg = 'ERROR: ' + str(msg) + ''.join(map(str, args))
-    raise Exception(msg)
-    return println(msg, *args)
+#def printERR(msg, *args):
+    #msg = 'ERROR: ' + str(msg) + ''.join(map(str, args))
+    #raise Exception(msg)
+    #return println(msg, *args)
 
 
 def printWARN(warn_msg, category=UserWarning):

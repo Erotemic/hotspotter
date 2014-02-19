@@ -1,27 +1,30 @@
+#!/usr/bin/env python
+# TODO: ADD COPYRIGHT TAG
+from __future__ import print_function, division
+from hsdev import test_api
+from hsgui import guitools
+from hsviz import viz
+import multiprocessing
 
+if __name__ == '__main__':
+    # INITIALIZATION CODE
+    # For windows
+    multiprocessing.freeze_support()
+    # Initialize a qt app (or get parent's)
+    app, is_root = guitools.init_qtapp()
+    # Create a HotSpotter API (hs) and GUI backend (back)
+    hs, back = test_api.main(defaultdb='NAUTS', preload=True, app=app)
+    # The test api returns a list of interesting chip indexes
+    qcx = test_api.get_test_cxs(hs, 1)[0]
+    # Convert chip-index in to chip-id
 
-def test():
-    import dev
-    from hsviz import viz
-    main_locals = dev.dev_main()
-    hs  = main_locals['hs']        # hotspotter api
-    qcx = main_locals['qcx']       # query chip index
     viz.viz_spatial_verification(hs, qcx)
 
-
-#if __name__ == '__main__':
-    #import multiprocessing
-    #multiprocessing.freeze_support()
-    #import matplotlib
-    #matplotlib.use('Qt4Agg')
-    #from hsviz import draw_func2 as df2
-    #print('[sc2] __main__ = spatial_verification2.py')
-    #test()
-    #exec(df2.present(num_rc=(1, 1), wh=2500))
-
+    exec(viz.df2.present(num_rc=(1, 1), wh=2500))
 
 
 '''
+Some test variables for SV things
 fx1_m  = np.array( (1, 2, 3, 4, 5))
 x1_m   = np.array( (1, 2, 1, 4, 5))
 y1_m   = np.array( (1, 2, 1, 4, 5))
@@ -63,4 +66,3 @@ Aj = np.array([[aj,0],[cj,dj]])
 
 Ah = np.array([(ai, 0, 0),(ci, di, 0), (0,0,1)])
 '''
-

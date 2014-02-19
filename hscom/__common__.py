@@ -3,7 +3,10 @@ import __builtin__
 import sys
 
 __QUIET__ = '--quiet' in sys.argv
+__AGGROFLUSH__ = '--aggroflush' in sys.argv
 __DEBUG__ = False
+
+__MODULE_LIST__ = []
 
 try:
     profile  # NoQA
@@ -15,13 +18,21 @@ except NameError:
     profile = lambda func: func
 
 
+def get_modules():
+    return __MODULE_LIST__
+
+
 def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
+    # implicitly imports a set of standard functions into hotspotter modules
+    # makes keeping track of printing much easier
+    global __MODULE_LIST__
     module = sys.modules[module_name]
-    aggroflush = '--aggroflush' in sys.argv
+    __MODULE_LIST__.append(module)
 
     if __DEBUG__:
         __builtin__.print('[common] import %s  # %s' % (module_name, module_prefix))
 
+    # Define reloading function
     def rrr():
         'Dynamic module reloading'
         global __DEBUG__
@@ -32,21 +43,32 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
         imp.reload(module)
         __DEBUG__ = prev
 
-    if aggroflush:
+    if __DEBUG__:
+        # Extra debug info
+        def print(msg):
+            __builtin__.print(module_prefix + str(msg).replace(module_prefix, ''))
+
         def print_(msg):
-            sys.stdout.write(msg)
+            sys.stdout.write(module_prefix + str(msg).replace(module_prefix, ''))
             sys.stdout.flush()
     else:
-        def print_(msg):
-            sys.stdout.write(msg)
+        if __AGGROFLUSH__:
+            def print_(msg):
+                sys.stdout.write(msg)
+                sys.stdout.flush()
+        else:
+            # Define a print that doesnt flush
+            def print_(msg):
+                sys.stdout.write(msg)
+        # Define a print that flushes
+        def print(msg):
+            __builtin__.print(msg)
 
-    def print(msg):
-        __builtin__.print(msg)
-        #__builtin__.print(module_prefix + str(msg).replace(module_prefix, ''))
-
+    # Function to to turn printing off
     def noprint(msg):
         pass
 
+    # Closures are cool
     def print_on():
         module.print = print
         module.print_ = print_
@@ -58,6 +80,7 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
     if DEBUG is None:
         return print, print_, print_on, print_off, rrr, profile
 
+    # Define a printdebug function
     if DEBUG:
         def printDBG(msg):
             print(module_prefix + ' DEBUG ' + msg)
@@ -65,6 +88,7 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
         def printDBG(msg):
             pass
 
+    # Initialize matplotlib if requested
     if initmpl:
         import matplotlib
         import multiprocessing

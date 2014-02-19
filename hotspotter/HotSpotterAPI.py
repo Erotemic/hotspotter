@@ -17,7 +17,6 @@ from PIL import Image
 # Hotspotter
 from hscom import cross_platform as cplat
 from hscom import fileio as io
-from hscom import helpers
 from hscom import helpers as util
 from hscom import tools
 #from hscom.Printable import DynStruct
@@ -151,7 +150,7 @@ def _delete_image(hs, gx_list):
     # GATHER INFO
     # Ensure a trash directory
     trash_dir = join(hs.dirs.db_dir, 'deleted-images')
-    helpers.ensuredir(trash_dir)
+    util.ensuredir(trash_dir)
     # Get image paths to move into trash
     src_list = hs.gx2_gname(gx_list, full=True)
     dst_list = hs.gx2_gname(gx_list, prefix=trash_dir)
@@ -166,7 +165,7 @@ def _delete_image(hs, gx_list):
         hs.delete_chip(cx, resample=False)
     # Move deleted images into the trash
     lbl = 'Trashing Image'
-    success_list = helpers.move_list(src_list, dst_list, lbl)
+    success_list = util.move_list(src_list, dst_list, lbl)
     hs.update_samples()
     hs.save_database()
     # Need to return something
@@ -225,8 +224,8 @@ def _export_name(hs, nx, change_gname=True):
                       for cid, gname in zip(cids_list, gname_list)]
     # Copy images
     lbl = 'Exporting Image'
-    helpers.ensuredir(dstdir)
-    success_list = helpers.copy_list(gname_src_list, gname_dst_list, lbl)
+    util.ensuredir(dstdir)
+    success_list = util.copy_list(gname_src_list, gname_dst_list, lbl)
     return success_list
 
 
@@ -251,6 +250,7 @@ class HotSpotter(object):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
         #super(HotSpotter, hs).__init__(child_exclude_list=['prefs', 'args'])
+        print('[hs] creating HotSpotter()')
         super(HotSpotter, hs).__init__()
         #printDBG('[\hs] Creating HotSpotter API')
         # TODO Remove args / integrate into prefs
@@ -303,17 +303,18 @@ class HotSpotter(object):
     # --------------
     @profile
     def load_preferences(hs):
-        print('[hs] load preferences')
-        hs.default_preferences()
-        prefmsg = hs.prefs.load()
-        was_loaded = prefmsg is True
-        print('[hs] Able to load prefs? ...%r' % was_loaded)
-        if was_loaded:
-            hs.fix_prefs()
-        else:
-            print('[hs]' + prefmsg)
+        with util.Indenter2('[hs.load_prefs]'):
+            print('[hs] load preferences')
             hs.default_preferences()
-        hs.assert_prefs()
+            prefmsg = hs.prefs.load()
+            was_loaded = prefmsg is True
+            print('[hs] Able to load prefs? ...%r' % was_loaded)
+            if was_loaded:
+                hs.fix_prefs()
+            else:
+                print('[hs]' + prefmsg)
+                hs.default_preferences()
+            hs.assert_prefs()
 
     @profile
     def default_preferences(hs):
@@ -324,11 +325,13 @@ class HotSpotter(object):
         hs.prefs.query_cfg = Config.default_vsmany_cfg(hs)
 
     def fix_prefs(hs):
+        print('[hs] fix_prefs()')
         # When loading some pointers may become broken. Fix them.
         hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
         hs.prefs.query_cfg._feat_cfg = hs.prefs.feat_cfg
 
     def fix_prefs2(hs, query_cfg=None):
+        print('[hs] fix_prefs2()')
         # Fix pointers in the correct direction
         if query_cfg is not None:
             hs.prefs.query_cfg = query_cfg
@@ -336,14 +339,29 @@ class HotSpotter(object):
         hs.prefs.chip_cfg = hs.prefs.feat_cfg._chip_cfg
 
     def assert_prefs(hs):
+        print('[hs] assert_prefs()')
         try:
             query_cfg = hs.prefs.query_cfg
             feat_cfg  = hs.prefs.feat_cfg
             chip_cfg  = hs.prefs.chip_cfg
-            assert query_cfg._feat_cfg is feat_cfg
-            assert query_cfg._feat_cfg._chip_cfg is chip_cfg
-            assert feat_cfg._chip_cfg is chip_cfg
+            errmsg = 'Preferences do not agree with Query Config'
+            assert query_cfg._feat_cfg is feat_cfg, errmsg
+            assert query_cfg._feat_cfg._chip_cfg is chip_cfg, errmsg
+            assert feat_cfg._chip_cfg is chip_cfg, errmsg
         except AssertionError:
+            print('[hs] DBG query_cfg.get_uid() = %r' % query_cfg.get_uid())
+            print('[hs] DBG ----')
+            print('[hs] DBG query_cfg = %r' % query_cfg)
+            print('[hs] DBG ----')
+            print('[hs] DBG feat_cfg            = %r' % feat_cfg)
+            print('[hs] DBG query_cfg._feat_cfg = %r' % query_cfg._feat_cfg)
+            print('[hs] DBG feat_cfg.get_uid()            = %r' % feat_cfg.get_uid())
+            print('[hs] DBG query_cfg._feat_cfg.get_uid() = %r' %  query_cfg._feat_cfg.get_uid())
+            print('[hs] DBG ----')
+            print('[hs] DBG chip_cfg           = %r' % chip_cfg)
+            print('[hs] DBG feat_cfg._chip_cfg = %r' % feat_cfg._chip_cfg)
+            print('[hs] DBG chip_cfg.get_uid()            = %r' % chip_cfg.get_uid())
+            print('[hs] DBG feat_cfg._chip_cfg.get_uid()  = %r' %  feat_cfg._chip_cfg.get_uid())
             print('[hs] preferences dependency tree is broken')
             raise
 
@@ -369,18 +387,21 @@ class HotSpotter(object):
     def load(hs, load_all=False):
         '(current load function) Loads the appropriate database'
         print('[hs] load()')
-        hs.unload_all()
-        hs.load_tables()
-        hs.update_samples()
-        if load_all:
-            #printDBG('[hs] load_all=True')
-            hs.load_chips()
-            hs.load_features()
-        else:
-            #printDBG('[hs] load_all=False')
-            hs.load_chips([])
-            hs.load_features([])
-        return hs
+        with util.Indenter2('[hs.load]'):
+            hs.unload_all()
+            hs.load_tables()
+            hs.update_samples()
+            if load_all:
+                print('[hs] aggro loading')
+                #printDBG('[hs] load_all=True')
+                hs.load_chips()
+                hs.load_features()
+            else:
+                print('[hs] lazy loading')
+                #printDBG('[hs] load_all=False')
+                hs.load_chips([])
+                hs.load_features([])
+            return hs
 
     def load_tables(hs, db_dir=None):
         # Check to make sure db_dir is specified correctly
@@ -462,12 +483,12 @@ class HotSpotter(object):
     #---------------
     @profile
     def unload_all(hs):
-        print('[hs] Unloading all data')
+        print('[hs] unload_all() START')
         hs.feats  = ds.HotspotterChipFeatures()
         hs.cpaths = ds.HotspotterChipPaths()
         hs.qdat.unload_data()
         hs.clear_lru_caches()
-        print('[hs] finished unloading all data')
+        print('[hs] unload_all() DONE')
 
     @profile
     def unload_cxdata(hs, cx):
@@ -485,7 +506,7 @@ class HotSpotter(object):
             hs.unload_all()
             return
         for list_ in lists:
-            helpers.ensure_list_size(list_, cx + 1)
+            util.ensure_list_size(list_, cx + 1)
             list_[cx] = None
 
     @profile
@@ -495,8 +516,8 @@ class HotSpotter(object):
         for cid_str in cid_str_list:
             dpath = hs.dirs.computed_dir
             pat = '*' + cid_str + '*'
-            helpers.remove_files_in_dir(dpath, pat, recursive=True,
-                                        verbose=True, dryrun=False)
+            util.remove_files_in_dir(dpath, pat, recursive=True,
+                                     verbose=True, dryrun=False)
 
     @profile
     def delete_cxdata(hs, cx):
@@ -539,22 +560,27 @@ class HotSpotter(object):
     @profile
     def query_cxs(hs, qcx, cxs, query_cfg=None, **kwargs):
         'wrapper that restricts query to only known groundtruth'
-        print('\n====================')
-        print('[hs] query cxs')
-        print('====================')
-        if query_cfg is None:
-            query_cfg = hs.prefs.query_cfg
-        qdat = mc3.prep_query_request(hs, query_cfg=query_cfg, qcxs=[qcx], dcxs=cxs, **kwargs)
-        # Ensure that we can process a query like this
-        try:
-            res = mc3.process_query_request(hs, qdat)[qcx]
-        except mf.QueryException as ex:
-            msg = '[hs] Query Failure: %r' % ex
-            print(msg)
-            if params.args.strict:
+        print('\n[hs]====================')
+        print('[hs] query_cxs()')
+        print('[hs]====================')
+        with util.Indenter2('[hs.query]'):
+            if query_cfg is None:
+                query_cfg = hs.prefs.query_cfg
+            qdat = mc3.prep_query_request(hs, query_cfg=query_cfg, qcxs=[qcx], dcxs=cxs, **kwargs)
+            # Ensure that we can process a query like this
+            try:
+                res = mc3.process_query_request(hs, qdat)[qcx]
+            except mf.QueryException as ex:
+                msg = '[hs] Query Failure: %r' % ex
+                print(msg)
+                if params.args.strict:
+                    raise
+                return msg
+            except AssertionError as ex:
+                msg = '[hs] Query Failure: %r' % ex
+                print(msg)
                 raise
-            return msg
-        return res
+            return res
     # ---------------
     # Change functions
     # ---------------
@@ -665,7 +691,7 @@ class HotSpotter(object):
         print('[hs.add_imgs] adding %d images' % nImages)
         img_dir = hs.dirs.img_dir
         copy_list = []
-        helpers.ensurepath(img_dir)
+        util.ensurepath(img_dir)
         if move_images:
             # Build lists of where the new images will be
             fpath_list2 = [join(img_dir, split(fpath)[1]) for fpath in fpath_list]
@@ -678,7 +704,7 @@ class HotSpotter(object):
             # It appears in multiple places
             # Also there should be the option of parallelization? IDK, these are
             # disk writes, but it still might help.
-            mark_progress, end_progress = helpers.progress_func(len(copy_list), lbl='Copying Image')
+            mark_progress, end_progress = util.progress_func(len(copy_list), lbl='Copying Image')
             for count, (src, dst) in enumerate(copy_list):
                 shutil.copy(src, dst)
                 mark_progress(count)
@@ -726,8 +752,8 @@ class HotSpotter(object):
         computed_dir = hs.dirs.computed_dir
         hs.unload_all()
         #[hs.unload_cxdata(cx) for cx in hs.get_valid_cxs()]
-        helpers.remove_files_in_dir(computed_dir, recursive=True, verbose=True,
-                                    dryrun=False)
+        util.remove_files_in_dir(computed_dir, recursive=True, verbose=True,
+                                 dryrun=False)
 
     def delete_global_prefs(hs):
         io.delete_global_cache()
@@ -736,8 +762,8 @@ class HotSpotter(object):
         qres_dir = hs.dirs.qres_dir
         hs.unload_all()
         #[hs.unload_cxdata(cx) for cx in hs.get_valid_cxs()]
-        helpers.remove_files_in_dir(qres_dir, recursive=True, verbose=True,
-                                    dryrun=False)
+        util.remove_files_in_dir(qres_dir, recursive=True, verbose=True,
+                                 dryrun=False)
 
     # ---------------
     # Getting functions
@@ -1174,7 +1200,7 @@ class HotSpotter(object):
         hs_uid    = 'HSDB(%s)' % hs.get_db_name()
         uid_list = [hs_uid] + query_cfg.get_uid_list()
         if cx_list is not None:
-            cxs_uid = helpers.hashstr_arr(cx_list, 'cxs')
+            cxs_uid = util.hashstr_arr(cx_list, 'cxs')
             uid_list.append('_' + cxs_uid)
         cache_uid = ''.join(uid_list)
         return cache_uid

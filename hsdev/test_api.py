@@ -10,18 +10,6 @@ def parse_arguments(defaultdb, usedbcache):
     args = argparse2.parse_arguments(defaultdb=defaultdb)
     # Parse arguments
     args = argparse2.fix_args_with_cache(args)
-    # fix args shortnam
-    if (args.dbdir is None) and (args.db is not None):
-        try:
-            args.dbdir = params.dev_databases[args.db]
-        except KeyError:
-            pass
-    # Lookup shortname
-    try:
-        inverse_dev_databases = params.inverse_dev_databases()
-        args.db = inverse_dev_databases[args.dbdir]
-    except KeyError:
-        pass
     if usedbcache:
         if args.vdd:
             util.vd(args.dbdir)

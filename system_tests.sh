@@ -13,7 +13,7 @@ run_nightly()
 
 clean_databases()
 {
-    python dev.py --db NAUTS_DAN --delete-cache 
+    python dev.py --db NAUT_DAN --delete-cache 
     python dev.py --db FROG_tufts --delete-cache 
     python dev.py --db WD_Siva --delete-cache 
 }

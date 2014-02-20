@@ -113,6 +113,12 @@ vsmany_best = {
 }
 best = vsmany_best
 
+chipsize_test = vsmany_best.copy()
+chipsize_test.update({
+    'chip_sqrt_area':  [400, 500, 750],
+})
+
+
 shortlist_test = vsmany_best.copy()
 shortlist_test.update({
     'nShortlist':  [50, 100, 500, 1000],

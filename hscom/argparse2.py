@@ -236,16 +236,7 @@ def fix_args_shortnames(args):
     #print('[argparse2] mapping %r to %r' % (args.db, args.dbdir))
     # The shortname is specified
     if (args.dbdir is None) and (args.db is not None):
-        try:
-            args.dbdir = params.dev_databases[args.db]
-        except KeyError:
-            pass
-    # Lookup shortname
-    try:
-        inverse_dev_databases = params.inverse_dev_databases()
-        args.db = inverse_dev_databases[args.dbdir]
-    except KeyError:
-        pass
+        args.dbdir = params.db_to_dbdir(args.db)
     #print('[argparse2] mapped %r to %r' % (args.db, args.dbdir))
     ARGS_ = args
     return args
@@ -261,6 +252,7 @@ def fix_args_with_cache(args):
         if args.dbdir in ['.', '', ' ']:
             args.dbdir = None
         print('[main] trying to read db_dir from cache: %r' % args.dbdir)
+    # --db has priority over --dbdir
     args = fix_args_shortnames(args)
     ARGS_ = args
     return args

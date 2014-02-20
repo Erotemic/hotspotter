@@ -235,9 +235,9 @@ def index_of(item, array):
     return np.where(array == item)[0][0]
 
 
-def list_index(search_list, to_find):
+def list_index(search_list, to_find_list):
     try:
-        toret = [np.where(search_list == item)[0][0] for item in to_find]
+        toret = [np.where(search_list == item)[0][0] for item in to_find_list]
     except IndexError as ex1:
         print(ex1)
         try:
@@ -760,7 +760,6 @@ def checkpath(path_, verbose=PRINT_CHECKS):
     'returns true if path_ exists on the filesystem'
     path_ = normpath(path_)
     if verbose:
-        print = print_
         pretty_path = path_ndir_split(path_, 2)
         caller_name = get_caller_name()
         print_('[%s] checkpath(%r)' % (caller_name, pretty_path))
@@ -775,13 +774,13 @@ def checkpath(path_, verbose=PRINT_CHECKS):
             if ismount(path_):
                 path_type += 'mount'
             path_type = 'file' if isfile(path_) else 'directory'
-            print('...(%s) exists' % (path_type,))
+            print_('...(%s) exists\n' % (path_type,))
         else:
-            print('... does not exist\n')
+            print_('... does not exist\n')
             if __CHECKPATH_VERBOSE__:
-                print('[helpers] \n  ! Does not exist\n')
+                print_('[helpers] \n  ! Does not exist\n')
                 _longest_path = longest_existing_path(path_)
-                print('[helpers] ... The longest existing path is: %r\n' % _longest_path)
+                print_('[helpers] ... The longest existing path is: %r\n' % _longest_path)
             return False
         return True
     else:
@@ -1273,21 +1272,25 @@ class Indenter(RedirectStdout):
 
 
 class Indenter2(object):
+    # THIS IS MUCH BETTER
     def __init__(self, lbl='    '):
         #self.modules = modules
         self.modules = __common__.get_modules()
         self.old_prints = {}
         self.old_prints_ = {}
         self.lbl = lbl
+        self.INDENT_PRINT_ = False
 
     def start(self):
+        # Chain functions together rather than overwriting stdout
         def indent_msg(msg):
             return self.lbl + str(msg).replace('\n', '\n' + self.lbl)
 
         for mod in self.modules:
             try:
                 self.old_prints[mod] = mod.print
-                self.old_prints_[mod] = mod.print_
+                if self.INDENT_PRINT_:
+                    self.old_prints_[mod] = mod.print_
             except KeyError as ex:
                 print('KeyError: ' + str(ex))
                 print('WARNING: module=%r was loaded between indent sessions' % mod)
@@ -1297,13 +1300,16 @@ class Indenter2(object):
 
         for mod in self.old_prints.keys():
             indent_print = lambda msg: self.old_prints[mod](indent_msg(msg))
-            indent_print_ = lambda msg: self.old_prints_[mod](indent_msg(msg))
             mod.print = indent_print
-            mod.print_ = indent_print_
+            if self.INDENT_PRINT_:
+                indent_print_ = lambda msg: self.old_prints_[mod](indent_msg(msg))
+                mod.print_ = indent_print_
 
     def stop(self):
         for mod in self.old_prints.iterkeys():
             mod.print =  self.old_prints[mod]
+            if self.INDENT_PRINT_:
+                mod.print_ =  self.old_prints_[mod]
 
     def __enter__(self):
         self.start()

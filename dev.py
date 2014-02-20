@@ -211,6 +211,9 @@ def vary_vsmany_cfg(hs, qcx_list, vary_dicts, fnum, **kwargs):
 def plot_keypoint_scales(hs, fnum=1):
     print('[dev] plot_keypoint_scales()')
     cx2_kpts = hs.feats.cx2_kpts
+    if len(cx2_kpts) == 0:
+        hs.refresh_features()
+        cx2_kpts = hs.feats.cx2_kpts
     cx2_nFeats = map(len, cx2_kpts)
     kpts = np.vstack(cx2_kpts)
     print('[dev] --- LaTeX --- ')

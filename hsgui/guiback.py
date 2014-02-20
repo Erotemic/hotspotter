@@ -447,7 +447,10 @@ class MainWindowBackend(QtCore.QObject):
     def user_option(back, *args, **kwargs):
         return guitools._user_option(back.front, *args, **kwargs)
 
-    def get_work_directory(back, use_cache=True):
+    def get_work_directory(back):
+        return params.get_workdir()
+
+    def get_work_directory2(back, use_cache=True):
         # TODO: This should go in api (or higher level main?)
         cache_id = 'work_directory_cache_id'
         if use_cache:

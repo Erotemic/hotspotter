@@ -3,7 +3,6 @@ from hscom import __common__
 print, print_, print_on, print_off, rrr, profile, printDBG =\
     __common__.init(__name__, '[Config]', DEBUG=False)
 from hscom.Preferences import Pref
-from hscom import helpers
 from hscom import helpers as util
 
 ConfigBase = Pref
@@ -167,7 +166,7 @@ class SpatialVerifyConfig(ConfigBase):
         sv_uid += [str(sv_cfg.nShortlist)]
         sv_uid += [',' + str(sv_cfg.xy_thresh)]
         scale_thresh = (sv_cfg.scale_thresh_low, sv_cfg.scale_thresh_high)
-        scale_str = helpers.remove_chars(str(scale_thresh), ' ()')
+        scale_str = util.remove_chars(str(scale_thresh), ' ()')
         sv_uid += [',' + scale_str.replace(',', '_')]
         sv_uid += [',cdl' * sv_cfg.use_chip_extent]  # chip diag len
         sv_uid += [',aff' * sv_cfg.just_affine]  # chip diag len

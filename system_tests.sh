@@ -22,9 +22,11 @@ run_experiment()
 {
     #export TEST_NAME=scale_test
     export TEST_NAME=shortlist_test
-    python dev.py --db NAUTS_DAN -t $TEST_NAME
-    python dev.py --db FROG_tufts -t $TEST_NAME --all-gt-cases --print-colscore
-    python dev.py --db WD_Siva -t $TEST_NAME --all-gt-cases --print-colscore
+    export DEV_ARGS=--all-gt-cases --print-colscore --quiet  -t $TEST_NAME
+
+    python dev.py --db NAUTS_DAN $DEV_ARGS
+    python dev.py --db FROG_tufts $DEV_ARGS
+    python dev.py --db WD_Siva $DEV_ARGS
 }
 
 run_continuous()

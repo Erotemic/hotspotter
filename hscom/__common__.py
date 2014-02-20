@@ -98,7 +98,8 @@ def create_logger():
         #logformat = '%Y-%m-%d %H:%M:%S'
         #logformat = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         logformat = '[%(asctime)s]%(message)s'
-        formatter = logging.Formatter(logformat, '%H:%M')
+        timeformat = '%H:%M:%S'
+        formatter = logging.Formatter(logformat, timeformat)
         ch.setFormatter(formatter)
         fh.setFormatter(formatter)
         # add the handlers to logger

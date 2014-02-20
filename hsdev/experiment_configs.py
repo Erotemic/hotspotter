@@ -22,7 +22,7 @@ vsmany_2 = {
     'ratio_thresh':    [None],  # 1.2, 1.6
     'lnbnn_thresh':    [None],  #
     'lnrat_thresh':    [None],  #
-    'nShortlist':      [1000],
+    'nShortlist':      [50],
     'sv_on':           [True],  # True, False],
     'score_method':    ['csum'],
     'max_alts':        [1000],
@@ -46,7 +46,7 @@ vsone_1 = {
     'ratio_thresh':    [1.5],  # 1.2, 1.6
     'lnbnn_thresh':    [None],  #
     'lnrat_thresh':    [None],  #
-    'nShortlist':      [1000],
+    'nShortlist':      [50],
     'sv_on':           [True],  # True, False],
     'score_method':    ['csum'],  # , 'pl'],  #, 'nsum', 'borda', 'topk', 'nunique']
     'max_alts':        [500],
@@ -81,7 +81,7 @@ vsmany_scoremethod = {
     'ratio_thresh':    [None],  # 1.2, 1.6
     'lnbnn_thresh':    [None],  #
     'lnrat_thresh':    [None],  #
-    'nShortlist':      [1000],
+    'nShortlist':      [50],
     'sv_on':           [True],  # True, False],
     'score_method':    ['csum', 'pl', 'plw', 'borda'],  # 'bordaw', 'topk', 'topkw'],  # , 'nsum', 'borda', 'topk', 'nunique']
     'max_alts':        [1000],
@@ -106,12 +106,17 @@ vsmany_best = {
     'lnbnn_thresh':    [None],  #
     'lnrat_thresh':    [None],  #
     'xy_thresh':       [.002],
-    'nShortlist':      [1000],
+    'nShortlist':      [50],
     'sv_on':           [True],  # True, False],
     'score_method':    ['csum'],  # 'bordaw', 'topk', 'topkw'],  # , 'nsum', 'borda', 'topk', 'nunique']
     'max_alts':        [1000],
 }
 best = vsmany_best
+
+shortlist = vsmany_best.copy()
+shortlist.update({
+    'nShortlist':  [50, 100, 500, 1000],
+})
 
 coverage = vsmany_best.copy()
 coverage.update({
@@ -233,7 +238,7 @@ vsmany_1 = {
     'ratio_thresh':    [None],  # 1.2, 1.6
     'lnbnn_thresh':    [None],  #
     'lnrat_thresh':    [None],  #
-    'nShortlist':      [1000],
+    'nShortlist':      [50],
     'sv_on':           [True],  # True, False],
     'score_method':    ['csum'],  # , 'nsum', 'borda', 'topk', 'nunique']
     'max_alts':        [1000],

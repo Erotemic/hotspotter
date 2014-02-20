@@ -10,7 +10,7 @@ import multiprocessing
 
 __MODULE_LIST__ = []
 __LOGGERS__ = {}
-IN_MAIN_PROCESS = multiprocessing.current_process().name == 'MainProcess'
+__IN_MAIN_PROCESS__ = multiprocessing.current_process().name == 'MainProcess'
 
 
 def argv_flag(name, default):
@@ -24,6 +24,8 @@ __QUIET__ = argv_flag('quiet', False)
 __AGGROFLUSH__ = argv_flag('aggroflush', False)
 __DEBUG__ = argv_flag('debug', False)
 __INDENT__ = argv_flag('indent', True)
+__LOGGING__ = argv_flag('logging', True)
+
 
 log_fname = 'hotspotter_logs_%d.out'
 log_dir = 'logs'
@@ -127,7 +129,7 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
     global __MODULE_LIST__
     module = sys.modules[module_name]
     __MODULE_LIST__.append(module)
-    if IN_MAIN_PROCESS:
+    if __IN_MAIN_PROCESS__ and __LOGGING__:
         create_logger()
 
     if __DEBUG__:
@@ -171,12 +173,10 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
 
     # Closures are cool
     def print_on():
-        return
         module.print = print
         module.print_ = print_
 
     def print_off():
-        return
         module.print = print
         module.print = noprint
         module.print_ = noprint
@@ -197,7 +197,7 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
     if initmpl:
         import matplotlib
         backend = matplotlib.get_backend()
-        if IN_MAIN_PROCESS:
+        if __IN_MAIN_PROCESS__:
             if not __QUIET__:
                 print('[common] ' + module_prefix + ' current backend is: %r' % backend)
                 print('[common] ' + module_prefix + ' matplotlib.use(Qt4Agg)')

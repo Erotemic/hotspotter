@@ -113,8 +113,8 @@ vsmany_best = {
 }
 best = vsmany_best
 
-shortlist = vsmany_best.copy()
-shortlist.update({
+shortlist_test = vsmany_best.copy()
+shortlist_test.update({
     'nShortlist':  [50, 100, 500, 1000],
 })
 

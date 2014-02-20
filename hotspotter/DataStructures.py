@@ -3,7 +3,7 @@ from hscom import __common__
 (print, print_, print_on, print_off, rrr,
  profile, printDBG) = __common__.init(__name__, '[ds]', DEBUG=False)
 # Standard
-from itertools import izip, chain
+from itertools import izip, chain, imap
 # Scientific
 import numpy as np
 # HotSpotter
@@ -54,24 +54,51 @@ class QueryData(DynStruct):
     def get_uid(qdat, *args, **kwargs):
         return ''.join(qdat.get_uid_list(*args, **kwargs))
 
+    def get_query_uid(qdat, hs, qcxs):
+        query_uid = qdat.get_uid()
+        hs_uid    = hs.get_db_name()
+        qcxs_uid  = util.hashstr_arr(qcxs, lbl='_qcxs')
+        test_uid  = hs_uid + query_uid + qcxs_uid
+        return test_uid
+
 
 class NNIndex(object):
     'Nearest Neighbor (FLANN) Index Class'
     def __init__(nn_index, hs, cx_list):
         cx2_desc  = hs.feats.cx2_desc
+        assert max(cx_list) < len(cx2_desc)
         # Make unique id for indexed descriptors
         feat_uid   = hs.prefs.feat_cfg.get_uid()
         sample_uid = util.hashstr_arr(cx_list, 'dcxs')
         uid = '_' + sample_uid + feat_uid
         # Number of features per sample chip
-        sx2_nFeat = [len(cx2_desc[cx]) for cx in iter(cx_list)]
+        nFeat_iter1 = imap(lambda cx: len(cx2_desc[cx]), iter(cx_list))
+        nFeat_iter2 = imap(lambda cx: len(cx2_desc[cx]), iter(cx_list))
+        nFeat_iter3 = imap(lambda cx: len(cx2_desc[cx]), iter(cx_list))
         # Inverted index from indexed descriptor to chipx and featx
-        _ax2_cx = [[cx] * nFeat for (cx, nFeat) in izip(cx_list, sx2_nFeat)]
-        _ax2_fx = [range(nFeat) for nFeat in iter(sx2_nFeat)]
+        _ax2_cx = ([cx] * nFeat for (cx, nFeat) in izip(cx_list, nFeat_iter1))
+        _ax2_fx = (xrange(nFeat) for nFeat in iter(nFeat_iter2))
         ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
         ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
         # Aggregate indexed descriptors into continuous structure
-        ax2_desc = np.vstack([cx2_desc[cx] for cx in cx_list if len(cx2_desc[cx]) > 0])
+        try:
+            # sanatize cx_list
+            cx_list = [cx for cx, nFeat in izip(iter(cx_list), nFeat_iter3) if nFeat > 0]
+            if isinstance(cx2_desc, list):
+                ax2_desc = np.vstack((cx2_desc[cx] for cx in cx_list))
+            elif isinstance(cx2_desc, np.ndarray):
+                ax2_desc = np.vstack(cx2_desc[cx_list])
+        except MemoryError as ex:
+            with util.Indenter2('[mem error]'):
+                print(ex)
+                print('len(cx_list) = %r' % (len(cx_list),))
+                print('len(cx_list) = %r' % (len(cx_list),))
+            raise
+        except Exception as ex:
+            with util.Indenter2('[mem error]'):
+                print(ex)
+                print('cx_list = %r' % (cx_list,))
+            raise
         # Build/Load the flann index
         flann_params = {'algorithm': 'kdtree', 'trees': 4}
         precomp_kwargs = {'cache_dir': hs.dirs.cache_dir,

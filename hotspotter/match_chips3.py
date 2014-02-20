@@ -17,6 +17,7 @@ modules = [api, api.fc2, api.cc2, parallel, mf, ds]
 
 
 @profile
+@util.indent_decor('[nn_index]')
 def ensure_nn_index(hs, qdat, dcxs, force_refresh=False):
     # NNIndexes depend on the data cxs AND feature / chip configs
     printDBG('qdat=%r' % (qdat,))
@@ -31,8 +32,7 @@ def ensure_nn_index(hs, qdat, dcxs, force_refresh=False):
         print('[mc3] dcxs_ is not in qdat cache')
         print('[mc3] hashstr(dcxs_) = %r' % dcxs_uid)
         print('[mc3] REFRESHING FEATURES')
-        with util.Indenter2('[nn_index]'):
-            hs.refresh_features(dcxs)
+        hs.refresh_features(dcxs)
         # Compute the FLANN Index
         data_index = ds.NNIndex(hs, dcxs)
         qdat._dcxs2_index[dcxs_uid] = data_index
@@ -46,7 +46,7 @@ def ensure_nn_index(hs, qdat, dcxs, force_refresh=False):
 #----------------------
 
 # QUERY PREP FUNCTIONS
-
+@util.indent_decor('[prep-request]')
 def prep_query_request(hs, qdat=None, query_cfg=None, qcxs=None, dcxs=None, **kwargs):
     printDBG('prep_query_request ---------------')
     printDBG('hs=%r' % hs)
@@ -92,13 +92,14 @@ def prep_query_request(hs, qdat=None, query_cfg=None, qcxs=None, dcxs=None, **kw
 
 
 # QUERY EXEC FUNCTIONS
-
+@util.indent_decor('[query-list]')
 def query_list(hs, qcxs, dcxs=None, **kwargs):
     qdat = prep_query_request(hs, qcxs=qcxs, dcxs=dcxs, **kwargs)
     qcx2_res = execute_query_lazy(hs, qdat, qcxs, dcxs)[0]
     return qcx2_res
 
 
+@util.indent_decor('[query_dcxs]')
 def query_dcxs(hs, qcx, dcxs, qdat, dochecks=True):
     'wrapper that bypasses all that "qcx2_ map" buisness'
     result_list = execute_query_safe(hs, qdat, [qcx], dcxs)
@@ -106,7 +107,9 @@ def query_dcxs(hs, qcx, dcxs, qdat, dochecks=True):
     return res
 
 
+@util.indent_decor('[prequery]')
 def prequery_checks(hs, qdat):
+    # Checks that happen JUST before querytime
     dcxs = qdat._dcxs
     qcxs = qdat._qcxs
     query_cfg = qdat.cfg
@@ -114,27 +117,25 @@ def prequery_checks(hs, qdat):
     feat_uid = qdat.cfg._feat_cfg.get_uid()
     query_hist_id = (feat_uid, query_uid)
 
-    def _refresh(hs, qdat, unload=True):
+    def _refresh(hs, qdat, unload=False):
         if unload:
             #print('[mc3] qdat._dcxs = %r' % qdat._dcxs)
-            with util.Indenter2('[prequery]'):
-                hs.unload_cxdata('all')
+            hs.unload_cxdata('all')
             # Reload
             qdat = prep_query_request(hs, query_cfg=query_cfg, qcxs=qcxs, dcxs=dcxs)
-        with util.Indenter2('[prequery]'):
-            ensure_nn_index(hs, qdat, qdat._dcxs, force_refresh=True)
+        ensure_nn_index(hs, qdat, qdat._dcxs, force_refresh=True)
 
     if hs.query_history[-1][0] is None:
         # FIRST LOAD:
         print('[mc3] FIRST LOAD. Need to reload features')
         print('[mc3] ensuring nn index')
-        _refresh(hs, qdat)
+        _refresh(hs, qdat, unload=hs.dirty)
 
     elif hs.query_history[-1][0] != feat_uid:
         print('[mc3] FEAT_UID is different. Need to reload features')
         print('[mc3] Old: ' + str(hs.query_history[-1][0]))
         print('[mc3] New: ' + str(feat_uid))
-        _refresh(hs, qdat)
+        _refresh(hs, qdat, True)
     elif hs.query_history[-1][1] != query_uid:
         print('[mc3] QUERY_UID is different. Need to refresh features')
         print('[mc3] Old: ' + str(hs.query_history[-1][1]))
@@ -144,6 +145,7 @@ def prequery_checks(hs, qdat):
     print('[mc3] prequery(): query_uid = %r ' % query_uid)
 
 
+@util.indent_decor('[process-request]')
 def process_query_request(hs, qdat, dochecks=True):
     'wrapper that bypasses all that "qcx2_ map" buisness'
     print('[mc3] process_query_request()')
@@ -198,7 +200,6 @@ def load_cached_query(hs, qdat, aug_list=['']):
 def execute_query_safe(hs, qdat, qcxs, dcxs, use_cache=True):
     '''Executes a query, performs all checks, callable on-the-fly'''
     qdat = prep_query_request(hs, qdat=qdat, qcxs=qcxs, dcxs=dcxs)
-    ensure_nn_index(hs, qdat, qdat._dcxs)
     return execute_query_lazy(hs, qdat, qcxs, dcxs, use_cache=use_cache)
 
 

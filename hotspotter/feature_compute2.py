@@ -150,7 +150,7 @@ def _load_features_bigcache(hs, cx_list):
 def load_features(hs, cx_list=None, **kwargs):
     # TODO: There needs to be a fast way to ensure that everything is
     # already loaded. Same for cc2.
-    print('\n=============================')
+    print('=============================')
     print('[fc2] Precomputing and loading features: %r' % hs.get_db_name())
     print('=============================')
     #----------------

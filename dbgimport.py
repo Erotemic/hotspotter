@@ -3,16 +3,17 @@ from __future__ import division, print_function
 from collections import OrderedDict, defaultdict
 from os.path import (dirname, realpath, join, exists, normpath, splitext,
                      expanduser, relpath)
+from itertools import izip, chain, imap
+from itertools import product as iprod
 import imp
 import itertools
-from itertools import izip, chain
-from itertools import product as iprod
+import logging
 import multiprocessing
 import os
 import re
-import sys
-import site
 import shutil
+import site
+import sys
 # Matplotlib
 import matplotlib
 import matplotlib as mpl

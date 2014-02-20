@@ -124,10 +124,6 @@ FIGSIZE = FIGSIZE_MED
 #FIGSIZE = FIGSIZE_SQUARE
 #DPI = 120
 
-tile_within = (-1, 30, 969, 1041)
-if util.get_computer_name() == 'Ooo':
-    TILE_WITHIN = (-1912, 30, -969, 1071)
-
 # DEFAULTS. (TODO: Can these be cleaned up?)
 
 DISTINCT_COLORS = True  # and False
@@ -397,7 +393,7 @@ def get_monitor_geometries():
     return monitor_geometries
 
 
-def all_figures_tile(num_rc=(3, 4), wh=750, xy_off=(0, 0), wh_off=(0, 0),
+def all_figures_tile(num_rc=(3, 4), wh=730, xy_off=(0, 0), wh_off=(0, 0),
                      row_first=True, no_tile=False, override1=False):
     'Lays out all figures in a grid. if wh is a scalar, a golden ratio is used'
     print('[df2] all_figures_tile()')
@@ -427,11 +423,24 @@ def all_figures_tile(num_rc=(3, 4), wh=750, xy_off=(0, 0), wh_off=(0, 0),
 
     nRows, nCols = num_rc
 
-    standard_sizes = {
-        'gnome3_menubar_h': 80,
-        'gnome3_win_xborder': 5,
-        'gnome3_win_yborder': 5,
-        'mpl_menubar_y': 30,
+    # Win7 Areo
+    win7_sizes = {
+        'os_border_x':   20,
+        'os_border_y':   35,
+        'os_border_h':   30,
+        'win_border_x':  17,
+        'win_border_y':  5,
+        'mpl_toolbar_y': 35,
+    }
+
+    # Ubuntu (Medeterrainian Dark)
+    gnome3_sizes = {
+        'os_border_x':    0,
+        'os_border_y':   80,  # for gnome3 title bar
+        'os_border_h':   0,
+        'win_border_x':   5,
+        'win_border_y':   5,
+        'mpl_toolbar_y': 60,
     }
 
     w, h = wh
@@ -441,41 +450,42 @@ def all_figures_tile(num_rc=(3, 4), wh=750, xy_off=(0, 0), wh_off=(0, 0),
     # Good offset measurements for...
     #Windows 7
     if sys.platform.startswith('win32'):
-        printDBG('win32')
-        h_off +=   0
-        w_off +=  40
-        x_off +=  40
-        y_off +=  40
-        x_pad +=   0
-        y_pad += 100
-    # Ubuntu (Medeterrainian Dark)
+        stdpxls = win7_sizes
     if sys.platform.startswith('linux2'):
-        printDBG('linux')
-        h_off +=  30
-        w_off +=  standard_sizes['gnome3_win_xborder']
-        x_off +=  0
-        y_off +=  standard_sizes['gnome3_win_yborder'] + standard_sizes['mpl_menubar_y']
-        x_pad +=  0
-        y_pad +=  standard_sizes['gnome3_menubar_h']  # for gnome3 title bar
+        stdpxls = gnome3_sizes
+    x_off +=  0
+    y_off +=  0
+    w_off +=  stdpxls['win_border_x']
+    h_off +=  stdpxls['win_border_y'] + stdpxls['mpl_toolbar_y']
+    # Pads are applied to all windows
+    x_pad +=  stdpxls['os_border_x']
+    y_pad +=  stdpxls['os_border_y']
 
     effective_w = w + w_off
     effective_h = h + h_off
 
     if True or num_rc is None:
         monitor_geometries = get_monitor_geometries()
+        printDBG('[df2] monitor_geometries = %r' % (monitor_geometries,))
         geom = monitor_geometries[0]
         # Use all of monitor 0
-        available_geom = (geom[0], geom[1], geom[2], geom[3])
+        available_geom = (geom[0], geom[1], geom[2] - stdpxls['os_border_h'], geom[3])
+        startx = available_geom[0]
+        starty = available_geom[1]
         avail_width = available_geom[2] - available_geom[0]
         avail_height = available_geom[3] - available_geom[1]
-        nRows = int(avail_width // (effective_w))
-        nCols = int(avail_height // (effective_h))
+        printDBG('[df2] available_geom = %r' % (available_geom,))
+        printDBG('[df2] avail_width = %r' % (avail_width,))
+        printDBG('[df2] avail_height = %r' % (avail_height,))
+
+        nRows = int(avail_height // (effective_h))
+        nCols = int(avail_width // (effective_w))
 
     printDBG('[df2] Tile all figures: ')
     printDBG('[df2]     wh = %r' % ((w, h),))
     printDBG('[df2]     xy_offsets = %r' % ((x_off, y_off),))
     printDBG('[df2]     wh_offsets = %r' % ((w_off, h_off),))
-    printDBG('[df2]     wh_effective = %r' % ((effective_h, effective_h),))
+    printDBG('[df2]     wh_effective = %r' % ((effective_w, effective_h),))
     printDBG('[df2]     xy_pads = %r' % ((x_pad, y_pad),))
     printDBG('[df2]     nRows, nCols = %r' % ((nRows, nCols),))
 
@@ -491,8 +501,8 @@ def all_figures_tile(num_rc=(3, 4), wh=750, xy_off=(0, 0), wh_off=(0, 0),
         else:
             colx = (ix % nCols)
             rowx = int(ix // nCols)
-        x = colx * (effective_w)
-        y = rowx * (effective_h)
+        x = startx + colx * (effective_w)
+        y = starty + rowx * (effective_h)
         printDBG('ix=%r) rowx=%r colx=%r, x=%r y=%r, w=%r, h=%r' %
                  (ix, rowx, colx, x, y, w, h))
         try:
@@ -663,7 +673,7 @@ def set_xlabel(lbl, ax=None):
     ax.set_xlabel(lbl, fontproperties=FONTS.xlabel)
 
 
-def set_title(title, ax=None):
+def set_title(title='', ax=None):
     if ax is None:
         ax = gca()
     ax.set_title(title, fontproperties=FONTS.axtitle)
@@ -768,8 +778,7 @@ def plot2(x_data, y_data, marker='o', title_pref='', x_label='x', y_label='y', *
     ax.set_aspect('equal')
     ax.set_xlabel(x_label, fontproperties=FONTS.xlabel)
     ax.set_ylabel(y_label, fontproperties=FONTS.xlabel)
-    ax.set_title(title_pref + ' ' + x_label + ' vs ' + y_label,
-                 fontproperties=FONTS.axtitle)
+    set_title(title_pref + ' ' + x_label + ' vs ' + y_label, ax=None)
 
 
 def adjust_subplots_xlabels():
@@ -1140,7 +1149,7 @@ def figure(fnum=None, docla=False, title=None, pnum=(1, 1, 1), figtitle=None,
     # Set the title
     if not title is None:
         ax = gca()
-        ax.set_title(title, fontproperties=FONTS.axtitle)
+        set_title(title, ax=ax)
         # Add title to figure
         if figtitle is None and pnum == (1, 1, 1):
             figtitle = title
@@ -1256,7 +1265,7 @@ def plot_sift_signature(sift, title='', fnum=None, pnum=None):
     ax.set_ylim(0, 256)
     space_xticks(9, 16)
     space_yticks(5, 64)
-    ax.set_title(title)
+    set_title(title, ax=ax)
     dark_background(ax)
     return ax
 

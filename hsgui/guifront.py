@@ -260,7 +260,7 @@ def new_menu_action(front, menu_name, name, text=None, shortcut=None, slot_fn=No
 
 
 def set_tabwidget_text(front, tblname, text):
-    print('[front] set_tabwidget_text(%s, %s)' % (tblname, text))
+    printDBG('[front] set_tabwidget_text(%s, %s)' % (tblname, text))
     tablename2_tabwidget = {
         'gxs': front.ui.image_view,
         'cxs': front.ui.chip_view,

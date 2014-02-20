@@ -1,4 +1,8 @@
 from __future__ import division, print_function
+from hscom import __common__
+(print, print_, print_on, print_off, rrr,
+ profile, printDBG) = __common__.init(__name__, '[cfgbank]', DEBUG=False)
+# Python
 
 vsmany_2 = {
     'query_type':      ['vsmany'],
@@ -165,19 +169,18 @@ normrule.update({
     'normalizer_rule': ['name', 'last'],
 })
 
-vsmany_kenya = vsmany_best.copy()
-#vsmany_kenya.update({
-    #'K': [2, 3, 4, 5],
-    #'xy_thresh': [.05, .01, .002, .001],
-#})
-#vsmany_kenya.update({
-    #'xy_thresh': [.01],
-    #'lnbnn_weight': [1, .01],
-#})
+small_scale_test = small_scale = vsmany_best.copy()
+small_scale_test.update({
+    'scale_min': [0, 20],
+    'scale_max': [30, 9001],
+})
 
-vsmany_kenya.update({
-    'scale_min': [10, 20],
-    'scale_max': [30, 50],
+
+scale_test = vsmany_best.copy()
+scale_test.update({
+    'scale_min': [0, 10, 20],
+    'scale_max': [30, 100, 9001],
+    'use_adaptive_scale': [True, False],
 })
 
 

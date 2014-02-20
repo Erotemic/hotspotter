@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+from hscom import __common__
+(print, print_, print_on, print_off, rrr,
+ profile, printDBG) = __common__.init(__name__, '[harn]', DEBUG=False)
 # Python
 import sys
 import itertools
@@ -132,20 +135,18 @@ def format_uid_list(uid_list):
 # Display Test Results
 #-----------
 # Run configuration for each query
-def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
+@util.indent_decor('[test_config]')
+def get_test_results(hs, qcxs, qdat, cfgx=0, nCfg=1, nocache_testres=False,
                      test_results_verbosity=2):
-    nQuery = len(qcx_list)
+    nQuery = len(qcxs)
     dcxs = hs.get_indexed_sample()
-    query_uid = qdat.get_uid()
-    hs_uid    = hs.get_db_name()
-    qcxs_uid  = util.hashstr_arr(qcx_list, lbl='_qcxs')
-    test_uid  = hs_uid + query_uid + qcxs_uid
+    test_uid = qdat.get_query_uid(hs, qcxs)
     cache_dir = join(hs.dirs.cache_dir, 'experiment_harness_results')
     io_kwargs = dict(dpath=cache_dir, fname='test_results', uid=test_uid,
                      ext='.cPkl')
 
     if test_results_verbosity == 2:
-        print('[harn] get_test_results(): %r' % query_uid)
+        print('[harn] test_uid = %r' % test_uid)
     #io.print_on()
 
     # High level caching
@@ -153,7 +154,7 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
         qx2_bestranks = io.smart_load(**io_kwargs)
         if qx2_bestranks is None:
             print('[harn] Cache returned None!')
-        elif len(qx2_bestranks) != len(qcx_list):
+        elif len(qx2_bestranks) != len(qcxs):
             print('[harn] Re-Caching qx2_bestranks')
         elif not qx2_bestranks is None:
             return qx2_bestranks, [[{0: None}]] * nQuery
@@ -173,7 +174,7 @@ def get_test_results(hs, qcx_list, qdat, cfgx=0, nCfg=1, nocache_testres=False,
     # Perform queries
     TEST_INFO = True
     # Query Chip / Row Loop
-    for qx, qcx in enumerate(qcx_list):
+    for qx, qcx in enumerate(qcxs):
         count = qx + nPrevQ + 1
         mark_progress(count, total)
         if TEST_INFO:
@@ -236,6 +237,7 @@ def get_cfg_list(hs, test_cfg_name_list):
 
 
 #-----------
+@util.indent_decor('[harn]')
 def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     # Test Each configuration
@@ -280,23 +282,20 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     # Run each test configuration
     # Query Config / Col Loop
+    dcxs = hs.get_indexed_sample()
     for cfgx, query_cfg in enumerate(cfg_list):
         mark_progress(cfgx + 1, nCfg)
         # Set data to the current config
-        #print(query_cfg.get_printable())
-        qdat.set_cfg(query_cfg, hs=hs)
-        #_nocache_testres = nocache_testres or (cfgx in sel_cols)
-        dcxs = hs.get_indexed_sample()
-        mc3.prepare_qdat_indexes(qdat, None, dcxs)
+        qdat = mc3.prep_query_request(hs, qdat, qcxs=qcx_list, dcxs=dcxs, query_cfg=query_cfg)
+        mc3.ensure_nn_index(hs, qdat, dcxs)
         uid2_query_cfg[qdat.get_uid()] = query_cfg
         # Run the test / read cache
         qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,
                                                       nCfg, nocache_testres,
                                                       test_results_verbosity)
-        if nomemory:
-            continue
+        if not nomemory:
+            mat_list.append(qx2_bestranks)
         # Store the results
-        mat_list.append(qx2_bestranks)
         #for qx, reslist in enumerate(qx2_reslist):
             #assert len(reslist) == 1
             #qcx2_res = reslist[0]
@@ -586,9 +585,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print('--------------------------------------')
         print('viewing (r, c) = (%r, %r)' % (r, c))
         # Load / Execute the query
-        qdat = mc3.prepare_qdat_cfg(hs, qdat, query_cfg)
-        mc3.prepare_qdat_indexes(qdat, None, dcxs)
-        res_list = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
+        qdat = mc3.prep_query_request(hs, qdat=qdat, qcxs=[qcx], dcxs=dcxs, query_cfg=query_cfg)
+        res_list = mc3.execute_query_lazy(hs, qdat, [qcx], dcxs)
         res = res_list[0][qcx]
         # Print Query UID
         print(res.true_uid)

@@ -11,7 +11,7 @@ if __name__ == '__main__':
     # Initialize a qt app (or get parent's)
     app, is_root = guitools.init_qtapp()
     # Create a HotSpotter API (hs) and GUI backend (back)
-    hs, back = test_api.main(defaultdb='NAUTS', preload=True, app=app)
+    hs, back = test_api.main(defaultdb='NAUTS', preload=False, app=app)
     # The test api returns a list of interesting chip indexes
     cx = test_api.get_test_cxs(hs, 1)[0]
     # Convert chip-index in to chip-id

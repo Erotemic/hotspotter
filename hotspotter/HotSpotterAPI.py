@@ -255,7 +255,7 @@ class HotSpotter(object):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
         #super(HotSpotter, hs).__init__(child_exclude_list=['prefs', 'args'])
-        with util.Indenter2('[hs.__init__]'):
+        with util.Indenter2('[hs.init]'):
             print('[hs] creating HotSpotter()')
             super(HotSpotter, hs).__init__()
             #printDBG('[\hs] Creating HotSpotter API')
@@ -285,6 +285,8 @@ class HotSpotter(object):
             if db_dir is not None:
                 hs.load_tables(db_dir=db_dir)
             hs.augment_api()
+            hs.dirty = True
+            hs.fresh = True
 
     def augment_api(hs):
         'Adds debugging functions'
@@ -393,19 +395,19 @@ class HotSpotter(object):
         '(current load function) Loads the appropriate database'
         with util.Indenter2('[hs.load]'):
             print('[hs] load()')
-            hs.unload_all()
-            hs.load_tables()
+            if not hs.fresh or hs.tables is None:
+                hs.unload_all()
+                hs.load_tables()
+                hs.fresh = False
             hs.update_samples()
             if load_all:
                 print('[hs] aggro loading')
                 #printDBG('[hs] load_all=True')
-                hs.load_chips()
-                hs.load_features()
+                hs.refresh_features()
             else:
                 print('[hs] lazy loading')
                 #printDBG('[hs] load_all=False')
-                hs.load_chips([])
-                hs.load_features([])
+                hs.refresh_features([])
             return hs
 
     def load_tables(hs, db_dir=None):
@@ -496,6 +498,7 @@ class HotSpotter(object):
         print('[hs] unload_all() DONE')
 
     @profile
+    @util.indent_decor('[unload_cx]')
     def unload_cxdata(hs, cx):
         'unloads features and chips. not tables'
         print('[hs] unload_cxdata(cx=%r)' % cx)
@@ -515,6 +518,7 @@ class HotSpotter(object):
             list_[cx] = None
 
     @profile
+    @util.indent_decor('[delete_cid]')
     def delete_ciddata(hs, cid):
         cid_str_list = ['cid%d_' % cid, 'qcid=%d.npz' % cid, ]
         hs.clear_lru_caches()
@@ -525,6 +529,7 @@ class HotSpotter(object):
                                      verbose=True, dryrun=False)
 
     @profile
+    @util.indent_decor('[delete_cxdata]')
     def delete_cxdata(hs, cx):
         'deletes features and chips. not tables'
         hs.unload_cxdata(cx)
@@ -563,29 +568,27 @@ class HotSpotter(object):
         return hs.query_cxs(qcx, gt_cxs, **kwargs)
 
     @profile
+    @util.indent_decor('[hs.query]')
     def query_cxs(hs, qcx, cxs, query_cfg=None, **kwargs):
         'wrapper that restricts query to only known groundtruth'
-        print('\n[hs]====================')
         print('[hs] query_cxs()')
-        print('[hs]====================')
-        with util.Indenter2('[hs.query]'):
-            if query_cfg is None:
-                query_cfg = hs.prefs.query_cfg
-            qdat = mc3.prep_query_request(hs, query_cfg=query_cfg, qcxs=[qcx], dcxs=cxs, **kwargs)
-            # Ensure that we can process a query like this
-            try:
-                res = mc3.process_query_request(hs, qdat)[qcx]
-            except mf.QueryException as ex:
-                msg = '[hs] Query Failure: %r' % ex
-                print(msg)
-                if params.args.strict:
-                    raise
-                return msg
-            except AssertionError as ex:
-                msg = '[hs] Query Failure: %r' % ex
-                print(msg)
+        if query_cfg is None:
+            query_cfg = hs.prefs.query_cfg
+        qdat = mc3.prep_query_request(hs, query_cfg=query_cfg, qcxs=[qcx], dcxs=cxs, **kwargs)
+        # Ensure that we can process a query like this
+        try:
+            res = mc3.process_query_request(hs, qdat)[qcx]
+        except mf.QueryException as ex:
+            msg = '[hs] Query Failure: %r' % ex
+            print(msg)
+            if params.args.strict:
                 raise
-            return res
+            return msg
+        except AssertionError as ex:
+            msg = '[hs] Query Failure: %r' % ex
+            print(msg)
+            raise
+        return res
     # ---------------
     # Change functions
     # ---------------

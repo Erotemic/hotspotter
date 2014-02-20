@@ -140,7 +140,7 @@ def frontblocking(func):
             result = func(front, *args, **kwargs)
         except Exception as ex:
             front.blockSignals(wasBlocked_)
-            print('Block wrapper caugt exception in %r' % func.func_name)
+            print('Block wrapper caught exception in %r' % func.func_name)
             print('front = %r' % front)
             VERBOSE = False
             if VERBOSE:
@@ -160,7 +160,7 @@ def frontblocking(func):
 def drawing(func):
     'Wraps a class function and draws windows on completion'
     #printDBG('[@guitools] Wrapping %r with drawing' % func.func_name)
-
+    @util.indent_decor('[drawing]')
     def drawing_wrapper(self, *args, **kwargs):
         #print('[guitools] DRAWING')
         result = func(self, *args, **kwargs)
@@ -383,6 +383,7 @@ def show_open_db_dlg(parent=None):
 
 
 @profile
+@util.indent_decor('[qt-init]')
 def init_qtapp():
     global IS_INIT
     global IS_ROOT
@@ -406,12 +407,14 @@ def init_qtapp():
 
 
 @profile
+@util.indent_decor('[qt-exit]')
 def exit_application():
     print('[*guitools] exiting application')
     QtGui.qApp.quit()
 
 
 @profile
+@util.indent_decor('[qt-main]')
 def run_main_loop(app, is_root=True, back=None, **kwargs):
     if back is not None:
         print('[*guitools] setting active window')

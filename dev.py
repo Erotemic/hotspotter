@@ -490,8 +490,8 @@ def get_seperatbility(hs, qcx2_res):
 
 # Driver Function
 def run_investigations(hs, qcx_list):
-    import experiment_harness
-    import experiment_configs
+    from hsdev import experiment_harness
+    from hsdev import experiment_configs
     print('\n========== RUN INVESTIGATIONS =============')
     test_list = params.args.tests[:]
     print('[dev] test_list = %r' % (test_list,))
@@ -602,4 +602,4 @@ if __name__ == '__main__':
     if params.args.nopresent:
         print('...not presenting')
         sys.exit(0)
-    exec(df2.present(wh=1000))  # **df2.OooScreen2()
+    exec(df2.present(wh=1000))

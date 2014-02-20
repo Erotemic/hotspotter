@@ -42,6 +42,8 @@ if [[ $# -gt 0 ]] ; then
         export TEST_TYPE="continuous"
     elif [[ "$1" = "experiment" ]] ; then
         export TEST_TYPE="experiment"
+    elif [[ "$1" = "cleandb" ]] ; then
+        export TEST_TYPE="cleandb"
     fi
 fi
 
@@ -54,4 +56,6 @@ elif [[ "$TEST_TYPE" = "experiment" ]] ; then
     run_experiment
 elif [[ "$TEST_TYPE" = "nightly" ]] ; then
     run_nightly
+elif [[ "$TEST_TYPE" = "cleandb" ]] ; then
+    clean_databases
 fi

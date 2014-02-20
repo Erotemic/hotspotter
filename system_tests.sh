@@ -21,8 +21,7 @@ clean_databases()
 
 run_experiment()
 {
-    #export TEST_NAME=scale_test
-    export TEST_NAME=shortlist_test
+    export TEST_NAME="shortlist_test chipsize_test scale_test"
     export DEV_ARGS="--all-gt-cases --print-colscore -t $TEST_NAME"
 
     python dev.py --db WD_Siva $DEV_ARGS
@@ -33,11 +32,13 @@ run_experiment()
 
 run_experiment2()
 {
-    #export TEST_NAME=scale_test
-    export TEST_NAME=chipsize_test
+    export TEST_NAME="shortlist_test chipsize_test scale_test"
     export DEV_ARGS="--all-gt-cases --print-colscore -t $TEST_NAME"
 
-    python dev.py --db NAUT_Dan $DEV_ARGS
+    python dev.py --db NAUT_Dan $DEV_ARGS 
+    python dev.py --db WD_Siva $DEV_ARGS
+    python dev.py --db Frogs $DEV_ARGS
+    python dev.py --db GZ $DEV_ARGS
 }
 
 run_continuous()

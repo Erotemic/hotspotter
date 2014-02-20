@@ -1352,16 +1352,16 @@ class Timer(object):
     def tic(self):
         if self.verbose:
             sys.stdout.flush()
-            sys.stdout.write('\ntic(%r)' % self.msg)
+            print_('\ntic(%r)' % self.msg)
             if self.newline:
-                sys.stdout.write('\n')
+                print_('\n')
             sys.stdout.flush()
         self.tstart = time.time()
 
     def toc(self):
         ellapsed = (time.time() - self.tstart)
         if self.verbose:
-            sys.stdout.write('...toc(%r)=%.4fs\n' % (self.msg, ellapsed))
+            print_('...toc(%r)=%.4fs\n' % (self.msg, ellapsed))
             sys.stdout.flush()
         return ellapsed
 

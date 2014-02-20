@@ -60,4 +60,5 @@ def dbstats(hs):
     ]
     tabular_body = hline.join(tabular_body_list)
     tabular = hline.join([tabular_head, tabular_body, tabular_tail])
+    print('[dev stats]')
     print(tabular)

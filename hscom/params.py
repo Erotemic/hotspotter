@@ -71,8 +71,14 @@ def guiselect_workdir():
 
 # Common databases I use
 dbalias_dict = {
-    'SONOGRAMS':        'sonograms',
     'NAUTS':            'NAUT_Dan',
+    'WD':               'WD_Siva',
+    'LF':               'LF_all',
+    'GZ':               'GZ_ALL',
+    'MOTHERS':          'HSDB_zebra_with_mothers',
+    'FROGS':            'Frogs',
+    'TOADS':            'WY_Toads',
+    'SEALS':            'Seals',
 
     'OXFORD':           'Oxford_Buildings',
     'PARIS':            'Paris_Buildings',
@@ -82,9 +88,6 @@ dbalias_dict = {
     'WILDEBEAST':       'Wildebeast',
     'WDOGS':            'WD_Siva',
 
-    'GZ':               'GZ_ALL',
-    'MOTHERS':          'HSDB_zebra_with_mothers',
-
     'PZ':               'PZ_FlankHack',
     'PZ2':              'PZ-Sweatwater',
     'PZ_MARIANNE':      'PZ_Marianne',
@@ -93,10 +96,8 @@ dbalias_dict = {
 
     'LF_ALL':           'LF_all',
     'WS_HARD':          'WS_hard',
+    'SONOGRAMS':        'sonograms',
 
-    'FROGS':            'Frogs',
-    'TOADS':            'WY_Toads',
-    'SEALS':            'Seals',
 }
 dbalias_dict['JAG'] = dbalias_dict['JAG_KELLY']
 #dbalias_dict['DEFAULT'] = dbalias_dict['NAUTS']
@@ -128,6 +129,8 @@ def db_to_dbdir(db):
                 print('[params] attempting to fix it')
                 db = fname_list[index]
                 dbdir = join(work_dir, db)
+                print('[params] dbdir=%r' % dbdir)
+                print('[params] db=%r' % db)
         if not exists(dbdir):
             print('[params] Valid DBs:')
             print('\n'.join(fname_list))

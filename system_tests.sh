@@ -11,6 +11,7 @@ run_nightly()
     python _tests/query_test.py --db MOTHERS --qcid 28 --nocache-query --nocache-feats --nocache-chips --strict
 }
 
+
 clean_databases()
 {
     python dev.py --db NAUT_DAN --delete-cache 
@@ -22,11 +23,21 @@ run_experiment()
 {
     #export TEST_NAME=scale_test
     export TEST_NAME=shortlist_test
-    export DEV_ARGS=--all-gt-cases --print-colscore --quiet  -t $TEST_NAME
+    export DEV_ARGS="--all-gt-cases --print-colscore -t $TEST_NAME"
 
-    python dev.py --db NAUTS_DAN $DEV_ARGS
-    python dev.py --db FROG_tufts $DEV_ARGS
     python dev.py --db WD_Siva $DEV_ARGS
+    python dev.py --db FROG_tufts $DEV_ARGS
+    python dev.py --db NAUTS_DAN $DEV_ARGS
+}
+
+
+run_experiment2()
+{
+    #export TEST_NAME=scale_test
+    export TEST_NAME=chipsize_test
+    export DEV_ARGS="--all-gt-cases --print-colscore -t $TEST_NAME"
+
+    python dev.py --db NAUT_Dan $DEV_ARGS
 }
 
 run_continuous()
@@ -57,7 +68,7 @@ echo "TEST_TYPE=$TEST_TYPE"
 if [[ "$TEST_TYPE" = "continuous" ]] ; then
     run_continuous $@
 elif [[ "$TEST_TYPE" = "experiment" ]] ; then
-    run_experiment
+    run_experiment2
 elif [[ "$TEST_TYPE" = "nightly" ]] ; then
     run_nightly
 elif [[ "$TEST_TYPE" = "cleandb" ]] ; then

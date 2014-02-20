@@ -172,6 +172,8 @@ def clean():
     util.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.log')
     util.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.out')
     util.remove_files_in_dir(join(cwd, '_doc/user-guide-latex'), '*.aux')
+    # Remove logs
+    util.remove_files_in_dir(join(cwd, 'logs'))
     # Remove misc
     util.delete(join(cwd, "'"))  # idk where this file comes from
     util.remove_files_in_dir(cwd + '/hstpl/extern_feat', 'libopencv_*.dylib', recursive=False)

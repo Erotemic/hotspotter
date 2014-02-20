@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+from hscom import __common__
+(print, print_, print_on, print_off, rrr,
+ profile, printDBG) = __common__.init(__name__, '[tapi]', DEBUG=False)
 
 
 def parse_arguments(defaultdb, usedbcache):
@@ -42,7 +45,7 @@ def main(defaultdb='cache', preload=False, app=None):
     if setcfg is not None:
         # FIXME move experiment harness to hsdev
         import experiment_harness
-        print('[main] setting cfg to %r' % setcfg)
+        print('[tapi.main] setting cfg to %r' % setcfg)
         varied_list = experiment_harness.get_varied_params_list([setcfg])
         cfg_dict = varied_list[0]
         hs.prefs.query_cfg.update_cfg(**cfg_dict)
@@ -55,7 +58,7 @@ def main(defaultdb='cache', preload=False, app=None):
         db_dir = hs.dirs.db_dir
         io.global_cache_write('db_dir', db_dir)
     except ValueError as ex:
-        print('[main] ValueError = %r' % (ex,))
+        print('[tapi.main] ValueError = %r' % (ex,))
         if params.args.strict:
             raise
     if app is not None:
@@ -82,7 +85,7 @@ def get_qcx_list(hs):
     import numpy as np
     from hscom import params
     from hscom import helpers as util
-    print('[dev] get_qcx_list()')
+    print('[tapi] get_qcx_list()')
 
     def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True, with_notes=False):
         qcx_list = []
@@ -109,30 +112,30 @@ def get_qcx_list(hs):
     # Sample a large pool of query indexes
     histids = None if params.args.histid is None else np.array(params.args.histid)
     if params.args.all_cases:
-        print('[dev] all cases')
+        print('[tapi] all cases')
         qcx_all = get_cases(hs, with_gt=True, with_nogt=True)
     elif params.args.all_gt_cases:
-        print('[dev] all gt cases')
+        print('[tapi] all gt cases')
         qcx_all = get_cases(hs, with_hard=True, with_gt=True, with_nogt=False)
     elif params.args.qcid is None:
-        print('[dev] did not select cases')
+        print('[tapi] did not select cases')
         qcx_all = get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
     else:
-        print('[dev] Chosen qcid=%r' % params.args.qcid)
+        print('[tapi] Chosen qcid=%r' % params.args.qcid)
         qcx_all =  util.ensure_iterable(hs.cid2_cx(params.args.qcid))
     # Filter only the ones you want from the large pool
     if histids is None:
         qcx_list = qcx_all
     else:
         histids = util.ensure_iterable(histids)
-        print('[dev] Chosen histids=%r' % histids)
+        print('[tapi] Chosen histids=%r' % histids)
         qcx_list = [qcx_list[id_] for id_ in histids]
 
     if len(qcx_list) == 0:
         if params.args.strict:
             raise Exception('no qcx_list history')
         qcx_list = [0]
-    print('[dev] len(qcx_list) = %d' % len(qcx_list))
+    print('[tapi] len(qcx_list) = %d' % len(qcx_list))
     qcx_list = util.unique_keep_order(qcx_list)
     return qcx_list
 

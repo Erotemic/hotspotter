@@ -14,20 +14,24 @@ __IN_MAIN_PROCESS__ = multiprocessing.current_process().name == 'MainProcess'
 
 
 def argv_flag(name, default):
+    # TODO Merge util's argv stuff here or merge this there?
+    # Or split it into sepearate top-level module?
+    if name.find('--') == 0:
+        name = name[2:]
     if '--' + name in sys.argv and default is False:
         return True
     if '--no' + name in sys.argv and default is True:
         return False
     return default
 
-__QUIET__ = argv_flag('quiet', False)
-__AGGROFLUSH__ = argv_flag('aggroflush', False)
-__DEBUG__ = argv_flag('debug', False)
-__INDENT__ = argv_flag('indent', True)
-__LOGGING__ = argv_flag('logging', True)
+__QUIET__      = argv_flag('--quiet', False)
+__AGGROFLUSH__ = argv_flag('--aggroflush', False)
+__DEBUG__      = argv_flag('--debug', False)
+__INDENT__     = argv_flag('--indent', True)
+__LOGGING__    = argv_flag('--logging', True)
 
 
-log_fname = 'hotspotter_logs_%d.out'
+log_fname = 'hotspotter_logs_%04d.out'
 log_dir = 'logs'
 
 if not exists(log_dir):
@@ -84,6 +88,7 @@ def create_logger():
     global root_logger
     global HS_PRINT_FUNCTION
     global HS_DBG_PRINT_FUNCTION
+    global HS_WRITE_FUNCTION
     if root_logger is None:
         #logging.config.dictConfig(LOGGING)
         msg = ('logging to log_fpath=%r' % log_fpath)
@@ -109,6 +114,7 @@ def create_logger():
         root_logger.addHandler(fh)
         root_logger.propagate = False
         # print success
+        HS_WRITE_FUNCTION = lambda msg: root_logger.info(msg)
         HS_PRINT_FUNCTION = lambda msg: root_logger.info(msg)
         HS_DBG_PRINT_FUNCTION = lambda msg: root_logger.debug(msg)
         HS_PRINT_FUNCTION('logger init')
@@ -142,44 +148,49 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
         import imp
         prev = __DEBUG__
         __DEBUG__ = False
-        print(module_prefix + ' reloading ' + module_name)
+        __builtin__.print(module_prefix + ' reloading ' + module_name)
         imp.reload(module)
         __DEBUG__ = prev
 
+    # Define log_print
     if __DEBUG__:
-        # Extra debug info
-        def print(msg):
+        def log_print(msg):
             HS_PRINT_FUNCTION(module_prefix + str(msg))
 
-        def print_(msg):
+        def log_print_(msg):
             HS_WRITE_FUNCTION(module_prefix + str(msg))
     else:
         if __AGGROFLUSH__:
-            def print_(msg):
+            def log_print_(msg):
                 HS_WRITE_FUNCTION(msg)
                 HS_FLUSH_FUNCTION()
         else:
-            # Define a print that doesnt flush
-            def print_(msg):
+            def log_print_(msg):
                 HS_WRITE_FUNCTION(msg)
-        # Define a print that flushes
-        def print(msg):
+        def log_print(msg):
             HS_PRINT_FUNCTION(msg)
 
-    # Function to to turn printing off
     def noprint(msg):
         #logger.debug(module_prefix + ' DEBUG ' + msg)
         pass
 
+    # Define print switches
     # Closures are cool
     def print_on():
-        module.print = print
-        module.print_ = print_
+        if not module in __MODULE_LIST__:
+            __MODULE_LIST__.append(module)  # SO HACKY
+        module.print = log_print
+        module.print_ = log_print_
 
     def print_off():
-        module.print = print
+        __MODULE_LIST__.remove(module)  # SO HACKY
         module.print = noprint
         module.print_ = noprint
+
+    # ACTUALLY SET PRINT:
+    # FIXME we dont actually have to overwrite the name in this module
+    print  = log_print
+    print_ = log_print_
 
     if DEBUG is None:
         return print, print_, print_on, print_off, rrr, profile

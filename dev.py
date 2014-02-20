@@ -35,8 +35,12 @@ from hotspotter import load_data2 as ld2
 from hotspotter import QueryResult as qr
 from hotspotter import chip_compute2 as cc2
 from hotspotter import feature_compute2 as fc2
+from hsdev import test_api
 from hsdev import dev_stats
+from hsdev import experiment_harness
+from hsdev import experiment_configs
 from hsviz import interact
+import hstpl
 
 
 def all_printoff():
@@ -296,7 +300,6 @@ def chip_info(hs, cx, notes=''):
 
 
 def intestigate_keypoint_interaction(hs, qcx_list, fnum=1, **kwargs):
-    import hstpl
     for qcx in qcx_list:
         rchip = hs.get_chip(qcx)
         kpts  = hs.feats.cx2_kpts[qcx]
@@ -314,7 +317,6 @@ def intestigate_keypoint_interaction(hs, qcx_list, fnum=1, **kwargs):
 # exec(open('dev.py').read())
 def dev_main(defaultdb='NAUTS', **kwargs):
     'Developer main script. Contains all you need to quickly start tests'
-    from hsdev import test_api
     print('[dev] main()')
     # Create Hotspotter API
     hs = test_api.main(defaultdb='NAUTS')
@@ -353,7 +355,6 @@ def get_qcx2_res(hs, qcx_list):
 
 
 def report_results(hs, qcx_list):
-    from hotspotter import report_results2 as rr2
     if '--list' in sys.argv:
         #listpos = sys.argv.index('--list')
         #if listpos < len(sys.argv) - 1:
@@ -493,11 +494,9 @@ def get_seperatbility(hs, qcx2_res):
 
 # Driver Function
 def run_investigations(hs, qcx_list):
-    from hsdev import experiment_harness
-    from hsdev import experiment_configs
     print('\n========== RUN INVESTIGATIONS =============')
-    test_list = params.args.tests[:]
-    print('[dev] test_list = %r' % (test_list,))
+    input_test_list = params.args.tests[:]
+    print('[dev] input_test_list = %r' % (input_test_list,))
     fnum = 1
     #view_all_history_names_in_db(hs, 'MOTHERS')
     #fnum = compare_matching_methods(hs, qcx, fnum)
@@ -509,11 +508,14 @@ def run_investigations(hs, qcx_list):
     K_   = {'K':             [2, 5, 10]}
     #Kr_  = {'Krecip':        [0, 2, 5, 10]}
 
+    valid_test_list = []  # build list for printing in case of failure
+
     def intest(*args):
         for testname in args:
-            ret = testname in test_list
+            valid_test_list.append(testname)
+            ret = testname in input_test_list
             if ret:
-                test_list.remove(testname)
+                input_test_list.remove(testname)
                 print('[dev] ===================')
                 print('[dev] running testname=%s' % testname)
                 return ret
@@ -563,22 +565,35 @@ def run_investigations(hs, qcx_list):
     for test_cfg_name in testcfg_locals:
         if intest(test_cfg_name):
             fnum = experiment_harness.test_configurations(hs, qcx_list, [test_cfg_name], fnum)
-    if len(test_list) > 0:
-        raise Exception('Unknown tests: %r ' % test_list)
+
+    if intest('help'):
+        print('valid tests are:')
+
+        print(''.join(util.indent_list('\n -t ', valid_test_list)))
+        return
+
+    if len(input_test_list) > 0:
+        print('valid tests are: \n')
+        print('\n'.join(valid_test_list))
+        raise Exception('Unknown tests: %r ' % input_test_list)
 
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     print('[dev] __main__ ')
     QUIET = util.get_flag('--quiet', False)
-    if QUIET:
-        print_off()
-        all_printoff()
-    QUIET_LOAD = False
-    if QUIET_LOAD:
+    VERBOSE = util.get_flag('--verbose', False)
+    #if QUIET:
+        #print_off()
+        #all_printoff()
+    QUIET_LOAD = not VERBOSE
+    QUIET_QUERY = not VERBOSE
+    if not VERBOSE:
         ld2.print_off()
         fc2.print_off()
         cc2.print_off()
+    if not VERBOSE:
+        mf.print_off()
 
     # useful when copy and pasting into ipython
     guitools.init_qtapp()

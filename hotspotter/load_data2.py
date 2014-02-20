@@ -22,9 +22,7 @@ from hscom import helpers
 from hscom import helpers as util
 from hscom import tools
 
-#========================================
 # GLOBALS
-#========================================
 
 VERBOSE_LOAD_DATA = True
 
@@ -51,12 +49,11 @@ RDIR_QRES     = join(RDIR_COMPUTED, 'query_results')
 
 UNKNOWN_NAME = '____'
 
-#========================================
 # DRIVER CODE
-#========================================
 
 
 #@profile  # This is perfectly fast .2 seconds on GZ
+@util.indent_decor('[ld2.load_csv]')
 def load_csv_tables(db_dir, allow_new_dir=True):
     '''
     Big function which loads the csv tables from a datatabase directory
@@ -64,9 +61,8 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     '''
     if 'vdd' in sys.argv:
         helpers.vd(db_dir)
-    print('\n=============================')
-    print('[ld2] Loading hotspotter csv tables: %r' % db_dir)
     print('=============================')
+    print('[ld2] Loading hotspotter csv tables: %r' % db_dir)
     hs_dirs = ds.HotspotterDirs(db_dir)
     hs_tables = ds.HotspotterTables()
     #exec(hs_dirs.execstr('hs_dirs'))
@@ -534,10 +530,8 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     return hs_dirs, hs_tables, db_version
 
 
-#========================================
 # Make Table Functions
 # Returns the formated csv table text
-#========================================
 
 
 def make_csv_table(column_labels=None, column_list=[], header='', column_type=None):
@@ -704,10 +698,8 @@ def make_name_csv(hs, nx_list):
     return name_table
 
 
-#========================================
 # Write Table Functions
 # Makes and writes csv files to disk
-#========================================
 
 def write_csv_tables(hs):
     'Saves the tables to disk'

@@ -35,7 +35,6 @@ except ImportError:
     pass
 
 
-
 def _checkargs_onload(hs):
     'checks relevant arguments after loading tables'
     args = params.args
@@ -391,36 +390,36 @@ class HotSpotter(object):
     #---------------
     # Loading Functions
     #---------------
+    @util.indent_decor('[hs.load]')
     def load(hs, load_all=False):
         '(current load function) Loads the appropriate database'
-        with util.Indenter2('[hs.load]'):
-            print('[hs] load()')
-            if not hs.fresh or hs.tables is None:
-                hs.unload_all()
-                hs.load_tables()
-                hs.fresh = False
-            hs.update_samples()
-            if load_all:
-                print('[hs] aggro loading')
-                #printDBG('[hs] load_all=True')
-                hs.refresh_features()
-            else:
-                print('[hs] lazy loading')
-                #printDBG('[hs] load_all=False')
-                hs.refresh_features([])
-            return hs
+        print('[hs] load()')
+        if not hs.fresh or hs.tables is None:
+            hs.unload_all()
+            hs.load_tables()
+            hs.fresh = False
+        hs.update_samples()
+        if load_all:
+            print('[hs] aggro loading')
+            #printDBG('[hs] load_all=True')
+            hs.refresh_features()
+        else:
+            print('[hs] lazy loading')
+            #printDBG('[hs] load_all=False')
+            hs.refresh_features([])
+        return hs
 
     def load_tables(hs, db_dir=None):
         # Check to make sure db_dir is specified correctly
         if db_dir is None:
             db_dir = params.args.dbdir
         if db_dir is None or not exists(db_dir):
-            raise ValueError('db_dir=%r does not exist!' % (db_dir))
+            raise ValueError('[hs] db_dir=%r does not exist!' % (db_dir))
         hs_dirs, hs_tables, db_version = ld2.load_csv_tables(db_dir)
         hs.tables = hs_tables
         hs.dirs = hs_dirs
         if db_version != 'current':
-            print('Loaded db_version=%r. Converting...' % db_version)
+            print('[hs] Loaded db_version=%r. Converting...' % db_version)
             hs.save_database()
         _checkargs_onload(hs)
 
@@ -518,7 +517,7 @@ class HotSpotter(object):
             list_[cx] = None
 
     @profile
-    @util.indent_decor('[delete_cid]')
+    @util.indent_decor('[hs.delete_ciddata]')
     def delete_ciddata(hs, cid):
         cid_str_list = ['cid%d_' % cid, 'qcid=%d.npz' % cid, ]
         hs.clear_lru_caches()
@@ -529,7 +528,7 @@ class HotSpotter(object):
                                      verbose=True, dryrun=False)
 
     @profile
-    @util.indent_decor('[delete_cxdata]')
+    @util.indent_decor('[hs.delete_cxdata]')
     def delete_cxdata(hs, cx):
         'deletes features and chips. not tables'
         hs.unload_cxdata(cx)
@@ -755,6 +754,7 @@ class HotSpotter(object):
     def delete_image(hs, gx_list):
         return _delete_image(hs, gx_list)
 
+    @util.indent_decor('[hs.delete_cache]')
     def delete_cache(hs):
         print('[hs] DELETE CACHE')
         computed_dir = hs.dirs.computed_dir
@@ -766,6 +766,7 @@ class HotSpotter(object):
     def delete_global_prefs(hs):
         io.delete_global_cache()
 
+    @util.indent_decor('[hs.delete_qres]')
     def delete_queryresults_dir(hs):
         qres_dir = hs.dirs.qres_dir
         hs.unload_all()

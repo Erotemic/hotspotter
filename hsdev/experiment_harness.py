@@ -135,7 +135,6 @@ def format_uid_list(uid_list):
 # Display Test Results
 #-----------
 # Run configuration for each query
-@util.indent_decor('[test_config]')
 def get_test_results(hs, qcxs, qdat, cfgx=0, nCfg=1, nocache_testres=False,
                      test_results_verbosity=2):
     nQuery = len(qcxs)
@@ -290,9 +289,10 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         mc3.ensure_nn_index(hs, qdat, dcxs)
         uid2_query_cfg[qdat.get_uid()] = query_cfg
         # Run the test / read cache
-        qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,
-                                                      nCfg, nocache_testres,
-                                                      test_results_verbosity)
+        with util.Indenter2('[cfg %d/%d]' % (cfgx, nCfg)):
+            qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,
+                                                          nCfg, nocache_testres,
+                                                          test_results_verbosity)
         if not nomemory:
             mat_list.append(qx2_bestranks)
         # Store the results

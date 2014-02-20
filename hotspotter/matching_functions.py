@@ -13,7 +13,6 @@ import coverage
 import nn_filters
 import spatial_verification2 as sv2
 import voting_rules2 as vr2
-from hscom import helpers
 from hscom import helpers as util
 
 
@@ -71,7 +70,7 @@ MARK_AFTER = 40
 
 
 def progress_func(maxval=0):
-    mark_progress, end_progress = helpers.progress_func(maxval, mark_after=MARK_AFTER, progress_type='simple')
+    mark_progress, end_progress = util.progress_func(maxval, mark_after=MARK_AFTER, progress_type='simple')
     #if maxval > MARK_AFTER:
         #print('')
     return mark_progress, end_progress
@@ -379,7 +378,7 @@ def spatial_verification(hs, qcx2_chipmatch, qdat):
         # Rebuild the feature match / score arrays to be consistent
         chipmatchSV = _fix_fmfsfk(cx2_fm_V, cx2_fs_V, cx2_fk_V)
         qcx2_chipmatchSV[qcx] = chipmatchSV
-    print('')
+    print_('\n')
     print('[mf] Finished sv')
     return qcx2_chipmatchSV
 

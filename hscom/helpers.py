@@ -1289,9 +1289,11 @@ class Indenter2(object):
                 self.old_prints[mod] = mod.print
                 self.old_prints_[mod] = mod.print_
             except KeyError as ex:
-                print('WARNING')
-                print(ex)
-                print('WARNING: module=%r was loaded durring indent session' % mod)
+                print('KeyError: ' + str(ex))
+                print('WARNING: module=%r was loaded between indent sessions' % mod)
+            except AttributeError as ex:
+                print('AttributeError: ' + str(ex))
+                print('WARNING: module=%r is not managed by __common__' % mod)
 
         for mod in self.old_prints.keys():
             indent_print = lambda msg: self.old_prints[mod](indent_msg(msg))

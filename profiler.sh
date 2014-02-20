@@ -12,17 +12,59 @@ export line_profile_output=$pyscript.lprof
 export raw_profile=raw_profile.$pyscript.$TIMESTAMP.$RAW_SUFFIX
 export clean_profile=clean_profile.$pyscript.$TIMESTAMP.$CLEAN_SUFFIX
 
-echo "Profiling $pyscript"
-# Line profile the python code w/ command line args
-kernprof.py -l $@
-# Dump the line profile output to a text file
-python -m line_profiler $line_profile_output >> $raw_profile
-# Clean the line profile output
-python _scripts/profiler_cleaner.py $raw_profile $clean_profile
-# Print the cleaned output
-cat $clean_profile
-
 remove_profiles()
 {
-    rm *.profile.txt
+    echo "Removing profiles"
+    #rm *.profile.txt
+    rm *raw.prof
+    rm *clean.prof
+    rm *.lprof
 }
+
+echo "Input: $@"
+echo "pyscript: $pyscript"
+echo "line_profile_output: $line_profile_output"
+
+
+if [ "$pyscript" == "clean" ]; then
+    remove_profiles
+    exit
+fi 
+
+echo "Profiling $pyscript"
+
+# Choose one
+export PROFILE_TYPE="kernprof"  # plop or kernprof
+
+if [ $PROFILE_TYPE = "plop" ]; then
+    python -m plop.collector $@
+    echo "http://localhost:8888"
+    python -m plop.viewer --datadir=profiles
+else
+    # Line profile the python code w/ command line args
+    if [ "$(expr substr $(uname -s) 1 10)" == "MINGW32_NT" ]; then
+        export MINGW_PYEXE=$(python -c "import sys; print(sys.executable)")
+        export MINGW_PYDIR=$(python -c "import sys, os; print(os.path.dirname(sys.executable))")
+        $MINGW_PYEXE $MINGW_PYDIR/Scripts/kernprof.py -l $@
+    else
+        kernprof.py -l $@
+    fi
+    # Dump the line profile output to a text file
+    python -m line_profiler $line_profile_output >> $raw_profile
+    # Clean the line profile output
+    python _scripts/profiler_cleaner.py $raw_profile $clean_profile
+    # Print the cleaned output
+    cat $clean_profile
+fi
+
+
+# In windows I had to set the default .sh extension to run with
+# C:\MinGW\msys\1.0\bin\sh.exe
+#assoc .sh=sh_auto_file
+#ftype sh_auto_file="C:\MinGW\msys\1.0\bin\sh.exe" %1 %*
+#
+#set PATHEXT=.sh;%PATHEXT% 
+#assoc .sh
+#assoc .sh=bashscript
+#ftype bashscript="C:\MinGW\msys\1.0\bin\sh.exe" %1 %*
+#https://stackoverflow.com/questions/105075/how-can-i-associate-sh-files-with-cygwin

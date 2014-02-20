@@ -79,6 +79,7 @@ windows = [
 ]
 
 other = [
+    'plop'  # python low overhead profiler
     'sympy',
     'supreme'  # super resolution
     'pytz',  # Timezones

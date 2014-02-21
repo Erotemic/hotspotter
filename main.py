@@ -50,19 +50,21 @@ def postload_args_process(hs, back):
         qcid = qcid_list[0]
         tx = tx_list[0] if len(tx_list) > 0 else None
         # Run a query
-        res = back.query(qcid, tx)
-        back.select_cid(qcid, show=False)
-        if len(cid_list) > 0:
-            # Interact with the query
-            cx = hs.cid2_cx(cid_list[0])
-            if len(qfx_list) > 0:
-                qfx = qfx_list[0]
-                mx = res.get_match_index(hs, cx, qfx)
-                res.interact_chipres(hs, cx, fnum=4, mx=mx)
-                res.show_nearest_descriptors(hs, qfx)
-            else:
-                res.interact_chipres(hs, cx, fnum=4)
-
+        try:
+            res = back.query(qcid, tx)
+            back.select_cid(qcid, show=False)
+            if len(cid_list) > 0:
+                # Interact with the query
+                cx = hs.cid2_cx(cid_list[0])
+                if len(qfx_list) > 0:
+                    qfx = qfx_list[0]
+                    mx = res.get_match_index(hs, cx, qfx)
+                    res.interact_chipres(hs, cx, fnum=4, mx=mx)
+                    res.show_nearest_descriptors(hs, qfx)
+                else:
+                    res.interact_chipres(hs, cx, fnum=4)
+        except AssertionError as ex:
+            print(ex)
     # Select on startup commands
     selgxs = params.args.selgxs
     if len(selgxs) > 0:

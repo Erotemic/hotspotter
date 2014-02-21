@@ -727,7 +727,15 @@ class MainWindowBackend(QtCore.QObject):
         # Action -> Query
         #prevBlock = back.front.blockSignals(True)
         print('[**back] query(cid=%r)' % cid)
-        cx = back.get_selected_cx() if cid is None else back.hs.cid2_cx(cid)
+        if cid is None:
+            cx = back.get_selected_cx()
+        else:
+            try:
+                cx = back.hs.cid2_cx(cid)
+            except IndexError as ex:
+                print(ex)
+                msg = 'Query qcid=%d does not exist / is invalid' % cid
+                raise AssertionError(msg)
         print('[**back.query()] cx = %r)' % cx)
         if cx is None:
             back.user_info('Cannot query. No chip selected')

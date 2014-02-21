@@ -8,7 +8,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off, rrr, profile,
- printDBG) = __common__.init(__name__, '[df2]', DEBUG=False, initmpl=True)
+ printDBG) = __common__.init(__name__, '[df2]', DEBUG=True, initmpl=True)
 # Python
 from itertools import izip
 from os.path import splitext, split, join, normpath, exists
@@ -393,7 +393,7 @@ def get_monitor_geometries():
     return monitor_geometries
 
 
-def all_figures_tile(num_rc=(3, 4), wh=730, xy_off=(0, 0), wh_off=(0, 0),
+def all_figures_tile(num_rc=None, wh=400, xy_off=(0, 0), wh_off=(0, 0),
                      row_first=True, no_tile=False, override1=False):
     'Lays out all figures in a grid. if wh is a scalar, a golden ratio is used'
     print('[df2] all_figures_tile()')
@@ -421,26 +421,24 @@ def all_figures_tile(num_rc=(3, 4), wh=730, xy_off=(0, 0), wh_off=(0, 0),
 
     #nFigs = len(all_figures) + len(all_qt4_wins)
 
-    nRows, nCols = num_rc
-
     # Win7 Areo
     win7_sizes = {
         'os_border_x':   20,
         'os_border_y':   35,
         'os_border_h':   30,
         'win_border_x':  17,
-        'win_border_y':  5,
-        'mpl_toolbar_y': 35,
+        'win_border_y':  10,
+        'mpl_toolbar_y': 10,
     }
 
     # Ubuntu (Medeterrainian Dark)
     gnome3_sizes = {
         'os_border_x':    0,
-        'os_border_y':   80,  # for gnome3 title bar
-        'os_border_h':   0,
+        'os_border_y':   35,  # for gnome3 title bar
+        'os_border_h':    0,
         'win_border_x':   5,
-        'win_border_y':   5,
-        'mpl_toolbar_y': 60,
+        'win_border_y':  30,
+        'mpl_toolbar_y':  0,
     }
 
     w, h = wh
@@ -463,8 +461,10 @@ def all_figures_tile(num_rc=(3, 4), wh=730, xy_off=(0, 0), wh_off=(0, 0),
 
     effective_w = w + w_off
     effective_h = h + h_off
+    startx = 0
+    starty = 0
 
-    if True or num_rc is None:
+    if num_rc is None:
         monitor_geometries = get_monitor_geometries()
         printDBG('[df2] monitor_geometries = %r' % (monitor_geometries,))
         geom = monitor_geometries[0]
@@ -480,6 +480,8 @@ def all_figures_tile(num_rc=(3, 4), wh=730, xy_off=(0, 0), wh_off=(0, 0),
 
         nRows = int(avail_height // (effective_h))
         nCols = int(avail_width // (effective_w))
+    else:
+        nRows, nCols = num_rc
 
     printDBG('[df2] Tile all figures: ')
     printDBG('[df2]     wh = %r' % ((w, h),))

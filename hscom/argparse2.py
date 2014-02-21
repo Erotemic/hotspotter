@@ -147,7 +147,9 @@ def database_argparse(parser2):
 def behavior_argparse(parser2):
     # Program behavior
     parser2 = parser2.add_argument_group('Behavior')
-    num_cpus = max(min(4, multiprocessing.cpu_count()), 1)
+    # TODO UNFILTER THIS HERE AND CHANGE PARALLELIZE TO KNOW ABOUT
+    # MEMORY USAGE
+    num_cpus = max(min(6, multiprocessing.cpu_count()), 1)
     num_proc_help = 'default to number of cpus = %d' % (num_cpus)
     parser2.add_int('--num-procs', num_cpus, num_proc_help)
     parser2.add_flag('--serial', help='Forces num_procs=1')

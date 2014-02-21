@@ -36,19 +36,19 @@ gz_chipsize_experiment()
 
 big_experiment()
 {
-    export TEST_NAME="shortlist_test chipsize_test scale_test"
+    export TEST_NAME="shortlist_test chipsize_test scale_test overnight_k"
     export DEV_ARGS="--all-gt-cases --print-colscore -t $TEST_NAME $@"
-
-    python dev.py --db NAUT_Dan $DEV_ARGS  && \
-    python dev.py --db WD_Siva $DEV_ARGS && \
-    python dev.py --db Frogs $DEV_ARGS && \
-    python dev.py --db GZ $DEV_ARGS
+    export DB_LIST="NAUT_Dan WD_Siva PZ_SweatwaterSmall HSDB_zebra_with_mothers GZ_ALL WY_Toads Wildebeast"
+    for DB in $DB_LIST
+    do
+        python dev.py --db $DB $DEV_ARGS
+    done
 }
 
 
 default()
 {
-    export TEST_NAME="shortlist_test chipsize_test scale_test"
+    export TEST_NAME="shortlist_test chipsize_test scale_test "
     export DEV_ARGS="--all-gt-cases --print-colscore -t $TEST_NAME $@"
 
     python dev.py --db NAUT_Dan $DEV_ARGS  && \
@@ -68,6 +68,8 @@ export TEST_TYPE=""
 if [[ $# -gt 0 ]] ; then
     if [[ "$1" = "nightly" ]] ; then
         export TEST_TYPE="nightly"
+    elif [[ "$1" = "big" ]] ; then
+        export TEST_TYPE="big"
     elif [[ "$1" = "continuous" ]] ; then
         export TEST_TYPE="continuous"
     elif [[ "$1" = "experiment" ]] ; then
@@ -86,6 +88,8 @@ elif [[ "$TEST_TYPE" = "experiment" ]] ; then
     run_experiment ${@:2}
 elif [[ "$TEST_TYPE" = "nightly" ]] ; then
     run_nightly ${@:2}
+elif [[ "$TEST_TYPE" = "big" ]] ; then
+    big_experiment ${@:2}
 elif [[ "$TEST_TYPE" = "cleandb" ]] ; then
     clean_databases ${@:2}
 else

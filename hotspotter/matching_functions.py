@@ -82,7 +82,10 @@ class QueryException(Exception):
 
 
 def NoDescriptorsException(hs, qcx):
-    ex = QueryException('Query %r has no descriptors! Please delete it.' % hs.cidstr(qcx))
+    dbname = hs.get_db_name()
+    cidstr = hs.cidstr(qcx)
+    ex = QueryException(('QUERY ERROR IN %s: Query Chip q%s has no descriptors!' +
+                         'Please delete it.') % (dbname, cidstr))
     return ex
 
 
@@ -114,7 +117,14 @@ def nearest_neighbors(hs, qcxs, qdat):
         qfx2_desc = cx2_desc[qcx]
         # Check that we can query this chip
         if len(qfx2_desc) == 0:
-            raise NoDescriptorsException(hs, qcx)
+            # Raise error if strict
+            if '--strict' in sys.argv:
+                raise NoDescriptorsException(hs, qcx)
+            # Assign empty nearest neighbors
+            empty_qfx2_dx   = np.empty((0, K + Knorm), dtype=np.int)
+            empty_qfx2_dist = np.empty((0, K + Knorm), dtype=np.float)
+            qcx2_nns[qcx] = (empty_qfx2_dx, empty_qfx2_dist)
+            continue
         # Find Neareset Neighbors
         (qfx2_dx, qfx2_dist) = flann.nn_index(qfx2_desc, K + Knorm, checks=checks)
         # Store nearest neighbors

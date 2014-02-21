@@ -191,7 +191,7 @@ scale_test = vsmany_best.copy()
 scale_test.update({
     'scale_min': [0, 10, 20],
     'scale_max': [30, 100, 9001],
-    'use_adaptive_scale': [True, False],
+    #'use_adaptive_scale': [True, False],
 })
 
 

@@ -19,31 +19,34 @@ remove_profiles()
     rm *raw.prof
     rm *clean.prof
     rm *.lprof
+    echo "Finshed removing profiles"
 }
 
 echo "Input: $@"
-echo "pyscript: $pyscript"
-echo "line_profile_output: $line_profile_output"
 
 
-if [ "$pyscript" == "clean" ]; then
+if [ "$pyscript" = "clean" ]; then
     remove_profiles
     exit
 fi 
 
+echo "pyscript: $pyscript"
+echo "line_profile_output: $line_profile_output"
 echo "Profiling $pyscript"
 
+export SYSNAME="$(expr substr $(uname -s) 1 10)"
 # Choose one
 export PROFILE_TYPE="kernprof"  # plop or kernprof
 #export PROFILE_TYPE="plop"  # plop or kernprof
+
 
 if [ $PROFILE_TYPE = "plop" ]; then
     python -m plop.collector $@
     echo "http://localhost:8888"
     python -m plop.viewer --datadir=profiles
-else
+elif [ $PROFILE_TYPE = "kernprof" ]; then
     # Line profile the python code w/ command line args
-    if [ "$(expr substr $(uname -s) 1 10)" == "MINGW32_NT" ]; then
+    if [ "$SYSNAME" = "MINGW32_NT" ]; then
         export MINGW_PYEXE=$(python -c "import sys; print(sys.executable)")
         export MINGW_PYDIR=$(python -c "import sys, os; print(os.path.dirname(sys.executable))")
         $MINGW_PYEXE $MINGW_PYDIR/Scripts/kernprof.py -l $@

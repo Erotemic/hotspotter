@@ -15,6 +15,7 @@ import experiment_configs
 from hotspotter import Config
 from hotspotter import DataStructures as ds
 from hotspotter import match_chips3 as mc3
+from hotspotter import matching_functions as mf
 from hscom import fileio as io
 from hscom import helpers as util
 from hscom import latex_formater
@@ -132,76 +133,120 @@ def format_uid_list(uid_list):
 
 
 #---------------
-# Display Test Results
+# Big Test Cache
 #-----------
-# Run configuration for each query
-def get_test_results(hs, qcxs, qdat, cfgx=0, nCfg=1, nocache_testres=False,
-                     test_results_verbosity=2):
-    nQuery = len(qcxs)
-    dcxs = hs.get_indexed_sample()
+
+def load_cached_test_results(hs, qdat, qcxs, dcxs, nocache_testres, test_results_verbosity):
     test_uid = qdat.get_query_uid(hs, qcxs)
     cache_dir = join(hs.dirs.cache_dir, 'experiment_harness_results')
-    io_kwargs = dict(dpath=cache_dir, fname='test_results', uid=test_uid,
-                     ext='.cPkl')
+    io_kwargs = {'dpath': cache_dir,
+                 'fname': 'test_results',
+                 'uid': test_uid,
+                 'ext': '.cPkl'}
 
     if test_results_verbosity == 2:
         print('[harn] test_uid = %r' % test_uid)
-    #io.print_on()
 
     # High level caching
     if not params.args.nocache_query and (not nocache_testres):
         qx2_bestranks = io.smart_load(**io_kwargs)
         if qx2_bestranks is None:
-            print('[harn] Cache returned None!')
+            print('[harn] qx2_bestranks cache returned None!')
         elif len(qx2_bestranks) != len(qcxs):
             print('[harn] Re-Caching qx2_bestranks')
-        elif not qx2_bestranks is None:
-            return qx2_bestranks, [[{0: None}]] * nQuery
-        #raise Exception('cannot be here')
+        else:
+            return qx2_bestranks
 
-    nPrevQ = nQuery * cfgx
-    qx2_bestranks = []
-    qx2_reslist = []
 
-    # Make progress message
-    msg = textwrap.dedent('''
-    ---------------------
-    [harn] TEST %d/%d
-    ---------------------''')
-    mark_progress = util.simple_progres_func(test_results_verbosity, msg, '.')
-    total = nQuery * nCfg
-    # Perform queries
-    TEST_INFO = True
-    # Query Chip / Row Loop
-    for qx, qcx in enumerate(qcxs):
-        count = qx + nPrevQ + 1
-        mark_progress(count, total)
-        if TEST_INFO:
-            print('qcx=%r. quid=%r' % (qcx, qdat.get_uid()))
-        res_list = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
-        qx2_reslist += [res_list]
-        assert len(res_list) == 1
-        bestranks = []
-        for qcx2_res in res_list:
-            assert len(qcx2_res) == 1
-            res = qcx2_res[qcx]
-            gt_ranks = res.get_gt_ranks(hs=hs)
-            #print('[harn] cx_ranks(/%4r) = %r' % (nChips, gt_ranks))
-            #print('[harn] cx_ranks(/%4r) = %r' % (NMultiNames, gt_ranks))
-            #print('ns_ranks(/%4r) = %r' % (nNames, gt_ranks))
-            _bestrank = -1 if len(gt_ranks) == 0 else min(gt_ranks)
-            bestranks += [_bestrank]
-        # record metadata
-        qx2_bestranks += [bestranks]
-        if qcx % 4 == 0:
-            sys.stdout.flush()
-    print('')
-    qx2_bestranks = np.array(qx2_bestranks)
-    # High level caching
+def cache_test_results(qx2_bestranks, hs, qdat, qcxs, dcxs):
+    test_uid = qdat.get_query_uid(hs, qcxs)
+    cache_dir = join(hs.dirs.cache_dir, 'experiment_harness_results')
     util.ensuredir(cache_dir)
+    io_kwargs = {'dpath': cache_dir,
+                 'fname': 'test_results',
+                 'uid': test_uid,
+                 'ext': '.cPkl'}
     io.smart_save(qx2_bestranks, **io_kwargs)
 
-    return qx2_bestranks, qx2_reslist
+
+#---------------
+# Display Test Results
+#-----------
+# Run configuration for each query
+@profile
+def get_test_results2(hs, qcxs, qdat, cfgx=0, nCfg=1, nocache_testres=False,
+                      test_results_verbosity=2):
+    TEST_INFO = True
+    nQuery = len(qcxs)
+    dcxs = hs.get_indexed_sample()
+    qx2_bestranks = load_cached_test_results(hs, qdat, qcxs, dcxs,
+                                             nocache_testres, test_results_verbosity)
+    if qx2_bestranks is not None:
+        return qx2_bestranks
+
+    mc3.ensure_nn_index(hs, qdat, dcxs)
+    qx2_bestranks = []
+
+    # Perform queries
+    BATCH_MODE = util.get_flag('--batch', False)
+    if BATCH_MODE:
+        qx2_bestranks = [None for qcx in qcxs]
+        # Query Chip / Row Loop
+        res_list = mc3.execute_query_safe(hs, qdat, qcxs, dcxs)
+        assert len(res_list) == 1
+        qcx2_res = res_list[0]
+        qcx2_bestranks = {}
+        for qcx, res in qcx2_res.iteritems():
+            gt_ranks = res.get_gt_ranks(hs=hs)
+            _rank = -1 if len(gt_ranks) == 0 else min(gt_ranks)
+            qcx2_bestranks[qcx] = _rank
+        for qx, qcx in enumerate(qcxs):
+            qx2_bestranks[qx] = [qcx2_bestranks[qcx]]
+    else:
+        # Make progress message
+        msg = textwrap.dedent('''
+        ---------------------
+        [harn] TEST %d/%d
+        ---------------------''')
+        mark_progress = util.simple_progres_func(test_results_verbosity, msg, '.')
+        total = nQuery * nCfg
+        nPrevQ = nQuery * cfgx
+        # Query Chip / Row Loop
+        for qx, qcx in enumerate(qcxs):
+            count = qx + nPrevQ + 1
+            mark_progress(count, total)
+            if TEST_INFO:
+                print('qcx=%r. quid=%r' % (qcx, qdat.get_uid()))
+            try:
+                res_list = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
+            except mf.QueryException as ex:
+                print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                print('Harness caught Query Exception: ')
+                print(ex)
+                print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                if params.args.strict:
+                    raise
+                else:
+                    qx2_bestranks += [[-1]]
+                    continue
+
+            assert len(res_list) == 1
+            qranks = []
+            for qcx2_res in res_list:
+                assert len(qcx2_res) == 1
+                res = qcx2_res[qcx]
+                gt_ranks = res.get_gt_ranks(hs=hs)
+                _rank = -1 if len(gt_ranks) == 0 else min(gt_ranks)
+                qranks.append(_rank)
+            # record metadata
+            qx2_bestranks.append(qranks)
+            if qcx % 4 == 0:
+                sys.stdout.flush()
+        print('')
+    qx2_bestranks = np.array(qx2_bestranks)
+    # High level caching
+    cache_test_results(qx2_bestranks, hs, qdat, qcxs, dcxs)
+    return qx2_bestranks
 
 
 def get_varied_params_list(test_cfg_name_list):
@@ -237,6 +282,7 @@ def get_cfg_list(hs, test_cfg_name_list):
 
 #-----------
 @util.indent_decor('[harn]')
+@profile
 def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     # Test Each configuration
@@ -264,6 +310,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     mat_list = []
     qdat     = ds.QueryData()
 
+    # TODO Add to argparse2
     nocache_testres =  util.get_flag('--nocache-testres', False)
 
     test_results_verbosity = 2 - __QUIET__
@@ -278,6 +325,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     uid2_query_cfg = {}
 
     nomemory = params.args.nomemory
+    dbname = hs.get_db_name()
 
     # Run each test configuration
     # Query Config / Col Loop
@@ -286,22 +334,15 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         mark_progress(cfgx + 1, nCfg)
         # Set data to the current config
         qdat = mc3.prep_query_request(hs, qdat, qcxs=qcx_list, dcxs=dcxs, query_cfg=query_cfg)
-        mc3.ensure_nn_index(hs, qdat, dcxs)
         uid2_query_cfg[qdat.get_uid()] = query_cfg
         # Run the test / read cache
-        with util.Indenter2('[cfg %d/%d]' % (cfgx, nCfg)):
-            qx2_bestranks, qx2_reslist = get_test_results(hs, qcx_list, qdat, cfgx,
-                                                          nCfg, nocache_testres,
-                                                          test_results_verbosity)
+        with util.Indenter2('[%s cfg %d/%d]' % (dbname, cfgx, nCfg)):
+            qx2_bestranks = get_test_results2(hs, qcx_list, qdat, cfgx,
+                                              nCfg, nocache_testres,
+                                              test_results_verbosity)
         if not nomemory:
             mat_list.append(qx2_bestranks)
         # Store the results
-        #for qx, reslist in enumerate(qx2_reslist):
-            #assert len(reslist) == 1
-            #qcx2_res = reslist[0]
-            #assert len(qcx2_res) == 1
-            #res = qcx2_res.values()[0]
-            #rc2_res[qx, cfgx] = res
 
     if not __QUIET__:
         print('[harn] Finished testing parameters')
@@ -310,10 +351,11 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         return
     #--------------------
     # Print Best Results
-    rank_mat = np.hstack(mat_list)
+    rank_mat = np.hstack(mat_list)  # concatenate each query rank across configs
     # Label the rank matrix:
     _colxs = np.arange(nCfg)
-    lbld_mat = np.vstack([_colxs, rank_mat])
+    lbld_mat = util.debug_vstack([_colxs, rank_mat])
+
     _rowxs = np.arange(nQuery + 1).reshape(nQuery + 1, 1) - 1
     lbld_mat = np.hstack([_rowxs, lbld_mat])
     #------------

@@ -1204,6 +1204,31 @@ def file_bytes(fpath):
     return os.stat(fpath).st_size
 
 
+def byte_str2(nBytes):
+    if nBytes < 2.0 ** 10:
+        return byte_str(nBytes, 'KB')
+    if nBytes < 2.0 ** 20:
+        return byte_str(nBytes, 'KB')
+    if nBytes < 2.0 ** 30:
+        return byte_str(nBytes, 'MB')
+    else:
+        return byte_str(nBytes, 'GB')
+
+
+def byte_str(nBytes, unit='bytes'):
+    if unit.lower().startswith('b'):
+        nUnit = nBytes
+    elif unit.lower().startswith('k'):
+        nUnit =  nBytes / (2.0 ** 10)
+    elif unit.lower().startswith('m'):
+        nUnit =  nBytes / (2.0 ** 20)
+    elif unit.lower().startswith('h'):
+        nUnit = nBytes / (2.0 ** 30)
+    else:
+        raise NotImplemented('unknown unit=%r' % unit)
+    return '%.2f %s' % (nUnit, unit)
+
+
 def file_megabytes(fpath):
     return os.stat(fpath).st_size / (2.0 ** 20)
 
@@ -2198,3 +2223,63 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
     #print(ret)
     sys.stdout.flush()
     return ret
+
+
+def debug_npstack(stacktup):
+    print('Debugging numpy [hv]stack:')
+    print('len(stacktup) = %r' % len(stacktup))
+    for count, item in enumerate(stacktup):
+        if isinstance(item, np.ndarray):
+            print(' * item[%d].shape = %r' % (count, item.shape))
+        elif isinstance(item, list) or isinstance(item, tuple):
+            print(' * len(item[%d]) = %d' % (count, len(item)))
+            print(' * DEBUG LIST')
+            with Indenter2(' * '):
+                debug_list(item)
+        else:
+            print(' *  type(item[%d]) = %r' % (count, type(item)))
+
+
+def debug_list(list_):
+    dbgmessage = []
+    append = dbgmessage.append
+    append('debug_list')
+    dim2 = None
+    if all([is_listlike(item) for item in list_]):
+        append(' * list items are all listlike')
+        all_lens = [len(item) for item in list_]
+        if list_eq(all_lens):
+            dim2 = all_lens[0]
+            append(' * uniform lens=%d' % dim2)
+        else:
+            append(' * nonuniform lens = %r' % np.unique(all_lens).tolist())
+    else:
+        all_types = [type(item) for item in list_]
+        if list_eq(all_types):
+            append(' * uniform types=%r' % all_types[0])
+        else:
+            append(' * nonuniform types: %r' % np.unique(all_types).tolist())
+    print('\n'.join(dbgmessage))
+    return dim2
+
+
+def is_listlike(obj):
+    return isinstance(obj, list) or isinstance(obj, tuple) or isinstance(obj, np.ndarray)
+
+
+def debug_hstack(stacktup):
+    try:
+        return np.hstack(stacktup)
+    except ValueError as ex:
+        print('ValueError in debug_hstack: ' + str(ex))
+        debug_npstack(stacktup)
+        raise
+
+
+def debug_vstack(stacktup):
+    try:
+        return np.vstack(stacktup)
+    except ValueError as ex:
+        print('ValueError in debug_vstack: ' + str(ex))
+        debug_npstack(stacktup)
+        raise

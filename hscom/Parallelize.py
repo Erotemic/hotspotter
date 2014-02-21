@@ -126,7 +126,12 @@ def parallelize_tasks(task_list, num_procs, task_lbl='', verbose=True):
     '''
     Used for embarissingly parallel tasks, which write output to disk
     '''
+    import resource
     nTasks = len(task_list)
+    used_memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    print('[parallel] Total system memory: %d bytes' % used_memory * num_procs)
+    print('[parallel] Current memory usage: %d bytes' % used_memory)
+    print('[parallel] Future memory usage: %d bytes' % used_memory * num_procs)
     msg = ('Distributing %d %s tasks to %d processes' % (nTasks, task_lbl, num_procs)
            if num_procs > 1 else
            'Executing %d %s tasks in serial' % (nTasks, task_lbl))

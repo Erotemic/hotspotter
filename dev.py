@@ -17,11 +17,6 @@ import numpy as np
 #import cv2
 # HotSpotter
 #from hotspotter import spatial_verification2 as sv2
-from hotspotter import DataStructures as ds
-from hotspotter import match_chips3 as mc3
-from hotspotter import matching_functions as mf
-from hotspotter import report_results2 as rr2
-from hotspotter import voting_rules2 as vr2
 from hscom import params
 from hscom import helpers as util
 from hscom import latex_formater
@@ -30,11 +25,16 @@ from hsviz import draw_func2 as df2
 from hsviz import viz
 from hsviz import allres_viz
 from hscom import fileio as io
+from hotspotter import DataStructures as ds
 from hotspotter import HotSpotterAPI as api
-from hotspotter import load_data2 as ld2
 from hotspotter import QueryResult as qr
 from hotspotter import chip_compute2 as cc2
 from hotspotter import feature_compute2 as fc2
+from hotspotter import load_data2 as ld2
+from hotspotter import match_chips3 as mc3
+from hotspotter import matching_functions as mf
+from hotspotter import report_results2 as rr2
+from hotspotter import voting_rules2 as vr2
 from hsdev import test_api
 from hsdev import dev_stats
 from hsdev import experiment_harness

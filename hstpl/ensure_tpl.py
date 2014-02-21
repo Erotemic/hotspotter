@@ -79,7 +79,8 @@ windows = [
 ]
 
 other = [
-    'plop'  # python low overhead profiler
+    'virtualenv',  # on windnows virtualenvwrapper-powershell
+    'plop',  # python low overhead profiler
     'sympy',
     'supreme'  # super resolution
     'pytz',  # Timezones

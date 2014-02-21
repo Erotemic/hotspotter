@@ -361,8 +361,8 @@ def batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
 
 
 # Main Script
-@profile
 @util.indent_decor('[cc]')
+@profile
 def load_chips(hs, cx_list=None, force_compute=False, **kwargs):
     print('=============================')
     print('[cc2] Precomputing chips and loading chip paths: %r' % hs.get_db_name())

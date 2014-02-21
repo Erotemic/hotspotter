@@ -35,6 +35,7 @@ echo "Profiling $pyscript"
 
 # Choose one
 export PROFILE_TYPE="kernprof"  # plop or kernprof
+#export PROFILE_TYPE="plop"  # plop or kernprof
 
 if [ $PROFILE_TYPE = "plop" ]; then
     python -m plop.collector $@

@@ -382,8 +382,8 @@ def show_open_db_dlg(parent=None):
     return opendb_ui, parent
 
 
-@profile
 @util.indent_decor('[qt-init]')
+@profile
 def init_qtapp():
     global IS_INIT
     global IS_ROOT
@@ -406,15 +406,15 @@ def init_qtapp():
     return app, is_root
 
 
-@profile
 @util.indent_decor('[qt-exit]')
+@profile
 def exit_application():
     print('[*guitools] exiting application')
     QtGui.qApp.quit()
 
 
-@profile
 @util.indent_decor('[qt-main]')
+@profile
 def run_main_loop(app, is_root=True, back=None, **kwargs):
     if back is not None:
         print('[*guitools] setting active window')

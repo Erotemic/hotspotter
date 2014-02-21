@@ -496,8 +496,8 @@ class HotSpotter(object):
         hs.clear_lru_caches()
         print('[hs] unload_all() DONE')
 
-    @profile
     @util.indent_decor('[unload_cx]')
+    @profile
     def unload_cxdata(hs, cx):
         'unloads features and chips. not tables'
         print('[hs] unload_cxdata(cx=%r)' % cx)
@@ -516,8 +516,8 @@ class HotSpotter(object):
             util.ensure_list_size(list_, cx + 1)
             list_[cx] = None
 
-    @profile
     @util.indent_decor('[hs.delete_ciddata]')
+    @profile
     def delete_ciddata(hs, cid):
         cid_str_list = ['cid%d_' % cid, 'qcid=%d.npz' % cid, ]
         hs.clear_lru_caches()
@@ -527,8 +527,8 @@ class HotSpotter(object):
             util.remove_files_in_dir(dpath, pat, recursive=True,
                                      verbose=True, dryrun=False)
 
-    @profile
     @util.indent_decor('[hs.delete_cxdata]')
+    @profile
     def delete_cxdata(hs, cx):
         'deletes features and chips. not tables'
         hs.unload_cxdata(cx)
@@ -566,8 +566,8 @@ class HotSpotter(object):
         gt_cxs = hs.get_other_indexed_cxs(qcx)
         return hs.query_cxs(qcx, gt_cxs, **kwargs)
 
-    @profile
     @util.indent_decor('[hs.query]')
+    @profile
     def query_cxs(hs, qcx, cxs, query_cfg=None, **kwargs):
         'wrapper that restricts query to only known groundtruth'
         print('[hs] query_cxs()')

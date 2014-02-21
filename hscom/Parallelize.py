@@ -10,7 +10,7 @@ import multiprocessing
 import os
 import sys
 # Hotspotter
-import helpers
+import helpers as util
 
 
 @profile
@@ -126,16 +126,11 @@ def parallelize_tasks(task_list, num_procs, task_lbl='', verbose=True):
     '''
     Used for embarissingly parallel tasks, which write output to disk
     '''
-    import resource
     nTasks = len(task_list)
-    used_memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    print('[parallel] Total system memory: %d bytes' % used_memory * num_procs)
-    print('[parallel] Current memory usage: %d bytes' % used_memory)
-    print('[parallel] Future memory usage: %d bytes' % used_memory * num_procs)
     msg = ('Distributing %d %s tasks to %d processes' % (nTasks, task_lbl, num_procs)
            if num_procs > 1 else
            'Executing %d %s tasks in serial' % (nTasks, task_lbl))
-    with helpers.Timer(msg=msg):
+    with util.Timer(msg=msg):
         if num_procs > 1:
             # Parallelize tasks
             return _compute_in_parallel(task_list, num_procs, task_lbl, verbose)
@@ -149,7 +144,7 @@ def _compute_in_serial(task_list, task_lbl='', verbose=True):
     result_list = []
     nTasks = len(task_list)
     if verbose:
-        mark_progress, end_prog = helpers.progress_func(nTasks, lbl=task_lbl)
+        mark_progress, end_prog = util.progress_func(nTasks, lbl=task_lbl)
         # Compute each task
         for count, (fn, args) in enumerate(task_list):
             mark_progress(count)
@@ -190,7 +185,7 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     sys.stdout.flush()
     result_list = []
     if verbose:
-        mark_progress, end_prog = helpers.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
+        mark_progress, end_prog = util.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
         for count in xrange(len(task_list)):
             mark_progress(count)
             printDBG('[parallel] done_queue.get()')

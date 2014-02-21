@@ -151,7 +151,7 @@ class SpatialVerifyConfig(ConfigBase):
         sv_cfg.scale_thresh_low = .5
         sv_cfg.scale_thresh_high = 2
         sv_cfg.xy_thresh = .01
-        sv_cfg.nShortlist = 1000
+        sv_cfg.nShortlist = 50
         sv_cfg.prescore_method = 'csum'
         sv_cfg.use_chip_extent = False
         sv_cfg.just_affine = False
@@ -194,7 +194,7 @@ class AggregateConfig(ConfigBase):
             'coverage': 'coverage',
         }
         # For Placket-Luce
-        agg_cfg.max_alts = 1000
+        agg_cfg.max_alts = 50
         #-----
         # User update
         agg_cfg.update(**kwargs)
@@ -345,7 +345,7 @@ class FeatureConfig(ConfigBase):
 class ChipConfig(ConfigBase):
     def __init__(cc_cfg, **kwargs):
         super(ChipConfig, cc_cfg).__init__(name='chip_cfg')
-        cc_cfg.chip_sqrt_area = 750
+        cc_cfg.chip_sqrt_area = 450
         cc_cfg.grabcut         = False
         cc_cfg.histeq          = False
         cc_cfg.adapteq         = False

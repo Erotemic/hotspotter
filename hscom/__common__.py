@@ -78,10 +78,25 @@ except NameError:
  #|                      the record is emitted
 
 root_logger = None
+__STDOUT__ = sys.stdout
 HS_PRINT_FUNCTION = __builtin__.print
 HS_DBG_PRINT_FUNCTION = __builtin__.print
-HS_WRITE_FUNCTION = sys.stdout.write
-HS_FLUSH_FUNCTION = sys.stdout.flush
+HS_WRITE_FUNCTION = __STDOUT__.write
+HS_FLUSH_FUNCTION = __STDOUT__.flush
+
+
+def add_logging_handler(handler, default_format=True):
+    global root_logger
+    if default_format:
+        logformat = '[%(asctime)s]%(message)s'
+        timeformat = '%H:%M:%S'
+        # create formatter and add it to the handlers
+        #logformat = '%Y-%m-%d %H:%M:%S'
+        #logformat = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        formatter = logging.Formatter(logformat, timeformat)
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(formatter)
+        root_logger.addHandler(handler)
 
 
 def create_logger():
@@ -98,21 +113,11 @@ def create_logger():
         # create file handler which logs even debug messages
         #fh = logging.handlers.WatchedFileHandler(log_fpath)
         fh = logging.FileHandler(log_fpath)
-        ch = logging.StreamHandler()
-        fh.setLevel(logging.DEBUG)
-        ch.setLevel(logging.DEBUG)
-        # create formatter and add it to the handlers
-        #logformat = '%Y-%m-%d %H:%M:%S'
-        #logformat = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        logformat = '[%(asctime)s]%(message)s'
-        timeformat = '%H:%M:%S'
-        formatter = logging.Formatter(logformat, timeformat)
-        ch.setFormatter(formatter)
-        fh.setFormatter(formatter)
-        # add the handlers to logger
-        root_logger.addHandler(ch)
-        root_logger.addHandler(fh)
+        ch = logging.StreamHandler(__STDOUT__)
+        add_logging_handler(fh)
+        add_logging_handler(ch)
         root_logger.propagate = False
+        root_logger.setLevel(logging.DEBUG)
         # print success
         HS_WRITE_FUNCTION = lambda msg: root_logger.info(msg)
         HS_PRINT_FUNCTION = lambda msg: root_logger.info(msg)
@@ -183,7 +188,8 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
         module.print_ = log_print_
 
     def print_off():
-        __MODULE_LIST__.remove(module)  # SO HACKY
+        if module in __MODULE_LIST__:
+            __MODULE_LIST__.remove(module)  # SO HACKY
         module.print = noprint
         module.print_ = noprint
 

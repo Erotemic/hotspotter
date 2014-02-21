@@ -74,7 +74,9 @@ def __ArgGaurd(func, default=False):
 
     def GaurdWrapper(*args, **kwargs):
         if util.get_flag(flag, default):
-            return func(*args, **kwargs)
+            indent_lbl = flag.replace('--', '').replace('print-', '')
+            with util.Indenter2('[%s]' % indent_lbl):
+                return func(*args, **kwargs)
         else:
             if not __QUIET__:
                 print('\n~~~ %s ~~~\n' % flag)
@@ -281,9 +283,13 @@ def get_cfg_list(hs, test_cfg_name_list):
 
 
 #-----------
-@util.indent_decor('[harn]')
+#@util.indent_decor('[harn]')
 @profile
 def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
+    if __QUIET__:
+        mc3.print_off()
+        from hotspotter import HotSpotterAPI as api
+        api.print_off()
 
     # Test Each configuration
     if not __QUIET__:
@@ -313,25 +319,27 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     # TODO Add to argparse2
     nocache_testres =  util.get_flag('--nocache-testres', False)
 
-    test_results_verbosity = 2 - __QUIET__
+    test_results_verbosity = 2 - (2 * __QUIET__)
     test_cfg_verbosity = 2
 
+    dbname = hs.get_db_name()
+    testnameid = dbname + ' ' + str(test_cfg_name_list)
     msg = textwrap.dedent('''
-    ---------------------')
-    [harn] TEST_CFG %d/%d'
+    ---------------------
+    [harn] TEST_CFG %d/%d: ''' + testnameid + '''
     ---------------------''')
     mark_progress = util.simple_progres_func(test_cfg_verbosity, msg, '+')
 
     uid2_query_cfg = {}
 
     nomemory = params.args.nomemory
-    dbname = hs.get_db_name()
 
     # Run each test configuration
     # Query Config / Col Loop
     dcxs = hs.get_indexed_sample()
     for cfgx, query_cfg in enumerate(cfg_list):
-        mark_progress(cfgx + 1, nCfg)
+        if not __QUIET__:
+            mark_progress(cfgx + 1, nCfg)
         # Set data to the current config
         qdat = mc3.prep_query_request(hs, qdat, qcxs=qcx_list, dcxs=dcxs, query_cfg=query_cfg)
         uid2_query_cfg[qdat.get_uid()] = query_cfg
@@ -381,7 +389,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     @ArgGaurdFalse
     def print_rowlbl():
         print('=====================')
-        print('[harn] Row/Query Labels')
+        print('[harn] Row/Query Labels: %s' % testnameid)
         print('=====================')
         print('[harn] queries:\n%s' % '\n'.join(qx2_lbl))
         print('--- /Row/Query Labels ---')
@@ -393,7 +401,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     def print_collbl():
         print('')
         print('=====================')
-        print('[harn] Col/Config Labels')
+        print('[harn] Col/Config Labels: %s' % testnameid)
         print('=====================')
         print('[harn] configs:\n%s' % '\n'.join(cfgx2_lbl))
         print('--- /Col/Config Labels ---')
@@ -428,7 +436,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     def print_rowscore():
         print('')
         print('=======================')
-        print('[harn] Scores per Query')
+        print('[harn] Scores per Query: %s' % testnameid)
         print('=======================')
         for qx in xrange(nQuery):
             bestCFG_X = qx2_argmin_rank[qx]
@@ -449,7 +457,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     @ArgGaurdFalse
     def print_hardcase():
         print('===')
-        print('--- hard new_hardtup_list (w.r.t these configs) ---')
+        print('--- hard new_hardtup_list (w.r.t these configs): %s' % testnameid)
         print('\n'.join(map(repr, new_hardtup_list)))
         print('There are %d hard cases ' % len(new_hardtup_list))
         print(sorted([x[0] for x in new_hardtup_list]))
@@ -459,7 +467,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     @ArgGaurdFalse
     def echo_hardcase():
         print('====')
-        print('--- hardcase commandline ---')
+        print('--- hardcase commandline: %s' % testnameid)
         hardcids_str = ' '.join(map(str, ['    ', '--qcid'] + new_qcid_list))
         print(hardcids_str)
         print('--- /Echo Hardcase ---')
@@ -481,7 +489,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     def print_colscore():
         print('')
         print('==================')
-        print('[harn] Scores per Config')
+        print('[harn] Scores per Config: %s' % testnameid)
         print('==================')
         for cfgx in xrange(nCfg):
             print('[score] %s' % (cfgx2_lbl[cfgx]))
@@ -497,7 +505,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     def print_latexsum():
         print('')
         print('==========================')
-        print('[harn] LaTeX')
+        print('[harn] LaTeX: %s' % testnameid)
         print('==========================')
         # Create configuration latex table
         criteria_lbls = ['#ranks < %d' % X for X in X_list]
@@ -538,7 +546,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     def print_bestcfg():
         print('')
         print('==========================')
-        print('[harn] Best Configurations')
+        print('[harn] Best Configurations: %s' % testnameid)
         print('==========================')
         # print each configs scores less than X=thresh
         for X, cfgx2_nLessX in nLessX_dict.iteritems():
@@ -565,9 +573,10 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     @ArgGaurdFalse
     def print_rankmat():
         print('')
-        print('[harn]-------------')
-        print('[harn] nRows=%r, nCols=%r' % lbld_mat.shape)
-        print('[harn] labled rank matrix: rows=queries, cols=cfgs:')
+        print('-------------')
+        print('RankMat: %s' % testnameid)
+        print(' nRows=%r, nCols=%r' % lbld_mat.shape)
+        print(' labled rank matrix: rows=queries, cols=cfgs:')
         #np.set_printoptions(threshold=5000, linewidth=5000, precision=5)
         with util.NpPrintOpts(threshold=5000, linewidth=5000, precision=5):
             print(lbld_mat)
@@ -575,12 +584,14 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     print_rankmat()
 
     #------------
-    print('')
-    print('+===========================')
-    print('| [cfg*] SUMMARY       ')
-    print('|---------------------------')
-    print(util.joins('\n| ', best_rankscore_summary))
-    print('+===========================')
+    sumstrs = []
+    sumstrs.append('')
+    sumstrs.append('||===========================')
+    sumstrs.append('|| [cfg*] SUMMARY: %s' % testnameid)
+    sumstrs.append('||---------------------------')
+    sumstrs.append(util.joins('\n|| ', best_rankscore_summary))
+    sumstrs.append('||===========================')
+    print('\n' + '\n'.join(sumstrs) + '\n')
     #print('--- /SUMMARY ---')
 
     # Draw results

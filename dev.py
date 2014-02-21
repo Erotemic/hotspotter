@@ -494,7 +494,10 @@ def get_seperatbility(hs, qcx2_res):
 
 # Driver Function
 def run_investigations(hs, qcx_list):
-    print('\n========== RUN INVESTIGATIONS =============')
+    print('\n\n')
+    print('==========================')
+    print('RUN INVESTIGATIONS %s' % hs.get_db_name())
+    print('==========================')
     input_test_list = params.args.tests[:]
     print('[dev] input_test_list = %r' % (input_test_list,))
     fnum = 1

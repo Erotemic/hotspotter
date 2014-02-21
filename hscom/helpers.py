@@ -1222,10 +1222,10 @@ def byte_str(nBytes, unit='bytes'):
         nUnit =  nBytes / (2.0 ** 10)
     elif unit.lower().startswith('m'):
         nUnit =  nBytes / (2.0 ** 20)
-    elif unit.lower().startswith('h'):
+    elif unit.lower().startswith('g'):
         nUnit = nBytes / (2.0 ** 30)
     else:
-        raise NotImplemented('unknown unit=%r' % unit)
+        raise NotImplementedError('unknown nBytes=%r unit=%r' % (nBytes, unit))
     return '%.2f %s' % (nUnit, unit)
 
 

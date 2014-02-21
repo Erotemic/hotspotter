@@ -52,6 +52,36 @@ def csv_sanatize(str_):
 #=================
 # Stream Stealer
 #=================
+import logging
+
+
+class GUILoggingSender(QtCore.QObject):
+    write_ = QtCore.pyqtSignal(str)
+
+    def __init__(self, front):
+        super(GUILoggingSender, self).__init__()
+        self.write_.connect(front.gui_write)
+
+    def write_gui(self, msg):
+        self.write_.emit(str(msg))
+
+
+class GUILoggingHandler(logging.StreamHandler):
+    """
+    A handler class which sends messages to to a connected QSlot
+    """
+    def __init__(self, front):
+        super(GUILoggingHandler, self).__init__()
+        self.sender = GUILoggingSender(front)
+
+    def emit(self, record):
+        try:
+            msg = self.format(record) + '\n'
+            self.sender.write_.emit(msg)
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)
 
 
 class StreamStealer(QtCore.QObject):
@@ -118,7 +148,11 @@ def _steal_stdout(front):
     print('[front] stealing standard out')
     if front.ostream is None:
         # Connect a StreamStealer object to the GUI output window
-        front.ostream = StreamStealer(front, share=not noshare)
+        if '--nologging' in sys.argv:
+            front.ostream = StreamStealer(front, share=not noshare)
+        else:
+            front.gui_logging_handler = GUILoggingHandler(front)
+            __common__.add_logging_handler(front.gui_logging_handler)
     else:
         print('[front] stream already stolen')
 
@@ -292,6 +326,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         #print('[*front] creating frontend')
         front.prev_tbl_item = None
         front.ostream = None
+        front.gui_logging_handler = None
         front.back = back
         front.ui = init_ui(front)
         # Programatially Defined Actions

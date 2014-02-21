@@ -21,6 +21,21 @@ clean_databases()
 
 run_experiment()
 {
+    gz_chipsize_experiment $@
+}
+
+gz_chipsize_experiment()
+{
+    export GZ_HARD="--qcid 140 183 184 231 253 276 277 287 289 306 311 316 329
+    339 340 425 430 435 436 441 442 443 444 445 446 450 451 453 454 456 460 463
+    465 501 550 553 589 661 662 681 694 720 786 802 803 812 815 817 838 908 941
+    981 1043 1044 1045 1046 1047"
+
+    python dev.py --db GZ --print-colscore -t chipsize_test --all-gt-cases $@
+}
+
+big_experiment()
+{
     export TEST_NAME="shortlist_test chipsize_test scale_test"
     export DEV_ARGS="--all-gt-cases --print-colscore -t $TEST_NAME $@"
 

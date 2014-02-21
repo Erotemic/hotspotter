@@ -110,12 +110,15 @@ vsmany_best = {
     'sv_on':           [True],  # True, False],
     'score_method':    ['csum'],  # 'bordaw', 'topk', 'topkw'],  # , 'nsum', 'borda', 'topk', 'nunique']
     'max_alts':        [1000],
+    'chip_sqrt_area':  [450],
 }
 best = vsmany_best
 
+
+# 450 works the best on GZ
 chipsize_test = vsmany_best.copy()
 chipsize_test.update({
-    'chip_sqrt_area':  [400, 500, 750],
+    'chip_sqrt_area':  [400, 450, 500, 600, 750],
 })
 
 

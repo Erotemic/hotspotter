@@ -4,6 +4,23 @@ from hscom import __common__
  profile, printDBG) = __common__.init(__name__, '[tapi]', DEBUG=False)
 
 
+def signal_reset():
+    import signal
+    signal.signal(signal.SIGINT, signal.SIG_DFL)  # reset ctrl+c behavior
+
+
+def signal_set():
+    import signal
+    signal.signal(signal.SIGINT, on_ctrl_c)
+
+
+def on_ctrl_c(signal, frame):
+    import sys
+    print('Caught ctrl+c')
+    print('Hotspotter parent process killed by ctrl+c')
+    sys.exit(0)
+
+
 def parse_arguments(defaultdb, usedbcache):
     from hscom import argparse2
     from hscom import params

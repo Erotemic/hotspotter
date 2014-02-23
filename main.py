@@ -17,23 +17,6 @@ def dependencies_for_myprogram():
     from scipy.special import _ufuncs_cxx  # NOQA
 
 
-def on_ctrl_c(signal, frame):
-    import sys
-    print('Caught ctrl+c')
-    print('Hotspotter parent process killed by ctrl+c')
-    sys.exit(0)
-
-
-def signal_reset():
-    import signal
-    signal.signal(signal.SIGINT, signal.SIG_DFL)  # reset ctrl+c behavior
-
-
-def signal_set():
-    import signal
-    signal.signal(signal.SIGINT, on_ctrl_c)
-
-
 def postload_args_process(hs, back):
     from hscom import params
     # --- Run Startup Commands ---
@@ -77,20 +60,7 @@ def postload_args_process(hs, back):
     if len(selcids) > 0:
         selcxs = hs.cid2_cx(selcids)
         back.select_cx(selcxs[0])
-    return res
-
-
-def imports():
-    pass
-    # TODO: Rename this to something better
-    #from hotspotter import load_data2 as ld2
-    #from hsgui import guiback
-    #from hsgui import guifront
-    #from hsviz import draw_func2 as df2
-    #ld2.print_off()
-    #guiback.print_off()
-    #guifront.print_off()
-    #df2.print_off()
+    return locals()
 
 
 #==================
@@ -106,14 +76,14 @@ if __name__ == '__main__':
     from hsdev import test_api
     print('main.py')
     # Listen for ctrl+c
-    signal_set()
+    test_api.signal_set()
     # Run qt app
     app, is_root = guitools.init_qtapp()
     # Run main script with backend
-
     hs, back = test_api.main(defaultdb=None, preload=False, app=app)
     # --- Run Startup Commands ---
-    res = postload_args_process(hs, back)
+    postload_locals = postload_args_process(hs, back)
+    res = postload_locals['res']
     # Connect database to the back gui
     #app.setActiveWindow(back.front)
 
@@ -163,4 +133,4 @@ if __name__ == '__main__':
         # If not in IPython run the QT main loop
         guitools.run_main_loop(app, is_root, back, frequency=100)
 
-    signal_reset()
+    test_api.signal_reset()

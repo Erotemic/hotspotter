@@ -314,8 +314,16 @@ class MainWindowBackend(QtCore.QObject):
             gx = back.hs.tables.cx2_gx(cx)
         return gx
 
-    def get_selected_cx(back):
+    def get_selected_cx(back, cid=None):
         'selected chip index'
+        if cid is not None:
+            try:
+                cx = back.hs.cid2_cx(cid)
+                return cx
+            except IndexError as ex:
+                print(ex)
+                msg = 'Query qcid=%d does not exist / is invalid' % cid
+                raise AssertionError(msg)
         if back.selection is None:
             return None
         type_ = back.selection['type_']
@@ -704,21 +712,25 @@ class MainWindowBackend(QtCore.QObject):
     @slot_()
     @blocking
     @profile
-    def add_chip(back):
+    def add_chip(back, gx=None, roi=None):
         # Action -> Add ROI
-        gx = back.get_selected_gx()
-        figtitle = 'Image View - Select ROI (click two points)'
-        back.show_image(gx, figtitle=figtitle)
-        roi = guitools.select_roi()
+        if gx is None:
+            gx = back.get_selected_gx()
         if roi is None:
-            print('[back*] roiselection failed. Not adding')
-            return
+            figtitle = 'Image View - Select ROI (click two points)'
+            back.show_image(gx, figtitle=figtitle)
+            roi = guitools.select_roi()
+            if roi is None:
+                print('[back*] roiselection failed. Not adding')
+                return
         cx = back.hs.add_chip(gx, roi)  # NOQA
         back.populate_tables()
         # RCOS TODO: Autoselect should be an option
         #back.select_gx(gx, cx)
         back.select_gx(gx)
         print('')
+        cid = back.hs.cx2_cid(cx)
+        return cid
 
     @slot_()
     @blocking
@@ -727,15 +739,7 @@ class MainWindowBackend(QtCore.QObject):
         # Action -> Query
         #prevBlock = back.front.blockSignals(True)
         print('[**back] query(cid=%r)' % cid)
-        if cid is None:
-            cx = back.get_selected_cx()
-        else:
-            try:
-                cx = back.hs.cid2_cx(cid)
-            except IndexError as ex:
-                print(ex)
-                msg = 'Query qcid=%d does not exist / is invalid' % cid
-                raise AssertionError(msg)
+        cx = back.get_selected_cx(cid)
         print('[**back.query()] cx = %r)' % cx)
         if cx is None:
             back.user_info('Cannot query. No chip selected')
@@ -759,20 +763,21 @@ class MainWindowBackend(QtCore.QObject):
     @slot_()
     @blocking
     @profile
-    def reselect_roi(back, **kwargs):
+    def reselect_roi(back, cid=None, roi=None, **kwargs):
         # Action -> Reselect ROI
         print(r'[\back] reselect_roi()')
-        cx = back.get_selected_cx()
+        cx = back.get_selected_cx(cid)
         if cx is None:
             back.user_info('Cannot reselect ROI. No chip selected')
             return
         gx = back.hs.tables.cx2_gx[cx]
-        figtitle = 'Image View - ReSelect ROI (click two points)'
-        back.show_image(gx, [cx], figtitle=figtitle, **kwargs)
-        roi = guitools.select_roi()
         if roi is None:
-            print('[back*] roiselection failed. Not adding')
-            return
+            figtitle = 'Image View - ReSelect ROI (click two points)'
+            back.show_image(gx, [cx], figtitle=figtitle, **kwargs)
+            roi = guitools.select_roi()
+            if roi is None:
+                print('[back*] roiselection failed. Not changing')
+                return
         back.hs.change_roi(cx, roi)
         back.populate_tables()
         back.select_gx(gx, cx, **kwargs)
@@ -783,19 +788,20 @@ class MainWindowBackend(QtCore.QObject):
     @slot_()
     @blocking
     @profile
-    def reselect_ori(back, **kwargs):
+    def reselect_ori(back, cid=None, theta=None, **kwargs):
         # Action -> Reselect ORI
-        cx = back.get_selected_cx()
+        cx = back.get_selected_cx(cid)
         if cx is None:
             back.user_info('Cannot reselect orientation. No chip selected')
             return
         gx = back.hs.tables.cx2_gx[cx]
-        figtitle = 'Image View - Select Orientation (click two points)'
-        back.show_image(gx, [cx], figtitle=figtitle, **kwargs)
-        theta = guitools.select_orientation()
         if theta is None:
-            print('[back*] theta selection failed. Not adding')
-            return
+            figtitle = 'Image View - Select Orientation (click two points)'
+            back.show_image(gx, [cx], figtitle=figtitle, **kwargs)
+            theta = guitools.select_orientation()
+            if theta is None:
+                print('[back*] theta selection failed. Not changing')
+                return
         back.hs.change_theta(cx, theta)
         back.populate_tables()
         back.select_gx(gx, cx, **kwargs)
@@ -822,8 +828,9 @@ class MainWindowBackend(QtCore.QObject):
     @slot_()
     @blocking
     @profile
-    def delete_image(back):
-        gx = back.get_selected_gx()
+    def delete_image(back, gx=None):
+        if gx is None:
+            gx = back.get_selected_gx()
         if gx is None:
             back.user_info('Cannot delete image. No image selected')
             return

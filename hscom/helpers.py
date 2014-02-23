@@ -882,16 +882,25 @@ def copy(src, dst):
         print('[%s] dst=%s' % (prefix, dst))
 
 
-def copy_all(src_dir, dest_dir, glob_str_list):
+def copy_all(src_dir, dest_dir, glob_str_list, recursive=False):
+    ensuredir(dest_dir)
     if not isinstance(glob_str_list, list):
         glob_str_list = [glob_str_list]
-    for _fname in os.listdir(src_dir):
-        for glob_str in glob_str_list:
-            if fnmatch.fnmatch(_fname, glob_str):
-                src = normpath(join(src_dir, _fname))
-                dst = normpath(join(dest_dir, _fname))
-                copy(src, dst)
-                break
+    for root, dirs, files in os.walk(src_dir):
+        for dname_ in dirs:
+            for glob_str in glob_str_list:
+                if fnmatch.fnmatch(dname_, glob_str):
+                    src = normpath(join(src_dir, dname_))
+                    dst = normpath(join(dest_dir, dname_))
+                    ensuredir(dst)
+        for fname_ in files:
+            for glob_str in glob_str_list:
+                if fnmatch.fnmatch(fname_, glob_str):
+                    src = normpath(join(src_dir, fname_))
+                    dst = normpath(join(dest_dir, fname_))
+                    copy(src, dst)
+        if not recursive:
+            break
 
 
 def copy_list(src_list, dst_list, lbl='Copying'):

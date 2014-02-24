@@ -18,12 +18,11 @@ def print(msg):
 
 
 if __name__ == '__main__':
-    print('[TEST] VSONETEST')
+    print('[TEST] VSONE SHORTLIST TEST')
     multiprocessing.freeze_support()
 
     print('[TEST] CLONEDB')
-    #dbname = 'MOTHERS'
-    dbname = 'NAUTS'
+    dbname = 'GZ'
 
     print('[TEST] TESTMAIN.MAIN')
     hs, back, app, is_root = test_api.main_init(defaultdb=dbname, preload=False)
@@ -32,18 +31,15 @@ if __name__ == '__main__':
     print('[TEST] LOAD')
     hs.load()
 
-    print('[TEST] GET VALID CID')
-    cid = test_api.get_valid_cid(hs)
+    print('[TEST] = QUERY')
+    hs.prefs.display_cfg.showanalysis = True
+    test_cids = hs.cx2_cid(test_api.get_test_cxs(hs))
+    cid = 306
+    back.select_cid(cid)
+    res = back.query(cid=cid)
 
-    print('[TEST] HS FEATS')
-    print(hs.feats)
-
-    print('[TEST] HS TABLES')
-    print(hs.tables)
-
-    print('[TEST] QUERY')
-    res1 = back.query(cid=cid, query_type='vsmany', K=6, Knorm=4, ratio_thresh=0)
-    res2 = back.query(cid=cid, query_type='vsone', K=1, Knorm=1, ratio_thresh=1.6)
+    cx = hs.cid2_cx(cid)
+    res2 = hs.query_groundtruth(cx, query_type='vsone')
 
     print('[TEST] END TEST')
     test_api.main_loop(app, is_root, back, runqtmain=INTERACTIVE)

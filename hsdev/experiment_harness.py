@@ -186,17 +186,16 @@ def get_test_results2(hs, qcxs, qdat, cfgx=0, nCfg=1, nocache_testres=False,
     if qx2_bestranks is not None:
         return qx2_bestranks
 
-    mc3.ensure_nn_index(hs, qdat, dcxs)
+    #mc3.ensure_nn_index(hs, qdat, dcxs)
     qx2_bestranks = []
 
     # Perform queries
     BATCH_MODE = util.get_flag('--batch', False)
     if BATCH_MODE:
+        mc3.prequery_checks(hs, qdat)
         qx2_bestranks = [None for qcx in qcxs]
         # Query Chip / Row Loop
-        res_list = mc3.execute_query_safe(hs, qdat, qcxs, dcxs)
-        assert len(res_list) == 1
-        qcx2_res = res_list[0]
+        qcx2_res = mc3.execute_unsafe_cached_query(hs, qdat)
         qcx2_bestranks = {}
         for qcx, res in qcx2_res.iteritems():
             gt_ranks = res.get_gt_ranks(hs=hs)
@@ -220,7 +219,7 @@ def get_test_results2(hs, qcxs, qdat, cfgx=0, nCfg=1, nocache_testres=False,
             if TEST_INFO:
                 print('qcx=%r. quid=%r' % (qcx, qdat.get_uid()))
             try:
-                res_list = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
+                qcx2_res = mc3.execute_query_safe(hs, qdat, [qcx], dcxs)
             except mf.QueryException as ex:
                 print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                 print('Harness caught Query Exception: ')
@@ -232,16 +231,12 @@ def get_test_results2(hs, qcxs, qdat, cfgx=0, nCfg=1, nocache_testres=False,
                     qx2_bestranks += [[-1]]
                     continue
 
-            assert len(res_list) == 1
-            qranks = []
-            for qcx2_res in res_list:
-                assert len(qcx2_res) == 1
-                res = qcx2_res[qcx]
-                gt_ranks = res.get_gt_ranks(hs=hs)
-                _rank = -1 if len(gt_ranks) == 0 else min(gt_ranks)
-                qranks.append(_rank)
+            assert len(qcx2_res) == 1
+            res = qcx2_res[qcx]
+            gt_ranks = res.get_gt_ranks(hs=hs)
+            _rank = -1 if len(gt_ranks) == 0 else min(gt_ranks)
             # record metadata
-            qx2_bestranks.append(qranks)
+            qx2_bestranks.append([_rank])
             if qcx % 4 == 0:
                 sys.stdout.flush()
         print('')
@@ -639,8 +634,8 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print('viewing (r, c) = (%r, %r)' % (r, c))
         # Load / Execute the query
         qdat = mc3.prep_query_request(hs, qdat=qdat, qcxs=[qcx], dcxs=dcxs, query_cfg=query_cfg)
-        res_list = mc3.execute_query_lazy(hs, qdat, [qcx], dcxs)
-        res = res_list[0][qcx]
+        qcx2_res = mc3.execute_cached_query(hs, qdat)
+        res = qcx2_res[qcx]
         # Print Query UID
         print(res.true_uid)
         # Draw Result

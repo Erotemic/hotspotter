@@ -34,7 +34,7 @@ def ensure_nn_index(hs, qdat):
         print('dcxs_ is not in qdat cache')
         print('hashstr(dcxs_) = %r' % dcxs_uid)
         print('REFRESHING FEATURES')
-        cx_list = np.unique(qdat._internal_dcxs + qdat._internal_qcxs)
+        cx_list = np.unique(np.hstack([qdat._internal_dcxs, qdat._internal_qcxs]))
         hs.refresh_features(cx_list)  # Refresh query as well
         # Compute the FLANN Index
         data_index = ds.NNIndex(hs, dcxs)
@@ -138,30 +138,32 @@ def prequery_checks(hs, qdat):
             # Reload
             qdat = prep_query_request(hs, query_cfg=query_cfg, qcxs=qcxs, dcxs=dcxs)
         ensure_nn_index(hs, qdat)
+        return qdat
 
     print('checking')
     if hs.query_history[-1][0] is None:
         # FIRST LOAD:
         print('FIRST LOAD. Need to reload features')
-        _refresh(hs, qdat, unload=hs.dirty)
+        qdat = _refresh(hs, qdat, unload=hs.dirty)
     elif hs.query_history[-1][0] != feat_uid:
         print('FEAT_UID is different. Need to reload features')
         print('Old: ' + str(hs.query_history[-1][0]))
         print('New: ' + str(feat_uid))
-        _refresh(hs, qdat, True)
+        qdat = _refresh(hs, qdat, True)
     elif hs.query_history[-1][1] != query_uid:
         print('QUERY_UID is different. Need to refresh features')
         print('Old: ' + str(hs.query_history[-1][1]))
         print('New: ' + str(query_uid))
-        _refresh(hs, qdat, False)
+        qdat = _refresh(hs, qdat, False)
     elif qdat._data_index is None:
         print('qdat._data_index is None. Need to refresh nn_index')
-        _refresh(hs, qdat, False)
+        qdat = _refresh(hs, qdat, False)
 
     print('checked')
     hs.query_history.append(query_hist_id)
     print('prequery(): feat_uid = %r ' % feat_uid)
     print('prequery(): query_uid = %r ' % query_uid)
+    return qdat
 
 
 def load_cached_query(hs, qdat):
@@ -223,10 +225,34 @@ def execute_cached_query(hs, qdat, use_cache=True):
         if qcx2_res is not None:
             return qcx2_res
     print('[q1] execute_cached_query()')
-    prequery_checks(hs, qdat)
+    qdat = prequery_checks(hs, qdat)
     #ensure_nn_index(hs, qdat)
     if qdat._data_index is None:
         print('ERROR in execute_cached_query()')
+        print('[q1] len(qdat._dcxs2_index)=%r' % len(qdat._dcxs2_index))
+        print('[q1] qdat_dcxs2_index._dcxs2_index=%r' % len(qdat._dcxs2_index))
+        print('[q1] qdat._dcxs2_index.keys()=%r' % qdat._dcxs2_index.keys())
+        print('[q1] qdat._data_index=%r' % qdat._data_index)
+        raise Exception('Data index cannot be None at query time')
+    # Do the actually query
+    qcx2_res = execute_query_fast(hs, qdat)
+    for qcx, res in qcx2_res.iteritems():
+        res.save(hs)
+    return qcx2_res
+
+
+# Query Level 1
+@util.indent_decor('[QL1]')
+def execute_unsafe_cached_query(hs, qdat, use_cache=True):
+    # caching
+    if not params.args.nocache_query and use_cache:
+        qcx2_res = load_cached_query(hs, qdat)
+        if qcx2_res is not None:
+            return qcx2_res
+    print('[q1] execute_unsafe_cached_query()')
+    #ensure_nn_index(hs, qdat)
+    if qdat._data_index is None:
+        print('ERROR in execute_unsafe_cached_query()')
         print('[q1] len(qdat._dcxs2_index)=%r' % len(qdat._dcxs2_index))
         print('[q1] qdat_dcxs2_index._dcxs2_index=%r' % len(qdat._dcxs2_index))
         print('[q1] qdat._dcxs2_index.keys()=%r' % qdat._dcxs2_index.keys())

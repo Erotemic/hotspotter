@@ -35,6 +35,7 @@ if __name__ == '__main__':
     # WARNING! DO NOT USE --DB or --DBDIR on this yet! IT WILL DELETE IMAGES ON
     # REAL (IE NON COPIED DATABASES)
     hs, back, app, is_root = test_api.main_init(defaultdb=clonename, preload=True)
+    hs.default_preferences()
 
     #print('[TEST] GET VALID CID')
     cid = test_api.get_valid_cid(hs)

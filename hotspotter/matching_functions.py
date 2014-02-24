@@ -478,7 +478,10 @@ def chipmatch_to_resdict(hs, qcx2_chipmatch, filt2_meta, qdat, aug=''):
         res.title = (title_uid + ' ' + aug).strip(' ')
         res.filt2_meta = {}
         for filt, qcx2_meta in filt2_meta.iteritems():
-            res.filt2_meta[filt] = qcx2_meta[qcx]
+            try:
+                res.filt2_meta[filt] = qcx2_meta[qcx]
+            except KeyError:
+                util.embed()
         qcx2_res[qcx] = res
     # Retain original score method
     return qcx2_res

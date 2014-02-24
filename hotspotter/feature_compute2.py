@@ -152,7 +152,6 @@ def load_features(hs, cx_list=None, **kwargs):
     # already loaded. Same for cc2.
     print('=============================')
     print('[fc2] Precomputing and loading features: %r' % hs.get_db_name())
-    print('=============================')
     #----------------
     # COMPUTE SETUP
     #----------------
@@ -171,6 +170,7 @@ def load_features(hs, cx_list=None, **kwargs):
     cx_list = hs.get_valid_cxs() if cx_list is None else cx_list
     if not np.iterable(cx_list):
         cx_list = [cx_list]
+    print('[cc2] len(cx_list) = %r' % len(cx_list))
     if len(cx_list) == 0:
         return  # HACK
     cx_list = np.array(cx_list)  # HACK

@@ -71,66 +71,13 @@ if __name__ == '__main__':
     # Necessary for windows parallelization
     multiprocessing.freeze_support()
     # Run Main Function
-    from hsgui import guitools
-    from hscom import helpers as util
     from hsdev import test_api
     print('main.py')
-    # Listen for ctrl+c
-    test_api.signal_set()
-    # Run qt app
-    app, is_root = guitools.init_qtapp()
     # Run main script with backend
-    hs, back = test_api.main(defaultdb=None, preload=False, app=app)
+    hs, back, app, is_root = test_api.main_init()
     # --- Run Startup Commands ---
     postload_locals = postload_args_process(hs, back)
     res = postload_locals['res']
     # Connect database to the back gui
     #app.setActiveWindow(back.front)
-
-    # Allow for a IPython connection by passing the --cmd flag
-    embedded = False
-    if util.get_flag('--cmd'):
-        import scripts
-        import generate_training
-        import sys
-
-        def do_encounters(seconds=None):
-            if not 'seconds' in vars() or seconds is None:
-                seconds = 5
-            scripts.rrr()
-            do_enc_loc = scripts.compute_encounters(hs, back, seconds)
-            return do_enc_loc
-
-        def do_extract_encounter(eid=None):
-            #if not 'eid' in vars() or eid is None:
-            #eid = 'ex=269_nGxs=21'
-            eid = 'ex=61_nGxs=18'
-            scripts.rrr()
-            extr_enc_loc = scripts.extract_encounter(hs, eid)
-            export_subdb_locals = extr_enc_loc['export_subdb_locals']
-            return extr_enc_loc, export_subdb_locals
-
-        def do_generate_training():
-            generate_training.rrr()
-            return generate_training.generate_detector_training_data(hs, (256, 448))
-
-        def do_import_database():
-            scripts.rrr()
-            #from os.path import expanduser, join
-            #workdir = expanduser('~/data/work')
-            #other_dbdir = join(workdir, 'hsdb_exported_138_185_encounter_eid=1 nGxs=43')
-
-        def vgd():
-            return generate_training.vgd(hs)
-
-        #from PyQt4.QtCore import pyqtRemoveInputHook
-        #from IPython.lib.inputhook import enable_qt4
-        #pyqtRemoveInputHook()
-        #enable_qt4()
-        exec(util.ipython_execstr())
-        sys.exit(1)
-    if not embedded:
-        # If not in IPython run the QT main loop
-        guitools.run_main_loop(app, is_root, back, frequency=100)
-
-    test_api.signal_reset()
+    test_api.main_loop(app, is_root, back)

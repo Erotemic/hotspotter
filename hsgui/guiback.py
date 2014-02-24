@@ -14,7 +14,6 @@ import guifront
 import guitools
 from guitools import drawing, slot_
 from guitools import backblocking as blocking
-from hscom import helpers
 from hscom import helpers as util
 from hscom import fileio as io
 from hscom import params
@@ -257,7 +256,6 @@ class MainWindowBackend(QtCore.QObject):
             viz.show_chip(back.hs, cx, fnum=fnum, figtitle='Chip View')
         back._layout_figures_if(did_exist)
 
-
     @drawing
     @profile
     def show_query_result(back, res, tx=None, **kwargs):
@@ -277,7 +275,6 @@ class MainWindowBackend(QtCore.QObject):
                 res.show_top(back.hs, fnum=fnum, figtitle='Query View ')
         back._layout_figures_if(did_exist)
 
-
     @drawing
     @profile
     def show_single_query(back, res, cx, **kwargs):
@@ -287,7 +284,6 @@ class MainWindowBackend(QtCore.QObject):
         df2.figure(fnum=fnum, docla=True, doclf=True)
         interact.interact_chipres(back.hs, res, cx=cx, fnum=fnum)
         back._layout_figures_if(did_exist)
-
 
     @drawing
     @profile
@@ -610,7 +606,7 @@ class MainWindowBackend(QtCore.QObject):
             new_dbdir = back.user_select_new_dbdir()
         if new_dbdir is not None:
             print('[*back] valid new_dbdir = %r' % new_dbdir)
-            helpers.ensurepath(new_dbdir)
+            util.ensurepath(new_dbdir)
             back.open_database(new_dbdir)
         else:
             print('[*back] abort new database()')
@@ -684,7 +680,7 @@ class MainWindowBackend(QtCore.QObject):
         msg = 'Select directory with images in it'
         img_dpath = guitools.select_directory(msg)
         print('[*back] selected %r' % img_dpath)
-        fpath_list = helpers.list_images(img_dpath, fullpath=True)
+        fpath_list = util.list_images(img_dpath, fullpath=True)
         back.hs.add_images(fpath_list)
         back.populate_image_table()
         print('')
@@ -735,29 +731,33 @@ class MainWindowBackend(QtCore.QObject):
     @slot_()
     @blocking
     @profile
-    def query(back, cid=None, tx=None):
+    def query(back, cid=None, tx=None, **kwargs):
         # Action -> Query
-        #prevBlock = back.front.blockSignals(True)
-        print('[**back] query(cid=%r)' % cid)
-        cx = back.get_selected_cx(cid)
-        print('[**back.query()] cx = %r)' % cx)
-        if cx is None:
-            back.user_info('Cannot query. No chip selected')
-            return
-        try:
-            res = back.hs.query(cx)
-        except Exception as ex:
-            # TODO Catch actuall exceptions here
-            print('[**back.query()] ex = %r' % ex)
-            raise
-        if isinstance(res, str):
-            back.user_info(res)
-            return
-        back.current_res = res
-        back.populate_result_table()
-        print(r'[/back] finished query')
-        print('')
-        back.show_query_result(res, tx)
+
+        with util.Indent('[back.prequery]'):
+            print('[back] query(cid=%r, %r)' % (cid, kwargs))
+            cx = back.get_selected_cx(cid)
+            print('[back] cx = %r' % cx)
+            if cx is None:
+                back.user_info('Cannot query. No chip selected')
+                return
+        with util.Indent('[back.query]'):
+            try:
+                res = back.hs.query(cx, **kwargs)
+            except Exception as ex:
+                # TODO Catch actually exceptions here
+                print('[back] ex = %r' % ex)
+                raise
+        with util.Indent('[back.postquery]'):
+            if isinstance(res, str):
+                back.user_info(res)
+                return
+            back.current_res = res
+            back.populate_result_table()
+            print(r'[back] finished query')
+            print('')
+            # Show results against test chip index (tx)
+            back.show_query_result(res, tx)
         return res
 
     @slot_()
@@ -889,7 +889,7 @@ class MainWindowBackend(QtCore.QObject):
             #mc3.print_off()
             #ds.print_off()
             #mf.print_off()
-        fmtstr = helpers.progress_str(len(valid_cx), '[back*] Query qcx=%r: ')
+        fmtstr = util.progress_str(len(valid_cx), '[back*] Query qcx=%r: ')
         for count, qcx in enumerate(valid_cx):
             sys.stdout.write(fmtstr % (qcx, count))
             back.hs.query(qcx, dochecks=False)
@@ -998,7 +998,7 @@ class MainWindowBackend(QtCore.QObject):
         front = back.front
         wasBlocked = front.blockSignals(True)
         devmode = True  # NOQA
-        #print(helpers.indent(str(hs), '[*back.hs] '))
+        #print(util.indent(str(hs), '[*back.hs] '))
         #rrr()
         print(r'[\back] finished dev_help')
         #app = back.app
@@ -1011,7 +1011,7 @@ class MainWindowBackend(QtCore.QObject):
         pyqtRemoveInputHook()
         #from IPython.lib.inputhook import enable_qt4
         #enable_qt4()
-        execstr = helpers.ipython_execstr()
+        execstr = util.ipython_execstr()
         #print(execstr)
         print('Debugging in IPython. IPython will break gui until you exit')
         exec(execstr)

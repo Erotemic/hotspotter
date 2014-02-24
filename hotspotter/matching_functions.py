@@ -62,7 +62,7 @@ NN_FILTER_FUNC_DICT = {
     'lnbnn':   nn_filters.nn_lnbnn_weight,
     'ratio':   nn_filters.nn_ratio_weight,
 }
-MARK_AFTER = 40
+MARK_AFTER = 1
 
 #=================
 # Helpers
@@ -189,7 +189,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
         # Get a numeric score score and valid flag for each feature match
         qfx2_score, qfx2_valid = _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt_cfg)
         qfx2_cx = dx2_cx[qfx2_nn]
-        print('[mf] * %d assignments are invalid by thresh' % ((True - qfx2_valid).sum()))
+        printDBG('[mf] * %d assignments are invalid by thresh' % ((True - qfx2_valid).sum()))
         # Remove Impossible Votes:
         # dont vote for yourself or another chip in the same image
         qfx2_notsamechip = qfx2_cx != qcx
@@ -198,8 +198,8 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
             ####DBG
             nChip_all_invalid = ((True - qfx2_notsamechip)).sum()
             nChip_new_invalid = (qfx2_valid * (True - qfx2_notsamechip)).sum()
-            print('[mf] * %d assignments are invalid by self' % nChip_all_invalid)
-            print('[mf] * %d are newly invalided by self' % nChip_new_invalid)
+            printDBG('[mf] * %d assignments are invalid by self' % nChip_all_invalid)
+            printDBG('[mf] * %d are newly invalided by self' % nChip_new_invalid)
             ####
             qfx2_valid = np.logical_and(qfx2_valid, qfx2_notsamechip)
         if cant_match_sameimg:
@@ -207,8 +207,8 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
             ####DBG
             nImg_all_invalid = ((True - qfx2_notsameimg)).sum()
             nImg_new_invalid = (qfx2_valid * (True - qfx2_notsameimg)).sum()
-            print('[mf] * %d assignments are invalid by gx' % nImg_all_invalid)
-            print('[mf] * %d are newly invalided by gx' % nImg_new_invalid)
+            printDBG('[mf] * %d assignments are invalid by gx' % nImg_all_invalid)
+            printDBG('[mf] * %d are newly invalided by gx' % nImg_new_invalid)
             ####
             qfx2_valid = np.logical_and(qfx2_valid, qfx2_notsameimg)
         if cant_match_samename:
@@ -216,11 +216,11 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
             ####DBG
             nName_all_invalid = ((True - qfx2_notsamename)).sum()
             nName_new_invalid = (qfx2_valid * (True - qfx2_notsamename)).sum()
-            print('[mf] * %d assignments are invalid by nx' % nName_all_invalid)
-            print('[mf] * %d are newly invalided by nx' % nName_new_invalid)
+            printDBG('[mf] * %d assignments are invalid by nx' % nName_all_invalid)
+            printDBG('[mf] * %d are newly invalided by nx' % nName_new_invalid)
             ####
             qfx2_valid = np.logical_and(qfx2_valid, qfx2_notsamename)
-        print('[mf] * Marking %d assignments as invalid' % ((True - qfx2_valid).sum()))
+        printDBG('[mf] * Marking %d assignments as invalid' % ((True - qfx2_valid).sum()))
         qcx2_nnfilter[qcx] = (qfx2_score, qfx2_valid)
     end_progress()
     return qcx2_nnfilter
@@ -251,11 +251,11 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, qdat):
     '''vsmany/vsone counts here. also this is where the filter
     weights and thershold are applied to the matches. Essientally
     nearest neighbors are converted into weighted assignments'''
-    print('[mf] Step 4) Building chipmatches')
     # Config
-    query_type = qdat.cfg.agg_cfg.query_type
     K = qdat.cfg.nn_cfg.K
+    query_type = qdat.cfg.agg_cfg.query_type
     is_vsone = query_type == 'vsone'
+    print('[mf] Step 4) Building chipmatches %s' % (query_type,))
     # Data Index
     dx2_cx = qdat._data_index.ax2_cx
     dx2_fx = qdat._data_index.ax2_fx
@@ -284,17 +284,17 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, qdat):
         # Pack feature matches into an interator
         match_iter = izip(*[qfx2[qfx2_valid] for qfx2 in
                             (qfx2_qfx, qfx2_cx, qfx2_fx, qfx2_fs, qfx2_k)])
+        # Vsmany - Iterate over feature matches
         if not is_vsone:
             cx2_fm, cx2_fs, cx2_fk = new_fmfsfk(hs)
-            # Vsmany - Iterate over feature matches
             for qfx, cx, fx, fs, fk in match_iter:
-                cx2_fm[cx].append((qfx, fx))
+                cx2_fm[cx].append((qfx, fx))  # Note the difference
                 cx2_fs[cx].append(fs)
                 cx2_fk[cx].append(fk)
             chipmatch = _fix_fmfsfk(cx2_fm, cx2_fs, cx2_fk)
             qcx2_chipmatch[qcx] = chipmatch
+        # Vsone - Iterate over feature matches
         else:
-            # Vsone - Iterate over feature matches
             for qfx, cx, fx, fs, fk in match_iter:
                 cx2_fm[qcx].append((fx, qfx))  # Note the difference
                 cx2_fs[qcx].append(fs)

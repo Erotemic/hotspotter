@@ -572,11 +572,9 @@ class HotSpotter(DynStruct):
     @profile
     def query_cxs(hs, qcx, cxs, query_cfg=None, **kwargs):
         'wrapper that restricts query to only known groundtruth'
-        print('[hs] query_cxs()')
-        if query_cfg is None:
-            query_cfg = hs.prefs.query_cfg
-        qdat = mc3.prep_query_request(hs, query_cfg=query_cfg, qcxs=[qcx], dcxs=cxs, **kwargs)
+        print('[hs] query_cxs(kwargs=%r)' % kwargs)
         # Ensure that we can process a query like this
+        qdat = mc3.prep_query_request(hs, query_cfg=query_cfg, qcxs=[qcx], dcxs=cxs, **kwargs)
         try:
             res = mc3.process_query_request(hs, qdat)[qcx]
         except mf.QueryException as ex:
@@ -665,6 +663,7 @@ class HotSpotter(DynStruct):
         hs.tables.nx2_name = np.array(nx2_name)
 
     @profile
+    @util.indent_decor('[hs.add_chip]')
     def add_chip(hs, gx, roi, nx=0, theta=0, props={}, dochecks=True):
         # TODO: Restructure for faster adding (preallocate and double size)
         # OR just make all the tables python lists
@@ -696,6 +695,7 @@ class HotSpotter(DynStruct):
         return cx
 
     @profile
+    @util.indent_decor('[hs.add_images]')
     def add_images(hs, fpath_list, move_images=True):
         nImages = len(fpath_list)
         print('[hs.add_imgs] adding %d images' % nImages)
@@ -744,6 +744,7 @@ class HotSpotter(DynStruct):
     # ---------------
     # Deleting functions
     # ---------------
+    @util.indent_decor('[hs.delete_chip]')
     def delete_chip(hs, cx, resample=True):
         hs.delete_cxdata(cx)
         hs.tables.cx2_cid[cx] = -1
@@ -754,6 +755,7 @@ class HotSpotter(DynStruct):
             hs.update_samples()
 
     @tools.class_iter_input
+    @util.indent_decor('[hs.delete_image]')
     def delete_image(hs, gx_list):
         return _delete_image(hs, gx_list)
 

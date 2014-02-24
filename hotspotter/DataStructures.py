@@ -24,7 +24,7 @@ class QueryData(DynStruct):
         qdat.cfg = None  # Query Config
         qdat._qcxs = []
         qdat._dcxs = []
-        qdat._data_indexes = None  # current index
+        qdat._data_index = None  # current index
         qdat._dcxs2_index = {}     # cached indexes
 
     def set_cfg(qdat, query_cfg, hs=None):
@@ -35,8 +35,8 @@ class QueryData(DynStruct):
     def unload_data(qdat):
         # Data TODO: Separate this
         printDBG('[qdat] unload_data()')
-        qdat._qcxs = []
-        qdat._dcxs = []
+        qdat._qcxs = []  # True Input QCXS
+        qdat._dcxs = []  # True Input DCXS
         qdat._data_index  = None  # current index
         qdat._dcxs2_index = {}  # cached indexes
         printDBG('[qdat] unload_data(success)')
@@ -65,6 +65,7 @@ class QueryData(DynStruct):
 class NNIndex(object):
     'Nearest Neighbor (FLANN) Index Class'
     def __init__(nn_index, hs, cx_list):
+        print('[ds] building NNIndex object')
         cx2_desc  = hs.feats.cx2_desc
         assert max(cx_list) < len(cx2_desc)
         # Make unique id for indexed descriptors
@@ -95,7 +96,7 @@ class NNIndex(object):
                 print('len(cx_list) = %r' % (len(cx_list),))
             raise
         except Exception as ex:
-            with util.Indenter2('[mem error]'):
+            with util.Indenter2('[unknown error]'):
                 print(ex)
                 print('cx_list = %r' % (cx_list,))
             raise

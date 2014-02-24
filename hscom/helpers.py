@@ -1352,6 +1352,8 @@ class Indenter2(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self.stop()
 
+Indent = Indenter2
+
 
 def rectify_wrapped_func(wrapper, func):
     wrapper.func_name = func.func_name

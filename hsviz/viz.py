@@ -109,6 +109,7 @@ def show_name(hs, nx, nx2_cxs=None, fnum=0, sel_cxs=[], subtitle='',
 #==========================
 
 
+@util.indent_decor('[annote_roi]')
 @profile
 def _annotate_roi(hs, ax, cx, sel_cxs, draw_lbls, annote):
     # Draw an roi around a chip in the image
@@ -129,6 +130,7 @@ def _annotate_roi(hs, ax, cx, sel_cxs, draw_lbls, annote):
     return xy_center
 
 
+@util.indent_decor('[annote_image]')
 @profile
 def _annotate_image(hs, ax, gx, sel_cxs, draw_lbls, annote):
     # draw chips in the image
@@ -144,6 +146,7 @@ def _annotate_image(hs, ax, gx, sel_cxs, draw_lbls, annote):
     ax._hs_cx_list = cx_list
 
 
+@util.indent_decor('[show_image]')
 @profile
 def show_image(hs, gx, sel_cxs=[], fnum=1, figtitle='Img', annote=True,
                draw_lbls=True, **kwargs):
@@ -227,6 +230,7 @@ def _annotate_qcx_match_results(hs, res, qcx, kpts, cx2_color):
         _kpts_helper(kpts_true, df2.GREEN, .6, 'True Matches')
 
 
+@util.indent_decor('[annote_kpts]')
 @profile
 def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=None, nRandKpts=None, rect=False):
     #print('[viz] _annotate_kpts()')
@@ -261,6 +265,7 @@ def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=None, nRandKpts=None,
         df2.draw_kpts2(sel_kpts, ell_color=df2.BLUE, arrow=True, rect=True)
 
 
+@util.indent_decor('[show_chip]')
 @profile
 def show_chip(hs, cx=None, allres=None, res=None, draw_ell=True,
               draw_pts=False, nRandKpts=None, prefix='', sel_fx=None,
@@ -378,6 +383,7 @@ def res_show_chipres(res, hs, cx, **kwargs):
     return show_chipres(hs, res, cx, **kwargs)
 
 
+@util.indent_decor('[show_chipres]')
 def show_chipres(hs, res, cx, fnum=None, pnum=None, sel_fm=[], in_image=False, **kwargs):
     'shows single annotated match result.'
     qcx = res.qcx
@@ -441,6 +447,7 @@ def show_chipres(hs, res, cx, fnum=None, pnum=None, sel_fm=[], in_image=False, *
     return ax, xywh1, xywh2
 
 
+@util.indent_decor('[annote_chipres]')
 def annotate_chipres(hs, res, cx, showTF=True, showScore=True, showRank=True, title_pref='',
                      title_suff='', show_gname=False, show_name=True,
                      time_appart=True, in_image=False, offset1=(0, 0),
@@ -513,6 +520,7 @@ def annotate_chipres(hs, res, cx, showTF=True, showScore=True, showRank=True, ti
 #==========================
 
 
+@util.indent_decor('[show_top]')
 @profile
 def show_top(res, hs, *args, **kwargs):
     topN_cxs = res.topN_cxs(hs)
@@ -524,6 +532,7 @@ def show_top(res, hs, *args, **kwargs):
                      all_kpts=False, **kwargs)
 
 
+@util.indent_decor('[analysis]')
 @profile
 def res_show_analysis(res, hs, **kwargs):
         print('[viz] res.show_analysis()')
@@ -565,6 +574,7 @@ def res_show_analysis(res, hs, **kwargs):
                          figtitle=figtitle, show_query=show_query, **kwargs)
 
 
+@util.indent_decor('[_showres]')
 @profile
 def _show_res(hs, res, **kwargs):
     ''' Displays query chip, groundtruth matches, and top 5 matches'''
@@ -669,6 +679,9 @@ def _show_res(hs, res, **kwargs):
         #printDBG('[viz._show_res()] Plotting Chips %s:' % hs.cidstr(cx_list))
         if cx_list is None:
             return
+        # Do lazy load before show_chipres
+        hs.get_chip(cx_list)
+        hs.get_kpts(cx_list)
         for ox, cx in enumerate(cx_list):
             plotx = ox + plotx_shift + 1
             pnum = (rowcols[0], rowcols[1], plotx)

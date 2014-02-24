@@ -251,6 +251,12 @@ class QueryConfig(ConfigBase):
         # Ensure feasibility of the configuration
         make_feasible(query_cfg)
 
+    def deepcopy(query_cfg, **kwargs):
+        import copy
+        copy_ = copy.deepcopy(query_cfg)
+        copy_.update_cfg(**kwargs)
+        return copy_
+
     def get_uid_list(query_cfg, *args, **kwargs):
         if query_cfg._feat_cfg is None:
             raise Exception('Feat / chip config is required')

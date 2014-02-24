@@ -87,6 +87,37 @@ def main(defaultdb='cache', preload=False, app=None):
     return hs
 
 
+def clone_database(dbname):
+    from hscom import params
+    from hscom import helpers as util
+    from os.path import join
+    work_dir = params.get_workdir()
+    dir1 = join(work_dir, dbname)
+    dir2 = join(work_dir, dbname + 'Clone')
+    util.delete(dir2)
+    util.copy_all(dir1, dir2, '*')
+    util.copy_all(join(dir1, 'images'), join(dir2, 'images'), '*')
+    util.copy_all(join(dir1, '_hsdb'), join(dir2, '_hsdb'), '*')
+    return dbname + 'Clone'
+
+
+def get_valid_cid(hs):
+    try:
+        test_cxs = get_test_cxs(hs)
+        test_cids = hs.cx2_cid(test_cxs)
+        cid = test_cids[0]
+    except IndexError as ex:
+        print('Index Error: %s' % str(ex))
+        raise
+        print(hs.tables)
+        print('cx2_cid: %r' % hs.tables.cx2_cid)
+        print(ex)
+        print(test_cxs)
+        print(test_cids)
+        print(cid)
+    return cid
+
+
 def get_test_cxs(hs, max_testcases=None):
     valid_cxs = get_qcx_list(hs)
     if max_testcases is not None:
@@ -153,13 +184,14 @@ def get_qcx_list(hs):
     if len(qcx_list) == 0:
         msg = '[tapi.get_qcxs] no qcx_list history'
         print(msg)
-        if params.args.strict:
+        import sys
+        if '--vstrict' in sys.argv:  # if params.args.vstrict:
             raise Exception(msg)
         print(valid_cxs)
         qcx_list = valid_cxs[0:1]
     print('[tapi] len(qcx_list) = %d' % len(qcx_list))
     qcx_list = util.unique_keep_order(qcx_list)
-    print('[tapi] qcx_list = %d' % qcx_list)
+    print('[tapi] qcx_list = %r' % qcx_list)
     return qcx_list
 
 
@@ -167,3 +199,32 @@ def reload_all():
     import dev_reload
     dev_reload.rrr()
     dev_reload.reload_all_modules()
+
+
+def main_init(defaultdb=None, preload=False, app=None):
+    from hsgui import guitools
+    # Listen for ctrl+c
+    signal_set()
+    # Run Qt App
+    app, is_root = guitools.init_qtapp()
+    hs, back = main(defaultdb=defaultdb, preload=preload, app=app)
+    return hs, back, app, is_root
+
+
+def main_loop(app, is_root, back, runqtmain=True):
+    from hscom import helpers as util
+    from hsgui import guitools
+    import sys
+    hs = back.hs  # NOQA
+    # Allow for a IPython connection by passing the --cmd flag
+    embedded = util.inIPython()
+    if not embedded and util.get_flag('--cmd'):
+        print('Embedding')
+        util.embed()
+        sys.exit(1)
+    if not embedded and runqtmain:
+        print('Running main loop')
+        # If not in IPython run the QT main loop
+        guitools.run_main_loop(app, is_root, back, frequency=100)
+    signal_reset()
+    print('hotspotter will exit')

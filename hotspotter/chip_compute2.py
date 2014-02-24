@@ -366,7 +366,6 @@ def batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
 def load_chips(hs, cx_list=None, force_compute=False, **kwargs):
     print('=============================')
     print('[cc2] Precomputing chips and loading chip paths: %r' % hs.get_db_name())
-    print('=============================')
     #----------------
     # COMPUTE SETUP
     #----------------
@@ -382,6 +381,7 @@ def load_chips(hs, cx_list=None, force_compute=False, **kwargs):
     cx_list = hs.get_valid_cxs() if cx_list is None else cx_list
     if not np.iterable(cx_list):
         cx_list = [cx_list]
+    print('[cc2] len(cx_list) = %r' % len(cx_list))
     if len(cx_list) == 0:
         return  # HACK
     cx_list = np.array(cx_list)  # HACK

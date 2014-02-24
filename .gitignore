@@ -43,3 +43,4 @@ hsviz/*.c
 *.synctex
 *.pyo
 logs
+logs2

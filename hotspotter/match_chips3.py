@@ -18,12 +18,11 @@ modules = [api, api.fc2, api.cc2, parallel, mf, ds]
 
 @profile
 @util.indent_decor('[nn_index]')
-def ensure_nn_index(hs, qdat, dcxs, force_refresh=False):
+def ensure_nn_index(hs, qdat, dcxs):
     print('checking flann')
     # NNIndexes depend on the data cxs AND feature / chip configs
     printDBG('qdat=%r' % (qdat,))
     printDBG('dcxs=%r' % (dcxs,))
-    printDBG('force_refresh=%r' % (force_refresh,))
 
     feat_uid = qdat.cfg._feat_cfg.get_uid()
     dcxs_uid = util.hashstr_arr(dcxs, 'dcxs') + feat_uid
@@ -110,7 +109,7 @@ def prequery_checks(hs, qdat, qcxs=None, dcxs=None):
             hs.unload_cxdata('all')
             # Reload
             qdat = prep_query_request(hs, query_cfg=query_cfg, qcxs=qcxs, dcxs=dcxs)
-        ensure_nn_index(hs, qdat, qdat._dcxs, force_refresh=True)
+        ensure_nn_index(hs, qdat, qdat._dcxs)
 
     print('checking')
     if hs.query_history[-1][0] is None:
@@ -224,6 +223,7 @@ def execute_cached_query(hs, qdat, qcxs, dcxs, use_cache=True):
         if not result_list is None:
             return result_list
     print('[query_cached()]')
+    ensure_nn_index(hs, qdat, dcxs)
     print('[mc3] qcxs=%r' % qdat._qcxs)
     print('[mc3] len(dcxs)=%r' % len(qdat._dcxs))
     print('[mc3] len(qdat._dcxs2_index)=%r' % len(qdat._dcxs2_index))
@@ -231,7 +231,8 @@ def execute_cached_query(hs, qdat, qcxs, dcxs, use_cache=True):
         print('ERROR in execute_cached_query()')
         print('[mc3] qdat_dcxs2_index._dcxs2_index=%r' % len(qdat._dcxs2_index))
         print('[mc3] dcxs=%r' % dcxs)
-        print('[mc3] qdat._data_index=%r' % len(qdat._data_index))
+        print('[mc3] qdat._dcxs2_index.keys()=%r' % qdat._dcxs2_index.keys())
+        print('[mc3] qdat._data_index=%r' % qdat._data_index)
         raise Exception('Data index cannot be None at query time')
     # Do the actually query
     result_list = execute_query_fast(hs, qdat, qcxs, dcxs)

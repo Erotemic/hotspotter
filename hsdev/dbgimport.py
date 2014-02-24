@@ -1,4 +1,5 @@
 from __future__ import division, print_function
+'''
 # Python
 from collections import OrderedDict, defaultdict
 from os.path import (dirname, realpath, join, exists, normpath, splitext,
@@ -30,10 +31,11 @@ import PyQt4
 from PyQt4 import QtCore, QtGui
 from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
                       Qt, QObject, pyqtSlot, QKeyEvent)
+'''
 # HotSpotter
 from hotspotter import Config
 from hotspotter import DataStructures as ds
-from hotspotter import HotSpotterAPI
+#from hotspotter import HotSpotterAPI
 from hotspotter import HotSpotterAPI as api
 from hotspotter import QueryResult as qr
 from hotspotter import algos
@@ -74,19 +76,19 @@ from hsviz import viz
 from hsviz import interact
 from hsviz import allres_viz
 #
-from hstpl import mask_creator as mc
+#from hstpl import mask_creator as mc
 # DEV
-from hsdev import dev_stats
-from hsdev import dev_consistency
-from hsdev import dev_api
-from hsdev import dev_reload
+#from hsdev import dev_stats
+#from hsdev import dev_consistency
+#from hsdev import dev_api
+#from hsdev import dev_reload
 #
-import dev
+#import dev
 
-if __name__ == 'main':
-    multiprocessing.freeze_support()
-    #exec(open('dbgimport.py').read())
-    if '--img' in sys.argv:
-        img_fpath_ = helpers.dbg_get_imgfpath()
-        np_img_ = io.imread(img_fpath_)
-        img_ = Image.open(img_fpath_)
+
+def all_printoff():
+    print('allprintoff()')
+    for key, val in globals().iteritems():
+        if hasattr(val, 'print_off'):
+            #print('print_off %s' % key)
+            val.print_off()

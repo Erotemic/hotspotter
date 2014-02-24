@@ -19,7 +19,7 @@ from hscom import cross_platform as cplat
 from hscom import fileio as io
 from hscom import helpers as util
 from hscom import tools
-#from hscom.Printable import DynStruct
+from hscom.Printable import DynStruct
 from hscom.Preferences import Pref
 import DataStructures as ds
 import Config
@@ -33,6 +33,8 @@ try:
     from hsdev import dev_api
 except ImportError:
     pass
+
+HSBASE = object if '--objbase' in sys.argv else DynStruct
 
 
 def _checkargs_onload(hs):
@@ -250,7 +252,7 @@ def __define_method(hs, method_name, func=None):
     #hs.cx2_tnx = lambda *args: api._cx2_tnx(hs, *args)
 
 
-class HotSpotter(object):
+class HotSpotter(DynStruct):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
         #super(HotSpotter, hs).__init__(child_exclude_list=['prefs', 'args'])
@@ -671,6 +673,7 @@ class HotSpotter(object):
             next_cid = hs.tables.cx2_cid.max() + 1
         else:
             next_cid = 1
+        # FIXME: WAY TOO AGRO
         # Remove any conflicts from disk
         if dochecks:
             hs.delete_ciddata(next_cid)
@@ -999,8 +1002,9 @@ class HotSpotter(object):
         try:
             cx_output = [index_of(cid, cx2_cid) for cid in cid_input]
         except IndexError as ex:
-            print('[hs] ERROR %r ' % ex)
-            print('[hs] ERROR a cid in %r does not exist.' % (cid_input,))
+            print('[hs.cid2_cx] ERROR %r ' % ex)
+            print('[hs.cid2_cx] ERROR a cid in cid_input=%r does not exist.' % (cid_input,))
+            print('[hs.cid2_cx = %r' % (cx2_cid,))
             raise
         return cx_output
 

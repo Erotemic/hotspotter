@@ -361,7 +361,7 @@ def batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
 
 
 # Main Script
-@util.indent_decor('[cc]')
+@util.indent_decor('[cc2]')
 @profile
 def load_chips(hs, cx_list=None, force_compute=False, **kwargs):
     print('=============================')
@@ -461,13 +461,13 @@ def load_chips(hs, cx_list=None, force_compute=False, **kwargs):
     except IOError as ex:
         import gc
         gc.collect()
-        print('[cc] ex=%r' % ex)
+        print('[cc2] ex=%r' % ex)
         print('path=%r' % path)
         if util.checkpath(path, verbose=True):
             import time
             time.sleep(1)  # delays for 1 seconds
-            print('[cc] file exists but cause IOError?')
-            print('[cc] probably corrupted. Removing it')
+            print('[cc2] file exists but cause IOError?')
+            print('[cc2] probably corrupted. Removing it')
             try:
                 util.remove_file(path)
             except OSError:

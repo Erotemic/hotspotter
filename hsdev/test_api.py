@@ -90,10 +90,11 @@ def main(defaultdb='cache', preload=False, app=None):
 def get_test_cxs(hs, max_testcases=None):
     valid_cxs = get_qcx_list(hs)
     if max_testcases is not None:
-        max_ = max(max_testcases, len(valid_cxs) - 1)
-        if max_ == 0:
-            raise ValueError('[test_api] Database does not have test cxs')
-        valid_cxs = valid_cxs[0:max_]
+        #maxcx = max(valid_cxs)
+        #max_ = max(len(valid_cxs) - 1, cxs)
+        #if max_ == 0:
+            #raise ValueError('[test_api] Database does not have test cxs')
+        valid_cxs = valid_cxs[0:max_testcases]
     return valid_cxs
 
 
@@ -102,11 +103,11 @@ def get_qcx_list(hs):
     import numpy as np
     from hscom import params
     from hscom import helpers as util
-    print('[tapi] get_qcx_list()')
+    print('[tapi!] get_qcx_list()')
 
+    valid_cxs = hs.get_valid_cxs()
     def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True, with_notes=False):
         qcx_list = []
-        valid_cxs = hs.get_valid_cxs()
         if with_hard:
             if 'hard' in hs.tables.prop_dict:
                 for cx in iter(valid_cxs):
@@ -135,6 +136,7 @@ def get_qcx_list(hs):
         print('[tapi] all gt cases')
         qcx_all = get_cases(hs, with_hard=True, with_gt=True, with_nogt=False)
     elif params.args.qcid is None:
+        # FIXEME: BUG
         print('[tapi] did not select cases')
         qcx_all = get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
     else:
@@ -149,11 +151,15 @@ def get_qcx_list(hs):
         qcx_list = [qcx_list[id_] for id_ in histids]
 
     if len(qcx_list) == 0:
+        msg = '[tapi.get_qcxs] no qcx_list history'
+        print(msg)
         if params.args.strict:
-            raise Exception('no qcx_list history')
-        qcx_list = [0]
+            raise Exception(msg)
+        print(valid_cxs)
+        qcx_list = valid_cxs[0:1]
     print('[tapi] len(qcx_list) = %d' % len(qcx_list))
     qcx_list = util.unique_keep_order(qcx_list)
+    print('[tapi] qcx_list = %d' % qcx_list)
     return qcx_list
 
 

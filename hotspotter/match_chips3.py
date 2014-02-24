@@ -19,6 +19,7 @@ modules = [api, api.fc2, api.cc2, parallel, mf, ds]
 @profile
 @util.indent_decor('[nn_index]')
 def ensure_nn_index(hs, qdat, dcxs, force_refresh=False):
+    print('checking flann')
     # NNIndexes depend on the data cxs AND feature / chip configs
     printDBG('qdat=%r' % (qdat,))
     printDBG('dcxs=%r' % (dcxs,))
@@ -28,7 +29,7 @@ def ensure_nn_index(hs, qdat, dcxs, force_refresh=False):
     dcxs_uid = util.hashstr_arr(dcxs, 'dcxs') + feat_uid
     if not dcxs_uid in qdat._dcxs2_index:
         # Make sure the features are all computed first
-        print('[mc3] qdat._data_index[dcxs_uid]... nn_index cache miss')
+        print('[mc3] qdat.flann[dcxs_uid]... nn_index cache miss')
         print('[mc3] dcxs_ is not in qdat cache')
         print('[mc3] hashstr(dcxs_) = %r' % dcxs_uid)
         print('[mc3] REFRESHING FEATURES')
@@ -37,7 +38,7 @@ def ensure_nn_index(hs, qdat, dcxs, force_refresh=False):
         data_index = ds.NNIndex(hs, dcxs)
         qdat._dcxs2_index[dcxs_uid] = data_index
     else:
-        print('[mc3] qdat._data_index[dcxs_uid]... cache hit')
+        print('[mc3] qdat.flann[dcxs_uid]... cache hit')
     qdat._data_index = qdat._dcxs2_index[dcxs_uid]
 
 
@@ -92,32 +93,18 @@ def prep_query_request(hs, qdat=None, query_cfg=None, qcxs=None, dcxs=None, **kw
 
 
 # QUERY EXEC FUNCTIONS
-@util.indent_decor('[query-list]')
-def query_list(hs, qcxs, dcxs=None, **kwargs):
-    qdat = prep_query_request(hs, qcxs=qcxs, dcxs=dcxs, **kwargs)
-    qcx2_res = execute_query_lazy(hs, qdat, qcxs, dcxs)[0]
-    return qcx2_res
-
-
-@util.indent_decor('[query_dcxs]')
-def query_dcxs(hs, qcx, dcxs, qdat, dochecks=True):
-    'wrapper that bypasses all that "qcx2_ map" buisness'
-    result_list = execute_query_safe(hs, qdat, [qcx], dcxs)
-    res = result_list[0].values()[0]
-    return res
-
-
 @util.indent_decor('[prequery]')
-def prequery_checks(hs, qdat):
+def prequery_checks(hs, qdat, qcxs=None, dcxs=None):
     # Checks that happen JUST before querytime
-    dcxs = qdat._dcxs
-    qcxs = qdat._qcxs
+    dcxs = dcxs if dcxs is not None else qdat._dcxs
+    qcxs = qcxs if qcxs is not None else qdat._qcxs
     query_cfg = qdat.cfg
     query_uid = qdat.cfg.get_uid('noCHIP')
     feat_uid = qdat.cfg._feat_cfg.get_uid()
     query_hist_id = (feat_uid, query_uid)
 
     def _refresh(hs, qdat, unload=False):
+        print('_refresh, unload=%r' % unload)
         if unload:
             #print('[mc3] qdat._dcxs = %r' % qdat._dcxs)
             hs.unload_cxdata('all')
@@ -125,38 +112,25 @@ def prequery_checks(hs, qdat):
             qdat = prep_query_request(hs, query_cfg=query_cfg, qcxs=qcxs, dcxs=dcxs)
         ensure_nn_index(hs, qdat, qdat._dcxs, force_refresh=True)
 
+    print('checking')
     if hs.query_history[-1][0] is None:
         # FIRST LOAD:
         print('[mc3] FIRST LOAD. Need to reload features')
         print('[mc3] ensuring nn index')
         _refresh(hs, qdat, unload=hs.dirty)
-
-    elif hs.query_history[-1][0] != feat_uid:
+    if hs.query_history[-1][0] != feat_uid:
         print('[mc3] FEAT_UID is different. Need to reload features')
         print('[mc3] Old: ' + str(hs.query_history[-1][0]))
         print('[mc3] New: ' + str(feat_uid))
         _refresh(hs, qdat, True)
-    elif hs.query_history[-1][1] != query_uid:
+    if hs.query_history[-1][1] != query_uid:
         print('[mc3] QUERY_UID is different. Need to refresh features')
         print('[mc3] Old: ' + str(hs.query_history[-1][1]))
         print('[mc3] New: ' + str(query_uid))
-        _refresh(hs, False)
+        _refresh(hs, qdat, False)
+    print('checked')
     hs.query_history.append(query_hist_id)
     print('[mc3] prequery(): query_uid = %r ' % query_uid)
-
-
-@util.indent_decor('[process-request]')
-def process_query_request(hs, qdat, dochecks=True):
-    'wrapper that bypasses all that "qcx2_ map" buisness'
-    print('[mc3] process_query_request()')
-    if dochecks:
-        prequery_checks(hs, qdat)
-    dcxs = qdat._dcxs
-    qcxs = qdat._qcxs
-    qcxs = qdat._qcxs
-    result_list = execute_query_safe(hs, qdat, qcxs, dcxs)
-    res = result_list[0]
-    return res
 
 
 # OTHER
@@ -197,20 +171,68 @@ def load_cached_query(hs, qdat, aug_list=['']):
 # Main Query Logic
 #----------------------
 @profile
+# Query Level 3
+@util.indent_decor('[QL3-dcxs]')
+def query_dcxs(hs, qcx, dcxs, qdat, dochecks=True):
+    'wrapper that bypasses all that "qcx2_ map" buisness'
+    print('[q3] query_dcxs()')
+    result_list = execute_query_safe(hs, qdat, [qcx], dcxs)
+    res = result_list[0].values()[0]
+    return res
+
+
+# Query Level 3
+@util.indent_decor('[QL3-request]')
+def process_query_request(hs, qdat, dochecks=True):
+    'wrapper that bypasses all that "qcx2_ map" buisness'
+    print('[q3] process_query_request()')
+    if dochecks:
+        prequery_checks(hs, qdat)
+    dcxs = qdat._dcxs
+    qcxs = qdat._qcxs
+    qcxs = qdat._qcxs
+    result_list = execute_query_safe(hs, qdat, qcxs, dcxs)
+    res = result_list[0]
+    return res
+
+
+# Query Level 2
+@util.indent_decor('[QL2-safe]')
 def execute_query_safe(hs, qdat, qcxs, dcxs, use_cache=True):
     '''Executes a query, performs all checks, callable on-the-fly'''
+    print('[execute_query_safe()]')
     qdat = prep_query_request(hs, qdat=qdat, qcxs=qcxs, dcxs=dcxs)
-    return execute_query_lazy(hs, qdat, qcxs, dcxs, use_cache=use_cache)
+    prequery_checks(hs, qdat, qcxs, dcxs)
+    return execute_cached_query(hs, qdat, qcxs, dcxs, use_cache=use_cache)
 
 
-def execute_query_lazy(hs, qdat, qcxs, dcxs, use_cache=True):
+# Query Level 2
+@util.indent_decor('[QL2-list]')
+def query_list(hs, qcxs, dcxs=None, **kwargs):
+    print('[query_list()]')
+    qdat = prep_query_request(hs, qcxs=qcxs, dcxs=dcxs, **kwargs)
+    qcx2_res = execute_cached_query(hs, qdat, qcxs, dcxs)[0]
+    return qcx2_res
+
+
+# Query Level 1
+@util.indent_decor('[QL1]')
+def execute_cached_query(hs, qdat, qcxs, dcxs, use_cache=True):
     # caching
     if not params.args.nocache_query and use_cache:
         result_list = load_cached_query(hs, qdat)
         if not result_list is None:
             return result_list
+    print('[query_cached()]')
     print('[mc3] qcxs=%r' % qdat._qcxs)
     print('[mc3] len(dcxs)=%r' % len(qdat._dcxs))
+    print('[mc3] len(qdat._dcxs2_index)=%r' % len(qdat._dcxs2_index))
+    if qdat._data_index is None:
+        print('ERROR in execute_cached_query()')
+        print('[mc3] qdat_dcxs2_index._dcxs2_index=%r' % len(qdat._dcxs2_index))
+        print('[mc3] dcxs=%r' % dcxs)
+        print('[mc3] qdat._data_index=%r' % len(qdat._data_index))
+        raise Exception('Data index cannot be None at query time')
     # Do the actually query
     result_list = execute_query_fast(hs, qdat, qcxs, dcxs)
     for qcx2_res in result_list:
@@ -220,6 +242,7 @@ def execute_query_lazy(hs, qdat, qcxs, dcxs, use_cache=True):
 
 
 @profile
+# Query Level 0
 def execute_query_fast(hs, qdat, qcxs, dcxs):
     '''Executes a query and assumes qdat has all precomputed information'''
     # Nearest neighbors

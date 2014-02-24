@@ -1,5 +1,6 @@
 from __future__ import division, print_function
-'''
+
+standard_imports = '''
 # Python
 from collections import OrderedDict, defaultdict
 from os.path import (dirname, realpath, join, exists, normpath, splitext,
@@ -32,6 +33,8 @@ from PyQt4 import QtCore, QtGui
 from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
                       Qt, QObject, pyqtSlot, QKeyEvent)
 '''
+
+
 # HotSpotter
 from hotspotter import Config
 from hotspotter import DataStructures as ds
@@ -86,9 +89,41 @@ from hsviz import allres_viz
 #import dev
 
 
+import hsviz
+import hsgui
+import hscom
+import hsdev
+import hotspotter
+
+
+def tryprint_off(module):
+    for key, val in module.__dict__.iteritems():
+        if hasattr(val, 'print_off'):
+            print(key)
+            val.print_off()
+
+
 def all_printoff():
     print('allprintoff()')
     for key, val in globals().iteritems():
-        if hasattr(val, 'print_off'):
-            #print('print_off %s' % key)
-            val.print_off()
+        tryprint_off(val)
+
+
+def hsviz_printoff():
+    tryprint_off(hsviz)
+
+
+def hsgui_printoff():
+    tryprint_off(hsgui)
+
+
+def hscom_printoff():
+    tryprint_off(hscom)
+
+
+def hsdev_printoff():
+    tryprint_off(hsdev)
+
+
+def hotspotter_printoff():
+    tryprint_off(hotspotter)

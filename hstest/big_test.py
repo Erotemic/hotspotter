@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # TODO: ADD COPYRIGHT TAG
 from __future__ import print_function, division
+import __builtin__
 from hsdev import test_api
 from hsgui import guitools
 from hscom import helpers as util
@@ -10,6 +11,15 @@ import sys
 from os.path import join
 import numpy as np
 from hsdev import dbgimport  # NOQA
+
+INTERACTIVE = '--interactive' in sys.argv or '-i' in sys.argv
+
+
+def print(msg):
+    __builtin__.print('\n=============================')
+    __builtin__.print(msg)
+    if INTERACTIVE:
+        raw_input('press enter to continue')
 
 
 def clone_database(dbname):
@@ -41,7 +51,11 @@ def get_valid_cid(hs):
 
 
 if __name__ == '__main__':
-    #dbgimport.all_printoff()
+    dbgimport.hsdev_printoff()
+    dbgimport.hsgui_printoff()
+    dbgimport.hsviz_printoff()
+    dbgimport.hsdev_printoff()
+    dbgimport.hscom_printoff()
 
     print('[TEST] BIGTEST')
     multiprocessing.freeze_support()
@@ -85,6 +99,7 @@ if __name__ == '__main__':
 
     print('[TEST] QUERY')
     res = back.query(cid=cid2)
+
     print('[TEST] CHANGE CHIP PROPERTY')
     #back.change_chip_property(cid)
 

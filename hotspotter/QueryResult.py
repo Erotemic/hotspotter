@@ -89,9 +89,9 @@ class QueryResult(DynStruct):
     #__slots__ = ['true_uid', 'qcx', 'query_uid', 'uid', 'title', 'nn_time',
                  #'weight_time', 'filt_time', 'build_time', 'verify_time',
                  #'cx2_fm', 'cx2_fs', 'cx2_fk', 'cx2_score']
-    def __init__(res, qcx, uid, qdat=None):
+    def __init__(res, qcx, uid, qreq=None):
         super(QueryResult, res).__init__()
-        res.true_uid  = '' if qdat is None else qdat.get_uid()
+        res.true_uid  = '' if qreq is None else qreq.get_uid()
         res.qcx       = qcx
         res.query_uid = uid
         res.uid       = uid

@@ -9,11 +9,11 @@ from dbgimport import  *
 
 exec(open(nn_filters.__file__).read())
 qcx2_nns = helpers.load_testdata('qcx2_nns')
-qdat = hs.qdat
+qreq = hs.qreq
 qcx = qcx2_nns.keys()[0]
-K, Knorm, rule = qdat.cfg.nn_cfg.dynget('K', 'Knorm', 'normalizer_rule')
-dx2_cx = qdat._data_index.ax2_cx
-dx2_fx = qdat._data_index.ax2_fx
+K, Knorm, rule = qreq.cfg.nn_cfg.dynget('K', 'Knorm', 'normalizer_rule')
+dx2_cx = qreq._data_index.ax2_cx
+dx2_fx = qreq._data_index.ax2_fx
 
 (qfx2_dx, qfx2_dist) = qcx2_nns[qcx]
 qfx2_nndist = qfx2_dist[:, 0:K]

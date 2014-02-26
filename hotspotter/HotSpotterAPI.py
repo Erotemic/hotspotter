@@ -282,8 +282,8 @@ class HotSpotter(DynStruct):
                 #args_dict = vars(args)
                 #hs.update_preferences(**args_dict)
             #hs.query_history = [(None, None)]
-            #hs.qdat = ds.QueryData()  # Query Data
-            hs.featid2_qdat = {}  # feature id -> query data
+            hs.qreq = ds.QueryRequest()  # Query Data
+            hs.qid2_qreq = {}  # feature id -> query data
             if db_dir is not None:
                 hs.load_tables(db_dir=db_dir)
             hs.augment_api()
@@ -340,12 +340,19 @@ class HotSpotter(DynStruct):
         hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
         hs.prefs.query_cfg._feat_cfg = hs.prefs.feat_cfg
 
-    def set_query_config(hs, query_cfg=None):
+    def set_qreq(hs, qreq):
         print('[hs] fix_prefs2()')
         # Fix pointers in the correct direction
-        if query_cfg is not None:
-            hs.prefs.query_cfg = query_cfg
-        hs.qdat.cfg       = hs.prefs.query_cfg
+        hs.qreq = qreq
+        hs.prefs.query_cfg = hs.qreq.query_cfg
+        hs.prefs.feat_cfg  = hs.qreq.query_cfg._feat_cfg
+        hs.prefs.chip_cfg  = hs.qreq.feat_cfg._chip_cfg
+
+
+    def set_qreq(hs, qreq):
+        print('[hs] fix_prefs2()')
+        # Fix pointers in the correct direction
+        hs.qreq.cfg       = hs.prefs.query_cfg
         hs.prefs.feat_cfg = hs.prefs.query_cfg._feat_cfg
         hs.prefs.chip_cfg = hs.prefs.feat_cfg._chip_cfg
 
@@ -436,6 +443,7 @@ class HotSpotter(DynStruct):
 
     @profile
     def refresh_features(hs, cx_list=None):
+        # TODO: All are loaded flag
         hs.load_chips(cx_list=cx_list)
         hs.load_features(cx_list=cx_list)
 
@@ -497,8 +505,8 @@ class HotSpotter(DynStruct):
         print('[hs] unload_all() START')
         hs.feats  = ds.HotspotterChipFeatures()
         hs.cpaths = ds.HotspotterChipPaths()
-        #hs.qdat.unload_data()
-        hs.featid2_qdat = {}
+        hs.qreq.unload_data()
+        hs.featid2_qreq = {}
         hs.clear_lru_caches()
         print('[hs] unload_all() DONE')
 
@@ -508,8 +516,8 @@ class HotSpotter(DynStruct):
         'unloads features and chips. not tables'
         print('[hs] unload_cxdata(cx=%r)' % cx)
         # HACK This should not really be removed EVERY time you unload any cx
-        #hs.qdat.unload_data()
-        hs.featid2_qdat = {}
+        hs.qreq.unload_data()
+        hs.featid2_qreq = {}
         hs.clear_lru_caches()
         lists = []
         if hs.cpaths is not None:
@@ -554,10 +562,6 @@ class HotSpotter(DynStruct):
     # Query Functions
     #---------------
     @profile
-    def prequery(hs):
-        mc3.prequery(hs)
-
-    @profile
     def query(hs, qcx, *args, **kwargs):
         return hs.query_database(qcx, *args, **kwargs)
 
@@ -576,12 +580,13 @@ class HotSpotter(DynStruct):
     @util.indent_decor('[hs.query]')
     @profile
     def query_cxs(hs, qcx, cxs, query_cfg=None, **kwargs):
-        'wrapper that restricts query to only known groundtruth'
+        '''wrapper that restricts query to only known groundtruth.
+        Calls the function level query wrappers'''
         print('[hs] query_cxs(kwargs=%r)' % kwargs)
         # Ensure that we can process a query like this
-        qdat = mc3.prep_query_request(hs, query_cfg=query_cfg, qcxs=[qcx], dcxs=cxs, **kwargs)
+        qreq = mc3.prep_query_request(hs, query_cfg=query_cfg, qcxs=[qcx], dcxs=cxs, **kwargs)
         try:
-            res = mc3.process_query_request(hs, qdat)[qcx]
+            res = mc3.process_query_request(hs, qreq)[qcx]
         except mf.QueryException as ex:
             msg = '[hs] Query Failure: %r' % ex
             print(msg)

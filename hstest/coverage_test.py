@@ -13,11 +13,11 @@ from hsviz import draw_func2 as df2
 
 
 def test_find_coverage_score(hs, res):
-    qdat = hs.qdat
+    qreq = hs.qreq
     chipmatch = (res.cx2_fm, res.cx2_fs, res.cx2_fk)
     qcx = res.qcx
     #qcx2_chipmatch = {qcx: chipmatch}
-    cx2_score = coverage.score_chipmatch_coverage(hs, qcx, chipmatch, qdat)
+    cx2_score = coverage.score_chipmatch_coverage(hs, qcx, chipmatch, qreq)
     res.cx2_score
     #print('=========')
     #print('')

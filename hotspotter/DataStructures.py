@@ -16,54 +16,67 @@ ID_DTYPE = np.int32  # id datatype
 X_DTYPE  = np.int32  # indeX datatype
 
 
-class QueryData(DynStruct):
-    # TODO: Rename to QueryRequest.
+class QueryRequest(DynStruct):
     # This will allow for a pipelining structure of requests and results
-    def __init__(qdat):
-        super(QueryData, qdat).__init__()
-        qdat.cfg = None  # Query Config
-        qdat._qcxs = []
-        qdat._dcxs = []
-        qdat._internal_qcxs = []
-        qdat._internal_dcxs = []
-        qdat._data_index = None  # current index
-        qdat._dcxs2_index = {}     # cached indexes
+    def __init__(qreq):
+        super(QueryRequest, qreq).__init__()
+        qreq.cfg = None  # Query Config
+        qreq._qcxs = []
+        qreq._dcxs = []
+        qreq._internal_qcxs = []
+        qreq._internal_dcxs = []
+        qreq._data_index = None  # current index
+        qreq._dcxs2_index = {}   # cached indexes
+        qreq.query_uid = None
+        qreq.featchip_uid = None
 
-    def set_cfg(qdat, query_cfg, hs=None):
-        qdat.cfg = query_cfg
-        if hs is not None:
-            hs.set_query_config(query_cfg=query_cfg)
+    def attach_to_hs(qreq, hs):
+        hs.set_qreq(qreq)
 
-    def unload_data(qdat):
+    def set_cfg(qreq, query_cfg, dcxs):
+        qreq._dcxs = dcxs
+        qreq.cfg = query_cfg
+        qreq.vsmany = query_cfg.query_method == 'vsmany'
+
+    def unload_data(qreq):
         # Data TODO: Separate this
-        printDBG('[qdat] unload_data()')
-        qdat._qcxs = []  # True Input QCXS
-        qdat._dcxs = []  # True Input DCXS
-        qdat._internal_qcxs = []
-        qdat._internal_dcxs = []
-        qdat._data_index  = None  # current index
-        qdat._dcxs2_index = {}  # cached indexes
-        printDBG('[qdat] unload_data(success)')
+        printDBG('[qreq] unload_data()')
+        qreq._qcxs = []  # True Input QCXS
+        qreq._dcxs = []  # True Input DCXS
+        qreq._internal_qcxs = []
+        qreq._internal_dcxs = []
+        qreq._data_index  = None  # current index
+        qreq._dcxs2_index = {}  # cached indexes
+        printDBG('[qreq] unload_data(success)')
 
-    def get_uid_list(qdat, *args, **kwargs):
-        uid_list = qdat.cfg.get_uid_list(*args, **kwargs)
+    def get_uid_list(qreq, *args, **kwargs):
+        uid_list = qreq.cfg.get_uid_list(*args, **kwargs)
         if not 'noDCXS' in args:
-            if len(qdat._dcxs) == 0:
-                raise Exception('QueryData has not been populated. len(dcxs)=0')
+            if len(qreq._dcxs) == 0:
+                raise Exception('QueryRequest has not been populated. len(dcxs)=0')
             # In case you don't search the entire dataset
-            dcxs_uid = util.hashstr_arr(qdat._dcxs, '_dcxs')
+            dcxs_uid = util.hashstr_arr(qreq._dcxs, '_dcxs')
             uid_list += [dcxs_uid]
         return uid_list
 
-    def get_uid(qdat, *args, **kwargs):
-        return ''.join(qdat.get_uid_list(*args, **kwargs))
+    def get_uid(qreq, *args, **kwargs):
+        return ''.join(qreq.get_uid_list(*args, **kwargs))
 
-    def get_query_uid(qdat, hs, qcxs):
-        query_uid = qdat.get_uid()
+    def get_query_uid(qreq, hs, qcxs):
+        query_uid = qreq.get_uid()
         hs_uid    = hs.get_db_name()
         qcxs_uid  = util.hashstr_arr(qcxs, lbl='_qcxs')
         test_uid  = hs_uid + query_uid + qcxs_uid
         return test_uid
+
+    def get_dcxs(qreq):
+        dcxs = qreq._dcxs if qreq.vsmany else qreq._qcxs
+        return dcxs
+
+    def get_qcxs(qreq):
+        dcxs = qreq._qcxs if qreq.vsmany else qreq._dcxs
+        return dcxs
+
 
 
 class NNIndex(object):

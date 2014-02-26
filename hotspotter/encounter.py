@@ -108,22 +108,22 @@ def get_fmatch_iter(res):
     return fmatch_iter
 
 
-def get_cxfx_enum(qdat):
-    ax2_cxs = qdat._data_index.ax2_cx
-    ax2_fxs = qdat._data_index.ax2_fx
+def get_cxfx_enum(qreq):
+    ax2_cxs = qreq._data_index.ax2_cx
+    ax2_fxs = qreq._data_index.ax2_fx
     cxfx_enum = enumerate(izip(ax2_cxs, ax2_fxs))
     return cxfx_enum
 
 
-def make_feature_graph(qdat, qcx2_res, use_networkx=True):
+def make_feature_graph(qreq, qcx2_res, use_networkx=True):
     # Make a graph between the chips
-    cxfx2_ax = {(cx, fx): ax for ax, (cx, fx) in get_cxfx_enum(qdat)}
+    cxfx2_ax = {(cx, fx): ax for ax, (cx, fx) in get_cxfx_enum(qreq)}
     def w_edge(cx1, cx2, fx1, fx2, score, rank):
         ax1 = cxfx2_ax[(cx1, fx1)]
         ax2 = cxfx2_ax[(cx2, fx2)]
         attr_dict =  {'score': score, 'rank': rank}
         return (ax1, ax2, attr_dict)
-    nodes = [(ax, {'fx': fx, 'cx': cx}) for ax, (cx, fx) in get_cxfx_enum(qdat)]
+    nodes = [(ax, {'fx': fx, 'cx': cx}) for ax, (cx, fx) in get_cxfx_enum(qreq)]
     weighted_edges = [w_edge(cx1, cx2, fx1, fx2, score, rank)
                       for (cx1, res) in qcx2_res.iteritems()
                       for (cx2, (fx1, fx2), score, rank) in get_fmatch_iter(res)
@@ -230,10 +230,10 @@ def draw_images_at_positions(img_list, pos_list):
 
 def intra_query_cxs(hs, cxs):
     dcxs = qcxs = cxs
-    qdat = hs.qdat  # Query data / configuration
-    qdat.set_cfg(hs.prefs.query_cfg, hs)
-    mc3.ensure_nn_index(hs, qdat, dcxs)
-    qcx2_res = mc3.execute_query_safe(hs, qdat, qcxs, dcxs)[0]
+    qreq = hs.qreq  # Query data / configuration
+    qreq.set_cfg(hs.prefs.query_cfg, hs)
+    mc3.ensure_nn_index(hs, qreq, dcxs)
+    qcx2_res = mc3.execute_query_safe(hs, qreq, qcxs, dcxs)[0]
     return qcx2_res
 
 

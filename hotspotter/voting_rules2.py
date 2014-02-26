@@ -19,11 +19,11 @@ def score_chipmatch_csum(chipmatch):
     return cx2_score
 
 
-def score_chipmatch_nsum(hs, qcx, chipmatch, qdat):
+def score_chipmatch_nsum(hs, qcx, chipmatch, qreq):
     raise NotImplementedError('nsum')
 
 
-def score_chipmatch_nunique(hs, qcx, chipmatch, qdat):
+def score_chipmatch_nunique(hs, qcx, chipmatch, qreq):
     raise NotImplementedError('nunique')
 
 
@@ -45,10 +45,10 @@ def enforce_one_name(hs, cx2_score, chipmatch=None, cx2_chipscore=None):
     return cx2_score
 
 
-def score_chipmatch_pos(hs, qcx, chipmatch, qdat, rule='borda'):
+def score_chipmatch_pos(hs, qcx, chipmatch, qreq, rule='borda'):
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
-    K = qdat.cfg.nn_cfg.K
-    isWeighted = qdat.cfg.agg_cfg.isWeighted
+    K = qreq.cfg.nn_cfg.K
+    isWeighted = qreq.cfg.agg_cfg.isWeighted
     # Create voting vectors of top K utilities
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
     # Run Positional Scoring Rule
@@ -61,10 +61,10 @@ def score_chipmatch_pos(hs, qcx, chipmatch, qdat, rule='borda'):
 
 
 # chipmatch = qcx2_chipmatch[qcx]
-def score_chipmatch_PL(hs, qcx, chipmatch, qdat):
-    K = qdat.cfg.nn_cfg.K
-    max_alts = qdat.cfg.agg_cfg.max_alts
-    isWeighted = qdat.cfg.agg_cfg.isWeighted
+def score_chipmatch_PL(hs, qcx, chipmatch, qreq):
+    K = qreq.cfg.nn_cfg.K
+    max_alts = qreq.cfg.agg_cfg.max_alts
+    isWeighted = qreq.cfg.agg_cfg.isWeighted
     # Create voting vectors of top K utilities
     qfx2_utilities = _chipmatch2_utilities(hs, qcx, chipmatch, K)
     qfx2_utilities = _filter_utilities(qfx2_utilities, max_alts)

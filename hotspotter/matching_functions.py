@@ -95,10 +95,10 @@ def NoDescriptorsException(hs, qcx):
 
 
 @profile
-def nearest_neighbors(hs, qcxs, qdat):
+def nearest_neighbors(hs, qcxs, qreq):
     'Plain Nearest Neighbors'
     # Neareset neighbor configuration
-    nn_cfg = qdat.cfg.nn_cfg
+    nn_cfg = qreq.cfg.nn_cfg
     K      = nn_cfg.K
     Knorm  = nn_cfg.Knorm
     checks = nn_cfg.checks
@@ -107,7 +107,7 @@ def nearest_neighbors(hs, qcxs, qdat):
     # Grab descriptors
     cx2_desc = hs.feats.cx2_desc
     # NNIndex
-    flann = qdat._data_index.flann
+    flann = qreq._data_index.flann
     # Output
     qcx2_nns = {}
     nNN, nDesc = 0, 0
@@ -144,8 +144,8 @@ def nearest_neighbors(hs, qcxs, qdat):
 
 
 @profile
-def weight_neighbors(hs, qcx2_nns, qdat):
-    filt_cfg = qdat.cfg.filt_cfg
+def weight_neighbors(hs, qcx2_nns, qreq):
+    filt_cfg = qreq.cfg.filt_cfg
     print('[mf] Step 2) Weight neighbors: ' + filt_cfg.get_uid())
     if not filt_cfg.filt_on:
         return  {}
@@ -156,7 +156,7 @@ def weight_neighbors(hs, qcx2_nns, qdat):
         nn_filter_fn = NN_FILTER_FUNC_DICT[nnfilter]
         # Apply [nnfilter] weight to each nearest neighbor
         # TODO FIX THIS!
-        qcx2_norm_weight, qcx2_selnorms = nn_filter_fn(hs, qcx2_nns, qdat)
+        qcx2_norm_weight, qcx2_selnorms = nn_filter_fn(hs, qcx2_nns, qreq)
         filt2_weights[nnfilter] = qcx2_norm_weight
         filt2_meta[nnfilter] = qcx2_selnorms
     return filt2_weights, filt2_meta
@@ -168,18 +168,18 @@ def weight_neighbors(hs, qcx2_nns, qdat):
 
 
 @profile
-def filter_neighbors(hs, qcx2_nns, filt2_weights, qdat):
+def filter_neighbors(hs, qcx2_nns, filt2_weights, qreq):
     qcx2_nnfilter = {}
     # Configs
-    filt_cfg = qdat.cfg.filt_cfg
+    filt_cfg = qreq.cfg.filt_cfg
     cant_match_sameimg = not filt_cfg.can_match_sameimg
     cant_match_samename = not filt_cfg.can_match_samename
-    K = qdat.cfg.nn_cfg.K
+    K = qreq.cfg.nn_cfg.K
     print('[mf] Step 3) Filter neighbors: ')
     #+ filt_cfg.get_uid())
     # NNIndex
     # Database feature index to chip index
-    dx2_cx = qdat._data_index.ax2_cx
+    dx2_cx = qreq._data_index.ax2_cx
     # Filter matches based on config and weights
     mark_progress, end_progress = progress_func(len(qcx2_nns))
     for count, qcx in enumerate(qcx2_nns.iterkeys()):
@@ -247,24 +247,24 @@ def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt_cfg):
 
 
 @profile
-def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, qdat):
+def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, qreq):
     '''vsmany/vsone counts here. also this is where the filter
     weights and thershold are applied to the matches. Essientally
     nearest neighbors are converted into weighted assignments'''
     # Config
-    K = qdat.cfg.nn_cfg.K
-    query_type = qdat.cfg.agg_cfg.query_type
+    K = qreq.cfg.nn_cfg.K
+    query_type = qreq.cfg.agg_cfg.query_type
     is_vsone = query_type == 'vsone'
     print('[mf] Step 4) Building chipmatches %s' % (query_type,))
     # Data Index
-    dx2_cx = qdat._data_index.ax2_cx
-    dx2_fx = qdat._data_index.ax2_fx
+    dx2_cx = qreq._data_index.ax2_cx
+    dx2_fx = qreq._data_index.ax2_fx
     # Return var
     qcx2_chipmatch = {}
 
     #Vsone
     if is_vsone:
-        assert len(qdat._qcxs) == 1
+        assert len(qreq._qcxs) == 1
         cx2_fm, cx2_fs, cx2_fk = new_fmfsfk(hs)
 
     # Iterate over chips with nearest neighbors
@@ -302,7 +302,7 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, qdat):
     #Vsone
     if is_vsone:
         chipmatch = _fix_fmfsfk(cx2_fm, cx2_fs, cx2_fk)
-        qcx = qdat._qcxs[0]
+        qcx = qreq._qcxs[0]
         qcx2_chipmatch[qcx] = chipmatch
 
     end_progress()
@@ -315,8 +315,8 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, qdat):
 
 
 @profile
-def spatial_verification(hs, qcx2_chipmatch, qdat):
-    sv_cfg = qdat.cfg.sv_cfg
+def spatial_verification(hs, qcx2_chipmatch, qreq):
+    sv_cfg = qreq.cfg.sv_cfg
     if not sv_cfg.sv_on or sv_cfg.xy_thresh is None:
         print('[mf] Step 5) Spatial verification: off')
         return qcx2_chipmatch
@@ -332,14 +332,14 @@ def spatial_verification(hs, qcx2_chipmatch, qdat):
     cx2_rchip_size  = hs.cpaths.cx2_rchip_size
     cx2_kpts = hs.feats.cx2_kpts
     qcx2_chipmatchSV = {}
-    #printDBG(qdat._dcxs)
-    dcxs_ = set(qdat._dcxs)
+    #printDBG(qreq._dcxs)
+    dcxs_ = set(qreq._dcxs)
     USE_1_to_2 = True
     # Find a transform from chip2 to chip1 (the old way was 1 to 2)
     for qcx in qcx2_chipmatch.iterkeys():
         #printDBG('[mf] verify qcx=%r' % qcx)
         chipmatch = qcx2_chipmatch[qcx]
-        cx2_prescore = score_chipmatch(hs, qcx, chipmatch, prescore_method, qdat)
+        cx2_prescore = score_chipmatch(hs, qcx, chipmatch, prescore_method, qreq)
         (cx2_fm, cx2_fs, cx2_fk) = chipmatch
         topx2_cx = cx2_prescore.argsort()[::-1]  # Only allow indexed cxs to be in the top results
         topx2_cx = [cx for cx in iter(topx2_cx) if cx in dcxs_]
@@ -463,55 +463,38 @@ def new_fmfsfk(hs):
 
 
 @profile
-def chipmatch_to_resdict(hs, qcx2_chipmatch, filt2_meta, qdat, aug=''):
+def chipmatch_to_resdict(hs, qcx2_chipmatch, filt2_meta, qreq):
     print('[mf] Step 6) Convert chipmatch -> res')
-    real_uid, title_uid = special_uids(qdat, aug)
-    score_method = qdat.cfg.agg_cfg.score_method
+    real_uid = qreq.get_uid()
+    score_method = qreq.cfg.agg_cfg.score_method
     # Create the result structures for each query.
     qcx2_res = {}
     for qcx in qcx2_chipmatch.iterkeys():
+        # For each query's chipmatch
         chipmatch = qcx2_chipmatch[qcx]
-        cx2_score = score_chipmatch(hs, qcx, chipmatch, score_method, qdat)
-        res = qr.QueryResult(qcx, real_uid, qdat)
+        # Perform final scoring
+        cx2_score = score_chipmatch(hs, qcx, chipmatch, score_method, qreq)
+        # Create a query result structure
+        res = qr.QueryResult(qcx, real_uid, qreq)
         res.cx2_score = cx2_score
         (res.cx2_fm, res.cx2_fs, res.cx2_fk) = chipmatch
-        res.title = (title_uid + ' ' + aug).strip(' ')
-        res.filt2_meta = {}
+        res.filt2_meta = {}  # dbgstats
         for filt, qcx2_meta in filt2_meta.iteritems():
-            try:
-                res.filt2_meta[filt] = qcx2_meta[qcx]
-            except KeyError:
-                util.embed()
+            res.filt2_meta[filt] = qcx2_meta[qcx]  # things like k+1th
         qcx2_res[qcx] = res
     # Retain original score method
     return qcx2_res
 
 
-def special_uids(qdat, aug):
-    real_uid = qdat.cfg.get_uid() + aug
-    # Hacky dev stuff
-    if aug == '+NN':
-        title_uid = qdat.cfg.get_uid(  'NN', 'noFILT', 'noSV', 'noAGG', 'noCHIP')
-    elif aug == '+FILT':
-        title_uid = qdat.cfg.get_uid('noNN',   'FILT', 'noSV', 'noAGG', 'noCHIP')
-    elif aug == '+SVER':
-        title_uid = qdat.cfg.get_uid('noNN', 'noFILT',   'SV', 'noAGG', 'noCHIP')
-    else:
-        title_uid = qdat.cfg.get_uid()
-    return real_uid, title_uid
-
-
-def load_resdict(hs, qcxs, qdat, aug=''):
-    real_uid, title_uid = special_uids(qdat, aug)
+def load_resdict(hs, qreq):
     # Load the result structures for each query.
-    try:
-        qcx2_res = {}
-        for qcx in qcxs:
-            res = qr.QueryResult(qcx, real_uid, qdat)
-            res.load(hs)
-            qcx2_res[qcx] = res
-    except IOError:
-        return None
+    qcxs = qreq._qcxs
+    real_uid = qreq.get_uid()
+    qcx2_res = {}
+    for qcx in qcxs:
+        res = qr.QueryResult(qcx, real_uid, qreq)
+        res.load(hs)
+        qcx2_res[qcx] = res
     return qcx2_res
 
 
@@ -521,7 +504,7 @@ def load_resdict(hs, qcxs, qdat, aug=''):
 
 
 @profile
-def score_chipmatch(hs, qcx, chipmatch, score_method, qdat=None):
+def score_chipmatch(hs, qcx, chipmatch, score_method, qreq=None):
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
     # HACK: Im not even sure if the 'w' suffix is correctly handled anymore
     if score_method.find('w') == len(score_method) - 1:
@@ -530,15 +513,15 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, qdat=None):
     if score_method == 'csum':
         cx2_score = vr2.score_chipmatch_csum(chipmatch)
     elif score_method == 'pl':
-        cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, qcx, chipmatch, qdat)
+        cx2_score, nx2_score = vr2.score_chipmatch_PL(hs, qcx, chipmatch, qreq)
     elif score_method == 'borda':
-        cx2_score, nx2_score = vr2.score_chipmatch_pos(hs, qcx, chipmatch, qdat, 'borda')
+        cx2_score, nx2_score = vr2.score_chipmatch_pos(hs, qcx, chipmatch, qreq, 'borda')
     elif score_method == 'topk':
-        cx2_score, nx2_score = vr2.score_chipmatch_pos(hs, qcx, chipmatch, qdat, 'topk')
+        cx2_score, nx2_score = vr2.score_chipmatch_pos(hs, qcx, chipmatch, qreq, 'topk')
     elif score_method.startswith('coverage'):
         # Method num is at the end of coverage
         method = int(score_method.replace('coverage', '0'))
-        cx2_score = coverage.score_chipmatch_coverage(hs, qcx, chipmatch, qdat, method=method)
+        cx2_score = coverage.score_chipmatch_coverage(hs, qcx, chipmatch, qreq, method=method)
     else:
         raise Exception('[mf] unknown scoring method:' + score_method)
     cx2_nMatch = np.array(map(len, cx2_fm))

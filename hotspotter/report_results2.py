@@ -1068,10 +1068,10 @@ def get_matching_descriptors(allres, match_list):
 def load_qcx2_res(hs, qcx_list, nocache=False):
     'Prefrosm / loads all queries'
     import match_chips3 as mc3
-    qdat = mc3.prepare_qdat_cfg(hs)
-    qdat._dcxs = hs.get_indexed_sample()  # HACK MAKE BETTER PREP QDAT
+    qreq = mc3.prepare_qdat_cfg(hs)
+    qreq._dcxs = hs.get_indexed_sample()  # HACK MAKE BETTER PREP QDAT
     # Build query big cache uid
-    query_uid = qdat.get_uid()
+    query_uid = qreq.get_uid()
     hs_uid    = hs.get_db_name()
     qcxs_uid  = helpers.hashstr_arr(qcx_list, lbl='_qcxs')
     qres_uid  = hs_uid + query_uid + qcxs_uid

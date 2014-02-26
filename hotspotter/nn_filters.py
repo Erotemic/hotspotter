@@ -71,18 +71,18 @@ def compare_matrix_to_rows(row_matrix, row_list, comp_op=np.equal, logic_op=np.l
     return output
 
 
-def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, qdat):
+def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, qreq):
     #from hscom import helpers as util
     #util.stash_testdata('qcx2_nns')
     # Only valid for vsone
-    K = qdat.cfg.nn_cfg.K
-    Knorm = qdat.cfg.nn_cfg.Knorm
-    rule  = qdat.cfg.nn_cfg.normalizer_rule
+    K = qreq.cfg.nn_cfg.K
+    Knorm = qreq.cfg.nn_cfg.Knorm
+    rule  = qreq.cfg.nn_cfg.normalizer_rule
     qcx2_weight = {qcx: None for qcx in qcx2_nns.iterkeys()}
     qcx2_selnorms = {qcx: None for qcx in qcx2_nns.iterkeys()}
     # Database feature index to chip index
-    dx2_cx = qdat._data_index.ax2_cx
-    dx2_fx = qdat._data_index.ax2_fx
+    dx2_cx = qreq._data_index.ax2_cx
+    dx2_fx = qreq._data_index.ax2_fx
     for qcx in qcx2_nns.iterkeys():
         (qfx2_dx, qfx2_dist) = qcx2_nns[qcx]
         qfx2_nndist = qfx2_dist[:, 0:K]
@@ -133,11 +133,11 @@ def nn_lnrat_weight(*args):
     return _nn_normalized_weight(LNRAT_fn, *args)
 
 
-def nn_bursty_weight(hs, qcx2_nns, qdat):
+def nn_bursty_weight(hs, qcx2_nns, qreq):
     'Filters matches to a feature which is matched > burst_thresh #times'
     # Half-generalized to vsmany
     # Assume the first nRows-1 rows are the matches (last row is normalizer)
-    K = qdat.cfg.nn_cfg.K
+    K = qreq.cfg.nn_cfg.K
     qcx2_bursty_weight = {qcx: None for qcx in qcx2_nns.iterkeys()}
     qcx2_metaweight = {qcx: None for qcx in qcx2_nns.iterkeys()}
     for qcx in qcx2_nns.iterkeys():
@@ -150,17 +150,17 @@ def nn_bursty_weight(hs, qcx2_nns, qdat):
 
 '''
 %run dev.py
-qdat = mc3.prequery(hs)
-qcx2_nns = mf.nearest_neighbors(hs, qcxs, qdat)
+qreq = mc3.prequery(hs)
+qcx2_nns = mf.nearest_neighbors(hs, qcxs, qreq)
 '''
 
 
-def nn_recip_weight(hs, qcx2_nns, qdat):
+def nn_recip_weight(hs, qcx2_nns, qreq):
     'Filters a nearest neighbor to only reciprocals'
-    data_index = qdat._data_index
-    K = qdat.cfg.nn_cfg.K
-    Krecip = qdat.cfg.filt_cfg.Krecip
-    checks = qdat.cfg.nn_cfg.checks
+    data_index = qreq._data_index
+    K = qreq.cfg.nn_cfg.K
+    Krecip = qreq.cfg.filt_cfg.Krecip
+    checks = qreq.cfg.nn_cfg.checks
     dx2_data = data_index.ax2_data
     data_flann = data_index.flann
     qcx2_recip_weight = {qcx: None for qcx in qcx2_nns.iterkeys()}
@@ -184,10 +184,10 @@ def nn_recip_weight(hs, qcx2_nns, qdat):
     return qcx2_recip_weight, qcx2_metaweight
 
 
-def nn_roidist_weight(hs, qcx2_nns, qdat):
+def nn_roidist_weight(hs, qcx2_nns, qreq):
     'Filters a matches to those within roughly the same spatial arangement'
-    data_index = qdat._data_index
-    K = qdat.cfg.nn_cfg.K
+    data_index = qreq._data_index
+    K = qreq.cfg.nn_cfg.K
     cx2_rchip_size = hs.cpaths.cx2_rchip_size
     cx2_kpts = hs.feats.cx2_kpts
     dx2_cx = data_index.ax2_cx
@@ -222,13 +222,13 @@ def nn_roidist_weight(hs, qcx2_nns, qdat):
     return cx2_roidist_weight
 
 
-def nn_scale_weight(hs, qcx2_nns, qdat):
+def nn_scale_weight(hs, qcx2_nns, qreq):
     # Filter by scale for funzies
-    K = qdat.cfg.nn_cfg.K
+    K = qreq.cfg.nn_cfg.K
     cx2_scale_weight = {qcx: None for qcx in qcx2_nns.iterkeys()}
     qcx2_metaweight = {qcx: None for qcx in qcx2_nns.iterkeys()}
-    data_index = qdat._data_index
-    K = qdat.cfg.nn_cfg.K
+    data_index = qreq._data_index
+    K = qreq.cfg.nn_cfg.K
     cx2_kpts = hs.feats.cx2_kpts
     dx2_cx = data_index.ax2_cx
     dx2_fx = data_index.ax2_fx

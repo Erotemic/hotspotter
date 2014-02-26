@@ -17,12 +17,12 @@ SCALE_FACTOR_DEFAULT = .05
 METHOD_DEFAULT = 0
 
 
-def score_chipmatch_coverage(hs, qcx, chipmatch, qdat, method=0):
+def score_chipmatch_coverage(hs, qcx, chipmatch, qreq, method=0):
     prescore_method = 'csum'
     nShortlist = 100
-    dcxs_ = set(qdat._dcxs)
+    dcxs_ = set(qreq._dcxs)
     (cx2_fm, cx2_fs, cx2_fk) = chipmatch
-    cx2_prescore = mf.score_chipmatch(hs, qcx, chipmatch, prescore_method, qdat)
+    cx2_prescore = mf.score_chipmatch(hs, qcx, chipmatch, prescore_method, qreq)
     topx2_cx = cx2_prescore.argsort()[::-1]  # Only allow indexed cxs to be in the top results
     topx2_cx = [cx for cx in iter(topx2_cx) if cx in dcxs_]
     nRerank = min(len(topx2_cx), nShortlist)

@@ -309,7 +309,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     nQuery   = len(qcx_list)
     #rc2_res  = np.empty((nQuery, nCfg), dtype=list)  # row/col -> result
     mat_list = []
-    qdat     = ds.QueryData()
+    qdat = ds.QueryData()
 
     # TODO Add to argparse2
     nocache_testres =  util.get_flag('--nocache-testres', False)

@@ -17,52 +17,30 @@ import numpy as np
 #import cv2
 # HotSpotter
 #from hotspotter import spatial_verification2 as sv2
-from hscom import params
-from hscom import helpers as util
-from hscom import latex_formater
-from hsgui import guitools
-from hsviz import draw_func2 as df2
-from hsviz import viz
-from hsviz import allres_viz
-from hscom import fileio as io
 from hotspotter import DataStructures as ds
-from hotspotter import HotSpotterAPI as api
-from hotspotter import QueryResult as qr
 from hotspotter import chip_compute2 as cc2
 from hotspotter import feature_compute2 as fc2
 from hotspotter import load_data2 as ld2
-from hotspotter import match_chips3 as mc3
 from hotspotter import matching_functions as mf
 from hotspotter import report_results2 as rr2
-from hotspotter import voting_rules2 as vr2
-from hsdev import test_api
+from hscom import helpers as util
+from hscom import latex_formater
+from hscom import params
 from hsdev import dev_stats
-from hsdev import experiment_harness
 from hsdev import experiment_configs
+from hsdev import experiment_harness
+from hsdev import test_api
+from hsgui import guitools
+from hsviz import allres_viz
+from hsviz import draw_func2 as df2
 from hsviz import interact
+from hsviz import viz
 import hstpl
-
-
-def all_printoff():
-    guitools.print_off()
-    cc2.print_off()
-    fc2.print_off()
-    ds.print_off()
-    mf.print_off()
-    io.print_off()
-    api.print_off()
-    mc3.print_off()
-    vr2.print_off()
-    ld2.print_off()
-    qr.print_off()
-    util.print_off()
-    df2.print_off()
-    #algos.print_off()
-    #cc2.print_off()
-    #fc2.print_off()
-    #ld2.print_off()
-    #util.print_off()
-    #parallel.print_off()
+#from hscom import fileio as io
+#from hotspotter import HotSpotterAPI as api
+#from hotspotter import QueryResult as qr
+#from hotspotter import match_chips3 as mc3
+#from hotspotter import voting_rules2 as vr2
 
 
 def export_qon_list(hs, qcx_list):
@@ -133,7 +111,6 @@ def vary_two_cfg(hs, qcx, cx, query_cfg, vary_cfg, fnum=1):
     #ax = df2.gca()
     # Vary cfg1
     #df2..gcf().clf()
-    print_lock_ = util.ModulePrintLock(mc3, df2)
     assign_alg = query_cfg.agg_cfg.query_type
     vert = not params.args.horiz
     plt_match_args = dict(fnum=fnum, show_gname=False, showTF=False, vert=vert)
@@ -160,11 +137,9 @@ def vary_two_cfg(hs, qcx, cx, query_cfg, vary_cfg, fnum=1):
                 ax.set_xlabel(x_title, **xlabel_args)
             if colx == 0:
                 ax.set_ylabel(y_title, **ylabel_args)
-    del print_lock_
     vary_title = '%s vary %s and %s' % (assign_alg, cfg1_name, cfg2_name)
     figtitle =  '%s %s %s' % (vary_title, hs.vs_str(qcx, cx), str(hs.cx2_property(qcx, 'Notes')))
-    subtitle = mc3.simplify_test_uid(query_cfg.get_uid())
-    df2.set_figtitle(figtitle, subtitle)
+    df2.set_figtitle(figtitle)
     df2.adjust_subplots_xylabels()
     fnum += 1
     viz.save_if_requested(hs, vary_title)

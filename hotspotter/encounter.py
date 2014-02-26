@@ -11,7 +11,6 @@ from scipy.cluster.hierarchy import fclusterdata
 # HotSpotter
 from hotspotter import match_chips3 as mc3
 from hscom import fileio as io
-from hscom import helpers
 from hscom import helpers as util
 from hsviz import draw_func2 as df2
 
@@ -62,7 +61,7 @@ def compute_encounters(hs, seconds_thresh=15):
     # Print images per encouter statistics
     clusterx2_nGxs = np.array(map(len, clusterx2_gxs))
     print('[encounter] image per encounter stats:\n %s'
-          % helpers.pstats(clusterx2_nGxs, True))
+          % util.pstats(clusterx2_nGxs, True))
 
     # Sort encounters by images per encounter
     ex2_clusterx = clusterx2_nGxs.argsort()
@@ -92,7 +91,7 @@ def get_chip_encounters(hs):
     # Build encounter to chips from encounter to images
     ex2_cxs = [None for _ in xrange(len(ex2_gxs))]
     for ex, gxs in enumerate(ex2_gxs):
-        ex2_cxs[ex] = helpers.flatten(hs.gx2_cxs(gxs))
+        ex2_cxs[ex] = util.flatten(hs.gx2_cxs(gxs))
     # optional
     # resort encounters by number of chips
     ex2_nCxs = map(len, ex2_cxs)
@@ -149,7 +148,7 @@ def make_feature_graph(qdat, qcx2_res, use_networkx=True):
             v_cx[v] = int(vprops['cx'])
             v_fx[v] = int(vprops['fx'])
 
-        mark_prog, end_prog = helpers.progress_func(len(weighted_edges))
+        mark_prog, end_prog = util.progress_func(len(weighted_edges))
         count = 0
         for ax1, ax2, prop_dict in weighted_edges:
             mark_prog(count)
@@ -163,7 +162,7 @@ def make_feature_graph(qdat, qcx2_res, use_networkx=True):
             e_rank[e] = int(prop_dict['rank'])
         mark_prog(count)
         end_prog()
-        import graph_tool.draw
+        #import graph_tool.draw
 
         graph.save('test_graph.dot')
     return graph
@@ -211,8 +210,7 @@ def draw_images_at_positions(img_list, pos_list):
     fig = df2.gcf()
     trans = ax.transData.transform
     trans2 = fig.transFigure.inverted().transform
-    mark_progress, end_progress = helpers.progress_func(len(pos_list),
-                                                        lbl='drawing img')
+    mark_progress, end_progress = util.progress_func(len(pos_list), lbl='drawing img')
     for ix, ((x, y), img) in enumerate(izip(pos_list, img_list)):
         mark_progress(ix)
         xx, yy = trans((x, y))  # figure coordinates
@@ -268,7 +266,7 @@ def inter_encounter_match(hs, eid2_names=None, **kwargs):
     # Perform Inter-Encounter Matching
     if eid2_names is None:
         eid2_names = intra_encounter_match(hs, **kwargs)
-    all_nxs = helpers.flatten(eid2_names.values())
+    all_nxs = util.flatten(eid2_names.values())
     for nx2_cxs in eid2_names:
         qnxs = nx2_cxs
         dnxs = all_nxs

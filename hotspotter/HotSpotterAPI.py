@@ -281,8 +281,9 @@ class HotSpotter(DynStruct):
                 #hs.prefs.N = args.N if args is not None
                 #args_dict = vars(args)
                 #hs.update_preferences(**args_dict)
-            hs.query_history = [(None, None)]
-            hs.qdat = ds.QueryData()  # Query Data
+            #hs.query_history = [(None, None)]
+            #hs.qdat = ds.QueryData()  # Query Data
+            hs.featid2_qdat = {}  # feature id -> query data
             if db_dir is not None:
                 hs.load_tables(db_dir=db_dir)
             hs.augment_api()
@@ -318,7 +319,7 @@ class HotSpotter(DynStruct):
             was_loaded = prefmsg is True
             print('[hs] Able to load prefs? ...%r' % was_loaded)
             if was_loaded:
-                hs.fix_prefs()
+                hs._ensure_pref_pointers()
             else:
                 print('[hs]' + prefmsg)
                 hs.default_preferences()
@@ -331,18 +332,20 @@ class HotSpotter(DynStruct):
         hs.prefs.chip_cfg  = Config.default_chip_cfg()
         hs.prefs.feat_cfg  = Config.default_feat_cfg(hs)
         hs.prefs.query_cfg = Config.default_vsmany_cfg(hs)
+        hs._ensure_pref_pointers()
 
-    def fix_prefs(hs):
+    def _ensure_pref_pointers(hs):
         print('[hs] fix_prefs()')
         # When loading some pointers may become broken. Fix them.
         hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
         hs.prefs.query_cfg._feat_cfg = hs.prefs.feat_cfg
 
-    def fix_prefs2(hs, query_cfg=None):
+    def set_query_config(hs, query_cfg=None):
         print('[hs] fix_prefs2()')
         # Fix pointers in the correct direction
         if query_cfg is not None:
             hs.prefs.query_cfg = query_cfg
+        hs.qdat.cfg       = hs.prefs.query_cfg
         hs.prefs.feat_cfg = hs.prefs.query_cfg._feat_cfg
         hs.prefs.chip_cfg = hs.prefs.feat_cfg._chip_cfg
 
@@ -494,7 +497,8 @@ class HotSpotter(DynStruct):
         print('[hs] unload_all() START')
         hs.feats  = ds.HotspotterChipFeatures()
         hs.cpaths = ds.HotspotterChipPaths()
-        hs.qdat.unload_data()
+        #hs.qdat.unload_data()
+        hs.featid2_qdat = {}
         hs.clear_lru_caches()
         print('[hs] unload_all() DONE')
 
@@ -504,7 +508,8 @@ class HotSpotter(DynStruct):
         'unloads features and chips. not tables'
         print('[hs] unload_cxdata(cx=%r)' % cx)
         # HACK This should not really be removed EVERY time you unload any cx
-        hs.qdat.unload_data()
+        #hs.qdat.unload_data()
+        hs.featid2_qdat = {}
         hs.clear_lru_caches()
         lists = []
         if hs.cpaths is not None:

@@ -24,19 +24,23 @@ class QueryData(DynStruct):
         qdat.cfg = None  # Query Config
         qdat._qcxs = []
         qdat._dcxs = []
+        qdat._internal_qcxs = []
+        qdat._internal_dcxs = []
         qdat._data_index = None  # current index
         qdat._dcxs2_index = {}     # cached indexes
 
     def set_cfg(qdat, query_cfg, hs=None):
         qdat.cfg = query_cfg
         if hs is not None:
-            hs.fix_prefs2(query_cfg=query_cfg)
+            hs.set_query_config(query_cfg=query_cfg)
 
     def unload_data(qdat):
         # Data TODO: Separate this
         printDBG('[qdat] unload_data()')
         qdat._qcxs = []  # True Input QCXS
         qdat._dcxs = []  # True Input DCXS
+        qdat._internal_qcxs = []
+        qdat._internal_dcxs = []
         qdat._data_index  = None  # current index
         qdat._dcxs2_index = {}  # cached indexes
         printDBG('[qdat] unload_data(success)')

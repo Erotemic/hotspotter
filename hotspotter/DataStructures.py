@@ -66,7 +66,7 @@ class QueryRequest(DynStruct):
         test_uid  = hs_uid + query_uid + qcxs_uid
         return test_uid
 
-    def get_interanl_dcxs(qreq):
+    def get_internal_dcxs(qreq):
         dcxs = qreq._dcxs if qreq.vsmany else qreq._qcxs
         return dcxs
 

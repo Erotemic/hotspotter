@@ -72,7 +72,11 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     # Run Main Function
     from hsdev import test_api
+    from hsdev import dbgimport
     print('main.py')
+    dbgimport.hsgui_printoff()
+    dbgimport.hsviz_printoff()
+    dbgimport.mf.print_off()
     # Run main script with backend
     hs, back, app, is_root = test_api.main_init()
     # --- Run Startup Commands ---

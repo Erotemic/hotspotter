@@ -62,7 +62,7 @@ NN_FILTER_FUNC_DICT = {
     'lnbnn':   nn_filters.nn_lnbnn_weight,
     'ratio':   nn_filters.nn_ratio_weight,
 }
-MARK_AFTER = 1
+MARK_AFTER = 2
 
 #=================
 # Helpers
@@ -496,11 +496,27 @@ def load_resdict(hs, qreq):
     ##ELSE
     #qcx2_res = {}
     #for qcx in qcxs:
-        #res = qr.QueryResult(qcx, real_uid, qreq)
+        #res = qr.QueryResult(qcx, uid)
         #res.load(hs)
         #qcx2_res[qcx] = res
     ##ENDIF
     return qcx2_res
+
+
+def try_load_resdict(hs, qreq):
+    # Load the result structures for each query.
+    qcxs = qreq._qcxs
+    uid = qreq.get_uid()
+    qcx2_res = {}
+    failed_qcxs = []
+    for qcx in qcxs:
+        try:
+            res = qr.QueryResult(qcx, uid)
+            res.load(hs)
+            qcx2_res[qcx] = res
+        except IOError:
+            failed_qcxs.append(qcx)
+    return qcx2_res, failed_qcxs
 
 
 #============================

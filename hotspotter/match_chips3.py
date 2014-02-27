@@ -2,6 +2,8 @@ from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[mc3]', DEBUG=False)
+# Science
+import numpy as np
 # HotSpotter
 from hscom import params
 from hscom import helpers as util
@@ -11,6 +13,9 @@ import matching_functions as mf
 
 @util.indent_decor('[quick_ensure]')
 def quickly_ensure_qreq(hs, qcxs=None, dcxs=None):
+    # This function is purely for hacking, eventually prep request or something
+    # new should be good enough to where this doesnt matter
+    print(' --- quick ensure qreq --- ')
     qreq = hs.qreq
     query_cfg = hs.prefs.query_cfg
     cxs = hs.get_indexed_sample()
@@ -27,24 +32,26 @@ def quickly_ensure_qreq(hs, qcxs=None, dcxs=None):
 
 @util.indent_decor('[prep_qreq]')
 def prep_query_request(qreq=None, query_cfg=None, qcxs=None, dcxs=None, **kwargs):
+    print(' --- prep query request ---')
     # Builds or modifies a query request object
     def loggedif(msg, condition):
         # helper function for logging if statment results
-        print(msg + '... ' + ['no', 'yes'][condition])
+        printDBG(msg + '... ' + ['no', 'yes'][condition])
         return condition
-    if loggedif('1) given qreq?', qreq is not None):
+    if not loggedif('(1) given qreq?', qreq is not None):
         qreq = ds.QueryRequest()
-    if loggedif('2) given qcxs?', qcxs is not None):
+    if loggedif('(2) given qcxs?', qcxs is not None):
         qreq._qcxs = qcxs
-    if loggedif('3) given dcxs?', dcxs is not None):
+    if loggedif('(3) given dcxs?', dcxs is not None):
         qreq._dcxs = dcxs
-    if not loggedif('4) given qcfg?', query_cfg is not None):
+    if not loggedif('(4) given qcfg?', query_cfg is not None):
         query_cfg = qreq.cfg
-    if loggedif('4) given kwargs?', len(kwargs) > 0):
+    if loggedif('(4) given kwargs?', len(kwargs) > 0):
         query_cfg = query_cfg.deepcopy(**kwargs)
     #
     qreq.set_cfg(query_cfg)
     #
+    assert (qreq is not None), ('invalid qeury request')
     assert (qreq._qcxs is not None and len(qreq._qcxs) > 0), (
         'query request has invalid query chip indexes')
     assert (qreq._dcxs is not None and len(qreq._dcxs) > 0), (
@@ -68,24 +75,31 @@ def pre_cache_checks(hs, qreq):
     feat_uid = qreq.cfg._feat_cfg.get_uid()
     # Load any needed features or chips into memory
     if hs.feats.feat_uid != feat_uid:
+        print(' !! UNLOAD DATA !!')
+        print('[mc3] feat_uid = %r' % feat_uid)
+        print('[mc3] hs.feats.feat_uid = %r' % hs.feats.feat_uid)
         hs.unload_cxdata('all')
-    hs.refresh_features(qreq._dcxs)
-    hs.refresh_features(qreq._qcxs)
     return qreq
 
 
 @profile
 @util.indent_decor('[pre_exec]')
 def pre_exec_checks(hs, qreq):
-    print(' --- pre query request execution checks --- ')
+    print(' --- pre exec checks ---')
     # Get qreq config information
-    dcxs = qreq.get_interanl_dcxs()
+    dcxs = qreq.get_internal_dcxs()
     feat_uid = qreq.cfg._feat_cfg.get_uid()
     dcxs_uid = util.hashstr_arr(dcxs, 'dcxs')
     # Ensure the index / inverted index exist for this config
-    dftup_uid = (dcxs_uid, feat_uid)
+    dftup_uid = dcxs_uid + feat_uid
     if not dftup_uid in qreq._dftup2_index:
-        print('qreq.flann[dcxs_uid]... nn_index cache miss')
+        print('qreq._dftup2_index[dcxs_uid]... nn_index cache miss')
+        print('dftup_uid = %r' % (dftup_uid,))
+        print('len(qreq._dftup2_index) = %r' % len(qreq._dftup2_index))
+        print('type(qreq._dftup2_index) = %r' % type(qreq._dftup2_index))
+        print('qreq = %r' % qreq)
+        cx_list = np.unique(np.hstack((qreq._dcxs, qreq._qcxs)))
+        hs.refresh_features(cx_list)
         # Compute the FLANN Index
         data_index = ds.NNIndex(hs, dcxs)
         qreq._dftup2_index[dftup_uid] = data_index
@@ -97,27 +111,52 @@ def pre_exec_checks(hs, qreq):
 # Main Query Logic
 #----------------------
 
+# Query Level 2
+@util.indent_decor('[QL2]')
+def process_query_request(hs, qreq, use_cache=True, safe=True):
+    '''
+    The standard query interface
+    '''
+    print(' --- process query request --- ')
+    # HotSpotter feature checks
+    if safe:
+        qreq = pre_cache_checks(hs, qreq)
+
+    # Try loading as many cached results as possible
+    use_cache = not params.args.nocache_query and use_cache
+    if use_cache:
+        qcx2_res, failed_qcxs = mf.try_load_resdict(hs, qreq)
+    else:
+        qcx2_res = {}
+        failed_qcxs = qreq._qcxs
+
+    # Execute and save queries
+    if len(failed_qcxs) > 0:
+        if safe:
+            qreq = pre_exec_checks(hs, qreq)
+        computed_qcx2_res = execute_query_and_save_L1(hs, qreq, failed_qcxs)
+        qcx2_res.update(computed_qcx2_res)  # Update cached results
+    return qcx2_res
+
+
 # Query Level 1
 @util.indent_decor('[QL1]')
-def process_query_request(hs, qreq, use_cache=True):
-    print('[q1] process_query_request()')
-    qreq = pre_cache_checks(hs, qreq)
-    if not params.args.nocache_query and use_cache:
-        try:
-            qcx2_res = mf.load_resdict(hs, qreq)  # load cache
-            return qcx2_res
-        except IOError as ex:
-            print(ex)
-    qreq = pre_exec_checks(hs, qreq)
-    qcx2_res = execute_query_request_L0(hs, qreq)  # exec query
-    [res.save(hs) for qcx, res in qcx2_res.iteritems()]  # save cache
+def execute_query_and_save_L1(hs, qreq, failed_qcxs=[]):
+    print('[q1] execute_query_and_save_L1()')
+    orig_qcxs = qreq._qcxs
+    if len(failed_qcxs) > 0:
+        qreq._qcxs = failed_qcxs
+    qcx2_res = execute_query_L0(hs, qreq)  # Execute Queries
+    for qcx, res in qcx2_res.iteritems():  # Cache Save
+        res.save(hs)
+    qreq._qcxs = orig_qcxs
     return qcx2_res
 
 
 # Query Level 0
 @profile
 @util.indent_decor('[QL0]')
-def execute_query_request_L0(hs, qreq):
+def execute_query_L0(hs, qreq):
     '''
     Driver logic of query pipeline
     Input:

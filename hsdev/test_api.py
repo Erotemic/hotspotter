@@ -101,11 +101,13 @@ def clone_database(dbname):
     return dbname + 'Clone'
 
 
-def get_valid_cid(hs):
+def get_valid_cid(hs, num=0):
     try:
         test_cxs = get_test_cxs(hs)
         test_cids = hs.cx2_cid(test_cxs)
-        cid = test_cids[0]
+        if len(test_cids) == 0:
+            raise IndexError('THERE ARE NO TEST_CIDS IN THIS DATABASE')
+        cid = test_cids[num % len(test_cids)]
     except IndexError as ex:
         print('Index Error: %s' % str(ex))
         raise

@@ -283,6 +283,7 @@ class HotSpotter(DynStruct):
                 #hs.update_preferences(**args_dict)
             #hs.query_history = [(None, None)]
             hs.qreq = ds.QueryRequest()  # Query Data
+            hs.qreq.set_cfg(hs.prefs.query_cfg)
             hs.qid2_qreq = {}  # feature id -> query data
             if db_dir is not None:
                 hs.load_tables(db_dir=db_dir)
@@ -335,13 +336,13 @@ class HotSpotter(DynStruct):
         hs._ensure_pref_pointers()
 
     def _ensure_pref_pointers(hs):
-        print('[hs] fix_prefs()')
+        print('[hs] _ensure_pref_pointers()')
         # When loading some pointers may become broken. Fix them.
         hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
         hs.prefs.query_cfg._feat_cfg = hs.prefs.feat_cfg
 
     def attatch_qreq(hs, qreq):
-        print('[hs] fix_prefs2()')
+        print('[hs] attatch_qreq()')
         # Fix pointers in the correct direction
         hs.qreq = qreq
         hs.prefs.query_cfg = hs.qreq.cfg
@@ -436,8 +437,9 @@ class HotSpotter(DynStruct):
     @profile
     def refresh_features(hs, cx_list=None):
         # TODO: All are loaded flag
-        hs.load_chips(cx_list=cx_list)
-        hs.load_features(cx_list=cx_list)
+        if hs.dirty:
+            hs.load_chips(cx_list=cx_list)
+            hs.load_features(cx_list=cx_list)
 
     def update_samples_split_pos(hs, pos):
         valid_cxs = hs.get_valid_cxs()
@@ -495,6 +497,7 @@ class HotSpotter(DynStruct):
     @profile
     def unload_all(hs):
         print('[hs] unload_all() START')
+        hs.dirty = True
         hs.feats  = ds.HotspotterChipFeatures()
         hs.cpaths = ds.HotspotterChipPaths()
         hs.qreq.unload_data()
@@ -508,6 +511,7 @@ class HotSpotter(DynStruct):
         'unloads features and chips. not tables'
         print('[hs] unload_cxdata(cx=%r)' % cx)
         # HACK This should not really be removed EVERY time you unload any cx
+        hs.dirty = True
         hs.qreq.unload_data()
         hs.featid2_qreq = {}
         hs.clear_lru_caches()

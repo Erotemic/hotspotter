@@ -50,9 +50,13 @@ default()
 {
     export TEST_NAME="shortlist_test chipsize_test scale_test "
     export DEV_ARGS="--all-gt-cases --print-colscore -t $TEST_NAME $@"
+    #export DB_LIST="NAUTS FROGS"
+    export DB_LIST="NAUTS"
+    for DB in $DB_LIST
+    do
+        python dev.py --db $DB $DEV_ARGS
+    done
 
-    python dev.py --db NAUT_Dan $DEV_ARGS  && \
-    python dev.py --db Frogs $DEV_ARGS
 }
 
 run_continuous()

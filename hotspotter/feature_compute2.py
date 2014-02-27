@@ -8,7 +8,6 @@ import numpy as np
 # python
 from os.path import join
 # hotspotter
-from hscom import helpers
 from hscom import helpers as util
 from hscom import params
 from hscom import fileio as io
@@ -25,7 +24,7 @@ def whiten_features(desc_list):
     offset = 0
     for cx in xrange(len(desc_list)):
         old_desc = desc_list[cx]
-        print ('[fc2] * ' + helpers.info(old_desc, 'old_desc'))
+        print ('[fc2] * ' + util.info(old_desc, 'old_desc'))
         offset = len(old_desc)
         new_desc = ax2_desc_white[index:(index + offset)]
         desc_list[cx] = new_desc
@@ -64,13 +63,13 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
     try:
         nFeats = len(feat_fpath_list)
         prog_label = '[fc2] Loading feature: '
-        mark_progress, end_progress = helpers.progress_func(nFeats, prog_label)
+        mark_progress, end_progress = util.progress_func(nFeats, prog_label)
         for count, feat_path in enumerate(feat_fpath_list):
             try:
                 npz = np.load(feat_path, mmap_mode=None)
             except IOError:
                 print('\n')
-                helpers.checkpath(feat_path, verbose=True)
+                util.checkpath(feat_path, verbose=True)
                 print('IOError on feat_path=%r' % feat_path)
                 raise
             kpts = npz['arr_0']
@@ -133,7 +132,7 @@ def _load_features_bigcache(hs, cx_list):
     feat_cfg = hs.prefs.feat_cfg
     feat_uid = feat_cfg.get_uid()
     cache_dir  = hs.dirs.cache_dir
-    sample_uid = helpers.hashstr_arr(cx_list, 'cids')
+    sample_uid = util.hashstr_arr(cx_list, 'cids')
     bigcache_uid = '_'.join((feat_uid, sample_uid))
     ext = '.npy'
     loaded = bigcache_feat_load(cache_dir, bigcache_uid, ext)
@@ -147,6 +146,7 @@ def _load_features_bigcache(hs, cx_list):
 
 
 @profile
+@util.indent_decor('[fc2]')
 def load_features(hs, cx_list=None, **kwargs):
     # TODO: There needs to be a fast way to ensure that everything is
     # already loaded. Same for cc2.
@@ -180,8 +180,8 @@ def load_features(hs, cx_list=None, **kwargs):
         kpts_list, desc_list = _load_features_individualy(hs, cx_list)
     # Extend the datastructure if needed
     list_size = max(cx_list) + 1
-    helpers.ensure_list_size(hs.feats.cx2_kpts, list_size)
-    helpers.ensure_list_size(hs.feats.cx2_desc, list_size)
+    util.ensure_list_size(hs.feats.cx2_kpts, list_size)
+    util.ensure_list_size(hs.feats.cx2_desc, list_size)
     # Copy the values into the ChipPaths object
     for lx, cx in enumerate(cx_list):
         hs.feats.cx2_kpts[cx] = kpts_list[lx]
@@ -197,6 +197,6 @@ def clear_feature_cache(hs):
     cache_dir = hs.dirs.cache_dir
     feat_uid = feat_cfg.get_uid()
     print('[fc2] clearing feature cache: %r' % feat_dir)
-    helpers.remove_files_in_dir(feat_dir, '*' + feat_uid + '*', verbose=True, dryrun=False)
-    helpers.remove_files_in_dir(cache_dir, '*' + feat_uid + '*', verbose=True, dryrun=False)
+    util.remove_files_in_dir(feat_dir, '*' + feat_uid + '*', verbose=True, dryrun=False)
+    util.remove_files_in_dir(cache_dir, '*' + feat_uid + '*', verbose=True, dryrun=False)
     pass

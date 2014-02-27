@@ -189,21 +189,33 @@ def get_test_results2(hs, qcxs, qreq, cfgx=0, nCfg=1, nocache_testres=False,
     qx2_bestranks = []
 
     # Perform queries
-    BATCH_MODE = util.get_flag('--batch', True)
+    BATCH_MODE = not '--nobatch' in sys.argv
+    #BATCH_MODE = '--batch' in sys.argv
     if BATCH_MODE:
+        print('[harn] querying in batch mode')
         mc3.pre_cache_checks(hs, qreq)
         mc3.pre_exec_checks(hs, qreq)
         qx2_bestranks = [None for qcx in qcxs]
         # Query Chip / Row Loop
-        qcx2_res = mc3.process_query_request(hs, qreq)
+        qcx2_res = mc3.process_query_request(hs, qreq, safe=False)
         qcx2_bestranks = {}
         for qcx, res in qcx2_res.iteritems():
             gt_ranks = res.get_gt_ranks(hs=hs)
             _rank = -1 if len(gt_ranks) == 0 else min(gt_ranks)
             qcx2_bestranks[qcx] = _rank
-        for qx, qcx in enumerate(qcxs):
-            qx2_bestranks[qx] = [qcx2_bestranks[qcx]]
+        try:
+            for qx, qcx in enumerate(qcxs):
+                qx2_bestranks[qx] = [qcx2_bestranks[qcx]]
+        except Exception as ex:
+            print('[harn] ERROR')
+            print(ex)
+            print('qcx2_bestranks=%r' % qcx2_bestranks)
+            print('qcx2_res=%r' % qcx2_res)
+            print('qcx=%r' % qcx)
+            print('qx=%r' % qx)
+            raise
     else:
+        print('[harn] querying one query at a time')
         # Make progress message
         msg = textwrap.dedent('''
         ---------------------
@@ -212,6 +224,8 @@ def get_test_results2(hs, qcxs, qreq, cfgx=0, nCfg=1, nocache_testres=False,
         mark_progress = util.simple_progres_func(test_results_verbosity, msg, '.')
         total = nQuery * nCfg
         nPrevQ = nQuery * cfgx
+        mc3.pre_cache_checks(hs, qreq)
+        mc3.pre_exec_checks(hs, qreq)
         # Query Chip / Row Loop
         for qx, qcx in enumerate(qcxs):
             count = qx + nPrevQ + 1
@@ -220,7 +234,7 @@ def get_test_results2(hs, qcxs, qreq, cfgx=0, nCfg=1, nocache_testres=False,
                 print('qcx=%r. quid=%r' % (qcx, qreq.get_uid()))
             try:
                 qreq._qcxs = [qcx]
-                qcx2_res = mc3.process_query_request(hs, qreq)
+                qcx2_res = mc3.process_query_request(hs, qreq, safe=False)
             except mf.QueryException as ex:
                 print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                 print('Harness caught Query Exception: ')
@@ -632,7 +646,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print('viewing (r, c) = (%r, %r)' % (r, c))
         # Load / Execute the query
         qreq = mc3.prep_query_request(qreq=qreq, qcxs=[qcx], dcxs=dcxs, query_cfg=query_cfg)
-        qcx2_res = mc3.process_query_request(hs, qreq)
+        qcx2_res = mc3.process_query_request(hs, qreq, safe=True)
         res = qcx2_res[qcx]
         # Print Query UID
         print(res.uid)

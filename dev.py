@@ -585,8 +585,8 @@ if __name__ == '__main__':
         ld2.print_off()
         fc2.print_off()
         cc2.print_off()
-    if not VERBOSE:
-        mf.print_off()
+    #if not VERBOSE:
+        #mf.print_off()
 
     # useful when copy and pasting into ipython
     guitools.init_qtapp()

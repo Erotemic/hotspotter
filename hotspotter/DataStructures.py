@@ -23,30 +23,27 @@ class QueryRequest(DynStruct):
         qreq.cfg = None  # Query Config
         qreq._qcxs = []
         qreq._dcxs = []
-        qreq._internal_qcxs = []
-        qreq._internal_dcxs = []
         qreq._data_index = None  # current index
-        qreq._dcxs2_index = {}   # cached indexes
+        qreq._dftup2_index = {}   # cached indexes
         qreq.query_uid = None
         qreq.featchip_uid = None
+        qreq.vsmany = False
+        qreq.vsone = False
 
-    def attach_to_hs(qreq, hs):
-        hs.set_qreq(qreq)
-
-    def set_cfg(qreq, query_cfg, dcxs):
+    def set_cxs(qreq, qcxs, dcxs):
+        qreq._qcxs = qcxs
         qreq._dcxs = dcxs
+
+    def set_cfg(qreq, query_cfg):
         qreq.cfg = query_cfg
-        qreq.vsmany = query_cfg.query_method == 'vsmany'
+        qreq.vsmany = query_cfg.agg_cfg.query_type == 'vsmany'
+        qreq.vsone  = query_cfg.agg_cfg.query_type == 'vsone'
 
     def unload_data(qreq):
         # Data TODO: Separate this
         printDBG('[qreq] unload_data()')
-        qreq._qcxs = []  # True Input QCXS
-        qreq._dcxs = []  # True Input DCXS
-        qreq._internal_qcxs = []
-        qreq._internal_dcxs = []
         qreq._data_index  = None  # current index
-        qreq._dcxs2_index = {}  # cached indexes
+        qreq._dftup2_index = {}  # cached indexes
         printDBG('[qreq] unload_data(success)')
 
     def get_uid_list(qreq, *args, **kwargs):
@@ -69,14 +66,13 @@ class QueryRequest(DynStruct):
         test_uid  = hs_uid + query_uid + qcxs_uid
         return test_uid
 
-    def get_dcxs(qreq):
+    def get_interanl_dcxs(qreq):
         dcxs = qreq._dcxs if qreq.vsmany else qreq._qcxs
         return dcxs
 
-    def get_qcxs(qreq):
+    def get_internal_qcxs(qreq):
         dcxs = qreq._qcxs if qreq.vsmany else qreq._dcxs
         return dcxs
-
 
 
 class NNIndex(object):

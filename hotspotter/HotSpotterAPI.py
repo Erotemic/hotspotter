@@ -340,21 +340,13 @@ class HotSpotter(DynStruct):
         hs.prefs.feat_cfg._chip_cfg = hs.prefs.chip_cfg
         hs.prefs.query_cfg._feat_cfg = hs.prefs.feat_cfg
 
-    def set_qreq(hs, qreq):
+    def attatch_qreq(hs, qreq):
         print('[hs] fix_prefs2()')
         # Fix pointers in the correct direction
         hs.qreq = qreq
-        hs.prefs.query_cfg = hs.qreq.query_cfg
-        hs.prefs.feat_cfg  = hs.qreq.query_cfg._feat_cfg
-        hs.prefs.chip_cfg  = hs.qreq.feat_cfg._chip_cfg
-
-
-    def set_qreq(hs, qreq):
-        print('[hs] fix_prefs2()')
-        # Fix pointers in the correct direction
-        hs.qreq.cfg       = hs.prefs.query_cfg
-        hs.prefs.feat_cfg = hs.prefs.query_cfg._feat_cfg
-        hs.prefs.chip_cfg = hs.prefs.feat_cfg._chip_cfg
+        hs.prefs.query_cfg = hs.qreq.cfg
+        hs.prefs.feat_cfg  = hs.qreq.cfg._feat_cfg
+        hs.prefs.chip_cfg  = hs.qreq.cfg._feat_cfg._chip_cfg
 
     def assert_prefs(hs):
         print('[hs] assert_prefs()')
@@ -584,7 +576,13 @@ class HotSpotter(DynStruct):
         Calls the function level query wrappers'''
         print('[hs] query_cxs(kwargs=%r)' % kwargs)
         # Ensure that we can process a query like this
-        qreq = mc3.prep_query_request(hs, query_cfg=query_cfg, qcxs=[qcx], dcxs=cxs, **kwargs)
+        if query_cfg is None:
+            query_cfg = hs.prefs.query_cfg
+        qreq = mc3.prep_query_request(qreq=hs.qreq,
+                                      qcxs=[qcx],
+                                      dcxs=cxs,
+                                      query_cfg=query_cfg,
+                                      **kwargs)
         try:
             res = mc3.process_query_request(hs, qreq)[qcx]
         except mf.QueryException as ex:

@@ -230,10 +230,11 @@ def draw_images_at_positions(img_list, pos_list):
 
 def intra_query_cxs(hs, cxs):
     dcxs = qcxs = cxs
-    qreq = hs.qreq  # Query data / configuration
-    qreq.set_cfg(hs.prefs.query_cfg, hs)
-    mc3.ensure_nn_index(hs, qreq, dcxs)
-    qcx2_res = mc3.execute_query_safe(hs, qreq, qcxs, dcxs)[0]
+    qreq = mc3.prep_query_request(qreq=hs.qreq,
+                                  qcxs=qcxs,
+                                  dcxs=dcxs,
+                                  query_cfg=hs.prefs.query_cfg)
+    qcx2_res = mc3.process_query_request(hs, qreq)
     return qcx2_res
 
 

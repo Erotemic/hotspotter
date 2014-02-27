@@ -2,41 +2,87 @@ from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[mc3]', DEBUG=False)
-#
-import numpy as np
 # HotSpotter
 from hscom import params
 from hscom import helpers as util
 import DataStructures as ds
 import matching_functions as mf
 
-# TODO INTEGRATE INDENTER 2 better
-import HotSpotterAPI as api
-from hscom import Parallelize as parallel
-modules = [api, api.fc2, api.cc2, parallel, mf, ds]
+
+@util.indent_decor('[quick_ensure]')
+def quickly_ensure_qreq(hs, qcxs=None, dcxs=None):
+    qreq = hs.qreq
+    query_cfg = hs.prefs.query_cfg
+    cxs = hs.get_indexed_sample()
+    if qcxs is None:
+        qcxs = cxs
+    if dcxs is None:
+        dcxs = cxs
+    qreq = prep_query_request(qreq=qreq, query_cfg=query_cfg,
+                              qcxs=qcxs, dcxs=dcxs)
+    pre_cache_checks(hs, qreq)
+    pre_exec_checks(hs, qreq)
+    return qreq
+
+
+@util.indent_decor('[prep_qreq]')
+def prep_query_request(qreq=None, query_cfg=None, qcxs=None, dcxs=None, **kwargs):
+    # Builds or modifies a query request object
+    def loggedif(msg, condition):
+        # helper function for logging if statment results
+        print(msg + '... ' + ['no', 'yes'][condition])
+        return condition
+    if loggedif('1) given qreq?', qreq is not None):
+        qreq = ds.QueryRequest()
+    if loggedif('2) given qcxs?', qcxs is not None):
+        qreq._qcxs = qcxs
+    if loggedif('3) given dcxs?', dcxs is not None):
+        qreq._dcxs = dcxs
+    if not loggedif('4) given qcfg?', query_cfg is not None):
+        query_cfg = qreq.cfg
+    if loggedif('4) given kwargs?', len(kwargs) > 0):
+        query_cfg = query_cfg.deepcopy(**kwargs)
+    #
+    qreq.set_cfg(query_cfg)
+    #
+    assert (qreq._qcxs is not None and len(qreq._qcxs) > 0), (
+        'query request has invalid query chip indexes')
+    assert (qreq._dcxs is not None and len(qreq._dcxs) > 0), (
+        'query request has invalid database chip indexes')
+    assert (qreq.cfg is not None), (
+        'query request has invalid query config')
+    return qreq
+
+
+#----------------------
+# Query and database checks
+#----------------------
+
 
 @profile
-@util.indent_decor('[pre_exec]')
-def pre_cache_checks(hs, qreq, use_cache=True):
+@util.indent_decor('[pre_cache]')
+def pre_cache_checks(hs, qreq):
     print(' --- pre cache checks --- ')
-    feat_uid = qreq.cfg.feat_cfg.get_uid()
+    # Ensure hotspotter object is using the right config
+    hs.attatch_qreq(qreq)
+    feat_uid = qreq.cfg._feat_cfg.get_uid()
     # Load any needed features or chips into memory
     if hs.feats.feat_uid != feat_uid:
         hs.unload_cxdata('all')
     hs.refresh_features(qreq._dcxs)
     hs.refresh_features(qreq._qcxs)
     return qreq
-    # Use the query result cache if possible
 
 
 @profile
 @util.indent_decor('[pre_exec]')
-def pre_exec_checks(hs, qreq, use_cache=True):
+def pre_exec_checks(hs, qreq):
     print(' --- pre query request execution checks --- ')
-    dcxs = qreq.get_dcxs()
-    feat_uid = qreq.cfg.feat_cfg.get_uid()
+    # Get qreq config information
+    dcxs = qreq.get_interanl_dcxs()
+    feat_uid = qreq.cfg._feat_cfg.get_uid()
     dcxs_uid = util.hashstr_arr(dcxs, 'dcxs')
-    # Ensure the index / inverted index exist
+    # Ensure the index / inverted index exist for this config
     dftup_uid = (dcxs_uid, feat_uid)
     if not dftup_uid in qreq._dftup2_index:
         print('qreq.flann[dcxs_uid]... nn_index cache miss')
@@ -47,176 +93,25 @@ def pre_exec_checks(hs, qreq, use_cache=True):
     return qreq
 
 
-@profile
-@util.indent_decor('[nn_index]')
-def ensure_nn_index(hs, qreq):
-    print('checking flann')
-    # NNIndexes depend on the data cxs AND feature / chip configs
-    printDBG('qreq=%r' % (qreq,))
-    # Indexed database (is actually qcxs for vsone)
-    dcxs = qreq._internal_dcxs
-    printDBG('dcxs=%r' % (dcxs,))
-
-    feat_uid = qreq.cfg._feat_cfg.get_uid()
-    dcxs_uid = util.hashstr_arr(dcxs, 'dcxs') + feat_uid
-    if not dcxs_uid in qreq._dftup2_index:
-        # Make sure the features are all computed first
-        print('qreq.flann[dcxs_uid]... nn_index cache miss')
-        print('dcxs_ is not in qreq cache')
-        print('hashstr(dcxs_) = %r' % dcxs_uid)
-        print('REFRESHING FEATURES')
-        cx_list = np.unique(np.hstack([qreq._internal_dcxs, qreq._internal_qcxs]))
-        hs.refresh_features(cx_list)  # Refresh query as well
-        # Compute the FLANN Index
-        data_index = ds.NNIndex(hs, dcxs)
-        qreq._dftup2_index[dcxs_uid] = data_index
-    else:
-        print('qreq.flann[dcxs_uid]... cache hit')
-    qreq._data_index = qreq._dftup2_index[dcxs_uid]
-
-
-@util.indent_decor('[prep-qreq]')
-def prep_query_request(hs, qreq=None, query_cfg=None, qcxs=None, dcxs=None, **kwargs):
-    # Get the database chip indexes to query
-    if dcxs is None:
-        print('given [hs/user] sample? ... hs')
-        dcxs = hs.get_indexed_sample()
-    else:
-        print('given [hs/user] sample? ... user')
-
-    # Get the query request structure
-    # Use the hotspotter query data if the user does not provide one
-    if qreq is None:
-        print('given [new/user] qreq? ... new')
-        qreq = ds.QueryRequest()
-    else:
-        print('given [hs/user] qreq? ... user')
-
-    # Use the hotspotter query_cfg if the user does not provide one
-    #hs.assert_prefs()
-    if query_cfg is None:
-        print('given [hs/user] query_prefs? ... hs')
-        query_cfg = hs.prefs.query_cfg
-    else:
-        print('given [hs/user] query_prefs? ... user')
-
-    # Update any arguments in the query config based on kwargs
-    if len(kwargs) > 0:
-        print('given kwargs? ... yes')
-        print(kwargs)
-        query_cfg = query_cfg.deepcopy(**kwargs)
-    else:
-        print('given kwargs? ... no')
-
-    # Check previously occuring bugs
-    assert not isinstance(query_cfg, list)
-    qreq.set_cfg(query_cfg, hs=hs)
-    if qcxs is None:
-        raise AssertionError('please query an index')
-    if len(dcxs) == 0:
-        raise AssertionError('please select database indexes')
-
-    printDBG('qcxs=%r' % qcxs)
-    printDBG('dcxs=%r' % dcxs)
-
-    # The users actual query
-    qreq._qcxs = qcxs
-    qreq._dcxs = dcxs
-    #---------------
-    # Flip query / database if using vsone query
-    query_type = qreq.cfg.agg_cfg.query_type
-    if query_type == 'vsone':
-        print('vsone query: swaping q/dcxs')
-        (internal_dcxs, internal_qcxs) = (qreq._qcxs, qreq._dcxs)
-        if len(qreq._qcxs) != 1:
-            print(qreq)
-            raise AssertionError('vsone only supports one query')
-    elif query_type == 'vsmany':
-        print('vsmany query')
-        (internal_dcxs, internal_qcxs) = (qreq._dcxs, qreq._qcxs)
-    else:
-        raise AssertionError('Unknown query_type=%r' % query_type)
-    # The flann indexed internel query
-    return qreq
-
-
-def load_cached_query(hs, qreq):
-    qcxs = qreq._qcxs
-    qcx2_res = mf.load_resdict(hs, qcxs, qreq)
-    if qcx2_res is None:
-        return None
-    print(' ... query result cache hit')
-    return qcx2_res
-
-
 #----------------------
 # Main Query Logic
 #----------------------
 
-@util.indent_decor('[QL2-qreq]')
-def process_query_request(hs, qreq, dochecks=True):
-    'wrapper that bypasses all that "qcx2_ map" buisness'
-    print('[q3] process_query_request()')
-    qcx2_res = execute_cached_query(hs, qreq)
-    return qcx2_res
-
-
-# Query Level 2
-@util.indent_decor('[QL2-safe]')
-def execute_query_safe(hs, qreq, qcxs, dcxs, use_cache=True):
-    '''Executes a query, performs all checks, callable on-the-fly'''
-    print('[q2] execute_query_safe()')
-    qreq = prep_query_request(hs, qreq=qreq, qcxs=qcxs, dcxs=dcxs)
-    return execute_cached_query(hs, qreq, use_cache=use_cache)
-
-
 # Query Level 1
 @util.indent_decor('[QL1]')
-def execute_cached_query(hs, qreq, use_cache=True):
-    print('[q1] execute_cached_query()')
-    # Precache:
-    qreq = pre_cache_checks(qreq)
-    # Cache Load: Use the query result cache if possible
+def process_query_request(hs, qreq, use_cache=True):
+    print('[q1] process_query_request()')
+    qreq = pre_cache_checks(hs, qreq)
     if not params.args.nocache_query and use_cache:
         try:
-            qcx2_res = mf.load_resdict(hs, qreq)
+            qcx2_res = mf.load_resdict(hs, qreq)  # load cache
             return qcx2_res
         except IOError as ex:
             print(ex)
-    # Prequery:
-    qreq = pre_exec_checks(qreq)
-    # Query:
-    qcx2_res = execute_query_request_L0(hs, qreq)
-    # Cache Save:
-    [res.save(hs) for qcx, res in qcx2_res.iteritems()]
+    qreq = pre_exec_checks(hs, qreq)
+    qcx2_res = execute_query_request_L0(hs, qreq)  # exec query
+    [res.save(hs) for qcx, res in qcx2_res.iteritems()]  # save cache
     return qcx2_res
-
-
-# Query Level 1
-@util.indent_decor('[QL1]')
-def execute_unsafe_cached_query(hs, qreq, use_cache=True):
-    # Cache Load: Use the query result cache if possible
-    if not params.args.nocache_query and use_cache:
-        try:
-            qcx2_res = mf.load_resdict(hs, qreq)
-            return qcx2_res
-        except IOError as ex:
-            print(ex)
-    print('[q1] execute_unsafe_cached_query()')
-    assert qreq._data_index is not None
-    # Query:
-    qcx2_res = execute_query_request_L0(hs, qreq)
-    # Cache Save:
-    [res.save(hs) for qcx, res in qcx2_res.iteritems()]
-    return qcx2_res
-
-
-def dbg_qreq(qreq):
-    print('ERROR in dbg_qreq()')
-    print('[q1] len(qreq._dftup2_index)=%r' % len(qreq._dftup2_index))
-    print('[q1] qreq_dftup2_index._dftup2_index=%r' % len(qreq._dftup2_index))
-    print('[q1] qreq._dftup2_index.keys()=%r' % qreq._dftup2_index.keys())
-    print('[q1] qreq._data_index=%r' % qreq._data_index)
 
 
 # Query Level 0
@@ -233,7 +128,7 @@ def execute_query_request_L0(hs, qreq):
     '''
     # Query Chip Indexes
     # * vsone qcxs/dcxs swapping occurs here
-    qcxs = qreq.get_qcxs()
+    qcxs = qreq.get_internal_qcxs()
     # Nearest neighbors (qcx2_nns)
     # * query descriptors assigned to database descriptors
     # * FLANN used here

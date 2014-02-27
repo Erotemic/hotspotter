@@ -274,6 +274,7 @@ class Pref(PrefNode):
             return self._tree.child_list[attrx]
         #print(self._internal.name)
         #print(self._tree)
+        print('[prefs!] !!! ERROR !!!')
         raise AttributeError('attribute: %s.%s not found' % (self._intern.name, name))
 
     def iteritems(self):

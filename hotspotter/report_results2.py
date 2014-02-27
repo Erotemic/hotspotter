@@ -18,7 +18,6 @@ from os.path import join, exists
 import numpy as np
 # Hotspotter imports
 from hscom import fileio as io
-from hscom import helpers
 from hscom import helpers as util
 from hscom import params
 from hscom.Printable import DynStruct
@@ -27,7 +26,6 @@ from hsviz import viz
 from hsviz import allres_viz
 import load_data2 as ld2
 import spatial_verification2 as sv2
-#import match_chips3 as mc3
 #import datetime
 #import subprocess
 
@@ -66,7 +64,7 @@ class AllResults(DynStruct):
         scalar_summary = str(allres.scalar_summary).strip()
         toret += ('| All Results: %s \n' % hs.get_db_name())
         toret += ('| title_suffix=%s\n' % str(allres.title_suffix))
-        toret += ('| scalar_summary=\n%s\n' % helpers.indent(scalar_summary, '|   '))
+        toret += ('| scalar_summary=\n%s\n' % util.indent(scalar_summary, '|   '))
         toret += ('| ' + str(allres.scalar_mAP_str))
         toret += ('|---\n')
         toret += ('| greater5_%s \n' % (hs.cidstr(allres.greater5_cxs),))
@@ -154,7 +152,7 @@ def res2_true_and_false(hs, res):
     cx2_score = res.cx2_score
     unfilt_top_cx = np.argsort(cx2_score)[::-1]
     # Get top chip indexes and scores
-    top_cx    = np.array(helpers.intersect_ordered(unfilt_top_cx, indx_samp))
+    top_cx    = np.array(util.intersect_ordered(unfilt_top_cx, indx_samp))
     top_score = cx2_score[top_cx]
     # Get the true and false ground truth ranks
     qnx         = hs.tables.cx2_nx[qcx]
@@ -297,7 +295,7 @@ def init_allres(hs, qcx2_res,
     # Make AllResults data containter
     allres = AllResults(hs, qcx2_res, qcx_list)
     allres.title_suffix = get_title_suffix(hs)
-    #helpers.ensurepath(allres.summary_dir)
+    #util.ensurepath(allres.summary_dir)
     print('[rr2] init_allres()')
     #---
     hs = allres.hs
@@ -334,7 +332,7 @@ def build_matrix_str(allres):
         return [os.path.splitext(gname)[0] for gname in gx2_gname[cx2_gx]]
     col_label_gname = cx2_gname(allres.col_label_cx)
     row_label_gname = cx2_gname(allres.row_label_cx)
-    timestamp =  helpers.get_timestamp(format_='comment') + '\n'
+    timestamp =  util.get_timestamp(format_='comment') + '\n'
     header = '\n'.join(
         ['# Result score matrix',
          '# Generated on: ' + timestamp,
@@ -428,7 +426,7 @@ def build_rankres_str(allres):
     #print('greater1_cxs = %r ' % (allres.greater1_cxs,))
     # CSV Metadata
     header = '# Experiment allres.title_suffix = ' + allres.title_suffix + '\n'
-    header +=  helpers.get_timestamp(format_='comment') + '\n'
+    header +=  util.get_timestamp(format_='comment') + '\n'
     # Scalar summary
     scalar_summary  = '# Num Query Chips: %d \n' % num_chips
     scalar_summary += '# Num Query Chips with at least one match: %d \n' % len(test_samp_with_gt)
@@ -443,7 +441,7 @@ def build_rankres_str(allres):
     scalar_summary += '# OutTrain Ranks <= 1: %r/%r = %.1f%% (missed %r)\n\n' % (fmt1_out_tup)
     header += scalar_summary
     # Experiment parameters
-    #header += '# Full Parameters: \n' + helpers.indent(params.param_string(), '#') + '\n\n'
+    #header += '# Full Parameters: \n' + util.indent(params.param_string(), '#') + '\n\n'
     # More Metadata
     header += textwrap.dedent('''
     # Rank Result Metadata:
@@ -502,16 +500,16 @@ def __dump_text_report(allres, report_type):
     # Get directories
     result_dir    = allres.hs.dirs.result_dir
     timestamp_dir = join(result_dir, 'timestamped_results')
-    helpers.ensurepath(timestamp_dir)
-    helpers.ensurepath(result_dir)
+    util.ensurepath(timestamp_dir)
+    util.ensurepath(result_dir)
     # Write to timestamp and result dir
-    timestamp = helpers.get_timestamp()
+    timestamp = util.get_timestamp()
     csv_timestamp_fname = report_type + allres.title_suffix + timestamp + '.csv'
     csv_timestamp_fpath = join(timestamp_dir, csv_timestamp_fname)
     csv_fname  = report_type + allres.title_suffix + '.csv'
     csv_fpath = join(result_dir, csv_fname)
-    helpers.write_to(csv_fpath, report_str)
-    helpers.write_to(csv_timestamp_fpath, report_str)
+    util.write_to(csv_fpath, report_str)
+    util.write_to(csv_timestamp_fpath, report_str)
 
 # ===========================
 # Driver functions
@@ -664,12 +662,12 @@ def dump_analysis(allres):
 
 
 def dump_all_queries2(hs):
-    import match_chips3 as mc3
+    import QueryResult as qr
     test_cxs = hs.test_sample_cx
     title_suffix = get_title_suffix(hs)
     print('[rr2] dumping all %r queries' % len(test_cxs))
     for qcx in test_cxs:
-        res = mc3.QueryResult(qcx)
+        res = qr.QueryResult(qcx)
         res.load(hs)
         # SUPER HACK (I don't know the figurename a priori, I have to contstruct
         # it to not duplciate dumping a figure)
@@ -774,11 +772,11 @@ def dump_feature_pair_analysis(allres):
         scale_list = []
         score_list = []
         lbl = 'Measuring ' + orgtype + ' pair '
-        fmt_str = helpers.make_progress_fmt_str(len(orgres), lbl)
+        fmt_str = util.make_progress_fmt_str(len(orgres), lbl)
         rank_skips = []
         gt_skips = []
         for ix, (qcx, cx, score, rank) in enumerate(orgres.iter()):
-            helpers.print_(fmt_str % (ix + 1,))
+            util.print_(fmt_str % (ix + 1,))
             # Skip low ranks
             if rank > 5:
                 rank_skips.append(qcx)
@@ -1068,12 +1066,11 @@ def get_matching_descriptors(allres, match_list):
 def load_qcx2_res(hs, qcx_list, nocache=False):
     'Prefrosm / loads all queries'
     import match_chips3 as mc3
-    qreq = mc3.prepare_qdat_cfg(hs)
-    qreq._dcxs = hs.get_indexed_sample()  # HACK MAKE BETTER PREP QDAT
+    qreq = mc3.quickly_ensure_qreq(hs, qcxs=qcx_list)
     # Build query big cache uid
     query_uid = qreq.get_uid()
     hs_uid    = hs.get_db_name()
-    qcxs_uid  = helpers.hashstr_arr(qcx_list, lbl='_qcxs')
+    qcxs_uid  = util.hashstr_arr(qcx_list, lbl='_qcxs')
     qres_uid  = hs_uid + query_uid + qcxs_uid
     cache_dir = join(hs.dirs.cache_dir, 'query_results_bigcache')
     print('[rr2] load_qcx2_res(): %r' % qres_uid)
@@ -1096,7 +1093,7 @@ def load_qcx2_res(hs, qcx_list, nocache=False):
     qcx2_res = [hs.query(qcx) if qcx in qcx_set else None for qcx in xrange(qcx_max)]
     # Save to the cache
     print('[rr2] Saving query_results to bigcache: %r' % qres_uid)
-    helpers.ensuredir(cache_dir)
+    util.ensuredir(cache_dir)
     io.smart_save(qcx2_res, **io_kwargs)
     return qcx2_res
 

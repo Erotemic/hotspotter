@@ -465,7 +465,7 @@ def new_fmfsfk(hs):
 @profile
 def chipmatch_to_resdict(hs, qcx2_chipmatch, filt2_meta, qreq):
     print('[mf] Step 6) Convert chipmatch -> res')
-    real_uid = qreq.get_uid()
+    uid = qreq.get_uid()
     score_method = qreq.cfg.agg_cfg.score_method
     # Create the result structures for each query.
     qcx2_res = {}
@@ -475,7 +475,7 @@ def chipmatch_to_resdict(hs, qcx2_chipmatch, filt2_meta, qreq):
         # Perform final scoring
         cx2_score = score_chipmatch(hs, qcx, chipmatch, score_method, qreq)
         # Create a query result structure
-        res = qr.QueryResult(qcx, real_uid, qreq)
+        res = qr.QueryResult(qcx, uid)
         res.cx2_score = cx2_score
         (res.cx2_fm, res.cx2_fs, res.cx2_fk) = chipmatch
         res.filt2_meta = {}  # dbgstats
@@ -489,12 +489,17 @@ def chipmatch_to_resdict(hs, qcx2_chipmatch, filt2_meta, qreq):
 def load_resdict(hs, qreq):
     # Load the result structures for each query.
     qcxs = qreq._qcxs
-    real_uid = qreq.get_uid()
-    qcx2_res = {}
-    for qcx in qcxs:
-        res = qr.QueryResult(qcx, real_uid, qreq)
-        res.load(hs)
-        qcx2_res[qcx] = res
+    uid = qreq.get_uid()
+    ##IF DICT_COMPREHENSION
+    qcx2_res = {qcx: qr.QueryResult(qcx, uid) for qcx in iter(qcxs)}
+    [res.load(hs) for res in qcx2_res.itervalues()]
+    ##ELSE
+    #qcx2_res = {}
+    #for qcx in qcxs:
+        #res = qr.QueryResult(qcx, real_uid, qreq)
+        #res.load(hs)
+        #qcx2_res[qcx] = res
+    ##ENDIF
     return qcx2_res
 
 

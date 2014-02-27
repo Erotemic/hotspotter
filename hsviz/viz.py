@@ -843,11 +843,9 @@ def show_nearest_descriptors(hs, qcx, qfx, fnum=None):
     if fnum is None:
         fnum = df2.next_fnum()
     # Inspect the nearest neighbors of a descriptor
-    dcxs = hs.get_indexed_sample()
-    qreq = hs.qreq
     from hotspotter import match_chips3 as mc3
-    mc3.ensure_nn_index(hs, qreq, dcxs)
-    data_index = hs.qreq._data_index
+    qreq = mc3.quickly_ensure_qreq(hs)
+    data_index = qreq._data_index
     if data_index is None:
         pass
     dx2_cx = data_index.ax2_cx

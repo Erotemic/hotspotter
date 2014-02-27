@@ -126,8 +126,6 @@ def check_qcx2_res(hs, qcx2_res):
     test_vars = defaultdict(list)
 
     for res in res_list:
-        assert res.true_uid.startswith(res.uid)
-        test_vars['res.true_uid'].append(res.true_uid)
         test_vars['res.uid'].append(res.uid)
         test_vars['fmlen'].append(len(res.cx2_fm))
         test_vars['fslen'].append(len(res.cx2_fs))
@@ -138,7 +136,6 @@ def check_qcx2_res(hs, qcx2_res):
     assert util.list_eq(test_vars['fslen'])
     assert util.list_eq(test_vars['fklen'])
     assert util.list_eq(test_vars['scorelen'])
-    assert util.list_eq(test_vars['res.true_uid'])
     assert util.list_eq(test_vars['res.uid'])
 
     print('[consist] passed length tests')
@@ -155,3 +152,40 @@ def check_qcx2_res(hs, qcx2_res):
         print('[consist] nMatches = %r' % (test_vars['nMatches'],))
 
     print('[consist] passed entropy test')
+
+
+def dbg_check_query_result(hs, res, strict=False):
+    print('[qr] Debugging result')
+    fpath = res.get_fpath(hs)
+    print(res)
+    print('fpath=%r' % fpath)
+
+    qcx = res.qcx
+    chip_str = 'q%s' % hs.cidstr(qcx)
+    kpts = hs.get_kpts(qcx)
+    #
+    # Check K are all in bounds
+    fk_maxmin = np.array([(fk.max(), fk.min())
+                          for fk in res.cx2_fk if len(fk) > 0])
+    K = hs.prefs.query_cfg.nn_cfg.K
+    assert fk_maxmin.max() < K
+    assert fk_maxmin.min() >= 0
+    #
+    # Check feature indexes are in boundsS
+    fx_maxmin = np.array([(fm[:, 0].max(), fm[:, 0].min())
+                          for fm in res.cx2_fm if len(fm) > 0])
+    nKpts = len(kpts)
+    if fx_maxmin.max() >= nKpts:
+        msg = ('DBG ERROR: ' + chip_str + ' nKpts=%d max_kpts=%d' % (nKpts, fx_maxmin.max()))
+        print(msg)
+        if strict:
+            raise AssertionError(msg)
+    assert fx_maxmin.min() >= 0
+
+
+def dbg_qreq(qreq):
+    print('ERROR in dbg_qreq()')
+    print('[q1] len(qreq._dftup2_index)=%r' % len(qreq._dftup2_index))
+    print('[q1] qreq_dftup2_index._dftup2_index=%r' % len(qreq._dftup2_index))
+    print('[q1] qreq._dftup2_index.keys()=%r' % qreq._dftup2_index.keys())
+    print('[q1] qreq._data_index=%r' % qreq._data_index)

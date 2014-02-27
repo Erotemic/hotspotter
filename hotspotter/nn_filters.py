@@ -148,12 +148,6 @@ def nn_bursty_weight(hs, qcx2_nns, qreq):
         qcx2_bursty_weight[qcx] = qfx2_bursty
     return qcx2_bursty_weight, qcx2_metaweight
 
-'''
-%run dev.py
-qreq = mc3.prequery(hs)
-qcx2_nns = mf.nearest_neighbors(hs, qcxs, qreq)
-'''
-
 
 def nn_recip_weight(hs, qcx2_nns, qreq):
     'Filters a nearest neighbor to only reciprocals'

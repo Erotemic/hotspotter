@@ -186,16 +186,16 @@ def get_test_results2(hs, qcxs, qreq, cfgx=0, nCfg=1, nocache_testres=False,
     if qx2_bestranks is not None:
         return qx2_bestranks
 
-    #mc3.ensure_nn_index(hs, qreq, dcxs)
     qx2_bestranks = []
 
     # Perform queries
-    BATCH_MODE = util.get_flag('--batch', False)
+    BATCH_MODE = util.get_flag('--batch', True)
     if BATCH_MODE:
-        mc3.prequery_checks(hs, qreq)
+        mc3.pre_cache_checks(hs, qreq)
+        mc3.pre_exec_checks(hs, qreq)
         qx2_bestranks = [None for qcx in qcxs]
         # Query Chip / Row Loop
-        qcx2_res = mc3.execute_unsafe_cached_query(hs, qreq)
+        qcx2_res = mc3.process_query_request(hs, qreq)
         qcx2_bestranks = {}
         for qcx, res in qcx2_res.iteritems():
             gt_ranks = res.get_gt_ranks(hs=hs)
@@ -219,7 +219,8 @@ def get_test_results2(hs, qcxs, qreq, cfgx=0, nCfg=1, nocache_testres=False,
             if TEST_INFO:
                 print('qcx=%r. quid=%r' % (qcx, qreq.get_uid()))
             try:
-                qcx2_res = mc3.execute_query_safe(hs, qreq, [qcx], dcxs)
+                qreq._qcxs = [qcx]
+                qcx2_res = mc3.process_query_request(hs, qreq)
             except mf.QueryException as ex:
                 print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                 print('Harness caught Query Exception: ')
@@ -325,8 +326,6 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     ---------------------''')
     mark_progress = util.simple_progres_func(test_cfg_verbosity, msg, '+')
 
-    uid2_query_cfg = {}
-
     nomemory = params.args.nomemory
 
     # Run each test configuration
@@ -336,10 +335,9 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         if not __QUIET__:
             mark_progress(cfgx + 1, nCfg)
         # Set data to the current config
-        qreq = mc3.prep_query_request(hs, qreq, qcxs=qcx_list, dcxs=dcxs, query_cfg=query_cfg)
-        uid2_query_cfg[qreq.get_uid()] = query_cfg
+        qreq = mc3.prep_query_request(qreq=qreq, qcxs=qcx_list, dcxs=dcxs, query_cfg=query_cfg)
         # Run the test / read cache
-        with util.Indenter2('[%s cfg %d/%d]' % (dbname, cfgx, nCfg)):
+        with util.Indenter2('[%s cfg %d/%d]' % (dbname, cfgx + 1, nCfg)):
             qx2_bestranks = get_test_results2(hs, qcx_list, qreq, cfgx,
                                               nCfg, nocache_testres,
                                               test_results_verbosity)
@@ -633,11 +631,11 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print('--------------------------------------')
         print('viewing (r, c) = (%r, %r)' % (r, c))
         # Load / Execute the query
-        qreq = mc3.prep_query_request(hs, qreq=qreq, qcxs=[qcx], dcxs=dcxs, query_cfg=query_cfg)
-        qcx2_res = mc3.execute_cached_query(hs, qreq)
+        qreq = mc3.prep_query_request(qreq=qreq, qcxs=[qcx], dcxs=dcxs, query_cfg=query_cfg)
+        qcx2_res = mc3.process_query_request(hs, qreq)
         res = qcx2_res[qcx]
         # Print Query UID
-        print(res.true_uid)
+        print(res.uid)
         # Draw Result
         #res.show_top(hs, fnum=fnum)
         if prev_cfg != query_cfg:
@@ -645,7 +643,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             hs.refresh_features()
         prev_cfg = query_cfg
         fnum = count
-        title_uid = res.true_uid
+        title_uid = res.uid
         title_uid = title_uid.replace('_FEAT', '\n_FEAT')
         res.show_analysis(hs, fnum=fnum, aug='\n' + title_uid, annote=1,
                           show_name=False, show_gname=False, time_appart=False)

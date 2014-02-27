@@ -10,7 +10,6 @@ import os
 # Scientific
 import numpy as np
 # HotSpotter
-from hscom import helpers
 from hscom import helpers as util
 from hscom import params
 from hscom.Printable import DynStruct
@@ -30,74 +29,42 @@ HASH_LEN = 16
 
 def remove_corrupted_queries(hs, res, dryrun=True):
     # This res must be corrupted!
-    query_uid = res.query_uid
-    hash_id = helpers.hashstr(query_uid, HASH_LEN)
+    uid = res.uid
+    hash_id = util.hashstr(uid, HASH_LEN)
     qres_dir  = hs.dirs.qres_dir
     testres_dir = join(hs.dirs.cache_dir, 'experiment_harness_results')
-    helpers.remove_files_in_dir(testres_dir, dryrun=dryrun)
-    helpers.remove_files_in_dir(qres_dir, '*' + query_uid + '*', dryrun=dryrun)
-    helpers.remove_files_in_dir(qres_dir, '*' + hash_id + '*', dryrun=dryrun)
+    util.remove_files_in_dir(testres_dir, dryrun=dryrun)
+    util.remove_files_in_dir(qres_dir, '*' + uid + '*', dryrun=dryrun)
+    util.remove_files_in_dir(qres_dir, '*' + hash_id + '*', dryrun=dryrun)
 
 
-def dbg_check_query_result(hs, res, strict=False):
-    print('[qr] Debugging result')
-    fpath = res.get_fpath(hs)
-    print(res)
-    print('fpath=%r' % fpath)
-
-    res.true_uid
-    qcx = res.qcx
-    chip_str = 'q%s' % hs.cidstr(qcx)
-    kpts = hs.get_kpts(qcx)
-    #
-    # Check K are all in bounds
-    fk_maxmin = np.array([(fk.max(), fk.min())
-                          for fk in res.cx2_fk if len(fk) > 0])
-    K = hs.prefs.query_cfg.nn_cfg.K
-    assert fk_maxmin.max() < K
-    assert fk_maxmin.min() >= 0
-    #
-    # Check feature indexes are in boundsS
-    fx_maxmin = np.array([(fm[:, 0].max(), fm[:, 0].min())
-                          for fm in res.cx2_fm if len(fm) > 0])
-    nKpts = len(kpts)
-    if fx_maxmin.max() >= nKpts:
-        msg = ('DBG ERROR: ' + chip_str + ' nKpts=%d max_kpts=%d' % (nKpts, fx_maxmin.max()))
-        print(msg)
-        if strict:
-            raise AssertionError(msg)
-    assert fx_maxmin.min() >= 0
-
-
-def query_result_fpath(hs, qcx, query_uid):
+def query_result_fpath(hs, qcx, uid):
     qres_dir  = hs.dirs.qres_dir
     qcid  = hs.tables.cx2_cid[qcx]
-    fname = 'res_%s_qcid=%d.npz' % (query_uid, qcid)
+    fname = 'res_%s_qcid=%d.npz' % (uid, qcid)
     if len(fname) > 64:
-        hash_id = helpers.hashstr(query_uid, HASH_LEN)
+        hash_id = util.hashstr(uid, HASH_LEN)
         fname = 'res_%s_qcid=%d.npz' % (hash_id, qcid)
     fpath = join(qres_dir, fname)
     return fpath
 
 
-def query_result_exists(hs, qcx, query_uid):
-    fpath = query_result_fpath(hs, qcx, query_uid)
+def query_result_exists(hs, qcx, uid):
+    fpath = query_result_fpath(hs, qcx, uid)
     return exists(fpath)
 
 
 class QueryResult(DynStruct):
-    #__slots__ = ['true_uid', 'qcx', 'query_uid', 'uid', 'title', 'nn_time',
+    #__slots__ = ['qcx', 'uid', 'nn_time',
                  #'weight_time', 'filt_time', 'build_time', 'verify_time',
                  #'cx2_fm', 'cx2_fs', 'cx2_fk', 'cx2_score']
-    def __init__(res, qcx, uid, qreq=None):
+    def __init__(res, qcx, uid):
         super(QueryResult, res).__init__()
-        res.true_uid  = '' if qreq is None else qreq.get_uid()
-        res.qcx       = qcx
-        res.query_uid = uid
-        res.uid       = uid
-        res.title     = uid
+        res.qcx = qcx
+        res.uid = uid
         # Assigned features matches
         res.cx2_fm = np.array([], dtype=FM_DTYPE)
+        # TODO: Merge FS and FK
         res.cx2_fs = np.array([], dtype=FS_DTYPE)
         res.cx2_fk = np.array([], dtype=FK_DTYPE)
         res.cx2_score = np.array([])
@@ -107,7 +74,7 @@ class QueryResult(DynStruct):
         return query_result_exists(hs, res.qcx)
 
     def get_fpath(res, hs):
-        return query_result_fpath(hs, res.qcx, res.query_uid)
+        return query_result_fpath(hs, res.qcx, res.uid)
 
     @profile
     def save(res, hs):
@@ -116,7 +83,6 @@ class QueryResult(DynStruct):
                                        else split(fpath)[1],))
         with open(fpath, 'wb') as file_:
             np.savez(file_, **res.__dict__.copy())
-        return True
 
     @profile
     def load(res, hs):
@@ -129,7 +95,7 @@ class QueryResult(DynStruct):
                 for _key in npz.files:
                     res.__dict__[_key] = npz[_key]
                 npz.close()
-            print('[res] res.load() fpath=%r' % (split(fpath)[1],))
+            print('[qr] res.load() fpath=%r' % (split(fpath)[1],))
             # These are nonarray items even if they are not lists
             # tolist seems to convert them back to their original
             # python representation
@@ -139,28 +105,27 @@ class QueryResult(DynStruct):
             except AttributeError:
                 print('[qr] loading old result format')
                 res.filt2_meta = {}
-            res.query_uid = str(res.query_uid)
-            res.true_uid = res.true_uid.tolist()
+            res.uid = res.uid.tolist()
             return True
         except IOError as ex:
-            #print('[res] encountered IOError: %r' % ex)
+            #print('[qr] encountered IOError: %r' % ex)
             if not exists(fpath):
-                print('[res] query result cache miss')
+                print('[qr] query result cache miss')
                 #print(fpath)
-                #print('[res] QueryResult(qcx=%d) does not exist' % res.qcx)
+                #print('[qr] QueryResult(qcx=%d) does not exist' % res.qcx)
                 raise
             else:
-                msg = ['[res] QueryResult(qcx=%d) is corrupted' % (res.qcx)]
+                msg = ['[qr] QueryResult(qcx=%d) is corrupted' % (res.qcx)]
                 msg += ['\n%r' % (ex,)]
                 print(''.join(msg))
                 raise Exception(msg)
         except BadZipFile as ex:
-            print('[res] Caught other BadZipFile: %r' % ex)
-            msg = ['[res] Attribute Error: QueryResult(qcx=%d) is corrupted' % (res.qcx)]
+            print('[qr] Caught other BadZipFile: %r' % ex)
+            msg = ['[qr] Attribute Error: QueryResult(qcx=%d) is corrupted' % (res.qcx)]
             msg += ['\n%r' % (ex,)]
             print(''.join(msg))
             if exists(fpath):
-                print('[res] Removing corrupted file: %r' % fpath)
+                print('[qr] Removing corrupted file: %r' % fpath)
                 os.remove(fpath)
                 raise IOError(msg)
             else:
@@ -172,13 +137,13 @@ class QueryResult(DynStruct):
 
     def cache_bytes(res, hs):
         fpath = res.get_fpath(hs)
-        return helpers.file_bytes(fpath)
+        return util.file_bytes(fpath)
 
     def get_gt_ranks(res, gt_cxs=None, hs=None):
         'returns the 0 indexed ranking of each groundtruth chip'
         # Ensure correct input
         if gt_cxs is None and hs is None:
-            raise Exception('[res] error')
+            raise Exception('[qr] error')
         if gt_cxs is None:
             gt_cxs = hs.get_other_indexed_cxs(res.qcx)
         return res.get_cx_ranks(gt_cxs)
@@ -232,10 +197,10 @@ class QueryResult(DynStruct):
             N = hs.prefs.display_cfg.N
         if N == 'all':
             N = nIndexed
-        #print('[res] cx2_score = %r' % (cx2_score,))
-        #print('[res] returning top_cxs = %r' % (top_cxs,))
+        #print('[qr] cx2_score = %r' % (cx2_score,))
+        #print('[qr] returning top_cxs = %r' % (top_cxs,))
         nTop = min(N, nIndexed)
-        #print('[res] returning nTop = %r' % (nTop,))
+        #print('[qr] returning nTop = %r' % (nTop,))
         topN_cxs = top_cxs[0:nTop]
         return topN_cxs
 
@@ -251,7 +216,7 @@ class QueryResult(DynStruct):
 
     def show_query(res, hs, **kwargs):
         from hsviz import viz
-        print('[res] show_query')
+        print('[qr] show_query')
         viz.show_chip(hs, res=res, **kwargs)
 
     def show_analysis(res, hs, *args, **kwargs):

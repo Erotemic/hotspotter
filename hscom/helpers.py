@@ -461,6 +461,10 @@ def simple_progres_func(verbosity, msg, progchar='.'):
     return mark_progress
 
 
+def prog_func(*args, **kwargs):
+    return progress_func(*args, **kwargs)
+
+
 # TODO: Return start_prog, make_prog, end_prog
 def progress_func(max_val=0, lbl='Progress: ', mark_after=-1,
                   flush_after=4, spacing=0, line_len=80,
@@ -986,11 +990,19 @@ def sanatize_fname2(fname):
     return fname
 
 
+@DEPRICATED
 def sanatize_fname(fname):
     ext = '.pkl'
     if fname.rfind(ext) != max(len(fname) - len(ext), 0):
         fname += ext
     return fname
+
+
+def ensure_ext(fpath, ext):
+    if fpath.rfind(ext) != max(len(fpath) - len(ext), 0):
+        fpath += ext
+    return fpath
+
 
 
 def eval_from(fpath, err_onread=True):
@@ -2343,3 +2355,10 @@ def debug_vstack(stacktup):
         print('ValueError in debug_vstack: ' + str(ex))
         debug_npstack(stacktup)
         raise
+
+
+def show_img_fpath(img_fpath):
+    from hsviz import draw_func2 as df2
+    from hscom import fileio as io
+    img = io.imread(img_fpath)
+    df2.imshow(img)

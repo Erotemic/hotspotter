@@ -227,7 +227,8 @@ def main_loop(app, is_root, back, runqtmain=True):
     embedded = util.inIPython()
     if not embedded and util.get_flag('--cmd'):
         print('Embedding')
-        util.embed()
+        parent_locals = util.get_parent_locals()
+        util.embed(parent_locals=parent_locals)
         sys.exit(1)
     if not embedded and runqtmain:
         print('Running main loop')

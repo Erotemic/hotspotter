@@ -74,6 +74,13 @@ class QueryRequest(DynStruct):
         dcxs = qreq._qcxs if qreq.vsmany else qreq._dcxs
         return dcxs
 
+    def get_cxfx_enum(qreq):
+        ax2_cxs = qreq._data_index.ax2_cx
+        ax2_fxs = qreq._data_index.ax2_fx
+        cxfx_enum = enumerate(izip(ax2_cxs, ax2_fxs))
+        return cxfx_enum
+
+
 
 def get_flann_uid(hs, cx_list):
     feat_uid   = hs.prefs.feat_cfg.get_uid()

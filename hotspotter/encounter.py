@@ -12,7 +12,6 @@ from scipy.cluster.hierarchy import fclusterdata
 from hotspotter import match_chips3 as mc3
 from hscom import fileio as io
 from hscom import helpers as util
-from hsviz import draw_func2 as df2
 
 
 def compute_encounters(hs, seconds_thresh=15):
@@ -115,139 +114,24 @@ def get_cxfx_enum(qreq):
     return cxfx_enum
 
 
-def make_feature_graph(qreq, qcx2_res, use_networkx=True):
-    # Make a graph between the chips
-    cxfx2_ax = {(cx, fx): ax for ax, (cx, fx) in get_cxfx_enum(qreq)}
-    def w_edge(cx1, cx2, fx1, fx2, score, rank):
-        ax1 = cxfx2_ax[(cx1, fx1)]
-        ax2 = cxfx2_ax[(cx2, fx2)]
-        attr_dict =  {'score': score, 'rank': rank}
-        return (ax1, ax2, attr_dict)
-    nodes = [(ax, {'fx': fx, 'cx': cx}) for ax, (cx, fx) in get_cxfx_enum(qreq)]
-    weighted_edges = [w_edge(cx1, cx2, fx1, fx2, score, rank)
-                      for (cx1, res) in qcx2_res.iteritems()
-                      for (cx2, (fx1, fx2), score, rank) in get_fmatch_iter(res)
-                      if score > 0]
-    if use_networkx:
-        graph = netx.DiGraph()
-        graph.add_nodes_from(nodes)
-        graph.add_edges_from(weighted_edges)
-    else:
-        vx2_ax = cxfx2_ax.values()
-        import graph_tool
-        graph = graph_tool.Graph(g=None, directed=True, prune=False, vorder=None)
-        vertex_list = graph.add_vertex(n=len(nodes))
-
-        v_fx = graph.new_vertex_property("int")
-        v_cx = graph.new_vertex_property("int")
-
-        e_score = graph.new_edge_property("float")
-        e_rank = graph.new_edge_property("int")
-
-        for v, (ax, vprops) in zip(vertex_list, nodes):
-            v_cx[v] = int(vprops['cx'])
-            v_fx[v] = int(vprops['fx'])
-
-        mark_prog, end_prog = util.progress_func(len(weighted_edges))
-        count = 0
-        for ax1, ax2, prop_dict in weighted_edges:
-            mark_prog(count)
-            count += 1
-            vx1 = vx2_ax.index(ax1)
-            vx2 = vx2_ax.index(ax2)
-            v1 = graph.vertex(vx1)
-            v2 = graph.vertex(vx2)
-            e = graph.add_edge(v1, v2)
-            e_score[e] = float(prop_dict['score'])
-            e_rank[e] = int(prop_dict['rank'])
-        mark_prog(count)
-        end_prog()
-        #import graph_tool.draw
-
-        graph.save('test_graph.dot')
-    return graph
-
-
-def make_chip_graph(qcx2_res):
-    # Make a graph between the chips
-    nodes = qcx2_res.keys()
-    #attr_edges = [(res.qcx, cx, {'score': score})
-                    #for res in qcx2_res.itervalues()
-                    #for cx, score in enumerate(res.cx2_score) if score > 0]
-    weighted_edges = [(res.qcx, cx, score)
-                      for res in qcx2_res.itervalues()
-                      for cx, score in enumerate(res.cx2_score) if score > 0]
-    graph = netx.DiGraph()
-    graph.add_nodes_from(nodes)
-    graph.add_weighted_edges_from(weighted_edges)
-    return graph
-
-
-def viz_graph(graph):
-    netx.draw(graph)
-
-
-def viz_chipgraph(hs, graph, fnum=1, with_images=False):
-    # Adapated from
-    # https://gist.github.com/shobhit/3236373
-    print('[encounter] drawing chip graph')
-    df2.figure(fnum=fnum, pnum=(1, 1, 1))
-    ax = df2.gca()
-    #pos = netx.spring_layout(graph)
-    pos = netx.graphviz_layout(graph)
-    netx.draw(graph, pos=pos, ax=ax)
-    if with_images:
-        cx_list = graph.nodes()
-        pos_list = [pos[cx] for cx in cx_list]
-        thumb_list = hs.get_thumb(cx_list, 16, 16)
-        draw_images_at_positions(thumb_list, pos_list)
-
-
-def draw_images_at_positions(img_list, pos_list):
-    print('[encounter] drawing %d images' % len(img_list))
-    # Thumb stack
-    ax  = df2.gca()
-    fig = df2.gcf()
-    trans = ax.transData.transform
-    trans2 = fig.transFigure.inverted().transform
-    mark_progress, end_progress = util.progress_func(len(pos_list), lbl='drawing img')
-    for ix, ((x, y), img) in enumerate(izip(pos_list, img_list)):
-        mark_progress(ix)
-        xx, yy = trans((x, y))  # figure coordinates
-        xa, ya = trans2((xx, yy))  # axes coordinates
-        #
-        width, height = img.shape[0:2]
-        tlx = xa - (width / 2.0)
-        tly = ya - (height / 2.0)
-        img_bbox = [tlx, tly, width, height]
-        # Make new axis for the image
-        img_ax = df2.plt.axes(img_bbox)
-        img_ax.imshow(img)
-        img_ax.set_aspect('equal')
-        img_ax.axis('off')
-    end_progress()
-
-
 def intra_query_cxs(hs, cxs):
     dcxs = qcxs = cxs
-    qreq = mc3.prep_query_request(qreq=hs.qreq,
-                                  qcxs=qcxs,
-                                  dcxs=dcxs,
+    qreq = mc3.prep_query_request(qreq=hs.qreq, qcxs=qcxs, dcxs=dcxs,
                                   query_cfg=hs.prefs.query_cfg)
     qcx2_res = mc3.process_query_request(hs, qreq)
     return qcx2_res
 
 
-def intra_encounter_match(hs, cxs, **kwargs):
+#def intra_encounter_match(hs, cxs, **kwargs):
     # Make a graph between the chips
-    qcx2_res = intra_query_cxs(cxs)
-    graph = make_chip_graph(qcx2_res)
+    #qcx2_res = intra_query_cxs(cxs)
+    #graph = make_chip_graph(qcx2_res)
     # TODO: Make a super cool algorithm which does this correctly
     #graph.cutEdges(**kwargs)
     # Get a temporary name id
     # TODO: ensure these name indexes do not conflict with other encounters
     #cx2_nx, nx2_cxs = graph.getConnectedComponents()
-    return graph
+    #return graph
 
 
 def execute_all_intra_encounter_match(hs, **kwargs):
@@ -258,15 +142,15 @@ def execute_all_intra_encounter_match(hs, **kwargs):
     for ex, cxs in enumerate(ex2_cxs):
         pass
         # Perform Intra-Encounter Matching
-        nx2_cxs = intra_encounter_match(hs, cxs)
-        ex2_names[ex] = nx2_cxs
+        #nx2_cxs = intra_encounter_match(hs, cxs)
+        #ex2_names[ex] = nx2_cxs
     return ex2_names
 
 
 def inter_encounter_match(hs, eid2_names=None, **kwargs):
     # Perform Inter-Encounter Matching
-    if eid2_names is None:
-        eid2_names = intra_encounter_match(hs, **kwargs)
+    #if eid2_names is None:
+        #eid2_names = intra_encounter_match(hs, **kwargs)
     all_nxs = util.flatten(eid2_names.values())
     for nx2_cxs in eid2_names:
         qnxs = nx2_cxs

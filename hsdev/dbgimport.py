@@ -3,7 +3,7 @@ from __future__ import division, print_function
 from collections import OrderedDict, defaultdict
 from os.path import (dirname, realpath, join, exists, normpath, splitext,
                      expanduser, relpath)
-from itertools import izip, chain, imap
+from itertools import izip, chain, imap, cycle
 from itertools import product as iprod
 import imp
 import itertools
@@ -20,11 +20,15 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 # Scientific
 import numpy as np
-import networkx as netx
 from PIL import Image
 from PIL.ExifTags import TAGS
 import cv2
 from scipy.cluster.hierarchy import fclusterdata
+import networkx as netx
+try:
+    import graph_tool as gtool
+except ImportError as ex:
+    print('Warning: %r' % ex)
 # Qt
 import PyQt4
 from PyQt4 import QtCore, QtGui
@@ -56,6 +60,7 @@ from hsgui import guifront
 from hsgui import guitools
 #
 from hscom import __common__
+from hscom import hsgraph
 from hscom import Parallelize as parallel
 from hscom import Preferences as prefs
 from hscom import Printable

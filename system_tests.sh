@@ -1,14 +1,15 @@
 
 run_nightly()
 {
-    python _tests/newdb_test.py $@
-    python _tests/coverage_test.py --db NAUTS
-    python _tests/query_test.py --db JAG --qcid 1 --nosteal --noshare
-    python _tests/query_test.py --db MOTHERS --qcid 1 --nosteal --noshare
+    python hstest/newdb_test.py $@
+    python hstest/coverage_test.py --db NAUTS
+    python hstest/coverage_test.py --db JAG
+    python hstest/query_test.py --db JAG --qcid 1 --nosteal --noshare
+    python hstest/query_test.py --db MOTHERS --qcid 1 --nosteal --noshare
 
-    python _tests/query_test.py --db NAUTS --qcid 1 --nocache-query --nocache-feats --nocache-chips --strict
-    python _tests/query_test.py --db JAG --qcid 1 --nocache-query --nocache-feats --nocache-chips --strict
-    python _tests/query_test.py --db MOTHERS --qcid 28 --nocache-query --nocache-feats --nocache-chips --strict
+    python hstest/query_test.py --db NAUTS --qcid 1 --nocache-query --nocache-feats --nocache-chips --strict
+    python hstest/query_test.py --db JAG --qcid 1 --nocache-query --nocache-feats --nocache-chips --strict
+    python hstest/query_test.py --db MOTHERS --qcid 28 --nocache-query --nocache-feats --nocache-chips --strict
 }
 
 
@@ -56,14 +57,13 @@ default()
     do
         python dev.py --db $DB $DEV_ARGS
     done
-
 }
 
 run_continuous()
 {
-    #python _tests/query_test.py
-    python _tests/coverage_test.py --db NAUTS $@
-    python _tests/query_test.py --db NAUTS $@
+    #python hstest/query_test.py
+    python hstest/coverage_test.py --db NAUTS $@
+    python hstest/query_test.py --db NAUTS $@
     #--nocache-query --nocache-feats --nocache-chips --strict
 }
 

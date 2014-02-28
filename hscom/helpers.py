@@ -787,19 +787,19 @@ def checkpath(path_, verbose=PRINT_CHECKS):
         return exists(path_)
 
 
-def check_path(path_):
-    return checkpath(path_)
+def check_path(path_, **kwargs):
+    return checkpath(path_, **kwargs)
 
 
-def ensurepath(path_):
-    if not checkpath(path_):
+def ensurepath(path_, **kwargs):
+    if not checkpath(path_, **kwargs):
         print('[helpers] mkdir(%r)' % path_)
         os.makedirs(path_)
     return True
 
 
-def ensuredir(path_):
-    return ensurepath(path_)
+def ensuredir(path_, **kwargs):
+    return ensurepath(path_, **kwargs)
 
 
 def ensure_path(path_):
@@ -1614,23 +1614,73 @@ def profile_lines(fname):
     '''
 
 
-def memory_profile():
+def memory_profile(with_gc=False):
     #http://stackoverflow.com/questions/2629680/deciding-between-subprocess-multiprocessing-and-thread-in-python
     import guppy
-    import gc
-    print('Collecting garbage')
-    gc.collect()
+    if with_gc:
+        garbage_collect()
     hp = guppy.hpy()
-    print('Waiting for heap output...')
+    print('[hpy] Waiting for heap output...')
     heap_output = hp.heap()
     print(heap_output)
+    print('[hpy] total heap size: ' + byte_str2(heap_output.size))
+    import resources2
+    resources2.memstats()
     # Graphical Browser
     #hp.pb()
+
+
+def disable_garbage_collection():
+    import gc
+    gc.disable()
+
+
+def enable_garbage_collection():
+    import gc
+    gc.enable()
 
 
 def garbage_collect():
     import gc
     gc.collect()
+
+
+def get_object_size(obj):
+    seen = set([])
+    def _get_object_size(obj):
+        if (obj is None or isinstance(obj, (str, int, bool, float))):
+            return sys.getsizeof(obj)
+
+        object_id = id(obj)
+        if not object_id in seen:
+            seen.add(object_id)
+        else:
+            return 0
+
+        totalsize = sys.getsizeof(obj)
+        if isinstance(obj, np.ndarray):
+            totalsize += obj.nbytes
+        elif (isinstance(obj, (tuple, list))):
+            for item in obj:
+                totalsize += _get_object_size(item)
+        elif isinstance(obj, dict):
+            try:
+                for key, val in obj.iteritems():
+                        totalsize += _get_object_size(key)
+                        totalsize += _get_object_size(val)
+            except RuntimeError:
+                print(key)
+                raise
+        elif isinstance(obj, object) and hasattr(obj, '__dict__'):
+            totalsize += _get_object_size(obj.__dict__)
+            return totalsize
+        return totalsize
+    return _get_object_size(obj)
+
+
+def print_object_size(obj, lbl=''):
+    print(lbl + byte_str2(get_object_size(obj)))
+
 #http://www.huyng.com/posts/python-performance-analysis/
 #Once youve gotten your code setup with the @profile decorator, use kernprof.py to run your script.
 #kernprof.py -l -v fib.py

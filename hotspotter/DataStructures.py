@@ -75,51 +75,65 @@ class QueryRequest(DynStruct):
         return dcxs
 
 
+def get_flann_uid(hs, cx_list):
+    feat_uid   = hs.prefs.feat_cfg.get_uid()
+    sample_uid = util.hashstr_arr(cx_list, 'dcxs')
+    uid = '_' + sample_uid + feat_uid
+    return uid
+
+
+@profile
+def build_flann_inverted_index(hs, cx_list, return_info=False):
+    cx2_desc  = hs.feats.cx2_desc
+    assert max(cx_list) < len(cx2_desc)
+    uid = get_flann_uid(hs, cx_list)
+    # Make unique id for indexed descriptors
+    # Number of features per sample chip
+    nFeat_iter1 = imap(lambda cx: len(cx2_desc[cx]), iter(cx_list))
+    nFeat_iter2 = imap(lambda cx: len(cx2_desc[cx]), iter(cx_list))
+    nFeat_iter3 = imap(lambda cx: len(cx2_desc[cx]), iter(cx_list))
+    # Inverted index from indexed descriptor to chipx and featx
+    _ax2_cx = ([cx] * nFeat for (cx, nFeat) in izip(cx_list, nFeat_iter1))
+    _ax2_fx = (xrange(nFeat) for nFeat in iter(nFeat_iter2))
+    ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
+    ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
+    # Aggregate indexed descriptors into continuous structure
+    try:
+        # sanatize cx_list
+        cx_list = [cx for cx, nFeat in izip(iter(cx_list), nFeat_iter3) if nFeat > 0]
+        if isinstance(cx2_desc, list):
+            ax2_desc = np.vstack((cx2_desc[cx] for cx in cx_list))
+        elif isinstance(cx2_desc, np.ndarray):
+            ax2_desc = np.vstack(cx2_desc[cx_list])
+    except MemoryError as ex:
+        with util.Indenter2('[mem error]'):
+            print(ex)
+            print('len(cx_list) = %r' % (len(cx_list),))
+            print('len(cx_list) = %r' % (len(cx_list),))
+        raise
+    except Exception as ex:
+        with util.Indenter2('[unknown error]'):
+            print(ex)
+            print('cx_list = %r' % (cx_list,))
+        raise
+    # Build/Load the flann index
+    flann_params = {'algorithm': 'kdtree', 'trees': 4}
+    precomp_kwargs = {'cache_dir': hs.dirs.cache_dir,
+                      'uid': uid,
+                      'flann_params': flann_params,
+                      'force_recompute': params.args.nocache_flann}
+    flann = algos.precompute_flann(ax2_desc, **precomp_kwargs)
+    if not return_info:
+        return ax2_cx, ax2_fx, ax2_desc, flann
+    else:
+        return ax2_cx, ax2_fx, ax2_desc, flann, precomp_kwargs
+
+
 class NNIndex(object):
     'Nearest Neighbor (FLANN) Index Class'
     def __init__(nn_index, hs, cx_list):
         print('[ds] building NNIndex object')
-        cx2_desc  = hs.feats.cx2_desc
-        assert max(cx_list) < len(cx2_desc)
-        # Make unique id for indexed descriptors
-        feat_uid   = hs.prefs.feat_cfg.get_uid()
-        sample_uid = util.hashstr_arr(cx_list, 'dcxs')
-        uid = '_' + sample_uid + feat_uid
-        # Number of features per sample chip
-        nFeat_iter1 = imap(lambda cx: len(cx2_desc[cx]), iter(cx_list))
-        nFeat_iter2 = imap(lambda cx: len(cx2_desc[cx]), iter(cx_list))
-        nFeat_iter3 = imap(lambda cx: len(cx2_desc[cx]), iter(cx_list))
-        # Inverted index from indexed descriptor to chipx and featx
-        _ax2_cx = ([cx] * nFeat for (cx, nFeat) in izip(cx_list, nFeat_iter1))
-        _ax2_fx = (xrange(nFeat) for nFeat in iter(nFeat_iter2))
-        ax2_cx  = np.array(list(chain.from_iterable(_ax2_cx)))
-        ax2_fx  = np.array(list(chain.from_iterable(_ax2_fx)))
-        # Aggregate indexed descriptors into continuous structure
-        try:
-            # sanatize cx_list
-            cx_list = [cx for cx, nFeat in izip(iter(cx_list), nFeat_iter3) if nFeat > 0]
-            if isinstance(cx2_desc, list):
-                ax2_desc = np.vstack((cx2_desc[cx] for cx in cx_list))
-            elif isinstance(cx2_desc, np.ndarray):
-                ax2_desc = np.vstack(cx2_desc[cx_list])
-        except MemoryError as ex:
-            with util.Indenter2('[mem error]'):
-                print(ex)
-                print('len(cx_list) = %r' % (len(cx_list),))
-                print('len(cx_list) = %r' % (len(cx_list),))
-            raise
-        except Exception as ex:
-            with util.Indenter2('[unknown error]'):
-                print(ex)
-                print('cx_list = %r' % (cx_list,))
-            raise
-        # Build/Load the flann index
-        flann_params = {'algorithm': 'kdtree', 'trees': 4}
-        precomp_kwargs = {'cache_dir': hs.dirs.cache_dir,
-                          'uid': uid,
-                          'flann_params': flann_params,
-                          'force_recompute': params.args.nocache_flann}
-        flann = algos.precompute_flann(ax2_desc, **precomp_kwargs)
+        ax2_cx, ax2_fx, ax2_desc, flann = build_flann_inverted_index(hs, cx_list)
         #----
         # Agg Data
         nn_index.ax2_cx   = ax2_cx

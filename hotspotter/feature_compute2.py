@@ -98,19 +98,26 @@ feat_type2_precompute = {
 }
 
 
-@profile
-def _load_features_individualy(hs, cx_list):
-    use_cache = not params.args.nocache_feats
-    feat_cfg = hs.prefs.feat_cfg
+def _cx2_feat_fpaths(hs, cx_list):
     feat_dir = hs.dirs.feat_dir
+    feat_cfg = hs.prefs.feat_cfg
     feat_uid = feat_cfg.get_uid()
-    print('[fc2]  Loading ' + feat_uid + ' individually')
-    # Build feature paths
-    rchip_fpath_list = [hs.cpaths.cx2_rchip_path[cx] for cx in iter(cx_list)]
     cid_list = hs.tables.cx2_cid[cx_list]
     feat_fname_fmt = ''.join(('cid%d', feat_uid, '.npz'))
     feat_fpath_fmt = join(feat_dir, feat_fname_fmt)
     feat_fpath_list = [feat_fpath_fmt % cid for cid in cid_list]
+    return feat_fpath_list
+
+
+@profile
+def _load_features_individualy(hs, cx_list):
+    use_cache = not params.args.nocache_feats
+    feat_cfg = hs.prefs.feat_cfg
+    feat_uid = feat_cfg.get_uid()
+    print('[fc2]  Loading ' + feat_uid + ' individually')
+    # Build feature paths
+    rchip_fpath_list = [hs.cpaths.cx2_rchip_path[cx] for cx in iter(cx_list)]
+    feat_fpath_list = _cx2_feat_fpaths(hs, cx_list)
     #feat_fname_list = [feat_fname_fmt % cid for cid in cid_list]
     # Compute features in parallel, saving them to disk
     kwargs_list = [feat_cfg.get_dict_args()] * len(rchip_fpath_list)

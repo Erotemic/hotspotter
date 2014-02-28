@@ -13,7 +13,6 @@ import numpy as np
 from PIL import Image
 # Hotspotter
 import load_data2 as ld2
-from hscom import helpers
 from hscom import helpers as util
 
 
@@ -49,7 +48,7 @@ class DatabaseStats(object):
 
     def print_name_info(self):
         hs = ld2.HotSpotter()
-        rss = helpers.RedirectStdout()
+        rss = util.RedirectStdout()
         rss.start()
         hs.load_tables(self.db_dir)
         name_info_dict = get_db_names_info(hs)
@@ -160,7 +159,7 @@ def print_database_stats(db_stats):
         db_stats.print_name_info()
     elif 'images' in db_stats.version:
         print(db_stats.db_dir)
-        print('num images: %d' % helpers.num_images_in_dir(db_stats.db_dir))
+        print('num images: %d' % util.num_images_in_dir(db_stats.db_dir))
 
 
 #--------------------
@@ -184,7 +183,7 @@ def is_imgdir(path):
     num_dirs = 0
     for name in files:
         subpath = join(path, name)
-        if helpers.matches_image(subpath):
+        if util.matches_image(subpath):
             num_imgs += 1
             return True
         elif isdir(subpath):
@@ -196,12 +195,12 @@ def is_imgdir(path):
 
 def has_ss_gt(path):
     ss_data = join(path, 'SightingData.csv')
-    return helpers.checkpath(ss_data, verbose=False)
+    return util.checkpath(ss_data, verbose=False)
 
 
 def has_v1_gt(path):
     info_table = join(path, 'animal_info_table.csv')
-    return helpers.checkpath(info_table, verbose=False)
+    return util.checkpath(info_table, verbose=False)
 
 
 def has_v2_gt(path):
@@ -303,7 +302,7 @@ def db_info(hs):
     gx2_gname  = hs.tables.gx2_gname
     cx2_gx = hs.tables.cx2_gx
     num_images = len(gx2_gname)
-    img_list = helpers.list_images(hs.dirs.img_dir, fullpath=True)
+    img_list = util.list_images(hs.dirs.img_dir, fullpath=True)
 
     def wh_print_stats(wh_list):
         if len(wh_list) == 0:
@@ -336,7 +335,7 @@ def db_info(hs):
     img_size_list  = np.array(get_img_size_list(img_list))
     img_size_stats  = wh_print_stats(img_size_list)
     chip_size_stats = wh_print_stats(chip_size_list)
-    multiton_stats  = helpers.printable_mystats(multiton_nx2_nchips)
+    multiton_stats  = util.printable_mystats(multiton_nx2_nchips)
 
     num_names = len(valid_nxs)
     # print
@@ -359,8 +358,10 @@ def db_info(hs):
 
 def get_keypoint_stats(hs):
     from hscom import latex_formater as pytex
-    hs.dbg_cx2_kpts()
+    from hsdev import dev_consistency
+    dev_consistency.check_keypoint_consistency(hs)
     # Keypoint stats
+    hs.refresh_features()
     cx2_kpts = hs.feats.cx2_kpts
     # Check cx2_kpts
     cx2_nFeats = map(len, cx2_kpts)

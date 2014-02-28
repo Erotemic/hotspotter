@@ -38,10 +38,10 @@ def used_memory():
 
 
 def memstats():
-    print('total = %s' % util.byte_str2(total_memory()))
-    print('available = %s' % util.byte_str2(available_memory()))
-    print('used = %s' % util.byte_str2(used_memory()))
-    print('current = %s' % util.byte_str2(current_memory_usage()))
+    print('[psutil] total = %s' % util.byte_str2(total_memory()))
+    print('[psutil] available = %s' % util.byte_str2(available_memory()))
+    print('[psutil] used = %s' % util.byte_str2(used_memory()))
+    print('[psutil] current = %s' % util.byte_str2(current_memory_usage()))
 
 if __name__ == '__main__':
     memstats()

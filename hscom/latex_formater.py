@@ -3,30 +3,95 @@ import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[latex]')
 # Python
+import os
 import re
 import helpers
 import textwrap
 # Science
 import numpy as np
+from hscom import helpers as util
+from hscom import cross_platform as cplat
+from os.path import join, splitext
+
+#def ensure_latex_environ():
+    #paths = os.environ['PATH'].split(os.pathsep)
+    #mpl.rc('font',**{'family':'serif'})
+    #mpl.rc('text', usetex=True)
+    #mpl.rc('text.latex',unicode=True)
+    #mpl.rc('text.latex',preamble='\usepackage[utf8]{inputenc}')
 
 
-def render(text):
+def make_full_document(text):
+    doc_preamb = r'''
+    \documentclass{article}
+    \pagenumbering{gobble}
+    '''
+    doc_header = r'''
+    \begin{document}
+    '''
+    doc_footer = r'''
+    \end{document}
+    '''
+    return doc_preamb + doc_header + text + doc_footer
+
+
+def render(input_text, fnum=1):
     import pylab as plt
     import matplotlib as mpl
-
+    verbose = False
+    text = make_full_document(input_text)
     #text = (r'\begin{document}' + '\n' +
             #text + '\n' +
             #r'\end{document}')
-    print(text)
-
-    mpl.rc('text', usetex=True)
-    mpl.rc('font', family='serif')
-    plt.figure()
-    plt.text(9, 3.4, text, size=12)
-    plt.show()
+    cwd = os.getcwd()
+    text_dir = join(cwd, 'tmptex')
+    text_fname = 'latex_formatter_temp.tex'
+    text_fpath = join(text_dir, text_fname)
+    pdf_fpath = splitext(text_fpath)[0] + '.pdf'
+    jpg_fpath = splitext(text_fpath)[0] + '.jpg'
+    try:
+        util.ensuredir(text_dir, verbose=verbose)
+        os.chdir(text_dir)
+        util.write_to(text_fpath, text)
+        cplat._cmd('pdflatex', text_fpath, verbose=verbose)
+        assert util.checkpath(pdf_fpath, verbose=verbose), 'latex failed'
+        cplat._cmd('convert', '-density', '300', pdf_fpath, '-quality', '90', jpg_fpath, verbose=verbose)
+        assert util.checkpath(jpg_fpath, verbose=verbose), 'imgmagick failed'
+        tex_img = plt.imread(jpg_fpath)
+        # Crop img bbox
+        nonwhite_x = np.where(tex_img.flatten() != 255)[0]
+        nonwhite_rows = nonwhite_x // tex_img.shape[1]
+        nonwhite_cols = nonwhite_x % tex_img.shape[1]
+        x1 = nonwhite_cols.min()
+        y1 = nonwhite_rows.min()
+        x2 = nonwhite_cols.max()
+        y2 = nonwhite_rows.max()
+        #util.embed()
+        cropped = tex_img[y1:y2, x1:x2]
+        fig = plt.figure(fnum)
+        fig.clf()
+        ax = fig.add_subplot(1, 1, 1)
+        ax.imshow(cropped, cmap=mpl.cm.gray)
+        #plt.show()
+        #mpl.rc('text', usetex=True)
+        #mpl.rc('font', family='serif')
+        #plt.figure()
+        #plt.text(9, 3.4, text, size=12)
+        #plt.show()
+    except Exception as ex:
+        print('LATEX ERROR')
+        print(text)
+        print(ex)
+        print('LATEX ERROR')
+        pass
+    finally:
+        os.chdir(cwd)
+        if util.checkpath(text_dir, verbose=verbose):
+            util.delete(text_dir)
 
 
 def latex_multicolumn(data, ncol=2):
+    data = escape_latex(data)
     return r'\multicolumn{%d}{|c|}{%s}' % (ncol, data)
 
 
@@ -34,18 +99,32 @@ def latex_multirow(data, nrow=2):
     return r'\multirow{%d}{*}{|c|}{%s}' % (nrow, data)
 
 
-def latex_mystats(lbl, data):
+def latex_mystats(lbl, data, mode=0):
     stats_ = helpers.mystats(data)
-    min_, max_, mean, std, nMin, nMax, shape = stats_.values()
-    fmttup1 = (int(min_), int(max_), float(mean), float(std))
-    fmttup = tuple(map(helpers.num_fmt, fmttup1))
+    max_ = stats_['max']
+    min_ = stats_['min']
+    mean = stats_['mean']
+    std  = stats_['std']
+    shape = stats_['shape']
+
+    int_fmt = lambda num: helpers.num_fmt(int(num))
+    float_fmt = lambda num: helpers.num_fmt(float(num))
+    tup_fmt = lambda tup: str(tup)
+    fmttup = (float_fmt(min_), float_fmt(max_), float_fmt(mean), float_fmt(std), tup_fmt(shape))
     lll = ' ' * len(lbl)
-    #fmtstr = r'''
-    #'''+lbl+r''' stats &{ max:%d, min:%d\\
-    #'''+lll+r'''       & mean:%.1f, std:%.1f}\\'''
-    fmtstr = r'''
-    ''' + lbl + r''' stats & max ; min = %s ; %s\\
-    ''' + lll + r'''       & mean; std = %s ; %s\\'''
+    if mode == 0:
+        prefmtstr = r'''
+        {label} stats & min ; max = %s ; %s\\
+        {space}       & mean; std = %s ; %s\\
+        {space}       & shape = %s \\'''
+    if mode == 1:
+        prefmtstr = r'''
+        {label} stats & min  = $%s$\\
+        {space}       & max  = $%s$\\
+        {space}       & mean = $%s$\\
+        {space}       & std  = $%s$\\
+        {space}       & shape = $%s$\\'''
+    fmtstr = prefmtstr.format(label=lbl, space=lll)
     latex_str = textwrap.dedent(fmtstr % fmttup).strip('\n') + '\n'
     return latex_str
 
@@ -250,3 +329,17 @@ def is_substr(find, strlist):
         if find not in strlist[i]:
             return False
     return True
+
+
+def tabular_join(tabular_body_list, nCols=2):
+    dedent = textwrap.dedent
+    tabular_head = dedent(r'''
+    \begin{tabular}{|l|l|}
+    ''')
+    tabular_tail = dedent(r'''
+    \end{tabular}
+    ''')
+    hline = ''.join([r'\hline', '\n'])
+    tabular_body = hline.join(tabular_body_list)
+    tabular = hline.join([tabular_head, tabular_body, tabular_tail])
+    return tabular

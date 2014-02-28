@@ -5,7 +5,7 @@ from hscom import __common__
  rrr, profile, printDBG) = __common__.init(__name__, '[algos]', DEBUG=False)
 # Python
 from itertools import izip
-from os.path import join
+from os.path import join, split
 import os
 import sys
 import textwrap
@@ -20,7 +20,6 @@ import numpy as np
 import scipy.sparse as spsparse
 # Hotspotter
 from hscom import fileio as io
-from hscom import helpers
 from hscom import helpers as util
 
 
@@ -177,9 +176,9 @@ def tune_flann(data, **kwargs):
         suffix = suffix.replace(badchar, '')
     print(flann_atkwargs)
     tuned_params = flann.build_index(data, **flann_atkwargs)
-    helpers.myprint(tuned_params)
+    util.myprint(tuned_params)
     out_file = 'flann_tuned' + suffix
-    helpers.write_to(out_file, repr(tuned_params))
+    util.write_to(out_file, repr(tuned_params))
     flann.delete_index()
     return tuned_params
 
@@ -366,10 +365,10 @@ def force_quit_akmeans(signal, frame):
         #data            = target_frame.f_locals['data']
         clusters        = target_frame.f_locals['clusters']
         datax2_clusterx = target_frame.f_locals['datax2_clusterx']
-        helpers.save_npz(fpath + '.earlystop', datax2_clusterx, clusters)
+        util.save_npz(fpath + '.earlystop', datax2_clusterx, clusters)
     except Exception as ex:
         print(repr(ex))
-        exec(helpers.IPYTHON_EMBED_STR)
+        exec(util.IPYTHON_EMBED_STR)
 
 
 def ann_flann_once(dpts, qpts, num_neighbors, flann_params):
@@ -401,14 +400,14 @@ def __akmeans_iterate(data,
           'time (iterx, ave(#changed), #unchanged)')
     for xx in xrange(0, max_iters):
         # 1) Find each datapoints nearest cluster center
-        tt = helpers.tic()
-        helpers.print_('...tic')
-        helpers.flush()
+        tt = util.tic()
+        util.print_('...tic')
+        util.flush()
         (datax2_clusterx, _dist) = ann_flann_once(clusters, data, 1,
                                                   flann_params)
-        ellapsed = helpers.toc(tt)
-        helpers.print_('...toc(%.2fs)' % ellapsed)
-        helpers.flush()
+        ellapsed = util.toc(tt)
+        util.print_('...toc(%.2fs)' % ellapsed)
+        util.flush()
         # 2) Find new cluster datapoints
         datax_sort    = datax2_clusterx.argsort()  # NOQA
         clusterx_sort = datax2_clusterx[datax_sort]
@@ -419,8 +418,8 @@ def __akmeans_iterate(data,
                 clusterx2_dataLRx[clusterx_sort[_L]] = (_L, _R)
                 _L = _R
         # 3) Compute new cluster centers
-        helpers.print_('+')
-        helpers.flush()
+        util.print_('+')
+        util.flush()
         for clusterx, dataLRx in enumerate(clusterx2_dataLRx):
             if dataLRx is None:
                 continue  # ON EMPTY CLUSTER
@@ -432,14 +431,14 @@ def __akmeans_iterate(data,
             clusters[clusterx] = np.array(np.round(clusters[clusterx]),
                                           dtype=np.uint8)
         # 4) Check for convergence (no change of cluster id)
-        helpers.print_('+')
-        helpers.flush()
+        util.print_('+')
+        util.flush()
         num_changed = (datax2_clusterx_old != datax2_clusterx).sum()
         xx2_unchanged[xx % ave_unchanged_iterwin] = num_changed
         ave_unchanged = xx2_unchanged.mean()
         #(iterx, ave(#changed), #unchanged)
-        helpers.print_('  (%d, %.2f, %d)\n' % (xx, ave_unchanged, num_changed))
-        helpers.flush()
+        util.print_('  (%d, %.2f, %d)\n' % (xx, ave_unchanged, num_changed))
+        util.flush()
         if ave_unchanged < ave_unchanged_thresh:
             break
         else:  # Iterate
@@ -490,7 +489,7 @@ def precompute_akmeans(data, num_clusters, max_iters=100,
         flann_params = {}
     print('[algos] pre_akmeans()')
     if same_data:
-        data_uid = helpers.hashstr_arr(data, 'dID')
+        data_uid = util.hashstr_arr(data, 'dID')
         uid += data_uid
     clusters_fname = 'akmeans_clusters'
     datax2cl_fname = 'akmeans_datax2cl'
@@ -504,7 +503,7 @@ def precompute_akmeans(data, num_clusters, max_iters=100,
             raise Exception('forcing')
         # Hack to refine akmeans with a few more iterations
         if '--refine' in sys.argv or '--refine-exit' in sys.argv:
-            max_iters_override = helpers.get_arg('--refine', type_=int)
+            max_iters_override = util.get_arg('--refine', type_=int)
             print('Overriding max_iters=%r' % max_iters_override)
             if not max_iters_override is None:
                 max_iters = max_iters_override
@@ -524,7 +523,7 @@ def precompute_akmeans(data, num_clusters, max_iters=100,
         print('[algos] pre_akmeans(): ... loaded akmeans.')
     except Exception as ex:
         print('[algos] pre_akmeans(): ... could not load akmeans.')
-        errstr = helpers.indent(repr(ex), '[algos]    ')
+        errstr = util.indent(repr(ex), '[algos]    ')
         print('[algos] pre_akmeans(): ... caught ex:\n %s ' % errstr)
         print('[algos] pre_akmeans(): printing debug_smart_load')
         print('---- <DEBUG SMART LOAD>---')
@@ -548,23 +547,28 @@ def precompute_akmeans(data, num_clusters, max_iters=100,
     return (datax2_clusterx, clusters)
 
 
+def get_flann_fpath(data, cache_dir, uid='', flann_params=None):
+    cache_dir = '.' if cache_dir is None else cache_dir
+    # Generate a unique filename for data and flann parameters
+    fparams_uid = util.remove_chars(str(flann_params.values()), ', \'[]')
+    data_uid = util.hashstr_arr(data, 'dID')  # flann is dependent on the data
+    flann_suffix = '_' + fparams_uid + '_' + data_uid + '.flann'
+    # Append any user labels
+    flann_fname = 'flann_index_' + uid + flann_suffix
+    flann_fpath = os.path.normpath(join(cache_dir, flann_fname))
+    return flann_fpath
+
+
 #@profile
 def precompute_flann(data, cache_dir=None, uid='', flann_params=None,
                      force_recompute=False):
     ''' Tries to load a cached flann index before doing anything'''
     print('[algos] precompute_flann(%r): ' % uid)
-    cache_dir = '.' if cache_dir is None else cache_dir
-    # Generate a unique filename for data and flann parameters
-    fparams_uid = helpers.remove_chars(str(flann_params.values()), ', \'[]')
-    data_uid = helpers.hashstr_arr(data, 'dID')  # flann is dependent on the data
-    flann_suffix = '_' + fparams_uid + '_' + data_uid + '.flann'
-    # Append any user labels
-    flann_fname = 'flann_index_' + uid + flann_suffix
-    flann_fpath = os.path.normpath(join(cache_dir, flann_fname))
     # Load the index if it exists
+    flann_fpath = get_flann_fpath(data, cache_dir, uid, flann_params)
     flann = pyflann.FLANN()
     load_success = False
-    if helpers.checkpath(flann_fpath) and not force_recompute:
+    if util.checkpath(flann_fpath) and not force_recompute:
         try:
             #print('[algos] precompute_flann():
                 #trying to load: %r ' % flann_fname)
@@ -576,8 +580,8 @@ def precompute_flann(data, cache_dir=None, uid='', flann_params=None,
             print('[algos] precompute_flann(): ...caught ex=\n%r' % (ex,))
     if not load_success:
         # Rebuild the index otherwise
-        with helpers.Timer(msg='compute FLANN', newline=False):
+        with util.Timer(msg='compute FLANN', newline=False):
             flann.build_index(data, **flann_params)
-        print('[algos] precompute_flann(): save_index(%r)' % flann_fname)
+        print('[algos] precompute_flann(): save_index(%r)' % split(flann_fpath)[1])
         flann.save_index(flann_fpath)
     return flann

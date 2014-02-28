@@ -359,10 +359,12 @@ class ChipConfig(ConfigBase):
         cc_cfg.rank_eq         = False
         cc_cfg.local_eq        = False
         cc_cfg.maxcontrast     = False
+        cc_cfg.chipfmt         = '.png'
         cc_cfg.update(**kwargs)
 
     def get_uid_list(cc_cfg):
         chip_uid = []
+        chip_uid += [cc_cfg.chipfmt[1:].lower()] * (cc_cfg.chipfmt != '.png')
         chip_uid += ['histeq']  * cc_cfg.histeq
         chip_uid += ['adapteq'] * cc_cfg.adapteq
         chip_uid += ['grabcut'] * cc_cfg.grabcut

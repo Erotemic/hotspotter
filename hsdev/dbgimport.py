@@ -1,6 +1,4 @@
 from __future__ import division, print_function
-
-standard_imports = '''
 # Python
 from collections import OrderedDict, defaultdict
 from os.path import (dirname, realpath, join, exists, normpath, splitext,
@@ -32,9 +30,6 @@ import PyQt4
 from PyQt4 import QtCore, QtGui
 from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
                       Qt, QObject, pyqtSlot, QKeyEvent)
-'''
-
-
 # HotSpotter
 from hotspotter import Config
 from hotspotter import DataStructures as ds
@@ -78,16 +73,15 @@ from hsviz import extract_patch
 from hsviz import viz
 from hsviz import interact
 from hsviz import allres_viz
-#
-#from hstpl import mask_creator as mc
-# DEV
-#from hsdev import dev_stats
-#from hsdev import dev_consistency
-#from hsdev import dev_api
-#from hsdev import dev_reload
-#
-#import dev
 
+from hstpl import mask_creator as mc
+# DEV
+from hsdev import dev_stats
+from hsdev import dev_consistency
+from hsdev import dev_api
+from hsdev import dev_reload
+
+import dev
 
 import hsviz
 import hsgui

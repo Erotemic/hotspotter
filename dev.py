@@ -307,21 +307,6 @@ def intestigate_keypoint_interaction(hs, qcx_list, fnum=1, **kwargs):
 # exec(open('dev.py').read())
 def dev_main(defaultdb='NAUTS', **kwargs):
     'Developer main script. Contains all you need to quickly start tests'
-    print('[dev] main()')
-    # Create Hotspotter API
-    hs = test_api.main(defaultdb='NAUTS')
-    print('')
-    print('==========================')
-    print('   **** DEV SCRIPT ***    ')
-    print('==========================')
-    print('[dev] dev_main()')
-    print('==========================')
-
-    # Get the query/others/notes list
-    # this contains a list of cannonical test examples
-    # FIXME: This is specific to one machine right now
-    qcx_list = test_api.get_qcx_list(hs)
-    qcx   = qcx_list[0]
     return locals()
 #---end main script
 
@@ -382,8 +367,8 @@ def plot_seperability(hs, qcx_list, fnum=1):
     df2.set_xlabel('true chipmatch index (%d)' % len(sep_score_list))
     df2.set_logyscale_from_data(sorted_sepscores)
     df2.dark_background()
-    true_uid = qcx2_res.itervalues().next().true_uid
-    df2.set_figtitle('seperability\n' + true_uid)
+    uid = qcx2_res.itervalues().next().uid
+    df2.set_figtitle('seperability\n' + uid)
     df2.legend()
     fnum += 1
     return fnum
@@ -464,14 +449,51 @@ def plot_scores(hs, qcx_list, fnum=1):
         if len(rankX_gtxs) > 0:
             df2.plot(rankX_gtxs, rankX_gtys, 'o', color=rankX_color, label=rankX_label)
 
-    true_uid = qcx2_res.itervalues().next().true_uid
+    uid = qcx2_res.itervalues().next().uid
 
     df2.set_logyscale_from_data(allscores_sorted)
     df2.set_xlabel('chipmatch index')
     df2.dark_background()
-    df2.set_figtitle('matching scores\n' + true_uid)
+    df2.set_figtitle('matching scores\n' + uid)
     df2.legend(loc='upper left')
     df2.update()
+
+    util.embed()
+    # Second Plot
+    #data = sorted(zip(gtscore_sortxs, gtscore_ys, gtscore_ranks))
+    #gtxs = [x for (x, y, z) in data]
+    #gtys = [y for (x, y, z) in data]
+    #gtrs = [z for (x, y, z) in data]
+    #nongtxs = np.setdiff1d(np.arange(gtxs[0], gtxs[-1]), gtxs)
+
+    #min_ = min(gtxs)
+    #max_ = len(allscores_sorted)
+    #len_ = max_ - min_
+    #normsum = 0
+    #ratsum = 0
+    #gtxs = np.array(gtxs)
+    #nongtxs = np.array(nongtxs)
+    #for ix in xrange(min_, max_):
+        #nongtxs_ = nongtxs[nongtxs >= ix]
+        #gtxs_ = gtxs[gtxs >= ix]
+        #numer = allscores_sorted[gtxs_].sum()
+        #denom = allscores_sorted[nongtxs_].sum()
+        #ratio = (1 + numer) / (denom + 1)
+        #total_support = (len(gtxs_) + len(nongtxs_))
+        #normrat = ratio / total_support
+        #ratsum += ratio
+        #normsum += normrat
+        #print(total_support)
+    #print(ratsum / len_)
+    #print(normsum / len_)
+    #print(ratsum / allscores_sorted[min_:max_].sum())
+    #print(normsum / allscores_sorted[min_:max_].sum())
+
+    #index_gap = np.diff(gtxs)
+    #score_gap = np.diff(gtys)
+    #badness = (index_gap - 1) * score_gap
+    #np.arange(len(gtxs))
+
     fnum += 1
     return fnum
 
@@ -524,6 +546,8 @@ def run_investigations(hs, qcx_list):
         fnum = vary_vsmany_cfg(hs, qcx_list, fnum, [K_, xy_])
     if intest('dbstats'):
         fnum = dev_stats.dbstats(hs)
+    if intest('cachemem'):
+        fnum = dev_stats.cache_memory_stats(hs, qcx_list, fnum)
     if intest('scale'):
         fnum = plot_keypoint_scales(hs)
     if intest('vsone-gt'):
@@ -573,6 +597,11 @@ def run_investigations(hs, qcx_list):
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
+
+    if '--memtest' in sys.argv:
+        util.disable_garbage_collection()
+        pass
+
     print('[dev] __main__ ')
     QUIET = util.get_flag('--quiet', False)
     VERBOSE = util.get_flag('--verbose', False)
@@ -585,15 +614,24 @@ if __name__ == '__main__':
         ld2.print_off()
         fc2.print_off()
         cc2.print_off()
-    #if not VERBOSE:
-        #mf.print_off()
+    if not VERBOSE:
+        mf.print_off()
 
     # useful when copy and pasting into ipython
     guitools.init_qtapp()
-    main_locals = dev_main()
-    hs = main_locals['hs']
-    qcx_list = main_locals['qcx_list']
-    exec(util.execstr_dict(main_locals, 'main_locals'))
+    # Create Hotspotter API
+    preload = '--preload' in sys.argv
+    hs = test_api.main(defaultdb='NAUTS', preload=preload)
+    if preload:
+        from hotspotter import match_chips3 as mc3
+        qreq = mc3.quickly_ensure_qreq(hs)
+    print('')
+    print('==========================')
+    print('   **** DEV SCRIPT ***    ')
+    print('==========================')
+    print('[dev] dev_main()')
+    print('==========================')
+    qcx_list = test_api.get_qcx_list(hs)
     print('[dev]====================')
     #mf.print_off()  # Make testing slightly faster
     # Big test function. Should be replaced with something
@@ -613,4 +651,36 @@ if __name__ == '__main__':
     if params.args.nopresent:
         print('...not presenting')
         sys.exit(0)
+    if params.args.vdd:
+        util.vd(hs.dirs.db_dir)
+
+    if '--memtest' in sys.argv:
+        util.memory_profile()
+        util.print_object_size(hs, 'hs = ')
+        util.print_object_size(hs.tables, 'hs.feats.tables = ')
+        util.print_object_size(hs.tables.cx2_cid, 'hs.feats.tables = ')
+        util.print_object_size(hs.tables.cx2_roi, 'hs.tables.cx2_roi = ')
+        util.print_object_size(hs.tables.cx2_roi, 'hs.tables.cx2_gx = ')
+        util.print_object_size(hs.tables.cx2_roi, 'hs.tables.cx2_nx = ')
+        util.print_object_size(hs.tables.cx2_theta, 'hs.tables.cx2_theta = ')
+        util.print_object_size(hs.tables.prop_dict, 'hs.tables.prop_dict = ')
+        util.print_object_size(hs.tables.prop_dict, 'hs.tables.nx2_name = ')
+        util.print_object_size(hs.tables.prop_dict, 'hs.tables.gx2_gname = ')
+        util.print_object_size(hs.feats, 'hs.feats = ')
+        util.print_object_size(hs.feats.cx2_desc, 'hs.feats.cx2_desc = ')
+        util.print_object_size(hs.feats.cx2_kpts, 'hs.feats.cx2_kpts = ')
+        util.print_object_size(hs.cpaths, 'hs.cpaths = ')
+        util.print_object_size(hs.qreq, 'hs.qreq = ')
+        util.print_object_size(qreq, 'qreq = ')
+        util.print_object_size(qreq._data_index, 'qreq._data_index= ')
+        util.print_object_size(qreq._data_index.ax2_data, 'qreq._data_index.ax2_data = ')
+        util.print_object_size(qreq._data_index.flann, 'qreq._data_index.flann = ')
+        util.print_object_size(qreq._data_index.ax2_fx, 'qreq._data_index.ax2_fx = ')
+        util.print_object_size(qreq._data_index.ax2_cx, 'qreq._data_index.ax2_cx = ')
+        print('flann._FLANN__curindex_data is ax2_data... %r' %
+              (qreq._data_index.flann._FLANN__curindex_data is
+               qreq._data_index.ax2_data))
+
+        qreq._data_index.flann._FLANN__curindex_data is qreq._data_index.ax2_data
+
     exec(df2.present(wh=1000))

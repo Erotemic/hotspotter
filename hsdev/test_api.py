@@ -87,17 +87,22 @@ def main(defaultdb='cache', preload=False, app=None):
     return hs
 
 
-def clone_database(dbname):
+def clone_database(dbname, dryrun=False):
     from hscom import params
     from hscom import helpers as util
-    from os.path import join
+    from os.path import join, exists
     work_dir = params.get_workdir()
     dir1 = join(work_dir, dbname)
     dir2 = join(work_dir, dbname + 'Clone')
-    util.delete(dir2)
-    util.copy_all(dir1, dir2, '*')
-    util.copy_all(join(dir1, 'images'), join(dir2, 'images'), '*')
-    util.copy_all(join(dir1, '_hsdb'), join(dir2, '_hsdb'), '*')
+    print('clone input: %r' % dir1)
+    print('clone output: %r' % dir2)
+    if not exists(dir1):
+        raise Exception('dir1=%r does not exist' % dir1)
+    if not dryrun:
+        util.delete(dir2)
+        util.copy_all(dir1, dir2, '*')
+        util.copy_all(join(dir1, 'images'), join(dir2, 'images'), '*')
+        util.copy_all(join(dir1, '_hsdb'), join(dir2, '_hsdb'), '*')
     return dbname + 'Clone'
 
 

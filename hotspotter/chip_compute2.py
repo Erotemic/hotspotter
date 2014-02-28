@@ -427,7 +427,7 @@ def load_chips(hs, cx_list=None, force_compute=False, **kwargs):
     #img_dir = hs.dirs.img_dir
     #gfpath_list = [join(img_dir, gname) for gname in iter(gname_list)]
     # Chip Paths: where to write extracted chips to
-    _cfname_fmt = 'cid%d' + chip_uid + '.png'
+    _cfname_fmt = 'cid%d' + chip_uid + chip_cfg['chipfmt']
     _cfpath_fmt = join(hs.dirs.chip_dir, _cfname_fmt)
     cfpath_list = [_cfpath_fmt  % cid for cid in iter(cid_list)]
     # Normalized Chip Sizes: ensure chips have about sqrt_area squared pixels

@@ -1,8 +1,6 @@
 from __future__ import division, print_function
 from hsdev.dbgimport import *  # NOQA
 
-exec(standard_imports)
-
 if __name__ == 'main':
     multiprocessing.freeze_support()
     #exec(open('dbgimport.py').read())

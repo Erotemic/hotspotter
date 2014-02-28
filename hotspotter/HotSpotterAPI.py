@@ -808,15 +808,15 @@ class HotSpotter(DynStruct):
         datatup_list = _get_datatup_list(hs, tblname, index_list, header_order, extra_cols)
         return datatup_list
 
-    def get_db_name(hs, devmode=False):
+    def get_db_name(hs):  # , devmode=False):
         db_name = split(hs.dirs.db_dir)[1]
-        if devmode:
-            # Grab the dev name insetad
-            dev_databases = params.dev_databases
-            db_tups = [(v, k) for k, v in dev_databases.iteritems() if v is not None]
-            #print('  \n'.join(map(str,db_tups)))
-            dev_dbs = dict((split(v)[1], k) for v, k in db_tups)
-            db_name = dev_dbs[db_name]
+        #if devmode:
+            ## Grab the dev name insetad
+            #dev_databases = params.dev_databases
+            #db_tups = [(v, k) for k, v in dev_databases.iteritems() if v is not None]
+            ##print('  \n'.join(map(str,db_tups)))
+            #dev_dbs = dict((split(v)[1], k) for v, k in db_tups)
+            #db_name = dev_dbs[db_name]
         return db_name
 
     # -------
@@ -1146,13 +1146,13 @@ class HotSpotter(DynStruct):
     @profile
     def get_desc(hs, cx_input):
         cx2_desc = hs.feats.cx2_desc
-        return hs._onthefly_cxlist_get(cx_input, cx2_desc, hs.load_features)
+        return hs._onthefly_cxlist_get(cx_input, cx2_desc, hs.refresh_features)
 
     # cx2_kpts
     @profile
     def get_kpts(hs, cx_input):
         cx2_kpts = hs.feats.cx2_kpts
-        return hs._onthefly_cxlist_get(cx_input, cx2_kpts, hs.load_features)
+        return hs._onthefly_cxlist_get(cx_input, cx2_kpts, hs.refresh_features)
 
     @profile
     def get_rchip_path(hs, cx_input):

@@ -1652,15 +1652,14 @@ def get_object_size(obj):
             return sys.getsizeof(obj)
 
         object_id = id(obj)
-        if not object_id in seen:
-            seen.add(object_id)
-        else:
+        if object_id in seen:
             return 0
+        seen.add(object_id)
 
         totalsize = sys.getsizeof(obj)
         if isinstance(obj, np.ndarray):
             totalsize += obj.nbytes
-        elif (isinstance(obj, (tuple, list))):
+        elif (isinstance(obj, (tuple, list, set, frozenset))):
             for item in obj:
                 totalsize += _get_object_size(item)
         elif isinstance(obj, dict):

@@ -368,3 +368,12 @@ sudo apt-get install sparsehash
 sudo apt-get install python-gi-cairo
 sudo apt-get install graphviz
 '''
+
+#Unofficial Windows Networkx
+#networkx-1.8.1.win32-py2.7.exe
+
+#http://www.graphviz.org/Download_windows.php
+
+
+# Graph Tool
+#http://graph-tool.skewed.de/

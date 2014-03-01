@@ -51,10 +51,10 @@ if __name__ == '__main__':
     # Use result list to build matching graph
     hsgraph.rrr()
     util.rrr()
-    #cgraph_gtool = hsgraph.make_chip_graph(qcx2_res, 'graph-tool')
-    #fgraph_gtool = hsgraph.make_feature_graph(qreq, qcx2_res, 'graph-tool')
-    cgraph_netx  = hsgraph.make_chip_graph(qcx2_res, 'netx')
-    fgraph_netx  = hsgraph.make_feature_graph(qreq, qcx2_res, 'netx')
+    #cgraph_gtool = hsgraph.make_chip_graph(hs, qcx2_res, 'graph-tool')
+    #fgraph_gtool = hsgraph.make_feature_graph(hs, qcx2_res, 'graph-tool')
+    cgraph_netx  = hsgraph.make_chip_graph(hs, qcx2_res, 'netx')
+    fgraph_netx  = hsgraph.make_feature_graph(hs, qcx2_res, 'netx')
     #
     graphs_dir = 'graphs'
     cgraph_fpath = join(graphs_dir, hs.get_db_name() + '_cgraph')
@@ -81,7 +81,3 @@ if __name__ == '__main__':
     df2.update()
     print('[TEST] END TEST')
     test_api.main_loop(app, is_root, back, runqtmain=INTERACTIVE)
-'''
-python hstest/test_encounter.py --dbdir ~/data/work/MISC_Jan12
-python hstest/test_encounter.py --dbdir ~/data/work/NAUTS_Dan
-'''

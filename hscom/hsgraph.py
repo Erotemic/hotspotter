@@ -6,9 +6,13 @@ from hscom import helpers as util
 from os.path import splitext, exists
 import cross_platform as cplat
 import networkx as netx
-import graph_tool as gtool
 from itertools import izip
 from hsviz import draw_func2 as df2
+try:
+    import graph_tool as gtool
+except ImportError as ex:
+    gtool = None
+    print(ex)
 
 
 def show_graph(graph, **kwargs):
@@ -30,7 +34,7 @@ def export_dot(graph, fpath='graph'):
     dot_fpath = util.ensure_ext(fpath, '.dot')
     if isinstance(graph, netx.Graph):
         netx.write_dot(graph, dot_fpath)
-    if isinstance(graph, gtool.Graph):
+    elif isinstance(graph, gtool.Graph):
         graph.save(dot_fpath, fmt='dot')
     return dot_fpath
 
@@ -39,7 +43,7 @@ def export_gephi(graph, fpath):
     gexf_fpath = util.ensure_ext(fpath, '.gexf')
     if isinstance(graph, netx.Graph):
         netx.write_gexf(graph, gexf_fpath)
-    if isinstance(graph, gtool.Graph):
+    elif isinstance(graph, gtool.Graph):
         raise NotImplementedError()
     return gexf_fpath
 
@@ -130,7 +134,8 @@ def netx_draw_images_at_positions(img_list, pos_list):
 
 
 @util.indent_decor('[feat_graph]')
-def make_feature_graph(qreq, qcx2_res, *args, **kwargs):
+def make_feature_graph(hs, qcx2_res, *args, **kwargs):
+    qreq = hs.qreq
     # Make a graph between the chips
     cxfx2_ax = {(cx, fx): ax for ax, (cx, fx) in qreq.get_cxfx_enum()}
     # Build feature nodes
@@ -147,13 +152,14 @@ def make_feature_graph(qreq, qcx2_res, *args, **kwargs):
 
 
 @util.indent_decor('[chip_graph]')
-def make_chip_graph(qcx2_res, *args, **kwargs):
+def make_chip_graph(hs, qcx2_res, *args, **kwargs):
     # Make a graph between the chips
-    nodes = [(cx,) for cx in qcx2_res.iterkeys()]
+
+    nodes = [(cx, hs.tables.cx2_cid[cx], hs.tables.cx2_nx[cx], hs.cx2_name(cx)) for cx in qcx2_res.iterkeys()]
     edges = [(res.qcx, cx, score)
              for res in qcx2_res.itervalues()
              for cx, score in enumerate(res.cx2_score) if score > 0]
-    node_lbls = []
+    node_lbls = [('cid', 'int'), ('nx', 'int'), ('name', 'int')]
     edge_lbls = [('weight', 'float')]
     return make_graph(nodes, edges, node_lbls, edge_lbls, *args, **kwargs)
 
@@ -189,7 +195,6 @@ def make_netx_graph(nodes, edges, node_lbls=[], edge_lbls=[]):
 
 
 def make_gtool_graph(nodes, edges, node_lbls=[], edge_lbls=[]):
-    # Create gtool graph
     #print('[graph] new graph')
     gtool_graph = gtool.Graph(g=None, directed=True, prune=False, vorder=None)
 

@@ -65,6 +65,7 @@ def export_xml(graph, fpath):
 
 
 def export(graph, fpath, fmt):
+    print('[graph] exporting graph: %r' % fpath)
     if fmt == 'gml':
         export_gml(graph, fpath)
     if fmt == 'dot':

@@ -2,13 +2,90 @@ from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[mc3]', DEBUG=False)
+# Python
+from os.path import join
 # Science
 import numpy as np
 # HotSpotter
+from hscom import tools
 from hscom import params
 from hscom import helpers as util
+from hscom import fileio as io
 import DataStructures as ds
 import matching_functions as mf
+
+
+#----------------------
+
+
+def get_bigcache_io_kwargs(hs, qreq):
+    query_uid = qreq.get_query_uid(hs, qreq._qcxs)
+    cache_dir = join(hs.dirs.cache_dir, 'bigcache_query')
+    io_kwargs = {
+        'dpath': cache_dir,
+        'fname': 'bigcache_query',
+        'uid':  query_uid,
+        'ext': '.cPkl'}
+    return io_kwargs
+
+
+def load_bigcache_query(hs, qreq, verbose):
+    # High level caching
+    io_kwargs = get_bigcache_io_kwargs(hs, qreq)
+    qcx2_res = io.smart_load(**io_kwargs)
+    if verbose:
+        print('query_uid = %r' % io_kwargs['uid'])
+    if qcx2_res is None:
+        raise IOError('bigcache_query ... miss')
+    elif len(qcx2_res) != len(qreq._qcxs):
+        raise IOError('bigcache_query ... outdated')
+    else:
+        return qcx2_res
+
+
+def save_bigcache_query(qx2_res, hs, qreq):
+    io_kwargs = get_bigcache_io_kwargs(hs, qreq)
+    util.ensuredir(io_kwargs['dpath'])
+    io.smart_save(qx2_res, **io_kwargs)
+
+
+@profile
+def bigcache_query(hs, qreq, batch_size=10, use_bigcache=True,
+                   limit_memory=False, verbose=True):
+    qcxs = qreq._qcxs
+    if use_bigcache and not params.args.nocache_query:
+        try:
+            qcx2_res = load_bigcache_query(hs, qreq, verbose)
+            return qcx2_res
+        except IOError as ex:
+            print(ex)
+    # Perform checks
+    pre_cache_checks(hs, qreq)
+    pre_exec_checks(hs, qreq)
+    # Execute queries in batches
+    qcx2_res = {}
+    nBatches = int(np.ceil(len(qcxs) / batch_size))
+    batch_enum = enumerate(tools.ichunks(qcxs, batch_size))
+    for batchx, qcxs_batch in batch_enum:
+        print('[mc3] batch %d / %d' % (batchx, nBatches))
+        qreq._qcxs = qcxs_batch
+        print('qcxs_batch=%r. quid=%r' % (qcxs_batch, qreq.get_uid()))
+        try:
+            qcx2_res_ = process_query_request(hs, qreq, safe=False)
+            # Append current batch results if we have the memory
+            if not limit_memory:
+                qcx2_res.update(qcx2_res_)
+        except mf.QueryException as ex:
+            print('[mc3] ERROR !!!: %r' % ex)
+            if params.args.strict:
+                raise
+            continue
+    qreq._qcxs = qcxs
+    # Need to reload all queries
+    if limit_memory:
+        qcx2_res = process_query_request(hs, qreq, safe=False)
+    save_bigcache_query(qcx2_res, hs, qreq)
+    return qcx2_res
 
 
 @util.indent_decor('[quick_ensure]')

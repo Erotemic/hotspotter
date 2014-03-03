@@ -655,7 +655,7 @@ if __name__ == '__main__':
         util.vd(hs.dirs.db_dir)
 
     if '--memtest' in sys.argv:
-        util.memory_profile()
+        #util.memory_profile()
         util.print_object_size(hs, 'hs = ')
         util.print_object_size(hs.tables, 'hs.feats.tables = ')
         util.print_object_size(hs.tables.cx2_cid, 'hs.feats.tables = ')

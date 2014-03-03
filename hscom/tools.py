@@ -178,3 +178,9 @@ def is_dict(var):
 def is_list(var):
     return isinstance(var, list)
     #return is_type(var, VALID_LIST_TYPES)
+
+
+def ichunks(list_, size):
+    'Yield successive n-sized chunks from list_.'
+    for ix in xrange(0, len(list_), size):
+        yield list_[ix: ix + size]

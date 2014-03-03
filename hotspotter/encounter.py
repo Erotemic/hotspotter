@@ -164,3 +164,10 @@ def inter_encounter_match(hs, eid2_names=None, **kwargs):
     graph.cutEdges(**kwargs)
     cx2_nx, nx2_cxs = graph.getConnectedComponents()
     return cx2_nx
+
+
+def print_encounter_stats(ex2_cxs):
+    ex2_nCxs = map(len, ex2_cxs)
+    ex_statstr = util.printable_mystats(ex2_nCxs)
+    print('num_encounters = %r' % len(ex2_nCxs))
+    print('encounter_stats = %r' % (ex_statstr,))

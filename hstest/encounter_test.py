@@ -39,30 +39,35 @@ if __name__ == '__main__':
         # Build encounter clusters
         ex2_cxs = encounter.get_chip_encounters(hs)
         util.save_testdata('ex2_cxs', uid=hs.get_db_name())
+    encounter.print_encounter_stats(ex2_cxs)
     cxs = ex2_cxs[-1]
     assert len(cxs) > 1
 
     # Build result list
     from hotspotter import match_chips3 as mc3
-    qreq = mc3.quickly_ensure_qreq(hs)
+    mc3.rrr()
+    qreq = mc3.quickly_ensure_qreq(hs, qcxs=cxs, dcxs=cxs)
     # Query within an encounter
-    qcx2_res = encounter.intra_query_cxs(hs, cxs)
+    qcx2_res = mc3.bigcache_query(hs, qreq, batch_size=64)
+    #encounter.intra_query_cxs(hs, cxs)
 
     # Use result list to build matching graph
     hsgraph.rrr()
     util.rrr()
-    #cgraph_gtool = hsgraph.make_chip_graph(hs, qcx2_res, 'graph-tool')
-    #fgraph_gtool = hsgraph.make_feature_graph(hs, qcx2_res, 'graph-tool')
-    cgraph_netx  = hsgraph.make_chip_graph(hs, qcx2_res, 'netx')
-    fgraph_netx  = hsgraph.make_feature_graph(hs, qcx2_res, 'netx')
-    #
     graphs_dir = 'graphs'
-    cgraph_fpath = join(graphs_dir, hs.get_db_name() + '_cgraph')
-    fgraph_fpath = join(graphs_dir, hs.get_db_name() + '_fgraph')
     util.ensuredir(graphs_dir)
 
+    #cgraph_gtool = hsgraph.make_chip_graph(hs, qcx2_res, 'graph-tool')
+    #fgraph_gtool = hsgraph.make_feature_graph(hs, qcx2_res, 'graph-tool')
+
+    cgraph_netx  = hsgraph.make_chip_graph(hs, qcx2_res, 'netx')
+    cgraph_fpath = join(graphs_dir, hs.get_db_name() + '_cgraph')
     hsgraph.export(cgraph_netx,  cgraph_fpath + '_netx', 'gml')
-    hsgraph.export(fgraph_netx,  fgraph_fpath + '_netx', 'gml')
+
+    #fgraph_fpath = join(graphs_dir, hs.get_db_name() + '_fgraph')
+    #fgraph_netx  = hsgraph.make_feature_graph(hs, qcx2_res, 'netx')
+    #hsgraph.export(fgraph_netx,  fgraph_fpath + '_netx', 'gml')
+
     #hsgraph.export(cgraph_gtool, cgraph_fpath + '_gtool', 'gml')
     #dot_fpath = hsgraph.export_dotfile(fgraph_netx,  'graphs/fgraph_netx')
     #hsgraph.render_graph(cgraph_gtool, 'graphs/cgraph_gtool')

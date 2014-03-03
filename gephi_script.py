@@ -1,3 +1,4 @@
+#/usr/local/bin/jython
 #from os.path import expanduser; f = open(expanduser('~/code/hotspotter/gephi_script.py')); exec(f.read()); f.close()
 #
 
@@ -56,8 +57,72 @@
 '''
 #from os.path import *; execfile(expanduser('~/code/hotspotter/gephi_script.py'))
 
+'''
+
+jython -Dpython.path=gephi-toolkit.jar
+
+'''
+
 import java
 from os.path import *  # NOQA
+import sys
+
+
+def ensure_gephi_toolkit_jar():
+    print('[init] ensuring gephi tookit')
+    jarname = 'gephi-toolkit.jar'
+    if jarname in map(lambda path: split(path)[1], sys.path):
+        print(' * gephi toolkit is already in path')
+        return
+    cwd = os.path.dirname(os.path.realpath(__file__))
+    toolkit = os.path.join(cwd, 'gephi-toolkit.jar')
+    if not exists(toolkit):
+        toolkit = os.path.join(os.getcwd(), jarname)
+    sys.path.append(toolkit)
+    print(' * found gephi')
+
+
+import org.openide.util.Lookup as Lookup
+Lookup = Lookup.getDefault().lookup
+
+
+#https://github.com/jsundram/pygephi/blob/master/gephi.py
+def lookup(name, namespace='org.gephi.'):
+    classname = namespace + name
+    print('[init] lookup: %s' % classname)
+    javaclass = java.lang.Class.forName(classname)
+    return Lookup(javaclass)
+
+
+try:
+    ProjectController
+    print('We are running in from gephi')
+except NameError:
+    print('We are running in from command line')
+    import org.gephi.project.api as project
+    import org.gephi.data.attributes.api as attributes
+    import org.gephi.filters.api as filters
+    import org.gephi.graph.api as graph
+    import org.gephi.io.exporter.api as exporter
+    import org.gephi.io.generator.api as generator
+    import org.gephi.io.importer.api as importer
+    import org.gephi.layout.api as layout
+    import org.gephi.partition.api as partition
+    import org.gephi.preview as preview
+    import org.gephi.project.api as project
+    import org.gephi.ranking.api as ranking
+    import org.gephi.statistics as statistics
+    import org.gephi.utils as utils
+    ensure_gephi_toolkit_jar()
+    ProjectController = lookup('project.api.ProjectController')
+    ExportController  = lookup('io.exporter.api.ExportController')
+    ImportController  = lookup('io.importer.api.ImportController')
+    GraphController   = lookup('graph.api.GraphController')
+    PreviewController = lookup('preview.api.PreviewController')
+    #from org.openide.util import Lookup
+    #import java.lang.Class
+    #import org.gephi.project.api.ProjectController as ProjectController
+    #pc = Lookup.getDefault().lookup(java.lang.Class.forName("org.gephi.project.api.ProjectController"))
 
 
 def rrr():
@@ -66,6 +131,7 @@ def rrr():
 if not 'DEVLOCALS' in vars():
     DEVLOCALS = {}
     DEVLOCALS['ISINIT'] = False
+    DEVLOCALS['DB'] = ''
 
 
 def print_available():
@@ -98,8 +164,9 @@ modelClassLib = viz.getModelClassLibrary()
 
 
 def get_gml_fpath():
-    #gml_fname = 'HSDB_zebra_with_mothers_cgraph_netx.gml'
     gml_fname = 'GZ_ALL_cgraph_netx.gml'
+    #gml_fname = 'HSDB_zebra_with_mothers_cgraph_netx.gml'
+    DEVLOCALS['DB'] = gml_fname
     gml_dir = expanduser('~/code/hotspotter/graphs/')
     gml_fpath = join(gml_dir, gml_fname)
     return gml_fpath
@@ -133,7 +200,8 @@ def SetCustomVizParams():
     # No Hulls
     viz.vizModel.setShowHulls(False)
     # Smaller edges
-    vizmodel.setEdgeScale(.2)
+    #vizmodel.setEdgeScale(.878)
+    vizmodel.setEdgeScale(1.3)
     # Dark background
     vizmodel.setBackgroundColor(black)
     # View the name of the animal nodes
@@ -145,37 +213,46 @@ def SetCustomVizParams():
     # Show animal names
     text_model.setShowNodeLabels(True)
     # Smaller font
+    fontsize = 32
     try:
-        smallfont = java.awt.Font('Mono Dyslexic', 0, 8)
+        smallfont = java.awt.Font('Mono Dyslexic', 0, fontsize)
         text_model.setNodeFont(smallfont)
     except Exception:
         print(ex)
-        smallfont = java.awt.Font('Arial', 0, 8)
+        smallfont = java.awt.Font('Arial', 0, fontsize)
         text_model.setNodeFont(smallfont)
     #text_model.setNodeColor(orange)
 
 
-def CustomForceParamsBAD(layout):
-    layout.maxDisplacement = 1e2
-    layout.repulsionStrength = 1e3
-    layout.attractionStrength = 1e-3
-    layout.gravity = 1e3
-    layout.freezeStrength = 1e2  # autostab strength
-    layout.freezeInertia = 1e2  # Autostab sensitivity
-    layout.cooling = 1e0
-    layout.inertia = 1e0
-    layout.speed = 1e2
+#def CustomForceParamsBAD(layout):
+    #layout.maxDisplacement = 1e2
+    #layout.repulsionStrength = 1e3
+    #layout.attractionStrength = 1e-2
+    #layout.gravity = 1e4
+    #layout.freezeStrength = 1e2  # autostab strength
+    #layout.freezeInertia = 1e2  # Autostab sensitivity
+    #layout.cooling = 1e0
+    #layout.inertia = 1e0
+    #layout.speed = 1e2
+
 
 def CustomForceParams(layout):
-    layout.maxDisplacement = 1e1
-    layout.repulsionStrength = 1e3
-    layout.attractionStrength = 1e-1
-    layout.gravity = -1e3
+    layout.maxDisplacement = 1e2
+    layout.repulsionStrength = 5e4
+    layout.attractionStrength = .8e-3
+    layout.gravity = -1e4
     layout.freezeStrength = 1e2  # autostab strength
     layout.freezeInertia = 1e0  # Autostab sensitivity
     layout.cooling = 1e0
     layout.inertia = 1e0
-    layout.speed = 1e0
+    layout.speed = 5.5e-4
+    if DEVLOCALS['DB'] == 'HSDB_zebra_with_mothers_cgraph_netx.gml':
+        layout.speed = 5.5e-6
+        layout.repulsionStrength = 5e6
+        layout.attractionStrength = .8e-2
+        layout.gravity = -1e3
+
+
 
 if ImportCustomGML():
     SetCustomVizParams()
@@ -184,18 +261,7 @@ else:
     stopLayout()
 
 #stopLayout()
-forces_ = ForceAtlas()
-layout  = forces_.buildLayout()
-
-selected_layout = lc.model.getSelectedLayout()
-print('selected_layout: %r' % selected_layout)
-print('  custom_layout: %r' % layout)
-CustomForceParams(layout)
-lc.setLayout(layout)
 #lc.model.loadProperties(layout)
-print('Running Layout')
-#run_layout(layout.getBuilder, iters=100)
-print('Done')
 #centerOnGraph()
 #stopLayout()
 
@@ -204,13 +270,23 @@ print('Done')
 # Viz Config
 
 
-def interpolateColor(alpha, color1=blue, color2=orange):
-    assert alpha >= 0 and alpha <= 1
-    red   = int(alpha * color1.red   + (1.0 - alpha) * color2.red)
-    green = int(alpha * color1.green + (1.0 - alpha) * color2.green)
-    blue  = int(alpha * color1.blue  + (1.0 - alpha) * color2.blue)
-    color3 = java.awt.Color(red, green, blue)
+def interpolateColor(alpha, color2, color1):
+    red   = (alpha * float(color1.red))   + ((1.0 - alpha) * float(color2.red))
+    green = (alpha * float(color1.green)) + ((1.0 - alpha) * float(color2.green))
+    blue  = (alpha * float(color1.blue))  + ((1.0 - alpha) * float(color2.blue))
+    color3 = java.awt.Color(int(red), int(green), int(blue))
     return color3
+
+
+scale = 'linear'
+if scale == 'log10':
+    from math import log10
+    scalefn = lambda num: log10(num)
+if scale == 'log':
+    from math import log
+    scalefn = lambda num: log(num)
+elif scale == 'linear':
+    scalefn = lambda num: num
 
 
 def CustomEdgeColors():
@@ -218,37 +294,82 @@ def CustomEdgeColors():
     minWeight = 1e29
     maxWeight = -1e29
 
+    meansum = 0.0
     for edge in graph.edges:
+        meansum += edge.weight
         if edge.weight < minWeight:
             minWeight = edge.weight
         if edge.weight > maxWeight:
             maxWeight = edge.weight
+    stddevsum = 0.0
+    mean = meansum / float(len(graph.edges))
+    for edge in graph.edges:
+        stddevsum += (mean - edge.weight) ** 2
+    stddevsum = stddevsum / float(len(graph.edges))
+    from math import sqrt
+    std = sqrt(stddevsum)
+    print('std = %r, mean = %r' % (std, mean))
+    # Remove outliers
+    MAXTHRESH = mean + 5.5 * std
+    maxWeight = min(MAXTHRESH, maxWeight)
+    for edge in graph.edges:
+        edge.weight = min(MAXTHRESH, edge.weight)
+    #maxWeight = min(1e4, maxWeight)
+    minWeight = float(minWeight)
+    maxWeight = float(maxWeight)
     print('minWeight, maxWeight = %r, %r' % (minWeight, maxWeight))
-    scale = 'log10'
-    if scale == 'log10':
-        from math import log10
-        scalefn = lambda num: log10(num)
-    if scale == 'log':
-        from math import log
-        scalefn = lambda num: log(num)
-    elif scale == 'linear':
-        scalefn = lambda num: num
-    shift2 = .3
+    #shift2 = .01
+    shift2 = 1
     min_ = scalefn(minWeight)
     max_ = scalefn(maxWeight)
     max_ = (shift2 * (max_ - min_)) + min_
     range_ = max_ - min_
+    #print('range_ = %r' % range_)
+    edge_list = graph.edges
     def interpolateEdge(edge):
-        alpha = (scalefn(edge.weight) - min_) / range_
-        alpha = min(1, max(0, alpha))
+        #alpha = min(1, max(0, alpha))
+        weight = scalefn(edge.weight)
+        alpha = (weight - min_) / (max_ - min_)
+        alpha = max(0.0, min(1.0, alpha))
+        #if alpha < 0 or alpha > 1:
+            #raise AssertionError('alpha not in range')
         color = interpolateColor(alpha, blue, orange)
         edge.color = color
+        return alpha, color, weight
+    alpha_list = []
+    weight_list = []
+    color_list = []
+    for edge in edge_list:
+        alpha, color, weight = interpolateEdge(edge)
+        color_list.append(color)
+        weight_list.append(weight)
+        alpha_list.append(alpha)
+
+    print('alpha_list %r' % alpha_list[1:100:5])
+    #print('weight_list %r' % weight_list[1:100:10])
+    #print('color_list %r' % color_list[1:100:10])
     print('Setting Edge Colors')
-    map(interpolateEdge, graph.edges)
-    print('Done')
+    print('Set Colors: %r' % shift2)
 
 
 CustomEdgeColors()
+try:
+    layout
+except Exception:
+    forces_ = ForceAtlas()
+    layout  = forces_.buildLayout()
+
+selected_layout = lc.model.getSelectedLayout()
+print('selected_layout: %r' % selected_layout)
+print('  custom_layout: %r' % layout)
+if not selected_layout is None:
+    layout = selected_layout
+CustomForceParams(layout)
+lc.setLayout(layout)
+print('Running Layout')
+#run_layout(layout.getBuilder, iters=100)
+#run_layout(layout.getBuilder)
+print('Done')
 
 
 def doForce():

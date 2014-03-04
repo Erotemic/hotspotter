@@ -43,6 +43,28 @@ def parse_arguments(defaultdb, usedbcache):
     return args
 
 
+def _checkargs_onload(hs):
+    'checks relevant arguments after loading tables'
+    import params
+    import sys
+    args = params.args
+    if args is None:
+        return
+    if args.vrd or args.vrdq:
+        hs.vrd()
+        if args.vrdq:
+            sys.exit(1)
+    if args.vcd or args.vcdq:
+        hs.vcd()
+        if args.vcdq:
+            sys.exit(1)
+    if params.args.delete_cache:
+        hs.delete_cache()
+    if params.args.quit:
+        print('[hs] user requested quit.')
+        sys.exit(1)
+
+
 def main(defaultdb='cache', preload=False, app=None):
     from hscom import fileio as io
     from hscom import params
@@ -74,6 +96,7 @@ def main(defaultdb='cache', preload=False, app=None):
         hs.load(load_all=load_all)
         db_dir = hs.dirs.db_dir
         io.global_cache_write('db_dir', db_dir)
+        _checkargs_onload(hs)
     except ValueError as ex:
         print('[tapi.main] ValueError = %r' % (ex,))
         if params.args.strict:

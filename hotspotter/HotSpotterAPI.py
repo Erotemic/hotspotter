@@ -37,26 +37,6 @@ except ImportError:
 HSBASE = object if '--objbase' in sys.argv else DynStruct
 
 
-def _checkargs_onload(hs):
-    'checks relevant arguments after loading tables'
-    args = params.args
-    if args is None:
-        return
-    if args.vrd or args.vrdq:
-        hs.vrd()
-        if args.vrdq:
-            sys.exit(1)
-    if args.vcd or args.vcdq:
-        hs.vcd()
-        if args.vcdq:
-            sys.exit(1)
-    if params.args.delete_cache:
-        hs.delete_cache()
-    if params.args.quit:
-        print('[hs] user requested quit.')
-        sys.exit(1)
-
-
 # Logic for hotspotter functions are module level functions for easy reloading.
 
 def _import_scripts(hs):
@@ -262,11 +242,12 @@ class HotSpotter(DynStruct):
             #printDBG('[\hs] Creating HotSpotter API')
             # TODO Remove args / integrate into prefs
             hs.callbacks = {}
-            hs.tables = None
-            hs.dirs   = None
-            hs.feats  = ds.HotspotterChipFeatures()
-            hs.cpaths = ds.HotspotterChipPaths()
-            #
+            # DataStructure
+            hs.tables = None  # annotations (larger)
+            hs.dirs   = None  # directory structure (small)
+            hs.feats  = ds.HotspotterChipFeatures()  # features (very large)
+            hs.cpaths = ds.HotspotterChipPaths()     # chip paths (smallish)
+            # These test/train/indexed lists can probably be moved elsewhere
             hs.train_sample_cx   = None
             hs.test_sample_cx    = None
             hs.indexed_sample_cx = None
@@ -277,17 +258,13 @@ class HotSpotter(DynStruct):
                 hs.default_preferences()
             else:
                 hs.load_preferences()
-            #if args is not None:
-                #hs.prefs.N = args.N if args is not None
-                #args_dict = vars(args)
-                #hs.update_preferences(**args_dict)
-            #hs.query_history = [(None, None)]
             hs.qreq = ds.QueryRequest()  # Query Data
             hs.qreq.set_cfg(hs.prefs.query_cfg)
-            hs.qid2_qreq = {}  # feature id -> query data
             if db_dir is not None:
                 hs.load_tables(db_dir=db_dir)
             hs.augment_api()
+            # These flags were meant to do more then they currently do
+            # they are not set correctly in all places
             hs.dirty = True
             hs.fresh = True
 
@@ -426,7 +403,6 @@ class HotSpotter(DynStruct):
         if db_version != 'current':
             print('[hs] Loaded db_version=%r. Converting...' % db_version)
             hs.save_database()
-        _checkargs_onload(hs)
 
     def load_chips(hs, cx_list=None):
         cc2.load_chips(hs, cx_list)
@@ -774,6 +750,8 @@ class HotSpotter(DynStruct):
     @util.indent_decor('[hs.delete_cache]')
     def delete_cache(hs):
         print('[hs] DELETE CACHE')
+        if hs.dirs is None:
+            raise Exception('Hotspotter has not loaded dirs')
         computed_dir = hs.dirs.computed_dir
         hs.unload_all()
         #[hs.unload_cxdata(cx) for cx in hs.get_valid_cxs()]

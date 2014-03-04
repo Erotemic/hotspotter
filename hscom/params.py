@@ -75,7 +75,7 @@ dbalias_dict = {
     'WD':               'WD_Siva',
     'LF':               'LF_all',
     'GZ':               'GZ_ALL',
-    'MOTHERS':          'HSDB_zebra_with_mothers',
+    'MOTHERS':          'PZ_MOTHERS',
     'FROGS':            'Frogs',
     'TOADS':            'WY_Toads',
     'SEALS':            'Seals',

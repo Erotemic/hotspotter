@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off, rrr,
- profile, printDBG) = __common__.init(__name__, '[tapi]', DEBUG=False)
+ profile, printDBG) = __common__.init(__name__, '[tapi]', DEBUG=False, initmpl=True)
 
 
 def signal_reset():
@@ -45,7 +45,7 @@ def parse_arguments(defaultdb, usedbcache):
 
 def _checkargs_onload(hs):
     'checks relevant arguments after loading tables'
-    import params
+    from hscom import params
     import sys
     args = params.args
     if args is None:

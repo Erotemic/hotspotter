@@ -71,6 +71,7 @@ if __name__ == '__main__':
     # Necessary for windows parallelization
     multiprocessing.freeze_support()
     # Run Main Function
+    #from hsviz import draw_func2 as df2  # NOQA
     from hsdev import test_api
     from hsdev import dbgimport
     print('main.py')

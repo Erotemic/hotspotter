@@ -1,4 +1,7 @@
 from __future__ import division, print_function
+from hscom import __common__
+(print, print_, print_on, print_off, rrr,
+ profile, printDBG) = __common__.init(__name__, '[dbgimp]', DEBUG=False, initmpl=True)
 # Python
 from collections import OrderedDict, defaultdict
 from os.path import (dirname, realpath, join, exists, normpath, splitext,

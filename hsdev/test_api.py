@@ -66,11 +66,12 @@ def _checkargs_onload(hs):
 
 
 def main(defaultdb='cache', preload=False, app=None):
+    from hotspotter import HotSpotterAPI as api
     from hscom import fileio as io
     from hscom import params
-    from hotspotter import HotSpotterAPI as api
-    from hsgui import guitools
+    from hsdev import experiment_harness
     from hsgui import guiback
+    from hsgui import guitools
     if app is True:
         app, is_root = guitools.init_qtapp()
     args = parse_arguments(defaultdb, defaultdb == 'cache')
@@ -83,7 +84,6 @@ def main(defaultdb='cache', preload=False, app=None):
     setcfg = args.setcfg
     if setcfg is not None:
         # FIXME move experiment harness to hsdev
-        import experiment_harness
         print('[tapi.main] setting cfg to %r' % setcfg)
         varied_list = experiment_harness.get_varied_params_list([setcfg])
         cfg_dict = varied_list[0]
@@ -161,6 +161,7 @@ def get_test_cxs(hs, max_testcases=None):
 
 def get_qcx_list(hs):
     ''' Function for getting the list of queries to test '''
+    import sys
     import numpy as np
     from hscom import params
     from hscom import helpers as util
@@ -214,7 +215,6 @@ def get_qcx_list(hs):
     if len(qcx_list) == 0:
         msg = '[tapi.get_qcxs] no qcx_list history'
         print(msg)
-        import sys
         if '--vstrict' in sys.argv:  # if params.args.vstrict:
             raise Exception(msg)
         print(valid_cxs)
@@ -242,9 +242,9 @@ def main_init(defaultdb=None, preload=False, app=None):
 
 
 def main_loop(app, is_root, back, runqtmain=True):
+    import sys
     from hscom import helpers as util
     from hsgui import guitools
-    import sys
     hs = back.hs  # NOQA
     # Allow for a IPython connection by passing the --cmd flag
     embedded = util.inIPython()

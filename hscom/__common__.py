@@ -201,6 +201,10 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
     if DEBUG is None:
         return print, print_, print_on, print_off, rrr, profile
 
+    if __DEBUG__:
+        # force all local debugging (unless DEBUG is None) if global debugging on
+        DEBUG = True
+
     # Define a printdebug function
     if DEBUG:
         def printDBG(msg):

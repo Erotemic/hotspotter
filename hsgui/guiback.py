@@ -639,7 +639,7 @@ class MainWindowBackend(QtCore.QObject):
             back.user_info('Aborting open database')
             print('aborting open database')
             print(ex)
-            if '--strict' in sys.argv:
+            if 'hs' not in vars() or '--strict' in sys.argv:
                 raise
         print('')
         return hs

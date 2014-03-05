@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[hs]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[hs]', DEBUG=False)
 import sys
 # Standard
 import os
@@ -235,13 +235,17 @@ def __define_method(hs, method_name, func=None):
 class HotSpotter(DynStruct):
     'The HotSpotter main class is a root handle to all relevant data'
     def __init__(hs, args=None, db_dir=None):
-        #super(HotSpotter, hs).__init__(child_exclude_list=['prefs', 'args'])
+        #super(HotSpotter, hs).__init__(child_exclude_list=['prefs'])
         with util.Indenter2('[hs.init]'):
-            print('[hs] creating HotSpotter()')
             super(HotSpotter, hs).__init__()
-            #printDBG('[\hs] Creating HotSpotter API')
-            # TODO Remove args / integrate into prefs
-            hs.callbacks = {}
+            if args is None:
+                if db_dir is None:
+                    print('Cannot create a hotspotter object without' +
+                          ' a database directory')
+                    raise AssertionError('Either args must be specified or db_dir must be given')
+            printDBG('[hs] creating HotSpotter()')
+            hs.callbacks = {}  # For custom callbacks
+            hs.db_dir = args.dbdir  # duplicate db_dir for consistency checks
             # DataStructure
             hs.tables = None  # annotations (larger)
             hs.dirs   = None  # directory structure (small)
@@ -252,7 +256,12 @@ class HotSpotter(DynStruct):
             hs.test_sample_cx    = None
             hs.indexed_sample_cx = None
             #
-            pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')
+            pref_fpath = join(db_dir, 'prefs')
+            if not exists(pref_fpath):
+                # We are no longer useing the global cache directory
+                #pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')
+                pass
+            # Create root preferences object
             hs.prefs = Pref('root', fpath=pref_fpath)
             if params.args.nocache_prefs:
                 hs.default_preferences()
@@ -393,8 +402,11 @@ class HotSpotter(DynStruct):
 
     def load_tables(hs, db_dir=None):
         # Check to make sure db_dir is specified correctly
+        printDBG('[hs] load_tables db_dir=%r, hs.db_dir=%r' % (db_dir, hs.db_dir))
         if db_dir is None:
-            db_dir = params.args.dbdir
+            db_dir = hs.db_dir
+        else:
+            hs.db_dir = db_dir
         if db_dir is None or not exists(db_dir):
             raise ValueError('[hs] db_dir=%r does not exist!' % (db_dir))
         hs_dirs, hs_tables, db_version = ld2.load_csv_tables(db_dir)

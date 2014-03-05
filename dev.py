@@ -652,7 +652,7 @@ if __name__ == '__main__':
         print('...not presenting')
         sys.exit(0)
     if params.args.vdd:
-        util.vd(hs.dirs.db_dir)
+        util.vd(hs.dirs.dbdir)
 
     if '--memtest' in sys.argv:
         #util.memory_profile()

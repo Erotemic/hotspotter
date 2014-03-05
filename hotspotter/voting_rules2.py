@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[vr2]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[vr2]', DEBUG=False)
 # Python
 from itertools import izip
 # Scientific
@@ -9,7 +9,6 @@ import numpy as np
 from numpy.linalg import svd
 #from numba import autojit
 # HotSpotter
-from hscom import helpers
 from hscom import helpers as util
 
 
@@ -194,9 +193,9 @@ def _filter_utilities(qfx2_utilities, max_alts=200):
 def _utilities2_pairwise_breaking(qfx2_utilities):
     print('[vote] building pairwise matrix')
     hstack = np.hstack
-    cartesian = helpers.cartesian
+    cartesian = util.cartesian
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
-    altx2_tnx = helpers.unique_keep_order(tnxs)
+    altx2_tnx = util.unique_keep_order(tnxs)
     tnx2_altx = {nx: altx for altx, nx in enumerate(altx2_tnx)}
     nUtilities = len(qfx2_utilities)
     nAlts   = len(altx2_tnx)
@@ -213,7 +212,7 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
     nVoters = 0
     for qfx in xrange(nUtilities):
         # partial and compliment order over alternatives
-        porder = helpers.unique_keep_order(qfx2_porder[qfx])
+        porder = util.unique_keep_order(qfx2_porder[qfx])
         nReport = len(porder)
         if nReport == 0:
             continue
@@ -241,7 +240,7 @@ def _utilities2_pairwise_breaking(qfx2_utilities):
 def _get_alts_from_utilities(qfx2_utilities):
     # get temp name indexes
     tnxs = [util[1] for utils in qfx2_utilities for util in utils]
-    altx2_tnx = helpers.unique_keep_order(tnxs)
+    altx2_tnx = util.unique_keep_order(tnxs)
     tnx2_altx = {nx: altx for altx, nx in enumerate(altx2_tnx)}
     nUtilities = len(qfx2_utilities)
     nAlts   = len(altx2_tnx)

@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[dev_consist]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[dev_consist]', DEBUG=False)
 # Standard
 from os.path import relpath
 # Science

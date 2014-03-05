@@ -65,20 +65,20 @@ class FilterConfig(ConfigBase):
             'dynamically adds filters'
             printDBG('[addfilt] %r %r %r %r' % (sign, filt, thresh, weight))
             filt_cfg._valid_filters.append(filt)
-            filt_cfg[filt + '_thresh'] = thresh
-            filt_cfg[filt + '_weight'] = weight
+            filt_cfg[filt + '_thresh'] = None if thresh is None else float(thresh)
+            filt_cfg[filt + '_weight'] = None if weight is None else float(weight)
             filt_cfg['_' + filt + '_depends'] = depends
             filt_cfg['_' + filt + '_sign'] = sign
         #tuple(Sign, Filt, ValidSignThresh, ScoreMetaWeight)
         # thresh test is: sign * score <= sign * thresh
         # sign +1 --> Lower scores are better
         # sign -1 --> Higher scores are better
-        addfilt(+1, 'roidist',  None,   0)
-        addfilt(-1,   'recip',     0,   0, 'filt_cfg.Krecip > 0')
-        addfilt(+1,  'bursty',  None,   0)
-        addfilt(-1,   'ratio',  None,   0)
-        addfilt(-1,   'lnbnn',  None,   1)
-        addfilt(-1,   'lnrat',  None,   0)
+        addfilt(+1, 'roidist',  None,   0.0)
+        addfilt(-1,   'recip',   0.0,   0.0, 'filt_cfg.Krecip > 0')
+        addfilt(+1,  'bursty',  None,   0.0)
+        addfilt(-1,   'ratio',  None,   0.0)
+        addfilt(-1,   'lnbnn',  None,   1.0)
+        addfilt(-1,   'lnrat',  None,   0.0)
         #addfilt(+1, 'scale' )
         filt_cfg.update(**kwargs)
 
@@ -90,7 +90,7 @@ class FilterConfig(ConfigBase):
         thresh = filt_cfg[filt + '_thresh']
         weight = filt_cfg[filt + '_weight']
         if weight == 1.0:
-            weight = 1
+            weight = 1.0
         return sign, thresh, weight
 
     def get_active_filters(filt_cfg):
@@ -424,7 +424,7 @@ def default_vsmany_cfg(hs, **kwargs):
 def default_vsone_cfg(hs, **kwargs):
     kwargs['query_type'] = 'vsone'
     kwargs_set = __dict_default_func(kwargs)
-    kwargs_set('lnbnn_weight', 0)
+    kwargs_set('lnbnn_weight', 0.0)
     kwargs_set('checks', 256)
     kwargs_set('K', 1)
     kwargs_set('Knorm', 1)

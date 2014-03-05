@@ -135,7 +135,7 @@ def _datatup_cols(hs, tblname, cx2_score=None):
 def _delete_image(hs, gx_list):
     # GATHER INFO
     # Ensure a trash directory
-    trash_dir = join(hs.dirs.db_dir, 'deleted-images')
+    trash_dir = join(hs.dirs.dbdir, 'deleted-images')
     util.ensuredir(trash_dir)
     # Get image paths to move into trash
     src_list = hs.gx2_gname(gx_list, full=True)
@@ -205,7 +205,7 @@ def _export_name(hs, nx, change_gname=True):
     gname_list = hs.cx2_gname(cxs_list, full=False)
     gname_src_list = hs.cx2_gname(cxs_list, full=True)
     # Change imagenames to show the groundtruth
-    dstdir = join(hs.dirs.db_dir, 'exported_images')
+    dstdir = join(hs.dirs.dbdir, 'exported_images')
     gname_dst_list = [join(dstdir, 'name=%s_cid=%d_%s') % (name, cid, gname)
                       for cid, gname in zip(cids_list, gname_list)]
     # Copy images
@@ -234,18 +234,18 @@ def __define_method(hs, method_name, func=None):
 
 class HotSpotter(DynStruct):
     'The HotSpotter main class is a root handle to all relevant data'
-    def __init__(hs, args=None, db_dir=None):
+    def __init__(hs, args=None, dbdir=None):
         #super(HotSpotter, hs).__init__(child_exclude_list=['prefs'])
         with util.Indenter2('[hs.init]'):
             super(HotSpotter, hs).__init__()
             if args is None:
-                if db_dir is None:
+                if dbdir is None:
                     print('Cannot create a hotspotter object without' +
                           ' a database directory')
-                    raise AssertionError('Either args must be specified or db_dir must be given')
+                    raise AssertionError('Either args must be specified or dbdir must be given')
             printDBG('[hs] creating HotSpotter()')
             hs.callbacks = {}  # For custom callbacks
-            hs.db_dir = args.dbdir  # duplicate db_dir for consistency checks
+            hs.dbdir = args.dbdir  # duplicate dbdir for consistency checks
             # DataStructure
             hs.tables = None  # annotations (larger)
             hs.dirs   = None  # directory structure (small)
@@ -256,7 +256,7 @@ class HotSpotter(DynStruct):
             hs.test_sample_cx    = None
             hs.indexed_sample_cx = None
             #
-            pref_fpath = join(db_dir, 'prefs')
+            pref_fpath = join(dbdir, 'prefs')
             if not exists(pref_fpath):
                 # We are no longer useing the global cache directory
                 #pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')
@@ -269,8 +269,8 @@ class HotSpotter(DynStruct):
                 hs.load_preferences()
             hs.qreq = ds.QueryRequest()  # Query Data
             hs.qreq.set_cfg(hs.prefs.query_cfg)
-            if db_dir is not None:
-                hs.load_tables(db_dir=db_dir)
+            if dbdir is not None:
+                hs.load_tables(dbdir=dbdir)
             hs.augment_api()
             # These flags were meant to do more then they currently do
             # they are not set correctly in all places
@@ -400,16 +400,16 @@ class HotSpotter(DynStruct):
             hs.refresh_features([])
         return hs
 
-    def load_tables(hs, db_dir=None):
-        # Check to make sure db_dir is specified correctly
-        printDBG('[hs] load_tables db_dir=%r, hs.db_dir=%r' % (db_dir, hs.db_dir))
-        if db_dir is None:
-            db_dir = hs.db_dir
+    def load_tables(hs, dbdir=None):
+        # Check to make sure dbdir is specified correctly
+        printDBG('[hs] load_tables dbdir=%r, hs.dbdir=%r' % (dbdir, hs.dbdir))
+        if dbdir is None:
+            dbdir = hs.dbdir
         else:
-            hs.db_dir = db_dir
-        if db_dir is None or not exists(db_dir):
-            raise ValueError('[hs] db_dir=%r does not exist!' % (db_dir))
-        hs_dirs, hs_tables, db_version = ld2.load_csv_tables(db_dir)
+            hs.dbdir = dbdir
+        if dbdir is None or not exists(dbdir):
+            raise ValueError('[hs] dbdir=%r does not exist!' % (dbdir))
+        hs_dirs, hs_tables, db_version = ld2.load_csv_tables(dbdir)
         hs.tables = hs_tables
         hs.dirs = hs_dirs
         if db_version != 'current':
@@ -799,7 +799,7 @@ class HotSpotter(DynStruct):
         return datatup_list
 
     def get_db_name(hs):  # , devmode=False):
-        db_name = split(hs.dirs.db_dir)[1]
+        db_name = split(hs.dirs.dbdir)[1]
         #if devmode:
             ## Grab the dev name insetad
             #dev_databases = params.dev_databases
@@ -1191,9 +1191,9 @@ class HotSpotter(DynStruct):
     #---------------
     # View Directories
     def vdd(hs):
-        db_dir = os.path.normpath(hs.dirs.db_dir)
-        print('[hs] viewing db_dir: %r ' % db_dir)
-        cplat.view_directory(db_dir)
+        dbdir = os.path.normpath(hs.dirs.dbdir)
+        print('[hs] viewing dbdir: %r ' % dbdir)
+        cplat.view_directory(dbdir)
 
     def vcd(hs):
         computed_dir = os.path.normpath(hs.dirs.computed_dir)

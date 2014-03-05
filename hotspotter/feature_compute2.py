@@ -2,7 +2,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[fc2]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[fc2]', DEBUG=False)
 # scientific
 import numpy as np
 # python

@@ -250,10 +250,10 @@ def fix_args_with_cache(args):
     global ARGS_
     if args.dbdir is None and not args.nocache_db:
         # Read from cache
-        args.dbdir = io.global_cache_read('db_dir')
+        args.dbdir = io.global_cache_read('dbdir')
         if args.dbdir in ['.', '', ' ']:
             args.dbdir = None
-        print('[main] trying to read db_dir from cache: %r' % args.dbdir)
+        print('[main] trying to read dbdir from cache: %r' % args.dbdir)
     # --db has priority over --dbdir
     args = fix_args_shortnames(args)
     ARGS_ = args

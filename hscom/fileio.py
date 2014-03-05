@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[io]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[io]', DEBUG=False)
 # Python
 import os
 import fnmatch

@@ -58,16 +58,16 @@ def detect_checkpath(dir_):
     return helpers.checkpath(dir_, verbose=VERBOSE_DETERMINE_VERSION)
 
 
-def detect_version(db_dir):
+def detect_version(dbdir):
     '''
     Attempt to detect the version of the database
-    Input: db_dir - the directory to the database
+    Input: dbdir - the directory to the database
     Output:
     '''
-    printDBG('[ld3] detect_version(%r)' % db_dir)
-    hs_dirs = ds.HotspotterDirs(db_dir)
+    printDBG('[ld3] detect_version(%r)' % dbdir)
+    hs_dirs = ds.HotspotterDirs(dbdir)
     # --- Directories ---
-    db_dir       = hs_dirs.db_dir
+    dbdir       = hs_dirs.dbdir
     img_dir      = hs_dirs.img_dir
     internal_dir = hs_dirs.internal_dir
 
@@ -77,7 +77,7 @@ def detect_version(db_dir):
     image_table  = join(internal_dir, IMAGE_TABLE_FNAME)  # TODO: Make optional
 
     # --- CHECKS ---
-    has_dbdir   = detect_checkpath(db_dir)
+    has_dbdir   = detect_checkpath(dbdir)
     has_imgdir  = detect_checkpath(img_dir)
     has_chiptbl = detect_checkpath(chip_table)
     has_nametbl = detect_checkpath(name_table)
@@ -98,10 +98,10 @@ def detect_version(db_dir):
     if not isCurrentVersion:
         def assign_alternate(tblname, optional=False):
             # Checks several places for target file
-            path = join(db_dir, tblname)
+            path = join(dbdir, tblname)
             if detect_checkpath(path):
                 return path
-            path = join(db_dir, '.hs_internals', tblname)
+            path = join(dbdir, '.hs_internals', tblname)
             if detect_checkpath(path):
                 return path
             if optional:
@@ -116,7 +116,7 @@ def detect_version(db_dir):
         # chip_table, name_table, image_table
 
         # HOTSPOTTER VERSION 2
-        if db_info.has_v2_gt(db_dir):
+        if db_info.has_v2_gt(dbdir):
             db_version = 'hotspotter-v2'
             header_csvformat_re = v12_csvformat_re
             chip_csv_format = 'MULTILINE'
@@ -124,7 +124,7 @@ def detect_version(db_dir):
             name_table  = assign_alternate('name_table.csv')
             image_table = assign_alternate('image_table.csv')
         # HOTSPOTTER VERSION 1
-        elif db_info.has_v1_gt(db_dir):
+        elif db_info.has_v1_gt(dbdir):
             db_version = 'hotspotter-v1'
             header_csvformat_re = v12_csvformat_re
             chip_csv_format = 'MULTILINE'
@@ -132,11 +132,11 @@ def detect_version(db_dir):
             name_table  = assign_alternate('name_table.csv', optional=True)
             image_table = assign_alternate('image_table.csv', optional=True)
         # STRIPESPOTTER VERSION
-        elif db_info.has_ss_gt(db_dir):
+        elif db_info.has_ss_gt(dbdir):
             db_version = 'stripespotter'
             header_csvformat_re = vss_csvformat_re
             chip_csv_format = ['imgindex', 'original_filepath', 'roi', 'animal_name']
-            chip_table = join(db_dir, 'SightingData.csv')
+            chip_table = join(dbdir, 'SightingData.csv')
             name_table  = None
             image_table = None
             if not detect_checkpath(chip_table):
@@ -151,13 +151,13 @@ def detect_version(db_dir):
                 image_table = assign_alternate(IMAGE_TABLE_FNAME)
             except AssertionError:
                 # CORRUPTED CURRENT VERSION
-                if db_info.has_partial_gt(db_dir):
+                if db_info.has_partial_gt(dbdir):
                     db_version = 'partial'
-                    chip_table =  join(db_dir, 'flat_table.csv')
+                    chip_table =  join(dbdir, 'flat_table.csv')
                     name_table  = None
                     image_table = None
                 # XLSX VERSION
-                elif db_info.has_xlsx_gt(db_dir):
+                elif db_info.has_xlsx_gt(dbdir):
                     db_version = 'xlsx'
                     chip_table  = None
                     name_table  = None
@@ -178,9 +178,9 @@ def detect_version(db_dir):
         return version_info
 
 
-def load_csv_tables(db_dir, allow_new_dir=True):
+def load_csv_tables(dbdir, allow_new_dir=True):
     # Detect the version info
-    version_info = detect_version(db_dir)
+    version_info = detect_version(dbdir)
     db_version          = version_info['db_version']
     chip_csv_format     = version_info['chip_csv_format']
     header_csvformat_re = version_info['header_csvformat_re']

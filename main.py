@@ -18,48 +18,61 @@ def dependencies_for_myprogram():
 
 
 def postload_args_process(hs, back):
+    # This processes command line arguments and runs corresponding commands on
+    # startup.
     from hscom import params
-    # --- Run Startup Commands ---
-    # Autocompute all queries
-    if params.args.autoquery:
-        back.precompute_queries()
-    # Run a query
-    qcid_list = params.args.query
-    tx_list = params.args.txs
-    qfx_list = params.args.qfxs
-    cid_list = params.args.cids
+
+    # Run a query of...
+    # currently each list is assumed to be of length 1 or 0
+    # anything else will cause errors
+    qcid_list = params.args.query  # Query qcid list
+    # Inspect results against...
+    tx_list = params.args.txs    # the chips with top ranked index OR
+    cid_list = params.args.cids  # the chip-ids
+    # Perform further inspection of...
+    qfx_list = params.args.qfxs  # the query feature index
     res = None
     if len(qcid_list) > 0:
         qcid = qcid_list[0]
         tx = tx_list[0] if len(tx_list) > 0 else None
-        # Run a query
         try:
-            res = back.query(qcid, tx)
-            back.select_cid(qcid, show=False)
+            res = back.query(qcid, tx)  # Run query with optional tx
+            back.select_cid(qcid, show=False)  # Select query
             if len(cid_list) > 0:
-                # Interact with the query
                 cx = hs.cid2_cx(cid_list[0])
-                if len(qfx_list) > 0:
+                if len(qfx_list) == 0:
+                    # Just interact with the query
+                    res.interact_chipres(hs, cx, fnum=4, mode=1)
+                else:
+                    # Interact with query and features
                     qfx = qfx_list[0]
                     mx = res.get_match_index(hs, cx, qfx)
                     res.interact_chipres(hs, cx, fnum=4, mx=mx)
                     res.show_nearest_descriptors(hs, qfx)
-                else:
-                    res.interact_chipres(hs, cx, fnum=4)
         except AssertionError as ex:
             print(ex)
-    # Select on startup commands
+
+    # Select image indexes
     selgxs = params.args.selgxs
     if len(selgxs) > 0:
         back.select_gx(selgxs[0])
+
+    # Select name indexes
     selnxs = params.args.selnxs
     if len(selnxs) > 0:
         name = hs.nx2_name(selnxs[0])
         back.select_name(name)
+
+    # Select chip ids
     selcids = params.args.selcids
     if len(selcids) > 0:
         selcxs = hs.cid2_cx(selcids)
         back.select_cx(selcxs[0])
+
+    # Autocompute all queries
+    if params.args.autoquery:
+        back.precompute_queries()
+
     return locals()
 
 
@@ -73,11 +86,11 @@ if __name__ == '__main__':
     # Run Main Function
     #from hsviz import draw_func2 as df2  # NOQA
     from hsdev import test_api
-    from hsdev import dbgimport
+    #from hsdev import dbgimport
     print('main.py')
-    dbgimport.hsgui_printoff()
-    dbgimport.hsviz_printoff()
-    dbgimport.mf.print_off()
+    #dbgimport.hsgui_printoff()
+    #dbgimport.hsviz_printoff()
+    #dbgimport.mf.print_off()
     # Run main script with backend
     hs, back, app, is_root = test_api.main_init()
     # --- Run Startup Commands ---

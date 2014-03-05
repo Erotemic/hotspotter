@@ -154,8 +154,10 @@ POINT_SIZE = 2
 base_fnum = 9001
 
 
-def next_fnum():
+def next_fnum(new_base=None):
     global base_fnum
+    if new_base is not None:
+        base_fnum = new_base
     base_fnum += 1
     return base_fnum
 

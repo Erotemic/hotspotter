@@ -21,43 +21,43 @@ import db_info
 # BUGS: TODO:
 # Orientation within chip
 
-def try_autoconvert(db_dir):
-    if db_info.has_v2_gt(db_dir):
+def try_autoconvert(dbdir):
+    if db_info.has_v2_gt(dbdir):
         raise NotImplementedError('hotspotter v2 conversion')
-    if db_info.has_v1_gt(db_dir):
+    if db_info.has_v1_gt(dbdir):
         raise NotImplementedError('hotspotter v1 conversion')
-    if db_info.has_ss_gt(db_dir):
+    if db_info.has_ss_gt(dbdir):
         raise NotImplementedError('stripe spotter conversion')
-    if db_info.has_partial_gt(db_dir):
+    if db_info.has_partial_gt(dbdir):
         raise NotImplementedError('partial database recovery')
     return False
 
 
-def is_current(db_dir):
-    return db_info.has_internal_tables(db_dir)
+def is_current(dbdir):
+    return db_info.has_internal_tables(dbdir)
 
 
-def try_user_guided(db_dir):
-    if db_info.is_imgdir(db_dir):
-        img_dpath = join(db_dir, ld2.RDIR_IMG2)
+def try_user_guided(dbdir):
+    if db_info.is_imgdir(dbdir):
+        img_dpath = join(dbdir, ld2.RDIR_IMG2)
         gt_format = None
-        return init_database_from_images(db_dir, img_dpath, gt_format=gt_format,
+        return init_database_from_images(dbdir, img_dpath, gt_format=gt_format,
                                          allow_unknown_chips=False)
     pass
 
 
-def try_new_database(db_dir):
-    return exists(db_dir)  # and len(os.listdir(db_dir)) == 0
+def try_new_database(dbdir):
+    return exists(dbdir)  # and len(os.listdir(dbdir)) == 0
 
 
-def convert_if_needed(db_dir):
-    if is_current(db_dir):
-        return db_dir
-    elif try_autoconvert(db_dir):
-        return db_dir
-    elif try_user_guided(db_dir):
+def convert_if_needed(dbdir):
+    if is_current(dbdir):
+        return dbdir
+    elif try_autoconvert(dbdir):
+        return dbdir
+    elif try_user_guided(dbdir):
         pass
-    elif try_new_database(db_dir):
+    elif try_new_database(dbdir):
         pass
     else:
         raise Exception('unknown and non-empty database directory')
@@ -139,9 +139,9 @@ def __read_oxsty_gtfile(gt_fpath, name, quality, img_dpath, corrupted_gname_set)
     return oxsty_chip_info_list
 
 
-def convert_from_oxford_style(db_dir):
+def convert_from_oxford_style(dbdir):
     # Get directories for the oxford groundtruth
-    oxford_gt_dpath      = join(db_dir, 'oxford_style_gt')
+    oxford_gt_dpath      = join(dbdir, 'oxford_style_gt')
     helpers.assertpath(oxford_gt_dpath)
     # Check for corrupted files (Looking at your Paris Buildings Dataset)
     corrupted_file_fpath = join(oxford_gt_dpath, 'corrupted_files.txt')
@@ -152,8 +152,8 @@ def convert_from_oxford_style(db_dir):
         corrupted_gname_set = set(corrupted_gname_list)
 
     # Recursively get relative path of all files in img_dpath
-    print('Loading Oxford Style Images from: ' + db_dir)
-    img_dpath  = join(db_dir, 'images')
+    print('Loading Oxford Style Images from: ' + dbdir)
+    img_dpath  = join(dbdir, 'images')
     helpers.assertpath(img_dpath)
     gname_list_ = [join(relpath(root, img_dpath), fname).replace('\\', '/').replace('./', '')
                    for (root, dlist, flist) in os.walk(img_dpath)
@@ -269,7 +269,7 @@ def convert_from_oxford_style(db_dir):
     cx2_gid = np.array(gx2_gid)[cx2_gx]
     #
     # Write tables
-    internal_dir      = join(db_dir, ld2.RDIR_INTERNAL2)
+    internal_dir      = join(dbdir, ld2.RDIR_INTERNAL2)
     helpers.ensurepath(internal_dir)
     write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta, prop_dict)
     write_name_table(internal_dir, nx2_nid, nx2_name)
@@ -277,14 +277,14 @@ def convert_from_oxford_style(db_dir):
 
 
 # Converts the name_num.jpg image format into a database
-def convert_named_chips(db_dir, img_dpath=None):
+def convert_named_chips(dbdir, img_dpath=None):
     print('\n --- Convert Named Chips ---')
     # --- Initialize ---
     gt_format = '{}_{:d}.jpg'
     print('gt_format (name, num) = %r' % gt_format)
     if img_dpath is None:
-        img_dpath = db_dir + '/images'
-    print('Converting db_dir=%r and img_dpath=%r' % (db_dir, img_dpath))
+        img_dpath = dbdir + '/images'
+    print('Converting dbdir=%r and img_dpath=%r' % (dbdir, img_dpath))
     # --- Build Image Table ---
     helpers.print_('Building name table: ')
     gx2_gname = helpers.list_images(img_dpath)
@@ -330,19 +330,19 @@ def convert_named_chips(db_dir, img_dpath=None):
     print('There are %d chips' % (cid - 1))
 
     # Write tables
-    internal_dir = join(db_dir, ld2.RDIR_INTERNAL2)
+    internal_dir = join(dbdir, ld2.RDIR_INTERNAL2)
     helpers.ensurepath(internal_dir)
     write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta)
     write_name_table(internal_dir, nx2_nid, nx2_name)
     write_image_table(internal_dir, gx2_gid, gx2_gname)
 
 
-def init_database_from_images(db_dir, img_dpath=None, gt_format=None,
+def init_database_from_images(dbdir, img_dpath=None, gt_format=None,
                               allow_unknown_chips=False):
     # --- Initialize ---
     if img_dpath is None:
-        img_dpath = db_dir + '/images'
-    print('Converting db_dir=%r and img_dpath=%r' % (db_dir, img_dpath))
+        img_dpath = dbdir + '/images'
+    print('Converting dbdir=%r and img_dpath=%r' % (dbdir, img_dpath))
     gx2_gid, gx2_gname = imagetables_from_img_dpath(img_dpath)
     name_set = groundtruth_from_imagenames(gx2_gname, gt_format)
     nx2_name, nx2_nid = nametables_from_nameset(name_set)
@@ -381,7 +381,7 @@ def init_database_from_images(db_dir, img_dpath=None, gt_format=None,
     print('There are %d chips' % (cid - 1))
 
     # Write tables
-    internal_dir      = join(db_dir, ld2.RDIR_INTERNAL2)
+    internal_dir      = join(dbdir, ld2.RDIR_INTERNAL2)
     helpers.ensurepath(internal_dir)
     write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta)
     write_name_table(internal_dir, nx2_nid, nx2_name)
@@ -420,40 +420,40 @@ def read_csv_file(csv_fpath):
     return column_labels, column_list
 
 
-def wildid_xlsx_to_tables(db_dir):
-    'finds any xlsx files in db_dir and transforms them into an image table'
+def wildid_xlsx_to_tables(dbdir):
+    'finds any xlsx files in dbdir and transforms them into an image table'
     import glob
-    db_dir = normpath(db_dir)
-    img_dpath = normpath(join(db_dir, 'images'))
-    xlsx_files = glob.glob(join(db_dir, ' * .xlsx'))
+    dbdir = normpath(dbdir)
+    img_dpath = normpath(join(dbdir, 'images'))
+    xlsx_files = glob.glob(join(dbdir, ' * .xlsx'))
     if len(xlsx_files) != 1:
         raise Exception('non-unique xlsx files')
     xlsx_fpath = normpath(xlsx_files[0])
     #'research/testdata/WILDEBEEST_MORRISON_B.xlsx'
-    print('[convert] Converting db_dir  = %r' % db_dir)
+    print('[convert] Converting dbdir  = %r' % dbdir)
     print('[convert] with img_dpath     = %r' % img_dpath)
     print('[convert] Reading xlsx_fpath = %r' % (xlsx_fpath,))
     column_labels, column_list = read_xlsx_file(xlsx_fpath)
-    return wildid_to_tables(db_dir, img_dpath, column_labels, column_list)
+    return wildid_to_tables(dbdir, img_dpath, column_labels, column_list)
 
 
-#db_dir = params.TOADS
-def wildid_csv_to_tables(db_dir):
+#dbdir = params.TOADS
+def wildid_csv_to_tables(dbdir):
     import glob
-    db_dir = normpath(db_dir)
-    img_dpath = normpath(join(db_dir, 'images'))
-    csv_files = glob.glob(join(db_dir, ' * .csv'))
+    dbdir = normpath(dbdir)
+    img_dpath = normpath(join(dbdir, 'images'))
+    csv_files = glob.glob(join(dbdir, ' * .csv'))
     if len(csv_files) != 1:
         raise Exception('non-unique csv files = %r' % csv_files)
     csv_fpath = normpath(csv_files[0])
-    print('[convert] Converting db_dir  = %r' % db_dir)
+    print('[convert] Converting dbdir  = %r' % dbdir)
     print('[convert] with img_dpath     = %r' % img_dpath)
     print('[convert] Reading csv_fpath = %r' % (csv_fpath,))
     column_labels, column_list = read_csv_file(csv_fpath)
-    return wildid_to_tables(db_dir, img_dpath, column_labels, column_list)
+    return wildid_to_tables(dbdir, img_dpath, column_labels, column_list)
 
 
-def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
+def wildid_to_tables(dbdir, img_dpath, column_labels, column_list):
     row_lengths = [len(col) for col in column_list]
     num_rows = row_lengths[0]
     assert all([num_rows == rowlen for rowlen in row_lengths]), 'number of rows in xlsx file must be consistent'
@@ -632,7 +632,7 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
     print('[convert] There are %d chips' % (cid - 1))
     #
     # Write tables
-    internal_dir      = join(db_dir, ld2.RDIR_INTERNAL2)
+    internal_dir      = join(dbdir, ld2.RDIR_INTERNAL2)
     helpers.ensurepath(internal_dir)
     write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta, prop_dict)
     write_name_table(internal_dir, nx2_nid, nx2_name)

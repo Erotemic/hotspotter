@@ -233,11 +233,13 @@ def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt_cfg):
     for filt, cx2_weights in filt2_weights.iteritems():
         qfx2_weights = cx2_weights[qcx]
         sign, thresh, weight = filt_cfg.get_stw(filt)
-        if isinstance(thresh, (int, float)):
-            qfx2_passed = sign * qfx2_weights <= sign * thresh
-            qfx2_valid  = np.logical_and(qfx2_valid, qfx2_passed)
+        if thresh is not None and thresh != 'None':
+            thresh = float(thresh)  # corrects for thresh being strings sometimes
+            if isinstance(thresh, (int, float)):
+                qfx2_passed = sign * qfx2_weights <= sign * thresh
+                qfx2_valid  = np.logical_and(qfx2_valid, qfx2_passed)
         if not weight == 0:
-            qfx2_score  += weight * qfx2_weights
+            qfx2_score += weight * qfx2_weights
     return qfx2_score, qfx2_valid
 
 

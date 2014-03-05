@@ -788,6 +788,7 @@ def kp_info(kp):
     return xy_str, acd_str, scale
 
 
+@util.indent_decor('[viz.draw_feat_row]')
 def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None,
                   cx=None, info='', type_=None):
     pnum_ = lambda px: (nRows, nCols, px)
@@ -830,7 +831,8 @@ def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None,
     if prevsift is not None:
         from hotspotter import algos
         #dist_list = ['L1', 'L2', 'hist_isect', 'emd']
-        dist_list = ['L2', 'hist_isect']
+        #dist_list = ['L2', 'hist_isect']
+        dist_list = ['L2']
         distmap = algos.compute_distances(sift, prevsift, dist_list)
         dist_str = ', '.join(['(%s, %.2E)' % (key, val) for key, val in distmap.iteritems()])
         df2.set_xlabel(dist_str)
@@ -839,10 +841,13 @@ def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None,
 #----
 
 
-def show_nearest_descriptors(hs, qcx, qfx, fnum=None):
+@util.indent_decor('[viz.show_near_desc]')
+def show_nearest_descriptors(hs, qcx, qfx, fnum=None, stride=5,
+                             consecutive_distance_compare=False):
+    # Plots the nearest neighbors of a given feature (qcx, qfx)
     if fnum is None:
         fnum = df2.next_fnum()
-    # Inspect the nearest neighbors of a descriptor
+    # Find the nearest neighbors of a descriptor using mc3 and flann
     from hotspotter import match_chips3 as mc3
     qreq = mc3.quickly_ensure_qreq(hs)
     data_index = qreq._data_index
@@ -857,10 +862,12 @@ def show_nearest_descriptors(hs, qcx, qfx, fnum=None):
     qfx2_desc = hs.get_desc(qcx)[qfx:qfx + 1]
 
     try:
+        # Flann NN query
         (qfx2_dx, qfx2_dist) = flann.nn_index(qfx2_desc, K + Knorm, checks=checks)
         qfx2_cx = dx2_cx[qfx2_dx]
         qfx2_fx = dx2_fx[qfx2_dx]
 
+        # Adds metadata to a feature match
         def get_extract_tuple(cx, fx, k=-1):
             rchip = hs.get_chip(cx)
             kp    = hs.get_kpts(cx)[fx]
@@ -880,22 +887,37 @@ def show_nearest_descriptors(hs, qcx, qfx, fnum=None):
 
         extracted_list = []
         extracted_list.append(get_extract_tuple(qcx, qfx, -1))
+        skipped = 0
         for k in xrange(K + Knorm):
+            if qfx2_cx[0, k] == qcx and qfx2_fx[0, k] == qfx:
+                skipped += 1
+                continue
             tup = get_extract_tuple(qfx2_cx[0, k], qfx2_fx[0, k], k)
             extracted_list.append(tup)
-        #print('[viz] K + Knorm = %r' % (K + Knorm))
-
         # Draw the _select_ith_match plot
         nRows, nCols = len(extracted_list), 3
+        if stride is None:
+            stride = nRows
         # Draw selected feature matches
         prevsift = None
-        df2.figure(fnum=fnum, docla=True, doclf=True)
         px = 0  # plot offset
-        for (rchip, kp, sift, fx, cx, info, type_) in extracted_list:
-            print('[viz] ' + info.replace('\n', ''))
-            px = draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px,
-                               prevsift=prevsift, cx=cx, info=info, type_=type_)
-            prevsift = sift
+        px_shift = 0  # plot stride shift
+        nExtracted = len(extracted_list)
+        for listx, tup in enumerate(extracted_list):
+            (rchip, kp, sift, fx, cx, info, type_) = tup
+            if listx % stride == 0:
+                # Create a temporary nRows and fnum in case we are splitting
+                # up nearest neighbors into separate figures with stride
+                _fnum = fnum + listx
+                _nRows = min(nExtracted - listx, stride)
+                px_shift = px
+                df2.figure(fnum=_fnum, docla=True, doclf=True)
+            printDBG('[viz] ' + info.replace('\n', ''))
+            px_ = px - px_shift
+            px = draw_feat_row(rchip, fx, kp, sift, _fnum, _nRows, nCols, px_,
+                               prevsift=prevsift, cx=cx, info=info, type_=type_) + px_shift
+            if prevsift is None or consecutive_distance_compare:
+                prevsift = sift
 
         df2.adjust_subplots_safe(hspace=1)
 

@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[latex]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[latex]', DEBUG=False)
 # Python
 import os
 import re

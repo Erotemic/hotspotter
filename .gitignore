@@ -45,3 +45,4 @@ hsviz/*.c
 logs
 logs2
 graphs
+gephi-toolkit.jar

@@ -94,8 +94,8 @@ def main(defaultdb='cache', preload=False, app=None):
     try:
         load_all = preload
         hs.load(load_all=load_all)
-        db_dir = hs.dirs.db_dir
-        io.global_cache_write('db_dir', db_dir)
+        dbdir = hs.dirs.dbdir
+        io.global_cache_write('dbdir', dbdir)
         _checkargs_onload(hs)
     except ValueError as ex:
         print('[tapi.main] ValueError = %r' % (ex,))

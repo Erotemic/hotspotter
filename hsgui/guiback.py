@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[back]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[back]', DEBUG=False)
 # Python
 from os.path import split, exists, join
 # Qt
@@ -335,9 +335,9 @@ class MainWindowBackend(QtCore.QObject):
         if back.hs.dirs is None:
             title = 'Hotspotter - invalid database'
         else:
-            db_dir = back.hs.dirs.db_dir
-            db_name = split(db_dir)[1]
-            title = 'Hotspotter - %r - %s' % (db_name, db_dir)
+            dbdir = back.hs.dirs.dbdir
+            db_name = split(dbdir)[1]
+            title = 'Hotspotter - %r - %s' % (db_name, dbdir)
         back.front.setWindowTitle(title)
 
     def connect_api(back, hs):
@@ -613,23 +613,23 @@ class MainWindowBackend(QtCore.QObject):
 
     @slot_()
     @blocking
-    def open_database(back, db_dir=None):
+    def open_database(back, dbdir=None):
         # File -> Open Database
         try:
             # Use the same args in a new (opened) database
             args = params.args
             #args = back.params.args
-            if db_dir is None:
+            if dbdir is None:
                 msg = 'Select (or create) a database directory.'
-                db_dir = guitools.select_directory(msg)
-            print('[*back] user selects database: ' + db_dir)
+                dbdir = guitools.select_directory(msg)
+            print('[*back] user selects database: ' + dbdir)
             # Try and load db
             if args is not None:
-                args.dbdir = db_dir
-            hs = HotSpotterAPI.HotSpotter(args=args, db_dir=db_dir)
+                args.dbdir = dbdir
+            hs = HotSpotterAPI.HotSpotter(args=args, dbdir=dbdir)
             hs.load(load_all=False)
             # Write to cache and connect if successful
-            io.global_cache_write('db_dir', db_dir)
+            io.global_cache_write('dbdir', dbdir)
             back.connect_api(hs)
             #back.layout_figures()
         except Exception as ex:

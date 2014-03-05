@@ -54,28 +54,28 @@ UNKNOWN_NAME = '____'
 
 #@profile  # This is perfectly fast .2 seconds on GZ
 @util.indent_decor('[ld2.load_csv]')
-def load_csv_tables(db_dir, allow_new_dir=True):
+def load_csv_tables(dbdir, allow_new_dir=True):
     '''
     Big function which loads the csv tables from a datatabase directory
     Returns HotspotterDirs and HotspotterTables
     '''
     if 'vdd' in sys.argv:
-        helpers.vd(db_dir)
+        helpers.vd(dbdir)
     print('=============================')
-    print('[ld2] Loading hotspotter csv tables: %r' % db_dir)
-    hs_dirs = ds.HotspotterDirs(db_dir)
+    print('[ld2] Loading hotspotter csv tables: %r' % dbdir)
+    hs_dirs = ds.HotspotterDirs(dbdir)
     hs_tables = ds.HotspotterTables()
     #exec(hs_dirs.execstr('hs_dirs'))
     #print(hs_dirs.execstr('hs_dirs'))
     img_dir      = hs_dirs.img_dir
     internal_dir = hs_dirs.internal_dir
-    db_dir       = hs_dirs.db_dir
+    dbdir       = hs_dirs.dbdir
     # --- Table Names ---
     chip_table   = join(internal_dir, CHIP_TABLE_FNAME)
     name_table   = join(internal_dir, NAME_TABLE_FNAME)
     image_table  = join(internal_dir, IMAGE_TABLE_FNAME)  # TODO: Make optional
     # --- CHECKS ---
-    has_dbdir   = helpers.checkpath(db_dir)
+    has_dbdir   = helpers.checkpath(dbdir)
     has_imgdir  = helpers.checkpath(img_dir)
     has_chiptbl = helpers.checkpath(chip_table)
     has_nametbl = helpers.checkpath(name_table)
@@ -96,7 +96,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
     IS_VERSION_1_OR_2 = False
 
     if not isCurrentVersion:
-        helpers.checkpath(db_dir, verbose=True)
+        helpers.checkpath(dbdir, verbose=True)
         helpers.checkpath(img_dir, verbose=True)
         helpers.checkpath(chip_table, verbose=True)
         helpers.checkpath(name_table, verbose=True)
@@ -104,10 +104,10 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         import db_info
 
         def assign_alternate(tblname, optional=False):
-            path = join(db_dir, tblname)
+            path = join(dbdir, tblname)
             if helpers.checkpath(path, verbose=True):
                 return path
-            path = join(db_dir, '.hs_internals', tblname)
+            path = join(dbdir, '.hs_internals', tblname)
             if helpers.checkpath(path, verbose=True):
                 return path
             if optional:
@@ -115,7 +115,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             else:
                 raise Exception('bad state=%r' % tblname)
         #
-        if db_info.has_v2_gt(db_dir):
+        if db_info.has_v2_gt(dbdir):
             IS_VERSION_1_OR_2 = True
             db_version = 'hotspotter-v2'
             print('[ld2] has %s database format' % db_version)
@@ -125,7 +125,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             name_table  = assign_alternate('name_table.csv')
             image_table = assign_alternate('image_table.csv')
         #
-        elif db_info.has_v1_gt(db_dir):
+        elif db_info.has_v1_gt(dbdir):
             IS_VERSION_1_OR_2 = True
             db_version = 'hotspotter-v1'
             print('[ld2] has %s database format' % db_version)
@@ -135,10 +135,10 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             name_table  = assign_alternate('name_table.csv', optional=True)
             image_table = assign_alternate('image_table.csv', optional=True)
         #
-        elif db_info.has_ss_gt(db_dir):
+        elif db_info.has_ss_gt(dbdir):
             db_version = 'stripespotter'
             print('[ld2] has %s database format' % db_version)
-            chip_table = join(db_dir, 'SightingData.csv')
+            chip_table = join(dbdir, 'SightingData.csv')
 
             chip_csv_format = ['imgindex', 'original_filepath', 'roi', 'animal_name']
             header_csvformat_re = '#imgindex,'
@@ -152,7 +152,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                 name_table  = assign_alternate(NAME_TABLE_FNAME)
                 image_table = assign_alternate(IMAGE_TABLE_FNAME)
             except Exception:
-                if db_info.has_partial_gt(db_dir):
+                if db_info.has_partial_gt(dbdir):
                     print('[ld2] detected incomplete database')
                     raise NotImplementedError('partial database recovery')
                 elif allow_new_dir:
@@ -482,7 +482,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
             if len(roi) == 0:
                 # Entire image is the roi
                 print('[ld2] Converting %s database' % db_version)
-                gpath = join(db_dir, RDIR_IMG, gname)
+                gpath = join(dbdir, RDIR_IMG, gname)
                 w, h = Image.open(gpath).size
                 roi = [1, 1, w, h]
             # /LEGACY HACK
@@ -524,7 +524,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
                    cx2_cid, cx2_nx, cx2_gx,
                    cx2_roi, cx2_theta, prop_dict)
 
-    print('[ld2] Done Loading hotspotter csv tables: %r' % (db_dir))
+    print('[ld2] Done Loading hotspotter csv tables: %r' % (dbdir))
     if 'vcd' in sys.argv:
         helpers.vd(hs_dirs.computed_dir)
     return hs_dirs, hs_tables, db_version
@@ -732,7 +732,7 @@ def write_csv_tables(hs):
 
 
 def write_flat_table(hs):
-    dbdir = hs.dirs.db_dir
+    dbdir = hs.dirs.dbdir
     # Make flat table
     valid_cx = hs.get_valid_cxs()
     flat_table  = make_flat_table(hs, valid_cx)

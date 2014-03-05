@@ -18,7 +18,7 @@ from hotspotter import load_data2 as ld2
 
 
 def extract_encounter(hs, eid):
-    work_dir = dirname(hs.dirs.db_dir)
+    work_dir = dirname(hs.dirs.dbdir)
     newdb_name = hs.get_db_name() + '_encounter_%s' % (eid)
     new_dbdir = join(work_dir, newdb_name)
     gx_list = np.where(np.array(hs.tables.gx2_eid) == eid)[0]
@@ -76,13 +76,13 @@ def import_database(hs, other_dbdir):
     '''
     import HotSpotterAPI as api
 
-    dbdir1 = hs.dirs.db_dir
+    dbdir1 = hs.dirs.dbdir
     dbdir2 = other_dbdir
 
     print('[scripts] Importing %r into %r' % (dbdir2, dbdir1))
 
     hs1 = hs
-    hs2 = api.HotSpotter(hs1.args, db_dir=dbdir2)
+    hs2 = api.HotSpotter(hs1.args, dbdir=dbdir2)
 
     names1 = hs1.tables.nx2_name[:]
     names2 = hs2.tables.nx2_name[:]
@@ -270,7 +270,7 @@ def delete_suffixed_images(hs, back):
             hs.tables.cx2_gx[cx] = orig_gx
 
     # Move deleted images into the trash
-    trash_dir = join(hs.dirs.db_dir, 'deleted-images')
+    trash_dir = join(hs.dirs.dbdir, 'deleted-images')
     src_list = hs.gx2_gname(remove_gxs, full=True)
     dst_list = hs.gx2_gname(remove_gxs, prefix=trash_dir)
     util.ensuredir(trash_dir)

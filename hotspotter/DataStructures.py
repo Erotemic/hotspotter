@@ -204,21 +204,21 @@ class HotspotterTables(DynStruct):
 
 # ___CLASS HOTSPOTTER DIRS________
 class HotspotterDirs(DynStruct):
-    def __init__(self, db_dir):
+    def __init__(self, dbdir):
         super(HotspotterDirs, self).__init__()
         import load_data2 as ld2
         from os.path import join
         # Class variables
-        self.db_dir       = db_dir
-        self.img_dir      = join(db_dir, ld2.RDIR_IMG)
-        self.internal_dir = join(db_dir, ld2.RDIR_INTERNAL)
-        self.computed_dir = join(db_dir, ld2.RDIR_COMPUTED)
-        self.chip_dir     = join(db_dir, ld2.RDIR_CHIP)
-        self.rchip_dir    = join(db_dir, ld2.RDIR_RCHIP)
-        self.feat_dir     = join(db_dir, ld2.RDIR_FEAT)
-        self.cache_dir    = join(db_dir, ld2.RDIR_CACHE)
-        self.result_dir   = join(db_dir, ld2.RDIR_RESULTS)
-        self.qres_dir     = join(db_dir, ld2.RDIR_QRES)
+        self.dbdir       = dbdir
+        self.img_dir      = join(dbdir, ld2.RDIR_IMG)
+        self.internal_dir = join(dbdir, ld2.RDIR_INTERNAL)
+        self.computed_dir = join(dbdir, ld2.RDIR_COMPUTED)
+        self.chip_dir     = join(dbdir, ld2.RDIR_CHIP)
+        self.rchip_dir    = join(dbdir, ld2.RDIR_RCHIP)
+        self.feat_dir     = join(dbdir, ld2.RDIR_FEAT)
+        self.cache_dir    = join(dbdir, ld2.RDIR_CACHE)
+        self.result_dir   = join(dbdir, ld2.RDIR_RESULTS)
+        self.qres_dir     = join(dbdir, ld2.RDIR_QRES)
 
     def ensure_dirs(self):
         # Make directories if needbe
@@ -232,9 +232,9 @@ class HotspotterDirs(DynStruct):
         util.ensure_path(self.qres_dir)
         util.ensure_path(self.cache_dir)
         # Shortcut to internals
-        #internal_sym = db_dir + '/Shortcut-to-hs_internals'
-        #computed_sym = db_dir + '/Shortcut-to-computed'
-        #results_sym  = db_dir + '/Shortcut-to-results'
+        #internal_sym = dbdir + '/Shortcut-to-hs_internals'
+        #computed_sym = dbdir + '/Shortcut-to-computed'
+        #results_sym  = dbdir + '/Shortcut-to-results'
         #util.symlink(self.internal_dir, internal_sym, noraise=False)
         #util.symlink(self.computed_dir, computed_sym, noraise=False)
         #util.symlink(self.result_dir, results_sym, noraise=False)

@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[Printable]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[Printable]', DEBUG=False)
 # Standard
 import re
 import copy

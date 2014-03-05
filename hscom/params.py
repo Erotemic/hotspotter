@@ -4,7 +4,7 @@
 from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[params]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[params]', DEBUG=False)
 # Python
 from os.path import exists, join
 import fileio as io

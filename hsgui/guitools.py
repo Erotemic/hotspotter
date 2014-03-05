@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[guitools]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[guitools]', DEBUG=False)
 # Python
 from os.path import split
 import sys
@@ -368,10 +368,10 @@ def show_open_db_dlg(parent=None):
     # OLD
     from _frontend import OpenDatabaseDialog
     if not '-nc' in sys.argv and not '--nocache' in sys.argv:
-        db_dir = io.global_cache_read('db_dir')
-        if db_dir == '.':
-            db_dir = None
-    print('[*guitools] cached db_dir=%r' % db_dir)
+        dbdir = io.global_cache_read('dbdir')
+        if dbdir == '.':
+            dbdir = None
+    print('[*guitools] cached dbdir=%r' % dbdir)
     if parent is None:
         parent = QtGui.QDialog()
     opendb_ui = OpenDatabaseDialog.Ui_Dialog()

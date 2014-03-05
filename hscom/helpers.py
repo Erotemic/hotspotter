@@ -1324,6 +1324,7 @@ class Indenter2(object):
         self.modules = __common__.get_modules()
         self.old_prints = {}
         self.old_prints_ = {}
+        self.old_printDBGs = {}
         self.lbl = lbl
         self.INDENT_PRINT_ = False
 
@@ -1332,30 +1333,50 @@ class Indenter2(object):
         def indent_msg(msg):
             return self.lbl + str(msg).replace('\n', '\n' + self.lbl)
 
-        for mod in self.modules:
-            try:
-                self.old_prints[mod] = mod.print
-                if self.INDENT_PRINT_:
-                    self.old_prints_[mod] = mod.print_
-            except KeyError as ex:
-                print('KeyError: ' + str(ex))
-                print('WARNING: module=%r was loaded between indent sessions' % mod)
-            except AttributeError as ex:
-                print('AttributeError: ' + str(ex))
-                print('WARNING: module=%r is not managed by __common__' % mod)
+        def save_module_functions(dict_, func_name):
+            for mod in self.modules:
+                try:
+                    dict_[mod] = getattr(mod, func_name)
+                except KeyError as ex:
+                    print('KeyError: ' + str(ex))
+                    print('WARNING: module=%r was loaded between indent sessions' % mod)
+                except AttributeError as ex:
+                    print('AttributeError: ' + str(ex))
+                    print('WARNING: module=%r is not managed by __common__' % mod)
+
+        save_module_functions(self.old_prints, 'print')
+        save_module_functions(self.old_printDBGs, 'printDBG')
+
+        #for mod in self.modules:
+            #try:
+                #self.old_prints[mod] = mod.print
+                #if self.INDENT_PRINT_:
+                    #self.old_prints_[mod] = mod.print_
+            #except KeyError as ex:
+                #print('KeyError: ' + str(ex))
+                #print('WARNING: module=%r was loaded between indent sessions' % mod)
+            #except AttributeError as ex:
+                #print('AttributeError: ' + str(ex))
+                #print('WARNING: module=%r is not managed by __common__' % mod)
 
         for mod in self.old_prints.keys():
             indent_print = lambda msg: self.old_prints[mod](indent_msg(msg))
             mod.print = indent_print
-            if self.INDENT_PRINT_:
-                indent_print_ = lambda msg: self.old_prints_[mod](indent_msg(msg))
-                mod.print_ = indent_print_
+
+        for mod in self.old_printDBGs.keys():
+            indent_printDBG = lambda msg: self.old_printDBGs[mod](indent_msg(msg))
+            mod.printDBG = indent_printDBG
+            #if self.INDENT_PRINT_:
+                #indent_print_ = lambda msg: self.old_prints_[mod](indent_msg(msg))
+                #mod.print_ = indent_print_
 
     def stop(self):
         for mod in self.old_prints.iterkeys():
-            mod.print =  self.old_prints[mod]
-            if self.INDENT_PRINT_:
-                mod.print_ =  self.old_prints_[mod]
+            mod.print = self.old_prints[mod]
+        for mod in self.old_printDBGs.iterkeys():
+            mod.printDBG = self.old_printDBGs[mod]
+            #if self.INDENT_PRINT_:
+                #mod.print_ =  self.old_prints_[mod]
 
     def __enter__(self):
         self.start()

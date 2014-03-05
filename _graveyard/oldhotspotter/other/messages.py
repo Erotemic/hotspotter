@@ -115,7 +115,7 @@ troubles_help = '''
 When in doubt, restart. 
 
 If the images you've imported aren't showing up, you can always re-import the
-images in your '<db_dir>/images directory'. 
+images in your '<dbdir>/images directory'. 
 
 If something looks corrupted or ROIs are being oddly drawn 
 consider deleting your computed directory. 

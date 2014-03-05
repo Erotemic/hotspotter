@@ -252,8 +252,8 @@ def interact_keypoints(rchip, kpts, desc, fnum=0, figtitle=None, nodraw=False, *
 
 @profile
 def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result',
-                     same_fig=False, **kwargs):
-    'Interacts with a single chipres, '
+                     same_fig=True, **kwargs):
+    'Plots a chip result and sets up callbacks for interaction.'
     fig = begin_interaction('chipres', fnum)
     qcx = res.qcx
     if cx is None:
@@ -262,7 +262,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result',
     fm = res.cx2_fm[cx]
     mx = kwargs.pop('mx', None)
     xywh2_ptr = [None]
-    annote_ptr = [0]
+    annote_ptr = [kwargs.pop('mode', 0)]
     from hscom.Printable import DynStruct
     last_state = DynStruct()
     last_state.same_fig = same_fig
@@ -271,7 +271,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result',
     # Draw default
     @profile
     def _chipmatch_view(pnum=(1, 1, 1), **kwargs):
-        mode = annote_ptr[0]
+        mode = annote_ptr[0]  # drawing mode draw: with/without lines/feats
         draw_ell = mode >= 1
         draw_lines = mode == 2
         annote_ptr[0] = (annote_ptr[0] + 1) % 3

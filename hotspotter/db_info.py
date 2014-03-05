@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off, rrr,
- profile) = __common__.init(__name__, '[dbinfo]')
+ profile, printDBG) = __common__.init(__name__, '[dbinfo]', DEBUG=False)
 # Python
 import os
 import sys
@@ -34,15 +34,15 @@ def is_link2(path):
 
 
 class DatabaseStats(object):
-    def __init__(self, db_dir, version, root_dir):
+    def __init__(self, dbdir, version, root_dir):
         self.version = version
-        self.db_dir = db_dir
+        self.dbdir = dbdir
         self.root_dir = root_dir
 
     def name(self):
-        simlink_suffix = '[symlink]' if islink(self.db_dir) else ''
-        db_name  = os.path.relpath(self.db_dir, self.root_dir)
-        #os.path.split(self.db_dir)[1]
+        simlink_suffix = '[symlink]' if islink(self.dbdir) else ''
+        db_name  = os.path.relpath(self.dbdir, self.root_dir)
+        #os.path.split(self.dbdir)[1]
         name_str = '%s %s %s' % (db_name, self.version, simlink_suffix)
         return name_str
 
@@ -50,7 +50,7 @@ class DatabaseStats(object):
         hs = ld2.HotSpotter()
         rss = util.RedirectStdout()
         rss.start()
-        hs.load_tables(self.db_dir)
+        hs.load_tables(self.dbdir)
         name_info_dict = get_db_names_info(hs)
         rss.stop()
         name_info = name_info_dict['info_str']
@@ -89,7 +89,7 @@ class DirectoryStats(object):
 
     def build_self(self, root_dir):
         print('root_dir=%r' % root_dir)
-        # Do not build a data or db_dir
+        # Do not build a data or dbdir
         if os.path.split(root_dir)[1] in KNOWN_DATA_DIRS:
             return
         name_list = os.listdir(root_dir)
@@ -158,8 +158,8 @@ def print_database_stats(db_stats):
     if db_stats.version == '(HEAD)':
         db_stats.print_name_info()
     elif 'images' in db_stats.version:
-        print(db_stats.db_dir)
-        print('num images: %d' % util.num_images_in_dir(db_stats.db_dir))
+        print(db_stats.dbdir)
+        print('num images: %d' % util.num_images_in_dir(db_stats.dbdir))
 
 
 #--------------------

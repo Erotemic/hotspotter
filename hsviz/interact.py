@@ -202,7 +202,7 @@ def interact_keypoints(rchip, kpts, desc, fnum=0, figtitle=None, nodraw=False, *
         # Get the fx-th keypiont
         kp, sift = kpts[fx], desc[fx]
         # Draw the image with keypoint fx highlighted
-        _viz_keypoints(fnum, (2, 1, 1), sel_fx=fx)
+        _viz_keypoints(fnum, (2, 1, 1), sel_fx=fx, **kwargs)  # MAYBE: remove kwargs
         # Draw the selected feature
         nRows, nCols, px = (2, 3, 3)
         viz.draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, None)
@@ -221,7 +221,7 @@ def interact_keypoints(rchip, kpts, desc, fnum=0, figtitle=None, nodraw=False, *
             draw_ell = mode == 1
             draw_pts = mode == 2
             print('... default kpts view mode=%r' % mode)
-            _viz_keypoints(fnum, draw_ell=draw_ell, draw_pts=draw_pts)
+            _viz_keypoints(fnum, draw_ell=draw_ell, draw_pts=draw_pts, **kwargs)    # MAYBE: remove kwargs
         else:
             ax = event.inaxes
             hs_viewtype = ax.__dict__.get('_hs_viewtype', None)
@@ -240,7 +240,7 @@ def interact_keypoints(rchip, kpts, desc, fnum=0, figtitle=None, nodraw=False, *
         viz.draw()
 
     # Draw without keypoints the first time
-    _viz_keypoints(fnum)
+    _viz_keypoints(fnum, **kwargs)   # MAYBE: remove kwargs
     df2.connect_callback(fig, 'button_press_event', _on_keypoints_click)
     if not nodraw:
         viz.draw()

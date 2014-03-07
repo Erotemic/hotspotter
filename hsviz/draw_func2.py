@@ -1367,9 +1367,9 @@ def plot_histpdf(data, label=None, draw_support=False, nbins=10):
 def plot_hist(data, bins=None, nbins=10, weights=None):
     if isinstance(data, list):
         data = np.array(data)
+    dmin = data.min()
+    dmax = data.max()
     if bins is None:
-        dmin = data.min()
-        dmax = data.max()
         bins = dmax - dmin
     ax  = gca()
     freq, bins_, patches = ax.hist(data, bins=nbins, weights=weights, range=(dmin, dmax))
@@ -1485,6 +1485,7 @@ def draw_sift(desc, kp=None):
 
 
 def scores_to_color(score_list, cmap_='hot', logscale=False):
+    printDBG('scores_to_color()')
     assert len(score_list.shape) == 1, 'score must be 1d'
     if logscale:
         score_list = np.log2(np.log2(score_list + 2) + 1)
@@ -1508,6 +1509,7 @@ def scores_to_color(score_list, cmap_='hot', logscale=False):
 
 
 def scores_to_cmap(scores, colors=None, cmap_='hot'):
+    printDBG('scores_to_cmap()')
     if colors is None:
         colors = scores_to_color(scores, cmap_=cmap_)
     sorted_colors = [x for (y, x) in sorted(zip(scores, colors))]
@@ -1518,6 +1520,7 @@ def scores_to_cmap(scores, colors=None, cmap_='hot'):
 
 def colorbar(scalars, colors):
     'adds a color bar next to the axes'
+    printDBG('colorbar()')
     # Parameters
     xy, width, height = _axis_xy_width_height()
     orientation = ['vertical', 'horizontal'][0]
@@ -1638,9 +1641,23 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
             _kwargs = dict(head_width=.01, length_includes_head=False)
             arrow_actors1 = [FancyArrow(0, 0, 0, 1, transform=aff, **_kwargs) for aff in aff_list]
             arrow_actors2 = [FancyArrow(0, 0, 1, 0, transform=aff, **_kwargs) for aff in aff_list]
+
             patch_list += arrow_actors1
             patch_list += arrow_actors2
+        ORI = True
+        if ORI:
+            if len(kptsT) == 6:
+                rad_list = kptsT[5]
+            else:
+                rad_list = np.zeros(len(kpts)) + (np.pi / 2)
+            dx = np.cos(rad_list) * d * scale_factor
+            dy = np.sin(rad_list) * d * scale_factor
+            _kwargs = dict(head_width=10, length_includes_head=False)
+            ori_actors = [FancyArrow(x_, y_, dx_, dy_, **_kwargs)
+                          for x_, y_, dx_, dy_ in izip(x, y, dx, dy)]
+            patch_list += ori_actors
         ellipse_collection = matplotlib.collections.PatchCollection(patch_list)
+        ORI = True
         ellipse_collection.set_facecolor('none')
         ellipse_collection.set_transform(pltTrans)
         if ELL_ALPHA_OVERRIDE is not None:
@@ -1664,8 +1681,10 @@ def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
 
 # ---- CHIP DISPLAY COMMANDS ----
 def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
-           interpolation='nearest', cmap=None, heatmap=False, **kwargs):
+           interpolation='nearest', cmap=None, heatmap=False,
+           data_colorbar=False, **kwargs):
     'other interpolations = nearest, bicubic, bilinear'
+    printDBG('imshow()')
     #printDBG('[df2] ----- IMSHOW ------ ')
     #printDBG('[***df2.imshow] fnum=%r pnum=%r title=%r *** ' % (fnum, pnum, title))
     #printDBG('[***df2.imshow] img.shape = %r ' % (img.shape,))
@@ -1687,7 +1706,7 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
     if heatmap:
         cmap = 'hot'
     try:
-        if len(img.shape) == 3 and img.shape[2] == 3:
+        if len(img.shape) == 3 and (img.shape[2] == 3 or img.shape[2] == 4):
             # img is in a color format
             imgBGR = img
             if imgBGR.dtype == np.float64:
@@ -1706,13 +1725,13 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
                 cmap = plt.get_cmap('gray')
             if isinstance(cmap, str):
                 cmap = plt.get_cmap(cmap)
-            if imgGRAY.dtype == np.float32 and False:
-                if imgGRAY.max() <= 1:
-                    printDBG('Drawing Float Grey Image < 1')
-                    imgGRAY = np.array(np.round(imgGRAY * 255), dtype=np.uint8)
-                else:
-                    printDBG('Drawing Float Grey Image > 1')
-                    imgGRAY = np.array(np.round(imgGRAY), dtype=np.uint8)
+            #if imgGRAY.dtype == np.float32 and False:
+                #if imgGRAY.max() <= 1:
+                    #printDBG('Drawing Float Grey Image < 1')
+                    #imgGRAY = np.array(np.round(imgGRAY * 255), dtype=np.uint8)
+                #else:
+                    #printDBG('Drawing Float Grey Image > 1')
+                    #imgGRAY = np.array(np.round(imgGRAY), dtype=np.uint8)
             ax.imshow(imgGRAY, cmap=cmap, **plt_imshow_kwargs)
         else:
             raise Exception('unknown image format')
@@ -1734,6 +1753,11 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
     #plt.set_cmap('gray')
     ax.set_xticks([])
     ax.set_yticks([])
+
+    if data_colorbar is True:
+        scores = np.unique(img.flatten())
+        colors = scores_to_color(scores, cmap)
+        colorbar(scores, colors)
     #ax.set_autoscale(False)
     #try:
         #if pnum == 111:
@@ -1742,6 +1766,32 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
         #print('[df2] !! Exception durring fig.tight_layout: '+repr(ex))
         #raise
     return fig, ax
+
+
+def draw_vector_field(gx, gy, fnum=None, pnum=None):
+    # https://stackoverflow.com/questions/1843194/plotting-vector-fields-in-python-matplotlib
+    np.tau = 2 * np.pi
+    #x_grid = np.arange(0, np.tau, .2)
+    #y_grid = np.arange(0, np.tau, .2)
+
+    #X, Y = np.meshgrid(x_grid, y_grid)
+    #U = np.cos(X)
+    #V = np.sin(Y)
+    U, V = gx, gy
+
+    #1
+    figure(fnum=fnum, pnum=pnum)
+    plt.quiver(U, V)
+    #plt.quiverkey(Q, 0.5, 0.92, 2, r'$2 \frac{m}{s}$', labelpos='W',
+                  #fontproperties={'weight': 'bold'})
+    #l, r, b, t = plt.axis()
+    #dx, dy = r - l, t - b
+    #ax = plt.axis([l - 0.05 * dx, r + 0.05 * dx, b - 0.05 * dy, t + 0.05 * dy])
+    ax = gca()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.invert_yaxis()
+    ax.set_aspect('equal')
 
 
 def get_num_channels(img):

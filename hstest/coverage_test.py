@@ -60,7 +60,7 @@ if __name__ == '__main__':
     hs = test_api.main(preload=True)
     # Test variables
     cx = test_api.get_test_cxs(hs, 1)[0]
-    if hs.get_db_name() == 'HSDB_zebra_with_mothers':
+    if hs.get_db_name() == 'PZ_MOTHERS':
         cx = hs.cid2_cx(13)
     kpts = hs.get_kpts(cx)
     chip = hs.get_chip(cx)

@@ -133,7 +133,7 @@ class StreamStealer(QtCore.QObject):
 
 
 def _steal_stdout(front):
-    from hscom import params
+    from hsdev import params
     #front.ui.outputEdit.setPlainText(sys.stdout)
     nosteal = params.args.nosteal
     noshare = params.args.noshare

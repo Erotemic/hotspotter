@@ -8,7 +8,7 @@ from itertools import izip, chain, imap
 import numpy as np
 # HotSpotter
 import algos
-from hscom import params
+from hsdev import params
 from hscom import helpers as util
 from hscom.Printable import DynStruct
 

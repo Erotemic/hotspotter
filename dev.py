@@ -25,7 +25,7 @@ from hotspotter import matching_functions as mf
 from hotspotter import report_results2 as rr2
 from hscom import helpers as util
 from hscom import latex_formater
-from hscom import params
+from hsdev import params
 from hsdev import dev_stats
 from hsdev import experiment_configs
 from hsdev import experiment_harness

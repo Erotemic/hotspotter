@@ -20,7 +20,7 @@ def dependencies_for_myprogram():
 def postload_args_process(hs, back):
     # This processes command line arguments and runs corresponding commands on
     # startup.
-    from hscom import params
+    from hsdev import params
 
     # Run a query of...
     # currently each list is assumed to be of length 1 or 0

@@ -28,7 +28,7 @@ import feature_compute2 as fc2
 import load_data2 as ld2
 import match_chips3 as mc3
 import matching_functions as mf
-from hscom import params  # NOQA
+from hsdev import params  # NOQA
 try:
     from hsdev import dev_api
 except ImportError:
@@ -245,7 +245,10 @@ class HotSpotter(DynStruct):
                     raise AssertionError('Either args must be specified or dbdir must be given')
             printDBG('[hs] creating HotSpotter()')
             hs.callbacks = {}  # For custom callbacks
-            hs.dbdir = args.dbdir  # duplicate dbdir for consistency checks
+            if dbdir is None:
+                hs.dbdir = args.dbdir  # duplicate dbdir for consistency checks
+            else:
+                hs.dbdir = dbdir  # duplicate dbdir for consistency checks
             # DataStructure
             hs.tables = None  # annotations (larger)
             hs.dirs   = None  # directory structure (small)
@@ -256,7 +259,7 @@ class HotSpotter(DynStruct):
             hs.test_sample_cx    = None
             hs.indexed_sample_cx = None
             #
-            pref_fpath = join(dbdir, 'prefs')
+            pref_fpath = join(hs.dbdir, 'prefs')
             if not exists(pref_fpath):
                 # We are no longer useing the global cache directory
                 #pref_fpath = join(io.GLOBAL_CACHE_DIR, 'prefs')

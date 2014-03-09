@@ -1,7 +1,9 @@
 from __future__ import division, print_function
+# Python
 import multiprocessing
 import argparse
-import cross_platform
+# HotSpotter
+from hscom import cross_platform
 # seemlessly fix any path issues
 cross_platform.ensure_pythonpath()
 
@@ -220,7 +222,7 @@ def args_postprocess(args):
     if args.serial:
         args.num_procs = 1
     if args.darken:
-        import draw_func2 as df2
+        from hsviz import draw_func2 as df2
         df2.DARKEN = .5
     if args.dbdir is not None:
         # The full path is specified
@@ -232,7 +234,7 @@ def args_postprocess(args):
 
 
 def fix_args_shortnames(args):
-    import params
+    from hsdev import params
     global ARGS_
     #print('[argparse2] fix_args_shortnames(): %r' % args.db)
     #print('[argparse2] mapping %r to %r' % (args.db, args.dbdir))
@@ -246,7 +248,7 @@ def fix_args_shortnames(args):
 
 def fix_args_with_cache(args):
     'Returns the database directory based on cache'
-    import fileio as io
+    from hscom import fileio as io
     global ARGS_
     if args.dbdir is None and not args.nocache_db:
         # Read from cache

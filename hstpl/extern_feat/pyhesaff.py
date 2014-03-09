@@ -23,11 +23,12 @@ kpts_dtype = np.float32
 desc_dtype = np.uint8
 # ctypes
 FLAGS_RW = 'aligned, c_contiguous, writeable'
-obj_t     = C.c_void_p
 kpts_t    = np.ctypeslib.ndpointer(dtype=kpts_dtype, ndim=2, flags=FLAGS_RW)
 desc_t    = np.ctypeslib.ndpointer(dtype=desc_dtype, ndim=2, flags=FLAGS_RW)
+obj_t     = C.c_void_p
 str_t     = C.c_char_p
 int_t     = C.c_int
+bool_t    = C.c_bool
 float_t   = C.c_float
 
 # THE ORDER OF THIS LIST IS IMPORTANT!
@@ -40,7 +41,7 @@ hesaff_typed_params = [
     # Affine Shape Params
     (int_t,   'maxIterations', 16),           # number of affine shape interations
     (float_t, 'convergenceThreshold', 0.05),  # maximum deviation from isotropic shape at convergence
-    (int_t,   'smmWindowSize', 19),           # width and height of the SMM mask
+    (int_t,   'smmWindowSize', 19),           # width and height of the SMM (second moment matrix) mask
     (float_t, 'mrSize', 3.0 * np.sqrt(3.0)),  # size of the measurement region (as multiple of the feature scale)
     # SIFT params
     (int_t,   'spatialBins', 4),
@@ -52,6 +53,7 @@ hesaff_typed_params = [
     # My params
     (float_t, 'scale_min', -1.0),
     (float_t, 'scale_max', -1.0),
+    (bool_t,  'rotation_invariance', False),
 ]
 
 OrderedDict = collections.OrderedDict
@@ -65,6 +67,14 @@ def load_hesaff_clib():
     '''
     # Get the root directory which should have the dynamic library in it
     #root_dir = realpath(dirname(__file__)) if '__file__' in vars() else realpath(os.getcwd())
+
+    # os.path.dirname(sys.executable)
+    #if getattr(sys, 'frozen', False):
+        # we are running in a |PyInstaller| bundle
+        #root_dir = realpath(sys._MEIPASS)
+    #else:
+        # we are running in a normal Python environment
+        #root_dir = realpath(dirname(__file__))
     root_dir = realpath(dirname(__file__))
     libname = 'hesaff'
     hesaff_lib, def_cfunc = ctypes_interface.load_clib(libname, root_dir)
@@ -103,17 +113,22 @@ def new_hesaff(img_fpath, **kwargs):
 
 
 def detect_kpts(img_fpath, use_adaptive_scale=False, **kwargs):
+    '''
+    main driver function for detecting hessian affine keypoints.
+    extra parameters can be passed to the hessian affine detector by using
+    kwargs. Valid keyword arguments are:
+    ''' + str(hesaff_param_dict.keys())
     #print('Detecting Keypoints')
     hesaff_ptr = new_hesaff(img_fpath, **kwargs)
     # Return the number of keypoints detected
     nKpts = hesaff_lib.detect(hesaff_ptr)
+    kpts_dim = 5
+    desc_dim = 128
     # Allocate arrays
-    kpts = np.empty((nKpts, 5), kpts_dtype)
-    desc = np.empty((nKpts, 128), desc_dtype)
-    # Populate arrays
-    hesaff_lib.exportArrays(hesaff_ptr, nKpts, kpts, desc)
-    # Adapt scale if requested
-    if use_adaptive_scale:
+    kpts = np.empty((nKpts, kpts_dim), kpts_dtype)
+    desc = np.empty((nKpts, desc_dim), desc_dtype)
+    hesaff_lib.exportArrays(hesaff_ptr, nKpts, kpts, desc)  # Populate arrays
+    if use_adaptive_scale:  # Adapt scale if requested
         #print('Adapting Scale')
         kpts, desc = adapt_scale(img_fpath, kpts)
     return kpts, desc

@@ -9,7 +9,7 @@ import numpy as np
 from os.path import join
 # hotspotter
 from hscom import helpers as util
-from hscom import params
+from hsdev import params
 from hscom import fileio as io
 from hscom.Parallelize import parallel_compute
 import extern_feat

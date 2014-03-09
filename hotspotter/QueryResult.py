@@ -11,7 +11,7 @@ import os
 import numpy as np
 # HotSpotter
 from hscom import helpers as util
-from hscom import params
+from hsdev import params
 from hscom.Printable import DynStruct
 import voting_rules2 as vr2
 

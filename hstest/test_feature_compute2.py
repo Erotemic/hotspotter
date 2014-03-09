@@ -5,7 +5,7 @@ from hotspotter import feature_compute2 as fc2
 from hscom import helpers
 from hscom import helpers as util
 from hsviz import viz
-from hscom import argparse2
+from hsdev import argparse2
 import multiprocessing
 
 if __name__ == '__main__':

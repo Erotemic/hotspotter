@@ -67,13 +67,13 @@ from hscom import hsgraph
 from hscom import Parallelize as parallel
 from hscom import Preferences as prefs
 from hscom import Printable
-from hscom import argparse2
+from hsdev import argparse2
 from hscom import cross_platform as cplat
 from hscom import fileio as io
 from hscom import helpers
 from hscom import helpers as util
 from hscom import latex_formater
-from hscom import params
+from hsdev import params
 from hscom import tools
 #
 from hsviz import draw_func2 as df2

@@ -4,7 +4,7 @@ from hscom import __common__
  rrr, profile) = __common__.init(__name__, '[training]')
 import numpy as np
 from hscom import helpers as util
-from hscom import params
+from hsdev import params
 from hotspotter import chip_compute2 as cc2
 from os.path import join
 

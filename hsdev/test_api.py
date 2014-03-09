@@ -22,8 +22,8 @@ def on_ctrl_c(signal, frame):
 
 
 def parse_arguments(defaultdb, usedbcache):
-    from hscom import argparse2
-    from hscom import params
+    from hsdev import argparse2
+    from hsdev import params
     from hscom import helpers as util
     from hscom import fileio as io
     import sys
@@ -45,7 +45,7 @@ def parse_arguments(defaultdb, usedbcache):
 
 def _checkargs_onload(hs):
     'checks relevant arguments after loading tables'
-    from hscom import params
+    from hsdev import params
     import sys
     args = params.args
     if args is None:
@@ -68,7 +68,7 @@ def _checkargs_onload(hs):
 def main(defaultdb='cache', preload=False, app=None):
     from hotspotter import HotSpotterAPI as api
     from hscom import fileio as io
-    from hscom import params
+    from hsdev import params
     from hsdev import experiment_harness
     from hsgui import guiback
     from hsgui import guitools
@@ -77,7 +77,12 @@ def main(defaultdb='cache', preload=False, app=None):
     args = parse_arguments(defaultdb, defaultdb == 'cache')
     # --- Build HotSpotter API ---
     if app is None:
-        hs = api.HotSpotter(args)
+        try:
+            hs = api.HotSpotter(args)
+        except TypeError as ex:
+            print('!!!!!!!!')
+            print('TypError: %s' % ex)
+            raise
     else:
         back = guiback.make_main_window(app)
         hs = back.open_database(args.dbdir)
@@ -111,7 +116,7 @@ def main(defaultdb='cache', preload=False, app=None):
 
 
 def clone_database(dbname, dryrun=False):
-    from hscom import params
+    from hsdev import params
     from hscom import helpers as util
     from os.path import join, exists
     work_dir = params.get_workdir()
@@ -163,7 +168,7 @@ def get_qcx_list(hs):
     ''' Function for getting the list of queries to test '''
     import sys
     import numpy as np
-    from hscom import params
+    from hsdev import params
     from hscom import helpers as util
     print('[tapi!] get_qcx_list()')
 

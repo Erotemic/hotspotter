@@ -14,7 +14,7 @@ from PIL import Image
 import algos
 from hscom import helpers as util
 from hscom import fileio as io
-from hscom import params
+from hsdev import params
 from hscom.Parallelize import parallel_compute
 #from hscom.Printable import DynStruct
 #import load_data2 as ld2

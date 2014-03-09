@@ -385,8 +385,6 @@ def subpixel_values(img, pts):
     Ic = img[y0, x1]
     Id = img[y1, x1]
 
-    cv2.warpAffine(dst
-
     # Perform the bilinear interpolation
     subpxl_vals = (wa * Ia) + (wb * Ib) + (wc * Ic) + (wd * Id)
     return subpxl_vals

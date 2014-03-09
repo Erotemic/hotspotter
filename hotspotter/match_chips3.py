@@ -8,7 +8,7 @@ from os.path import join
 import numpy as np
 # HotSpotter
 from hscom import tools
-from hscom import params
+from hsdev import params
 from hscom import helpers as util
 from hscom import fileio as io
 import DataStructures as ds

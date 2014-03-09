@@ -2,13 +2,14 @@
     stores a bunch of global variables used by the other modules
     It also reads from sys.argv'''
 from __future__ import division, print_function
-import __common__
+from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[params]', DEBUG=False)
 # Python
 from os.path import exists, join
-import fileio as io
 import sys
+# Hotspotter
+from hscom import fileio as io
 
 '''
 print(' * __name__ = %s' % __name__)
@@ -116,7 +117,7 @@ def db_to_dbdir(db):
         dbdir = join(work_dir, dbalias_dict[db.upper()])
     if not exists(dbdir):
         import os
-        import helpers as util
+        from hscom import helpers as util
         print('!!!!!!!!!!!!!!!!!!!!!')
         print('[params] WARNING: db=%r not found in work_dir=%r' %
               (db, work_dir))

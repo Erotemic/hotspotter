@@ -19,7 +19,7 @@ from hotspotter import matching_functions as mf
 from hscom import fileio as io
 from hscom import helpers as util
 from hscom import latex_formater
-from hscom import params
+from hsdev import params
 from hsviz import draw_func2 as df2
 #from match_chips3 import *
 #import draw_func2 as df2

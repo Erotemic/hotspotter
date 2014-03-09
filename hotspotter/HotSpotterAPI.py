@@ -30,7 +30,7 @@ import match_chips3 as mc3
 import matching_functions as mf
 from hsdev import params  # NOQA
 try:
-    from hsdev import dev_api
+    from hsdev import dev_augmenter
 except ImportError:
     pass
 
@@ -283,7 +283,7 @@ class HotSpotter(DynStruct):
     def augment_api(hs):
         'Adds debugging functions'
         try:
-            dev_api.augment_api(hs)
+            dev_augmenter.augment_api(hs)
             print('[hs] created debug api')
         except NameError as ex:
             print('[hs] created release api: %s' % ex)

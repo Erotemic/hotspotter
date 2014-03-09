@@ -86,7 +86,7 @@ from hstpl import mask_creator as mc
 # DEV
 from hsdev import dev_stats
 from hsdev import dev_consistency
-from hsdev import dev_api
+from hsdev import dev_augmenter
 from hsdev import dev_reload
 
 import dev

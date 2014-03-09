@@ -42,7 +42,7 @@ def reload_all_modules():
     # DEV
     from . import dev_stats
     from . import dev_consistency
-    from . import dev_api
+    from . import dev_augmenter
     from . import dev_reload
     # Self
     rrr()
@@ -81,7 +81,7 @@ def reload_all_modules():
     # dev
     dev_stats.rrr()
     dev_consistency.rrr()
-    dev_api.rrr()
+    dev_augmenter.rrr()
     dev_reload.rrr()
 
     print('---------------------------')

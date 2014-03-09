@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off, rrr,
- profile, printDBG) = __common__.init(__name__, '[dev_api]', DEBUG=False)
+ profile, printDBG) = __common__.init(__name__, '[dev_augmenter]', DEBUG=False)
 import dev_stats
 import dev_consistency
 import dev_reload

@@ -6,7 +6,7 @@ from hotspotter import encounter
 from hscom import util
 from hsviz import draw_func2 as df2
 from hsdev import test_api
-from hsdev import dev_api
+from hsdev import dev_augmenter
 from hscom import hsgraph
 import networkx as netx  # NOQA
 import sys
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     hs, back, app, is_root = test_api.main_init(preload=True)
 
     encounter.rrr()
-    dev_api.dev_reload.reload_all_modules()
+    dev_augmenter.dev_reload.reload_all_modules()
     try:
         if USE_TESTCACHE:
             raise KeyError('use_testcache=False')

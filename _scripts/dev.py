@@ -6,7 +6,7 @@ from PIL import Image
 import types
 import os
 from os.path import expanduser, join, relpath, normpath, exists, dirname
-from hotspotter.helpers import *
+from hotspotter.util import *
 from hotspotter.other.AbstractPrintable import *
 from hotspotter.other.ConcretePrintable import *
 from hotspotter.other.logger import *

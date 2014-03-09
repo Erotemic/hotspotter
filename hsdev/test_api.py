@@ -24,7 +24,7 @@ def on_ctrl_c(signal, frame):
 def parse_arguments(defaultdb, usedbcache):
     from hsdev import argparse2
     from hsdev import params
-    from hscom import helpers as util
+    from hscom import util
     from hscom import fileio as io
     import sys
     args = argparse2.parse_arguments(defaultdb=defaultdb)
@@ -117,7 +117,7 @@ def main(defaultdb='cache', preload=False, app=None):
 
 def clone_database(dbname, dryrun=False):
     from hsdev import params
-    from hscom import helpers as util
+    from hscom import util
     from os.path import join, exists
     work_dir = params.get_workdir()
     dir1 = join(work_dir, dbname)
@@ -169,7 +169,7 @@ def get_qcx_list(hs):
     import sys
     import numpy as np
     from hsdev import params
-    from hscom import helpers as util
+    from hscom import util
     print('[tapi!] get_qcx_list()')
 
     valid_cxs = hs.get_valid_cxs()
@@ -248,7 +248,7 @@ def main_init(defaultdb=None, preload=False, app=None):
 
 def main_loop(app, is_root, back, runqtmain=True):
     import sys
-    from hscom import helpers as util
+    from hscom import util
     from hsgui import guitools
     hs = back.hs  # NOQA
     # Allow for a IPython connection by passing the --cmd flag

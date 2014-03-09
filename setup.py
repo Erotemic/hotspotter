@@ -5,7 +5,7 @@ import os
 import sys
 import fnmatch
 # Hotspotter
-from hscom import helpers as util
+from hscom import util
 
 HOME = os.path.expanduser('~')
 # Allows other python modules (like hesaff) to find hotspotter modules

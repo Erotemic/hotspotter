@@ -14,7 +14,7 @@
 
 def print_cvkpt(cvkp):
     import types
-    from helpers import public_attributes
+    from util import public_attributes
     if type(cvkp) == types.ListType:
         [print_cvkpt(kp) for kp in cvkp]
         return

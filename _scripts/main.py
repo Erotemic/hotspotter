@@ -143,7 +143,7 @@ if __name__ == '__main__':
     run_exec = isRootApp
     if args.cmd_bit:
         # Start IPython command line mode
-        from hotspotter.helpers import in_IPython, have_IPython
+        from hotspotter.util import in_IPython, have_IPython
         run_exec = False
         if not in_IPython() and have_IPython():
             import IPython

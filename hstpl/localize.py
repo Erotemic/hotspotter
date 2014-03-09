@@ -18,8 +18,8 @@ if not hsdir in sys.path:
     # Append hotspotter dir to PYTHON_PATH (i.e. sys.path)
     sys.path.append(hsdir)
 
-from hscom import helpers
-from hscom import helpers as util
+from hscom import util
+from hscom import util
 
 extern_dir = join(hsdir, 'hstpl', 'extern_feat')
 hesaffsrc_dir = join(code_dir, 'hesaff')
@@ -43,7 +43,7 @@ for srcdir, fname_list in filemap.iteritems():
         src  = join(srcdir, fname)
         dest = join(extern_dir, fname)
         try:
-            helpers.copy(src, dest)
+            util.copy(src, dest)
         except Exception as ex:
             print(ex)
 

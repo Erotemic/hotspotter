@@ -12,7 +12,7 @@ import cv2
 from PIL import Image
 # Hotspotter
 import algos
-from hscom import helpers as util
+from hscom import util
 from hscom import fileio as io
 from hsdev import params
 from hscom.Parallelize import parallel_compute

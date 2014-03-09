@@ -2,7 +2,7 @@
 
 #os.chdir(hotspotter_root)
 import os, sys
-from hotspotter.helpers import check_path, ensure_path, vd, copy_all, copy
+from hotspotter.util import check_path, ensure_path, vd, copy_all, copy
 from os.path import join
 import types
 import textwrap

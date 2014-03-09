@@ -9,7 +9,7 @@ import numpy as np
 # HotSpotter
 from hscom import tools
 from hsdev import params
-from hscom import helpers as util
+from hscom import util
 from hscom import fileio as io
 import DataStructures as ds
 import matching_functions as mf

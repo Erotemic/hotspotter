@@ -58,14 +58,14 @@ def plot_score_matrix(allres):
     score_matrix = allres.score_matrix
     title = 'Score Matrix\n' + allres.title_suffix
     # Find inliers
-    #inliers = helpers.find_std_inliers(score_matrix)
+    #inliers = util.find_std_inliers(score_matrix)
     #max_inlier = score_matrix[inliers].max()
     # Trunate above 255
     score_img = np.copy(score_matrix)
     score_img[score_img < 0] = 0
     score_img[score_img > 255] = 255
     #dim = 0
-    #score_img = helpers.norm_zero_one(score_img, dim=dim)
+    #score_img = util.norm_zero_one(score_img, dim=dim)
     df2.figure(fnum=FIGNUM, doclf=True, title=title)
     df2.imshow(score_img, fnum=FIGNUM)
     df2.set_xlabel('database')
@@ -84,7 +84,7 @@ def __dump(hs, subdir):
     fpath = hs.dirs.result_dir
     if not subdir is None:
         fpath = join(fpath, subdir)
-        helpers.ensurepath(fpath)
+        util.ensurepath(fpath)
     df2.save_figure(fpath=fpath, usetitle=True)
     df2.reset()
 
@@ -95,9 +95,9 @@ def save_if_requested(hs, subdir):
     #print('[viz] Dumping Image')
     fpath = hs.dirs.result_dir
     if not subdir is None:
-        subdir = helpers.sanatize_fname2(subdir)
+        subdir = util.sanatize_fname2(subdir)
         fpath = join(fpath, subdir)
-        helpers.ensurepath(fpath)
+        util.ensurepath(fpath)
     df2.save_figure(fpath=fpath, usetitle=True)
     df2.reset()
 

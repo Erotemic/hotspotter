@@ -1,6 +1,4 @@
 '''
-This module will be renamed to util.py
-
 This is less of a helper function file and more of a pile of things
 where I wasn't sure of where to put.
 A lot of things could probably be consolidated or removed. There are many
@@ -40,7 +38,7 @@ import warnings
 # HotSpotter
 import tools
 from Printable import printableVal
-#print('LOAD_MODULE: helpers.py')
+#print('LOAD_MODULE: util.py')
 
 # --- Globals ---
 
@@ -583,7 +581,7 @@ def win_shortcut(source, link_name):
     flags = 1 if isdir(source) else 0
     retval = csl(link_name, source, flags)
     if retval == 0:
-        #warn_msg = '[helpers] Unable to create symbolic link on windows.'
+        #warn_msg = '[util] Unable to create symbolic link on windows.'
         #print(warn_msg)
         #warnings.warn(warn_msg, category=UserWarning)
         if checkpath(link_name):
@@ -593,9 +591,9 @@ def win_shortcut(source, link_name):
 
 def symlink(source, link_name, noraise=False):
     if os.path.islink(link_name):
-        print('[helpers] symlink %r exists' % (link_name))
+        print('[util] symlink %r exists' % (link_name))
         return
-    print('[helpers] Creating symlink: source=%r link_name=%r' % (source, link_name))
+    print('[util] Creating symlink: source=%r link_name=%r' % (source, link_name))
     try:
         os_symlink = getattr(os, "symlink", None)
         if callable(os_symlink):
@@ -668,10 +666,10 @@ def remove_file(fpath, verbose=True, dryrun=False, **kwargs):
     try:
         if dryrun:
             if verbose:
-                print('[helpers] Dryrem %r' % fpath)
+                print('[util] Dryrem %r' % fpath)
         else:
             if verbose:
-                print('[helpers] Removing %r' % fpath)
+                print('[util] Removing %r' % fpath)
             os.remove(fpath)
     except OSError as e:
         printWARN('OSError: %s,\n Could not delete %s' % (str(e), fpath))
@@ -680,7 +678,7 @@ def remove_file(fpath, verbose=True, dryrun=False, **kwargs):
 
 
 def remove_dirs(dpath, dryrun=False, **kwargs):
-    print('[helpers] Removing directory: %r' % dpath)
+    print('[util] Removing directory: %r' % dpath)
     try:
         shutil.rmtree(dpath)
     except OSError as e:
@@ -691,7 +689,7 @@ def remove_dirs(dpath, dryrun=False, **kwargs):
 
 def remove_files_in_dir(dpath, fname_pattern='*', recursive=False, verbose=True,
                         dryrun=False, **kwargs):
-    print('[helpers] Removing files:')
+    print('[util] Removing files:')
     print('  * in dpath = %r ' % dpath)
     print('  * matching pattern = %r' % fname_pattern)
     print('  * recursive = %r' % recursive)
@@ -707,12 +705,12 @@ def remove_files_in_dir(dpath, fname_pattern='*', recursive=False, verbose=True,
                                        dryrun=dryrun, **kwargs)
         if not recursive:
             break
-    print('[helpers] ... Removed %d/%d files' % (num_removed, num_matched))
+    print('[util] ... Removed %d/%d files' % (num_removed, num_matched))
     return True
 
 
 def delete(path, dryrun=False, recursive=True, verbose=True, **kwargs):
-    print('[helpers] Deleting path=%r' % path)
+    print('[util] Deleting path=%r' % path)
     rmargs = dict(dryrun=dryrun, recursive=recursive, verbose=verbose, **kwargs)
     if not exists(path):
         msg = ('..does not exist!')
@@ -782,9 +780,9 @@ def checkpath(path_, verbose=PRINT_CHECKS):
         else:
             print_('... does not exist\n')
             if __CHECKPATH_VERBOSE__:
-                print_('[helpers] \n  ! Does not exist\n')
+                print_('[util] \n  ! Does not exist\n')
                 _longest_path = longest_existing_path(path_)
-                print_('[helpers] ... The longest existing path is: %r\n' % _longest_path)
+                print_('[util] ... The longest existing path is: %r\n' % _longest_path)
             return False
         return True
     else:
@@ -797,7 +795,7 @@ def check_path(path_, **kwargs):
 
 def ensurepath(path_, **kwargs):
     if not checkpath(path_, **kwargs):
-        print('[helpers] mkdir(%r)' % path_)
+        print('[util] mkdir(%r)' % path_)
         os.makedirs(path_)
     return True
 
@@ -838,50 +836,50 @@ def copy_task(cp_list, test=False, nooverwrite=False, print_tasks=True):
     num_overwrite = 0
     _cp_tasks = []  # Build this list with the actual tasks
     if nooverwrite:
-        print('[helpers] Removed: copy task ')
+        print('[util] Removed: copy task ')
     else:
-        print('[helpers] Begining copy + overwrite task.')
+        print('[util] Begining copy + overwrite task.')
     for (src, dst) in iter(cp_list):
         if exists(dst):
             num_overwrite += 1
             if print_tasks:
-                print('[helpers] !!! Overwriting ')
+                print('[util] !!! Overwriting ')
             if not nooverwrite:
                 _cp_tasks.append((src, dst))
         else:
             if print_tasks:
-                print('[helpers] ... Copying ')
+                print('[util] ... Copying ')
                 _cp_tasks.append((src, dst))
         if print_tasks:
-            print('[helpers]    ' + src + ' -> \n    ' + dst)
-    print('[helpers] About to copy %d files' % len(cp_list))
+            print('[util]    ' + src + ' -> \n    ' + dst)
+    print('[util] About to copy %d files' % len(cp_list))
     if nooverwrite:
-        print('[helpers] Skipping %d tasks which would have overwriten files' % num_overwrite)
+        print('[util] Skipping %d tasks which would have overwriten files' % num_overwrite)
     else:
-        print('[helpers] There will be %d overwrites' % num_overwrite)
+        print('[util] There will be %d overwrites' % num_overwrite)
     if not test:
-        print('[helpers]... Copying')
+        print('[util]... Copying')
         for (src, dst) in iter(_cp_tasks):
             shutil.copy(src, dst)
-        print('[helpers]... Finished copying')
+        print('[util]... Finished copying')
     else:
-        print('[helpers]... In test mode. Nothing was copied.')
+        print('[util]... In test mode. Nothing was copied.')
 
 
 def copy(src, dst):
     if exists(src):
         if exists(dst):
             prefix = 'C+O'
-            print('[helpers] [Copying + Overwrite]:')
+            print('[util] [Copying + Overwrite]:')
         else:
             prefix = 'C'
-            print('[helpers] [Copying]: ')
+            print('[util] [Copying]: ')
         print('[%s] | %s' % (prefix, src))
         print('[%s] ->%s' % (prefix, dst))
         shutil.copy(src, dst)
     else:
         prefix = 'Miss'
-        print('[helpers] [Cannot Copy]: ')
+        print('[util] [Cannot Copy]: ')
         print('[%s] src=%s does not exist!' % (prefix, src))
         print('[%s] dst=%s' % (prefix, dst))
 
@@ -1004,37 +1002,36 @@ def ensure_ext(fpath, ext):
     return fpath
 
 
-
 def eval_from(fpath, err_onread=True):
     'evaluate a line from a test file'
-    print('[helpers] Evaling: fpath=%r' % fpath)
+    print('[util] Evaling: fpath=%r' % fpath)
     text = read_from(fpath)
     if text is None:
         if err_onread:
             raise Exception('Error reading: fpath=%r' % fpath)
-        print('[helpers] * could not eval: %r ' % fpath)
+        print('[util] * could not eval: %r ' % fpath)
         return None
     return eval(text)
 
 
 def read_from(fpath):
     if not checkpath(fpath):
-        print('[helpers] * FILE DOES NOT EXIST!')
+        print('[util] * FILE DOES NOT EXIST!')
         return None
-    print('[helpers] * Reading text file: %r ' % split(fpath)[1])
+    print('[util] * Reading text file: %r ' % split(fpath)[1])
     try:
         text = open(fpath, 'r').read()
     except Exception:
-        print('[helpers] * Error reading fpath=%r' % fpath)
+        print('[util] * Error reading fpath=%r' % fpath)
         raise
     if VERY_VERBOSE:
-        print('[helpers] * Read %d characters' % len(text))
+        print('[util] * Read %d characters' % len(text))
     return text
 
 
 def write_to(fpath, to_write):
     if __PRINT_WRITES__:
-        print('[helpers] * Writing to text file: %r ' % fpath)
+        print('[util] * Writing to text file: %r ' % fpath)
     with open(fpath, 'w') as file:
         file.write(to_write)
 
@@ -1057,8 +1054,8 @@ def save_npz(fpath, *args, **kwargs):
 
 
 def load_npz(fpath):
-    print('[helpers] load_npz: %r ' % split(fpath)[1])
-    print('[helpers] filesize is: ' + file_megabytes_str(fpath))
+    print('[util] load_npz: %r ' % split(fpath)[1])
+    print('[util] filesize is: ' + file_megabytes_str(fpath))
     npz = np.load(fpath, mmap_mode='r + ')
     data = tuple(npz[key] for key in sorted(npz.keys()))
     #print(' * npz.keys() = %r ' + str(npz.keys()))
@@ -1170,8 +1167,8 @@ def load_cache_npz(input_data, uid='', cache_dir='.', is_sparse=False):
     cachefile_exists = checkpath(data_fpath)
     if cachefile_exists:
         try:
-            print('helpers.load_cache> Trying to load cached data: %r' % split(data_fpath)[1])
-            print('helpers.load_cache> Cache filesize: ' + file_megabytes_str(data_fpath))
+            print('util.load_cache> Trying to load cached data: %r' % split(data_fpath)[1])
+            print('util.load_cache> Cache filesize: ' + file_megabytes_str(data_fpath))
             sys.stdout.flush()
             if is_sparse:
                 with open(data_fpath, 'rb') as file_:
@@ -1184,8 +1181,8 @@ def load_cache_npz(input_data, uid='', cache_dir='.', is_sparse=False):
             return data
         except Exception as ex:
             print('...failure')
-            print('helpers.load_cache> %r ' % ex)
-            print('helpers.load_cache>...cannot load data_fpath=%r ' % data_fpath)
+            print('util.load_cache> %r ' % ex)
+            print('util.load_cache>...cannot load data_fpath=%r ' % data_fpath)
             raise CacheException(repr(ex))
     else:
         raise CacheException('nonexistant file: %r' % data_fpath)
@@ -1194,7 +1191,7 @@ def load_cache_npz(input_data, uid='', cache_dir='.', is_sparse=False):
 
 def save_cache_npz(input_data, data, uid='', cache_dir='.', is_sparse=False):
     data_fpath = __cache_data_fpath(input_data, uid, cache_dir)
-    print('[helpers] caching data: %r' % split(data_fpath)[1])
+    print('[util] caching data: %r' % split(data_fpath)[1])
     sys.stdout.flush()
     if is_sparse:
         with open(data_fpath, 'wb') as outfile:
@@ -1475,19 +1472,19 @@ def ipython_execstr():
     if in_ipython:
         print('Presenting in current ipython shell.')
     elif '--cmd' in sys.argv or 'devmode' in vars():
-        print('[helpers] Requested IPython shell with --cmd argument.')
+        print('[util] Requested IPython shell with --cmd argument.')
         if have_ipython:
-            print('[helpers] Found IPython')
+            print('[util] Found IPython')
             try:
                 import IPython
-                print('[helpers] Presenting in new ipython shell.')
+                print('[util] Presenting in new ipython shell.')
                 embedded = True
                 IPython.embed()
             except Exception as ex:
                 print(repr(ex)+'\n!!!!!!!!')
                 embedded = False
         else:
-            print('[helpers] IPython is not installed')
+            print('[util] IPython is not installed')
     ''')
 
 
@@ -1530,7 +1527,7 @@ def execstr_timeitsetup(dict_, exclude_list=[]):
     local_dict = locals().copy()
     exclude_list=['_*', 'In', 'Out', 'rchip1', 'rchip2']
     local_dict = locals().copy()
-    setup = helpers.execstr_timeitsetup(local_dict, exclude_list)
+    setup = util.execstr_timeitsetup(local_dict, exclude_list)
     timeit.timeit('somefunc', setup)
     '''
     old_thresh =  np.get_printoptions()['threshold']
@@ -1551,7 +1548,7 @@ def execstr_timeitsetup(dict_, exclude_list=[]):
     import_str = textwrap.dedent('''
     import numpy as np
     from numpy import array, float32, float64, int32, int64
-    import helpers
+    import util
     from spatial_verification2 import *
                                  ''')
     setup = import_str + exec_str
@@ -1620,11 +1617,11 @@ def runprofile(cmd, globals_=globals(), locals_=locals()):
     import cProfile
     import sys
     import os
-    print('[helpers] Profiling Command: ' + cmd)
+    print('[util] Profiling Command: ' + cmd)
     cProfOut_fpath = 'OpenGLContext.profile'
     cProfile.runctx( cmd, globals_, locals_, filename=cProfOut_fpath)
     # RUN SNAKE
-    print('[helpers] Profiled Output: ' + cProfOut_fpath)
+    print('[util] Profiled Output: ' + cProfOut_fpath)
     if sys.platform == 'win32':
         rsr_fpath = 'C:/Python27/Scripts/runsnake.exe'
     else:
@@ -2085,7 +2082,7 @@ def load_testdata(*args, **kwargs):
 
 
 def import_testdata():
-    from hscom import helpers as util
+    from hscom import util
     import shelve
     shelf = shelve.open('test_data.shelf')
     print('importing\n * ' + '\n * '.join(shelf.keys()))
@@ -2104,7 +2101,7 @@ def embed(parent_locals=None):
         parent_locals = get_parent_locals()
     exec(execstr_dict(parent_locals, 'parent_locals'))
     print('')
-    print('[helpers] embedding')
+    print('[util] embedding')
     import IPython
     IPython.embed()
 

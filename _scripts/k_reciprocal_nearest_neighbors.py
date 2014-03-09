@@ -4,7 +4,7 @@ import pyflann
 import params
 import numpy as np
 import draw_func2 as df2
-import helpers
+import util
 np.random.seed(5)
 # Parameters
 tdim   =   2; # Target viewing dimensions
@@ -60,7 +60,7 @@ qfx2_maxdist = nn2_dists.max(2)
 # max distance of the assigned points K nearest neighbors
 isReciprocal = qfx2_dists < qfx2_maxdist
 krx2_nn  = qx2_nn[isReciprocal]
-krx2_qfx = helpers.tiled_range(nQuery, K)[isReciprocal] 
+krx2_qfx = util.tiled_range(nQuery, K)[isReciprocal] 
 krx2_query = query[krx2_qfx]
 
 

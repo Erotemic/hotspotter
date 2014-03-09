@@ -4,8 +4,8 @@ from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[seg]')
 import numpy as np
-from hscom import helpers
-from hscom import helpers as util
+from hscom import util
+from hscom import util
 import cv2
 import algos
 from hscom import fileio as io
@@ -189,7 +189,7 @@ def segment(img_fpath, roi_, new_size=None):
     _mask = np.zeros((img_h, img_w), dtype=np.uint8)  # Initialize: mask
     _mask[y1:y2, x1:x2] = cv2.GC_PR_FGD             # Set ROI to cv2.GC_PR_FGD
     # Grab Cut
-    tt = helpers.Timer(' * cv2.grabCut()', verbose=DEBUG_SEGM)
+    tt = util.Timer(' * cv2.grabCut()', verbose=DEBUG_SEGM)
     cv2.grabCut(img_resz, _mask, rect, bgd_model, fgd_model, num_iters, mode=mode)
     tt.toc()
     img_mask = np.where((_mask == cv2.GC_FGD) + (_mask == cv2.GC_PR_FGD), 255, 0).astype('uint8')

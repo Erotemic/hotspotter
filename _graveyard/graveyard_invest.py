@@ -1,12 +1,12 @@
 _stdoutlock = None
 def start_stdout():
     global _stdoutlock
-    _stdoutlock = helpers.RedirectStdout(autostart=True)
+    _stdoutlock = util.RedirectStdout(autostart=True)
 def stop_stdout():
     global _stdoutlock
     _stdoutlock.stop()
 
-#rss = helpers.RedirectStdout(autostart=True)
+#rss = util.RedirectStdout(autostart=True)
 #rss.stop()
 def where_did_vsone_matches_go(hs, qcx, fnum=1):
     vsone_cfg  = mc3.vsone_cfg()
@@ -55,7 +55,7 @@ def __where_did_vsone_matches_go(hs, qcx, fnum, vsone_cfg, vsmany_cfg):
         vsmany_fm  = cast_uint32(np.vstack(map(cast_uint32,(vsmany_qfxs, vsmany_fxs))).T)
         vsmany_fs  = vsmany_kxs # use k as score
         # Intersect vsmany with vsone_V
-        fm_intersect, vsone_ix, vsmany_ix = helpers.intersect2d(vsone_fm_V, vsmany_fm)
+        fm_intersect, vsone_ix, vsmany_ix = util.intersect2d(vsone_fm_V, vsmany_fm)
         print(vsmany_ix)
         isecting_vsmany_fm = vsmany_fm[vsmany_ix]
         isecting_vsmany_fs = vsmany_kxs[vsmany_ix] # use k as score
@@ -65,7 +65,7 @@ def __where_did_vsone_matches_go(hs, qcx, fnum, vsone_cfg, vsmany_cfg):
                                                          vsmany_fm, vsmany_fs,
                                                          rchip_size2=rchip_size2)
         # Intersect vsmany_V with vsone_V
-        fm_V_intersect, vsoneV_ix, vsmanyV_ix = helpers.intersect2d(vsone_fm_V, vsmany_fm_V)
+        fm_V_intersect, vsoneV_ix, vsmanyV_ix = util.intersect2d(vsone_fm_V, vsmany_fm_V)
         isecting_vsmany_fm_V = vsmany_fm[vsmanyV_ix]
         print('[invest]   VSONE had %r verified matches to this image ' % (len(vsone_fm_V)))
         print('[invest]   In the top K=%r in this image...' % (K))
@@ -76,8 +76,8 @@ def __where_did_vsone_matches_go(hs, qcx, fnum, vsone_cfg, vsmany_cfg):
               (len(fm_intersect), len(vsone_fm_V)))
         print('[invest]   There were %r / %r intersecting verified matches in VSONE_V and VSMANY_V' % 
               (len(fm_V_intersect), len(vsone_fm_V)))
-        print('[invest]   Distribution of kxs: '+helpers.printable_mystats(kxs))
-        print('[invest]   Distribution of intersecting kxs: '+helpers.printable_mystats(isecting_kxs))
+        print('[invest]   Distribution of kxs: '+util.printable_mystats(kxs))
+        print('[invest]   Distribution of intersecting kxs: '+util.printable_mystats(isecting_kxs))
         # Visualize the intersecting matches 
         def _show_matches_helper(fm, fs, plotnum, title):
             df2.show_matches2(rchip1, rchip2, qfx2_kp1, fx2_kp2, fm, fs,
@@ -103,7 +103,7 @@ def __where_did_vsone_matches_go(hs, qcx, fnum, vsone_cfg, vsmany_cfg):
     #print('qcid_list = %r ' % qcid_list)
     #print('qcx_list = %r ' % qcid_list)
     #print('[get_hard_cases]\n %r\n %r\n %r\n' % (qcx_list, ocid_list, note_list))
-@helpers.__DEPRICATED__
+@util.__DEPRICATED__
 def get_hard_cases(hs):
     return get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
 
@@ -119,11 +119,11 @@ def view_all_history_names_in_db(hs, db):
     print('unique_nxs = %r' % unique_nxs)
     names = hs.tables.nx2_name[unique_nxs]
     print('names = %r' % names)
-    helpers.ensuredir('hard_names')
+    util.ensuredir('hard_names')
     for nx in unique_nxs:
         viz.plot_name(hs, nx, fignum=nx)
         df2.save_figure(fpath='hard_names', usetitle=True)
-    helpers.vd('hard_names')
+    util.vd('hard_names')
 
 
     #return qcx_list, ocid_list, note_list
@@ -131,7 +131,7 @@ def view_all_history_names_in_db(hs, db):
     #print('qcid_list = %r ' % qcid_list)
     #print('qcx_list = %r ' % qcid_list)
     #print('[get_hard_cases]\n %r\n %r\n %r\n' % (qcx_list, ocid_list, note_list))
-@helpers.__DEPRICATED__
+@util.__DEPRICATED__
 def get_hard_cases(hs):
     return get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
 
@@ -147,11 +147,11 @@ def view_all_history_names_in_db(hs, db):
     print('unique_nxs = %r' % unique_nxs)
     names = hs.tables.nx2_name[unique_nxs]
     print('names = %r' % names)
-    helpers.ensuredir('hard_names')
+    util.ensuredir('hard_names')
     for nx in unique_nxs:
         viz.plot_name(hs, nx, fignum=nx)
         df2.save_figure(fpath='hard_names', usetitle=True)
-    helpers.vd('hard_names')
+    util.vd('hard_names')
     
 
 
@@ -189,7 +189,7 @@ def get_qfx2_gtkrank(hs, qcx, q_cfg):
     qfx2_cx = dx2_cx[qfx2_dx[:, 0:K]]
     qfx2_gt = np.in1d(qfx2_cx.flatten(), gt_cxs)
     qfx2_gt.shape = qfx2_cx.shape
-    qfx2_gtkrank = np.array([helpers.npfind(isgt) for isgt in qfx2_gt])
+    qfx2_gtkrank = np.array([util.npfind(isgt) for isgt in qfx2_gt])
     qfx2_gtkweight = [0 if rank == -1 else weights[rank] 
                       for weights, rank in zip(qfx2_weights, qfx2_gtkrank)]
     qfx2_gtkweight = np.array(qfx2_gtkweight)
@@ -232,7 +232,7 @@ def measure_cx_rankings(hs):
         res = reses[2][qcx]
         cx2_score = res.get_cx2_score(hs)
         top_cxs  = cx2_score.argsort()[::-1]
-        gt_ranks = [helpers.npfind(top_cxs == gtcx) for gtcx in gt_cxs]
+        gt_ranks = [util.npfind(top_cxs == gtcx) for gtcx in gt_cxs]
         bestrank = min(gt_ranks)
         id2_bestranks += [bestrank]
     print(id2_bestranks)

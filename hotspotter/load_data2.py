@@ -18,8 +18,8 @@ import numpy as np
 from PIL import Image
 # Hotspotter
 import DataStructures as ds
-from hscom import helpers
-from hscom import helpers as util
+from hscom import util
+from hscom import util
 from hscom import tools
 
 # GLOBALS
@@ -60,7 +60,7 @@ def load_csv_tables(dbdir, allow_new_dir=True):
     Returns HotspotterDirs and HotspotterTables
     '''
     if 'vdd' in sys.argv:
-        helpers.vd(dbdir)
+        util.vd(dbdir)
     print('=============================')
     print('[ld2] Loading hotspotter csv tables: %r' % dbdir)
     hs_dirs = ds.HotspotterDirs(dbdir)
@@ -75,11 +75,11 @@ def load_csv_tables(dbdir, allow_new_dir=True):
     name_table   = join(internal_dir, NAME_TABLE_FNAME)
     image_table  = join(internal_dir, IMAGE_TABLE_FNAME)  # TODO: Make optional
     # --- CHECKS ---
-    has_dbdir   = helpers.checkpath(dbdir)
-    has_imgdir  = helpers.checkpath(img_dir)
-    has_chiptbl = helpers.checkpath(chip_table)
-    has_nametbl = helpers.checkpath(name_table)
-    has_imgtbl  = helpers.checkpath(image_table)
+    has_dbdir   = util.checkpath(dbdir)
+    has_imgdir  = util.checkpath(img_dir)
+    has_chiptbl = util.checkpath(chip_table)
+    has_nametbl = util.checkpath(name_table)
+    has_imgtbl  = util.checkpath(image_table)
 
     # ChipTable Header Markers
     header_numdata = '# NumData '
@@ -96,19 +96,19 @@ def load_csv_tables(dbdir, allow_new_dir=True):
     IS_VERSION_1_OR_2 = False
 
     if not isCurrentVersion:
-        helpers.checkpath(dbdir, verbose=True)
-        helpers.checkpath(img_dir, verbose=True)
-        helpers.checkpath(chip_table, verbose=True)
-        helpers.checkpath(name_table, verbose=True)
-        helpers.checkpath(image_table, verbose=True)
+        util.checkpath(dbdir, verbose=True)
+        util.checkpath(img_dir, verbose=True)
+        util.checkpath(chip_table, verbose=True)
+        util.checkpath(name_table, verbose=True)
+        util.checkpath(image_table, verbose=True)
         import db_info
 
         def assign_alternate(tblname, optional=False):
             path = join(dbdir, tblname)
-            if helpers.checkpath(path, verbose=True):
+            if util.checkpath(path, verbose=True):
                 return path
             path = join(dbdir, '.hs_internals', tblname)
-            if helpers.checkpath(path, verbose=True):
+            if util.checkpath(path, verbose=True):
                 return path
             if optional:
                 return None
@@ -143,7 +143,7 @@ def load_csv_tables(dbdir, allow_new_dir=True):
             chip_csv_format = ['imgindex', 'original_filepath', 'roi', 'animal_name']
             header_csvformat_re = '#imgindex,'
             #raise NotImplementedError('stripe spotter conversion')
-            if not helpers.checkpath(chip_table, verbose=True):
+            if not util.checkpath(chip_table, verbose=True):
                 raise Exception('bad state chip_table=%r' % chip_table)
         else:
             try:
@@ -172,7 +172,7 @@ def load_csv_tables(dbdir, allow_new_dir=True):
                     errmsg += ('\n\n!!!!!\n\n')
                     print(errmsg)
                     raise Exception(errmsg)
-    if not helpers.checkpath(chip_table):
+    if not util.checkpath(chip_table):
         raise Exception('bad state chip_table=%r' % chip_table)
     print('[ld2] detected %r' % db_version)
     hs_dirs.ensure_dirs()
@@ -469,7 +469,7 @@ def load_csv_tables(dbdir, allow_new_dir=True):
                         # This is so hacky. The gpath in hospotter-v2 doesnt have
                         # extensions
                         name, ext = splitext(gname)
-                        if ext not in helpers.IMG_EXTENSIONS:
+                        if ext not in util.IMG_EXTENSIONS:
                             if 'img_extension' in prop_dict:
                                 gname = gname + '.' + prop_dict['img_extension'][-1]
                 # /LEGACY HACK
@@ -526,7 +526,7 @@ def load_csv_tables(dbdir, allow_new_dir=True):
 
     print('[ld2] Done Loading hotspotter csv tables: %r' % (dbdir))
     if 'vcd' in sys.argv:
-        helpers.vd(hs_dirs.computed_dir)
+        util.vd(hs_dirs.computed_dir)
     return hs_dirs, hs_tables, db_version
 
 
@@ -724,11 +724,11 @@ def write_csv_tables(hs):
     image_table_fpath = join(internal_dir, IMAGE_TABLE_FNAME)
     # write csv files
     print('[ld2] Writing chip table')
-    helpers.write_to(chip_table_fpath, chip_table)
+    util.write_to(chip_table_fpath, chip_table)
     print('[ld2] Writing name table')
-    helpers.write_to(name_table_fpath, name_table)
+    util.write_to(name_table_fpath, name_table)
     print('[ld2] Writing image table')
-    helpers.write_to(image_table_fpath, image_table)
+    util.write_to(image_table_fpath, image_table)
 
 
 def write_flat_table(hs):
@@ -739,15 +739,15 @@ def write_flat_table(hs):
     flat_table_fpath  = join(dbdir, 'flat_table.csv')
     # Write flat table
     print('[ld2] Writing flat table')
-    helpers.write_to(flat_table_fpath, flat_table)
+    util.write_to(flat_table_fpath, flat_table)
 
 
 def backup_csv_tables(hs, force_backup=False):
     internal_dir = hs.dirs.internal_dir
     backup_dir = join(internal_dir, 'backup_v0.1.0')
     if not exists(backup_dir) or force_backup:
-        helpers.ensuredir(backup_dir)
-        timestamp = helpers.get_timestamp(use_second=True)
+        util.ensuredir(backup_dir)
+        timestamp = util.get_timestamp(use_second=True)
 
         def do_backup(fname):
             src = join(internal_dir, fname)

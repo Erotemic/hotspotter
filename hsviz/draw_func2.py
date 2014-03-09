@@ -36,7 +36,7 @@ import numpy as np
 import scipy.stats
 import cv2
 # HotSpotter
-from hscom import helpers as util
+from hscom import util
 from hscom import tools
 from hscom.Printable import DynStruct
 

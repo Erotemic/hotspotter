@@ -1,5 +1,5 @@
-from hscom import helpers
-from hscom import helpers as util
+from hscom import util
+from hscom import util
 from hotspotter import nn_filters
 from dbgimport import  *
 '''
@@ -8,7 +8,7 @@ from dbgimport import  *
 
 
 exec(open(nn_filters.__file__).read())
-qcx2_nns = helpers.load_testdata('qcx2_nns')
+qcx2_nns = util.load_testdata('qcx2_nns')
 qreq = hs.qreq
 qcx = qcx2_nns.keys()[0]
 K, Knorm, rule = qreq.cfg.nn_cfg.dynget('K', 'Knorm', 'normalizer_rule')

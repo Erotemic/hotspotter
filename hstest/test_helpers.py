@@ -2,7 +2,7 @@
 if __name__ == '__main__':
     import multiprocessing
     multiprocessing.freeze_support()
-    print('[helpers] You ran helpers as main!')
+    print('[util] You ran util as main!')
     module = sys.modules[__name__]
     seen = set(['numpy', 'matplotlib', 'scipy', 'pyflann', 'skimage', 'cv2'])
 
@@ -16,6 +16,6 @@ if __name__ == '__main__':
                          'scipy.sparse'])
     seen = set(list(python_basic) + list(science_basic) + list(tpl_basic))
     seen = set([])
-    print('[helpers] seen=%r' % seen)
+    print('[util] seen=%r' % seen)
     explore_module(module, maxdepth=0, seen=seen, nonmodules=False)
 '''

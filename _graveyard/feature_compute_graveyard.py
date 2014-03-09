@@ -24,7 +24,7 @@ def load_features(hs, cx_list=None, fc_cfg=None, **kwargs):
         # Build Parallel Jobs, Compute features, saving them to disk.
         # Then Run Parallel Jobs 
         cid_iter = (cx2_cid[cx] for cx in cx_list)
-        feat_type_str = helpers.remove_chars(repr(feat_type), [' ', '(', ')', '\''])
+        feat_type_str = util.remove_chars(repr(feat_type), [' ', '(', ')', '\''])
         cx2_feat_path = [feat_dir+'/CID_%d_%s.npz' % (cid, feat_type_str) for cid in cid_iter]
         precompute_fn = feat_type2_precompute[feat_type]
         parallel_compute(precompute_fn, [cx2_rchip_path, cx2_feat_path])

@@ -9,7 +9,7 @@ import numpy as np
 from numpy.linalg import svd
 #from numba import autojit
 # HotSpotter
-from hscom import helpers as util
+from hscom import util
 
 
 def score_chipmatch_csum(chipmatch):

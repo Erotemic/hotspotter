@@ -49,7 +49,7 @@
             #stw_str += '_' + str(weight)
         #stw_list.append(stw_str)
     #return ','.join(stw_list)
-    ##return helpers.remove_chars(str(dict_), [' ','\'','}','{',':'])
+    ##return util.remove_chars(str(dict_), [' ','\'','}','{',':'])
 
 
 

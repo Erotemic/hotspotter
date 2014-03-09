@@ -7,7 +7,7 @@ import numpy as np
 # HotSpotter
 from hotspotter import db_info
 from hscom import latex_formater
-from hscom import helpers as util
+from hscom import util
 
 
 def dbstats(hs):

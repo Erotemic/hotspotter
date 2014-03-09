@@ -11,7 +11,7 @@ import numpy as np
 from scipy.cluster.hierarchy import fclusterdata
 # HotSpotter
 from hscom import fileio as io
-from hscom import helpers as util
+from hscom import util
 from hotspotter import load_data2 as ld2
 
 #from dbgimport import *  # NOQA

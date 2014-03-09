@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[graph]', DEBUG=False)
-from hscom import helpers as util
+from hscom import util
 from os.path import splitext, exists
 import cross_platform as cplat
 import networkx as netx

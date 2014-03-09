@@ -1,6 +1,6 @@
 from numba import autojit
 import numpy as np
-import helpers
+import util
 
 @autojit
 def sum2d(arr):
@@ -45,20 +45,20 @@ if __name__ == '__main__':
     for sz in input_sizes:
         print('\n--------------------\nInput Size: '+str(sz))
         arr = np.random.rand(sz, sz)
-        with helpers.Timer('with numba'):
+        with util.Timer('with numba'):
             res = sum2d(arr)
             print res
-        with helpers.Timer('with numpy'):
+        with util.Timer('with numpy'):
             res2 = sum2d4(arr)
             print res2
-        with helpers.Timer('without numpy and numba'):
+        with util.Timer('without numpy and numba'):
             res2 = sum2d5(arr)
             print res2
         '''
-        with helpers.Timer('without numba (but smart)'):
+        with util.Timer('without numba (but smart)'):
             res3 = sum2d3(arr)
             print res3
-        with helpers.Timer('without numba (naive)'):
+        with util.Timer('without numba (naive)'):
             res2 = sum2d2(arr)
             print res2
         '''

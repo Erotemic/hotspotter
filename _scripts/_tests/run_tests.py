@@ -1,7 +1,7 @@
 #!/usr/bin/python2.7
 import os
 import sys
-import helpers
+import util
 
 dataset_list = []
 #dataset_list += [' GZ']
@@ -23,7 +23,7 @@ def execute(args):
     cmd = ' '.join(args)
     print(cmd)
     if QUIET:
-        rss = helpers.RedirectStdout(); rss.start()
+        rss = util.RedirectStdout(); rss.start()
     os.system(cmd)
     if QUIET: 
         rss.stop()

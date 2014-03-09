@@ -6,7 +6,7 @@ import dev_stats
 import dev_consistency
 import dev_reload
 from hscom.Printable import DynStruct
-from hscom import helpers as util
+from hscom import util
 
 
 class DebugAPI(DynStruct):

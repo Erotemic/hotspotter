@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image
 # Hotspotter
 import load_data2 as ld2
-from hscom import helpers as util
+from hscom import util
 
 
 def dir_size(path):

@@ -9,7 +9,7 @@ import numpy as np
 # HotSpotter
 import algos
 from hsdev import params
-from hscom import helpers as util
+from hscom import util
 from hscom.Printable import DynStruct
 
 ID_DTYPE = np.int32  # id datatype

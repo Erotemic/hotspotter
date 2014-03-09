@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 import cv2
-from hotspotter import helpers
+from hotspotter import util
 import textwrap
 import numpy as np
 import subprocess
@@ -9,8 +9,8 @@ import numpy as np
 import os, sys
 from numpy import uint8, float32, diag, sqrt, abs
 from numpy.linalg import det
-hstr = helpers.horiz_string
-hprint = helpers.horiz_print
+hstr = util.horiz_string
+hprint = util.horiz_print
 np.set_printoptions(precision=8)
 
 def svd(M):

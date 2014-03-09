@@ -144,7 +144,7 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
                      x2_m, y2_m, acd2_m, xy_thresh_sqrd, 
                      scale_thresh_high, scale_thresh_low):
     'Estimates inliers deterministically using elliptical shapes'
-    with helpers.Timer(msg='both') as t:
+    with util.Timer(msg='both') as t:
         best_inliers = []
         best_Aff = None
         # Get keypoint scales (determinant)
@@ -291,8 +291,8 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
     
     local_dict = locals().copy()
     exclude_list=['_*', 'In', 'Out', 'rchip1', 'rchip2', 'nan', 'inf', 'Inf']
-    helpers.rrr()
-    setup = helpers.execstr_timeitsetup(local_dict, exclude_list)
+    util.rrr()
+    setup = util.execstr_timeitsetup(local_dict, exclude_list)
 
     import textwrap
     import timeit
@@ -309,7 +309,7 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
     print timeit.timeit(test3, setup=setup_, number=500)
 
 
-    with helpers.Timer(msg='stack'):
+    with util.Timer(msg='stack'):
     test1 = '''
         best_inliers = []
         best_Aff = None
@@ -336,7 +336,7 @@ def __affine_inliers(x1_m, y1_m, acd1_m,
                 best_Aff     = Aff_list[:, mx]
     '''
                 
-    with helpers.Timer(msg='randacc'):
+    with util.Timer(msg='randacc'):
     test2 = '''
         best_inliers = []
         best_Aff = None
@@ -434,7 +434,7 @@ def __affine_inliers_cascade(x1_m, y1_m, acd1_m,
                      x2_m, y2_m, acd2_m, xy_thresh_sqrd, 
                      scale_thresh_high, scale_thresh_low):
     'Estimates inliers deterministically using elliptical shapes'
-#with helpers.Timer('scale cascade'):
+#with util.Timer('scale cascade'):
     best_inliers = []
     best_Aff = None
     # Get keypoint scales (determinant)
@@ -506,7 +506,7 @@ def affine_inliers(kpts1, kpts2, fm, xy_thresh, scale_thresh):
 
 
 def test_realdata2():
-    from helpers import printWARN, printINFO
+    from util import printWARN, printINFO
     import warnings
     import numpy.linalg as linalg
     import numpy as np
@@ -515,7 +515,7 @@ def test_realdata2():
     import load_data2
     import params
     import draw_func2 as df2
-    import helpers
+    import util
     import spatial_verification
     #params.reload_module()
     #load_data2.reload_module()
@@ -541,7 +541,7 @@ def test_realdata2():
     df2.show_matches2(rchip1, rchip2, kpts1,  kpts2, fm, fs, title=title)
 
     np.random.seed(6)
-    subst = helpers.random_indexes(len(fm),len(fm))
+    subst = util.random_indexes(len(fm),len(fm))
     kpts1_m = kpts1[fm[subst, 0], :].T
     kpts2_m = kpts2[fm[subst, 1], :].T
 
@@ -557,9 +557,9 @@ def test_realdata2():
                       fignum=1, vert=True)
 
     spatial_verification.reload_module()
-    with helpers.Timer():
+    with util.Timer():
         aff_inliers1 = spatial_verification.aff_inliers_from_ellshape2(kpts1_m, kpts2_m, xy_thresh_sqrd)
-    with helpers.Timer():
+    with util.Timer():
         aff_inliers2 = spatial_verification.aff_inliers_from_ellshape(kpts1_m, kpts2_m, xy_thresh_sqrd)
 
     # Homogonize+Normalize

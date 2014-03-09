@@ -4,7 +4,7 @@ import warnings
 import os
 import draw_func2 as df2
 import cv2
-import helpers
+import util
 import subprocess
 import numpy as np
 import os, sys
@@ -174,7 +174,7 @@ draw_kpts3(kpts1.copy(), 5)
 df2.update()
 
 # TEST
-hprint = helpers.horiz_print
+hprint = util.horiz_print
 invA1 = inv(A1)
 hprint('invE = ', invE)
 hprint('A1 = ', A1)

@@ -32,39 +32,39 @@ if __name__ == '__main__':
     for save_func in save_func_list:
         print('[io] Testing: ' + save_func.__name__)
         print('[io]  withext: ' + save_func.ext)
-        tt_total = helpers.tic(save_func.__name__)
+        tt_total = util.tic(save_func.__name__)
 
         for fpath, data, in zip(fpath_list, data_list):
             fpath += save_func.ext
-            tt_single = helpers.tic(fpath)
+            tt_single = util.tic(fpath)
             save_func(fpath, data)
-            helpers.toc(tt_single)
-        helpers.toc(tt_total)
+            util.toc(tt_single)
+        util.toc(tt_total)
         print('------------------')
 
     # Test memory:
     for save_func in save_func_list:
         for fpath in fpath_list:
             fpath += save_func.ext
-            print(helpers.file_megabytes_str(fpath))
+            print(util.file_megabytes_str(fpath))
 
     # Test Load
     for load_func in load_func_list:
         print('Testing: ' + load_func.__name__)
         print(' withext: ' + load_func.ext)
-        tt_total = helpers.tic(load_func.__name__)
+        tt_total = util.tic(load_func.__name__)
 
         for fpath, data, in zip(fpath_list, data_list):
             fpath += load_func.ext
-            tt = helpers.tic(fpath)
+            tt = util.tic(fpath)
             data2 = load_func(fpath)
-            helpers.toc(tt)
-        helpers.toc(tt_total)
+            util.toc(tt)
+        util.toc(tt_total)
         print('------------------')
-    print(helpers.file_megabytes_str(fpath))
+    print(util.file_megabytes_str(fpath))
 
-    tic = helpers.tic
-    toc = helpers.toc
+    tic = util.tic
+    toc = util.toc
 
     #tt = tic(fpath_py)
     #with open(fpath, 'wb') as file_:
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     with open(fpath_py, 'rb') as file_:
         npy_data = np.load(file_)
     toc(tt)
-    print(helpers.file_megabytes_str(fpath_py))
+    print(util.file_megabytes_str(fpath_py))
 
 
     tt = tic(fpath_pyz)
@@ -96,7 +96,7 @@ if __name__ == '__main__':
         npz_data = npz['arr_0']
         npz.close()
     toc(tt)
-    print(helpers.file_megabytes_str(fpath_pyz))
+    print(util.file_megabytes_str(fpath_pyz))
 
     tt = tic(fpath_pyz)
     with open(fpath_pyz, 'rb') as file_:
@@ -105,7 +105,7 @@ if __name__ == '__main__':
         npz.close()
     toc(tt)
 
-    tt = helpers.tic(fpath)
+    tt = util.tic(fpath)
     data2 = load_func(fpath)
 
     with Timer():

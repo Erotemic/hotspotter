@@ -2,7 +2,7 @@ from __future__ import division, print_function
 from os.path import join
 import os
 import sys
-import helpers
+import util
 import textwrap
 import load_data2 as ld2
 import match_chips2 as mc2
@@ -78,7 +78,7 @@ def run_experiment(hs=None, free_mem=False, pprefix='[run_expt]', **kwargs):
     '''
     print('** Changing print function with pprefix=%r' % (pprefix,))
     def prefix_print(msg):
-        helpers.println(helpers.indent(str(msg), pprefix))
+        util.println(util.indent(str(msg), pprefix))
     ld2.print = prefix_print
     df2.print = prefix_print
     mc2.print = prefix_print
@@ -95,7 +95,7 @@ def run_experiment(hs=None, free_mem=False, pprefix='[run_expt]', **kwargs):
         hs.set_samples() # default samples
     print('======================')
     print('[expt] Running Experiment on hs:\n'+str(hs.db_name()))
-    #print('[expt] Params: \n'+ helpers.indent(params.param_string()))
+    #print('[expt] Params: \n'+ util.indent(params.param_string()))
     print('======================')
     # First load cached results
     qcx2_res, dirty_samp = mc2.load_cached_matches(hs)
@@ -251,7 +251,7 @@ def leave_out(expt_func=None, split_test=False, **kwargs):
         # Generate chip splits
         test_cxs_list = nx2_cxs[list(test_nxs)]
         test_nChip = map(len, test_cxs_list)
-        print('[expt] testnames #cxs stats: %r' % helpers.printable_mystats(test_nChip))
+        print('[expt] testnames #cxs stats: %r' % util.printable_mystats(test_nChip))
         test_cx_splits  = []
         if not split_test:
             # Chucks version of the test (much simplier and better)
@@ -299,7 +299,7 @@ def tweak_params(expt_func=None):
         print('========================')
         print('[expt] tweak_params(%d/%d)> param tweak %r ' % (count, total_tests, tup,))
         print('========================')
-        rss = helpers.RedirectStdout()
+        rss = util.RedirectStdout()
         rss.start()
         xy_thresh, scale_thresh_high, scale_thresh_low = tup
         params.__XY_THRESH__         = xy_thresh

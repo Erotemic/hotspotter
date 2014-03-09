@@ -1,5 +1,5 @@
 from __future__ import division
-from helpers import printWARN, printINFO
+from util import printWARN, printINFO
 import warnings
 import cv2
 import numpy.linalg as linalg
@@ -273,12 +273,12 @@ def compare():
     sv2.reload_module()
     kpts1_m = kpts1[fm[:, 0], :].T
     kpts2_m = kpts2[fm[:, 1], :].T
-    with helpers.Timer('sv1') as t: 
+    with util.Timer('sv1') as t: 
         hinlier_tup1 = sv1.H_homog_from_DELSAC(kpts1_m, kpts2_m,
                                                xy_thresh, 
                                                scale_thresh_high,
                                                scale_thresh_low)
-    with helpers.Timer('sv2') as t: 
+    with util.Timer('sv2') as t: 
         hinlier_tup2 = sv2.homography_inliers(kpts1, kpts2, fm,
                                               xy_thresh, 
                                               scale_thresh_high,

@@ -17,7 +17,7 @@ from hotspotter import DataStructures as ds
 from hotspotter import match_chips3 as mc3
 from hotspotter import matching_functions as mf
 from hscom import fileio as io
-from hscom import helpers as util
+from hscom import util
 from hscom import latex_formater
 from hsdev import params
 from hsviz import draw_func2 as df2

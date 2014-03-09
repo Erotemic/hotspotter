@@ -1,8 +1,8 @@
 from hotspotter import HotSpotterAPI as api
 from hotspotter import chip_compute2 as cc2
 from hsdev import argparse2
-from hscom import helpers
-from hscom import helpers as util
+from hscom import util
+from hscom import util
 from hsviz import viz
 import multiprocessing
 import numpy as np  # NOQA
@@ -20,9 +20,9 @@ if __name__ == '__main__':
     hs.load_tables()
     hs.update_samples()
     # --- LOAD CHIPS --- #
-    force_compute = helpers.get_flag('--force', default=False)
+    force_compute = util.get_flag('--force', default=False)
     cc2.load_chips(hs, force_compute=force_compute)
-    cx = helpers.get_arg('--cx', type_=int)
+    cx = util.get_arg('--cx', type_=int)
     if not cx is None:
         #tau = np.pi * 2
         #hs.change_theta(cx, tau / 8)

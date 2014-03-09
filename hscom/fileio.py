@@ -17,7 +17,7 @@ import cv2
 from PIL import Image
 from PIL.ExifTags import TAGS
 # Hotspotter
-import helpers
+import util
 
 VERBOSE_IO = 0  # 2
 
@@ -113,7 +113,7 @@ def __args2_fpath(dpath, fname, uid, ext):
         raise Exception('Fatal Error: Please be explicit and use a dot in ext')
     fname_uid = fname + uid
     if len(fname_uid) > 128:
-        fname_uid = fname + '_' + helpers.hashstr(fname_uid, 8)
+        fname_uid = fname + '_' + util.hashstr(fname_uid, 8)
     fpath = join(dpath, fname_uid + ext)
     fpath = normpath(fpath)
     return fpath
@@ -133,7 +133,7 @@ def smart_fname_info(func_name, dpath, fname, uid, ext):
 @profile
 def smart_save(data, dpath='', fname='', uid='', ext='', verbose=VERBOSE_IO):
     ''' Saves data to the direcotry speficied '''
-    helpers.ensuredir(dpath)
+    util.ensuredir(dpath)
     fpath = __args2_fpath(dpath, fname, uid, ext)
     if verbose:
         if verbose > 1:
@@ -173,7 +173,7 @@ def __smart_save(data, fpath, verbose):
             print('[io] saved %s ' % (filesize_str(fpath),))
     except Exception as ex:
         print('[io] ! Exception will saving %r' % fpath)
-        print(helpers.indent(repr(ex), '[io]    '))
+        print(util.indent(repr(ex), '[io]    '))
         raise
 
 
@@ -276,7 +276,7 @@ def print_filesize(fpath):
 @profile
 def filesize_str(fpath):
     _, fname = os.path.split(fpath)
-    mb_str = helpers.file_megabytes_str(fpath)
+    mb_str = util.file_megabytes_str(fpath)
     return 'filesize(%r)=%s' % (fname, mb_str)
 
 
@@ -375,7 +375,7 @@ def read_exif(fpath, tag=None):
 
 @profile
 def print_image_checks(img_fpath):
-    hasimg = helpers.checkpath(img_fpath, verbose=True)
+    hasimg = util.checkpath(img_fpath, verbose=True)
     if hasimg:
         _tup = (img_fpath, filesize_str(img_fpath))
         print('[io] Image %r (%s) exists. Is it corrupted?' % _tup)
@@ -390,7 +390,7 @@ def read_exif_list(fpath_list, **kwargs):
         # Exif generator
         nGname = len(fpath_list)
         lbl = '[io] Load Image EXIF'
-        mark_progress, end_progress = helpers.progress_func(nGname, lbl, 16)
+        mark_progress, end_progress = util.progress_func(nGname, lbl, 16)
         for count, fpath in enumerate(fpath_list):
             mark_progress(count)
             yield read_exif(fpath, **kwargs)
@@ -430,11 +430,11 @@ def detect_duplicate_images(imgpath_list):
     nImg = len(imgpath_list)
     lbl = 'checking duplicate'
     duplicates = {}
-    mark_progress, end_progress = helpers.progress_func(nImg, lbl=lbl)
+    mark_progress, end_progress = util.progress_func(nImg, lbl=lbl)
     for count, gpath in enumerate(imgpath_list):
         mark_progress(count)
         img = imread(gpath)
-        img_hash = helpers.hashstr(img, DUPLICATE_HASH_PRECISION)
+        img_hash = util.hashstr(img, DUPLICATE_HASH_PRECISION)
         if not img_hash in duplicates:
             duplicates[img_hash] = []
         duplicates[img_hash].append(gpath)
@@ -475,23 +475,23 @@ def splash_img_fpath():
 HOME = expanduser('~')
 #GLOBAL_CACHE_DIR = realpath('.hotspotter/global_cache')
 GLOBAL_CACHE_DIR = join(HOME, '.hotspotter/global_cache')
-helpers.ensuredir(GLOBAL_CACHE_DIR)
+util.ensuredir(GLOBAL_CACHE_DIR)
 
 
 def global_cache_read(cache_id, default='.'):
     cache_fname = join(GLOBAL_CACHE_DIR, 'cached_dir_%s.txt' % cache_id)
-    return helpers.read_from(cache_fname) if exists(cache_fname) else default
+    return util.read_from(cache_fname) if exists(cache_fname) else default
 
 
 def global_cache_write(cache_id, newdir):
     cache_fname = join(GLOBAL_CACHE_DIR, 'cached_dir_%s.txt' % cache_id)
-    helpers.write_to(cache_fname, newdir)
+    util.write_to(cache_fname, newdir)
 
 
 def delete_global_cache():
     global_cache_dir = GLOBAL_CACHE_DIR
-    helpers.remove_files_in_dir(global_cache_dir, recursive=True, verbose=True,
-                                dryrun=False)
+    util.remove_files_in_dir(global_cache_dir, recursive=True, verbose=True,
+                             dryrun=False)
 
 
 # --- Shelve Caching ---

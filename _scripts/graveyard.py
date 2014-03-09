@@ -249,7 +249,7 @@ def leave_out(expt_func=None, **kwargs):
     multiton_cxs = nx2_cxs[multiton_nxs]
     singleton_cxs = nx2_cxs[singleton_nxs]
     multiton_nChips = map(len, multiton_cxs)
-    print('[expt] multion #cxs stats: %r' % helpers.printable_mystats(multiton_nChips))
+    print('[expt] multion #cxs stats: %r' % util.printable_mystats(multiton_nChips))
     # Find test/train splits
     num_names = len(multiton_cxs)
 
@@ -284,7 +284,7 @@ def leave_out(expt_func=None, **kwargs):
         # Generate chip splits
         test_cxs_list = nx2_cxs[list(test_nxs)]
         test_nChip = map(len, test_cxs_list)
-        print('[expt] testnames #cxs stats: %r' % helpers.printable_mystats(test_nChip))
+        print('[expt] testnames #cxs stats: %r' % util.printable_mystats(test_nChip))
         test_cx_splits  = []
         for ix in xrange(len(test_cxs_list)):
             cxs = test_cxs_list[ix]
@@ -319,7 +319,7 @@ def leave_out(expt_func=None, **kwargs):
             print('[expt] Run expt_func()')
             print('[expt] M=%r, J=%r' % (nsplit_size,csplit_size))
             print(mj_label)
-            #rss = helpers.RedirectStdout('[expt %d/%d]' % (kx, K)); rss.start()
+            #rss = util.RedirectStdout('[expt %d/%d]' % (kx, K)); rss.start()
             expt_locals = expt_func(hs, pprefix=mj_label, **kwargs)
             print('[expt] Finished expt_func()')
             print('[expt] mth iteration: %r/%r' % (kx+1, num_nsplits))

@@ -13,7 +13,7 @@ import draw_func2 as df2
 import extract_patch
 from hsdev import params
 from hscom import fileio as io
-from hscom import helpers as util
+from hscom import util
 from hotspotter import QueryResult as qr
 
 #from interaction import interact_keypoints, interact_chipres, interact_chip # NOQA

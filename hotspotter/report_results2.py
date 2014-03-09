@@ -18,7 +18,7 @@ from os.path import join, exists
 import numpy as np
 # Hotspotter imports
 from hscom import fileio as io
-from hscom import helpers as util
+from hscom import util
 from hsdev import params
 from hscom.Printable import DynStruct
 from hsviz import draw_func2 as df2

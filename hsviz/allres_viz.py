@@ -4,8 +4,8 @@ from hscom import __common__
     __common__.init(__name__, '[allres-viz]', DEBUG=False)
 from os.path import join
 import numpy as np
-from hscom import helpers
-from hscom import helpers as util
+from hscom import util
+from hscom import util
 import draw_func2 as df2
 import os
 # Global variables
@@ -67,14 +67,14 @@ def plot_score_matrix(allres):
     score_matrix = allres.score_matrix
     title = 'Score Matrix\n' + allres.title_suffix
     # Find inliers
-    #inliers = helpers.find_std_inliers(score_matrix)
+    #inliers = util.find_std_inliers(score_matrix)
     #max_inlier = score_matrix[inliers].max()
     # Trunate above 255
     score_img = np.copy(score_matrix)
     #score_img[score_img < 0] = 0
     #score_img[score_img > 255] = 255
     #dim = 0
-    #score_img = helpers.norm_zero_one(score_img, dim=dim)
+    #score_img = util.norm_zero_one(score_img, dim=dim)
     # Make colors
     scores = score_img.flatten()
     colors = df2.scores_to_color(scores, logscale=True)
@@ -112,7 +112,7 @@ def dump(hs, subdir=None, quality=False, overwrite=False):
     fpath = hs.dirs.result_dir
     if subdir is not None:
         fpath = join(fpath, subdir)
-        helpers.ensurepath(fpath)
+        util.ensurepath(fpath)
     df2.save_figure(fpath=fpath, usetitle=True, overwrite=overwrite)
     df2.reset()
 
@@ -123,9 +123,9 @@ def save_if_requested(hs, subdir):
     #print('[viz] Dumping Image')
     fpath = hs.dirs.result_dir
     if not subdir is None:
-        subdir = helpers.sanatize_fname2(subdir)
+        subdir = util.sanatize_fname2(subdir)
         fpath = join(fpath, subdir)
-        helpers.ensurepath(fpath)
+        util.ensurepath(fpath)
     df2.save_figure(fpath=fpath, usetitle=True)
     df2.reset()
 
@@ -201,7 +201,7 @@ def show_descriptors_match_distances(orgres2_distance, fnum=1, db_name='', **kwa
     color_list = df2.distinct_colors(nColors)
     df2.figure(fnum=fnum, docla=True, doclf=True)
     pnum_ = lambda px: (nRow, nCol, px + 1)
-    plot_type = helpers.get_arg('--plot-type', default='plot')
+    plot_type = util.get_arg('--plot-type', default='plot')
 
     # Remember min and max val for each distance type (l1, emd...)
     distkey2_min = {distkey: np.uint64(-1) for distkey in disttype_list}

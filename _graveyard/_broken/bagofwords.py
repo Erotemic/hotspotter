@@ -14,8 +14,8 @@ import textwrap
 import hotspotter.draw_func2 as df2
 # Hotspotter Imports
 import hotspotter.fileio as io
-import hotspotter.helpers as helpers
-from hotspotter.helpers import Timer, tic, toc, printWARN
+import hotspotter.util as util
+from hotspotter.util import Timer, tic, toc, printWARN
 from hotspotter.Printable import DynStruct
 import hotspotter.algos as algos
 import hotspotter.spatial_verification2 as sv2
@@ -126,7 +126,7 @@ def __compute_vocabulary(cx2_desc, train_cxs, vocab_size, cache_dir=None):
     num_train_desc = train_desc.shape[0]
     if vocab_size > num_train_desc:
         msg = '[mc2] vocab_size(%r) > #train_desc(%r)' % (vocab_size, num_train_desc)
-        helpers.printWARN(msg)
+        util.printWARN(msg)
         vocab_size = num_train_desc / 2
     # Cluster descriptors into a visual vocabulary
     matcher_uid = params.get_matcher_uid(with_train=True, with_indx=False)
@@ -150,7 +150,7 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, indexed_cxs, ca
     ax2_cx, ax2_fx, ax2_desc = __aggregate_descriptors(cx2_desc, indexed_cxs)
     # Build UID
     matcher_uid  = params.get_matcher_uid()
-    data_uid = helpers.hashstr(ax2_desc)
+    data_uid = util.hashstr(ax2_desc)
     uid = data_uid + '_' + matcher_uid
     try: 
         cx2_vvec = io.smart_load(cache_dir, 'cx2_vvec', uid, '.cPkl') #sparse
@@ -159,18 +159,18 @@ def __index_database_to_vocabulary(cx2_desc, words, words_flann, indexed_cxs, ca
         wx2_idf  = io.smart_load(cache_dir, 'wx2_idf',  uid, '.npy')
         print('[mc2] successful cache load: vocabulary indexed databased.')
         return cx2_vvec, wx2_cxs, wx2_fxs, wx2_idf
-    #helpers.CacheException as ex:
+    #util.CacheException as ex:
     except IOError as ex:
         print(repr(ex))
 
     print('[mc2] quantizing each descriptor to a word')
     # Assign each descriptor to its nearest visual word
     print('[mc2] ...this may take awhile with no indication of progress')
-    tt1 = helpers.Timer('quantizing each descriptor to a word')
+    tt1 = util.Timer('quantizing each descriptor to a word')
     ax2_wx, _ = words_flann.nn_index(ax2_desc, 1, checks=128)
     tt1.toc()
     # Build inverse word to ax
-    tt2 = helpers.Timer('database_indexing')
+    tt2 = util.Timer('database_indexing')
     print('')
     print('[mc2] building inverse word to ax map')
     wx2_axs = [[] for _ in xrange(len(words))]

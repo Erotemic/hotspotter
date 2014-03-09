@@ -4,7 +4,7 @@ import sys
 sys.argv.extend(['--nologging', '--noindent'])
 import os  # NOQA
 from os.path import join, expanduser, exists, split  # NOQA
-from hscom import helpers as util
+from hscom import util
 import psutil  # NOQA
 
 

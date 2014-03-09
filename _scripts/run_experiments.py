@@ -2,7 +2,7 @@ from __future__ import division
 #from __future__ import print_function
 from hotspotter.HotSpotterAPI import HotSpotterAPI 
 from hotspotter.algo.spatial_functions import ransac
-from hotspotter.helpers import alloc_lists, Timer, vd, join_mkdir
+from hotspotter.util import alloc_lists, Timer, vd, join_mkdir
 from hotspotter.other.AbstractPrintable import AbstractManager, AbstractPrintable
 from hotspotter.other.ConcretePrintable import DynStruct
 from hotspotter.QueryManager import QueryResult

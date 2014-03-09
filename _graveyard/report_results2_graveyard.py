@@ -53,7 +53,7 @@
     #viz.DUMP = True
     #dump_all(allres)
     #if '--vrd' in sys.argv:
-        #helpers.vd(hs.dirs.result_dir)
+        #util.vd(hs.dirs.result_dir)
     ##dinspect(18)
     #print(allres)
     #exec(df2.present(wh=(900,600)))

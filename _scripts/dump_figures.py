@@ -76,7 +76,7 @@ positive_examples = {key: positive_examples[key] for key in DATASETS_LIST}
 
 
 def dump_fig(output_dir):
-    helpers.ensuredir(output_dir)
+    util.ensuredir(output_dir)
     df2.adjust_subplots_safe()
     df2.save_figure(fpath=output_dir, usetitle=True)
     df2.reset()
@@ -138,4 +138,4 @@ for dbname, query_list in positive_examples.iteritems():
             viz.show_name(hs, nx)
             dump_fig(output_dir)
 
-#helpers.vd(rootoutput_dir)
+#util.vd(rootoutput_dir)

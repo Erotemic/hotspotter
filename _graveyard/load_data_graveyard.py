@@ -57,7 +57,7 @@ def print_chiptable(hs_tables):
     print('=======================================================')
 
 
-@helpers.unit_test
+@util.unit_test
 def test_load_csv():
     db_dir = params.DEFAULT
     hs_dirs, hs_tables = load_csv_tables(db_dir)
@@ -69,7 +69,7 @@ def test_load_csv():
     return hs_dirs, hs_tables
 
 
-@helpers.__DEPRICATED__
+@util.__DEPRICATED__
 def get_sv_test_data(qcx=0, cx=None):
     return get_test_data(qcx, cx)
 

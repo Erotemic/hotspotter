@@ -6,7 +6,7 @@ import load_data2 as ld2
 import draw_func2 as df2
 import match_chips2 as mc2
 import vizualizations as viz
-import helpers
+import util
 import cv2
 import spatial_verification2 as sv2
 import sys
@@ -308,9 +308,9 @@ if __name__ == '__main__':
             high=6
         else:
             db_dir = params.DEFAULT
-            qcx = helpers.get_arg_after('--qcx', type_=int)
-            low = helpers.get_arg_after('--low', type_=int)
-            high = helpers.get_arg_after('--high', type_=int)
+            qcx = util.get_arg_after('--qcx', type_=int)
+            low = util.get_arg_after('--low', type_=int)
+            high = util.get_arg_after('--high', type_=int)
             if qcx is None:
                 raise Exception('fds')
                 qcx = 1

@@ -13,8 +13,8 @@ from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
 # HotSpotter
 from hscom import fileio as io
-from hscom import helpers
-from hscom import helpers as util
+from hscom import util
+from hscom import util
 from hsviz import draw_func2 as df2
 
 IS_INIT = False
@@ -77,7 +77,7 @@ def slot_(*types, **kwargs_):  # This is called at wrap time to get args
                 kwastr_list = ['%s=%s' % item for item in kwargs.iteritems()]
                 argstr = ', '.join(argstr_list + kwastr_list)
                 print('[**slot_.Begining] %s(%s)' % (func_name, argstr))
-                #with helpers.Indenter():
+                #with util.Indenter():
                 result = func(self, *args, **kwargs)
                 print('[**slot_.Finished] %s(%s)' % (func_name, argstr))
                 return result
@@ -289,7 +289,7 @@ def _user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=
     print('[*guitools] _user_option:\n %r: %s' + title + ': ' + msg)
     # Recall decision
     print('[*guitools] asking user: %r %r' % (msg, title))
-    cache_id = helpers.hashstr(title + msg)
+    cache_id = util.hashstr(title + msg)
     if use_cache:
         reply = io.global_cache_read(cache_id, default=None)
         if reply is not None:
@@ -324,7 +324,7 @@ def user_question(msg):
 
 
 def getQtImageNameFilter():
-    imgNamePat = ' '.join(['*' + ext for ext in helpers.IMG_EXTENSIONS])
+    imgNamePat = ' '.join(['*' + ext for ext in util.IMG_EXTENSIONS])
     imgNameFilter = 'Images (%s)' % (imgNamePat)
     return imgNameFilter
 

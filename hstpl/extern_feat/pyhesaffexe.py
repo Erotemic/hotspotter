@@ -99,7 +99,7 @@ def read_text_feat_file(outname, be_clean=True):
 
 def filter_kpts_scale(kpts, desc, scale_max=None, scale_min=None, **kwargs):
     #max_scale=1E-3, min_scale=1E-7
-    #from hotspotter import helpers
+    #from hotspotter import util
     if len(kpts) == 0 or \
        scale_max is None or scale_min is None or\
        scale_max < 0 or scale_min < 0 or\
@@ -108,13 +108,13 @@ def filter_kpts_scale(kpts, desc, scale_max=None, scale_min=None, **kwargs):
     acd = kpts.T[2:5]
     det_ = acd[0] * acd[2]
     scale = np.sqrt(det_)
-    #print('scale.stats()=%r' % helpers.printable_mystats(scale))
+    #print('scale.stats()=%r' % util.printable_mystats(scale))
     #is_valid = np.bitwise_and(scale_min < scale, scale < scale_max).flatten()
     is_valid = np.logical_and(scale_min < scale, scale < scale_max).flatten()
     #scale = scale[is_valid]
     kpts = kpts[is_valid]
     desc = desc[is_valid]
-    #print('scale.stats() = %s' % str(helpers.printable_mystats(scale)))
+    #print('scale.stats() = %s' % str(util.printable_mystats(scale)))
     return kpts, desc
 
 

@@ -16,7 +16,7 @@ def build_voters_profile(hs, qcx, K):
     ax2_cx       = args.ax2_cx
     ax2_fx       = args.ax2_fx
     print('[invest] Building voter preferences over %s indexed descriptors. K=%r' %
-          (helpers.commas(len(ax2_cx)), K))
+          (util.commas(len(ax2_cx)), K))
     nn_args = (args, qcx, cx2_kpts, cx2_desc, cx2_rchip_size, K+1)
     nn_result = mc2.vsmany_nearest_neighbors(*nn_args)
     (qfx2_ax, qfx2_dists, qfx2_valid) = nn_result
@@ -44,7 +44,7 @@ def filter_alternative_frequencies(alternative_ids1, qfx2_altx1, correct_altx, m
     smallest_cfreq = altx2_freq[smallest_altx]
     smallest_thresh = len(smallest_cfreq) - max_cands
     print('Current num alternatives = %r. Truncating to %r' % (len(altx2_freq), max_cands))
-    print('Frequency stats: '+str(helpers.mystats(altx2_freq[altx2_freq != 0])))
+    print('Frequency stats: '+str(util.mystats(altx2_freq[altx2_freq != 0])))
     print('Correct alternative frequency = %r' % altx2_freq[correct_altx])
     print('Correct alternative frequency rank = %r' % (np.where(smallest_altx == correct_altx)[0],)) 
     if smallest_thresh > -1:
@@ -95,15 +95,15 @@ def build_pairwise_votes(alternative_ids, qfx2_altx):
                            for rank in xrange(0, len(partial_order))]
         pairwise_losers  = [np.hstack((compliment_order, partial_order[rank+1:]))
                            for rank in xrange(0, len(partial_order))]
-        pairwise_vote_list = [helpers.cartesian((pwinners, plosers)) for pwinners, plosers
+        pairwise_vote_list = [util.cartesian((pwinners, plosers)) for pwinners, plosers
                                     in zip(pairwise_winners, pairwise_losers)]
         pairwise_votes = np.vstack(pairwise_vote_list)
         return pairwise_votes
     pairwise_mat = np.zeros((nAlts, nAlts))
     nVoters = len(qfx2_altx)
-    progstr = helpers.make_progress_fmt_str(nVoters, lbl='[voting] building P(d)')
+    progstr = util.make_progress_fmt_str(nVoters, lbl='[voting] building P(d)')
     for ix, qfx in enumerate(xrange(nVoters)):
-        helpers.print_(progstr % (ix+1))
+        util.print_(progstr % (ix+1))
         partial_order = qfx2_altx[qfx]
         partial_order = partial_order[partial_order != -1]
         if len(partial_order) == 0: continue
@@ -135,7 +135,7 @@ def optimize(M):
     con = lambda x: linalg.norm(x) - 1
     cons = {'type':'eq', 'fun': con}
     print('[vote] running optimization')
-    with helpers.Timer() as t:
+    with util.Timer() as t:
         res = scipy.optimize.minimize(f, x0, args=(M,), constraints=cons)
     x = res['x']
     xnorm = linalg.norm(x)
@@ -221,7 +221,7 @@ def viz_votingrule_table(ranked_candiates, ranked_scores, correct_altx, title, f
         \begin{tabular}{%s}
         %s
         \end{tabular}
-        ''') % (col_placement, helpers.indent(body))
+        ''') % (col_placement, util.indent(body))
         print(latex_str)
         plt.text(0, 0, latex_str, fontsize=14, 
                  horizontalalignment='left',
@@ -362,9 +362,9 @@ def test_voting_rules(hs, qcx, K, fnum=1):
     m = len(alternative_ids)
     n = len(qfx2_altx)
     k = len(qfx2_altx.T)
-    bigo_breaking = helpers.int_comma_str((m+k)*k*n)
-    bigo_gmm = helpers.int_comma_str(int(m**2.376))
-    bigo_gmm3 = helpers.int_comma_str(int(m**3))
+    bigo_breaking = util.int_comma_str((m+k)*k*n)
+    bigo_gmm = util.int_comma_str(int(m**2.376))
+    bigo_gmm3 = util.int_comma_str(int(m**3))
     print('[voting] m = num_alternatives = %r ' % len(alternative_ids))
     print('[voting] n = nVoters = %r ' % len(qfx2_altx))
     print('[voting] k = top_k_breaking = %r ' % len(qfx2_altx.T))

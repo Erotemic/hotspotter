@@ -15,9 +15,9 @@ def checktext(rpath):
 
     if text1 != text2:
         print('difference in: %r' % rpath)
-        from hscom import helpers
-        helpers.vd(dirname(fpath1))
-        helpers.vd(dirname(fpath2))
+        from hscom import util
+        util.vd(dirname(fpath1))
+        util.vd(dirname(fpath2))
         raise Exception('difference')
 
 

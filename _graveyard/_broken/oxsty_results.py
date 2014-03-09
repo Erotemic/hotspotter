@@ -1,5 +1,5 @@
 # Hotspotter imports
-import helpers
+import util
 import load_data2
 import oxsty_results
 import params
@@ -33,14 +33,14 @@ def oxsty_mAP_results(allres):
     # Check directorys where ranked lists of images names will be put
     oxsty_qres_dname = 'oxsty_ranked_lists' +allres.title_suffix
     oxsty_qres_dpath = join(hs.dirs.qres_dir, oxsty_qres_dname)
-    helpers.ensure_path(oxsty_qres_dpath)
+    util.ensure_path(oxsty_qres_dpath)
 
     oxford_gt_dir = join(hs.dirs.db_dir, 'oxford_style_gt')
-    helpers.assertpath(oxford_gt_dir)
+    util.assertpath(oxford_gt_dir)
     compute_ap_exe = normpath(join(oxford_gt_dir, '../compute_ap'))
-    if not helpers.checkpath(compute_ap_exe):
+    if not util.checkpath(compute_ap_exe):
         compute_ap_exe = normpath(join(oxford_gt_dir, '/compute_ap'))
-    helpers.assertpath(compute_ap_exe)
+    util.assertpath(compute_ap_exe)
     # Get the mAP scores using philbins program
     query_mAP_list = []
     query_mAP_cx   = []
@@ -57,7 +57,7 @@ def oxsty_mAP_results(allres):
     # build a CSV file with the results
     header  = '# Oxford Style Map Scores: title_suffix=%r\n' % allres.title_suffix
     header += scalar_mAP_str
-    header += helpers.get_timestamp(format='comment')+'\n'
+    header += util.get_timestamp(format='comment')+'\n'
     header += '# Full Parameters: \n#' + params.param_string().replace('\n','\n#')+'\n\n'
     column_labels = ['QCX', 'mAP']
     column_list   = [query_mAP_cx, query_mAP_list]
@@ -97,7 +97,7 @@ def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
     cx_aug = 'qcx_'+str(qcx)
     ranked_list_fname = 'ranked_list_' + cx_aug + ground_truth_query + '.txt'
     ranked_list_fpath = join(oxsty_qres_dpath, ranked_list_fname)
-    helpers.write_to(ranked_list_fpath, '\n'.join(ranked_list))
+    util.write_to(ranked_list_fpath, '\n'.join(ranked_list))
     # execute external mAP code:
     # ./compute_ap [GROUND_TRUTH] [RANKED_LIST]
     os.chdir(oxford_gt_dir)
@@ -111,7 +111,7 @@ def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
                                 filename(ranked_list_fpath)))
         print('Executing: %r' % printable_cmd)
     else:
-        helpers.print_('.')
+        util.print_('.')
     args = (compute_ap_exe, ground_truth_query, ranked_list_fpath)
 
     cmdstr  = ' '.join(args)
@@ -124,13 +124,13 @@ def get_oxsty_mAP_score_from_res(hs, res, SV, oxsty_qres_dpath,
         if OXSTY_VERBOSE:
             print(repr(ex))
         if repr(ex) == "OSError(12, 'Cannot allocate memory')":
-            args_hash = helpers.hashstr(args)
+            args_hash = util.hashstr(args)
             proc_err_fname = 'proc_err'+args_hash
             proc_err_cmd = proc_err_fname+'.cmd'
             proc_err_out = proc_err_fname+'.out'
-            helpers.write_to(proc_err_cmd, repr(args))
-            if helpers.checkpath(proc_err_out):
-                out = helpers.read_from(proc_err_out)
+            util.write_to(proc_err_cmd, repr(args))
+            if util.checkpath(proc_err_out):
+                out = util.read_from(proc_err_out)
     mAP = float(out.strip())
     os.chdir(cwd)
     return mAP
@@ -186,8 +186,8 @@ def debug_compute_ap_exe(compute_ap_exe,
     print('Debugging compute_ap executable:')
     print('-----------')
     print('Path checks: ')
-    helpers.checkpath(ranked_list_fpath, True)
-    helpers.checkpath(compute_ap_exe, True)
+    util.checkpath(ranked_list_fpath, True)
+    util.checkpath(compute_ap_exe, True)
     print('-----------')
     print('Command string check:')
     args = (compute_ap_exe, ground_truth_query, ranked_list_fpath)

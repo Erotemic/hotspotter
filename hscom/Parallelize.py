@@ -10,7 +10,7 @@ import multiprocessing
 import os
 import sys
 # Hotspotter
-import helpers as util
+import util
 
 
 @profile

@@ -5,7 +5,7 @@ if __name__ == '__main__':
     print('=================================')
     import main
     hs = main.main()
-    cx = helpers.get_arg('--cx', type_=int)
+    cx = util.get_arg('--cx', type_=int)
     qcx = hs.get_valid_cxs()[0]
     if cx is not None:
         qcx = cx

@@ -13,7 +13,7 @@ import coverage
 import nn_filters
 import spatial_verification2 as sv2
 import voting_rules2 as vr2
-from hscom import helpers as util
+from hscom import util
 
 
 #=================

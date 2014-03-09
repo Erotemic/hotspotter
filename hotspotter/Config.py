@@ -3,7 +3,7 @@ from hscom import __common__
 print, print_, print_on, print_off, rrr, profile, printDBG =\
     __common__.init(__name__, '[Config]', DEBUG=False)
 from hscom.Preferences import Pref
-from hscom import helpers as util
+from hscom import util
 
 ConfigBase = Pref
 #ConfigBase = DynStruct

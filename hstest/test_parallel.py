@@ -17,9 +17,9 @@ if __name__ == '__main__':
         u, s, v = np.linalg.svd(data)
         return s[0] + tmp
 
-    with helpers.Timer('ser'):
+    with util.Timer('ser'):
         x2 = map(complex_func, data_list)
-    with helpers.Timer('par'):
+    with util.Timer('par'):
         x1 = p.map(complex_func, data_list)
 
     '''

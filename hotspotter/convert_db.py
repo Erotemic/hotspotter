@@ -12,8 +12,8 @@ import parse
 from PIL import Image
 import numpy as np
 # Hotspotter
-from hscom import helpers
-from hscom import helpers as util
+from hscom import util
+from hscom import util
 import load_data2 as ld2
 import db_info
 
@@ -142,11 +142,11 @@ def __read_oxsty_gtfile(gt_fpath, name, quality, img_dpath, corrupted_gname_set)
 def convert_from_oxford_style(dbdir):
     # Get directories for the oxford groundtruth
     oxford_gt_dpath      = join(dbdir, 'oxford_style_gt')
-    helpers.assertpath(oxford_gt_dpath)
+    util.assertpath(oxford_gt_dpath)
     # Check for corrupted files (Looking at your Paris Buildings Dataset)
     corrupted_file_fpath = join(oxford_gt_dpath, 'corrupted_files.txt')
     corrupted_gname_set = set([])
-    if helpers.checkpath(corrupted_file_fpath):
+    if util.checkpath(corrupted_file_fpath):
         with open(corrupted_file_fpath) as f:
             corrupted_gname_list = f.read().splitlines()
         corrupted_gname_set = set(corrupted_gname_list)
@@ -154,12 +154,12 @@ def convert_from_oxford_style(dbdir):
     # Recursively get relative path of all files in img_dpath
     print('Loading Oxford Style Images from: ' + dbdir)
     img_dpath  = join(dbdir, 'images')
-    helpers.assertpath(img_dpath)
+    util.assertpath(img_dpath)
     gname_list_ = [join(relpath(root, img_dpath), fname).replace('\\', '/').replace('./', '')
                    for (root, dlist, flist) in os.walk(img_dpath)
                    for fname in iter(flist)]
     gname_list = [gname for gname in iter(gname_list_)
-                  if not gname in corrupted_gname_set and helpers.matches_image(gname)]
+                  if not gname in corrupted_gname_set and util.matches_image(gname)]
     print(' * num_images = %d ' % len(gname_list))
 
     # Read the Oxford Style Groundtruth files
@@ -270,7 +270,7 @@ def convert_from_oxford_style(dbdir):
     #
     # Write tables
     internal_dir      = join(dbdir, ld2.RDIR_INTERNAL2)
-    helpers.ensurepath(internal_dir)
+    util.ensurepath(internal_dir)
     write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta, prop_dict)
     write_name_table(internal_dir, nx2_nid, nx2_name)
     write_image_table(internal_dir, gx2_gid, gx2_gname)
@@ -286,12 +286,12 @@ def convert_named_chips(dbdir, img_dpath=None):
         img_dpath = dbdir + '/images'
     print('Converting dbdir=%r and img_dpath=%r' % (dbdir, img_dpath))
     # --- Build Image Table ---
-    helpers.print_('Building name table: ')
-    gx2_gname = helpers.list_images(img_dpath)
+    util.print_('Building name table: ')
+    gx2_gname = util.list_images(img_dpath)
     gx2_gid   = range(1, len(gx2_gname) + 1)
     print('There are %d images' % len(gx2_gname))
     # ---- Build Name Table ---
-    helpers.print_('Building name table: ')
+    util.print_('Building name table: ')
     name_set = set([])
     for gx, gname in enumerate(gx2_gname):
         name, num = parse.parse(gt_format, gname)
@@ -331,7 +331,7 @@ def convert_named_chips(dbdir, img_dpath=None):
 
     # Write tables
     internal_dir = join(dbdir, ld2.RDIR_INTERNAL2)
-    helpers.ensurepath(internal_dir)
+    util.ensurepath(internal_dir)
     write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta)
     write_name_table(internal_dir, nx2_nid, nx2_name)
     write_image_table(internal_dir, gx2_gid, gx2_gname)
@@ -347,7 +347,7 @@ def init_database_from_images(dbdir, img_dpath=None, gt_format=None,
     name_set = groundtruth_from_imagenames(gx2_gname, gt_format)
     nx2_name, nx2_nid = nametables_from_nameset(name_set)
     # ---- Build Chip Table ---
-    helpers.print_('Building chip table: ')
+    util.print_('Building chip table: ')
     cx2_cid     = []
     cx2_theta   = []
     cx2_roi     = []
@@ -382,7 +382,7 @@ def init_database_from_images(dbdir, img_dpath=None, gt_format=None,
 
     # Write tables
     internal_dir      = join(dbdir, ld2.RDIR_INTERNAL2)
-    helpers.ensurepath(internal_dir)
+    util.ensurepath(internal_dir)
     write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta)
     write_name_table(internal_dir, nx2_nid, nx2_name)
     write_image_table(internal_dir, gx2_gid, gx2_gname)
@@ -467,7 +467,7 @@ def wildid_to_tables(dbdir, img_dpath, column_labels, column_list):
 
     def get_lbl_pos(column_labels, valid_labels):
         for lbl in valid_labels:
-            index = helpers.listfind(column_labels, lbl)
+            index = util.listfind(column_labels, lbl)
             if index is not None:
                 return index
         raise Exception('There is no valid label')
@@ -633,7 +633,7 @@ def wildid_to_tables(dbdir, img_dpath, column_labels, column_list):
     #
     # Write tables
     internal_dir      = join(dbdir, ld2.RDIR_INTERNAL2)
-    helpers.ensurepath(internal_dir)
+    util.ensurepath(internal_dir)
     write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta, prop_dict)
     write_name_table(internal_dir, nx2_nid, nx2_name)
     write_image_table(internal_dir, gx2_gid, gx2_gname)
@@ -656,7 +656,7 @@ def roi_from_imgsize(img_fpath, silent=False):
 
 
 def imagetables_from_img_dpath(img_dpath=None):
-    gx2_gname = helpers.list_images(img_dpath)
+    gx2_gname = util.list_images(img_dpath)
     gx2_gid   = range(1, len(gx2_gname) + 1)
     print('There are %d images' % len(gx2_gname))
     return gx2_gid, gx2_gname
@@ -721,12 +721,12 @@ def write_to_wrapper(csv_fpath, csv_string):
                 #print(diff_str)
                 #print('--------')
     else:
-        helpers.write_to(csv_fpath, csv_string)
+        util.write_to(csv_fpath, csv_string)
 
 
 def write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid,
                      cx2_roi, cx2_theta, prop_dict=None):
-    helpers.__PRINT_WRITES__ = True
+    util.__PRINT_WRITES__ = True
     print('Writing Chip Table')
     # Make chip_table.csv
     header = '# chip table'
@@ -745,7 +745,7 @@ def write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid,
 
 
 def write_name_table(internal_dir, nx2_nid, nx2_name):
-    helpers.__PRINT_WRITES__ = True
+    util.__PRINT_WRITES__ = True
     # Make name_table.csv
     column_labels = ['nid', 'name']
     column_list = [nx2_nid[2:], nx2_name[2:]]  # dont write ____ for backcomp
@@ -756,7 +756,7 @@ def write_name_table(internal_dir, nx2_nid, nx2_name):
 
 
 def write_image_table(internal_dir, gx2_gid, gx2_gname):
-    helpers.__PRINT_WRITES__ = True
+    util.__PRINT_WRITES__ = True
     # Make image_table.csv
     column_labels = ['gid', 'gname', 'aif']  # do aif for backwards compatibility
     gx2_aif = np.ones(len(gx2_gid), dtype=np.uint32)

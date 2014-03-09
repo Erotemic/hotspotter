@@ -5,11 +5,11 @@ import __common__
 # Python
 import os
 import re
-import helpers
+import util
 import textwrap
 # Science
 import numpy as np
-from hscom import helpers as util
+from hscom import util
 from hscom import cross_platform as cplat
 from os.path import join, splitext
 
@@ -100,15 +100,15 @@ def latex_multirow(data, nrow=2):
 
 
 def latex_mystats(lbl, data, mode=0):
-    stats_ = helpers.mystats(data)
+    stats_ = util.mystats(data)
     max_ = stats_['max']
     min_ = stats_['min']
     mean = stats_['mean']
     std  = stats_['std']
     shape = stats_['shape']
 
-    int_fmt = lambda num: helpers.num_fmt(int(num))
-    float_fmt = lambda num: helpers.num_fmt(float(num))
+    int_fmt = lambda num: util.num_fmt(int(num))
+    float_fmt = lambda num: util.num_fmt(float(num))
     tup_fmt = lambda tup: str(tup)
     fmttup = (float_fmt(min_), float_fmt(max_), float_fmt(mean), float_fmt(std), tup_fmt(shape))
     lll = ' ' * len(lbl)
@@ -130,7 +130,7 @@ def latex_mystats(lbl, data, mode=0):
 
 
 def latex_scalar(lbl, data):
-    return (r'%s & %s\\' % (lbl, helpers.num_fmt(data))) + '\n'
+    return (r'%s & %s\\' % (lbl, util.num_fmt(data))) + '\n'
 
 
 def make_stats_tabular():

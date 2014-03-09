@@ -52,7 +52,7 @@ def translate_cython_line(in_line, PYX_MAP):
 
 def translate_python_to_cython(input_lines):
     try:
-        from hscom import helpers as util
+        from hscom import util
         timestamp = util.get_timestamp()
     except Exception:
         timestamp = '???'

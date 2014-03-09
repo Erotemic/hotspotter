@@ -100,10 +100,10 @@ def test__():
         #_qfs = vvec_flat[wx]
             #_fs = cx2_bow[cx, wx]
             #fs  = _qfs * _fs
-    #print helpers.toc(t)
+    #print util.toc(t)
 
 
-    #t = helpers.tic()
+    #t = util.tic()
     #cx2_fm = [[] for _ in xrange(len(cx2_cid))]
     #cx2_fs = [[] for _ in xrange(len(cx2_cid))]
     #qfx2_cxlist = wx2_cxs[qfx2_wx] 
@@ -119,8 +119,8 @@ def test__():
             #cx2_fs[cx].append(fs)
     #cx2_fm_ = cx2_fm
     #cx2_fs_ = cx2_fs
-    #print helpers.toc(t)
-    #t = helpers.tic()
+    #print util.toc(t)
+    #t = util.tic()
 
 # the inverted file (and probably tf-idf scores too)
 # Compute word assignments of database descriptors
@@ -153,7 +153,7 @@ def __compute_vocabulary(hs, train_cxs):
 
 
 #------------------- convert
-@helpers.__DEPRICATED__
+@util.__DEPRICATED__
 def __read_ox_gtfile_OLD(gt_fpath, gt_name, quality):
     ox_chip_info_list = []
     with open(gt_fpath,'r') as file:
@@ -178,7 +178,7 @@ def __read_ox_gtfile_OLD(gt_fpath, gt_name, quality):
             ox_chip_info_list.append(ox_chip_info)
     return ox_chip_info_list
                      
-@helpers.__DEPRICATED__
+@util.__DEPRICATED__
 def convert_from_oxford_sytle_OLD(db_dir):
     hs_dirs, hs_tables = load_data2.load_csv_tables(db_dir)
 
@@ -188,7 +188,7 @@ def convert_from_oxford_sytle_OLD(db_dir):
 
     # Check for corrupted files (Looking at your Paris Buildings Dataset)
     corrupted_gname_list = []
-    if helpers.checkpath(corrupted_file_fpath):
+    if util.checkpath(corrupted_file_fpath):
         with open(corrupted_file_fpath) as f:
             corrupted_gname_list = f.read().splitlines()
         corrupted_gname_list = set(corrupted_gname_list)
@@ -746,17 +746,17 @@ def aff_inliers_from_randomsac(kpts1_m, kpts2_m, xy_thresh_sqrd, nIter=500, nSam
 # feature_compute2.py
 
             #print (' * Stacking '+str(len(cx2_desc))+' features')
-            #print helpers.info(cx2_desc, 'cx2_desc')
+            #print util.info(cx2_desc, 'cx2_desc')
 
-            #print (' * '+helpers.info(ax2_desc, 'ax2_desc'))
-            #print (' * '+helpers.info(ax2_desc_white, 'ax2_desc_white'))
+            #print (' * '+util.info(ax2_desc, 'ax2_desc'))
+            #print (' * '+util.info(ax2_desc_white, 'ax2_desc_white'))
 
             #print ('Looping through '+str(len(cx2_desc))+' features')
 
-                #print ('index=%r ; offset=%r ; new_desc.shape=%r' % (offset, index, helpers.info(new_desc,'new_desc')))
+                #print ('index=%r ; offset=%r ; new_desc.shape=%r' % (offset, index, util.info(new_desc,'new_desc')))
 
             #print ('index=%r ; offset=%r ; new_desc.shape=%r' % (index, offset, new_desc.shape,))
-            #print ' * '+helpers.info(cx2_desc, 'cx2_desc')
+            #print ' * '+util.info(cx2_desc, 'cx2_desc')
 
     #if __WHITEN_INDIVIDUAL__: # I dont think this is the way to go
     #    cx2_desc = [algos.whiten(d) for (k,d) in cx2_feats]
@@ -768,8 +768,8 @@ def aff_inliers_from_randomsac(kpts1_m, kpts2_m, xy_thresh_sqrd, nIter=500, nSam
             desc_mem_use = 0
             import draw_func2 as df2
             #exec(df2.present())
-            kpts_bits, num_kpts, _ = helpers.numpy_list_num_bits(cx2_kpts, np.float32, 5)
-            desc_bits, num_desc, _ = helpers.numpy_list_num_bits(cx2_desc, np.uint8, 128)
+            kpts_bits, num_kpts, _ = util.numpy_list_num_bits(cx2_kpts, np.float32, 5)
+            desc_bits, num_desc, _ = util.numpy_list_num_bits(cx2_desc, np.uint8, 128)
             print('#kpts = %r ; bits(kpts)=%r ; MB(kpts)=%r' % (num_kpts,
                                                                 kpts_bits,
                                                                 kpts_bits / 8 / 2.0**20))

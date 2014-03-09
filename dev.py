@@ -23,7 +23,7 @@ from hotspotter import feature_compute2 as fc2
 from hotspotter import load_data2 as ld2
 from hotspotter import matching_functions as mf
 from hotspotter import report_results2 as rr2
-from hscom import helpers as util
+from hscom import util
 from hscom import latex_formater
 from hsdev import params
 from hsdev import dev_stats

@@ -127,7 +127,7 @@ def list_images(img_dpath, ignore_list=[], recursive=False, fullpath=True):
 
 def ensurepath(path_):
     if not exists(path_):
-        print('[helpers] mkdir(%r)' % path_)
+        print('[util] mkdir(%r)' % path_)
         os.makedirs(path_)
     return True
 

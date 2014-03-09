@@ -3,11 +3,11 @@ import DataStructures as ds
 import dev
 import match_chips3 as mc3
 import numpy as np
-import helpers
+import util
 from Printable import DynStruct
 import sys
 import params
-import helpers
+import util
 import extract_patch as extract_patch
 import pyflann
 
@@ -58,7 +58,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
     state = State()
     state.fnum = fnum
     fx_ptr = [0]
-    hprint = helpers.horiz_print
+    hprint = util.horiz_print
     kpts = hs.get_kpts(cx)
     scale = np.sqrt(kpts.T[2]*kpts.T[4])
     desc = hs.get_desc(cx)
@@ -77,7 +77,7 @@ def chip_interaction(hs, cx, notes, fnum=1, **kwargs):
             is_valid[:] = np.bitwise_and(scale <= state.scale_max, is_valid)
         print(state)
         print('%d valid keypoints' % sum(is_valid))
-        print('kpts scale ' + helpers.printable_mystats(scale[is_valid]))
+        print('kpts scale ' + util.printable_mystats(scale[is_valid]))
         select_ith_keypoint(fx_ptr[0])
 
     def keypoint_info(fx):
@@ -223,7 +223,7 @@ if __name__ == '__main__':
     freeze_support()
     print('[interact] __main__ ')
     main_locals = dev.dev_main()
-    exec(helpers.execstr_dict(main_locals, 'main_locals'))
+    exec(util.execstr_dict(main_locals, 'main_locals'))
     fnum = 1
     interact1(hs, qon_list, fnum)
     #df2.update()

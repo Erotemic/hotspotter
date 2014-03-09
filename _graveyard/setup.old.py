@@ -3,7 +3,7 @@ from os.path import isdir, isfile
 from distutils.core import setup
 from distutils.util import convert_path
 from fnmatch import fnmatchcase
-from _setup import git_helpers as git_helpers
+from _setup import git_util as git_util
 
 def get_hotspotter_datafiles():
     'Build the data files used by py2exe and py2app'
@@ -99,7 +99,7 @@ def write_version_py(filename=None):
         version = full_version''')
     FULL_VERSION = VERSION
     if isdir('.git'):
-        GIT_REVISION = git_helpers.git_version()
+        GIT_REVISION = git_util.git_version()
     # must be a source distribution, use existing version file
     elif exists(filename):
         GIT_REVISION = 'RELEASE'

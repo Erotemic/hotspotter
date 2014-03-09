@@ -14,7 +14,7 @@ import guifront
 import guitools
 from guitools import drawing, slot_
 from guitools import backblocking as blocking
-from hscom import helpers as util
+from hscom import util
 from hscom import fileio as io
 from hsdev import params
 from hsviz import draw_func2 as df2

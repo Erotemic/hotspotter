@@ -72,7 +72,7 @@ def compare_matrix_to_rows(row_matrix, row_list, comp_op=np.equal, logic_op=np.l
 
 
 def _nn_normalized_weight(normweight_fn, hs, qcx2_nns, qreq):
-    #from hscom import helpers as util
+    #from hscom import util
     #util.stash_testdata('qcx2_nns')
     # Only valid for vsone
     K = qreq.cfg.nn_cfg.K

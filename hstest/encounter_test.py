@@ -3,7 +3,7 @@ from __future__ import division, print_function
 import __builtin__
 import multiprocessing
 from hotspotter import encounter
-from hscom import helpers as util
+from hscom import util
 from hsviz import draw_func2 as df2
 from hsdev import test_api
 from hsdev import dev_api

@@ -3,7 +3,7 @@
     #qcx2_nns = {qcx:func(qcx) for qcx in qcxs}
     #printDBG('[mf] Finding nearest neighbors of qcx=%r' % (qcx,))
     #printDBG('[mf] qfx2_desc.shape nearest neighbors of qcx=%r' % (qcx,))
-    #helpers.printvar2('qfx2_desc', '.shape')
+    #util.printvar2('qfx2_desc', '.shape')
 
 
     #SPEEDprint('[mf] * computing %s weights' % nnfilter)
@@ -31,7 +31,7 @@
     #printDBG('[mf] * thresh=%r ' % thresh)
     #printDBG('[mf] * sign=%r ' % sign)
     #if isinstance(thresh, (int, float)) or not weight == 0:
-        #printDBG('[mf] * \\ qfx2_weights = %r' % helpers.printable_mystats(qfx2_weights.flatten()))
+        #printDBG('[mf] * \\ qfx2_weights = %r' % util.printable_mystats(qfx2_weights.flatten()))
             #qfx2_valid  = np.bitwise_and(qfx2_valid, qfx2_passed)
 
 

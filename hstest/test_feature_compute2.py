@@ -2,8 +2,8 @@
 from __future__ import division, print_function
 from hotspotter import HotSpotterAPI as api
 from hotspotter import feature_compute2 as fc2
-from hscom import helpers
-from hscom import helpers as util
+from hscom import util
+from hscom import util
 from hsviz import viz
 from hsdev import argparse2
 import multiprocessing
@@ -12,9 +12,9 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     print('[fc2] __main__ = feature_compute2.py')
     # Read Args
-    cx = helpers.get_arg('--cx', type_=int)
-    delete_features = helpers.get_flag('--delete-features', default=False)
-    nRandKpts = helpers.get_arg('--nRandKpts', type_=int)
+    cx = util.get_arg('--cx', type_=int)
+    delete_features = util.get_flag('--delete-features', default=False)
+    nRandKpts = util.get_arg('--nRandKpts', type_=int)
     # Debugging vars
     feat_cfg = None
     cx_list = None

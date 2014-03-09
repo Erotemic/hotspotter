@@ -4,7 +4,7 @@ import hotspotter.load_data2 as ld2
 import hotspotter.match_chips2 as mc2
 import hotspotter.draw_func2 as df2
 import hotspotter.params
-import hotspotter.helpers as helpers
+import hotspotter.util as util
 import pyflann
 
 def get_vsone_flann(data):
@@ -74,8 +74,8 @@ if __name__ == '__main__':
     if not 'hs' in vars():
         hs = ld2.HotSpotter()
         hs.load_all(db_dir, matcher=False)
-        qcx = helpers.get_arg_after('--qcx', type_=int, default=0)
-        cx = helpers.get_arg_after('--cx', type_=int)
+        qcx = util.get_arg_after('--qcx', type_=int, default=0)
+        cx = util.get_arg_after('--cx', type_=int)
         if cx is None:
             cx_list = hs.get_other_cxs(qcx)
         else:

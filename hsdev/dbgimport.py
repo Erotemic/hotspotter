@@ -70,8 +70,8 @@ from hscom import Printable
 from hsdev import argparse2
 from hscom import cross_platform as cplat
 from hscom import fileio as io
-from hscom import helpers
-from hscom import helpers as util
+from hscom import util
+from hscom import util
 from hscom import latex_formater
 from hsdev import params
 from hscom import tools

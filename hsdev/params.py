@@ -117,7 +117,7 @@ def db_to_dbdir(db):
         dbdir = join(work_dir, dbalias_dict[db.upper()])
     if not exists(dbdir):
         import os
-        from hscom import helpers as util
+        from hscom import util
         print('!!!!!!!!!!!!!!!!!!!!!')
         print('[params] WARNING: db=%r not found in work_dir=%r' %
               (db, work_dir))

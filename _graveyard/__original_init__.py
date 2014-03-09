@@ -89,7 +89,7 @@
 #import hotspotter.gui as gui
 #import hotspotter.tpl.extern_feat as extern_feat
 #import hotspotter.params as params
-#import hotspotter.helpers as helpers
+#import hotspotter.util as util
 ## Main Pipeline
 #import hotspotter.load_data2 as ld2
 #import hotspotter.chip_compute2 as cc2
@@ -114,7 +114,7 @@
     #imp.reload(sys.modules[__name__])
 
 #def hotspotter_modulenames():
-    #modpath_list = helpers.glob(HSDIR, '*.py')
+    #modpath_list = util.glob(HSDIR, '*.py')
     #def just_name(path):
         #return os.path.splitext(os.path.split(path)[1])[0]
     #modname_list = [just_name(path) for path in modpath_list]
@@ -126,8 +126,8 @@
     ##for module in non_hots_modlist:
         ##print('not reloading %r ' % (module,))
     #for name, module in mymods_dict['hotspotter']:
-        #helpers.reload_module()
-        #explore_str = helpers.explore_module(module, maxdepth=1)
+        #util.reload_module()
+        #explore_str = util.explore_module(module, maxdepth=1)
         #explore_list.append(explore_str)
     #print '\n'.join(explore_list)
 
@@ -163,8 +163,8 @@
         #mod_list  = [modules for _, modules in modlist]
         ## do dot hack
         #mod_names = list(set([name if name.find('.') == -1 else name[0:name.find('.')] for name in mod_names]))
-        ##print(helpers.indent('\n'.join(sorted(mod_names))))
-        #print(helpers.indent('\n'.join(sorted(mod_names))))
+        ##print(util.indent('\n'.join(sorted(mod_names))))
+        #print(util.indent('\n'.join(sorted(mod_names))))
     #for key, modlist in mymods_dict.iteritems():
         #print ('Module  Type: '+str(key))
         #print (' #loaded='+str(len(modlist)))
@@ -200,7 +200,7 @@
     #sv1.reload_module()
     #Pref.reload_module()
     #algos.reload_module()
-    #helpers.reload_module()
+    #util.reload_module()
     #params.reload_module()
     #report_results2.reload_module()
     #extern_feat.reload_module()

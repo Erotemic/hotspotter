@@ -137,7 +137,7 @@ def target_dsize(img, M):
     def free_some_memory(hs):
         print('[hs] Releasing matcher memory')
         import gc
-        helpers.memory_profile()
+        util.memory_profile()
         print("[hs] HotSpotter Referrers: "+str(gc.get_referrers(hs)))
         print("[hs] Matcher Referrers: "+str(gc.get_referrers(hs.matcher)))
         print("[hs] Desc Referrers: "+str(gc.get_referrers(hs.feats.cx2_desc)))
@@ -145,5 +145,5 @@ def target_dsize(img, M):
         del hs.feats.cx2_desc
         del hs.matcher
         gc.collect()
-        helpers.memory_profile()
+        util.memory_profile()
         ans = raw_input('[hs] good?')

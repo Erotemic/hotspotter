@@ -3,7 +3,7 @@ if matplotlib.get_backend() != 'Qt4Agg':
     matplotlib.use('Qt4Agg', warn=True, force=True)
     matplotlib.rcParams['toolbar'] = 'None'
 import hotspotter.draw_func2 as df2
-import hotspotter.helpers as helpers
+import hotspotter.util as util
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -456,8 +456,8 @@ def sympy_manual_sqrtm_inv():
 sympy_manual_sqrtm_inv()
 
 r'''
-str1 = '\n'.join(helpers.execstr_func(sympy_data).split('\n')[0:-2])
-str2 = '\n'.join(helpers.execstr_func(execute_test).split('\n')[3:])
+str1 = '\n'.join(util.execstr_func(sympy_data).split('\n')[0:-2])
+str2 = '\n'.join(util.execstr_func(execute_test).split('\n')[3:])
 
 toexec = str1 + '\n' + str2
 exec(toexec)

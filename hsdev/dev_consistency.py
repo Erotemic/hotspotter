@@ -8,7 +8,7 @@ from os.path import relpath
 import numpy as np
 # Hotspotter
 from hscom import fileio as io
-from hscom import helpers as util
+from hscom import util
 
 
 #----------------------

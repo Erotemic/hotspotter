@@ -9,7 +9,7 @@ import numpy as np
 from numpy import sqrt
 # Hotspotter
 import draw_func2 as df2
-from hscom import helpers as util
+from hscom import util
 
 
 def rrr():

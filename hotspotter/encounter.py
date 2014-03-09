@@ -11,7 +11,7 @@ from scipy.cluster.hierarchy import fclusterdata
 # HotSpotter
 from hotspotter import match_chips3 as mc3
 from hscom import fileio as io
-from hscom import helpers as util
+from hscom import util
 
 
 def compute_encounters(hs, seconds_thresh=15):

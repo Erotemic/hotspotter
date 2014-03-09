@@ -12,15 +12,15 @@ import match_chips2       as mc2
 import cv2
 import load_data2
 import spatial_verification
-import helpers
+import util
 import imp
 imp.reload(spatial_verification)
 imp.reload(df2)
 imp.reload(fc2)
 imp.reload(mc2)
-imp.reload(helpers)
+imp.reload(util)
 import params
-from helpers import *
+from util import *
 import spatial_verification
 #import cython_spatial_verification
 from pyflann import FLANN

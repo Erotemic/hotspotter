@@ -6,7 +6,7 @@ import __common__
 import psutil
 import os
 # HotSpotter
-import helpers as util
+import util
 
 
 def peak_memory():

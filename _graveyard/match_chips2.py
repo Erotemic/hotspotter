@@ -17,11 +17,11 @@ import textwrap
 import draw_func2 as df2
 # Hotspotter Imports
 import fileio as io
-import helpers
-from helpers import Timer, tic, toc, printWARN
+import util
+from util import Timer, tic, toc, printWARN
 from Printable import DynStruct
 import algos
-import helpers
+import util
 import spatial_verification2 as sv2
 import load_data2
 import params
@@ -35,7 +35,7 @@ import scipy.sparse as spsparse
 import sklearn.preprocessing 
 from itertools import izip
 #print('LOAD_MODULE: match_chips2.py')
-#from _localhelpers.bagofwords import *
+#from _localutil.bagofwords import *
 
 # Toggleable printing
 print = __builtin__.print
@@ -105,9 +105,9 @@ def fix_res_types(res):
 def fix_qcx2_res_types(qcx2_res):
     ' Changes data types of cx2_fm_V and cx2_fs_V '
     total_qcx = len(qcx2_res)
-    fmt_str = helpers.make_progress_fmt_str(total_qcx)
+    fmt_str = util.make_progress_fmt_str(total_qcx)
     for qcx in xrange(total_qcx):
-        helpers.print_(fmt_str % (qcx))
+        util.print_(fmt_str % (qcx))
         res = qcx2_res[qcx]
         fix_res_types(res)
 
@@ -362,10 +362,10 @@ def match_vsone(cx, cx2_kpts, cx2_desc, cx2_rchip_size, vsone_args):
     fs  = np.array(fx2_ratio[fx], dtype=FS_DTYPE)
     #print('>>>')
     #print(' In match_vsone()')
-    #helpers.printvar(locals(), 'fx')
-    #helpers.printvar(locals(), 'qfx')
-    #helpers.printvar(locals(), 'fm')
-    #helpers.printvar(locals(), 'fs')
+    #util.printvar(locals(), 'fx')
+    #util.printvar(locals(), 'qfx')
+    #util.printvar(locals(), 'fm')
+    #util.printvar(locals(), 'fs')
     #print('<<<')
     return (fm, fs)
 
@@ -440,7 +440,7 @@ def assign_matches_vsmany(args, qcx, cx2_kpts, cx2_desc, cx2_rchip_size):
         cx2_fs - C x Mx1 array of matching feature scores'''
 
     # args = hs.matcher.vsmany_args
-    #helpers.println('Assigning vsmany feature matches from qcx=%d to %d chips'\ % (qcx, len(cx2_desc)))
+    #util.println('Assigning vsmany feature matches from qcx=%d to %d chips'\ % (qcx, len(cx2_desc)))
     isQueryIndexed = True
     k_vsmany     = args.K + isQueryIndexed
     ax2_cx       = args.ax2_cx
@@ -464,7 +464,7 @@ def assign_matches_vsmany(args, qcx, cx2_kpts, cx2_desc, cx2_rchip_size):
     cx2_fm = [[] for _ in xrange(len(cx2_desc))]
     cx2_fs = [[] for _ in xrange(len(cx2_desc))]
     nQuery = len(qfx2_ax)
-    qfx2_qfx = helpers.tiled_range(nQuery, k_vsmany)
+    qfx2_qfx = util.tiled_range(nQuery, k_vsmany)
     #iter_matches = izip(qfx2_qfx.flat, qfx2_cx.flat, qfx2_fx.flat, qfx2_score.flat)
     iter_matches = izip(qfx2_qfx[qfx2_valid],
                         qfx2_cx[qfx2_valid],
@@ -769,7 +769,7 @@ class QueryResult(DynStruct):
 
     def cache_bytes(self, hs):
         fpath = self.get_fpath(hs)
-        return helpers.file_bytes(fpath)
+        return util.file_bytes(fpath)
 
     def top5_cxs(self):
         return self.topN_cxs(5)
@@ -807,7 +807,7 @@ def run_matching2(hs, verbose=params.VERBOSE_MATCHING):
     print('[mc2] There are %d dirty queries' % total_dirty)
     if len(dirty_samp) == 0:
         return
-    print_ = helpers.print_
+    print_ = util.print_
     if hs.matcher is None:
         hs.load_matcher()
     assign_matches  = hs.matcher.assign_matches
@@ -819,7 +819,7 @@ def run_matching2(hs, verbose=params.VERBOSE_MATCHING):
         build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches, qnum, total_dirty, verbose)
 
 def load_cached_matches(hs):
-    print_ = helpers.print_
+    print_ = util.print_
     test_samp = hs.test_sample_cx
     # Create result containers
     print('[mc2] hs.num_cx = %r ' % hs.num_cx)
@@ -831,7 +831,7 @@ def load_cached_matches(hs):
     print('[mc2] Total queries: %d' % total_queries)
     dirty_test_sample_cx = []
     clean_test_sample_cx = []
-    fmt_str_filter = helpers.make_progress_fmt_str(total_queries, lbl='[mc2] check cache: ')
+    fmt_str_filter = util.make_progress_fmt_str(total_queries, lbl='[mc2] check cache: ')
     
     # Filter queries into dirty and clean sets
     for count, qcx in enumerate(test_samp):
@@ -849,7 +849,7 @@ def load_cached_matches(hs):
         num_bytes += qcx2_res[qcx].cache_bytes(hs)
     print('[mc2] Loading %dMB cached results' % (num_bytes / (2.0 ** 20)))
     # Load clean queries from the cache
-    fmt_str_load = helpers.make_progress_fmt_str(len(clean_test_sample_cx),
+    fmt_str_load = util.make_progress_fmt_str(len(clean_test_sample_cx),
                                                  lbl='[mc2] load cache: ')
     for count, qcx in enumerate(clean_test_sample_cx):
         print_(fmt_str_load % (count+1))
@@ -905,11 +905,11 @@ def build_result(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches, ve
 def __build_result_assign_step(hs, res, cx2_kpts, cx2_desc, cx2_rchip_size, assign_matches, verbose):
     '1) Assign matches with the chosen function (vsone) or (vsmany)'
     if verbose:
-        #helpers.printvar(locals(), 'cx2_desc')
-        #helpers.printvar(locals(), 'res.qcx')
+        #util.printvar(locals(), 'cx2_desc')
+        #util.printvar(locals(), 'res.qcx')
         num_qdesc = len(cx2_desc[res.qcx])
         print('[mc2] assign %d desc' % (num_qdesc))
-    tt1 = helpers.Timer(verbose=False)
+    tt1 = util.Timer(verbose=False)
     assign_output = assign_matches(res.qcx, cx2_kpts, cx2_desc, cx2_rchip_size)
     (cx2_fm, cx2_fs, cx2_score) = assign_output
     # Record initial assignments 
@@ -926,7 +926,7 @@ def __build_result_verify_step(hs, res, cx2_kpts, cx2_rchip_size, verbose):
     if verbose:
         num_assigned = np.array([len(fm) for fm in cx2_fm]).sum()
         print('[mc2] verify %d assigned matches' % (num_assigned))
-    tt2 = helpers.Timer(verbose=False)
+    tt2 = util.Timer(verbose=False)
     sv_output = spatially_verify_matches(res.qcx, cx2_kpts, cx2_rchip_size, cx2_fm, cx2_fs, cx2_score)
     (cx2_fm_V, cx2_fs_V, cx2_score_V) = sv_output
     # Record verified assignments 
@@ -1020,7 +1020,7 @@ if __name__ == '__main__':
     hs.load_matcher()
     #qcx = 111
     #cx = 305
-    qcx = helpers.get_arg_after('--qcx', type_=int)
+    qcx = util.get_arg_after('--qcx', type_=int)
     if qcx is None: qcx = 0
     matcher_test(hs, qcx)
 

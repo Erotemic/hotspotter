@@ -18,8 +18,8 @@ import numpy as np
 from PIL import Image
 # Hotspotter
 import DataStructures as ds
-from hscom import helpers
-from hscom import helpers as util
+from hscom import util
+from hscom import util
 from hscom import tools
 import db_info
 
@@ -55,7 +55,7 @@ VALID_UNKNOWN_NAMES = ['UNIDENTIFIED', UNKNOWN_NAME]
 
 
 def detect_checkpath(dir_):
-    return helpers.checkpath(dir_, verbose=VERBOSE_DETERMINE_VERSION)
+    return util.checkpath(dir_, verbose=VERBOSE_DETERMINE_VERSION)
 
 
 def detect_version(dbdir):

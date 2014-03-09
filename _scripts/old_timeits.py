@@ -153,7 +153,7 @@ print timeit.timeit(test4, setup=setup, number=10000)
 # Test ways of componentwise anding a lists of booleans
 import timeit
 setup = '''
-import helpers
+import util
 func1 = lambda var: str(type(var))
 def func2(var): return str(type(var))
 '''
@@ -198,7 +198,7 @@ def imread_timeittesst():
     import timeit
     import cv2
     import numpy as np
-    import helpers
+    import util
     from PIL import Image
     import matplotlib.pyplot as plt
     img_fname = '/media/Store/data/work/HSDB_zebra_with_mothers/images/Nid-06_410--Cid-1.JPG'
@@ -211,11 +211,11 @@ def imread_timeittesst():
 
     img_fpath = '/media/Store/data/work/HSDB_zebra_with_mothers/images/Nid-06_410--Cid-1.JPG'
     '''
-    with helpers.Timer('cv'):
+    with util.Timer('cv'):
         img1 = cv2.cvtColor(cv2.imread(img_fpath, flags=cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
-    with helpers.Timer('PIL'):
+    with util.Timer('PIL'):
         img2 = np.asarray(Image.open(img_fpath))
-    with helpers.Timer('plt'):
+    with util.Timer('plt'):
         img3 = plt.imread(img_fpath)
     print('img1.shape = %r ' % (img1.shape,))
     print('img2.shape = %r ' % (img2.shape,))

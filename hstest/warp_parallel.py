@@ -15,7 +15,7 @@ import multiprocessing
 import cv2
 from itertools import izip
 sys.path.append(join(expanduser('~'), 'code'))
-from hotspotter import helpers
+from hotspotter import util
 #from hotspotter import chip_compute2 as cc2
 #from hotspotter import Parallelize as parallel
 #from hotspotter.dbgimport import *
@@ -137,7 +137,7 @@ def _compute_in_parallel2(task_list, num_procs, task_lbl='', verbose=True):
     sys.stdout.flush()
     result_list = []
     if verbose:
-        mark_progress = helpers.progress_func(nTasks, lbl=task_lbl)
+        mark_progress = util.progress_func(nTasks, lbl=task_lbl)
         for count in xrange(len(task_list)):
             #printDBG('[parallel] done_queue.get()')
             mark_progress(count)

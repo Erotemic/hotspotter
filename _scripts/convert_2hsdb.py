@@ -1,5 +1,5 @@
 from hotspotter.HotSpotterAPI import HotSpotterAPI
-from hotspotter.helpers import ensure_path, assert_path, copy_all, copy, img_ext_set, copy_task
+from hotspotter.util import ensure_path, assert_path, copy_all, copy, img_ext_set, copy_task
 from fnmatch import fnmatch
 from os import walk
 from os.path import join, relpath, splitext

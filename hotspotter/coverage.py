@@ -10,7 +10,7 @@ import math
 import cv2
 import numpy as np
 # HotSpotter
-from hscom import helpers as util
+from hscom import util
 import matching_functions as mf
 
 SCALE_FACTOR_DEFAULT = .05

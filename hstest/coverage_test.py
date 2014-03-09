@@ -7,7 +7,7 @@ from hscom import __common__
 from hsviz import viz
 import multiprocessing
 import numpy as np  # NOQA
-from hsdev import test_api
+from hsdev import main_api
 from hotspotter import coverage
 from hsviz import draw_func2 as df2
 
@@ -57,9 +57,9 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     np.set_printoptions(precision=2, threshold=1000000, linewidth=180)
     # --- LOAD TABLES --- #
-    hs = test_api.main(preload=True)
+    hs = main_api.main(preload=True)
     # Test variables
-    cx = test_api.get_test_cxs(hs, 1)[0]
+    cx = main_api.get_test_cxs(hs, 1)[0]
     if hs.get_db_name() == 'PZ_MOTHERS':
         cx = hs.cid2_cx(13)
     kpts = hs.get_kpts(cx)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     np.tau = 2 * np.pi
     fnum = 2
     # Reload
-    test_api.reload_all()
+    main_api.reload_all()
     coverage.rrr()
 
     scale_factor = .1

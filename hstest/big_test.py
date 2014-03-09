@@ -2,7 +2,7 @@
 # TODO: ADD COPYRIGHT TAG
 from __future__ import print_function, division
 import __builtin__
-from hsdev import test_api
+from hsdev import main_api
 import multiprocessing
 import sys
 import numpy as np
@@ -29,16 +29,16 @@ if __name__ == '__main__':
 
     print('[TEST] CLONEDB')
     dbname = 'NAUT_Dan'
-    clonename = test_api.clone_database(dbname)
+    clonename = main_api.clone_database(dbname)
 
     print('[TEST] TESTMAIN.MAIN')
     # WARNING! DO NOT USE --DB or --DBDIR on this yet! IT WILL DELETE IMAGES ON
     # REAL (IE NON COPIED DATABASES)
-    hs, back, app, is_root = test_api.main_init(defaultdb=clonename, preload=True)
+    hs, back, app, is_root = main_api.main_init(defaultdb=clonename, preload=True)
     hs.default_preferences()
 
     #print('[TEST] GET VALID CID')
-    cid = test_api.get_valid_cid(hs)
+    cid = main_api.get_valid_cid(hs)
 
     print('[TEST] ADDCHIP')
     cid1 = back.add_chip(gx=0, roi=[800, 350, 500, 500])
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     back.delete_image(gx=gx)
 
     print('[TEST] SELECT CID')
-    cid2 = test_api.get_valid_cid(hs)
+    cid2 = main_api.get_valid_cid(hs)
     back.select_cid(cid2)
 
     print('[TEST] QUERY')
@@ -73,4 +73,4 @@ if __name__ == '__main__':
     #back.change_chip_property(cid)
 
     print('[TEST] END TEST')
-    test_api.main_loop(app, is_root, back, runqtmain=INTERACTIVE)
+    main_api.main_loop(app, is_root, back, runqtmain=INTERACTIVE)

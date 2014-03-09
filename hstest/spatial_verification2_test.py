@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # TODO: ADD COPYRIGHT TAG
 from __future__ import print_function, division
-from hsdev import test_api
+from hsdev import main_api
 from hsviz import viz
 import multiprocessing
 
@@ -10,9 +10,9 @@ if __name__ == '__main__':
     # For windows
     multiprocessing.freeze_support()
     # Create a HotSpotter API (hs) and GUI backend (back)
-    hs = test_api.main(defaultdb='NAUTS', preload=True, app=None)
+    hs = main_api.main(defaultdb='NAUTS', preload=True, app=None)
     # The test api returns a list of interesting chip indexes
-    qcx = test_api.get_test_cxs(hs, 1)[0]
+    qcx = main_api.get_test_cxs(hs, 1)[0]
     # Convert chip-index in to chip-id
 
     viz.viz_spatial_verification(hs, qcx)

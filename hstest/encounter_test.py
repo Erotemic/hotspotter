@@ -5,7 +5,7 @@ import multiprocessing
 from hotspotter import encounter
 from hscom import util
 from hsviz import draw_func2 as df2
-from hsdev import test_api
+from hsdev import main_api
 from hsdev import dev_augmenter
 from hscom import hsgraph
 import networkx as netx  # NOQA
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
 
     print('[TEST] END TEST')
-    hs, back, app, is_root = test_api.main_init(preload=True)
+    hs, back, app, is_root = main_api.main_init(preload=True)
 
     encounter.rrr()
     dev_augmenter.dev_reload.reload_all_modules()
@@ -85,4 +85,4 @@ if __name__ == '__main__':
 
     df2.update()
     print('[TEST] END TEST')
-    test_api.main_loop(app, is_root, back, runqtmain=INTERACTIVE)
+    main_api.main_loop(app, is_root, back, runqtmain=INTERACTIVE)

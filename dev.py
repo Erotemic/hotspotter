@@ -29,7 +29,7 @@ from hsdev import params
 from hsdev import dev_stats
 from hsdev import experiment_configs
 from hsdev import experiment_harness
-from hsdev import test_api
+from hsdev import main_api
 from hsgui import guitools
 from hsviz import allres_viz
 from hsviz import draw_func2 as df2
@@ -621,7 +621,7 @@ if __name__ == '__main__':
     guitools.init_qtapp()
     # Create Hotspotter API
     preload = '--preload' in sys.argv
-    hs = test_api.main(defaultdb='NAUTS', preload=preload)
+    hs = main_api.main(defaultdb='NAUTS', preload=preload)
     if preload:
         from hotspotter import match_chips3 as mc3
         qreq = mc3.quickly_ensure_qreq(hs)
@@ -631,7 +631,7 @@ if __name__ == '__main__':
     print('==========================')
     print('[dev] dev_main()')
     print('==========================')
-    qcx_list = test_api.get_qcx_list(hs)
+    qcx_list = main_api.get_qcx_list(hs)
     print('[dev]====================')
     #mf.print_off()  # Make testing slightly faster
     # Big test function. Should be replaced with something

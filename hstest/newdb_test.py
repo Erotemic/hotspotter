@@ -2,7 +2,7 @@
 # TODO: ADD COPYRIGHT TAG
 from __future__ import print_function, division
 from hscom import util
-from hsdev import test_api
+from hsdev import main_api
 from hsgui import guitools
 from os.path import join
 import multiprocessing
@@ -11,7 +11,7 @@ import multiprocessing
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     app, is_root = guitools.init_qtapp()
-    hs, back = test_api.main(defaultdb=None, preload=False, app=app)
+    hs, back = main_api.main(defaultdb=None, preload=False, app=app)
 
     # Build the test db name
     work_dir = back.get_work_directory()

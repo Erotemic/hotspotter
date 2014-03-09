@@ -17,7 +17,7 @@ def dependencies_for_myprogram():
     from scipy.special import _ufuncs_cxx  # NOQA
 
 
-def postload_args_process(hs, back):
+def postload_interpret_cmdline(hs, back):
     # This processes command line arguments and runs corresponding commands on
     # startup.
     from hsdev import params
@@ -85,17 +85,17 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     # Run Main Function
     #from hsviz import draw_func2 as df2  # NOQA
-    from hsdev import test_api
+    from hsdev import main_api
     #from hsdev import dbgimport
-    print('main.py')
+    print('[main] main.py')
     #dbgimport.hsgui_printoff()
     #dbgimport.hsviz_printoff()
     #dbgimport.mf.print_off()
     # Run main script with backend
-    hs, back, app, is_root = test_api.main_init()
+    hs, back, app, is_root = main_api.main_init()
     # --- Run Startup Commands ---
-    postload_locals = postload_args_process(hs, back)
+    postload_locals = postload_interpret_cmdline(hs, back)
     res = postload_locals['res']
     # Connect database to the back gui
     #app.setActiveWindow(back.front)
-    test_api.main_loop(app, is_root, back)
+    main_api.main_loop(app, is_root, back)

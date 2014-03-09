@@ -1,7 +1,10 @@
+# TODO: THis module needs a big cleanup.
+# Needs a clear enter and exit point as well as clear utility functions
 from __future__ import division, print_function
 from hscom import __common__
+from hsdev import argparse2
 (print, print_, print_on, print_off, rrr,
- profile, printDBG) = __common__.init(__name__, '[tapi]', DEBUG=False, initmpl=True)
+ profile, printDBG) = __common__.init(__name__, '[main]', DEBUG=False, initmpl=False)
 
 
 def signal_reset():
@@ -22,7 +25,6 @@ def on_ctrl_c(signal, frame):
 
 
 def parse_arguments(defaultdb, usedbcache):
-    from hsdev import argparse2
     from hsdev import params
     from hscom import util
     from hscom import fileio as io
@@ -65,16 +67,21 @@ def _checkargs_onload(hs):
         sys.exit(1)
 
 
-def main(defaultdb='cache', preload=False, app=None):
+def main(defaultdb='cache', preload=False, app=None, args=None):
+    # TODO: this function name needs to be cleaned up
+    # Rectify with main(), main_init(), and main_loop()
+    # Parse arguments first for quick --help
+    if args is None:
+        args = parse_arguments(defaultdb, defaultdb == 'cache')
+    # Import after parsing args
     from hotspotter import HotSpotterAPI as api
     from hscom import fileio as io
     from hsdev import params
     from hsdev import experiment_harness
     from hsgui import guiback
-    from hsgui import guitools
     if app is True:
+        from hsgui import guitools
         app, is_root = guitools.init_qtapp()
-    args = parse_arguments(defaultdb, defaultdb == 'cache')
     # --- Build HotSpotter API ---
     if app is None:
         try:
@@ -159,7 +166,7 @@ def get_test_cxs(hs, max_testcases=None):
         #maxcx = max(valid_cxs)
         #max_ = max(len(valid_cxs) - 1, cxs)
         #if max_ == 0:
-            #raise ValueError('[test_api] Database does not have test cxs')
+            #raise ValueError('[main_api] Database does not have test cxs')
         valid_cxs = valid_cxs[0:max_testcases]
     return valid_cxs
 
@@ -237,12 +244,15 @@ def reload_all():
 
 
 def main_init(defaultdb=None, preload=False, app=None):
-    from hsgui import guitools
-    # Listen for ctrl+c
-    signal_set()
+    # TODO: this function name needs to be cleaned up
+    # Rectify with main(), main_init(), and main_loop()
+    # Parse arguments first
+    args = parse_arguments(defaultdb, defaultdb == 'cache')
+    signal_set()  # Listen for ctrl+c
     # Run Qt App
+    from hsgui import guitools
     app, is_root = guitools.init_qtapp()
-    hs, back = main(defaultdb=defaultdb, preload=preload, app=app)
+    hs, back = main(defaultdb=defaultdb, preload=preload, app=app, args=args)
     return hs, back, app, is_root
 
 

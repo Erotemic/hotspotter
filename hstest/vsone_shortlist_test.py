@@ -2,7 +2,7 @@
 # TODO: ADD COPYRIGHT TAG
 from __future__ import print_function, division
 import __builtin__
-from hsdev import test_api
+from hsdev import main_api
 import multiprocessing
 import sys
 from hsdev import dbgimport  # NOQA
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     dbname = 'GZ'
 
     print('[TEST] TESTMAIN.MAIN')
-    hs, back, app, is_root = test_api.main_init(defaultdb=dbname, preload=False)
+    hs, back, app, is_root = main_api.main_init(defaultdb=dbname, preload=False)
     hs.default_preferences()
 
     print('[TEST] LOAD')
@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     print('[TEST] = QUERY')
     hs.prefs.display_cfg.showanalysis = True
-    test_cids = hs.cx2_cid(test_api.get_test_cxs(hs))
+    test_cids = hs.cx2_cid(main_api.get_test_cxs(hs))
     cid = 306
     back.select_cid(cid)
     res = back.query(cid=cid)
@@ -42,4 +42,4 @@ if __name__ == '__main__':
     res2 = hs.query_groundtruth(cx, query_type='vsone')
 
     print('[TEST] END TEST')
-    test_api.main_loop(app, is_root, back, runqtmain=INTERACTIVE)
+    main_api.main_loop(app, is_root, back, runqtmain=INTERACTIVE)

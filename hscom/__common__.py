@@ -136,9 +136,9 @@ def get_modules():
 
 def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
     global root_logger
+    global __MODULE_LIST__
     # implicitly imports a set of standard functions into hotspotter modules
     # makes keeping track of printing much easier
-    global __MODULE_LIST__
     module = sys.modules[module_name]
     __MODULE_LIST__.append(module)
     if __IN_MAIN_PROCESS__ and __LOGGING__:
@@ -217,30 +217,35 @@ def init(module_name, module_prefix='[???]', DEBUG=None, initmpl=False):
 
     # Initialize matplotlib if requested
     if initmpl:
-        import matplotlib
-        backend = matplotlib.get_backend()
-        if __IN_MAIN_PROCESS__:
-            if not __QUIET__:
-                print('[common] ' + module_prefix + ' current backend is: %r' % backend)
-                print('[common] ' + module_prefix + ' matplotlib.use(Qt4Agg)')
-            if backend != 'Qt4Agg':
-                matplotlib.use('Qt4Agg', warn=True, force=True)
-                backend = matplotlib.get_backend()
-                print(module_prefix + ' current backend is: %r' % backend)
-            if '--notoolbar' in sys.argv or '--devmode' in sys.argv:
-                toolbar = 'None'
-            else:
-                toolbar = 'toolbar2'
-            matplotlib.rcParams['toolbar'] = toolbar
-            matplotlib.rc('text', usetex=False)
-            mpl_keypress_shortcuts = [key for key in matplotlib.rcParams.keys() if key.find('keymap') == 0]
-            for key in mpl_keypress_shortcuts:
-                matplotlib.rcParams[key] = ''
-            #matplotlib.rcParams['text'].usetex = False
-            #for key in mpl_keypress_shortcuts:
-                #print('%s = %s' % (key, matplotlib.rcParams[key]))
-            # Disable mpl shortcuts
-                #matplotlib.rcParams['toolbar'] = 'None'
-                #matplotlib.rcParams['interactive'] = True
+        init_matplotlib(module_prefix)
 
     return print, print_, print_on, print_off, rrr, profile, printDBG
+
+
+def init_matplotlib(module_prefix='[???]'):
+    import matplotlib
+    backend = matplotlib.get_backend()
+    if __IN_MAIN_PROCESS__:
+        if not __QUIET__:
+            print('--- INIT MPL---')
+            print('[common] ' + module_prefix + ' current backend is: %r' % backend)
+            print('[common] ' + module_prefix + ' matplotlib.use(Qt4Agg)')
+        if backend != 'Qt4Agg':
+            matplotlib.use('Qt4Agg', warn=True, force=True)
+            backend = matplotlib.get_backend()
+            print(module_prefix + ' current backend is: %r' % backend)
+        if '--notoolbar' in sys.argv or '--devmode' in sys.argv:
+            toolbar = 'None'
+        else:
+            toolbar = 'toolbar2'
+        matplotlib.rcParams['toolbar'] = toolbar
+        matplotlib.rc('text', usetex=False)
+        mpl_keypress_shortcuts = [key for key in matplotlib.rcParams.keys() if key.find('keymap') == 0]
+        for key in mpl_keypress_shortcuts:
+            matplotlib.rcParams[key] = ''
+        #matplotlib.rcParams['text'].usetex = False
+        #for key in mpl_keypress_shortcuts:
+            #print('%s = %s' % (key, matplotlib.rcParams[key]))
+        # Disable mpl shortcuts
+            #matplotlib.rcParams['toolbar'] = 'None'
+            #matplotlib.rcParams['interactive'] = True

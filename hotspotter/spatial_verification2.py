@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
- rrr, profile) = __common__.init(__name__, '[sv2]')
+ rrr, profile, printDBG) = __common__.init(__name__, '[sv2]', DEBUG=False)
 # Science
 import numpy as np
 import numpy.linalg as linalg
@@ -11,6 +11,9 @@ import scipy.sparse.linalg as sparse_linalg
 # skimage.transform
 # http://stackoverflow.com/questions/11462781/fast-2d-rigid-body-transformations-in-numpy-scipy
 # skimage.transform.fast_homography(im, H)
+
+# vtool
+import vtool
 
 #PYX START
 """
@@ -22,11 +25,6 @@ ctypedef np.float64_t FLOAT64
 #PYX MAP FLOAT_1D np.ndarray[FLOAT64, ndim=1]
 #PYX END
 SV_DTYPE = np.float64
-
-
-def printDBG(msg):
-    pass
-    #print(msg)
 
 
 @profile
@@ -67,21 +65,6 @@ def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
     h = v[-1]  # v = V.H # (transposed in matlab)
     H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]))
     return H
-
-
-def calc_diaglen_sqrd(x_m, y_m):
-    x_extent_sqrd = (x_m.max() - x_m.min()) ** 2
-    y_extent_sqrd = (y_m.max() - y_m.min()) ** 2
-    diaglen_sqrd = x_extent_sqrd + y_extent_sqrd
-    return diaglen_sqrd
-
-
-def split_kpts(kpts5xN):
-    'breakup keypoints into position and shape'
-    _xs   = np.array(kpts5xN[0], dtype=SV_DTYPE)
-    _ys   = np.array(kpts5xN[1], dtype=SV_DTYPE)
-    _acds = np.array(kpts5xN[2:5], dtype=SV_DTYPE)
-    return _xs, _ys, _acds
 
 
 def normalize_xy_points(x_m, y_m):
@@ -266,11 +249,13 @@ def homography_inliers(kpts1, kpts2, fm,
     # Estimate affine correspondence convert to SV_DTYPE
     # matching feature indexes
     fx1_m, fx2_m = fm[:, 0], fm[:, 1]
+    kpts1_m = kpts1[fx1_m, :]
+    kpts2_m = kpts1[fx1_m, :]
     # x, y, a, c, d : postion, shape
-    x1_m, y1_m, acd1_m = split_kpts(kpts1[fx1_m, :].T)
-    x2_m, y2_m, acd2_m = split_kpts(kpts2[fx2_m, :].T)
+    x1_m, y1_m, acd1_m = vtool.keypoint.split(kpts1_m)
+    x2_m, y2_m, acd2_m = vtool.keypoint.split(kpts2_m)
     # Get diagonal length
-    dlen_sqrd2 = calc_diaglen_sqrd(x2_m, y2_m) if dlen_sqrd2 is None else dlen_sqrd2
+    dlen_sqrd2 = vtool.keypoint.diag_extent_sqrd(kpts2_m) if dlen_sqrd2 is None else dlen_sqrd2
     xy_thresh_sqrd = dlen_sqrd2 * xy_thresh
     fx1_m = fm[:, 0]
     #fx2_m = fm[:, 1]

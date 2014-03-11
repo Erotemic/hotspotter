@@ -10,24 +10,19 @@ from hscom import __common__
 (print, print_, print_on, print_off, rrr, profile,
  printDBG) = __common__.init(__name__, '[df2]', DEBUG=False, initmpl=True)
 # Python
-from itertools import izip
 from os.path import splitext, split, join, normpath, exists
+from itertools import product as iprod
 import colorsys
-import itertools
 import pylab
 import sys
 import textwrap
 import time
 import warnings
 # Matplotlib / Qt
-import matplotlib
-import matplotlib as mpl  # NOQA
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib.font_manager import FontProperties
-from matplotlib.patches import Rectangle, Circle, FancyArrow
-from matplotlib.transforms import Affine2D
-from matplotlib.backends import backend_qt4
-import matplotlib.pyplot as plt
 # Qt
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
@@ -39,6 +34,8 @@ import cv2
 from hscom import util
 from hscom import tools
 from hscom.Printable import DynStruct
+# VTool
+import vtool.drawtool.mpl_keypoint as mpl_kp
 
 #================
 # GLOBALS
@@ -88,6 +85,7 @@ DEEP_PINK    = np.array((255,  20, 147, 255)) / 255.0
 PINK         = np.array((255,  100, 100, 255)) / 255.0
 FALSE_RED    = np.array((255,  51,   0, 255)) / 255.0
 TRUE_GREEN   = np.array((  0, 255,   0, 255)) / 255.0
+DARK_RED     = np.array((127,  0,   0, 255)) / 255.0
 DARK_ORANGE  = np.array((127,  63,   0, 255)) / 255.0
 DARK_YELLOW  = np.array((127,  127,   0, 255)) / 255.0
 PURPLE = np.array((102,   0, 153, 255)) / 255.0
@@ -126,30 +124,8 @@ FIGSIZE = FIGSIZE_MED
 
 # DEFAULTS. (TODO: Can these be cleaned up?)
 
-DISTINCT_COLORS = True  # and False
-DARKEN = None
-ELL_LINEWIDTH = 1.5
-if DISTINCT_COLORS:
-    ELL_ALPHA  = .6
-    LINE_ALPHA = .35
-else:
-    ELL_ALPHA  = .4
-    LINE_ALPHA = .4
-
 LINE_ALPHA_OVERRIDE = util.get_arg('--line-alpha-override', type_=float, default=None)
 ELL_ALPHA_OVERRIDE = util.get_arg('--ell-alpha-override', type_=float, default=None)
-#LINE_ALPHA_OVERRIDE = None
-#ELL_ALPHA_OVERRIDE = None
-ELL_COLOR  = BLUE
-
-LINE_COLOR = RED
-LINE_WIDTH = 1.4
-
-SHOW_LINES = True  # True
-SHOW_ELLS  = True
-
-POINT_SIZE = 2
-
 
 base_fnum = 9001
 
@@ -160,17 +136,6 @@ def next_fnum(new_base=None):
         base_fnum = new_base
     base_fnum += 1
     return base_fnum
-
-
-def my_prefs():
-    global LINE_COLOR
-    global ELL_COLOR
-    global ELL_LINEWIDTH
-    global ELL_ALPHA
-    LINE_COLOR = (1, 0, 0)
-    ELL_COLOR = (0, 0, 1)
-    ELL_LINEWIDTH = 2
-    ELL_ALPHA = .5
 
 
 def execstr_global():
@@ -252,7 +217,7 @@ def draw_border(ax, color=GREEN, lw=2, offset=None):
         xy = [xoff, yoff]
         height = - height - yoff
         width = width - xoff
-    rect = matplotlib.patches.Rectangle(xy, width, height, lw=lw)
+    rect = mpl.patches.Rectangle(xy, width, height, lw=lw)
     rect = ax.add_patch(rect)
     rect.set_clip_on(False)
     rect.set_fill(False)
@@ -266,26 +231,26 @@ def draw_roi(roi, label=None, bbox_color=(1, 0, 0),
     (rx, ry, rw, rh) = roi
     #cos_ = np.cos(theta)
     #sin_ = np.sin(theta)
-    #rot_t = Affine2D([( cos_, -sin_, 0),
+    #rot_t = mpl.transforms.Affine2D([( cos_, -sin_, 0),
                       #( sin_,  cos_, 0),
                       #(  0,       0, 1)])
-    #scale_t = Affine2D([( rw,  0, 0),
+    #scale_t = mpl.transforms.Affine2D([( rw,  0, 0),
                         #( 0,  rh, 0),
                         #( 0,   0, 1)])
-    #trans_t = Affine2D([( 1,  0, rx + rw / 2),
+    #trans_t = mpl.transforms.Affine2D([( 1,  0, rx + rw / 2),
                         #( 0,  1, ry + rh / 2),
                         #( 0,  0, 1)])
     #t_end = scale_t + rot_t + trans_t + t_start
     # Transformations are specified in backwards order.
-    trans_roi = Affine2D()
+    trans_roi = mpl.transforms.Affine2D()
     trans_roi.scale(rw, rh)
     trans_roi.rotate(theta)
     trans_roi.translate(rx + rw / 2, ry + rh / 2)
     t_end = trans_roi + ax.transData
-    bbox = matplotlib.patches.Rectangle((-.5, -.5), 1, 1, lw=2, transform=t_end)
+    bbox = mpl.patches.Rectangle((-.5, -.5), 1, 1, lw=2, transform=t_end)
     arw_x, arw_y, arw_dx, arw_dy   = (-0.5, -0.5, 1.0, 0.0)
     arrowargs = dict(head_width=.1, transform=t_end, length_includes_head=True)
-    arrow = FancyArrow(arw_x, arw_y, arw_dx, arw_dy, **arrowargs)
+    arrow = mpl.patches.FancyArrow(arw_x, arw_y, arw_dx, arw_dy, **arrowargs)
 
     bbox.set_fill(False)
     #bbox.set_transform(trans)
@@ -337,7 +302,7 @@ def get_screen_info():
 
 def get_all_figures():
     all_figures_ = [manager.canvas.figure for manager in
-                    matplotlib._pylab_helpers.Gcf.get_all_fig_managers()]
+                    mpl._pylab_helpers.Gcf.get_all_fig_managers()]
     all_figures = []
     # Make sure you dont show figures that this module closed
     for fig in iter(all_figures_):
@@ -494,7 +459,12 @@ def all_figures_tile(num_rc=None, wh=400, xy_off=(0, 0), wh_off=(0, 0),
     printDBG('[df2]     nRows, nCols = %r' % ((nRows, nCols),))
 
     def position_window(ix, win):
-        isqt4_mpl = isinstance(win, backend_qt4.MainWindow)
+        try:
+            QMainWin = mpl.backends.backend_qt4.MainWindow
+        except NameError as ex:
+            print('[df2] Warning: %r' % ex)
+            QMainWin = mpl.backends.backend_qt4.QtGui.QMainWindow
+        isqt4_mpl = isinstance(win, QMainWin)
         isqt4_back = isinstance(win, QtGui.QMainWindow)
         if not isqt4_mpl and not isqt4_back:
             raise NotImplementedError('%r-th Backend %r is not a Qt Window' %
@@ -1013,7 +983,7 @@ def test_build_qkeyevent():
     qtwin = df2.QT4_WINS[0]
     # This reconstructs an test mplevent
     canvas = df2.figure(1).canvas
-    mevent = matplotlib.backend_bases.KeyEvent('key_press_event', canvas, u'ctrl+p', x=672, y=230.0)
+    mevent = mpl.backend_bases.KeyEvent('key_press_event', canvas, u'ctrl+p', x=672, y=230.0)
     qevent = df2.convert_keypress_event_mpl_to_qt4(mevent)
     app = qtwin.backend.app
     app.sendEvent(qtwin.ui, mevent)
@@ -1120,7 +1090,7 @@ def figure(fnum=None, docla=False, title=None, pnum=(1, 1, 1), figtitle=None,
     fnum = fignum = figure number
     pnum = plotnum = plot tuple
     '''
-    #matplotlib.pyplot.xkcd()
+    #mpl.pyplot.xkcd()
     fig = get_fig(fnum)
     axes_list = fig.get_axes()
     # Ensure my customized settings
@@ -1284,7 +1254,7 @@ def dark_background(ax=None, doubleit=False):
         xy = (xy[0] - halfw, xy[1] - halfh)
         width *= (doubleit + 1)
         height *= (doubleit + 1)
-    rect = matplotlib.patches.Rectangle(xy, width, height, lw=0, zorder=0)
+    rect = mpl.patches.Rectangle(xy, width, height, lw=0, zorder=0)
     rect.set_clip_on(True)
     rect.set_fill(True)
     rect.set_color(BLACK * .9)
@@ -1396,7 +1366,6 @@ def variation_trunctate(data):
 
 
 # ---- IMAGE CREATION FUNCTIONS ----
-@tools.debug_exception
 def draw_sift(desc, kp=None):
     # TODO: There might be a divide by zero warning in here.
     ''' desc = np.random.rand(128)
@@ -1424,8 +1393,8 @@ def draw_sift(desc, kp=None):
     arm_ori = np.tile(discrete_ori, (NBINS, 1)).flatten()
     # The offset x,y's for each sift measurment
     arm_dxy = np.array(zip(*cirlce_rad2xy(arm_ori, arm_mag)))
-    yxt_gen = itertools.product(xrange(NY), xrange(NX), xrange(NORIENTS))
-    yx_gen  = itertools.product(xrange(NY), xrange(NX))
+    yxt_gen = iprod(xrange(NY), xrange(NX), xrange(NORIENTS))
+    yx_gen  = iprod(xrange(NY), xrange(NX))
     # Transform the drawing of the SIFT descriptor to the its elliptical patch
     axTrans = ax.transData
     kpTrans = None
@@ -1434,9 +1403,9 @@ def draw_sift(desc, kp=None):
     kp = np.array(kp)
     kpT = kp.T
     x, y, a, c, d = kpT[:, 0]
-    kpTrans = Affine2D([( a, 0, x),
-                        ( c, d, y),
-                        ( 0, 0, 1)])
+    kpTrans = mpl.transforms.Affine2D([( a, 0, x),
+                                       ( c, d, y),
+                                       ( 0, 0, 1)])
     axTrans = ax.transData
     # Draw 8 directional arms in each of the 4x4 grid cells
     arrow_patches = []
@@ -1452,14 +1421,14 @@ def draw_sift(desc, kp=None):
         #posB = (arw_x+arw_dx, arw_y+arw_dy)
         _args = [arw_x, arw_y, arw_dx, arw_dy]
         _kwargs = dict(head_width=.0001, transform=kpTrans, length_includes_head=False)
-        arrow_patches  += [FancyArrow(*_args, **_kwargs)]
-        arrow_patches2 += [FancyArrow(*_args, **_kwargs)]
+        arrow_patches  += [mpl.patches.FancyArrow(*_args, **_kwargs)]
+        arrow_patches2 += [mpl.patches.FancyArrow(*_args, **_kwargs)]
     # Draw circles around each of the 4x4 grid cells
     circle_patches = []
     for y, x in yx_gen:
         circ_xy = (x * XYSCALE + XYSHIFT, y * XYSCALE + XYSHIFT)
         circ_radius = DSCALE
-        circle_patches += [Circle(circ_xy, circ_radius, transform=kpTrans)]
+        circle_patches += [mpl.patches.Circle(circ_xy, circ_radius, transform=kpTrans)]
     # Efficiently draw many patches with PatchCollections
     circ_collection = PatchCollection(circle_patches)
     circ_collection.set_facecolor('none')
@@ -1473,7 +1442,7 @@ def draw_sift(desc, kp=None):
     arw_collection.set_color(RED)
     arw_collection.set_alpha(1)
     # Border of arrows
-    arw_collection2 = matplotlib.collections.PatchCollection(arrow_patches2)
+    arw_collection2 = mpl.collections.PatchCollection(arrow_patches2)
     arw_collection2.set_transform(axTrans)
     arw_collection2.set_linewidth(1)
     arw_collection2.set_color(BLACK)
@@ -1553,11 +1522,7 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
     printDBG('draw_lines2()')
     printDBG(' * len(fm) = %r' % len(fm))
     printDBG(' * scale_factor = %r' % scale_factor)
-    if not DISTINCT_COLORS:
-        color_list = None
     # input data
-    if not SHOW_LINES:
-        return
     if fm is None:  # assume kpts are in director correspondence
         assert kpts1.shape == kpts2.shape
     if len(fm) == 0:
@@ -1573,14 +1538,12 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
                          kpts2_m[1] * scale_factor + hoff))
     if color_list is None:
         if fs is None:  # Draw with solid color
-            color_list    = [ LINE_COLOR for fx in xrange(len(fm))]
+            color_list    = [RED for fx in xrange(len(fm))]
         else:  # Draw with colors proportional to score difference
             color_list = scores_to_color(fs)
     segments  = [((x1, y1), (x2, y2)) for (x1, x2, y1, y2) in xxyy_iter]
-    linewidth = [LINE_WIDTH for fx in xrange(len(fm))]
-    line_alpha = LINE_ALPHA
-    if LINE_ALPHA_OVERRIDE is not None:
-        line_alpha = LINE_ALPHA_OVERRIDE
+    linewidth = [1.4 for fx in xrange(len(fm))]
+    line_alpha = .35 if LINE_ALPHA_OVERRIDE is None else LINE_ALPHA_OVERRIDE
     line_group = LineCollection(segments, linewidth, color_list, alpha=line_alpha)
     #plt.colorbar(line_group, ax=ax)
     ax.add_collection(line_group)
@@ -1588,101 +1551,52 @@ def draw_lines2(kpts1, kpts2, fm=None, fs=None, kpts2_offset=(0, 0),
     #plt.hexbin(x,y, cmap=plt.cm.YlOrRd_r)
 
 
-def draw_kpts(kpts, *args, **kwargs):
-    draw_kpts2(kpts, *args, **kwargs)
-
-
-def draw_kpts2(kpts, offset=(0, 0), ell=SHOW_ELLS, pts=False, pts_color=ORANGE,
-               pts_size=POINT_SIZE, ell_alpha=ELL_ALPHA,
-               ell_linewidth=ELL_LINEWIDTH, ell_color=ELL_COLOR,
-               color_list=None, rect=None, arrow=False, scale_factor=1, **kwargs):
-    if not DISTINCT_COLORS:
-        color_list = None
+def draw_kpts2(kpts, offset=(0, 0), scale_factor=1,
+               ell=True, pts=False, rect=False, eig=False, ori=False,
+               pts_size=2, ell_alpha=.6, ell_linewidth=1.5,
+               ell_color=BLUE, pts_color=ORANGE, color_list=None, **kwargs):
     printDBG('-------------')
     printDBG('draw_kpts2():')
+    #printDBG(' * kwargs.keys()=%r' % (kwargs.keys(),))
     printDBG(' * ell=%r pts=%r' % (ell, pts))
     printDBG(' * scale_factor=%r' % (scale_factor,))
     printDBG(' * offset=%r' % (offset,))
-    # get matplotlib info
-    ax = gca()
-    pltTrans = ax.transData
-    ell_actors = []
-    # data
-    kpts = np.array(kpts)
-    kptsT = kpts.T
-    x = kptsT[0, :] * scale_factor + offset[0]
-    y = kptsT[1, :] * scale_factor + offset[1]
     printDBG(' * drawing kpts.shape=%r' % (kpts.shape,))
-    if rect is None:
-        rect = ell
-        rect = False
-        if pts is True:
-            rect = False
-    if ell or rect:
-        # We have the transformation from unit circle to ellipse here. (inv(A))
-        a = kptsT[2] * scale_factor
-        b = np.zeros(len(a))
-        c = kptsT[3] * scale_factor
-        d = kptsT[4] * scale_factor
+    ax = gca()
+    ell_alpha = ell_alpha if ELL_ALPHA_OVERRIDE is None else ELL_ALPHA_OVERRIDE
+    if color_list is not None:
+        ell_color = color_list
+        pts_color = color_list
+    #else:
+        #pts_color = [pts_color for _ in xrange(len(kpts))]
+    if ell_color == 'distinct':
+        ell_color = distinct_colors(len(kpts))
 
-        kpts_iter = izip(x, y, a, b, c, d)
-        aff_list = [Affine2D([( a_, b_, x_),
-                              ( c_, d_, y_),
-                              (  0,  0,  1)])
-                    for (x_, y_, a_, b_, c_, d_) in kpts_iter]
-        patch_list = []
-        ell_actors = [Circle( (0, 0), 1, transform=aff) for aff in aff_list]
-        if ell:
-            patch_list += ell_actors
-        if rect:
-            rect_actors = [Rectangle( (-1, -1), 2, 2, transform=aff) for aff in aff_list]
-            patch_list += rect_actors
-        if arrow:
-            _kwargs = dict(head_width=.01, length_includes_head=False)
-            arrow_actors1 = [FancyArrow(0, 0, 0, 1, transform=aff, **_kwargs) for aff in aff_list]
-            arrow_actors2 = [FancyArrow(0, 0, 1, 0, transform=aff, **_kwargs) for aff in aff_list]
+    _kwargs = kwargs.copy()
+    _kwargs.update({
+        # offsets
+        'offset': offset,
+        'scale_factor': scale_factor,
+        # flags
+        'pts': pts,
+        'ell': ell,
+        'ori': ori,
+        'rect': rect,
+        'eig': eig,
+        # properties
+        'ell_color': ell_color,
+        'ell_alpha': ell_alpha,
+        'pts_color': pts_color,
+        'ell_linewidth': ell_linewidth,
+    })
 
-            patch_list += arrow_actors1
-            patch_list += arrow_actors2
-        ORI = True
-        if ORI:
-            if len(kptsT) == 6:
-                rad_list = kptsT[5]
-            else:
-                rad_list = np.zeros(len(kpts)) + (np.pi / 2)
-            dx = np.cos(rad_list) * d * scale_factor
-            dy = np.sin(rad_list) * d * scale_factor
-            _kwargs = dict(head_width=10, length_includes_head=False)
-            ori_actors = [FancyArrow(x_, y_, dx_, dy_, **_kwargs)
-                          for x_, y_, dx_, dy_ in izip(x, y, dx, dy)]
-            patch_list += ori_actors
-        ellipse_collection = matplotlib.collections.PatchCollection(patch_list)
-        ORI = True
-        ellipse_collection.set_facecolor('none')
-        ellipse_collection.set_transform(pltTrans)
-        if ELL_ALPHA_OVERRIDE is not None:
-            ell_alpha = ELL_ALPHA_OVERRIDE
-        ellipse_collection.set_alpha(ell_alpha)
-        ellipse_collection.set_linewidth(ell_linewidth)
-        if not color_list is None:
-            ell_color = color_list
-        if ell_color == 'distinct':
-            ell_color = distinct_colors(len(kpts))
-        ellipse_collection.set_edgecolor(ell_color)
-        ax.add_collection(ellipse_collection)
-    if pts:
-        if color_list is None:
-            color_list = [pts_color for _ in xrange(len(x))]
-        ax.autoscale(enable=False)
-        ax.scatter(x, y, c=color_list, s=2 * pts_size, marker='o', edgecolor='none')
-        #ax.autoscale(enable=False)
-        #ax.plot(x, y, linestyle='None', marker='o', markerfacecolor=pts_color, markersize=pts_size, markeredgewidth=0)
+    mpl_kp.draw_keypoints(ax, kpts, **_kwargs)
 
 
 # ---- CHIP DISPLAY COMMANDS ----
 def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
            interpolation='nearest', cmap=None, heatmap=False,
-           data_colorbar=False, **kwargs):
+           data_colorbar=False, darken=None, **kwargs):
     'other interpolations = nearest, bicubic, bilinear'
     printDBG('imshow()')
     #printDBG('[df2] ----- IMSHOW ------ ')
@@ -1691,9 +1605,10 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
     #printDBG('[***df2.imshow] img.stats = %r ' % (util.printable_mystats(img),))
     fig = figure(fnum=fnum, pnum=pnum, title=title, figtitle=figtitle, **kwargs)
     ax = gca()
-    if not DARKEN is None:
+    if darken is not None:
+        # Darken the shown picture
         imgdtype = img.dtype
-        img = np.array(img, dtype=float) * DARKEN
+        img = np.array(img, dtype=float) * darken
         img = np.array(img, dtype=imgdtype)
 
     plt_imshow_kwargs = {
@@ -1975,7 +1890,7 @@ def draw_boxedX(xywh, color=RED, lw=2, alpha=.5, theta=0):
     x2, y2 = x1 + w, y1 + h
     segments = [((x1, y1), (x2, y2)),
                 ((x1, y2), (x2, y1))]
-    trans = Affine2D()
+    trans = mpl.transforms.Affine2D()
     trans.rotate(theta)
     trans = trans + ax.transData
     width_list = [lw] * len(segments)

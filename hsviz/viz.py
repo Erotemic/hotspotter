@@ -233,19 +233,19 @@ def _annotate_qcx_match_results(hs, res, qcx, kpts, cx2_color):
 @util.indent_decor('[annote_kpts]')
 @profile
 def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=None, nRandKpts=None,
-                   rect=False, arrow=False):
+                   **kwargs):
     #print('[viz] _annotate_kpts()')
     if color is None:
         color = 'distinct' if sel_fx is None else df2.ORANGE
-    ell_args = {
+    ell_args = kwargs.copy()
+    ell_args.update({
         'ell': draw_ell,
         'pts': draw_pts,
-        'rect': rect,
-        'arrow': arrow,
-        'ell_alpha': .4,
+        'ell_alpha': kwargs.get('ell_alpha', .4),
         'ell_linewidth': 2,
         'ell_color': color,
-    }
+    })
+    printDBG('[df2._annotate_kpts] %r' % (ell_args.keys(),))
     if draw_ell and nRandKpts is not None:
         # show a random sample of kpts
         nkpts1 = len(kpts)
@@ -316,9 +316,10 @@ def show_chip(hs, cx=None, allres=None, res=None, draw_ell=True,
 
 @profile
 def show_keypoints(rchip, kpts, draw_ell=True, draw_pts=False, sel_fx=None, fnum=0,
-                   pnum=None, color=None, rect=False, arrow=False, **kwargs):
+                   pnum=None, color=None, **kwargs):
+    #printDBG('[df2.show_kpts] %r' % (kwargs.keys(),))
     df2.imshow(rchip, fnum=fnum, pnum=pnum, **kwargs)
-    _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=color, rect=rect, arrow=arrow)
+    _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=color, **kwargs)
     ax = df2.gca()
     ax._hs_viewtype = 'keypoints'
     ax._hs_kpts = kpts

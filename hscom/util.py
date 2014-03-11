@@ -2200,21 +2200,29 @@ def search_stack_for_localvar(varname):
     return None
 
 
-def get_parent_locals():
-    this_frame = inspect.currentframe()
-    call_frame = this_frame.f_back
-    parent_frame = call_frame.f_back
-    if parent_frame is None:
-        return None
+def get_stack_frame(N=0):
+    frame_level0 = inspect.currentframe()
+    frame_cur = frame_level0
+    for _ix in xrange(N + 1):
+        frame_next = frame_cur.f_back
+        if frame_next is None:
+            raise AssertionError('Frame level %r is root' % _ix)
+        frame_cur = frame_next
+    return frame_cur
+
+
+def get_parent_locals(N=0):
+    parent_frame = get_stack_frame(N=N + 2)
     return parent_frame.f_locals
 
 
-def get_parent_globals():
-    this_frame = inspect.currentframe()
-    call_frame = this_frame.f_back
-    parent_frame = call_frame.f_back
-    if parent_frame is None:
-        return None
+def get_parent_globals(N=0):
+    parent_frame = get_stack_frame(N=N + 1)
+    #this_frame = inspect.currentframe()
+    #call_frame = this_frame.f_back
+    #parent_frame = call_frame.f_back
+    #if parent_frame is None:
+        #return None
     return parent_frame.f_globals
 
 

@@ -10,6 +10,7 @@ from numpy import sqrt
 # Hotspotter
 import draw_func2 as df2
 from hscom import util
+import vtool
 
 
 def rrr():
@@ -17,13 +18,6 @@ def rrr():
     import sys
     print('[extract] Reloading: ' + __name__)
     imp.reload(sys.modules[__name__])
-
-
-def svd(M):
-    flags = cv2.SVD_FULL_UV
-    S, U, V = cv2.SVDecomp(M, flags=flags)
-    S = S.flatten()
-    return U, S, V
 
 
 def draw_warped_keypoint_patch(rchip, kp, **kwargs):
@@ -60,46 +54,22 @@ def get_aff_to_unit_circle(a, c, d):
     return A
 
 
-def get_translation(x, y):
-    T = np.array([[1, 0,  x],
-                  [0, 1,  y],
-                  [0, 0,  1]])
-    return T
-
-
-def get_scale(ss):
-    S = np.array([[ss, 0, 0],
-                  [0, ss, 0],
-                  [0,  0, 1]])
-    return S
-
-
-def get_rotation(radians):
-    sin_ = np.sin(radians)
-    cos_ = np.cos(radians)
-    R = np.array(((cos_, -sin_, 0),
-                  (sin_,  cos_, 0),
-                  (   0,      0, 1)))
-    return R
-
-
 def get_warped_patch(rchip, kp):
     'Returns warped patch around a keypoint'
     if len(kp) == 5:
         (x, y, a, c, d), r = kp, 0
     else:
         (x, y, a, c, d, r) = kp
-
-    sfx, sfy = kp2_sf(kp)
+    sfx, sfy = vtool.keypoint.orthogonal_scales(kp.reshape((1, kp.size)))[0, :]
     s = 41  # sf
     ss = sqrt(s) * 3
     (h, w) = rchip.shape[0:2]
     # Translate to origin(0,0) = (x,y)
-    T = get_translation(-x, -y)
+    T = vtool.linalg.translation_mat(-x, -y)
     A = get_aff_to_unit_circle(a, c, d)
-    R = get_rotation(r)
-    S = get_scale(ss)
-    X = get_translation(s / 2, s / 2)
+    R = vtool.linalg.rotation_mat(r)
+    S = vtool.linalg.scale_mat(ss)
+    X = vtool.linalg.translation_mat(s / 2, s / 2)
     rchip_h, rchip_w = rchip.shape[0:2]
     dsize = np.array(np.ceil(np.array([s, s])), dtype=int)
     M = X.dot(S).dot(R).dot(A).dot(T)
@@ -507,7 +477,8 @@ def in_depth_ellipse2x2(rchip, kp):
 def get_patch(rchip, kp):
     'Returns cropped unwarped patch around a keypoint'
     (x, y, a, c, d) = kp[0:5]
-    sfx, sfy = kp2_sf(kp)
+    S_list = vtool.keypoint.orthogonal_scales(kp.reshape((1, kp.size)))
+    sfx, sfy = S_list[0, :]
     ratio = max(sfx, sfy) / min(sfx, sfy)
     radx = sfx * ratio
     rady = sfy * ratio
@@ -528,7 +499,9 @@ def get_patch(rchip, kp):
 
 
 def quantize_to_pixel_with_offset(z, radius, low, high):
-    ''' Quantizes a small area into an indexable pixel location
+    '''
+    Quantizes a small area into an indexable pixel location
+    Useful for extracting the range of a keypoint from an image.
     Returns: pixel_range=(iz1, iz2), subpxl_offset
     Pixels:
     +___+___+___+___+___+___+___+___+
@@ -556,14 +529,3 @@ def quantize_to_pixel_with_offset(z, radius, low, high):
     z_radius = min(z_radius1, z_radius2)
     #print('z_radius=%r' % z_radius)
     return iz1, iz2, z_radius
-
-
-def kp2_sf(kp):
-    'computes scale factor of keypoint'
-    (x, y, a, c, d) = kp[0:5]
-    A = np.array(((a, 0), (c, d)))
-    U, S, V = svd(A)
-    # sf = np.sqrt(1 / (a * d))
-    sfx = S[1]
-    sfy = S[0]
-    return sfx, sfy

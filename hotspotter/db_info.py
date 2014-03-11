@@ -14,6 +14,8 @@ from PIL import Image
 # Hotspotter
 import load_data2 as ld2
 from hscom import util
+# vtool
+import vtool
 
 
 def dir_size(path):
@@ -369,8 +371,7 @@ def get_keypoint_stats(hs):
     print('[dbinfo] --- LaTeX --- ')
     _printopts = np.get_printoptions()
     np.set_printoptions(precision=3)
-    acd = kpts[:, 2:5].T
-    scales = np.sqrt(acd[0] * acd[2])
+    scales = vtool.keypoint.scale(kpts)
     scales = np.array(sorted(scales))
     tex_scale_stats = pytex.latex_mystats(r'kpt scale', scales)
     tex_nKpts       = pytex.latex_scalar(r'\# kpts', len(kpts))

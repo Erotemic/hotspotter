@@ -1,3 +1,4 @@
+# TODO: Depricate this file and just call pyhessaff in feature_compute2
 from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
@@ -31,9 +32,6 @@ if not os.path.exists(EXE_PATH):
 
 HESAFF_EXE = join(EXE_PATH, 'hesaff' + EXE_EXT)
 INRIA_EXE  = join(EXE_PATH, 'compute_descriptors' + EXE_EXT)
-
-KPTS_DTYPE = np.float64
-DESC_DTYPE = np.uint8
 
 
 #---------------------------------------

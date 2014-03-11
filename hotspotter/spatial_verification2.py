@@ -27,14 +27,10 @@ ctypedef np.float64_t FLOAT64
 SV_DTYPE = np.float64
 
 
-@profile
-def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
-    '''Generate 6 degrees of freedom homography transformation
-    Computes homography from normalized (0 to 1) point correspondences
-    from 2 --> 1 '''
-    #printDBG('[sv2] compute_homog')
+def build_lstsqrs_Mx9(x1_mn, y1_mn, x2_mn, y2_mn):
+    # Builds the M x 9 least squares matrix
     num_pts = len(x1_mn)
-    Mbynine = np.zeros((2 * num_pts, 9), dtype=SV_DTYPE)
+    Mx9 = np.zeros((2 * num_pts, 9), dtype=SV_DTYPE)
     for ix in xrange(num_pts):  # Loop over inliers
         # Concatinate all 2x9 matrices into an Mx9 matrix
         u2        = x2_mn[ix]
@@ -43,84 +39,55 @@ def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
         (g, h, i) = ( v2 * x1_mn[ix],  v2 * y1_mn[ix],  v2)
         (j, k, l) = (      x1_mn[ix],       y1_mn[ix],   1)
         (p, q, r) = (-u2 * x1_mn[ix], -u2 * y1_mn[ix], -u2)
-        Mbynine[ix * 2]     = (0, 0, 0, d, e, f, g, h, i)
-        Mbynine[ix * 2 + 1] = (j, k, l, 0, 0, 0, p, q, r)
-    # Solve for the nullspace of the Mbynine (solves least squares)
+        Mx9[ix * 2]     = (0, 0, 0, d, e, f, g, h, i)
+        Mx9[ix * 2 + 1] = (j, k, l, 0, 0, 0, p, q, r)
+    return Mx9
+
+
+@profile
+def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
+    '''Generate 6 degrees of freedom homography transformation
+    Computes homography from normalized (0 to 1) point correspondences
+    from 2 --> 1 '''
+    #printDBG('[sv2] compute_homog')
+    # Solve for the nullspace of the Mx9 matrix (solves least squares)
+    Mx9 = build_lstsqrs_Mx9(x1_mn, y1_mn, x2_mn, y2_mn)
     try:
-        #printDBG('[sv2] svd(%r)' % (Mbynine.shape,))
-        (u, s, v) = linalg.svd(Mbynine, full_matrices=False)
-        #printDBG('[sv2] done')
+        (u, s, v) = linalg.svd(Mx9, full_matrices=False)
     except MemoryError as ex:
         print('[sv2] Caught MemErr %r during full SVD. Trying sparse SVD.' % (ex))
-        MbynineSparse = sparse.lil_matrix(Mbynine)
-        (u, s, v) = sparse_linalg.svds(MbynineSparse)
+        Mx9Sparse = sparse.lil_matrix(Mx9)
+        (U, S, V) = sparse_linalg.svds(Mx9Sparse)
     except linalg.LinAlgError as ex:
         print('[sv2] svd did not converge: %r' % ex)
         return np.eye(3)
     except Exception as ex:
         print('[sv2] svd error: %r' % ex)
-        print('[sv2] Mbynine.shape = %r' % (Mbynine.shape,))
+        print('[sv2] Mx9.shape = %r' % (Mx9.shape,))
         raise
     # Rearange the nullspace into a homography
-    h = v[-1]  # v = V.H # (transposed in matlab)
+    h = V[-1]  # v = V.H # (transposed in matlab)
     H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]))
     return H
 
 
 def normalize_xy_points(x_m, y_m):
     'Returns a transformation to normalize points to mean=0, stddev=1'
-    mean_x = x_m.mean()  # center of mass
-    mean_y = y_m.mean()
+    mu_x = x_m.mean()  # center of mass
+    mu_y = y_m.mean()
     std_x = x_m.std()
     std_y = y_m.std()
     sx = 1.0 / std_x if std_x > 0 else 1  # average xy magnitude
     sy = 1.0 / std_y if std_x > 0 else 1
-    T = np.array([(sx, 0, -mean_x * sx),
-                  (0, sy, -mean_y * sy),
+    T = np.array([(sx, 0, -mu_x * sx),
+                  (0, sy, -mu_y * sy),
                   (0,  0,  1)])
-    x_norm = (x_m - mean_x) * sx
-    y_norm = (y_m - mean_y) * sy
+    x_norm = (x_m - mu_x) * sx
+    y_norm = (y_m - mu_y) * sy
     return x_norm, y_norm, T
 
 
 #---
-# Ensure that a feature doesn't have multiple assignments
-# --------------------------------
-# Linear algebra functions on lower triangular matrices
-
-#PYX DEFINE
-#cdef det_acd(FLOAT_2D acd):
-def det_acd(acd):
-    'Lower triangular determinant'
-    #PYX CDEF FLOAT_1D
-    det = acd[0] * acd[2]
-    return det
-
-
-#PYX DEFINE
-#cdef inv_acd(FLOAT_2D acd, FLOAT_1D det):
-def inv_acd(acd, det):
-    'Lower triangular inverse'
-    #PYX CDEF FLOAT_2D
-    inv_acd = np.array((acd[2], -acd[1], acd[0])) / det
-    return inv_acd
-
-
-#PYX DEFINE
-#cdef dot_acd(FLOAT_2D acd1, FLOAT_2D acd2):
-def dot_acd(acd1, acd2):
-    'Lower triangular dot product'
-    #PYX CDEF FLOAT_1D
-    a = (acd1[0] * acd2[0])
-    #PYX CDEF FLOAT_1D
-    c = (acd1[1] * acd2[0]) + (acd1[2] * acd2[1])
-    #PYX CDEF FLOAT_1D
-    d = (acd1[2] * acd2[2])
-    #PYX CDEF FLOAT_2D
-    acd3 = np.array((a, c, d))
-    return acd3
-
-
 # --------------------------------
 #import numba
 @profile
@@ -158,21 +125,19 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
     num_best_inliers = 0
     best_mx  = None
     # Get keypoint scales (determinant)
-    #PYX CDEF FLOAT_1D
-    det1_m = det_acd(acd1_m)
-    #PYX CDEF FLOAT_1D
-    det2_m = det_acd(acd2_m)
+    det1_m = vtool.keypoint.det_acd(acd1_m)  # PYX FLOAT_1D
+    det2_m = vtool.keypoint.det_acd(acd2_m)  # PYX FLOAT_1D
     # Compute all transforms from kpts1 to kpts2 (enumerate all hypothesis)
     # HACK: Because what I thought was A is actually invA,  need to invert calculation
     #inv2_m = inv_acd(acd2_m, det2_m)
-    inv1_m = inv_acd(acd1_m, det1_m)
+    inv1_m = vtool.keypoint.inv_acd(acd1_m, det1_m)
     # The transform from kp1 to kp2 is given as:
     # A = inv(A2).dot(A1)
     # HACK: Because what I thought was A is actually invA,  need to invert calculation
     #Aff_list = dot_acd(inv2_m, acd1_m)
-    Aff_list = dot_acd(acd2_m, inv1_m)
+    Aff_list = vtool.keypoint.dot_acd(acd2_m, inv1_m)
     # Compute scale change of all transformations
-    detAff_list = det_acd(Aff_list)
+    detAff_list = vtool.keypoint.det_acd(Aff_list)
     # Test all hypothesis
     for mx in xrange(len(x1_m)):
         # --- Get the mth hypothesis ---

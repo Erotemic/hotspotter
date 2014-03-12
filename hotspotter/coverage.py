@@ -170,13 +170,13 @@ def build_transforms(kpts, chip_shape, src_shape, scale_factor):
     S1 = np.array(((1 / w_,      0,  0),
                    (0,      1 / h_,  0),
                    (0,           0,  1),))
-    aff_list = [np.array(((a, 0, x),
+    invVR_aff2Ds = [np.array(((a, 0, x),
                           (c, d, y),
                           (0, 0, 1),)) for (x, y, a, c, d) in kpts]
     S2 = np.array(((scale_factor,      0,  0),
                    (0,      scale_factor,  0),
                    (0,           0,  1),))
-    perspective_list = [S2.dot(A).dot(S1).dot(T1) for A in aff_list]
+    perspective_list = [S2.dot(A).dot(S1).dot(T1) for A in invVR_aff2Ds]
     transform_list = [M[0:2] for M in perspective_list]
     return transform_list
 

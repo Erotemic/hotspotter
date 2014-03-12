@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.patches import Rectangle, Circle, FancyArrow
 import tpl.extern_feat as extern_feat
+import vtool.keypoint as ktool
 #__file__ = 'tpl/extern_feat/extern_feat.py'
 #exec(open('tpl/extern_feat/extern_feat.py').read())
 #import warnings
@@ -41,21 +42,21 @@ def draw_kpts3(kpts, method):
     b = np.zeros(len(a), dtype=float)
     if method == 0: # original inverse square root
         warnings.simplefilter("ignore")
-        aIS = 1/np.sqrt(a) 
+        aIS = 1/np.sqrt(a)
         bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
         cIS = b
         dIS = 1/np.sqrt(d)
         #cIS = (c/np.sqrt(d) - c/np.sqrt(d)) / (a-d+eps)
     elif method == 1:
         # Just inverse
-        aIS = 1/a 
+        aIS = 1/a
         bIS = -c/(a*d)
         cIS = b
         dIS = 1/d
     elif method == 2:
         # Identity
         aIS = c
-        bIS = b 
+        bIS = b
         cIS = c
         dIS = d
     elif method == 3:
@@ -72,7 +73,7 @@ def draw_kpts3(kpts, method):
         # Modify det_
         #det_ = 1/(det_)**2
         # inverse square root
-        aIS = 1/a 
+        aIS = 1/a
         bIS = -c/(a*d)
         cIS = b
         dIS = 1/d
@@ -95,7 +96,7 @@ def draw_kpts3(kpts, method):
         # Modify det_
         #det_ = 1/(det_)**2
         # inverse square root
-        aIS = 1/a 
+        aIS = 1/a
         bIS = -c/(a*d)
         cIS = b
         dIS = 1/d
@@ -107,8 +108,8 @@ def draw_kpts3(kpts, method):
     elif method == 5:
         print('m5')
         # inverse square root
-        A_list = extern_feat.expand_acd(kptsT[2:5].T)
-        aIS = 1/np.sqrt(a) 
+        A_list = ktool.get_invV_mats(kpts)
+        aIS = 1/np.sqrt(a)
         bIS = c/(-np.sqrt(a)*d - a*np.sqrt(d))
         cIS = b
         dIS = 1/np.sqrt(d)
@@ -119,7 +120,7 @@ def draw_kpts3(kpts, method):
     kpts_iter = izip(x,y,aIS,bIS,cIS,dIS)
     aff2d_list = [Affine2D([( a_, b_, x_),
                             ( c_, d_, y_),
-                            ( 0 , 0 , 1)]) 
+                            ( 0 , 0 , 1)])
                         for (x_,y_,a_,b_,c_,d_) in kpts_iter]
     ell_actors = [Circle((0,0), 1, transform=aff2d) for aff2d in aff2d_list]
     ellipse_collection = matplotlib.collections.PatchCollection(ell_actors)
@@ -140,7 +141,7 @@ outname = extern_feat.compute_perdoch_text_feats(rchip_fpath)
 kpts0, desc = extern_feat.read_text_feat_file(outname)
 invE = extern_feat.expand_invET(kpts0[:,2:5].T)[0]
 kpts1 = extern_feat.fix_kpts_hack(kpts0[:], method=1)
-A1 = extern_feat.expand_acd(kpts1[:,2:5])[0]
+A1 = ktool.get_invV_mats(kpts1)[0]
 #kpts, desc = filter_kpts_scale(kpts, desc)
 
 df2.figure(1, doclf=True)

@@ -2103,6 +2103,12 @@ def embed(parent_locals=None):
     print('')
     print('[util] embedding')
     import IPython
+    try:
+        # make qt not loop forever
+        from PyQt4.QtCore import pyqtRemoveInputHook
+        pyqtRemoveInputHook()
+    except ImportError as ex:
+        print(ex)
     IPython.embed()
 
 

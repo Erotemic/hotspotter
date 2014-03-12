@@ -81,7 +81,6 @@ class QueryRequest(DynStruct):
         return cxfx_enum
 
 
-
 def get_flann_uid(hs, cx_list):
     feat_uid   = hs.prefs.feat_cfg.get_uid()
     sample_uid = util.hashstr_arr(cx_list, 'dcxs')

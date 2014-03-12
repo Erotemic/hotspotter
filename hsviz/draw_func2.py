@@ -1366,6 +1366,7 @@ def variation_trunctate(data):
 
 
 # ---- IMAGE CREATION FUNCTIONS ----
+@util.DEPRICATED
 def draw_sift(desc, kp=None):
     # TODO: There might be a divide by zero warning in here.
     ''' desc = np.random.rand(128)
@@ -1558,6 +1559,7 @@ def draw_kpts2(kpts, offset=(0, 0), scale_factor=1,
     printDBG('-------------')
     printDBG('draw_kpts2():')
     #printDBG(' * kwargs.keys()=%r' % (kwargs.keys(),))
+    printDBG(' * kpts.shape=%r:' % (kpts.shape,))
     printDBG(' * ell=%r pts=%r' % (ell, pts))
     printDBG(' * scale_factor=%r' % (scale_factor,))
     printDBG(' * offset=%r' % (offset,))

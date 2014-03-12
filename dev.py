@@ -41,6 +41,8 @@ import hstpl
 #from hotspotter import QueryResult as qr
 #from hotspotter import match_chips3 as mc3
 #from hotspotter import voting_rules2 as vr2
+# VTool
+import vtool.keypoint as ktool
 
 
 def myexcepthook(type, value, tb):
@@ -215,8 +217,7 @@ def plot_keypoint_scales(hs, fnum=1):
     np.set_printoptions(precision=3)
     print(latex_formater.latex_scalar(r'\# keypoints, ', len(kpts)))
     print(latex_formater.latex_mystats(r'\# keypoints per image', cx2_nFeats))
-    acd = kpts[:, 2:5].T
-    scales = np.sqrt(acd[0] * acd[2])
+    scales = ktool.get_scales(kpts)
     scales = np.array(sorted(scales))
     print(latex_formater.latex_mystats(r'keypoint scale', scales))
     np.set_printoptions(**_printopts)

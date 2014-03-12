@@ -80,6 +80,7 @@ def load_hesaff_clib():
     hesaff_lib, def_cfunc = ctypes_interface.load_clib(libname, root_dir)
     # Expose extern C Functions
     def_cfunc(int_t, 'detect',                 [obj_t])
+    def_cfunc(int_t, 'get_kpts_dim',           [])
     def_cfunc(None,  'exportArrays',           [obj_t, int_t, kpts_t, desc_t])
     def_cfunc(None,  'extractDesc',            [obj_t, int_t, kpts_t, desc_t])
     def_cfunc(obj_t, 'new_hesaff',             [str_t])
@@ -88,6 +89,8 @@ def load_hesaff_clib():
 
 # Create a global interface to the hesaff lib
 hesaff_lib = load_hesaff_clib()
+KPTS_DIM = hesaff_lib.get_kpts_dim()
+DESC_DIM = hesaff_lib.get_desc_dim()
 
 
 #============================
@@ -112,7 +115,9 @@ def new_hesaff(img_fpath, **kwargs):
     return hesaff_ptr
 
 
-def detect_kpts(img_fpath, use_adaptive_scale=False, **kwargs):
+def detect_kpts(img_fpath,
+                use_adaptive_scale=False, assume_gravity=False,
+                **kwargs):
     '''
     main driver function for detecting hessian affine keypoints.
     extra parameters can be passed to the hessian affine detector by using
@@ -122,11 +127,9 @@ def detect_kpts(img_fpath, use_adaptive_scale=False, **kwargs):
     hesaff_ptr = new_hesaff(img_fpath, **kwargs)
     # Return the number of keypoints detected
     nKpts = hesaff_lib.detect(hesaff_ptr)
-    kpts_dim = 5
-    desc_dim = 128
     # Allocate arrays
-    kpts = np.empty((nKpts, kpts_dim), kpts_dtype)
-    desc = np.empty((nKpts, desc_dim), desc_dtype)
+    kpts = np.empty((nKpts, KPTS_DIM), kpts_dtype)
+    desc = np.empty((nKpts, DESC_DIM), desc_dtype)
     hesaff_lib.exportArrays(hesaff_ptr, nKpts, kpts, desc)  # Populate arrays
     if use_adaptive_scale:  # Adapt scale if requested
         #print('Adapting Scale')

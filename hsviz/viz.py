@@ -15,6 +15,8 @@ from hsdev import params
 from hscom import fileio as io
 from hscom import util
 from hotspotter import QueryResult as qr
+# VTool
+from vtool import keypoint as ktool
 
 #from interaction import interact_keypoints, interact_chipres, interact_chip # NOQA
 
@@ -198,7 +200,8 @@ def _annotate_qcx_match_results(hs, res, qcx, kpts, cx2_color):
         for cx, color in cx2_color.iteritems():
             try:
                 qfxs = res.cx2_fm[cx][:, 0]
-                kpts_ = np.empty((0, 5)) if len(qfxs) == 0 else kpts[qfxs]
+                kpts_dim = kpts.shape[1]
+                kpts_ = np.empty((0, kpts_dim)) if len(qfxs) == 0 else kpts[qfxs]
                 _kpts_helper(kpts_, color, .4, hs.cidstr(cx))
             except Exception as ex:
                 print('qfxs=%r' % qfxs)
@@ -784,11 +787,11 @@ def _show_res(hs, res, **kwargs):
 
 
 def kp_info(kp):
-    xy_str   = 'xy=(%.1f, %.1f)' % (kp[0], kp[1],)
-    acd_str  = '[(%3.1f,  0.00),\n' % (kp[2],)
-    acd_str += ' (%3.1f, %3.1f)]' % (kp[3], kp[4],)
-    scale = np.sqrt(kp[2] * kp[4])
-    return xy_str, acd_str, scale
+    kpts = np.array([kp])
+    xy_str    = ktool.get_xy_strs(kpts)[0]
+    shape_str = ktool.get_shape_strs(kpts)[0]
+    scale = ktool.get_scales(kpts)[0]
+    return xy_str, shape_str, scale
 
 
 @util.indent_decor('[viz.draw_feat_row]')
@@ -800,14 +803,14 @@ def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None,
         return extract_patch.draw_keypoint_patch(rchip, kp, sift, **kwargs)
 
     # Feature strings
-    xy_str, acd_str, scale = kp_info(kp)
+    xy_str, shape_str, scale = kp_info(kp)
 
     # Draw the unwarped selected feature
     ax = _draw_patch(fnum=fnum, pnum=pnum_(px + 1))
     ax._hs_viewtype = 'unwarped'
     ax._hs_cx = cx
     ax._hs_fx = fx
-    unwarped_lbl = 'affine feature inv(A) =\n' + acd_str
+    unwarped_lbl = 'affine feature invV =\n' + shape_str
     df2.set_xlabel(unwarped_lbl, ax)
 
     # Draw the warped selected feature

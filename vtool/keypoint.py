@@ -40,6 +40,7 @@ KPTS_DTYPE = np.float32
 
 def get_xys(kpts):
     # Keypoint locations in chip space
+    # TODO: _xys = kpts.T[0:2]
     _xs, _ys   = kpts.T[0:2]
     return _xs, _ys
 

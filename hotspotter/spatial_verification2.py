@@ -214,8 +214,8 @@ def homography_inliers(kpts1, kpts2, fm,
     kpts1_m = kpts1[fx1_m, :]
     kpts2_m = kpts1[fx1_m, :]
     # x, y, a, c, d : postion, shape
-    x1_m, y1_m, invV1_m = ktool.cast_split(kpts1_m, SV_DTYPE)
-    x2_m, y2_m, invV2_m = ktool.cast_split(kpts2_m, SV_DTYPE)
+    x1_m, y1_m, invV1_m, oris1_m = ktool.cast_split(kpts1_m, SV_DTYPE)
+    x2_m, y2_m, invV2_m, oris2_m = ktool.cast_split(kpts2_m, SV_DTYPE)
     # Get diagonal length
     dlen_sqrd2 = ktool.diag_extent_sqrd(kpts2_m) if dlen_sqrd2 is None else dlen_sqrd2
     xy_thresh_sqrd = dlen_sqrd2 * xy_thresh

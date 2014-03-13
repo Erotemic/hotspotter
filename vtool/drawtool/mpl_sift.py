@@ -17,21 +17,33 @@ def cirlce_rad2xy(radians, mag):
     return np.cos(radians) * mag, np.sin(radians) * mag
 
 
+# Create a patch collection with attributes
+def circl_collection(patch_list, color, alpha):
+    coll = mpl.collections.PatchCollection(patch_list)
+    coll.set_alpha(alpha)
+    coll.set_edgecolor(color)
+    coll.set_facecolor('none')
+    return coll
+
+
+def arm_collection(patch_list, color, alpha, lw):
+    coll = mpl.collections.PatchCollection(patch_list)
+    coll.set_alpha(alpha)
+    coll.set_color(color)
+    coll.set_linewidth(lw)
+    return coll
+
+
 def get_sift_collection(sift, aff=mpl.transforms.Affine2D(),
                         bin_color=BLACK, arm1_color=RED, arm2_color=BLACK):
-    DSCALE = .25
-    XYSCALE = .5
-    XYSHIFT = -.75
-    ORI_SHIFT = 0
+    # global offset scale adjustments
+    DSCALE, ARMSCALE, XYSCALE, XYOFFST = .25, 1.5, .5, -.75
     # SIFT CONSTANTS
-    NORIENTS = 8
-    NX = 4
-    NY = 4
+    NORIENTS, NX, NY = 8, 4, 4
     NBINS = NX * NY
-
-    discrete_ori = (np.arange(0, NORIENTS) * (np.tau / NORIENTS) + ORI_SHIFT)
     # Build list of plot positions
     # Build an "arm" for each sift measurement
+    discrete_ori = (np.arange(0, NORIENTS) * (np.tau / NORIENTS))
     arm_mag   = sift / 255.0
     arm_ori = np.tile(discrete_ori, (NBINS, 1)).flatten()
     # The offset x,y's for each sift measurment
@@ -41,40 +53,24 @@ def get_sift_collection(sift, aff=mpl.transforms.Affine2D(),
     # Draw 8 directional arms in each of the 4x4 grid cells
     arrow_patches1 = []
     arrow_patches2 = []
+    _kwarm = dict(head_width=1e-10, length_includes_head=False, transform=aff)
+    _kwcirc = dict(transform=aff)
     for y, x, t in yxt_gen:
         index = y * NX * NORIENTS + x * NORIENTS + t
         (dx, dy) = arm_dxy[index]
-        arm_x  = x * XYSCALE + XYSHIFT
-        arm_y  = y * XYSCALE + XYSHIFT
-        arm_dy = dy * DSCALE * 1.5  # scale for viz Hack
-        arm_dx = dx * DSCALE * 1.5
+        arm_x  = x * XYSCALE + XYOFFST
+        arm_y  = y * XYSCALE + XYOFFST
+        arm_dy = dy * DSCALE * ARMSCALE
+        arm_dx = dx * DSCALE * ARMSCALE
         _args = [arm_x, arm_y, arm_dx, arm_dy]
-        _kwargs = dict(head_width=1e-10, length_includes_head=False, transform=aff)
-        arrow_patches1.append(mpl.patches.FancyArrow(*_args, **_kwargs))
-        arrow_patches2.append(mpl.patches.FancyArrow(*_args, **_kwargs))
+        arrow_patches1.append(mpl.patches.FancyArrow(*_args, **_kwarm))
+        arrow_patches2.append(mpl.patches.FancyArrow(*_args, **_kwarm))
     # Draw circles around each of the 4x4 grid cells
     circle_patches = []
     for y, x in yx_gen:
-        circ_xy = (x * XYSCALE + XYSHIFT, y * XYSCALE + XYSHIFT)
+        circ_xy = (x * XYSCALE + XYOFFST, y * XYSCALE + XYOFFST)
         circ_radius = DSCALE
-        circle_patches += [mpl.patches.Circle(circ_xy, circ_radius, transform=aff)]
-
-    # Create a patch collection with attributes
-    def circl_collection(patch_list, color, alpha):
-        coll = mpl.collections.PatchCollection(patch_list)
-        coll.set_alpha(alpha)
-        coll.set_edgecolor(color)
-        coll.set_facecolor('none')
-        return coll
-
-    def arm_collection(patch_list, color, alpha, lw):
-        coll = mpl.collections.PatchCollection(patch_list)
-        coll.set_alpha(alpha)
-        coll.set_color(color)
-        #coll.set_edgecolor('none')
-        #coll.set_facecolor('none')
-        coll.set_linewidth(lw)
-        return coll
+        circle_patches += [mpl.patches.Circle(circ_xy, circ_radius, **_kwcirc)]
 
     circ_coll = circl_collection(circle_patches,  bin_color, 0.5)
     arm1_coll = arm_collection(arrow_patches1, arm1_color, 1.0, 0.5)

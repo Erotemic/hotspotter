@@ -33,6 +33,7 @@ def maxima_neighbors(argmaxima, hist, centers=None):
 
 
 def interpolate_submaxima(argmaxima, hist, centers=None):
+    # TODO Use np.polyfit here instead for readability
     x123, y123 = maxima_neighbors(argmaxima, hist, centers)
     (y1, y2, y3) = y123
     (x1, x2, x3) = x123
@@ -44,3 +45,35 @@ def interpolate_submaxima(argmaxima, hist, centers=None):
     yv = C - B * B / (4 * A)
     submaxima_x, submaxima_y = np.vstack((xv.T, yv.T))
     return submaxima_x, submaxima_y
+
+
+def subbin_bounds(z, radius, low, high):
+    '''
+    Gets quantized bounds of a sub-bin/pixel point and a radius.
+    Useful for cropping using subpixel points
+    Returns: quantized_bounds=(iz1, iz2), subbin_offset
+
+    e.g.
+    Illustration: (the bin edges are pipes)
+                  (the bin centers are pluses)
+    Input = {'z': 1.5, 'radius':5.666, 'low':0, 'high':7}
+    Output = {'z1':0, 'z2': 7, 'offst': 5.66}
+
+    |   |   |   |   |   |   |   |   |
+    |_+_|_+_|_+_|_+_|_+_|_+_|_+_|_+_|
+      ^     ^                     ^
+      z1    z                     z2
+            ,.___.___.___.___.___.   < radius (5.333)
+      .---.-,                        < z_offset1 (1.6666)
+            ,_.___.___.___.___.___.  < z_offset2 (5.666)
+                '''
+    #print('quan pxl: z=%r, radius=%r, low=%r, high=%r' % (z, radius, low, high))
+    # Get subpixel bounds ignoring boundaries
+    z1 = z - radius
+    z2 = z + radius
+    # Quantize and clip bounds
+    iz1 = int(max(np.floor(z1), low))
+    iz2 = int(min(np.ceil(z2), high))
+    # Quantized min radius
+    z_offst = z - iz1
+    return iz1, iz2, z_offst

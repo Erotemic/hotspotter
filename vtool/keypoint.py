@@ -70,7 +70,7 @@ def get_components(kpts):
 
 # --- scaled and offset keypoint components ---
 
-def scale_xys(kpts, scale_factor=1, offset=(0, 0)):
+def scale_xys(kpts, scale_factor=1.0, offset=(0.0, 0.0)):
     # Keypoint location modified by an offset and scale
     __xs, __ys = get_xys(kpts)
     _xs = (__xs * scale_factor) + offset[0]
@@ -78,23 +78,21 @@ def scale_xys(kpts, scale_factor=1, offset=(0, 0)):
     return _xs, _ys
 
 
-def scale_invVs(kpts, scale_factor=1, with12=False):
+def scale_invVs(kpts, scale_factor=1.0):
     # Keypoint location modified by an offset and scale
     __iv11s, __iv21s, __iv22s = get_invVs(kpts)
     _iv11s = __iv11s * scale_factor
     _iv21s = __iv21s * scale_factor
     _iv22s = __iv22s * scale_factor
-    if not with12:
-        return _iv11s, _iv21s, _iv22s,
-    else:
-        _iv12s = np.zeros(len(_iv11s), dtype=_iv11s.dtype)
-        return _iv11s, _iv12s, _iv21s, _iv22s,
+    _iv12s = np.zeros(len(_iv11s), dtype=_iv11s.dtype)
+    return _iv11s, _iv12s, _iv21s, _iv22s
 
 
-def scale_kpts(kpts, scale_factor=1, offset=(0, 0)):
+def scale_kpts(kpts, scale_factor=1.0, offset=(0.0, 0.0)):
     # Returns keypoint components subject to a scale and offset
-    _xs, _ys = scale_xys(kpts, scale_factor, offset)
-    _iv11s, _iv12s, _iv21s, _iv22s = scale_invVs(kpts, scale_factor, with12=True)
+    (_xs, _ys) = scale_xys(kpts, scale_factor, offset)
+    (_iv11s, _iv12s,
+     _iv21s, _iv22s) = scale_invVs(kpts, scale_factor)
     _oris = get_oris(kpts)
     return _xs, _ys, _iv11s, _iv12s, _iv21s, _iv22s, _oris
 
@@ -161,8 +159,7 @@ def orthogonal_scales(invV_mats=None, kpts=None):
         assert kpts is not None
         invV_mats = get_invV_mats(kpts, ashomog=False)
     'gets the scales of the major and minor elliptical axis'
-    USV_list = [svd(invV) for invV in invV_mats[:, 0:2, 0:2]]
-    S_list = array([S for U, S, V in USV_list])
+    S_list = np.array([svd(invV)[1] for invV in invV_mats[:, 0:2, 0:2]])
     return S_list
 
 

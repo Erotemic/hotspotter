@@ -53,16 +53,16 @@ def draw_keypoints(ax, kpts, scale_factor=1.0, offset=(0.0, 0.0), ell=True,
     (_xs, _ys, _iv11s, _iv12s, _iv21s, _iv22s, _oris) = ktool.scale_kpts(kpts, scale_factor, offset)
     # Build list of keypoint shape transforms from unit circles to ellipes
     invV_aff2Ds = get_invV_aff2Ds(_xs, _ys, _iv11s, _iv12s, _iv21s, _iv22s)
-    invVR_aff2Ds = get_invVR_aff2Ds(invV_aff2Ds, _oris)
+    RinvV_aff2Ds = get_RinvV_aff2Ds(invV_aff2Ds, _oris)
     try:
         if sifts is not None:
             # SIFT descriptors
             sift_kwargs = {}
             pass_props(kwargs, sift_kwargs, 'bin_color', 'arm1_color', 'arm2_color')
-            mpl_sift.draw_sifts(ax, sifts, invVR_aff2Ds, **sift_kwargs)
+            mpl_sift.draw_sifts(ax, sifts, RinvV_aff2Ds, **sift_kwargs)
         if rect:
             # Bounding Rectangles
-            rect_patches = rectangle_actors(invVR_aff2Ds)
+            rect_patches = rectangle_actors(RinvV_aff2Ds)
             draw_patches(ax, rect_patches, rect_color, ell_alpha, rect_linewidth)
         if ell:
             # Keypoint shape
@@ -94,19 +94,19 @@ def _draw_pts(ax, _xs, _ys, pts_size, pts_color):
     ax.autoscale(enable=False)
 
 
-def get_invV_aff2Ds(_xs, _ys, _iv11s, _iv12s, _iv21s, _iv22s, _oris=None):
+def get_invV_aff2Ds(_xs, _ys, _iv11s, _iv12s, _iv21s, _iv22s):
     kpts_iter = izip(_xs, _ys, _iv11s, _iv12s, _iv21s, _iv22s)
-    invV_aff2Ds = [mpl.transforms.Affine2D([(iv11, iv21, x),
+    invV_aff2Ds = [mpl.transforms.Affine2D([(iv11, iv12, x),
                                             (iv21, iv22, y),
                                             (0,       0, 1)])
                    for (x, y, iv11, iv12, iv21, iv22) in kpts_iter]
     return invV_aff2Ds
 
 
-def get_invVR_aff2Ds(invV_aff2Ds, _oris=None):
+def get_RinvV_aff2Ds(invV_aff2Ds, _oris=None):
     ori_list = [mpl.transforms.Affine2D().rotate(ori) for ori in _oris]
-    invVR_aff2Ds = [ori + invV for (invV, ori) in izip(invV_aff2Ds, ori_list)]
-    return invVR_aff2Ds
+    RinvV_aff2Ds = [ori + invV for (invV, ori) in izip(invV_aff2Ds, ori_list)]
+    return RinvV_aff2Ds
 
 
 def ellipse_actors(invV_aff2Ds):
@@ -116,10 +116,10 @@ def ellipse_actors(invV_aff2Ds):
     return ell_actors
 
 
-def rectangle_actors(invVR_aff2Ds):
+def rectangle_actors(RinvV_aff2Ds):
     # warp unit rectangles to keypoint shapes
-    rect_actors = [mpl.patches.Rectangle((-1, -1), 2, 2, transform=invVR)
-                   for invVR in invVR_aff2Ds]
+    rect_actors = [mpl.patches.Rectangle((-1, -1), 2, 2, transform=RinvV)
+                   for RinvV in RinvV_aff2Ds]
     return rect_actors
 
 

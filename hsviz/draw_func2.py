@@ -1366,7 +1366,7 @@ def variation_trunctate(data):
 
 
 # ---- IMAGE CREATION FUNCTIONS ----
-@util.DEPRICATED
+#@util.DEPRICATED
 def draw_sift(desc, kp=None):
     # TODO: There might be a divide by zero warning in here.
     ''' desc = np.random.rand(128)
@@ -1403,7 +1403,10 @@ def draw_sift(desc, kp=None):
         kp = [0, 0, 1, 0, 1]
     kp = np.array(kp)
     kpT = kp.T
-    x, y, a, c, d = kpT[:, 0]
+    if len(kpT) == 6:
+        x, y, a, c, d, r = kpT
+    elif len(kpT) == 5:
+        x, y, a, c, d = kpT
     kpTrans = mpl.transforms.Affine2D([( a, 0, x),
                                        ( c, d, y),
                                        ( 0, 0, 1)])

@@ -16,13 +16,13 @@ import multiprocessing
 import numpy as np
 #import cv2
 # HotSpotter
-#from hotspotter import spatial_verification2 as sv2
-from hotspotter import DataStructures as ds
-from hotspotter import chip_compute2 as cc2
-from hotspotter import feature_compute2 as fc2
-from hotspotter import load_data2 as ld2
-from hotspotter import matching_functions as mf
-from hotspotter import report_results2 as rr2
+#from hsapi import spatial_verification2 as sv2
+from hsapi import DataStructures as ds
+from hsapi import chip_compute2 as cc2
+from hsapi import feature_compute2 as fc2
+from hsapi import load_data2 as ld2
+from hsapi import matching_functions as mf
+from hsapi import report_results2 as rr2
 from hscom import util
 from hscom import latex_formater
 from hsdev import params
@@ -37,10 +37,10 @@ from hsviz import interact
 from hsviz import viz
 import hstpl
 #from hscom import fileio as io
-#from hotspotter import HotSpotterAPI as api
-#from hotspotter import QueryResult as qr
-#from hotspotter import match_chips3 as mc3
-#from hotspotter import voting_rules2 as vr2
+#from hsapi import HotSpotterAPI as api
+#from hsapi import QueryResult as qr
+#from hsapi import match_chips3 as mc3
+#from hsapi import voting_rules2 as vr2
 # VTool
 import vtool.keypoint as ktool
 
@@ -624,7 +624,7 @@ if __name__ == '__main__':
     preload = '--preload' in sys.argv
     hs = main_api.main(defaultdb='NAUTS', preload=preload)
     if preload:
-        from hotspotter import match_chips3 as mc3
+        from hsapi import match_chips3 as mc3
         qreq = mc3.quickly_ensure_qreq(hs)
     print('')
     print('==========================')

@@ -1,6 +1,6 @@
 from hscom import util
 from hscom import util
-from hotspotter import nn_filters
+from hsapi import nn_filters
 from dbgimport import  *
 '''
 %run main.py --query 28 --nocache-query

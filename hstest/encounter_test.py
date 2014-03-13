@@ -2,7 +2,7 @@
 from __future__ import division, print_function
 import __builtin__
 import multiprocessing
-from hotspotter import encounter
+from hsapi import encounter
 from hscom import util
 from hsviz import draw_func2 as df2
 from hsdev import main_api
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     assert len(cxs) > 1
 
     # Build result list
-    from hotspotter import match_chips3 as mc3
+    from hsapi import match_chips3 as mc3
     mc3.rrr()
     qreq = mc3.quickly_ensure_qreq(hs, qcxs=cxs, dcxs=cxs)
     # Query within an encounter

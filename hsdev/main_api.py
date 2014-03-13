@@ -74,7 +74,7 @@ def main(defaultdb='cache', preload=False, app=None, args=None):
     if args is None:
         args = parse_arguments(defaultdb, defaultdb == 'cache')
     # Import after parsing args
-    from hotspotter import HotSpotterAPI as api
+    from hsapi import HotSpotterAPI as api
     from hscom import fileio as io
     from hsdev import params
     from hsdev import experiment_harness

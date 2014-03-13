@@ -36,6 +36,7 @@ from hscom import tools
 from hscom.Printable import DynStruct
 # VTool
 import vtool.drawtool.mpl_keypoint as mpl_kp
+import vtool.patch as ptool
 
 #================
 # GLOBALS
@@ -1598,6 +1599,43 @@ def draw_kpts2(kpts, offset=(0, 0), scale_factor=1,
     mpl_kp.draw_keypoints(ax, kpts, **_kwargs)
 
 
+@util.indent_decor('[df2.dkp]')
+def draw_keypoint_patch(rchip, kp, sift=None, warped=False, patch_dict={}, **kwargs):
+    #print('--------------------')
+    printDBG('[df2] draw_keypoint_patch()')
+    kpts = np.array([kp])
+    if warped:
+        #if kpts.shape[1] == 6:
+            #ori = kpts[0, 5]
+            #np.tau = 2 * np.pi
+            #kpts[0, 5] = 0
+            #np.tau / 4
+        patches, subkpts = ptool.get_warped_patches(rchip, kpts)
+        #if kpts.shape[1] == 6:
+            #kpts[0, 5] = ori
+    else:
+        patches, subkpts = ptool.get_unwarped_patches(rchip, kpts)
+    #print('[df2] kpts[0]    = %r' % (kpts[0]))
+    #print('[df2] subkpts[0] = %r' % (subkpts[0]))
+    #print('[df2] patches[0].shape = %r' % (patches[0].shape,))
+    patch = patches[0]
+    subkpts_ = np.array(subkpts)
+    patch_dict_ = {
+        'sifts': np.array([sift]),
+        'ell_color':  (0, 0, 1),
+        'pts': True,
+        'ori': True,
+        'ell': True,
+        'eig': False,
+        'rect': True,
+    }
+    patch_dict_.update(patch_dict)
+    # Draw patch with keypoint overlay
+    fig, ax = imshow(patch, **kwargs)
+    draw_kpts2(subkpts_, **patch_dict_)
+    return ax
+
+
 # ---- CHIP DISPLAY COMMANDS ----
 def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
            interpolation='nearest', cmap=None, heatmap=False,
@@ -1697,7 +1735,7 @@ def draw_vector_field(gx, gy, fnum=None, pnum=None):
     #X, Y = np.meshgrid(x_grid, y_grid)
     #U = np.cos(X)
     #V = np.sin(Y)
-    U, V = gx, gy
+    U, V = gx, -gy
 
     #1
     figure(fnum=fnum, pnum=pnum)

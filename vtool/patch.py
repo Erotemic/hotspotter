@@ -10,6 +10,10 @@ from numpy import array, sqrt
 import vtool.histogram as htool
 import vtool.keypoint as ktool
 import vtool.linalg as ltool
+import vtool.image as gtool
+
+
+np.tau = 2 * np.pi
 
 
 def patch_gradient(image, ksize=1):
@@ -24,9 +28,10 @@ def patch_mag(gradx, grady):
 
 
 def patch_ori(gradx, grady):
-    np.tau = 2 * np.pi
+    'returns patch orientation relative to the gravity vector'
     gori = np.arctan2(grady, gradx)  # outputs from -pi to pi
     gori[gori < 0] = gori[gori < 0] + np.tau  # map to 0 to tau (keep coords)
+    gori = (gori + ktool.GRAVITY_THETA) % np.tau  # normalize relative to gravity
     return gori
 
 
@@ -39,7 +44,7 @@ def get_unwarped_patches(rchip, kpts):
     subkpts = []
 
     for (kp, x, y, (sfy, sfx)) in izip(kpts, _xs, _ys, S_list):
-        ratio = np.sqrt(max(sfx, sfy) / min(sfx, sfy))
+        ratio = (max(sfx, sfy) / min(sfx, sfy))
         radius_x = sfx * ratio
         radius_y = sfy * ratio
         (chip_h, chip_w) = rchip.shape[0:2]
@@ -61,6 +66,7 @@ def get_warped_patches(rchip, kpts):
     warped_patches = []
     warped_subkpts = []
     xs, ys = ktool.get_xys(kpts)
+    # rotate relative to the gravity vector
     oris = ktool.get_oris(kpts)
     invV_mats = ktool.get_invV_mats(kpts, with_trans=False, ashomog=True)
     V_mats = ktool.get_V_mats(invV_mats)
@@ -77,27 +83,24 @@ def get_warped_patches(rchip, kpts):
         X = ltool.translation_mat(s / 2, s / 2)
         M = X.dot(S).dot(R).dot(V).dot(T)
         # Prepare to warp
-        rchip_h, rchip_w = rchip.shape[0:2]
         dsize = np.array(np.ceil(np.array([s, s])), dtype=int)
-        cv2_flags = cv2.INTER_LANCZOS4
-        cv2_borderMode = cv2.BORDER_CONSTANT
-        cv2_warp_kwargs = {'flags': cv2_flags, 'borderMode': cv2_borderMode}
         # Warp
-        warped_patch = cv2.warpAffine(rchip, M[0:2], tuple(dsize), **cv2_warp_kwargs)
+        warped_patch = gtool.warpAffine(rchip, M, dsize)
         # Build warped keypoints
-        wkp = np.array((s / 2, s / 2, ss, 0., ss, ori))
+        wkp = np.array((s / 2, s / 2, ss, 0., ss, oris))
         warped_patches.append(warped_patch)
         warped_subkpts.append(wkp)
     return warped_patches, warped_subkpts
 
 
-def get_patch(imgBGR, kp):
+def get_warped_patch(imgBGR, kp, gray=False):
     kpts = np.array([kp])
-    wpatches, wkps = get_warped_patches(imgBGR, kpts)
+    wpatches, wkpts = get_warped_patches(imgBGR, kpts)
     wpatch = wpatches[0]
-    wpatchLAB = cv2.cvtColor(wpatch, cv2.COLOR_BGR2LAB)
-    wpatchL = wpatchLAB[:, :, 0]
-    return wpatchL
+    wkp = wkpts[0]
+    if gray:
+        wpatch = gtool.cvt_BGR2L(wpatch)
+    return wpatch, wkp
 
 
 def get_orientation_histogram(gori):
@@ -109,18 +112,17 @@ def get_orientation_histogram(gori):
 
 
 def find_kpts_direction(imgBGR, kpts):
-    theta_list = []
+    ori_list = []
     for kp in kpts:
-        patch = get_patch(imgBGR, kp)
+        patch, wkp = get_warped_patch(imgBGR, kp, gray=True)
         gradx, grady = patch_gradient(patch)
         gori = patch_ori(gradx, grady)
         hist, centers = get_orientation_histogram(gori)
         # Find submaxima
         maxima_x, maxima_y, argmaxima = htool.hist_argmaxima(hist, centers)
         submaxima_x, submaxima_y = htool.interpolate_submaxima(argmaxima, hist, centers)
-        theta = submaxima_x[submaxima_y.argmax()]
-        theta_list.append(theta)
-    print(kpts.shape)
-    print(len(theta_list))
-    kpts2 = np.vstack([kpts.T, theta_list]).T
+        ori = submaxima_x[submaxima_y.argmax()] % np.tau
+        ori_list.append(ori)
+    # discard old orientatiosn if they exist
+    kpts2 = np.vstack([kpts[:, 0:5].T, ori_list]).T
     return kpts2

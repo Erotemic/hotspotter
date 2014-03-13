@@ -38,25 +38,25 @@ from PyQt4 import QtCore, QtGui
 from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
                       Qt, QObject, pyqtSlot, QKeyEvent)
 # HotSpotter
-from hotspotter import Config
-from hotspotter import DataStructures as ds
-#from hotspotter import HotSpotterAPI
-from hotspotter import HotSpotterAPI as api
-from hotspotter import QueryResult as qr
-from hotspotter import algos
-from hotspotter import extern_feat
-from hotspotter import db_info
-from hotspotter import chip_compute2 as cc2
-from hotspotter import feature_compute2 as fc2
-from hotspotter import load_data2 as ld2
-from hotspotter import match_chips3 as mc3
-from hotspotter import matching_functions as mf
-from hotspotter import nn_filters
-from hotspotter import QueryResult as qr
-from hotspotter import report_results2 as rr2
-from hotspotter import segmentation
-from hotspotter import spatial_verification2 as sv2
-from hotspotter import voting_rules2 as vr2
+from hsapi import Config
+from hsapi import DataStructures as ds
+#from hsapi import HotSpotterAPI
+from hsapi import HotSpotterAPI as api
+from hsapi import QueryResult as qr
+from hsapi import algos
+from hsapi import extern_feat
+from hsapi import db_info
+from hsapi import chip_compute2 as cc2
+from hsapi import feature_compute2 as fc2
+from hsapi import load_data2 as ld2
+from hsapi import match_chips3 as mc3
+from hsapi import matching_functions as mf
+from hsapi import nn_filters
+from hsapi import QueryResult as qr
+from hsapi import report_results2 as rr2
+from hsapi import segmentation
+from hsapi import spatial_verification2 as sv2
+from hsapi import voting_rules2 as vr2
 #
 from hsgui import guiback
 from hsgui import guifront
@@ -88,6 +88,13 @@ from hsdev import dev_stats
 from hsdev import dev_consistency
 from hsdev import dev_augmenter
 from hsdev import dev_reload
+# vtool
+import vtool
+import vtool.patch as ptool
+import vtool.linalg as ltool
+import vtool.keypoint as ktool
+import vtool.drawtool as dtool
+import vtool.histogram as htool
 
 import dev
 
@@ -95,7 +102,7 @@ import hsviz
 import hsgui
 import hscom
 import hsdev
-import hotspotter
+import hsapi
 
 
 def tryprint_off(module):
@@ -128,4 +135,4 @@ def hsdev_printoff():
 
 
 def hotspotter_printoff():
-    tryprint_off(hotspotter)
+    tryprint_off(hsapi)

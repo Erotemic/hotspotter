@@ -5,7 +5,7 @@ from hscom import __common__
 # Science
 import numpy as np
 # HotSpotter
-from hotspotter import db_info
+from hsapi import db_info
 from hscom import latex_formater
 from hscom import util
 
@@ -56,9 +56,9 @@ def dbstats(hs):
 
 
 def cache_memory_stats(hs, qcx_list, fnum=None):
-    from hotspotter import feature_compute2 as fc2
-    from hotspotter import algos
-    from hotspotter import DataStructures as ds
+    from hsapi import feature_compute2 as fc2
+    from hsapi import algos
+    from hsapi import DataStructures as ds
     from hscom import latex_formater
     print('[dev stats] cache_memory_stats()')
     kpts_list = hs.get_kpts(qcx_list)

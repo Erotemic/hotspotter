@@ -5,8 +5,8 @@ from os.path import join
 import multiprocessing
 import os
 # HotSpotter
-from hotspotter import load_data3 as ld3
-from hotspotter import db_info
+from hsapi import load_data3 as ld3
+from hsapi import db_info
 # Test load csv tables
 
 

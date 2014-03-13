@@ -92,6 +92,9 @@ hesaff_lib = load_hesaff_clib()
 KPTS_DIM = hesaff_lib.get_kpts_dim()
 DESC_DIM = hesaff_lib.get_desc_dim()
 
+print('%r KPTS_DIM = %r' % (type(KPTS_DIM), KPTS_DIM))
+print('%r DESC_DIM = %r' % (type(KPTS_DIM), DESC_DIM))
+
 
 #============================
 # hesaff python interface
@@ -115,6 +118,12 @@ def new_hesaff(img_fpath, **kwargs):
     return hesaff_ptr
 
 
+def allocate_kpts(nKpts):
+    kpts = np.empty((nKpts, KPTS_DIM), kpts_dtype)
+    desc = np.empty((nKpts, DESC_DIM), desc_dtype)
+    return kpts, desc
+
+
 def detect_kpts(img_fpath,
                 use_adaptive_scale=False, assume_gravity=False,
                 **kwargs):
@@ -128,8 +137,7 @@ def detect_kpts(img_fpath,
     # Return the number of keypoints detected
     nKpts = hesaff_lib.detect(hesaff_ptr)
     # Allocate arrays
-    kpts = np.empty((nKpts, KPTS_DIM), kpts_dtype)
-    desc = np.empty((nKpts, DESC_DIM), desc_dtype)
+    kpts, desc = allocate_kpts(nKpts)
     hesaff_lib.exportArrays(hesaff_ptr, nKpts, kpts, desc)  # Populate arrays
     if use_adaptive_scale:  # Adapt scale if requested
         #print('Adapting Scale')

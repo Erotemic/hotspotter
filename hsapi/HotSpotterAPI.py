@@ -143,7 +143,7 @@ def _delete_image(hs, gx_list):
     # Get chips which will also be deleted
     cx_iter = chain.from_iterable(hs.gx2_cxs(gx_list))  # very fast flatten
     # DO REMOVAL
-    # Remove images from hotspotter tables
+    # Remove images from hsapi tables
     for gx in gx_list:
         hs.tables.gx2_gname[gx] = ''
     # Delete chips in those images
@@ -223,7 +223,7 @@ def _get_thumb(hs, cx_input, width, height):
 
 
 def __define_method(hs, method_name, func=None):
-    from hotspotter import HotSpotterAPI as api
+    from hsapi import HotSpotterAPI as api
     api.rrr()
     method_name = 'cx2_tnx'
     if func is None:

@@ -1,19 +1,19 @@
 # Developer Functions
 from PyQt4.Qt import QApplication, QMainWindow,\
         QMessageBox, QAbstractItemView, QObject, QInputDialog
-from hotspotter.QueryManager import RawResults, QueryResult
+from hsapi.QueryManager import RawResults, QueryResult
 from PIL import Image
 import types
 import os
 from os.path import expanduser, join, relpath, normpath, exists, dirname
-from hotspotter.util import *
-from hotspotter.other.AbstractPrintable import *
-from hotspotter.other.ConcretePrintable import *
-from hotspotter.other.logger import *
+from hsapi.util import *
+from hsapi.other.AbstractPrintable import *
+from hsapi.other.ConcretePrintable import *
+from hsapi.other.logger import *
 import hotspotter.ChipFunctions
 import cv2
 import matplotlib.pyplot as plt
-from hotspotter.ChipFunctions import normalize, read_oriented_chip
+from hsapi.ChipFunctions import normalize, read_oriented_chip
 
 # Get commonly used variables for command line usage
 hs    = fac.hs

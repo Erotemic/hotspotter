@@ -1,6 +1,6 @@
 import cv2
 from pylab import *
-from hotspotter.util import Timer, figure
+from hsapi.util import Timer, figure
 import os
 figure(1, doclf=True, title='SIFT Descriptors')
 figure(2, doclf=True, title='FREAK Descriptors')

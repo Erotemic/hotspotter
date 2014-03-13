@@ -8,7 +8,7 @@ from hsviz import viz
 import multiprocessing
 import numpy as np  # NOQA
 from hsdev import main_api
-from hotspotter import coverage
+from hsapi import coverage
 from hsviz import draw_func2 as df2
 
 

@@ -408,8 +408,6 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result',
     else:
         _select_ith_match(mx, qcx, cx)
 
-    from hsgui import guitools
-
     def toggle_samefig():
         interact_chipres(hs, res, cx=cx, fnum=fnum, figtitle=figtitle, same_fig=not same_fig, **kwargs)
 
@@ -425,6 +423,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result',
         (toggle_samefig_key, toggle_samefig),
         ('query last feature', query_last_feature),
         ('cancel', lambda: print('cancel')), ]
+    from hsgui import guitools
     guitools.popup_menu(fig.canvas, opt2_callback, fig.canvas)
     df2.connect_callback(fig, 'button_press_event', _click_chipres_click)
     viz.draw()

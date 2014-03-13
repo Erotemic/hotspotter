@@ -20,7 +20,7 @@ from hsdev import params
 from hsviz import draw_func2 as df2
 from hsviz import viz
 from hsviz import interact
-from hotspotter import HotSpotterAPI
+from hsapi import HotSpotterAPI
 
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5, name=6)
 viz.register_FNUMS(FNUMS)

@@ -126,7 +126,7 @@ def expand_kpts(kpts, scales):
 
 
 def expand_subscales(kpts, subscale_list):
-    subscale_kpts_list = [kp * np.array((1, 1, scale, scale, scale))
+    subscale_kpts_list = [kp * np.array((1, 1, scale, scale, scale, 1))
                           for kp, subscales in izip(kpts, subscale_list)
                           for scale in subscales]
     subscale_kpts = np.vstack(subscale_kpts_list)
@@ -446,31 +446,3 @@ def circular_distance(arr=None):
     #print(dist_end_.shape)
     dists = np.sqrt(np.hstack((dist_head_, dist_tail_)))
     return dists
-
-
-def almost_eq(a, b, thresh=1E-11):
-    return abs(a - b) < thresh
-
-
-def rotation(theta):
-    sin_ = np.sin(theta)
-    cos_ = np.cos(theta)
-    rot_ = array([[cos_, -sin_],
-                  [sin_, cos_]])
-    return rot_
-
-
-def rotation_around(theta, x, y):
-    sin_ = np.sin(theta)
-    cos_ = np.cos(theta)
-    tr1_ = array([[1, 0, -x],
-                  [0, 1, -y],
-                  [0, 0, 1]])
-    rot_ = array([[cos_, -sin_, 0],
-                  [sin_, cos_,  0],
-                  [   0,    0,  1]])
-    tr2_ = array([[1, 0, x],
-                  [0, 1, y],
-                  [0, 0, 1]])
-    rot = tr2_.dot(rot_).dot(tr1_)
-    return rot

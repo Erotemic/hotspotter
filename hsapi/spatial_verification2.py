@@ -54,22 +54,21 @@ def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
     # Solve for the nullspace of the Mx9 matrix (solves least squares)
     Mx9 = build_lstsqrs_Mx9(x1_mn, y1_mn, x2_mn, y2_mn)
     try:
-        (u, s, v) = npl.svd(Mx9, full_matrices=False)
+        (U, S, V) = npl.svd(Mx9, full_matrices=False)
     except MemoryError as ex:
         print('[sv2] Caught MemErr %r during full SVD. Trying sparse SVD.' % (ex))
         Mx9Sparse = sps.lil_matrix(Mx9)
         (U, S, V) = spsl.svds(Mx9Sparse)
     except npl.LinAlgError as ex:
         print('[sv2] svd did not converge: %r' % ex)
-        #return np.eye(3)
-        raise
+        raise  # return np.eye(3)
     except Exception as ex:
         print('[sv2] svd error: %r' % ex)
         print('[sv2] Mx9.shape = %r' % (Mx9.shape,))
         raise
     # Rearange the nullspace into a homography
-    h = V[-1]  # v = V.H # (transposed in matlab)
-    H = np.vstack( ( h[0:3],  h[3:6],  h[6:9]))
+    h = V[-1]  # v = V.H
+    H = np.vstack((h[0:3], h[3:6], h[6:9]))
     return H
 
 
@@ -91,6 +90,8 @@ def normalize_xy_points(x_m, y_m):
 
 #---
 # --------------------------------
+# TODO: This is one of the slowest functions we have right now
+# This needs to be sped up
 #import numba
 @profile
 #@numba.autojit
@@ -212,7 +213,7 @@ def homography_inliers(kpts1, kpts2, fm,
     # matching feature indexes
     fx1_m, fx2_m = fm[:, 0], fm[:, 1]
     kpts1_m = kpts1[fx1_m, :]
-    kpts2_m = kpts1[fx1_m, :]
+    kpts2_m = kpts2[fx2_m, :]
     # x, y, a, c, d : postion, shape
     x1_m, y1_m, invV1_m, oris1_m = ktool.cast_split(kpts1_m, SV_DTYPE)
     x2_m, y2_m, invV2_m, oris2_m = ktool.cast_split(kpts2_m, SV_DTYPE)

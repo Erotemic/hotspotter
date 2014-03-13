@@ -1,12 +1,12 @@
 from __future__ import division
 #from __future__ import print_function
-from hotspotter.HotSpotterAPI import HotSpotterAPI 
-from hotspotter.algo.spatial_functions import ransac
-from hotspotter.util import alloc_lists, Timer, vd, join_mkdir
-from hotspotter.other.AbstractPrintable import AbstractManager, AbstractPrintable
-from hotspotter.other.ConcretePrintable import DynStruct
-from hotspotter.QueryManager import QueryResult
-from hotspotter.other.logger import logdbg, logerr, hsl, logmsg, logwarn
+from hsapi.HotSpotterAPI import HotSpotterAPI 
+from hsapi.algo.spatial_functions import ransac
+from hsapi.util import alloc_lists, Timer, vd, join_mkdir
+from hsapi.other.AbstractPrintable import AbstractManager, AbstractPrintable
+from hsapi.other.ConcretePrintable import DynStruct
+from hsapi.QueryManager import QueryResult
+from hsapi.other.logger import logdbg, logerr, hsl, logmsg, logwarn
 from numpy import spacing as eps
 from os.path import join, realpath, exists
 import os

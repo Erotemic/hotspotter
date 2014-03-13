@@ -324,12 +324,19 @@ class Pref(PrefNode):
             try:
                 printDBG('load: %r' % self._intern.fpath)
                 pref_dict = cPickle.load(f)
-            except EOFError as ex:
-                msg = ('[pref] WARN: fpath=%r did not load correctly.' +
-                       'ex=%r' % (self._intern.fpath, ex))
+            except EOFError as ex1:
+                msg = (('[pref] EOFError WARN: fpath=%r did not load correctly.' +
+                       'ex1=%r') % (self._intern.fpath, ex1))
                 printDBG(msg)
                 warnings.warn(msg)
-                return False
+                return msg
+            except ImportError as ex2:
+                msg = (('[pref] ImportError WARN: fpath=%r did not load correctly.' +
+                       'ex2=%r') % (self._intern.fpath, ex2))
+                printDBG(msg)
+                warnings.warn(msg)
+                return msg
+
         if not tools.is_dict(pref_dict):
             raise Exception('Preference file is corrupted')
         self.add_dict(pref_dict)

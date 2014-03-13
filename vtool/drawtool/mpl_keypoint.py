@@ -18,7 +18,8 @@ def pass_props(dict1, dict2, *args):
             dict2[key] = dict1[key]
 
 
-def draw_patches(ax, patch_list, color, alpha, lw, fcolor='none'):
+def _draw_patches(ax, patch_list, color, alpha, lw, fcolor='none'):
+    # creates a collection from a patch list and sets properties
     coll = mpl.collections.PatchCollection(patch_list)
     coll.set_facecolor(fcolor)
     coll.set_alpha(alpha)
@@ -53,6 +54,7 @@ def draw_keypoints(ax, kpts, scale_factor=1.0, offset=(0.0, 0.0), ell=True,
     (_xs, _ys, _iv11s, _iv12s, _iv21s, _iv22s, _oris) = ktool.scale_kpts(kpts, scale_factor, offset)
     # Build list of keypoint shape transforms from unit circles to ellipes
     invV_aff2Ds = get_invV_aff2Ds(_xs, _ys, _iv11s, _iv12s, _iv21s, _iv22s)
+    # transformations but with rotations specified
     RinvV_aff2Ds = get_RinvV_aff2Ds(invV_aff2Ds, _oris)
     try:
         if sifts is not None:
@@ -63,19 +65,19 @@ def draw_keypoints(ax, kpts, scale_factor=1.0, offset=(0.0, 0.0), ell=True,
         if rect:
             # Bounding Rectangles
             rect_patches = rectangle_actors(RinvV_aff2Ds)
-            draw_patches(ax, rect_patches, rect_color, ell_alpha, rect_linewidth)
+            _draw_patches(ax, rect_patches, rect_color, ell_alpha, rect_linewidth)
         if ell:
             # Keypoint shape
             ell_patches = ellipse_actors(invV_aff2Ds)
-            draw_patches(ax, ell_patches, ell_color, ell_alpha, ell_linewidth)
+            _draw_patches(ax, ell_patches, ell_color, ell_alpha, ell_linewidth)
         if eig:
             # Shape eigenvectors
             eig_patches = eigenvector_actors(invV_aff2Ds)
-            draw_patches(ax, eig_patches, eig_color, ell_alpha, eig_linewidth)
+            _draw_patches(ax, eig_patches, eig_color, ell_alpha, eig_linewidth)
         if ori:
             # Keypoint orientation
             ori_patches = orientation_actors(_xs, _ys, _iv11s, _iv21s, _iv22s, _oris)
-            draw_patches(ax, ori_patches, ori_color, ell_alpha, ori_linewidth, ori_color)
+            _draw_patches(ax, ori_patches, ori_color, ell_alpha, ori_linewidth, ori_color)
         if pts:
             # Keypoint locations
             _draw_pts(ax, _xs, _ys, pts_size, pts_color)
@@ -103,9 +105,9 @@ def get_invV_aff2Ds(_xs, _ys, _iv11s, _iv12s, _iv21s, _iv22s):
     return invV_aff2Ds
 
 
-def get_RinvV_aff2Ds(invV_aff2Ds, _oris=None):
-    ori_list = [mpl.transforms.Affine2D().rotate(ori) for ori in _oris]
-    RinvV_aff2Ds = [ori + invV for (invV, ori) in izip(invV_aff2Ds, ori_list)]
+def get_RinvV_aff2Ds(invV_aff2Ds, _oris):
+    R_list = [mpl.transforms.Affine2D().rotate(ori) for ori in _oris]
+    RinvV_aff2Ds = [R + invV for (invV, R) in izip(invV_aff2Ds, R_list)]
     return RinvV_aff2Ds
 
 
@@ -139,8 +141,10 @@ def eigenvector_actors(invV_aff2Ds):
 
 def orientation_actors(_xs, _ys, _iv11s, _iv21s, _iv22s, _oris):
     try:
-        _sins = np.sin(_oris)
-        _coss = np.cos(_oris)
+        # orientations are relative to the gravity vector
+        abs_oris = _oris + ktool.GRAVITY_THETA
+        _sins = np.sin(abs_oris)
+        _coss = np.cos(abs_oris)
         # scaled orientation x and y direction relative to center
         #sf = np.sqrt(_iv11s * _iv22s)
         _dxs = _coss * _iv11s

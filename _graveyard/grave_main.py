@@ -29,7 +29,7 @@ def emergency_msgbox(title, msg):
 def ensure_tpl_libs():
     print('Ensuring third party libraries')
     try: # Ensure that TPL's lib files are in PATH
-        #from hotspotter.standalone import find_hotspotter_root_dir
+        #from hsapi.standalone import find_hotspotter_root_dir
         print('Can import hotspotter?')
         import hotspotter
         print(' ... yes')
@@ -111,10 +111,10 @@ if __name__ == '__main__':
     args = parse_arguments()
     app, isRootApp = initQtApp()
     # 4) HotSpotter Initialization
-    from hotspotter.other.logger import hsl
+    from hsapi.other.logger import hsl
 
-    from hotspotter.standalone import delete_preference_dir
-    from hotspotter.Facade import Facade
+    from hsapi.standalone import delete_preference_dir
+    from hsapi.Facade import Facade
     if args.logall_bit:
         hsl.enable_global_logs()
     if args.delpref_bit:
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     run_exec = isRootApp
     if args.cmd_bit:
         # Start IPython command line mode
-        from hotspotter.util import in_IPython, have_IPython
+        from hsapi.util import in_IPython, have_IPython
         run_exec = False
         if not in_IPython() and have_IPython():
             import IPython

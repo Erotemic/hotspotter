@@ -20,6 +20,30 @@ def rotation_mat(radians):
     return R
 
 
+def rotation2x2(theta):
+    sin_ = sin(theta)
+    cos_ = cos(theta)
+    rot_ = array([[cos_, -sin_],
+                  [sin_, cos_]])
+    return rot_
+
+
+def rotation3x3_around(theta, x, y):
+    sin_ = sin(theta)
+    cos_ = cos(theta)
+    tr1_ = array([[1, 0, -x],
+                  [0, 1, -y],
+                  [0, 0, 1]])
+    rot_ = array([[cos_, -sin_, 0],
+                  [sin_, cos_,  0],
+                  [   0,    0,  1]])
+    tr2_ = array([[1, 0, x],
+                  [0, 1, y],
+                  [0, 0, 1]])
+    rot = tr2_.dot(rot_).dot(tr1_)
+    return rot
+
+
 def translation_mat(x, y):
     T = array([[1, 0,  x],
                [0, 1,  y],

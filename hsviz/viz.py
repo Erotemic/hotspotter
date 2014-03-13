@@ -10,11 +10,10 @@ import warnings
 import numpy as np
 # Hotspotter
 import draw_func2 as df2
-import extract_patch
 from hsdev import params
 from hscom import fileio as io
 from hscom import util
-from hotspotter import QueryResult as qr
+from hsapi import QueryResult as qr
 # VTool
 from vtool import keypoint as ktool
 
@@ -263,11 +262,24 @@ def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=None, nRandKpts=None,
         df2.set_xlabel('displaying %r/%r keypoints' % (nRandKpts, nkpts1))
     elif draw_ell or draw_pts:
         # draw all keypoints
-        df2.draw_kpts2(kpts, **ell_args)
+        if sel_fx is not None:
+            # dont draw the selected keypoint in this batch
+            kpts_ = np.vstack((kpts[0:sel_fx], kpts[sel_fx + 1:]))
+        else:
+            kpts_ = kpts
+        df2.draw_kpts2(kpts_, **ell_args)
     if sel_fx is not None:
         # Draw selected keypoint
         sel_kpts = kpts[sel_fx:sel_fx + 1]
-        df2.draw_kpts2(sel_kpts, ell_color=df2.BLUE, arrow=True, rect=True)
+        print('[viz] sel_kpts = %r' % sel_kpts)
+        ell_args2 = ell_args.copy()
+        ell_args2.update({
+            'ell_color': df2.BLUE,
+            'eig': True,
+            'rect': True,
+            'ori': True,
+        })
+        df2.draw_kpts2(sel_kpts, **ell_args2)
 
 
 @util.indent_decor('[show_chip]')
@@ -800,7 +812,7 @@ def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None,
     pnum_ = lambda px: (nRows, nCols, px)
 
     def _draw_patch(**kwargs):
-        return extract_patch.draw_keypoint_patch(rchip, kp, sift, **kwargs)
+        return df2.draw_keypoint_patch(rchip, kp, sift, **kwargs)
 
     # Feature strings
     xy_str, shape_str, scale = kp_info(kp)
@@ -835,7 +847,7 @@ def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None,
     ax = df2.plot_sift_signature(sift, sigtitle, fnum=fnum, pnum=pnum_(px + 3))
     ax._hs_viewtype = 'histogram'
     if prevsift is not None:
-        from hotspotter import algos
+        from hsapi import algos
         #dist_list = ['L1', 'L2', 'hist_isect', 'emd']
         #dist_list = ['L2', 'hist_isect']
         dist_list = ['L2']
@@ -854,7 +866,7 @@ def show_nearest_descriptors(hs, qcx, qfx, fnum=None, stride=5,
     if fnum is None:
         fnum = df2.next_fnum()
     # Find the nearest neighbors of a descriptor using mc3 and flann
-    from hotspotter import match_chips3 as mc3
+    from hsapi import match_chips3 as mc3
     qreq = mc3.quickly_ensure_qreq(hs)
     data_index = qreq._data_index
     if data_index is None:
@@ -985,7 +997,7 @@ def ensure_cx2(hs, cx1, cx2=None):
 @util.indent_decor('[viz.sv]')
 def viz_spatial_verification(hs, cx1, figtitle='Spatial Verification View', **kwargs):
     #kwargs = {}
-    from hotspotter import spatial_verification2 as sv2
+    from hsapi import spatial_verification2 as sv2
     import cv2
     print('\n[viz] ======================')
     cx2 = ensure_cx2(hs, cx1, kwargs.pop('cx2', None))

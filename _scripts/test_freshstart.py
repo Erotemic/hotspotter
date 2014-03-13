@@ -73,7 +73,7 @@ def create_new_database_test(new_database_dir=None, **kwargs):
     'Creates a new database, adds images, and adds ROIs' 
     import os
     os.mkdir(new_database_dir)
-    from hotspotter.HotSpotterAPI import HotSpotterAPI
+    from hsapi.HotSpotterAPI import HotSpotterAPI
     hs = HotSpotterAPI(new_database_dir, autoload=True)
     new_images_dir = DATA+'/test/test-images'
     new_image_list = [os.path.normpath(os.path.join(new_images_dir, newimg))\
@@ -85,7 +85,7 @@ def create_new_database_test(new_database_dir=None, **kwargs):
 
 def quick_experiment_test(database_dir=None, **kwargs):
     'Runs a quick experiment, which tests many things.'
-    from hotspotter.HotSpotterAPI import HotSpotterAPI
+    from hsapi.HotSpotterAPI import HotSpotterAPI
     hs = HotSpotterAPI(database_dir, autoload=True)
     hs.em.quick_experiment()
 

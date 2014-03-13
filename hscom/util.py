@@ -103,6 +103,8 @@ def horiz_print(*args):
 
 def horiz_string(str_list):
     '''
+    prints a list of objects ensuring that the next item in the list
+    is all the way to the right of any previous items.
     str_list = ['A = ', str(np.array(((1,2),(3,4)))), ' * ', str(np.array(((1,2),(3,4))))]
     '''
     all_lines = []
@@ -1997,6 +1999,10 @@ def float_to_decimal(f):
         ctx.prec *= 2
         result = ctx.divide(numerator, denominator)
     return result
+
+
+def almost_eq(a, b, thresh=1E-11):
+    return abs(a - b) < thresh
 
 
 #http://stackoverflow.com/questions/2663612/nicely-representing-a-floating-point-number-in-python

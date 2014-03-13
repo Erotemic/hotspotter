@@ -12,10 +12,10 @@ from itertools import imap
 import numpy as np
 # Hotspotter
 import experiment_configs
-from hotspotter import Config
-from hotspotter import DataStructures as ds
-from hotspotter import match_chips3 as mc3
-from hotspotter import matching_functions as mf
+from hsapi import Config
+from hsapi import DataStructures as ds
+from hsapi import match_chips3 as mc3
+from hsapi import matching_functions as mf
 from hscom import fileio as io
 from hscom import util
 from hscom import latex_formater
@@ -298,7 +298,7 @@ def get_cfg_list(hs, test_cfg_name_list):
 def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     if __QUIET__:
         mc3.print_off()
-        from hotspotter import HotSpotterAPI as api
+        from hsapi import HotSpotterAPI as api
         api.print_off()
 
     # Test Each configuration

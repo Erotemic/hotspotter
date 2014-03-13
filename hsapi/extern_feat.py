@@ -26,9 +26,9 @@ if not '__file__' in vars():
     __file__ = os.path.realpath('extern_feat.py')
 EXE_PATH = realpath(dirname(__file__))
 if not os.path.exists(EXE_PATH):
-    EXE_PATH = realpath('tpl/extern_feat')
+    EXE_PATH = realpath('hstpl/extern_feat')
 if not os.path.exists(EXE_PATH):
-    EXE_PATH = realpath('hotspotter/tpl/extern_feat')
+    EXE_PATH = realpath('hotspotter/hstpl/extern_feat')
 
 HESAFF_EXE = join(EXE_PATH, 'hesaff' + EXE_EXT)
 INRIA_EXE  = join(EXE_PATH, 'compute_descriptors' + EXE_EXT)

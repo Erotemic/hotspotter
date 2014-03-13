@@ -5,7 +5,7 @@ from hscom import __common__
 import numpy as np
 from hscom import util
 from hsdev import params
-from hotspotter import chip_compute2 as cc2
+from hsapi import chip_compute2 as cc2
 from os.path import join
 
 
@@ -112,6 +112,6 @@ def extract_detector_positives(hs, output_dir, batch_extract_kwargs):
 python generate_training.py --dbdir /media/Store/data/work/MISC_Jan12
 '''
 if __name__ == '__main__':
-    from hotspotter import main
+    from hsapi import main
     hs = main.main(defaultdb='MISC_Jan12', default_load_all=False)
     generate_detector_training_data(hs)

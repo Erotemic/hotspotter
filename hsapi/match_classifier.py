@@ -5,7 +5,7 @@ from hscom import __common__
 # Science
 import numpy as np
 # HotSpotter
-from hotspotter import report_results2 as rr2
+from hsapi import report_results2 as rr2
 
 
 def get_gt_cases(hs):

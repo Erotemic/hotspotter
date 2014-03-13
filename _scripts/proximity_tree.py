@@ -1,5 +1,5 @@
 import numpy as np
-from hotspotter.other.ConcretePrintable import DynStruct
+from hsapi.other.ConcretePrintable import DynStruct
 def L2_squared(vec1, vec2):
     'Returns squared distance between two vectors'
     return np.sum((vec1 - vec2)**2)

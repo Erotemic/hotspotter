@@ -1,5 +1,5 @@
-from hotspotter import HotSpotterAPI as api
-from hotspotter import chip_compute2 as cc2
+from hsapi import HotSpotterAPI as api
+from hsapi import chip_compute2 as cc2
 from hsdev import argparse2
 from hscom import util
 from hscom import util

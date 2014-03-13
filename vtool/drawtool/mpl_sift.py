@@ -13,12 +13,24 @@ BLACK  = np.array((0.0, 0.0, 0.0, 1.0))
 RED    = np.array((1.0, 0.0, 0.0, 1.0))
 
 
-def cirlce_rad2xy(radians, mag):
+def _cirlce_rad2xy(radians, mag):
     return np.cos(radians) * mag, np.sin(radians) * mag
 
 
+def _set_colltup_list_transform(colltup_list, trans):
+    for coll_tup in colltup_list:
+        for coll in coll_tup:
+            coll.set_transform(trans)
+
+
+def _draw_colltup_list(ax, colltup_list):
+    for coll_tup in colltup_list:
+        for coll in coll_tup:
+            ax.add_collection(coll)
+
+
 # Create a patch collection with attributes
-def circl_collection(patch_list, color, alpha):
+def _circl_collection(patch_list, color, alpha):
     coll = mpl.collections.PatchCollection(patch_list)
     coll.set_alpha(alpha)
     coll.set_edgecolor(color)
@@ -26,7 +38,7 @@ def circl_collection(patch_list, color, alpha):
     return coll
 
 
-def arm_collection(patch_list, color, alpha, lw):
+def _arm_collection(patch_list, color, alpha, lw):
     coll = mpl.collections.PatchCollection(patch_list)
     coll.set_alpha(alpha)
     coll.set_color(color)
@@ -34,10 +46,16 @@ def arm_collection(patch_list, color, alpha, lw):
     return coll
 
 
-def get_sift_collection(sift, aff=mpl.transforms.Affine2D(),
-                        bin_color=BLACK, arm1_color=RED, arm2_color=BLACK):
+def get_sift_collection(sift,
+                        aff=mpl.transforms.Affine2D(),
+                        bin_color=BLACK,
+                        arm1_color=RED,
+                        arm2_color=BLACK):
     # global offset scale adjustments
-    DSCALE, ARMSCALE, XYSCALE, XYOFFST = .25, 1.5, .5, -.75
+    DSCALE   =  0.25
+    ARMSCALE =  1.5
+    XYSCALE  =  0.5
+    XYOFFST  = -0.75
     # SIFT CONSTANTS
     NORIENTS, NX, NY = 8, 4, 4
     NBINS = NX * NY
@@ -47,7 +65,7 @@ def get_sift_collection(sift, aff=mpl.transforms.Affine2D(),
     arm_mag   = sift / 255.0
     arm_ori = np.tile(discrete_ori, (NBINS, 1)).flatten()
     # The offset x,y's for each sift measurment
-    arm_dxy = np.array(zip(*cirlce_rad2xy(arm_ori, arm_mag)))
+    arm_dxy = np.array(zip(*_cirlce_rad2xy(arm_ori, arm_mag)))
     yxt_gen = iprod(xrange(NY), xrange(NX), xrange(NORIENTS))
     yx_gen  = iprod(xrange(NY), xrange(NX))
     # Draw 8 directional arms in each of the 4x4 grid cells
@@ -72,26 +90,16 @@ def get_sift_collection(sift, aff=mpl.transforms.Affine2D(),
         circ_radius = DSCALE
         circle_patches += [mpl.patches.Circle(circ_xy, circ_radius, **_kwcirc)]
 
-    circ_coll = circl_collection(circle_patches,  bin_color, 0.5)
-    arm1_coll = arm_collection(arrow_patches1, arm1_color, 1.0, 0.5)
-    arm2_coll = arm_collection(arrow_patches2, arm2_color, 1.0, 1.0)
+    circ_coll = _circl_collection(circle_patches,  bin_color, 0.5)
+    arm1_coll = _arm_collection(arrow_patches1, arm1_color, 1.0, 0.5)
+    arm2_coll = _arm_collection(arrow_patches2, arm2_color, 1.0, 1.0)
     coll_tup = (circ_coll, arm2_coll, arm1_coll)
     return coll_tup
 
 
-def set_colltup_list_transform(colltup_list, trans):
-    for coll_tup in colltup_list:
-        for coll in coll_tup:
-            coll.set_transform(trans)
-
-
-def draw_colltup_list(ax, colltup_list):
-    for coll_tup in colltup_list:
-        for coll in coll_tup:
-            ax.add_collection(coll)
-
-
-def draw_sifts(ax, sifts, invVR_aff2Ds, **kwargs):
+def draw_sifts(ax, sifts, invVR_aff2Ds=None, **kwargs):
+    if invVR_aff2Ds is None:
+        invVR_aff2Ds = [mpl.transforms.Affine2D() for _ in xrange(len(sifts))]
     colltup_list = [get_sift_collection(sift, aff, **kwargs) for sift, aff in izip(sifts, invVR_aff2Ds)]
-    set_colltup_list_transform(colltup_list, ax.transData)
-    draw_colltup_list(ax, colltup_list)
+    _set_colltup_list_transform(colltup_list, ax.transData)
+    _draw_colltup_list(ax, colltup_list)

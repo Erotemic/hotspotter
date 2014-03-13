@@ -2,22 +2,23 @@ from __future__ import division, print_function
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[dev_reload]', DEBUG=False)
+import imp
 
 
 def reload_all_modules():
     print('===========================')
     print('[dev] performing dev_reload')
     print('---------------------------')
-    from hotspotter import DataStructures as ds
-    from hotspotter import algos
-    from hotspotter import load_data2 as ld2
-    from hotspotter import chip_compute2 as cc2
-    from hotspotter import feature_compute2 as fc2
-    from hotspotter import match_chips3 as mc3
-    from hotspotter import matching_functions as mf
-    from hotspotter import nn_filters
-    from hotspotter import report_results2 as rr2
-    from hotspotter import voting_rules2 as vr2
+    from hsapi import DataStructures as ds
+    from hsapi import algos
+    from hsapi import load_data2 as ld2
+    from hsapi import chip_compute2 as cc2
+    from hsapi import feature_compute2 as fc2
+    from hsapi import match_chips3 as mc3
+    from hsapi import matching_functions as mf
+    from hsapi import nn_filters
+    from hsapi import report_results2 as rr2
+    from hsapi import voting_rules2 as vr2
     # Common
     from hscom import Parallelize as parallel
     #from hscom import Preferences as prefs
@@ -40,10 +41,25 @@ def reload_all_modules():
     from hsgui import guifront
     from hsgui import guiback
     # DEV
-    from . import dev_stats
-    from . import dev_consistency
-    from . import dev_augmenter
-    from . import dev_reload
+    from hsdev import dev_stats
+    from hsdev import dev_consistency
+    from hsdev import dev_augmenter
+    from hsdev import dev_reload
+    # Vtool
+    import vtool
+    import vtool.patch as ptool
+    import vtool.linalg as ltool
+    import vtool.keypoint as ktool
+    import vtool.drawtool as dtool
+    import vtool.histogram as htool
+
+    imp.reload(vtool)
+    imp.reload(ptool)
+    imp.reload(ktool)
+    imp.reload(dtool)
+    imp.reload(htool)
+    imp.reload(ltool)
+
     # Self
     rrr()
     # com

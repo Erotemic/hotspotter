@@ -6,8 +6,8 @@ import cv2
 
 
 from pylab import *
-from hotspotter.util import Timer, figure, myprint
-from hotspotter.other.ConcretePrintable import Pref
+from hsapi.util import Timer, figure, myprint
+from hsapi.other.ConcretePrintable import Pref
 import os, sys, types, string
 
 
@@ -299,7 +299,7 @@ except NameError as ex:
         raise
     else:
         if '--cmd' in sys.argv:
-            from hotspotter.util import in_IPython, have_IPython
+            from hsapi.util import in_IPython, have_IPython
             run_exec = False
             if not in_IPython() and have_IPython():
                 import IPython

@@ -15,10 +15,10 @@ import multiprocessing
 import cv2
 from itertools import izip
 sys.path.append(join(expanduser('~'), 'code'))
-from hotspotter import util
-#from hotspotter import chip_compute2 as cc2
-#from hotspotter import Parallelize as parallel
-#from hotspotter.dbgimport import *
+from hsapi import util
+#from hsapi import chip_compute2 as cc2
+#from hsapi import Parallelize as parallel
+#from hsapi.dbgimport import *
 #import PyQt4
 #from PyQt4 import QtCore
 #from PyQt4 import QtGui
@@ -153,7 +153,7 @@ def _compute_in_parallel2(task_list, num_procs, task_lbl='', verbose=True):
         task_queue.put('STOP')
     return result_list
 
-from hotspotter import fileio as io
+from hsapi import fileio as io
 
 def extract_chip2(img_path, roi, theta, new_size):
     'Crops chip from image ; Rotates and scales; Converts to grayscale'
@@ -192,6 +192,6 @@ print(results)
 
 
 
-#from hotspotter import draw_func2 as df2
+#from hsapi import draw_func2 as df2
 #df2.imshow(result_list[0])
 #exec(df2.present())

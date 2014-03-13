@@ -16,7 +16,7 @@ from itertools import izip
 import numpy as np
 import numpy.linalg as npl
 from numpy.core.umath_tests import matrix_multiply
-from numpy import (array, rollaxis, sqrt, vstack, zeros, ones)
+from numpy import (array, rollaxis, sqrt, zeros, ones)
 # VTool
 from vtool.linalg import svd
 
@@ -31,7 +31,8 @@ ctypedef np.float64_t FLOAT64
 #PYX MAP FLOAT_1D np.ndarray[FLOAT64, ndim=1]
 #PYX END
 
-tau = np.pi * 2  # tauday.com
+tau = np.tau = np.pi * 2  # tauday.com
+GRAVITY_THETA = np.tau / 4
 KPTS_DTYPE = np.float32
 
 
@@ -51,9 +52,10 @@ def get_invVs(kpts):
 
 def get_oris(kpts):
     # Keypoint orientations
+    # (in isotropic guassian space relative to the gravity vector)
+    # (in simpler words: the orientation is is taken from keypoints warped to the unit circle)
     if kpts.shape[1] == 5:
         _oris = np.zeros(len(kpts), dtype=kpts.dtype)
-        _oris += (tau / 4)  # default to gravity vector
     elif kpts.shape[1] == 6:
         _oris = kpts.T[5]
     else:
@@ -171,23 +173,20 @@ def diag_extent_sqrd(kpts):
     return extent_sqrd
 
 
-def _append_gravity(kpts):
-    assert kpts.shape[1] == 5
-    theta = zeros(len(kpts)) + tau / 4
-    kpts2 = vstack((kpts.T, theta)).T
-    return kpts2
-
-
 def cast_split(kpts, dtype=KPTS_DTYPE):
     'breakup keypoints into location, shape, and orientation'
-    assert kpts.shape[1] == 6
     kptsT = kpts.T
     _xs   = array(kptsT[0], dtype=dtype)
     _ys   = array(kptsT[1], dtype=dtype)
     _invVs = array(kptsT[2:5], dtype=dtype)
-    _oris = array(kptsT[5:6], dtype=dtype)
+    if kpts.shape[1] == 6:
+        _oris = array(kptsT[5:6], dtype=dtype)
+    else:
+        _oris = zeros(len(kpts))
     return _xs, _ys, _invVs, _oris
 
+
+# --- strings ---
 
 def get_xy_strs(kpts):
     _xs, _ys   = get_xys(kpts)

@@ -1,7 +1,7 @@
 #!/usr/env python
 from __future__ import division, print_function
-from hotspotter import HotSpotterAPI as api
-from hotspotter import feature_compute2 as fc2
+from hsapi import HotSpotterAPI as api
+from hsapi import feature_compute2 as fc2
 from hscom import util
 from hscom import util
 from hsviz import viz

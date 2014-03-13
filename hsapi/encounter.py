@@ -9,7 +9,7 @@ import networkx as netx
 import numpy as np
 from scipy.cluster.hierarchy import fclusterdata
 # HotSpotter
-from hotspotter import match_chips3 as mc3
+from hsapi import match_chips3 as mc3
 from hscom import fileio as io
 from hscom import util
 

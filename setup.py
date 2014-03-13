@@ -160,7 +160,7 @@ def clean():
     util.remove_files_in_dir(cwd, '*.prof.txt', recursive=True)
     util.remove_files_in_dir(cwd, '*.lprof', recursive=True)
     # Remove cython generated c files carefully
-    hsmod_list = ['hotspotter', 'hsgui', 'hsviz', 'hscom']
+    hsmod_list = ['hsapi', 'hsgui', 'hsviz', 'hscom', 'vtool', 'hsdev']
     for hsmod in hsmod_list:
         util.remove_files_in_dir(join(cwd, hsmod), '*.so', recursive=False)
         util.remove_files_in_dir(join(cwd, hsmod), '*.c', recursive=False)
@@ -211,7 +211,7 @@ def build_mac_dmg():
 def get_setup_dpath():
     assert exists('setup.py'), 'must be run in hotspotter directory'
     assert exists('../hotspotter/setup.py'), 'must be run in hotspotter directory'
-    assert exists('../hotspotter/hotspotter'), 'must be run in hotspotter directory'
+    assert exists('../hotspotter/hsapi'), 'must be run in hotspotter directory'
     assert exists('_setup'), 'must be run in hotspotter directory'
     cwd = normpath(realpath(dirname(__file__)))
     return cwd
@@ -374,11 +374,11 @@ def inspect_cython_typness(fpath):
 def build_cython():
     # Sorted roughly by importance (how slow the module is)
     # Critical Section
-    compile_cython('hotspotter/spatial_verification2.py')
-    #compile_cython('hotspotter/matching_functions.py')
-    compile_cython('hotspotter/nn_filters.py')
-    compile_cython('hotspotter/algos.py')
-    #compile_cython('hotspotter/match_chips3.py')
+    compile_cython('hsapi/spatial_verification2.py')
+    #compile_cython('hsapi/matching_functions.py')
+    compile_cython('hsapi/nn_filters.py')
+    compile_cython('hsapi/algos.py')
+    #compile_cython('hsapi/match_chips3.py')
 
     # Cannot cython this file
     #compile_cython('hstpl/extern_feat/pyhesaff.py')
@@ -395,24 +395,24 @@ def build_cython():
     compile_cython('hscom/Printable.py')
     compile_cython('hscom/Preferences.py')
 
-    compile_cython('hotspotter/chip_compute2.py')
-    compile_cython('hotspotter/feature_compute2.py')
-    compile_cython('hotspotter/extern_feat.py')
-    compile_cython('hotspotter/load_data2.py')
+    compile_cython('hsapi/chip_compute2.py')
+    compile_cython('hsapi/feature_compute2.py')
+    compile_cython('hsapi/extern_feat.py')
+    compile_cython('hsapi/load_data2.py')
 
-    compile_cython('hotspotter/Config.py')
-    compile_cython('hotspotter/QueryResult.py')
-    compile_cython('hotspotter/voting_rules2.py')
-    compile_cython('hotspotter/segmentation.py')
-    compile_cython('hotspotter/report_results2.py')
+    compile_cython('hsapi/Config.py')
+    compile_cython('hsapi/QueryResult.py')
+    compile_cython('hsapi/voting_rules2.py')
+    compile_cython('hsapi/segmentation.py')
+    compile_cython('hsapi/report_results2.py')
 
-    compile_cython('hotspotter/DataStructures.py')
-    compile_cython('hotspotter/HotSpotterAPI.py')
+    compile_cython('hsapi/DataStructures.py')
+    compile_cython('hsapi/HotSpotterAPI.py')
 
 
 def build_pyo():
     _cmd('python -O -m compileall *.py')
-    _cmd('python -O -m compileall hotspotter/*.py')
+    _cmd('python -O -m compileall hsapi/*.py')
     _cmd('python -O -m compileall hsgui/*.py')
     _cmd('python -O -m compileall hsviz/*.py')
     _cmd('python -O -m compileall hscom/*.py')

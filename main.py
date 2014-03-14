@@ -30,8 +30,33 @@ def postload_interpret_cmdline(hs, back):
     tx_list = params.args.txs    # the chips with top ranked index OR
     cid_list = params.args.cids  # the chip-ids
     # Perform further inspection of...
-    qfx_list = params.args.qfxs  # the query feature index
+    fx_list = params.args.fxs   # the query feature index
+    selgxs = params.args.selgxs
+    selnxs = params.args.selnxs
+    selcids = params.args.selcids
+    cfgstrdict_list = params.args.update_cfg
     res = None
+
+    if len(cfgstrdict_list) > 0:
+        cfgdict = {}
+        for strdict in cfgstrdict_list:
+            print(strdict)
+            key, val = strdict.split(':')
+            if val.lower() in ['none']:
+                val = None
+            elif val.lower() in ['true']:
+                val = True
+            elif val.lower() in ['false']:
+                val = False
+            elif '.' in val:
+                val = float(val)
+            cfgdict[key] = val
+        hs.prefs.query_cfg.update_cfg(**cfgdict)
+
+    # Autocompute all queries
+    if params.args.batchfeats:
+        back.precompute_feats()
+
     if len(qcid_list) > 0:
         qcid = qcid_list[0]
         tx = tx_list[0] if len(tx_list) > 0 else None
@@ -40,12 +65,12 @@ def postload_interpret_cmdline(hs, back):
             back.select_cid(qcid, show=False)  # Select query
             if len(cid_list) > 0:
                 cx = hs.cid2_cx(cid_list[0])
-                if len(qfx_list) == 0:
+                if len(fx_list) == 0:
                     # Just interact with the query
                     res.interact_chipres(hs, cx, fnum=4, mode=1)
                 else:
                     # Interact with query and features
-                    qfx = qfx_list[0]
+                    qfx = fx_list[0]
                     mx = res.get_match_index(hs, cx, qfx)
                     res.interact_chipres(hs, cx, fnum=4, mx=mx)
                     res.show_nearest_descriptors(hs, qfx)
@@ -53,24 +78,21 @@ def postload_interpret_cmdline(hs, back):
             print(ex)
 
     # Select image indexes
-    selgxs = params.args.selgxs
     if len(selgxs) > 0:
         back.select_gx(selgxs[0])
 
     # Select name indexes
-    selnxs = params.args.selnxs
     if len(selnxs) > 0:
         name = hs.nx2_name(selnxs[0])
         back.select_name(name)
 
     # Select chip ids
-    selcids = params.args.selcids
     if len(selcids) > 0:
+        fx = None if len(fx_list) == 0 else fx_list[0]
         selcxs = hs.cid2_cx(selcids)
-        back.select_cx(selcxs[0])
+        back.select_cx(selcxs[0], noimage=True, fx=fx)
 
-    # Autocompute all queries
-    if params.args.autoquery:
+    if params.args.batchquery:
         back.precompute_queries()
 
     return locals()
@@ -86,6 +108,7 @@ if __name__ == '__main__':
     # Run Main Function
     #from hsviz import draw_func2 as df2  # NOQA
     from hsdev import main_api
+    main_api.inject_colored_exception_hook()
     #from hsdev import dbgimport
     print('[main] main.py')
     #dbgimport.hsgui_printoff()

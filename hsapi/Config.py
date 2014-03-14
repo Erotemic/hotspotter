@@ -314,6 +314,7 @@ class FeatureConfig(ConfigBase):
         feat_cfg.scale_min = 0  # 0  # 30 # TODO: Put in pref types here
         feat_cfg.scale_max = 9001  # 9001 # 80
         feat_cfg.use_adaptive_scale = False  # 9001 # 80
+        feat_cfg.nogravity_hack = False  # 9001 # 80
         if hs is None:
             feat_cfg._chip_cfg = ChipConfig(**kwargs)  # creating without hs delays crash
         else:
@@ -324,7 +325,8 @@ class FeatureConfig(ConfigBase):
         dict_args = {
             'scale_min': feat_cfg.scale_min,
             'scale_max': feat_cfg.scale_max,
-            'use_adaptive_scale': feat_cfg.use_adaptive_scale
+            'use_adaptive_scale': feat_cfg.use_adaptive_scale,
+            'nogravity_hack': feat_cfg.nogravity_hack,
         }
         return dict_args
 
@@ -340,6 +342,7 @@ class FeatureConfig(ConfigBase):
         feat_uids += [',white'] * feat_cfg.whiten
         feat_uids += [',%r_%r' % (feat_cfg.scale_min, feat_cfg.scale_max)]
         feat_uids += [',adaptive'] * feat_cfg.use_adaptive_scale
+        feat_uids += [',nogravity'] * feat_cfg.nogravity_hack
         feat_uids += [')']
         feat_uids += feat_cfg._chip_cfg.get_uid_list()
         return feat_uids

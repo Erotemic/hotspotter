@@ -244,14 +244,13 @@ class MainWindowBackend(QtCore.QObject):
 
     @drawing
     @profile
-    def show_chip(back, cx, **kwargs):
+    def show_chip(back, cx, fx=None, **kwargs):
         fnum = FNUMS['chip']
         did_exist = df2.plt.fignum_exists(fnum)
         df2.figure(fnum=fnum, docla=True, doclf=True)
         INTERACTIVE_CHIPS = True  # This should always be True
         if INTERACTIVE_CHIPS:
-            interact_fn = interact.interact_chip
-            interact_fn(back.hs, cx, fnum=fnum, figtitle='Chip View')
+            interact.interact_chip(back.hs, cx, fx=fx, fnum=fnum, figtitle='Chip View')
         else:
             viz.show_chip(back.hs, cx, fnum=fnum, figtitle='Chip View')
         back._layout_figures_if(did_exist)
@@ -483,7 +482,7 @@ class MainWindowBackend(QtCore.QObject):
     @slot_(int)
     @blocking
     @profile
-    def select_gx(back, gx, cx=None, show=True, **kwargs):
+    def select_gx(back, gx, cx=None, fx=None, show=True, noimage=False, **kwargs):
         # Table Click -> Image Table
         autoselect_chips = False
         if autoselect_chips and cx is None:
@@ -496,8 +495,9 @@ class MainWindowBackend(QtCore.QObject):
             if cx is None:
                 back.show_splash(2, 'Chip', dodraw=False)
             else:
-                back.show_chip(cx, dodraw=False)
-            back.show_image(gx, sel_cxs, **kwargs)
+                back.show_chip(cx, fx=fx, dodraw=False)
+            if not noimage:
+                back.show_image(gx, sel_cxs, **kwargs)
 
     @slot_(int)
     def select_cid(back, cid, **kwargs):

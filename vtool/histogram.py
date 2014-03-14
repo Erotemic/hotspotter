@@ -18,8 +18,17 @@ def wrap_histogram(hist, edges):
     return hist_wrap, edge_wrap
 
 
+def hist_interpolated_submaxima(hist, centers=None):
+    maxima_x, maxima_y, argmaxima = hist_argmaxima(hist, centers)
+    submaxima_x, submaxima_y = interpolate_submaxima(argmaxima, hist, centers)
+    return submaxima_x, submaxima_y
+
+
 def hist_argmaxima(hist, centers=None):
-    argmaxima = argrelextrema(hist, np.greater)[0]
+    # FIXME: Not handling general cases
+    argmaxima = argrelextrema(hist, np.greater)[0]  # [0] index because argrelmaxima returns a tuple
+    if len(argmaxima) == 0:
+        argmaxima = hist.argmax()  # Hack for no maxima
     maxima_x = argmaxima if centers is None else centers[argmaxima]
     maxima_y = hist[argmaxima]
     return maxima_x, maxima_y, argmaxima

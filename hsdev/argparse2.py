@@ -66,6 +66,9 @@ class ArgumentParser2(object):
     def add_intlist(self, switch, *args, **kwargs):
         self.add_meta(switch, int,  *args, nargs='*', **kwargs)
 
+    def add_strlist(self, switch, *args, **kwargs):
+        self.add_meta(switch, str,  *args, nargs='*', **kwargs)
+
     def add_float(self, switch, *args, **kwargs):
         self.add_meta(switch, float, *args, **kwargs)
 
@@ -97,17 +100,17 @@ def make_argparse2(description, *args, **kwargs):
 def commands_argparse(parser2):
     parser2 = parser2.add_argument_group('Commands')
     parser2.add_str('--setcfg', help='standard config name')
-    parser2.add_flag('--autoquery')
+    parser2.add_flag('--batchfeats')
+    parser2.add_flag('--batchquery')
     parser2.add_intlist('--query', default=[], help='query chip-id to investigate')
-    parser2.add_intlist('--select-cids', default=[], help='chip indexes to view')
     parser2.add_intlist('--selgxs', default=[], help='image indexes to view')
-    parser2.add_intlist('--selcids', default=[], help='chip indexes to view')
+    parser2.add_intlist(('--selcids', '--sel-cids', '--select-cids'), default=[], help='chip indexes to view')
     parser2.add_intlist('--selnxs', default=[], help='name indexes to view')
     parser2.add_intlist('--txs', default=[], help='investigate match to top x of querys')
     parser2.add_intlist('--cids', default=[], help='investigate match cx')
-    parser2.add_intlist('--qfxs', default=[], help='investigate match to cx via qfxs')
-    parser2.add_int('--qcid', help='query chip-id to investigate', nargs='*')
+    parser2.add_intlist('--fxs', default=[], help='investigate match to cx via fxs')
     parser2.add_intlist('--ocid', help='query chip-id to investigate')
+    parser2.add_strlist(('--update-cfg', '--updatecfg'), default=[], help='set cfg dict via strings')
     parser2.add_int('--histid', help='history id (hard cases)')
     parser2.add_intlist(('--sel-rows', '-r'), help='view row')
     parser2.add_intlist(('--sel-cols', '-c'), help='view col')

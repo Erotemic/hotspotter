@@ -7,6 +7,24 @@ from hsdev import argparse2
  profile, printDBG) = __common__.init(__name__, '[main]', DEBUG=False, initmpl=False)
 
 
+def inject_colored_exception_hook():
+    import sys
+    def myexcepthook(type, value, tb):
+        #https://stackoverflow.com/questions/14775916/coloring-exceptions-from-python-on-a-terminal
+        import traceback
+        from pygments import highlight
+        from pygments.lexers import get_lexer_by_name
+        from pygments.formatters import TerminalFormatter
+
+        tbtext = ''.join(traceback.format_exception(type, value, tb))
+        lexer = get_lexer_by_name("pytb", stripall=True)
+        formatter = TerminalFormatter(bg="dark")
+        sys.stderr.write(highlight(tbtext, lexer, formatter))
+
+    sys.excepthook = myexcepthook
+
+
+
 def signal_reset():
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)  # reset ctrl+c behavior

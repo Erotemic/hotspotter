@@ -128,6 +128,8 @@ def interact_name(hs, nx, sel_cxs=[], select_cx_func=None, fnum=5, **kwargs):
 # CHIP INTERACTION 2
 @profile
 def interact_chip(hs, cx, fnum=2, figtitle=None, fx=None, **kwargs):
+    # TODO: Reconcile this with interact keypoints.
+    # Preferably this will call that but it will set some fancy callbacks
     fig = begin_interaction('chip', fnum)
     # Get chip info (make sure get_chip is called first)
     rchip = hs.get_chip(cx)
@@ -164,7 +166,7 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, fx=None, **kwargs):
             _chip_view(draw_ell=draw_ell, draw_pts=draw_pts)
         else:
             hs_viewtype = ax.__dict__.get('_hs_viewtype', '')
-            print_(' hs_viewtype=%r' % hs_viewtype)
+            print_('[ic] hs_viewtype=%r' % hs_viewtype)
             if hs_viewtype == 'chip' and event.key == 'shift':
                 print('... masking')
                 # TODO: Do better integration of masking
@@ -179,8 +181,12 @@ def interact_chip(hs, cx, fnum=2, figtitle=None, fx=None, **kwargs):
                     _select_ith_kpt(fx)
                 else:
                     print('... len(kpts) == 0')
+            elif hs_viewtype in ['warped', 'unwarped']:
+                hs_fx = ax.__dict__.get('_hs_fx', None)
+                if hs_fx is not None and hs_viewtype == 'warped':
+                    viz.show_keypoint_gradient_orientations(hs, cx, hs_fx, fnum=df2.next_fnum())
             else:
-                print('...Unknown viewtype')
+                print('...Unknown viewtype: %r' % hs_viewtype)
         viz.draw()
 
     # Draw without keypoints the first time
@@ -225,7 +231,7 @@ def interact_keypoints(rchip, kpts, desc, fnum=0, figtitle=None, nodraw=False, *
         else:
             ax = event.inaxes
             hs_viewtype = ax.__dict__.get('_hs_viewtype', None)
-            print_(' viewtype=%r' % hs_viewtype)
+            print_('[ik] viewtype=%r' % hs_viewtype)
             if hs_viewtype == 'keypoints':
                 kpts = ax.__dict__.get('_hs_kpts', [])
                 if len(kpts) == 0:
@@ -235,6 +241,13 @@ def interact_keypoints(rchip, kpts, desc, fnum=0, figtitle=None, nodraw=False, *
                     x, y = event.xdata, event.ydata
                     fx = nearest_point(x, y, kpts)[0]
                     _select_ith_kpt(fx)
+            elif hs_viewtype == 'warped':
+                hs_fx = ax.__dict__.get('_hs_fx', None)
+                if hs_fx is not None:
+                    # Ugly. Interactions should be changed to classes.
+                    kp = kpts[hs_fx]
+                    sift = desc[hs_fx]
+                    df2.draw_keypoint_gradient_orientations(rchip, kp, sift=sift, mode='vec', fnum=df2.next_fnum())
             else:
                 print('...unhandled')
         viz.draw()
@@ -370,7 +383,7 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result',
             viz.draw()
             return
         hs_viewtype = ax.__dict__.get('_hs_viewtype', '')
-        print_(' hs_viewtype=%r ' % hs_viewtype)
+        print_('[ir] hs_viewtype=%r ' % hs_viewtype)
         key = '' if event.key is None else event.key
         print_('key=%r ' % key)
         ctrl_down = key.find('control') == 0
@@ -397,10 +410,12 @@ def interact_chipres(hs, res, cx=None, fnum=4, figtitle='Inspect Query Result',
         elif hs_viewtype in ['warped', 'unwarped']:
             hs_cx = ax.__dict__.get('_hs_cx', None)
             hs_fx = ax.__dict__.get('_hs_fx', None)
-            if hs_cx is not None:
+            if hs_cx is not None and hs_viewtype == 'unwarped':
                 interact_chip(hs, hs_cx, fx=hs_fx, fnum=df2.next_fnum())
+            elif hs_cx is not None and hs_viewtype == 'warped':
+                viz.show_keypoint_gradient_orientations(hs, hs_cx, hs_fx, fnum=df2.next_fnum())
         else:
-            print('...Unknown viewtype')
+            print('...Unknown viewtype: %r' % hs_viewtype)
         viz.draw()
 
     if mx is None:

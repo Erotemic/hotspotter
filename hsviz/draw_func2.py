@@ -1599,20 +1599,27 @@ def draw_kpts2(kpts, offset=(0, 0), scale_factor=1,
     mpl_kp.draw_keypoints(ax, kpts, **_kwargs)
 
 
+def draw_keypoint_gradient_orientations(rchip, kp, sift=None, mode='vec', **kwargs):
+    wpatch, wkp  = ptool.get_warped_patch(rchip, kp, gray=True)
+    gradx, grady = ptool.patch_gradient(wpatch)
+    if mode == 'vec':
+        draw_vector_field(gradx, grady, **kwargs)
+    elif mode == 'col':
+        gmag = ptool.patch_mag(gradx, grady)
+        gori = ptool.patch_ori(gradx, grady)
+        import vtool.drawtool as dtool
+        gorimag = dtool.color_orimag(gori, gmag)
+        imshow(gorimag, **kwargs)
+    draw_kpts2(np.array([wkp]), sifts=np.array([sift]), ori=True)
+
+
 @util.indent_decor('[df2.dkp]')
 def draw_keypoint_patch(rchip, kp, sift=None, warped=False, patch_dict={}, **kwargs):
     #print('--------------------')
     printDBG('[df2] draw_keypoint_patch()')
     kpts = np.array([kp])
     if warped:
-        #if kpts.shape[1] == 6:
-            #ori = kpts[0, 5]
-            #np.tau = 2 * np.pi
-            #kpts[0, 5] = 0
-            #np.tau / 4
         patches, subkpts = ptool.get_warped_patches(rchip, kpts)
-        #if kpts.shape[1] == 6:
-            #kpts[0, 5] = ori
     else:
         patches, subkpts = ptool.get_unwarped_patches(rchip, kpts)
     #print('[df2] kpts[0]    = %r' % (kpts[0]))

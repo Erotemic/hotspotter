@@ -13,7 +13,7 @@ import vtool.linalg as ltool
 import vtool.image as gtool
 
 
-np.tau = 2 * np.pi
+np.tau = 2 * np.pi  # tauday.com
 
 
 def patch_gradient(image, ksize=1):
@@ -36,7 +36,6 @@ def patch_ori(gradx, grady):
 
 
 def get_unwarped_patches(rchip, kpts):
-    # TODO: CLEAN ME (FIX CROP EXTENT PROBLEMS. It is an issue with svd or no skew?)
     'Returns cropped unwarped patch around a keypoint'
     _xs, _ys = ktool.get_xys(kpts)
     xyexnts = ktool.get_xy_axis_extents(kpts=kpts)
@@ -60,8 +59,8 @@ def get_unwarped_patches(rchip, kpts):
 
 
 def get_warped_patches(rchip, kpts):
-    # TODO: CLEAN ME
     'Returns warped patch around a keypoint'
+    # TODO: CLEAN ME
     warped_patches = []
     warped_subkpts = []
     xs, ys = ktool.get_xys(kpts)
@@ -76,7 +75,7 @@ def get_warped_patches(rchip, kpts):
         (h, w) = rchip.shape[0:2]
         # Translate to origin(0,0) = (x,y)
         T = ltool.translation_mat(-x, -y)
-        R = ltool.rotation_mat(ori)
+        R = ltool.rotation_mat(-ori)
         S = ltool.scale_mat(ss)
         X = ltool.translation_mat(s / 2, s / 2)
         M = X.dot(S).dot(R).dot(V).dot(T)
@@ -85,7 +84,7 @@ def get_warped_patches(rchip, kpts):
         # Warp
         warped_patch = gtool.warpAffine(rchip, M, dsize)
         # Build warped keypoints
-        wkp = np.array((s / 2, s / 2, ss, 0., ss, oris))
+        wkp = np.array((s / 2, s / 2, ss, 0., ss, 0))
         warped_patches.append(warped_patch)
         warped_subkpts.append(wkp)
     return warped_patches, warped_subkpts
@@ -117,10 +116,10 @@ def find_kpts_direction(imgBGR, kpts):
         gori = patch_ori(gradx, grady)
         hist, centers = get_orientation_histogram(gori)
         # Find submaxima
-        maxima_x, maxima_y, argmaxima = htool.hist_argmaxima(hist, centers)
-        submaxima_x, submaxima_y = htool.interpolate_submaxima(argmaxima, hist, centers)
+        submaxima_x, submaxima_y = htool.hist_interpolated_submaxima(hist, centers)
         ori = submaxima_x[submaxima_y.argmax()] % np.tau
         ori_list.append(ori)
+    _oris = np.array(ori_list, dtype=kpts.dtype)
     # discard old orientatiosn if they exist
-    kpts2 = np.vstack([kpts[:, 0:5].T, ori_list]).T
+    kpts2 = np.vstack([kpts[:, 0:5].T, _oris]).T
     return kpts2

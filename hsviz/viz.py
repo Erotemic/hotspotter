@@ -271,7 +271,7 @@ def _annotate_kpts(kpts, sel_fx, draw_ell, draw_pts, color=None, nRandKpts=None,
     if sel_fx is not None:
         # Draw selected keypoint
         sel_kpts = kpts[sel_fx:sel_fx + 1]
-        print('[viz] sel_kpts = %r' % sel_kpts)
+        print('[viz] sel_kpts = \n%r' % sel_kpts)
         ell_args2 = ell_args.copy()
         ell_args2.update({
             'ell_color': df2.BLUE,
@@ -798,12 +798,26 @@ def _show_res(hs, res, **kwargs):
 #==========================#
 
 
+def show_keypoint_gradient_orientations(hs, cx, fx, fnum=None, pnum=None):
+    # Draw the gradient vectors of a patch overlaying the keypoint
+    if fnum is None:
+        fnum = df2.next_fnum()
+    rchip = hs.get_chip(cx)
+    kp = hs.get_kpts(cx)[fx]
+    sift = hs.get_desc(cx)[fx]
+    df2.draw_keypoint_gradient_orientations(rchip, kp, sift=sift,
+                                            mode='vec', fnum=fnum, pnum=pnum)
+    df2.set_title('Gradient orientation\n %s, fx=%d' % (hs.cidstr(cx), fx))
+
+
 def kp_info(kp):
     kpts = np.array([kp])
     xy_str    = ktool.get_xy_strs(kpts)[0]
     shape_str = ktool.get_shape_strs(kpts)[0]
+    ori_ = ktool.get_oris(kpts)[0]
+    ori_str = 'ori=.2f' % ori_
     scale = ktool.get_scales(kpts)[0]
-    return xy_str, shape_str, scale
+    return xy_str, shape_str, scale, ori_str
 
 
 @util.indent_decor('[viz.draw_feat_row]')
@@ -812,17 +826,17 @@ def draw_feat_row(rchip, fx, kp, sift, fnum, nRows, nCols, px, prevsift=None,
     pnum_ = lambda px: (nRows, nCols, px)
 
     def _draw_patch(**kwargs):
-        return df2.draw_keypoint_patch(rchip, kp, sift, **kwargs)
+        return df2.draw_keypoint_patch(rchip, kp, sift, ori_color=df2.DEEP_PINK, **kwargs)
 
     # Feature strings
-    xy_str, shape_str, scale = kp_info(kp)
+    xy_str, shape_str, scale, ori_str = kp_info(kp)
 
     # Draw the unwarped selected feature
     ax = _draw_patch(fnum=fnum, pnum=pnum_(px + 1))
     ax._hs_viewtype = 'unwarped'
     ax._hs_cx = cx
     ax._hs_fx = fx
-    unwarped_lbl = 'affine feature invV =\n' + shape_str
+    unwarped_lbl = 'affine feature invV =\n' + shape_str + '\n' + ori_str
     df2.set_xlabel(unwarped_lbl, ax)
 
     # Draw the warped selected feature

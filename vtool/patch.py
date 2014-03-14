@@ -39,14 +39,13 @@ def get_unwarped_patches(rchip, kpts):
     # TODO: CLEAN ME (FIX CROP EXTENT PROBLEMS. It is an issue with svd or no skew?)
     'Returns cropped unwarped patch around a keypoint'
     _xs, _ys = ktool.get_xys(kpts)
-    S_list = ktool.orthogonal_scales(kpts=kpts)
+    xyexnts = ktool.get_xy_axis_extents(kpts=kpts)
     patches = []
     subkpts = []
 
-    for (kp, x, y, (sfy, sfx)) in izip(kpts, _xs, _ys, S_list):
-        ratio = (max(sfx, sfy) / min(sfx, sfy))
-        radius_x = sfx * ratio
-        radius_y = sfy * ratio
+    for (kp, x, y, (sfx, sfy)) in izip(kpts, _xs, _ys, xyexnts):
+        radius_x = sfx * 1.5
+        radius_y = sfy * 1.5
         (chip_h, chip_w) = rchip.shape[0:2]
         # Get integer grid coordinates to crop at
         ix1, ix2, xm = htool.subbin_bounds(x, radius_x, 0, chip_w)
@@ -70,10 +69,9 @@ def get_warped_patches(rchip, kpts):
     oris = ktool.get_oris(kpts)
     invV_mats = ktool.get_invV_mats(kpts, with_trans=False, ashomog=True)
     V_mats = ktool.get_V_mats(invV_mats)
-    S_list = ktool.orthogonal_scales(invV_mats)
-    kpts_iter = izip(xs, ys, V_mats, oris, S_list)
+    kpts_iter = izip(xs, ys, V_mats, oris)
     s = 41  # sf
-    for x, y, V, ori, (sfx, sfy) in kpts_iter:
+    for x, y, V, ori in kpts_iter:
         ss = sqrt(s) * 3
         (h, w) = rchip.shape[0:2]
         # Translate to origin(0,0) = (x,y)

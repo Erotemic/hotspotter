@@ -1,14 +1,31 @@
 from __future__ import print_function, division
 # Science
 import cv2
-from numpy import (array, sin, cos,)
+import numpy as np
+from numpy import (array, sin, cos, sqrt)
 
 
 def svd(M):
+    # V is actually Vt
     flags = cv2.SVD_FULL_UV
-    S, U, V = cv2.SVDecomp(M, flags=flags)
-    S = S.flatten()
-    return U, S, V
+    S, U, Vt = cv2.SVDecomp(M, flags=flags)
+    s = S.flatten()
+    return U, s, Vt
+
+
+def get_UsVt_list(M_list):
+    UsV_list = [svd(M) for M in M_list]
+    return UsV_list
+
+
+def get_USVt_list(M_list):
+    UsV_list = get_UsVt_list(M_list)
+    USV_list = [(U, np.diag(s), V) for U, s, V in UsV_list]
+    return USV_list
+
+
+def USVt_axis_extent(U, S, Vt):
+    return sqrt(U.dot(S) ** 2).T.sum(0)
 
 
 def rotation_mat(radians):

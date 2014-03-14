@@ -16,9 +16,9 @@ from itertools import izip
 import numpy as np
 import numpy.linalg as npl
 from numpy.core.umath_tests import matrix_multiply
-from numpy import (array, rollaxis, sqrt, zeros, ones)
+from numpy import (array, rollaxis, sqrt, zeros, ones, diag)
 # VTool
-from vtool.linalg import svd
+import vtool.linalg as ltool
 
 
 #PYX START
@@ -157,13 +157,20 @@ def get_E_mats(V_mats):
     return Z_mats
 
 
-def orthogonal_scales(invV_mats=None, kpts=None):
+def get_xy_axis_extents(invV_mats=None, kpts=None):
+    'gets the scales of the major and minor elliptical axis'
     if invV_mats is None:
         assert kpts is not None
         invV_mats = get_invV_mats(kpts, ashomog=False)
-    'gets the scales of the major and minor elliptical axis'
-    S_list = np.array([svd(invV)[1] for invV in invV_mats[:, 0:2, 0:2]])
-    return S_list
+    if invV_mats.shape[1] == 3:
+        # Take the SVD of only the shape part
+        invV_mats = invV_mats[:, 0:2, 0:2]
+    Us_list = [ltool.svd(invV)[0:2] for invV in invV_mats]
+    def Us_axis_extent(U, s):
+        # Columns of U.dot(S) are in principle scaled directions
+        return sqrt(U.dot(diag(s)) ** 2).T.sum(0)
+    xyexnts = array([Us_axis_extent(U, s) for U, s in Us_list])
+    return xyexnts
 
 
 def diag_extent_sqrd(kpts):

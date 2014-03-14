@@ -29,7 +29,7 @@ def color_orimag(gori, gmag):
 
 def draw_hist_subbin_maxima(hist, centers=None):
     # Find maxima
-    maxima_x, maxima_y, argmaxima = htool.hist_argmaximum(hist, centers)
+    maxima_x, maxima_y, argmaxima = htool.hist_argmaxima(hist, centers)
     # Expand parabola points around submaxima
     x123, y123 = htool.maxima_neighbors(argmaxima, hist, centers)
     # Find submaxima

@@ -46,8 +46,11 @@ def patch_ori(gradx, grady):
     return gori
 
 
-def gaussian_patch(width=3, height=3, shape=(7, 7), sigma=None,
-                   norm_01=True):
+from hscom import tools
+
+
+@tools.lru_cache
+def gaussian_patch(width=3, height=3, shape=(7, 7), sigma=None, norm_01=True):
     # Build a list of x and y coordinates
     half_width  = width  / 2.0
     half_height = height / 2.0

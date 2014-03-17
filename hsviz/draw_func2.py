@@ -542,6 +542,13 @@ def update():
     all_figures_bring_to_front()
 
 
+def iupdate():
+    if util.inIPython():
+        update()
+
+iup = iupdate
+
+
 def present(*args, **kwargs):
     'execing present should cause IPython magic'
     print('[df2] Presenting figures...')
@@ -1605,12 +1612,14 @@ def draw_keypoint_gradient_orientations(rchip, kp, sift=None, mode='vec', **kwar
     if mode == 'vec':
         draw_vector_field(gradx, grady, **kwargs)
     elif mode == 'col':
+        import vtool.drawtool as dtool
         gmag = ptool.patch_mag(gradx, grady)
         gori = ptool.patch_ori(gradx, grady)
-        import vtool.drawtool as dtool
         gorimag = dtool.color_orimag(gori, gmag)
         imshow(gorimag, **kwargs)
-    draw_kpts2(np.array([wkp]), sifts=np.array([sift]), ori=True)
+    wkpts = np.array([wkp])
+    sifts = np.array([sift])
+    draw_kpts2(wkpts, sifts=sifts, ori=True)
 
 
 @util.indent_decor('[df2.dkp]')
@@ -1733,30 +1742,49 @@ def imshow(img, fnum=None, title=None, figtitle=None, pnum=None,
     return fig, ax
 
 
-def draw_vector_field(gx, gy, fnum=None, pnum=None):
+def draw_vector_field(gx, gy, fnum=None, pnum=None, title=None):
     # https://stackoverflow.com/questions/1843194/plotting-vector-fields-in-python-matplotlib
+    # http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.quiver
+    printDBG('[df2] draw_vector_vield()')
+    quiv_kw = {
+        'units': 'xy',
+        'scale_units': 'xy',
+        #'angles': 'uv',
+        #'scale': 80,
+        #'width':
+        'headaxislength': 4.5,
+        'headlength': 5,
+        'headwidth': 3,
+        'minshaft': 1,
+        'minlength': 1,
+        #'color': 'r',
+        #'edgecolor': 'k',
+        'linewidths': (.5,),
+        'pivot': 'tail',  # 'middle',
+    }
+    stride = 1
     np.tau = 2 * np.pi
-    #x_grid = np.arange(0, np.tau, .2)
-    #y_grid = np.arange(0, np.tau, .2)
-
-    #X, Y = np.meshgrid(x_grid, y_grid)
-    #U = np.cos(X)
-    #V = np.sin(Y)
+    x_grid = np.arange(0, len(gx), 1)
+    y_grid = np.arange(0, len(gy), 1)
+    # Vector locations and directions
+    X, Y = np.meshgrid(x_grid, y_grid)
     U, V = gx, -gy
-
-    #1
+    # Apply stride
+    X_ = X[::stride, ::stride]
+    Y_ = Y[::stride, ::stride]
+    U_ = U[::stride, ::stride]
+    V_ = V[::stride, ::stride]
+    # Draw arrows
     figure(fnum=fnum, pnum=pnum)
-    plt.quiver(U, V)
-    #plt.quiverkey(Q, 0.5, 0.92, 2, r'$2 \frac{m}{s}$', labelpos='W',
-                  #fontproperties={'weight': 'bold'})
-    #l, r, b, t = plt.axis()
-    #dx, dy = r - l, t - b
-    #ax = plt.axis([l - 0.05 * dx, r + 0.05 * dx, b - 0.05 * dy, t + 0.05 * dy])
+    plt.quiver(X_, Y_, U_, V_, **quiv_kw)
+    # Plot properties
     ax = gca()
     ax.set_xticks([])
     ax.set_yticks([])
     ax.invert_yaxis()
     ax.set_aspect('equal')
+    if title is not None:
+        set_title(title)
 
 
 def get_num_channels(img):

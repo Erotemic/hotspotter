@@ -108,6 +108,7 @@ def commands_argparse(parser2):
     parser2.add_intlist('--selnxs', default=[], help='name indexes to view')
     parser2.add_intlist('--txs', default=[], help='investigate match to top x of querys')
     parser2.add_intlist('--cids', default=[], help='investigate match cx')
+    parser2.add_intlist('--qcid', default=[], help='investigate match cx')
     parser2.add_intlist('--fxs', default=[], help='investigate match to cx via fxs')
     parser2.add_intlist('--ocid', help='query chip-id to investigate')
     parser2.add_strlist(('--update-cfg', '--updatecfg', '--cfg'), default=[], help='set cfg dict via strings')

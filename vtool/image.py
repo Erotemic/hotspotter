@@ -8,7 +8,7 @@ CV2_WARP_KWARGS = {'flags': cv2.INTER_LANCZOS4,
                    'borderMode': cv2.BORDER_CONSTANT}
 
 
-def imread(img_fpath, mode=None):
+def imread(img_fpath):
     try:
         # opencv always reads in BGR mode (fastest load time)
         imgBGR = cv2.imread(img_fpath, flags=cv2.CV_LOAD_IMAGE_COLOR)

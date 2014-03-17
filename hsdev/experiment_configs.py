@@ -115,6 +115,12 @@ vsmany_best = {
 best = vsmany_best
 
 
+gravity_test = vsmany_best.copy()
+gravity_test.update({
+    'nogravity_hack': [False, True],
+})
+
+
 # 450 works the best on GZ
 chipsize_test = vsmany_best.copy()
 chipsize_test.update({

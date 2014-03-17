@@ -189,3 +189,26 @@ def dbg_qreq(qreq):
     print('[q1] qreq_dftup2_index._dftup2_index=%r' % len(qreq._dftup2_index))
     print('[q1] qreq._dftup2_index.keys()=%r' % qreq._dftup2_index.keys())
     print('[q1] qreq._data_index=%r' % qreq._data_index)
+
+
+def check_desc(desc):
+    # Checks to make sure descriptors are close to valid SIFT descriptors.
+    # There will be error because of uint8
+    target = 1.0  # this should be 1.0
+    bindepth = 256.0
+    L2_list = np.sqrt(((desc / bindepth) ** 2).sum(1)) / 2.0  # why?
+    err = (target - L2_list) ** 2
+    thresh = 1 / 256.0
+    invalids = err >= thresh
+    if np.any(invalids):
+        print('There are %d/%d problem SIFT descriptors' % (invalids.sum(), len(invalids)))
+        L2_range = L2_list.max() - L2_list.min()
+        indexes = np.where(invalids)[0]
+        print('L2_range = %r' % (L2_range,))
+        print('thresh = %r' % thresh)
+        print('L2_list.mean() = %r' % L2_list.mean())
+        print('at indexes: %r' % indexes)
+        print('with errors: %r' % err[indexes])
+    else:
+        print('There are %d OK SIFT descriptors' % (len(desc),))
+    return invalids

@@ -24,7 +24,6 @@ def inject_colored_exception_hook():
     sys.excepthook = myexcepthook
 
 
-
 def signal_reset():
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)  # reset ctrl+c behavior

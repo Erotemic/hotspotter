@@ -12,6 +12,8 @@ import numpy as np
 # HotSpotter
 from hscom import util
 import matching_functions as mf
+# VTool
+import vtool.patch as ptool
 
 SCALE_FACTOR_DEFAULT = .05
 METHOD_DEFAULT = 0
@@ -72,7 +74,7 @@ def get_cx_match_covimg(hs, cx, sel_fx, mx2_score, **kwargs):
     chip = hs.get_chip(cx)
     kpts = hs.get_kpts(cx)
     mx2_kp = kpts[sel_fx]
-    srcimg = get_gaussimg()
+    srcimg = ptool.gaussian_patch()
     # 2 and 3 are scale modes
     if kwargs.get('method', 0) in [2, 3]:
         # Bigger keypoints should get smaller weights
@@ -102,7 +104,7 @@ def warp_srcimg_to_kpts(fx2_kp, srcimg, chip_shape, fx2_score=None, **kwargs):
     dst_copy = dstimg.copy()
     src_shape = srcimg.shape
     # Build keypoint transforms
-    fx2_M = build_transforms(fx2_kp, (h, w), src_shape, scale_factor)
+    fx2_M = build_kpts_transforms(fx2_kp, (h, w), src_shape, scale_factor)
     # cv2 warp flags
     dsize = (w, h)
     flags = cv2.INTER_LINEAR  # cv2.INTER_LANCZOS4
@@ -128,40 +130,7 @@ def warp_srcimg_to_kpts(fx2_kp, srcimg, chip_shape, fx2_score=None, **kwargs):
     return dstimg
 
 
-def pdf_norm2d(x_, y_):
-    x = np.array([x_, y_])
-    sigma = np.eye(2)
-    mu = np.array([0, 0])
-    size = len(x)
-    if size == len(mu) and (size, size) == sigma.shape:
-        det = np.linalg.det(sigma)
-        if det == 0:
-            raise NameError("The covariance matrix can't be singular")
-    np.tau = 2 * np.pi
-    norm_const = 1.0 / ( math.pow(np.tau, float(size) / 2) * math.pow(det, 1.0 / 2))
-    x_mu = np.matrix(x - mu)
-    inv = np.linalg.inv(sigma)
-    result = math.pow(math.e, -0.5 * (x_mu * inv * x_mu.T))
-    return norm_const * result
-
-
-def get_gaussimg(width=3, resolution=7):
-    half_width = width / 2
-    gauss_xs = np.linspace(-half_width, half_width, resolution)
-    gauss_ys = np.linspace(-half_width, half_width, resolution)
-
-    gaussspace_xys = np.array(list(iprod(gauss_xs, gauss_ys)))
-    gausspace_score = np.array([pdf_norm2d(x, y) for (x, y) in gaussspace_xys])
-    gausspace_score -= gausspace_score.min()
-    gausspace_score /= gausspace_score.max()
-
-    size = (resolution, resolution)
-    gaussimg = gausspace_score.reshape(size).T
-    gaussimg = np.array(gaussimg, dtype=np.float32)
-    return gaussimg
-
-
-def build_transforms(kpts, chip_shape, src_shape, scale_factor):
+def build_kpts_transforms(kpts, chip_shape, src_shape, scale_factor):
     (h, w) = chip_shape
     (h_, w_) = src_shape
     T1 = np.array(((1, 0, -w_ / 2),
@@ -171,8 +140,8 @@ def build_transforms(kpts, chip_shape, src_shape, scale_factor):
                    (0,      1 / h_,  0),
                    (0,           0,  1),))
     invVR_aff2Ds = [np.array(((a, 0, x),
-                          (c, d, y),
-                          (0, 0, 1),)) for (x, y, a, c, d) in kpts]
+                              (c, d, y),
+                              (0, 0, 1),)) for (x, y, a, c, d, ori) in kpts]
     S2 = np.array(((scale_factor,      0,  0),
                    (0,      scale_factor,  0),
                    (0,           0,  1),))
@@ -184,6 +153,6 @@ def build_transforms(kpts, chip_shape, src_shape, scale_factor):
 def get_coverage_map(kpts, chip_shape, **kwargs):
     # Create gaussian image to warp
     np.tau = 2 * np.pi
-    srcimg = get_gaussimg()
+    srcimg = ptool.gaussian_patch()
     dstimg = warp_srcimg_to_kpts(kpts, srcimg, chip_shape, **kwargs)
     return dstimg

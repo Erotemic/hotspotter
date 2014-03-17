@@ -35,9 +35,15 @@ tau = np.tau = np.pi * 2  # tauday.com
 GRAVITY_THETA = np.tau / 4
 KPTS_DTYPE = np.float32
 
+XDIM = 0
+YDIM = 1
+SCAX_DIM = 2
+SKEW_DIM = 3
+SCAY_DIM = 4
+ORI_DIM = 5
+
 
 # --- raw keypoint components ---
-
 def get_xys(kpts):
     # Keypoint locations in chip space
     # TODO: _xys = kpts.T[0:2]
@@ -205,6 +211,6 @@ def get_xy_strs(kpts):
 def get_shape_strs(kpts):
     invVs = get_invVs(kpts)
     shape_strs  = [(('[(%3.1f,  0.00),\n' +
-                    ' (%3.1f, %3.1f)]') % (iv11, iv21, iv22,))
+                     ' (%3.1f, %3.1f)]') % (iv11, iv21, iv22,))
                    for iv11, iv21, iv22 in izip(*invVs)]
     return shape_strs

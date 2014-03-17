@@ -12,7 +12,7 @@ from hscom import util
 from hsdev import params
 from hscom import fileio as io
 from hscom.Parallelize import parallel_compute
-import extern_feat
+from hstpl.extern_feat import pyhesaff
 
 
 def whiten_features(desc_list):
@@ -92,10 +92,12 @@ def sequential_feat_load(feat_cfg, feat_fpath_list):
     return kpts_list, desc_list
 
 
-# Maps a preference string into a function
-feat_type2_precompute = {
-    'hesaff+sift': extern_feat.precompute_hesaff,
-}
+def precompute_hesaff(rchip_fpath, feat_fpath, dict_args):
+    # Calls the function which reads the chip and computes features
+    kpts, desc = pyhesaff.detect_kpts(rchip_fpath, dict_args)
+    # Saves the features to the feature cache dir
+    np.savez(feat_fpath, kpts, desc)
+    return None  # kpts, desc
 
 
 def _cx2_feat_fpaths(hs, cx_list):
@@ -122,7 +124,7 @@ def _load_features_individualy(hs, cx_list):
     # Compute features in parallel, saving them to disk
     kwargs_list = [feat_cfg.get_dict_args()] * len(rchip_fpath_list)
     pfc_kwargs = {
-        'func': feat_type2_precompute[feat_cfg.feat_type],
+        'func': precompute_hesaff,
         'arg_list': [rchip_fpath_list, feat_fpath_list, kwargs_list],
         'num_procs': params.args.num_procs,
         'lazy': use_cache,

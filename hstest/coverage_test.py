@@ -10,6 +10,8 @@ import numpy as np  # NOQA
 from hsdev import main_api
 from hsapi import coverage
 from hsviz import draw_func2 as df2
+#
+import vtool.patch as ptool
 
 
 def test_find_coverage_score(hs, res):
@@ -74,7 +76,7 @@ if __name__ == '__main__':
     scale_factor = .1
 
     # Get source gaussian
-    srcimg = coverage.get_gaussimg()
+    srcimg = ptool.gaussian_patch()
 
     # Get Chip Coverage
     dstimg = coverage.warp_srcimg_to_kpts(kpts, srcimg, chip_shape,

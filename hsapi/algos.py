@@ -1,3 +1,9 @@
+# TODO: Separate this into:
+# cached_flann module
+# vector distances module
+# cached_akmeans module
+# whatever else it needs to be
+
 'hotspotter.algos contains algorithm poltpori'
 from __future__ import division, print_function
 from hscom import __common__

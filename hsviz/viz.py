@@ -817,7 +817,7 @@ def kp_info(kp):
     xy_str    = ktool.get_xy_strs(kpts)[0]
     shape_str = ktool.get_shape_strs(kpts)[0]
     ori_ = ktool.get_oris(kpts)[0]
-    ori_str = 'ori=.2f' % ori_
+    ori_str = 'ori=%.2f' % ori_
     scale = ktool.get_scales(kpts)[0]
     return xy_str, shape_str, scale, ori_str
 

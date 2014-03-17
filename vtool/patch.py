@@ -1,7 +1,10 @@
 # LICENCE
 from __future__ import print_function, division
 # Python
+import sys
 from itertools import izip
+from itertools import product as iprod
+import functools
 # Science
 import cv2
 import numpy as np
@@ -13,13 +16,21 @@ import vtool.linalg as ltool
 import vtool.image as gtool
 
 
+# Command line switch
+sys.argv.append('--vecfield')
+
+
 np.tau = 2 * np.pi  # tauday.com
 
 
-def patch_gradient(image, ksize=1):
-    image_ = array(image, dtype=np.float64)
-    gradx = cv2.Sobel(image_, cv2.CV_64F, 1, 0, ksize=ksize)
-    grady = cv2.Sobel(image_, cv2.CV_64F, 0, 1, ksize=ksize)
+def patch_gradient(patch, ksize=1, gaussian_weighted=True):
+    patch_ = array(patch, dtype=np.float64)
+    gradx = cv2.Sobel(patch_, cv2.CV_64F, 1, 0, ksize=ksize)
+    grady = cv2.Sobel(patch_, cv2.CV_64F, 0, 1, ksize=ksize)
+    if gaussian_weighted:
+        gausspatch = gaussian_patch(shape=gradx.shape)
+        gradx *= gausspatch
+        grady *= gausspatch
     return gradx, grady
 
 
@@ -28,11 +39,31 @@ def patch_mag(gradx, grady):
 
 
 def patch_ori(gradx, grady):
-    'returns patch orientation relative to the gravity vector'
+    'returns patch orientation relative to the x-axis'
     gori = np.arctan2(grady, gradx)  # outputs from -pi to pi
     gori[gori < 0] = gori[gori < 0] + np.tau  # map to 0 to tau (keep coords)
-    gori = (gori + ktool.GRAVITY_THETA) % np.tau  # normalize relative to gravity
+    gori = gori % np.tau
     return gori
+
+
+def gaussian_patch(width=3, height=3, shape=(7, 7), sigma=None,
+                   norm_01=True):
+    # Build a list of x and y coordinates
+    half_width  = width  / 2.0
+    half_height = height / 2.0
+    gauss_xs = np.linspace(-half_width,  half_width,  shape[0])
+    gauss_ys = np.linspace(-half_height, half_height, shape[1])
+    # Iterate over the cartesian coordinate product and get pdf values
+    gauss_xys  = iprod(gauss_xs, gauss_ys)
+    gauss_func = functools.partial(ltool.gauss2d_pdf, sigma=sigma, mu=None)
+    gaussvals  = [gauss_func(x, y) for (x, y) in gauss_xys]
+    # Reshape pdf values into a 2D image
+    gausspatch = np.array(gaussvals, dtype=np.float32).reshape(shape).T
+    if norm_01:
+        # normalize if requested
+        gausspatch -= gausspatch.min()
+        gausspatch /= gausspatch.max()
+    return gausspatch
 
 
 def get_unwarped_patches(rchip, kpts):
@@ -119,9 +150,10 @@ def find_kpts_direction(imgBGR, kpts):
         # Find submaxima
         submaxima_x, submaxima_y = htool.hist_interpolated_submaxima(hist, centers)
         submax_ori = submaxima_x[submaxima_y.argmax()]
-        ori = (submax_ori - gravity_ori) % np.tau
+        ori = (submax_ori)  # normalize w.r.t. gravity
         ori_list.append(ori)
     _oris = np.array(ori_list, dtype=kpts.dtype)
-    # discard old orientatiosn if they exist
-    kpts2 = np.vstack([kpts[:, 0:5].T, _oris]).T
+    _oris -= gravity_ori  % np.tau  # normalize w.r.t. gravity
+    # discard old orientation if they exist
+    kpts2 = np.vstack((kpts[:, 0:5].T, _oris)).T
     return kpts2

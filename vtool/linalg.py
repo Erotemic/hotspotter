@@ -1,7 +1,11 @@
 from __future__ import print_function, division
 # Science
 import cv2
+import numpy as np
+import numpy.linalg as npl
 from numpy import (array, sin, cos)
+
+np.tau = 2 * np.pi  # tauday.com
 
 
 def svd(M):
@@ -10,6 +14,51 @@ def svd(M):
     S, U, Vt = cv2.SVDecomp(M, flags=flags)
     s = S.flatten()
     return U, s, Vt
+
+
+def OLD_pdf_norm2d(x_, y_):
+    # DEPRICATED
+    import math
+    x = np.array([x_, y_])
+    sigma = np.eye(2)
+    mu = np.array([0, 0])
+    size = len(x)
+    if size == len(mu) and (size, size) == sigma.shape:
+        det = np.linalg.det(sigma)
+        if det == 0:
+            raise NameError('The covariance matrix cant be singular')
+    np.tau = 2 * np.pi
+    norm_const = 1.0 / ( math.pow(np.tau, float(size) / 2) * math.pow(det, 1.0 / 2))
+    x_mu = np.matrix(x - mu)
+    inv = np.linalg.inv(sigma)
+    result = math.pow(math.e, -0.5 * (x_mu * inv * x_mu.T))
+    return norm_const * result
+
+
+def gauss2d_pdf(x_, y_, sigma=None, mu=None):
+    '''
+    Input: x and y coordinate of a 2D gaussian
+           sigma, mu - covariance and mean vector
+    Output: The probability density at that point
+    '''
+    if sigma is None:
+        sigma = np.eye(2)
+    if mu is None:
+        mu = np.array([0, 0])
+    x = array([x_, y_])
+    size = len(x)
+    if size == len(mu) and (size, size) == sigma.shape:
+        det = npl.det(sigma)
+        if det == 0:
+            raise NameError('The covariance matrix cant be singular')
+    denom1 = np.tau ** (size / 2.0)
+    denom2 = np.sqrt(det)
+    norm_const = 1.0 / (denom1 * denom2)
+    x_mu = x - mu  # deviation from mean
+    invSigma = npl.inv(sigma)  # inverse covariance
+    exponent = -0.5 * (x_mu.dot(invSigma).dot(x_mu.T))
+    result = norm_const * np.exp(exponent)
+    return result
 
 
 def rotation_mat(radians):

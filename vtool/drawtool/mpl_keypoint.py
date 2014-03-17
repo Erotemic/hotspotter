@@ -106,7 +106,7 @@ def get_invV_aff2Ds(_xs, _ys, _iv11s, _iv12s, _iv21s, _iv22s):
 
 
 def get_RinvV_aff2Ds(invV_aff2Ds, _oris):
-    R_list = [mpl.transforms.Affine2D().rotate(ori) for ori in _oris]
+    R_list = [mpl.transforms.Affine2D().rotate(-ori) for ori in _oris]
     RinvV_aff2Ds = [R + invV for (invV, R) in izip(invV_aff2Ds, R_list)]
     return RinvV_aff2Ds
 
@@ -141,7 +141,7 @@ def eigenvector_actors(invV_aff2Ds):
 
 def orientation_actors(_xs, _ys, _iv11s, _iv21s, _iv22s, _oris):
     try:
-        # orientations are relative to the gravity vector
+        # orientations are w.r.t. the gravity vector
         abs_oris = _oris + ktool.GRAVITY_THETA
         _sins = np.sin(abs_oris)
         _coss = np.cos(abs_oris)

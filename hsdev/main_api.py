@@ -109,7 +109,8 @@ def main(defaultdb='cache', preload=False, app=None, args=None):
             print('TypError: %s' % ex)
             raise
     else:
-        back = guiback.make_main_window(app)
+        showgui = not params.args.nogui
+        back = guiback.make_main_window(app, showgui=showgui)
         hs = back.open_database(args.dbdir)
     setcfg = args.setcfg
     if setcfg is not None:

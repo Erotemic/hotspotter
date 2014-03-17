@@ -92,10 +92,10 @@ def select_next_in_order(back):
 
 
 # Creation function
-def make_main_window(app=None, hs=None):
+def make_main_window(app=None, hs=None, showgui=True):
     #printDBG(r'[*back] make_main_window()')
     back = MainWindowBackend(app=app, hs=hs)
-    if hs is None or not params.args.nogui:
+    if showgui:
         back.show()
         back.layout_figures()
         if app is not None:

@@ -110,6 +110,7 @@ def get_orientation_histogram(gori):
 
 def find_kpts_direction(imgBGR, kpts):
     ori_list = []
+    gravity_ori = ktool.GRAVITY_THETA
     for kp in kpts:
         patch, wkp = get_warped_patch(imgBGR, kp, gray=True)
         gradx, grady = patch_gradient(patch)
@@ -117,7 +118,8 @@ def find_kpts_direction(imgBGR, kpts):
         hist, centers = get_orientation_histogram(gori)
         # Find submaxima
         submaxima_x, submaxima_y = htool.hist_interpolated_submaxima(hist, centers)
-        ori = submaxima_x[submaxima_y.argmax()] % np.tau
+        submax_ori = submaxima_x[submaxima_y.argmax()]
+        ori = (submax_ori - gravity_ori) % np.tau
         ori_list.append(ori)
     _oris = np.array(ori_list, dtype=kpts.dtype)
     # discard old orientatiosn if they exist

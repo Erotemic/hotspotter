@@ -99,7 +99,7 @@ def make_argparse2(description, *args, **kwargs):
 
 def commands_argparse(parser2):
     parser2 = parser2.add_argument_group('Commands')
-    parser2.add_str('--setcfg', help='standard config name')
+    parser2.add_str(('--setcfg', '--setstdcfg'), help='standard config name')
     parser2.add_flag('--batchfeats')
     parser2.add_flag('--batchquery')
     parser2.add_intlist('--query', default=[], help='query chip-id to investigate')
@@ -110,7 +110,7 @@ def commands_argparse(parser2):
     parser2.add_intlist('--cids', default=[], help='investigate match cx')
     parser2.add_intlist('--fxs', default=[], help='investigate match to cx via fxs')
     parser2.add_intlist('--ocid', help='query chip-id to investigate')
-    parser2.add_strlist(('--update-cfg', '--updatecfg'), default=[], help='set cfg dict via strings')
+    parser2.add_strlist(('--update-cfg', '--updatecfg', '--cfg'), default=[], help='set cfg dict via strings')
     parser2.add_int('--histid', help='history id (hard cases)')
     parser2.add_intlist(('--sel-rows', '-r'), help='view row')
     parser2.add_intlist(('--sel-cols', '-c'), help='view col')

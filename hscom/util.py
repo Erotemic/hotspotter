@@ -1798,10 +1798,15 @@ def try_cast(var, type_):
 
 def get_arg(arg, type_=None, default=None):
     arg_after = default
+    if type_ is bool:
+        arg_after = False if default is None else default
     try:
-        arg_index = sys.argv.index(arg)
-        if arg_index < len(sys.argv):
-            arg_after = try_cast(sys.argv[arg_index + 1], type_)
+        argx = sys.argv.index(arg)
+        if argx < len(sys.argv):
+            if type_ is bool:
+                arg_after = True
+            else:
+                arg_after = try_cast(sys.argv[argx + 1], type_)
     except Exception:
         pass
     return arg_after

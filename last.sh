@@ -8,3 +8,7 @@ python dev.py --db MOTHERS --nocache-feat --cfg nogravity_hack:True --all-cases 
 
 python dev.py --db GZ -t gravity_test --all-gt-cases
 python dev.py --db MOTHERS -t gravity_test --all-gt-cases
+
+
+python dev.py --db MOTHERS --stdcfg gravity_test 0 -t scores --all-gt-cases
+python dev.py --db MOTHERS --stdcfg gravity_test 1 -t scores --all-gt-cases

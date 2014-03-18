@@ -441,13 +441,25 @@ def plot_scores(hs, qcx_list, fnum=1):
     uid = qcx2_res.itervalues().next().uid
 
     df2.set_logyscale_from_data(allscores_sorted)
+
+    def order_of_magnitude_ceil(num):
+        num = len(allscores_sorted)
+        nDigits = np.ceil(np.log10(num))
+        scalefactor = 10 ** (nDigits - 1)
+        return np.ceil(num / scalefactor) * scalefactor
     df2.set_xlabel('chipmatch index')
     df2.dark_background()
     df2.set_figtitle('matching scores\n' + uid)
     df2.legend(loc='upper left')
+    xmin = 0
+    xmax = order_of_magnitude_ceil(len(allscores_sorted))
+    print('len_ = %r' % (len(allscores_sorted),))
+    print('xmin = %r' % (xmin,))
+    print('xmax = %r' % (xmax,))
+    df2.gca().set_xlim(xmin, xmax)
     df2.update()
 
-    util.embed()
+    #util.embed()
     # Second Plot
     #data = sorted(zip(gtscore_sortxs, gtscore_ys, gtscore_ranks))
     #gtxs = [x for (x, y, z) in data]

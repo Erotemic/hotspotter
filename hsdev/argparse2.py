@@ -99,7 +99,7 @@ def make_argparse2(description, *args, **kwargs):
 
 def commands_argparse(parser2):
     parser2 = parser2.add_argument_group('Commands')
-    parser2.add_str(('--setcfg', '--setstdcfg'), help='standard config name')
+    parser2.add_strlist(('--stdcfg', '--setstdcfg'), help='standard config name')
     parser2.add_flag('--batchfeats')
     parser2.add_flag('--batchquery')
     parser2.add_intlist('--query', default=[], help='query chip-id to investigate')

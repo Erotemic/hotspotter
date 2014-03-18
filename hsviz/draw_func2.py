@@ -666,7 +666,7 @@ def set_ylabel(lbl):
     ax.set_ylabel(lbl, fontproperties=FONTS.xlabel)
 
 
-def get_good_logyscale_kwargs(y_data):
+def get_good_logyscale_kwargs(y_data, adaptive_knee_scaling=False):
     # Attempts to detect knee points by looking for
     # log derivatives way past the normal standard deviations
     # The input data is assumed to be sorted and y_data
@@ -690,7 +690,7 @@ def get_good_logyscale_kwargs(y_data):
     knee_points = dy_sortx[knee_indexes]
     print('[df2] knee_points = %r' % (knee_points,))
     # Check to see that we have found a knee
-    if len(knee_points) > 0:
+    if len(knee_points) > 0 and adaptive_knee_scaling:
         # Use linear scaling up the the knee points and
         # scale it by the magnitude of the knee
         kneex = knee_points.argmin()

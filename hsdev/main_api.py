@@ -88,6 +88,7 @@ def main(defaultdb='cache', preload=False, app=None, args=None):
     # TODO: this function name needs to be cleaned up
     # Rectify with main(), main_init(), and main_loop()
     # Parse arguments first for quick --help
+    print('[main_api] main()')
     if args is None:
         args = parse_arguments(defaultdb, defaultdb == 'cache')
     # Import after parsing args
@@ -111,15 +112,19 @@ def main(defaultdb='cache', preload=False, app=None, args=None):
         showgui = not params.args.nogui
         back = guiback.make_main_window(app, showgui=showgui)
         hs = back.open_database(args.dbdir)
-    setcfg = args.setcfg
-    if setcfg is not None:
+
+    if args.stdcfg is not None:
+        if len(args.stdcfg) == 0 or len(args.stdcfg) > 2:
+            raise Exception('stdcfg expects 1 or 2 arguments')
         # FIXME move experiment harness to hsdev
-        print('[tapi.main] setting cfg to %r' % setcfg)
-        varied_list = experiment_harness.get_varied_params_list([setcfg])
-        cfg_dict = varied_list[0]
+        cfgname = args.stdcfg[0]
+        variedx = 0 if len(args.stdcfg) == 1 else int(args.stdcfg[1])
+        print('[main_api] setting cfg to %r[%d]' % (cfgname, variedx))
+        varied_list = experiment_harness.get_varied_params_list([cfgname])
+        cfg_dict = varied_list[variedx]
         hs.prefs.query_cfg.update_cfg(**cfg_dict)
         hs.prefs.save()
-        hs.prefs.printme()
+        #hs.prefs.printme()
     # Load all data if needed now, otherwise be lazy
     try:
         load_all = preload
@@ -128,7 +133,7 @@ def main(defaultdb='cache', preload=False, app=None, args=None):
         io.global_cache_write('dbdir', dbdir)
         _checkargs_onload(hs)
     except ValueError as ex:
-        print('[tapi.main] ValueError = %r' % (ex,))
+        print('[main_api] ValueError = %r' % (ex,))
         if params.args.strict:
             raise
     if app is not None:
@@ -195,7 +200,7 @@ def get_qcx_list(hs):
     import numpy as np
     from hsdev import params
     from hscom import util
-    print('[tapi!] get_qcx_list()')
+    print('[main_api!] get_qcx_list()')
 
     valid_cxs = hs.get_valid_cxs()
     def get_cases(hs, with_hard=True, with_gt=True, with_nogt=True, with_notes=False):
@@ -222,36 +227,36 @@ def get_qcx_list(hs):
     # Sample a large pool of query indexes
     histids = None if params.args.histid is None else np.array(params.args.histid)
     if params.args.all_cases:
-        print('[tapi] all cases')
+        print('[main_api] all cases')
         qcx_all = get_cases(hs, with_gt=True, with_nogt=True)
     elif params.args.all_gt_cases:
-        print('[tapi] all gt cases')
+        print('[main_api] all gt cases')
         qcx_all = get_cases(hs, with_hard=True, with_gt=True, with_nogt=False)
     elif params.args.qcid is None:
         # FIXEME: BUG
-        print('[tapi] did not select cases')
+        print('[main_api] did not select cases')
         qcx_all = get_cases(hs, with_hard=True, with_gt=False, with_nogt=False)
     else:
-        print('[tapi] Chosen qcid=%r' % params.args.qcid)
+        print('[main_api] Chosen qcid=%r' % params.args.qcid)
         qcx_all =  util.ensure_iterable(hs.cid2_cx(params.args.qcid))
     # Filter only the ones you want from the large pool
     if histids is None:
         qcx_list = qcx_all
     else:
         histids = util.ensure_iterable(histids)
-        print('[tapi] Chosen histids=%r' % histids)
+        print('[main_api] Chosen histids=%r' % histids)
         qcx_list = [qcx_list[id_] for id_ in histids]
 
     if len(qcx_list) == 0:
-        msg = '[tapi.get_qcxs] no qcx_list history'
+        msg = '[main_api.get_qcxs] no qcx_list history'
         print(msg)
         if '--vstrict' in sys.argv:  # if params.args.vstrict:
             raise Exception(msg)
         print(valid_cxs)
         qcx_list = valid_cxs[0:1]
-    print('[tapi] len(qcx_list) = %d' % len(qcx_list))
+    print('[main_api] len(qcx_list) = %d' % len(qcx_list))
     qcx_list = util.unique_keep_order(qcx_list)
-    print('[tapi] qcx_list = %r' % qcx_list)
+    print('[main_api] qcx_list = %r' % qcx_list)
     return qcx_list
 
 

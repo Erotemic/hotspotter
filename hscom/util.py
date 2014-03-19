@@ -236,6 +236,8 @@ def index_of(item, array):
 
 
 def list_index(search_list, to_find_list):
+    ''' Keep this function
+    Searches search_list for each element in to_find_list'''
     try:
         toret = [np.where(search_list == item)[0][0] for item in to_find_list]
     except IndexError as ex1:
@@ -254,6 +256,13 @@ def list_eq(list_):
         return True
     item0 = list_[0]
     return all([item == item0 for item in list_])
+
+
+def inbounds(arr, low, high):
+    flag_low = arr >= low
+    flag_high = arr < high if high is not None else flag_low
+    flag = np.logical_and(flag_low, flag_high)
+    return flag
 
 
 def intersect2d_numpy(A, B):
@@ -290,7 +299,7 @@ def unique_keep_order(arr):
 
 # --- Info Strings ---
 
-def pstats(*args, **kwargs):
+def stats_str(*args, **kwargs):
     # wrapper for printable_mystats
     return printable_mystats(*args, **kwargs)
 
@@ -2405,3 +2414,10 @@ def show_img_fpath(img_fpath):
     from hscom import fileio as io
     img = io.imread(img_fpath)
     df2.imshow(img)
+
+
+def order_of_magnitude_ceil(num):
+    num = len(num)
+    nDigits = np.ceil(np.log10(num))
+    scalefactor = 10 ** (nDigits - 1)
+    return np.ceil(num / scalefactor) * scalefactor

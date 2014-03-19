@@ -25,12 +25,33 @@ np.tau = 2 * np.pi  # tauday.com
 
 def patch_gradient(patch, ksize=1, gaussian_weighted=True):
     patch_ = array(patch, dtype=np.float64)
-    gradx = cv2.Sobel(patch_, cv2.CV_64F, 1, 0, ksize=ksize)
-    grady = cv2.Sobel(patch_, cv2.CV_64F, 0, 1, ksize=ksize)
-    if gaussian_weighted:
-        gausspatch = gaussian_patch(shape=gradx.shape)
-        gradx *= gausspatch
-        grady *= gausspatch
+    try:
+        gradx = cv2.Sobel(patch_, cv2.CV_64F, 1, 0, ksize=ksize)
+        grady = cv2.Sobel(patch_, cv2.CV_64F, 0, 1, ksize=ksize)
+        if gaussian_weighted:
+            gausspatch = gaussian_patch(shape=gradx.shape)
+            gradx *= gausspatch
+            grady *= gausspatch
+    except Exception as ex:
+        print('!!!!!!!!!!!!')
+        print('[patch!] Exception = ' + str(ex))
+        def printvarDBG(vname, locals_=None, var=None):
+            print('---------')
+            try:
+                if var is None:
+                    var = locals_[vname]
+                print('type(' + vname + ') = ' + str(type(var)))
+                print('repr(' + vname + ') = ' + str(repr(var)))
+                print(vname + ' = ' + str(var))
+            except Exception as ex:
+                print(vname)
+        printvarDBG('patch', locals())
+        printvarDBG('ksize', locals())
+        printvarDBG('patch_', locals())
+        printvarDBG('gaussian_weighted', locals())
+        printvarDBG('gradx', locals())
+        printvarDBG('grady', locals())
+        raise
     return gradx, grady
 
 
@@ -46,10 +67,10 @@ def patch_ori(gradx, grady):
     return gori
 
 
-from hscom import tools
+#from hscom import tools
 
 
-@tools.lru_cache()
+#@tools.lru_cache()
 def gaussian_patch(width=3, height=3, shape=(7, 7), sigma=None, norm_01=True):
     # Build a list of x and y coordinates
     half_width  = width  / 2.0

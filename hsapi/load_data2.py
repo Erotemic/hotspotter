@@ -19,7 +19,6 @@ from PIL import Image
 # Hotspotter
 import DataStructures as ds
 from hscom import util
-from hscom import util
 from hscom import tools
 
 # GLOBALS
@@ -532,6 +531,11 @@ def load_csv_tables(dbdir, allow_new_dir=True):
 
 # Make Table Functions
 # Returns the formated csv table text
+def numpy_to_csv(arr, column_labels=None, header='', column_type=None):
+    column_list = arr.T.tolist()
+    return make_csv_table(column_labels=column_labels,
+                          column_list=column_list, header=header,
+                          column_type=column_type)
 
 
 def make_csv_table(column_labels=None, column_list=[], header='', column_type=None):

@@ -149,6 +149,7 @@ class QueryResult(DynStruct):
         return res.get_cx_ranks(gt_cxs)
 
     def get_cx_ranks(res, cx_list):
+        'get ranks of chip indexes in cx_list'
         cx2_score = res.get_cx2_score()
         top_cxs  = cx2_score.argsort()[::-1]
         foundpos = [np.where(top_cxs == cx)[0] for cx in cx_list]

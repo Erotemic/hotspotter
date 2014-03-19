@@ -1608,7 +1608,16 @@ def draw_kpts2(kpts, offset=(0, 0), scale_factor=1,
 
 def draw_keypoint_gradient_orientations(rchip, kp, sift=None, mode='vec', **kwargs):
     wpatch, wkp  = ptool.get_warped_patch(rchip, kp, gray=True)
-    gradx, grady = ptool.patch_gradient(wpatch)
+    try:
+        gradx, grady = ptool.patch_gradient(wpatch)
+    except Exception as ex:
+        print('!!!!!!!!!!!!')
+        print('[df2!] Exception = ' + str(ex))
+        print('---------')
+        print('type(wpatch) = ' + str(type(wpatch)))
+        print('repr(wpatch) = ' + str(repr(wpatch)))
+        print('wpatch = ' + str(wpatch))
+        raise
     if mode == 'vec':
         draw_vector_field(gradx, grady, **kwargs)
     elif mode == 'col':

@@ -349,7 +349,7 @@ def plot_seperability(hs, qcx_list, fnum=1):
     qcx2_separability = get_seperatbility(hs, qcx2_res)
     sep_score_list = qcx2_separability.values()
     df2.figure(fnum=fnum, doclf=True, docla=True)
-    print('[dev] seperability stats: ' + util.pstats(sep_score_list))
+    print('[dev] seperability stats: ' + util.stats_str(sep_score_list))
     sorted_sepscores = sorted(sep_score_list)
     df2.plot(sorted_sepscores, color=df2.DEEP_PINK, label='seperation score',
              yscale=YSCALE)
@@ -363,14 +363,14 @@ def plot_seperability(hs, qcx_list, fnum=1):
     return fnum
 
 
-def plot_scores(hs, qcx_list, fnum=1):
+def plot_scores2(hs, qcx_list, fnum=1):
     print('[dev] plot_scores(fnum=%r)' % fnum)
     qcx2_res = get_qcx2_res(hs, qcx_list)
     all_score_list = []
     gtscore_ys = []
     gtscore_xs = []
     gtscore_ranks = []
-    EXCLUDE_ZEROS = True
+    EXCLUDE_ZEROS = False
     N = 1
     # Append all scores to a giant list
     for res in qcx2_res.itervalues():
@@ -416,7 +416,7 @@ def plot_scores(hs, qcx_list, fnum=1):
         df2.UNKNOWN_PURP,
         df2.FALSE_RED
     ]
-    print('[dev] matching chipscore stats: ' + util.pstats(all_score_list))
+    print('[dev] matching chipscore stats: ' + util.stats_str(all_score_list))
     df2.figure(fnum=fnum, doclf=True, docla=True)
     # Finds the knee
     df2.plot(allscores_sorted, color=df2.ORANGE, label='all scores')
@@ -442,21 +442,16 @@ def plot_scores(hs, qcx_list, fnum=1):
 
     df2.set_logyscale_from_data(allscores_sorted)
 
-    def order_of_magnitude_ceil(num):
-        num = len(allscores_sorted)
-        nDigits = np.ceil(np.log10(num))
-        scalefactor = 10 ** (nDigits - 1)
-        return np.ceil(num / scalefactor) * scalefactor
     df2.set_xlabel('chipmatch index')
     df2.dark_background()
     df2.set_figtitle('matching scores\n' + uid)
     df2.legend(loc='upper left')
-    xmin = 0
-    xmax = order_of_magnitude_ceil(len(allscores_sorted))
-    print('len_ = %r' % (len(allscores_sorted),))
-    print('xmin = %r' % (xmin,))
-    print('xmax = %r' % (xmax,))
-    df2.gca().set_xlim(xmin, xmax)
+    #xmin = 0
+    #xmax = util.order_of_magnitude_ceil(len(allscores_sorted))
+    #print('len_ = %r' % (len(allscores_sorted),))
+    #print('xmin = %r' % (xmin,))
+    #print('xmax = %r' % (xmax,))
+    #df2.gca().set_xlim(xmin, xmax)
     df2.update()
 
     #util.embed()
@@ -496,6 +491,93 @@ def plot_scores(hs, qcx_list, fnum=1):
     #np.arange(len(gtxs))
 
     fnum += 1
+    return fnum
+
+
+def plot_scores(hs, qcx_list, fnum=1):
+    print('[dev] plot_scores(fnum=%r)' % fnum)
+    topN_gt    = 3
+    topN_ranks = 3
+    qcx2_res = get_qcx2_res(hs, qcx_list)
+    data_scores = []  # matching scores
+    data_qpairs = []  # query info (qcx, cx)
+    data_gtranks = []  # query info (gtrank)
+    # Append all scores to a giant list
+    for res in qcx2_res.itervalues():
+        # Get gt scores first
+        qcx = res.qcx
+        top_cxs = np.array(res.topN_cxs(hs, N=topN_ranks, only_gt=False))
+        gt_cxs  = np.array(res.topN_cxs(hs, N=topN_gt, only_gt=True))
+        top_scores = res.cx2_score[top_cxs]
+        np.intersect1d(top_cxs, gt_cxs)
+        # list of ranks if score is ground truth otherwise -1
+        isgt_ranks = [tx if cx in set(gt_cxs) else -1 for (tx, cx) in enumerate(top_cxs)]
+        qcx_pairs  = [(hs.cx2_cid(qcx), hs.cx2_cid(cx)) for cx in top_cxs]
+        # Append all scores
+        data_scores.extend(top_scores.tolist())
+        data_qpairs.extend(qcx_pairs)
+        data_gtranks.extend(isgt_ranks)
+    data_scores = np.array(data_scores)
+    data_qpairs = np.array(data_qpairs)
+    data_gtranks = np.array(data_gtranks)
+
+    data_xorder = data_scores.argsort()
+    sorted_scores = data_scores[data_xorder]
+
+    # Draw and info
+    rank_colorbounds = [
+        ((-1, 0), df2.FALSE_RED),
+        ((0, 1), df2.TRUE_GREEN),
+        ((1, 5), df2.UNKNOWN_PURP),
+        ((5, None), df2.DARK_ORANGE),
+    ]
+    print('[dev] matching chipscore stats: ' + util.stats_str(data_scores))
+    df2.figure(fnum=fnum, doclf=True, docla=True)
+    # Finds the knee
+    df2.plot(sorted_scores, color=df2.ORANGE, label='all scores')
+    df2.iup()
+
+    # get positions which are within rank bounds
+    colorbounds_iter = reversed(list(enumerate(rank_colorbounds)))
+    count, ((low, high), rankX_color) = enumerate(rank_colorbounds).next()
+    colorbounds_iter = reversed(list(enumerate(rank_colorbounds)))
+    for count, ((low, high), rankX_color) in colorbounds_iter:
+        rankX_flag = util.inbounds(data_gtranks, low, high)
+        inbounds_xorder = data_xorder[rankX_flag]
+        rankX_xs = util.list_index(data_xorder, inbounds_xorder)
+        rankX_ys = data_scores[inbounds_xorder]
+        #inbounds_scores = data_scores[rankX_flag]
+        #inbounds_gtranks = data_gtranks[rankX_flag]
+        #inbounds_qpairs = data_qpairs[rankX_flag]
+        #rankX_xs
+        if high is None:
+            rankX_label = '%d <= gt rank' % low
+        else:
+            rankX_label = '%d <= gt rank < %d' % (low, high)
+        if len(rankX_ys) > 0:
+            df2.plot(rankX_xs, rankX_ys, 'o', color=rankX_color, label=rankX_label, alpha=.5)
+
+    uid = qcx2_res.itervalues().next().uid
+
+    df2.set_logyscale_from_data(data_scores)
+
+    df2.set_xlabel('chipmatch index')
+    df2.dark_background()
+    df2.set_figtitle('matching scores\n' + uid)
+    df2.legend(loc='upper left')
+    df2.iup()
+    fnum += 1
+
+    score_table = np.vstack((data_scores, data_gtranks, data_qpairs.T)).T
+    score_table = score_table[data_xorder[::-1]]
+
+    column_labels = ['score', 'gt', 'qcx', 'cx']
+    header = 'score_table\nuid=%r' % uid
+    column_type = [float(0), int(0), int(0), int(0)]
+    import hsapi.load_data2 as ld2
+    csv_txt = ld2.numpy_to_csv(score_table,  column_labels, header, column_type)
+    print(csv_txt)
+    util.embed()
     return fnum
 
 

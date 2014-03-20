@@ -28,8 +28,8 @@ def argv_flag(name, default):
 __QUIET__      = argv_flag('--quiet', False)
 __AGGROFLUSH__ = argv_flag('--aggroflush', False)
 __DEBUG__      = argv_flag('--debug', False)
-__INDENT__     = argv_flag('--indent', True)
-__LOGGING__    = argv_flag('--logging', True)
+__INDENT__     = argv_flag('--indent', False)
+__LOGGING__    = argv_flag('--logging', False)
 
 
 log_fname = 'hotspotter_logs_%04d.out'

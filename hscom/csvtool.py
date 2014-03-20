@@ -1,0 +1,85 @@
+from __future__ import division, print_function
+from hscom import __common__
+(print, print_, print_on, print_off,
+ rrr, profile, printDBG) = __common__.init(__name__, '[csv]', DEBUG=False)
+from hscom import tools
+import numpy as np
+
+
+def numpy_to_csv(arr, column_labels=None, header='', column_type=None):
+    column_list = arr.T.tolist()
+    return make_csv_table(column_labels=column_labels,
+                          column_list=column_list, header=header,
+                          column_type=column_type)
+
+
+def make_csv_table(column_labels=None, column_list=[], header='', column_type=None):
+    '''
+    Creates a csv table with aligned columns
+    '''
+    if len(column_list) == 0:
+        print('[csv] No columns')
+        return header
+    column_len = [len(col) for col in column_list]
+    num_data = column_len[0]
+    if num_data == 0:
+        print('[csv.make_csv_table()] No data. (header=%r)' % (header,))
+        return header
+    if any([num_data != clen for clen in column_len]):
+        print('[lds] column_labels = %r ' % (column_labels,))
+        print('[lds] column_len = %r ' % (column_len,))
+        print('[csv] inconsistent column lengths')
+        return header
+
+    if column_type is None:
+        column_type = [type(col[0]) for col in column_list]
+
+    csv_rows = []
+    csv_rows.append(header)
+    csv_rows.append('# NumData %r' % num_data)
+
+    column_maxlen = []
+    column_str_list = []
+
+    if column_labels is None:
+        column_labels = [''] * len(column_list)
+
+    def _toint(c):
+        try:
+            if np.isnan(c):
+                return 'nan'
+        except TypeError as ex:
+            print('------')
+            print('[csv] TypeError %r ' % ex)
+            print('[csv] _toint(c) failed')
+            print('[csv] c = %r ' % c)
+            print('[csv] type(c) = %r ' % type(c))
+            print('------')
+            raise
+        return ('%d') % int(c)
+
+    for col, lbl, coltype in iter(zip(column_list, column_labels, column_type)):
+        if coltype is list or tools.is_list(coltype):
+            col_str  = [str(c).replace(',', ' ').replace('.', '') for c in iter(col)]
+        elif coltype is float or tools.is_float(coltype):
+            col_str = [('%.2f') % float(c) for c in iter(col)]
+        elif coltype is int or tools.is_int(coltype):
+            col_str = [_toint(c) for c in iter(col)]
+        elif coltype is str or tools.is_str(coltype):
+            col_str = [str(c) for c in iter(col)]
+        else:
+            col_str  = [str(c) for c in iter(col)]
+        col_lens = [len(s) for s in iter(col_str)]
+        max_len  = max(col_lens)
+        max_len  = max(len(lbl), max_len)
+        column_maxlen.append(max_len)
+        column_str_list.append(col_str)
+
+    _fmtfn = lambda maxlen: ''.join(['%', str(maxlen + 2), 's'])
+    fmtstr = ','.join([_fmtfn(maxlen) for maxlen in column_maxlen])
+    csv_rows.append('# ' + fmtstr % tuple(column_labels))
+    for row in zip(*column_str_list):
+        csv_rows.append('  ' + fmtstr % row)
+
+    csv_text = '\n'.join(csv_rows)
+    return csv_text

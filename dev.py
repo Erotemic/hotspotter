@@ -24,6 +24,7 @@ from hsapi import load_data2 as ld2
 from hsapi import matching_functions as mf
 from hsapi import report_results2 as rr2
 from hscom import util
+from hscom import csvtool
 from hscom import latex_formater
 from hsdev import params
 from hsdev import dev_stats
@@ -521,8 +522,8 @@ def plot_scores(hs, qcx_list, fnum=1):
     data_qpairs = np.array(data_qpairs)
     data_gtranks = np.array(data_gtranks)
 
-    data_xorder = data_scores.argsort()
-    sorted_scores = data_scores[data_xorder]
+    data_sortx = data_scores.argsort()
+    sorted_scores = data_scores[data_sortx]
 
     # Draw and info
     rank_colorbounds = [
@@ -542,14 +543,15 @@ def plot_scores(hs, qcx_list, fnum=1):
     count, ((low, high), rankX_color) = enumerate(rank_colorbounds).next()
     colorbounds_iter = reversed(list(enumerate(rank_colorbounds)))
     for count, ((low, high), rankX_color) in colorbounds_iter:
+        print('-----------------')
+        print('count=%r, low=%r, high=%r, rankX_color=%r' % (count, low, high, rankX_color,))
         rankX_flag = util.inbounds(data_gtranks, low, high)
-        inbounds_xorder = data_xorder[rankX_flag]
-        rankX_xs = util.list_index(data_xorder, inbounds_xorder)
-        rankX_ys = data_scores[inbounds_xorder]
-        #inbounds_scores = data_scores[rankX_flag]
-        #inbounds_gtranks = data_gtranks[rankX_flag]
-        #inbounds_qpairs = data_qpairs[rankX_flag]
-        #rankX_xs
+        rankX_xs = np.where(rankX_flag[data_sortx])[0]
+        rankX_ys = data_scores[rankX_flag]
+        if count == 1:
+            util.embed()
+        print('rankX_xs=%r' % (rankX_xs))
+        print('rankX_ys=%r' % (rankX_ys))
         if high is None:
             rankX_label = '%d <= gt rank' % low
         else:
@@ -569,15 +571,14 @@ def plot_scores(hs, qcx_list, fnum=1):
     fnum += 1
 
     score_table = np.vstack((data_scores, data_gtranks, data_qpairs.T)).T
-    score_table = score_table[data_xorder[::-1]]
+    score_table = score_table[data_sortx[::-1]]
 
     column_labels = ['score', 'gt', 'qcx', 'cx']
     header = 'score_table\nuid=%r' % uid
-    column_type = [float(0), int(0), int(0), int(0)]
-    import hsapi.load_data2 as ld2
-    csv_txt = ld2.numpy_to_csv(score_table,  column_labels, header, column_type)
+    column_type = [float, int, int, int]
+    csv_txt = csvtool.numpy_to_csv(score_table,  column_labels, header, column_type)
     print(csv_txt)
-    util.embed()
+    #util.embed()
     return fnum
 
 

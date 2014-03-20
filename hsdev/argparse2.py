@@ -126,7 +126,7 @@ def dev_argparse(parser2):
     parser2 = parser2.add_argument_group('Dev')
     # Testing flags
     parser2.add_flag('--all-cases')
-    parser2.add_flag('--all-gt-cases')
+    parser2.add_flag(('--all-gt-cases', '--allgt'))
     # Plotting Args
     parser2.add_flag('--noshow-query')
     parser2.add_flag('--noshow-gt')

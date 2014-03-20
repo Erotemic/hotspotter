@@ -10,7 +10,6 @@ matplotlib.use('Qt4Agg')
 import os
 import sys
 import textwrap
-import fnmatch
 import warnings
 from itertools import izip
 from os.path import join, exists
@@ -24,8 +23,8 @@ from hscom.Printable import DynStruct
 from hsviz import draw_func2 as df2
 from hsviz import viz
 from hsviz import allres_viz
-import load_data2 as ld2
-import spatial_verification2 as sv2
+from hscom import csvtool
+from hsapi import spatial_verification2 as sv2
 #import datetime
 #import subprocess
 
@@ -469,7 +468,7 @@ def build_rankres_str(allres):
         qcx2_top_false_rank[test_samp], test_sample_gname, ]
     column_type = [int, int, int, int, int,
                    float, float, float, int, int, int, str, ]
-    rankres_str = ld2.make_csv_table(column_labels, column_list, header, column_type)
+    rankres_str = csvtool.make_csv_table(column_labels, column_list, header, column_type)
     # Put some more data at the end
     problem_true_pairs = zip(allres.problem_true.qcxs, allres.problem_true.cxs)
     problem_false_pairs = zip(allres.problem_false.qcxs, allres.problem_false.cxs)
@@ -933,68 +932,6 @@ def read_until(file, target):
         if curent_line.find(target) > -1:
             return curent_line
         curent_line = file.readline()
-
-
-def print_result_summaries_list(topnum=5):
-    print('\n<(^_^<)\n')
-    # Print out some summary of all results you have
-    hs = ld2.HotSpotter()
-    hs.load_tables(ld2.DEFAULT)
-    result_file_list = os.listdir(hs.dirs.result_dir)
-
-    sorted_rankres = []
-    for result_fname in iter(result_file_list):
-        if fnmatch.fnmatch(result_fname, 'rankres_str*.csv'):
-            print(result_fname)
-            with open(join(hs.dirs.result_dir, result_fname), 'r') as file:
-
-                metaline = file.readline()
-                toprint = metaline
-                # skip 4 metalines
-                [file.readline() for _ in xrange(4)]
-                top5line = file.readline()
-                top1line = file.readline()
-                toprint += top5line + top1line
-                line = read_until(file, '# NumData')
-                num_data = int(line.replace('# NumData', ''))
-                file.readline()  # header
-                res_data_lines = [file.readline() for _ in xrange(num_data)]
-                res_data_str = np.array([line.split(',') for line in res_data_lines])
-                tt_scores = np.array(res_data_str[:, 5], dtype=np.float)
-                bt_scores = np.array(res_data_str[:, 6], dtype=np.float)
-                tf_scores = np.array(res_data_str[:, 7], dtype=np.float)
-
-                tt_score_sum = sum([score for score in tt_scores if score > 0])
-                bt_score_sum = sum([score for score in bt_scores if score > 0])
-                tf_score_sum = sum([score for score in tf_scores if score > 0])
-
-                toprint += ('tt_scores = %r; ' % tt_score_sum)
-                toprint += ('bt_scores = %r; ' % bt_score_sum)
-                toprint += ('tf_scores = %r; ' % tf_score_sum)
-                if topnum == 5:
-                    sorted_rankres.append(top5line + metaline)
-                else:
-                    sorted_rankres.append(top1line + metaline)
-                print(toprint + '\n')
-
-    print('\n(>^_^)>\n')
-
-    sorted_mapscore = []
-    for result_fname in iter(result_file_list):
-        if fnmatch.fnmatch(result_fname, 'oxsty_map_csv*.csv'):
-            print(result_fname)
-            with open(join(hs.dirs.result_dir, result_fname), 'r') as file:
-                metaline = file.readline()
-                scoreline = file.readline()
-                toprint = metaline + scoreline
-
-                sorted_mapscore.append(scoreline + metaline)
-                print(toprint)
-
-    print('\n'.join(sorted(sorted_rankres)))
-    print('\n'.join(sorted(sorted_mapscore)))
-
-    print('\n^(^_^)^\n')
 
 
 def _get_orgres2_distances(allres, orgres_list=None):

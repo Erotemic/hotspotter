@@ -19,8 +19,7 @@ from PIL import Image
 # Hotspotter
 import DataStructures as ds
 from hscom import util
-from hscom import tools
-
+from hscom import csvtool
 # GLOBALS
 
 VERBOSE_LOAD_DATA = True
@@ -529,84 +528,6 @@ def load_csv_tables(dbdir, allow_new_dir=True):
     return hs_dirs, hs_tables, db_version
 
 
-# Make Table Functions
-# Returns the formated csv table text
-def numpy_to_csv(arr, column_labels=None, header='', column_type=None):
-    column_list = arr.T.tolist()
-    return make_csv_table(column_labels=column_labels,
-                          column_list=column_list, header=header,
-                          column_type=column_type)
-
-
-def make_csv_table(column_labels=None, column_list=[], header='', column_type=None):
-    if len(column_list) == 0:
-        print('[ld2] No columns')
-        return header
-    column_len = [len(col) for col in column_list]
-    num_data = column_len[0]
-    if num_data == 0:
-        print('[ld2.make_csv_table()] No data. (header=%r)' % (header,))
-        return header
-    if any([num_data != clen for clen in column_len]):
-        print('[lds] column_labels = %r ' % (column_labels,))
-        print('[lds] column_len = %r ' % (column_len,))
-        print('[ld2] inconsistent column lengths')
-        return header
-
-    if column_type is None:
-        column_type = [type(col[0]) for col in column_list]
-
-    csv_rows = []
-    csv_rows.append(header)
-    csv_rows.append('# NumData %r' % num_data)
-
-    column_maxlen = []
-    column_str_list = []
-
-    if column_labels is None:
-        column_labels = [''] * len(column_list)
-
-    def _toint(c):
-        try:
-            if np.isnan(c):
-                return 'nan'
-        except TypeError as ex:
-            print('------')
-            print('[ld2] TypeError %r ' % ex)
-            print('[ld2] _toint(c) failed')
-            print('[ld2] c = %r ' % c)
-            print('[ld2] type(c) = %r ' % type(c))
-            print('------')
-            raise
-        return ('%d') % int(c)
-
-    for col, lbl, coltype in iter(zip(column_list, column_labels, column_type)):
-        if tools.is_list(coltype):
-            col_str  = [str(c).replace(',', ' ').replace('.', '') for c in iter(col)]
-        elif tools.is_float(coltype):
-            col_str = [('%.2f') % float(c) for c in iter(col)]
-        elif tools.is_int(coltype):
-            col_str = [_toint(c) for c in iter(col)]
-        elif tools.is_str(coltype):
-            col_str = [str(c) for c in iter(col)]
-        else:
-            col_str  = [str(c) for c in iter(col)]
-        col_lens = [len(s) for s in iter(col_str)]
-        max_len  = max(col_lens)
-        max_len  = max(len(lbl), max_len)
-        column_maxlen.append(max_len)
-        column_str_list.append(col_str)
-
-    _fmtfn = lambda maxlen: ''.join(['%', str(maxlen + 2), 's'])
-    fmtstr = ','.join([_fmtfn(maxlen) for maxlen in column_maxlen])
-    csv_rows.append('# ' + fmtstr % tuple(column_labels))
-    for row in zip(*column_str_list):
-        csv_rows.append('  ' + fmtstr % row)
-
-    csv_text = '\n'.join(csv_rows)
-    return csv_text
-
-
 def make_flat_table(hs, cx_list):
     # Valid chip tables
     if len(cx_list) == 0:
@@ -634,7 +555,7 @@ def make_flat_table(hs, cx_list):
             column_list.append(val)
             column_type.append(str)
 
-    chip_table = make_csv_table(column_labels, column_list, header, column_type)
+    chip_table = csvtool.make_csv_table(column_labels, column_list, header, column_type)
     return chip_table
 
 
@@ -665,7 +586,7 @@ def make_chip_csv(hs, cx_list):
             column_list.append(val)
             column_type.append(str)
 
-    chip_table = make_csv_table(column_labels, column_list, header, column_type)
+    chip_table = csvtool.make_csv_table(column_labels, column_list, header, column_type)
     return chip_table
 
 
@@ -684,7 +605,7 @@ def make_image_csv(hs, gx_list):
     header = '# image table'
     column_labels = ['gid', 'gname', 'aif']  # do aif for backwards compatibility
     column_list   = [gx2_gid, gx2_gname, gx2_aif]
-    image_table = make_csv_table(column_labels, column_list, header)
+    image_table = csvtool.make_csv_table(column_labels, column_list, header)
     return image_table
 
 
@@ -698,7 +619,7 @@ def make_name_csv(hs, nx_list):
     header = '# name table'
     column_labels = ['nid', 'name']
     column_list   = [nx_list_, nx2_name]
-    name_table = make_csv_table(column_labels, column_list, header)
+    name_table = csvtool.make_csv_table(column_labels, column_list, header)
     return name_table
 
 

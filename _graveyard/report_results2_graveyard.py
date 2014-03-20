@@ -78,3 +78,65 @@
         #cx_sorted.extend(sorted(cxs))
     # get matrix data rows
 
+
+def print_result_summaries_list(topnum=5):
+    print('\n<(^_^<)\n')
+    # Print out some summary of all results you have
+    hs = ld2.HotSpotter()
+    hs.load_tables(ld2.DEFAULT)
+    result_file_list = os.listdir(hs.dirs.result_dir)
+
+    sorted_rankres = []
+    for result_fname in iter(result_file_list):
+        if fnmatch.fnmatch(result_fname, 'rankres_str*.csv'):
+            print(result_fname)
+            with open(join(hs.dirs.result_dir, result_fname), 'r') as file:
+
+                metaline = file.readline()
+                toprint = metaline
+                # skip 4 metalines
+                [file.readline() for _ in xrange(4)]
+                top5line = file.readline()
+                top1line = file.readline()
+                toprint += top5line + top1line
+                line = read_until(file, '# NumData')
+                num_data = int(line.replace('# NumData', ''))
+                file.readline()  # header
+                res_data_lines = [file.readline() for _ in xrange(num_data)]
+                res_data_str = np.array([line.split(',') for line in res_data_lines])
+                tt_scores = np.array(res_data_str[:, 5], dtype=np.float)
+                bt_scores = np.array(res_data_str[:, 6], dtype=np.float)
+                tf_scores = np.array(res_data_str[:, 7], dtype=np.float)
+
+                tt_score_sum = sum([score for score in tt_scores if score > 0])
+                bt_score_sum = sum([score for score in bt_scores if score > 0])
+                tf_score_sum = sum([score for score in tf_scores if score > 0])
+
+                toprint += ('tt_scores = %r; ' % tt_score_sum)
+                toprint += ('bt_scores = %r; ' % bt_score_sum)
+                toprint += ('tf_scores = %r; ' % tf_score_sum)
+                if topnum == 5:
+                    sorted_rankres.append(top5line + metaline)
+                else:
+                    sorted_rankres.append(top1line + metaline)
+                print(toprint + '\n')
+
+    print('\n(>^_^)>\n')
+
+    sorted_mapscore = []
+    for result_fname in iter(result_file_list):
+        if fnmatch.fnmatch(result_fname, 'oxsty_map_csv*.csv'):
+            print(result_fname)
+            with open(join(hs.dirs.result_dir, result_fname), 'r') as file:
+                metaline = file.readline()
+                scoreline = file.readline()
+                toprint = metaline + scoreline
+
+                sorted_mapscore.append(scoreline + metaline)
+                print(toprint)
+
+    print('\n'.join(sorted(sorted_rankres)))
+    print('\n'.join(sorted(sorted_mapscore)))
+
+    print('\n^(^_^)^\n')
+

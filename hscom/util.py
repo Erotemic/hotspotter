@@ -2116,10 +2116,13 @@ def num2_sigfig(num):
     return int(np.ceil(np.log10(num)))
 
 
-def embed(parent_locals=None):
+def embed(parent_locals=None, parent_globals=None):
     if parent_locals is None:
         parent_locals = get_parent_locals()
-    exec(execstr_dict(parent_locals, 'parent_locals'))
+    if parent_globals is None:
+        parent_globals = get_parent_globals()
+    exec(execstr_dict(parent_locals,  'parent_locals'))
+    exec(execstr_dict(parent_globals, 'parent_globals'))
     print('')
     print('[util] embedding')
     import IPython
@@ -2132,24 +2135,32 @@ def embed(parent_locals=None):
     IPython.embed()
 
 
-def quitflag(num=None, embed_=False, parent_locals=None):
+def quitflag(num=None, embed_=False, parent_locals=None, parent_globals=None):
     if num is None or get_flag('--quit' + str(num)):
         if parent_locals is None:
             parent_locals = get_parent_locals()
+        if parent_globals is None:
+            parent_globals = get_parent_globals()
         exec(execstr_dict(parent_locals, 'parent_locals'))
+        exec(execstr_dict(parent_globals, 'parent_globals'))
         if embed_:
             print('Triggered --quit' + str(num))
-            embed(parent_locals=parent_locals)
+            embed(parent_locals=parent_locals,
+                  parent_globals=parent_globals)
         print('Triggered --quit' + str(num))
         sys.exit(1)
 
 
 def qflag(num=None, embed_=True):
-    return quitflag(num, embed_=embed_, parent_locals=get_parent_locals())
+    return quitflag(num, embed_=embed_,
+                    parent_locals=get_parent_locals(),
+                    parent_globals=get_parent_globals())
 
 
 def quit(num=None, embed_=False):
-    return quitflag(num, embed_=embed_, parent_locals=get_parent_locals())
+    return quitflag(num, embed_=embed_,
+                    parent_locals=get_parent_locals(),
+                    parent_globals=get_parent_globals())
 
 
 def iflatten(list_):
@@ -2243,7 +2254,7 @@ def get_parent_locals(N=0):
 
 
 def get_parent_globals(N=0):
-    parent_frame = get_stack_frame(N=N + 1)
+    parent_frame = get_stack_frame(N=N + 2)
     #this_frame = inspect.currentframe()
     #call_frame = this_frame.f_back
     #parent_frame = call_frame.f_back

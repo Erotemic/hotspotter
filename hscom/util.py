@@ -6,6 +6,8 @@ non-independent functions which are part of HotSpotter. They should be removed
 and put into their own module. The standalone functions should be compiled
 into a global set of helper functions.
 
+And I'm doing this. These are going into ibeis.util
+
 Wow, pylint is nice for cleaning.
 '''
 from __future__ import division, print_function
@@ -61,7 +63,7 @@ def DEPRICATED(func):
     def __DEP_WRAPPER(*args, **kwargs):
         raise Exception('dep')
         warnings.warn(warn_msg, category=DeprecationWarning)
-        #printWARN(warn_msg, category=DeprecationWarning)
+        #warnings.warn(warn_msg, category=DeprecationWarning)
         return func(*args, **kwargs)
     __DEP_WRAPPER.__name__ = func.__name__
     __DEP_WRAPPER.__doc__ = func.__doc__
@@ -658,21 +660,6 @@ def cmd(command):
 
 # --- Path ---
 #@DEPRICATED
-def filecheck(fpath):
-    return exists(fpath)
-
-
-@DEPRICATED
-def dircheck(dpath, makedir=True):
-    if not exists(dpath):
-        if not makedir:
-            #print('Nonexistant directory: %r ' % dpath)
-            return False
-        print('Making directory: %r' % dpath)
-        os.makedirs(dpath)
-    return True
-
-
 def remove_file(fpath, verbose=True, dryrun=False, **kwargs):
     try:
         if dryrun:
@@ -683,7 +670,7 @@ def remove_file(fpath, verbose=True, dryrun=False, **kwargs):
                 print('[util] Removing %r' % fpath)
             os.remove(fpath)
     except OSError as e:
-        printWARN('OSError: %s,\n Could not delete %s' % (str(e), fpath))
+        warnings.warn('OSError: %s,\n Could not delete %s' % (str(e), fpath))
         return False
     return True
 
@@ -693,7 +680,7 @@ def remove_dirs(dpath, dryrun=False, **kwargs):
     try:
         shutil.rmtree(dpath)
     except OSError as e:
-        printWARN('OSError: %s,\n Could not delete %s' % (str(e), dpath))
+        warnings.warn('OSError: %s,\n Could not delete %s' % (str(e), dpath))
         return False
     return True
 
@@ -826,15 +813,6 @@ def assertpath(path_):
 
 def assert_path(path_):
     return assertpath(path_)
-
-
-def join_mkdir(*args):
-    'join and creates if not exists'
-    output_dir = join(*args)
-    if not exists(output_dir):
-        print('Making dir: ' + output_dir)
-        os.mkdir(output_dir)
-    return output_dir
 
 
 # ---File Copy---
@@ -1460,7 +1438,7 @@ try:
     embedded = True
     IPython.embed()
 except Exception as ex:
-    printWARN(repr(ex)+'\n!!!!!!!!')
+    warnings.warn(repr(ex)+'\n!!!!!!!!')
     embedded = False
 '''
 
@@ -1743,56 +1721,12 @@ def reset_streams():
     print('helprs> Reset stdout and stderr')
 
 
-def print_list(list):
-    if list is None:
+def print_list(list_):
+    if list_ is None:
         return 'None'
-    msg = '\n'.join([repr(item) for item in list])
+    msg = '\n'.join([repr(item) for item in list_])
     print(msg)
     return msg
-
-
-#def _print(msg):
-    #sys.stdout.write(msg)
-
-
-#def _println(msg):
-    #sys.stdout.write(msg + '\n')
-
-
-#def println(msg, *args):
-    #args = args + tuple('\n',)
-    #return print_(msg + ''.join(args))
-
-
-#def flush():
-    #sys.stdout.flush()
-    #return ''
-
-
-#def endl():
-    #print_('\n')
-    #sys.stdout.flush()
-    #return '\n'
-
-
-#def printINFO(msg, *args):
-    #msg = 'INFO: ' + str(msg) + ''.join(map(str, args))
-    #return println(msg, *args)
-
-
-#def printERR(msg, *args):
-    #msg = 'ERROR: ' + str(msg) + ''.join(map(str, args))
-    #raise Exception(msg)
-    #return println(msg, *args)
-
-
-def printWARN(warn_msg, category=UserWarning):
-    warn_msg = 'Probably not a big issue, but you should know...: ' + warn_msg
-    sys.stdout.write(warn_msg + '\n')
-    sys.stdout.flush()
-    warnings.warn(warn_msg, category=category)
-    sys.stdout.flush()
-    return warn_msg
 
 
 #---------------

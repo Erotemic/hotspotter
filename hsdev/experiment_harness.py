@@ -6,6 +6,7 @@ from hscom import __common__
 import sys
 import itertools
 import textwrap
+from itertools import chain
 from os.path import join
 from itertools import imap
 # Scientific
@@ -19,6 +20,7 @@ from hsapi import matching_functions as mf
 from hscom import fileio as io
 from hscom import util
 from hscom import latex_formater
+from hscom import csvtool
 from hsdev import params
 from hsviz import draw_func2 as df2
 #from match_chips3 import *
@@ -58,15 +60,15 @@ __QUIET__ = '--quiet' in sys.argv
 # Display Test Results
 
 
-def ArgGaurdFalse(func):
-    return __ArgGaurd(func, default=False)
+def argv_flag_dec(func):
+    return __argv_flag_dec(func, default=False)
 
 
-def ArgGaurdTrue(func):
-    return __ArgGaurd(func, default=True)
+def argv_flag_dec_true(func):
+    return __argv_flag_dec(func, default=True)
 
 
-def __ArgGaurd(func, default=False):
+def __argv_flag_dec(func, default=False):
     flag = func.func_name
     if flag.find('no') == 0:
         flag = flag[2:]
@@ -322,7 +324,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     sel_rows = [] if sel_rows is None else sel_rows
     nCfg     = len(cfg_list)
     nQuery   = len(qcx_list)
-    #rc2_res  = np.empty((nQuery, nCfg), dtype=list)  # row/col -> result
+    #rc2_res = np.empty((nQuery, nCfg), dtype=list)  # row/col -> result
     mat_list = []
     qreq = ds.QueryRequest()
 
@@ -393,7 +395,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     #------------
     indent = util.indent
 
-    @ArgGaurdFalse
+    @argv_flag_dec
     def print_rowlbl():
         print('=====================')
         print('[harn] Row/Query Labels: %s' % testnameid)
@@ -404,7 +406,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     #------------
 
-    @ArgGaurdFalse
+    @argv_flag_dec
     def print_collbl():
         print('')
         print('=====================')
@@ -439,7 +441,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         new_hardtup_list += [(qcid, notes)]
         new_qcid_list += [qcid]
 
-    @ArgGaurdFalse
+    @argv_flag_dec
     def print_rowscore():
         print('')
         print('=======================')
@@ -461,7 +463,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     #------------
 
-    @ArgGaurdFalse
+    @argv_flag_dec
     def print_hardcase():
         print('===')
         print('--- hard new_hardtup_list (w.r.t these configs): %s' % testnameid)
@@ -471,7 +473,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print('--- /Print Hardcase ---')
     print_hardcase()
 
-    @ArgGaurdFalse
+    @argv_flag_dec
     def echo_hardcase():
         print('====')
         print('--- hardcase commandline: %s' % testnameid)
@@ -492,7 +494,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             nLessX_ = sum(np.logical_and(ranks < X, ranks >= 0))
             nLessX_dict[int(X)][cfgx] = nLessX_
 
-    @ArgGaurdFalse
+    @argv_flag_dec
     def print_colscore():
         print('')
         print('==================')
@@ -508,7 +510,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     #------------
 
-    @ArgGaurdFalse
+    @argv_flag_dec
     def print_latexsum():
         print('')
         print('==========================')
@@ -549,7 +551,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     for ix in xrange(1, len(to_intersect_list)):
         intersected = np.intersect1d(intersected, to_intersect_list[ix])
 
-    @ArgGaurdFalse
+    @argv_flag_dec
     def print_bestcfg():
         print('')
         print('==========================')
@@ -577,7 +579,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
 
     #------------
 
-    @ArgGaurdFalse
+    @argv_flag_dec
     def print_rankmat():
         print('')
         print('-------------')
@@ -589,6 +591,25 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
             print(lbld_mat)
         print('[harn]-------------')
     print_rankmat()
+
+    row2_cid = hs.cx2_cid(qcx_list)
+    # Find rows which scored differently over the various configs
+    diff_rows = np.where([not np.all(row == row[0]) for row in rank_mat])[0]
+    diff_cids = row2_cid[diff_rows]
+    diff_rank = rank_mat[diff_rows]
+    diff_mat = np.vstack((diff_cids, diff_rank.T)).T
+    col_labels = list(chain(['qcid'], imap(lambda x: 'cfg%d_rank' % x, xrange(nCfg))))
+    col_types  = list(chain([int], [int] * nCfg))
+    header = 'rankmat2'
+    diff_matstr = csvtool.numpy_to_csv(diff_mat, col_labels, header, col_types)
+    @argv_flag_dec
+    def print_diffmat():
+        print('')
+        print('-------------')
+        print('RankMat2: %s' % testnameid)
+        print(diff_matstr)
+        print('[harn]-------------')
+    print_diffmat()
 
     #------------
     sumstrs = []

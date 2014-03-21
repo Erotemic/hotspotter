@@ -132,15 +132,12 @@ class StreamStealer(QtCore.QObject):
         self.flush_.emit()
 
 
-def _steal_stdout(front):
+def _tee_logging(front):
     from hsdev import params
-    #front.ui.outputEdit.setPlainText(sys.stdout)
     nosteal = params.args.nosteal
     noshare = params.args.noshare
     if '--cmd' in sys.argv:
         nosteal = noshare = True
-    #from IPython.utils import io
-    #with io.capture_output() as captured:
         #%run my_script.py
     if NOSTEAL_OVERRIDE or (nosteal and noshare):
         print('[front] not stealing stdout.')
@@ -148,11 +145,11 @@ def _steal_stdout(front):
     print('[front] stealing standard out')
     if front.ostream is None:
         # Connect a StreamStealer object to the GUI output window
-        if '--nologging' in sys.argv:
-            front.ostream = StreamStealer(front, share=not noshare)
-        else:
+        if __common__.__LOGGING__:
             front.gui_logging_handler = GUILoggingHandler(front)
             __common__.add_logging_handler(front.gui_logging_handler)
+        else:
+            front.ostream = StreamStealer(front, share=not noshare)
     else:
         print('[front] stream already stolen')
 
@@ -340,7 +337,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         front.steal_stdout()
 
     def steal_stdout(front):
-        return _steal_stdout(front)
+        return _tee_logging(front)
 
     def return_stdout(front):
         return _return_stdout(front)

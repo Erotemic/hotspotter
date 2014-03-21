@@ -28,27 +28,6 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 
-def configure_matplotlib():
-    import multiprocessing
-    import matplotlib
-    mplbackend = matplotlib.get_backend()
-    if multiprocessing.current_process().name == 'MainProcess':
-        print('[*guitools] current mplbackend is: %r' % mplbackend)
-        print('[*guitools] matplotlib.use(Qt4Agg)')
-    else:
-        return
-    matplotlib.rcParams['toolbar'] = 'toolbar2'
-    matplotlib.rc('text', usetex=False)
-    #matplotlib.rcParams['text'].usetex = False
-    if mplbackend != 'Qt4Agg':
-        matplotlib.use('Qt4Agg', warn=True, force=True)
-        mplbackend = matplotlib.get_backend()
-        if multiprocessing.current_process().name == 'MainProcess':
-            print('[*guitools] current mplbackend is: %r' % mplbackend)
-        #matplotlib.rcParams['toolbar'] = 'None'
-        #matplotlib.rcParams['interactive'] = True
-
-
 #---------------
 # SLOT DECORATORS
 
@@ -62,10 +41,11 @@ def slot_(*types, **kwargs_):  # This is called at wrap time to get args
     '''
     initdbg = kwargs_.get('initdbg', DEBUG)
     rundbg  = kwargs_.get('rundbg', DEBUG)
+    name_  = kwargs_.get('name', None)
 
     # Wrap with debug statments
     def pyqtSlotWrapper(func):
-        func_name = func.func_name
+        func_name = func.func_name if name_ is None else name_
         if initdbg:
             print('[@guitools] Wrapping %r with slot_' % func.func_name)
 

@@ -497,7 +497,7 @@ def plot_scores2(hs, qcx_list, fnum=1):
 
 def plot_scores(hs, qcx_list, fnum=1):
     print('[dev] plot_scores(fnum=%r)' % fnum)
-    topN_gt    = 3
+    topN_gt    = 1
     topN_ranks = 3
     qcx2_res = get_qcx2_res(hs, qcx_list)
     data_scores = []  # matching scores
@@ -527,31 +527,22 @@ def plot_scores(hs, qcx_list, fnum=1):
 
     # Draw and info
     rank_colorbounds = [
-        ((-1, 0), df2.FALSE_RED),
+        ((-1, 0), df2.GRAY),
         ((0, 1), df2.TRUE_GREEN),
         ((1, 5), df2.UNKNOWN_PURP),
-        ((5, None), df2.DARK_ORANGE),
+        ((5, None), df2.FALSE_RED),
     ]
     print('[dev] matching chipscore stats: ' + util.stats_str(data_scores))
     df2.figure(fnum=fnum, doclf=True, docla=True)
     # Finds the knee
     df2.plot(sorted_scores, color=df2.ORANGE, label='all scores')
-    df2.iup()
 
-    # get positions which are within rank bounds
-    colorbounds_iter = reversed(list(enumerate(rank_colorbounds)))
-    count, ((low, high), rankX_color) = enumerate(rank_colorbounds).next()
+    # Plot results with ranks within (low, high) bounds
     colorbounds_iter = reversed(list(enumerate(rank_colorbounds)))
     for count, ((low, high), rankX_color) in colorbounds_iter:
-        print('-----------------')
-        print('count=%r, low=%r, high=%r, rankX_color=%r' % (count, low, high, rankX_color,))
-        rankX_flag = util.inbounds(data_gtranks, low, high)
-        rankX_xs = np.where(rankX_flag[data_sortx])[0]
-        rankX_ys = data_scores[rankX_flag]
-        if count == 1:
-            util.embed()
-        print('rankX_xs=%r' % (rankX_xs))
-        print('rankX_ys=%r' % (rankX_ys))
+        datarank_flag = util.inbounds(data_gtranks, low, high)
+        rankX_xs = np.where(datarank_flag[data_sortx])[0]
+        rankX_ys = sorted_scores[rankX_xs]
         if high is None:
             rankX_label = '%d <= gt rank' % low
         else:
@@ -573,7 +564,7 @@ def plot_scores(hs, qcx_list, fnum=1):
     score_table = np.vstack((data_scores, data_gtranks, data_qpairs.T)).T
     score_table = score_table[data_sortx[::-1]]
 
-    column_labels = ['score', 'gt', 'qcx', 'cx']
+    column_labels = ['score', 'gtrank', 'qcid', 'cid']
     header = 'score_table\nuid=%r' % uid
     column_type = [float, int, int, int]
     csv_txt = csvtool.numpy_to_csv(score_table,  column_labels, header, column_type)

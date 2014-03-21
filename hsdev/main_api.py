@@ -20,8 +20,8 @@ def inject_colored_exception_hook():
         lexer = get_lexer_by_name("pytb", stripall=True)
         formatter = TerminalFormatter(bg="dark")
         sys.stderr.write(highlight(tbtext, lexer, formatter))
-
-    sys.excepthook = myexcepthook
+    if not sys.platform.startswith('win32'):
+        sys.excepthook = myexcepthook
 
 
 def signal_reset():

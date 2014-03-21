@@ -698,8 +698,8 @@ def get_good_logyscale_kwargs(y_data, adaptive_knee_scaling=False):
         linthreshy = y_data[linthreshx] * basey
         linscaley = min(2, max(1, (knee_mag[kneex] / (basey * 2))))
     else:
-        linthreshx = 1E-15
-        linthreshy = 1E-15
+        linthreshx = 1E2
+        linthreshy = 1E2
         linscaley = 1
     logscale_kwargs = {
         'basey': basey,

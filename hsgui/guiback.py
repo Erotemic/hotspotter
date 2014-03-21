@@ -13,7 +13,6 @@ import numpy as np
 import guifront
 import guitools
 from guitools import drawing, slot_
-from guitools import backblocking as blocking
 from hscom import util
 from hscom import fileio as io
 from hsdev import params
@@ -25,6 +24,15 @@ from hsapi import HotSpotterAPI
 FNUMS = dict(image=1, chip=2, res=3, inspect=4, special=5, name=6)
 viz.register_FNUMS(FNUMS)
 
+
+def blocking_slot(*types_):
+    def wrap1(func):
+        def wrap2(*args, **kwargs):
+            return func(*args, **kwargs)
+        wrap2.func_name = func.func_name
+        wrap3 = slot_(*types_, name=func.func_name)(guitools.backblocking(wrap2))
+        return wrap3
+    return wrap1
 
 # Helper functions (should probably be moved into HotSpotter API)
 
@@ -479,8 +487,7 @@ class MainWindowBackend(QtCore.QObject):
     # Selection Functions
     #--------------------------------------------------------------------------
 
-    @slot_(int)
-    @blocking
+    @blocking_slot(int)
     @profile
     def select_gx(back, gx, cx=None, fx=None, show=True, noimage=False, **kwargs):
         # Table Click -> Image Table
@@ -544,16 +551,14 @@ class MainWindowBackend(QtCore.QObject):
         back.show_splash(FNUMS['chip'], 'Chip', dodraw=False)
         back.show_splash(FNUMS['res'], 'Results', **kwargs)
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def default_preferences(back):
         # Button Click -> Preferences Defaults
         # TODO: Propogate changes back to back.edit_prefs.ui
         back.hs.default_preferences()
         back.hs.prefs.save()
 
-    @slot_(int, str, str)
-    @blocking
+    @blocking_slot(int, str, str)
     @profile
     def change_chip_property(back, cid, key, val):
         # Table Edit -> Change Chip Property
@@ -571,8 +576,7 @@ class MainWindowBackend(QtCore.QObject):
         back.populate_tables(image=False)
         print('')
 
-    @slot_(int, str, str)
-    @blocking
+    @blocking_slot(int, str, str)
     @profile
     def alias_name(back, nx, key, val):
         key, val = map(str, (key, val))
@@ -583,8 +587,7 @@ class MainWindowBackend(QtCore.QObject):
         back.populate_tables(image=False)
         print('')
 
-    @slot_(int, str, bool)
-    @blocking
+    @blocking_slot(int, str, bool)
     def change_image_property(back, gx, key, val):
         # Table Edit -> Change Image Property
         key, val = str(key), bool(val)
@@ -598,8 +601,7 @@ class MainWindowBackend(QtCore.QObject):
     # File Slots
     #--------------------------------------------------------------------------
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def new_database(back, new_dbdir=None):
         # File -> New Database
         if new_dbdir is None:
@@ -611,8 +613,7 @@ class MainWindowBackend(QtCore.QObject):
         else:
             print('[*back] abort new database()')
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def open_database(back, dbdir=None):
         # File -> Open Database
         try:
@@ -644,14 +645,12 @@ class MainWindowBackend(QtCore.QObject):
         print('')
         return hs
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def save_database(back):
         # File -> Save Database
         back.hs.save_database()
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def import_images(back):
         # File -> Import Images
         print('[*back] import images')
@@ -664,8 +663,7 @@ class MainWindowBackend(QtCore.QObject):
         if reply == 'Directory':
             back.import_images_from_dir()
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def import_images_from_file(back):
         # File -> Import Images From File
         fpath_list = guitools.select_images('Select image files to import')
@@ -673,8 +671,7 @@ class MainWindowBackend(QtCore.QObject):
         back.populate_image_table()
         print('')
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def import_images_from_dir(back):
         # File -> Import Images From Directory
         msg = 'Select directory with images in it'
@@ -694,8 +691,7 @@ class MainWindowBackend(QtCore.QObject):
     # Action menu slots
     #--------------------------------------------------------------------------
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def new_prop(back):
         # Action -> New Chip Property
         newprop = back.user_input('What is the new property name?')
@@ -705,8 +701,7 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] added newprop = %r' % newprop)
         print('')
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     @profile
     def add_chip(back, gx=None, roi=None):
         # Action -> Add ROI
@@ -728,8 +723,7 @@ class MainWindowBackend(QtCore.QObject):
         cid = back.hs.cx2_cid(cx)
         return cid
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     @profile
     def query(back, cid=None, tx=None, **kwargs):
         # Action -> Query
@@ -760,8 +754,7 @@ class MainWindowBackend(QtCore.QObject):
             back.show_query_result(res, tx)
         return res
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     @profile
     def reselect_roi(back, cid=None, roi=None, **kwargs):
         # Action -> Reselect ROI
@@ -785,8 +778,7 @@ class MainWindowBackend(QtCore.QObject):
         print('')
         pass
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     @profile
     def reselect_ori(back, cid=None, theta=None, **kwargs):
         # Action -> Reselect ORI
@@ -808,8 +800,7 @@ class MainWindowBackend(QtCore.QObject):
         print(r'[/back] reselected theta=%r' % theta)
         print('')
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     @profile
     def delete_chip(back):
         # Action -> Delete Chip
@@ -825,8 +816,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[back] deleted cx=%r\n' % cx)
         print('')
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     @profile
     def delete_image(back, gx=None):
         if gx is None:
@@ -840,8 +830,7 @@ class MainWindowBackend(QtCore.QObject):
         print('[back] deleted gx=%r\n' % gx)
         print('')
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     @profile
     def select_next(back):
         # Action -> Next
@@ -859,8 +848,7 @@ class MainWindowBackend(QtCore.QObject):
     # Batch menu slots
     #--------------------------------------------------------------------------
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def precompute_feats(back):
         # Batch -> Precompute Feats
         #prevBlock = back.front.blockSignals(True)
@@ -870,8 +858,7 @@ class MainWindowBackend(QtCore.QObject):
         back.populate_chip_table()
         print('')
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def precompute_queries(back):
         # Batch -> Precompute Queries
         # TODO:
@@ -907,8 +894,7 @@ class MainWindowBackend(QtCore.QObject):
     #--------------------------------------------------------------------------
 
     #@slot_(rundbg=True)
-    @slot_()
-    @blocking
+    @blocking_slot()
     def layout_figures(back):
         # Options -> Layout Figures
         print('[back] layout_figures')
@@ -989,8 +975,7 @@ class MainWindowBackend(QtCore.QObject):
     def invalidate_result(back):
         back.current_res = None
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def dev_mode(back):
         # Help -> Developer Help
         steal_again = back.front.return_stdout()
@@ -1020,13 +1005,12 @@ class MainWindowBackend(QtCore.QObject):
         back.front.blockSignals(wasBlocked)
         #back.timer.start()
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def dev_reload(back):
         # Help -> Developer Reload
+        print('!!')
         _dev_reload(back)
 
-    @slot_()
-    @blocking
+    @blocking_slot()
     def detect_dupimg(back):
-        back.hs.dbg_duplicate_images()
+        pass

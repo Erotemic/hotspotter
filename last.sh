@@ -10,5 +10,10 @@ python dev.py --db GZ -t gravity_test --all-gt-cases
 python dev.py --db MOTHERS -t gravity_test --all-gt-cases
 
 
-python dev.py --db GZ --stdcfg gravity_test 0 -t scores --allgt
-python dev.py --db GZ --stdcfg gravity_test 1 -t scores --allgt
+export DB=GZ
+export DB=MOTHERS
+python dev.py --allgt --db $DB -t gravity_test
+python dev.py --allgt --db $DB --stdcfg gravity_test 0 -t scores
+python dev.py --allgt --db $DB --stdcfg gravity_test 1 -t scores
+
+python main.py --allgt --db $DB --stdcfg gravity_test 0 -t scores

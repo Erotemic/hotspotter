@@ -6,11 +6,9 @@ from hscom import tools
 import numpy as np
 
 
-def numpy_to_csv(arr, column_labels=None, header='', column_type=None):
-    column_list = arr.T.tolist()
-    return make_csv_table(column_labels=column_labels,
-                          column_list=column_list, header=header,
-                          column_type=column_type)
+def numpy_to_csv(arr, col_labels=None, header='', col_type=None):
+    col_list = arr.T.tolist()
+    return make_csv_table(col_labels, col_list, header, col_type)
 
 
 def make_csv_table(column_labels=None, column_list=[], header='', column_type=None):
@@ -60,7 +58,7 @@ def make_csv_table(column_labels=None, column_list=[], header='', column_type=No
 
     for col, lbl, coltype in iter(zip(column_list, column_labels, column_type)):
         if coltype is list or tools.is_list(coltype):
-            col_str  = [str(c).replace(',', ' ').replace('.', '') for c in iter(col)]
+            col_str = [str(c).replace(',', ' ').replace('.', '') for c in iter(col)]
         elif coltype is float or tools.is_float(coltype):
             col_str = [('%.2f') % float(c) for c in iter(col)]
         elif coltype is int or tools.is_int(coltype):

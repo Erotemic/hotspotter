@@ -5,7 +5,6 @@ import __common__
 # Python
 import os
 import re
-import util
 import textwrap
 # Science
 import numpy as np
@@ -107,7 +106,7 @@ def latex_mystats(lbl, data, mode=0):
     std  = stats_['std']
     shape = stats_['shape']
 
-    int_fmt = lambda num: util.num_fmt(int(num))
+    #int_fmt = lambda num: util.num_fmt(int(num))
     float_fmt = lambda num: util.num_fmt(float(num))
     tup_fmt = lambda tup: str(tup)
     fmttup = (float_fmt(min_), float_fmt(max_), float_fmt(mean), float_fmt(std), tup_fmt(shape))

@@ -21,11 +21,6 @@ import util
 
 VERBOSE_IO = 0  # 2
 
-ENABLE_SMART_FNAME_HASHING = False
-
-if sys.platform.startswith('win32'):
-    ENABLE_SMART_FNAME_HASHING = True
-
 
 # --- Saving ---
 def save_npy(fpath, data):

@@ -1,3 +1,13 @@
+
+NOTICE: HOTSPOTTER IS A LEGACY REPOSITORY
+FOR THE LATEST AND GREATEST CHECK OUT IBEIS
+
+https://github.com/Erotemic/ibeis
+
+(ibeis has much better setup instructions and documentation)
+
+#----------
+
 Hotspotter is a work in progress, and getting setup on a new system
 has not fully been hashed out yet. Its doable. Best of luck. 
 Message me on github if you need help. 

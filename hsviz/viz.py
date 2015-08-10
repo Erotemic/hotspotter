@@ -309,7 +309,13 @@ def show_chip(hs, cx=None, allres=None, res=None, draw_ell=True,
         title_str = ''
     else:
         title_str = prefix + ', '.join(title_list)
+
     fig, ax = df2.imshow(rchip, title=title_str, **kwargs)
+    SHOW_TIME = True  # Hack
+    if SHOW_TIME:
+        xlabel_ = []
+        xlabel_.append(hs.cx2_timestring(cx))
+        df2.set_xlabel(''.join(xlabel_), ax)
     # Add user data to axis
     ax._hs_viewtype = 'chip'
     ax._hs_cx = cx

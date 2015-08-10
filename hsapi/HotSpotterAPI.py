@@ -914,8 +914,15 @@ class HotSpotter(DynStruct):
 
     @tools.class_iter_input
     @profile
-    def cx2_unixtime(hs, gx_list):
-        return _cx2_unixtime(hs, gx_list)
+    def cx2_unixtime(hs, cx_list):
+        return _cx2_unixtime(hs, cx_list)
+
+    @tools.class_iter_input
+    @profile
+    def cx2_timestring(hs, cx_list):
+        gx_list = hs.cx2_gx(cx_list)
+        datetime_list = hs.gx2_exif(gx_list, tag='DateTime')
+        return datetime_list
 
     #----
     # image index --> property

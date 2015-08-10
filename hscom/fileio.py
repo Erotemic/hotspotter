@@ -292,6 +292,8 @@ def exiftime_to_unixtime(datetime_str):
                 return -1
             if datetime_str == '0000:00:00 00:00:00':
                 return -1
+            else:
+                return -1
         print('!!!!!!!!!!!!!!!!!!')
         print('Caught Error: ' + repr(ex))
         print('type(datetime_str) = %r' % type(datetime_str))
@@ -398,7 +400,8 @@ def read_exif_list(fpath_list, **kwargs):
 def imread(img_fpath, mode=None):
     try:
         # opencv always reads in BGR mode (fastest load time)
-        imgBGR = cv2.imread(img_fpath, flags=cv2.CV_LOAD_IMAGE_COLOR)
+        IMREAD_COLOR = cv2.IMREAD_COLOR if cv2.__version__[0] == '3' else cv2.CV_LOAD_IMAGE_COLOR
+        imgBGR = cv2.imread(img_fpath, flags=IMREAD_COLOR)
         if mode is not None and mode != 'BRG':
             # RGB is a good standard and makes physical sense
             if mode == 'RGB':

@@ -1,4 +1,4 @@
-# ### SNIPIT: Namespace Dict 
+# ### SNIPIT: Namespace Dict
 namespace_dict = freak_params
 for key, val in namespace_dict.iteritems():
     exec(key+' = '+repr(val))
@@ -84,7 +84,7 @@ C = array([[ 0.47064145,  0.84106429],
        [-0.29378553,  0.36523425]])
 
 zeros_2x1 = np.zeros((2,1))
-''' 
+'''
 print timeit.timeit('np.dot(B,C)', setup=setup, number=100000)
 print timeit.timeit('B.dot(C)', setup=setup, number=100000) # This is twice as fast
 
@@ -94,17 +94,46 @@ print timeit.timeit('linalg.inv(B)', setup=setup, number=10000) # This also is t
 
 # concatinate is faster
 print timeit.timeit('np.concatenate((C.dot(linalg.pinv(B)), np.zeros((2,1))),
-                    axis=1)', setup=setup, number=50000) 
+                    axis=1)', setup=setup, number=50000)
 print timeit.timeit('np.hstack((C.dot(linalg.pinv(B)),np.zeros((2,1))))',
-                    setup=setup, number=50000)  
+                    setup=setup, number=50000)
 
 print timeit.timeit('np.concatenate((C.dot(linalg.pinv(B)),zeros_2x1), axis=1)',
-                    setup=setup, number=50000) 
+                    setup=setup, number=50000)
 print timeit.timeit('np.hstack((C.dot(linalg.pinv(B)),zeros_2x1))', setup=setup,
-                    number=50000)  
+                    number=50000)
 
 # pinverse is faster here
 print timeit.timeit('np.concatenate((C.dot(linalg.inv(B)),zeros_2x1), axis=1)',
-                    setup=setup, number=50000) 
+                    setup=setup, number=50000)
 print timeit.timeit('np.hstack((C.dot(linalg.inv(B)),zeros_2x1))', setup=setup,
-                    number=50000)  
+                    number=50000)
+
+
+def test():
+    import utool
+    from vtool.keypoint import *  # NOQA
+    kpts = get_dummy_kpts(1000)
+    invV_mats = get_invV_mats2x2(kpts)
+    ori_mats  = get_ori_mats(kpts)
+    with utool.Timer('list'):
+        res1 = (np.array([R.dot(invV) for (invV, R) in izip(invV_mats, ori_mats)]))
+    with utool.Timer('list'):
+        res2 = (np.array([invV.dot(R) for (invV, R) in izip(invV_mats, ori_mats)]))
+    # Matrix multiply if faster
+    with utool.Timer('np'):
+        res3 = (matrix_multiply(ori_mats, invV_mats))
+    with utool.Timer('np'):
+        res4 = (matrix_multiply(invV_mats, ori_mats))
+
+    invC = np.array([[2, 0],
+                     [0, 2]])
+
+    # matrix multiply works for ((1,N,M) x (K,N,M))  OR ((K,N,M) x (K,N,M))
+    with utool.Timer('list'):
+        np.array([invC.dot(invV) for invV in invV_mats])
+    with utool.Timer('np'):
+        (matrix_multiply(invV_mats, invC))
+
+    assert np.all(res1 == res3)
+    assert np.all(res2 == res4)

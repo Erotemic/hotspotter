@@ -1,11 +1,12 @@
 
-NOTICE: HOTSPOTTER IS A LEGACY REPOSITORY
-FOR THE LATEST AND GREATEST CHECK OUT IBEIS
+### NOTICE (2014-2-27):
+
+HOTSPOTTER IS A LEGACY REPOSITORY FOR THE LATEST AND GREATEST CHECK OUT IBEIS
 
 https://github.com/Erotemic/ibeis
 
 
-NOTICE (2020-12-18): 
+### NOTICE (2020-12-18): 
 
 It looks like the main RPI website has been removed, although it can still be accessed via the wayback machine:
 https://web.archive.org/web/20170602093944/http://cs.rpi.edu/hotspotter/
@@ -13,12 +14,11 @@ https://web.archive.org/web/20170602093944/http://cs.rpi.edu/hotspotter/
 
 Dropbox should still be hosting the download links: 
 
-https://www.dropbox.com/s/5j1xyx2hq1wzqz2/hotspotter-win32-setup.exe?dl=0 
+* Win32 Installer: https://www.dropbox.com/s/5j1xyx2hq1wzqz2/hotspotter-win32-setup.exe?dl=0 
 
-https://www.dropbox.com/s/q0vzz3xnjbxhsda/hotspotter_installer_mac.dmg?dl=0
+* OSX Installer: https://www.dropbox.com/s/q0vzz3xnjbxhsda/hotspotter_installer_mac.dmg?dl=0
 
 If you have access to a Linux machine or virtual machine I would recommend using IBEIS (https://github.com/Erotemic/ibeis) over HotSpotter. It's an improved version of the software. If you have linux with a python environment you can simply `pip install ibeis`, and then run `ibeis` to use it. The most recent README has installation and usage instructions. Also note, that while I'm not supporting HotSpotter with software updates (distribution of win32 exes was magic I don't know if I'll ever be able to capture again), I will support the IBEIS software with bug fixes and perhaps updates. 
-
 
 
 Known Issues
@@ -41,11 +41,12 @@ database is too big for you computer.
 
 
 
-#----------
+Original README
+---------------
 
-Hotspotter is a work in progress, and getting setup on a new system
-has not fully been hashed out yet. Its doable. Best of luck. 
-Message me on github if you need help. 
+Hotspotter is a work in progress (although it is no longer in development), and
+getting setup on a new system has not fully been hashed out yet. Its doable.
+Best of luck.  Message me on github if you need help. 
 
 This will be open source we have not completely settled on a licence yet. 
 
@@ -60,14 +61,14 @@ Quick Instructions:
 If you encounter errors on a Linux or Mac system  before doing anything else
 try running: 
 
-python setup.py fix_issues 
+`python setup.py fix_issues`
 
 Command Line Instructions: 
 
 To Run Hotspotter from the command line:
 
-python main.py
+`python main.py`
 
 To Run HotSpotter from the command line with a command line interface 
 
-python main.py --cmd
+`python main.py --cmd`

@@ -3,14 +3,17 @@ from hscom import __common__
 (print, print_, print_on, print_off, rrr, profile, printDBG) = \
     __common__.init(__name__, '[viz]', DEBUG=False)
 import matplotlib
-matplotlib.use('Qt4Agg')
+if 0:
+    matplotlib.use('Qt4Agg')
+else:
+    matplotlib.use('Qt5Agg')
 #import re
 import warnings
 # Scientific
 import numpy as np
 # Hotspotter
-import draw_func2 as df2
-import extract_patch
+from . import draw_func2 as df2
+from . import extract_patch
 from hscom import params
 from hscom import fileio as io
 from hscom import helpers as util

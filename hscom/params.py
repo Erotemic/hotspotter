@@ -1,13 +1,13 @@
 '''Parameters module: DEPRICATE THIS
     stores a bunch of global variables used by the other modules
     It also reads from sys.argv'''
-from __future__ import division, print_function
-import __common__
+
+from . import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[params]')
 # Python
 from os.path import exists, join
-import fileio as io
+from . import fileio as io
 import sys
 
 '''
@@ -116,7 +116,7 @@ def db_to_dbdir(db):
         dbdir = join(work_dir, dbalias_dict[db.upper()])
     if not exists(dbdir):
         import os
-        import helpers as util
+        from . import helpers as util
         print('!!!!!!!!!!!!!!!!!!!!!')
         print('[params] WARNING: db=%r not found in work_dir=%r' %
               (db, work_dir))
@@ -164,17 +164,17 @@ mother_hesaff_tuned_params = {'algorithm':           'kmeans',
                               'cores':               0,
                               'eps':                 0.0,
                               'iterations':          5,
-                              'key_size_':           20L,
+                              'key_size_':           20,
                               'leaf_max_size':       4,
                               'log_level':           'warning',
                               'max_neighbors':       -1,
                               'memory_weight':       0.0,
-                              'multi_probe_level_':  2L,
+                              'multi_probe_level_':  2,
                               'random_seed':         94222758,
                               'sample_fraction':     0.10000000149011612,
                               'sorted':              1,
                               'speedup':             23.30769157409668,
-                              'table_number_':       12L,
+                              'table_number_':       12,
                               'target_precision':    0.8999999761581421,
                               'trees':               1}
 

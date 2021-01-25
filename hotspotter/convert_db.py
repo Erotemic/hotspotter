@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_,
  print_on, print_off,
@@ -14,8 +14,8 @@ import numpy as np
 # Hotspotter
 from hscom import helpers
 from hscom import helpers as util
-import load_data2 as ld2
-import db_info
+from . import load_data2 as ld2
+from . import db_info
 
 
 # BUGS: TODO:
@@ -79,7 +79,7 @@ def compute_ap2(pos, amb, ranked_list):
     ap = 0.0
     intersect_size = 0
     j = 0
-    for i in xrange(ranked_list):
+    for i in range(ranked_list):
         if amb.count(ranked_list[i]):
             continue
         if pos.count(ranked_list[i]):
@@ -129,7 +129,7 @@ def __read_oxsty_gtfile(gt_fpath, name, quality, img_dpath, corrupted_gname_set)
             if gname in corrupted_gname_set:
                 continue
             if len(fields) > 1:  # if has roi
-                roi =  map(int, map(round, map(float, fields[1:])))
+                roi =  list(map(int, list(map(round, list(map(float, fields[1:]))))))
             else:
                 gpath = join(img_dpath, gname)
                 (w, h) = Image.open(gpath).size
@@ -195,8 +195,8 @@ def convert_from_oxford_style(db_dir):
     # Remove duplicates img.jpg : (*1.txt, *2.txt, ...) -> (*.txt)
     gname2_chips     = collections.defaultdict(list)
     multinamed_gname_list = []
-    for gname, val in gname2_chips_raw.iteritems():
-        val_repr = map(repr, val)
+    for gname, val in gname2_chips_raw.items():
+        val_repr = list(map(repr, val))
         unique_reprs = set(val_repr)
         unique_indexes = [val_repr.index(urep) for urep in unique_reprs]
         for ux in unique_indexes:
@@ -205,7 +205,7 @@ def convert_from_oxford_style(db_dir):
             multinamed_gname_list.append(gname)
     # print some statistics
     query_gname_list = [tup[0] for tup in query_chips]
-    gname_with_groundtruth_list = gname2_chips.keys()
+    gname_with_groundtruth_list = list(gname2_chips.keys())
     gname_without_groundtruth_list = np.setdiff1d(gname_list, gname_with_groundtruth_list)
     print(' * num_images = %d ' % len(gname_list))
     print(' * images with groundtruth    = %d ' % len(gname_with_groundtruth_list))
@@ -218,8 +218,8 @@ def convert_from_oxford_style(db_dir):
     print('adding to table: ')
     gx2_gname = gname_list
     nx2_name  = ['____', '____'] + list(name_set)
-    nx2_nid   = [1, 1] + range(2, len(name_set) + 2)
-    gx2_gid   = range(1, len(gx2_gname) + 1)
+    nx2_nid   = [1, 1] + list(range(2, len(name_set) + 2))
+    gx2_gid   = list(range(1, len(gx2_gname) + 1))
 
     cx2_cid     = []
     cx2_theta   = []
@@ -247,13 +247,13 @@ def convert_from_oxford_style(db_dir):
 
     for gname, roi, name, num in query_chips:
         add_to_hs_tables(gname, name, roi, 'query', num)
-    for gname in gname2_chips.keys():
+    for gname in list(gname2_chips.keys()):
         if len(gname2_chips[gname]) == 1:
             (name, roi, quality) = gname2_chips[gname][0]
             add_to_hs_tables(gname, name, roi, quality)
         else:
             # just take the first name. This is foobar
-            names, rois, qualities = zip(*gname2_chips[gname])
+            names, rois, qualities = list(zip(*gname2_chips[gname]))
             add_to_hs_tables(gname, names[0], rois[0], qualities[0])
     for gname in gname_without_groundtruth_list:
         gpath = join(img_dpath, gname)
@@ -288,7 +288,7 @@ def convert_named_chips(db_dir, img_dpath=None):
     # --- Build Image Table ---
     helpers.print_('Building name table: ')
     gx2_gname = helpers.list_images(img_dpath)
-    gx2_gid   = range(1, len(gx2_gname) + 1)
+    gx2_gid   = list(range(1, len(gx2_gname) + 1))
     print('There are %d images' % len(gx2_gname))
     # ---- Build Name Table ---
     helpers.print_('Building name table: ')
@@ -297,7 +297,7 @@ def convert_named_chips(db_dir, img_dpath=None):
         name, num = parse.parse(gt_format, gname)
         name_set.add(name)
     nx2_name  = ['____', '____'] + list(name_set)
-    nx2_nid   = [1, 1] + range(2, len(name_set) + 2)
+    nx2_nid   = [1, 1] + list(range(2, len(name_set) + 2))
     print('There are %d names' % (len(nx2_name) - 2))
     # ---- Build Chip Table ---
     print('[converdb] Building chip table: ')
@@ -413,10 +413,10 @@ def read_csv_file(csv_fpath):
     csv_file.close()
     csv_iter = iter(csv_lines)
     # Read first line (header)
-    csv_line = csv_iter.next()
+    csv_line = next(csv_iter)
     column_labels = parse_csv_line(csv_line)
     csv_rows = [parse_csv_line(csv_line_) for csv_line_ in csv_iter]
-    column_list = zip(*csv_rows)
+    column_list = list(zip(*csv_rows))
     return column_labels, column_list
 
 
@@ -482,7 +482,7 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
 
     def get_multiprop_colx_list(prefix):
         colx_list = []
-        for num in xrange(chips_per_name):
+        for num in range(chips_per_name):
             lbl = prefix + str(num + 1)
             colx = get_lbl_pos(column_labels, [lbl])
             colx_list.append(colx)
@@ -533,9 +533,9 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
     prop_dict       = {}
     pairwise_dict   = {}
     gnameroi_to_cid = {}
-    for key in prop2_colx.keys():
+    for key in list(prop2_colx.keys()):
         prop_dict[key] = []
-    for key in multiprop2_colx.keys():
+    for key in list(multiprop2_colx.keys()):
         prop_dict[key] = []
     cid = 1
 
@@ -547,7 +547,7 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
         cx2_roi.append(roi)
         cx2_nx.append(nx)
         cx2_gx.append(gx)
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             prop_dict[key].append(val)
         cx2_theta.append(theta)
         sys.stdout.write(('\b' * 10) + 'cid = %4d' % cid)
@@ -555,16 +555,16 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
     # ---------
     # Wildid parsing
     bad_rows = 0
-    for rowx in xrange(num_rows):
+    for rowx in range(num_rows):
         name        = column_list[name_colx][rowx]
-        tbl_kwargs2 = {key: column_list[val][rowx] for key, val in prop2_colx.iteritems()}
-        pairwise_vals = [column_list[colx][rowx] for colx in pairprop2_colx.values()]
+        tbl_kwargs2 = {key: column_list[val][rowx] for key, val in prop2_colx.items()}
+        pairwise_vals = [column_list[colx][rowx] for colx in list(pairprop2_colx.values())]
         cid_tup = []
-        for num in xrange(chips_per_name):  # TODO: This is always just pairwise
+        for num in range(chips_per_name):  # TODO: This is always just pairwise
             img_colx = image_colx_list[num]
             gname = column_list[img_colx][rowx]
-            tbl_kwargs1 = {key: column_list[val[num]][rowx] for key, val in multiprop2_colx.iteritems()}
-            tbl_kwargs = dict(tbl_kwargs1.items() + tbl_kwargs2.items())
+            tbl_kwargs1 = {key: column_list[val[num]][rowx] for key, val in multiprop2_colx.items()}
+            tbl_kwargs = dict(list(tbl_kwargs1.items()) + list(tbl_kwargs2.items()))
             roi      = roi_from_imgsize(join(img_dpath, gname), silent=True)
             if roi is None:
                 img_fpath = join(img_dpath, gname)
@@ -575,7 +575,7 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
                     print('corrupted image: %r' % gname)
                 continue
             gnameroi = (gname, tuple(roi))
-            if gnameroi in gnameroi_to_cid.keys():
+            if gnameroi in list(gnameroi_to_cid.keys()):
                 cid = gnameroi_to_cid[gnameroi]
                 cid_tup.append(cid)
                 continue
@@ -620,9 +620,9 @@ def wildid_to_tables(db_dir, img_dpath, column_labels, column_list):
             continue
         name     = '____'
         roi      = roi_from_imgsize(join(img_dpath, gname), silent=False)
-        tbl_kwargs1 = {key: 'NA' for key, val in multiprop2_colx.iteritems()}
-        tbl_kwargs2 = {key: 'NA' for key, val in prop2_colx.iteritems()}
-        tbl_kwargs = dict(tbl_kwargs1.items() + tbl_kwargs2.items())
+        tbl_kwargs1 = {key: 'NA' for key, val in multiprop2_colx.items()}
+        tbl_kwargs2 = {key: 'NA' for key, val in prop2_colx.items()}
+        tbl_kwargs = dict(list(tbl_kwargs1.items()) + list(tbl_kwargs2.items()))
         if not roi is None:
             cid = wildid_add_to_hs_tables(gname, name, roi, **tbl_kwargs)
     num_unknown_chips = len(cx2_cid) - num_known_chips
@@ -657,7 +657,7 @@ def roi_from_imgsize(img_fpath, silent=False):
 
 def imagetables_from_img_dpath(img_dpath=None):
     gx2_gname = helpers.list_images(img_dpath)
-    gx2_gid   = range(1, len(gx2_gname) + 1)
+    gx2_gid   = list(range(1, len(gx2_gname) + 1))
     print('There are %d images' % len(gx2_gname))
     return gx2_gid, gx2_gname
 
@@ -676,7 +676,7 @@ def groundtruth_from_imagenames(gx2_gname, gt_format):
 
 def nametables_from_nameset(name_set):
     nx2_name  = ['____', '____'] + list(name_set)
-    nx2_nid   = [1, 1] + range(2, len(name_set) + 2)
+    nx2_nid   = [1, 1] + list(range(2, len(name_set) + 2))
     print('There are %d names' % (len(nx2_name) - 2))
     return nx2_name, nx2_nid
 
@@ -734,7 +734,7 @@ def write_chip_table(internal_dir, cx2_cid, cx2_gid, cx2_nid,
     column_list   = [cx2_cid, cx2_gid, cx2_nid, cx2_roi, cx2_theta]
     column_type   = [int, int, int, list, float]
     if not prop_dict is None:
-        for key, val in prop_dict.iteritems():
+        for key, val in prop_dict.items():
             column_labels.append(key)
             column_list.append(val)
             column_type.append(str)

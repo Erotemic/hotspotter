@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from numpy import sqrt
 # Hotspotter
-import draw_func2 as df2
+from . import draw_func2 as df2
 
 
 def rrr():

@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[extern_feat]')
@@ -19,7 +19,7 @@ def reload_module():
     import sys
     imp.reload(sys.modules[__name__])
 
-EXE_EXT = {'win32': '.exe', 'darwin': '.mac', 'linux2': '.ln'}[sys.platform]
+EXE_EXT = {'win32': '.exe', 'darwin': '.mac', 'linux2': '.ln', 'linux': '.ln'}[sys.platform]
 
 if not '__file__' in vars():
     __file__ = os.path.realpath('extern_feat.py')

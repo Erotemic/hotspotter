@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off, rrr, profile,
  printDBG) = __common__.init(__name__, '[covt]', DEBUG=False)
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     print(hs.get_cache_uid())
     res = hs.query(cx)
     nTop = 2
-    for tx in xrange(nTop):
+    for tx in range(nTop):
         cx2 = res.topN_cxs(hs)[tx]
         dstimg1, dstimg2, args_, kwargs_ = test_result_coverage(hs, res, cx2, scale_factor)
         test_find_coverage_score(hs, res)

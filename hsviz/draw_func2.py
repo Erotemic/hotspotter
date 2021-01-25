@@ -10,7 +10,8 @@ from hscom import __common__
 (print, print_, print_on, print_off, rrr, profile,
  printDBG) = __common__.init(__name__, '[df2]', DEBUG=False, initmpl=True)
 # Python
-from itertools import izip
+# from itertools import izip
+izip = zip
 from os.path import splitext, split, join, normpath, exists
 import colorsys
 import itertools
@@ -26,11 +27,22 @@ from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle, Circle, FancyArrow
 from matplotlib.transforms import Affine2D
-from matplotlib.backends import backend_qt4
 import matplotlib.pyplot as plt
 # Qt
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import Qt
+if 0:
+    from matplotlib.backends import backend_qt4 as backend_qt
+    from PyQt4 import QtCore, QtGui
+    from PyQt4.QtCore import Qt
+    QtGui = QtWidgets
+else:
+    from matplotlib.backends import backend_qt5 as backend_qt
+    from PyQt5 import QtCore
+    from PyQt5 import QtGui
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
+    from PyQt5.QtWidgets import *
+    from PyQt5 import QtWidgets
+
 # Scientific
 import numpy as np
 import scipy.stats
@@ -320,8 +332,7 @@ def get_geometry(fnum):
 
 
 def get_screen_info():
-    from PyQt4 import Qt, QtGui  # NOQA
-    desktop = QtGui.QDesktopWidget()
+    desktop = QtWidgets.QDesktopWidget()
     mask = desktop.mask()  # NOQA
     layout_direction = desktop.layoutDirection()  # NOQA
     screen_number = desktop.screenNumber()  # NOQA
@@ -329,7 +340,7 @@ def get_screen_info():
     num_screens = desktop.screenCount()  # NOQA
     avail_rect = desktop.availableGeometry()  # NOQA
     screen_rect = desktop.screenGeometry()  # NOQA
-    QtGui.QDesktopWidget().availableGeometry().center()  # NOQA
+    QtWidgets.QDesktopWidget().availableGeometry().center()  # NOQA
     normal_geometry = desktop.normalGeometry()  # NOQA
 
 
@@ -373,19 +384,17 @@ def ensure_app_is_running():
 
 
 def get_monitor_geom(monitor_num=0):
-    from PyQt4 import QtGui  # NOQA
     ensure_app_is_running()
-    desktop = QtGui.QDesktopWidget()
+    desktop = QtWidgets.QDesktopWidget()
     rect = desktop.availableGeometry(screen=monitor_num)
     geom = (rect.x(), rect.y(), rect.width(), rect.height())
     return geom
 
 
 def get_monitor_geometries():
-    from PyQt4 import QtGui  # NOQA
     ensure_app_is_running()
     monitor_geometries = {}
-    desktop = QtGui.QDesktopWidget()
+    desktop = QtWidgets.QDesktopWidget()
     for screenx in xrange(desktop.numScreens()):
         rect = desktop.availableGeometry(screen=screenx)
         geom = (rect.x(), rect.y(), rect.width(), rect.height())
@@ -449,7 +458,9 @@ def all_figures_tile(num_rc=None, wh=400, xy_off=(0, 0), wh_off=(0, 0),
     #Windows 7
     if sys.platform.startswith('win32'):
         stdpxls = win7_sizes
-    if sys.platform.startswith('linux2'):
+    elif sys.platform.startswith('linux'):
+        stdpxls = gnome3_sizes
+    else:
         stdpxls = gnome3_sizes
     x_off +=  0
     y_off +=  0
@@ -492,8 +503,8 @@ def all_figures_tile(num_rc=None, wh=400, xy_off=(0, 0), wh_off=(0, 0),
     printDBG('[df2]     nRows, nCols = %r' % ((nRows, nCols),))
 
     def position_window(ix, win):
-        isqt4_mpl = isinstance(win, backend_qt4.MainWindow)
-        isqt4_back = isinstance(win, QtGui.QMainWindow)
+        isqt4_mpl = isinstance(win, backend_qt.MainWindow)
+        isqt4_back = isinstance(win, QtWidgets.QMainWindow)
         if not isqt4_mpl and not isqt4_back:
             raise NotImplementedError('%r-th Backend %r is not a Qt Window' %
                                       (ix, win))
@@ -955,7 +966,7 @@ def convert_keypress_event_mpl_to_qt4(mevent):
     if sys.platform == 'darwin':
         mpl2qtkey.update({'super': Qt.Key_Control, 'control': Qt.Key_Meta, })
 
-    # Try to reconstruct QtGui.KeyEvent
+    # Try to reconstruct QtWidgets.KeyEvent
     type_ = QtCore.QEvent.Type(QtCore.QEvent.KeyPress)  # The type should always be KeyPress
     text = ''
     # Try to extract the original modifiers
@@ -1002,7 +1013,7 @@ def convert_keypress_event_mpl_to_qt4(mevent):
     print('[df2] autorep = %r' % autorep)
     print('[df2] count = %r ' % count)
     print('----------------')
-    qevent = QtGui.QKeyEvent(type_, key_, modifiers, text, autorep, count)
+    qevent = QtWidgets.QKeyEvent(type_, key_, modifiers, text, autorep, count)
     return qevent
 
 
@@ -1023,7 +1034,7 @@ def test_build_qkeyevent():
     #key_ = ord('A')  # Qt works with uppercase keys
     #autorep = False  # default false
     #count   = 1  # default 1
-    #qevent = QtGui.QKeyEvent(type_, key_, modifiers, text, autorep, count)
+    #qevent = QtWidgets.QKeyEvent(type_, key_, modifiers, text, autorep, count)
     return qevent
 
 
@@ -1039,7 +1050,7 @@ def on_key_press_event(event):
         print('[df2] attempting to send qevent to qtwin')
         app.sendEvent(qtwin, qevent)
         # TODO: FINISH ME
-        #PyQt4.QtGui.QKeyEvent
+        #PyQt4.QtWidgets.QKeyEvent
         #qtwin.keyPressEvent(event)
         #fig.canvas.manager.window.keyPressEvent()
 

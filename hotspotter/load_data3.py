@@ -3,7 +3,7 @@ Module: load_data
     Loads the paths and table information from which all other data is computed.
     This is the first script run in the loading pipeline.
 '''
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[ld3]', DEBUG=False)
@@ -17,11 +17,11 @@ import sys
 import numpy as np
 from PIL import Image
 # Hotspotter
-import DataStructures as ds
+from . import DataStructures as ds
 from hscom import helpers
 from hscom import helpers as util
 from hscom import tools
-import db_info
+from . import db_info
 
 #========================================
 # GLOBALS

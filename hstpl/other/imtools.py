@@ -3,7 +3,7 @@ Code from https://github.com/jesolem/PCV
 Under the BSD Licence
 
 '''
-from __future__ import division, print_function
+
 import os
 from PIL import Image
 from pylab import *
@@ -29,7 +29,7 @@ def compute_average(imlist):
         try:
             averageim += array(Image.open(imname))
         except:
-            print(imname + "...skipped")
+            print((imname + "...skipped"))
             skipped += 1
 
     averageim /= (len(imlist) - skipped)

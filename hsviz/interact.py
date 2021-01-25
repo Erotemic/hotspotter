@@ -5,8 +5,8 @@ from hscom import __common__
 # Scientific
 import numpy as np
 # Hotspotter
-import draw_func2 as df2
-import viz
+from . import draw_func2 as df2
+from . import viz
 from hstpl import mask_creator
 
 

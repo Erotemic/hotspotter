@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 import pip as pip_
 import parse
 from os.path import abspath, dirname
@@ -181,7 +181,7 @@ def get_allpkg_info():
         pkg, version = pkgstr.split('>=')
         info = pipinfo(pkg)
         tup = (info[0]['pkg'], info[0]['installed'], info[0]['latest'])
-        print('pkg=%r installed=%r latest=%r' % (tup))
+        print(('pkg=%r installed=%r latest=%r' % (tup)))
         allpkg_info.append(info)
     print_allpkg_info(allpkg_info)
     return allpkg_info
@@ -191,7 +191,7 @@ def print_allpkg_info(allpkg_info):
     for info in allpkg_info:
         tup = (info[0]['pkg'], info[0]['installed'], info[0]['latest'])
         buf =  ' ' * max(12 - len(info[0]['pkg']), 0)
-        print(('%s ' + buf + 'installed=%r latest=%r') % tup)
+        print((('%s ' + buf + 'installed=%r latest=%r') % tup))
 #installed_list = pip.get_installed_distributions()
 #install('runsnake')
 
@@ -224,8 +224,8 @@ def get_outdated_packages(allpkg_info, safe=True):
             unavailable.append(info)
         elif latest != installed:
             outdated.append(info)
-    print('Pip does not seem to be managing:  \n    *' + '\n    *'.join([info[0]['pkg'] for info in unavailable]))
-    print('Updates available for:  \n    *' + '\n    *'.join([info[0]['pkg'] + ' current=' + info[0]['installed'] + ' latest=' + info[0]['latest']for info in outdated]))
+    print(('Pip does not seem to be managing:  \n    *' + '\n    *'.join([info[0]['pkg'] for info in unavailable])))
+    print(('Updates available for:  \n    *' + '\n    *'.join([info[0]['pkg'] + ' current=' + info[0]['installed'] + ' latest=' + info[0]['latest']for info in outdated])))
     return outdated, unavailable
 
 
@@ -259,7 +259,7 @@ if __name__ == '__main__':
 
     cmd_list = ['pip install %s --upgrade' % info[0]['pkg'] for info in outdated]
     write_installer_script(cmd_list, scriptname='pip_upgrade')
-    print('\n'.join(cmd_list))
+    print(('\n'.join(cmd_list)))
 
 
 # sparesehash

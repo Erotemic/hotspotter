@@ -1,10 +1,10 @@
-from __future__ import division, print_function
-import __common__
+
+from . import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[latex]')
 # Python
 import re
-import helpers
+from . import helpers
 import textwrap
 # Science
 import numpy as np
@@ -36,7 +36,7 @@ def latex_multirow(data, nrow=2):
 
 def latex_mystats(lbl, data):
     stats_ = helpers.mystats(data)
-    min_, max_, mean, std, nMin, nMax, shape = stats_.values()
+    min_, max_, mean, std, nMin, nMax, shape = list(stats_.values())
     fmttup1 = (int(min_), int(max_), float(mean), float(std))
     fmttup = tuple(map(helpers.num_fmt, fmttup1))
     lll = ' ' * len(lbl)
@@ -72,7 +72,7 @@ def ensure_colvec(arr):
 
 
 def padvec(shape=(1, 1)):
-    pad = np.array([[' ' for c in xrange(shape[1])] for r in xrange(shape[0])])
+    pad = np.array([[' ' for c in range(shape[1])] for r in range(shape[0])])
     return pad
 
 
@@ -142,8 +142,8 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
     AUTOFIX_LATEX = True
     FORCE_INT = True
     DO_PERCENT = True
-    for r in xrange(len(body)):
-        for c in xrange(len(body[0])):
+    for r in range(len(body)):
+        for c in range(len(body[0])):
             # In data land
             if r > 0 and c > 0:
                 # Force integer
@@ -157,14 +157,14 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
     if bold_best:
         best_col_scores = scores.max(0) if bigger_is_better else scores.min(0)
         rows_to_bold = [np.where(scores[:, colx] == best_col_scores[colx])[0]
-                        for colx in xrange(len(scores.T))]
+                        for colx in range(len(scores.T))]
         for colx, rowx_list in enumerate(rows_to_bold):
             for rowx in rowx_list:
                 body[rowx + 1][colx + 1] = '\\txtbf{' + body[rowx + 1][colx + 1] + '}'
 
     # More fixing after the bold is in place
-    for r in xrange(len(body)):
-        for c in xrange(len(body[0])):
+    for r in range(len(body)):
+        for c in range(len(body[0])):
             # In data land
             if r > 0 and c > 0:
                 if not out_of is None:
@@ -179,8 +179,8 @@ def make_score_tabular(row_lbls, col_lbls, scores, title=None,
     if ALIGN_BODY:
         new_body_cols = []
         for col in body.T:
-            colstrs = map(str, col.tolist())
-            collens = map(len, colstrs)
+            colstrs = list(map(str, col.tolist()))
+            collens = list(map(len, colstrs))
             maxlen = max(collens)
             newcols = [str_ + (' ' * (maxlen - len(str_))) for str_ in colstrs]
             new_body_cols += [newcols]

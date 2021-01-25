@@ -1,3 +1,0 @@
-* Stupidly easy to implement on the GPU
-* Can represent geometry efficiently using Perdoch's quantized representation. 
-* Can precompute all transformations of Perdoch's quantized representation so matrix square root and inverse becomes a lookup table operation. 

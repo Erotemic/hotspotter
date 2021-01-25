@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off, rrr,
  profile) = __common__.init(__name__, '[dbinfo]')
@@ -12,7 +12,7 @@ import fnmatch
 import numpy as np
 from PIL import Image
 # Hotspotter
-import load_data2 as ld2
+from . import load_data2 as ld2
 from hscom import helpers
 from hscom import helpers as util
 
@@ -21,8 +21,8 @@ def dir_size(path):
     if sys.platform == 'win32':
         pass
     else:
-        import commands
-        size = commands.getoutput('du -sh ' + path).split()[0]
+        import subprocess
+        size = subprocess.getoutput('du -sh ' + path).split()[0]
     return size
 
 
@@ -84,7 +84,7 @@ class DirectoryStats(object):
         #---
 
     def get_db_types(self):
-        if 'db_types' in self.__dict__.keys():
+        if 'db_types' in list(self.__dict__.keys()):
             return self.db_types
         self.db_types = []
 
@@ -282,7 +282,7 @@ def get_db_names_info(hs):
 def db_info(hs):
     # Name Info
     nx2_cxs    = np.array(hs.get_nx2_cxs())
-    nx2_nChips = np.array(map(len, nx2_cxs))
+    nx2_nChips = np.array(list(map(len, nx2_cxs)))
     uniden_cxs = np.hstack(nx2_cxs[[0, 1]])
     num_uniden = nx2_nChips[0] + nx2_nChips[1]
     nx2_nChips[0:2] = 0  # remove uniden names
@@ -296,7 +296,7 @@ def db_info(hs):
     multiton_cx_lists = nx2_cxs[multiton_nxs]
     multiton_cxs = np.hstack(multiton_cx_lists)
     singleton_cxs = nx2_cxs[singleton_nxs]
-    multiton_nx2_nchips = map(len, multiton_cx_lists)
+    multiton_nx2_nchips = list(map(len, multiton_cx_lists))
     valid_cxs = hs.get_valid_cxs()
     num_chips = len(valid_cxs)
     # Image info
@@ -313,8 +313,8 @@ def db_info(hs):
              ( 'min', wh_list.min(0)),
              ('mean', wh_list.mean(0)),
              ( 'std', wh_list.std(0))])
-        arr2str = lambda var: '[' + (', '.join(map(lambda x: '%.1f' % x, var))) + ']'
-        ret = (',\n    '.join(['%r:%s' % (key, arr2str(val)) for key, val in stat_dict.items()]))
+        arr2str = lambda var: '[' + (', '.join(['%.1f' % x for x in var])) + ']'
+        ret = (',\n    '.join(['%r:%s' % (key, arr2str(val)) for key, val in list(stat_dict.items())]))
         return '{\n    ' + ret + '}'
 
     def get_img_size_list(img_list):
@@ -363,7 +363,7 @@ def get_keypoint_stats(hs):
     # Keypoint stats
     cx2_kpts = hs.feats.cx2_kpts
     # Check cx2_kpts
-    cx2_nFeats = map(len, cx2_kpts)
+    cx2_nFeats = list(map(len, cx2_kpts))
     kpts = np.vstack(cx2_kpts)
     print('[dbinfo] --- LaTeX --- ')
     _printopts = np.get_printoptions()

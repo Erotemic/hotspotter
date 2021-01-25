@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import sys
 from os.path import expanduser, join, exists
 
@@ -10,7 +10,7 @@ if not exists(hsdir):
     code_dir = join(expanduser('~'), 'Code-RPI')
     hsdir      = join(code_dir, 'hotspotter')
     if not exists(hsdir):
-        print('[pyhesaff] hsdir=%r DOES NOT EXIST!' % (hsdir,))
+        print(('[pyhesaff] hsdir=%r DOES NOT EXIST!' % (hsdir,)))
         raise Exception('Expected that hesaff and hotspotter to be in ~/code')
 
 # Ensure hotspotter is in path before importing it
@@ -38,7 +38,7 @@ filemap = {
                     'pyhesaffexe.py',
                     'ctypes_interface.py'], }
 
-for srcdir, fname_list in filemap.iteritems():
+for srcdir, fname_list in list(filemap.items()):
     for fname in fname_list:
         src  = join(srcdir, fname)
         dest = join(extern_dir, fname)

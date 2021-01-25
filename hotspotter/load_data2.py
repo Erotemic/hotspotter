@@ -3,7 +3,7 @@ Module: load_data
     Loads the paths and table information from which all other data is computed.
     This is the first script run in the loading pipeline.
 '''
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[ld2]', DEBUG=False)
@@ -17,7 +17,7 @@ import sys
 import numpy as np
 from PIL import Image
 # Hotspotter
-import DataStructures as ds
+from . import DataStructures as ds
 from hscom import helpers
 from hscom import helpers as util
 from hscom import tools
@@ -101,7 +101,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
         helpers.checkpath(chip_table, verbose=True)
         helpers.checkpath(name_table, verbose=True)
         helpers.checkpath(image_table, verbose=True)
-        import db_info
+        from . import db_info
 
         def assign_alternate(tblname, optional=False):
             path = join(db_dir, tblname)
@@ -397,7 +397,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
 
         # All nonstandard properties are unknown and belong in the prop_dict
         # get csv indexes which are unknown properties
-        prop_x_list  = np.setdiff1d(range(len(chip_csv_format)), standard_xs).tolist()
+        prop_x_list  = np.setdiff1d(list(range(len(chip_csv_format))), standard_xs).tolist()
         px2_prop_key = [chip_csv_format[x] for x in prop_x_list]
         prop_dict = {}
         for prop in iter(px2_prop_key):
@@ -405,7 +405,7 @@ def load_csv_tables(db_dir, allow_new_dir=True):
 
         # Print header parsing status
         if VERBOSE_LOAD_DATA:
-            print('[ld2] * num_user_properties: %d' % (len(prop_dict.keys())))
+            print('[ld2] * num_user_properties: %d' % (len(list(prop_dict.keys()))))
             print('[ld2] * num_standard_properties: %d / %d' %
                   (len(standard_xs), len(standard_xs_)))
 
@@ -618,14 +618,14 @@ def make_flat_table(hs, cx_list):
         cx2_roi = np.array([])
     cx2_theta = hs.tables.cx2_theta[cx_list]
     prop_dict = {propkey: [cx2_propval[cx] for cx in iter(cx_list)]
-                 for (propkey, cx2_propval) in hs.tables.prop_dict.iteritems()}
+                 for (propkey, cx2_propval) in hs.tables.prop_dict.items()}
     # Turn the chip indexes into a DOCUMENTED csv table
     header = '# flat table'
     column_labels = ['ChipID', 'Image', 'Name', 'roi[tl_x  tl_y  w  h]', 'theta']
     column_list   = [cx2_cid, cx2_gname, cx2_name, cx2_roi, cx2_theta]
     column_type   = [int, int, int, list, float]
     if not prop_dict is None:
-        for key, val in prop_dict.iteritems():
+        for key, val in prop_dict.items():
             column_labels.append(key)
             column_list.append(val)
             column_type.append(str)
@@ -649,14 +649,14 @@ def make_chip_csv(hs, cx_list):
         cx2_roi = np.array([])
     cx2_theta = hs.tables.cx2_theta[cx_list]
     prop_dict = {propkey: [cx2_propval[cx] for cx in iter(cx_list)]
-                 for (propkey, cx2_propval) in hs.tables.prop_dict.iteritems()}
+                 for (propkey, cx2_propval) in hs.tables.prop_dict.items()}
     # Turn the chip indexes into a DOCUMENTED csv table
     header = '# chip table'
     column_labels = ['ChipID', 'ImgID', 'NameID', 'roi[tl_x  tl_y  w  h]', 'theta']
     column_list   = [cx2_cid, cx2_gx, cx2_nx, cx2_roi, cx2_theta]
     column_type   = [int, int, int, list, float]
     if not prop_dict is None:
-        for key, val in prop_dict.iteritems():
+        for key, val in prop_dict.items():
             column_labels.append(key)
             column_list.append(val)
             column_type.append(str)

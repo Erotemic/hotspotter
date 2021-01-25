@@ -1,9 +1,9 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 print, print_, print_on, print_off, rrr, profile, printDBG =\
     __common__.init(__name__, '[cov]', DEBUG=False)
 # Standard
-from itertools import izip
+
 from itertools import product as iprod
 import math
 # Science
@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 # HotSpotter
 from hscom import helpers as util
-import matching_functions as mf
+from . import matching_functions as mf
 
 SCALE_FACTOR_DEFAULT = .05
 METHOD_DEFAULT = 0
@@ -26,10 +26,10 @@ def score_chipmatch_coverage(hs, qcx, chipmatch, qreq, method=0):
     topx2_cx = cx2_prescore.argsort()[::-1]  # Only allow indexed cxs to be in the top results
     topx2_cx = [cx for cx in iter(topx2_cx) if cx in dcxs_]
     nRerank = min(len(topx2_cx), nShortlist)
-    cx2_score = [0 for _ in xrange(len(cx2_fm))]
+    cx2_score = [0 for _ in range(len(cx2_fm))]
     mark_progress, end_progress = util.progress_func(nRerank, flush_after=10,
                                                      lbl='[cov] Compute coverage')
-    for topx in xrange(nRerank):
+    for topx in range(nRerank):
         mark_progress(topx)
         cx2 = topx2_cx[topx]
         fm = cx2_fm[cx2]
@@ -97,7 +97,7 @@ def warp_srcimg_to_kpts(fx2_kp, srcimg, chip_shape, fx2_score=None, **kwargs):
         fx2_score = np.ones(len(fx2_kp))
     scale_factor = kwargs.get('scale_Factor', SCALE_FACTOR_DEFAULT)
     # Build destination image
-    (h, w) = map(int, (chip_shape[0] * scale_factor, chip_shape[1] * scale_factor))
+    (h, w) = list(map(int, (chip_shape[0] * scale_factor, chip_shape[1] * scale_factor)))
     dstimg = np.zeros((h, w), dtype=np.float32)
     dst_copy = dstimg.copy()
     src_shape = srcimg.shape
@@ -115,7 +115,7 @@ def warp_srcimg_to_kpts(fx2_kp, srcimg, chip_shape, fx2_score=None, **kwargs):
     # For each keypoint warp a gaussian scaled by the feature score
     # into the image
     count = 0
-    for count, (M, score) in enumerate(izip(fx2_M, fx2_score)):
+    for count, (M, score) in enumerate(zip(fx2_M, fx2_score)):
         mark_progress(count)
         warped = cv2.warpAffine(srcimg * score, M, dsize,
                                 dst=dst_copy,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
+
 import multiprocessing
 from hotspotter import encounter
 from hscom import helpers

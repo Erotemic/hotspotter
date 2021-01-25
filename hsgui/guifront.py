@@ -1,17 +1,33 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[front]', DEBUG=False)
 # Python
 import sys
 # Qt
-from PyQt4 import QtGui, QtCore
-from PyQt4.Qt import (QAbstractItemView, pyqtSignal, Qt)
+if 0:
+    from PyQt4 import QtGui, QtCore
+    from PyQt4.Qt import (QAbstractItemView, pyqtSignal, Qt)
+    from PyQt5.QtGui import QMainWindow
+    from PyQt5.QtGui import QTableWidgetItem
+    QtWidgets = QtGui
+else:
+    from matplotlib.backends import backend_qt5 as backend_qt
+    from PyQt5 import QtCore
+    from PyQt5 import QtGui
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
+    from PyQt5.QtWidgets import *
+    from PyQt5.QtWidgets import QMainWindow
+    from PyQt5.QtWidgets import QTableWidgetItem
+    from PyQt5 import QtWidgets
+    QtWidgets.QApplication.UnicodeUTF8 = -1
+
 # HotSpotter
-from _frontend.MainSkel import Ui_mainSkel
-import guitools
-from guitools import slot_
-from guitools import frontblocking as blocking
+from ._frontend.MainSkel import Ui_mainSkel
+from . import guitools
+from .guitools import slot_
+from .guitools import frontblocking as blocking
 from hscom import tools
 
 #=================
@@ -40,7 +56,7 @@ def clicked(func):
             return
         front.prev_tbl_item = item
         return func(front, item, *args, **kwargs)
-    clicked_wrapper.func_name = func.func_name
+    clicked_wrapper.__name__ = func.__name__
     # Hacky decorator
     return clicked_wrapper
 
@@ -121,7 +137,7 @@ class StreamStealer(QtCore.QObject):
         #steam_holder.stdout
 
     def write_shared(self, msg):
-        msg_ = unicode(str(msg))
+        msg_ = str(str(msg))
         self.iostream.write(msg_)
         self.write_.emit(msg_)
 
@@ -254,7 +270,7 @@ def connect_experimental_signals(front):
 #def popup(front, pos):
     #for i in front.ui.gxs_TBL.selectionModel().selection().indexes():
         #front.print(repr((i.row(), i.column())))
-    #menu = QtGui.QMenu()
+    #menu = QtWidgets.QMenu()
     #action1 = menu.addAction("action1")
     #action2 = menu.addAction("action2")
     #action3 = menu.addAction("action2")
@@ -269,7 +285,7 @@ def new_menu_action(front, menu_name, name, text=None, shortcut=None, slot_fn=No
     ui = front.ui
     if hasattr(ui, action_name):
         raise Exception('menu action already defined')
-    action = QtGui.QAction(front)
+    action = QtWidgets.QAction(front)
     setattr(ui, action_name, action)
     action.setShortcutContext(QtCore.Qt.ApplicationShortcut)
     action.setObjectName(_fromUtf8(action_name))
@@ -280,14 +296,14 @@ def new_menu_action(front, menu_name, name, text=None, shortcut=None, slot_fn=No
     # TODO: Have ui.retranslate call this
     def retranslate_fn():
         printDBG('retranslating %s' % name)
-        action.setText(QtGui.QApplication.translate("mainSkel", action_text, None, QtGui.QApplication.UnicodeUTF8))
+        action.setText(QtWidgets.QApplication.translate("mainSkel", action_text, None, QtWidgets.QApplication.UnicodeUTF8))
         if action_shortcut is not None:
-            action.setShortcut(QtGui.QApplication.translate("mainSkel", action_shortcut, None, QtGui.QApplication.UnicodeUTF8))
+            action.setShortcut(QtWidgets.QApplication.translate("mainSkel", action_shortcut, None, QtWidgets.QApplication.UnicodeUTF8))
     def connect_fn():
         printDBG('connecting %s' % name)
         action.triggered.connect(slot_fn)
-    connect_fn.func_name = name + '_' + connect_fn.func_name
-    retranslate_fn.func_name = name + '_' + retranslate_fn.func_name
+    connect_fn.__name__ = name + '_' + connect_fn.__name__
+    retranslate_fn.__name__ = name + '_' + retranslate_fn.__name__
     front.connect_fns.append(connect_fn)
     front.retranslatable_fns.append(retranslate_fn)
     retranslate_fn()
@@ -304,12 +320,12 @@ def set_tabwidget_text(front, tblname, text):
     ui = front.ui
     tab_widget = tablename2_tabwidget[tblname]
     tab_index = ui.tablesTabWidget.indexOf(tab_widget)
-    tab_text = QtGui.QApplication.translate("mainSkel", text, None,
-                                            QtGui.QApplication.UnicodeUTF8)
+    tab_text = QtWidgets.QApplication.translate("mainSkel", text, None,
+                                            QtWidgets.QApplication.UnicodeUTF8)
     ui.tablesTabWidget.setTabText(tab_index, tab_text)
 
 
-class MainWindowFrontend(QtGui.QMainWindow):
+class MainWindowFrontend(QMainWindow):
     printSignal     = pyqtSignal(str)
     quitSignal      = pyqtSignal()
     selectGxSignal  = pyqtSignal(int)
@@ -412,7 +428,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         #front.printDBG('setEnabled(%r)' % flag)
         ui = front.ui
         # Enable or disable all actions
-        for uikey in ui.__dict__.keys():
+        for uikey in list(ui.__dict__.keys()):
             if uikey.find('action') == 0:
                 ui.__dict__[uikey].setEnabled(flag)
 
@@ -516,7 +532,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         for row in iter(row_list):
             data_tup = datatup_list[row]
             for col, data in enumerate(data_tup):
-                item = QtGui.QTableWidgetItem()
+                item = QTableWidgetItem()
                 # RCOS TODO: Pass in datatype here.
                 # BOOLEAN DATA
                 if tools.is_bool(data) or data == 'True' or data == 'False':
@@ -539,7 +555,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
                 # Mark as editable or not
                 if col_editable[col]:
                     item.setFlags(item.flags() | Qt.ItemIsEditable)
-                    item.setBackground(QtGui.QColor(250, 240, 240))
+                    item.setBackground(QtWidgets.QColor(250, 240, 240))
                 else:
                     item.setFlags(item.flags() ^ Qt.ItemIsEditable)
                 item.setTextAlignment(Qt.AlignHCenter)
@@ -615,7 +631,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
     # Table Changed Functions
     #=======================
 
-    @slot_(QtGui.QTableWidgetItem)
+    @slot_(QTableWidgetItem)
     def img_tbl_changed(front, item):
         front.print('img_tbl_changed()')
         row, col = (item.row(), item.column())
@@ -624,7 +640,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         new_val = item.checkState() == Qt.Checked
         front.changeGxSignal.emit(sel_gx, header_lbl, new_val)
 
-    @slot_(QtGui.QTableWidgetItem)
+    @slot_(QTableWidgetItem)
     def chip_tbl_changed(front, item):
         front.print('chip_tbl_changed()')
         row, col = (item.row(), item.column())
@@ -633,7 +649,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         header_lbl = front.get_chiptbl_header(col)  # Get changed column
         front.changeCidSignal.emit(sel_cid, header_lbl, new_val)
 
-    @slot_(QtGui.QTableWidgetItem)
+    @slot_(QTableWidgetItem)
     def res_tbl_changed(front, item):
         front.print('res_tbl_changed()')
         row, col = (item.row(), item.column())
@@ -642,7 +658,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         header_lbl = front.get_restbl_header(col)  # Get changed column
         front.changeCidSignal.emit(sel_cid, header_lbl, new_val)
 
-    @slot_(QtGui.QTableWidgetItem)
+    @slot_(QTableWidgetItem)
     def name_tbl_changed(front, item):
         front.print('name_tbl_changed()')
         row, col = (item.row(), item.column())
@@ -654,7 +670,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
     #=======================
     # Table Clicked Functions
     #=======================
-    @slot_(QtGui.QTableWidgetItem)
+    @slot_(QTableWidgetItem)
     @clicked
     def img_tbl_clicked(front, item):
         row = item.row()
@@ -662,7 +678,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         sel_gx = front.get_imgtbl_gx(row)
         front.selectGxSignal.emit(sel_gx)
 
-    @slot_(QtGui.QTableWidgetItem)
+    @slot_(QTableWidgetItem)
     @clicked
     def chip_tbl_clicked(front, item):
         row, col = (item.row(), item.column())
@@ -670,7 +686,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         sel_cid = front.get_chiptbl_cid(row)
         front.selectCidSignal.emit(sel_cid)
 
-    @slot_(QtGui.QTableWidgetItem)
+    @slot_(QTableWidgetItem)
     @clicked
     def res_tbl_clicked(front, item):
         row, col = (item.row(), item.column())
@@ -678,7 +694,7 @@ class MainWindowFrontend(QtGui.QMainWindow):
         sel_cid = front.get_restbl_cid(row)
         front.selectResSignal.emit(sel_cid)
 
-    @slot_(QtGui.QTableWidgetItem)
+    @slot_(QTableWidgetItem)
     @clicked
     def name_tbl_clicked(front, item):
         row, col = (item.row(), item.column())

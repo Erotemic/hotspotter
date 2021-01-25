@@ -1,16 +1,16 @@
 # http://docs.python.org/2/library/multiprocessing.html
-from __future__ import print_function, division
-import __common__
+
+from . import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[parallel]', DEBUG=False)
 # Python
-from itertools import izip
+
 from os.path import exists, dirname, split
 import multiprocessing
 import os
 import sys
 # Hotspotter
-import helpers as util
+from . import helpers as util
 
 
 @profile
@@ -50,13 +50,13 @@ def parallel_compute(func=None, arg_list=[], num_procs=None, lazy=True, args=Non
                                common_args=common_args, output_dir=output_dir)
     nTasks = len(task_list)
     if nTasks == 0:
-        print('[parallel] ... No %s tasks left to compute!' % func.func_name)
+        print('[parallel] ... No %s tasks left to compute!' % func.__name__)
         return None
     # Do not execute small tasks in parallel
     if nTasks < num_procs / 2 or nTasks == 1:
         num_procs = 1
     num_procs = min(num_procs, nTasks)
-    task_lbl = func.func_name + ': '
+    task_lbl = func.__name__ + ': '
     try:
         ret = parallelize_tasks(task_list, num_procs, task_lbl)
     except Exception as ex:
@@ -92,7 +92,7 @@ def make_task_list(func, arg_list, lazy=True, common_args=[], output_dir=None):
     append_common = lambda _args: tuple(list(_args) + common_args)
     if not (lazy and has_output):
         # does not check existance
-        task_list = [(func, append_common(_args)) for _args in izip(*arg_list)]
+        task_list = [(func, append_common(_args)) for _args in zip(*arg_list)]
         return task_list
 
     if output_dir is None:
@@ -110,14 +110,14 @@ def make_task_list(func, arg_list, lazy=True, common_args=[], output_dir=None):
         # But all the files need to be in the same directory
         fname_set = set(os.listdir(output_dir))
         exist_list = [fname in fname_set for fname in output_fname_list]
-        argiter = izip(exist_list, izip(*arg_list))
+        argiter = zip(exist_list, zip(*arg_list))
         arg_list2 = [append_common(_args) for bit, _args in argiter if not bit]
     else:
         # check existance individually
-        arg_list2 = [append_common(_args) for _args in izip(*arg_list) if not exists(_args[1])]
+        arg_list2 = [append_common(_args) for _args in zip(*arg_list) if not exists(_args[1])]
     task_list = [(func, _args) for _args in iter(arg_list2)]
-    nSkip = len(zip(*arg_list)) - len(arg_list2)
-    print('[parallel] Already computed %d %s tasks' % (nSkip, func.func_name))
+    nSkip = len(list(zip(*arg_list))) - len(arg_list2)
+    print('[parallel] Already computed %d %s tasks' % (nSkip, func.__name__))
     return task_list
 
 
@@ -174,7 +174,7 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
         task_queue.put(task)
     # start processes
     proc_list = []
-    for i in xrange(num_procs):
+    for i in range(num_procs):
         printDBG('[parallel] creating process %r' % (i,))
         proc = multiprocessing.Process(target=_worker, args=(task_queue, done_queue))
         proc.daemon = True
@@ -186,19 +186,19 @@ def _compute_in_parallel(task_list, num_procs, task_lbl='', verbose=True):
     result_list = []
     if verbose:
         mark_progress, end_prog = util.progress_func(nTasks, lbl=task_lbl, spacing=num_procs)
-        for count in xrange(len(task_list)):
+        for count in range(len(task_list)):
             mark_progress(count)
             printDBG('[parallel] done_queue.get()')
             result = done_queue.get()
             result_list.append(result)
         end_prog()
     else:
-        for i in xrange(nTasks):
+        for i in range(nTasks):
             done_queue.get()
         print('[parallel]  ... done')
     printDBG('[parallel] stopping children')
     # stop children processes
-    for i in xrange(num_procs):
+    for i in range(num_procs):
         task_queue.put('STOP')
     for proc in proc_list:
         proc.join()

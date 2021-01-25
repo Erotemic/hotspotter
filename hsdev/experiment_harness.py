@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off, rrr,
  profile, printDBG) = __common__.init(__name__, '[harn]', DEBUG=False)
@@ -7,11 +7,11 @@ import sys
 import itertools
 import textwrap
 from os.path import join
-from itertools import imap
+
 # Scientific
 import numpy as np
 # Hotspotter
-import experiment_configs
+from . import experiment_configs
 from hotspotter import Config
 from hotspotter import DataStructures as ds
 from hotspotter import match_chips3 as mc3
@@ -33,7 +33,7 @@ from hsviz import draw_func2 as df2
 
 
 def get_valid_testcfg_names():
-    testcfg_keys = vars(experiment_configs).keys()
+    testcfg_keys = list(vars(experiment_configs).keys())
     testcfg_locals = [key for key in testcfg_keys if key.find('_') != 0]
     valid_cfg_names = util.indent('\n'.join(testcfg_locals), '  * ')
     return valid_cfg_names
@@ -67,7 +67,7 @@ def ArgGaurdTrue(func):
 
 
 def __ArgGaurd(func, default=False):
-    flag = func.func_name
+    flag = func.__name__
     if flag.find('no') == 0:
         flag = flag[2:]
     flag = '--' + flag.replace('_', '-')
@@ -80,7 +80,7 @@ def __ArgGaurd(func, default=False):
         else:
             if not __QUIET__:
                 print('\n~~~ %s ~~~\n' % flag)
-    GaurdWrapper.func_name = func.func_name
+    GaurdWrapper.__name__ = func.__name__
     return GaurdWrapper
 
 
@@ -106,15 +106,15 @@ def wrap_uid(uid):
     prefix_str = ''
     # If unbalanced there is a prefix before a marker
     if len(uidmarker_list) < len(uidconfig_list):
-        frag = interleave_iter.next()
+        frag = next(interleave_iter)
         new_uid_list += [frag]
         total_len = len(frag)
         prefix_str = ' ' * len(frag)
     # Iterate through markers and config strings
     while True:
         try:
-            marker_str = interleave_iter.next()
-            config_str = interleave_iter.next()
+            marker_str = next(interleave_iter)
+            config_str = next(interleave_iter)
             frag = marker_str + config_str
         except StopIteration:
             break
@@ -130,7 +130,7 @@ def wrap_uid(uid):
 
 def format_uid_list(uid_list):
     indented_list = util.indent_list('    ', uid_list)
-    wrapped_list = imap(wrap_uid, indented_list)
+    wrapped_list = map(wrap_uid, indented_list)
     return util.joins('\n', wrapped_list)
 
 
@@ -199,7 +199,7 @@ def get_test_results2(hs, qcxs, qreq, cfgx=0, nCfg=1, nocache_testres=False,
         # Query Chip / Row Loop
         qcx2_res = mc3.process_query_request(hs, qreq, safe=False)
         qcx2_bestranks = {}
-        for qcx, res in qcx2_res.iteritems():
+        for qcx, res in qcx2_res.items():
             gt_ranks = res.get_gt_ranks(hs=hs)
             _rank = -1 if len(gt_ranks) == 0 else min(gt_ranks)
             qcx2_bestranks[qcx] = _rank
@@ -376,7 +376,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     #------------
     # Build row labels
     qx2_lbl = []
-    for qx in xrange(nQuery):
+    for qx in range(nQuery):
         qcx = qcx_list[qx]
         label = 'qx=%d) q%s ' % (qx, hs.cidstr(qcx, notes=True))
         qx2_lbl.append(label)
@@ -384,7 +384,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     #------------
     # Build col labels
     cfgx2_lbl = []
-    for cfgx in xrange(nCfg):
+    for cfgx in range(nCfg):
         test_uid  = cfg_list[cfgx].get_uid()
         test_uid  = cfg_list[cfgx].get_uid()
         cfg_label = 'cfgx=(%3d) %s' % (cfgx, test_uid)
@@ -421,7 +421,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     new_hard_qx_list = []
     new_qcid_list = []
     new_hardtup_list = []
-    for qx in xrange(nQuery):
+    for qx in range(nQuery):
         ranks = rank_mat[qx]
         min_rank = ranks.min()
         bestCFG_X = np.where(ranks == min_rank)[0]
@@ -445,7 +445,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print('=======================')
         print('[harn] Scores per Query: %s' % testnameid)
         print('=======================')
-        for qx in xrange(nQuery):
+        for qx in range(nQuery):
             bestCFG_X = qx2_argmin_rank[qx]
             min_rank = qx2_min_rank[qx]
             minimizing_cfg_str = indent('\n'.join(cfgx2_lbl[bestCFG_X]), '    ')
@@ -485,7 +485,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     X_list = [1, 5]
     # Build a dictionary mapping X (as in #ranks < X) to a list of cfg scores
     nLessX_dict = {int(X): np.zeros(nCfg) for X in iter(X_list)}
-    for cfgx in xrange(nCfg):
+    for cfgx in range(nCfg):
         ranks = rank_mat[:, cfgx]
         for X in iter(X_list):
             #nLessX_ = sum(np.bitwise_and(ranks < X, ranks >= 0))
@@ -498,7 +498,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print('==================')
         print('[harn] Scores per Config: %s' % testnameid)
         print('==================')
-        for cfgx in xrange(nCfg):
+        for cfgx in range(nCfg):
             print('[score] %s' % (cfgx2_lbl[cfgx]))
             for X in iter(X_list):
                 nLessX_ = nLessX_dict[int(X)][cfgx]
@@ -537,7 +537,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     best_rankscore_summary = []
     to_intersect_list = []
     # print each configs scores less than X=thresh
-    for X, cfgx2_nLessX in nLessX_dict.iteritems():
+    for X, cfgx2_nLessX in nLessX_dict.items():
         max_LessX = cfgx2_nLessX.max()
         bestCFG_X = np.where(cfgx2_nLessX == max_LessX)[0]
         best_rankscore = '[cfg*] %d cfg(s) scored ' % len(bestCFG_X)
@@ -546,7 +546,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         to_intersect_list += [cfgx2_lbl[bestCFG_X]]
 
     intersected = to_intersect_list[0] if len(to_intersect_list) > 0 else []
-    for ix in xrange(1, len(to_intersect_list)):
+    for ix in range(1, len(to_intersect_list)):
         intersected = np.intersect1d(intersected, to_intersect_list[ix])
 
     @ArgGaurdFalse
@@ -556,7 +556,7 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
         print('[harn] Best Configurations: %s' % testnameid)
         print('==========================')
         # print each configs scores less than X=thresh
-        for X, cfgx2_nLessX in nLessX_dict.iteritems():
+        for X, cfgx2_nLessX in nLessX_dict.items():
             max_LessX = cfgx2_nLessX.max()
             bestCFG_X = np.where(cfgx2_nLessX == max_LessX)[0]
             best_rankscore = '[cfg*] %d cfg(s) scored ' % len(bestCFG_X)
@@ -605,12 +605,12 @@ def test_configurations(hs, qcx_list, test_cfg_name_list, fnum=1):
     if not __QUIET__:
         print('remember to inspect with --sel-rows (-r) and --sel-cols (-c) ')
     if len(sel_rows) > 0 and len(sel_cols) == 0:
-        sel_cols = range(len(cfg_list))
+        sel_cols = list(range(len(cfg_list)))
     if len(sel_cols) > 0 and len(sel_rows) == 0:
-        sel_rows = range(len(qcx_list))
+        sel_rows = list(range(len(qcx_list)))
     if params.args.view_all:
-        sel_rows = range(len(qcx_list))
-        sel_cols = range(len(cfg_list))
+        sel_rows = list(range(len(qcx_list)))
+        sel_cols = list(range(len(cfg_list)))
     sel_cols = list(sel_cols)
     sel_rows = list(sel_rows)
     total = len(sel_cols) * len(sel_rows)

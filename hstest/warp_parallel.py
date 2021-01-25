@@ -3,7 +3,7 @@ There is an issue with cv2.warpAffine on macs.
 This is a test to further investigate the issue.
 python -c "import cv2; help(cv2.warpAffine)"
 '''
-from __future__ import division, print_function
+
 #import matplotlib
 #matplotlib.use('Qt4Agg')
 import os
@@ -13,7 +13,7 @@ from PIL import Image
 import numpy as np
 import multiprocessing
 import cv2
-from itertools import izip
+
 sys.path.append(join(expanduser('~'), 'code'))
 from hotspotter import helpers
 #from hotspotter import chip_compute2 as cc2
@@ -67,7 +67,7 @@ img_path = gfpath
 # parallel tasks
 nTasks = 20
 gfpath_list = [gfpath] * nTasks
-cfpath_list = [cfpath+str(ix)+'.png' for ix in xrange(nTasks)]
+cfpath_list = [cfpath+str(ix)+'.png' for ix in range(nTasks)]
 roi_list = [roi] * nTasks
 theta_list = [theta] * nTasks
 chipsz_list = [new_size] * nTasks
@@ -127,7 +127,7 @@ def _compute_in_parallel2(task_list, num_procs, task_lbl='', verbose=True):
         task_queue.put(task)
     # start processes
     proc_list = []
-    for i in xrange(num_procs):
+    for i in range(num_procs):
         printDBG('[parallel] creating process %r' % (i,))
         proc = multiprocessing.Process(target=_worker2, args=(task_queue, done_queue))
         proc.start()
@@ -138,18 +138,18 @@ def _compute_in_parallel2(task_list, num_procs, task_lbl='', verbose=True):
     result_list = []
     if verbose:
         mark_progress = helpers.progress_func(nTasks, lbl=task_lbl)
-        for count in xrange(len(task_list)):
+        for count in range(len(task_list)):
             #printDBG('[parallel] done_queue.get()')
             mark_progress(count)
             result_list.append(done_queue.get())
         print('')
     else:
-        for i in xrange(nTasks):
+        for i in range(nTasks):
             done_queue.get()
         print('[parallel]  ... done')
     printDBG('[parallel] stopping children')
     # stop children processes
-    for i in xrange(num_procs):
+    for i in range(num_procs):
         task_queue.put('STOP')
     return result_list
 
@@ -172,7 +172,7 @@ def extract_chip2(img_path, roi, theta, new_size):
     return chip
 
 def parallel_compute2(func, arg_list, num_procs):
-    task_list = [(func, _args) for _args in izip(*arg_list)]
+    task_list = [(func, _args) for _args in zip(*arg_list)]
     for task in task_list:
         print(task)
 

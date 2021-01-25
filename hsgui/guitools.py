@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[guitools]')
@@ -9,8 +9,21 @@ import sys
 # Science
 import numpy as np
 # Qt
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import Qt
+if 0:
+    from PyQt4 import QtCore, QtGui
+    from PyQt4.QtCore import Qt
+    from PyQt5.QtGui import QApplication
+    QtWidgets = QtGui
+else:
+    from matplotlib.backends import backend_qt5 as backend_qt
+    from PyQt5 import QtCore
+    from PyQt5 import QtGui
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
+    from PyQt5.QtWidgets import *
+    from PyQt5.QtWidgets import QApplication
+    from PyQt5 import QtWidgets
+
 # HotSpotter
 from hscom import fileio as io
 from hscom import helpers
@@ -66,15 +79,15 @@ def slot_(*types, **kwargs_):  # This is called at wrap time to get args
 
     # Wrap with debug statments
     def pyqtSlotWrapper(func):
-        func_name = func.func_name
+        func_name = func.__name__
         if initdbg:
-            print('[@guitools] Wrapping %r with slot_' % func.func_name)
+            print('[@guitools] Wrapping %r with slot_' % func.__name__)
 
         if rundbg:
-            @QtCore.pyqtSlot(*types, name=func.func_name)
+            @QtCore.pyqtSlot(*types, name=func.__name__)
             def slot_wrapper(self, *args, **kwargs):
-                argstr_list = map(str, args)
-                kwastr_list = ['%s=%s' % item for item in kwargs.iteritems()]
+                argstr_list = list(map(str, args))
+                kwastr_list = ['%s=%s' % item for item in kwargs.items()]
                 argstr = ', '.join(argstr_list + kwastr_list)
                 print('[**slot_.Begining] %s(%s)' % (func_name, argstr))
                 #with helpers.Indenter():
@@ -82,12 +95,12 @@ def slot_(*types, **kwargs_):  # This is called at wrap time to get args
                 print('[**slot_.Finished] %s(%s)' % (func_name, argstr))
                 return result
         else:
-            @QtCore.pyqtSlot(*types, name=func.func_name)
+            @QtCore.pyqtSlot(*types, name=func.__name__)
             def slot_wrapper(self, *args, **kwargs):
                 result = func(self, *args, **kwargs)
                 return result
 
-        slot_wrapper.func_name = func_name
+        slot_wrapper.__name__ = func_name
         return slot_wrapper
     return pyqtSlotWrapper
 
@@ -109,7 +122,7 @@ def backblocking(func):
             result = func(back, *args, **kwargs)
         except Exception as ex:
             back.front.blockSignals(wasBlocked_)
-            print('Block wrapper caugt exception in %r' % func.func_name)
+            print('Block wrapper caugt exception in %r' % func.__name__)
             print('back = %r' % back)
             VERBOSE = False
             if VERBOSE:
@@ -124,7 +137,7 @@ def backblocking(func):
         back.front.blockSignals(wasBlocked_)
         #print('[guitools] UNBLOCKING')
         return result
-    block_wrapper.func_name = func.func_name
+    block_wrapper.__name__ = func.__name__
     return block_wrapper
 
 
@@ -140,7 +153,7 @@ def frontblocking(func):
             result = func(front, *args, **kwargs)
         except Exception as ex:
             front.blockSignals(wasBlocked_)
-            print('Block wrapper caught exception in %r' % func.func_name)
+            print('Block wrapper caught exception in %r' % func.__name__)
             print('front = %r' % front)
             VERBOSE = False
             if VERBOSE:
@@ -152,7 +165,7 @@ def frontblocking(func):
         front.blockSignals(wasBlocked_)
         #print('[guitools] UNBLOCKING')
         return result
-    block_wrapper.func_name = func.func_name
+    block_wrapper.__name__ = func.__name__
     return block_wrapper
 
 
@@ -168,7 +181,7 @@ def drawing(func):
         if kwargs.get('dodraw', True) or DISABLE_NODRAW:
             df2.draw()
         return result
-    drawing_wrapper.func_name = func.func_name
+    drawing_wrapper.__name__ = func.__name__
     return drawing_wrapper
 
 
@@ -215,7 +228,7 @@ def select_roi():
         xM = max(x1, x2)
         ym = min(y1, y2)
         yM = max(y1, y2)
-        xywh = map(int, map(round, (xm, ym, xM - xm, yM - ym)))
+        xywh = list(map(int, list(map(round, (xm, ym, xM - xm, yM - ym)))))
         roi = np.array(xywh, dtype=np.int32)
         # Reconnect the old button press events
         df2.connect_callback(fig, 'button_press_event', oldcbfn)
@@ -227,25 +240,25 @@ def select_roi():
 
 
 def _addOptions(msgBox, options):
-    #msgBox.addButton(QtGui.QMessageBox.Close)
+    #msgBox.addButton(QtWidgets.QMessageBox.Close)
     for opt in options:
-        role = QtGui.QMessageBox.ApplyRole
-        msgBox.addButton(QtGui.QPushButton(opt), role)
+        role = QtWidgets.QMessageBox.ApplyRole
+        msgBox.addButton(QtWidgets.QPushButton(opt), role)
 
 
 def _cacheReply(msgBox):
-    dontPrompt = QtGui.QCheckBox('dont ask me again', parent=msgBox)
+    dontPrompt = QtWidgets.QCheckBox('dont ask me again', parent=msgBox)
     dontPrompt.blockSignals(True)
-    msgBox.addButton(dontPrompt, QtGui.QMessageBox.ActionRole)
+    msgBox.addButton(dontPrompt, QtWidgets.QMessageBox.ActionRole)
     return dontPrompt
 
 
 def _newMsgBox(msg='', title='', parent=None, options=None, cache_reply=False):
-    msgBox = QtGui.QMessageBox(parent)
+    msgBox = QtWidgets.QMessageBox(parent)
     #msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-    #std_buts = QtGui.QMessageBox.Close
-    #std_buts = QtGui.QMessageBox.NoButton
-    std_buts = QtGui.QMessageBox.Cancel
+    #std_buts = QtWidgets.QMessageBox.Close
+    #std_buts = QtWidgets.QMessageBox.NoButton
+    std_buts = QtWidgets.QMessageBox.Cancel
     msgBox.setStandardButtons(std_buts)
     msgBox.setWindowTitle(title)
     msgBox.setText(msg)
@@ -255,10 +268,10 @@ def _newMsgBox(msg='', title='', parent=None, options=None, cache_reply=False):
 
 @profile
 def msgbox(msg, title='msgbox'):
-    'Make a non modal critical QtGui.QMessageBox.'
-    msgBox = QtGui.QMessageBox(None)
+    'Make a non modal critical QtWidgets.QMessageBox.'
+    msgBox = QtWidgets.QMessageBox(None)
     msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-    msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
+    msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok)
     msgBox.setWindowTitle(title)
     msgBox.setText(msg)
     msgBox.setModal(False)
@@ -268,7 +281,7 @@ def msgbox(msg, title='msgbox'):
 
 
 def user_input(parent, msg, title='input dialog'):
-    reply, ok = QtGui.QInputDialog.getText(parent, title, msg)
+    reply, ok = QtWidgets.QInputDialog.getText(parent, title, msg)
     if not ok:
         return None
     return str(reply)
@@ -277,7 +290,7 @@ def user_input(parent, msg, title='input dialog'):
 def user_info(parent, msg, title='info'):
     msgBox = _newMsgBox(msg, title, parent)
     msgBox.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-    msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
+    msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok)
     msgBox.setModal(False)
     msgBox.open(msgBox.close)
     msgBox.show()
@@ -301,7 +314,7 @@ def _user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=
         dontPrompt = _cacheReply(msgBox)
     # Wait for output
     optx = msgBox.exec_()
-    if optx == QtGui.QMessageBox.Cancel:
+    if optx == QtWidgets.QMessageBox.Cancel:
         return None
     try:
         reply = options[optx]
@@ -319,7 +332,7 @@ def _user_option(parent, msg, title='options', options=['No', 'Yes'], use_cache=
 
 
 def user_question(msg):
-    msgBox = QtGui.QMessageBox.question(None, '', 'lovely day?')
+    msgBox = QtWidgets.QMessageBox.question(None, '', 'lovely day?')
     return msgBox
 
 
@@ -332,7 +345,9 @@ def getQtImageNameFilter():
 @profile
 def select_images(caption='Select images:', directory=None):
     name_filter = getQtImageNameFilter()
-    return select_files(caption, directory, name_filter)
+    selected = select_files(caption, directory, name_filter)
+    print('selected = {!r}'.format(selected))
+    return selected
 
 
 @profile
@@ -341,9 +356,10 @@ def select_files(caption='Select Files:', directory=None, name_filter=None):
     print(caption)
     if directory is None:
         directory = io.global_cache_read('select_directory')
-    qdlg = QtGui.QFileDialog()
+    qdlg = QtWidgets.QFileDialog()
     qfile_list = qdlg.getOpenFileNames(caption=caption, directory=directory, filter=name_filter)
-    file_list = map(str, qfile_list)
+    print('qfile_list = {!r}'.format(qfile_list))
+    file_list = list(map(str, qfile_list))
     print('Selected %d files' % len(file_list))
     io.global_cache_write('select_directory', directory)
     return file_list
@@ -354,8 +370,8 @@ def select_directory(caption='Select Directory', directory=None):
     print(caption)
     if directory is None:
         directory = io.global_cache_read('select_directory')
-    qdlg = QtGui.QFileDialog()
-    qopt = QtGui.QFileDialog.ShowDirsOnly
+    qdlg = QtWidgets.QFileDialog()
+    qopt = QtWidgets.QFileDialog.ShowDirsOnly
     qdlg_kwargs = dict(caption=caption, options=qopt, directory=directory)
     dpath = str(qdlg.getExistingDirectory(**qdlg_kwargs))
     print('Selected Directory: %r' % dpath)
@@ -366,14 +382,14 @@ def select_directory(caption='Select Directory', directory=None):
 @profile
 def show_open_db_dlg(parent=None):
     # OLD
-    from _frontend import OpenDatabaseDialog
+    from ._frontend import OpenDatabaseDialog
     if not '-nc' in sys.argv and not '--nocache' in sys.argv:
         db_dir = io.global_cache_read('db_dir')
         if db_dir == '.':
             db_dir = None
     print('[*guitools] cached db_dir=%r' % db_dir)
     if parent is None:
-        parent = QtGui.QDialog()
+        parent = QtWidgets.QDialog()
     opendb_ui = OpenDatabaseDialog.Ui_Dialog()
     opendb_ui.setupUi(parent)
     #opendb_ui.new_db_but.clicked.connect(create_new_database)
@@ -394,7 +410,7 @@ def init_qtapp():
     is_root = app is None
     if is_root:  # if not in qtconsole
         print('[*guitools] Initializing QApplication')
-        app = QtGui.QApplication(sys.argv)
+        app = QApplication(sys.argv)
         QAPP = app
     try:
         __IPYTHON__
@@ -410,7 +426,7 @@ def init_qtapp():
 @profile
 def exit_application():
     print('[*guitools] exiting application')
-    QtGui.qApp.quit()
+    QtWidgets.qApp.quit()
 
 
 @util.indent_decor('[qt-main]')
@@ -463,7 +479,7 @@ def make_dummy_main_window():
     class DummyBackend(QtCore.QObject):
         def __init__(self):
             super(DummyBackend,  self).__init__()
-            self.front = QtGui.QMainWindow()
+            self.front = QtWidgets.QMainWindow()
             self.front.setWindowTitle('Dummy Main Window')
             self.front.show()
     back = DummyBackend()
@@ -488,10 +504,10 @@ def enfore_scope(qobj, scoped_obj, scope_title='_scope_list'):
 def popup_menu(widget, opt2_callback, parent=None):
     def popup_slot(pos):
         print(pos)
-        menu = QtGui.QMenu()
+        menu = QtWidgets.QMenu()
         actions = [menu.addAction(opt, func) for opt, func in
                    iter(opt2_callback)]
-        #pos=QtGui.QCursor.pos()
+        #pos=QtWidgets.QCursor.pos()
         selection = menu.exec_(widget.mapToGlobal(pos))
         return selection, actions
     if parent is not None:

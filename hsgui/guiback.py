@@ -1,19 +1,28 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[back]')
 # Python
 from os.path import split, exists, join
 # Qt
-from PyQt4 import QtCore
-from PyQt4.Qt import pyqtSignal
+if 0:
+    from matplotlib.backends import backend_qt4 as backend_qt
+    from PyQt4 import QtCore, QtGui
+    from PyQt4.QtCore import Qt
+else:
+    from matplotlib.backends import backend_qt5 as backend_qt
+    from PyQt5 import QtCore
+    from PyQt5 import QtGui
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
+    from PyQt5.QtWidgets import *
 # Science
 import numpy as np
 # Hotspotter
-import guifront
-import guitools
-from guitools import drawing, slot_
-from guitools import backblocking as blocking
+from . import guifront
+from . import guitools
+from .guitools import drawing, slot_
+from .guitools import backblocking as blocking
 from hscom import helpers as util
 from hscom import fileio as io
 from hscom import params
@@ -36,7 +45,7 @@ def select_next_unannotated(back):
     if selection_exists or back.selection['type_'] == 'gx':
         valid_gxs = back.hs.get_valid_gxs()
         has_chips = lambda gx: len(back.hs.gx2_cxs(gx)) > 0
-        hascxs_list = map(has_chips, iter(valid_gxs))
+        hascxs_list = list(map(has_chips, iter(valid_gxs)))
         try:
             gx = valid_gxs[hascxs_list.index(False)]
             back.select_gx(gx)
@@ -49,7 +58,7 @@ def select_next_unannotated(back):
     if selection_exists or (was_err and cx_is_selected):
         valid_cxs = back.hs.get_valid_cxs()
         has_name = lambda cx: back.hs.cx2_name(cx) != '____'
-        is_named = map(has_name, iter(valid_cxs))
+        is_named = list(map(has_name, iter(valid_cxs)))
         try:
             cx = valid_cxs[is_named.index(False)]
             cid = back.hs.tables.cx2_cid[cx]
@@ -124,14 +133,19 @@ def _user_select_new_dbdir(back):
         msg_put = 'Where should I put %r?' % new_db
         opt_put = ['Choose Directory', 'My Work Dir']
         reply = back.user_option(msg_put, 'options', opt_put, True)
+        print('reply = {!r}'.format(reply))
         if reply == opt_put[1]:
             put_dir = back.get_work_directory()
+            print('put_dir = {!r}'.format(put_dir))
         elif reply == opt_put[0]:
             put_dir = guitools.select_directory(
                 'Select where to put the new database')
+            print('put_dir = {!r}'.format(put_dir))
         else:
             raise StopIteration('Canceled')
+
         new_dbdir = join(put_dir, new_db)
+
         if not exists(put_dir):
             raise ValueError('Directory %r does not exist.' % put_dir)
         elif exists(new_dbdir):
@@ -185,7 +199,7 @@ class MainWindowBackend(QtCore.QObject):
             'score':      'Confidence',
             'match_name': 'Matching Name',
         }
-        back.reverse_fancy = {v: k for (k, v) in back.fancy_headers.items()}
+        back.reverse_fancy = {v: k for (k, v) in list(back.fancy_headers.items())}
 
         # A list of default internal headers to display
         back.table_headers = {
@@ -365,7 +379,7 @@ class MainWindowBackend(QtCore.QObject):
         headers = back.table_headers[tblname]
         editable = back.table_editable[tblname]
         if tblname == 'cxs':  # in ['cxs', 'res']: TODO props in restable
-            prop_keys = back.hs.tables.prop_dict.keys()
+            prop_keys = list(back.hs.tables.prop_dict.keys())
         else:
             prop_keys = []
         col_headers, col_editable = guitools.make_header_lists(headers,
@@ -380,7 +394,7 @@ class MainWindowBackend(QtCore.QObject):
         body_datatup = back.hs.get_datatup_list(tblname, index_list,
                                                 col_headers, extra_cols)
         datatup_list = prefix_datatup + body_datatup
-        row_list = range(len(datatup_list))
+        row_list = list(range(len(datatup_list)))
         # Populate with fancy headers.
         col_fancyheaders = [back.fancy_headers[key]
                             if key in back.fancy_headers else key
@@ -561,7 +575,7 @@ class MainWindowBackend(QtCore.QObject):
         # arugment as well. (Guifront tries to automatically interpret the
         # variable type by its value and it will get stuck on things like
         # 'True'. Is that a string or a bool? I don't know. We should tell it.)
-        key, val = map(str, (key, val))
+        key, val = list(map(str, (key, val)))
         print('[*back] change_chip_property(%r, %r, %r)' % (cid, key, val))
         cx = back.hs.cid2_cx(cid)
         if key in ['name', 'matching_name']:
@@ -575,7 +589,7 @@ class MainWindowBackend(QtCore.QObject):
     @blocking
     @profile
     def alias_name(back, nx, key, val):
-        key, val = map(str, (key, val))
+        key, val = list(map(str, (key, val)))
         print('[*back] alias_name(%r, %r, %r)' % (nx, key, val))
         if key in ['name']:
             # TODO: Add option to change name if alias fails
@@ -641,6 +655,7 @@ class MainWindowBackend(QtCore.QObject):
             print(ex)
             if '--strict' in sys.argv:
                 raise
+            raise
         print('')
         return hs
 

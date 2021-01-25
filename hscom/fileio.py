@@ -1,12 +1,12 @@
-from __future__ import division, print_function
-import __common__
+
+from . import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[io]')
 # Python
 import os
 import fnmatch
 import pickle
-import cPickle
+import pickle
 from os.path import normpath, exists, realpath, join, expanduser, dirname
 import datetime
 import time
@@ -17,7 +17,7 @@ import cv2
 from PIL import Image
 from PIL.ExifTags import TAGS
 # Hotspotter
-import helpers
+from . import helpers
 
 VERBOSE_IO = 0  # 2
 
@@ -40,7 +40,7 @@ def save_npz(fpath, data):
 
 def save_cPkl(fpath, data):
     with open(fpath, 'wb') as file:
-        cPickle.dump(data, file, cPickle.HIGHEST_PROTOCOL)
+        pickle.dump(data, file, pickle.HIGHEST_PROTOCOL)
 
 
 def save_pkl(fpath, data):
@@ -73,7 +73,7 @@ def load_npy(fpath):
 
 def load_cPkl(fpath):
     with open(fpath, 'rb') as file:
-        data = cPickle.load(file)
+        data = pickle.load(file)
     return data
 
 
@@ -290,7 +290,7 @@ def exiftime_to_unixtime(datetime_str):
             #return -1
         return -1
     except ValueError as ex:
-        if isinstance(datetime_str, str) or isinstance(datetime_str, unicode):
+        if isinstance(datetime_str, str) or isinstance(datetime_str, str):
             if datetime_str.find('No EXIF Data') == 0:
                 return -1
             if datetime_str.find('Invalid') == 0:
@@ -309,7 +309,7 @@ def check_exif_keys(pil_image):
     info_ = pil_image._getexif()
     valid_keys = []
     invalid_keys = []
-    for key, val in info_.iteritems():
+    for key, val in info_.items():
         try:
             exif_keyval = TAGS[key]
             valid_keys.append((key, exif_keyval))
@@ -324,7 +324,7 @@ def check_exif_keys(pil_image):
 @profile
 def read_all_exif_tags(pil_image):
     info_ = pil_image._getexif()
-    info_iter = info_.iteritems()
+    info_iter = iter(info_.items())
     tag_ = lambda key: TAGS.get(key, key)
     exif = {} if info_ is None else {tag_(k): v for k, v in info_iter}
     return exif
@@ -333,7 +333,7 @@ def read_all_exif_tags(pil_image):
 @profile
 def read_one_exif_tag(pil_image, tag):
     try:
-        exif_key = TAGS.keys()[TAGS.values().index(tag)]
+        exif_key = list(TAGS.keys())[list(TAGS.values()).index(tag)]
     except ValueError:
         return 'Invalid EXIF Tag'
     info_ = pil_image._getexif()
@@ -359,7 +359,7 @@ def read_exif(fpath, tag=None):
         if not hasattr(pil_image, '_getexif'):
             return 'No EXIF Data'
     except IOError as ex:
-        import argparse2
+        from . import argparse2
         print('Caught IOError: %r' % (ex,))
         print_image_checks(fpath)
         if argparse2.ARGS_.strict:
@@ -441,7 +441,7 @@ def detect_duplicate_images(imgpath_list):
 
     if '--strict' in sys.argv:
         # Be very safe: Check for collisions
-        for hashstr, gpath_list in duplicates.iteritems():
+        for hashstr, gpath_list in duplicates.items():
             img1 = imread(gpath_list[0])
             for gpath in gpath_list:
                 img2 = imread(gpath)

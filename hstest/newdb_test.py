@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # TODO: ADD COPYRIGHT TAG
-from __future__ import print_function, division
+
 from hscom import helpers as util
 from hsdev import test_api
 from hsgui import guitools

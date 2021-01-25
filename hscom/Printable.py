@@ -1,5 +1,5 @@
-from __future__ import division, print_function
-import __common__
+
+from . import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[Printable]')
 # Standard
@@ -52,7 +52,7 @@ class AbstractPrintable(object):
         body = ''
         attri_list = []
         exclude_key_list = list(self._printable_exclude) + list(print_exclude_aug)
-        for (key, val) in self.__dict__.iteritems():
+        for (key, val) in self.__dict__.items():
             try:
                 if key in exclude_key_list:
                     continue
@@ -132,7 +132,7 @@ def printableVal(val, type_bit=True, justlength=False):
         _valstr = val.get_printable(type_bit=type_bit)
     elif isinstance(val, dict):
         _valstr = '{\n'
-        for val_key in val.keys():
+        for val_key in list(val.keys()):
             val_val = val[val_key]
             _valstr += '  ' + str(val_key) + ' : ' + str(val_val) + '\n'
         _valstr += '}'
@@ -183,7 +183,7 @@ class DynStruct(AbstractPrintable):
 
     def update(self, **kwargs):
         self_keys = set(self.__dict__.keys())
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             if key in self_keys:
                 if isinstance(val, list):
                     val = val[0]
@@ -194,19 +194,19 @@ class DynStruct(AbstractPrintable):
         if not isinstance(dyn_dict, dict):
             raise Exception('DynStruct.add_dict expects a dictionary.' +
                             'Recieved: ' + str(type(dyn_dict)))
-        for (key, val) in dyn_dict.iteritems():
+        for (key, val) in dyn_dict.items():
             self[key] = val
 
     def to_dict(self):
         '''Converts dynstruct to a dictionary.  '''
         dyn_dict = {}
-        for (key, val) in self.__dict__.iteritems():
+        for (key, val) in self.__dict__.items():
             if not key in self._printable_exclude:
                 dyn_dict[key] = val
         return dyn_dict
 
     def flat_dict(self, dyn_dict={}, only_public=True):
-        for (key, val) in self.__dict__.iteritems():
+        for (key, val) in self.__dict__.items():
             if key in self._printable_exclude:
                 continue
             elif only_public and key.find('_') == 0:
@@ -230,7 +230,7 @@ class DynStruct(AbstractPrintable):
            * use locals().update(dyn.to_dict()) instead
         '''
         execstr = ''
-        for (key, val) in self.__dict__.iteritems():
+        for (key, val) in self.__dict__.items():
             if not key in self._printable_exclude:
                 execstr += key + ' = ' + local_name + '.' + key + '\n'
         return execstr

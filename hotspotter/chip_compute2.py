@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_,
  print_on, print_off,
@@ -11,7 +11,7 @@ import numpy as np
 import cv2
 from PIL import Image
 # Hotspotter
-import algos
+from . import algos
 from hscom import helpers as util
 from hscom import fileio as io
 from hscom import params
@@ -219,7 +219,7 @@ def histeq_fn(chapBGR):
 
 
 def grabcut_fn(chipBGR):
-    import segmentation
+    from . import segmentation
     chipRGB = cv2.cvtColor(chipBGR, cv2.COLOR_BGR2RGB)
     chipRGB = segmentation.grabcut(chipRGB)
     chapBGR = cv2.cvtColor(chipRGB, cv2.COLOR_RGB2BGR)
@@ -278,7 +278,7 @@ def region_norm_fn(chip):
     y1 = chiph / 2 - half_h
     x2 = chipw / 2 + half_w
     y2 = chiph / 2 + half_h
-    (x1, y1, x2, y2) = map(int, map(round, (x1, y1, x2, y2)))
+    (x1, y1, x2, y2) = list(map(int, list(map(round, (x1, y1, x2, y2)))))
     area = chip_[x1:x2, y1:y2]
     intensity = area.flatten()
     freq, _  = np.histogram(intensity, 32)
@@ -336,7 +336,7 @@ def batch_extract_chips(gfpath_list, cfpath_list, roi_list, theta_list,
     cfpath_fmt - a string with a %d embedded where the cid will go.
     '''
     try:
-        list_size_list = map(len, (gfpath_list, cfpath_list, roi_list, theta_list))
+        list_size_list = list(map(len, (gfpath_list, cfpath_list, roi_list, theta_list)))
         assert all([list_size_list[0] == list_size for list_size in list_size_list])
     except AssertionError as ex:
         print(ex)

@@ -7,4 +7,4 @@ Downloaded compute_descriptors from:
 Downloaded hesaff from:
     https://github.com/perdoch/hesaff
 '''
-from __future__ import division, print_function
+

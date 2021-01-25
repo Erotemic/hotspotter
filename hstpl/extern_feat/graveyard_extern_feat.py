@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 import subprocess
 import numpy as np
 import os, sys
@@ -29,7 +29,7 @@ INRIA_EXE  = join(EXE_PATH, 'compute_descriptors'+EXE_EXT)
 # Create directory for temporary files (if needed)
 TMP_DIR = os.path.join(EXE_PATH, '.tmp_external_features') 
 if not os.path.exists(TMP_DIR):
-    print('Making directory: '+TMP_DIR)
+    print(('Making directory: '+TMP_DIR))
     os.mkdir(TMP_DIR)
 #---------------------------------------
 # Defined temp compute functions
@@ -161,7 +161,7 @@ def convert_invE_to_abcd(invET):
 
     # Decompose using singular value decomposition
     USV_list = [svd(invE) for invE in invE_list]
-    U_list, S_list, V_list = zip(*USV_list)
+    U_list, S_list, V_list = list(zip(*USV_list))
     # Deintegrate the scale
     sc_list = [1.0 / (sqrt(sqrt(S[0] * S[1]))) for S in S_list]
     sigma_list = [sc / DESC_FACTOR for sc in sc_list]
@@ -230,7 +230,7 @@ def test_inria_feats():
     for detect_type in detect_type_list:
         for extract_type in extract_type_list:
             cmd = inria_cmd(rchip_fpath, detect_type, extract_type)
-            print('Execute: '+cmd)
+            print(('Execute: '+cmd))
             __execute_extern(cmd+' -DP')
 
 def test_deintegrate_scale(invET):
@@ -307,7 +307,7 @@ def test_deintegrate_scale(invET):
         a21 = (d*b + c*a)/(b2a2*det_2)
         a22 = det_2/b2a2
         Aup = np.array(((a11, a12), (a21, a22)))
-        print(Aup.dot(Aup.T))
+        print((Aup.dot(Aup.T)))
         U,S,Vt = np.linalg.svd(Aup)
         E4 = U.dot(diag(det_2**2 * S**2)).dot(U.T)
         print(E4)
@@ -400,12 +400,12 @@ def test_deintegrate_scale(invET):
         #print(hstr([U,S,V]))
         # Try and conform to opencv
         Sm = diag(S)
-        print('---- SVD of '+name+' ----')
-        print(name+' =\n%s' % M)
+        print(('---- SVD of '+name+' ----'))
+        print((name+' =\n%s' % M))
         print('= U * S * V =')
-        print(hstr([U, ' * ', Sm, ' * ', V]))
+        print((hstr([U, ' * ', Sm, ' * ', V])))
         print('=')
-        print(U.dot(Sm).dot(V))
+        print((U.dot(Sm).dot(V)))
         print('--')
         # SVD is not rotation, scale rotation...
         # That is only for a shear matrix
@@ -422,8 +422,8 @@ def test_deintegrate_scale(invET):
         print([thetaV11,thetaV12,thetaV21,thetaV22])
         thetaU = thetaU11*360/(2*np.pi)
         thetaV = thetaV11*360/(2*np.pi)
-        print('theta_U = %r' % thetaU)
-        print('theta_V = %r' % thetaV)
+        print(('theta_U = %r' % thetaU))
+        print(('theta_V = %r' % thetaV))
         print('---------------------\n')
         return U, S, V, Sm
     U, S, V, Sm = print_2x2_svd(invE, 'invE')
@@ -433,11 +433,11 @@ def test_deintegrate_scale(invET):
         sigma = sc / DESC_FACTOR
         print('---- Scale Extraction ---')
         print('sc = 1.0 / (sqrt(sqrt(S[0] * S[1])))')
-        print('sc = 1.0 / (sqrt(sqrt(%f * %f])))' % (S[0], S[1]))
-        print('sc = %.3f' % sc)
-        print('sigma = %.3f / DESC_FACTOR' % sc)
-        print('sigma = %.3f / %.3f' % (sc, DESC_FACTOR))
-        print('sigma = %.3f' % (sigma))
+        print(('sc = 1.0 / (sqrt(sqrt(%f * %f])))' % (S[0], S[1])))
+        print(('sc = %.3f' % sc))
+        print(('sigma = %.3f / DESC_FACTOR' % sc))
+        print(('sigma = %.3f / %.3f' % (sc, DESC_FACTOR)))
+        print(('sigma = %.3f' % (sigma)))
         print('---------------------\n')
         return sc, sigma
     sc, sigma = print_extract_scale(S)
@@ -447,24 +447,24 @@ def test_deintegrate_scale(invET):
         Sm_unit = diag(sqrt(S[::-1])*sc)
         M_unit = (U.dot(Sm_unit).dot(V)).flatten().reshape(2,2)
         print('---- Reconstruct Unit A ---')
-        print('sc = %.3f' % sc)
-        print(name+'_unit = U * sqrt(S[::-1])*sc * V')
+        print(('sc = %.3f' % sc))
+        print((name+'_unit = U * sqrt(S[::-1])*sc * V'))
         print('=')
-        print(hstr([U, ' * ', flip_Sm, '*' , ('%.3f' % sc), ' * ', V]))
+        print((hstr([U, ' * ', flip_Sm, '*' , ('%.3f' % sc), ' * ', V])))
         print('=')
-        print(hstr([U, ' * ', Sm_unit, ' * ', V]))
+        print((hstr([U, ' * ', Sm_unit, ' * ', V])))
         print('=')
         print(M_unit)
         print('--')
-        print('sqrt(det('+name+'_unit)) = %.3f' % sqrt(det(M_unit)))
+        print(('sqrt(det('+name+'_unit)) = %.3f' % sqrt(det(M_unit))))
         print('---------------------\n')
         return M_unit
     A_unit = print_reconstruct_unit(U, S, V, sc, name='A')
 
     def print_rectify_up(M, name=''):
-        print('---- Recify '+name+' up is up ---')
+        print(('---- Recify '+name+' up is up ---'))
         (a, b, c, d) = M.flatten()
-        print(name+' =\n%s' % M)
+        print((name+' =\n%s' % M))
         det_ = sqrt(abs(a*d - b*c))
         b2a2 = sqrt(b*b + a*a)
         a11 = b2a2 / det_
@@ -473,20 +473,20 @@ def test_deintegrate_scale(invET):
         a22 = det_/b2a2
         M_up = np.array(((a11, a12), (a21, a22)))
         print('det = sqrt(abs(a*d - b*c))')
-        print('det = sqrt(abs(%.3f*%.3f - %.3f*%.3f))' % (a, b, c, d))
-        print('det = %.3f' % det_)
+        print(('det = sqrt(abs(%.3f*%.3f - %.3f*%.3f))' % (a, b, c, d)))
+        print(('det = %.3f' % det_))
         print('--')
         print('b2a2 = sqrt(b*b + a*a)')
-        print('b2a2 = sqrt(%.3f*%.3f + %.3f*%.3f)' % (b, b, a, a))
-        print('b2a2 = %.3f' % b2a2)
+        print(('b2a2 = sqrt(%.3f*%.3f + %.3f*%.3f)' % (b, b, a, a)))
+        print(('b2a2 = %.3f' % b2a2))
         print('--')
-        print('A ='+textwrap.dedent('''
+        print(('A ='+textwrap.dedent('''
         [[             b2a2/det, 0       ],
-        [(d*b + c*a)/(b2a2*det), det/b2a2]]'''))
-        print('= '+name+'_up = ')
+        [(d*b + c*a)/(b2a2*det), det/b2a2]]''')))
+        print(('= '+name+'_up = '))
         print(M_up)
         print('--')
-        print('det('+name+'_up) = %.3f' % det(M_up))
+        print(('det('+name+'_up) = %.3f' % det(M_up)))
         print('---------------------\n')
         return M_up
     A_up = print_rectify_up(A_unit, 'A')
@@ -497,11 +497,11 @@ def test_deintegrate_scale(invET):
         #S, U, V = cv2.SVDecomp(M)
         #S = S.flatten()
         scaled_Sm = diag(S) / sc
-        print('---- Integrate scale into '+name+' ----')
-        print('sc = %.3f' % sc)
-        print(name+' =\n%s' % M)
-        print(name+'\' = U * (S/sc) * V =')
-        print(hstr([U, ' * ', scaled_Sm, ' * ', V]))
+        print(('---- Integrate scale into '+name+' ----'))
+        print(('sc = %.3f' % sc))
+        print((name+' =\n%s' % M))
+        print((name+'\' = U * (S/sc) * V ='))
+        print((hstr([U, ' * ', scaled_Sm, ' * ', V])))
         print('=')
         scaled_M = U.dot(scaled_Sm).dot(V)
         scaled_M = helpers.correct_zeros(scaled_M)
@@ -510,14 +510,14 @@ def test_deintegrate_scale(invET):
         return scaled_M
 
     scaled_M = print_integrate_scale(A, sc, 'A')
-    print(hstr(('A.T.dot(A) =', str(A.T.dot(A)))))
-    print(hstr(('A.dot(A.T) =', str(A.dot(A.T)))))
+    print((hstr(('A.T.dot(A) =', str(A.T.dot(A))))))
+    print((hstr(('A.dot(A.T) =', str(A.dot(A.T))))))
     print_2x2_svd(A, 'A')
 
-    print('A =\n%s' % (A,))
-    print('Sm =\n%s' % (Sm,))
-    print(Sm.dot(A))
-    print(A.dot(Sm))
+    print(('A =\n%s' % (A,)))
+    print(('Sm =\n%s' % (Sm,)))
+    print((Sm.dot(A)))
+    print((A.dot(Sm)))
 
     print('---- Check things ---')
     #AScaleUnit = A_up.dot(

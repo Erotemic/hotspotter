@@ -4,12 +4,14 @@ Interactive tool to draw mask on an image or image-like array.
 Adapted from matplotlib/examples/event_handling/poly_editor.py
 Jan 9 2014: taken from: https://gist.github.com/tonysyu/3090704
 """
-from __future__ import division, print_function
+
 import matplotlib
-matplotlib.use('Qt4Agg')
+if 0:
+    matplotlib.use('Qt4Agg')
+else:
+    matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
-from matplotlib.mlab import dist_point_to_segment
 #from matplotlib import nxutils  # Depricated
 
 # Scientific
@@ -66,7 +68,7 @@ class MaskCreator(object):
                      "Close figure when done.")
         self.ax = ax
 
-        x, y = zip(*self.poly.xy)
+        x, y = list(zip(*self.poly.xy))
         #line_color = 'none'
         color = np.array(line_color) * .6
         marker_face_color = line_color
@@ -143,6 +145,8 @@ class MaskCreator(object):
             for i in range(len(xys) - 1):
                 s0 = xys[i]
                 s1 = xys[i + 1]
+                # FIXME: not in python3
+                from matplotlib.mlab import dist_point_to_segment
                 d = dist_point_to_segment(p, s0, s1)
                 if d <= self.max_ds:
                     self.poly.xy = np.array(
@@ -177,7 +181,7 @@ class MaskCreator(object):
         # save verts because polygon gets deleted when figure is closed
         self.verts = self.poly.xy
         self.last_vert_ind = len(self.poly.xy) - 1
-        self.line.set_data(zip(*self.poly.xy))
+        self.line.set_data(list(zip(*self.poly.xy)))
 
     def get_ind_under_cursor(self, event):
         'get the index of the vertex under cursor if within max_ds tolerance'
@@ -228,12 +232,12 @@ def roi_to_mask(shape, roi):
 
 def mask_creator_demo(mode=0):
     print('*** START DEMO ***')
-    print('mode = %r' % mode)
+    print(('mode = %r' % mode))
     try:
         from hscom import fileio as io
         img = io.imread('/lena.png', 'RGB')
     except ImportError as ex:
-        print('cant read lena: %r' % ex)
+        print(('cant read lena: %r' % ex))
         img = np.random.uniform(0, 255, size=(100, 100))
 
     ax = plt.subplot(111)
@@ -268,7 +272,7 @@ def mask_creator_demo(mode=0):
 
 if __name__ == '__main__':
     import sys
-    print(sys.argv)
+    print((sys.argv))
     if len(sys.argv) == 1:
         mode = 0
     else:

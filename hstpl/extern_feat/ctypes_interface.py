@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 from os.path import join, exists, dirname, normpath
 import sys
 import ctypes as C
@@ -19,6 +19,8 @@ def get_lib_fname_list(libname):
     elif sys.platform == 'darwin':
         libnames = ['lib' + libname + '.dylib']
     elif sys.platform == 'linux2':
+        libnames = ['lib' + libname + '.so']
+    elif sys.platform == 'linux':
         libnames = ['lib' + libname + '.so']
     else:
         raise Exception('Unknown operating system: %s' % sys.platform)
@@ -48,8 +50,8 @@ def find_lib_fpath(libname, root_dir, recurse_down=True, verbose=False):
                 lib_fpath = normpath(join(lib_dpath, lib_fname))
                 if exists(lib_fpath):
                     if verbose:
-                        print('\n[c] Checked: '.join(tried_fpaths))
-                    print('using: %r' % lib_fpath)
+                        print(('\n[c] Checked: '.join(tried_fpaths)))
+                    print(('using: %r' % lib_fpath))
                     return lib_fpath
                 else:
                     # Remember which candiate library fpaths did not exist
@@ -67,7 +69,7 @@ def find_lib_fpath(libname, root_dir, recurse_down=True, verbose=False):
            (libname, root_dir, recurse_down, verbose) +
            '\n[c!] Cannot FIND dynamic library')
     print(msg)
-    print('\n[c!] Checked: '.join(tried_fpaths))
+    print(('\n[c!] Checked: '.join(tried_fpaths)))
     raise ImportError(msg)
 
 
@@ -92,7 +94,7 @@ def load_clib(libname, root_dir):
             cfunc.restype = return_type
             cfunc.argtypes = arg_type_list
     except Exception as ex:
-        print('[C!] Caught exception: %r' % ex)
-        print('[C!] load_clib(libname=%r root_dir=%r)' % (libname, root_dir))
+        print(('[C!] Caught exception: %r' % ex))
+        print(('[C!] load_clib(libname=%r root_dir=%r)' % (libname, root_dir)))
         raise ImportError('[C] Cannot LOAD dynamic library. Did you compile HESAFF?')
     return clib, def_cfunc

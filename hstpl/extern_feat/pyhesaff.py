@@ -1,9 +1,9 @@
-from __future__ import print_function, division
+
 # Standard
 #from itertools import izip
 #from ctypes.util import find_library
 from os.path import realpath, dirname
-import ctypes_interface
+from . import ctypes_interface
 import ctypes as C
 import collections
 # Scientific
@@ -77,7 +77,10 @@ def load_hesaff_clib():
     return hesaff_lib
 
 # Create a global interface to the hesaff lib
-hesaff_lib = load_hesaff_clib()
+if 0:
+    hesaff_lib = load_hesaff_clib()
+else:
+    hesaff_lib = None
 
 
 #============================
@@ -86,7 +89,7 @@ hesaff_lib = load_hesaff_clib()
 
 def _make_hesaff_cpp_params(**kwargs):
     hesaff_params = hesaff_param_dict.copy()
-    for key, val in kwargs.iteritems():
+    for key, val in kwargs.items():
         if key in hesaff_params:
             hesaff_params[key] = val
         else:
@@ -97,12 +100,17 @@ def new_hesaff(img_fpath, **kwargs):
     # Make detector and read image
     hesaff_params = hesaff_param_dict.copy()
     hesaff_params.update(kwargs)
-    hesaff_args = hesaff_params.values()
+    hesaff_args = list(hesaff_params.values())
     hesaff_ptr = hesaff_lib.new_hesaff_from_params(realpath(img_fpath), *hesaff_args)
     return hesaff_ptr
 
 
 def detect_kpts(img_fpath, use_adaptive_scale=False, **kwargs):
+    if hesaff_lib is None:
+        import pyhesaff
+        kpts, desc = pyhesaff.detect_feats_in_image(img_fpath, use_adaptive_scale=use_adaptive_scale)
+        return kpts, desc
+
     #print('Detecting Keypoints')
     hesaff_ptr = new_hesaff(img_fpath, **kwargs)
     # Return the number of keypoints detected
@@ -120,7 +128,7 @@ def detect_kpts(img_fpath, use_adaptive_scale=False, **kwargs):
 
 
 def adapt_scale(img_fpath, kpts):
-    import ellipse
+    from . import ellipse
     nScales = 16
     nSamples = 16
     low, high = -1, 2

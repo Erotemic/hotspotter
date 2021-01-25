@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[dev_consist]')
@@ -42,7 +42,7 @@ def detect_duplicate_images(hs):
     # Convert output paths to indexes
     nDuplicates = 0
     dup_gxs = []
-    for hashstr, gpath_list in duplicates.iteritems():
+    for hashstr, gpath_list in duplicates.items():
         if len(gpath_list) != 1:
             gname_list = [relpath(gpath, img_dir) for gpath in gpath_list]
             gx_list = np.array(hs.gname2_gx(gname_list))
@@ -56,7 +56,7 @@ def detect_duplicate_images(hs):
     remove_gxs = []
     for gx_list in dup_gxs:
         cxs_list = np.array(hs.gx2_cxs(gx_list))
-        nCxs_list = np.array(map(len, cxs_list))
+        nCxs_list = np.array(list(map(len, cxs_list)))
         nonzeros = nCxs_list != 0
         # Check to see if no image was populated
         populated_gxs = gx_list[nonzeros]
@@ -105,9 +105,9 @@ def check_qcx2_res(hs, qcx2_res):
     from collections import defaultdict
     if isinstance(qcx2_res, dict):
         print('[consist] qcx2_res is in dict format')
-        for qcx, res in qcx2_res.iteritems():
+        for qcx, res in qcx2_res.items():
             assert qcx == res.qcx
-        res_list = qcx2_res.values()
+        res_list = list(qcx2_res.values())
     elif isinstance(qcx2_res, list):
         print('[consist] qcx2_res is in list format')
         for qcx, res in enumerate(qcx2_res):
@@ -119,7 +119,7 @@ def check_qcx2_res(hs, qcx2_res):
         raise AssertionError(msg)
     print('[consist] structure is consistent')
 
-    nUniqueRes = len(np.unique(map(id, res_list)))
+    nUniqueRes = len(np.unique(list(map(id, res_list))))
     assert nUniqueRes == len(res_list)
     print('[consist] results are unique objects')
 
@@ -187,5 +187,5 @@ def dbg_qreq(qreq):
     print('ERROR in dbg_qreq()')
     print('[q1] len(qreq._dftup2_index)=%r' % len(qreq._dftup2_index))
     print('[q1] qreq_dftup2_index._dftup2_index=%r' % len(qreq._dftup2_index))
-    print('[q1] qreq._dftup2_index.keys()=%r' % qreq._dftup2_index.keys())
+    print('[q1] qreq._dftup2_index.keys()=%r' % list(qreq._dftup2_index.keys()))
     print('[q1] qreq._data_index=%r' % qreq._data_index)

@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 
 standard_imports = '''
 # Python
@@ -97,7 +97,7 @@ import hotspotter
 
 
 def tryprint_off(module):
-    for key, val in module.__dict__.iteritems():
+    for key, val in module.__dict__.items():
         if hasattr(val, 'print_off'):
             print(key)
             val.print_off()
@@ -105,7 +105,7 @@ def tryprint_off(module):
 
 def all_printoff():
     print('allprintoff()')
-    for key, val in globals().iteritems():
+    for key, val in globals().items():
         tryprint_off(val)
 
 

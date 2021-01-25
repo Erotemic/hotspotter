@@ -1,10 +1,10 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off, rrr,
  profile, printDBG) = __common__.init(__name__, '[dev_api]', DEBUG=False)
-import dev_stats
-import dev_consistency
-import dev_reload
+from . import dev_stats
+from . import dev_consistency
+from . import dev_reload
 from hscom.Printable import DynStruct
 from hscom import helpers as util
 

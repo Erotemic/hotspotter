@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[mc3]', DEBUG=False)
@@ -7,8 +7,8 @@ import numpy as np
 # HotSpotter
 from hscom import params
 from hscom import helpers as util
-import DataStructures as ds
-import matching_functions as mf
+from . import DataStructures as ds
+from . import matching_functions as mf
 
 
 @util.indent_decor('[quick_ensure]')
@@ -147,7 +147,7 @@ def execute_query_and_save_L1(hs, qreq, failed_qcxs=[]):
     if len(failed_qcxs) > 0:
         qreq._qcxs = failed_qcxs
     qcx2_res = execute_query_L0(hs, qreq)  # Execute Queries
-    for qcx, res in qcx2_res.iteritems():  # Cache Save
+    for qcx, res in qcx2_res.items():  # Cache Save
         res.save(hs)
     qreq._qcxs = orig_qcxs
     return qcx2_res

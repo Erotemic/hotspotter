@@ -1,18 +1,18 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 print, print_, print_on, print_off, rrr, profile, printDBG =\
     __common__.init(__name__, '[mf]', DEBUG=False)
 # Python
-from itertools import izip
+
 import sys
 # Scientific
 import numpy as np
 # Hotspotter
-import QueryResult as qr
-import coverage
-import nn_filters
-import spatial_verification2 as sv2
-import voting_rules2 as vr2
+from . import QueryResult as qr
+from . import coverage
+from . import nn_filters
+from . import spatial_verification2 as sv2
+from . import voting_rules2 as vr2
 from hscom import helpers as util
 
 
@@ -182,7 +182,7 @@ def filter_neighbors(hs, qcx2_nns, filt2_weights, qreq):
     dx2_cx = qreq._data_index.ax2_cx
     # Filter matches based on config and weights
     mark_progress, end_progress = progress_func(len(qcx2_nns))
-    for count, qcx in enumerate(qcx2_nns.iterkeys()):
+    for count, qcx in enumerate(qcx2_nns.keys()):
         mark_progress(count)
         (qfx2_dx, _) = qcx2_nns[qcx]
         qfx2_nn = qfx2_dx[:, 0:K]
@@ -230,7 +230,7 @@ def _apply_filter_scores(qcx, qfx2_nn, filt2_weights, filt_cfg):
     qfx2_score = np.ones(qfx2_nn.shape, dtype=qr.FS_DTYPE)
     qfx2_valid = np.ones(qfx2_nn.shape, dtype=np.bool)
     # Apply the filter weightings to determine feature validity and scores
-    for filt, cx2_weights in filt2_weights.iteritems():
+    for filt, cx2_weights in filt2_weights.items():
         qfx2_weights = cx2_weights[qcx]
         sign, thresh, weight = filt_cfg.get_stw(filt)
         if isinstance(thresh, (int, float)):
@@ -269,7 +269,7 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, qreq):
 
     # Iterate over chips with nearest neighbors
     mark_progress, end_progress = progress_func(len(qcx2_nns))
-    for count, qcx in enumerate(qcx2_nns.iterkeys()):
+    for count, qcx in enumerate(qcx2_nns.keys()):
         mark_progress(count)
         #print('[mf] * scoring q' + hs.cidstr(qcx))
         (qfx2_dx, _) = qcx2_nns[qcx]
@@ -282,7 +282,7 @@ def build_chipmatches(hs, qcx2_nns, qcx2_nnfilt, qreq):
         qfx2_qfx = np.tile(np.arange(nQuery), (K, 1)).T
         qfx2_k   = np.tile(np.arange(K), (nQuery, 1))
         # Pack feature matches into an interator
-        match_iter = izip(*[qfx2[qfx2_valid] for qfx2 in
+        match_iter = zip(*[qfx2[qfx2_valid] for qfx2 in
                             (qfx2_qfx, qfx2_cx, qfx2_fx, qfx2_fs, qfx2_k)])
         # Vsmany - Iterate over feature matches
         if not is_vsone:
@@ -336,7 +336,7 @@ def spatial_verification(hs, qcx2_chipmatch, qreq):
     dcxs_ = set(qreq._dcxs)
     USE_1_to_2 = True
     # Find a transform from chip2 to chip1 (the old way was 1 to 2)
-    for qcx in qcx2_chipmatch.iterkeys():
+    for qcx in qcx2_chipmatch.keys():
         #printDBG('[mf] verify qcx=%r' % qcx)
         chipmatch = qcx2_chipmatch[qcx]
         cx2_prescore = score_chipmatch(hs, qcx, chipmatch, prescore_method, qreq)
@@ -359,7 +359,7 @@ def spatial_verification(hs, qcx2_chipmatch, qreq):
                 sys.stdout.write(msg)
             count += 1
         # spatially verify the top __NUM_RERANK__ results
-        for topx in xrange(nRerank):
+        for topx in range(nRerank):
             cx = topx2_cx[topx]
             fm = cx2_fm[cx]
             #printDBG('[mf] vs topcx=%r, score=%r' % (cx, cx2_prescore[cx]))
@@ -439,7 +439,7 @@ def _fix_fmfsfk(cx2_fm, cx2_fs, cx2_fk):
     cx2_fs = [np.array(fs, fs_dtype_) for fs in iter(cx2_fs)]
     cx2_fk = [np.array(fk, fk_dtype_) for fk in iter(cx2_fk)]
     # Ensure shape
-    for cx in xrange(len(cx2_fm)):
+    for cx in range(len(cx2_fm)):
         cx2_fm[cx].shape = (cx2_fm[cx].size // 2, 2)
     # Cast lists
     cx2_fm = np.array(cx2_fm, list)
@@ -451,9 +451,9 @@ def _fix_fmfsfk(cx2_fm, cx2_fs, cx2_fk):
 
 def new_fmfsfk(hs):
     num_chips = hs.get_num_chips()
-    cx2_fm = [[] for _ in xrange(num_chips)]
-    cx2_fs = [[] for _ in xrange(num_chips)]
-    cx2_fk = [[] for _ in xrange(num_chips)]
+    cx2_fm = [[] for _ in range(num_chips)]
+    cx2_fs = [[] for _ in range(num_chips)]
+    cx2_fk = [[] for _ in range(num_chips)]
     return cx2_fm, cx2_fs, cx2_fk
 
 
@@ -469,7 +469,7 @@ def chipmatch_to_resdict(hs, qcx2_chipmatch, filt2_meta, qreq):
     score_method = qreq.cfg.agg_cfg.score_method
     # Create the result structures for each query.
     qcx2_res = {}
-    for qcx in qcx2_chipmatch.iterkeys():
+    for qcx in qcx2_chipmatch.keys():
         # For each query's chipmatch
         chipmatch = qcx2_chipmatch[qcx]
         # Perform final scoring
@@ -479,7 +479,7 @@ def chipmatch_to_resdict(hs, qcx2_chipmatch, filt2_meta, qreq):
         res.cx2_score = cx2_score
         (res.cx2_fm, res.cx2_fs, res.cx2_fk) = chipmatch
         res.filt2_meta = {}  # dbgstats
-        for filt, qcx2_meta in filt2_meta.iteritems():
+        for filt, qcx2_meta in filt2_meta.items():
             res.filt2_meta[filt] = qcx2_meta[qcx]  # things like k+1th
         qcx2_res[qcx] = res
     # Retain original score method
@@ -492,7 +492,7 @@ def load_resdict(hs, qreq):
     uid = qreq.get_uid()
     ##IF DICT_COMPREHENSION
     qcx2_res = {qcx: qr.QueryResult(qcx, uid) for qcx in iter(qcxs)}
-    [res.load(hs) for res in qcx2_res.itervalues()]
+    [res.load(hs) for res in qcx2_res.values()]
     ##ELSE
     #qcx2_res = {}
     #for qcx in qcxs:
@@ -545,7 +545,7 @@ def score_chipmatch(hs, qcx, chipmatch, score_method, qreq=None):
         cx2_score = coverage.score_chipmatch_coverage(hs, qcx, chipmatch, qreq, method=method)
     else:
         raise Exception('[mf] unknown scoring method:' + score_method)
-    cx2_nMatch = np.array(map(len, cx2_fm))
+    cx2_nMatch = np.array(list(map(len, cx2_fm)))
     # Autoremove chips with no match support
     cx2_score *= (cx2_nMatch != 0)
     return cx2_score

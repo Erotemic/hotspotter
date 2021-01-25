@@ -1,22 +1,33 @@
-from __future__ import division, print_function
-import __common__
+
+from . import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[pref]')
 # Python
-import cPickle
+import pickle
 import os.path
 import sys
-import tools
+from . import tools
 import traceback
 import warnings
 # Science
 import numpy as np
 # Qt
-from PyQt4 import QtCore, QtGui
-from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
-                      QString, Qt, QObject, pyqtSlot)
+if 0:
+    from PyQt4 import QtCore, QtGui
+    from PyQt4.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
+                          QString, Qt, QObject, pyqtSlot)
+else:
+    from PyQt5 import QtCore
+    from PyQt5 import QtGui
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
+    from PyQt5.QtWidgets import *
+    # from PyQt5 import QtCore, QtGui
+    # from PyQt5.Qt import (QAbstractItemModel, QModelIndex, QVariant, QWidget,
+    #                       QString, Qt, QObject, pyqtSlot)
+
 # HotSpotter
-from Printable import DynStruct
+from .Printable import DynStruct
 
 # ---
 # GLOBALS
@@ -111,7 +122,7 @@ class PrefChoice(DynStruct):
         elif isinstance(new_val, str):
             self.sel = self.choices.index(new_val)
         else:
-            raise('Exception: Unknown newval=%r' % new_val)
+            raise 'Exception: Unknown newval=%r'
         if self.sel < 0 or self.sel > len(self.choices):
             raise Exception('self.sel=%r is not in the self.choices=%r '
                             % (self.sel, self.choices))
@@ -176,7 +187,7 @@ class Pref(PrefNode):
             # Do not break pointers when overwriting a Preference
             if issubclass(attr._intern.value, PrefNode):
                 # Main Branch Logic
-                for (key, val) in attr.iteritems():
+                for (key, val) in attr.items():
                     child.__setattr__(key, val)
             else:
                 self.__overwrite_child_attr(name, attr.value())
@@ -278,10 +289,12 @@ class Pref(PrefNode):
         raise AttributeError('attribute: %s.%s not found' % (self._intern.name, name))
 
     def iteritems(self):
-        for (key, val) in self.__dict__.iteritems():
+        for (key, val) in list(self.__dict__.items()):
             if key in self._printable_exclude:
                 continue
             yield (key, val)
+
+    items = iteritems
 
     #----------------
     # Disk caching
@@ -290,7 +303,7 @@ class Pref(PrefNode):
         Children Pref can be optionally separated'''
         pref_dict = {}
         struct_dict = {}
-        for (key, val) in self.iteritems():
+        for (key, val) in list(self.items()):
             if split_structs_bit and isinstance(val, Pref):
                 struct_dict[key] = val
                 continue
@@ -310,7 +323,7 @@ class Pref(PrefNode):
         with open(self._intern.fpath, 'w') as f:
             print('[pref] Saving to ' + self._intern.fpath)
             pref_dict = self.to_dict()
-            cPickle.dump(pref_dict, f)
+            pickle.dump(pref_dict, f)
         return True
 
     def load(self):
@@ -323,7 +336,7 @@ class Pref(PrefNode):
         with open(self._intern.fpath, 'r') as f:
             try:
                 printDBG('load: %r' % self._intern.fpath)
-                pref_dict = cPickle.load(f)
+                pref_dict = pickle.load(f)
             except EOFError as ex:
                 msg = ('[pref] WARN: fpath=%r did not load correctly.' +
                        'ex=%r' % (self._intern.fpath, ex))
@@ -379,7 +392,7 @@ class Pref(PrefNode):
     def update(self, **kwargs):
         #print('Updating Preference: kwargs = %r' % (kwargs))
         self_keys = set(self.__dict__.keys())
-        for key, val in kwargs.iteritems():
+        for key, val in list(kwargs.items()):
             if key in self_keys:
                 #print('update: key=%r, %r' % (key, val))
                 #if type(val) == types.ListType:

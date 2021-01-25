@@ -1,9 +1,9 @@
-from __future__ import print_function, division
+
 from hscom import __common__
 (print, print_, print_on, print_off, rrr, profile,
  printDBG) = __common__.init(__name__, '[encounter]', DEBUG=False)
 # Python
-from itertools import izip
+
 # Science
 import networkx as netx
 import numpy as np
@@ -54,12 +54,12 @@ def compute_encounters(hs, seconds_thresh=15):
     gx2_clusterid = fclusterdata(X_data, seconds_thresh, criterion='distance')
 
     # Reverse the image to cluster index mapping
-    clusterx2_gxs = [[] for _ in xrange(gx2_clusterid.max())]
+    clusterx2_gxs = [[] for _ in range(gx2_clusterid.max())]
     for gx, clusterx in enumerate(gx2_clusterid):
         clusterx2_gxs[clusterx - 1].append(gx)  # IDS are 1 based
 
     # Print images per encouter statistics
-    clusterx2_nGxs = np.array(map(len, clusterx2_gxs))
+    clusterx2_nGxs = np.array(list(map(len, clusterx2_gxs)))
     print('[encounter] image per encounter stats:\n %s'
           % util.pstats(clusterx2_nGxs, True))
 
@@ -89,29 +89,29 @@ def build_encounter_ids(ex2_gxs, gx2_clusterid):
 def get_chip_encounters(hs):
     gx2_ex, ex2_gxs = compute_encounters(hs)
     # Build encounter to chips from encounter to images
-    ex2_cxs = [None for _ in xrange(len(ex2_gxs))]
+    ex2_cxs = [None for _ in range(len(ex2_gxs))]
     for ex, gxs in enumerate(ex2_gxs):
         ex2_cxs[ex] = util.flatten(hs.gx2_cxs(gxs))
     # optional
     # resort encounters by number of chips
-    ex2_nCxs = map(len, ex2_cxs)
+    ex2_nCxs = list(map(len, ex2_cxs))
     ex2_cxs = [y for (x, y) in sorted(zip(ex2_nCxs, ex2_cxs))]
     return ex2_cxs
 
 
 def get_fmatch_iter(res):
     # USE res.get_fmatch_iter()
-    fmfsfk_enum = enumerate(izip(res.cx2_fm, res.cx2_fs, res.cx2_fk))
+    fmfsfk_enum = enumerate(zip(res.cx2_fm, res.cx2_fs, res.cx2_fk))
     fmatch_iter = ((cx, fx_tup, score, rank)
                    for cx, (fm, fs, fk) in fmfsfk_enum
-                   for (fx_tup, score, rank) in izip(fm, fs, fk))
+                   for (fx_tup, score, rank) in zip(fm, fs, fk))
     return fmatch_iter
 
 
 def get_cxfx_enum(qreq):
     ax2_cxs = qreq._data_index.ax2_cx
     ax2_fxs = qreq._data_index.ax2_fx
-    cxfx_enum = enumerate(izip(ax2_cxs, ax2_fxs))
+    cxfx_enum = enumerate(zip(ax2_cxs, ax2_fxs))
     return cxfx_enum
 
 
@@ -125,7 +125,7 @@ def make_feature_graph(qreq, qcx2_res, use_networkx=True):
         return (ax1, ax2, attr_dict)
     nodes = [(ax, {'fx': fx, 'cx': cx}) for ax, (cx, fx) in get_cxfx_enum(qreq)]
     weighted_edges = [w_edge(cx1, cx2, fx1, fx2, score, rank)
-                      for (cx1, res) in qcx2_res.iteritems()
+                      for (cx1, res) in qcx2_res.items()
                       for (cx2, (fx1, fx2), score, rank) in get_fmatch_iter(res)
                       if score > 0]
     if use_networkx:
@@ -133,7 +133,7 @@ def make_feature_graph(qreq, qcx2_res, use_networkx=True):
         graph.add_nodes_from(nodes)
         graph.add_edges_from(weighted_edges)
     else:
-        vx2_ax = cxfx2_ax.values()
+        vx2_ax = list(cxfx2_ax.values())
         import graph_tool
         graph = graph_tool.Graph(g=None, directed=True, prune=False, vorder=None)
         vertex_list = graph.add_vertex(n=len(nodes))
@@ -170,12 +170,12 @@ def make_feature_graph(qreq, qcx2_res, use_networkx=True):
 
 def make_chip_graph(qcx2_res):
     # Make a graph between the chips
-    nodes = qcx2_res.keys()
+    nodes = list(qcx2_res.keys())
     #attr_edges = [(res.qcx, cx, {'score': score})
                     #for res in qcx2_res.itervalues()
                     #for cx, score in enumerate(res.cx2_score) if score > 0]
     weighted_edges = [(res.qcx, cx, score)
-                      for res in qcx2_res.itervalues()
+                      for res in qcx2_res.values()
                       for cx, score in enumerate(res.cx2_score) if score > 0]
     graph = netx.DiGraph()
     graph.add_nodes_from(nodes)
@@ -211,7 +211,7 @@ def draw_images_at_positions(img_list, pos_list):
     trans = ax.transData.transform
     trans2 = fig.transFigure.inverted().transform
     mark_progress, end_progress = util.progress_func(len(pos_list), lbl='drawing img')
-    for ix, ((x, y), img) in enumerate(izip(pos_list, img_list)):
+    for ix, ((x, y), img) in enumerate(zip(pos_list, img_list)):
         mark_progress(ix)
         xx, yy = trans((x, y))  # figure coordinates
         xa, ya = trans2((xx, yy))  # axes coordinates
@@ -267,16 +267,16 @@ def inter_encounter_match(hs, eid2_names=None, **kwargs):
     # Perform Inter-Encounter Matching
     if eid2_names is None:
         eid2_names = intra_encounter_match(hs, **kwargs)
-    all_nxs = util.flatten(eid2_names.values())
+    all_nxs = util.flatten(list(eid2_names.values()))
     for nx2_cxs in eid2_names:
         qnxs = nx2_cxs
         dnxs = all_nxs
         name_result = hs.query(qnxs=qnxs, dnxs=dnxs)
     qcx2_res = name_result.chip_results()
     graph = netx.Graph()
-    graph.add_nodes_from(range(len(qcx2_res)))
-    graph.add_edges_from([res.cx2_fm for res in qcx2_res.itervalues()])
-    graph.setWeights([(res.cx2_fs, res.cx2_fk) for res in qcx2_res.itervalues()])
+    graph.add_nodes_from(list(range(len(qcx2_res))))
+    graph.add_edges_from([res.cx2_fm for res in qcx2_res.values()])
+    graph.setWeights([(res.cx2_fs, res.cx2_fk) for res in qcx2_res.values()])
     graph.cutEdges(**kwargs)
     cx2_nx, nx2_cxs = graph.getConnectedComponents()
     return cx2_nx

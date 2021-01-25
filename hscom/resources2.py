@@ -1,12 +1,12 @@
-from __future__ import print_function, division
-import __common__
+
+from . import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[parallel]', DEBUG=False)
 # Python
 import psutil
 import os
 # HotSpotter
-import helpers as util
+from . import helpers as util
 
 
 def peak_memory():

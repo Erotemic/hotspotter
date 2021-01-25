@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 print, print_, print_on, print_off, rrr, profile, printDBG =\
     __common__.init(__name__, '[Config]', DEBUG=False)
@@ -17,11 +17,11 @@ def make_feasible(query_cfg):
     nn_cfg   = query_cfg.nn_cfg
 
     # Ensure the list of on filters is valid given the weight and thresh
-    if filt_cfg.ratio_thresh <= 1:
+    if filt_cfg.ratio_thresh is None or filt_cfg.ratio_thresh <= 1:
         filt_cfg.ratio_thresh = None
-    if filt_cfg.roidist_thresh >= 1:
+    if filt_cfg.roidist_thresh is None or filt_cfg.roidist_thresh >= 1:
         filt_cfg.roidist_thresh = None
-    if filt_cfg.bursty_thresh   <= 1:
+    if filt_cfg.bursty_thresh is None or filt_cfg.bursty_thresh   <= 1:
         filt_cfg.bursty_thresh = None
 
     # normalizer rule depends on Knorm

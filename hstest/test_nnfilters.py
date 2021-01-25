@@ -10,7 +10,7 @@ from dbgimport import  *
 exec(open(nn_filters.__file__).read())
 qcx2_nns = helpers.load_testdata('qcx2_nns')
 qreq = hs.qreq
-qcx = qcx2_nns.keys()[0]
+qcx = list(qcx2_nns.keys())[0]
 K, Knorm, rule = qreq.cfg.nn_cfg.dynget('K', 'Knorm', 'normalizer_rule')
 dx2_cx = qreq._data_index.ax2_cx
 dx2_fx = qreq._data_index.ax2_fx
@@ -31,7 +31,7 @@ qfx2_normtnx = hs.cx2_tnx(qfx2_normtcx)
 qfx2_normk = mark_name_valid_normalizers(qfx2_normtnx, qfx2_toptnx, qtnx)
 qfx2_normk += (K + Knorm)  # convert form negative to pos indexes
 
-qfx2_normdx = [dxs[normk] for (dxs, normk) in izip(qfx2_dx, qfx2_normk)]
+qfx2_normdx = [dxs[normk] for (dxs, normk) in zip(qfx2_dx, qfx2_normk)]
 
 qfx2_normcx = dx2_cx[qfx2_normdx]
 qfx2_normnx = hs.cx2_tnx(qfx2_normcx)

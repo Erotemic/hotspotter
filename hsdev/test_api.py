@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off, rrr,
  profile, printDBG) = __common__.init(__name__, '[tapi]', DEBUG=False)
@@ -61,7 +61,7 @@ def main(defaultdb='cache', preload=False, app=None):
     setcfg = args.setcfg
     if setcfg is not None:
         # FIXME move experiment harness to hsdev
-        import experiment_harness
+        from . import experiment_harness
         print('[tapi.main] setting cfg to %r' % setcfg)
         varied_list = experiment_harness.get_varied_params_list([setcfg])
         cfg_dict = varied_list[0]
@@ -198,7 +198,7 @@ def get_qcx_list(hs):
 
 
 def reload_all():
-    import dev_reload
+    from . import dev_reload
     dev_reload.rrr()
     dev_reload.reload_all_modules()
 

@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 # Standard
 #from ctypes.util import find_library
 import subprocess
@@ -33,7 +33,7 @@ EXE_FPATH = find_hesaff_fpath()
 
 
 def __cmd(args, verbose=True):
-    print('[setup] Running: %r' % args)
+    print(('[setup] Running: %r' % args))
     sys.stdout.flush()
     PIPE = subprocess.PIPE
     proc = subprocess.Popen(args, stdout=PIPE, stderr=PIPE, shell=True)

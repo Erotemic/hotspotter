@@ -1,10 +1,10 @@
 'hotspotter.algos contains algorithm poltpori'
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[algos]', DEBUG=False)
 # Python
-from itertools import izip
+
 from os.path import join
 import os
 import sys
@@ -98,7 +98,7 @@ def emd(hist1, hist2):
         emd_dist = emd_(a32, b32)
         return emd_dist
     else:
-        ab_list   = [(add_weight(a), add_weight(b)) for a, b in izip(hist1, hist2)]
+        ab_list   = [(add_weight(a), add_weight(b)) for a, b in zip(hist1, hist2)]
         ab32_list = [(convertCV32(a), convertCV32(b)) for a, b in ab_list]
         emd_dists = [emd_(a32, b32) for a32, b32, in ab32_list]
         return emd_dists
@@ -126,7 +126,7 @@ def xywh_to_tlbr(roi, img_wh):
 def localmax(signal1d):
     maxpos = []
     nsamp = len(signal1d)
-    for ix in xrange(nsamp):
+    for ix in range(nsamp):
         _prev = signal1d[max(0, ix - 1)]
         _item = signal1d[ix]
         _next = signal1d[min(nsamp - 1, ix + 1)]
@@ -141,7 +141,7 @@ def viz_localmax(signal1d):
     from hsviz import draw_func2 as df2
     signal1d = np.array(signal1d)
     maxpos = np.array(localmax(signal1d))
-    x_data = range(len(signal1d))
+    x_data = list(range(len(signal1d)))
     y_data = signal1d
     df2.figure('localmax vizualization')
     df2.plot(x_data, y_data)
@@ -399,7 +399,7 @@ def __akmeans_iterate(data,
           (ave_unchanged_thresh, ave_unchanged_iterwin))
     print('[algos] Printing akmeans info in format:' +
           'time (iterx, ave(#changed), #unchanged)')
-    for xx in xrange(0, max_iters):
+    for xx in range(0, max_iters):
         # 1) Find each datapoints nearest cluster center
         tt = helpers.tic()
         helpers.print_('...tic')
@@ -413,8 +413,8 @@ def __akmeans_iterate(data,
         datax_sort    = datax2_clusterx.argsort()  # NOQA
         clusterx_sort = datax2_clusterx[datax_sort]
         _L = 0
-        clusterx2_dataLRx = [None for _ in xrange(num_clusters)]
-        for _R in xrange(len(datax_sort) + 1):  # Slide R
+        clusterx2_dataLRx = [None for _ in range(num_clusters)]
+        for _R in range(len(datax_sort) + 1):  # Slide R
             if _R == num_data or clusterx_sort[_L] != clusterx_sort[_R]:
                 clusterx2_dataLRx[clusterx_sort[_L]] = (_L, _R)
                 _L = _R
@@ -555,7 +555,7 @@ def precompute_flann(data, cache_dir=None, uid='', flann_params=None,
     print('[algos] precompute_flann(%r): ' % uid)
     cache_dir = '.' if cache_dir is None else cache_dir
     # Generate a unique filename for data and flann parameters
-    fparams_uid = helpers.remove_chars(str(flann_params.values()), ', \'[]')
+    fparams_uid = helpers.remove_chars(str(list(flann_params.values())), ', \'[]')
     data_uid = helpers.hashstr_arr(data, 'dID')  # flann is dependent on the data
     flann_suffix = '_' + fparams_uid + '_' + data_uid + '.flann'
     # Append any user labels

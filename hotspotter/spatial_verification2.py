@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from hscom import __common__
 (print, print_, print_on, print_off,
  rrr, profile) = __common__.init(__name__, '[sv2]')
@@ -37,7 +37,7 @@ def compute_homog(x1_mn, y1_mn, x2_mn, y2_mn):
     #printDBG('[sv2] compute_homog')
     num_pts = len(x1_mn)
     Mbynine = np.zeros((2 * num_pts, 9), dtype=SV_DTYPE)
-    for ix in xrange(num_pts):  # Loop over inliers
+    for ix in range(num_pts):  # Loop over inliers
         # Concatinate all 2x9 matrices into an Mx9 matrix
         u2        = x2_mn[ix]
         v2        = y2_mn[ix]
@@ -191,7 +191,7 @@ def affine_inliers(x1_m, y1_m, acd1_m, fx1_m,
     # Compute scale change of all transformations
     detAff_list = det_acd(Aff_list)
     # Test all hypothesis
-    for mx in xrange(len(x1_m)):
+    for mx in range(len(x1_m)):
         # --- Get the mth hypothesis ---
         Aa, Ac, Ad = Aff_list[:, mx]
         Adet = detAff_list[mx]

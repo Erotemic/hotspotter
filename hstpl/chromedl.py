@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 from selenium import webdriver
 import os
 import parse
@@ -72,17 +72,17 @@ def clean_package_names(pkgname_list):
 def find_elements(pkgname):
     element_list = browser.find_elements_by_partial_link_text(pkgname)
     element_list2 = []
-    print('Searching for: %r' % pkgname)
+    print(('Searching for: %r' % pkgname))
     for element in element_list:
         if element.text.find(TARGET_PLATFORM) != -1:
-            print('  Found: %r' % element.text)
+            print(('  Found: %r' % element.text))
             element_list2 += [element]
     return (pkgname, element_list2)
 
 
 def choose_element(pkgname, element_list2):
     if len(element_list2) == 0:
-        print('choose %r = %r' % (pkgname, None))
+        print(('choose %r = %r' % (pkgname, None)))
         return (pkgname, None)
     if len(element_list2) == 1:
         element = element_list2[0]
@@ -97,7 +97,7 @@ def choose_element(pkgname, element_list2):
         element = None
         print('options: ')
         for element_ in element_list2:
-            print(' * %r' % element_.text)
+            print((' * %r' % element_.text))
             version_ = version_from_text(element_.text)
             if element_ is None:
                 continue
@@ -107,7 +107,7 @@ def choose_element(pkgname, element_list2):
                 version = version_from_text(element.text)
                 if version_ > version:
                     element = element_
-    print('choose %r = %r' % (pkgname, element.text))
+    print(('choose %r = %r' % (pkgname, element.text)))
     return (pkgname, element)
 
 
@@ -128,23 +128,23 @@ def get_true_href(element):
     return href
 
 pkgname_list, unsuported_list  = clean_package_names(pkgname_list)
-print('Unsupported packages: %r' % (unsuported_list,))
+print(('Unsupported packages: %r' % (unsuported_list,)))
 
 # Find elements in the browser
 elements_dict = dict(find_elements(pkgname) for pkgname in pkgname_list)
 # Fix conflicts
-element_list = [choose_element(*tup) for tup in elements_dict.iteritems()]
+element_list = [choose_element(*tup) for tup in list(elements_dict.items())]
 
 # Be sneaky and extract the true url
 # I could click it with the element, but
 # that requires the user to click and confirm each download
 href_list = []
 for pkgname, element in element_list:
-    print('Downloading: ' + pkgname)
+    print(('Downloading: ' + pkgname))
     if element is None:
         print('  none element')
         continue
-    print('  downloading: ' + element.text)
+    print(('  downloading: ' + element.text))
     href_list += [get_true_href(element)]
 
 
@@ -153,8 +153,8 @@ for href in href_list:
     # I guess we can't wget anyway. Oh well.
 
 
-raw_input('click ok and wait for them to download')
-dldir = normpath('C:\Users\joncrall\Downloads')
+eval(input('click ok and wait for them to download'))
+dldir = normpath('C:\\Users\joncrall\Downloads')
 fpath_list = []
 for href in href_list:
     fname = os.path.split(href)[1]
@@ -167,7 +167,7 @@ while True:
     for fpath in fpath_list:
         if not exists(fpath):
             done_flag = False
-            print('waiting for: %r' % fpath)
+            print(('waiting for: %r' % fpath))
             sys.stdout.flush()
     if done_flag:
         print('done')

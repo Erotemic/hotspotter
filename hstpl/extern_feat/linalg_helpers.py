@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 import cv2
 from hotspotter import helpers
 import textwrap
@@ -42,16 +42,16 @@ def print_2x2_svd(M, name=''):
     #print(hstr([U,S,V]))
     # Try and conform to opencv
     Sm = diag(S)
-    print('---- SVD of '+name+' ----')
-    print(name+' =\n%s' % M)
+    print(('---- SVD of '+name+' ----'))
+    print((name+' =\n%s' % M))
     print('= U * S * V =')
     hprint([U, ' * ', Sm, ' * ', V])
     print('=')
-    print(U.dot(Sm).dot(V))
+    print((U.dot(Sm).dot(V)))
     print('-- Retified --')
     Mup, scale = rectify_up_is_up(M)
     hprint(name+'up = ', Mup)
-    print('scale=%r' % scale)
+    print(('scale=%r' % scale))
 
 
 

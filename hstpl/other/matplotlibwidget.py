@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright © 2009 Pierre Raybaut
+# Copyright 2009 Pierre Raybaut
 # Licensed under the terms of the MIT License
 from __future__ import division, print_function
 
-"""
-MatplotlibWidget
-================
+# """
+# MatplotlibWidget
+# ================
 
-Example of matplotlib widget for PyQt4
+# Example of matplotlib widget for PyQt4
 
-Copyright © 2009 Pierre Raybaut
-This software is licensed under the terms of the MIT License
+# Copyright 2009 Pierre Raybaut
+# This software is licensed under the terms of the MIT License
 
-Derived from 'embedding_in_pyqt4.py':
-Copyright © 2005 Florent Rougon, 2006 Darren Dale
-"""
+# Derived from 'embedding_in_pyqt4.py':
+# Copyright 2005 Florent Rougon, 2006 Darren Dale
+# """
 
 __version__ = "1.0.0"
 
@@ -29,6 +29,7 @@ try:
     _fromUtf8 = QString.fromUtf8
 except AttributeError:
     _fromUtf8 = lambda s: s
+
 
 class MatplotlibWidget(Canvas):
     """

@@ -10,8 +10,8 @@ into a global set of helper functions.
 
 Wow, pylint is nice for cleaning.
 '''
-from __future__ import division, print_function
-import __common__
+
+from . import __common__
 (print, print_, print_on, print_off,
  rrr, profile, printDBG) = __common__.init(__name__, '[util]', DEBUG=False)
 # Scientific
@@ -19,11 +19,11 @@ import numpy as np
 # Standard
 from collections import OrderedDict
 from itertools import product as iprod
-from itertools import izip, chain, imap, cycle
+from itertools import chain, cycle
 from os.path import (join, relpath, normpath, split, isdir, isfile, exists,
                      islink, ismount, expanduser)
-import cPickle
-import cStringIO
+import pickle
+import io
 import datetime
 import decimal
 import fnmatch
@@ -38,8 +38,8 @@ import time
 import types
 import warnings
 # HotSpotter
-import tools
-from Printable import printableVal
+from . import tools
+from .Printable import printableVal
 #print('LOAD_MODULE: helpers.py')
 
 # --- Globals ---
@@ -109,7 +109,7 @@ def horiz_string(str_list):
     '''
     all_lines = []
     hpos = 0
-    for sx in xrange(len(str_list)):
+    for sx in range(len(str_list)):
         str_ = str(str_list[sx])
         lines = str_.split('\n')
         line_diff = len(lines) - len(all_lines)
@@ -121,7 +121,7 @@ def horiz_string(str_list):
             all_lines[lx] += line
             hpos = max(hpos, len(all_lines[lx]))
         # Horizontal padding
-        for lx in xrange(len(all_lines)):
+        for lx in range(len(all_lines)):
             hpos_diff = hpos - len(all_lines[lx])
             if hpos_diff > 0:
                 all_lines[lx] += ' ' * hpos_diff
@@ -297,7 +297,7 @@ def pstats(*args, **kwargs):
 
 def printable_mystats(_list, newlines=False):
     stat_dict = mystats(_list)
-    stat_strs = ['%r: %s' % (key, val) for key, val in stat_dict.iteritems()]
+    stat_strs = ['%r: %s' % (key, val) for key, val in stat_dict.items()]
     if newlines:
         indent = '    '
         head = '{\n' + indent
@@ -413,14 +413,14 @@ def numpy_list_num_bits(nparr_list, expected_type, expected_dims):
 # --- Util ---
 def alloc_lists(num_alloc):
     'allocates space for a numpy array of lists'
-    return [[] for _ in xrange(num_alloc)]
+    return [[] for _ in range(num_alloc)]
 
 
 def ensure_list_size(list_, size_):
     'extend list to max_cx'
     lendiff = (size_) - len(list_)
     if lendiff > 0:
-        extension = [None for _ in xrange(lendiff)]
+        extension = [None for _ in range(lendiff)]
         list_.extend(extension)
 
 
@@ -608,7 +608,7 @@ def symlink(source, link_name, noraise=False):
 # --- Convinience ----
 def vd(dname=None):
     'view directory'
-    import cross_platform
+    from . import cross_platform
     cross_platform.view_directory(dname)
 
 
@@ -738,7 +738,7 @@ def longest_existing_path(_path):
 
 def path_ndir_split(path, n):
     path, ndirs = split(path)
-    for i in xrange(n - 1):
+    for i in range(n - 1):
         path, name = split(path)
         ndirs = name + os.path.sep + ndirs
     return ndirs
@@ -912,7 +912,7 @@ def copy_list(src_list, dst_list, lbl='Copying'):
             return False
         mark_progress(count)
         return True
-    task_iter = izip(src_list, dst_list)
+    task_iter = zip(src_list, dst_list)
     mark_progress, end_progress = progress_func(len(src_list), lbl=lbl)
     success_list = [domove(src, dst, count) for count, (src, dst) in enumerate(task_iter)]
     end_progress()
@@ -928,7 +928,7 @@ def move_list(src_list, dst_list, lbl='Moving'):
             return False
         mark_progress(count)
         return True
-    task_iter = izip(src_list, dst_list)
+    task_iter = zip(src_list, dst_list)
     mark_progress, end_progress = progress_func(len(src_list), lbl=lbl)
     success_list = [domove(src, dst, count) for count, (src, dst) in enumerate(task_iter)]
     end_progress()
@@ -948,7 +948,7 @@ def grep(string, pattern):
 
 
 def correct_zeros(M):
-    index_gen = iprod(*[xrange(_) for _ in M.shape])
+    index_gen = iprod(*[range(_) for _ in M.shape])
     for index in index_gen:
         if M[index] < 1E-18:
             M[index] = 0
@@ -1029,12 +1029,12 @@ def write_to(fpath, to_write):
 
 def save_pkl(fpath, data):
     with open(fpath, 'wb') as file:
-        cPickle.dump(data, file)
+        pickle.dump(data, file)
 
 
 def load_pkl(fpath):
     with open(fpath, 'wb') as file:
-        return cPickle.load(file)
+        return pickle.load(file)
 
 
 def save_npz(fpath, *args, **kwargs):
@@ -1059,7 +1059,7 @@ def dict_union2(dict1, dict2):
 
 
 def dict_union(*args):
-    return dict([item for dict_ in iter(args) for item in dict_.iteritems()])
+    return dict([item for dict_ in iter(args) for item in dict_.items()])
 
 
 def hashstr_arr(arr, lbl='arr', **kwargs):
@@ -1075,6 +1075,9 @@ def hashstr_arr(arr, lbl='arr', **kwargs):
 
 
 def hashstr(data, trunc_pos=8):
+    import ubelt as ub
+    hashstr = ub.hash_data(data, base='abc')[:trunc_pos]
+    return hashstr
     if isinstance(data, tuple):
         data = repr(data)
     # Get a 128 character hex string
@@ -1163,7 +1166,7 @@ def load_cache_npz(input_data, uid='', cache_dir='.', is_sparse=False):
             sys.stdout.flush()
             if is_sparse:
                 with open(data_fpath, 'rb') as file_:
-                    data = cPickle.load(file_)
+                    data = pickle.load(file_)
             else:
                 npz = np.load(data_fpath)
                 data = npz['arr_0']
@@ -1186,7 +1189,7 @@ def save_cache_npz(input_data, data, uid='', cache_dir='.', is_sparse=False):
     sys.stdout.flush()
     if is_sparse:
         with open(data_fpath, 'wb') as outfile:
-            cPickle.dump(data, outfile, cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(data, outfile, pickle.HIGHEST_PROTOCOL)
     else:
         np.savez(data_fpath, data)
     print('...success')
@@ -1263,7 +1266,7 @@ def toc(tt):
 class RedirectStdout(object):
     def __init__(self, lbl=None, autostart=False, show_on_exit=True):
         self._stdout_old = sys.stdout
-        self.stream = cStringIO.StringIO()
+        self.stream = io.StringIO()
         self.record = '<no record>'
         self.lbl = lbl
         self.show_on_exit = show_on_exit
@@ -1332,7 +1335,7 @@ class Indenter2(object):
                 print('AttributeError: ' + str(ex))
                 print('WARNING: module=%r is not managed by __common__' % mod)
 
-        for mod in self.old_prints.keys():
+        for mod in list(self.old_prints.keys()):
             indent_print = lambda msg: self.old_prints[mod](indent_msg(msg))
             mod.print = indent_print
             if self.INDENT_PRINT_:
@@ -1340,7 +1343,7 @@ class Indenter2(object):
                 mod.print_ = indent_print_
 
     def stop(self):
-        for mod in self.old_prints.iterkeys():
+        for mod in self.old_prints.keys():
             mod.print =  self.old_prints[mod]
             if self.INDENT_PRINT_:
                 mod.print_ =  self.old_prints_[mod]
@@ -1356,7 +1359,7 @@ Indent = Indenter2
 
 
 def rectify_wrapped_func(wrapper, func):
-    wrapper.func_name = func.func_name
+    wrapper.__name__ = func.__name__
 
 
 def indent_decor(lbl):
@@ -1478,12 +1481,12 @@ def execstr_dict(dict_, local_name, exclude_list=None):
         #exec('dict_ = local_name')
     if exclude_list is None:
         execstr = '\n'.join((key + ' = ' + local_name + '[' + repr(key) + ']'
-                            for (key, val) in dict_.iteritems()))
+                            for (key, val) in dict_.items()))
     else:
         if not isinstance(exclude_list, list):
             exclude_list = [exclude_list]
         exec_list = []
-        for (key, val) in dict_.iteritems():
+        for (key, val) in dict_.items():
             if not any((fnmatch.fnmatch(key, pat) for pat in iter(exclude_list))):
                 exec_list.append(key + ' = ' + local_name + '[' + repr(key) + ']')
         execstr = '\n'.join(exec_list)
@@ -1503,7 +1506,7 @@ def execstr_timeitsetup(dict_, exclude_list=[]):
     old_thresh =  np.get_printoptions()['threshold']
     np.set_printoptions(threshold=1000000000)
     matches = fnmatch.fnmatch
-    excl_valid_keys = [key for key in dict_.iterkeys() if not any((matches(key, pat) for pat in iter(exclude_list)))]
+    excl_valid_keys = [key for key in dict_.keys() if not any((matches(key, pat) for pat in iter(exclude_list)))]
     valid_types = set([np.ndarray, np.float32, np.float64, np.int64, int, float])
     type_valid_keys = [key for key in iter(excl_valid_keys) if type(dict_[key]) in valid_types]
     exec_list = []
@@ -1532,7 +1535,7 @@ def dict_execstr(dict_, local_name=None):
 
 
 def execstr_func(func):
-    print(' ! Getting executable source for: ' + func.func_name)
+    print(' ! Getting executable source for: ' + func.__name__)
     _src = inspect.getsource(func)
     execstr = textwrap.dedent(_src[_src.find(':') + 1:])
     # Remove return statments
@@ -1567,7 +1570,7 @@ def get_exec_src(func):
 
 # --- Profiling ---
 def unit_test(test_func):
-    test_name = test_func.func_name
+    test_name = test_func.__name__
 
     def __unit_test_wraper():
         print('Testing: ' + test_name)
@@ -1817,7 +1820,7 @@ class NpPrintOpts(object):
 
 
 def printvar(locals_, varname, attr='.shape'):
-    import tools
+    from . import tools
     npprintopts = np.get_printoptions()
     np.set_printoptions(threshold=5)
     dotpos = varname.find('.')
@@ -1901,7 +1904,7 @@ def cartesian(arrays, out=None):
     out[:, 0] = np.repeat(arrays[0], m)
     if arrays[1:]:
         cartesian(arrays[1:], out=out[0:m, 1:])
-        for j in xrange(1, arrays[0].size):
+        for j in range(1, arrays[0].size):
             out[j * m:(j + 1) * m, 1:] = out[0:m, 1:]
     return out
 
@@ -1972,7 +1975,7 @@ def npfind(arr):
 
 
 def all_dict_combinations(varied_dict):
-    viter = varied_dict.iteritems()
+    viter = iter(varied_dict.items())
     tups_list = [[(key, val) for val in val_list] for (key, val_list) in viter]
     dict_list = [{key: val for (key, val) in tups} for tups in iprod(*tups_list)]
     return dict_list
@@ -2006,11 +2009,11 @@ def import_testdata():
     from hscom import helpers as util
     import shelve
     shelf = shelve.open('test_data.shelf')
-    print('importing\n * ' + '\n * '.join(shelf.keys()))
+    print('importing\n * ' + '\n * '.join(list(shelf.keys())))
     shelf_exec = util.execstr_dict(shelf, 'shelf')
     exec(shelf_exec)
     shelf.close()
-    return import_testdata.func_code.co_code
+    return import_testdata.__code__.co_code
 
 
 def num2_sigfig(num):
@@ -2065,14 +2068,14 @@ def joins(string, list_, with_head=True, with_tail=False, tostrip='\n'):
 
 
 def interleave(args):
-    arg_iters = map(iter, args)
+    arg_iters = list(map(iter, args))
     cycle_iter = cycle(arg_iters)
     for iter_ in cycle_iter:
-        yield iter_.next()
+        yield next(iter_)
 
 
 def indent_list(indent, list_):
-    return imap(lambda item: indent + str(item), list_)
+    return map(lambda item: indent + str(item), list_)
 
 
 # --- Context ---
@@ -2102,7 +2105,7 @@ def print_frame(frame):
                           for _execstr in execstr_attr_list(obj_name, attr_list)]
     execstr = '\n'.join(execstr_print_list)
     exec(execstr)
-    local_varnames = pack_into('; '.join(frame.f_locals.keys()))
+    local_varnames = pack_into('; '.join(list(frame.f_locals.keys())))
     print(local_varnames)
     print('--- End Frame ---')
 
@@ -2112,7 +2115,7 @@ def search_stack_for_localvar(varname):
     print(' * Searching parent frames for: ' + str(varname))
     frame_no = 0
     while not curr_frame.f_back is None:
-        if varname in curr_frame.f_locals.keys():
+        if varname in list(curr_frame.f_locals.keys()):
             print(' * Found in frame: ' + str(frame_no))
             return curr_frame.f_locals[varname]
         frame_no += 1
@@ -2190,7 +2193,7 @@ def explore_module(module_, seen=None, maxdepth=2, nonmodules=False):
 
     def __explore_module(module, indent, seen, depth, maxdepth, nonmodules):
         valid_children = []
-        ret = u''
+        ret = ''
         modname = str(module.__name__)
         #modname = repr(module)
         for child, aname in __childiter(module):

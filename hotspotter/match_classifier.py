@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 from hscom import __common__
 (print, print_, print_on, print_off, rrr, profile,
  printDBG) = __common__.init(__name__, '[classifier]', DEBUG=False)
@@ -17,7 +17,7 @@ def get_gt_cases(hs):
 def get_labeled_descriptors(allres, orgtype_='false'):
     qcxs = allres[orgtype_].qcxs
     cxs  = allres[orgtype_].cxs
-    match_list = zip(qcxs, cxs)
+    match_list = list(zip(qcxs, cxs))
     aggdesc1, aggdesc2 = rr2.get_matching_descriptors(allres, match_list)
     return aggdesc1, aggdesc2
 

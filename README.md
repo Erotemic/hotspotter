@@ -5,7 +5,7 @@ HOTSPOTTER IS A LEGACY REPOSITORY FOR THE LATEST AND GREATEST CHECK OUT IBEIS
 
 https://github.com/Erotemic/ibeis
 
-A copy of the paper is hosted on github: 
+A copy of the paper is hosted on github: https://github.com/Erotemic/hotspotter/blob/main/crall-hotspotter-wacv-2013.pdf 
 
 
 ### NOTICE (2020-12-18): 

@@ -5,6 +5,8 @@ HOTSPOTTER IS A LEGACY REPOSITORY FOR THE LATEST AND GREATEST CHECK OUT IBEIS
 
 https://github.com/Erotemic/ibeis
 
+A copy of the paper is hosted on github: 
+
 
 ### NOTICE (2020-12-18): 
 
